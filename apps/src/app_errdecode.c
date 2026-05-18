@@ -145,7 +145,7 @@ static ErrorCodeFormat DetectFormat(const char *input)
 }
 
 /* Parse error code string */
-static int32_t ParseErrorCode(const char *input, uint64_t *code)
+static int32_t ParseErrorCode(const char *input, int32_t hexMode, uint64_t *code)
 {
     if (input == NULL || code == NULL) {
         return HITLS_APP_INVALID_ARG;
@@ -154,8 +154,12 @@ static int32_t ParseErrorCode(const char *input, uint64_t *code)
     char *endptr;
     uint64_t result;
     
+    const char *parseInput = input;
     /* Check if hexadecimal (starts with 0x or 0X) */
     if (strncmp(input, "0x", HEX_PREFIX_LEN) == 0 || strncmp(input, "0X", HEX_PREFIX_LEN) == 0) {
+        parseInput = input + HEX_PREFIX_LEN;
+        result = strtoull(parseInput, &endptr, HEX_BASE);
+    } else if (hexMode) {
         result = strtoull(input, &endptr, HEX_BASE);
     } else {
         /* Auto-detect format */
@@ -175,8 +179,7 @@ static int32_t ParseErrorCode(const char *input, uint64_t *code)
     }
     
     /* Check if empty or only prefix */
-    if (endptr == input ||
-        (strncmp(input, "0x", HEX_PREFIX_LEN) == 0 && endptr == input + HEX_PREFIX_LEN)) {
+    if (endptr == parseInput) {
         return HITLS_APP_INVALID_ARG;
     }
     
@@ -346,7 +349,7 @@ static int32_t ProcessSingleError(const char *errorCodeStr, const CommandOptions
     uint64_t code;
     
     /* Parse error code */
-    int32_t parseResult = ParseErrorCode(errorCodeStr, &code);
+    int32_t parseResult = ParseErrorCode(errorCodeStr, options->hexMode, &code);
     if (parseResult != HITLS_APP_SUCCESS) {
         AppPrintError("Error: invalid error code format: %s\n", errorCodeStr);
         return HITLS_APP_INVALID_ARG;

@@ -18,11 +18,14 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stddef.h>
+#include <sys/stat.h>
+#include <unistd.h>
 #include "app_enc.h"
 #include "app_errno.h"
 #include "app_help.h"
 #include "app_print.h"
 #include "app_opt.h"
+#include "app_utils.h"
 #include "app_provider.h"
 #include "bsl_uio.h"
 #include "crypt_eal_cipher.h"
@@ -167,7 +170,8 @@ void UT_HITLS_APP_ENC_TC003(void)
         {"enc", "-enc", "-cipher", "aes128_cbc", "-in", "../testdata/apps/enc/test_encfile", "-pass", "file:../testdata/apps/pass/empty_pass", "-out", "../testdata/apps/enc/res_encfile"},
         {"enc", "-enc", "-cipher", "aes128_cbc", "-md", "md_abc", "-in", "../testdata/apps/enc/test_encfile", "-pass", "pass:12345678", "-out", "../testdata/apps/enc/res_encfile"},
         {"enc", "-enc", "-cipher", "aes128_cbc", "-in", "../testdata/apps/enc/test_encfile", "-pass", "pass:", "-out", "../testdata/apps/enc/res_encfile"},
-        {"enc", "-enc", "-cipher", "aes128_cbc", "-in", "../testdata/apps/enc/test_encfile", "-pass", "file:../testdata/apps/pass/size_1025_pass", "-out", "../testdata/apps/enc/res_encfile"}
+        {"enc", "-enc", "-cipher", "aes128_cbc", "-in", "../testdata/apps/enc/test_encfile", "-pass", "file:../testdata/apps/pass/size_1025_pass", "-out", "../testdata/apps/enc/res_encfile"},
+        {"enc", "-enc", "-cipher", "aes128-wrap-pad", "-in", "../testdata/apps/enc/test_encfile", "-pass", "pass:12345678", "-out", "../testdata/apps/enc/res_encfile"}
     };
 
     OptTestData testData[] = {
@@ -175,7 +179,8 @@ void UT_HITLS_APP_ENC_TC003(void)
         {10, argv[1], HITLS_APP_PASSWD_FAIL},
         {12, argv[2], HITLS_APP_OPT_VALUE_INVALID},
         {10, argv[3], HITLS_APP_PASSWD_FAIL},
-        {10, argv[4], HITLS_APP_PASSWD_FAIL}
+        {10, argv[4], HITLS_APP_PASSWD_FAIL},
+        {10, argv[5], HITLS_APP_OPT_VALUE_INVALID}
     };
 
     ASSERT_EQ(AppInit(), HITLS_APP_SUCCESS);
@@ -186,6 +191,76 @@ void UT_HITLS_APP_ENC_TC003(void)
     
 EXIT:
     AppUninit();
+    return;
+}
+/* END_CASE */
+
+/**
+ * @test UT_HITLS_APP_ENC_TC004
+ * @spec  -
+ * @title  Test enc named output file permission; expect 0600 even with permissive umask
+ */
+
+/* BEGIN_CASE */
+void UT_HITLS_APP_ENC_TC004(void)
+{
+    char outFile[] = "res_perm_tmpfile";
+    char *argv[] = {"enc", "-enc", "-cipher", "aes128_cbc", "-in", "../testdata/apps/enc/test_encfile",
+        "-pass", "pass:12345678", "-out", outFile};
+    struct stat st = {0};
+    mode_t oldMask = umask(0022);
+
+    ASSERT_EQ(AppInit(), HITLS_APP_SUCCESS);
+    (void)remove(outFile);
+
+    int ret = HITLS_EncMain(sizeof(argv) / sizeof(argv[0]), argv);
+    ASSERT_EQ(ret, HITLS_APP_SUCCESS);
+    ASSERT_EQ(stat(outFile, &st), 0);
+    ASSERT_EQ(st.st_mode & 0777, S_IRUSR | S_IWUSR);
+
+EXIT:
+    (void)umask(oldMask);
+    (void)remove(outFile);
+    AppUninit();
+    return;
+}
+/* END_CASE */
+
+/**
+ * @test UT_HITLS_APP_ENC_TC005
+ * @spec  -
+ * @title  Test stdin reads respect the caller supplied maximum size
+ */
+
+/* BEGIN_CASE */
+void UT_HITLS_APP_ENC_TC005(void)
+{
+    char inFile[] = "stdin_limit_tmpfile";
+    uint8_t *buf = NULL;
+    uint64_t bufLen = 0;
+    int stdinFd = -1;
+    FILE *fp = fopen(inFile, "wb");
+    ASSERT_NE(fp, NULL);
+    ASSERT_EQ(fwrite("12345", 1, 5, fp), 5);
+    ASSERT_EQ(fclose(fp), 0);
+    fp = NULL;
+
+    stdinFd = dup(STDIN_FILENO);
+    ASSERT_TRUE(stdinFd >= 0);
+    ASSERT_NE(freopen(inFile, "rb", stdin), NULL);
+    ASSERT_EQ(HITLS_APP_ReadFileOrStdin(&buf, &bufLen, NULL, 4, "enc"), HITLS_APP_UIO_FAIL);
+
+EXIT:
+    BSL_SAL_FREE(buf);
+    if (fp != NULL) {
+        (void)fclose(fp);
+    }
+    if (stdinFd >= 0) {
+        (void)dup2(stdinFd, STDIN_FILENO);
+        (void)close(stdinFd);
+        clearerr(stdin);
+    }
+    (void)remove(inFile);
     return;
 }
 /* END_CASE */

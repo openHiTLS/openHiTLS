@@ -19,6 +19,7 @@
 #include <dirent.h>
 #include <limits.h>
 #include <string.h>
+#include <sys/stat.h>
 #include "bsl_uio.h"
 #include "crypt_eal_rand.h"
 #include "crypt_eal_cipher.h"
@@ -156,6 +157,68 @@ static char *GetPubKeyFilePath(const char *workPath, const char *uuid)
     return GetKeyFullPath(workPath, uuid, "-pub.pem");
 }
 
+static bool IsUuidHexChar(char c)
+{
+    return (c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F');
+}
+
+static bool IsValidKeyUuid(const char *uuid)
+{
+    if (uuid == NULL) {
+        return false;
+    }
+    for (uint32_t i = 0; i < APP_KEYMGMT_UUID_STR_SIZE - 1; i++) {
+        if (!IsUuidHexChar(uuid[i])) {
+            return false;
+        }
+    }
+    return uuid[APP_KEYMGMT_UUID_STR_SIZE - 1] == '\0';
+}
+
+static bool IsValidKeyUuidList(const char *uuidList)
+{
+    if (uuidList == NULL || uuidList[0] == '\0') {
+        return false;
+    }
+
+    uint32_t uuidLen = 0;
+    for (const char *cur = uuidList; ; cur++) {
+        if (*cur == ',' || *cur == '\0') {
+            if (uuidLen != APP_KEYMGMT_UUID_STR_SIZE - 1) {
+                return false;
+            }
+            if (*cur == '\0') {
+                return true;
+            }
+            uuidLen = 0;
+            continue;
+        }
+        if (!IsUuidHexChar(*cur) || uuidLen >= APP_KEYMGMT_UUID_STR_SIZE - 1) {
+            return false;
+        }
+        uuidLen++;
+    }
+}
+
+static int32_t CheckUuid(const char *uuid)
+{
+    if (!IsValidKeyUuid(uuid)) {
+        AppPrintError("keymgmt: Invalid uuid, expect %u hex characters.\n", APP_KEYMGMT_UUID_STR_SIZE - 1);
+        return HITLS_APP_INVALID_ARG;
+    }
+    return HITLS_APP_SUCCESS;
+}
+
+static int32_t CheckUuidList(const char *uuidList)
+{
+    if (!IsValidKeyUuidList(uuidList)) {
+        AppPrintError("keymgmt: Invalid uuid list, expect comma-separated %u-hex-character uuid values.\n",
+            APP_KEYMGMT_UUID_STR_SIZE - 1);
+        return HITLS_APP_INVALID_ARG;
+    }
+    return HITLS_APP_SUCCESS;
+}
+
 static int32_t WriteKeyFile(KeyMgmtCmdOpt *keyMgmtOpt, const char *uuid, HITLS_PKCS12 *p12)
 {
     CRYPT_Pbkdf2Param pbkdf2Param = {0};
@@ -194,11 +257,17 @@ static int32_t WriteKeyFile(KeyMgmtCmdOpt *keyMgmtOpt, const char *uuid, HITLS_P
     }
 
     int32_t ret = HITLS_PKCS12_GenFile(BSL_FORMAT_ASN1, p12, &encodeParam, true, path);
-    BSL_SAL_Free(path);
     if (ret != HITLS_PKI_SUCCESS) {
+        BSL_SAL_Free(path);
         AppPrintError("keymgmt: Failed to generate pkcs12 key file, errCode: 0x%x.\n", ret);
         return HITLS_APP_X509_FAIL;
     }
+    if (chmod(path, S_IRUSR | S_IWUSR) != 0) {
+        BSL_SAL_Free(path);
+        AppPrintError("keymgmt: Failed to set key file permission.\n");
+        return HITLS_APP_UIO_FAIL;
+    }
+    BSL_SAL_Free(path);
     return HITLS_APP_SUCCESS;
 }
 
@@ -483,12 +552,16 @@ static int32_t EraseKeyFile(char *path)
 
 static int32_t HITLS_APP_RmvKey(KeyMgmtCmdOpt *keyMgmtOpt, const char *uuid)
 {
+    int32_t ret = CheckUuid(uuid);
+    if (ret != HITLS_APP_SUCCESS) {
+        return ret;
+    }
     char *path = GetKeyFilePath(keyMgmtOpt->smParam->workPath, uuid);
     if (path == NULL) {
         return HITLS_APP_INVALID_ARG;
     }
     keyMgmtOpt->smParam->status = HITLS_APP_SM_STATUS_APPORVED;
-    int32_t ret = EraseKeyFile(path);
+    ret = EraseKeyFile(path);
     if (ret != HITLS_APP_SUCCESS) {
         BSL_SAL_Free(path);
         return ret;
@@ -622,6 +695,11 @@ static int32_t CheckOptParam(KeyMgmtCmdOpt *keyMgmtOpt)
             AppPrintError("keymgmt: The uuid is not specified.\n");
             return HITLS_APP_OPT_VALUE_INVALID;
         }
+        ret = keyMgmtOpt->deleteTag == 1 ? CheckUuidList(keyMgmtOpt->smParam->uuid) :
+            CheckUuid(keyMgmtOpt->smParam->uuid);
+        if (ret != HITLS_APP_SUCCESS) {
+            return HITLS_APP_OPT_VALUE_INVALID;
+        }
         return HITLS_APP_SUCCESS;
     }
 
@@ -663,6 +741,11 @@ static int32_t CreateKey(KeyMgmtCmdOpt *keyMgmtOpt)
 
 static int32_t SplitUuidString(const char *uuid, BslList **uuidList)
 {
+    int32_t ret = CheckUuidList(uuid);
+    if (ret != HITLS_APP_SUCCESS) {
+        return ret;
+    }
+
     char *src = BSL_SAL_Dump(uuid, strlen(uuid) + 1);
     if (src == NULL) {
         AppPrintError("keymgmt: Failed to dump uuid string.\n");
@@ -687,7 +770,7 @@ static int32_t SplitUuidString(const char *uuid, BslList **uuidList)
             AppPrintError("keymgmt: Failed to dump single uuid string.\n");
             return HITLS_APP_MEM_ALLOC_FAIL;
         }
-        int32_t ret = BSL_LIST_AddElement(list, singleUuid, BSL_LIST_POS_END);
+        ret = BSL_LIST_AddElement(list, singleUuid, BSL_LIST_POS_END);
         if (ret != BSL_SUCCESS) {
             BSL_SAL_FREE(singleUuid);
             BSL_SAL_FREE(src);
@@ -735,7 +818,15 @@ static bool IsP12File(const char *file)
     if (fileLen != 2 * HITLS_APP_UUID_LEN + strlen(suffix)) { // 2: one byte to two hex chars.
         return false;
     }
-    return strcmp(file + fileLen - strlen(suffix), suffix) == 0;
+    if (strcmp(file + fileLen - strlen(suffix), suffix) != 0) {
+        return false;
+    }
+    for (uint32_t i = 0; i < APP_KEYMGMT_UUID_STR_SIZE - 1; i++) {
+        if (!IsUuidHexChar(file[i])) {
+            return false;
+        }
+    }
+    return true;
 }
 
 static int32_t GetAllKeyUuids(const char *workPath, BslList **fileList)
@@ -852,6 +943,10 @@ static int32_t SelfTest(KeyMgmtCmdOpt *keyMgmtOpt)
 
 static int32_t ReadKeyFile(AppProvider *provider, HITLS_APP_SM_Param *smParam, HITLS_PKCS12 **p12)
 {
+    int32_t ret = CheckUuid(smParam->uuid);
+    if (ret != HITLS_APP_SUCCESS) {
+        return ret;
+    }
     char *path = GetKeyFilePath(smParam->workPath, smParam->uuid);
     if (path == NULL) {
         AppPrintError("keymgmt: Failed to get key full path.\n");
@@ -866,7 +961,7 @@ static int32_t ReadKeyFile(AppProvider *provider, HITLS_APP_SM_Param *smParam, H
     pwdParam.encPwd = &encPwd;
     pwdParam.macPwd = &encPwd;
 
-    int32_t ret = HITLS_PKCS12_ProviderParseFile(APP_GetCurrent_LibCtx(), provider->providerAttr, "ASN1", path,
+    ret = HITLS_PKCS12_ProviderParseFile(APP_GetCurrent_LibCtx(), provider->providerAttr, "ASN1", path,
         &pwdParam, p12, true);
     BSL_SAL_Free(path);
     if (ret != HITLS_PKI_SUCCESS) {

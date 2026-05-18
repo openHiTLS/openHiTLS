@@ -18,6 +18,7 @@
 #include <stddef.h>
 #include <stdbool.h>
 #ifdef HITLS_APP_SM_MODE
+#include <sys/stat.h>
 #include <unistd.h>
 #endif
 #include "bsl_bytes.h"
@@ -293,6 +294,10 @@ static int32_t WriteUserFile(char *userFile, UserInfo *userInfo)
         return HITLS_APP_UIO_FAIL;
     }
     BSL_UIO_Free(uio);
+    if (chmod(userFile, S_IRUSR | S_IWUSR) != 0) {
+        AppPrintError("Failed to set userFile permission: %s\n", userFile);
+        return HITLS_APP_UIO_FAIL;
+    }
     return HITLS_APP_SUCCESS;
 }
 

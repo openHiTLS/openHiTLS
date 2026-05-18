@@ -706,11 +706,12 @@ static int32_t ReadPemByUioSymbol(BSL_UIO *memUio, BSL_UIO *rUio, BSL_PEM_Symbol
     return ret;
 }
 
-static int32_t ReadBlockFromStdin(BSL_UIO *memUio, BSL_UIO *rUio)
+static int32_t ReadBlockFromStdin(BSL_UIO *memUio, BSL_UIO *rUio, uint32_t maxSize)
 {
     int32_t ret = HITLS_APP_UIO_FAIL;
     uint32_t readLen;
     uint32_t writeLen;
+    uint64_t totalLen = 0;
     uint8_t *buf = (uint8_t *)BSL_SAL_Calloc(MAX_DIGEST_SIZE + 1, 1);
     if (buf == NULL) {
         return HITLS_APP_MEM_ALLOC_FAIL;
@@ -726,15 +727,20 @@ static int32_t ReadBlockFromStdin(BSL_UIO *memUio, BSL_UIO *rUio)
             ret = HITLS_APP_SUCCESS;
             break;
         }
+        if (totalLen + readLen > maxSize) {
+            AppPrintError("The maximum file size is %ukb.\n", maxSize / 1024);
+            break;
+        }
         if (BSL_UIO_Write(memUio, buf, readLen, &writeLen) != BSL_SUCCESS || writeLen != readLen) {
             break;
         }
+        totalLen += readLen;
     }
     BSL_SAL_FREE(buf);
     return ret;
 }
 
-static int32_t ReadPemFromStdin(BSL_BufMem **data, BSL_PEM_Symbol *symbol)
+static int32_t ReadPemFromStdin(BSL_BufMem **data, BSL_PEM_Symbol *symbol, uint32_t maxSize)
 {
     int32_t ret = HITLS_APP_UIO_FAIL;
     BSL_UIO *memUio = BSL_UIO_New(BSL_UIO_MemMethod());
@@ -749,7 +755,7 @@ static int32_t ReadPemFromStdin(BSL_BufMem **data, BSL_PEM_Symbol *symbol)
         return ret;
     }
     if (symbol == NULL || symbol->head == NULL || symbol->tail == NULL) {
-        ret = ReadBlockFromStdin(memUio, rUio);
+        ret = ReadBlockFromStdin(memUio, rUio, maxSize);
     } else {
         ret = ReadPemByUioSymbol(memUio, rUio, symbol);
     }
@@ -787,7 +793,7 @@ int32_t HITLS_APP_ReadData(const char *path, BSL_PEM_Symbol *symbol, char *fileN
     }
     if (path == NULL) {
         BSL_BufMem *buf = NULL;
-        if (ReadPemFromStdin(&buf, symbol) != HITLS_APP_SUCCESS) {
+        if (ReadPemFromStdin(&buf, symbol, APP_FILE_MAX_SIZE) != HITLS_APP_SUCCESS) {
             AppPrintError("Failed to read %s from stdin.\n", fileName);
             return HITLS_APP_UIO_FAIL;
         }
@@ -1061,14 +1067,15 @@ int32_t HITLS_APP_ReadFileOrStdin(uint8_t **buf, uint64_t *bufLen, const char *i
 
     // Special handling for stdin
     if (inFile == NULL) {
-        BSL_Buffer data = {0};
-        int32_t ret = HITLS_APP_ReadData(NULL, NULL, "data", &data);
+        BSL_BufMem *data = NULL;
+        int32_t ret = ReadPemFromStdin(&data, NULL, maxSize);
         if (ret != HITLS_APP_SUCCESS) {
             AppPrintError("%s: Failed to read content from stdin\n", module);
             return ret;
         }
-        *buf = data.data;
-        *bufLen = data.dataLen;
+        *buf = (uint8_t *)data->data;
+        *bufLen = data->length;
+        BSL_SAL_Free(data);
         return HITLS_APP_SUCCESS;
     }
 

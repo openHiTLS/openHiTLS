@@ -200,6 +200,7 @@ static int32_t ParseKeyPbe(Pkcs12OptCtx *opt)
         HITLS_APP_PrintStdoutUioUnInit();
         return HITLS_APP_OPT_VALUE_INVALID;
     }
+    opt->keyPbe = ret;
     return HITLS_APP_SUCCESS;
 }
 
@@ -214,6 +215,7 @@ static int32_t ParseCertPbe(Pkcs12OptCtx *opt)
         HITLS_APP_PrintStdoutUioUnInit();
         return HITLS_APP_OPT_VALUE_INVALID;
     }
+    opt->certPbe = ret;
     return HITLS_APP_SUCCESS;
 }
 
@@ -228,6 +230,7 @@ static int32_t ParseMacAlg(Pkcs12OptCtx *opt)
         HITLS_APP_PrintStdoutUioUnInit();
         return HITLS_APP_OPT_VALUE_INVALID;
     }
+    opt->macAlg = ret;
     return HITLS_APP_SUCCESS;
 }
 

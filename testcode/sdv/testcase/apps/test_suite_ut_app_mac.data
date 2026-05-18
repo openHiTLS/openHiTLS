@@ -13,6 +13,9 @@ UT_HITLS_APP_MAC_InvalidOpt_TC001:"mac -name hmac_sha256 -hexkey 0x1234G -in ../
 "-key and hexkey": both specified
 UT_HITLS_APP_MAC_InvalidOpt_TC001:"mac -name hmac_sha256 -key 123456 -hexkey 0x1234 -in ../testdata/apps/mac/test.txt":HITLS_APP_OPT_VALUE_INVALID
 
+"-name": unsupported GMAC
+UT_HITLS_APP_MAC_InvalidOpt_TC001:"mac -name gmac_aes128 -hexkey 0x00000000000000000000000000000000 -in ../testdata/apps/mac/test.txt":HITLS_APP_OPT_VALUE_INVALID
+
 normal mac
 UT_HITLS_APP_MAC_NormalOpt_TC001:"mac -name hmac_sha256 -key 123456 -in ../testdata/apps/mac/test.txt -out mac_out.out":"mac_out.out":"f959b969e71d0f3778b6265a2b06a032c9ac9dd20b51d33a7adc700a3e5df20b"
 

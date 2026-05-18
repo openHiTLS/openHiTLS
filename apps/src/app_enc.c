@@ -89,6 +89,15 @@ static const uint32_t CIPHER_IS_XTS[] = {
     CRYPT_CIPHER_SM4_XTS,
 };
 
+static const uint32_t CIPHER_IS_AES_WRAP[] = {
+    CRYPT_CIPHER_AES128_WRAP_NOPAD,
+    CRYPT_CIPHER_AES128_WRAP_PAD,
+    CRYPT_CIPHER_AES192_WRAP_NOPAD,
+    CRYPT_CIPHER_AES192_WRAP_PAD,
+    CRYPT_CIPHER_AES256_WRAP_NOPAD,
+    CRYPT_CIPHER_AES256_WRAP_PAD,
+};
+
 typedef struct {
     char *pass;
     uint32_t passLen;
@@ -184,6 +193,16 @@ static int32_t GetMacId(const char *name)
     return HITLS_APP_GetCidByName(name, HITLS_APP_LIST_OPT_MD_TO_MAC_ALG);
 }
 
+static bool IsAesWrapCipher(int32_t cipherId)
+{
+    for (uint32_t i = 0; i < sizeof(CIPHER_IS_AES_WRAP) / sizeof(CIPHER_IS_AES_WRAP[0]); ++i) {
+        if ((uint32_t)cipherId == CIPHER_IS_AES_WRAP[i]) {
+            return true;
+        }
+    }
+    return false;
+}
+
 // process for the ENC to receive subordinate options
 static int32_t HandleOpt(EncCmdOpt *encOpt)
 {
@@ -273,6 +292,10 @@ static int32_t CheckParam(EncCmdOpt *encOpt)
         AppPrintError("Use -help for summary.\n");
         return HITLS_APP_OPT_VALUE_INVALID;
     }
+    if (IsAesWrapCipher(encOpt->cipherId)) {
+        AppPrintError("enc: AES-WRAP algorithms are not supported.\n");
+        return HITLS_APP_OPT_VALUE_INVALID;
+    }
     // if the user does not specify the encryption or decryption mode,
     // an error is reported and the user is prompted to enter the following information
     if (encOpt->encTag != 1 && encOpt->encTag != 0) {
@@ -306,6 +329,18 @@ static int32_t CheckParam(EncCmdOpt *encOpt)
     return HITLS_APP_SUCCESS;
 }
 
+static int32_t SetOutputFilePermission(const char *outFile)
+{
+    if (outFile == NULL) {
+        return HITLS_APP_SUCCESS;
+    }
+    if (chmod(outFile, S_IRUSR | S_IWUSR) != 0) {
+        AppPrintError("enc: Failed to set output file permission.\n");
+        return HITLS_APP_UIO_FAIL;
+    }
+    return HITLS_APP_SUCCESS;
+}
+
 // enc determines the input and output paths
 static int32_t HandleIO(EncCmdOpt *encOpt)
 {
@@ -324,6 +359,13 @@ static int32_t HandleIO(EncCmdOpt *encOpt)
         BSL_UIO_Free(encOpt->encUio->rUio);
         encOpt->encUio->rUio = NULL;
         AppPrintError("enc: Failed to create the output pipeline.\n");
+        return HITLS_APP_UIO_FAIL;
+    }
+    if (SetOutputFilePermission(encOpt->outFile) != HITLS_APP_SUCCESS) {
+        BSL_UIO_Free(encOpt->encUio->rUio);
+        BSL_UIO_Free(encOpt->encUio->wUio);
+        encOpt->encUio->rUio = NULL;
+        encOpt->encUio->wUio = NULL;
         return HITLS_APP_UIO_FAIL;
     }
     return HITLS_APP_SUCCESS;

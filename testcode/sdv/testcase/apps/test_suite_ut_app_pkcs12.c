@@ -343,12 +343,18 @@ void UT_HITLS_APP_PKCS12_TC006(void)
         {"pkcs12", "-export", "-in", CERT, "-inkey", PRI_KEY, "-passin", "pass:12345678", "-chain", "-CAfile",
             CHAIN, "-passout", "pass:12345678", "-out", "out.pfx", "-macalg", "sha224"},
         {"pkcs12", "-export", "-in", CERT, "-inkey", PRI_KEY, "-passin", "pass:12345678", "-chain", "-CAfile",
+            CHAIN, "-passout", "pass:12345678", "-out", "out.pfx", "-macalg", "sha512"},
+        {"pkcs12", "-export", "-in", CERT, "-inkey", PRI_KEY, "-passin", "pass:12345678", "-chain", "-CAfile",
             CHAIN, "-passout", "pass:12345678", "-out", "out.pfx", "-macalg", "INVALID_ALG"},
+        {"pkcs12", "-in", "out.pfx", "-passin", "pass:12345678", "-passout", "pass:12345678", "-out",
+            "decode_pfx.pem"},
     };
 
     OptTestData testData[] = {
         {17, argv[0], HITLS_APP_SUCCESS},
-        {17, argv[1], HITLS_APP_OPT_VALUE_INVALID},
+        {17, argv[1], HITLS_APP_SUCCESS},
+        {17, argv[2], HITLS_APP_OPT_VALUE_INVALID},
+        {9, argv[3], HITLS_APP_SUCCESS},
     };
 
     ASSERT_EQ(AppPrintErrorUioInit(stderr), HITLS_APP_SUCCESS);

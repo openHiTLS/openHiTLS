@@ -298,6 +298,47 @@ EXIT:
 /* END_CASE */
 
 /**
+ * @test UT_HITLS_APP_SM_TC004
+ * @spec  -
+ * @title  Test SM user file permission; expect 0600 even with permissive umask
+ */
+
+/* BEGIN_CASE */
+void UT_HITLS_APP_SM_TC004(void)
+{
+#ifndef HITLS_APP_SM_MODE
+    SKIP_TEST();
+#else
+    char *password = NULL;
+    char userFilePath[1024] = {0};
+    struct stat st = {0};
+    mode_t oldMask = umask(0022);
+    STUB_REPLACE(BSL_UI_ReadPwdUtil, STUB_BSL_UI_ReadPwdUtil);
+    STUB_REPLACE(HITLS_APP_SM_IntegrityCheck, STUB_HITLS_APP_SM_IntegrityCheck);
+    STUB_REPLACE(HITLS_APP_SM_RootUserCheck, STUB_HITLS_APP_SM_RootUserCheck);
+
+    system("rm -rf " WORK_PATH);
+    system("mkdir -p " WORK_PATH);
+    ASSERT_EQ(AppTestInit(), HITLS_APP_SUCCESS);
+
+    int32_t status = 0;
+    ASSERT_EQ(HITLS_APP_SM_Init(&g_appProvider, WORK_PATH, &password, &status), HITLS_APP_SUCCESS);
+    snprintf(userFilePath, sizeof(userFilePath), "%s/openhitls_user", WORK_PATH);
+    ASSERT_EQ(stat(userFilePath, &st), 0);
+    ASSERT_EQ(st.st_mode & 0777, S_IRUSR | S_IWUSR);
+
+EXIT:
+    (void)umask(oldMask);
+    BSL_SAL_FREE(password);
+    AppTestUninit();
+    STUB_RESTORE(BSL_UI_ReadPwdUtil);
+    STUB_RESTORE(HITLS_APP_SM_IntegrityCheck);
+    STUB_RESTORE(HITLS_APP_SM_RootUserCheck);
+#endif
+}
+/* END_CASE */
+
+/**
  * @test UT_HITLS_APP_SM_TC005
  * @spec  -
  * @title  Test wrong user password; second login fails in the command-line SM module

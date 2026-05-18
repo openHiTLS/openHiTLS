@@ -15,6 +15,7 @@
 
 /* BEGIN_HEADER */
 #include <stdio.h>
+#include <string.h>
 #include "app_errdecode.h"
 #include "app_errno.h"
 #include "app_print.h"
@@ -212,6 +213,37 @@ void UT_HITLS_APP_ERRDECODE_TC008(void)
 
 EXIT:
     AppPrintErrorUioUnInit();
+    return;
+}
+/* END_CASE */
+
+/**
+ * @test UT_HITLS_APP_ERRDECODE_TC009
+ * @spec  -
+ * @title   Test -hex forces digit-only input to be parsed as hexadecimal
+ */
+/* BEGIN_CASE */
+void UT_HITLS_APP_ERRDECODE_TC009(void)
+{
+    char *argv[] = {"errdecode", "-hex", "06000001"};
+    FILE *fp = tmpfile();
+    char output[256] = {0};
+
+    ASSERT_NE(fp, NULL);
+    ASSERT_EQ(AppPrintErrorUioInit(fp), HITLS_APP_SUCCESS);
+
+    int ret = HITLS_ErrdecodeMain(ARGC_THREE_ARGS, argv);
+    ASSERT_EQ(ret, HITLS_APP_SUCCESS);
+    ASSERT_EQ(fflush(fp), 0);
+    ASSERT_EQ(fseek(fp, 0, SEEK_SET), 0);
+    ASSERT_TRUE(fread(output, 1, sizeof(output) - 1, fp) > 0);
+    ASSERT_TRUE(strstr(output, "error:0000000006000001:CIPHER:cipher_init:initialization failed") != NULL);
+
+EXIT:
+    AppPrintErrorUioUnInit();
+    if (fp != NULL) {
+        fclose(fp);
+    }
     return;
 }
 /* END_CASE */
