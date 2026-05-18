@@ -4211,3 +4211,85 @@ EXIT:
     FRAME_FreeLink(server);
 }
 /* END_CASE */
+
+
+STUB_DEFINE_RET2(uint32_t, MapVersion2VersionBit, bool, uint16_t);
+
+uint32_t STUB_MapVersion2VersionBit(bool isDatagram, uint16_t version)
+{
+    (void)isDatagram;
+    (void)version;
+    return TLCP11_VERSION_BIT;
+}
+
+static void Test_Fatal_Alert1(HITLS_Ctx *ctx, uint8_t *data, uint32_t *len,
+    uint32_t bufSize, void *user)
+{
+    (void)bufSize;
+    (void)user;
+    (void)len;
+    (void)ctx;
+    (void)data;
+    STUB_REPLACE(MapVersion2VersionBit, STUB_MapVersion2VersionBit);
+
+    return;
+}
+
+/* @
+* @test  UT_TLS_PROCESS_SERVER_KX_NAMED_CURVE_TC001
+* @title  Test ProcessServerKxMsgNamedCurve with version mismatch
+* @precon  nan
+* @brief  1. Create TLS 1.2 client with ECDHE cipher suite.
+*          2. Use a named curve that doesn't ProcessServerKxMsgNamedCurve support TLS 1.2 version bits.
+*          3. Server sends ServerKeyExchange with incompatible curve.
+*          4. Client processes the ServerKeyExchange message.
+* @expect  1. Client returns HITLS_MSG_HANDLE_UNSUPPORT_NAMED_CURVE.
+*          2. Client sends ALERT_ILLEGAL_PARAMETER alert.
+* @prior  Level 1
+* @auto  TRUE
+@ */
+/* BEGIN_CASE */
+void UT_TLS_PROCESS_SERVER_KX_NAMED_CURVE_TC001(void)
+{
+    FRAME_Init();
+    FRAME_LinkObj *client = NULL;
+    FRAME_LinkObj *server = NULL;
+
+    HITLS_Config *c_config = HITLS_CFG_NewTLS12Config();
+    HITLS_Config *s_config = HITLS_CFG_NewTLS12Config();
+    ASSERT_TRUE(c_config != NULL);
+    ASSERT_TRUE(s_config != NULL);
+
+    client = FRAME_CreateLink(c_config, BSL_UIO_TCP);
+    ASSERT_TRUE(client != NULL);
+    server = FRAME_CreateLink(s_config, BSL_UIO_TCP);
+    ASSERT_TRUE(server != NULL);
+
+    RecWrapper wrapper = {
+        TRY_RECV_SERVER_KEY_EXCHANGE,
+        REC_TYPE_HANDSHAKE,
+        true,
+        NULL,
+        Test_Fatal_Alert1
+    };
+    RegisterWrapper(wrapper);
+
+    // Establish connection up to ServerKeyExchange
+    ASSERT_TRUE(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT) == HITLS_MSG_HANDLE_UNSUPPORT_NAMED_CURVE);
+
+    // // Verify alert was sent
+    ALERT_Info alertInfo = {0};
+    ALERT_GetInfo(client->ssl, &alertInfo);
+    ASSERT_EQ(alertInfo.flag, ALERT_FLAG_SEND);
+    ASSERT_EQ(alertInfo.level, ALERT_LEVEL_FATAL);
+    ASSERT_EQ(alertInfo.description, ALERT_ILLEGAL_PARAMETER);
+
+EXIT:
+    ClearWrapper();
+    STUB_RESTORE(MapVersion2VersionBit);
+    HITLS_CFG_FreeConfig(c_config);
+    HITLS_CFG_FreeConfig(s_config);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+}
+/* END_CASE */

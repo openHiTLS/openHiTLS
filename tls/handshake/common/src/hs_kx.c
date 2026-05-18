@@ -33,6 +33,9 @@
 #include "hs_ctx.h"
 #include "transcript_hash.h"
 #include "hs_common.h"
+#include "alert.h"
+#include "config_check.h"
+#include "config_type.h"
 #include "hs_kx.h"
 
 KeyExchCtx *HS_KeyExchCtxNew(void)
@@ -110,6 +113,14 @@ static int32_t ProcessServerKxMsgNamedCurve(TLS_Ctx *ctx, const ServerKeyExchang
             "no supported curves found.", 0, 0, 0, 0);
         ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_ILLEGAL_PARAMETER);
         return HITLS_MSG_HANDLE_UNSUPPORT_NAMED_CURVE;
+    }
+
+    uint32_t versionBits = MapVersion2VersionBit(IS_SUPPORT_DATAGRAM(ctx->config.tlsConfig.originVersionMask),
+                                                 ctx->negotiatedInfo.version);
+    const TLS_GroupInfo *groupInfo = ConfigGetGroupInfo(&ctx->config.tlsConfig, namedGroup);
+    if (groupInfo == NULL || ((groupInfo->versionBits & versionBits) != versionBits)) {
+        return RETURN_ALERT_PROCESS(ctx, HITLS_MSG_HANDLE_UNSUPPORT_NAMED_CURVE, BINLOG_ID17088,
+            "named curve not supported.", ALERT_ILLEGAL_PARAMETER);
     }
 #ifdef HITLS_TLS_FEATURE_SECURITY
     int32_t ret = SECURITY_SslCheck(ctx, HITLS_SECURITY_SECOP_CURVE_CHECK, 0, (int32_t)namedGroup, NULL);
@@ -476,7 +487,7 @@ int32_t DeriveMasterSecret(TLS_Ctx *ctx, const uint8_t *preMasterSecret, uint32_
     deriveInfo.hashAlgo = ctx->negotiatedInfo.cipherSuiteInfo.hashAlg;
     deriveInfo.secret = preMasterSecret;
     deriveInfo.secretLen = len;
-    
+
 #ifdef HITLS_TLS_FEATURE_EXTENDED_MASTER_SECRET
     const uint8_t exMasterSecretLabel[] = "extended master secret";
     bool isExtendedMasterSecret = ctx->negotiatedInfo.isExtendedMasterSecret;
