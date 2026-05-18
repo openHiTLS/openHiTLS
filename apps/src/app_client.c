@@ -31,6 +31,7 @@
 #include "app_keymgmt.h"
 #include "app_utils.h"
 #include "hitls.h"
+#include "hitls_cert.h"
 #include "hitls_cert_init.h"
 #include "hitls_session.h"
 #include "crypt_errno.h"
@@ -423,6 +424,14 @@ static HITLS_Config *CreateClientConfig(HITLS_ClientParams *params)
     if (ret != HITLS_APP_SUCCESS) {
         HITLS_CFG_FreeConfig(config);
         return NULL;
+    }
+    if (!params->verifyNone) {
+        ret = HITLS_CFG_SetHost(config, params->host);
+        if (ret != HITLS_SUCCESS) {
+            AppPrintError("Failed to set verification host: 0x%x\n", ret);
+            HITLS_CFG_FreeConfig(config);
+            return NULL;
+        }
     }
 
     /* Configure client certificate if provided */

@@ -148,6 +148,11 @@ static int32_t MacOptAlg(MacOpt *macOpt)
     if (macOpt->algId == BSL_CID_UNKNOWN) {
         return HITLS_APP_OPT_VALUE_INVALID;
     }
+    if (macOpt->algId == CRYPT_MAC_GMAC_AES128 || macOpt->algId == CRYPT_MAC_GMAC_AES192 ||
+        macOpt->algId == CRYPT_MAC_GMAC_AES256) {
+        AppPrintError("mac: GMAC is not supported by this command.\n");
+        return HITLS_APP_OPT_VALUE_INVALID;
+    }
     return HITLS_APP_SUCCESS;
 }
 

@@ -86,7 +86,7 @@ EXIT:
 /**
  * @test UT_HITLS_APP_prime_TC002
  * @spec  -
- * @title   Test safe prime generation
+ * @title   Test unsupported safe prime option
  */
 /* BEGIN_CASE */
 void UT_HITLS_APP_prime_TC002(void)
@@ -96,7 +96,7 @@ void UT_HITLS_APP_prime_TC002(void)
     };
 
     OptTestData testData[] = {
-        {5, argv[0], HITLS_APP_SUCCESS},
+        {5, argv[0], HITLS_APP_INVALID_ARG},
     };
 
     ASSERT_EQ(AppPrintErrorUioInit(stderr), HITLS_APP_SUCCESS);

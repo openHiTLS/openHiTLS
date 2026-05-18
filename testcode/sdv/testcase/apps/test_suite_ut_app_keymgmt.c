@@ -21,6 +21,7 @@
 #include <dirent.h>
 #include <unistd.h>
 #include <fcntl.h>
+#include <sys/stat.h>
 #include "app_enc.h"
 #include "app_keymgmt.h"
 #include "app_dgst.h"
@@ -410,6 +411,9 @@ void UT_HITLS_APP_KEYMGMT_TC001(void)
     STUB_REPLACE(HITLS_APP_SM_RootUserCheck, STUB_HITLS_APP_SM_RootUserCheck);
 
     char *uuid = NULL;
+    char keyPath[1024] = {0};
+    struct stat st = {0};
+    mode_t oldMask = umask(0022);
     char *argv[] = {"keymgmt", "-create", "-algid", "sm4", SM_PARAM, NULL};
 
     ASSERT_EQ(AppTestInit(), HITLS_APP_SUCCESS);
@@ -419,6 +423,9 @@ void UT_HITLS_APP_KEYMGMT_TC001(void)
 
     uuid = GetUuidFromP12(WORK_PATH);
     ASSERT_TRUE(uuid != NULL);
+    snprintf(keyPath, sizeof(keyPath), "%s/%s.p12", WORK_PATH, uuid);
+    ASSERT_EQ(stat(keyPath, &st), 0);
+    ASSERT_EQ(st.st_mode & 0777, S_IRUSR | S_IWUSR);
 
     ret = EncryptAndDecrypt(uuid, "sm4_cbc");
     ASSERT_EQ(ret, HITLS_APP_SUCCESS);
@@ -439,6 +446,7 @@ void UT_HITLS_APP_KEYMGMT_TC001(void)
     ASSERT_EQ(ret, HITLS_APP_SUCCESS);
 
 EXIT:
+    (void)umask(oldMask);
     BSL_SAL_FREE(uuid);
     AppTestUninit();
     STUB_RESTORE(BSL_UI_ReadPwdUtil);
@@ -646,6 +654,19 @@ void UT_HITLS_APP_KEYMGMT_TC005(void)
     ret = HITLS_KeyMgmtMain(sizeof(argv7) / sizeof(argv7[0]) - 1, argv7);
     ASSERT_EQ(ret, HITLS_APP_OPT_VALUE_INVALID);
 
+    // Case 8: Reject UUIDs that are not exactly 64 hex characters.
+    char invalidUuid[] = "../../target";
+    char *argv8[] = {"keymgmt", "-delete", SM_PARAM, "-uuid", invalidUuid, NULL};
+    ret = HITLS_KeyMgmtMain(sizeof(argv8) / sizeof(argv8[0]) - 1, argv8);
+    ASSERT_EQ(ret, HITLS_APP_OPT_VALUE_INVALID);
+
+    // Case 9: Reject invalid UUID elements in comma-separated lists.
+    char invalidUuidList[] =
+        "1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef,../../target";
+    char *argv9[] = {"keymgmt", "-delete", SM_PARAM, "-uuid", invalidUuidList, NULL};
+    ret = HITLS_KeyMgmtMain(sizeof(argv9) / sizeof(argv9[0]) - 1, argv9);
+    ASSERT_EQ(ret, HITLS_APP_OPT_VALUE_INVALID);
+
 EXIT:
     AppTestUninit();
     STUB_RESTORE(BSL_UI_ReadPwdUtil);
@@ -774,7 +795,7 @@ void UT_HITLS_APP_KEYMGMT_TC008(void)
     ASSERT_EQ(AppTestInit(), HITLS_APP_SUCCESS);
 
     // Test deleting a non-existent key - pass a randomly generated UUID
-    char fakeUuid[] = "1234567890abcdef1234567890abcdef";
+    char fakeUuid[] = "1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef";
     char *argv_delete[] = {"keymgmt", "-delete", SM_PARAM, "-uuid", fakeUuid, NULL};
     int ret = HITLS_KeyMgmtMain(sizeof(argv_delete) / sizeof(argv_delete[0]) - 1, argv_delete);
 
@@ -920,7 +941,7 @@ void UT_HITLS_APP_KEYMGMT_TC010(void)
     fclose(fp1);
 
     // Construct a list containing existing and non-existing UUIDs
-    char fakeUuid[] = "1234567890abcdef1234567890abcdef";
+    char fakeUuid[] = "1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef";
     char uuidList[256];
     // Note: Put the existing UUID first and the non-existing one after, to verify ordered deletion logic
     snprintf(uuidList, sizeof(uuidList), "%s,%s", uuid1, fakeUuid);

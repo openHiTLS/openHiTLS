@@ -95,7 +95,7 @@ static X509KeyUsageMap g_exKuMap[] = {
 
 static int32_t FindEndIdx(char *str, char separator, int32_t beginIdx, int32_t currIdx, bool allowEmpty)
 {
-    while (currIdx >= 0 && (isspace(str[currIdx]) || str[currIdx] == separator)) {
+    while (currIdx >= 0 && (isspace((unsigned char)str[currIdx]) || str[currIdx] == separator)) {
         currIdx--;
     }
     if (beginIdx < currIdx) {
@@ -112,7 +112,8 @@ static int32_t FindEndIdx(char *str, char separator, int32_t beginIdx, int32_t c
 int32_t HITLS_APP_SplitString(const char *str, char separator, bool allowEmpty, char **strArr, uint32_t maxArrCnt,
     uint32_t *realCnt)
 {
-    if (str == NULL || strlen(str) == 0 || isspace(separator) || strArr == NULL || maxArrCnt == 0 || realCnt == NULL) {
+    if (str == NULL || strlen(str) == 0 || isspace((unsigned char)separator) || strArr == NULL || maxArrCnt == 0 ||
+        realCnt == NULL) {
         return HITLS_APP_INVALID_ARG;
     }
 
@@ -133,7 +134,7 @@ int32_t HITLS_APP_SplitString(const char *str, char separator, bool allowEmpty, 
     *realCnt = 0;
     for (int32_t i = 0; i < len; i++) {
         if (!hasBegin) {
-            if (isspace(res[i])) {
+            if (isspace((unsigned char)res[i])) {
                 continue;
             }
             if (*realCnt == maxArrCnt) {
@@ -509,6 +510,7 @@ static int32_t ParseIPValue(char *value, HITLS_X509_GeneralName *generalName)
     struct sockaddr_in sockIpv4 = {};
     struct sockaddr_in6 sockIpv6 = {};
     char *ipv4ValueList[IPV4_VALUE_MAX_CNT] = {0};
+    char *ipv4ValueBase = NULL;
     uint32_t ipSize = 0;
     if (inet_pton(AF_INET, value, &(sockIpv4.sin_addr)) == 1) {
         uint32_t valueCnt = 0;
@@ -516,9 +518,10 @@ static int32_t ParseIPValue(char *value, HITLS_X509_GeneralName *generalName)
         if (ret != HITLS_APP_SUCCESS) {
             return ret;
         }
+        ipv4ValueBase = ipv4ValueList[0];
         if (valueCnt != IPV4_VALUE_MAX_CNT) {
             AppPrintError("Failed to split IP string, IP: %s.\n", value);
-            BSL_SAL_FREE(ipv4ValueList[0]);
+            BSL_SAL_FREE(ipv4ValueBase);
             return HITLS_APP_INVALID_IP;
         }
         // Normalize IPv4 octets by removing leading zeros (cross-platform fix)
@@ -541,7 +544,7 @@ static int32_t ParseIPValue(char *value, HITLS_X509_GeneralName *generalName)
     generalName->value.data = BSL_SAL_Calloc(ipSize, 1);
     if (generalName->value.data == NULL) {
         AppPrintError("Invalid IP format for directory name, IP: %s.\n", value);
-        BSL_SAL_FREE(ipv4ValueList[0]);
+        BSL_SAL_FREE(ipv4ValueBase);
         return HITLS_APP_MEM_ALLOC_FAIL;
     }
     for (uint32_t i = 0; i < ipSize; i++) {
@@ -552,7 +555,7 @@ static int32_t ParseIPValue(char *value, HITLS_X509_GeneralName *generalName)
         }
     }
     generalName->value.dataLen = ipSize;
-    BSL_SAL_FREE(ipv4ValueList[0]);
+    BSL_SAL_FREE(ipv4ValueBase);
     return HITLS_APP_SUCCESS;
 }
 

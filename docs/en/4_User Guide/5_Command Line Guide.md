@@ -31,7 +31,7 @@ The openHiTLS command source code is located in the apps directory, and the comp
 ||s_server|SSL/TLS server tool|
 |**Other Utility Tools**|| |
 ||rand|Generate random numbers of specified length, supporting hexadecimal and Base64 encoded output|
-||prime|Generate and test primes, support hexadecimal input/output, and generate safe primes|
+||prime|Generate and test primes, support hexadecimal input/output|
 
 ## 1.2 Command Usage
 
@@ -106,8 +106,12 @@ hitls list -all-curves
 ### 3.2.1 enc
 Symmetric encryption and decryption operations, supporting multiple symmetric algorithms
 
+AES-WRAP algorithms are not supported by the `enc` command.
+
 ### 3.2.2 mac
 Message authentication code calculation and verification
+
+GMAC algorithms are not supported by the `mac` command.
 
 ### 3.2.3 dgst
 Message digest calculation and digital signature operations
@@ -201,7 +205,7 @@ hitls rand -algorithm hmac-sha256 -hex 10
 **Usage**:
 
 ```
-hitls prime [-help] [-generate] [-bits num] [-safe] [-hex] [-checks num] [number]
+hitls prime [-help] [-generate] [-bits num] [-hex] [-checks num] [number]
 ```
 
 **Supported Options**:
@@ -210,7 +214,6 @@ hitls prime [-help] [-generate] [-bits num] [-safe] [-hex] [-checks num] [number
 - `-bits <n>`: Specify the bit length of the prime to be generated
 - `-hex`: Use hexadecimal format for input/output (decimal by default)
 - `-generate`: Enable prime generation mode
-- `-safe`: Generate a safe prime
 - `-check <n>`: Number of iterations for primality testing (default: 64)
 
 **Examples**:
@@ -227,9 +230,6 @@ hitls prime [-help] [-generate] [-bits num] [-safe] [-hex] [-checks num] [number
 
 # Generate a 256-bit prime
 ./hitls prime -generate -bits 256
-
-# Generate a 512-bit safe prime
-./hitls prime -generate -bits 512 -safe
 
 # Output in hexadecimal format
 ./hitls prime -generate -bits 128 -hex

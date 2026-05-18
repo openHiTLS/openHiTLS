@@ -30,14 +30,12 @@
 #include "app_function.h"
 #include "crypt_bn.h"
 
-#define MIN_SAFE_PRIME_BITS  16 // Minimum bits for safe prime generation
 #define DEFAULT_PRIME_CHECKS 64 // Default number of primality checks
 
 typedef struct {
     int32_t hex;
     int32_t generate;
     int32_t bits;
-    int32_t safe;
     int32_t checks;
 } AppPrimeCtx;
 
@@ -48,8 +46,7 @@ typedef enum OptionChoice {
     OPT_BITS = 2,
     OPT_HEX = 3,
     OPT_GENERATE = 4,
-    OPT_SAFE = 5,
-    OPT_CHECKS = 6,
+    OPT_CHECKS = 5,
 } OPTION_CHOICE;
 
 static const HITLS_CmdOption g_primeOpts[] = {
@@ -57,7 +54,6 @@ static const HITLS_CmdOption g_primeOpts[] = {
     {"bits", OPT_BITS, HITLS_APP_OPT_VALUETYPE_POSITIVE_INT, "Size of number in bits"},
     {"hex", OPT_HEX, HITLS_APP_OPT_VALUETYPE_NO_VALUE, "Hex output"},
     {"generate", OPT_GENERATE, HITLS_APP_OPT_VALUETYPE_NO_VALUE, "Generate a prime"},
-    {"safe", OPT_SAFE, HITLS_APP_OPT_VALUETYPE_NO_VALUE, "Generate a safe prime"},
     {"checks", OPT_CHECKS, HITLS_APP_OPT_VALUETYPE_POSITIVE_INT, "Number of checks"},
     {NULL, 0, 0, NULL}
 };
@@ -128,7 +124,7 @@ static int32_t ConvertPrimeToString(BN_BigNum *bn, int32_t hex)
     return HITLS_APP_SUCCESS;
 }
 
-static int32_t GeneratePrime(int32_t bits, int32_t hex, int32_t safe)
+static int32_t GeneratePrime(int32_t bits, int32_t hex)
 {
     int32_t ret;
     BN_BigNum *bn = NULL;
@@ -147,13 +143,9 @@ static int32_t GeneratePrime(int32_t bits, int32_t hex, int32_t safe)
         goto EXIT;
     }
 
-    ret = BN_GenPrime(bn, NULL, (uint32_t)bits, (bool)safe, optimizer, NULL);
+    ret = BN_GenPrime(bn, NULL, (uint32_t)bits, false, optimizer, NULL);
     if (ret != CRYPT_SUCCESS) {
         AppPrintError("prime: Failed to generate prime, errCode: 0x%x\n", ret);
-        if (safe && bits < MIN_SAFE_PRIME_BITS) {
-            AppPrintError("prime: Safe prime generation may require more bits (minimum %d)\n",
-                                MIN_SAFE_PRIME_BITS);
-        }
         ret = HITLS_APP_CRYPTO_FAIL;
         goto EXIT;
     }
@@ -202,9 +194,6 @@ static int32_t ProcessOptionSwitch(OPTION_CHOICE option, AppPrimeCtx *ctx)
             return HITLS_APP_SUCCESS;
         case OPT_GENERATE:
             ctx->generate = 1;
-            return HITLS_APP_SUCCESS;
-        case OPT_SAFE:
-            ctx->safe = 1;
             return HITLS_APP_SUCCESS;
         case OPT_CHECKS:
             return HandleOptionChecks(&ctx->checks);
@@ -293,7 +282,7 @@ int32_t HITLS_PrimeMain(int32_t argc, char **argv)
     }
 
     if (ctx.generate) {
-        ret = GeneratePrime(ctx.bits, ctx.hex, ctx.safe);
+        ret = GeneratePrime(ctx.bits, ctx.hex);
     } else {
         ret = CheckPrime(checkNumber, ctx.hex, ctx.checks);
     }
