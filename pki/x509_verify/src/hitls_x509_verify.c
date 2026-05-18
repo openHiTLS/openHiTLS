@@ -263,13 +263,17 @@ static int32_t X509_GetMaxDepth(HITLS_X509_StoreCtx *storeCtx, int32_t *val, uin
 
 static int32_t X509_SetParamFlag(HITLS_X509_StoreCtx *storeCtx, uint64_t *val, uint32_t valLen)
 {
-    if (valLen != sizeof(uint64_t) && valLen != sizeof(uint32_t)) {
-        BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
-        return HITLS_X509_ERR_INVALID_PARAM;
+    if (valLen == sizeof(uint64_t)) {
+        storeCtx->verifyParam.flags |= *val;
+        return HITLS_PKI_SUCCESS;
     }
-
-    storeCtx->verifyParam.flags |= *val;
-    return HITLS_PKI_SUCCESS;
+    if (valLen == sizeof(uint32_t)) {
+        uint64_t temp = (uint64_t)(*(uint32_t *)val);
+        storeCtx->verifyParam.flags |= temp;
+        return HITLS_PKI_SUCCESS;
+    }
+    BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
+    return HITLS_X509_ERR_INVALID_PARAM;
 }
 
 static int32_t X509_GetParamFlag(HITLS_X509_StoreCtx *storeCtx, uint64_t *val, uint32_t valLen)

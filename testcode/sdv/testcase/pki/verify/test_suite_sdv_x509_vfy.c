@@ -297,6 +297,38 @@ EXIT:
 }
 /* END_CASE */
 
+/* BEGIN_CASE */
+void SDV_X509_STORE_CTRL_PARAM_FLAG_TC001(void)
+{
+    HITLS_X509_StoreCtx *store = HITLS_X509_StoreCtxNew();
+    ASSERT_TRUE(store != NULL);
+
+    uint64_t flag64 = HITLS_X509_VFY_FLAG_TIME;
+    uint64_t flag = 0;
+
+    ASSERT_EQ(HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_SET_PARAM_FLAGS, &flag64, sizeof(flag64)),
+        HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_GET_PARAM_FLAGS, &flag, sizeof(flag)),
+        HITLS_PKI_SUCCESS);
+    ASSERT_EQ(flag, flag64);
+    HITLS_X509_StoreCtxFree(store);
+    store = HITLS_X509_StoreCtxNew();
+    ASSERT_TRUE(store != NULL);
+
+    uint32_t flag32 = HITLS_X509_VFY_FLAG_DISABLE_TIME_CHECK;
+    flag = 0;
+    ASSERT_EQ(HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_SET_PARAM_FLAGS, &flag32, sizeof(flag32)),
+        HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_GET_PARAM_FLAGS, &flag, sizeof(flag)),
+        HITLS_PKI_SUCCESS);
+    ASSERT_EQ(flag, flag32);
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
+EXIT:
+    HITLS_X509_StoreCtxFree(store);
+}
+/* END_CASE */
+
 /**
  * @test   SDV_X509_STORE_CTRL_LONG_IPV6_HOST_TC001
  * @title  StoreCtx host setting accepts long IPv4-embedded IPv6 literals.
