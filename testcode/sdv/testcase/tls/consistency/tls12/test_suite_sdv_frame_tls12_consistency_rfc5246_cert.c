@@ -35,6 +35,7 @@
 #include "stub_utils.h"
 #include "hitls_pki_types.h"
 #include "hitls_pki_x509.h"
+#include "rec_wrapper.h"
 /* END_HEADER */
 
 /* ============================================================================
@@ -1439,6 +1440,88 @@ void UT_TLS_TLS12_RFC5246_PSK_IDENTITY_HINT_NULL_TERMINATOR_TC001(void)
     ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
+    HITLS_CFG_FreeConfig(config);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+}
+/* END_CASE */
+
+static void ModifyCertificateVerifySignAlgWrapper(HITLS_Ctx *ctx, uint8_t *buf, uint32_t *len,
+    uint32_t bufSize, void *userData)
+{
+    (void)ctx;
+    (void)userData;
+    (void)bufSize;
+    (void)buf;
+    (void)len;
+    if (ctx->isClient) {
+        ASSERT_EQ(ctx->negotiatedInfo.signScheme,  CERT_SIG_SCHEME_RSA_PSS_PSS_SHA256);
+        ctx->negotiatedInfo.signScheme = CERT_SIG_SCHEME_RSA_PSS_PSS_SHA384;
+    }
+
+
+EXIT:
+    return;
+}
+
+/** @
+* @test UT_TLS_TLS12_RFC5246_CONSISTENCY_RSAPSS_KEY_PARAM_MISMATCH_TC001
+* @title RSA PSS certificate with PSS parameters: modify signature algorithm to SHA384 in CertificateVerify, connection fails
+* @precon nan
+* @brief    1. Configure dual-end verification using RSA PSS certificates with PSS parameters.
+*           2. Use wrapper to modify the signature algorithm in CertificateVerify message to SHA384.
+*           3. The connection should fail due to signature algorithm mismatch.
+* @expect   1. The connection fails to be established.
+@ */
+/* BEGIN_CASE */
+void UT_TLS_TLS12_RFC5246_CONSISTENCY_RSAPSS_KEY_PARAM_MISMATCH_TC001(void)
+{
+    FRAME_Init();
+
+    HITLS_Config *config = HITLS_CFG_NewTLS12Config();
+    ASSERT_TRUE(config != NULL);
+
+    // Configure dual-end verification
+    HITLS_CFG_SetClientVerifySupport(config, true);
+
+    // Use RSA PSS certificates with PSS parameters
+    FRAME_CertInfo certInfoServer = {
+        "rsa_pss_with_pss_param/root.der",
+        "rsa_pss_with_pss_param/intermediate.der",
+        "rsa_pss_with_pss_param/leaf.der",
+        0,
+        "rsa_pss_with_pss_param/leaf.key.der",
+        0,
+    };
+    FRAME_CertInfo certInfoClient = {
+        "rsa_pss_with_pss_param/root.der",
+        "rsa_pss_with_pss_param/intermediate.der",
+        "rsa_pss_with_pss_param/leaf.der",
+        0,
+        "rsa_pss_with_pss_param/leaf.key.der",
+        0,
+    };
+
+    FRAME_LinkObj *client = FRAME_CreateLinkWithCert(config, BSL_UIO_TCP, &certInfoClient);
+    ASSERT_TRUE(client != NULL);
+    FRAME_LinkObj *server = FRAME_CreateLinkWithCert(config, BSL_UIO_TCP, &certInfoServer);
+    ASSERT_TRUE(server != NULL);
+
+    // Register wrapper to modify signature algorithm in Certificate message
+    RecWrapper wrapper = {
+        TRY_SEND_CERTIFICATE,
+        REC_TYPE_HANDSHAKE,
+        false,
+        NULL,
+        ModifyCertificateVerifySignAlgWrapper
+    };
+    RegisterWrapper(wrapper);
+
+    // Connection should fail due to signature algorithm mismatch
+    ASSERT_EQ(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_PARSE_UNSUPPORT_SIGN_ALG);
+
+EXIT:
+    ClearWrapper();
     HITLS_CFG_FreeConfig(config);
     FRAME_FreeLink(client);
     FRAME_FreeLink(server);

@@ -22,6 +22,7 @@
 #include "bsl_err_internal.h"
 #include "hitls_error.h"
 #include "hs_common.h"
+#include "config_type.h"
 #include "parse_common.h"
 
 int32_t ParseVersion(ParsePacket *pkt, uint16_t *version)
@@ -214,8 +215,16 @@ int32_t CheckPeerSignScheme(HITLS_Ctx *ctx, CERT_Pair *peerCert, uint16_t signSc
     (void)SAL_CERT_KeyCtrl(config, pubkey, CERT_KEY_CTRL_GET_TYPE, NULL, (void *)&keyType);
     SAL_CERT_KeyFree(config->certMgrCtx, pubkey);
 
-    if (keyType != HS_SignScheme2CertKeyType(ctx, signScheme)) {
+    const TLS_SigSchemeInfo *info = ConfigGetSignatureSchemeInfo(config, signScheme);
+    if (info == NULL || info->keyType != (int32_t)keyType) {
         return RETURN_ERROR_NUMBER_PROCESS(HITLS_PARSE_UNSUPPORT_SIGN_ALG, BINLOG_ID17156, "signScheme err");
+    }
+    if (info->keyType == TLS_CERT_KEY_TYPE_RSA_PSS) {
+        int32_t hashAlgId = HITLS_HASH_BUTT;
+        (void)SAL_CERT_KeyCtrl(config, pubkey, CERT_KEY_CTRL_GET_PSS_MD, NULL, (void *)&hashAlgId);
+        if (hashAlgId != (int32_t)HITLS_HASH_BUTT && hashAlgId != info->hashAlgId) {
+            return RETURN_ERROR_NUMBER_PROCESS(HITLS_PARSE_UNSUPPORT_SIGN_ALG, BINLOG_ID17123, "hashAlgId unsupported");
+        }
     }
 
     return HITLS_SUCCESS;

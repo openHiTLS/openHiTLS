@@ -1,0 +1,18 @@
+[ req ]
+default_bits        = 2048
+prompt              = no
+distinguished_name  = dn
+
+[ dn ]
+C                   = CN
+ST                  = Shanghai
+L                   = Shanghai
+O                   = Example Org
+OU                  = Intermediate CA
+CN                  = Example RSA-PSS Intermediate CA
+
+[ v3_intermediate_ca ]
+subjectKeyIdentifier = hash
+authorityKeyIdentifier = keyid:always,issuer
+basicConstraints = critical, CA:true, pathlen:0
+keyUsage = critical, keyCertSign, cRLSign
