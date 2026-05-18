@@ -307,8 +307,8 @@ static int32_t GroupCfgDeepCopy(HITLS_Config *destConfig, const HITLS_Config *sr
             if (destConfig->groupInfo[i].name == NULL) {
                 return HITLS_MEMALLOC_FAIL;
             }
-            destConfig->groupInfolen++;
 #endif
+            destConfig->groupInfolen++;
         }
     }
 #endif /* HITLS_TLS_FEATURE_PROVIDER_DYNAMIC */
@@ -344,9 +344,11 @@ static int32_t SignAlgorithmsCfgDeepCopy(HITLS_Config *destConfig, const HITLS_C
     }
 #ifdef HITLS_TLS_FEATURE_PROVIDER_DYNAMIC
     if (srcConfig->sigSchemeInfo != NULL) {
+#ifndef HITLS_TLS_CAP_NO_STR
         for (uint32_t i = 0; i < destConfig->sigSchemeInfolen; i++) {
             BSL_SAL_FREE(destConfig->sigSchemeInfo[i].name);
         }
+#endif
         BSL_SAL_FREE(destConfig->sigSchemeInfo);
         destConfig->sigSchemeInfoSize = 0;
         destConfig->sigSchemeInfolen = 0;
@@ -357,11 +359,13 @@ static int32_t SignAlgorithmsCfgDeepCopy(HITLS_Config *destConfig, const HITLS_C
         destConfig->sigSchemeInfoSize = srcConfig->sigSchemeInfolen;
         for (uint32_t i = 0; i < srcConfig->sigSchemeInfolen; i++) {
             destConfig->sigSchemeInfo[i] = srcConfig->sigSchemeInfo[i];
+#ifndef HITLS_TLS_CAP_NO_STR
             destConfig->sigSchemeInfo[i].name =
                 BSL_SAL_Dump(srcConfig->sigSchemeInfo[i].name, strlen(srcConfig->sigSchemeInfo[i].name) + 1);
             if (destConfig->sigSchemeInfo[i].name == NULL) {
                 return HITLS_MEMALLOC_FAIL;
             }
+#endif
             destConfig->sigSchemeInfolen++;
         }
     }

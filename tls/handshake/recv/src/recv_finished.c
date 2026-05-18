@@ -280,23 +280,6 @@ static int32_t RecvFinishedProcess(TLS_Ctx *ctx, const HS_Msg *msg)
     }
     return HITLS_SUCCESS;
 }
-#ifdef HITLS_TLS_HOST_CLIENT
-#ifdef HITLS_TLS_PROTO_TLS_BASIC
-int32_t Tls12ClientRecvFinishedProcess(TLS_Ctx *ctx, const HS_Msg *msg)
-{
-    int32_t ret = RecvFinishedProcess(ctx, msg);
-    if (ret != HITLS_SUCCESS) {
-        return ret;
-    }
-
-    if (ctx->negotiatedInfo.isResume == true) {
-        ctx->method.ctrlCCS(ctx, CCS_CMD_RECV_EXIT_READY);
-        return HS_ChangeState(ctx, TRY_SEND_CHANGE_CIPHER_SPEC);
-    }
-
-    return HS_ChangeState(ctx, TLS_CONNECTED);
-}
-#endif /* HITLS_TLS_PROTO_TLS_BASIC */
 
 #ifdef HITLS_TLS_PROTO_DTLS12
 int32_t DtlsRecvFinishedProcess(TLS_Ctx *ctx, const HS_Msg *msg)
@@ -342,7 +325,26 @@ int32_t DtlsRecvFinishedProcess(TLS_Ctx *ctx, const HS_Msg *msg)
 #endif /* HITLS_TLS_FEATURE_SESSION_TICKET */
     return HS_ChangeState(ctx, TRY_SEND_CHANGE_CIPHER_SPEC);
 }
-#endif
+#endif /* HITLS_TLS_PROTO_DTLS12 */
+
+#ifdef HITLS_TLS_HOST_CLIENT
+#ifdef HITLS_TLS_PROTO_TLS_BASIC
+int32_t Tls12ClientRecvFinishedProcess(TLS_Ctx *ctx, const HS_Msg *msg)
+{
+    int32_t ret = RecvFinishedProcess(ctx, msg);
+    if (ret != HITLS_SUCCESS) {
+        return ret;
+    }
+
+    if (ctx->negotiatedInfo.isResume == true) {
+        ctx->method.ctrlCCS(ctx, CCS_CMD_RECV_EXIT_READY);
+        return HS_ChangeState(ctx, TRY_SEND_CHANGE_CIPHER_SPEC);
+    }
+
+    return HS_ChangeState(ctx, TLS_CONNECTED);
+}
+#endif /* HITLS_TLS_PROTO_TLS_BASIC */
+
 #ifdef HITLS_TLS_PROTO_TLS13
 int32_t Tls13ClientRecvFinishedProcess(TLS_Ctx *ctx, const HS_Msg *msg)
 {

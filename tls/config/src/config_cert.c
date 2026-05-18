@@ -1257,7 +1257,8 @@ int32_t HITLS_CFG_ClearVerifyCrls(HITLS_Config *config)
         return RETURN_ERROR_NUMBER_PROCESS(HITLS_UNREGISTERED_CALLBACK, BINLOG_ID16569, "unregistered callback");
     }
 
-    HITLS_CERT_Store *certStore = SAL_CERT_GET_CERT_STORE(mgrCtx);
+    HITLS_CERT_Store *certStore = SAL_CERT_GET_VERIFY_STORE(mgrCtx) == NULL ?
+        SAL_CERT_GET_CERT_STORE(mgrCtx) : SAL_CERT_GET_VERIFY_STORE(mgrCtx);
     if (certStore == NULL) {
         return HITLS_SUCCESS; /* No store, nothing to clear */
     }
