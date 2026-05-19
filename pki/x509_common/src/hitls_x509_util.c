@@ -207,7 +207,7 @@ int32_t X509_VerifyHostnameWithCn(HITLS_X509_Cert *cert, const char *hostname,
 int32_t HITLS_X509_VerifyIdentity(HITLS_X509_Cert *cert, uint32_t flags, uint32_t type, const char *hostname,
     uint32_t hostnameLen)
 {
-    if (cert == NULL || hostname == NULL || type != HITLS_GEN_DNS) {
+    if (cert == NULL || hostname == NULL || hostnameLen == 0 || type != HITLS_GEN_DNS) {
         BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
         return HITLS_X509_ERR_INVALID_PARAM;
     }

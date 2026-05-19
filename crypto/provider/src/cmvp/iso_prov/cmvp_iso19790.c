@@ -332,6 +332,7 @@ ERR:
 
 static bool ISO19790_MacParamCheck(CRYPT_MAC_AlgId id, uint32_t keyLen)
 {
+    // The upper layer of the provider has been intercepted, and unsupported algId will not be set in
     (void)id;
     // https://nvlpubs.nist.gov/nistpubs/SpecialPublications/NIST.SP.800-131Ar2.pdf Chapter 10
     // Key lengths ≥ 112 bits, 8 bits: 1 byte
