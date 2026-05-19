@@ -1508,6 +1508,37 @@ EXIT:
 /* END_CASE */
 
 /**
+ * @test UT_TLS_TLS13_GROUP_TUPLE_KEYSHARE_CFG_TC005
+ * @spec HITLS_CFG_SetGroupList
+ * @title Test group tuple configuration with too many tuples
+ * @precon nan
+ * @brief Test that more than MAX_GROUP_TYPE_NUM tuple tokens returns error
+ * @expect Configuration fails with HITLS_INVALID_INPUT
+ */
+/* BEGIN_CASE */
+void UT_TLS_TLS13_GROUP_TUPLE_KEYSHARE_CFG_TC005(void)
+{
+    FRAME_Init();
+    HITLS_Config *config = HITLS_CFG_NewTLS13Config();
+    ASSERT_TRUE(config != NULL);
+
+    char groupNames[2 * (MAX_GROUP_TYPE_NUM + 1u)] = {0};
+    uint32_t groupNamesLen = 0;
+    for (uint32_t i = 0; i < MAX_GROUP_TYPE_NUM + 1u; i++) {
+        groupNames[groupNamesLen++] = ':';
+        if (i != MAX_GROUP_TYPE_NUM) {
+            groupNames[groupNamesLen++] = '/';
+        }
+    }
+
+    ASSERT_EQ(HITLS_CFG_SetGroupList(config, groupNames, groupNamesLen), HITLS_INVALID_INPUT);
+
+EXIT:
+    HITLS_CFG_FreeConfig(config);
+}
+/* END_CASE */
+
+/**
  * @test UT_TLS_TLS13_GROUP_TUPLE_KEYSHARE_SELECT_TC001
  * @spec ServerSelectGroupByTuples
  * @title Test client preference mode with keyshare match in first tuple

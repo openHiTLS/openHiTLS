@@ -72,7 +72,7 @@ static bool CMVP_SignVerifyPct(void *ctx, int32_t algId)
             break;
         }
     }
-    GOTO_ERR_IF_TRUE(map == NULL, CRYPT_EAL_ERR_ALGID);
+    GOTO_ERR_IF_TRUE(map == NULL || map->id == CRYPT_PKEY_MAX, CRYPT_EAL_ERR_ALGID);
 
     GOTO_ERR_IF_TRUE(map->ctrl(ctx, CRYPT_CTRL_GET_SIGNLEN, &signLen, sizeof(signLen)) != CRYPT_SUCCESS,
         CRYPT_CMVP_ERR_ALGO_SELFTEST);

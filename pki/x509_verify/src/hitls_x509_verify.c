@@ -695,7 +695,7 @@ static int32_t X509_SetHost(HITLS_X509_StoreCtx *storeCtx, const void *val)
         return HITLS_PKI_SUCCESS;
     }
     size_t hostnameLen = strlen(hostname);
-    if (hostnameLen > MAX_HOSTNAME_LEN) {
+    if (hostnameLen > MAX_HOSTNAME_LEN || hostnameLen == 0) {
         return HITLS_X509_ERR_INVALID_PARAM;
     }
 
@@ -714,19 +714,18 @@ static int32_t X509_AddHost(HITLS_X509_StoreCtx *storeCtx, const void *val)
 {
     const char *hostname = (const char *)val;
     size_t hostnameLen = strlen(hostname);
-    if (hostnameLen > MAX_HOSTNAME_LEN) {
+    if (hostnameLen > MAX_HOSTNAME_LEN || hostnameLen == 0) {
         return HITLS_X509_ERR_INVALID_PARAM;
     }
-    if (hostname != NULL) {
-        unsigned char buff[16];
-        int32_t len = sizeof(buff) / sizeof(buff[0]);
-        if (SAL_ParseIp(hostname, buff, &len) == BSL_SUCCESS) {
-            if (storeCtx->verifyParam.ip != NULL) {
-                BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_ADD_VERIFY_IP);
-                return HITLS_X509_ERR_ADD_VERIFY_IP;
-            }
-            return X509_SetVerifyIp(storeCtx, buff, len);
+    
+    unsigned char buff[16];
+    int32_t len = sizeof(buff) / sizeof(buff[0]);
+    if (SAL_ParseIp(hostname, buff, &len) == BSL_SUCCESS) {
+        if (storeCtx->verifyParam.ip != NULL) {
+            BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_ADD_VERIFY_IP);
+            return HITLS_X509_ERR_ADD_VERIFY_IP;
         }
+        return X509_SetVerifyIp(storeCtx, buff, len);
     }
 
     return X509_SetVerifyHost(storeCtx, hostname);

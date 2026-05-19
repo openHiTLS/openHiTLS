@@ -1267,9 +1267,13 @@ void SDV_HITLS_CFG_SetHost_TC001()
     ASSERT_TRUE(config != NULL);
     char ip[] = "192.168.0.1";
     ASSERT_EQ(HITLS_CFG_SetHost(config, NULL), HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_CFG_SetHost(config, "\0"), HITLS_X509_ERR_INVALID_PARAM);
+    ASSERT_EQ(HITLS_CFG_SetHost(config, ""), HITLS_X509_ERR_INVALID_PARAM);
     ASSERT_EQ(HITLS_CFG_SetHost(config, ip), HITLS_SUCCESS);
     ASSERT_TRUE(((HITLS_X509_StoreCtx *)config->certMgrCtx->certStore)->verifyParam.ip != NULL);
     ASSERT_EQ(HITLS_CFG_AddHost(config, NULL), HITLS_X509_ERR_INVALID_PARAM);
+    ASSERT_EQ(HITLS_CFG_AddHost(config, "\0"), HITLS_X509_ERR_INVALID_PARAM);
+    ASSERT_EQ(HITLS_CFG_AddHost(config, ""), HITLS_X509_ERR_INVALID_PARAM);
     ASSERT_EQ(HITLS_CFG_AddHost(config, ip), HITLS_X509_ERR_ADD_VERIFY_IP);
     char host[] = "www.abc.com";
     ASSERT_EQ(HITLS_CFG_SetHost(config, host), HITLS_SUCCESS);
