@@ -2292,6 +2292,65 @@ EXIT:
 /* END_CASE */
 
 /**
+ * @test   SDV_CRYPT_PRIMARY_DRBG_DEINIT_API_TC001
+ * @title  Internal singleton DRBG deinit protection test.
+ * @precon nan
+ * @brief
+ *    1.Initialize the random number and obtain the internal seed/global DRBG handles.
+ *    2.Call CRYPT_EAL_DrbgDeinit on the internal singleton handles.
+ *    3.Verify that an error is reported and both handles remain usable.
+ * @expect
+ *    1.successful.
+ *    2.Failed with error stack reported.
+ *    3.successful.
+ */
+/* BEGIN_CASE */
+void SDV_CRYPT_PRIMARY_DRBG_DEINIT_API_TC001(int algId)
+{
+#if (!defined(HITLS_CRYPTO_ENTROPY))
+    (void)algId;
+    SKIP_TEST();
+#else
+    if (IsRandAlgDisabled(algId)) {
+        SKIP_TEST();
+    }
+    uint8_t addin[40] = {1, 2, 3, 4};
+    uint8_t randByte[64];
+    uint32_t working = 0;
+    CRYPT_EAL_RndCtx *seedCtx = NULL;
+    CRYPT_EAL_RndCtx *globalCtx = NULL;
+
+    TestMemInit();
+    ASSERT_EQ(CRYPT_EAL_RandInit(algId, NULL, NULL, NULL, 0), CRYPT_SUCCESS);
+
+    seedCtx = CRYPT_EAL_GetSeedCtx(true);
+    globalCtx = CRYPT_EAL_GetSeedCtx(false);
+    ASSERT_TRUE(seedCtx != NULL);
+    ASSERT_TRUE(globalCtx != NULL);
+
+    TestErrClear();
+    CRYPT_EAL_DrbgDeinit(seedCtx);
+    ASSERT_TRUE(TestIsErrStackNotEmpty());
+    ASSERT_EQ(CRYPT_EAL_DrbgCtrl(seedCtx, CRYPT_CTRL_GET_WORKING_STATUS, &working, sizeof(working)), CRYPT_SUCCESS);
+    ASSERT_EQ(working, 1);
+    ASSERT_EQ(CRYPT_EAL_DrbgSeedWithAdin(seedCtx, addin, sizeof(addin)), CRYPT_SUCCESS);
+
+    TestErrClear();
+    CRYPT_EAL_DrbgDeinit(globalCtx);
+    ASSERT_TRUE(TestIsErrStackNotEmpty());
+    ASSERT_EQ(CRYPT_EAL_DrbgCtrl(globalCtx, CRYPT_CTRL_GET_WORKING_STATUS, &working, sizeof(working)), CRYPT_SUCCESS);
+    ASSERT_EQ(working, 1);
+    ASSERT_EQ(CRYPT_EAL_Drbgbytes(globalCtx, randByte, sizeof(randByte)), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_Randbytes(randByte, sizeof(randByte)), CRYPT_SUCCESS);
+
+EXIT:
+    CRYPT_EAL_RandDeinit();
+    return;
+#endif
+}
+/* END_CASE */
+
+/**
  * @test   SDV_CRYPT_PRIMARY_DRBG_RESEED_FUNC_TC001
  * @title  DRGB get seed ctx and reseed test.
  * @precon nan

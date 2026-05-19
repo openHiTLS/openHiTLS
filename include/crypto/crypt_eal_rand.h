@@ -395,8 +395,9 @@ int32_t CRYPT_EAL_DrbgCtrl(CRYPT_EAL_RndCtx *ctx, int32_t cmd, void *val, uint32
  *
  * @param isParentEntropy [IN] If true, return primary DRBG; otherwise, return g_globalRndCtx.
  *
- * @retval  DRBG handle. The returned handle is an internal singleton object and must not be deinitialized
- *          by CRYPT_EAL_DrbgDeinit.
+ * @retval  DRBG handle. The returned handle is a borrowed internal singleton object.
+ *          It must not be deinitialized by CRYPT_EAL_DrbgDeinit, must not be kept for later use,
+ *          and must not be shared across threads as a long-lived handle.
  */
 CRYPT_EAL_RndCtx *CRYPT_EAL_GetSeedCtx(bool isParentEntropy);
 

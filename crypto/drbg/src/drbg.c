@@ -53,6 +53,8 @@ static void DRBG_CleanEntropy(DRBG_Ctx *ctx, CRYPT_Data *entropy)
     if (seedMeth->cleanEntropy != NULL) {
         seedMeth->cleanEntropy(ctx->seedCtx, entropy);
     }
+    entropy->data = NULL;
+    entropy->len = 0;
 }
 
 // According to the definition of DRBG_Ctx, ctx->seedMeth is not NULL
@@ -109,6 +111,8 @@ static void DRBG_CleanNonce(DRBG_Ctx *ctx, CRYPT_Data *nonce)
     if (seedMeth->cleanNonce != NULL) {
         seedMeth->cleanNonce(ctx->seedCtx, nonce);
     }
+    nonce->data = NULL;
+    nonce->len = 0;
 }
 
 // According to the definition of DRBG_Ctx, ctx->seedMeth is not NULL
