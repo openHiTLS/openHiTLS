@@ -270,7 +270,7 @@ static int32_t VerifyHMAC(AppProvider *provider, int32_t macId, const uint8_t *d
         return ret;
     }
 
-    if (calcHmacLen != hmacLen || memcmp(calculatedHmac, hmac, hmacLen) != 0) {
+    if (calcHmacLen != hmacLen || ConstTimeMemcmp(calculatedHmac, hmac, hmacLen) == 0) {
         AppPrintError("HMAC verify failed.\n");
         return HITLS_APP_INTEGRITY_VERIFY_FAIL;
     }
@@ -406,7 +406,7 @@ static int32_t VerifyPassword(AppProvider *provider, UserInfo *userInfo, char *p
         return HITLS_APP_INFO_CMP_FAIL;
     }
 
-    if (memcmp(derivedKey, userInfo->userParam.dKey, userInfo->userParam.dKeyLen) != 0) {
+    if (ConstTimeMemcmp(derivedKey, userInfo->userParam.dKey, userInfo->userParam.dKeyLen) == 0) {
         BSL_SAL_CleanseData(derivedKey, HITLS_APP_SM_DKEY_LEN);
         AppPrintError("Admin verification failed.\n");
         return HITLS_APP_PASSWD_FAIL;
