@@ -55,7 +55,7 @@
 /* ============================================================================
  * Stub Definitions
  * ============================================================================ */
-STUB_DEFINE_RET4(int32_t, HS_CalcCookie, TLS_Ctx *, const ClientHelloMsg *, uint8_t *, uint32_t *);
+STUB_DEFINE_RET5(int32_t, HS_CalcCookie, TLS_Ctx *, const ClientHelloMsg *, uint8_t *, uint32_t *, bool);
 STUB_DEFINE_RET3(int32_t, HS_CheckCookie, TLS_Ctx *, const ClientHelloMsg *, bool *);
 
 #define BUF_SIZE_DTO_TEST 18432

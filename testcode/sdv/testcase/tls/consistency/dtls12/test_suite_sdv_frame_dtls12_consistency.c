@@ -2557,9 +2557,10 @@ int32_t HS_CheckCookie_Custom(TLS_Ctx *ctx, const ClientHelloMsg *clientHello, b
     return HITLS_SUCCESS;
 }
 
-int32_t HS_CalcCookie_Custom(TLS_Ctx *ctx, const ClientHelloMsg *clientHello, uint8_t *cookie, uint32_t *cookieLen)
+int32_t HS_CalcCookie_Custom(TLS_Ctx *ctx, const ClientHelloMsg *clientHello, uint8_t *cookie, uint32_t *cookieLen, bool ischeck)
 {
     (void)clientHello;
+    (void)ischeck;
     if (ctx->globalConfig->appGenCookieCb == NULL) {
         return HITLS_UNREGISTERED_CALLBACK;
     }
@@ -2727,6 +2728,56 @@ void UT_TLS_DTLS_CONSISTENCY_RFC6347_HELLO_VERIFY_REQ_TC004(void)
 EXIT:
     HITLS_CFG_FreeConfig(tlsConfig);
     FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+}
+/* END_CASE */
+
+/* @
+* @test UT_TLS_DTLS_CONSISTENCY_RFC6347_HELLO_VERIFY_REQ_TC005
+* @spec -
+* @title The server initializes macKey during default cookie verification.
+* @precon nan
+* @brief 1. Create a DTLS server HITLS_Ctx by using the frame framework and enable cookie exchange.
+            2. Construct a ClientHello carrying a cookie and invoke HS_CheckCookie.
+            3. Check whether cookieInfo->macKey is still all 0. Expected result 3.
+* @expect 1. HS_CheckCookie is successfully executed.
+* @expect 2. The cookie is invalid.
+* @expect 3. cookieInfo->macKey is not all 0.
+* @prior Level 1
+* @auto TRUE
+@ */
+/* BEGIN_CASE */
+void UT_TLS_DTLS_CONSISTENCY_RFC6347_HELLO_VERIFY_REQ_TC005(void)
+{
+    FRAME_Init();
+    HITLS_Config *tlsConfig = HITLS_CFG_NewDTLS12Config();
+    ASSERT_TRUE(tlsConfig != NULL);
+    FRAME_LinkObj *server = FRAME_CreateLink(tlsConfig, BSL_UIO_UDP);
+    ASSERT_TRUE(server != NULL);
+    HITLS_Ctx *serverTlsCtx = FRAME_GetTlsCtx(server);
+    ASSERT_TRUE(serverTlsCtx != NULL);
+
+    uint16_t cipherSuite = HITLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384;
+    uint8_t cookie[] = {0x01};
+    uint8_t zeroMacKey[MAC_KEY_LEN] = {0};
+    ClientHelloMsg clientHello = {0};
+    bool isCookieValid = true;
+
+    serverTlsCtx->config.tlsConfig.isSupportDtlsCookieExchange = true;
+    clientHello.version = HITLS_VERSION_DTLS12;
+    clientHello.cookie = cookie;
+    clientHello.cookieLen = sizeof(cookie);
+    clientHello.cipherSuites = &cipherSuite;
+    clientHello.cipherSuitesSize = 1;
+    memset(clientHello.randomValue, 0x5A, sizeof(clientHello.randomValue));
+
+    ASSERT_EQ(memcmp(serverTlsCtx->negotiatedInfo.cookieInfo.macKey, zeroMacKey, MAC_KEY_LEN), 0);
+    ASSERT_EQ(HS_CheckCookie(serverTlsCtx, &clientHello, &isCookieValid), HITLS_SUCCESS);
+    ASSERT_TRUE(isCookieValid == false);
+    ASSERT_TRUE(memcmp(serverTlsCtx->negotiatedInfo.cookieInfo.macKey, zeroMacKey, MAC_KEY_LEN) != 0);
+
+EXIT:
+    HITLS_CFG_FreeConfig(tlsConfig);
     FRAME_FreeLink(server);
 }
 /* END_CASE */

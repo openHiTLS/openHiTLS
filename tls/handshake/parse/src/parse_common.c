@@ -213,23 +213,25 @@ int32_t CheckPeerSignScheme(HITLS_Ctx *ctx, CERT_Pair *peerCert, uint16_t signSc
     }
     uint32_t keyType = TLS_CERT_KEY_TYPE_UNKNOWN;
     ret = SAL_CERT_KeyCtrl(config, pubkey, CERT_KEY_CTRL_GET_TYPE, NULL, (void *)&keyType);
-    SAL_CERT_KeyFree(config->certMgrCtx, pubkey);
     if (ret != HITLS_SUCCESS) {
+        SAL_CERT_KeyFree(config->certMgrCtx, pubkey);
         return RETURN_ERROR_NUMBER_PROCESS(ret, BINLOG_ID17099, "get pubkey type fail");
     }
 
     const TLS_SigSchemeInfo *info = ConfigGetSignatureSchemeInfo(config, signScheme);
     if (info == NULL || info->keyType != (int32_t)keyType) {
+        SAL_CERT_KeyFree(config->certMgrCtx, pubkey);
         return RETURN_ERROR_NUMBER_PROCESS(HITLS_PARSE_UNSUPPORT_SIGN_ALG, BINLOG_ID17156, "signScheme err");
     }
     if (info->keyType == TLS_CERT_KEY_TYPE_RSA_PSS) {
         int32_t hashAlgId = HITLS_HASH_BUTT;
         (void)SAL_CERT_KeyCtrl(config, pubkey, CERT_KEY_CTRL_GET_PSS_MD, NULL, (void *)&hashAlgId);
         if (hashAlgId != (int32_t)HITLS_HASH_BUTT && hashAlgId != info->hashAlgId) {
+            SAL_CERT_KeyFree(config->certMgrCtx, pubkey);
             return RETURN_ERROR_NUMBER_PROCESS(HITLS_PARSE_UNSUPPORT_SIGN_ALG, BINLOG_ID17123, "hashAlgId unsupported");
         }
     }
-
+    SAL_CERT_KeyFree(config->certMgrCtx, pubkey);
     return HITLS_SUCCESS;
 }
 
