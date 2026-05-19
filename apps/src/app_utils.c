@@ -672,10 +672,9 @@ static int32_t ReadPemByUioSymbol(BSL_UIO *memUio, BSL_UIO *rUio, BSL_PEM_Symbol
         if ((BSL_UIO_Gets(rUio, buf, &lineLen) != BSL_SUCCESS) || (lineLen == 0)) {
             break;
         }
-        ret = BSL_UIO_Ctrl(rUio, BSL_UIO_GET_READ_NUM, sizeof(int64_t), &dataLen);
-        if (ret != BSL_SUCCESS || dataLen > APP_FILE_MAX_SIZE) {
+        int32_t ctrlRet = BSL_UIO_Ctrl(rUio, BSL_UIO_GET_READ_NUM, sizeof(int64_t), &dataLen);
+        if (ctrlRet != BSL_SUCCESS || dataLen > APP_FILE_MAX_SIZE) {
             AppPrintError("The maximum file size is %zukb.\n", APP_FILE_MAX_SIZE_KB);
-            ret = HITLS_APP_UIO_FAIL;
             break;
         }
         if (!hasHead) {
@@ -691,7 +690,7 @@ static int32_t ReadPemByUioSymbol(BSL_UIO *memUio, BSL_UIO *rUio, BSL_PEM_Symbol
         }
         // Check whether it is the tail.
         if (strncmp(buf, symbol->tail, strlen(symbol->tail)) == 0) {
-            if (BSL_UIO_Write(memUio, (const uint8_t *)buf, lineLen + 1, &writeMemLen) != BSL_SUCCESS ||
+            if (BSL_UIO_Write(memUio, (const uint8_t *)buf, lineLen + 1, &writeMemLen) == BSL_SUCCESS &&
                 writeMemLen == lineLen + 1) {
                 ret = HITLS_APP_SUCCESS;
             }
