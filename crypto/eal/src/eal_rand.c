@@ -609,21 +609,6 @@ int32_t CRYPT_EAL_Drbgbytes(CRYPT_EAL_RndCtx *ctx, uint8_t *byte, uint32_t len)
 
 void CRYPT_EAL_DrbgDeinit(CRYPT_EAL_RndCtx *ctx)
 {
-    if (ctx == NULL) {
-        return;
-    }
-#ifdef HITLS_CRYPTO_ENTROPY
-    if (ctx == g_seedDrbg.seed) {
-        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_RAND, ctx->id, CRYPT_NOT_SUPPORT);
-        BSL_ERR_PUSH_ERROR(CRYPT_NOT_SUPPORT);
-        return;
-    }
-#endif
-    if (ctx == g_globalRndCtx) {
-        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_RAND, ctx->id, CRYPT_NOT_SUPPORT);
-        BSL_ERR_PUSH_ERROR(CRYPT_NOT_SUPPORT);
-        return;
-    }
     EAL_RandDeinit(ctx);
     return;
 }
