@@ -842,6 +842,104 @@ EXIT:
 /* END_CASE */
 
 /** @
+ * @test  UT_TLS_TLS13_CONSISTENCY_RFC8446_REQUEST_CLIENT_HELLO_FUNC_TC006
+ * @brief 2.1-Incorrect DHE Share-6
+ * @spec  If the server requests a HelloRetryRequest, it MUST request a key_share group that was not offered in the
+ *        original ClientHello key_share. This check must still fail when HRR carries a cookie.
+ * @title  The client rejects an HRR carrying cookie when selected_group repeats a group from the original ClientHello
+ *         key_share.
+ * @precon  nan
+ * @brief
+ * 1. Set the group (HITLS_EC_GROUP_CURVE25519 and HITLS_EC_GROUP_SECP256R1) on the client and set the group
+ *    (HITLS_EC_GROUP_SECP256R1) on the server. Expected result 1 is obtained.
+ * 2. Establish a connection, stop the server in the TRY_SEND_HELLO_RETRY_REQUEST state, change the HRR selected_group
+ *    to HITLS_EC_GROUP_CURVE25519, and add the cookie extension. Expected result 2 is obtained.
+ * 3. Continue connection establishment and observe the connection establishment result. Expected result 3 is obtained.
+ * @expect
+ * 1. The setting is successful.
+ * 2. The modification is successful.
+ * 3. The connection fails to be established. After receiving the HRR, the client returns
+ *    HITLS_MSG_HANDLE_ILLEGAL_SELECTED_GROUP.
+ * @ */
+/* BEGIN_CASE */
+void UT_TLS_TLS13_CONSISTENCY_RFC8446_REQUEST_CLIENT_HELLO_FUNC_TC006()
+{
+    FRAME_Init();
+    FRAME_LinkObj *client = NULL;
+    FRAME_LinkObj *server = NULL;
+    HITLS_Config *clientconfig = NULL;
+    HITLS_Config *serverconfig = NULL;
+
+    clientconfig = HITLS_CFG_NewTLS13Config();
+    ASSERT_TRUE(clientconfig != NULL);
+    serverconfig = HITLS_CFG_NewTLS13Config();
+    ASSERT_TRUE(serverconfig != NULL);
+
+    uint16_t clientgroups[] = {HITLS_EC_GROUP_CURVE25519, HITLS_EC_GROUP_SECP256R1};
+    uint16_t servergroups[] = {HITLS_EC_GROUP_SECP256R1};
+    ASSERT_EQ(HITLS_CFG_SetGroups(clientconfig, clientgroups, sizeof(clientgroups) / sizeof(uint16_t)), HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_CFG_SetGroups(serverconfig, servergroups, sizeof(servergroups) / sizeof(uint16_t)), HITLS_SUCCESS);
+
+    client = FRAME_CreateLink(clientconfig, BSL_UIO_TCP);
+    ASSERT_TRUE(client != NULL);
+    server = FRAME_CreateLink(serverconfig, BSL_UIO_TCP);
+    ASSERT_TRUE(server != NULL);
+
+    ASSERT_TRUE(HITLS_Connect(client->ssl) == HITLS_REC_NORMAL_RECV_BUF_EMPTY);
+    ASSERT_TRUE(FRAME_TrasferMsgBetweenLink(client, server) == HITLS_SUCCESS);
+    ASSERT_TRUE(HITLS_Accept(server->ssl) == HITLS_REC_NORMAL_IO_BUSY);
+    ASSERT_TRUE(FRAME_TrasferMsgBetweenLink(server, client) == HITLS_SUCCESS);
+
+    FrameUioUserData *ioUserData = BSL_UIO_GetUserData(client->io);
+    uint8_t *recBuf = ioUserData->recMsg.msg;
+    uint32_t recLen = ioUserData->recMsg.len;
+    ASSERT_TRUE(recLen != 0);
+
+    uint32_t parseLen = 0;
+    FRAME_Msg frameMsg = {0};
+    FRAME_Type frameType = {0};
+    frameType.versionType = HITLS_VERSION_TLS13;
+    frameType.recordType = REC_TYPE_HANDSHAKE;
+    frameType.handshakeType = SERVER_HELLO;
+    frameType.keyExType = HITLS_KEY_EXCH_ECDHE;
+    ASSERT_TRUE(FRAME_ParseMsg(&frameType, recBuf, recLen, &frameMsg, &parseLen) == HITLS_SUCCESS);
+
+    FRAME_ServerHelloMsg *helloRetryRequestMsg = &frameMsg.body.hsMsg.body.serverHello;
+    helloRetryRequestMsg->keyShare.data.group.state = ASSIGNED_FIELD;
+    helloRetryRequestMsg->keyShare.data.group.data = HITLS_EC_GROUP_CURVE25519;
+    helloRetryRequestMsg->tls13Cookie.exState = ASSIGNED_FIELD;
+    helloRetryRequestMsg->tls13Cookie.exType.state = INITIAL_FIELD;
+    helloRetryRequestMsg->tls13Cookie.exType.data = 0x2cu;
+    helloRetryRequestMsg->tls13Cookie.exLen.state = INITIAL_FIELD;
+    helloRetryRequestMsg->tls13Cookie.exLen.data = 32u;
+    helloRetryRequestMsg->tls13Cookie.exDataLen.state = INITIAL_FIELD;
+    helloRetryRequestMsg->tls13Cookie.exDataLen.data = 32u;
+    helloRetryRequestMsg->tls13Cookie.exData.state = INITIAL_FIELD;
+    helloRetryRequestMsg->tls13Cookie.exData.size = 32u;
+    helloRetryRequestMsg->tls13Cookie.exData.data = BSL_SAL_Calloc(32u, sizeof(uint8_t));
+    ASSERT_TRUE(helloRetryRequestMsg->tls13Cookie.exData.data != NULL);
+
+    uint32_t sendLen = MAX_RECORD_LENTH;
+    uint8_t sendBuf[MAX_RECORD_LENTH] = {0};
+    ASSERT_TRUE(FRAME_PackMsg(&frameType, &frameMsg, sendBuf, sendLen, &sendLen) == HITLS_SUCCESS);
+
+    ioUserData->recMsg.len = 0;
+    ASSERT_TRUE(FRAME_TransportRecMsg(client->io, sendBuf, sendLen) == HITLS_SUCCESS);
+    FRAME_CleanMsg(&frameType, &frameMsg);
+    memset(&frameMsg, 0, sizeof(frameMsg));
+
+    ASSERT_EQ(HITLS_Connect(client->ssl), HITLS_MSG_HANDLE_ILLEGAL_SELECTED_GROUP);
+
+EXIT:
+    FRAME_CleanMsg(&frameType, &frameMsg);
+    HITLS_CFG_FreeConfig(clientconfig);
+    HITLS_CFG_FreeConfig(serverconfig);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+}
+/* END_CASE */
+
+/** @
 * @test  UT_TLS_TLS13_CONSISTENCY_RFC8446_REQUEST_CLIENT_HELLO_FUNC_TC004
 * @brief 2.1-Incorrect DHE Share-6
 * @spec  If no common cryptographic parameters can be negotiated, the server MUST abort the handshake with an

@@ -184,7 +184,8 @@ static int32_t AddCookieCalcMaterial(
 }
 #endif /* HITLS_TLS_FEATURE_DEFAULT_COOKIE */
 
-int32_t HS_CalcCookie(TLS_Ctx *ctx, const ClientHelloMsg *clientHello, uint8_t *cookie, uint32_t *cookieLen)
+int32_t HS_CalcCookie(TLS_Ctx *ctx, const ClientHelloMsg *clientHello, uint8_t *cookie, uint32_t *cookieLen,
+    bool ischeck)
 {
     (void)clientHello;
     /* If the user's cookie calculation callback is registered, use the user's callback interface */
@@ -226,7 +227,9 @@ int32_t HS_CalcCookie(TLS_Ctx *ctx, const ClientHelloMsg *clientHello, uint8_t *
     }
 
     /* Updated the current HMAC algorithm usage times */
-    cookieInfo->algRemainTime--;
+    if (!ischeck) {
+        cookieInfo->algRemainTime--;
+    }
 
     return HITLS_SUCCESS;
 #else
@@ -242,10 +245,7 @@ static int32_t CheckCookie(TLS_Ctx *ctx, const ClientHelloMsg *clientHello, bool
 
     *isCookieValid = false;
 
-    /* Calculating cookies will reduce the number of times the algorithm is used. In order to prevent algorithm
-     * switching after calculation, it is increased by itself and then calculated */
-    ctx->negotiatedInfo.cookieInfo.algRemainTime++;
-    int32_t ret = HS_CalcCookie(ctx, clientHello, cookie, &cookieLen);
+    int32_t ret = HS_CalcCookie(ctx, clientHello, cookie, &cookieLen, true);
     if (ret != HITLS_SUCCESS) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16917, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "CalcCookie fail", 0, 0, 0, 0);

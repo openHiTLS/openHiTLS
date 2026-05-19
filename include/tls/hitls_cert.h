@@ -782,7 +782,7 @@ int32_t HITLS_RemoveCertAndKey(HITLS_Ctx *ctx);
  * @param   errCode [IN] Current error code. indicates that the certificate has passed the verification.
  *                       Other values indicate verification failure.
  * @param   storeCtx [IN] Cert store context
- * @return  1 indicates success. Other values indicate failure.
+ * @return  0 indicates success. Other values indicate failure.
  */
 typedef int (*HITLS_VerifyCb)(int32_t errCode, HITLS_CERT_StoreCtx *storeCtx);
 

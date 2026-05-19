@@ -869,9 +869,8 @@ static int32_t ClientCheckHrrKeyShareExtension(TLS_Ctx *ctx, const ServerHelloMs
     const uint16_t *groups = ctx->config.tlsConfig.groups;
     uint32_t numOfGroups = ctx->config.tlsConfig.groupsSize;
 
-    /* The selected group exist in the key share extension of the original client hello and no cookie exchange requested
-     */
-    if (ctx->negotiatedInfo.cookie == NULL && FindGroupInKeyShare(ctx, selectedGroup)) {
+    /* The selected group exist in the key share extension of the original client hello */
+    if (FindGroupInKeyShare(ctx, selectedGroup)) {
         BSL_ERR_PUSH_ERROR(HITLS_MSG_HANDLE_ILLEGAL_SELECTED_GROUP);
         return RETURN_ALERT_PROCESS(ctx, HITLS_MSG_HANDLE_ILLEGAL_SELECTED_GROUP, BINLOG_ID15283,
             "hrr selected group in clienthello key share extension", ALERT_ILLEGAL_PARAMETER);

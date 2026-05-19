@@ -1491,7 +1491,7 @@ static int32_t PrepareDtlsCookie(TLS_Ctx *ctx, const ClientHelloMsg *clientHello
     int32_t ret;
     uint8_t cookie[TLS_HS_MAX_COOKIE_SIZE] = {0};
     uint32_t cookieSize = TLS_HS_MAX_COOKIE_SIZE;
-    ret = HS_CalcCookie(ctx, clientHello, cookie, &cookieSize);
+    ret = HS_CalcCookie(ctx, clientHello, cookie, &cookieSize, false);
     if (ret != HITLS_SUCCESS) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15241, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "calc cookie fail when process client hello.", 0, 0, 0, 0);
