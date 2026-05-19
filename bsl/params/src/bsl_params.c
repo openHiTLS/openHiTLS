@@ -23,6 +23,15 @@
 
 #define BSL_PARAM_MAX_NUMBER 1000
 
+static int32_t CheckSizeTLen(uint32_t len)
+{
+    if (len != (uint32_t)sizeof(size_t)) {
+        BSL_ERR_PUSH_ERROR(BSL_INVALID_ARG);
+        return BSL_INVALID_ARG;
+    }
+    return BSL_SUCCESS;
+}
+
 int32_t BSL_PARAM_InitValue(BSL_Param *param, int32_t key, uint32_t type, void *val, uint32_t valueLen)
 {
     if (key == 0) {
@@ -54,18 +63,23 @@ int32_t BSL_PARAM_InitValue(BSL_Param *param, int32_t key, uint32_t type, void *
         case BSL_PARAM_TYPE_INT32:
         case BSL_PARAM_TYPE_OCTETS_PTR:
         case BSL_PARAM_TYPE_UTF8_STR:
-        case BSL_PARAM_TYPE_SIZE_T:
         case BSL_PARAM_TYPE_SIZE_T_PTR:
-            param->value = val;
-            param->valueLen = valueLen;
-            param->valueType = type;
-            param->key = key;
-            param->useLen = 0;
-            return BSL_SUCCESS;
+            break;
+        case BSL_PARAM_TYPE_SIZE_T:
+            if (CheckSizeTLen(valueLen) != BSL_SUCCESS) {
+                return BSL_INVALID_ARG;
+            }
+            break;
         default:
             BSL_ERR_PUSH_ERROR(BSL_PARAMS_INVALID_TYPE);
             return BSL_PARAMS_INVALID_TYPE;
     }
+    param->value = val;
+    param->valueLen = valueLen;
+    param->valueType = type;
+    param->key = key;
+    param->useLen = 0;
+    return BSL_SUCCESS;
 }
 
 static int32_t ParamCheck(BSL_Param *param, int32_t key, uint32_t type)
@@ -113,6 +127,9 @@ static int32_t SetOtherValues(BSL_Param *param, uint32_t type, void *val, uint32
             param->useLen = len;
             return BSL_SUCCESS;
         case BSL_PARAM_TYPE_SIZE_T:
+            if (CheckSizeTLen(len) != BSL_SUCCESS) {
+                return BSL_INVALID_ARG;
+            }
             *(size_t *)param->value = *(size_t *)val;
             param->useLen = len;
             return BSL_SUCCESS;

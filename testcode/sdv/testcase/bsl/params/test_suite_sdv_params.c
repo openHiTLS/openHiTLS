@@ -32,15 +32,19 @@ void SDV_BSL_BSL_PARAM_InitValue_API_TC001()
     BSL_Param param = {0};
     int32_t val = 1;
     bool valBool = true;
+    size_t valSize = 1;
+    uint8_t shortVal = 1;
     int32_t *valPtr = &val;
     ASSERT_EQ(BSL_PARAM_InitValue(&param, 0, BSL_PARAM_TYPE_UINT32,
         &val, sizeof(val)), BSL_PARAMS_INVALID_KEY);
     ASSERT_EQ(BSL_PARAM_InitValue(NULL, 1, BSL_PARAM_TYPE_UINT32, &val, sizeof(val)), BSL_INVALID_ARG);
     ASSERT_EQ(BSL_PARAM_InitValue(&param, 1, BSL_PARAM_TYPE_UINT32, NULL, sizeof(val)), BSL_INVALID_ARG);
     ASSERT_EQ(BSL_PARAM_InitValue(&param, 1, 100, &val, sizeof(val)), BSL_PARAMS_INVALID_TYPE);
+    ASSERT_EQ(BSL_PARAM_InitValue(&param, 1, BSL_PARAM_TYPE_SIZE_T, &shortVal, sizeof(shortVal)), BSL_INVALID_ARG);
     TestErrClear();
     ASSERT_EQ(BSL_PARAM_InitValue(&param, 1, BSL_PARAM_TYPE_UINT32, &val, sizeof(val)), BSL_SUCCESS);
     ASSERT_EQ(BSL_PARAM_InitValue(&param, 1, BSL_PARAM_TYPE_BOOL, &valBool, sizeof(valBool)), BSL_SUCCESS);
+    ASSERT_EQ(BSL_PARAM_InitValue(&param, 1, BSL_PARAM_TYPE_SIZE_T, &valSize, sizeof(valSize)), BSL_SUCCESS);
     ASSERT_EQ(BSL_PARAM_InitValue(&param, 1, BSL_PARAM_TYPE_FUNC_PTR, valPtr, 0), BSL_SUCCESS);
     ASSERT_EQ(BSL_PARAM_InitValue(&param, 1, BSL_PARAM_TYPE_CTX_PTR, valPtr, 0), BSL_SUCCESS);
     valPtr = NULL;
@@ -105,18 +109,22 @@ void SDV_BSL_BSL_PARAM_SetValue_API_TC002()
     uint16_t tmp2 = 0;
     uint32_t tmp3 = 0;
     bool tmp4 = 0;
+    size_t tmp5 = 0;
     uint8_t tmpBuffer1[10] = {0};
     uint32_t tmpBuffer1Len = 10;
     uint8_t ptr[] = {0};
+    uint8_t shortDst = 0;
 
     uint8_t val1 = 1;
     uint16_t val2 = 1;
     uint32_t val3 = 1;
     bool val4 = true;
+    size_t val5 = 1;
     uint8_t buffer1[15] = {1};
     uint32_t buffer1Len = 15;
+    uint8_t shortSrc = 1;
 
-    BSL_Param param[9] = {
+    BSL_Param param[10] = {
         {1, BSL_PARAM_TYPE_UINT8, &tmp1, sizeof(tmp1), sizeof(tmp1)},
         {1, BSL_PARAM_TYPE_UINT16, &tmp2, sizeof(tmp2), sizeof(tmp2)},
         {1, BSL_PARAM_TYPE_UINT32, &tmp3, sizeof(tmp3), sizeof(tmp3)},
@@ -125,6 +133,7 @@ void SDV_BSL_BSL_PARAM_SetValue_API_TC002()
         {1, BSL_PARAM_TYPE_OCTETS_PTR, NULL, 0, 0},
         {1, BSL_PARAM_TYPE_FUNC_PTR, NULL, 0, 0},
         {1, BSL_PARAM_TYPE_CTX_PTR, NULL, 0, 0},
+        {1, BSL_PARAM_TYPE_SIZE_T, &tmp5, sizeof(tmp5), sizeof(tmp5)},
         BSL_PARAM_END
     };
 
@@ -154,6 +163,13 @@ void SDV_BSL_BSL_PARAM_SetValue_API_TC002()
     ASSERT_EQ(BSL_PARAM_SetValue(&param[7], 1, BSL_PARAM_TYPE_CTX_PTR, ptr, 8), BSL_SUCCESS);
     ASSERT_EQ(param[7].value, ptr);
     ASSERT_EQ(param[7].useLen, 8);
+
+    ASSERT_EQ(BSL_PARAM_SetValue(&param[8], 1, BSL_PARAM_TYPE_SIZE_T, &val5, sizeof(val5)), BSL_SUCCESS);
+    ASSERT_EQ(val5, tmp5);
+
+    BSL_Param shortParam = {1, BSL_PARAM_TYPE_SIZE_T, &shortDst, sizeof(shortDst), 0};
+    ASSERT_EQ(BSL_PARAM_SetValue(&shortParam, 1, BSL_PARAM_TYPE_SIZE_T, &shortSrc, sizeof(shortSrc)), BSL_INVALID_ARG);
+    TestErrClear();
     ASSERT_TRUE(TestIsErrStackEmpty());
 EXIT:
     return;
