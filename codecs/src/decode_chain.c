@@ -110,7 +110,7 @@ void CRYPT_DECODE_PoolFreeCtx(CRYPT_DECODER_PoolCtx *poolCtx)
 
 static int32_t SetDecodeType(void *val, int32_t valLen, const char **targetValue)
 {
-    if (valLen == 0 || valLen > MAX_CRYPT_DECODE_FORMAT_TYPE_SIZE) {
+    if (valLen <= 0 || valLen > MAX_CRYPT_DECODE_FORMAT_TYPE_SIZE) {
         BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
         return CRYPT_INVALID_ARG;
     }
