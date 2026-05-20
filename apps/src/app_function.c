@@ -39,6 +39,8 @@
 #include "app_pkeyutl.h"
 #include "app_prime.h"
 #include "app_errdecode.h"
+#include "app_asymutil.h"
+#include "app_sign.h"
 
 HITLS_CmdFunc g_cmdFunc[] = {
     {"help",     FUNC_TYPE_GENERAL,   HITLS_HelpMain},
@@ -59,6 +61,8 @@ HITLS_CmdFunc g_cmdFunc[] = {
     {"kdf",      FUNC_TYPE_GENERAL,   HITLS_KdfMain},
     {"prime",    FUNC_TYPE_GENERAL,   HITLS_PrimeMain},
     {"errdecode", FUNC_TYPE_GENERAL,  HITLS_ErrdecodeMain},
+    {"asymutil", FUNC_TYPE_GENERAL,   HITLS_AsymutilMain},
+    {"sign",     FUNC_TYPE_GENERAL,   HITLS_SignMain},
 #ifdef HITLS_APP_SM_MODE
     {"keymgmt",  FUNC_TYPE_GENERAL,   HITLS_KeyMgmtMain},
 #endif

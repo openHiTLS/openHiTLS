@@ -1,0 +1,5 @@
+UT_HITLS_APP_ASYMUTIL_TC001 asymutil rsa enc
+UT_HITLS_APP_ASYMUTIL_TC001:"../testdata/apps/asymutil/pub.pem":"../testdata/apps/asymutil/pri.pem":"../testdata/apps/asymutil/ptest01"
+
+UT_HITLS_APP_ASYMUTIL_TC002 asymutil rsa dec
+UT_HITLS_APP_ASYMUTIL_TC002:"../testdata/apps/asymutil/pri.pem":"../testdata/apps/asymutil/ctest01":"../testdata/apps/asymutil/ptest01"

@@ -1,0 +1,20 @@
+UT_HITLS_APP_SIGN_TC001 sign multi_sign_verify
+UT_HITLS_APP_SIGN_TC001:
+
+unknown opt
+UT_HITLS_APP_SIGN_TC002:"sign -unknownopt -in ../testdata/apps/sign/test.txt":HITLS_APP_OPT_UNKOWN
+
+unsupported pkeyalg value
+UT_HITLS_APP_SIGN_TC002:"sign -in ../testdata/apps/sign/test.txt -out sign.sig -key ../testdata/apps/sign/ecdsa_priv.pem -pkeyalg rsa -digest sm3":HITLS_APP_OPT_VALUE_INVALID
+
+unsupported digest algorithm
+UT_HITLS_APP_SIGN_TC002:"sign -in ../testdata/apps/sign/test.txt -out sign.sig -key ../testdata/apps/sign/ecdsa_priv.pem -pkeyalg ecdsa -digest md5":HITLS_APP_OPT_VALUE_INVALID
+
+sign mode: missing \"-key\"
+UT_HITLS_APP_SIGN_TC002:"sign -in ../testdata/apps/sign/test.txt -out sign.sig -pkeyalg ecdsa -digest sha256":HITLS_APP_OPT_VALUE_INVALID
+
+verify mode: missing \"-pubkey\" and \"-sig\"
+UT_HITLS_APP_SIGN_TC002:"sign -verify -in ../testdata/apps/sign/test.txt -pkeyalg ecdsa -digest sha256":HITLS_APP_OPT_VALUE_INVALID
+
+input file not exist
+UT_HITLS_APP_SIGN_TC002:"sign -in ../testdata/apps/sign/not_exist.txt -out sign.sig -key ../testdata/apps/sign/ecdsa_priv.pem -pkeyalg ecdsa -digest sha256":HITLS_APP_UIO_FAIL
