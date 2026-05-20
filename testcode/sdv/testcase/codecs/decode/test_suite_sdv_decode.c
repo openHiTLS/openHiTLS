@@ -515,10 +515,18 @@ void SDV_CRYPT_DECODE_POOL_CTRL_API_TC001(void)
         sizeof(bool)), CRYPT_INVALID_ARG);
 
     /* Test with invalid format length */
+    ASSERT_EQ(CRYPT_DECODE_PoolCtrl(poolCtx, CRYPT_DECODE_POOL_CMD_SET_TARGET_FORMAT, (void *)targetFormat, 0),
+        CRYPT_INVALID_ARG);
+    ASSERT_EQ(CRYPT_DECODE_PoolCtrl(poolCtx, CRYPT_DECODE_POOL_CMD_SET_TARGET_FORMAT, (void *)targetFormat, -1),
+        CRYPT_INVALID_ARG);
     ASSERT_EQ(CRYPT_DECODE_PoolCtrl(poolCtx, CRYPT_DECODE_POOL_CMD_SET_TARGET_FORMAT, (void *)targetFormat,
         MAX_CRYPT_DECODE_FORMAT_TYPE_SIZE + 1), CRYPT_INVALID_ARG);
 
     /* Test with invalid type length */
+    ASSERT_EQ(CRYPT_DECODE_PoolCtrl(poolCtx, CRYPT_DECODE_POOL_CMD_SET_TARGET_TYPE, (void *)targetType, 0),
+        CRYPT_INVALID_ARG);
+    ASSERT_EQ(CRYPT_DECODE_PoolCtrl(poolCtx, CRYPT_DECODE_POOL_CMD_SET_TARGET_TYPE, (void *)targetType, -1),
+        CRYPT_INVALID_ARG);
     ASSERT_EQ(CRYPT_DECODE_PoolCtrl(poolCtx, CRYPT_DECODE_POOL_CMD_SET_TARGET_TYPE, (void *)targetType,
         MAX_CRYPT_DECODE_FORMAT_TYPE_SIZE + 1), CRYPT_INVALID_ARG);
 

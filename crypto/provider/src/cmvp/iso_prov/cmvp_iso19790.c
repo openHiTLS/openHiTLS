@@ -248,7 +248,7 @@ ERR:
 static bool EcdhParamCheck(const CRYPT_EAL_PkeyC2Data *data)
 {
     // https://nvlpubs.nist.gov/nistpubs/SpecialPublications/NIST.SP.800-131Ar2.pdf Chapters 3 and 5
-    // Requires curve specified using SP 800-56A
+    // Requires curve specified using SP 800-56A sm2
     static const uint32_t list[] = {
         CRYPT_ECC_NISTP224,
         CRYPT_ECC_NISTP256,

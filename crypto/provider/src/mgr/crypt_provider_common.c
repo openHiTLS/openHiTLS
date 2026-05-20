@@ -239,38 +239,6 @@ void CRYPT_EAL_ProviderMgrCtxFree(CRYPT_EAL_ProvMgrCtx  *ctx)
     BSL_SAL_Free(ctx);
 }
 
-// Add provider to the list
-static int32_t AddProviderToList(CRYPT_EAL_LibCtx *libCtx, CRYPT_EAL_ProvMgrCtx *providerMgr)
-{
-    int32_t ret = BSL_SAL_ThreadWriteLock(libCtx->lock);
-    if (ret != BSL_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
-        return ret;
-    }
-
-    ret = BSL_LIST_AddElement(libCtx->providers, providerMgr, BSL_LIST_POS_END);
-    (void)BSL_SAL_ThreadUnlock(libCtx->lock);
-    if (ret != BSL_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
-    }
-
-    return ret;
-}
-
-static void DeleteProviderFromList(CRYPT_EAL_LibCtx *libCtx, CRYPT_EAL_ProvMgrCtx *providerMgr)
-{
-    (void)BSL_SAL_ThreadWriteLock(libCtx->lock);
-    for (BslListNode *node = BSL_LIST_FirstNode(libCtx->providers); node != NULL;
-        node = BSL_LIST_GetNextNode(libCtx->providers, node)) {
-        if (BSL_LIST_GetData(node) == providerMgr) {
-            BSL_LIST_DeleteNode(libCtx->providers, node, (BSL_LIST_PFUNC_FREE)CRYPT_EAL_ProviderMgrCtxFree);
-            break;
-        }
-    }
-
-    (void)BSL_SAL_ThreadUnlock(libCtx->lock);
-}
-
 int32_t CRYPT_EAL_AddNewProvMgrCtx(CRYPT_EAL_LibCtx *libCtx, const char *providerName, const char *providerPath,
     CRYPT_EAL_ImplProviderInit init, void *handle, BSL_Param *param, CRYPT_EAL_ProvMgrCtx **ctx)
 {
@@ -303,14 +271,15 @@ int32_t CRYPT_EAL_AddNewProvMgrCtx(CRYPT_EAL_LibCtx *libCtx, const char *provide
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
-    ret = AddProviderToList(libCtx, mgrCtx);
-    if (ret != CRYPT_SUCCESS) {
+    ret = CRYPT_EAL_InitProviderMethod(mgrCtx, param, init);
+    if (ret != BSL_SUCCESS) {
         CRYPT_EAL_ProviderMgrCtxFree(mgrCtx);
         return ret;
     }
-    ret = CRYPT_EAL_InitProviderMethod(mgrCtx, param, init);
-    if (ret != BSL_SUCCESS) {
-        DeleteProviderFromList(libCtx, mgrCtx);
+    ret = BSL_LIST_AddElement(libCtx->providers, mgrCtx, BSL_LIST_POS_END);
+    if (ret != CRYPT_SUCCESS) {
+        CRYPT_EAL_ProviderMgrCtxFree(mgrCtx);
+        BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
     if (ctx != NULL) {

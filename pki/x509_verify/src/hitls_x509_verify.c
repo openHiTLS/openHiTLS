@@ -225,7 +225,7 @@ HITLS_X509_StoreCtx *HITLS_X509_StoreCtxNew(void)
 #endif
 
     ctx->verifyParam.maxDepth = HITLS_X509_MAX_DEPTH;
-    ctx->verifyParam.securityBits = 128; // 128: The default number of secure bits.
+    ctx->verifyParam.securityBits = 0; // 0: The default number of secure bits.
     ctx->certChain = NULL; // Initialize to NULL, will be created when needed
 #ifdef HITLS_PKI_X509_VFY_CB
     ctx->verifyCb = VerifyCbDefault;
@@ -1853,7 +1853,7 @@ static int32_t GetCheckTime(HITLS_X509_StoreCtx *storeCtx, bool *isCheckTime, in
         *checkTime = storeCtx->verifyParam.time;
     } else if ((storeCtx->verifyParam.flags & HITLS_X509_VFY_FLAG_DISABLE_TIME_CHECK) == 0) {
         *checkTime = BSL_SAL_CurrentSysTimeGet();
-        if (*checkTime < 0) {
+        if (*checkTime <= 0) {
             return BSL_SAL_TIME_SYS_ERROR;
         }
     } else {

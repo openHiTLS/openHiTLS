@@ -38,6 +38,7 @@
 #include "bsl_uio.h"
 #include "hitls_pki_utils.h"
 #include "bsl_asn1.h"
+#include "bsl_obj.h"
 #include "stub_utils.h"
 #include "bsl_err_internal.h"
 
@@ -49,6 +50,7 @@
 STUB_DEFINE_RET4(int32_t, HITLS_X509_CheckCertTime, HITLS_X509_StoreCtx *, HITLS_X509_Cert *, int32_t, int64_t *);
 STUB_DEFINE_RET3(int32_t, BSL_LIST_AddElement, BslList *, void *, BslListPosition);
 STUB_DEFINE_VOID1(HITLS_X509_CertFree, HITLS_X509_Cert *);
+STUB_DEFINE_RET0(BslUnixTime, BSL_SAL_CurrentSysTimeGet);
 
 /* ============================================================================
  * Helper Macros for Verification Callback
@@ -520,6 +522,11 @@ static int32_t HITLS_AddCrlToStoreTest(char *path, HITLS_X509_StoreCtx *store, H
         return ret;
     }
     return HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_SET_CRL, *crl, sizeof(HITLS_X509_Crl));
+}
+
+static BslUnixTime STUB_BSL_SAL_CurrentSysTimeGet_Zero(void)
+{
+    return 0;
 }
 
 /* BEGIN_CASE */
@@ -2692,6 +2699,52 @@ void SDV_X509_VFY_CERT_TIME_CURRENT_PASS_TC001(void)
 
     ASSERT_TRUE(TestIsErrStackEmpty());
 EXIT:
+    HITLS_X509_StoreCtxFree(store);
+    BSL_LIST_FREE(chain, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);
+}
+/* END_CASE */
+
+/**
+ * Mock the system time source to return Unix epoch, and the default certificate
+ * time check should treat it as an invalid current time.
+ */
+/* BEGIN_CASE */
+void SDV_X509_VFY_CERT_TIME_SYS_TIME_ZERO_FAIL_TC001(void)
+{
+    HITLS_X509_Cert *root = NULL;
+    HITLS_X509_Cert *inter = NULL;
+    HITLS_X509_Cert *leaf = NULL;
+    HITLS_X509_StoreCtx *store = NULL;
+    HITLS_X509_List *chain = NULL;
+    bool isStubbed = false;
+
+    TestMemInit();
+    store = HITLS_X509_StoreCtxNew();
+    chain = BSL_LIST_New(sizeof(HITLS_X509_Cert *));
+    ASSERT_TRUE(store != NULL && chain != NULL);
+
+    ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_ASN1, "../testdata/cert/chain/time/root_current.der", &root), 0);
+    ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_ASN1, "../testdata/cert/chain/time/inter_current.der", &inter), 0);
+    ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_ASN1, "../testdata/cert/chain/time/leaf_current.der", &leaf), 0);
+    ASSERT_EQ(BSL_LIST_AddElement(chain, leaf, BSL_LIST_POS_END), BSL_SUCCESS);
+    ASSERT_EQ(BSL_LIST_AddElement(chain, inter, BSL_LIST_POS_END), BSL_SUCCESS);
+    ASSERT_EQ(BSL_LIST_AddElement(chain, root, BSL_LIST_POS_END), BSL_SUCCESS);
+    ASSERT_EQ(HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_DEEP_COPY_SET_CA, root, sizeof(HITLS_X509_Cert)), 0);
+
+    STUB_REPLACE(BSL_SAL_CurrentSysTimeGet, STUB_BSL_SAL_CurrentSysTimeGet_Zero);
+    isStubbed = true;
+    ASSERT_EQ(HITLS_X509_CertVerify(store, chain), BSL_SAL_TIME_SYS_ERROR);
+    STUB_RESTORE(BSL_SAL_CurrentSysTimeGet);
+    isStubbed = false;
+    TestErrClear();
+
+    ASSERT_EQ(HITLS_X509_CertVerify(store, chain), HITLS_PKI_SUCCESS);
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
+EXIT:
+    if (isStubbed) {
+        STUB_RESTORE(BSL_SAL_CurrentSysTimeGet);
+    }
     HITLS_X509_StoreCtxFree(store);
     BSL_LIST_FREE(chain, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);
 }
