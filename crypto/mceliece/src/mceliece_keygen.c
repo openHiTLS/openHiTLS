@@ -347,7 +347,7 @@ int32_t SeededKeyGenInternal(const uint8_t *delta, CMPublicKey *pk, CMPrivateKey
         int32_t ret = McEliecePrg(sk->delta, rndE, prgOutputByteLen);
         if (ret != CRYPT_SUCCESS) {
             BSL_ERR_PUSH_ERROR(ret);
-            BSL_SAL_FREE(rndE);
+            BSL_SAL_ClearFree(rndE, prgOutputByteLen);
             return ret;
         }
         memcpy(deltaPrime, rndE + prgOutputByteLen - deltaPrimeByteLen, deltaPrimeByteLen);
@@ -363,7 +363,7 @@ int32_t SeededKeyGenInternal(const uint8_t *delta, CMPublicKey *pk, CMPrivateKey
         }
         memcpy(sk->delta, deltaPrime, MCELIECE_L_BYTES);
     }
-    BSL_SAL_FREE(rndE);
+    BSL_SAL_ClearFree(rndE, prgOutputByteLen);
     return CRYPT_MCELIECE_KEYGEN_FAIL;
 }
 #endif

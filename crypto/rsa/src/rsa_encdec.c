@@ -743,7 +743,10 @@ static int32_t RsaGetSignVerifyData(CRYPT_RSA_Ctx *ctx, uint8_t *hash, uint32_t 
     uint32_t emLen = BN_BITS_TO_BYTES(bits);
 
     uint32_t hLen = (uint32_t)ctx->pad.para.iso9796_2.mdMeth.mdSize;
-
+    if (hLen != hashLen) {
+        BSL_ERR_PUSH_ERROR(CRYPT_RSA_ERR_INPUT_VALUE);
+        return CRYPT_RSA_ERR_INPUT_VALUE;
+    }
     // Verify whether the signature algorithm and hash algorithm match reasonably.
     if (emLen < hLen + 2) {
         BSL_ERR_PUSH_ERROR(CRYPT_RSA_ERR_INPUT_VALUE);

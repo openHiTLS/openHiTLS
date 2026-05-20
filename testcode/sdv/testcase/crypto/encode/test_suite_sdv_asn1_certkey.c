@@ -1564,6 +1564,58 @@ EXIT:
 }
 /* END_CASE */
 
+#if defined(HITLS_CRYPTO_PROVIDER) && (defined(HITLS_CRYPTO_DSA) || defined(HITLS_CRYPTO_DH))
+static int32_t CompareDsaDhPrvKey(CRYPT_EAL_PkeyCtx *pkey1, CRYPT_EAL_PkeyCtx *pkey2, uint32_t keyLen)
+{
+    uint8_t *prv1 = NULL;
+    uint8_t *prv2 = NULL;
+    CRYPT_EAL_PkeyPrv prvKey1 = {0};
+    CRYPT_EAL_PkeyPrv prvKey2 = {0};
+    int32_t pkeyId;
+    int32_t ret = CRYPT_INVALID_KEY;
+
+    prv1 = BSL_SAL_Malloc(keyLen);
+    prv2 = BSL_SAL_Malloc(keyLen);
+    ASSERT_TRUE(prv1 != NULL);
+    ASSERT_TRUE(prv2 != NULL);
+    ASSERT_EQ(CRYPT_EAL_PkeyGetId(pkey1), CRYPT_EAL_PkeyGetId(pkey2));
+    pkeyId = CRYPT_EAL_PkeyGetId(pkey1);
+    if (pkeyId == CRYPT_PKEY_DSA) {
+        prvKey1.id = CRYPT_PKEY_DSA;
+        prvKey1.key.dsaPrv.data = prv1;
+        prvKey1.key.dsaPrv.len = keyLen;
+        prvKey2.id = CRYPT_PKEY_DSA;
+        prvKey2.key.dsaPrv.data = prv2;
+        prvKey2.key.dsaPrv.len = keyLen;
+        ASSERT_EQ(CRYPT_EAL_PkeyGetPrv(pkey1, &prvKey1), CRYPT_SUCCESS);
+        ASSERT_EQ(CRYPT_EAL_PkeyGetPrv(pkey2, &prvKey2), CRYPT_SUCCESS);
+        ASSERT_EQ(prvKey1.key.dsaPrv.len, prvKey2.key.dsaPrv.len);
+        ASSERT_COMPARE("dsa private key compare.", prvKey1.key.dsaPrv.data, prvKey1.key.dsaPrv.len,
+            prvKey2.key.dsaPrv.data, prvKey2.key.dsaPrv.len);
+    } else if (pkeyId == CRYPT_PKEY_DH) {
+        prvKey1.id = CRYPT_PKEY_DH;
+        prvKey1.key.dhPrv.data = prv1;
+        prvKey1.key.dhPrv.len = keyLen;
+        prvKey2.id = CRYPT_PKEY_DH;
+        prvKey2.key.dhPrv.data = prv2;
+        prvKey2.key.dhPrv.len = keyLen;
+        ASSERT_EQ(CRYPT_EAL_PkeyGetPrv(pkey1, &prvKey1), CRYPT_SUCCESS);
+        ASSERT_EQ(CRYPT_EAL_PkeyGetPrv(pkey2, &prvKey2), CRYPT_SUCCESS);
+        ASSERT_EQ(prvKey1.key.dhPrv.len, prvKey2.key.dhPrv.len);
+        ASSERT_COMPARE("dh private key compare.", prvKey1.key.dhPrv.data, prvKey1.key.dhPrv.len,
+            prvKey2.key.dhPrv.data, prvKey2.key.dhPrv.len);
+    } else {
+        ASSERT_TRUE(false);
+    }
+    ret = CRYPT_SUCCESS;
+
+EXIT:
+    BSL_SAL_FREE(prv1);
+    BSL_SAL_FREE(prv2);
+    return ret;
+}
+#endif
+
 /* BEGIN_CASE */
 void SDV_BSL_ASN1_DECODE_DSAKEY_BUFF_CMP(char *path, int fileType, Hex *asn1)
 {
@@ -1576,7 +1628,11 @@ void SDV_BSL_ASN1_DECODE_DSAKEY_BUFF_CMP(char *path, int fileType, Hex *asn1)
     BSL_Buffer encodeAsn1 = {asn1->x, asn1->len};
     ASSERT_EQ(CRYPT_EAL_DecodeFileKey(BSL_FORMAT_UNKNOWN, fileType, path, NULL, 0, &pkeyCtx), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_DecodeBuffKey(BSL_FORMAT_ASN1, fileType, &encodeAsn1, NULL, 0, &pkeyAsn1Ctx), CRYPT_SUCCESS);
-    ASSERT_EQ(CRYPT_EAL_PkeyCmp(pkeyCtx, pkeyAsn1Ctx), CRYPT_SUCCESS);
+    if (fileType != CRYPT_PRIKEY_PKCS8_UNENCRYPT) {
+        ASSERT_EQ(CRYPT_EAL_PkeyCmp(pkeyCtx, pkeyAsn1Ctx), CRYPT_SUCCESS);
+    } else {
+        ASSERT_EQ(CompareDsaDhPrvKey(pkeyCtx, pkeyAsn1Ctx, asn1->len), CRYPT_SUCCESS);
+    }
 EXIT:
     CRYPT_EAL_PkeyFreeCtx(pkeyCtx);
     CRYPT_EAL_PkeyFreeCtx(pkeyAsn1Ctx);
@@ -1601,7 +1657,11 @@ void SDV_BSL_ASN1_DECODE_DHKEY_BUFF_CMP(char *path, int fileType, Hex *asn1)
     BSL_Buffer encodeAsn1 = {asn1->x, asn1->len};
     ASSERT_EQ(CRYPT_EAL_DecodeFileKey(BSL_FORMAT_UNKNOWN, fileType, path, NULL, 0, &pkeyCtx), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_DecodeBuffKey(BSL_FORMAT_ASN1, fileType, &encodeAsn1, NULL, 0, &pkeyAsn1Ctx), CRYPT_SUCCESS);
-    ASSERT_EQ(CRYPT_EAL_PkeyCmp(pkeyCtx, pkeyAsn1Ctx), CRYPT_SUCCESS);
+    if (fileType != CRYPT_PRIKEY_PKCS8_UNENCRYPT) {
+        ASSERT_EQ(CRYPT_EAL_PkeyCmp(pkeyCtx, pkeyAsn1Ctx), CRYPT_SUCCESS);
+    } else {
+        ASSERT_EQ(CompareDsaDhPrvKey(pkeyCtx, pkeyAsn1Ctx, asn1->len), CRYPT_SUCCESS);
+    }
 EXIT:
     CRYPT_EAL_PkeyFreeCtx(pkeyCtx);
     CRYPT_EAL_PkeyFreeCtx(pkeyAsn1Ctx);
@@ -1741,8 +1801,12 @@ void SDV_PKCS8_DECODE_DHKEY_DSAKEY_TC001(char *path, int fileType,  Hex *asn1)
     memcpy(decodeAsn1.data, asn1->x, asn1->len);
     ASSERT_EQ(CRYPT_EAL_DecodeFileKey(BSL_FORMAT_UNKNOWN, fileType, path, NULL, 0, &pkeyBypem), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_DecodeBuffKey(BSL_FORMAT_ASN1, fileType, &decodeAsn1, NULL, 0, &pkeyByAsn1), CRYPT_SUCCESS);
+    if (fileType != CRYPT_PRIKEY_PKCS8_UNENCRYPT) {
+        ASSERT_EQ(CRYPT_EAL_PkeyCmp(pkeyBypem, pkeyByAsn1), 0);
+    } else {
+        ASSERT_EQ(CompareDsaDhPrvKey(pkeyBypem, pkeyByAsn1, asn1->len), CRYPT_SUCCESS);
+    }
 
-    ASSERT_EQ(CRYPT_EAL_PkeyCmp(pkeyBypem, pkeyByAsn1), 0);
 EXIT:
     BSL_SAL_FREE(decodeAsn1.data);
     CRYPT_EAL_PkeyFreeCtx(pkeyBypem);
@@ -1795,7 +1859,11 @@ void SDV_PKCS8_ENCDEC_DHKEY_DSAKEY_TC001(char *path, int fileType,  Hex *asn1)
     ASSERT_EQ(CRYPT_EAL_DecodeFileKey(BSL_FORMAT_UNKNOWN, fileType, path, NULL, 0, &pkeyBypem), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_DecodeBuffKey(BSL_FORMAT_ASN1, fileType, &decodeAsn1, NULL, 0, &pkeyByAsn1), CRYPT_SUCCESS);
 
-    ASSERT_EQ(CRYPT_EAL_PkeyCmp(pkeyBypem, pkeyByAsn1), 0);
+    if (fileType != CRYPT_PRIKEY_PKCS8_UNENCRYPT) {
+        ASSERT_EQ(CRYPT_EAL_PkeyCmp(pkeyBypem, pkeyByAsn1), 0);
+    } else {
+        ASSERT_EQ(CompareDsaDhPrvKey(pkeyBypem, pkeyByAsn1, asn1->len), CRYPT_SUCCESS);
+    }
 
     ASSERT_EQ(CRYPT_EAL_EncodeBuffKey(pkeyBypem, NULL, BSL_FORMAT_ASN1, fileType, &encodeAsn1), CRYPT_SUCCESS);
     ASSERT_COMPARE("asn1 compare.", encodeAsn1.data, encodeAsn1.dataLen, asn1->x, asn1->len);
@@ -1814,9 +1882,15 @@ void SDV_PKCS8_ENCDEC_DHKEY_DSAKEY_TC001(char *path, int fileType,  Hex *asn1)
     ASSERT_EQ(
         CRYPT_EAL_DecodeBuffKey(BSL_FORMAT_ASN1, fileType, &decodeAsn1_2, NULL, 0, &decpkeyByAsn1), CRYPT_SUCCESS);
 
-    ASSERT_EQ(CRYPT_EAL_PkeyCmp(decpkeyBypem, decpkeyByAsn1), 0);
-    ASSERT_EQ(CRYPT_EAL_PkeyCmp(decpkeyBypem, pkeyBypem), 0);
-    ASSERT_EQ(CRYPT_EAL_PkeyCmp(pkeyByAsn1, decpkeyByAsn1), 0);
+    if (fileType != CRYPT_PRIKEY_PKCS8_UNENCRYPT) {
+        ASSERT_EQ(CRYPT_EAL_PkeyCmp(decpkeyBypem, decpkeyByAsn1), 0);
+        ASSERT_EQ(CRYPT_EAL_PkeyCmp(decpkeyBypem, pkeyBypem), 0);
+        ASSERT_EQ(CRYPT_EAL_PkeyCmp(pkeyByAsn1, decpkeyByAsn1), 0);
+    } else {
+        ASSERT_EQ(CompareDsaDhPrvKey(decpkeyBypem, decpkeyByAsn1, encodeAsn1.dataLen), CRYPT_SUCCESS);
+        ASSERT_EQ(CompareDsaDhPrvKey(decpkeyBypem, pkeyBypem, encodeAsn1.dataLen), CRYPT_SUCCESS);
+        ASSERT_EQ(CompareDsaDhPrvKey(pkeyByAsn1, decpkeyByAsn1, encodeAsn1.dataLen), CRYPT_SUCCESS);
+    }
 EXIT:
     CRYPT_EAL_PkeyFreeCtx(pkeyBypem);
     CRYPT_EAL_PkeyFreeCtx(pkeyByAsn1);

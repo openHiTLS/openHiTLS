@@ -1749,6 +1749,21 @@ static int32_t InitMdCtxForAlgs(CMS_SignedData *signedData, const BSL_Param *par
     return HITLS_PKI_SUCCESS;
 }
 
+static int32_t CheckSignAlgMatchesPubKey(const HITLS_X509_Asn1AlgId *alg, const CRYPT_EAL_PkeyCtx *pubKey)
+{
+    CRYPT_PKEY_AlgId keyAlg = CRYPT_EAL_PkeyGetId(pubKey);
+    // Currently, we only check this consistency for mldsa
+    if (keyAlg == CRYPT_PKEY_ML_DSA) {
+        if (alg->algId == BSL_CID_ML_DSA_44 || alg->algId == BSL_CID_ML_DSA_65 
+            || alg->algId == BSL_CID_ML_DSA_87) {
+                return HITLS_PKI_SUCCESS;
+        }
+        BSL_ERR_PUSH_ERROR(HITLS_CMS_ERR_INVALID_ALGO);
+        return HITLS_CMS_ERR_INVALID_ALGO;
+    }
+    return HITLS_PKI_SUCCESS;
+}
+
 static int32_t CheckSignature(HITLS_X509_Asn1AlgId *alg, CRYPT_EAL_PkeyCtx *pubKey, int32_t hashId, uint8_t *msg,
     uint32_t msgLen, uint8_t *signature, uint32_t signatureLen, bool verifyByHash)
 {
@@ -1757,6 +1772,11 @@ static int32_t CheckSignature(HITLS_X509_Asn1AlgId *alg, CRYPT_EAL_PkeyCtx *pubK
     if (verifyPubKey == NULL) {
         BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_VFY_DUP_PUBKEY);
         return HITLS_X509_ERR_VFY_DUP_PUBKEY;
+    }
+    ret = CheckSignAlgMatchesPubKey(alg, verifyPubKey);
+    if (ret != HITLS_PKI_SUCCESS) {
+        CRYPT_EAL_PkeyFreeCtx(verifyPubKey);
+        return ret;
     }
     ret = HITLS_X509_CtrlAlgInfo(verifyPubKey, hashId, alg);
     if (ret != HITLS_PKI_SUCCESS) {

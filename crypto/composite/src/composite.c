@@ -391,26 +391,6 @@ int32_t CRYPT_COMPOSITE_Ctrl(CRYPT_CompositeCtx *ctx, int32_t opt, void *val, ui
     }
 }
 
-static int32_t CRYPT_CompositeCreateKeyBuf(CRYPT_CompositeCtx *ctx)
-{
-    if (ctx->pubKey == NULL) {
-        ctx->pubKey = BSL_SAL_Malloc(ctx->pubLen);
-        if (ctx->pubKey == NULL) {
-            BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
-            return CRYPT_MEM_ALLOC_FAIL;
-        }
-    }
-    if (ctx->prvKey == NULL) {
-        ctx->prvKey = BSL_SAL_Malloc(ctx->prvLen);
-        if (ctx->prvKey == NULL) {
-            BSL_SAL_FREE(ctx->pubKey);
-            BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
-            return CRYPT_MEM_ALLOC_FAIL;
-        }
-    }
-    return CRYPT_SUCCESS;
-}
-
 int32_t CRYPT_COMPOSITE_GenKey(CRYPT_CompositeCtx *ctx)
 {
     int32_t ret;
@@ -433,11 +413,21 @@ int32_t CRYPT_COMPOSITE_GenKey(CRYPT_CompositeCtx *ctx)
     GOTO_ERR_IF(CRYPT_CompositeGetTradPrvKey(ctx, &tradPrv), ret);
     GOTO_ERR_IF(CRYPT_CompositeGetPqcPubKey(ctx, &pqcPub), ret);
     GOTO_ERR_IF(CRYPT_CompositeGetTradPubKey(ctx, &tradPub), ret);
-
-    ctx->prvLen = pqcPrv.dataLen + tradPrv.dataLen;
+    uint8_t *pub = BSL_SAL_Malloc(pqcPub.dataLen + tradPub.dataLen);
+    uint8_t *prv = BSL_SAL_Malloc(pqcPrv.dataLen + tradPrv.dataLen);
+    if (pub == NULL || prv == NULL) {
+        BSL_SAL_FREE(pub);
+        BSL_SAL_FREE(prv);
+        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
+        ret = CRYPT_MEM_ALLOC_FAIL;
+        goto ERR;
+    }
+    BSL_SAL_FREE(ctx->pubKey);
+    BSL_SAL_ClearFree(ctx->prvKey, ctx->prvLen);
+    ctx->pubKey = pub;
+    ctx->prvKey = prv;
     ctx->pubLen = pqcPub.dataLen + tradPub.dataLen;
-    GOTO_ERR_IF(CRYPT_CompositeCreateKeyBuf(ctx), ret);
-
+    ctx->prvLen = pqcPrv.dataLen + tradPrv.dataLen;
     memcpy(ctx->prvKey, pqcPrv.data, pqcPrv.dataLen);
     memcpy(ctx->prvKey + pqcPrv.dataLen, tradPrv.data, tradPrv.dataLen);
     memcpy(ctx->pubKey, pqcPub.data, pqcPub.dataLen);

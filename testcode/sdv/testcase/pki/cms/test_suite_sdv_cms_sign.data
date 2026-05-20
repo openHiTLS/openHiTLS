@@ -295,6 +295,9 @@ SDV_CMS_MLDSA_INVALID_HASH_VERIFY_TC001:"../testdata/cert/asn1/cms/signeddata/ml
 SDV_CMS_MLDSA_INVALID_HASH_VERIFY_TC001 Test MLDSA87 with SHA-256 (invalid - should use SHA-512)
 SDV_CMS_MLDSA_INVALID_HASH_VERIFY_TC001:"../testdata/cert/asn1/cms/signeddata/mldsa/invalid_hash/mldsa87/mldsa87_sha256_attached.cms":"../testdata/cert/asn1/cms/signeddata/msg.txt":"../testdata/cert/asn1/cms/signeddata/mldsa/invalid_hash/mldsa87/ca_cert.pem"
 
+SDV_CMS_MLDSA_SIGNALG_MISMATCH_VERIFY_TC001 Test MLDSA65 with non-PQC signatureAlgorithm
+SDV_CMS_MLDSA_SIGNALG_MISMATCH_VERIFY_TC001:"../testdata/cert/asn1/cms/signeddata/mldsa/mldsa65/mldsa65_attached.cms":"../testdata/cert/asn1/cms/signeddata/msg.txt":"../testdata/cert/asn1/cms/signeddata/mldsa/mldsa65/ca_cert.pem"
+
 SDV_CMS_GEN_SIGNEDDATA_INVALID_HASH_TC001 mldsa44 - sha1 has signedAttrs
 SDV_CMS_GEN_SIGNEDDATA_INVALID_HASH_TC001:"../testdata/cert/asn1/cms/signeddata/mldsa/mldsa44/ca_cert.pem":"../testdata/cert/asn1/cms/signeddata/mldsa/mldsa44/entity_cert.pem":"../testdata/cert/asn1/cms/signeddata/mldsa/mldsa44/entity_key.pem":"../testdata/cert/asn1/cms/signeddata/msg.txt":1:1:BSL_CID_SHA1:HITLS_CMS_ERR_MLDSA_INVALID_DIGEST
 

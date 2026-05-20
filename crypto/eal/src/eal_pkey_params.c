@@ -782,7 +782,7 @@ int32_t PkeyProviderSetPub(CRYPT_EAL_PkeyCtx *pkey, const CRYPT_EAL_PkeyPub *key
             BSL_Param paParam[5] = {
                 {CRYPT_PARAM_ELGAMAL_P, BSL_PARAM_TYPE_OCTETS, key->key.elgamalPub.p, key->key.elgamalPub.pLen, 0},
                 {CRYPT_PARAM_ELGAMAL_G, BSL_PARAM_TYPE_OCTETS, key->key.elgamalPub.g, key->key.elgamalPub.gLen, 0},
-                {CRYPT_PARAM_ELGAMAL_Y, BSL_PARAM_TYPE_OCTETS, key->key.elgamalPub.y, key->key.elgamalPub.pLen, 0},
+                {CRYPT_PARAM_ELGAMAL_Y, BSL_PARAM_TYPE_OCTETS, key->key.elgamalPub.y, key->key.elgamalPub.yLen, 0},
                 {CRYPT_PARAM_ELGAMAL_Q, BSL_PARAM_TYPE_OCTETS, key->key.elgamalPub.q, key->key.elgamalPub.qLen, 0},
                 BSL_PARAM_END};
             return pkey->method.setPub(pkey->key, &paParam);

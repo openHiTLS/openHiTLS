@@ -306,6 +306,7 @@ static int32_t EncodeKeyParamAsn1BuffInner(CRYPT_EAL_PkeyCtx *pctx, int32_t opt,
 static int32_t SetDsaDhKeyPair(CRYPT_EAL_PkeyCtx *pkey, CRYPT_PKEY_AlgId algId, bool isPriv,
     uint8_t *buff, uint32_t buffLen)
 {
+    int32_t ret;
     int32_t pubKeyTag;
     int32_t prvKeyTag;
     if (algId == CRYPT_PKEY_DSA) {
@@ -319,20 +320,19 @@ static int32_t SetDsaDhKeyPair(CRYPT_EAL_PkeyCtx *pkey, CRYPT_PKEY_AlgId algId, 
         {pubKeyTag, BSL_PARAM_TYPE_OCTETS, buff, buffLen, 0},
         BSL_PARAM_END
     };
-    int32_t ret = CRYPT_EAL_PkeySetPubEx(pkey, rawKey);
-    if (ret != CRYPT_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
-        return ret;
-    }
     if (isPriv != 0) {
         rawKey[0].key = prvKeyTag;
         ret = CRYPT_EAL_PkeySetPrvEx(pkey, rawKey);
         if (ret != CRYPT_SUCCESS) {
             BSL_ERR_PUSH_ERROR(ret);
-            return ret;
         }
+        return ret;
     }
-    return CRYPT_SUCCESS;
+    ret = CRYPT_EAL_PkeySetPubEx(pkey, rawKey);
+    if (ret != CRYPT_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+    }
+    return ret;
 }
 #endif
 

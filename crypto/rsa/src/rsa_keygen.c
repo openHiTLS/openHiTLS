@@ -1285,6 +1285,10 @@ static bool IsExistRsaParam(const BSL_Param *params)
 int32_t CRYPT_RSA_Import(CRYPT_RSA_Ctx *ctx, const BSL_Param *params)
 {
     int32_t ret = CRYPT_SUCCESS;
+    if (ctx == NULL || params == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return CRYPT_NULL_INPUT;
+    }
     if (IsExistRsaParam(params)) {
         ret = CRYPT_RSA_SetParaEx(ctx, params);
         if (ret != CRYPT_SUCCESS) {
