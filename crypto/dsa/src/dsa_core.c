@@ -1599,6 +1599,10 @@ int32_t CryptDsaFips1864GenParams(CRYPT_DSA_Ctx *ctx, void *val)
 // Set flag == 1, enable generate private key SP800-56Ar3 5_6_1_1_4.
 static int32_t CRYPT_SetFipsFlag(CRYPT_DSA_Ctx *ctx, void *val, uint32_t len)
 {
+    if (val == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return CRYPT_NULL_INPUT;
+    }
     if (len != sizeof(uint32_t)) {
         BSL_ERR_PUSH_ERROR(CRYPT_DSA_PARA_ERROR);
         return CRYPT_DSA_PARA_ERROR;

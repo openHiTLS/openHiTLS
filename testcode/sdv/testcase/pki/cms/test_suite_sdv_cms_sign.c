@@ -2798,6 +2798,63 @@ EXIT:
 /* END_CASE */
 
 /**
+ * @test SDV_CMS_MLDSA_SIGNALG_MISMATCH_VERIFY_TC001
+ * @title Test ML-DSA CMS verification with mismatched signatureAlgorithm
+ * @precon nan
+ * @brief
+ *    1. Parse a valid ML-DSA CMS file
+ *    2. Tamper SignerInfo.signatureAlgorithm to a non-PQC OID
+ *    3. Call HITLS_CMS_DataVerify
+ * @expect
+ *    1. Parsing should succeed
+ *    2. Verification should fail with HITLS_CMS_ERR_INVALID_ALGO
+ */
+/* BEGIN_CASE */
+void SDV_CMS_MLDSA_SIGNALG_MISMATCH_VERIFY_TC001(char *p7path, char *msgpath, char *caPath)
+{
+#if !defined(HITLS_PKI_CMS_SIGNEDDATA)
+    (void)p7path;
+    (void)msgpath;
+    (void)caPath;
+    SKIP_TEST();
+#else
+    HITLS_CMS *cms = NULL;
+    BSL_Buffer msgBuff = {NULL, 0};
+    HITLS_X509_Cert *caCert = NULL;
+    HITLS_X509_List *caCertList = NULL;
+
+    ASSERT_EQ(HITLS_CMS_ProviderParseFile(NULL, NULL, NULL, p7path, &cms), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(BSL_SAL_ReadFile(msgpath, &msgBuff.data, &msgBuff.dataLen), BSL_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_PEM, caPath, &caCert), HITLS_PKI_SUCCESS);
+    ASSERT_NE(caCert, NULL);
+
+    caCertList = BSL_LIST_New(sizeof(HITLS_X509_Cert *));
+    ASSERT_NE(caCertList, NULL);
+    ASSERT_EQ(BSL_LIST_AddElement(caCertList, caCert, BSL_LIST_POS_END), BSL_SUCCESS);
+    BSL_Param params[2] = {
+        {HITLS_CMS_PARAM_CA_CERT_LISTS, BSL_PARAM_TYPE_CTX_PTR, caCertList, 0, 0},
+        BSL_PARAM_END
+    };
+
+    CMS_SignedData *signedData = cms->ctx.signedData;
+    ASSERT_NE(signedData, NULL);
+    CMS_SignerInfo *si = (CMS_SignerInfo *)BSL_LIST_GET_FIRST(signedData->signerInfos);
+    ASSERT_NE(si, NULL);
+    // tamper the algId of signerInfo
+    si->sigAlg.algId = BSL_CID_ECDSAWITHSHA256;
+
+    ASSERT_EQ(HITLS_CMS_DataVerify(cms, &msgBuff, params, NULL), HITLS_CMS_ERR_INVALID_ALGO);
+
+EXIT:
+    BSL_LIST_FREE(caCertList, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);
+    BSL_SAL_FREE(msgBuff.data);
+    HITLS_CMS_Free(cms);
+    return;
+#endif
+}
+/* END_CASE */
+
+/**
  * @test   SDV_CMS_GEN_SIGNEDDATA_INVALID_HASH_TC001
  * @title  Generate detached CMS SignedData with multiple signers
  * @brief

@@ -142,7 +142,7 @@ static int32_t BerlekampMassey(const GFElement *syndrome, GFPolynomial *sigma, c
     BmInitState(polyC, polyB, &lenLFSR, &b);
     for (int32_t lenN = 0; lenN < 2 * params->t; lenN++) {
         GFElement d = BmComputeDiscrepancy(syndrome, polyC, lenN, params->t);
-        uint16_t dMask = ((d - 1) >> 15 ) - 1;
+        uint16_t dMask = ((uint16_t)(d - 1) >> 15 ) - 1;
         uint16_t nMask = ((uint16_t)(lenN - (lenLFSR << 1)) >> 15) - 1;
         nMask &= dMask;
         for (int32_t i = 0; i <= params->t; i++) {

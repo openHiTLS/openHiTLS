@@ -391,7 +391,7 @@ int32_t CRYPT_ML_KEM_SetDecapsKey(CRYPT_ML_KEM_Ctx *ctx, const CRYPT_KemDecapsKe
     uint8_t *ekData = BSL_SAL_Dump(dk->data + MLKEM_CIPHER_LEN * ctx->info->k, ctx->info->encapsKeyLen);
     if (dkData == NULL || ekData == NULL) {
         MLKEM_KeyReset(ctx);
-        BSL_SAL_FREE(dkData);
+        BSL_SAL_ClearFree(dkData, dk->len);
         BSL_SAL_FREE(ekData);
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         return CRYPT_MEM_ALLOC_FAIL;
