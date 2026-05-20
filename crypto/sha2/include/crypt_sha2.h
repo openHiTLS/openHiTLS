@@ -387,7 +387,10 @@ void CRYPT_SHA256x2_Compress(uint32_t state1[CRYPT_SHA256_STATE_SIZE], uint32_t 
  * @brief   SHA256 multi-buffer one-shot hashing.
  *
  * Notes:
- * - Currently only supports num == 2.
+ * - This API is intended for internal acceleration paths.
+ * - Callers must ensure all parameters are valid (data, digest arrays and their elements
+ *   must not be NULL; outlen must point to a valid uint32_t; *outlen >= 32 bytes).
+ * - Currently only supports num == 2 on AArch64 with SHA2-ASM.
  * - nbytes is the same length for all lanes in this one-shot API.
  *
  * @param   data [IN] Input pointer array. data[i] is message pointer for lane i.
@@ -397,9 +400,7 @@ void CRYPT_SHA256x2_Compress(uint32_t state1[CRYPT_SHA256_STATE_SIZE], uint32_t 
  * @param   num [IN] Number of lanes/messages.
  *
  * @retval  #CRYPT_SUCCESS Success.
- * @retval  #CRYPT_NULL_INPUT Invalid input pointer.
  * @retval  #CRYPT_NOT_SUPPORT Not supported (e.g. num != 2 or platform capability missing).
- * @retval  Other error codes, see crypt_errno.h.
  */
 int32_t CRYPT_SHA256_MB(const uint8_t *data[], uint32_t nbytes, uint8_t *digest[], uint32_t *outlen, uint32_t num);
 

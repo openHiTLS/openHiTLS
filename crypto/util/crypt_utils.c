@@ -92,7 +92,7 @@ const BSL_Param *EAL_FindConstParam(const BSL_Param *param, int32_t key)
         return NULL;
     }
     int32_t index = 0;
-    while (param[index].key != 0 && index < PARAM_MAX_NUMBER) {
+    while (index < PARAM_MAX_NUMBER && param[index].key != 0) {
         if (param[index].key == key) {
             return &param[index];
         }
@@ -112,7 +112,7 @@ BSL_Param *EAL_FindParam(BSL_Param *param, int32_t key)
         return NULL;
     }
     int32_t index = 0;
-    while (param[index].key != 0 && index < PARAM_MAX_NUMBER) {
+    while (index < PARAM_MAX_NUMBER && param[index].key != 0) {
         if (param[index].key == key) {
             return &param[index];
         }
