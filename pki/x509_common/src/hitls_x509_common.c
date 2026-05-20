@@ -638,7 +638,7 @@ int32_t HITLS_X509_ParseBundleBuff(void *libCtx, const char *attrName, int32_t f
     return HITLS_PKI_SUCCESS;
 }
 
-#ifdef HITLS_PKI_X509_VFY
+#if defined(HITLS_PKI_X509_VFY) || defined(HITLS_PKI_CMS_ENVELOPEDDATA)
 static int32_t X509_NodeNameCompare(BSL_ASN1_Buffer *src, BSL_ASN1_Buffer *dest)
 {
     if (src->tag != dest->tag) {
@@ -740,7 +740,7 @@ int32_t HITLS_X509_CmpNameNode(BSL_ASN1_List *nameOri, BSL_ASN1_List *name)
     }
     return 0;
 }
-#endif // HITLS_PKI_X509_VFY
+#endif // HITLS_PKI_X509_VFY || HITLS_PKI_CMS_ENVELOPEDDATA
 
 #ifdef HITLS_CRYPTO_RSA
 /**

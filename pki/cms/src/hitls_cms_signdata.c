@@ -615,19 +615,8 @@ static int32_t EncodeHashAlgId(const CMS_AlgId *alg, BSL_ASN1_Buffer *asn)
     return HITLS_PKI_SUCCESS;
 }
 
-static void FreeAsnList(BSL_ASN1_Buffer *list, uint32_t count)
-{
-    for (uint32_t i = 0; i < count; i++) {
-        BSL_SAL_FREE(list[i].buff);
-    }
-    BSL_SAL_FREE(list);
-}
-
 // Callback for encoding items directly to ASN.1 buffer (AlgId, SignerInfo)
 typedef int32_t (*EncodeItemToAsnFunc)(void *item, BSL_ASN1_Buffer *encode);
-
-// Callback for encoding X509 items with format parameter (Cert, CRL)
-typedef int32_t (*EncodeX509ItemFunc)(int32_t format, void *item, BSL_Buffer *buf);
 
 // Common function to encode a list of items as SET OF SEQUENCE
 static int32_t EncodeListToSet(BslList *list, EncodeItemToAsnFunc encodeFunc, BSL_ASN1_Buffer *encode)
@@ -647,7 +636,7 @@ static int32_t EncodeListToSet(BslList *list, EncodeItemToAsnFunc encodeFunc, BS
         listNode = BSL_LIST_GetNextNode(list, listNode)) {
         int32_t ret = encodeFunc(BSL_LIST_GetData(listNode), &asnArr[i]);
         if (ret != HITLS_PKI_SUCCESS) {
-            FreeAsnList(asnArr, i);
+            HITLS_CMS_FreeAsnList(asnArr, i);
             return ret;
         }
         i++;
@@ -657,7 +646,7 @@ static int32_t EncodeListToSet(BslList *list, EncodeItemToAsnFunc encodeFunc, BS
     BSL_ASN1_Template seqTempl = {&seqTemplItem, 1};
     BSL_ASN1_Buffer outAsn = {0};
     int32_t ret = BSL_ASN1_EncodeListItem(BSL_ASN1_TAG_SET, count, &seqTempl, asnArr, i, &outAsn);
-    FreeAsnList(asnArr, i);
+    HITLS_CMS_FreeAsnList(asnArr, i);
     if (ret != HITLS_PKI_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
@@ -696,70 +685,6 @@ static int32_t EncodeEncapContentInfo(CMS_EncapContentInfo encap, BSL_ASN1_Buffe
     encode->len = outAsn.len;
     encode->tag = BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE;
     return HITLS_PKI_SUCCESS;
-}
-
-// Common function to encode a list of X509 items (certificates or CRLs)
-static int32_t EncodeX509List(HITLS_X509_List *list, uint8_t implicitTag, EncodeX509ItemFunc encodeFunc,
-    BSL_ASN1_Buffer *encode)
-{
-    uint8_t tag = BSL_ASN1_CLASS_CTX_SPECIFIC | BSL_ASN1_TAG_CONSTRUCTED | implicitTag;
-    if (list == NULL || BSL_LIST_COUNT(list) == 0) {
-        encode->tag = tag;
-        return HITLS_PKI_SUCCESS;
-    }
-
-    uint32_t count = (uint32_t)BSL_LIST_COUNT(list);
-    BSL_ASN1_Buffer *asnBuf = BSL_SAL_Calloc(count, sizeof(BSL_ASN1_Buffer));
-    if (asnBuf == NULL) {
-        BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
-        return BSL_MALLOC_FAIL;
-    }
-
-    uint32_t i = 0;
-    for (BslListNode *listNode = BSL_LIST_FirstNode(list); listNode != NULL;
-        listNode = BSL_LIST_GetNextNode(list, listNode), i++) {
-        void *node = BSL_LIST_GetData(listNode);
-        BSL_Buffer tmp = {0};
-        int32_t ret = encodeFunc(BSL_FORMAT_ASN1, node, &tmp);
-        if (ret != HITLS_PKI_SUCCESS) {
-            FreeAsnList(asnBuf, i);
-            BSL_ERR_PUSH_ERROR(ret);
-            return ret;
-        }
-        asnBuf[i].buff = tmp.data;
-        asnBuf[i].len  = tmp.dataLen;
-        asnBuf[i].tag  = BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE;
-    }
-    uint32_t len = 0;
-    for (uint32_t j = 0; j < i; j++) {
-        len += asnBuf[j].len;
-    }
-    uint8_t *temp = BSL_SAL_Malloc(len);
-    if (temp == NULL) {
-        FreeAsnList(asnBuf, i);
-        BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
-        return BSL_MALLOC_FAIL;
-    }
-    uint32_t offset = 0;
-    for (uint32_t j = 0; j < i; j++) {
-        memcpy(temp + offset, asnBuf[j].buff, asnBuf[j].len);
-        offset += asnBuf[j].len;
-    }
-    FreeAsnList(asnBuf, i);
-    encode->buff = temp;
-    encode->len = len;
-    encode->tag = tag;
-    return HITLS_PKI_SUCCESS;
-}
-
-static int32_t EncodeCertList(HITLS_X509_List *certs, BSL_ASN1_Buffer *encode)
-{
-    return EncodeX509List(certs, 0, (EncodeX509ItemFunc)HITLS_X509_CertGenBuff, encode);
-}
-
-static int32_t EncodeCrlList(HITLS_X509_List *crls, BSL_ASN1_Buffer *encode)
-{
-    return EncodeX509List(crls, 1, (EncodeX509ItemFunc)HITLS_X509_CrlGenBuff, encode);
 }
 
 static int32_t EncodeSignerIdentifier(CMS_SignerInfo *si, BSL_ASN1_Buffer *sid)

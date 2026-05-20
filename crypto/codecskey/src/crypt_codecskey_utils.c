@@ -122,6 +122,45 @@ typedef enum {
     CRYPT_RSAPSS_TRAILED_IDX,
     CRYPT_RSAPSS_MAX
 } CRYPT_RSAPSS_IDX;
+
+/**
+ * ref: rfc4055
+ * RSAES-OAEP-params ::= SEQUENCE {
+ *    hashAlgorithm      [0] HashAlgorithm     DEFAULT sha1Identifier,
+ *    maskGenAlgorithm   [1] MaskGenAlgorithm  DEFAULT mgf1SHA1Identifier,
+ *    pSourceAlgorithm   [2] PSourceAlgorithm  DEFAULT pSpecifiedEmptyIdentifier
+ * }
+ */
+static BSL_ASN1_TemplateItem g_rsaOaepTempl[] = {
+    {BSL_ASN1_CLASS_CTX_SPECIFIC | BSL_ASN1_TAG_CONSTRUCTED | CRYPT_ASN1_CTX_SPECIFIC_TAG_RSAOAEP_HASH,
+        BSL_ASN1_FLAG_DEFAULT, 0},
+    {BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE, 0, 1},
+    {BSL_ASN1_TAG_OBJECT_ID, 0, 2},
+    {BSL_ASN1_TAG_ANY, BSL_ASN1_FLAG_OPTIONAL, 2},
+    {BSL_ASN1_CLASS_CTX_SPECIFIC | BSL_ASN1_TAG_CONSTRUCTED | CRYPT_ASN1_CTX_SPECIFIC_TAG_RSAOAEP_MASKGEN,
+        BSL_ASN1_FLAG_DEFAULT, 0},
+    {BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE, 0, 1},
+    {BSL_ASN1_TAG_OBJECT_ID, 0, 2},
+    {BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE, 0, 2},
+    {BSL_ASN1_TAG_OBJECT_ID, 0, 3},
+    {BSL_ASN1_TAG_ANY, BSL_ASN1_FLAG_OPTIONAL, 3},
+    {BSL_ASN1_CLASS_CTX_SPECIFIC | BSL_ASN1_TAG_CONSTRUCTED | CRYPT_ASN1_CTX_SPECIFIC_TAG_RSAOAEP_PSOURCE,
+        BSL_ASN1_FLAG_DEFAULT, 0},
+    {BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE, 0, 1},
+    {BSL_ASN1_TAG_OBJECT_ID, 0, 2},
+    {BSL_ASN1_TAG_OCTETSTRING, 0, 2},
+};
+
+typedef enum {
+    CRYPT_RSAOAEP_HASH_IDX,
+    CRYPT_RSAOAEP_HASHANY_IDX,
+    CRYPT_RSAOAEP_MGF1_IDX,
+    CRYPT_RSAOAEP_MGF1PARAM_IDX,
+    CRYPT_RSAOAEP_MGF1PARAMANY_IDX,
+    CRYPT_RSAOAEP_PSOURCE_IDX,
+    CRYPT_RSAOAEP_PSOURCEPARAM_IDX,
+    CRYPT_RSAOAEP_MAX
+} CRYPT_RSAOAEP_IDX;
 #endif // HITLS_CRYPTO_KEY_DECODE
 
 #endif
@@ -524,6 +563,120 @@ int32_t CRYPT_EAL_ParseRsaPssAlgParam(BSL_ASN1_Buffer *param, CRYPT_RSA_PssPara 
         }
     }
     return ret;
+}
+
+static int32_t RsaOaepTagGetOrCheck(int32_t type, uint32_t idx, void *data, void *expVal)
+{
+    (void)idx;
+    (void)data;
+    if (type == BSL_ASN1_TYPE_GET_ANY_TAG) {
+        *(uint8_t *)expVal = BSL_ASN1_TAG_NULL;
+        return CRYPT_SUCCESS;
+    }
+    BSL_ERR_PUSH_ERROR(CRYPT_DECODE_ERR_RSSPSS_GET_ANY_TAG);
+    return CRYPT_DECODE_ERR_RSSPSS_GET_ANY_TAG;
+}
+
+static void InitRsaOaepAlgParamDefaults(CRYPT_RSA_OaepPara *para, BSL_Buffer *label)
+{
+    para->mdId = CRYPT_MD_SHA1;
+    para->mgfId = CRYPT_MD_SHA1;
+    if (label != NULL) {
+        label->data = NULL;
+        label->dataLen = 0;
+    }
+}
+
+static int32_t DecodeRsaOaepAlgParam(BSL_ASN1_Buffer *param, BSL_ASN1_Buffer *asns)
+{
+    uint8_t *temp = param->buff;
+    uint32_t tempLen = param->len;
+    BSL_ASN1_Template templ = {g_rsaOaepTempl, sizeof(g_rsaOaepTempl) / sizeof(g_rsaOaepTempl[0])};
+    int32_t ret = BSL_ASN1_DecodeTemplate(&templ, RsaOaepTagGetOrCheck, &temp, &tempLen, asns, CRYPT_RSAOAEP_MAX);
+    if (ret != BSL_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(CRYPT_DECODE_ERR_RSSPSS);
+        return CRYPT_DECODE_ERR_RSSPSS;
+    }
+    return CRYPT_SUCCESS;
+}
+
+static int32_t ParseRsaOaepHashAlg(const BSL_ASN1_Buffer *hashAsn, CRYPT_RSA_OaepPara *para)
+{
+    if (hashAsn->tag == 0) {
+        return CRYPT_SUCCESS;
+    }
+    para->mdId = (CRYPT_MD_AlgId)BSL_OBJ_GetCidFromOidBuff(hashAsn->buff, hashAsn->len);
+    if (para->mdId == (CRYPT_MD_AlgId)BSL_CID_UNKNOWN) {
+        BSL_ERR_PUSH_ERROR(CRYPT_DECODE_ERR_RSSPSS_MD);
+        return CRYPT_DECODE_ERR_RSSPSS_MD;
+    }
+    return CRYPT_SUCCESS;
+}
+
+static int32_t ParseRsaOaepMgfAlg(const BSL_ASN1_Buffer *mgfAsn, const BSL_ASN1_Buffer *mgfParamAsn,
+    CRYPT_RSA_OaepPara *para)
+{
+    if (mgfAsn->tag == 0) {
+        return CRYPT_SUCCESS;
+    }
+    BslCid mgfCid = BSL_OBJ_GetCidFromOidBuff(mgfAsn->buff, mgfAsn->len);
+    if (mgfCid != BSL_CID_MGF1) {
+        BSL_ERR_PUSH_ERROR(CRYPT_DECODE_ERR_RSSPSS_MGF1MD);
+        return CRYPT_DECODE_ERR_RSSPSS_MGF1MD;
+    }
+    para->mgfId = (CRYPT_MD_AlgId)BSL_OBJ_GetCidFromOidBuff(mgfParamAsn->buff, mgfParamAsn->len);
+    if (para->mgfId == (CRYPT_MD_AlgId)BSL_CID_UNKNOWN) {
+        BSL_ERR_PUSH_ERROR(CRYPT_DECODE_ERR_RSSPSS_MGF1MD);
+        return CRYPT_DECODE_ERR_RSSPSS_MGF1MD;
+    }
+    return CRYPT_SUCCESS;
+}
+
+static int32_t ParseRsaOaepPSourceAlg(const BSL_ASN1_Buffer *sourceAsn, const BSL_ASN1_Buffer *sourceParamAsn,
+    BSL_Buffer *label)
+{
+    static const uint8_t g_pSpecifiedOid[] = {0x2A, 0x86, 0x48, 0x86, 0xF7, 0x0D, 0x01, 0x01, 0x09};
+
+    if (sourceAsn->tag == 0) {
+        return CRYPT_SUCCESS;
+    }
+    if (sourceAsn->len != sizeof(g_pSpecifiedOid) ||
+        memcmp(sourceAsn->buff, g_pSpecifiedOid, sizeof(g_pSpecifiedOid)) != 0) {
+        BSL_ERR_PUSH_ERROR(CRYPT_ERR_ALGID);
+        return CRYPT_ERR_ALGID;
+    }
+    if (label != NULL) {
+        label->data = sourceParamAsn->buff;
+        label->dataLen = sourceParamAsn->len;
+    }
+    return CRYPT_SUCCESS;
+}
+
+int32_t CRYPT_EAL_ParseRsaOaepAlgParam(BSL_ASN1_Buffer *param, CRYPT_RSA_OaepPara *para, BSL_Buffer *label)
+{
+    if (para == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return CRYPT_NULL_INPUT;
+    }
+    InitRsaOaepAlgParamDefaults(para, label);
+    if (param == NULL || param->buff == NULL || param->len == 0) {
+        return CRYPT_SUCCESS;
+    }
+
+    BSL_ASN1_Buffer asns[CRYPT_RSAOAEP_MAX] = {0};
+    int32_t ret = DecodeRsaOaepAlgParam(param, asns);
+    if (ret != CRYPT_SUCCESS) {
+        return ret;
+    }
+    ret = ParseRsaOaepHashAlg(&asns[CRYPT_RSAOAEP_HASH_IDX], para);
+    if (ret != CRYPT_SUCCESS) {
+        return ret;
+    }
+    ret = ParseRsaOaepMgfAlg(&asns[CRYPT_RSAOAEP_MGF1_IDX], &asns[CRYPT_RSAOAEP_MGF1PARAM_IDX], para);
+    if (ret != CRYPT_SUCCESS) {
+        return ret;
+    }
+    return ParseRsaOaepPSourceAlg(&asns[CRYPT_RSAOAEP_PSOURCE_IDX], &asns[CRYPT_RSAOAEP_PSOURCEPARAM_IDX], label);
 }
 #endif
 

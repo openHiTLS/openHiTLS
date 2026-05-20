@@ -15,6 +15,7 @@
 
 #include "hitls_build.h"
 #ifdef HITLS_PKI_CMS
+#include <string.h>
 #include "bsl_err_internal.h"
 #include "bsl_asn1_internal.h"
 #include "bsl_obj_internal.h"
@@ -161,7 +162,7 @@ int32_t HITLS_CMS_EncodeDigestInfoBuff(BslCid cid, BSL_Buffer *in, BSL_Buffer *e
 }
 #endif // HITLS_PKI_CMS_DIGESTINFO
 
-#ifdef HITLS_PKI_CMS_SIGNEDDATA
+#if defined(HITLS_PKI_CMS_SIGNEDDATA) || defined(HITLS_PKI_CMS_ENVELOPEDDATA)
 /*
  * Defined in RFC 5652
  * ContentInfo ::= SEQUENCE {
@@ -210,12 +211,99 @@ int32_t HITLS_CMS_ProviderParseBuff(HITLS_PKI_LibCtx *libCtx, const char *attrNa
     }
     BSL_Buffer asnArrData = {asnArr[HITLS_CMS_CONTENT_VALUE_IDX].buff, asnArr[HITLS_CMS_CONTENT_VALUE_IDX].len};
     switch (cid) {
+#ifdef HITLS_PKI_CMS_SIGNEDDATA
         case BSL_CID_PKCS7_SIGNEDDATA:
             return HITLS_CMS_ParseSignedData(libCtx, attrName, &asnArrData, cms);
+#endif
+#ifdef HITLS_PKI_CMS_ENVELOPEDDATA
+        case BSL_CID_PKCS7_ENVELOPEDDATA:
+            return HITLS_CMS_ParseEnvelopedData(libCtx, attrName, &asnArrData, cms);
+#endif
         default:
             BSL_ERR_PUSH_ERROR(HITLS_CMS_ERR_PARSE_TYPE);
             return HITLS_CMS_ERR_PARSE_TYPE;
     }
+}
+
+// Callback for encoding X509 items with format parameter (Cert, CRL)
+typedef int32_t (*EncodeX509ItemFunc)(int32_t format, void *item, BSL_Buffer *buf);
+
+// Common function to encode a list of X509 items (certificates or CRLs)
+static int32_t EncodeX509List(HITLS_X509_List *list, uint8_t implicitTag, EncodeX509ItemFunc encodeFunc,
+    BSL_ASN1_Buffer *encode)
+{
+    const uint32_t initBufLen = 512;
+    uint8_t tag = BSL_ASN1_CLASS_CTX_SPECIFIC | BSL_ASN1_TAG_CONSTRUCTED | implicitTag;
+    if (BSL_LIST_COUNT(list) == 0) {
+        encode->tag = tag;
+        return HITLS_PKI_SUCCESS;
+    }
+
+    uint8_t *temp = BSL_SAL_Malloc(initBufLen);
+    if (temp == NULL) {
+        BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
+        return BSL_MALLOC_FAIL;
+    }
+
+    uint32_t len = 0;
+    uint32_t bufLen = initBufLen;
+    for (void *node = BSL_LIST_GET_FIRST(list); node != NULL; node = BSL_LIST_GET_NEXT(list)) {
+        BSL_Buffer tmp = {0};
+        int32_t ret = encodeFunc(BSL_FORMAT_ASN1, node, &tmp);
+        if (ret != HITLS_PKI_SUCCESS) {
+            BSL_SAL_Free(temp);
+            BSL_ERR_PUSH_ERROR(ret);
+            return ret;
+        }
+
+        if (tmp.dataLen > UINT32_MAX - len) {
+            BSL_SAL_Free(tmp.data);
+            BSL_SAL_Free(temp);
+            BSL_ERR_PUSH_ERROR(BSL_ASN1_ERR_LEN_OVERFLOW);
+            return BSL_ASN1_ERR_LEN_OVERFLOW;
+        }
+
+        uint32_t totalLen = len + tmp.dataLen;
+        if (totalLen > bufLen) {
+            uint32_t newBufLen = bufLen;
+            while (newBufLen < totalLen) {
+                if (newBufLen > UINT32_MAX / 2) {
+                    newBufLen = totalLen;
+                    break;
+                }
+                newBufLen *= 2;
+            }
+            uint8_t *newBuf = BSL_SAL_Realloc(temp, newBufLen, bufLen);
+            if (newBuf == NULL) {
+                BSL_SAL_Free(tmp.data);
+                BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
+                BSL_SAL_Free(temp);
+                return BSL_MALLOC_FAIL;
+            }
+            temp = newBuf;
+            bufLen = newBufLen;
+        }
+
+        if (tmp.dataLen > 0) {
+            memcpy(temp + len, tmp.data, tmp.dataLen);
+            len = totalLen;
+        }
+        BSL_SAL_Free(tmp.data);
+    }
+    encode->buff = temp;
+    encode->len = len;
+    encode->tag = tag;
+    return HITLS_PKI_SUCCESS;
+}
+
+int32_t EncodeCertList(HITLS_X509_List *certs, BSL_ASN1_Buffer *encode)
+{
+    return EncodeX509List(certs, 0, (EncodeX509ItemFunc)HITLS_X509_CertGenBuff, encode);
+}
+
+int32_t EncodeCrlList(HITLS_X509_List *crls, BSL_ASN1_Buffer *encode)
+{
+    return EncodeX509List(crls, 1, (EncodeX509ItemFunc)HITLS_X509_CrlGenBuff, encode);
 }
 
 static int32_t CMS_EncodeContent(int32_t dataType, BSL_Buffer *input, BSL_Buffer *encode)
@@ -257,9 +345,16 @@ int32_t HITLS_CMS_GenBuff(int32_t format, HITLS_CMS *cms, const BSL_Param *optio
     int32_t ret;
     BSL_Buffer input = {0};
     switch (cms->dataType) {
+#ifdef HITLS_PKI_CMS_SIGNEDDATA
         case BSL_CID_PKCS7_SIGNEDDATA:
             ret = HITLS_CMS_GenSignedDataBuff(format, cms, &input);
             break;
+#endif
+#ifdef HITLS_PKI_CMS_ENVELOPEDDATA
+        case BSL_CID_PKCS7_ENVELOPEDDATA:
+            ret = HITLS_CMS_GenEnvelopedDataBuff(format, cms, &input);
+            break;
+#endif
         default:
             ret = HITLS_CMS_ERR_UNSUPPORTED_TYPE;
             break;
@@ -323,8 +418,14 @@ int32_t HITLS_CMS_DataInit(int32_t option, HITLS_CMS *cms, const BSL_Param *para
         return HITLS_CMS_ERR_NULL_POINTER;
     }
     switch (cms->dataType) {
+#ifdef HITLS_PKI_CMS_SIGNEDDATA
         case BSL_CID_PKCS7_SIGNEDDATA:
             return HITLS_CMS_SignedDataInit(cms, option, param);
+#endif
+#ifdef HITLS_PKI_CMS_ENVELOPEDDATA
+        case BSL_CID_PKCS7_ENVELOPEDDATA:
+            return HITLS_CMS_EnvelopedDataInit(cms, option, param);
+#endif
         default:
             BSL_ERR_PUSH_ERROR(HITLS_CMS_ERR_UNSUPPORTED_TYPE);
             return HITLS_CMS_ERR_UNSUPPORTED_TYPE;
@@ -338,8 +439,10 @@ int32_t HITLS_CMS_DataUpdate(HITLS_CMS *cms, const BSL_Buffer *input)
         return HITLS_CMS_ERR_NULL_POINTER;
     }
     switch (cms->dataType) {
+#ifdef HITLS_PKI_CMS_SIGNEDDATA
         case BSL_CID_PKCS7_SIGNEDDATA:
             return HITLS_CMS_SignedDataUpdate(cms, input);
+#endif
         default:
             BSL_ERR_PUSH_ERROR(HITLS_CMS_ERR_UNSUPPORTED_TYPE);
             return HITLS_CMS_ERR_UNSUPPORTED_TYPE;
@@ -353,13 +456,60 @@ int32_t HITLS_CMS_DataFinal(HITLS_CMS *cms, const BSL_Param *param)
         return HITLS_CMS_ERR_NULL_POINTER;
     }
     switch (cms->dataType) {
+#ifdef HITLS_PKI_CMS_SIGNEDDATA
         case BSL_CID_PKCS7_SIGNEDDATA:
             return HITLS_CMS_SignedDataFinal(cms, param);
+#endif
         default:
             BSL_ERR_PUSH_ERROR(HITLS_CMS_ERR_UNSUPPORTED_TYPE);
             return HITLS_CMS_ERR_UNSUPPORTED_TYPE;
     }
 }
 
-#endif // HITLS_PKI_CMS_SIGNEDDATA
+int32_t HITLS_CMS_DataUpdateEx(HITLS_CMS *cms, const BSL_Buffer *input, BSL_Buffer *output)
+{
+    if (cms == NULL) {
+        BSL_ERR_PUSH_ERROR(HITLS_CMS_ERR_NULL_POINTER);
+        return HITLS_CMS_ERR_NULL_POINTER;
+    }
+    switch (cms->dataType) {
+#ifdef HITLS_PKI_CMS_SIGNEDDATA
+        case BSL_CID_PKCS7_SIGNEDDATA:
+            (void)output;
+            return HITLS_CMS_SignedDataUpdate(cms, input);
+#endif
+#ifdef HITLS_PKI_CMS_ENVELOPEDDATA
+        case BSL_CID_PKCS7_ENVELOPEDDATA:
+            return HITLS_CMS_EnvelopedDataUpdate(cms, input, output);
+#endif
+        default:
+            BSL_ERR_PUSH_ERROR(HITLS_CMS_ERR_UNSUPPORTED_TYPE);
+            return HITLS_CMS_ERR_UNSUPPORTED_TYPE;
+    }
+}
+
+int32_t HITLS_CMS_DataFinalEx(HITLS_CMS *cms, const BSL_Param *param, BSL_Buffer *output)
+{
+    if (cms == NULL) {
+        BSL_ERR_PUSH_ERROR(HITLS_CMS_ERR_NULL_POINTER);
+        return HITLS_CMS_ERR_NULL_POINTER;
+    }
+    switch (cms->dataType) {
+#ifdef HITLS_PKI_CMS_SIGNEDDATA
+        case BSL_CID_PKCS7_SIGNEDDATA:
+            (void)output;
+            return HITLS_CMS_SignedDataFinal(cms, param);
+#endif
+#ifdef HITLS_PKI_CMS_ENVELOPEDDATA
+        case BSL_CID_PKCS7_ENVELOPEDDATA:
+            return HITLS_CMS_EnvelopedDataFinal(cms, param, output);
+#endif
+        default:
+            BSL_ERR_PUSH_ERROR(HITLS_CMS_ERR_UNSUPPORTED_TYPE);
+            return HITLS_CMS_ERR_UNSUPPORTED_TYPE;
+    }
+}
+
+#endif // HITLS_PKI_CMS_SIGNEDDATA || HITLS_PKI_CMS_ENVELOPEDDATA
+
 #endif // HITLS_PKI_CMS

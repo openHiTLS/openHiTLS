@@ -437,6 +437,7 @@ option(HITLS_PKI_CMS                                           "CMS" OFF)
   option(HITLS_PKI_CMS_DIGESTINFO                                "CMS DigestInfo" OFF)
   option(HITLS_PKI_CMS_SIGNEDDATA                                "CMS SignedData" OFF)
   option(HITLS_PKI_CMS_ENCRYPTDATA                               "CMS EncryptedData" OFF)
+  option(HITLS_PKI_CMS_ENVELOPEDDATA                             "CMS EnvelopedData" OFF)
 
 ## PKCS12
 option(HITLS_PKI_PKCS12                                        "PKCS12" OFF)

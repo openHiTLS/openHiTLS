@@ -78,22 +78,6 @@ static void CMS_SignedDataFree(CMS_SignedData *sd)
     BSL_SAL_Free(sd);
 }
 
-void HITLS_CMS_Free(HITLS_CMS *cms)
-{
-    if (cms == NULL) {
-        return;
-    }
-    switch (cms->dataType) {
-        case BSL_CID_PKCS7_SIGNEDDATA:
-            CMS_SignedDataFree(cms->ctx.signedData);
-            break;
-        default:
-            break;
-    }
-    BSL_SAL_Free(cms);
-    return;
-}
-
 CMS_SignerInfo *CMS_SignerInfoNew(uint32_t flag)
 {
     CMS_SignerInfo *si = (CMS_SignerInfo *)BSL_SAL_Calloc(1, sizeof(CMS_SignerInfo));
@@ -150,32 +134,6 @@ static CMS_SignedData *CMS_ProviderSignedDataNew(HITLS_PKI_LibCtx *libCtx, const
     sd->attrName = attrName;
     sd->detached = true; // Default is detached
     return sd;
-}
-
-HITLS_CMS *HITLS_CMS_ProviderNew(HITLS_PKI_LibCtx *libCtx, const char *attrName, int32_t dataType)
-{
-    HITLS_CMS *cms = (HITLS_CMS *)BSL_SAL_Calloc(1, sizeof(HITLS_CMS));
-    if (cms == NULL) {
-        BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
-        return NULL;
-    }
-    cms->dataType = dataType;
-    switch (dataType) {
-        case BSL_CID_PKCS7_SIGNEDDATA: {
-            CMS_SignedData *sd = CMS_ProviderSignedDataNew(libCtx, attrName);
-            if (sd == NULL) {
-                BSL_SAL_Free(cms);
-                return NULL;
-            }
-            cms->ctx.signedData = sd;
-            break;
-        }
-        default:
-            BSL_ERR_PUSH_ERROR(HITLS_CMS_ERR_UNSUPPORTED_TYPE);
-            BSL_SAL_Free(cms);
-            return NULL;
-    }
-    return cms;
 }
 
 typedef int32_t (*HITLS_CMS_ItemCtrlFunc)(void *item, int32_t cmd, void *val, uint32_t valLen);
@@ -300,6 +258,99 @@ int32_t HITLS_CMS_SignedDataCtrl(HITLS_CMS *cms, int32_t cmd, void *val, uint32_
 
     return HITLS_PKI_SUCCESS;
 }
+#endif // HITLS_PKI_CMS_SIGNEDDATA
+
+#ifdef HITLS_PKI_CMS_ENVELOPEDDATA
+static CMS_EnvelopedData *CMS_ProviderEnvelopedDataNew(HITLS_PKI_LibCtx *libCtx, const char *attrName)
+{
+    CMS_RecipientInfos *recip = NULL;
+    CMS_EnvelopedData *envData = NULL;
+    recip = BSL_LIST_New(sizeof(CMS_RecipientInfo *));
+    envData = BSL_SAL_Calloc(1, sizeof(CMS_EnvelopedData));
+    if (envData == NULL || recip == NULL) {
+        BSL_SAL_Free(envData);
+        BSL_LIST_FREE(recip, (BSL_LIST_PFUNC_FREE)RecipientInfoFree);
+        return NULL;
+    }
+    envData->recipientInfos = recip;
+    envData->libCtx = libCtx;
+    envData->attrName = attrName;
+    envData->state = HITLS_CMS_UNINIT;
+    return envData;
+}
+#endif // HITLS_PKI_CMS_ENVELOPEDDATA
+
+#if defined(HITLS_PKI_CMS_SIGNEDDATA) || defined(HITLS_PKI_CMS_ENVELOPEDDATA)
+
+void HITLS_CMS_FreeAsnList(BSL_ASN1_Buffer *list, uint32_t count)
+{
+    for (uint32_t i = 0; i < count; i++) {
+        BSL_SAL_FREE(list[i].buff);
+    }
+    BSL_SAL_FREE(list);
+}
+
+void HITLS_CMS_Free(HITLS_CMS *cms)
+{
+    if (cms == NULL) {
+        return;
+    }
+    switch (cms->dataType) {
+#ifdef  HITLS_PKI_CMS_SIGNEDDATA
+        case BSL_CID_PKCS7_SIGNEDDATA:
+            CMS_SignedDataFree(cms->ctx.signedData);
+            break;
+#endif
+#ifdef HITLS_PKI_CMS_ENVELOPEDDATA
+        case BSL_CID_PKCS7_ENVELOPEDDATA:
+            CMS_EnvelopedDataFree(cms->ctx.envelopedData);
+            break;
+#endif
+        default:
+            break;
+    }
+    BSL_SAL_Free(cms);
+    return;
+}
+
+HITLS_CMS *HITLS_CMS_ProviderNew(HITLS_PKI_LibCtx *libCtx, const char *attrName, int32_t dataType)
+{
+    HITLS_CMS *cms = (HITLS_CMS *)BSL_SAL_Calloc(1, sizeof(HITLS_CMS));
+    if (cms == NULL) {
+        BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
+        return NULL;
+    }
+    cms->dataType = dataType;
+    switch (dataType) {
+#ifdef HITLS_PKI_CMS_SIGNEDDATA
+        case BSL_CID_PKCS7_SIGNEDDATA: {
+            CMS_SignedData *sd = CMS_ProviderSignedDataNew(libCtx, attrName);
+            if (sd == NULL) {
+                BSL_SAL_Free(cms);
+                return NULL;
+            }
+            cms->ctx.signedData = sd;
+            break;
+        }
+#endif
+#ifdef HITLS_PKI_CMS_ENVELOPEDDATA
+        case BSL_CID_PKCS7_ENVELOPEDDATA: {
+            CMS_EnvelopedData *ed = CMS_ProviderEnvelopedDataNew(libCtx, attrName);
+            if (ed == NULL) {
+                BSL_SAL_Free(cms);
+                return NULL;
+            }
+            cms->ctx.envelopedData = ed;
+            break;
+        }
+#endif
+        default:
+            BSL_ERR_PUSH_ERROR(HITLS_CMS_ERR_UNSUPPORTED_TYPE);
+            BSL_SAL_Free(cms);
+            return NULL;
+    }
+    return cms;
+}
 
 int32_t HITLS_CMS_Ctrl(HITLS_CMS *cms, int32_t cmd, void *val, uint32_t valLen)
 {
@@ -310,13 +361,19 @@ int32_t HITLS_CMS_Ctrl(HITLS_CMS *cms, int32_t cmd, void *val, uint32_t valLen)
 
     // Dispatch to appropriate sub-module ctrl function based on CMS dataType
     switch (cms->dataType) {
+#ifdef HITLS_PKI_CMS_SIGNEDDATA
         case BSL_CID_PKCS7_SIGNEDDATA:
             return HITLS_CMS_SignedDataCtrl(cms, cmd, val, valLen);
+#endif
+#ifdef HITLS_PKI_CMS_ENVELOPEDDATA
+        case BSL_CID_PKCS7_ENVELOPEDDATA:
+            return HITLS_CMS_EnvelopedDataCtrl(cms, cmd, val, valLen);
+#endif
         default:
             BSL_ERR_PUSH_ERROR(HITLS_CMS_ERR_UNSUPPORTED_TYPE);
             return HITLS_CMS_ERR_UNSUPPORTED_TYPE;
     }
 }
-#endif // HITLS_PKI_CMS_SIGNEDDATA
+#endif // HITLS_PKI_CMS_SIGNEDDATA || HITLS_PKI_CMS_ENVELOPEDDATA
 
 #endif // HITLS_PKI_CMS

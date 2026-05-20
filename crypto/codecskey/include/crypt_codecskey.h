@@ -55,6 +55,7 @@ int32_t CRYPT_DECODE_Pkcs8Info(uint8_t *buff, uint32_t buffLen, BSL_ASN1_DecTemp
 
 #ifdef HITLS_CRYPTO_RSA
 int32_t CRYPT_EAL_ParseRsaPssAlgParam(BSL_ASN1_Buffer *param, CRYPT_RSA_PssPara *para);
+int32_t CRYPT_EAL_ParseRsaOaepAlgParam(BSL_ASN1_Buffer *param, CRYPT_RSA_OaepPara *para, BSL_Buffer *label);
 #endif
 
 #endif // HITLS_CRYPTO_KEY_DECODE
@@ -68,6 +69,8 @@ int32_t CRYPT_EAL_EncodePubKeyBuffInternal(CRYPT_EAL_PkeyCtx *ealPubKey,
 
 #ifdef HITLS_CRYPTO_RSA
 int32_t CRYPT_EAL_EncodeRsaPssAlgParam(const CRYPT_RSA_PssPara *rsaPssParam, uint8_t **buf, uint32_t *bufLen);
+int32_t CRYPT_EAL_EncodeRsaOaepAlgParam(const CRYPT_RSA_OaepPara *rsaOaepParam, const BSL_Buffer *label,
+    uint8_t **buf, uint32_t *bufLen);
 #endif
 
 #endif // HITLS_CRYPTO_KEY_ENCODE

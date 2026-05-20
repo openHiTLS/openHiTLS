@@ -23,6 +23,12 @@ if(HITLS_PKI_CMS_SIGNEDDATA)
     )
 endif()
 
+if(HITLS_PKI_CMS_ENVELOPEDDATA)
+    list(APPEND _cms_sources
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/hitls_cms_envelopeddata.c
+    )
+endif()
+
 add_library(_hitls_pki_cms OBJECT ${_cms_sources})
 
 target_link_libraries(_hitls_pki_cms

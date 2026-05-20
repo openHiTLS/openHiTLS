@@ -2549,6 +2549,87 @@ EXIT:
     }
     return ret;
 }
+
+static int32_t EncodePSourceAlg(const BSL_Buffer *label, BSL_ASN1_Buffer *asn)
+{
+    static const uint8_t g_pSpecifiedOid[] = {0x2A, 0x86, 0x48, 0x86, 0xF7, 0x0D, 0x01, 0x01, 0x09};
+
+    asn->tag = BSL_ASN1_CLASS_CTX_SPECIFIC | BSL_ASN1_TAG_CONSTRUCTED | CRYPT_ASN1_CTX_SPECIFIC_TAG_RSAOAEP_PSOURCE;
+    if (label == NULL || (label->data == NULL && label->dataLen == 0) || label->dataLen == 0) {
+        return CRYPT_SUCCESS;
+    }
+
+    BSL_ASN1_TemplateItem psourceTempl[] = {
+        {BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE, 0, 0},
+            {BSL_ASN1_TAG_OBJECT_ID, 0, 1},
+            {BSL_ASN1_TAG_OCTETSTRING, 0, 1},
+    };
+    BSL_ASN1_Template templ = {psourceTempl, sizeof(psourceTempl) / sizeof(psourceTempl[0])};
+    BSL_ASN1_Buffer asnArr[2] = {
+        {BSL_ASN1_TAG_OBJECT_ID, sizeof(g_pSpecifiedOid), (uint8_t *)(uintptr_t)g_pSpecifiedOid},
+        {BSL_ASN1_TAG_OCTETSTRING, label->dataLen, label->data},
+    };
+    int32_t ret = BSL_ASN1_EncodeTemplate(&templ, asnArr, 2, &(asn->buff), &(asn->len));
+    if (ret != CRYPT_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        return ret;
+    }
+    return CRYPT_SUCCESS;
+}
+
+#define X509_RSAOAEP_ELEM_NUMBER 3
+int32_t CRYPT_EAL_EncodeRsaOaepAlgParam(const CRYPT_RSA_OaepPara *rsaOaepParam, const BSL_Buffer *label,
+    uint8_t **buf, uint32_t *bufLen)
+{
+    if (rsaOaepParam == NULL || buf == NULL || bufLen == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return CRYPT_NULL_INPUT;
+    }
+    BSL_ASN1_Buffer asnArr[X509_RSAOAEP_ELEM_NUMBER] = {0};
+    int32_t ret = EncodeHashAlg(rsaOaepParam->mdId, &asnArr[0]);
+    if (ret != CRYPT_SUCCESS) {
+        return ret;
+    }
+    asnArr[0].tag = BSL_ASN1_CLASS_CTX_SPECIFIC | BSL_ASN1_TAG_CONSTRUCTED | CRYPT_ASN1_CTX_SPECIFIC_TAG_RSAOAEP_HASH;
+
+    ret = EncodeMgfAlg(rsaOaepParam->mgfId, &asnArr[1]);
+    if (ret != CRYPT_SUCCESS) {
+        goto EXIT;
+    }
+    asnArr[1].tag = BSL_ASN1_CLASS_CTX_SPECIFIC | BSL_ASN1_TAG_CONSTRUCTED |
+        CRYPT_ASN1_CTX_SPECIFIC_TAG_RSAOAEP_MASKGEN;
+
+    ret = EncodePSourceAlg(label, &asnArr[2]);
+    if (ret != CRYPT_SUCCESS) {
+        goto EXIT;
+    }
+
+    uint32_t totalLen = asnArr[0].len + asnArr[1].len + asnArr[2].len;
+    if (totalLen == 0) {
+        *buf = NULL;
+        *bufLen = 0;
+        return CRYPT_SUCCESS;
+    }
+
+    BSL_ASN1_TemplateItem rsaOaepTempl[] = {
+        {BSL_ASN1_CLASS_CTX_SPECIFIC | BSL_ASN1_TAG_CONSTRUCTED | CRYPT_ASN1_CTX_SPECIFIC_TAG_RSAOAEP_HASH,
+            BSL_ASN1_FLAG_DEFAULT, 0},
+        {BSL_ASN1_CLASS_CTX_SPECIFIC | BSL_ASN1_TAG_CONSTRUCTED | CRYPT_ASN1_CTX_SPECIFIC_TAG_RSAOAEP_MASKGEN,
+            BSL_ASN1_FLAG_DEFAULT, 0},
+        {BSL_ASN1_CLASS_CTX_SPECIFIC | BSL_ASN1_TAG_CONSTRUCTED | CRYPT_ASN1_CTX_SPECIFIC_TAG_RSAOAEP_PSOURCE,
+            BSL_ASN1_FLAG_DEFAULT, 0},
+    };
+    BSL_ASN1_Template templ = {rsaOaepTempl, sizeof(rsaOaepTempl) / sizeof(rsaOaepTempl[0])};
+    ret = BSL_ASN1_EncodeTemplate(&templ, asnArr, X509_RSAOAEP_ELEM_NUMBER, buf, bufLen);
+    if (ret != CRYPT_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+    }
+EXIT:
+    for (uint32_t i = 0; i < X509_RSAOAEP_ELEM_NUMBER; i++) {
+        BSL_SAL_Free(asnArr[i].buff);
+    }
+    return ret;
+}
 #endif // HITLS_CRYPTO_RSA
 #endif // HITLS_CRYPTO_KEY_ENCODE
 

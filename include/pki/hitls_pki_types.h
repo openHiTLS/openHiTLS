@@ -485,6 +485,8 @@ typedef enum {
 typedef enum {
     HITLS_CMS_OPT_SIGN   = 0x01,  /**< Initialize for signing */
     HITLS_CMS_OPT_VERIFY  = 0x02,  /**< Initialize for verification */
+    HITLS_CMS_OPT_ENCRYPT = 0x03,  /**< Initialize for encryption */
+    HITLS_CMS_OPT_DECRYPT = 0x04,  /**< Initialize for decryption */
 } HITLS_CMS_Option;
 
 #ifdef __cplusplus

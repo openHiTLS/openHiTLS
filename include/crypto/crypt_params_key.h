@@ -141,6 +141,7 @@ extern "C" {
 #define CRYPT_PARAM_RSA_XP2                                 (CRYPT_PARAM_RSA_BASE + 16)
 #define CRYPT_PARAM_RSA_XQ1                                 (CRYPT_PARAM_RSA_BASE + 17)
 #define CRYPT_PARAM_RSA_XQ2                                 (CRYPT_PARAM_RSA_BASE + 18)
+#define CRYPT_PARAM_RSA_OAEP_LABEL                          (CRYPT_PARAM_RSA_BASE + 19)
 
 #define CRYPT_PARAM_ML_KEM_BASE                             1400
 #define CRYPT_PARAM_ML_KEM_PRVKEY                           (CRYPT_PARAM_ML_KEM_BASE + 1)
