@@ -66,7 +66,7 @@ int32_t SAL_TIME_SysTimeGet(BSL_TIME *sysTime)
 
 int32_t SAL_TIME_UtcTimeToDateConvert(int64_t utcTime, BSL_TIME *sysTime)
 {
-    struct tm tempTime;
+    struct tm tempTime = {0};
     time_t utcTimeTmp = (time_t)utcTime;
     if ((int64_t)utcTimeTmp != utcTime) {
         return BSL_SAL_TIME_BAD_PARAM;
@@ -76,9 +76,7 @@ int32_t SAL_TIME_UtcTimeToDateConvert(int64_t utcTime, BSL_TIME *sysTime)
     }
 
     int64_t year = (int64_t)tempTime.tm_year + (int64_t)BSL_TIME_YEAR_START; /* 1900 is base year */
-    if (year < 0 || year > UINT16_MAX || tempTime.tm_mon < 0 || tempTime.tm_mon > 11 ||
-        tempTime.tm_mday < 1 || tempTime.tm_mday > 31 || tempTime.tm_hour < 0 || tempTime.tm_hour > 23 ||
-        tempTime.tm_min < 0 || tempTime.tm_min > 59 || tempTime.tm_sec < 0 || tempTime.tm_sec > 60) {
+    if (year < 0 || year > UINT16_MAX) {
         return BSL_SAL_TIME_BAD_PARAM;
     }
 
