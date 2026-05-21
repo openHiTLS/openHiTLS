@@ -130,9 +130,14 @@ extern "C" {
  * @param   option [IN] indicates the options to be checked, such as the version, certificate, temporary key,
  * signature algorithm, support group, and session ticket...
  * @param   bits   [IN] Number of security bits, which is used to check the level of security of the key.
- * @param   id     [IN] Indicates the ID to be checked, such as the version ID, signature algorithm ID,
- * and support group ID. Input based on the options that need to be checked.
- * @param   other  [IN] Parameters to be checked, such as cipher suites, certificates, and signature algorithms.
+ * @param   id     [IN] Indicates the ID to be checked. For most options, this is the option-specific ID, such as
+ * version ID. For HITLS_SECURITY_SECOP_SIGALG_* options, this parameter is the hash algorithm ID
+ * (CRYPT_MD_AlgId). For HITLS_SECURITY_SECOP_CURVE_* options, this parameter is the key parameter ID
+ * (CRYPT_PKEY_ParaId).
+ * @param   other  [IN] Parameters to be checked, such as cipher suites and certificates. For
+ * HITLS_SECURITY_SECOP_SIGALG_* and HITLS_SECURITY_SECOP_CURVE_* options, this parameter points to a uint16_t IANA
+ * ID: signature scheme ID for HITLS_SECURITY_SECOP_SIGALG_* and supported group ID for
+ * HITLS_SECURITY_SECOP_CURVE_*.
  * @param   exData [IN] Input the data as required.
  * @return  1: success; others: failure
  */
