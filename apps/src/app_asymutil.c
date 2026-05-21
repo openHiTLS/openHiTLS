@@ -224,27 +224,9 @@ typedef enum {
     HITLS_ASYM_TAG_SIGN   = 3,
 } HITLS_AsymOpTag;
 
-static int32_t GetPwdFromFile(const char *fileArg, char *tmpPass) __attribute__((unused));
-static int32_t Str2HexStr(
-    const unsigned char *buf,
-    uint32_t bufLen,
-    char *hexBuf,
-    uint32_t hexBufLen
-) __attribute__((unused));
-static int32_t HexToStr(const char *hexBuf, unsigned char *buf) __attribute__((unused));
-static int32_t Int2Hex(uint32_t num, char *hexBuf);
-static uint32_t Hex2Uint(char *hexBuf, int32_t *num);
 static void PrintCipherAlgList(void);
-static int32_t HexAndWrite(AsymCmdOpt *asymOpt, uint32_t decData, char *buf) __attribute__((unused));
-static int32_t ReadAndDec(
-    AsymCmdOpt *asymOpt,
-    char *hexBuf,
-    uint32_t hexBufLen,
-    int32_t *decData
-) __attribute__((unused));
 static int32_t GetPkeyAlgId(const char *name);
 static int32_t GetCipherAlgId(const char *name);
-static int32_t CheckPasswd(const char *passwd) __attribute__((unused));
 static int32_t EncryptFromFileLoop(AsymCmdOpt *opt, uint8_t *inBuf, uint8_t *outBuf,
                                    uint32_t maxInLen, uint32_t k, uint64_t readFileLen);
 
@@ -651,8 +633,8 @@ static int32_t UpdateEncFile(AsymCmdOpt *asymOpt, uint64_t readFileLen)
 
     const uint32_t maxInLen = k - OAEP_COEFF * SHA256_LEN - OAEP_CONST_2;
 
-    uint8_t *inBuf  = (uint8_t *)malloc(maxInLen);
-    uint8_t *outBuf = (uint8_t *)malloc(k);
+    uint8_t *inBuf  = (uint8_t *)BSL_SAL_Malloc(maxInLen);
+    uint8_t *outBuf = (uint8_t *)BSL_SAL_Malloc(k);
 
     if (!inBuf || !outBuf) {
         ret = HITLS_APP_MEM_ALLOC_FAIL;
@@ -665,8 +647,8 @@ static int32_t UpdateEncFile(AsymCmdOpt *asymOpt, uint64_t readFileLen)
     }
 
 EXIT:
-    free(inBuf);
-    free(outBuf);
+    BSL_SAL_Free(inBuf);
+    BSL_SAL_Free(outBuf);
     return ret;
 }
 
@@ -737,8 +719,8 @@ static int32_t DoPkeyUpdateDec(AsymCmdOpt *asymOpt, uint64_t readFileLen)
         AppPrintError("Invalid block size: %u (must be >0 and <= %u)\n", k, MAX_BLOCK_SIZE);
         return HITLS_APP_MEM_ALLOC_FAIL;
     }
-    uint8_t *inBlk  = (uint8_t *)malloc(k);
-    uint8_t *outBlk = (uint8_t *)malloc(k);
+    uint8_t *inBlk  = (uint8_t *)BSL_SAL_Malloc(k);
+    uint8_t *outBlk = (uint8_t *)BSL_SAL_Malloc(k);
     if (!inBlk || !outBlk) {
         ret = HITLS_APP_MEM_ALLOC_FAIL;
         goto EXIT;
@@ -788,8 +770,8 @@ static int32_t DoPkeyUpdateDec(AsymCmdOpt *asymOpt, uint64_t readFileLen)
     
     
 EXIT:
-    free(inBlk);
-    free(outBlk);
+    BSL_SAL_Free(inBlk);
+    BSL_SAL_Free(outBlk);
     return ret;
 }
 
@@ -974,149 +956,3 @@ static int32_t GetCipherAlgId(const char *name)
     PrintCipherAlgList();
     return -1;
 }
-
-static int32_t GetPwdFromFile(const char *fileArg, char *tmpPass)
-{
-    char tmpFileArg[REC_MAX_FILENAME_LENGTH + REC_MIN_PRE_LENGTH + 1] = {0};
-    size_t fileArgLen = strlen(fileArg);
-    if (fileArgLen > REC_MAX_FILENAME_LENGTH + REC_MIN_PRE_LENGTH) {
-        return HITLS_APP_SECUREC_FAIL;
-    }
-    (void)memcpy(tmpFileArg, fileArg, fileArgLen + 1);
-
-    char *filePath = strchr(tmpFileArg, ':');
-    if (filePath == NULL || *(filePath + 1) == '\0') {
-        return HITLS_APP_SECUREC_FAIL;
-    }
-    filePath++;
-    char *nextColon = strchr(filePath, ':');
-    if (nextColon != NULL) {
-        *nextColon = '\0';
-    }
-
-    BSL_UIO *passUio = BSL_UIO_New(BSL_UIO_FileMethod());
-    char tmpPassBuf[APP_MAX_PASS_LENGTH * REC_DOUBLE] = {0};
-    if (BSL_UIO_Ctrl(passUio, BSL_UIO_FILE_OPEN, BSL_UIO_FILE_READ, filePath) != BSL_SUCCESS) {
-        AppPrintError("Failed to set infile mode for passwd.\n");
-        BSL_UIO_SetIsUnderlyingClosedByUio(passUio, true);
-        BSL_UIO_Free(passUio);
-        return HITLS_APP_UIO_FAIL;
-    }
-    uint32_t rPassLen = 0;
-    if (BSL_UIO_Read(passUio, tmpPassBuf, sizeof(tmpPassBuf), &rPassLen) != BSL_SUCCESS || rPassLen <= 0) {
-        AppPrintError("Failed to read passwd from file.\n");
-        BSL_UIO_SetIsUnderlyingClosedByUio(passUio, true);
-        BSL_UIO_Free(passUio);
-        return HITLS_APP_UIO_FAIL;
-    }
-    BSL_UIO_SetIsUnderlyingClosedByUio(passUio, true);
-    BSL_UIO_Free(passUio);
-    if (tmpPassBuf[rPassLen - 1] == '\n') {
-        tmpPassBuf[rPassLen - 1] = '\0';
-        rPassLen -= 1;
-    }
-    if (rPassLen > APP_MAX_PASS_LENGTH) {
-        HITLS_APP_PrintPassErrlog();
-        return HITLS_APP_PASSWD_FAIL;
-    }
-
-    if (HITLS_APP_CheckPasswd((uint8_t *)tmpPassBuf, rPassLen) != HITLS_APP_SUCCESS) {
-        return HITLS_APP_PASSWD_FAIL;
-    }
-    size_t passLen = strlen(tmpPassBuf);
-    if (passLen >= APP_MAX_PASS_LENGTH) {
-        return HITLS_APP_COPY_ARGS_FAILED;
-    }
-    (void)memcpy(tmpPass, tmpPassBuf, passLen + 1);
-    return HITLS_APP_SUCCESS;
-}
-
-static int32_t CheckPasswd(const char *passwd)
-{
-    int32_t passLen = strlen(passwd);
-    if (passLen > APP_MAX_PASS_LENGTH) {
-        HITLS_APP_PrintPassErrlog();
-        return HITLS_APP_PASSWD_FAIL;
-    }
-    return HITLS_APP_CheckPasswd((const uint8_t *)passwd, (uint32_t)passLen);
-}
-
-static int32_t Str2HexStr(const unsigned char *buf, uint32_t bufLen, char *hexBuf, uint32_t hexBufLen)
-{
-    if (hexBufLen < bufLen * REC_DOUBLE + 1) {
-        return HITLS_APP_INVALID_ARG;
-    }
-    for (uint32_t i = 0; i < bufLen; i++) {
-        int ret = snprintf(hexBuf + i * REC_DOUBLE, hexBufLen - i * REC_DOUBLE, "%02x", buf[i]);
-        if (ret != REC_DOUBLE) {
-            AppPrintError("BSL_SAL_Calloc Failed.\n");
-            return HITLS_APP_ENCODE_FAIL;
-        }
-    }
-    hexBuf[bufLen * REC_DOUBLE] = '\0';
-    return HITLS_APP_SUCCESS;
-}
-
-static int32_t HexToStr(const char *hexBuf, unsigned char *buf)
-{
-    int len = strlen(hexBuf) / 2;
-    for (int i = 0; i < len; i++) {
-        uint32_t val;
-        if (sscanf(hexBuf + i * REC_DOUBLE, "%2x", &val) != 1) {
-            AppPrintError("error in converting hex str to str.\n");
-            return HITLS_APP_ENCODE_FAIL;
-        }
-        buf[i] = (unsigned char)val;
-    }
-    return HITLS_APP_SUCCESS;
-}
-
-static int32_t Int2Hex(uint32_t num, char *hexBuf)
-{
-    int ret = snprintf(hexBuf, REC_HEX_BUF_LENGTH + 1, "%08X", num);
-    if (ret != REC_HEX_BUF_LENGTH) {
-        AppPrintError("error in uint to hex.\n");
-        return HITLS_APP_ENCODE_FAIL;
-    }
-    return HITLS_APP_SUCCESS;
-}
-
-static uint32_t Hex2Uint(char *hexBuf, int32_t *num)
-{
-    if (hexBuf == NULL) {
-        AppPrintError("No hex buffer here.\n");
-        return HITLS_APP_INVALID_ARG;
-    }
-    char *endptr = NULL;
-    *num = strtoul(hexBuf, &endptr, REC_HEX_BASE);
-    return HITLS_APP_SUCCESS;
-}
-
-static int32_t HexAndWrite(AsymCmdOpt *asymOpt, uint32_t decData, char *buf)
-{
-    uint32_t writeLen = 0;
-    if (Int2Hex(decData, buf) != HITLS_APP_SUCCESS) {
-        return HITLS_APP_ENCODE_FAIL;
-    }
-    if (BSL_UIO_Write(asymOpt->asymUio->wUio, buf, REC_HEX_BUF_LENGTH, &writeLen) != BSL_SUCCESS ||
-        writeLen != REC_HEX_BUF_LENGTH) {
-        return HITLS_APP_UIO_FAIL;
-    }
-    return HITLS_APP_SUCCESS;
-}
-static int32_t ReadAndDec(AsymCmdOpt *asymOpt, char *hexBuf, uint32_t hexBufLen, int32_t *decData)
-{
-    if (hexBufLen < REC_HEX_BUF_LENGTH + 1) {
-        return HITLS_APP_INVALID_ARG;
-    }
-    uint32_t readLen = 0;
-    if (BSL_UIO_Read(asymOpt->asymUio->rUio, hexBuf, REC_HEX_BUF_LENGTH, &readLen) != BSL_SUCCESS ||
-        readLen != REC_HEX_BUF_LENGTH) {
-        return HITLS_APP_UIO_FAIL;
-    }
-    if (Hex2Uint(hexBuf, decData) != HITLS_APP_SUCCESS) {
-        return HITLS_APP_ENCODE_FAIL;
-    }
-    return HITLS_APP_SUCCESS;
-}
-

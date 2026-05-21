@@ -17,7 +17,6 @@
 
 #include <string.h>
 #include "bsl_sal.h"
-#include "securec.h"
 #include "bsl_types.h"
 #include "bsl_log.h"
 #include "sal_file.h"
