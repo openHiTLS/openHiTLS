@@ -1322,7 +1322,9 @@ int32_t CryptDsaFips1864ValidatePq(int32_t algId, void *libCtx, const char *mdAt
     uint32_t pBits = BN_Bits(dsaPara->p);
     uint32_t qBits = BN_Bits(dsaPara->q);
     RETURN_RET_IF(DSAFips1864ValidateSecurityLength(pBits, qBits, type) == 0, CRYPT_DSA_PARA_ERROR);
-    RETURN_RET_IF(seed->dataLen * 8 < qBits || counter > 4 * pBits - 1, CRYPT_DSA_PARA_ERROR); // from FIPS.186-4
+    uint32_t outLen = CRYPT_GetMdSizeById(algId);
+    RETURN_RET_IF(seed->dataLen * 8 < qBits || outLen * 8 < qBits || counter > 4 * pBits - 1,
+        CRYPT_DSA_PARA_ERROR); // from FIPS.186-4
     BN_Optimizer *opt = BN_OptimizerCreate();
     RETURN_RET_IF(opt == NULL, CRYPT_MEM_ALLOC_FAIL);
     (void)BN_OptimizerSetLibCtx(libCtx, opt);
