@@ -251,6 +251,16 @@ void CRYPT_EAL_Cleanup(uint64_t opts)
 #if defined(HITLS_EAL_INIT_OPTS)
     initOpt = CRYPT_EAL_INIT_ALL;
 #endif
+    uint64_t cleanOpt = initOpt;
+#if defined(HITLS_CRYPTO_PROVIDER) && defined(HITLS_CRYPTO_DRBG)
+    /*
+     * Provider RAND is stored in the predefined provider libCtx. Freeing the
+     * provider also frees that DRBG, so keep the init-state bits consistent.
+     */
+    if ((initOpt & CRYPT_EAL_INIT_PROVIDER) != 0) {
+        cleanOpt |= CRYPT_EAL_INIT_PROVIDER_RAND;
+    }
+#endif
 
     // Cleanup in reverse order of initialization (LIFO principle)
     // Init order: CPU → BSL → Lock → Provider → Rand
@@ -259,7 +269,7 @@ void CRYPT_EAL_Cleanup(uint64_t opts)
     ProviderModuleFree(initOpt);
     GlobalLockFree(initOpt);
     BslModuleFree(initOpt);
-    g_ealInitOpts &= (~initOpt);
+    g_ealInitOpts &= (~cleanOpt);
 }
 
 #ifdef HITLS_CRYPTO_ASM_CHECK

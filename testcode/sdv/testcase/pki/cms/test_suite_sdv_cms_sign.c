@@ -2844,7 +2844,8 @@ void SDV_CMS_MLDSA_SIGNALG_MISMATCH_VERIFY_TC001(char *p7path, char *msgpath, ch
     si->sigAlg.algId = BSL_CID_ECDSAWITHSHA256;
 
     ASSERT_EQ(HITLS_CMS_DataVerify(cms, &msgBuff, params, NULL), HITLS_CMS_ERR_INVALID_ALGO);
-
+    si->sigAlg.algId = BSL_CID_ML_DSA_44;
+    ASSERT_EQ(HITLS_CMS_DataVerify(cms, &msgBuff, params, NULL), HITLS_CMS_ERR_INVALID_ALGO);
 EXIT:
     BSL_LIST_FREE(caCertList, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);
     BSL_SAL_FREE(msgBuff.data);

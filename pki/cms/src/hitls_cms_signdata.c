@@ -1750,16 +1750,15 @@ static int32_t InitMdCtxForAlgs(CMS_SignedData *signedData, const BSL_Param *par
     }
     return HITLS_PKI_SUCCESS;
 }
-
 static int32_t CheckSignAlgMatchesPubKey(const HITLS_X509_Asn1AlgId *alg, const CRYPT_EAL_PkeyCtx *pubKey)
 {
     CRYPT_PKEY_AlgId keyAlg = CRYPT_EAL_PkeyGetId(pubKey);
-    // Currently, we only check this consistency for mldsa
-    if (keyAlg == CRYPT_PKEY_ML_DSA) {
-        if (alg->algId == BSL_CID_ML_DSA_44 || alg->algId == BSL_CID_ML_DSA_65 
-            || alg->algId == BSL_CID_ML_DSA_87) {
-                return HITLS_PKI_SUCCESS;
-        }
+      // Currently, we only check this consistency for ML-DSA.
+    if (keyAlg != CRYPT_PKEY_ML_DSA) {
+        return HITLS_PKI_SUCCESS;
+    }
+    BslCid paraId = (BslCid)CRYPT_EAL_PkeyGetParaId(pubKey);
+    if (alg->algId != paraId) {
         BSL_ERR_PUSH_ERROR(HITLS_CMS_ERR_INVALID_ALGO);
         return HITLS_CMS_ERR_INVALID_ALGO;
     }
