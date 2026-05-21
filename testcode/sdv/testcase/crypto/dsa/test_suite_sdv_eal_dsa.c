@@ -938,6 +938,33 @@ EXIT:
 /* END_CASE */
 
 /* BEGIN_CASE */
+void SDV_CRYPTO_DSA_VERIFY_PQ_FUNC_TC002(int algId, Hex *seed, char *pHex, char *qHex, int result)
+{
+#ifndef HITLS_CRYPTO_DSA_GEN_PARA
+    (void)algId;
+    (void)seed;
+    (void)pHex;
+    (void)qHex;
+    (void)result;
+    SKIP_TEST();
+#else
+    BSL_Buffer seedTmp = {seed->x, seed->len};
+    BN_BigNum *p = NULL;
+    BN_BigNum *q = NULL;
+    ASSERT_EQ(BN_Hex2Bn(&p, pHex), CRYPT_SUCCESS);
+    ASSERT_EQ(BN_Hex2Bn(&q, qHex), CRYPT_SUCCESS);
+    CRYPT_DSA_Para dsaPara = {p, q, NULL};
+    uint32_t counter = 5;
+    ASSERT_EQ(CryptDsaFips1864ValidatePq(algId, NULL, NULL, CRYPT_DSA_FFC_PARAM, &seedTmp, &dsaPara, counter),
+        result);
+EXIT:
+    BN_Destroy(p);
+    BN_Destroy(q);
+#endif
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
 void SDV_CRYPTO_DSA_GEN_PQ_FUNC_TC001(int algId, int L, int N, Hex *seed, char *pHex, char *qHex)
 {
 #ifndef HITLS_CRYPTO_DSA_GEN_PARA
