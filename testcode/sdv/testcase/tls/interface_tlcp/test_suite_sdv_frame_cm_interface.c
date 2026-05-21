@@ -2611,27 +2611,114 @@ int32_t SendHelloReq(HITLS_Ctx *ctx)
  * @brief
  * 1. After the client and server are initialized, initiate a connection establishment request. Expected result 1
  * 2. Call the HITLS_GetRenegotiationState interface to query the renegotiation status. Expected result 2
- * 3. The server invokes the hitls_renegotiate interface to initiate renegotiation and invokes the
- *  HITLS_GetRenegotiationState interface to query the renegotiation status on the server. Expected result 3
- * 4. After receiving the hello request, the client invokes the HITLS_GetRenegotiationState interface
- * to query the renegotiation status. Expected result 4
- * 5. After receiving the client hello message, the server invokes the HITLS_GetRenegotiationState interface to query
- * the renegotiation status. Expected result 5
- * 6. After the renegotiation is complete, call the HITLS_GetRenegotiationState interface to query the renegotiation
- * status on the client and server. Expected result 6
- * 7. The client invokes the hitls_renegotiate interface to initiate renegotiation and invokes the
- * HITLS_GetRenegotiationState interface to query the renegotiation status. Expected result 7
+ * 3. The client invokes the hitls_renegotiate interface to initiate renegotiation and invokes the
+ * HITLS_GetRenegotiationState interface to query the renegotiation status. Expected result 3
+ * 4. The server invokes the hitls_renegotiate interface and then invokes HITLS_Accept to send hello request,
+ * and then invokes the HITLS_GetRenegotiationState interface to query the renegotiation status. Expected result 4
+ * 5. After the client receives the hello request, the server invokes the HITLS_GetRenegotiationState
+ * interface to query the renegotiation status. Expected result 5
+ * 6. After the server receives the client hello message, the server invokes the
+ * HITLS_GetRenegotiationState interface to query the renegotiation status. Expected result 6
+ * 7. After the renegotiation is complete, call the HITLS_GetRenegotiationState interface to query the renegotiation
+ * status on the client and server. Expected result 7
  * @expect
  * 1. The connection is successfully established
  * 2. The return value is false
  * 3. The return value is true
  * 4. The return value is true
  * 5. The return value is true
- * 6. The return value is flase
- * 7. The return value is true
+ * 6. The return value is true
+ * 7. The return value is false
  */
 /* BEGIN_CASE */
 void UT_TLS_CM_HITLS_GetRenegotiationState_FUNC_TC001(void)
+{
+    FRAME_Init();
+
+    HITLS_Config *config = NULL;
+    FRAME_LinkObj *client = NULL;
+    FRAME_LinkObj *server = NULL;
+
+    bool isRenegotiation = true;
+    int32_t ret;
+    config = HITLS_CFG_NewTLS12Config();
+    ASSERT_TRUE(config != NULL);
+
+    client = FRAME_CreateLink(config, BSL_UIO_TCP);
+    ASSERT_TRUE(client != NULL);
+    client->ssl->config.tlsConfig.endpoint = HITLS_ENDPOINT_CLIENT;
+    server = FRAME_CreateLink(config, BSL_UIO_TCP);
+    ASSERT_TRUE(server != NULL);
+    HITLS_SetRenegotiationSupport(client->ssl, true);
+    HITLS_SetRenegotiationSupport(server->ssl, true);
+
+    ASSERT_EQ(FRAME_CreateConnection(client, server, false, HS_STATE_BUTT), HITLS_SUCCESS);
+    ASSERT_TRUE(HITLS_GetRenegotiationState(client->ssl, &isRenegotiation) == HITLS_SUCCESS);
+    ASSERT_TRUE(isRenegotiation == false);
+    ASSERT_TRUE(HITLS_GetRenegotiationState(server->ssl, &isRenegotiation) == HITLS_SUCCESS);
+    ASSERT_TRUE(isRenegotiation == false);
+
+    ASSERT_TRUE(HITLS_Renegotiate(client->ssl) == HITLS_SUCCESS);
+    ASSERT_TRUE(HITLS_GetRenegotiationState(client->ssl, &isRenegotiation) == HITLS_SUCCESS);
+    ASSERT_TRUE(isRenegotiation == true);
+    ASSERT_TRUE(HITLS_GetRenegotiationState(server->ssl, &isRenegotiation) == HITLS_SUCCESS);
+    ASSERT_TRUE(isRenegotiation == false);
+
+    ASSERT_TRUE(HITLS_Renegotiate(server->ssl) == HITLS_SUCCESS);
+    ASSERT_TRUE(HITLS_GetRenegotiationState(server->ssl, &isRenegotiation) == HITLS_SUCCESS);
+    ASSERT_TRUE(isRenegotiation == true);
+    ASSERT_EQ(HITLS_Accept(server->ssl), HITLS_SUCCESS);
+    ASSERT_TRUE(HITLS_GetRenegotiationState(server->ssl, &isRenegotiation) == HITLS_SUCCESS);
+    ASSERT_TRUE(isRenegotiation == true);
+    ASSERT_TRUE(HITLS_GetRenegotiationState(client->ssl, &isRenegotiation) == HITLS_SUCCESS);
+    ASSERT_TRUE(isRenegotiation == true);
+
+    ASSERT_TRUE(FRAME_TrasferMsgBetweenLink(server, client) == HITLS_SUCCESS);
+    ret = HITLS_Connect(client->ssl);
+    ASSERT_TRUE(ret == HITLS_SUCCESS || ret == HITLS_REC_NORMAL_RECV_BUF_EMPTY);
+    ASSERT_TRUE(HITLS_GetRenegotiationState(server->ssl, &isRenegotiation) == HITLS_SUCCESS);
+    ASSERT_TRUE(isRenegotiation == true);
+
+    ASSERT_EQ(FRAME_CreateRenegotiationState(client, server, false, TRY_SEND_SERVER_HELLO), HITLS_SUCCESS);
+    ASSERT_TRUE(HITLS_GetRenegotiationState(server->ssl, &isRenegotiation) == HITLS_SUCCESS);
+    ASSERT_TRUE(isRenegotiation == true);
+
+    ASSERT_EQ(FRAME_CreateRenegotiationState(client, server, false, HS_STATE_BUTT), HITLS_SUCCESS);
+    ASSERT_TRUE(HITLS_GetRenegotiationState(server->ssl, &isRenegotiation) == HITLS_SUCCESS);
+    ASSERT_TRUE(isRenegotiation == false);
+    ASSERT_TRUE(HITLS_GetRenegotiationState(client->ssl, &isRenegotiation) == HITLS_SUCCESS);
+    ASSERT_TRUE(isRenegotiation == false);
+
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
+EXIT:
+    HITLS_CFG_FreeConfig(config);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+}
+
+/* END_CASE */
+
+/**
+ * @test  UT_TLS_CM_HITLS_GetRenegotiationState_FUNC_TC002
+ * @title  Verifying the HITLS_GetRenegotiationState Interface During Pending Server-Initiated Renegotiation
+ * @precon  nan
+ * @brief
+ * 1. After the client and server are initialized, initiate a connection establishment request. Expected result 1
+ * 2. The server invokes the hitls_renegotiate interface to initiate renegotiation, and then invokes
+ * HITLS_Accept to send hello request. Expected result 2
+ * 3. Before the client processes the hello request, the client and server invoke the
+ * HITLS_GetRenegotiationState interface to query the renegotiation status. Expected result 3
+ * 4. After the hello request is transferred to the client but the client does not process it, the client and server
+ * invoke the HITLS_GetRenegotiationState interface to query the renegotiation status. Expected result 4
+ * @expect
+ * 1. The connection is successfully established
+ * 2. The server returns true
+ * 3. The server returns true and the client returns false
+ * 4. The server returns true and the client returns false
+ */
+/* BEGIN_CASE */
+void UT_TLS_CM_HITLS_GetRenegotiationState_FUNC_TC002(void)
 {
     FRAME_Init();
 
@@ -2654,30 +2741,25 @@ void UT_TLS_CM_HITLS_GetRenegotiationState_FUNC_TC001(void)
     ASSERT_EQ(FRAME_CreateConnection(client, server, false, HS_STATE_BUTT), HITLS_SUCCESS);
     ASSERT_TRUE(HITLS_GetRenegotiationState(client->ssl, &isRenegotiation) == HITLS_SUCCESS);
     ASSERT_TRUE(isRenegotiation == false);
-
-    ASSERT_TRUE(HITLS_Renegotiate(client->ssl) == HITLS_SUCCESS);
-    ASSERT_TRUE(HITLS_Renegotiate(server->ssl) == HITLS_SUCCESS);
-    ASSERT_TRUE(HITLS_GetRenegotiationState(server->ssl, &isRenegotiation) == HITLS_SUCCESS);
-    ASSERT_TRUE(isRenegotiation == true);
-
-    ASSERT_TRUE(SendHelloReq(server->ssl) == HITLS_SUCCESS);
-    ASSERT_TRUE(FRAME_TrasferMsgBetweenLink(server, client) == HITLS_SUCCESS);
-    ASSERT_EQ(HITLS_Accept(client->ssl), HITLS_REC_NORMAL_RECV_BUF_EMPTY);
-    ASSERT_TRUE(HITLS_GetRenegotiationState(server->ssl, &isRenegotiation) == HITLS_SUCCESS);
-    ASSERT_TRUE(isRenegotiation == true);
-
-    ASSERT_EQ(FRAME_CreateRenegotiationState(client, server, false, TRY_SEND_SERVER_HELLO), HITLS_SUCCESS);
-    ASSERT_TRUE(HITLS_GetRenegotiationState(server->ssl, &isRenegotiation) == HITLS_SUCCESS);
-    ASSERT_TRUE(isRenegotiation == true);
-
-    ASSERT_EQ(FRAME_CreateRenegotiationState(client, server, false, HS_STATE_BUTT), HITLS_SUCCESS);
     ASSERT_TRUE(HITLS_GetRenegotiationState(server->ssl, &isRenegotiation) == HITLS_SUCCESS);
     ASSERT_TRUE(isRenegotiation == false);
 
-    ASSERT_TRUE(HITLS_Renegotiate(client->ssl) == HITLS_SUCCESS);
     ASSERT_TRUE(HITLS_Renegotiate(server->ssl) == HITLS_SUCCESS);
     ASSERT_TRUE(HITLS_GetRenegotiationState(server->ssl, &isRenegotiation) == HITLS_SUCCESS);
     ASSERT_TRUE(isRenegotiation == true);
+    ASSERT_TRUE(HITLS_GetRenegotiationState(client->ssl, &isRenegotiation) == HITLS_SUCCESS);
+    ASSERT_TRUE(isRenegotiation == false);
+    ASSERT_EQ(HITLS_Accept(server->ssl), HITLS_SUCCESS);
+    ASSERT_TRUE(HITLS_GetRenegotiationState(server->ssl, &isRenegotiation) == HITLS_SUCCESS);
+    ASSERT_TRUE(isRenegotiation == true);
+    ASSERT_TRUE(HITLS_GetRenegotiationState(client->ssl, &isRenegotiation) == HITLS_SUCCESS);
+    ASSERT_TRUE(isRenegotiation == false);
+
+    ASSERT_TRUE(FRAME_TrasferMsgBetweenLink(server, client) == HITLS_SUCCESS);
+    ASSERT_TRUE(HITLS_GetRenegotiationState(server->ssl, &isRenegotiation) == HITLS_SUCCESS);
+    ASSERT_TRUE(isRenegotiation == true);
+    ASSERT_TRUE(HITLS_GetRenegotiationState(client->ssl, &isRenegotiation) == HITLS_SUCCESS);
+    ASSERT_TRUE(isRenegotiation == false);
 
     ASSERT_TRUE(TestIsErrStackEmpty());
 

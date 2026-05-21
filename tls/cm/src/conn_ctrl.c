@@ -236,7 +236,7 @@ int32_t HITLS_GetRenegotiationState(const HITLS_Ctx *ctx, bool *isRenegotiationS
         return HITLS_NULL_INPUT;
     }
 
-    *isRenegotiationState = ctx->negotiatedInfo.isRenegotiation;
+    *isRenegotiationState = (ctx->userRenego || ctx->negotiatedInfo.isRenegotiation);
 
     return HITLS_SUCCESS;
 }
