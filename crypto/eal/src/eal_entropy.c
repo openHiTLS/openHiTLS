@@ -17,6 +17,7 @@
 #if defined(HITLS_CRYPTO_EAL) && defined(HITLS_CRYPTO_ENTROPY)
 #include <string.h>
 #include "bsl_err_internal.h"
+#include "bsl_sal.h"
 #include "crypt_errno.h"
 #include "eal_entropy.h"
 
@@ -85,8 +86,7 @@ EAL_EntropyCtx *EAL_EntropyNewCtx(CRYPT_EAL_SeedPoolCtx *seedPool, uint8_t isNpe
 void EAL_EntropyFreeCtx(EAL_EntropyCtx *ctx)
 {
     if (ctx->buf != NULL) {
-        memset(ctx->buf, 0, ctx->bufLen);
-        BSL_SAL_FREE(ctx->buf);
+        BSL_SAL_ClearFree(ctx->buf, ctx->bufLen);
     }
     BSL_SAL_Free(ctx);
 }

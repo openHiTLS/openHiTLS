@@ -224,7 +224,7 @@ static void EntropyProcess(ES_JitterState *e)
         buf[NS_ENTROPY_HASH_SIZE] = e->data[i];
         e->hashFunc(buf, sizeof(buf), (e->data + start), NS_ENTROPY_HASH_SIZE);
     }
-    memset(buf, 0, sizeof(buf));
+    BSL_SAL_CleanseData(buf, sizeof(buf));
 }
 
 static int32_t EsCpuJitterGen(ES_JitterState *jitter, uint8_t *buf, uint32_t bufLen)
@@ -286,8 +286,7 @@ static void ES_CpuJitterFree(void *ctx)
     if (ctx == NULL) {
         return;
     }
-    memset(ctx, 0, sizeof(ES_JitterState));
-    BSL_SAL_FREE(ctx);
+    BSL_SAL_ClearFree(ctx, sizeof(ES_JitterState));
 }
 
 static void *ES_CpuJitterInit(void *para)
@@ -304,7 +303,6 @@ static void *ES_CpuJitterInit(void *para)
     // Try to read 32 bytes once to check whether the environment is normal.
     uint8_t data[32] = {0};
     if (ES_CpuJitterRead(e, true, data, sizeof(data)) != CRYPT_SUCCESS) {
-        memset(data, 0, 32);  // 32, Zeroed 32-byte array
         ES_CpuJitterFree(e);
         return NULL;
     }

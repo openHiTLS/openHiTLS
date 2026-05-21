@@ -2698,6 +2698,8 @@ void SDV_PKI_VERIFY_HOSTNAME_WITH_CN_TC001(int algId, int format, Hex *encode, i
     uint32_t testFlag = flag == 0 ? 0 : HITLS_X509_FLAG_VFY_WITH_PARTIAL_WILDCARD;
     TestMemInit();
     HITLS_X509_Cert *cert = NULL;
+    HITLS_X509_ExtEntry *badSan = NULL;
+    static uint8_t invalidSan[] = {BSL_ASN1_TAG_NULL, 0};
     ASSERT_EQ(HITLS_X509_CertParseBuff(format, (BSL_Buffer *)encode, &cert), HITLS_PKI_SUCCESS);
     ASSERT_NE(cert, NULL);
 
@@ -2709,7 +2711,19 @@ void SDV_PKI_VERIFY_HOSTNAME_WITH_CN_TC001(int algId, int format, Hex *encode, i
     ASSERT_EQ(HITLS_X509_VerifyHostname(cert, testFlag, "test.openhitls.com", strlen("test.openhitls.com")),
         HITLS_PKI_SUCCESS);
 
+    badSan = BSL_SAL_Calloc(1, sizeof(HITLS_X509_ExtEntry));
+    ASSERT_NE(badSan, NULL);
+    badSan->cid = BSL_CID_CE_SUBJECTALTNAME;
+    badSan->extnValue.buff = invalidSan;
+    badSan->extnValue.len = sizeof(invalidSan);
+    ASSERT_EQ(BSL_LIST_AddElement(cert->tbs.ext.extList, badSan, BSL_LIST_POS_END), BSL_SUCCESS);
+    badSan = NULL;
+    ASSERT_NE(HITLS_X509_VerifyHostname(cert, testFlag, "test.openhitls.com", strlen("test.openhitls.com")),
+        HITLS_PKI_SUCCESS);
+    TestErrClear();
+
 EXIT:
+    BSL_SAL_Free(badSan);
     HITLS_X509_CertFree(cert);
 #else
     UnusedParam2(algId, format, encode);

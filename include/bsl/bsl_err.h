@@ -57,7 +57,9 @@ typedef enum {
  * @ingroup bsl_err
  * @brief Initialize Error code module.
  *
- * The user must call this interface to initialize.
+ * The user must call this interface to initialize the error code module.
+ * This is a global initialization API and usually needs to be called only once
+ * during process startup.
  *
  * @attention NONE
  * @retval #BSL_SUCCESS, error code module is successfully initialized.

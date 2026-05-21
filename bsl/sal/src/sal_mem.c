@@ -86,27 +86,30 @@ void *BSL_SAL_Dump(const void *src, uint32_t size)
 
 void *BSL_SAL_Realloc(void *addr, uint32_t newSize, uint32_t oldSize)
 {
+    if (g_memCallback.pfMalloc != NULL) {
+        if (addr == NULL) {
+            return BSL_SAL_Malloc(newSize);
+        }
+        uint32_t minSize = (oldSize > newSize) ? newSize : oldSize;
+
+        void *ptr = BSL_SAL_Malloc(newSize);
+        if (ptr == NULL) {
+            return NULL;
+        }
+
+        if (minSize > 0 && addr != NULL) {
+            memcpy(ptr, addr, minSize);
+        }
+        BSL_SAL_FREE(addr);
+
+        return ptr;
+    } else {
 #if defined(HITLS_BSL_SAL_MEM) && (defined(HITLS_BSL_SAL_LINUX) || defined(HITLS_BSL_SAL_DARWIN))
-    (void)oldSize;
-    return SAL_ReallocImpl(addr, newSize);
+        return SAL_ReallocImpl(addr, newSize);
 #else
-    if (addr == NULL) {
-        return BSL_SAL_Malloc(newSize);
-    }
-    uint32_t minSize = (oldSize > newSize) ? newSize : oldSize;
-
-    void *ptr = BSL_SAL_Malloc(newSize);
-    if (ptr == NULL) {
         return NULL;
-    }
-
-    if (minSize > 0 && addr != NULL) {
-        memcpy(ptr, addr, minSize);
-    }
-    BSL_SAL_FREE(addr);
-
-    return ptr;
 #endif
+    }
 }
 
 void BSL_SAL_CleanseData(void *ptr, uint32_t size)
