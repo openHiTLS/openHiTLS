@@ -57,8 +57,7 @@ void ES_EntropyPoolDeInit(ES_EntropyPool *pool)
         return;
     }
 
-    (void)memset_s(pool->buf, pool->maxSize, 0, pool->maxSize);
-    BSL_SAL_FREE(pool->buf);
+    BSL_SAL_ClearFree(pool->buf, pool->maxSize);
     BSL_SAL_Free(pool);
     return;
 }

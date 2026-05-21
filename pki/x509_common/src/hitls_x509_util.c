@@ -161,8 +161,8 @@ int32_t X509_VerifyHostnameWithSan(HITLS_X509_Cert *cert, const char *hostname,
 {
     HITLS_X509_ExtSan san = {0};
     int32_t ret = HITLS_X509_CertCtrl(cert, HITLS_X509_EXT_GET_SAN, &san, sizeof(san));
-    if (ret != HITLS_PKI_SUCCESS || san.names == NULL) {
-        return HITLS_X509_ERR_EXT_NOT_FOUND;
+    if (ret != HITLS_PKI_SUCCESS) {
+        return ret;
     }
 
     ret = HITLS_X509_ERR_EXT_NOT_FOUND;

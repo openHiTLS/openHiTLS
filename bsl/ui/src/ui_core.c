@@ -216,7 +216,7 @@ static int32_t BSL_UI_OperVerifyData(BSL_UI *ui, const char *promptStr, BSL_UI_D
         ret = BSL_UI_VERIFY_BUFF_FAILED;
     }
     BSL_SAL_FREE(verifyStr);
-    (void)memset_s(verifyRes, sizeof(verifyRes), 0, sizeof(verifyRes));
+    BSL_SAL_CleanseData(verifyRes, sizeof(verifyRes));
     BSL_ERR_PUSH_ERROR(ret);
     return ret;
 }

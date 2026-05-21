@@ -197,7 +197,8 @@ int32_t HITLS_PKCS12_ProviderParseFile(HITLS_PKI_LibCtx *libCtx, const char *att
  * @brief pkcs12 gen
  * @par Description: gen p12 buffer.
  *
- * @attention Generate a p12 buffer based on the existing information.
+ * @attention Generate a p12 buffer based on the existing information. When isNeedMac is false,
+ * macData is omitted; encryption is still controlled by the selected bag type and encodeParam.
  * @param format          [IN] Encoding format: BSL_FORMAT_ASN1.
  * @param p12             [IN] p12 struct, including entityCert, CA-cert, prvkey, and so on.
  * @param encodeParam     [IN] encode data
@@ -213,7 +214,8 @@ int32_t HITLS_PKCS12_GenBuff(int32_t format, HITLS_PKCS12 *p12, const HITLS_PKCS
  * @ingroup pkcs12
  * @par Description: Generate p12 to store in file
  *
- * @attention Generate a .p12 file based on the existing information.
+ * @attention Generate a .p12 file based on the existing information. When isNeedMac is false,
+ * macData is omitted; encryption is still controlled by the selected bag type and encodeParam.
  * @param format          [IN] Encoding format: BSL_FORMAT_ASN1.
  * @param p12             [IN] p12 struct, including entityCert, CA-cert, prvkey, and so on.
  * @param encodeParam     [IN] encode data

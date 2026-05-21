@@ -1841,7 +1841,8 @@ typedef int32_t (*BslDlSym)(void *handle, const char *funcName, void **func);
  * This function is used to control and register callback functions for different SAL modules
  * such as network, time, and file operations.
  *
- * @attention None
+ * @attention For memory callbacks (BSL_SAL_MEM_MALLOC/BSL_SAL_MEM_FREE),
+ * both malloc and free must be registered together.
  * @param funcType [IN] Type of the callback function to be controlled
  * @param funcCb [IN] Pointer to the callback function
  * @retval #BSL_SUCCESS Callback function controlled successfully
