@@ -111,6 +111,65 @@ EXIT:
 /* END_CASE */
 
 /* @
+* @test  SDV_CRYPTO_MLDSA_DUP_CTX_CTRL_TC001
+* @spec  -
+* @title  Verify that DupCtx preserves MLDSA ctrl state.
+* @precon  nan
+* @brief
+* 1.Generate an MLDSA context.
+* 2.Set the private key format and query the generated seed.
+* 3.Duplicate the context.
+* 4.Verify the duplicated context keeps the same private key format and seed.
+* @expect
+* 1.success
+* 2.The duplicated context preserves the ctrl state.
+* @prior  nan
+* @auto  FALSE
+@ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_MLDSA_DUP_CTX_CTRL_TC001(int type, int keyFormat)
+{
+    TestMemInit();
+    CRYPT_EAL_PkeyCtx *ctx = NULL;
+    CRYPT_EAL_PkeyCtx *dupCtx = NULL;
+    ASSERT_EQ(TestRandInit(), CRYPT_SUCCESS);
+    uint32_t srcFormat = 0;
+    uint32_t dupFormat = 0;
+    uint32_t keyFormatVal = (uint32_t)keyFormat;
+    uint8_t srcSeed[32] = {0};
+    uint8_t dupSeed[32] = {0};
+
+    ctx = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_ML_DSA);
+    ASSERT_TRUE(ctx != NULL);
+    ASSERT_EQ(CRYPT_EAL_PkeySetParaById(ctx, (uint32_t)type), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyGen(ctx), CRYPT_SUCCESS);
+
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_SET_MLDSA_PRVKEY_FORMAT,
+        &keyFormatVal, sizeof(keyFormatVal)), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_GET_MLDSA_PRVKEY_FORMAT,
+        &srcFormat, sizeof(srcFormat)), CRYPT_SUCCESS);
+    ASSERT_EQ(srcFormat, keyFormatVal);
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_GET_MLDSA_SEED,
+        srcSeed, sizeof(srcSeed)), CRYPT_SUCCESS);
+
+    dupCtx = CRYPT_EAL_PkeyDupCtx(ctx);
+    ASSERT_TRUE(dupCtx != NULL);
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(dupCtx, CRYPT_CTRL_GET_MLDSA_PRVKEY_FORMAT,
+        &dupFormat, sizeof(dupFormat)), CRYPT_SUCCESS);
+    ASSERT_EQ(dupFormat, keyFormatVal);
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(dupCtx, CRYPT_CTRL_GET_MLDSA_SEED,
+        dupSeed, sizeof(dupSeed)), CRYPT_SUCCESS);
+    ASSERT_COMPARE("compare seed", srcSeed, (uint32_t)sizeof(srcSeed), dupSeed, (uint32_t)sizeof(dupSeed));
+    ASSERT_TRUE(TestIsErrStackEmpty());
+EXIT:
+    CRYPT_EAL_PkeyFreeCtx(ctx);
+    CRYPT_EAL_PkeyFreeCtx(dupCtx);
+    TestRandDeInit();
+    return;
+}
+/* END_CASE */
+
+/* @
 * @test  SDV_CRYPTO_MLDSA_FUNC_KEYGEN_TC001
 * @spec  -
 * @title  Generate public and private key tests.

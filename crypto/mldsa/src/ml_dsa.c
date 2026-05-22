@@ -132,6 +132,7 @@ CRYPT_ML_DSA_Ctx *CRYPT_ML_DSA_DupCtx(CRYPT_ML_DSA_Ctx *ctx)
     newCtx->deterministicSignFlag = ctx->deterministicSignFlag;
     newCtx->needPreHash = ctx->needPreHash;
     newCtx->libCtx = ctx->libCtx;
+    newCtx->prvKeyFormat = ctx->prvKeyFormat;
     return newCtx;
 ERR:
     CRYPT_ML_DSA_FreeCtx(newCtx);
@@ -278,7 +279,7 @@ static int32_t MlDSASetPreHashMode(CRYPT_ML_DSA_Ctx *ctx, void *val, uint32_t le
     return CRYPT_SUCCESS;
 }
 
-int32_t MLDSASetctxInfo(CRYPT_ML_DSA_Ctx *ctx, void *val, uint32_t len)
+static int32_t MLDSASetctxInfo(CRYPT_ML_DSA_Ctx *ctx, void *val, uint32_t len)
 {
     if (len > MLDSA_MAX_CTX_BYTES) {
         BSL_ERR_PUSH_ERROR(CRYPT_MLDSA_KEYLEN_ERROR);
