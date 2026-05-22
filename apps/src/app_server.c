@@ -605,9 +605,11 @@ static int HandleClientConnection(HITLS_Ctx *ctx, HITLS_ServerParams *params)
 
 static void CleanupConnection(HITLS_Ctx *ctx, BSL_UIO *uio, int clientFd)
 {
-    if (ctx) {
-        HITLS_Close(ctx); // send close
-        HITLS_Close(ctx); // read close
+    if (ctx != NULL) {
+        int32_t closeRet = HITLS_Close(ctx);
+        if (closeRet == HITLS_REC_NORMAL_IO_BUSY) {
+            (void)HITLS_Close(ctx);
+        }
         HITLS_Free(ctx);
     }
     

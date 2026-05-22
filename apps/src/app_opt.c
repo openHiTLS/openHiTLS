@@ -627,24 +627,25 @@ int32_t HITLS_APP_OptReadUio(BSL_UIO *uio, uint8_t **readBuf, uint64_t *readBufL
         AppPrintError("Failed to obtain the content length\n");
         return HITLS_APP_UIO_FAIL;
     }
-    if (*readBufLen == 0 || *readBufLen > maxBufLen) {
+    if (*readBufLen == 0 || *readBufLen > maxBufLen || *readBufLen > UINT32_MAX - 1) {
         AppPrintError("Invalid content length\n");
         return HITLS_APP_UIO_FAIL;
     }
     // obtain the length of the UIO content, the pointer of the input parameter points to the allocated memory
-    uint8_t *buf = (uint8_t *)BSL_SAL_Calloc(*readBufLen + 1, 1);
+    uint32_t bufLen = (uint32_t)*readBufLen;
+    uint8_t *buf = (uint8_t *)BSL_SAL_Calloc(bufLen + 1, 1);
     if (buf == NULL) {
         AppPrintError("Failed to create the space.\n");
         return HITLS_APP_MEM_ALLOC_FAIL;
     }
     uint32_t readLen = 0;
-    readRet = BSL_UIO_Read(uio, buf, *readBufLen, &readLen); // read content to memory
-    if (readRet != BSL_SUCCESS || *readBufLen != readLen) {
+    readRet = BSL_UIO_Read(uio, buf, bufLen, &readLen); // read content to memory
+    if (readRet != BSL_SUCCESS || bufLen != readLen) {
         BSL_SAL_FREE(buf);
         AppPrintError("Failed to read UIO content.\n");
         return HITLS_APP_UIO_FAIL;
     }
-    buf[*readBufLen] = '\0';
+    buf[bufLen] = '\0';
     *readBuf = buf;
     return HITLS_APP_SUCCESS;
 }
