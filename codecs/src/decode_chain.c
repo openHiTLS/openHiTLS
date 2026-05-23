@@ -412,7 +412,7 @@ static int32_t ProcessEachProviderDecoder(CRYPT_EAL_ProvMgrCtx *ctx, void *args)
     }
 
     ret = CRYPT_EAL_ProviderQuery(ctx, CRYPT_EAL_OPERAID_DECODER, &algInfos);
-    if (ret == CRYPT_NOT_SUPPORT) {
+    if (algInfos == NULL) {
         return CRYPT_SUCCESS;
     }
     if (ret != CRYPT_SUCCESS) {
