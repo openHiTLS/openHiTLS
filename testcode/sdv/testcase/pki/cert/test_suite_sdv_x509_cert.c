@@ -36,9 +36,11 @@
 #include "sal_file.h"
 #include "crypt_codecskey.h"
 #include "crypt_eal_codecs.h"
+#include "crypt_eal_provider.h"
+#include "crypt_eal_rand.h"
 #include "hitls_x509_local.h"
 #include "stub_utils.h"
-
+#include "test.h"
 /* END_HEADER */
 
 /* ============================================================================
@@ -48,6 +50,32 @@
 STUB_DEFINE_RET1(void *, BSL_SAL_Malloc, uint32_t);
 #endif
 STUB_DEFINE_RET2(int32_t, HITLS_X509_ParseCertTbs, BSL_ASN1_Buffer *, HITLS_X509_Cert *);
+
+#if defined(HITLS_PKI_X509_CRT_PARSE) && defined(HITLS_CRYPTO_PROVIDER)
+#define HITLS_X509_SHA256_LIB_NAME "provider_sha256." BSL_SAL_DL_EXT
+#define HITLS_X509_SHA256_PROVIDER_PATH "provider_test_data/path2"
+
+static CRYPT_EAL_LibCtx *X509_LoadSha256ProviderWithDefault(void)
+{
+    CRYPT_EAL_LibCtx *libCtx = NULL;
+    int32_t ret = CRYPT_EAL_RandInit(CRYPT_RAND_SHA256, NULL, NULL, NULL, 0);
+    if (ret != CRYPT_SUCCESS && ret != CRYPT_EAL_ERR_DRBG_REPEAT_INIT) {
+        ASSERT_EQ(ret, CRYPT_SUCCESS);
+    }
+
+    libCtx = CRYPT_EAL_LibCtxNew();
+    ASSERT_TRUE(libCtx != NULL);
+
+    ASSERT_EQ(CRYPT_EAL_ProviderSetLoadPath(libCtx, HITLS_X509_SHA256_PROVIDER_PATH), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_ProviderLoad(libCtx, 0, HITLS_X509_SHA256_LIB_NAME, NULL, NULL), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_ProviderLoad(libCtx, 0, "default", NULL, NULL), CRYPT_SUCCESS);
+    return libCtx;
+
+EXIT:
+    CRYPT_EAL_LibCtxFree(libCtx);
+    return NULL;
+}
+#endif
 
 static uint32_t g_certSerialMemAllocCount = 0;
 static uint32_t g_certSerialMemFreeCount = 0;
@@ -923,6 +951,36 @@ void SDV_X509_PROVIDER_CERT_PARSE_BUNDLE_BUFF_FUNC_TC001(char *format, char *pat
 EXIT:
     BSL_LIST_FREE(list, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);
     BSL_SAL_Free(encodeData.data);
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_X509_PROVIDER_CERT_PARSE_WITH_UNSUPPORTED_PROVIDER_TC001(char *attrName, char *format, char *path, int certNum)
+{
+#if !defined(HITLS_PKI_X509_CRT_PARSE) || !defined(HITLS_CRYPTO_PROVIDER)
+    (void)attrName;
+    (void)format;
+    (void)path;
+    (void)certNum;
+    SKIP_TEST();
+#else
+    TestMemInit();
+    BSL_GLOBAL_Init();
+    CRYPT_EAL_LibCtx *libCtx = X509_LoadSha256ProviderWithDefault();
+    HITLS_X509_List *list = NULL;
+    ASSERT_TRUE(libCtx != NULL);
+
+    ASSERT_EQ(HITLS_X509_ProviderCertParseBundleFile((HITLS_PKI_LibCtx *)libCtx, attrName, format, path, &list),
+        HITLS_PKI_SUCCESS);
+    ASSERT_EQ(BSL_LIST_COUNT(list), certNum);
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
+EXIT:
+    BSL_LIST_FREE(list, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);
+    CRYPT_EAL_RandDeinitEx(libCtx);
+    CRYPT_EAL_LibCtxFree(libCtx);
+    BSL_GLOBAL_DeInit();
+#endif
 }
 /* END_CASE */
 

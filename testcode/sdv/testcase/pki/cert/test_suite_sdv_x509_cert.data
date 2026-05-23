@@ -3436,6 +3436,9 @@ SDV_X509_PROVIDER_CERT_PARSE_BUNDLE_BUFF_FUNC_TC001:"ASN1":"../testdata/cert/sm2
 SDV_X509_PROVIDER_CERT_PARSE_BUNDLE_BUFF_FUNC_TC001 provider parse bundle buff with 1 der cert
 SDV_X509_PROVIDER_CERT_PARSE_BUNDLE_BUFF_FUNC_TC001:"ASN1":"../testdata/cert/asn1/sha256Rsaca.crt":1
 
+SDV_X509_PROVIDER_CERT_PARSE_WITH_UNSUPPORTED_PROVIDER_TC001 provider parse rsa bundle file with unsupported sha256 provider
+SDV_X509_PROVIDER_CERT_PARSE_WITH_UNSUPPORTED_PROVIDER_TC001:"provider=default":"PEM":"../testdata/tls/certificate/pem/rsa_sha256/server.pem":1
+
 SDV_X509_CERT_GET_BCONS_TEST_TC001
 SDV_X509_CERT_GET_BCONS_TEST_TC001:BSL_FORMAT_ASN1:"../testdata/cert/asn1/ecdsa_cert/ca.der":1:1:-1
 

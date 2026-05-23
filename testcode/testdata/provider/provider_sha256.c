@@ -29,6 +29,7 @@
 #include "bsl_err_internal.h"
 
 #define CRYPT_EAL_DEFAULT_ATTR "provider=sha256_test"
+#define PROVIDER_SHA256_NOT_SUPPORT 0x7F000001
 
 
 CRYPT_SHA2_256_Ctx *Sha256NewCtx(void *provCtx, int32_t algId)
@@ -65,7 +66,7 @@ static int32_t CRYPT_EAL_Sha256ProvQuery(void *provCtx, int32_t operaId, const C
             *algInfos = defMds;
             return CRYPT_SUCCESS;
         default:
-            return CRYPT_NOT_SUPPORT;
+            return PROVIDER_SHA256_NOT_SUPPORT;
     }
 }
 
