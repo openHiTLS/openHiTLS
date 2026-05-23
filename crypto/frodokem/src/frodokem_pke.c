@@ -22,7 +22,10 @@
 #include "bsl_errno.h"
 #include "crypt_errno.h"
 #include "bsl_err_internal.h"
-
+#if defined(HITLS_CRYPTO_FRODOKEM_ARMV8)
+void FrodoCommonSampleNFromR(uint16_t *samples, const size_t n, const uint16_t *cdfTable, const size_t cdfLen,
+                             const uint8_t *rBytes);
+#else
 static void FrodoCommonSampleNFromR(uint16_t *samples, const size_t n, const uint16_t *cdfTable, const size_t cdfLen,
                                     const uint8_t *rBytes)
 {
@@ -39,6 +42,8 @@ static void FrodoCommonSampleNFromR(uint16_t *samples, const size_t n, const uin
         samples[i] = ((uint16_t)(-sign) ^ t) + sign;
     }
 }
+#endif
+
 
 int32_t FrodoPkeKeygenSeeded(const FrodoKemParams *params, uint8_t *pk, uint16_t *matrixSTranspose,
                              const uint8_t *seedA, const uint8_t *seedSE)

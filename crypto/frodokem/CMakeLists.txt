@@ -14,6 +14,21 @@
 
 file(GLOB _frodokem_sources ${CMAKE_CURRENT_SOURCE_DIR}/src/*.c)
 
+set(_frodokem_sources
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/frodokem.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/frodo_util.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/frodo_params.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/frodokem_pke.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/frodo_core_ref.c
+)
+
+if(HITLS_CRYPTO_FRODOKEM_ARMV8)
+    list(APPEND _frodokem_sources
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/asm/armv8_frodo_matmul.S
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/asm/armv8_frodo_sample.S
+    )
+endif()
+
 add_library(_hitls_crypto_frodokem OBJECT ${_frodokem_sources})
 
 target_link_libraries(_hitls_crypto_frodokem

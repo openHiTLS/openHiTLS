@@ -92,7 +92,13 @@ static int32_t AESCtrEncrypt(void *ctx, EAL_CipherMethod *method, const int32_t 
     }
     return CRYPT_SUCCESS;
 }
+#if defined(HITLS_CRYPTO_FRODOKEM_ARMV8)
+void MultAsPlusEAES(uint16_t *out, const uint16_t *matrixST, const int32_t n, const int32_t nBar, uint16_t *rows,
+                    int32_t rowNumber);
 
+void MultSaPlusEAES(uint16_t *out, const uint16_t *matrixS, const int32_t n, const int32_t nBar, uint16_t *rows,
+                    int32_t rowNumber);
+#else
 static void MultAsPlusEAES(uint16_t *out, const uint16_t *matrixST, const int32_t n, const int32_t nBar, uint16_t *rows,
                            int32_t rowNumber)
 {
@@ -143,6 +149,7 @@ static void MultSaPlusEAES(uint16_t *out, const uint16_t *matrixS, const int32_t
         }
     }
 }
+#endif
 
 static int32_t FrodoCommonMulAddAES(uint16_t *out, const uint16_t *matrixSTranspose, const uint8_t *seedA,
                                     const int32_t n, const int32_t nBar, uint16_t rows[FRODO_MATRIX_FOUR_ROWS_SIZE],
@@ -184,7 +191,14 @@ EXIT:
 // =================================================================================
 // Static helper functions for SHAKE-based PRG
 // =================================================================================
+#if defined(HITLS_CRYPTO_FRODOKEM_ARMV8)
+void MulAsPlusESHAKE(uint16_t *out, const uint16_t *matrixST, const int32_t n, const int32_t nBar,
+                     uint16_t *row0, uint16_t *row1, uint16_t *row2, uint16_t *row3, int32_t rowNumber);
 
+void MulSaPlusESHAKE(uint16_t *out, const uint16_t *matrixS, const int32_t n, const int32_t nBar, uint16_t *row0,
+                     uint16_t *row1, uint16_t *row2, uint16_t *row3, int32_t rowNumber);
+
+#else
 static void MulAsPlusESHAKE(uint16_t *out, const uint16_t *matrixST, const int32_t n, const int32_t nBar,
                             uint16_t *row0, uint16_t *row1, uint16_t *row2, uint16_t *row3, int32_t rowNumber)
 {
@@ -225,6 +239,7 @@ static void MulSaPlusESHAKE(uint16_t *out, const uint16_t *matrixS, const int32_
         }
     }
 }
+#endif
 
 static int32_t FrodoCommonMulAddAsPlusESHAKE(uint16_t *out, const uint16_t *matrixST, const uint8_t *seedA,
                                              const FrodoKemParams *params, const int32_t n, const int32_t nBar,
@@ -269,11 +284,23 @@ int32_t FrodoCommonMulAddAsPlusEPortable(uint16_t *out, const uint16_t *matrixST
     const int32_t N = params->n;
     const int32_t nBar = params->nBar;
     uint16_t rows[4 * FRODO_MAX_N];
+#if defined(HITLS_CRYPTO_FRODOKEM_ARMV8)
+    /* Transpose S^T (nBar×N) → S (N×nBar) once upfront.
+     * Assembly uses outer-product MLA which requires S[k][0..7] contiguous;
+     * addv-based dot-product is replaced, removing the 4-cycle throughput bottleneck. */
+    uint16_t sMatrix[8 * FRODO_MAX_N]; /* nBar is always 8; max = 8*1344*2 = 21 KB */
+    for (int32_t j = 0; j < nBar; j++)
+        for (int32_t k = 0; k < N; k++)
+            sMatrix[k * nBar + j] = matrixST[j * N + k];
+    const uint16_t *matS = sMatrix;
+#else
+    const uint16_t *matS = matrixST;
+#endif
     if (params->prg == FRODO_PRG_AES) {
         uint8_t plaintext[FRODO_PRG_AES_PLAINTEXT_SIZE];
-        return FrodoCommonMulAddAES(out, matrixST, seedA, N, nBar, rows, plaintext, MultAsPlusEAES);
+        return FrodoCommonMulAddAES(out, matS, seedA, N, nBar, rows, plaintext, MultAsPlusEAES);
     } else {
-        return FrodoCommonMulAddAsPlusESHAKE(out, matrixST, seedA, params, N, nBar, rows, MulAsPlusESHAKE);
+        return FrodoCommonMulAddAsPlusESHAKE(out, matS, seedA, params, N, nBar, rows, MulAsPlusESHAKE);
     }
 }
 
@@ -294,7 +321,7 @@ int32_t FrodoCommonMulAddSaPlusEPortable(uint16_t *out, const uint16_t *s, const
         return FrodoCommonMulAddAsPlusESHAKE(out, s, seedA, params, n, nBar, rows, MulSaPlusESHAKE);
     }
 }
-
+#if !defined(HITLS_CRYPTO_FRODOKEM_ARMV8)
 void FrodoCommonMulAddSbPlusEPortable(uint16_t *V0, const uint16_t *STp, const uint16_t *B, const uint16_t *Epp,
                                       const FrodoKemParams *params)
 {
@@ -320,6 +347,7 @@ void FrodoCommonMulAddSbPlusEPortable(uint16_t *V0, const uint16_t *STp, const u
         }
     }
 }
+#endif
 
 void FrodoCommonMulBs(uint16_t *out, const uint16_t *b, const uint16_t *s, const FrodoKemParams *params)
 {
