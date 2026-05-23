@@ -32,6 +32,7 @@
 #include "tls_config.h"
 #include "hs_ctx.h"
 #include "hs.h"
+#include "hs_cookie.h"
 
 #define MAX_IP_ADDR_SIZE 256u
 
@@ -180,7 +181,7 @@ static int32_t AddCookieCalcMaterial(
 }
 
 int32_t HS_CalcCookie(TLS_Ctx *ctx, const ClientHelloMsg *clientHello, uint8_t *cookie, uint32_t *cookieLen,
-    bool ischeck)
+    bool isCheck)
 {
     /* If the user's cookie calculation callback is registered, use the user's callback interface */
     if (ctx->globalConfig != NULL && ctx->globalConfig->appGenCookieCb != NULL) {
@@ -221,7 +222,7 @@ int32_t HS_CalcCookie(TLS_Ctx *ctx, const ClientHelloMsg *clientHello, uint8_t *
     }
 
     /* Updated the current HMAC algorithm usage times */
-    if (!ischeck) {
+    if (!isCheck) {
         cookieInfo->algRemainTime--;
     }
 

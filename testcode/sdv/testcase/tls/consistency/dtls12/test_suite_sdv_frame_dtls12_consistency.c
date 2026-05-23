@@ -2557,10 +2557,10 @@ int32_t HS_CheckCookie_Custom(TLS_Ctx *ctx, const ClientHelloMsg *clientHello, b
     return HITLS_SUCCESS;
 }
 
-int32_t HS_CalcCookie_Custom(TLS_Ctx *ctx, const ClientHelloMsg *clientHello, uint8_t *cookie, uint32_t *cookieLen, bool ischeck)
+int32_t HS_CalcCookie_Custom(TLS_Ctx *ctx, const ClientHelloMsg *clientHello, uint8_t *cookie, uint32_t *cookieLen, bool isCheck)
 {
     (void)clientHello;
-    (void)ischeck;
+    (void)isCheck;
     if (ctx->globalConfig->appGenCookieCb == NULL) {
         return HITLS_UNREGISTERED_CALLBACK;
     }

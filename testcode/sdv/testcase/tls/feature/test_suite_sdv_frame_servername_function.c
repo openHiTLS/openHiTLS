@@ -42,6 +42,7 @@
 #include "common_func.h"
 #include "hitls_crypt_init.h"
 #include "alert.h"
+#include "session.h"
 
 #define TEST_SERVERNAME_LENGTH 20
 #define READ_BUF_SIZE 18432
@@ -70,6 +71,7 @@ static char *g_serverName = "huawei.com";
 static char *g_serverNameErr = "www.huawei.com";
 static uint8_t *g_sessionId;
 static uint32_t g_sessionIdSize;
+static uint32_t g_resumeSniCbCallCount = 0;
 
 int32_t ServernameCbErrOK(HITLS_Ctx *ctx, int *alert, void *arg)
 {
@@ -78,6 +80,27 @@ int32_t ServernameCbErrOK(HITLS_Ctx *ctx, int *alert, void *arg)
     (void)arg;
 
     return HITLS_ACCEPT_SNI_ERR_OK;
+}
+
+int32_t ServernameCbErrOKCount(HITLS_Ctx *ctx, int *alert, void *arg)
+{
+    (void)ctx;
+    (void)alert;
+    (void)arg;
+
+    g_resumeSniCbCallCount++;
+
+    return HITLS_ACCEPT_SNI_ERR_OK;
+}
+
+int32_t ServernameCbErrNoAckCount(HITLS_Ctx *ctx, int *alert, void *arg)
+{
+    (void)ctx;
+    (void)alert;
+    (void)arg;
+
+    g_resumeSniCbCallCount++;
+    return HITLS_ACCEPT_SNI_ERR_NOACK;
 }
 
 void STUB_SendAlert(const TLS_Ctx *ctx, ALERT_Level level, ALERT_Description description)
@@ -490,5 +513,154 @@ EXIT:
     HITLS_CFG_FreeConfig(serverconfig);
     FRAME_FreeLink(client);
     FRAME_FreeLink(server);
+}
+/* END_CASE */
+
+/* @
+* @test  UT_TLS_SNI_RESUME_SERVERNAME_FUNC_TC004
+* @title  The first handshake uses SNI, and on session resumption the snidealcb returns NOACK.
+* @precon  nan
+* @brief  1. Perform the first TLS1.2 handshake with SNI enabled and save the client session. Expected result 1
+          2. Reconnect with the saved session and make snidealcb return HITLS_ACCEPT_SNI_ERR_NOACK. Expected result 2
+* @expect 1. The first handshake succeeds
+          2. The second handshake succeeds and falls back to a full handshake instead of session resumption
+@ */
+/* BEGIN_CASE */
+void UT_TLS_SNI_RESUME_SERVERNAME_FUNC_TC004()
+{
+        FRAME_Init();
+
+    HITLS_Config *clientconfig = HITLS_CFG_NewTLS12Config();
+    HITLS_Config *serverconfig = HITLS_CFG_NewTLS12Config();
+    FRAME_LinkObj *client = NULL;
+    FRAME_LinkObj *server = NULL;
+    HITLS_Session *session = NULL;
+    char *sessionIdCtx = "123456789";
+    bool isReused = false;
+
+    ASSERT_TRUE(clientconfig != NULL);
+    ASSERT_TRUE(serverconfig != NULL);
+    ASSERT_EQ(HITLS_CFG_SetServerName(clientconfig, (uint8_t *)g_serverName, strlen(g_serverName)), HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_CFG_SetServerNameCb(serverconfig, ServernameCbErrOK), HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_CFG_SetSessionIdCtx(clientconfig, (const uint8_t *)sessionIdCtx, strlen(sessionIdCtx)),
+        HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_CFG_SetSessionIdCtx(serverconfig, (const uint8_t *)sessionIdCtx, strlen(sessionIdCtx)),
+        HITLS_SUCCESS);
+    HITLS_CFG_SetSessionTicketSupport(clientconfig, false);
+    HITLS_CFG_SetSessionTicketSupport(serverconfig, false);
+
+    client = FRAME_CreateLink(clientconfig, BSL_UIO_TCP);
+    ASSERT_TRUE(client != NULL);
+    server = FRAME_CreateLink(serverconfig, BSL_UIO_TCP);
+    ASSERT_TRUE(server != NULL);
+    ASSERT_EQ(FRAME_CreateConnection(client, server, false, HS_STATE_BUTT), HITLS_SUCCESS);
+
+    session = HITLS_GetDupSession(client->ssl);
+    ASSERT_TRUE(session != NULL);
+    ASSERT_EQ(SESS_SetHostName(session, strlen(g_serverName) + 1, (uint8_t *)g_serverName), HITLS_SUCCESS);
+
+    FRAME_FreeLink(client);
+    client = NULL;
+    FRAME_FreeLink(server);
+    server = NULL;
+
+    ASSERT_EQ(HITLS_CFG_SetServerNameCb(serverconfig, ServernameCbErrNoAckCount), HITLS_SUCCESS);
+    g_resumeSniCbCallCount = 0;
+    client = FRAME_CreateLink(clientconfig, BSL_UIO_TCP);
+    ASSERT_TRUE(client != NULL);
+    server = FRAME_CreateLink(serverconfig, BSL_UIO_TCP);
+    ASSERT_TRUE(server != NULL);
+    ASSERT_EQ(HITLS_SetSession(client->ssl, session), HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_SetServerName(client->ssl, (uint8_t *)g_serverName, strlen(g_serverName)), HITLS_SUCCESS);
+
+    ASSERT_EQ(FRAME_CreateConnection(client, server, false, HS_STATE_BUTT), HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_IsSessionReused(client->ssl, &isReused), HITLS_SUCCESS);
+    ASSERT_EQ(isReused, false);
+    ASSERT_EQ(client->ssl->negotiatedInfo.isResume, false);
+    ASSERT_EQ(server->ssl->negotiatedInfo.isResume, false);
+    /* invoke snicb 2 times. One for resume, one for full handshake*/
+    ASSERT_EQ(g_resumeSniCbCallCount, 2);
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
+EXIT:
+    HITLS_CFG_FreeConfig(clientconfig);
+    HITLS_CFG_FreeConfig(serverconfig);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+    HITLS_SESS_Free(session);
+}
+/* END_CASE */
+
+/* @
+* @test  UT_TLS_SNI_RESUME_SERVERNAME_FUNC_TC005
+* @title  The first handshake uses SNI, and on session resumption the snidealcb returns OK.
+* @precon  nan
+* @brief  1. Perform the first TLS1.2 handshake with SNI enabled and save the client session. Expected result 1
+          2. Reconnect with the saved session and make snidealcb return HITLS_ACCEPT_SNI_ERR_OK. Expected result 2
+* @expect 1. The first handshake succeeds
+          2. The second handshake succeeds and resumes the saved session
+@ */
+/* BEGIN_CASE */
+void UT_TLS_SNI_RESUME_SERVERNAME_FUNC_TC005()
+{
+    FRAME_Init();
+
+    HITLS_Config *clientconfig = HITLS_CFG_NewTLS12Config();
+    HITLS_Config *serverconfig = HITLS_CFG_NewTLS12Config();
+    FRAME_LinkObj *client = NULL;
+    FRAME_LinkObj *server = NULL;
+    HITLS_Session *session = NULL;
+    char *sessionIdCtx = "123456789";
+    bool isReused = false;
+
+    ASSERT_TRUE(clientconfig != NULL);
+    ASSERT_TRUE(serverconfig != NULL);
+    ASSERT_EQ(HITLS_CFG_SetServerName(clientconfig, (uint8_t *)g_serverName, strlen(g_serverName)), HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_CFG_SetServerNameCb(serverconfig, ServernameCbErrOK), HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_CFG_SetSessionIdCtx(clientconfig, (const uint8_t *)sessionIdCtx, strlen(sessionIdCtx)),
+        HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_CFG_SetSessionIdCtx(serverconfig, (const uint8_t *)sessionIdCtx, strlen(sessionIdCtx)),
+        HITLS_SUCCESS);
+    HITLS_CFG_SetSessionTicketSupport(clientconfig, false);
+    HITLS_CFG_SetSessionTicketSupport(serverconfig, false);
+
+    client = FRAME_CreateLink(clientconfig, BSL_UIO_TCP);
+    ASSERT_TRUE(client != NULL);
+    server = FRAME_CreateLink(serverconfig, BSL_UIO_TCP);
+    ASSERT_TRUE(server != NULL);
+    ASSERT_EQ(FRAME_CreateConnection(client, server, false, HS_STATE_BUTT), HITLS_SUCCESS);
+
+    session = HITLS_GetDupSession(client->ssl);
+    ASSERT_TRUE(session != NULL);
+    ASSERT_EQ(SESS_SetHostName(session, strlen(g_serverName) + 1, (uint8_t *)g_serverName), HITLS_SUCCESS);
+
+    FRAME_FreeLink(client);
+    client = NULL;
+    FRAME_FreeLink(server);
+    server = NULL;
+
+    ASSERT_EQ(HITLS_CFG_SetServerNameCb(serverconfig, ServernameCbErrOKCount), HITLS_SUCCESS);
+    g_resumeSniCbCallCount = 0;
+    client = FRAME_CreateLink(clientconfig, BSL_UIO_TCP);
+    ASSERT_TRUE(client != NULL);
+    server = FRAME_CreateLink(serverconfig, BSL_UIO_TCP);
+    ASSERT_TRUE(server != NULL);
+    ASSERT_EQ(HITLS_SetSession(client->ssl, session), HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_SetServerName(client->ssl, (uint8_t *)g_serverName, strlen(g_serverName)), HITLS_SUCCESS);
+
+    ASSERT_EQ(FRAME_CreateConnection(client, server, false, HS_STATE_BUTT), HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_IsSessionReused(client->ssl, &isReused), HITLS_SUCCESS);
+    ASSERT_EQ(isReused, true);
+    ASSERT_EQ(client->ssl->negotiatedInfo.isResume, true);
+    ASSERT_EQ(server->ssl->negotiatedInfo.isResume, true);
+    ASSERT_EQ(g_resumeSniCbCallCount, 1);
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
+EXIT:
+    HITLS_CFG_FreeConfig(clientconfig);
+    HITLS_CFG_FreeConfig(serverconfig);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+    HITLS_SESS_Free(session);
 }
 /* END_CASE */
