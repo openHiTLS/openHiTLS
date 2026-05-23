@@ -48,7 +48,7 @@ typedef enum {
  * @brief Create a new CMS handle
  * @param libCtx library context
  * @param attrName Attribute/profile name
- * @param dataType CMS content/data type (e.g., SignedData, EnvelopedData)
+ * @param dataType CMS content/data type (e.g., SignedData, EnvelopedData, AuthenticatedData)
  * @return Pointer to the newly created CMS handle on success, or NULL on failure
  */
 HITLS_CMS *HITLS_CMS_ProviderNew(HITLS_PKI_LibCtx *libCtx, const char *attrName, int32_t dataType);
@@ -63,9 +63,10 @@ void HITLS_CMS_Free(HITLS_CMS *cms);
 /**
  * @ingroup cms
  * @brief cms parse
- * @par Description: parse cms buffer, and set the cms struct. Supports parsing SignedData and EnvelopedData.
-
- * @attention Supports parsing CMS buffers for SignedData and EnvelopedData.
+ * @par Description: Parse the cms buffer, and set the cms struct. Supports parsing SignedData, EnvelopedData
+ *      and AuthenticatedData.
+ *
+ * @attention Only support to parse cms buffer.
  * @param libCtx         [IN] lib context
  * @param attrName       [IN] attribute name
  * @param param          [IN] parameter
@@ -186,19 +187,63 @@ int32_t HITLS_CMS_DataDecrypt(HITLS_CMS *cms, const BSL_Param *param, BSL_Buffer
 
 /**
  * @ingroup cms
- * @brief Initialize streaming operation for CMS data processing (unified interface)
+ * @brief Generate CMS AuthenticatedData and its MAC (one-shot operation).
+ * @par Description:
+ * Generates a CMS AuthenticatedData structure, including recipient infos, encapsulated content,
+ * optional authenticated attributes, and the final MAC value.
+ *
+ * @param cms           [IN/OUT] CMS AuthenticatedData handle
+ * @param msg           [IN] Message data to authenticate
+ * @param optionalParam [IN] Optional parameters. For generation, optional parameters must include
+ *                           HITLS_CMS_PARAM_RECIPIENT_CERT_LISTS. MAC algorithm and content type are
+ *                           required for generation; digest algorithm is required when authenticated
+ *                           attributes are enabled.
+ * @retval #HITLS_PKI_SUCCESS on success.
+ *         Error codes can be found in hitls_pki_errno.h
+ */
+int32_t HITLS_CMS_DataAuth(HITLS_CMS *cms, const BSL_Buffer *msg, const BSL_Param *optionalParam);
+
+/**
+ * @ingroup cms
+ * @brief Verify CMS AuthenticatedData MAC and recover the authenticated content.
+ * @par Description:
+ * Locates the matching recipient info, unwraps the MAC key with the provided private key,
+ * recomputes the MAC, and verifies it against the encoded AuthenticatedData value.
+ *
+ * @attention For detached AuthenticatedData, msg must be provided. For recipient types identified by
+ *            certificate fields (currently KTRI), param must include HITLS_CMS_PARAM_RECIPIENT_CERT.
+ * @param cms         [IN] CMS AuthenticatedData handle
+ * @param decryptKey  [IN] Recipient private key used to recover the MAC key
+ * @param msg         [IN] Detached content to verify; optional for attached content
+ * @param param       [IN] Optional parameters
+ * @param output      [OUT] If not NULL, returns the actual message buffer used for MAC verification
+ *                          (points to msg for detached, or to embedded content for attached)
+ * @retval #HITLS_PKI_SUCCESS on success.
+ *         Error codes can be found in hitls_pki_errno.h
+ */
+int32_t HITLS_CMS_DataAuthVerify(HITLS_CMS *cms, CRYPT_EAL_PkeyCtx *decryptKey, BSL_Buffer *msg,
+    const BSL_Param *param, BSL_Buffer *output);
+
+/**
+ * @ingroup cms
+ * @brief Initialize streaming operation for CMS SignedData, EnvelopedData, AuthenticatedData (unified interface)
  * @par Description: Unified interface for initializing streaming operations.
  *
- * Useful to sign, verify, encrypt or decrypt large input data.
+ * Useful for to deal sign, verify, encrypt, decrypt, authenticate or verify MAC large input data.
  *
  * @attention State must be HITLS_CMS_UNINIT.
  * @param cms             [IN/OUT] CMS structure to initialize
- * @param option           [IN] Operation option, ref hitls_pki_types.h
+ * @param option           [IN] Operation option，ref hitls_pki_types.h
  * @param param            [IN] Parameters:
  *                            - For encryption: Optional parameters may include the content encryption algorithm
  *                              and content type. Recipients are added by subsequent HITLS_CMS_DataEncrypt calls.
  *                            - For decryption: Recipient credentials are provided here to unwrap the CEK and
  *                              initialize the decryption context.
+ *                            - For MAC generation: optional parameters must include
+ *                              HITLS_CMS_PARAM_RECIPIENT_CERT_LISTS, and detached mode must be enabled.
+ *                            - For MAC verification: For KTRI, parameters must include
+ *                              HITLS_CMS_PARAM_PRIVATE_KEY and HITLS_CMS_PARAM_RECIPIENT_CERT.
+ *                              Streaming verification is supported for detached AuthenticatedData only.
  * @retval #HITLS_PKI_SUCCESS on success.
  *         Error codes can be found in hitls_pki_errno.h
  */
@@ -210,9 +255,12 @@ int32_t HITLS_CMS_DataInit(int32_t option, HITLS_CMS *cms, const BSL_Param *para
  * @par Description: deal with a chunk of input data. This function can be
  * called multiple times to process the input data in chunks.
  *
- * This interface only supports SignedData sign and verify streaming operations.
+ * Works for sign ,verify, authenticate and verify MAC.
+ * 
  * EnvelopedData streaming encryption and decryption use HITLS_CMS_DataUpdateEx,
  * which returns the detached output chunk.
+ *
+ * For AuthenticatedData, streaming update is supported for detached mode only.
  *
  * @attention Call HITLS_CMS_DataInit before calling this function.
  * @param cms             [IN/OUT] CMS structure
@@ -226,9 +274,15 @@ int32_t HITLS_CMS_DataUpdate(HITLS_CMS *cms, const BSL_Buffer *input);
  * @ingroup cms
  * @brief Finalize streaming SignedData operation.
  * @par Description:
- * Finalize the streaming operation. For sign, this generates the signature and adds
- * the completed SignerInfo to the CMS structure. For verification, this finalizes the
- * digest computation, compares with message-digest attributes, and verifies all signatures.
+ * Finalize the streaming operation.
+ * For sign, this generates the signature and adds the completed SignerInfo to the CMS structure.
+ * For verification, this finalizes the digest computation, compares with message-digest attributes, 
+ *  and verifies all signatures.
+ * For authenticate, this finalizes the MAC computation and stores the completed AuthenticatedData structure.
+ * For verify MAC, this finalizes the digest/MAC computation and verifies the encoded MAC value.
+ *
+ * For AuthenticatedData, streaming finalization is supported for detached mode only, and verification
+ * does not return an output buffer through this interface.
  *
  * The function determines the operation type based on the option set in HITLS_CMS_DataInit.
  *
@@ -247,9 +301,9 @@ int32_t HITLS_CMS_DataFinal(HITLS_CMS *cms, const BSL_Param *param);
  * @ingroup cms
  * @brief Update streaming operation and return output data.
  * @par Description:
- * This interface supports SignedData and EnvelopedData streaming operations.
- * For SignedData, output is not used and may be NULL. For EnvelopedData, input
- * is a plaintext chunk during encryption or a detached ciphertext chunk during
+ * This interface supports SignedData, EnvelopedData and AuthenticatedData streaming operations.
+ * For SignedData and AuthenticatedData, output is not used and may be NULL.
+ * For EnvelopedData, input is a plaintext chunk during encryption or a detached ciphertext chunk during
  * decryption; output must provide a caller-owned buffer. Before the call,
  * output->dataLen is the output buffer capacity. After a successful call,
  * output->dataLen is the actual ciphertext or plaintext length.
@@ -259,7 +313,7 @@ int32_t HITLS_CMS_DataFinal(HITLS_CMS *cms, const BSL_Param *param);
  *            before the first update.
  * @param cms             [IN/OUT] CMS structure
  * @param input           [IN] Input data chunk to process
- * @param output          [IN/OUT] Output data chunk for EnvelopedData; unused for SignedData.
+ * @param output          [IN/OUT] Output data chunk for EnvelopedData; unused for SignedData, AuthenticatedData.
  * @retval #HITLS_PKI_SUCCESS on success.
  *         Error codes can be found in hitls_pki_errno.h
  */
@@ -269,15 +323,15 @@ int32_t HITLS_CMS_DataUpdateEx(HITLS_CMS *cms, const BSL_Buffer *input, BSL_Buff
  * @ingroup cms
  * @brief Finalize streaming operation and return final output data.
  * @par Description:
- * This interface supports SignedData and EnvelopedData streaming operations.
- * For SignedData, output is not used and may be NULL. For EnvelopedData, output
- * must provide a caller-owned buffer. Before the call, output->dataLen is the
+ * This interface supports SignedData, EnvelopedData and AuthenticatedData streaming operations.
+ * For SignedData and AuthenticatedData, output is not used and may be NULL.
+ * For EnvelopedData, output must provide a caller-owned buffer. Before the call, output->dataLen is the
  * output buffer capacity. After a successful call, output->dataLen is the actual
  * final detached ciphertext or plaintext length.
  *
  * @param cms             [IN/OUT] CMS structure
- * @param param           [IN] Optional parameters for SignedData; unused for EnvelopedData.
- * @param output          [IN/OUT] Final output data chunk for EnvelopedData; unused for SignedData.
+ * @param param           [IN] Optional parameters.
+ * @param output          [IN/OUT] Final output data chunk for EnvelopedData; unused for SignedData, AuthenticatedData.
  * @retval #HITLS_PKI_SUCCESS on success.
  *         Error codes can be found in hitls_pki_errno.h
  */

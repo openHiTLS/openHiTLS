@@ -269,7 +269,7 @@ static CMS_EnvelopedData *CMS_ProviderEnvelopedDataNew(HITLS_PKI_LibCtx *libCtx,
     envData = BSL_SAL_Calloc(1, sizeof(CMS_EnvelopedData));
     if (envData == NULL || recip == NULL) {
         BSL_SAL_Free(envData);
-        BSL_LIST_FREE(recip, (BSL_LIST_PFUNC_FREE)RecipientInfoFree);
+        BSL_LIST_FREE(recip, (BSL_LIST_PFUNC_FREE)CMS_RecipientInfoFree);
         return NULL;
     }
     envData->recipientInfos = recip;
@@ -280,7 +280,83 @@ static CMS_EnvelopedData *CMS_ProviderEnvelopedDataNew(HITLS_PKI_LibCtx *libCtx,
 }
 #endif // HITLS_PKI_CMS_ENVELOPEDDATA
 
-#if defined(HITLS_PKI_CMS_SIGNEDDATA) || defined(HITLS_PKI_CMS_ENVELOPEDDATA)
+#ifdef HITLS_PKI_CMS_AUTHENTICATEDDATA
+CMS_AuthenticatedData *CMS_ProviderAuthenticatedDataNew(HITLS_PKI_LibCtx *libCtx, const char *attrName)
+{
+    CMS_RecipientInfos *recip = BSL_LIST_New(sizeof(CMS_RecipientInfo));
+    CMS_AuthenticatedData *authData = BSL_SAL_Calloc(1, sizeof(CMS_AuthenticatedData));
+    if (authData == NULL || recip == NULL) {
+        BSL_LIST_FREE(recip, (BSL_LIST_PFUNC_FREE)CMS_RecipientInfoFree);
+        BSL_SAL_Free(authData);
+        BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
+        return NULL;
+    }
+
+    authData->version = 0;
+    authData->hasDigestAlg = false;
+    authData->encapCont.contentType = BSL_CID_PKCS7_SIMPLEDATA;
+    authData->libCtx = libCtx;
+    authData->attrName = attrName;
+    authData->recipientInfos = recip;
+    authData->state = HITLS_CMS_UNINIT;
+    authData->detached = true;
+    return authData;
+}
+
+/**
+ * according to RFC 5652 section 9.1, the version of AuthenticatedData is determined by:
+ * IF originatorInfo contains any certificates with type "other" or any crls with type "other",
+ * THEN version is 3
+ * ELSE IF originatorInfo contains any version 2 attribute certificates,
+ * THEN version is 1
+ * ELSE version is 0
+ *
+ * The current implementation reuses X509 cert/crl containers only, so unsupported "other" certificate,
+ * "other" crl, and attribute certificate forms are not representable here. The effective version is
+ * therefore 0 for all currently supported objects.
+ */
+int32_t CMS_GetAuthenticatedDataVersion(CMS_AuthenticatedData *authData)
+{
+    if (authData == NULL) {
+        BSL_ERR_PUSH_ERROR(HITLS_CMS_ERR_NULL_POINTER);
+        return HITLS_CMS_ERR_NULL_POINTER;
+    }
+
+    if (CMS_OriginatorInfoIsEmpty(authData->originatorInfo)) {
+        authData->version = 0;
+        return HITLS_PKI_SUCCESS;
+    }
+
+    authData->version = 0;
+    return HITLS_PKI_SUCCESS;
+}
+
+void CMS_AuthenticatedDataFree(CMS_AuthenticatedData *authData)
+{
+    if (authData == NULL) {
+        return;
+    }
+
+    CMS_OriginatorInfoFree(authData->originatorInfo);
+    BSL_LIST_FREE(authData->recipientInfos, (BSL_LIST_PFUNC_FREE)CMS_RecipientInfoFree);
+    CRYPT_EAL_MacFreeCtx(authData->macAlg.macCtx);
+    BSL_SAL_FREE(authData->macAlg.param.data);
+    CRYPT_EAL_MdFreeCtx(authData->digestAlg.mdCtx);
+    BSL_SAL_FREE(authData->digestAlg.param.data);
+    HITLS_X509_AttrsFree(authData->authAttrs, NULL);
+    HITLS_X509_AttrsFree(authData->unauthAttrs, NULL);
+    if ((authData->flag & HITLS_CMS_FLAG_PARSE) == 0) {
+        BSL_SAL_FREE(authData->mac.data);
+        BSL_SAL_FREE(authData->encapCont.content.data);
+    }
+    BSL_SAL_ClearFree(authData->macKey.data, authData->macKey.dataLen);
+    BSL_SAL_FREE(authData->initData);
+    BSL_SAL_Free(authData);
+}
+#endif // HITLS_PKI_CMS_AUTHENTICATEDDATA
+
+#if defined(HITLS_PKI_CMS_SIGNEDDATA) || defined(HITLS_PKI_CMS_ENVELOPEDDATA) || \
+    defined(HITLS_PKI_CMS_AUTHENTICATEDDATA)
 
 void HITLS_CMS_FreeAsnList(BSL_ASN1_Buffer *list, uint32_t count)
 {
@@ -304,6 +380,11 @@ void HITLS_CMS_Free(HITLS_CMS *cms)
 #ifdef HITLS_PKI_CMS_ENVELOPEDDATA
         case BSL_CID_PKCS7_ENVELOPEDDATA:
             CMS_EnvelopedDataFree(cms->ctx.envelopedData);
+            break;
+#endif
+#ifdef HITLS_PKI_CMS_AUTHENTICATEDDATA
+        case BSL_CID_PKCS7_AUTHENTICATEDDATA:
+            CMS_AuthenticatedDataFree(cms->ctx.authenticatedData);
             break;
 #endif
         default:
@@ -344,6 +425,17 @@ HITLS_CMS *HITLS_CMS_ProviderNew(HITLS_PKI_LibCtx *libCtx, const char *attrName,
             break;
         }
 #endif
+#ifdef HITLS_PKI_CMS_AUTHENTICATEDDATA
+        case BSL_CID_PKCS7_AUTHENTICATEDDATA: {
+            CMS_AuthenticatedData *ad = CMS_ProviderAuthenticatedDataNew(libCtx, attrName);
+            if (ad == NULL) {
+                BSL_SAL_Free(cms);
+                return NULL;
+            }
+            cms->ctx.authenticatedData = ad;
+            break;
+        }
+#endif
         default:
             BSL_ERR_PUSH_ERROR(HITLS_CMS_ERR_UNSUPPORTED_TYPE);
             BSL_SAL_Free(cms);
@@ -369,11 +461,15 @@ int32_t HITLS_CMS_Ctrl(HITLS_CMS *cms, int32_t cmd, void *val, uint32_t valLen)
         case BSL_CID_PKCS7_ENVELOPEDDATA:
             return HITLS_CMS_EnvelopedDataCtrl(cms, cmd, val, valLen);
 #endif
+#ifdef HITLS_PKI_CMS_AUTHENTICATEDDATA
+        case BSL_CID_PKCS7_AUTHENTICATEDDATA:
+            return HITLS_CMS_AuthenticatedDataCtrl(cms, cmd, val, valLen);
+#endif
         default:
             BSL_ERR_PUSH_ERROR(HITLS_CMS_ERR_UNSUPPORTED_TYPE);
             return HITLS_CMS_ERR_UNSUPPORTED_TYPE;
     }
 }
-#endif // HITLS_PKI_CMS_SIGNEDDATA || HITLS_PKI_CMS_ENVELOPEDDATA
+#endif // HITLS_PKI_CMS_SIGNEDDATA || HITLS_PKI_CMS_ENVELOPEDDATA || HITLS_PKI_CMS_AUTHENTICATEDDATA
 
 #endif // HITLS_PKI_CMS

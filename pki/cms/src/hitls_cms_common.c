@@ -162,7 +162,8 @@ int32_t HITLS_CMS_EncodeDigestInfoBuff(BslCid cid, BSL_Buffer *in, BSL_Buffer *e
 }
 #endif // HITLS_PKI_CMS_DIGESTINFO
 
-#if defined(HITLS_PKI_CMS_SIGNEDDATA) || defined(HITLS_PKI_CMS_ENVELOPEDDATA)
+#if defined(HITLS_PKI_CMS_SIGNEDDATA) || defined(HITLS_PKI_CMS_ENVELOPEDDATA) || \
+    defined(HITLS_PKI_CMS_AUTHENTICATEDDATA)
 /*
  * Defined in RFC 5652
  * ContentInfo ::= SEQUENCE {
@@ -218,6 +219,10 @@ int32_t HITLS_CMS_ProviderParseBuff(HITLS_PKI_LibCtx *libCtx, const char *attrNa
 #ifdef HITLS_PKI_CMS_ENVELOPEDDATA
         case BSL_CID_PKCS7_ENVELOPEDDATA:
             return HITLS_CMS_ParseEnvelopedData(libCtx, attrName, &asnArrData, cms);
+#endif
+#ifdef HITLS_PKI_CMS_AUTHENTICATEDDATA
+        case BSL_CID_PKCS7_AUTHENTICATEDDATA:
+            return HITLS_CMS_ParseAuthenticatedData(libCtx, attrName, &asnArrData, cms);
 #endif
         default:
             BSL_ERR_PUSH_ERROR(HITLS_CMS_ERR_PARSE_TYPE);
@@ -355,6 +360,11 @@ int32_t HITLS_CMS_GenBuff(int32_t format, HITLS_CMS *cms, const BSL_Param *optio
             ret = HITLS_CMS_GenEnvelopedDataBuff(format, cms, &input);
             break;
 #endif
+#ifdef HITLS_PKI_CMS_AUTHENTICATEDDATA
+        case BSL_CID_PKCS7_AUTHENTICATEDDATA:
+            ret = HITLS_CMS_GenAuthenticatedDataBuff(format, cms, &input);
+            break;
+#endif
         default:
             ret = HITLS_CMS_ERR_UNSUPPORTED_TYPE;
             break;
@@ -426,6 +436,10 @@ int32_t HITLS_CMS_DataInit(int32_t option, HITLS_CMS *cms, const BSL_Param *para
         case BSL_CID_PKCS7_ENVELOPEDDATA:
             return HITLS_CMS_EnvelopedDataInit(cms, option, param);
 #endif
+#ifdef HITLS_PKI_CMS_AUTHENTICATEDDATA
+        case BSL_CID_PKCS7_AUTHENTICATEDDATA:
+            return HITLS_CMS_AuthenticatedDataInit(cms, option, param);
+#endif
         default:
             BSL_ERR_PUSH_ERROR(HITLS_CMS_ERR_UNSUPPORTED_TYPE);
             return HITLS_CMS_ERR_UNSUPPORTED_TYPE;
@@ -443,6 +457,10 @@ int32_t HITLS_CMS_DataUpdate(HITLS_CMS *cms, const BSL_Buffer *input)
         case BSL_CID_PKCS7_SIGNEDDATA:
             return HITLS_CMS_SignedDataUpdate(cms, input);
 #endif
+#ifdef HITLS_PKI_CMS_AUTHENTICATEDDATA
+        case BSL_CID_PKCS7_AUTHENTICATEDDATA:
+            return HITLS_CMS_AuthenticatedDataUpdate(cms, input);
+#endif
         default:
             BSL_ERR_PUSH_ERROR(HITLS_CMS_ERR_UNSUPPORTED_TYPE);
             return HITLS_CMS_ERR_UNSUPPORTED_TYPE;
@@ -459,6 +477,10 @@ int32_t HITLS_CMS_DataFinal(HITLS_CMS *cms, const BSL_Param *param)
 #ifdef HITLS_PKI_CMS_SIGNEDDATA
         case BSL_CID_PKCS7_SIGNEDDATA:
             return HITLS_CMS_SignedDataFinal(cms, param);
+#endif
+#ifdef HITLS_PKI_CMS_AUTHENTICATEDDATA
+        case BSL_CID_PKCS7_AUTHENTICATEDDATA:
+            return HITLS_CMS_AuthenticatedDataFinal(cms, param);
 #endif
         default:
             BSL_ERR_PUSH_ERROR(HITLS_CMS_ERR_UNSUPPORTED_TYPE);
@@ -482,6 +504,11 @@ int32_t HITLS_CMS_DataUpdateEx(HITLS_CMS *cms, const BSL_Buffer *input, BSL_Buff
         case BSL_CID_PKCS7_ENVELOPEDDATA:
             return HITLS_CMS_EnvelopedDataUpdate(cms, input, output);
 #endif
+#ifdef HITLS_PKI_CMS_AUTHENTICATEDDATA
+        case BSL_CID_PKCS7_AUTHENTICATEDDATA:
+            (void)output;
+            return HITLS_CMS_AuthenticatedDataUpdate(cms, input);
+#endif
         default:
             BSL_ERR_PUSH_ERROR(HITLS_CMS_ERR_UNSUPPORTED_TYPE);
             return HITLS_CMS_ERR_UNSUPPORTED_TYPE;
@@ -504,12 +531,17 @@ int32_t HITLS_CMS_DataFinalEx(HITLS_CMS *cms, const BSL_Param *param, BSL_Buffer
         case BSL_CID_PKCS7_ENVELOPEDDATA:
             return HITLS_CMS_EnvelopedDataFinal(cms, param, output);
 #endif
+#ifdef HITLS_PKI_CMS_AUTHENTICATEDDATA
+        case BSL_CID_PKCS7_AUTHENTICATEDDATA:
+            (void)output;
+            return HITLS_CMS_AuthenticatedDataFinal(cms, param);
+#endif
         default:
             BSL_ERR_PUSH_ERROR(HITLS_CMS_ERR_UNSUPPORTED_TYPE);
             return HITLS_CMS_ERR_UNSUPPORTED_TYPE;
     }
 }
 
-#endif // HITLS_PKI_CMS_SIGNEDDATA || HITLS_PKI_CMS_ENVELOPEDDATA
+#endif // HITLS_PKI_CMS_SIGNEDDATA || HITLS_PKI_CMS_ENVELOPEDDATA || HITLS_PKI_CMS_AUTHENTICATEDDATA
 
 #endif // HITLS_PKI_CMS

@@ -19,21 +19,23 @@
 #include "hitls_build.h"
 #ifdef HITLS_PKI_CMS
 #include "hitls_x509_local.h"
+#include "crypt_eal_cipher.h"
 #include "crypt_eal_md.h"
-#include "hitls_cert_local.h"
+#include "crypt_eal_mac.h"
 #include "hitls_pki_crl.h"
 #include "hitls_pki_cms.h"
-#include "crypt_eal_cipher.h"
+#include "hitls_cms_recipient.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cplusplus */
 
-#if defined(HITLS_PKI_CMS_SIGNEDDATA) || defined(HITLS_PKI_CMS_ENVELOPEDDATA)
-
+#if defined(HITLS_PKI_CMS_SIGNEDDATA) || defined(HITLS_PKI_CMS_ENVELOPEDDATA) || \
+    defined(HITLS_PKI_CMS_AUTHENTICATEDDATA)
 #define HITLS_CMS_FLAG_GEN               0x01
 #define HITLS_CMS_FLAG_PARSE             0x02
 #define HITLS_CMS_FLAG_NO_SIGNEDATTR     0x08
+#define HITLS_CMS_FLAG_NO_AUTHATTR       0x10
 
 #define HITLS_CMS_UNINIT                      0
 #define HITLS_CMS_SIGN_INIT                   1
@@ -44,10 +46,13 @@ extern "C" {
 #define HITLS_CMS_DECRYPT_INIT                6
 #define HITLS_CMS_ENCRYPT_FINISHED            7
 #define HITLS_CMS_DECRYPT_FINISHED            8
-#endif /* HITLS_PKI_CMS_SIGNEDDATA || HITLS_PKI_CMS_ENVELOPEDDATA */
+#define HITLS_CMS_AUTH_INIT                   9
+#define HITLS_CMS_AUTH_VERIFY_INIT            10
+#define HITLS_CMS_AUTH_FINISHED               11
+#define HITLS_CMS_AUTH_VERIFY_FINISHED        12
+#endif /* HITLS_PKI_CMS_SIGNEDDATA || HITLS_PKI_CMS_ENVELOPEDDATA || HITLS_PKI_CMS_AUTHENTICATEDDATA */
 
 #ifdef HITLS_PKI_CMS_ENVELOPEDDATA
-
 /**
  * Reference: RFC 5652 Section 6.1
  * EncryptedContentInfo ::= SEQUENCE {
@@ -65,198 +70,6 @@ typedef struct {
     uint8_t *key; // Content encryption key
     uint32_t keyLen;
 } CMS_EncryptedContentInfo;
-
-/**
- * @brief KeyTransRecipientInfo structure
- * Reference: RFC 5652 Section 6.2.1
- * KeyTransRecipientInfo ::= SEQUENCE {
- *      version CMSVersion,  -- always set to 0 or 2
- *      rid RecipientIdentifier,
- *      keyEncryptionAlgorithm KeyEncryptionAlgorithmIdentifier,
- *      encryptedKey EncryptedKey }
- */
-typedef struct {
-    uint32_t version; /* According to RFC 5652:
-                         If the RecipientIdentifier is the CHOICE issuerAndSerialNumber, then the version MUST be 0.
-                         If the RecipientIdentifier is subjectKeyIdentifier, then the version MUST be 2. */
-    BSL_ASN1_List *issuerName;
-    BSL_Buffer serialNumber;
-    HITLS_X509_ExtSki subjectKeyId;
-    BslCid keyEncryAlg;
-    BSL_Buffer algParams;
-    BSL_Buffer encryptedKey;
-    /* Runtime context - not encoded into ASN.1 */
-    uint32_t flag; // Used to mark EnvelopedData parsing or generation, indicating resource release behavior.
-    CRYPT_EAL_PkeyCtx *pkey;
-    CRYPT_EAL_LibCtx *libCtx;
-    const char *attrName; // Provider attribute name
-} CMS_KeyTransRecipientInfo;
-
-typedef struct {
-    BslCid algorithm;
-    BSL_Buffer algParams;
-    BSL_ASN1_BitString publicKey;
-} CMS_OriginatorPublicKey;
-
-typedef struct {
-    BSL_ASN1_List *issuer; // Issuer DN
-    BSL_Buffer serialNumber;
-} CMS_IssuerAndSerialNumber;
-
-typedef struct {
-    uint32_t type; // 0: issuerAndSerialNumber, 1: subjectKeyIdentifier, 2: originatorKey
-    union {
-        CMS_IssuerAndSerialNumber *issuerAndSerialNumber;
-        HITLS_X509_ExtSki *subjectKeyIdentifier;
-        CMS_OriginatorPublicKey *originatorKey;
-    } d;
-} CMS_OriginatorIdentifierOrKey;
-
-typedef struct {
-    HITLS_X509_ExtSki subjectKeyIdentifier;
-    BSL_TIME *date;
-    BslCid otherKeyAttrId;
-    BSL_Buffer otherKeyAttr;
-} CMS_RecipientKeyIdentifier;
-
-typedef struct {
-    uint32_t type; // 0: issuer and serialnumber, 1: recipient key identifier
-    union {
-        CMS_IssuerAndSerialNumber *issuerAndSerialNumber;
-        CMS_RecipientKeyIdentifier *recipientKeyIdentifier;
-    } d;
-} CMS_KeyAgreeRecipientIdentifier;
-
-typedef struct {
-    CMS_KeyAgreeRecipientIdentifier rid;
-    BSL_Buffer encryptedKey;
-} CMS_RecipientEncryptedKey;
-
-/**
- * @brief KeyAgreeRecipientInfo structure
- * Reference: RFC 5652 Section 6.2.2
- * KeyAgreeRecipientInfo ::= SEQUENCE {
- *      version CMSVersion,  -- always set to 3
- *      originator [0] EXPLICIT OriginatorIdentifierOrKey,
- *      ukm [1] EXPLICIT UserKeyingMaterial OPTIONAL,
- *      keyEncryptionAlgorithm KeyEncryptionAlgorithmIdentifier,
- *      recipientEncryptedKeys RecipientEncryptedKeys }
- */
-typedef struct {
-    uint32_t version; // Must be 3
-    CMS_OriginatorIdentifierOrKey originator;
-    BSL_Buffer ukm; // User Keying Material (Optional)
-    BslCid keyEncryAlg;
-    BSL_Buffer algParams;
-    BSL_ASN1_List *recipientEncryptedKeys;
-    /* Runtime context - not encoded into ASN.1 */
-    CRYPT_EAL_PkeyCtx *pkey;
-    CRYPT_EAL_LibCtx *libCtx;
-    const char *attrName;
-} CMS_KeyAgreeRecipientInfo;
-
-/**
- * @brief KEKRecipientInfo structure
- * Reference: RFC 5652 Section 6.2.3
- * KEKRecipientInfo ::= SEQUENCE {
- *      version CMSVersion,  -- always set to 4
- *      kekid KEKIdentifier,
- *      keyEncryptionAlgorithm KeyEncryptionAlgorithmIdentifier,
- *      encryptedKey EncryptedKey }
- *
- * KEKIdentifier ::= SEQUENCE {
- *      keyIdentifier OCTET STRING,
- *      date GeneralizedTime OPTIONAL,
- *      other OtherKeyAttribute OPTIONAL }
- */
-typedef struct {
-    uint32_t version; // Must be 4
-    CMS_RecipientKeyIdentifier kekid;
-    BslCid keyEncryAlg;
-    BSL_Buffer algParams;
-    BSL_Buffer encryptedKey;
-    /* Runtime context - not encoded into ASN.1 */
-    BSL_Buffer *kek;
-    CRYPT_EAL_LibCtx *libCtx;
-    const char *attrName;
-} CMS_KEKRecipientInfo;
-
-/**
- * @brief PasswordRecipientInfo structure
- * Reference: RFC 5652 Section 6.2.4
- *  PasswordRecipientInfo ::= SEQUENCE {
- *      version CMSVersion,   -- Always set to 0
- *      keyDerivationAlgorithm [0] KeyDerivationAlgorithmIdentifier
- *                                   OPTIONAL,
- *      keyEncryptionAlgorithm KeyEncryptionAlgorithmIdentifier,
- *      encryptedKey EncryptedKey }
- */
-typedef struct {
-    uint32_t version; // Must be 0
-    BslCid keyDerivationAlg; // Optional
-    BSL_Buffer kdfParams;
-    BslCid keyEncryAlg;
-    BSL_Buffer keyEncAlgParams;
-    BSL_Buffer encryptedKey;
-    /* Runtime context - not encoded into ASN.1 */
-    BSL_Buffer *password;
-    CRYPT_EAL_LibCtx *libCtx;
-    const char *attrName;
-} CMS_PasswordRecipientInfo;
-
-/**
- * @brief OtherRecipientInfo structure
- * Reference: RFC 5652 Section 6.2.5
- *  OtherRecipientInfo ::= SEQUENCE {
- *      oriType OBJECT IDENTIFIER,
- *      oriValue ANY DEFINED BY oriType }
- */
-typedef struct {
-    BslCid oriType;
-    BSL_Buffer oriValue;
-} CMS_OtherRecipientInfo;
-
-/**
- * @brief RecipientInfo structure
- * Reference: RFC 5652 Section 6.2
- * RecipientInfo ::= CHOICE {
- *      ktri KeyTransRecipientInfo,
- *      kari [1] KeyAgreeRecipientInfo,
- *      kekri [2] KEKRecipientInfo,
- *      pwri [3] PasswordRecipientinfo,
- *      ori [4] OtherRecipientInfo }
- */
-typedef enum {
-    CMS_RECIPIENT_TYPE_KTRI = 0,
-    CMS_RECIPIENT_TYPE_KARI = 1,
-    CMS_RECIPIENT_TYPE_KEKRI = 2,
-    CMS_RECIPIENT_TYPE_PWRI = 3,
-    CMS_RECIPIENT_TYPE_ORI = 4
-} CMS_RecipientType;
-typedef struct {
-    CMS_RecipientType type;
-    union {
-        CMS_KeyTransRecipientInfo *ktri;
-        CMS_KeyAgreeRecipientInfo *kari;
-        CMS_KEKRecipientInfo *kekri;
-        CMS_PasswordRecipientInfo *pwri;
-        CMS_OtherRecipientInfo *ori;
-    } d;
-} CMS_RecipientInfo;
-
-/**
- * @brief Originator structure
- * Reference: RFC 5652 Section 6.1
- * OriginatorInfo ::= SEQUENCE {
- *     certs [0] IMPLICIT CertificateSet OPTIONAL,
- *     crls [1] IMPLICIT RevocationInfoChoices OPTIONAL }
- */
-typedef struct {
-    HITLS_X509_List *certs;
-    HITLS_X509_List *crls;
-} CMS_OriginatorInfo;
-
-#define CMS_RecipientInfos BslList
 
 /**
  * @brief EnvelopedData structure
@@ -286,17 +99,6 @@ typedef struct {
 } CMS_EnvelopedData;
 
 void CMS_EnvelopedDataFree(CMS_EnvelopedData *envData);
-
-/**
- * @brief Create a new CMS_RecipientInfo structure
- * @param type [IN] Specifies the type of recipient information to create
- *                  (e.g., CMS_RECIPIENT_TYPE_KTRI, CMS_RECIPIENT_TYPE_KARI, etc.)
- * @param flag [IN] Flags used to control creation behavior (reserved or implementation-specific)
- * @return Returns a pointer to the CMS_RecipientInfo structure on success, or NULL on failure
- */
-CMS_RecipientInfo *CMS_RecipientInfoNew(CMS_RecipientType type, uint32_t flag);
-
-void RecipientInfoFree(CMS_RecipientInfo *recipInfo);
 
 /**
  * @brief Initialize streaming operation for EnvelopedData
@@ -331,35 +133,108 @@ int32_t HITLS_CMS_ParseEnvelopedData(HITLS_PKI_LibCtx *libCtx, const char *attrN
 
 #endif // HITLS_PKI_CMS_ENVELOPEDDATA
 
+#if defined(HITLS_PKI_CMS_SIGNEDDATA) || defined(HITLS_PKI_CMS_AUTHENTICATEDDATA)
+/**
+ * @brief AlgorithmIdentifier structure
+ * Reference: RFC 5652 Section 5.1.1 / 9.1
+ */
+typedef struct {
+    int32_t id;     /**< Algorithm OID */
+    BSL_Buffer param; /**< Algorithm parameters (optional) */
+    CRYPT_EAL_MdCTX *mdCtx; /**< Message digest context for streaming operations */
+} CMS_AlgId;
+
+/**
+ * @brief EncapsulatedContentInfo structure
+ * Reference: RFC 5652 Section 5.2 / 9.1
+ */
+typedef struct {
+    int32_t contentType;   /**< Content type */
+    BSL_Buffer content;   /**< Encapsulated content (optional) */
+} CMS_EncapContentInfo;
+#endif /* HITLS_PKI_CMS_SIGNEDDATA || HITLS_PKI_CMS_AUTHENTICATEDDATA */
+
+#ifdef HITLS_PKI_CMS_AUTHENTICATEDDATA
+typedef struct {
+    int32_t id;     /**< MAC algorithm OID */
+    BSL_Buffer param; /**< Algorithm parameters (optional) */
+    CRYPT_EAL_MacCtx *macCtx; /**< MAC context for streaming operations */
+} CMS_MacAlg;
+
+/**
+ * @brief AuthenticatedData structure
+ * Reference: RFC 5652 Section 9.1
+ */
+typedef struct {
+    int32_t version;
+    CMS_OriginatorInfo *originatorInfo; /**< optional */
+    CMS_RecipientInfos *recipientInfos;
+    CMS_MacAlg macAlg;
+    CMS_AlgId digestAlg; /**< valid only when hasDigestAlg is true */
+    bool hasDigestAlg;
+    CMS_EncapContentInfo encapCont;
+    HITLS_X509_Attrs *authAttrs; /**< optional */
+    BSL_Buffer mac;
+    HITLS_X509_Attrs *unauthAttrs; /**< optional */
+    uint32_t flag;
+    uint8_t *initData;
+    bool detached;
+    uint32_t state;
+    BSL_Buffer macKey;
+    HITLS_PKI_LibCtx *libCtx;
+    const char *attrName;
+} CMS_AuthenticatedData;
+
+CMS_AuthenticatedData *CMS_ProviderAuthenticatedDataNew(HITLS_PKI_LibCtx *libCtx, const char *attrName);
+
+void CMS_AuthenticatedDataFree(CMS_AuthenticatedData *authData);
+
+int32_t CMS_GetAuthenticatedDataVersion(CMS_AuthenticatedData *authData);
+
+/**
+ * @brief Parse AuthenticatedData from buffer
+ */
+int32_t HITLS_CMS_ParseAuthenticatedData(HITLS_PKI_LibCtx *libCtx, const char *attrName, const BSL_Buffer *encode,
+    HITLS_CMS **cms);
+
+/**
+ * @brief Generate AuthenticatedData buffer
+ */
+int32_t HITLS_CMS_GenAuthenticatedDataBuff(int32_t format, HITLS_CMS *cms, BSL_Buffer *encode);
+
+/**
+ * @brief Initialize streaming operation for AuthenticatedData
+ */
+int32_t HITLS_CMS_AuthenticatedDataInit(HITLS_CMS *cms, int32_t option, const BSL_Param *param);
+
+/**
+ * @brief Update streaming operation for AuthenticatedData
+ */
+int32_t HITLS_CMS_AuthenticatedDataUpdate(HITLS_CMS *cms, const BSL_Buffer *input);
+
+/**
+ * @brief Finalize streaming operation for AuthenticatedData
+ */
+int32_t HITLS_CMS_AuthenticatedDataFinal(HITLS_CMS *cms, const BSL_Param *param);
+
+/**
+ * @brief Control AuthenticatedData structure
+ */
+int32_t HITLS_CMS_AuthenticatedDataCtrl(HITLS_CMS *cms, int32_t cmd, void *val, uint32_t valLen);
+
+int32_t ApplyAuthDataParams(HITLS_CMS *cms, const BSL_Param *params);
+#endif // HITLS_PKI_CMS_AUTHENTICATEDDATA
+
 #ifdef HITLS_PKI_CMS_SIGNEDDATA
 
 #define HITLS_CMS_SIGNEDDATA_SIGNERINFO_V1    0x01  /** v1 signerinfo. */
 #define HITLS_CMS_SIGNEDDATA_SIGNERINFO_V3    0x03  /** v3 signerinfo. */
 
 /**
- * @brief AlgorithmIdentifier structure
- * Reference: RFC 5652 Section 5.1.1
- */
-typedef struct {
-    int32_t id;     /**< Algorithm OID */
-    BSL_Buffer param; /**< Algorithm parameters (optional) */
-    CRYPT_EAL_MdCtx *mdCtx; /**< Message digest context for streaming signature */
-} CMS_AlgId;
-
-/**
  * @brief Attribute structure
  * Reference: RFC 5652 Section 5.3
  */
 #define CMS_SignerInfos BslList
-
-/**
- * @brief EncapsulatedContentInfo structure
- * Reference: RFC 5652 Section 5.2
- */
-typedef struct {
-    int32_t contentType;   /**< Content type */
-    BSL_Buffer content;   /**< Encapsulated content (optional) */
-} CMS_EncapContentInfo;
 
 /**
  * @brief SignerInfo structure
@@ -466,7 +341,7 @@ int32_t HITLS_CMS_SignedDataUpdate(HITLS_CMS *cms, const BSL_Buffer *input);
  */
 int32_t HITLS_CMS_SignedDataFinal(HITLS_CMS *cms, const BSL_Param *param);
 
-#endif
+#endif // HITLS_PKI_CMS_SIGNEDDATA
 
 #ifdef HITLS_PKI_CMS_DATA
 // parse PKCS7-Data
@@ -474,16 +349,15 @@ int32_t HITLS_CMS_ParseAsn1Data(BSL_Buffer *encode, BSL_Buffer *dataValue);
 #endif
 
 #ifdef HITLS_PKI_CMS_DIGESTINFO
-
 // parse PKCS7-DigestInfo：only support hash.
 int32_t HITLS_CMS_ParseDigestInfo(BSL_Buffer *encode, BslCid *cid, BSL_Buffer *digest);
 
 // encode PKCS7-DigestInfo：only support hash.
 int32_t HITLS_CMS_EncodeDigestInfoBuff(BslCid cid, BSL_Buffer *in, BSL_Buffer *encode);
-
 #endif
 
-#if defined(HITLS_PKI_CMS_SIGNEDDATA) || defined(HITLS_PKI_CMS_ENVELOPEDDATA)
+#if defined(HITLS_PKI_CMS_SIGNEDDATA) || defined(HITLS_PKI_CMS_ENVELOPEDDATA) || \
+    defined(HITLS_PKI_CMS_AUTHENTICATEDDATA)
 /**
  * @brief CMS ContentInfo structure
  * Reference: RFC 5652 Section 3
@@ -501,6 +375,9 @@ struct _HITLS_CMS {
 #endif
 #ifdef HITLS_PKI_CMS_ENVELOPEDDATA
         CMS_EnvelopedData *envelopedData;
+#endif
+#ifdef HITLS_PKI_CMS_AUTHENTICATEDDATA
+        CMS_AuthenticatedData *authenticatedData;
 #endif
     } ctx;
 };
@@ -540,7 +417,7 @@ int32_t HITLS_CMS_GenBuff(int32_t format, HITLS_CMS *cms, const BSL_Param *optio
  */
 int32_t HITLS_CMS_GenFile(int32_t format, HITLS_CMS *cms, const BSL_Param *optionalParam, const char *path);
 
-#endif // HITLS_PKI_CMS_SIGNEDDATA || HITLS_PKI_CMS_ENVELOPEDDATA
+#endif // HITLS_PKI_CMS_SIGNEDDATA || HITLS_PKI_CMS_ENVELOPEDDATA || HITLS_PKI_CMS_AUTHENTICATEDDATA
 
 #ifdef __cplusplus
 }

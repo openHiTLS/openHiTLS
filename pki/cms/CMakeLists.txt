@@ -22,10 +22,17 @@ if(HITLS_PKI_CMS_SIGNEDDATA)
         ${CMAKE_CURRENT_SOURCE_DIR}/src/hitls_cms_signdata.c
     )
 endif()
+if(HITLS_PKI_CMS_AUTHENTICATEDDATA)
+    list(APPEND _cms_sources
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/hitls_cms_authdata.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/hitls_cms_recipient.c
+    )
+endif()
 
 if(HITLS_PKI_CMS_ENVELOPEDDATA)
     list(APPEND _cms_sources
         ${CMAKE_CURRENT_SOURCE_DIR}/src/hitls_cms_envelopeddata.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/hitls_cms_recipient.c
     )
 endif()
 

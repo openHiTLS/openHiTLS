@@ -483,10 +483,12 @@ typedef enum {
  * @brief Option values for HITLS_CMS_Init
  */
 typedef enum {
-    HITLS_CMS_OPT_SIGN   = 0x01,  /**< Initialize for signing */
-    HITLS_CMS_OPT_VERIFY  = 0x02,  /**< Initialize for verification */
-    HITLS_CMS_OPT_ENCRYPT = 0x03,  /**< Initialize for encryption */
-    HITLS_CMS_OPT_DECRYPT = 0x04,  /**< Initialize for decryption */
+    HITLS_CMS_OPT_SIGN   = 0x01,    /**< Initialize for signing */
+    HITLS_CMS_OPT_VERIFY,           /**< Initialize for verification */
+    HITLS_CMS_OPT_ENCRYPT,          /**< Initialize for encryption */
+    HITLS_CMS_OPT_DECRYPT,          /**< Initialize for decryption */
+    HITLS_CMS_OPT_AUTH,             /**< Initialize for MAC generation */
+    HITLS_CMS_OPT_AUTH_VERIFY,      /**< Initialize for MAC verification */
 } HITLS_CMS_Option;
 
 #ifdef __cplusplus

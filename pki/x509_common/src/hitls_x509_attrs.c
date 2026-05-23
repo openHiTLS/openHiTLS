@@ -14,7 +14,9 @@
  */
 
 #include "hitls_build.h"
-#if (defined(HITLS_PKI_X509_CSR) && defined(HITLS_PKI_X509_CSR_ATTR)) || defined(HITLS_PKI_PKCS12)
+#if (defined(HITLS_PKI_X509_CSR) && defined(HITLS_PKI_X509_CSR_ATTR)) || defined(HITLS_PKI_PKCS12) || \
+    defined(HITLS_PKI_CMS_SIGNEDDATA) || defined(HITLS_PKI_CMS_AUTHENTICATEDDATA) || \
+    defined(HITLS_PKI_CMS_ENVELOPEDDATA)
 #include <stdint.h>
 #include "hitls_x509_local.h"
 #include "bsl_obj.h"
@@ -28,7 +30,8 @@
 #include "hitls_pki_utils.h"
 
 #if defined(HITLS_PKI_X509_CSR_PARSE) || defined(HITLS_PKI_PKCS12_PARSE) || defined(HITLS_PKI_CMS_SIGNEDDATA) || \
-    defined(HITLS_PKI_CMS_ENVELOPEDDATA)
+    defined(HITLS_PKI_CMS_ENVELOPEDDATA) || defined(HITLS_PKI_CMS_AUTHENTICATEDDATA)
+
 /**
  * RFC 2985: section-5.4.2
  *  extensionRequest ATTRIBUTE ::= {
@@ -93,7 +96,8 @@ void HITLS_X509_AttrsFree(HITLS_X509_Attrs *attrs, HITLS_X509_FreeAttrItemCb fre
     BSL_SAL_Free(attrs);
 }
 
-#if defined(HITLS_PKI_X509_CSR_GEN) || defined(HITLS_PKI_PKCS12_GEN) || defined(HITLS_PKI_CMS_SIGNEDDATA)
+#if defined(HITLS_PKI_X509_CSR_GEN) || defined(HITLS_PKI_PKCS12_GEN) || defined(HITLS_PKI_CMS_SIGNEDDATA) || \
+    defined(HITLS_PKI_CMS_AUTHENTICATEDDATA)
 int32_t HITLS_X509_EncodeObjIdentity(BslCid cid, BSL_ASN1_Buffer *asnBuff)
 {
     BslOidString *oidStr = BSL_OBJ_GetOID(cid);
@@ -150,7 +154,7 @@ void HITLS_X509_AttrEntryFree(HITLS_X509_AttrEntry *attr)
 }
 
 #if defined(HITLS_PKI_X509_CSR_PARSE) || defined(HITLS_PKI_PKCS12_PARSE) || defined(HITLS_PKI_CMS_SIGNEDDATA) || \
-    defined(HITLS_PKI_CMS_ENVELOPEDDATA)
+    defined(HITLS_PKI_CMS_ENVELOPEDDATA) || defined(HITLS_PKI_CMS_AUTHENTICATEDDATA)
 int32_t HITLS_X509_ParseAttr(BSL_ASN1_Buffer *attrItem, HITLS_X509_AttrEntry *attrEntry)
 {
     uint8_t *temp = attrItem->buff;
@@ -347,7 +351,7 @@ int32_t HITLS_X509_AttrCtrl(HITLS_X509_Attrs *attributes, HITLS_X509_AttrCmd cmd
 }
 
 #if defined(HITLS_PKI_X509_CSR_GEN) || defined(HITLS_PKI_PKCS12_GEN) || defined(HITLS_PKI_CMS_SIGNEDDATA) || \
-    defined(HITLS_PKI_CMS_ENVELOPEDDATA)
+    defined(HITLS_PKI_CMS_ENVELOPEDDATA) || defined(HITLS_PKI_CMS_AUTHENTICATEDDATA)
 
 #define X509_CSR_ATTR_ELEM_NUMBER 2
 static BSL_ASN1_TemplateItem g_x509AttrEntryTempl[] = {
@@ -430,6 +434,7 @@ int32_t HITLS_X509_EncodeAttrList(uint8_t tag, HITLS_X509_Attrs *attrs, HITLS_X5
     attrAsn1->tag = tag;
     return ret;
 }
-#endif // HITLS_PKI_X509_CSR_GEN || HITLS_PKI_PKCS12_GEN || HITLS_PKI_CMS_SIGNEDDATA || HITLS_PKI_CMS_ENVELOPEDDATA
+#endif /* HITLS_PKI_X509_CSR_GEN || HITLS_PKI_PKCS12_GEN || HITLS_PKI_CMS_SIGNEDDATA || HITLS_PKI_CMS_ENVELOPEDDATA
+          HITLS_PKI_CMS_AUTHENTICATEDDATA */
 
 #endif // (HITLS_PKI_X509_CSR && HITLS_PKI_X509_CSR_ATTR) || HITLS_PKI_PKCS12
