@@ -977,20 +977,20 @@ static int32_t DealResumeServerName(TLS_Ctx *ctx, const ClientHelloMsg *clientHe
         return  HITLS_MSG_HANDLE_SNI_UNRECOGNIZED_NAME;
     }
 
-    int alert = ALERT_UNRECOGNIZED_NAME;
     /* Execute the product callback function */
-    int32_t ret = ctx->globalConfig->sniDealCb(ctx, &alert, ctx->globalConfig->sniArg);
-    switch (ret) {
-        case HITLS_ACCEPT_SNI_ERR_OK:
-            ctx->negotiatedInfo.isSniStateOK = true;
-            break;
-        case HITLS_ACCEPT_SNI_ERR_NOACK:
-            ctx->negotiatedInfo.isSniStateOK = false;
-            break;
-        default:
-            ctx->negotiatedInfo.isSniStateOK = false;
-            ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, (ALERT_Description)alert);
-            return HITLS_MSG_HANDLE_SNI_UNRECOGNIZED_NAME;
+    if (ctx->globalConfig != NULL && ctx->globalConfig->sniDealCb != NULL && serverNameSize != 0) {
+        int alert = ALERT_UNRECOGNIZED_NAME;
+        int32_t ret = ctx->globalConfig->sniDealCb(ctx, &alert, ctx->globalConfig->sniArg);
+        ctx->negotiatedInfo.isSniStateOK = false;
+        switch (ret) {
+            case HITLS_ACCEPT_SNI_ERR_OK:
+                break;
+            case HITLS_ACCEPT_SNI_ERR_NOACK:
+                return HITLS_MSG_HANDLE_SNI_UNRECOGNIZED_NAME;
+            default:
+                ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, (ALERT_Description)alert);
+                return HITLS_MSG_HANDLE_SNI_UNRECOGNIZED_NAME;
+        }
     }
 
     BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15236, BSL_LOG_LEVEL_INFO, BSL_LOG_BINLOG_TYPE_RUN,
