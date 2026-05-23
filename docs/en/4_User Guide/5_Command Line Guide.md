@@ -225,6 +225,9 @@ Certificate chain verification and trust relationship checking
 ### 3.4.5 req
 Generation and processing of certificate signing requests
 
+### 3.4.6 asn1parse
+ASN.1 Encoding Structure Parsing and Cryptographic Object Diagnosis
+
 ## 3.5 SSL/TLS Communication
 
 ### 3.5.1 s_client

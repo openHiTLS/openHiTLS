@@ -39,6 +39,7 @@
 #include "app_pkeyutl.h"
 #include "app_prime.h"
 #include "app_errdecode.h"
+#include "app_asn1parse.h"
 
 HITLS_CmdFunc g_cmdFunc[] = {
     {"help",     FUNC_TYPE_GENERAL,   HITLS_HelpMain},
@@ -65,6 +66,7 @@ HITLS_CmdFunc g_cmdFunc[] = {
     {"s_client", FUNC_TYPE_GENERAL,   HITLS_ClientMain},
     {"s_server", FUNC_TYPE_GENERAL,   HITLS_ServerMain},
     {"pkeyutl",  FUNC_TYPE_GENERAL,   HITLS_PkeyUtlMain},
+    {"asn1parse", FUNC_TYPE_GENERAL, HITLS_Asn1Main},
     {NULL,      FUNC_TYPE_NONE, NULL}
 };
 static void AppGetFuncPrintfLen(size_t *maxLen)
