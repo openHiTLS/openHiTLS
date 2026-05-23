@@ -44,6 +44,40 @@ STUB_DEFINE_RET1(void *, BSL_SAL_Malloc, uint32_t);
 STUB_DEFINE_RET2(int32_t, HITLS_X509_CheckKey, HITLS_X509_Cert *, CRYPT_EAL_PkeyCtx *);
 STUB_DEFINE_RET1(int32_t, BSL_SAL_SysTimeGet, BSL_TIME *);
 
+static int32_t GetSlhDsaDigestAlg(CRYPT_EAL_PkeyCtx *pkey)
+{
+    CRYPT_PKEY_ParaId paraId = CRYPT_EAL_PkeyGetParaId(pkey);
+    switch (paraId) {
+        case BSL_CID_SLH_DSA_SHA2_128S:
+        case BSL_CID_SLH_DSA_SHA2_128F:
+            return BSL_CID_SHA256;
+        case BSL_CID_SLH_DSA_SHA2_192S:
+        case BSL_CID_SLH_DSA_SHA2_192F:
+        case BSL_CID_SLH_DSA_SHA2_256S:
+        case BSL_CID_SLH_DSA_SHA2_256F:
+            return BSL_CID_SHA512;
+        case BSL_CID_SLH_DSA_SHAKE_128S:
+        case BSL_CID_SLH_DSA_SHAKE_128F:
+            return BSL_CID_SHAKE128;
+        case BSL_CID_SLH_DSA_SHAKE_192S:
+        case BSL_CID_SLH_DSA_SHAKE_192F:
+        case BSL_CID_SLH_DSA_SHAKE_256S:
+        case BSL_CID_SLH_DSA_SHAKE_256F:
+            return BSL_CID_SHAKE256;
+        default:
+            return BSL_CID_UNKNOWN;
+    }
+}
+
+static int32_t GetDefaultDigestAlgForKey(CRYPT_EAL_PkeyCtx *pkey, int32_t fallbackMd)
+{
+    int32_t keyId = CRYPT_EAL_PkeyGetId(pkey);
+    if (keyId == CRYPT_PKEY_SLH_DSA) {
+        return GetSlhDsaDigestAlg(pkey);
+    }
+    return fallbackMd;
+}
+
 /*
  * @test   SDV_CMS_SIGNEDDATA_MALLOC_TC001
  * @title  Test malloc CMS SignedData
@@ -436,7 +470,7 @@ void SDV_CMS_SIGNERINFOGEN_SET_DN_TC001(void)
 
     // Call HITLS_CMS_DataSign to create signerinfo
     int32_t version = HITLS_CMS_SIGNEDDATA_SIGNERINFO_V1;
-    int32_t mdId = BSL_CID_SHA256;
+    int32_t mdId = GetDefaultDigestAlgForKey(pkey, BSL_CID_SHA256);
     HITLS_X509_List *certchain = BSL_LIST_New(sizeof(HITLS_X509_Cert *));
     ASSERT_NE(certchain, NULL);
     ASSERT_EQ(BSL_LIST_AddElement(certchain, cert, BSL_LIST_POS_END), BSL_SUCCESS);
@@ -523,7 +557,7 @@ void SDV_CMS_SIGNERINFOGEN_SET_SKI_TC002(void)
 
     // Call HITLS_CMS_DataSign to create signer info only
     int32_t version = HITLS_CMS_SIGNEDDATA_SIGNERINFO_V3;
-    int32_t mdId = BSL_CID_SHA256;
+    int32_t mdId = GetDefaultDigestAlgForKey(pkey, BSL_CID_SHA256);
     HITLS_X509_List *certchain = BSL_LIST_New(sizeof(HITLS_X509_Cert *));
     ASSERT_NE(certchain, NULL);
     ASSERT_EQ(BSL_LIST_AddElement(certchain, cert, BSL_LIST_POS_END), BSL_SUCCESS);
@@ -1018,6 +1052,9 @@ void SDV_CMS_GEN_ATTACH_SIGNEDDATA_TC001(int algId, char *capath, char *certPath
 
     BSL_Buffer msgBuf = {data, dataLen};
     int32_t mdId = BSL_CID_SHA256;
+    if (algId == BSL_CID_ML_DSA || algId == BSL_CID_SLH_DSA) {
+        mdId = BSL_CID_UNKNOWN;
+    }
     bool isDetached = false;
     bool hasNoSignedAttrs = !((bool)hasSignedAttrs);
     HITLS_X509_List *caCertchain = BSL_LIST_New(sizeof(HITLS_X509_Cert *));
@@ -1155,7 +1192,7 @@ void SDV_CMS_GEN_DETACHED_SIGNEDDATA_MULTI_SIGNER_TC001(char *capath, char *capa
     // Add SignerInfo and sign
     BSL_Buffer msgBuf = {data, dataLen};
     int32_t version1 = HITLS_CMS_SIGNEDDATA_SIGNERINFO_V1;
-    int32_t mdId1 = BSL_CID_SHA256;
+    int32_t mdId1 = GetDefaultDigestAlgForKey(pkey1, BSL_CID_SHA256);
     HITLS_X509_List *caCertchain = BSL_LIST_New(sizeof(HITLS_X509_Cert *));
     ASSERT_NE(caCertchain, NULL);
     ASSERT_EQ(BSL_LIST_AddElement(caCertchain, caCert, BSL_LIST_POS_END), BSL_SUCCESS);
@@ -1277,7 +1314,7 @@ void SDV_CMS_STREAM_SIGN_DETACHED_TC001(char *capath, char *cert1Path, char *key
     // Create CMS SignedData (detached by default)
     cms = HITLS_CMS_ProviderNew(NULL, NULL, BSL_CID_PKCS7_SIGNEDDATA);
     ASSERT_TRUE(cms != NULL);
-    int32_t mdId1 = BSL_CID_SHA256;
+    int32_t mdId1 = GetDefaultDigestAlgForKey(pkey1, BSL_CID_SHA256);
     int32_t mdId2 = BSL_CID_SHA384;
     HITLS_X509_List *caCertchain = BSL_LIST_New(sizeof(HITLS_X509_Cert *));
     ASSERT_NE(caCertchain, NULL);
@@ -1310,7 +1347,7 @@ void SDV_CMS_STREAM_SIGN_DETACHED_TC001(char *capath, char *cert1Path, char *key
     ASSERT_EQ(HITLS_CMS_DataUpdate(cms, &msgBuf2), HITLS_PKI_SUCCESS);
 
     // Finalize signature
-    int32_t version = HITLS_CMS_SIGNEDDATA_SIGNERINFO_V3;
+    int32_t version = (alg1 == BSL_CID_ECDSA) ? HITLS_CMS_SIGNEDDATA_SIGNERINFO_V3 : HITLS_CMS_SIGNEDDATA_SIGNERINFO_V1;
     HITLS_X509_List *certchain = BSL_LIST_New(sizeof(HITLS_X509_Cert *));
     ASSERT_NE(certchain, NULL);
     ASSERT_EQ(BSL_LIST_AddElement(certchain, cert1, BSL_LIST_POS_END), BSL_SUCCESS);
@@ -2798,6 +2835,224 @@ EXIT:
 /* END_CASE */
 
 /**
+ * @test SDV_CMS_MLDSA_SIGNALG_MISMATCH_VERIFY_TC001
+ * @title Test ML-DSA CMS verification with mismatched signatureAlgorithm
+ * @precon nan
+ * @brief
+ *    1. Parse a valid ML-DSA CMS file
+ *    2. Tamper SignerInfo.signatureAlgorithm to a non-PQC OID
+ *    3. Call HITLS_CMS_DataVerify
+ *    4. Tamper SignerInfo.signatureAlgorithm to another ML-DSA variant
+ *    5. Call HITLS_CMS_DataVerify
+ * @expect
+ *    1. Parsing should succeed
+ *    2-3. Verification should fail with HITLS_CMS_ERR_INVALID_ALGO
+ *    4-5. Verification should fail with HITLS_CMS_ERR_SIGALG_PUBKEY_MISMATCH
+ */
+/* BEGIN_CASE */
+void SDV_CMS_MLDSA_SIGNALG_MISMATCH_VERIFY_TC001(char *p7path, char *msgpath, char *caPath)
+{
+#if !defined(HITLS_PKI_CMS_SIGNEDDATA)
+    (void)p7path;
+    (void)msgpath;
+    (void)caPath;
+    SKIP_TEST();
+#else
+    HITLS_CMS *cms = NULL;
+    BSL_Buffer msgBuff = {NULL, 0};
+    HITLS_X509_Cert *caCert = NULL;
+    HITLS_X509_List *caCertList = NULL;
+
+    ASSERT_EQ(HITLS_CMS_ProviderParseFile(NULL, NULL, NULL, p7path, &cms), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(BSL_SAL_ReadFile(msgpath, &msgBuff.data, &msgBuff.dataLen), BSL_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_PEM, caPath, &caCert), HITLS_PKI_SUCCESS);
+    ASSERT_NE(caCert, NULL);
+
+    caCertList = BSL_LIST_New(sizeof(HITLS_X509_Cert *));
+    ASSERT_NE(caCertList, NULL);
+    ASSERT_EQ(BSL_LIST_AddElement(caCertList, caCert, BSL_LIST_POS_END), BSL_SUCCESS);
+    BSL_Param params[2] = {
+        {HITLS_CMS_PARAM_CA_CERT_LISTS, BSL_PARAM_TYPE_CTX_PTR, caCertList, 0, 0},
+        BSL_PARAM_END
+    };
+
+    CMS_SignedData *signedData = cms->ctx.signedData;
+    ASSERT_NE(signedData, NULL);
+    CMS_SignerInfo *si = (CMS_SignerInfo *)BSL_LIST_GET_FIRST(signedData->signerInfos);
+    ASSERT_NE(si, NULL);
+    // tamper the algId of signerInfo
+    si->sigAlg.algId = BSL_CID_ECDSAWITHSHA256;
+
+    ASSERT_EQ(HITLS_CMS_DataVerify(cms, &msgBuff, params, NULL), HITLS_CMS_ERR_INVALID_ALGO);
+    si->sigAlg.algId = BSL_CID_ML_DSA_44;
+    ASSERT_EQ(HITLS_CMS_DataVerify(cms, &msgBuff, params, NULL), HITLS_CMS_ERR_SIGALG_PUBKEY_MISMATCH);
+EXIT:
+    BSL_LIST_FREE(caCertList, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);
+    BSL_SAL_FREE(msgBuff.data);
+    HITLS_CMS_Free(cms);
+    return;
+#endif
+}
+/* END_CASE */
+
+/**
+ * @test   SDV_CMS_ALGPROTECT_ATTR_SIGN_TC001
+ * @title  Signed attributes include CMSAlgorithmProtection
+ * @brief
+ *    1. Create CMS SignedData with signed attributes
+ *    2. Locate CMSAlgorithmProtection in signerInfo.signedAttrs
+ *    3. Verify exactly one instance exists
+ * @expect
+ *    1-3. Success
+ */
+/* BEGIN_CASE */
+void SDV_CMS_ALGPROTECT_ATTR_SIGN_TC001(char *certPath, char *keyPath, char *msg)
+{
+#if !defined(HITLS_PKI_CMS_SIGNEDDATA) || !defined(HITLS_BSL_SAL_FILE)
+    (void)certPath;
+    (void)keyPath;
+    (void)msg;
+    SKIP_TEST();
+#else
+    TestMemInit();
+    ASSERT_EQ(TestRandInit(), CRYPT_SUCCESS);
+    CRYPT_EAL_PkeyCtx *pkey = NULL;
+    HITLS_X509_Cert *cert = NULL;
+    HITLS_CMS *cms = NULL;
+    uint8_t *data = NULL;
+    uint32_t dataLen = 0;
+    uint32_t algProtectCount = 0;
+
+    ASSERT_EQ(BSL_SAL_ReadFile(msg, &data, &dataLen), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_PEM, certPath, &cert), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_DecodeFileKey(BSL_FORMAT_PEM, CRYPT_PRIKEY_PKCS8_UNENCRYPT, keyPath, NULL, 0, &pkey),
+              CRYPT_SUCCESS);
+    cms = HITLS_CMS_ProviderNew(NULL, NULL, BSL_CID_PKCS7_SIGNEDDATA);
+    ASSERT_NE(cms, NULL);
+
+    int32_t pkcsv15 = CRYPT_MD_SHA256;
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_SET_RSA_EMSA_PKCSV15, &pkcsv15, sizeof(pkcsv15)), CRYPT_SUCCESS);
+
+    BSL_Buffer msgBuf = {data, dataLen};
+    int32_t version = HITLS_CMS_SIGNEDDATA_SIGNERINFO_V1;
+    int32_t mdId = BSL_CID_SHA256;
+    HITLS_X509_List *certchain = BSL_LIST_New(sizeof(HITLS_X509_Cert *));
+    ASSERT_NE(certchain, NULL);
+    ASSERT_EQ(BSL_LIST_AddElement(certchain, cert, BSL_LIST_POS_END), BSL_SUCCESS);
+    BSL_Param params[4] = {
+        {HITLS_CMS_PARAM_SIGNERINFO_VERSION, BSL_PARAM_TYPE_INT32, &version, sizeof(version), 0},
+        {HITLS_CMS_PARAM_DIGEST, BSL_PARAM_TYPE_INT32, &mdId, sizeof(mdId), 0},
+        {HITLS_CMS_PARAM_CERT_LISTS, BSL_PARAM_TYPE_CTX_PTR, certchain, sizeof(HITLS_X509_List *), 0},
+        BSL_PARAM_END};
+    ASSERT_EQ(HITLS_CMS_DataSign(cms, pkey, cert, &msgBuf, params), HITLS_PKI_SUCCESS);
+
+    CMS_SignerInfo *si = (CMS_SignerInfo *)BSL_LIST_GET_FIRST(cms->ctx.signedData->signerInfos);
+    ASSERT_NE(si, NULL);
+    for (HITLS_X509_AttrEntry *attr = (HITLS_X509_AttrEntry *)BSL_LIST_GET_FIRST(si->signedAttrs->list); attr != NULL;
+         attr = (HITLS_X509_AttrEntry *)BSL_LIST_GET_NEXT(si->signedAttrs->list)) {
+        if (attr->cid == BSL_CID_PKCS9_AT_CMSALGORITHMPROTECTION) {
+            algProtectCount++;
+            ASSERT_NE(attr->attrValue.buff, NULL);
+            ASSERT_TRUE(attr->attrValue.len > 0);
+        }
+    }
+    ASSERT_EQ(algProtectCount, 1);
+
+EXIT:
+    BSL_SAL_FREE(data);
+    HITLS_CMS_Free(cms);
+    CRYPT_EAL_PkeyFreeCtx(pkey);
+    BSL_LIST_FREE(certchain, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);
+    TestRandDeInit();
+    return;
+#endif
+}
+/* END_CASE */
+
+/**
+ * @test   SDV_CMS_ALGPROTECT_ATTR_VERIFY_TC001
+ * @title  Verification fails when CMSAlgorithmProtection mismatches
+ * @brief
+ *    1. Generate a valid CMS SignedData
+ *    2. Tamper CMSAlgorithmProtection attribute value
+ *    3. Verify SignedData
+ * @expect
+ *    1. Sign succeeds
+ *    2. Tamper succeeds
+ *    3. Verification returns HITLS_CMS_ERR_ALGPROTECT_MISMATCH
+ */
+/* BEGIN_CASE */
+void SDV_CMS_ALGPROTECT_ATTR_VERIFY_TC001(char *caPath, char *certPath, char *keyPath, char *msg)
+{
+#if !defined(HITLS_PKI_CMS_SIGNEDDATA) || !defined(HITLS_BSL_SAL_FILE)
+    (void)caPath;
+    (void)certPath;
+    (void)keyPath;
+    (void)msg;
+    SKIP_TEST();
+#else
+    TestMemInit();
+    ASSERT_EQ(TestRandInit(), CRYPT_SUCCESS);
+    CRYPT_EAL_PkeyCtx *pkey = NULL;
+    HITLS_X509_Cert *cert = NULL;
+    HITLS_X509_Cert *caCert = NULL;
+    HITLS_CMS *cms = NULL;
+    uint8_t *data = NULL;
+    uint32_t dataLen = 0;
+
+    ASSERT_EQ(BSL_SAL_ReadFile(msg, &data, &dataLen), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_PEM, certPath, &cert), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_PEM, caPath, &caCert), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_DecodeFileKey(BSL_FORMAT_PEM, CRYPT_PRIKEY_PKCS8_UNENCRYPT, keyPath, NULL, 0, &pkey),
+              CRYPT_SUCCESS);
+    cms = HITLS_CMS_ProviderNew(NULL, NULL, BSL_CID_PKCS7_SIGNEDDATA);
+    ASSERT_NE(cms, NULL);
+
+    int32_t pkcsv15 = CRYPT_MD_SHA256;
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_SET_RSA_EMSA_PKCSV15, &pkcsv15, sizeof(pkcsv15)), CRYPT_SUCCESS);
+
+    BSL_Buffer msgBuf = {data, dataLen};
+    int32_t version = HITLS_CMS_SIGNEDDATA_SIGNERINFO_V1;
+    int32_t mdId = BSL_CID_SHA256;
+    HITLS_X509_List *certchain = BSL_LIST_New(sizeof(HITLS_X509_Cert *));
+    ASSERT_NE(certchain, NULL);
+    ASSERT_EQ(BSL_LIST_AddElement(certchain, cert, BSL_LIST_POS_END), BSL_SUCCESS);
+    HITLS_X509_List *caCertchain = BSL_LIST_New(sizeof(HITLS_X509_Cert *));
+    ASSERT_NE(caCertchain, NULL);
+    ASSERT_EQ(BSL_LIST_AddElement(caCertchain, caCert, BSL_LIST_POS_END), BSL_SUCCESS);
+    BSL_Param params[5] = {
+        {HITLS_CMS_PARAM_SIGNERINFO_VERSION, BSL_PARAM_TYPE_INT32, &version, sizeof(version), 0},
+        {HITLS_CMS_PARAM_DIGEST, BSL_PARAM_TYPE_INT32, &mdId, sizeof(mdId), 0},
+        {HITLS_CMS_PARAM_CERT_LISTS, BSL_PARAM_TYPE_CTX_PTR, certchain, sizeof(HITLS_X509_List *), 0},
+        {HITLS_CMS_PARAM_CA_CERT_LISTS, BSL_PARAM_TYPE_CTX_PTR, caCertchain, sizeof(HITLS_X509_List *), 0},
+        BSL_PARAM_END};
+    ASSERT_EQ(HITLS_CMS_DataSign(cms, pkey, cert, &msgBuf, params), HITLS_PKI_SUCCESS);
+
+    CMS_SignerInfo *si = (CMS_SignerInfo *)BSL_LIST_GET_FIRST(cms->ctx.signedData->signerInfos);
+    ASSERT_NE(si, NULL);
+    for (HITLS_X509_AttrEntry *attr = (HITLS_X509_AttrEntry *)BSL_LIST_GET_FIRST(si->signedAttrs->list); attr != NULL;
+         attr = (HITLS_X509_AttrEntry *)BSL_LIST_GET_NEXT(si->signedAttrs->list)) {
+        if (attr->cid == BSL_CID_PKCS9_AT_CMSALGORITHMPROTECTION) {
+            ASSERT_TRUE(attr->attrValue.len > 4);
+            attr->attrValue.buff[attr->attrValue.len - 1] ^= 0x01;
+            break;
+        }
+    }
+    ASSERT_EQ(HITLS_CMS_DataVerify(cms, &msgBuf, params, NULL), HITLS_CMS_ERR_ALGPROTECT_MISMATCH);
+
+EXIT:
+    BSL_SAL_FREE(data);
+    HITLS_CMS_Free(cms);
+    CRYPT_EAL_PkeyFreeCtx(pkey);
+    BSL_LIST_FREE(certchain, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);
+    BSL_LIST_FREE(caCertchain, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);
+    TestRandDeInit();
+    return;
+#endif
+}
+/* END_CASE */
+
+/**
  * @test   SDV_CMS_GEN_SIGNEDDATA_INVALID_HASH_TC001
  * @title  Generate detached CMS SignedData with multiple signers
  * @brief
@@ -3045,7 +3300,7 @@ void SDV_CMS_GEN_MULTI_SIGNER_WITH_DIFF_SIGNEDATTR_TC001(char *capath, char *cap
     // Add SignerInfo and sign
     BSL_Buffer msgBuf = {data, dataLen};
     int32_t version1 = HITLS_CMS_SIGNEDDATA_SIGNERINFO_V1;
-    int32_t mdId1 = BSL_CID_SHA256;
+    int32_t mdId1 = BSL_CID_SHA512; // RFC 9882: SHA-512 is valid for all ML-DSA variants with or without signedAttrs
     HITLS_X509_List *caCertchain = BSL_LIST_New(sizeof(HITLS_X509_Cert *));
     ASSERT_NE(caCertchain, NULL);
     ASSERT_EQ(BSL_LIST_AddElement(caCertchain, caCert, BSL_LIST_POS_END), BSL_SUCCESS);

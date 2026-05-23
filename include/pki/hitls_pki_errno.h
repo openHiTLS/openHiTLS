@@ -216,6 +216,9 @@ typedef enum {
     HITLS_CMS_ERR_RECIPIENT_CERT_REQUIRED,
     HITLS_CMS_ERR_RECIPIENT_PRIKEY_REQUIRED,
     HITLS_CMS_ERR_ATTACHED_STREAM_UNSUPPORTED,
+    HITLS_CMS_ERR_SIGALG_PUBKEY_MISMATCH,    /**< signatureAlgorithm does not match the public key parameter set */
+    HITLS_CMS_ERR_ALGPROTECT_MISMATCH,       /**< CMSAlgorithmProtection attribute mismatch (RFC 6211) */
+    HITLS_CMS_ERR_SLHDSA_INVALID_DIGEST,     /**< SLH-DSA digest algorithm does not meet RFC 9814 requirements */
 
     HITLS_PKCS12_ERR_NULL_POINTER = 0x04070001,
     HITLS_PKCS12_ERR_INVALID_PARAM,

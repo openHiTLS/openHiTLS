@@ -34,6 +34,23 @@
 #define MAX_DIGEST_SIZE 64  // Maximum digest size (e.g., SHA-512)
 
 /**
+ * Get the correct output length for a CMS digest algorithm.
+ * For all other algorithms, the standard digest size is used, falling back to
+ * MAX_DIGEST_SIZE if the algorithm reports 0 (e.g. unknown / not yet in the table).
+ */
+static uint32_t GetCmsDigestSize(int32_t mdId)
+{
+    if (mdId == (int32_t)BSL_CID_SHAKE128) {
+        return 32; // RFC 9814 §4: SHAKE128 with 256-bit output
+    }
+    if (mdId == (int32_t)BSL_CID_SHAKE256) {
+        return 64; // RFC 9814 §4: SHAKE256 with 512-bit output
+    }
+    uint32_t sz = CRYPT_EAL_MdGetDigestSize((CRYPT_MD_AlgId)mdId);
+    return (sz == 0) ? MAX_DIGEST_SIZE : sz;
+}
+
+/**
  * SignedData ::= SEQUENCE {
  * digestAlgorithms DigestAlgorithmIdentifiers,
  * encapContentInfo EncapsulatedContentInfo,
@@ -390,6 +407,37 @@ static int32_t ParseDigestSignAlgId(BSL_ASN1_Buffer *asn, CMS_AlgId *algId)
     return HITLS_PKI_SUCCESS;
 }
 
+static void FreeAlgIdMembers(CMS_AlgId *algId)
+{
+    if (algId == NULL) {
+        return;
+    }
+    CRYPT_EAL_MdFreeCtx(algId->mdCtx);
+    algId->mdCtx = NULL;
+    BSL_SAL_FREE(algId->param.data);
+    algId->param.data = NULL;
+    algId->param.dataLen = 0;
+}
+
+static int32_t ConvertSignAlgToCmsAlgId(const HITLS_X509_Asn1AlgId *signAlg, CMS_AlgId *algId)
+{
+    HITLS_X509_Asn1AlgId tmpSignAlg = *signAlg;
+    BSL_ASN1_Buffer signAlgBuff = {0};
+    int32_t ret = HITLS_X509_EncodeSignAlgInfo(&tmpSignAlg, &signAlgBuff);
+    if (ret != HITLS_PKI_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        return ret;
+    }
+
+    ret = ParseDigestSignAlgId(&signAlgBuff, algId);
+    BSL_SAL_FREE(signAlgBuff.buff);
+    if (ret != HITLS_PKI_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        return ret;
+    }
+    return HITLS_PKI_SUCCESS;
+}
+
 static int32_t SignedAttrsCheck(HITLS_X509_Attrs *attrs)
 {
     if (attrs == NULL || BSL_LIST_COUNT(attrs->list) == 0) {
@@ -613,6 +661,125 @@ static int32_t EncodeHashAlgId(const CMS_AlgId *alg, BSL_ASN1_Buffer *asn)
     }
     asn->tag = BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE;
     return HITLS_PKI_SUCCESS;
+}
+
+static int32_t EncodeAlgIdentifier(const CMS_AlgId *alg, BSL_ASN1_Buffer *asn)
+{
+    if (alg == NULL || asn == NULL) {
+        BSL_ERR_PUSH_ERROR(HITLS_CMS_ERR_NULL_POINTER);
+        return HITLS_CMS_ERR_NULL_POINTER;
+    }
+    if (alg->param.data != NULL || alg->param.dataLen != 0) {
+        if (alg->id == BSL_CID_UNKNOWN) {
+            BSL_ERR_PUSH_ERROR(HITLS_CMS_ERR_INVALID_ALGO);
+            return HITLS_CMS_ERR_INVALID_ALGO;
+        }
+        return HITLS_X509_EncodeSignAlgInfo((HITLS_X509_Asn1AlgId *)(uintptr_t)alg, asn);
+    }
+    return EncodeHashAlgId(alg, asn);
+}
+
+static bool IsAsn1Null(const BSL_Buffer *param)
+{
+    return (param != NULL && param->data != NULL && param->dataLen == 2 && param->data[0] == BSL_ASN1_TAG_NULL &&
+            param->data[1] == 0);
+}
+
+static bool IsDigestParamOptionalNull(BslCid cid)
+{
+    switch (cid) {
+        case BSL_CID_MD5:
+        case BSL_CID_SHA1:
+        case BSL_CID_SHA224:
+        case BSL_CID_SHA256:
+        case BSL_CID_SHA384:
+        case BSL_CID_SHA512:
+        case BSL_CID_SHA3_224:
+        case BSL_CID_SHA3_256:
+        case BSL_CID_SHA3_384:
+        case BSL_CID_SHA3_512:
+        case BSL_CID_SHAKE128:
+        case BSL_CID_SHAKE256:
+        case BSL_CID_SM3:
+            return true;
+        default:
+            return false;
+    }
+}
+
+static int32_t CompareAlgId(const CMS_AlgId *left, const CMS_AlgId *right)
+{
+    if (left == NULL || right == NULL) {
+        return 1;
+    }
+    if (left->id != right->id) {
+        return 1;
+    }
+    if (left->param.dataLen == right->param.dataLen &&
+        (left->param.dataLen == 0 || memcmp(left->param.data, right->param.data, left->param.dataLen) == 0)) {
+        return 0;
+    }
+    if (IsDigestParamOptionalNull((BslCid)left->id)) {
+        bool leftEmpty = (left->param.data == NULL || left->param.dataLen == 0);
+        bool rightEmpty = (right->param.data == NULL || right->param.dataLen == 0);
+        if ((leftEmpty && IsAsn1Null(&right->param)) || (rightEmpty && IsAsn1Null(&left->param))) {
+            return 0;
+        }
+    }
+    return 1;
+}
+
+static int32_t CreateCmsAlgProtectionAttr(CMS_SignerInfo *signerInfo, HITLS_X509_AttrEntry **outAttr)
+{
+    HITLS_X509_AttrEntry *algAttr = (HITLS_X509_AttrEntry *)BSL_SAL_Calloc(1, sizeof(HITLS_X509_AttrEntry));
+    BSL_ASN1_Buffer digestAlg = {0};
+    BSL_ASN1_Buffer signAlg = {0};
+    BSL_ASN1_Buffer items[2] = {0};
+    BSL_ASN1_TemplateItem templItems[] = {
+        {BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE, 0, 0},
+            {BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE, 0, 1},
+            {BSL_ASN1_CLASS_CTX_SPECIFIC | BSL_ASN1_TAG_CONSTRUCTED | 1, 0, 1},
+    };
+    BSL_ASN1_Template templ = {templItems, sizeof(templItems) / sizeof(templItems[0])};
+    int32_t ret;
+
+    if (algAttr == NULL) {
+        BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
+        return BSL_MALLOC_FAIL;
+    }
+    algAttr->cid = BSL_CID_PKCS9_AT_CMSALGORITHMPROTECTION;
+    ret = HITLS_X509_EncodeObjIdentity(BSL_CID_PKCS9_AT_CMSALGORITHMPROTECTION, &algAttr->attrId);
+    if (ret != HITLS_PKI_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        goto EXIT;
+    }
+    ret = EncodeAlgIdentifier(&signerInfo->digestAlg, &digestAlg);
+    if (ret != HITLS_PKI_SUCCESS) {
+        goto EXIT;
+    }
+    ret = HITLS_X509_EncodeSignAlgInfo(&signerInfo->sigAlg, &signAlg);
+    if (ret != HITLS_PKI_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        goto EXIT;
+    }
+    signAlg.tag = BSL_ASN1_CLASS_CTX_SPECIFIC | BSL_ASN1_TAG_CONSTRUCTED | 1;
+    items[0] = digestAlg;
+    items[1] = signAlg;
+    ret = BSL_ASN1_EncodeTemplate(&templ, items, 2, &algAttr->attrValue.buff, &algAttr->attrValue.len);
+    if (ret != BSL_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        goto EXIT;
+    }
+    algAttr->attrValue.tag = BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SET;
+    BSL_SAL_FREE(digestAlg.buff);
+    BSL_SAL_FREE(signAlg.buff);
+    *outAttr = algAttr;
+    return HITLS_PKI_SUCCESS;
+EXIT:
+    BSL_SAL_FREE(digestAlg.buff);
+    BSL_SAL_FREE(signAlg.buff);
+    HITLS_X509_AttrEntryFree(algAttr);
+    return ret;
 }
 
 // Callback for encoding items directly to ASN.1 buffer (AlgId, SignerInfo)
@@ -1334,6 +1501,17 @@ static int32_t EnsureRequiredAttrsExist(CMS_SignerInfo *signerInfo, uint8_t *dig
     if (ret != HITLS_PKI_SUCCESS) {
         return ret;
     }
+
+    HITLS_X509_AttrEntry *algAttr = NULL;
+    ret = CreateCmsAlgProtectionAttr(signerInfo, &algAttr);
+    if (ret != HITLS_PKI_SUCCESS) {
+        return ret;
+    }
+    ret = AddRequiredAttr(signerInfo->signedAttrs, algAttr);
+    if (ret != HITLS_PKI_SUCCESS) {
+        return ret;
+    }
+
     return EncodeSignedAttrsForSigning(signerInfo, signData, signDataLen);
 }
 
@@ -1353,7 +1531,18 @@ static int32_t GenerateSignature(const CRYPT_EAL_PkeyCtx *prvKey, int32_t mdId,
         return BSL_MALLOC_FAIL;
     }
 
-    int32_t ret = CRYPT_EAL_PkeySign(prvKey, mdId, signData, signDataLen, sig, &sigLen);
+    // For SLH-DSA, sign the raw data directly
+    // For traditional algorithms, the crypto layer handles pre-hashing
+    int32_t signMdId = mdId;
+
+#ifdef HITLS_CRYPTO_SLH_DSA
+    CRYPT_PKEY_AlgId asymAlg = CRYPT_EAL_PkeyGetId(prvKey);
+    if (asymAlg == CRYPT_PKEY_SLH_DSA) {
+        signMdId = BSL_CID_UNKNOWN; // Indicate pure signature mode
+    }
+#endif
+
+    int32_t ret = CRYPT_EAL_PkeySign(prvKey, signMdId, signData, signDataLen, sig, &sigLen);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         BSL_SAL_FREE(sig);
@@ -1514,19 +1703,41 @@ static int32_t SignedDataCore(CMS_SignedData *signedData, CMS_SignerInfo *signer
 
 static int32_t CheckOrGetMdForPqc(CRYPT_PKEY_ParaId algId, bool hasSignedAttr, int32_t *mdId, bool isStream)
 {
+    BslCid md = BSL_CID_UNKNOWN;
     if (!hasSignedAttr) {
         if (isStream) {
             BSL_ERR_PUSH_ERROR(HITLS_CMS_ERR_NOT_SUPPORT_STREAM_PQC);
             return HITLS_CMS_ERR_NOT_SUPPORT_STREAM_PQC;
         } else {
-            int32_t md = HITLS_CMS_GetDefaultMlDsaDigestAlg((BslCid)algId, false);
-            if (md != BSL_CID_UNKNOWN) {
-                *mdId = md;
+            if (*mdId == BSL_CID_UNKNOWN) {
+                md = HITLS_CMS_GetDefaultMlDsaDigestAlg((BslCid)algId, false);
+                if (md == BSL_CID_UNKNOWN) {
+                    md = HITLS_CMS_GetDefaultSlhDsaDigestAlg((BslCid)algId, false);
+                }
+                if (md != BSL_CID_UNKNOWN) {
+                    *mdId = md;
+                }
             }
-            // RFC 9882: Validate digest algorithm for ML-DSA
+            if ((BslCid)algId >= BSL_CID_SLH_DSA_SHA2_128S && (BslCid)algId <= BSL_CID_SLH_DSA_SHAKE_256F) {
+                return HITLS_CMS_ValidateSlhDsaDigestAlg((BslCid)algId, (BslCid)(*mdId), false);
+            }
+            if ((BslCid)algId >= BSL_CID_ML_DSA_44 && (BslCid)algId <= BSL_CID_ML_DSA_87) {
+                return HITLS_CMS_ValidateMlDsaDigestAlg((BslCid)algId, (BslCid)(*mdId), false);
+            }
             return HITLS_PKI_SUCCESS;
         }
     } else {
+        if (*mdId == BSL_CID_UNKNOWN) {
+            md = HITLS_CMS_GetDefaultMlDsaDigestAlg((BslCid)algId, true);
+            if (md == BSL_CID_UNKNOWN) {
+                md = HITLS_CMS_GetDefaultSlhDsaDigestAlg((BslCid)algId, true);
+            }
+            if (md == BSL_CID_UNKNOWN) {
+                BSL_ERR_PUSH_ERROR(HITLS_CMS_ERR_INVALID_ALGO);
+                return HITLS_CMS_ERR_INVALID_ALGO;
+            }
+            *mdId = md;
+        }
         return HITLS_CMS_ValidatePqcSignDigest((BslCid)algId, *(BslCid *)mdId);
     }
 }
@@ -1617,11 +1828,8 @@ int32_t HITLS_CMS_DataSign(HITLS_CMS *cms, CRYPT_EAL_PkeyCtx *prvKey, HITLS_X509
         return ret;
     }
     uint8_t digest[MAX_DIGEST_SIZE];
-    uint32_t digestLen = sizeof(digest);
-    BSL_Buffer signedBuf = {
-        .data = digest,
-        .dataLen = digestLen
-    };
+    uint32_t digestLen = GetCmsDigestSize(mdId);
+    BSL_Buffer signedBuf = {.data = digest, .dataLen = digestLen};
     ret = CMS_GetOriginSignedData(signedData, signerInfo, msg, &signedBuf);
     if (ret != HITLS_PKI_SUCCESS) {
         HITLS_CMS_SignerInfoFree(signerInfo);
@@ -1689,10 +1897,21 @@ static int32_t CheckSignature(HITLS_X509_Asn1AlgId *alg, CRYPT_EAL_PkeyCtx *pubK
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
+
+    // For SLH-DSA, use pure verification mode (raw message, no pre-hashing).
+    int32_t verifyHashId = hashId;
+
+#ifdef HITLS_CRYPTO_SLH_DSA
+    CRYPT_PKEY_AlgId asymAlg = CRYPT_EAL_PkeyGetId(verifyPubKey);
+    if (asymAlg == CRYPT_PKEY_SLH_DSA) {
+        verifyHashId = BSL_CID_UNKNOWN; // Indicate pure verification mode
+    }
+#endif
+
     if (verifyByHash) {
         ret = CRYPT_EAL_PkeyVerifyData(verifyPubKey, msg, msgLen, signature, signatureLen);
     } else {
-        ret = CRYPT_EAL_PkeyVerify(verifyPubKey, hashId, msg, msgLen, signature, signatureLen);
+        ret = CRYPT_EAL_PkeyVerify(verifyPubKey, verifyHashId, msg, msgLen, signature, signatureLen);
     }
     CRYPT_EAL_PkeyFreeCtx(verifyPubKey);
     if (ret != CRYPT_SUCCESS) {
@@ -1711,6 +1930,26 @@ static int32_t CheckSignerCert(HITLS_X509_Cert *cert, uint8_t *msg, uint32_t msg
         BSL_ERR_PUSH_ERROR(HITLS_CMS_ERR_SIGNEDDATA_OBTAIN_PUB_FAILED);
         return HITLS_CMS_ERR_SIGNEDDATA_OBTAIN_PUB_FAILED;
     }
+
+    // RFC 9814 §4 MUST: verify signatureAlgorithm is consistent with the public key.
+    // For PQC algorithms, the specific variant (paraId) must match the sigAlg OID.
+    CRYPT_PKEY_AlgId pubKeyAlgId = CRYPT_EAL_PkeyGetId(pubKey);
+    bool sigIsPqc = HITLS_CMS_IsPqcSignAlg((BslCid)signerInfo->sigAlg.algId);
+    bool keyIsPqc = HITLS_CMS_IsPqcSignAlg((BslCid)pubKeyAlgId);
+    if (sigIsPqc != keyIsPqc) {
+        CRYPT_EAL_PkeyFreeCtx(pubKey);
+        BSL_ERR_PUSH_ERROR(HITLS_CMS_ERR_SIGALG_PUBKEY_MISMATCH);
+        return HITLS_CMS_ERR_SIGALG_PUBKEY_MISMATCH;
+    }
+    if (sigIsPqc) {
+        CRYPT_PKEY_ParaId keyParaId = CRYPT_EAL_PkeyGetParaId(pubKey);
+        if (keyParaId == CRYPT_PKEY_PARAID_MAX || (BslCid)keyParaId != signerInfo->sigAlg.algId) {
+            CRYPT_EAL_PkeyFreeCtx(pubKey);
+            BSL_ERR_PUSH_ERROR(HITLS_CMS_ERR_SIGALG_PUBKEY_MISMATCH);
+            return HITLS_CMS_ERR_SIGALG_PUBKEY_MISMATCH;
+        }
+    }
+
     if (signerInfo->signData.data != NULL && signerInfo->signData.dataLen > 0) {
         uint8_t *data = NULL;
         uint32_t dataLen = 0;
@@ -1776,6 +2015,147 @@ static int32_t CMS_AttrDecodeContentType(HITLS_X509_AttrEntry *attr, void *out)
     }
     *(BslCid *)out = cid;
     return HITLS_PKI_SUCCESS;
+}
+
+static int32_t CheckPqcAlgIdContentParamsOmitted(const BSL_ASN1_Buffer *algIdContent);
+
+static int32_t DecodeCmsAlgProtection(HITLS_X509_AttrEntry *attr, CMS_AlgId *digestAlg, CMS_AlgId *signAlg)
+{
+    BSL_ASN1_Buffer items[3] = {0};
+    uint8_t *tmp = attr->attrValue.buff;
+    uint32_t tmpLen = attr->attrValue.len;
+    int32_t ret;
+
+    if (attr->attrValue.buff == NULL || attr->attrValue.len == 0) {
+        BSL_ERR_PUSH_ERROR(HITLS_CMS_ERR_SIGNEDDATA_INVALID_ATTR);
+        return HITLS_CMS_ERR_SIGNEDDATA_INVALID_ATTR;
+    }
+    uint32_t outerLen = 0;
+    ret = BSL_ASN1_DecodeTagLen(BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE, &tmp, &tmpLen, &outerLen);
+    if (ret != BSL_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(HITLS_CMS_ERR_SIGNEDDATA_INVALID_ATTR);
+        return HITLS_CMS_ERR_SIGNEDDATA_INVALID_ATTR;
+    }
+    if (outerLen != tmpLen) {
+        BSL_ERR_PUSH_ERROR(HITLS_CMS_ERR_SIGNEDDATA_INVALID_ATTR);
+        return HITLS_CMS_ERR_SIGNEDDATA_INVALID_ATTR;
+    }
+    BSL_ASN1_TemplateItem innerTempl[] = {
+        {BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE, BSL_ASN1_FLAG_HEADERONLY, 0},
+        {BSL_ASN1_CLASS_CTX_SPECIFIC | BSL_ASN1_TAG_CONSTRUCTED | 1,
+            BSL_ASN1_FLAG_OPTIONAL | BSL_ASN1_FLAG_HEADERONLY, 0},
+        {BSL_ASN1_CLASS_CTX_SPECIFIC | BSL_ASN1_TAG_CONSTRUCTED | 2,
+            BSL_ASN1_FLAG_OPTIONAL | BSL_ASN1_FLAG_HEADERONLY, 0},
+    };
+    BSL_ASN1_Template innerT = {innerTempl, sizeof(innerTempl) / sizeof(innerTempl[0])};
+    ret = BSL_ASN1_DecodeTemplate(&innerT, NULL, &tmp, &tmpLen, items, 3);
+    if (ret != BSL_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        return ret;
+    }
+    if (tmpLen != 0 || items[2].len != 0 || items[1].len == 0) {
+        BSL_ERR_PUSH_ERROR(HITLS_CMS_ERR_SIGNEDDATA_INVALID_ATTR);
+        return HITLS_CMS_ERR_SIGNEDDATA_INVALID_ATTR;
+    }
+    ret = ParseDigestSignAlgId(&items[0], digestAlg);
+    if (ret != HITLS_PKI_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        return ret;
+    }
+    ret = CheckPqcAlgIdContentParamsOmitted(&items[1]);
+    if (ret != HITLS_PKI_SUCCESS) {
+        FreeAlgIdMembers(digestAlg);
+        BSL_ERR_PUSH_ERROR(ret);
+        return ret;
+    }
+    items[1].tag = BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE;
+    ret = ParseDigestSignAlgId(&items[1], signAlg);
+    if (ret != HITLS_PKI_SUCCESS) {
+        FreeAlgIdMembers(digestAlg);
+        BSL_ERR_PUSH_ERROR(ret);
+        return ret;
+    }
+    return HITLS_PKI_SUCCESS;
+}
+
+static int32_t CheckPqcAlgIdContentParamsOmitted(const BSL_ASN1_Buffer *algIdContent)
+{
+    uint8_t *tmp = NULL;
+    uint32_t tmpLen = 0;
+    uint32_t oidLen = 0;
+    BslCid algCid;
+    int32_t ret;
+
+    if (algIdContent == NULL || algIdContent->buff == NULL || algIdContent->len == 0) {
+        BSL_ERR_PUSH_ERROR(HITLS_CMS_ERR_INVALID_DATA);
+        return HITLS_CMS_ERR_INVALID_DATA;
+    }
+
+    tmp = algIdContent->buff;
+    tmpLen = algIdContent->len;
+    ret = BSL_ASN1_DecodeTagLen(BSL_ASN1_TAG_OBJECT_ID, &tmp, &tmpLen, &oidLen);
+    if (ret != BSL_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        return ret;
+    }
+
+    algCid = BSL_OBJ_GetCidFromOidBuff(tmp, oidLen);
+    if (!HITLS_CMS_PqcShouldOmitParams(algCid)) {
+        return HITLS_PKI_SUCCESS;
+    }
+
+    tmp += oidLen;
+    tmpLen -= oidLen;
+    if (tmpLen != 0) {
+        BSL_ERR_PUSH_ERROR(HITLS_CMS_ERR_PQC_PARAMS_NOT_OMITTED);
+        return HITLS_CMS_ERR_PQC_PARAMS_NOT_OMITTED;
+    }
+    return HITLS_PKI_SUCCESS;
+}
+
+static int32_t ValidateCmsAlgProtectionAttr(HITLS_X509_Attrs *attrs, CMS_SignerInfo *si)
+{
+    HITLS_X509_AttrEntry *found = NULL;
+    uint32_t count = 0;
+    CMS_AlgId digestAlg = {0};
+    CMS_AlgId signAlg = {0};
+    CMS_AlgId signerSigAlg = {0};
+    int32_t ret;
+
+    for (HITLS_X509_AttrEntry *node = (HITLS_X509_AttrEntry *)BSL_LIST_GET_FIRST(attrs->list); node != NULL;
+         node = (HITLS_X509_AttrEntry *)BSL_LIST_GET_NEXT(attrs->list)) {
+        if (node->cid == BSL_CID_PKCS9_AT_CMSALGORITHMPROTECTION) {
+            found = node;
+            count++;
+        }
+    }
+    if (count == 0) {
+        return HITLS_PKI_SUCCESS;
+    }
+    if (count != 1) {
+        BSL_ERR_PUSH_ERROR(HITLS_CMS_ERR_ALGPROTECT_MISMATCH);
+        return HITLS_CMS_ERR_ALGPROTECT_MISMATCH;
+    }
+    ret = DecodeCmsAlgProtection(found, &digestAlg, &signAlg);
+    if (ret != HITLS_PKI_SUCCESS) {
+        return ret;
+    }
+    ret = ConvertSignAlgToCmsAlgId(&si->sigAlg, &signerSigAlg);
+    if (ret != HITLS_PKI_SUCCESS) {
+        FreeAlgIdMembers(&digestAlg);
+        FreeAlgIdMembers(&signAlg);
+        return ret;
+    }
+    if (CompareAlgId(&digestAlg, &si->digestAlg) != 0 || CompareAlgId(&signAlg, &signerSigAlg) != 0) {
+        ret = HITLS_CMS_ERR_ALGPROTECT_MISMATCH;
+        BSL_ERR_PUSH_ERROR(ret);
+    } else {
+        ret = HITLS_PKI_SUCCESS;
+    }
+    FreeAlgIdMembers(&digestAlg);
+    FreeAlgIdMembers(&signAlg);
+    FreeAlgIdMembers(&signerSigAlg);
+    return ret;
 }
 
 // Find attribute by CID in signedAttrs list and decode via callback
@@ -1995,9 +2375,9 @@ static int32_t CheckSignerInfoAttrs(CMS_SignedData *sigData, CMS_SignerInfo *si,
     }
     if (digestAlg != NULL) {
         uint8_t hash[MAX_DIGEST_SIZE];
-        uint32_t hashLen = sizeof(hash);
-        ret = CRYPT_EAL_ProviderMd(sigData->libCtx, digestAlg->id, sigData->attrName, buff->data, buff->dataLen,
-            hash, &hashLen);
+        uint32_t hashLen = GetCmsDigestSize(digestAlg->id);
+        ret = CRYPT_EAL_ProviderMd(sigData->libCtx, digestAlg->id, sigData->attrName, buff->data, buff->dataLen, hash,
+                                   &hashLen);
         if (ret != CRYPT_SUCCESS) {
             return ret;
         }
@@ -2012,6 +2392,12 @@ static int32_t CheckSignerInfoAttrs(CMS_SignedData *sigData, CMS_SignerInfo *si,
             return HITLS_CMS_ERR_SIGNEDDATA_MSG_HASH_MISMATCH;
         }
     }
+
+    ret = ValidateCmsAlgProtectionAttr(si->signedAttrs, si);
+    if (ret != HITLS_PKI_SUCCESS) {
+        return ret;
+    }
+
     return HITLS_PKI_SUCCESS;
 }
 
@@ -2067,12 +2453,37 @@ static int32_t GetVerifyMsgContent(CMS_SignedData *sigData, const BSL_Buffer *ms
 static int32_t CheckPqcSignAlgAndDigest(CMS_SignerInfo *si, bool isStream)
 {
     bool hasSignedAttr = (si->signedAttrs != NULL && BSL_LIST_COUNT(si->signedAttrs->list) > 0);
+    BslCid defaultMd;
     if (!hasSignedAttr) {
         if (isStream) {
             BSL_ERR_PUSH_ERROR(HITLS_CMS_ERR_NOT_SUPPORT_STREAM_PQC);
             return HITLS_CMS_ERR_NOT_SUPPORT_STREAM_PQC;
         } else {
-            if (si->digestAlg.id != BSL_CID_SHA512) {
+            if ((BslCid)si->sigAlg.algId >= BSL_CID_SLH_DSA_SHA2_128S &&
+                (BslCid)si->sigAlg.algId <= BSL_CID_SLH_DSA_SHAKE_256F) {
+                int32_t ret =
+                    HITLS_CMS_ValidateSlhDsaDigestAlg((BslCid)si->sigAlg.algId, (BslCid)si->digestAlg.id, false);
+                if (ret != HITLS_PKI_SUCCESS) {
+                    BSL_ERR_PUSH_ERROR(ret);
+                    return ret;
+                }
+                return HITLS_PKI_SUCCESS;
+            }
+            if ((BslCid)si->sigAlg.algId == BSL_CID_ML_DSA_44 || (BslCid)si->sigAlg.algId == BSL_CID_ML_DSA_65 ||
+                (BslCid)si->sigAlg.algId == BSL_CID_ML_DSA_87) {
+                int32_t ret = HITLS_CMS_ValidateMlDsaDigestAlg((BslCid)si->sigAlg.algId, (BslCid)si->digestAlg.id,
+                    false);
+                if (ret != HITLS_PKI_SUCCESS) {
+                    BSL_ERR_PUSH_ERROR(ret);
+                    return ret;
+                }
+                return HITLS_PKI_SUCCESS;
+            }
+            defaultMd = HITLS_CMS_GetDefaultMlDsaDigestAlg((BslCid)si->sigAlg.algId, false);
+            if (defaultMd == BSL_CID_UNKNOWN) {
+                defaultMd = HITLS_CMS_GetDefaultSlhDsaDigestAlg((BslCid)si->sigAlg.algId, false);
+            }
+            if (defaultMd != BSL_CID_UNKNOWN && (BslCid)si->digestAlg.id != defaultMd) {
                 BSL_ERR_PUSH_ERROR(HITLS_CMS_ERR_MLDSA_ERROR_DIGEST);
                 return HITLS_CMS_ERR_MLDSA_ERROR_DIGEST;
             }
@@ -2294,7 +2705,7 @@ static int32_t GetDigestFromMdCtx(HITLS_X509_List *digestAlg, int32_t mdId, uint
         algNode = BSL_LIST_GetNextNode(digestAlg, algNode)) {
         CMS_AlgId *alg = (CMS_AlgId *)BSL_LIST_GetData(algNode);
         if (alg->id == mdId) {
-            tmpDigestLen = MAX_DIGEST_SIZE;
+            tmpDigestLen = GetCmsDigestSize(alg->id);
             int32_t ret = GetDigestValue(alg->mdCtx, tmpDigest, &tmpDigestLen);
             if (ret != HITLS_PKI_SUCCESS) {
                 return ret;
@@ -2440,7 +2851,7 @@ static int32_t VerifyAllSignerInfos(CMS_SignedData *signedData, ChainVerifyParam
             return HITLS_CMS_ERR_SIGNEDDATA_NO_FIND_HASH;
         }
         uint8_t hash[MAX_DIGEST_SIZE];
-        uint32_t hashLen = MAX_DIGEST_SIZE;
+        uint32_t hashLen = GetCmsDigestSize(si->digestAlg.id);
         BSL_Buffer hashBuff = {.data = hash, .dataLen = hashLen};
         int32_t ret = GetDigestValue(alg->mdCtx, hashBuff.data, &hashBuff.dataLen);
         if (ret != HITLS_PKI_SUCCESS) {

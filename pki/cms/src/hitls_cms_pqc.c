@@ -38,42 +38,103 @@ typedef struct {
     uint32_t count;
 } MlDsaDigestEntry;
 
+typedef struct {
+    BslCid algId;
+    BslCid defaultDigest;
+    BslCid noAttrFallback;
+} SlhDsaDigestEntry;
+
 static const BslCid MLDSA44_DIGEST[] = {
     BSL_CID_SHA256, BSL_CID_SHA384, BSL_CID_SHA512,
     BSL_CID_SHA3_256, BSL_CID_SHA3_384, BSL_CID_SHA3_512,
     BSL_CID_SHAKE128, BSL_CID_SHAKE256,
 };
+
 static const BslCid MLDSA65_DIGEST[] = {
     BSL_CID_SHA384, BSL_CID_SHA512,
     BSL_CID_SHA3_384, BSL_CID_SHA3_512,
     BSL_CID_SHAKE256,
 };
+
 static const BslCid MLDSA87_DIGEST[] = {
     BSL_CID_SHA512, BSL_CID_SHA3_512, BSL_CID_SHAKE256,
 };
 
-#define MLDSA_ARRAY_SIZE(arr) (uint32_t)(sizeof(arr) / sizeof((arr)[0]))
+#define PQC_ARRAY_SIZE(arr) (uint32_t)(sizeof(arr) / sizeof((arr)[0]))
 
 static const MlDsaDigestEntry MLDSA_DIGEST_TABLE[] = {
-    { BSL_CID_ML_DSA_44, MLDSA44_DIGEST, MLDSA_ARRAY_SIZE(MLDSA44_DIGEST) },
-    { BSL_CID_ML_DSA_65, MLDSA65_DIGEST, MLDSA_ARRAY_SIZE(MLDSA65_DIGEST) },
-    { BSL_CID_ML_DSA_87, MLDSA87_DIGEST, MLDSA_ARRAY_SIZE(MLDSA87_DIGEST) },
+    { BSL_CID_ML_DSA_44, MLDSA44_DIGEST, PQC_ARRAY_SIZE(MLDSA44_DIGEST) },
+    { BSL_CID_ML_DSA_65, MLDSA65_DIGEST, PQC_ARRAY_SIZE(MLDSA65_DIGEST) },
+    { BSL_CID_ML_DSA_87, MLDSA87_DIGEST, PQC_ARRAY_SIZE(MLDSA87_DIGEST) },
 };
 
-static int32_t CMS_ValidateMlDsaDigestAlg(BslCid algId, BslCid mdId)
+static const SlhDsaDigestEntry SLHDSA_DIGEST_TABLE[] = {
+    { BSL_CID_SLH_DSA_SHA2_128S, BSL_CID_SHA256, BSL_CID_UNKNOWN },
+    { BSL_CID_SLH_DSA_SHA2_128F, BSL_CID_SHA256, BSL_CID_UNKNOWN },
+    { BSL_CID_SLH_DSA_SHA2_192S, BSL_CID_SHA512, BSL_CID_SHA256 },
+    { BSL_CID_SLH_DSA_SHA2_192F, BSL_CID_SHA512, BSL_CID_SHA256 },
+    { BSL_CID_SLH_DSA_SHA2_256S, BSL_CID_SHA512, BSL_CID_SHA256 },
+    { BSL_CID_SLH_DSA_SHA2_256F, BSL_CID_SHA512, BSL_CID_SHA256 },
+    { BSL_CID_SLH_DSA_SHAKE_128S, BSL_CID_SHAKE128, BSL_CID_SHA256 },
+    { BSL_CID_SLH_DSA_SHAKE_128F, BSL_CID_SHAKE128, BSL_CID_SHA256 },
+    { BSL_CID_SLH_DSA_SHAKE_192S, BSL_CID_SHAKE256, BSL_CID_SHA256 },
+    { BSL_CID_SLH_DSA_SHAKE_192F, BSL_CID_SHAKE256, BSL_CID_SHA256 },
+    { BSL_CID_SLH_DSA_SHAKE_256S, BSL_CID_SHAKE256, BSL_CID_SHA256 },
+    { BSL_CID_SLH_DSA_SHAKE_256F, BSL_CID_SHAKE256, BSL_CID_SHA256 },
+};
+
+int32_t HITLS_CMS_ValidateMlDsaDigestAlg(BslCid mldsaVariant, BslCid digestAlg, bool useSignedAttrs)
 {
-    for (uint32_t i = 0; i < MLDSA_ARRAY_SIZE(MLDSA_DIGEST_TABLE); i++) {
-        if (MLDSA_DIGEST_TABLE[i].algId != algId) {
+    /**
+     * RFC 9882 Section 3: When signed attributes are not used,
+     * implementations MUST use SHA-512.
+     */
+    if (!useSignedAttrs) {
+        if (mldsaVariant != BSL_CID_ML_DSA_44 &&
+            mldsaVariant != BSL_CID_ML_DSA_65 &&
+            mldsaVariant != BSL_CID_ML_DSA_87) {
+            BSL_ERR_PUSH_ERROR(HITLS_CMS_ERR_INVALID_ALGO);
+            return HITLS_CMS_ERR_INVALID_ALGO;
+        }
+        if (digestAlg != BSL_CID_SHA512) {
+            BSL_ERR_PUSH_ERROR(HITLS_CMS_ERR_MLDSA_INVALID_DIGEST);
+            return HITLS_CMS_ERR_MLDSA_INVALID_DIGEST;
+        }
+        return HITLS_PKI_SUCCESS;
+    }
+
+    for (uint32_t i = 0; i < PQC_ARRAY_SIZE(MLDSA_DIGEST_TABLE); i++) {
+        if (MLDSA_DIGEST_TABLE[i].algId != mldsaVariant) {
             continue;
         }
         for (uint32_t j = 0; j < MLDSA_DIGEST_TABLE[i].count; j++) {
-            if (MLDSA_DIGEST_TABLE[i].digestList[j] == mdId) {
+            if (MLDSA_DIGEST_TABLE[i].digestList[j] == digestAlg) {
                 return HITLS_PKI_SUCCESS;
             }
         }
         BSL_ERR_PUSH_ERROR(HITLS_CMS_ERR_MLDSA_INVALID_DIGEST);
         return HITLS_CMS_ERR_MLDSA_INVALID_DIGEST;
     }
+
+    BSL_ERR_PUSH_ERROR(HITLS_CMS_ERR_INVALID_ALGO);
+    return HITLS_CMS_ERR_INVALID_ALGO;
+}
+
+int32_t HITLS_CMS_ValidateSlhDsaDigestAlg(BslCid slhdsaVariant, BslCid digestAlg, bool useSignedAttrs)
+{
+    for (uint32_t i = 0; i < PQC_ARRAY_SIZE(SLHDSA_DIGEST_TABLE); i++) {
+        const SlhDsaDigestEntry *entry = &SLHDSA_DIGEST_TABLE[i];
+        if (entry->algId != slhdsaVariant) {
+            continue;
+        }
+        if (digestAlg == entry->defaultDigest ||
+            (!useSignedAttrs && entry->noAttrFallback != BSL_CID_UNKNOWN && digestAlg == entry->noAttrFallback)) {
+            return HITLS_PKI_SUCCESS;
+        }
+        BSL_ERR_PUSH_ERROR(HITLS_CMS_ERR_SLHDSA_INVALID_DIGEST);
+        return HITLS_CMS_ERR_SLHDSA_INVALID_DIGEST;
+    }
+
     BSL_ERR_PUSH_ERROR(HITLS_CMS_ERR_INVALID_ALGO);
     return HITLS_CMS_ERR_INVALID_ALGO;
 }
@@ -93,6 +154,36 @@ BslCid HITLS_CMS_GetDefaultMlDsaDigestAlg(BslCid mldsaVariant, bool useSignedAtt
     return useSignedAttrs ? BSL_CID_SHAKE256 : BSL_CID_SHA512;
 }
 
+BslCid HITLS_CMS_GetDefaultSlhDsaDigestAlg(BslCid slhdsaVariant, bool useSignedAttrs)
+{
+    (void)useSignedAttrs;
+    for (uint32_t i = 0; i < PQC_ARRAY_SIZE(SLHDSA_DIGEST_TABLE); i++) {
+        if (SLHDSA_DIGEST_TABLE[i].algId == slhdsaVariant) {
+            return SLHDSA_DIGEST_TABLE[i].defaultDigest;
+        }
+    }
+    return BSL_CID_UNKNOWN;
+}
+
+/**
+ * According to RFC 9882 Section 3 for ML-DSA:
+ * "The parameters field MUST be omitted when encoding an ML-DSA AlgorithmIdentifier."
+ *
+ * This function can be extended for other PQC algorithms as needed.
+ */
+bool HITLS_CMS_PqcShouldOmitParams(BslCid algId)
+{
+    if (algId == BSL_CID_ML_DSA_44 ||
+        algId == BSL_CID_ML_DSA_65 ||
+        algId == BSL_CID_ML_DSA_87) {
+        return true;
+    }
+    if (algId >= BSL_CID_SLH_DSA_SHA2_128S && algId <= BSL_CID_SLH_DSA_SHAKE_256F) {
+        return true;
+    }
+
+    return false;
+}
 
 bool HITLS_CMS_IsPqcSignAlg(BslCid algId)
 {
@@ -117,11 +208,14 @@ int32_t HITLS_CMS_ValidatePqcSignDigest(BslCid signAlgId, BslCid digestAlg)
         signAlgId == BSL_CID_ML_DSA_44 ||
         signAlgId == BSL_CID_ML_DSA_65 ||
         signAlgId == BSL_CID_ML_DSA_87) {
-        return CMS_ValidateMlDsaDigestAlg(signAlgId, digestAlg);
+        return HITLS_CMS_ValidateMlDsaDigestAlg(signAlgId, digestAlg, true);
+    }
+
+    if (signAlgId >= BSL_CID_SLH_DSA_SHA2_128S && signAlgId <= BSL_CID_SLH_DSA_SHAKE_256F) {
+        return HITLS_CMS_ValidateSlhDsaDigestAlg(signAlgId, digestAlg, true);
     }
 
     // For other PQC algorithms, add validation as needed
-    // Currently, just return success for SLH-DSA and others
     return HITLS_PKI_SUCCESS;
 }
 

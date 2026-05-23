@@ -1353,9 +1353,11 @@ static int32_t CheckMlKemKeyUsage(HITLS_X509_Cert *cert)
 {
     // Check ML-KEM keyUsage according to draft-ietf-lamps-kyber-certificates-11 Section 5
     // keyEncipherment MUST be the only key usage set for ML-KEM-512/768/1024 certificates
-    BSL_ERR_SET_MARK();
+    if (CRYPT_EAL_PkeyGetId(cert->tbs.ealPubKey) != CRYPT_PKEY_ML_KEM) {
+        return HITLS_PKI_SUCCESS;
+    }
+
     CRYPT_PKEY_ParaId pubKeyParaId = CRYPT_EAL_PkeyGetParaId(cert->tbs.ealPubKey);
-    BSL_ERR_POP_TO_MARK();
     if (pubKeyParaId != CRYPT_KEM_TYPE_MLKEM_512 &&
         pubKeyParaId != CRYPT_KEM_TYPE_MLKEM_768 &&
         pubKeyParaId != CRYPT_KEM_TYPE_MLKEM_1024) {

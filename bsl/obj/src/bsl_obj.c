@@ -226,6 +226,10 @@ BslOidInfo g_oidTable[] = {
     {{8, "\53\6\1\5\5\7\6\66", BSL_OID_GLOBAL}, "MLDSA87-ECDSA-P521-SHA512", BSL_CID_MLDSA87_ECDSA_P521_SHA512},
     {{10, "\52\206\110\206\367\15\1\11\27\1", BSL_OID_GLOBAL}, "x509crl", BSL_CID_X509CRL},
     {{9, "\52\206\110\206\367\15\1\11\17", BSL_OID_GLOBAL}, "smimeCapabilities", BSL_CID_SMIMECAP},
+    // CMSAlgorithmProtection (RFC 6211)
+    {{9, "\52\206\110\206\367\15\1\11\64", BSL_OID_GLOBAL},
+     "cmsAlgorithmProtect",
+     BSL_CID_PKCS9_AT_CMSALGORITHMPROTECTION},
 };
 
 uint32_t g_tableSize = (uint32_t)sizeof(g_oidTable)/sizeof(g_oidTable[0]);

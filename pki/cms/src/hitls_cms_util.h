@@ -34,6 +34,21 @@ extern "C" {
 BslCid HITLS_CMS_GetDefaultMlDsaDigestAlg(BslCid mldsaVariant, bool useSignedAttrs);
 
 /**
+ * @brief Get default digest algorithm for SLH-DSA variant
+ * @param slhdsaVariant SLH-DSA variant CID
+ * @param useSignedAttrs Whether signed attributes will be used
+ * @return Recommended digest algorithm CID
+ */
+BslCid HITLS_CMS_GetDefaultSlhDsaDigestAlg(BslCid slhdsaVariant, bool useSignedAttrs);
+
+/**
+ * @brief Check if PQC algorithm parameters should be omitted
+ * @param algId Algorithm identifier CID
+ * @return true if parameters must be omitted
+ */
+bool HITLS_CMS_PqcShouldOmitParams(BslCid algId);
+
+/**
  * @brief Check if algorithm is a PQC signature algorithm
  * @param algId Algorithm identifier CID
  * @return true if it's a PQC signature algorithm
@@ -47,6 +62,25 @@ bool HITLS_CMS_IsPqcSignAlg(BslCid algId);
  * @return HITLS_PKI_SUCCESS if valid, error code otherwise
  */
 int32_t HITLS_CMS_ValidatePqcSignDigest(BslCid signAlgId, BslCid digestAlg);
+
+/**
+ * @brief Validate ML-DSA signature algorithm and digest combination
+ * @param mldsaVariant ML-DSA variant CID
+ * @param digestAlg Digest algorithm CID
+ * @param useSignedAttrs true for signedAttrs-present path (general table),
+ *        false for no-signedAttrs path (RFC 9882: SHA-512 only)
+ * @return HITLS_PKI_SUCCESS if valid, error code otherwise
+ */
+int32_t HITLS_CMS_ValidateMlDsaDigestAlg(BslCid mldsaVariant, BslCid digestAlg, bool useSignedAttrs);
+
+/**
+ * @brief Validate SLH-DSA signature algorithm and digest combination
+ * @param slhdsaVariant SLH-DSA variant CID
+ * @param digestAlg Digest algorithm CID
+ * @param useSignedAttrs true for RFC 9814 signedAttrs-present path, false for no-signedAttrs compatibility path
+ * @return HITLS_PKI_SUCCESS if valid, error code otherwise
+ */
+int32_t HITLS_CMS_ValidateSlhDsaDigestAlg(BslCid slhdsaVariant, BslCid digestAlg, bool useSignedAttrs);
 
 #ifdef __cplusplus
 }

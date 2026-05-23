@@ -736,6 +736,7 @@ typedef enum {
     BSL_CID_SM4_CCM,
     BSL_CID_X509CRL,
     BSL_CID_SMIMECAP,
+    BSL_CID_PKCS9_AT_CMSALGORITHMPROTECTION, /**< RFC 6211 CMSAlgorithmProtection attribute OID */
 
     BSL_CID_MAX,
     BSL_CID_EXTEND = 0x60000000,
