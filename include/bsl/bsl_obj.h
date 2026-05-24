@@ -696,6 +696,7 @@ typedef enum {
     BSL_CID_HSS_SHA256_L3_H10_H10_H10 = 2428,
 
     BSL_CID_PKCS7_AUTHENTICATEDDATA = 2500, /* identifies CMS Authenticated Data */
+    BSL_CID_CMS_ORI_KEM = 2501,
 
     BSL_CID_SM9 = 5201,
     BSL_CID_ECC_SM9 = 5202,

@@ -78,3 +78,48 @@ SDV_CMS_ENVELOPEDDATA_RSA_MULTI_RECIPIENT_TC001:"../testdata/cert/asn1/cms/envel
 
 SDV_CMS_ENVELOPEDDATA_NULL_PARAMS_TC001 test with null parameters
 SDV_CMS_ENVELOPEDDATA_NULL_PARAMS_TC001:
+
+SDV_CMS_ENVELOPEDDATA_MLKEM_PARSE_DECRYPT_FILE_TC001 ML_KEM512_PARSE_DECRYPT
+SDV_CMS_ENVELOPEDDATA_MLKEM_PARSE_DECRYPT_FILE_TC001:"../testdata/cert/asn1/cms/envelopeddata/mlkem/env_mlkem512.der":"../testdata/cert/asn1/cms/envelopeddata/mlkem/mlkem512_cert.der":"../testdata/cert/asn1/cms/envelopeddata/mlkem/mlkem512_prikey.der":CRYPT_PRIKEY_PKCS8_UNENCRYPT:BSL_CID_ML_KEM_512:"../testdata/cert/asn1/cms/envelopeddata/mlkem/message.txt"
+
+SDV_CMS_ENVELOPEDDATA_MLKEM_PARSE_DECRYPT_FILE_TC001 ML_KEM768_PARSE_DECRYPT
+SDV_CMS_ENVELOPEDDATA_MLKEM_PARSE_DECRYPT_FILE_TC001:"../testdata/cert/asn1/cms/envelopeddata/mlkem/env_mlkem768.der":"../testdata/cert/asn1/cms/envelopeddata/mlkem/mlkem768_cert.der":"../testdata/cert/asn1/cms/envelopeddata/mlkem/mlkem768_prikey.der":CRYPT_PRIKEY_PKCS8_UNENCRYPT:BSL_CID_ML_KEM_768:"../testdata/cert/asn1/cms/envelopeddata/mlkem/message.txt"
+
+SDV_CMS_ENVELOPEDDATA_MLKEM_PARSE_DECRYPT_FILE_TC001 ML_KEM1024_PARSE_DECRYPT
+SDV_CMS_ENVELOPEDDATA_MLKEM_PARSE_DECRYPT_FILE_TC001:"../testdata/cert/asn1/cms/envelopeddata/mlkem/env_mlkem1024.der":"../testdata/cert/asn1/cms/envelopeddata/mlkem/mlkem1024_cert.der":"../testdata/cert/asn1/cms/envelopeddata/mlkem/mlkem1024_prikey.der":CRYPT_PRIKEY_PKCS8_UNENCRYPT:BSL_CID_ML_KEM_1024:"../testdata/cert/asn1/cms/envelopeddata/mlkem/message.txt"
+
+SDV_CMS_ENVELOPEDDATA_MLKEM_ENCRYPT_DECRYPT_TC001 ML_KEM512
+SDV_CMS_ENVELOPEDDATA_MLKEM_ENCRYPT_DECRYPT_TC001:BSL_CID_AES256_CBC:CRYPT_PRIKEY_PKCS8_UNENCRYPT:BSL_CID_ML_KEM_512:"../testdata/cert/asn1/cms/envelopeddata/mlkem/mlkem512_cert.der":"../testdata/cert/asn1/cms/envelopeddata/mlkem/mlkem512_prikey.der"
+
+SDV_CMS_ENVELOPEDDATA_MLKEM_ENCRYPT_DECRYPT_TC001 ML_KEM768
+SDV_CMS_ENVELOPEDDATA_MLKEM_ENCRYPT_DECRYPT_TC001:BSL_CID_AES256_CBC:CRYPT_PRIKEY_PKCS8_UNENCRYPT:BSL_CID_ML_KEM_768:"../testdata/cert/asn1/cms/envelopeddata/mlkem/mlkem768_cert.der":"../testdata/cert/asn1/cms/envelopeddata/mlkem/mlkem768_prikey.der"
+
+SDV_CMS_ENVELOPEDDATA_MLKEM_ENCRYPT_DECRYPT_TC001 ML_KEM1024
+SDV_CMS_ENVELOPEDDATA_MLKEM_ENCRYPT_DECRYPT_TC001:BSL_CID_AES256_CBC:CRYPT_PRIKEY_PKCS8_UNENCRYPT:BSL_CID_ML_KEM_1024:"../testdata/cert/asn1/cms/envelopeddata/mlkem/mlkem1024_cert.der":"../testdata/cert/asn1/cms/envelopeddata/mlkem/mlkem1024_prikey.der"
+
+SDV_CMS_ENVELOPEDDATA_MLKEM_ONESHOT_STUB_TC001 ML_KEM512_ONESHOT_STUB
+SDV_CMS_ENVELOPEDDATA_MLKEM_ONESHOT_STUB_TC001:CRYPT_PRIKEY_PKCS8_UNENCRYPT:BSL_CID_ML_KEM_512:"../testdata/cert/asn1/cms/envelopeddata/mlkem/mlkem512_cert.der":"../testdata/cert/asn1/cms/envelopeddata/mlkem/mlkem512_prikey.der"
+
+SDV_CMS_ENVELOPEDDATA_MLKEM_STREAM_STUB_TC001 ML_KEM512_STREAM_STUB
+SDV_CMS_ENVELOPEDDATA_MLKEM_STREAM_STUB_TC001:CRYPT_PRIKEY_PKCS8_UNENCRYPT:BSL_CID_ML_KEM_512:"../testdata/cert/asn1/cms/envelopeddata/mlkem/mlkem512_cert.der":"../testdata/cert/asn1/cms/envelopeddata/mlkem/mlkem512_prikey.der"
+
+SDV_CMS_ENVELOPEDDATA_MLKEM_ONESHOT_STUB_TC001 ML_KEM768_ONESHOT_STUB
+SDV_CMS_ENVELOPEDDATA_MLKEM_ONESHOT_STUB_TC001:CRYPT_PRIKEY_PKCS8_UNENCRYPT:BSL_CID_ML_KEM_768:"../testdata/cert/asn1/cms/envelopeddata/mlkem/mlkem768_cert.der":"../testdata/cert/asn1/cms/envelopeddata/mlkem/mlkem768_prikey.der"
+
+SDV_CMS_ENVELOPEDDATA_MLKEM_STREAM_STUB_TC001 ML_KEM768_STREAM_STUB
+SDV_CMS_ENVELOPEDDATA_MLKEM_STREAM_STUB_TC001:CRYPT_PRIKEY_PKCS8_UNENCRYPT:BSL_CID_ML_KEM_768:"../testdata/cert/asn1/cms/envelopeddata/mlkem/mlkem768_cert.der":"../testdata/cert/asn1/cms/envelopeddata/mlkem/mlkem768_prikey.der"
+
+SDV_CMS_ENVELOPEDDATA_MLKEM_ONESHOT_STUB_TC001 ML_KEM1024_ONESHOT_STUB
+SDV_CMS_ENVELOPEDDATA_MLKEM_ONESHOT_STUB_TC001:CRYPT_PRIKEY_PKCS8_UNENCRYPT:BSL_CID_ML_KEM_1024:"../testdata/cert/asn1/cms/envelopeddata/mlkem/mlkem1024_cert.der":"../testdata/cert/asn1/cms/envelopeddata/mlkem/mlkem1024_prikey.der"
+
+SDV_CMS_ENVELOPEDDATA_MLKEM_STREAM_STUB_TC001 ML_KEM1024_STREAM_STUB
+SDV_CMS_ENVELOPEDDATA_MLKEM_STREAM_STUB_TC001:CRYPT_PRIKEY_PKCS8_UNENCRYPT:BSL_CID_ML_KEM_1024:"../testdata/cert/asn1/cms/envelopeddata/mlkem/mlkem1024_cert.der":"../testdata/cert/asn1/cms/envelopeddata/mlkem/mlkem1024_prikey.der"
+
+SDV_CMS_ENVELOPEDDATA_MIXED_RECIPIENT_TC001 RSA_ML_KEM512_MIXED
+SDV_CMS_ENVELOPEDDATA_MIXED_RECIPIENT_TC001:BSL_CID_AES256_CBC:CRYPT_PRIKEY_PKCS8_UNENCRYPT:BSL_CID_ML_KEM_512:"../testdata/cert/asn1/cms/envelopeddata/rsa/rsa_p1_v1.crt.der":"../testdata/cert/asn1/cms/envelopeddata/rsa/rsa_p1.key.der":"../testdata/cert/asn1/cms/envelopeddata/mlkem/mlkem512_cert.der":"../testdata/cert/asn1/cms/envelopeddata/mlkem/mlkem512_prikey.der"
+
+SDV_CMS_ENVELOPEDDATA_MIXED_RECIPIENT_TC001 RSA_ML_KEM768_MIXED
+SDV_CMS_ENVELOPEDDATA_MIXED_RECIPIENT_TC001:BSL_CID_AES256_CBC:CRYPT_PRIKEY_PKCS8_UNENCRYPT:BSL_CID_ML_KEM_768:"../testdata/cert/asn1/cms/envelopeddata/rsa/rsa_p1_v1.crt.der":"../testdata/cert/asn1/cms/envelopeddata/rsa/rsa_p1.key.der":"../testdata/cert/asn1/cms/envelopeddata/mlkem/mlkem768_cert.der":"../testdata/cert/asn1/cms/envelopeddata/mlkem/mlkem768_prikey.der"
+
+SDV_CMS_ENVELOPEDDATA_MIXED_RECIPIENT_TC001 RSA_ML_KEM1024_MIXED
+SDV_CMS_ENVELOPEDDATA_MIXED_RECIPIENT_TC001:BSL_CID_AES256_CBC:CRYPT_PRIKEY_PKCS8_UNENCRYPT:BSL_CID_ML_KEM_1024:"../testdata/cert/asn1/cms/envelopeddata/rsa/rsa_p1_v1.crt.der":"../testdata/cert/asn1/cms/envelopeddata/rsa/rsa_p1.key.der":"../testdata/cert/asn1/cms/envelopeddata/mlkem/mlkem1024_cert.der":"../testdata/cert/asn1/cms/envelopeddata/mlkem/mlkem1024_prikey.der"

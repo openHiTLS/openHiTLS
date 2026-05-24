@@ -48,7 +48,7 @@ typedef struct {
     BSL_Buffer serialNumber;
     HITLS_X509_ExtSki subjectKeyId;
     BslCid keyEncryAlg;
-    BSL_Buffer algParams;
+    BSL_Buffer *algParams;
     BSL_Buffer encryptedKey;
     /* Runtime context - not encoded into ASN.1 */
     uint32_t flag; // Used to mark EnvelopedData parsing or generation, indicating resource release behavior.
@@ -181,6 +181,44 @@ typedef struct {
     BSL_Buffer oriValue;
 } CMS_OtherRecipientInfo;
 
+
+/**
+ * @brief KEMRecipientInfo structure
+ * Reference: RFC 9629 Section 6.2
+ * KEMRecipientInfo ::= SEQUENCE {
+ *      version CMSVersion, -- always set to 0
+ *      rid RecipientIdentifier,
+ *      kem KEMAlgorithmIdentifier,
+ *      kemct OCTET STRING,
+ *      kdf KeyDerivationAlgorithmIdentifier,
+ *      kekLength INTEGER (1..65535),
+ *      ukm [0] EXPLICIT UserKeyingMaterial OPTIONAL,
+ *      wrap KeyEncryptionAlgorithmIdentifier,
+ *      encryptedKey EncryptedKey }
+ */
+typedef struct {
+    uint32_t version; // Must be 0
+    BSL_ASN1_List *issuerName;
+    BSL_Buffer serialNumber;
+    HITLS_X509_ExtSki subjectKeyId;
+    BslCid kemAlg;
+    BSL_Buffer *kemParams;
+    BSL_Buffer kemCiphertext;
+    BslCid kdfAlg;
+    BSL_Buffer *kdfParams;
+    uint32_t kekLen;
+    BSL_Buffer *ukm;
+    BslCid wrapAlg;
+    BSL_Buffer *wrapParams;
+    BSL_Buffer encryptedKey;
+    /* Runtime context - not encoded into ASN.1 */
+    uint32_t flag;
+    bool useSki;
+    CRYPT_EAL_PkeyCtx *pkey;
+    CRYPT_EAL_LibCtx *libCtx;
+    const char *attrName;
+} CMS_KEMRecipientInfo;
+
 /**
  * @brief RecipientInfo structure
  * Reference: RFC 5652 Section 6.2
@@ -196,12 +234,14 @@ typedef enum {
     CMS_RECIPIENT_TYPE_KARI = 1,
     CMS_RECIPIENT_TYPE_KEKRI = 2,
     CMS_RECIPIENT_TYPE_PWRI = 3,
-    CMS_RECIPIENT_TYPE_ORI = 4
+    CMS_RECIPIENT_TYPE_ORI = 4,
+    CMS_RECIPIENT_TYPE_KEMRI = 5,
 } CMS_RecipientType;
 typedef struct {
     CMS_RecipientType type;
     union {
         CMS_KeyTransRecipientInfo *ktri;
+        CMS_KEMRecipientInfo *kemri;
         CMS_KeyAgreeRecipientInfo *kari;
         CMS_KEKRecipientInfo *kekri;
         CMS_PasswordRecipientInfo *pwri;

@@ -1662,14 +1662,14 @@ static int32_t GetRecipientCertParam(const BSL_Param *param, const BSL_Param **c
         return HITLS_CMS_ERR_NULL_POINTER;
     }
     if (param == NULL) {
-        BSL_ERR_PUSH_ERROR(HITLS_CMS_ERR_KTRI_CERT_REQUIRED);
-        return HITLS_CMS_ERR_KTRI_CERT_REQUIRED;
+        BSL_ERR_PUSH_ERROR(HITLS_CMS_ERR_RECIPIENT_CERT_REQUIRED);
+        return HITLS_CMS_ERR_RECIPIENT_CERT_REQUIRED;
     }
 
     const BSL_Param *p = BSL_PARAM_FindConstParam(param, HITLS_CMS_PARAM_RECIPIENT_CERT);
     if (p == NULL || p->value == NULL) {
-        BSL_ERR_PUSH_ERROR(HITLS_CMS_ERR_KTRI_CERT_REQUIRED);
-        return HITLS_CMS_ERR_KTRI_CERT_REQUIRED;
+        BSL_ERR_PUSH_ERROR(HITLS_CMS_ERR_RECIPIENT_CERT_REQUIRED);
+        return HITLS_CMS_ERR_RECIPIENT_CERT_REQUIRED;
     }
     if (p->valueType != BSL_PARAM_TYPE_CTX_PTR || p->valueLen != sizeof(HITLS_X509_Cert *)) {
         BSL_ERR_PUSH_ERROR(HITLS_CMS_ERR_INVALID_PARAM);

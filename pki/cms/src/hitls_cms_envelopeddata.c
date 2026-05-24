@@ -268,7 +268,8 @@ static int32_t GetEnvDataVersion(CMS_EnvelopedData *envData)
     bool hasPwriOrOri = false;
     CMS_RecipientInfo *recip = BSL_LIST_GET_FIRST(envData->recipientInfos);
     while (recip != NULL) {
-        if (recip->type == CMS_RECIPIENT_TYPE_PWRI || recip->type == CMS_RECIPIENT_TYPE_ORI) {
+        if (recip->type == CMS_RECIPIENT_TYPE_PWRI || recip->type == CMS_RECIPIENT_TYPE_ORI ||
+            recip->type == CMS_RECIPIENT_TYPE_KEMRI) {
             hasPwriOrOri = true;
             break;
         }
@@ -839,9 +840,11 @@ int32_t HITLS_CMS_DataEncrypt(HITLS_CMS *cms, const BSL_Buffer *plaintext, const
     // Call internal GenerateEnvelopedData
     if (!hasRecipient) {
         ret = CMS_GenerateEnvData(envData->libCtx, envData->attrName, plaintext, contentType, encAlg, envData);
-        if (ret != HITLS_PKI_SUCCESS) {
-            goto ERR;
-        }
+    } else {
+        ret = GetEnvDataVersion(envData);
+    }
+    if (ret != HITLS_PKI_SUCCESS) {
+        goto ERR;
     }
     return HITLS_PKI_SUCCESS;
 ERR:

@@ -851,7 +851,7 @@ void SDV_CMS_AUTHENTICATEDDATA_INVALID_PARAM_TC001(void)
     ASSERT_EQ(HITLS_CMS_GenBuff(BSL_FORMAT_ASN1, cms, NULL, &encoded), HITLS_PKI_SUCCESS);
     ASSERT_EQ(HITLS_CMS_ProviderParseBuff(NULL, NULL, NULL, &encoded, &parsedCms), HITLS_PKI_SUCCESS);
     ASSERT_EQ(HITLS_CMS_DataAuthVerify(parsedCms, recipientKey, NULL, NULL, &output),
-        HITLS_CMS_ERR_KTRI_CERT_REQUIRED);
+        HITLS_CMS_ERR_RECIPIENT_CERT_REQUIRED);
 
     BSL_Param verifyParams[] = {
         {HITLS_CMS_PARAM_RECIPIENT_CERT, BSL_PARAM_TYPE_CTX_PTR, recipientCert, sizeof(HITLS_X509_Cert *), 0},

@@ -364,11 +364,11 @@ void SDV_CMS_ENVELOPEDDATA_PARSE_DECRYPT_FILE_TC001(char *envPath, char *certPat
     ASSERT_EQ(ktri->keyEncryAlg, (BslCid)expectedKeyEncAlg);
     ASSERT_EQ(ktri->encryptedKey.dataLen, 256);
     if (expectedKeyEncAlg == BSL_CID_RSA) {
-        ASSERT_EQ(ktri->algParams.data, NULL);
-        ASSERT_EQ(ktri->algParams.dataLen, 0);
+        ASSERT_EQ(ktri->algParams, NULL);
     } else if (expectedKeyEncAlg == BSL_CID_RSAES_OAEP) {
-        ASSERT_NE(ktri->algParams.data, NULL);
-        ASSERT_LT(0, ktri->algParams.dataLen);
+        ASSERT_NE(ktri->algParams, NULL);
+        ASSERT_NE(ktri->algParams->data, NULL);
+        ASSERT_LT(0, ktri->algParams->dataLen);
     }
 
     ASSERT_EQ(cms->ctx.envelopedData->encryptedContentInfo.contentType, BSL_CID_PKCS7_SIMPLEDATA);
@@ -1409,6 +1409,674 @@ EXIT:
     HITLS_CMS_Free(finalCms);
     HITLS_X509_CertFree(recipientCert);
     CRYPT_EAL_PkeyFreeCtx(recipientKey);
+    TestRandDeInit();
+#endif
+}
+/* END_CASE */
+
+static uint32_t AddKemriRecipientParams(BSL_Param *params, HITLS_X509_Cert *cert, CRYPT_EAL_PkeyCtx *privateKey,
+    int32_t *recipientType)
+{
+    uint32_t idx = 0;
+
+    params[idx++] = (BSL_Param){HITLS_CMS_PARAM_RECIPIENT_TYPE, BSL_PARAM_TYPE_INT32,
+        recipientType, sizeof(*recipientType), 0};
+    params[idx++] = (BSL_Param){HITLS_CMS_PARAM_RECIPIENT_CERT, BSL_PARAM_TYPE_CTX_PTR,
+        cert, sizeof(HITLS_X509_Cert *), 0};
+    if (privateKey != NULL) {
+        params[idx++] = (BSL_Param){HITLS_CMS_PARAM_PRIVATE_KEY, BSL_PARAM_TYPE_CTX_PTR,
+            privateKey, sizeof(CRYPT_EAL_PkeyCtx *), 0};
+    }
+    params[idx] = (BSL_Param)BSL_PARAM_END;
+    return idx;
+}
+
+static uint32_t SDV_CMS_CountRecipientType(CMS_RecipientInfos *recipientInfos, CMS_RecipientType type)
+{
+    uint32_t count = 0;
+    if (recipientInfos == NULL) {
+        return 0;
+    }
+    for (CMS_RecipientInfo *recipient = BSL_LIST_GET_FIRST(recipientInfos); recipient != NULL;
+        recipient = BSL_LIST_GET_NEXT(recipientInfos)) {
+        if (recipient->type == type) {
+            ++count;
+        }
+    }
+    return count;
+}
+
+static void SDV_CMS_CheckKemRecipientInfo(CMS_RecipientInfos *recipientInfos, BslCid expectedKemAlg,
+    int32_t needEncryptedKey)
+{
+    BslCid expectedWrapAlg = BSL_CID_UNKNOWN;
+    uint32_t expectedKekLen = 0;
+    CMS_KEMRecipientInfo *kemri = NULL;
+
+    ASSERT_NE(recipientInfos, NULL);
+    for (CMS_RecipientInfo *recipient = BSL_LIST_GET_FIRST(recipientInfos); recipient != NULL;
+        recipient = BSL_LIST_GET_NEXT(recipientInfos)) {
+        if (recipient->type == CMS_RECIPIENT_TYPE_KEMRI) {
+            kemri = recipient->d.kemri;
+            break;
+        }
+    }
+    ASSERT_NE(kemri, NULL);
+    if (expectedKemAlg == BSL_CID_ML_KEM_512) {
+        expectedWrapAlg = BSL_CID_AES128_WRAP_NOPAD;
+        expectedKekLen = 16;
+    } else if (expectedKemAlg == BSL_CID_ML_KEM_768 || expectedKemAlg == BSL_CID_ML_KEM_1024) {
+        expectedWrapAlg = BSL_CID_AES256_WRAP_NOPAD;
+        expectedKekLen = 32;
+    }
+    ASSERT_EQ(kemri->version, 0);
+    ASSERT_EQ(kemri->kemAlg, expectedKemAlg);
+    ASSERT_EQ(kemri->kdfAlg, BSL_CID_HKDF_SHA256);
+    ASSERT_EQ(kemri->wrapAlg, expectedWrapAlg);
+    ASSERT_EQ(kemri->kekLen, expectedKekLen);
+    if (needEncryptedKey) {
+        ASSERT_LT(0, kemri->kemCiphertext.dataLen);
+        ASSERT_LT(0, kemri->encryptedKey.dataLen);
+    }
+EXIT:
+    return;
+}
+
+/**
+ * @test SDV_CMS_ENVELOPEDDATA_MLKEM_PARSE_DECRYPT_FILE_TC001
+ * @title Parse external ML-KEM EnvelopedData file and verify decrypted content
+ * @precon External ML-KEM CMS EnvelopedData file and matching recipient certificate/private key are available
+ * @brief
+ *    1. Read the original CMS file and expected plaintext file
+ *    2. Parse CMS EnvelopedData from file
+ *    3. Verify parsed KEMRecipientInfo fields from the parsed EnvelopedData
+ *    4. Re-encode CMS and compare with the original file bytes
+ *    5. Decrypt EnvelopedData with the matching recipient key and certificate
+ *    6. Compare decrypted output with the expected plaintext file
+ * @expect
+ *    1. Parsing succeeds
+ *    2. Parsed structure matches the expected ML-KEM + HKDF-SHA256 + AES-KW layout
+ *    3. Re-encoded bytes match the original file
+ *    4. Decryption succeeds
+ *    5. Decrypted plaintext matches the expected file content
+ */
+/* BEGIN_CASE */
+void SDV_CMS_ENVELOPEDDATA_MLKEM_PARSE_DECRYPT_FILE_TC001(char *envPath, char *certPath, char *keyPath, int keyType,
+    int expectedKemAlg, char *msgPath)
+{
+#if !defined(HITLS_PKI_CMS_ENVELOPEDDATA) || !defined(HITLS_BSL_SAL_FILE) || !defined(HITLS_CRYPTO_MLKEM) || \
+    !defined(HITLS_CRYPTO_HKDF) || !defined(HITLS_CRYPTO_AES)
+    (void)envPath;
+    (void)certPath;
+    (void)keyPath;
+    (void)keyType;
+    (void)expectedKemAlg;
+    (void)msgPath;
+    SKIP_TEST();
+#else
+    HITLS_CMS *cms = NULL;
+    HITLS_X509_Cert *recipientCert = NULL;
+    CRYPT_EAL_PkeyCtx *recipientKey = NULL;
+    BSL_Buffer envFile = {0};
+    BSL_Buffer expectedMsg = {0};
+    BSL_Buffer encoded = {0};
+    BSL_Buffer decrypted = {0};
+    int32_t recipientType = HITLS_CMS_RECIPIENT_TYPE_KEMRI;
+
+    ASSERT_EQ(TestRandInit(), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(BSL_SAL_ReadFile(envPath, &envFile.data, &envFile.dataLen), BSL_SUCCESS);
+    ASSERT_EQ(BSL_SAL_ReadFile(msgPath, &expectedMsg.data, &expectedMsg.dataLen), BSL_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_ASN1, certPath, &recipientCert), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_DecodeFileKey(BSL_FORMAT_ASN1, keyType, keyPath, NULL, 0, &recipientKey), HITLS_PKI_SUCCESS);
+
+    ASSERT_EQ(HITLS_CMS_ProviderParseFile(NULL, NULL, NULL, envPath, &cms), HITLS_PKI_SUCCESS);
+    ASSERT_NE(cms, NULL);
+    ASSERT_EQ(cms->dataType, BSL_CID_PKCS7_ENVELOPEDDATA);
+    ASSERT_NE(cms->ctx.envelopedData, NULL);
+    ASSERT_EQ(cms->ctx.envelopedData->version, 3);
+    ASSERT_EQ(BSL_LIST_COUNT(cms->ctx.envelopedData->recipientInfos), 1);
+
+    SDV_CMS_CheckKemRecipientInfo(cms->ctx.envelopedData->recipientInfos, (BslCid)expectedKemAlg, true);
+
+    ASSERT_LT(0, cms->ctx.envelopedData->encryptedContentInfo.encryptedContent.dataLen);
+
+    ASSERT_EQ(HITLS_CMS_GenBuff(BSL_FORMAT_ASN1, cms, NULL, &encoded), HITLS_PKI_SUCCESS);
+    ASSERT_COMPARE("mlkem envdata encode compare", encoded.data, encoded.dataLen, envFile.data, envFile.dataLen);
+
+    BSL_Param decryptParams[8];
+    (void)AddKemriRecipientParams(decryptParams, recipientCert, recipientKey, &recipientType);
+
+    ASSERT_EQ(HITLS_CMS_DataDecrypt(cms, decryptParams, &decrypted), HITLS_PKI_SUCCESS);
+    ASSERT_NE(decrypted.data, NULL);
+    ASSERT_EQ(decrypted.dataLen, expectedMsg.dataLen);
+    ASSERT_COMPARE("mlkem decrypted content compare", decrypted.data, decrypted.dataLen, expectedMsg.data,
+        expectedMsg.dataLen);
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
+EXIT:
+    HITLS_CMS_Free(cms);
+    HITLS_X509_CertFree(recipientCert);
+    CRYPT_EAL_PkeyFreeCtx(recipientKey);
+    BSL_SAL_Free(envFile.data);
+    BSL_SAL_Free(expectedMsg.data);
+    BSL_SAL_Free(encoded.data);
+    BSL_SAL_Free(decrypted.data);
+    TestRandDeInit();
+#endif
+}
+/* END_CASE */
+
+/**
+ * @test SDV_CMS_ENVELOPEDDATA_MLKEM_ENCRYPT_DECRYPT_TC001
+ * @title Test ML-KEM EnvelopedData one-shot and streaming encryption and decryption
+ * @precon Prepare ML-KEM recipient certificate and private key
+ * @brief
+ *    1. Create CMS EnvelopedData handle
+ *    2. Add ML-KEM recipient certificate
+ *    3. Encrypt plaintext using HITLS_CMS_DataEncrypt and verify one-shot decrypt
+ *    4. Parse encrypted data and verify KEMRecipientInfo fields
+ *    5. Re-encode parsed data and compare with the generated bytes
+ *    6. Perform streaming encrypt/decrypt using HITLS_CMS_DataInit/Update/Final
+ * @expect
+ *    1. One-shot encryption succeeds
+ *    2. Parsed structure matches the expected ML-KEM profile
+ *    3. One-shot and streaming decryption succeed
+ *    4. Plaintext matches original in both flows
+ */
+/* BEGIN_CASE */
+void SDV_CMS_ENVELOPEDDATA_MLKEM_ENCRYPT_DECRYPT_TC001(int encAlg, int keyType, int expectedKemAlg,
+    char *certPath, char *keyPath)
+{
+#if !defined(HITLS_PKI_CMS_ENVELOPEDDATA) || !defined(HITLS_BSL_SAL_FILE) || !defined(HITLS_CRYPTO_MLKEM) || \
+    !defined(HITLS_CRYPTO_HKDF) || !defined(HITLS_CRYPTO_AES)
+    (void)encAlg;
+    (void)keyType;
+    (void)expectedKemAlg;
+    (void)certPath;
+    (void)keyPath;
+    SKIP_TEST();
+#else
+    HITLS_X509_Cert *recipientCert = NULL;
+    CRYPT_EAL_PkeyCtx *recipientKey = NULL;
+    CRYPT_EAL_PkeyCtx *recipientPubKey = NULL;
+    HITLS_CMS *encCms = NULL;
+    HITLS_CMS *decCms = NULL;
+    HITLS_CMS *streamCms = NULL;
+    HITLS_CMS *streamDecCms = NULL;
+    BSL_Buffer encoded = {0};
+    BSL_Buffer reEncoded = {0};
+    BSL_Buffer decrypted = {0};
+    BSL_Buffer streamEncoded = {0};
+    BSL_Buffer streamCiphertext = {0};
+    BSL_Buffer streamDecrypted = {0};
+    int32_t recipientType = HITLS_CMS_RECIPIENT_TYPE_KEMRI;
+
+    ASSERT_EQ(TestRandInit(), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_ASN1, certPath, &recipientCert), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_DecodeFileKey(BSL_FORMAT_ASN1, keyType, keyPath, NULL, 0, &recipientKey), HITLS_PKI_SUCCESS);
+
+    const char *plaintext = "Hello, ML-KEM EnvelopedData!";
+    BSL_Buffer plaintextBuf = {(uint8_t *)plaintext, strlen(plaintext)};
+    BslCid contentEncAlg = (BslCid)encAlg;
+    BslCid contentType = BSL_CID_PKCS7_SIMPLEDATA;
+    BSL_Param params[8];
+    uint32_t paramIdx = AddKemriRecipientParams(params, recipientCert, NULL, &recipientType);
+    AddContentEncryptParams(params, &paramIdx, &contentEncAlg, &contentType);
+    BSL_Param decryptParams[8];
+    (void)AddKemriRecipientParams(decryptParams, recipientCert, recipientKey, &recipientType);
+
+    encCms = HITLS_CMS_ProviderNew(NULL, NULL, BSL_CID_PKCS7_ENVELOPEDDATA);
+    ASSERT_NE(encCms, NULL);
+    ASSERT_EQ(HITLS_CMS_DataEncrypt(encCms, &plaintextBuf, params), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(encCms->ctx.envelopedData->version, 3);
+    SDV_CMS_CheckKemRecipientInfo(encCms->ctx.envelopedData->recipientInfos, (BslCid)expectedKemAlg, true);
+    ASSERT_EQ(HITLS_CMS_GenBuff(BSL_FORMAT_ASN1, encCms, NULL, &encoded), HITLS_PKI_SUCCESS);
+    ASSERT_NE(encoded.data, NULL);
+    ASSERT_LT(0, encoded.dataLen);
+
+    ASSERT_EQ(HITLS_CMS_ProviderParseBuff(NULL, NULL, NULL, &encoded, &decCms), HITLS_PKI_SUCCESS);
+    ASSERT_NE(decCms, NULL);
+    ASSERT_EQ(decCms->dataType, BSL_CID_PKCS7_ENVELOPEDDATA);
+    ASSERT_EQ(decCms->ctx.envelopedData->version, 3);
+    ASSERT_EQ(BSL_LIST_COUNT(decCms->ctx.envelopedData->recipientInfos), 1);
+    SDV_CMS_CheckKemRecipientInfo(decCms->ctx.envelopedData->recipientInfos, (BslCid)expectedKemAlg, true);
+    ASSERT_EQ(HITLS_CMS_GenBuff(BSL_FORMAT_ASN1, decCms, NULL, &reEncoded), HITLS_PKI_SUCCESS);
+    ASSERT_COMPARE("mlkem re-encode compare", reEncoded.data, reEncoded.dataLen, encoded.data, encoded.dataLen);
+    ASSERT_EQ(HITLS_X509_CertCtrl(recipientCert, HITLS_X509_GET_PUBKEY, &recipientPubKey, 0), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyPairCheck(recipientPubKey, recipientKey), CRYPT_SUCCESS);
+
+    ASSERT_EQ(HITLS_CMS_DataDecrypt(decCms, decryptParams, &decrypted), HITLS_PKI_SUCCESS);
+    ASSERT_NE(decrypted.data, NULL);
+    ASSERT_EQ(decrypted.dataLen, plaintextBuf.dataLen);
+    ASSERT_EQ(memcmp(decrypted.data, plaintextBuf.data, plaintextBuf.dataLen), 0);
+
+    streamCms = HITLS_CMS_ProviderNew(NULL, NULL, BSL_CID_PKCS7_ENVELOPEDDATA);
+    ASSERT_NE(streamCms, NULL);
+    ASSERT_EQ(HITLS_CMS_DataInit(HITLS_CMS_OPT_ENCRYPT, streamCms, params), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_CMS_DataEncrypt(streamCms, NULL, params), HITLS_PKI_SUCCESS);
+
+    const char *streamPlaintext = "Hello, ML-KEM Streaming EnvelopedData!";
+    BSL_Buffer streamChunks[] = {
+        {(uint8_t *)"Hello, ", strlen("Hello, ")},
+        {(uint8_t *)"ML-KEM ", strlen("ML-KEM ")},
+        {(uint8_t *)"Streaming ", strlen("Streaming ")},
+        {(uint8_t *)"EnvelopedData!", strlen("EnvelopedData!")}
+    };
+    ASSERT_EQ(StreamEncryptToBuffer(streamCms, streamChunks, sizeof(streamChunks) / sizeof(streamChunks[0]),
+        &streamCiphertext), HITLS_PKI_SUCCESS);
+
+    ASSERT_EQ(HITLS_CMS_GenBuff(BSL_FORMAT_ASN1, streamCms, NULL, &streamEncoded), HITLS_PKI_SUCCESS);
+    ASSERT_NE(streamEncoded.data, NULL);
+    ASSERT_LT(0, streamEncoded.dataLen);
+    ASSERT_EQ(HITLS_CMS_ProviderParseBuff(NULL, NULL, NULL, &streamEncoded, &streamDecCms), HITLS_PKI_SUCCESS);
+    ASSERT_NE(streamDecCms, NULL);
+    ASSERT_EQ(streamDecCms->dataType, BSL_CID_PKCS7_ENVELOPEDDATA);
+
+    ASSERT_EQ(HITLS_CMS_DataInit(HITLS_CMS_OPT_DECRYPT, streamDecCms, decryptParams), HITLS_PKI_SUCCESS);
+    ASSERT_NE(streamDecCms->ctx.envelopedData, NULL);
+    uint32_t part1Len = streamCiphertext.dataLen / 3;
+    uint32_t part2Len = (streamCiphertext.dataLen - part1Len) / 2;
+    BSL_Buffer streamCipherChunks[] = {
+        {streamCiphertext.data, part1Len},
+        {streamCiphertext.data + part1Len, part2Len},
+        {streamCiphertext.data + part1Len + part2Len, streamCiphertext.dataLen - part1Len - part2Len}
+    };
+    ASSERT_EQ(StreamDecryptToBuffer(streamDecCms, streamCipherChunks,
+        sizeof(streamCipherChunks) / sizeof(streamCipherChunks[0]), &streamDecrypted), HITLS_PKI_SUCCESS);
+    ASSERT_NE(streamDecrypted.data, NULL);
+    ASSERT_EQ(streamDecrypted.dataLen, strlen(streamPlaintext));
+    ASSERT_EQ(memcmp(streamDecrypted.data, streamPlaintext, streamDecrypted.dataLen), 0);
+    ASSERT_TRUE(TestIsErrStackEmpty());
+EXIT:
+    HITLS_CMS_Free(encCms);
+    HITLS_CMS_Free(decCms);
+    HITLS_CMS_Free(streamCms);
+    HITLS_CMS_Free(streamDecCms);
+    HITLS_X509_CertFree(recipientCert);
+    CRYPT_EAL_PkeyFreeCtx(recipientKey);
+    CRYPT_EAL_PkeyFreeCtx(recipientPubKey);
+    BSL_SAL_Free(encoded.data);
+    BSL_SAL_Free(reEncoded.data);
+    BSL_SAL_Free(decrypted.data);
+    BSL_SAL_Free(streamEncoded.data);
+    BSL_SAL_Free(streamCiphertext.data);
+    BSL_SAL_Free(streamDecrypted.data);
+    TestRandDeInit();
+#endif
+}
+/* END_CASE */
+
+/**
+ * @test SDV_CMS_ENVELOPEDDATA_MLKEM_ONESHOT_STUB_TC001
+ * @title Test ML-KEM EnvelopedData one-shot malloc branches
+ * @precon Prepare ML-KEM recipient certificate and private key
+ * @brief
+ *    1. Count malloc calls for ML-KEM one-shot encrypt/decrypt
+ *    2. Replay malloc failures for one-shot encrypt/decrypt
+ * @expect
+ *    1. Valid one-shot encrypt/decrypt succeeds
+ *    2. Malloc failure paths do not leak resources
+ */
+/* BEGIN_CASE */
+void SDV_CMS_ENVELOPEDDATA_MLKEM_ONESHOT_STUB_TC001(int keyType, int expectedKemAlg, char *certPath, char *keyPath)
+{
+#if !defined(HITLS_PKI_CMS_ENVELOPEDDATA) || !defined(HITLS_BSL_SAL_FILE) || !defined(HITLS_CRYPTO_MLKEM) || \
+    !defined(HITLS_CRYPTO_HKDF) || !defined(HITLS_CRYPTO_AES)
+    (void)keyType;
+    (void)expectedKemAlg;
+    (void)certPath;
+    (void)keyPath;
+    SKIP_TEST();
+#else
+    HITLS_X509_Cert *recipientCert = NULL;
+    CRYPT_EAL_PkeyCtx *recipientKey = NULL;
+    HITLS_CMS *encCms = NULL;
+    HITLS_CMS *encCms1 = NULL;
+    HITLS_CMS *decCms = NULL;
+    BSL_Buffer encoded = {0};
+    BSL_Buffer decrypted = {0};
+    const char *plaintext = "Hello, ML-KEM Stub!";
+    BSL_Buffer plaintextBuf = {(uint8_t *)plaintext, strlen(plaintext)};
+    BslCid contentEncAlg = BSL_CID_AES256_CBC;
+    BslCid contentType = BSL_CID_PKCS7_SIMPLEDATA;
+    int32_t recipientType = HITLS_CMS_RECIPIENT_TYPE_KEMRI;
+    uint32_t totalMallocCount = 0;
+    BSL_Param encParams[8];
+    BSL_Param decryptParams[8];
+
+    ASSERT_EQ(TestRandInit(), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_ASN1, certPath, &recipientCert), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_DecodeFileKey(BSL_FORMAT_ASN1, keyType, keyPath, NULL, 0, &recipientKey), HITLS_PKI_SUCCESS);
+    uint32_t paramIdx = AddKemriRecipientParams(encParams, recipientCert, NULL, &recipientType);
+    AddContentEncryptParams(encParams, &paramIdx, &contentEncAlg, &contentType);
+    (void)AddKemriRecipientParams(decryptParams, recipientCert, recipientKey, &recipientType);
+
+    STUB_REPLACE(BSL_SAL_Malloc, STUB_BSL_SAL_Malloc);
+
+    encCms = HITLS_CMS_ProviderNew(NULL, NULL, BSL_CID_PKCS7_ENVELOPEDDATA);
+    ASSERT_NE(encCms, NULL);
+    STUB_EnableMallocFail(false);
+    STUB_ResetMallocCount();
+    ASSERT_EQ(HITLS_CMS_DataEncrypt(encCms, &plaintextBuf, encParams), HITLS_PKI_SUCCESS);
+    totalMallocCount = STUB_GetMallocCallCount();
+    ASSERT_TRUE(TestIsErrStackEmpty());
+    for (uint32_t i = 0; i < totalMallocCount; i++) {
+        encCms1 = HITLS_CMS_ProviderNew(NULL, NULL, BSL_CID_PKCS7_ENVELOPEDDATA);
+        ASSERT_NE(encCms1, NULL);
+        STUB_EnableMallocFail(true);
+        STUB_ResetMallocCount();
+        STUB_SetMallocFailIndex(i);
+        ASSERT_NE(HITLS_CMS_DataEncrypt(encCms1, &plaintextBuf, encParams), HITLS_PKI_SUCCESS);
+        STUB_EnableMallocFail(false);
+        HITLS_CMS_Free(encCms1);
+        encCms1 = NULL;
+    }
+    TestErrClear();
+
+    SDV_CMS_CheckKemRecipientInfo(encCms->ctx.envelopedData->recipientInfos, (BslCid)expectedKemAlg, true);
+    ASSERT_EQ(HITLS_CMS_GenBuff(BSL_FORMAT_ASN1, encCms, NULL, &encoded), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_CMS_ProviderParseBuff(NULL, NULL, NULL, &encoded, &decCms), HITLS_PKI_SUCCESS);
+    SDV_CMS_CheckKemRecipientInfo(decCms->ctx.envelopedData->recipientInfos, (BslCid)expectedKemAlg, true);
+
+    STUB_EnableMallocFail(false);
+    STUB_ResetMallocCount();
+    ASSERT_EQ(HITLS_CMS_DataDecrypt(decCms, decryptParams, &decrypted), HITLS_PKI_SUCCESS);
+    totalMallocCount = STUB_GetMallocCallCount();
+    ASSERT_NE(decrypted.data, NULL);
+    ASSERT_EQ(decrypted.dataLen, plaintextBuf.dataLen);
+    ASSERT_EQ(memcmp(decrypted.data, plaintextBuf.data, plaintextBuf.dataLen), 0);
+    ASSERT_TRUE(TestIsErrStackEmpty());
+    BSL_SAL_Free(decrypted.data);
+    decrypted.data = NULL;
+    decrypted.dataLen = 0;
+
+    STUB_EnableMallocFail(true);
+    for (uint32_t i = 0; i < totalMallocCount; i++) {
+        BSL_Buffer tmp = {0};
+        STUB_ResetMallocCount();
+        STUB_SetMallocFailIndex(i);
+        (void)HITLS_CMS_DataDecrypt(decCms, decryptParams, &tmp);
+        BSL_SAL_Free(tmp.data);
+    }
+    TestErrClear();
+
+EXIT:
+    STUB_EnableMallocFail(false);
+    STUB_RESTORE(BSL_SAL_Malloc);
+    HITLS_CMS_Free(encCms);
+    HITLS_CMS_Free(encCms1);
+    HITLS_CMS_Free(decCms);
+    HITLS_X509_CertFree(recipientCert);
+    CRYPT_EAL_PkeyFreeCtx(recipientKey);
+    BSL_SAL_Free(encoded.data);
+    BSL_SAL_Free(decrypted.data);
+    TestRandDeInit();
+#endif
+}
+/* END_CASE */
+
+/**
+ * @test SDV_CMS_ENVELOPEDDATA_MLKEM_STREAM_STUB_TC001
+ * @title Test ML-KEM EnvelopedData stream malloc branches
+ * @precon Prepare ML-KEM recipient certificate and private key
+ * @brief
+ *    1. Count malloc calls for ML-KEM streaming encrypt/decrypt
+ *    2. Replay malloc failures for streaming encrypt/decrypt
+ * @expect
+ *    1. Valid streaming encrypt/decrypt succeeds
+ *    2. Malloc failure paths do not leak resources
+ */
+/* BEGIN_CASE */
+void SDV_CMS_ENVELOPEDDATA_MLKEM_STREAM_STUB_TC001(int keyType, int expectedKemAlg, char *certPath, char *keyPath)
+{
+#if !defined(HITLS_PKI_CMS_ENVELOPEDDATA) || !defined(HITLS_BSL_SAL_FILE) || !defined(HITLS_CRYPTO_MLKEM) || \
+    !defined(HITLS_CRYPTO_HKDF) || !defined(HITLS_CRYPTO_AES)
+    (void)keyType;
+    (void)expectedKemAlg;
+    (void)certPath;
+    (void)keyPath;
+    SKIP_TEST();
+#else
+    HITLS_X509_Cert *recipientCert = NULL;
+    CRYPT_EAL_PkeyCtx *recipientKey = NULL;
+    HITLS_CMS *streamCms = NULL;
+    HITLS_CMS *streamCms1 = NULL;
+    HITLS_CMS *streamDecCms = NULL;
+    HITLS_CMS *streamDecCms1 = NULL;
+    BSL_Buffer streamEncoded = {0};
+    BSL_Buffer streamCiphertext = {0};
+    BSL_Buffer streamDecrypted = {0};
+    const char *streamPlaintext = "Hello, ML-KEM Streaming Stub!";
+    BSL_Buffer streamChunks[] = {
+        {(uint8_t *)"Hello, ", strlen("Hello, ")},
+        {(uint8_t *)"ML-KEM ", strlen("ML-KEM ")},
+        {(uint8_t *)"Streaming ", strlen("Streaming ")},
+        {(uint8_t *)"Stub!", strlen("Stub!")}
+    };
+    BslCid contentEncAlg = BSL_CID_AES256_CBC;
+    BslCid contentType = BSL_CID_PKCS7_SIMPLEDATA;
+    int32_t recipientType = HITLS_CMS_RECIPIENT_TYPE_KEMRI;
+    uint32_t totalMallocCount = 0;
+    BSL_Param encParams[8];
+    BSL_Param decryptParams[8];
+
+    ASSERT_EQ(TestRandInit(), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_ASN1, certPath, &recipientCert), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_DecodeFileKey(BSL_FORMAT_ASN1, keyType, keyPath, NULL, 0, &recipientKey), HITLS_PKI_SUCCESS);
+    uint32_t paramIdx = AddKemriRecipientParams(encParams, recipientCert, NULL, &recipientType);
+    AddContentEncryptParams(encParams, &paramIdx, &contentEncAlg, &contentType);
+    (void)AddKemriRecipientParams(decryptParams, recipientCert, recipientKey, &recipientType);
+
+    STUB_REPLACE(BSL_SAL_Malloc, STUB_BSL_SAL_Malloc);
+
+    streamCms = HITLS_CMS_ProviderNew(NULL, NULL, BSL_CID_PKCS7_ENVELOPEDDATA);
+    ASSERT_NE(streamCms, NULL);
+    STUB_EnableMallocFail(false);
+    STUB_ResetMallocCount();
+    ASSERT_EQ(HITLS_CMS_DataInit(HITLS_CMS_OPT_ENCRYPT, streamCms, encParams), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_CMS_DataEncrypt(streamCms, NULL, encParams), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(StreamEncryptToBuffer(streamCms, streamChunks, sizeof(streamChunks) / sizeof(streamChunks[0]),
+        &streamCiphertext), HITLS_PKI_SUCCESS);
+    totalMallocCount = STUB_GetMallocCallCount();
+    ASSERT_TRUE(TestIsErrStackEmpty());
+    for (uint32_t i = 0; i < totalMallocCount; i++) {
+        int32_t ret;
+        BSL_Buffer tmpCiphertext = {0};
+        streamCms1 = HITLS_CMS_ProviderNew(NULL, NULL, BSL_CID_PKCS7_ENVELOPEDDATA);
+        ASSERT_NE(streamCms1, NULL);
+        STUB_EnableMallocFail(true);
+        STUB_ResetMallocCount();
+        STUB_SetMallocFailIndex(i);
+        ret = HITLS_CMS_DataInit(HITLS_CMS_OPT_ENCRYPT, streamCms1, encParams);
+        if (ret == HITLS_PKI_SUCCESS) {
+            ret = HITLS_CMS_DataEncrypt(streamCms1, NULL, encParams);
+        }
+        if (ret == HITLS_PKI_SUCCESS) {
+            ret = StreamEncryptToBuffer(streamCms1, streamChunks, sizeof(streamChunks) / sizeof(streamChunks[0]),
+                &tmpCiphertext);
+        }
+        ASSERT_NE(ret, HITLS_PKI_SUCCESS);
+        STUB_EnableMallocFail(false);
+        BSL_SAL_Free(tmpCiphertext.data);
+        HITLS_CMS_Free(streamCms1);
+        streamCms1 = NULL;
+    }
+    TestErrClear();
+
+    SDV_CMS_CheckKemRecipientInfo(streamCms->ctx.envelopedData->recipientInfos, (BslCid)expectedKemAlg, true);
+    ASSERT_EQ(HITLS_CMS_GenBuff(BSL_FORMAT_ASN1, streamCms, NULL, &streamEncoded), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_CMS_ProviderParseBuff(NULL, NULL, NULL, &streamEncoded, &streamDecCms), HITLS_PKI_SUCCESS);
+    SDV_CMS_CheckKemRecipientInfo(streamDecCms->ctx.envelopedData->recipientInfos, (BslCid)expectedKemAlg, true);
+
+    STUB_EnableMallocFail(false);
+    STUB_ResetMallocCount();
+    ASSERT_EQ(HITLS_CMS_DataInit(HITLS_CMS_OPT_DECRYPT, streamDecCms, decryptParams), HITLS_PKI_SUCCESS);
+    {
+        uint32_t part1Len = streamCiphertext.dataLen / 3;
+        uint32_t part2Len = (streamCiphertext.dataLen - part1Len) / 2;
+        BSL_Buffer cChunks[] = {
+            {streamCiphertext.data, part1Len},
+            {streamCiphertext.data + part1Len, part2Len},
+            {streamCiphertext.data + part1Len + part2Len, streamCiphertext.dataLen - part1Len - part2Len}
+        };
+
+        ASSERT_EQ(StreamDecryptToBuffer(streamDecCms, cChunks, sizeof(cChunks) / sizeof(cChunks[0]),
+            &streamDecrypted), HITLS_PKI_SUCCESS);
+        totalMallocCount = STUB_GetMallocCallCount();
+        ASSERT_NE(streamDecrypted.data, NULL);
+        ASSERT_EQ(streamDecrypted.dataLen, strlen(streamPlaintext));
+        ASSERT_EQ(memcmp(streamDecrypted.data, streamPlaintext, streamDecrypted.dataLen), 0);
+        ASSERT_TRUE(TestIsErrStackEmpty());
+        BSL_SAL_Free(streamDecrypted.data);
+        streamDecrypted.data = NULL;
+        streamDecrypted.dataLen = 0;
+
+        for (uint32_t i = 0; i < totalMallocCount; i++) {
+            int32_t ret;
+            BSL_Buffer tmp = {0};
+            STUB_EnableMallocFail(false);
+            ASSERT_EQ(HITLS_CMS_ProviderParseBuff(NULL, NULL, NULL, &streamEncoded, &streamDecCms1), HITLS_PKI_SUCCESS);
+            STUB_EnableMallocFail(true);
+            STUB_ResetMallocCount();
+            STUB_SetMallocFailIndex(i);
+            ret = HITLS_CMS_DataInit(HITLS_CMS_OPT_DECRYPT, streamDecCms1, decryptParams);
+            if (ret == HITLS_PKI_SUCCESS) {
+                ret = StreamDecryptToBuffer(streamDecCms1, cChunks, sizeof(cChunks) / sizeof(cChunks[0]), &tmp);
+            }
+            (void)ret;
+            STUB_EnableMallocFail(false);
+            BSL_SAL_Free(tmp.data);
+            HITLS_CMS_Free(streamDecCms1);
+            streamDecCms1 = NULL;
+        }
+    }
+    TestErrClear();
+
+EXIT:
+    STUB_EnableMallocFail(false);
+    STUB_RESTORE(BSL_SAL_Malloc);
+    HITLS_CMS_Free(streamCms);
+    HITLS_CMS_Free(streamCms1);
+    HITLS_CMS_Free(streamDecCms);
+    HITLS_CMS_Free(streamDecCms1);
+    HITLS_X509_CertFree(recipientCert);
+    CRYPT_EAL_PkeyFreeCtx(recipientKey);
+    BSL_SAL_Free(streamEncoded.data);
+    BSL_SAL_Free(streamCiphertext.data);
+    BSL_SAL_Free(streamDecrypted.data);
+    TestRandDeInit();
+#endif
+}
+/* END_CASE */
+
+/**
+ * @test SDV_CMS_ENVELOPEDDATA_MIXED_RECIPIENT_TC001
+ * @title Test EnvelopedData with mixed RSA and ML-KEM recipients
+ * @precon Prepare one RSA recipient and one ML-KEM recipient
+ * @brief
+ *    1. Create EnvelopedData with one RSA and one ML-KEM recipient
+ *    2. Encrypt plaintext for both recipients
+ *    3. Verify recipient list contains both KTRI and KEMRI
+ *    4. Each recipient decrypts the same ciphertext independently
+ * @expect
+ *    1. Encryption succeeds for both recipient types
+ *    2. Parsed structure version is upgraded for KEM recipient usage
+ *    3. Both RSA and ML-KEM recipients decrypt successfully
+ */
+/* BEGIN_CASE */
+void SDV_CMS_ENVELOPEDDATA_MIXED_RECIPIENT_TC001(int encAlg, int kemKeyType, int expectedKemAlg, char *rsaCertPath,
+    char *rsaKeyPath, char *kemCertPath, char *kemKeyPath)
+{
+#if !defined(HITLS_PKI_CMS_ENVELOPEDDATA) || !defined(HITLS_BSL_SAL_FILE) || !defined(HITLS_CRYPTO_RSA) || \
+    !defined(HITLS_CRYPTO_MLKEM) || !defined(HITLS_CRYPTO_HKDF) || !defined(HITLS_CRYPTO_AES)
+    (void)encAlg;
+    (void)kemKeyType;
+    (void)expectedKemAlg;
+    (void)rsaCertPath;
+    (void)rsaKeyPath;
+    (void)kemCertPath;
+    (void)kemKeyPath;
+    SKIP_TEST();
+#else
+    HITLS_X509_Cert *rsaCert = NULL;
+    HITLS_X509_Cert *kemCert = NULL;
+    CRYPT_EAL_PkeyCtx *rsaKey = NULL;
+    CRYPT_EAL_PkeyCtx *kemKey = NULL;
+    HITLS_CMS *encCms = NULL;
+    HITLS_CMS *decCms1 = NULL;
+    HITLS_CMS *decCms2 = NULL;
+    BSL_Buffer encoded = {0};
+    BSL_Buffer decrypted1 = {0};
+    BSL_Buffer decrypted2 = {0};
+    const char *plaintext = "Mixed recipient EnvelopedData";
+    BSL_Buffer plaintextBuf = {(uint8_t *)plaintext, strlen(plaintext)};
+    BslCid contentEncAlg = (BslCid)encAlg;
+    BslCid contentType = BSL_CID_PKCS7_SIMPLEDATA;
+    int32_t rsaRecipientType = HITLS_CMS_RECIPIENT_TYPE_KTRI;
+    int32_t kemRecipientType = HITLS_CMS_RECIPIENT_TYPE_KEMRI;
+    BslCid rsaKeyEncAlg = BSL_CID_RSA;
+    BSL_Param rsaEncParams[10];
+    BSL_Param kemEncParams[8];
+    BSL_Param rsaDecryptParams[8];
+    BSL_Param kemDecryptParams[8];
+
+    ASSERT_EQ(TestRandInit(), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_ASN1, rsaCertPath, &rsaCert), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_DecodeFileKey(BSL_FORMAT_ASN1, CRYPT_PRIKEY_RSA, rsaKeyPath, NULL, 0, &rsaKey),
+        HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_ASN1, kemCertPath, &kemCert), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_DecodeFileKey(BSL_FORMAT_ASN1, kemKeyType, kemKeyPath, NULL, 0, &kemKey), HITLS_PKI_SUCCESS);
+    uint32_t paramIdx = AddKtriRecipientParams(rsaEncParams, rsaCert, NULL, &rsaRecipientType,
+        &rsaKeyEncAlg, NULL, NULL, NULL);
+    AddContentEncryptParams(rsaEncParams, &paramIdx, &contentEncAlg, &contentType);
+    (void)AddKemriRecipientParams(kemEncParams, kemCert, NULL, &kemRecipientType);
+    (void)AddKtriRecipientParams(rsaDecryptParams, rsaCert, rsaKey, &rsaRecipientType, &rsaKeyEncAlg,
+        NULL, NULL, NULL);
+    (void)AddKemriRecipientParams(kemDecryptParams, kemCert, kemKey, &kemRecipientType);
+
+    encCms = HITLS_CMS_ProviderNew(NULL, NULL, BSL_CID_PKCS7_ENVELOPEDDATA);
+    ASSERT_NE(encCms, NULL);
+    ASSERT_EQ(HITLS_CMS_DataEncrypt(encCms, &plaintextBuf, rsaEncParams), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_CMS_DataEncrypt(encCms, NULL, kemEncParams), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(encCms->ctx.envelopedData->version, 3);
+    ASSERT_EQ(BSL_LIST_COUNT(encCms->ctx.envelopedData->recipientInfos), 2);
+    ASSERT_EQ(SDV_CMS_CountRecipientType(encCms->ctx.envelopedData->recipientInfos, CMS_RECIPIENT_TYPE_KTRI), 1);
+    ASSERT_EQ(SDV_CMS_CountRecipientType(encCms->ctx.envelopedData->recipientInfos, CMS_RECIPIENT_TYPE_KEMRI), 1);
+    SDV_CMS_CheckKemRecipientInfo(encCms->ctx.envelopedData->recipientInfos, (BslCid)expectedKemAlg, true);
+
+    ASSERT_EQ(HITLS_CMS_GenBuff(BSL_FORMAT_ASN1, encCms, NULL, &encoded), HITLS_PKI_SUCCESS);
+
+    ASSERT_EQ(HITLS_CMS_ProviderParseBuff(NULL, NULL, NULL, &encoded, &decCms1), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(decCms1->ctx.envelopedData->version, 3);
+    ASSERT_EQ(BSL_LIST_COUNT(decCms1->ctx.envelopedData->recipientInfos), 2);
+    ASSERT_EQ(SDV_CMS_CountRecipientType(decCms1->ctx.envelopedData->recipientInfos, CMS_RECIPIENT_TYPE_KTRI), 1);
+    ASSERT_EQ(SDV_CMS_CountRecipientType(decCms1->ctx.envelopedData->recipientInfos, CMS_RECIPIENT_TYPE_KEMRI), 1);
+    ASSERT_EQ(HITLS_CMS_DataDecrypt(decCms1, rsaDecryptParams, &decrypted1), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(decrypted1.dataLen, plaintextBuf.dataLen);
+    ASSERT_EQ(memcmp(decrypted1.data, plaintextBuf.data, plaintextBuf.dataLen), 0);
+
+    ASSERT_EQ(HITLS_CMS_ProviderParseBuff(NULL, NULL, NULL, &encoded, &decCms2), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(decCms2->ctx.envelopedData->version, 3);
+    ASSERT_EQ(BSL_LIST_COUNT(decCms2->ctx.envelopedData->recipientInfos), 2);
+    ASSERT_EQ(SDV_CMS_CountRecipientType(decCms2->ctx.envelopedData->recipientInfos, CMS_RECIPIENT_TYPE_KTRI), 1);
+    ASSERT_EQ(SDV_CMS_CountRecipientType(decCms2->ctx.envelopedData->recipientInfos, CMS_RECIPIENT_TYPE_KEMRI), 1);
+    SDV_CMS_CheckKemRecipientInfo(decCms2->ctx.envelopedData->recipientInfos, (BslCid)expectedKemAlg, true);
+    ASSERT_EQ(HITLS_CMS_DataDecrypt(decCms2, kemDecryptParams, &decrypted2), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(decrypted2.dataLen, plaintextBuf.dataLen);
+    ASSERT_EQ(memcmp(decrypted2.data, plaintextBuf.data, plaintextBuf.dataLen), 0);
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
+EXIT:
+    HITLS_CMS_Free(encCms);
+    HITLS_CMS_Free(decCms1);
+    HITLS_CMS_Free(decCms2);
+    HITLS_X509_CertFree(rsaCert);
+    HITLS_X509_CertFree(kemCert);
+    CRYPT_EAL_PkeyFreeCtx(rsaKey);
+    CRYPT_EAL_PkeyFreeCtx(kemKey);
+    BSL_SAL_Free(encoded.data);
+    BSL_SAL_Free(decrypted1.data);
+    BSL_SAL_Free(decrypted2.data);
     TestRandDeInit();
 #endif
 }

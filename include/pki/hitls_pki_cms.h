@@ -41,6 +41,7 @@ typedef struct _HITLS_CMS HITLS_CMS;
 /* Recipient type used by EnvelopedData recipient parameters. */
 typedef enum {
     HITLS_CMS_RECIPIENT_TYPE_KTRI = 1,
+    HITLS_CMS_RECIPIENT_TYPE_KEMRI = 2,
 } HITLS_CMS_RecipientType;
 
 /**
