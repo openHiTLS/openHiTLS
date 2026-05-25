@@ -1354,7 +1354,8 @@ int32_t HITLS_CFG_IsDtls(const HITLS_Config *config, bool *isDtls);
 
 /**
  * @ingroup hitls_config
- * @brief   cipher suites are preferentially selected from the list of algorithms supported by the server.
+ * @brief   cipher suites are preferentially selected from the list of algorithms supported by the server.This interface
+ *          can only be invoked by the server.
  *
  * @param   config [IN] TLS link configuration.
  * @param   isSupport [IN] Support or not.
