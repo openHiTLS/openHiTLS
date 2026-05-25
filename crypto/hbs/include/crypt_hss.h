@@ -186,6 +186,16 @@ int32_t CRYPT_HSS_GetPubKey(CRYPT_HSS_Ctx *ctx, BSL_Param *param);
  * @param sig [OUT] Signature data
  * @param sigLen [IN/OUT] The input parameter is the space length of the sig,
  *                        and the output parameter is the valid length of the sig.
+ * @attention 
+ * * 1. Stateful private key:
+ *    HSS is a stateful signature scheme. The private key is updated after each
+ *    successful signature. The caller MUST retrieve the updated private key via
+ *    CRYPT_HSS_GetPrvKey and persist it (e.g., to disk or secure storage).
+ *    Failure to do so may result in reuse of one-time keys and compromise security.
+ * 2. No concurrent use:
+ *    The same private key MUST NOT be used concurrently across multiple contexts
+ *    (e.g., threads or processes). Concurrent signing may lead to reuse of the same
+ *    one-time key index, which breaks the security guarantees of HSS.
  *
  * @retval CRYPT_NULL_INPUT      Invalid null pointer input.
  * @retval CRYPT_MEM_ALLOC_FAIL  Memory allocation failure.

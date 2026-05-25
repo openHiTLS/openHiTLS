@@ -1316,7 +1316,13 @@ int32_t CRYPT_RSA_Import(CRYPT_RSA_Ctx *ctx, const BSL_Param *params)
     if (mdIdParam != NULL && mgf1IdParam != NULL && saltLenParam != NULL) {
         ret = CRYPT_RSA_Ctrl(ctx, CRYPT_CTRL_SET_RSA_EMSA_PSS, (void *)(uintptr_t)params, 0);
     } else if (mdIdParam != NULL && mdIdParam->valueType == BSL_PARAM_TYPE_INT32 && mdIdParam->value != NULL) {
-        int32_t mdId = *(int32_t *)mdIdParam->value;
+        int32_t mdId = 0;
+        uint32_t len = sizeof(mdId);
+        ret = BSL_PARAM_GetValue(mdIdParam, CRYPT_PARAM_RSA_MD_ID, BSL_PARAM_TYPE_INT32, &mdId, &len);
+        if (ret != CRYPT_SUCCESS) {
+            BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
+            return CRYPT_INVALID_ARG;
+        }
         ret = CRYPT_RSA_Ctrl(ctx, CRYPT_CTRL_SET_RSA_EMSA_PKCSV15, &mdId, sizeof(mdId));
     }
     if (ret != CRYPT_SUCCESS) {
