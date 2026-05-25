@@ -144,7 +144,8 @@
     #define HITLS_BSL_SAL_FILE
 #endif
 
-#if defined(HITLS_PKI_X509_VFY_DEFAULT) || defined(HITLS_PKI_X509_VFY_CB) || defined(HITLS_PKI_X509_VFY_LOCATION)
+#if defined(HITLS_PKI_X509_VFY_DEFAULT) || defined(HITLS_PKI_X509_VFY_CB) || defined(HITLS_PKI_X509_VFY_LOCATION) || \
+    defined(HITLS_PKI_X509_VFY_HOSTNAME)
     #ifndef HITLS_PKI_X509_VFY
         #define HITLS_PKI_X509_VFY
     #endif
