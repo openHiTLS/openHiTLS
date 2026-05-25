@@ -104,6 +104,7 @@ if(_hitls_linker_version MATCHES "GNU gold|GNU ld|GNU Binutils")
         -Wl,-z,now
         -Wl,--build-id=none
     )
+    list(APPEND _hitls_shared_link_flags_list -Wl,--no-undefined)
     if(_hitls_linker_version MATCHES "GNU gold")
         list(APPEND _hitls_public_link_flags_list
             -Wl,--threads
@@ -114,6 +115,7 @@ elseif(_hitls_linker_version MATCHES "ld64" OR CMAKE_SYSTEM_NAME STREQUAL "Darwi
     # macOS 64-bit executables are always PIE by default (enforced by ld64 since macOS 10.7);
     # explicitly passing -pie is redundant and ld64 may warn about it, so it is omitted here.
     list(APPEND _hitls_public_link_flags_list -Wl,-dead_strip)
+    list(APPEND _hitls_shared_link_flags_list -Wl,-undefined,error)
 elseif(_hitls_linker_version MATCHES "LLD")
     list(APPEND _hitls_exe_link_flags_list -pie)
     list(APPEND _hitls_public_link_flags_list
@@ -123,6 +125,7 @@ elseif(_hitls_linker_version MATCHES "LLD")
         -Wl,--build-id=none
         -Wl,--as-needed
     )
+    list(APPEND _hitls_shared_link_flags_list -Wl,--no-undefined)
 endif()
 
 list(APPEND _hitls_shared_link_flags_list ${_hitls_public_link_flags_list})

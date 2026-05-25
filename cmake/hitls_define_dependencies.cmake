@@ -72,7 +72,7 @@ hitls_define_dependency(HITLS_BSL_OBJ_DEFAULT           DEPS HITLS_BSL_OBJ)
 hitls_define_dependency(HITLS_BSL_OBJ_CUSTOM            DEPS HITLS_BSL_OBJ HITLS_BSL_HASH)
 hitls_define_dependency(HITLS_BSL_PARAMS            DEPS HITLS_BSL HITLS_BSL_SAL HITLS_BSL_LIST)
 hitls_define_dependency(HITLS_BSL_PEM               DEPS HITLS_BSL HITLS_BSL_SAL HITLS_BSL_BASE64)
-hitls_define_dependency(HITLS_BSL_PRINT             DEPS HITLS_BSL HITLS_BSL_SAL)
+hitls_define_dependency(HITLS_BSL_PRINT             DEPS HITLS_BSL HITLS_BSL_SAL HITLS_BSL_UIO_PLT)
 hitls_define_dependency(HITLS_BSL_TLV               DEPS HITLS_BSL HITLS_BSL_SAL)
 hitls_define_dependency(HITLS_BSL_UI                DEPS HITLS_BSL HITLS_BSL_SAL HITLS_BSL_SAL_FILE)
 hitls_define_dependency(HITLS_BSL_UIO
@@ -469,7 +469,7 @@ hitls_define_dependency(HITLS_CRYPTO_CODECS             DEPS HITLS_CRYPTO_PROVID
 # Crypto Assembling Dependencies
 hitls_define_dependency(HITLS_ASM                       DEPS HITLS_CRYPTO_ASM_CHECK)
 hitls_define_dependency(HITLS_CRYPTO_BN_ARMV8           DEPS HITLS_CRYPTO_BN_ASM)
-hitls_define_dependency(HITLS_CRYPTO_BN_X8664           DEPS HITLS_CRYPTO_BN_ASM)
+hitls_define_dependency(HITLS_CRYPTO_BN_X8664           DEPS HITLS_CRYPTO_BN_ASM HITLS_CRYPTO_EALINIT)
 hitls_define_dependency(HITLS_CRYPTO_AES_ARMV8          DEPS HITLS_CRYPTO_AES_ASM)
 hitls_define_dependency(HITLS_CRYPTO_AES_X8664          DEPS HITLS_CRYPTO_AES_ASM)
 hitls_define_dependency(HITLS_CRYPTO_SM4_ARMV8          DEPS HITLS_CRYPTO_SM4_ASM)
@@ -490,8 +490,8 @@ hitls_define_dependency(HITLS_CRYPTO_MODES_X8664_AVX512
     DEPS     HITLS_CRYPTO_MODES_ASM
     CHILDREN HITLS_CRYPTO_GHASH_X8664 HITLS_CRYPTO_CHACHA20POLY1305_X8664_AVX512
 )
-hitls_define_dependency(HITLS_CRYPTO_GCM_ARMV8          DEPS HITLS_CRYPTO_GHASH_ASM)
-hitls_define_dependency(HITLS_CRYPTO_GCM_X8664          DEPS HITLS_CRYPTO_GHASH_ASM)
+hitls_define_dependency(HITLS_CRYPTO_GHASH_ARMV8        DEPS HITLS_CRYPTO_GHASH_ASM)
+hitls_define_dependency(HITLS_CRYPTO_GHASH_X8664        DEPS HITLS_CRYPTO_GHASH_ASM)
 hitls_define_dependency(HITLS_CRYPTO_CHACHA20POLY1305_X8664 DEPS HITLS_CRYPTO_CHACHA20POLY1305_ASM)
 hitls_define_dependency(HITLS_CRYPTO_CHACHA20POLY1305_X8664_AVX512 DEPS HITLS_CRYPTO_CHACHA20POLY1305_ASM)
 hitls_define_dependency(HITLS_CRYPTO_MD5_X8664          DEPS HITLS_CRYPTO_MD5_ASM)

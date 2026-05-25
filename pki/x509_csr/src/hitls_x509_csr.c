@@ -192,30 +192,22 @@ static int32_t ParseCertRequestInfo(BSL_ASN1_Buffer *asnArr, HITLS_X509_Csr *csr
         "PUBKEY_SUBKEY_WITHOUT_SEQ", &subPubKeyBuff, NULL, (CRYPT_EAL_PkeyCtx **)&csr->reqInfo.ealPubKey);
     if (ret != BSL_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        goto ERR;
+        return ret;
     }
     /* attributes */
 #ifdef HITLS_PKI_X509_CSR_ATTR
     ret = HITLS_X509_ParseAttrList(&asnArr[HITLS_X509_CSR_REQINFO_ATTRS_IDX], csr->reqInfo.attributes, NULL, NULL);
     if (ret != BSL_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        goto ERR;
+        return ret;
     }
 #else
     if (asnArr[HITLS_X509_CSR_REQINFO_ATTRS_IDX].len > 0) {
         ret = HITLS_X509_ERR_ATTR_UNSUPPORT;
         BSL_ERR_PUSH_ERROR(ret);
-        goto ERR;
+        return ret;
     }
 #endif
-    return ret;
-
-ERR:
-    if (csr->reqInfo.ealPubKey != NULL) {
-        CRYPT_EAL_PkeyFreeCtx(csr->reqInfo.ealPubKey);
-        csr->reqInfo.ealPubKey = NULL;
-    }
-    BSL_LIST_FREE(csr->reqInfo.subjectName, (BSL_LIST_PFUNC_FREE)HITLS_X509_FreeParsedNameNode);
     return ret;
 }
 
@@ -261,8 +253,10 @@ static int32_t X509CsrBuffAsn1Parse(uint8_t *encode, uint32_t encodeLen, HITLS_X
     csr->rawDataLen = encodeLen - tempLen;
     return HITLS_PKI_SUCCESS;
 ERR:
+#ifdef HITLS_PKI_X509_CSR_ATTR
     HITLS_X509_AttrsFree(csr->reqInfo.attributes, NULL);
     csr->reqInfo.attributes = NULL;
+#endif
     BSL_LIST_FREE(csr->reqInfo.subjectName, (BSL_LIST_PFUNC_FREE)HITLS_X509_FreeParsedNameNode);
     if (csr->reqInfo.ealPubKey != NULL) {
         CRYPT_EAL_PkeyFreeCtx(csr->reqInfo.ealPubKey);

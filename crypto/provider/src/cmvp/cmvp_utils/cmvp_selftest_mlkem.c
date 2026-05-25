@@ -13,7 +13,7 @@
  * See the Mulan PSL v2 for more details.
  */
 #include "hitls_build.h"
-#if defined(HITLS_CRYPTO_CMVP_ISO19790) || defined(HITLS_CRYPTO_CMVP_SM)
+#if defined(HITLS_CRYPTO_CMVP_ISO19790)
 #include <string.h>
 #include "crypt_cmvp_selftest.h"
 #include "cmvp_common.h"
