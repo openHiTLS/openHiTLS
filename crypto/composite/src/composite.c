@@ -632,7 +632,8 @@ int32_t CRYPT_COMPOSITE_Sign(CRYPT_CompositeCtx *ctx, int32_t algId, const uint8
     RETURN_RET_IF_ERR(CompositeMsgEncode(ctx, ctx->info->hashId, data, dataLen, &msg), ret);
     if (ctx->pqcMethod->ctrl == NULL || ctx->pqcMethod->sign == NULL || ctx->tradMethod->sign == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NOT_SUPPORT);
-        return CRYPT_NOT_SUPPORT;
+        ret = CRYPT_NOT_SUPPORT;
+        goto ERR;
     }
     GOTO_ERR_IF(ctx->pqcMethod->ctrl(ctx->pqcCtx, CRYPT_CTRL_SET_CTX_INFO, (void *)(uintptr_t)ctx->info->label,
         (uint32_t)strlen(ctx->info->label)), ret);
@@ -673,7 +674,8 @@ int32_t CRYPT_COMPOSITE_Verify(CRYPT_CompositeCtx *ctx, int32_t algId, const uin
     RETURN_RET_IF_ERR(CompositeMsgEncode(ctx, ctx->info->hashId, data, dataLen, &msg), ret);
     if (ctx->pqcMethod->ctrl == NULL || ctx->pqcMethod->verify == NULL || ctx->tradMethod->verify == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NOT_SUPPORT);
-        return CRYPT_NOT_SUPPORT;
+        ret = CRYPT_NOT_SUPPORT;
+        goto ERR;
     }
     GOTO_ERR_IF(ctx->pqcMethod->ctrl(ctx->pqcCtx, CRYPT_CTRL_SET_CTX_INFO, (void *)(uintptr_t)ctx->info->label,
         (uint32_t)strlen(ctx->info->label)), ret);
@@ -682,7 +684,6 @@ int32_t CRYPT_COMPOSITE_Verify(CRYPT_CompositeCtx *ctx, int32_t algId, const uin
         tradSigLen), ret);
     ret = CRYPT_SUCCESS;
 ERR:
-    BSL_ERR_PUSH_ERROR(ret);
     BSL_SAL_FREE(msg.data);
     return ret;
 }
