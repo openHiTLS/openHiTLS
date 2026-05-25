@@ -1147,23 +1147,6 @@ int32_t HITLS_GetSecureRenegotiationSupport(const HITLS_Ctx *ctx, bool *isSecure
  *               HiTLS caches the message, the message is returned when a user calls HITLS_Read.
  *               Maximum of 50 app messages can be cached, if the cache is full, subsequent app messages will be
  *               ignored.
- *            5. In the DTLS over UDP scenario, if the user functions as the server,
- *               packet loss occurs in the renegotiation request(hello request).
- *               (1) If the user calls the HITLS_Write for renegotiation, the app message to be sent is
- *                   sent to the peer end after packet loss occurs in the renegotiation request.
- *               (2) The HiTLS does not retransmit the renegotiation request. The user needs to call the
- *                   HITLS_Renegotiate and HITLS_Accept interfaces again to continue the renegotiation.
- *                   You can call the HITLS_GetRenegotiationState interface to determine
- *                   whether the current renegotiation is in the renegotiation state,
- *                   If the renegotiation is not in the renegotiation state,
- *                   call the HITLS_Renegotiate and HITLS_Accept interfaces again to continue the renegotiation.
- *            6. In the DTLS over UDP scenario, if the user as the client,
- *               packet loss occurs in the renegotiation request (client hello).
- *               (1) If the user calls the HITLS_Write to perform renegotiation, the app message is not
- *                   sent to the peer end after packet loss occurs in the renegotiation request.
- *                   Instead, the user waits for the response from the peer end.
- *               (2) The client hello message is retransmitted inside the HiTLS,
- *                   and the user does not need to initiate renegotiation again.
  * @param   ctx  [IN] TLS Connection Handle
  *
  * @retval  HITLS_SUCCESS, if successful.
@@ -1581,8 +1564,9 @@ int32_t HITLS_ExportKeyingMaterial(HITLS_Ctx *ctx, uint8_t *out, size_t outLen, 
 
 /**
  * @ingroup tls
- * @brief   This interface is valid only on the server. When the post-handshake command is configured,
- *          the client identity is verified through this interface.
+ * @brief   This interface is valid only on the server. After the handshake completes, if the peer sent the
+ *          post_handshake_auth extension during the handshake, the server can call this interface to initiate
+ *          post-handshake client authentication.
  *
  * @param   ctx [IN] TLS Connection Handle
  * @retval  HITLS_INVALID_INPUT, invalid input parameter.
