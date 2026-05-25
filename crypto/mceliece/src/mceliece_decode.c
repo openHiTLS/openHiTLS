@@ -25,11 +25,6 @@
 static int32_t ComputeSyndrome(const uint8_t *received, const GFPolynomial *g, const GFElement *alpha,
                                GFElement *syndrome, const McelieceParams *params)
 {
-    if (received == NULL || g == NULL || alpha == NULL || syndrome == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
-        return CRYPT_NULL_INPUT;
-    }
-
     const int32_t syndLen = params->t << 1;
     const uint64_t *received64 = (const uint64_t *)received;
     uint32_t full64 = params->n >> 6;
@@ -284,16 +279,8 @@ static int32_t VerifyPattern(const uint8_t *vec, const GFElement *origSyn, const
 }
 
 int32_t DecodeGoppa(const uint8_t *received, const GFPolynomial *g, const GFElement *alpha, uint8_t *errorVector,
-                    int32_t errorVecLen, int32_t *decodeSuccess, const McelieceParams *params)
+                    const McelieceParams *params)
 {
-    // basic validation
-    if (received == NULL || g == NULL || alpha == NULL || errorVector == NULL || decodeSuccess == NULL ||
-        errorVecLen < params->nBytes) {
-        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
-        return CRYPT_NULL_INPUT;
-    }
-    *decodeSuccess = 0; // Initial failure sentinel before actual decoding is attempted
-
     GFElement *syndrome = SafeSyndrome(received, g, alpha, params);
     if (syndrome == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
@@ -301,7 +288,6 @@ int32_t DecodeGoppa(const uint8_t *received, const GFPolynomial *g, const GFElem
     }
     if (IsZeroSyndrome(syndrome, 2 * params->t) == CRYPT_SUCCESS) {
         BSL_SAL_CleanseData(errorVector, params->nBytes);
-        *decodeSuccess = 1; // Boolean success flag when the syndrome is all-zero (no errors to correct)
         BSL_SAL_FREE(syndrome);
         return CRYPT_SUCCESS;
     }
@@ -320,11 +306,9 @@ int32_t DecodeGoppa(const uint8_t *received, const GFPolynomial *g, const GFElem
         return ret;
     }
     PosToBits(errorVector, errorPos, numErrors, params->n);
-    *decodeSuccess = (VerifyPattern(errorVector, syndrome, g, alpha, params) == CRYPT_SUCCESS &&
-                      VectorWeight(errorVector, params->nBytes) == params->t);
-
+    ret = VerifyPattern(errorVector, syndrome, g, alpha, params);
     BSL_SAL_FREE(errorPos);
     BSL_SAL_FREE(syndrome);
-    return CRYPT_SUCCESS;
+    return ret;
 }
 #endif

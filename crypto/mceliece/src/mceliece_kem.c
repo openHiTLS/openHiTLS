@@ -115,18 +115,19 @@ static int32_t BuildVectorAndDecoding(uint8_t *e, const uint8_t *c0, const CMPri
         return CRYPT_MEM_ALLOC_FAIL;
     }
     SupportFromCbits(gfL, sk->controlbits, params->m, params->n);
-
-    int32_t decodeSuccess;
-    int32_t ret = DecodeGoppa(v, &sk->g, gfL, e, params->nBytes, &decodeSuccess, params);
+    int32_t ret = DecodeGoppa(v, &sk->g, gfL, e, params);
     BSL_SAL_FREE(gfL);
     BSL_SAL_FREE(v);
 
     if (ret != CRYPT_SUCCESS) {
+        if (ret == CRYPT_MCELIECE_DECODE_FAIL) {
+            return CRYPT_MCELIECE_INVALID_CIPHER;
+        }
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
-    if (decodeSuccess == 0) {
-        (void)memcpy_s(e, params->nBytes, sk->s, params->nBytes);
+    if (VectorWeight(e, params->nBytes) != params->t) {
+        return CRYPT_MCELIECE_INVALID_CIPHER;
     }
     return CRYPT_SUCCESS;
 }
@@ -144,7 +145,14 @@ int32_t McElieceDecapsInternal(const uint8_t *ciphertext, const CMPrivateKey *sk
         return CRYPT_MEM_ALLOC_FAIL;
     }
     int32_t ret = BuildVectorAndDecoding(e, c0, sk, params);
-    uint8_t b = (ret == CRYPT_SUCCESS) ? 1 : 0; // If e = ⊥, set b <- 0
+    uint8_t b = 1;
+    if (ret == CRYPT_MCELIECE_INVALID_CIPHER) {
+        // https://classic.mceliece.org/mceliece-spec-20221023.pdf, Section 5.6
+        memcpy(e, sk->s, params->nBytes);
+        b = 0; // If e = ⊥, set b <- 0
+    } else if (ret != CRYPT_SUCCESS) {
+        goto EXIT;
+    }
     if (isPc) {
         // PC only: verify C1
         uint8_t hashIn[1 + MCELIECE_L_BYTES];

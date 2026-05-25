@@ -162,7 +162,7 @@ int32_t SupportFromCbits(GFElement *L, const uint8_t *cbits, const int64_t w, co
 // =================================================================================
 // Goppa code decoding - recovers error vector from syndrome
 int32_t DecodeGoppa(const uint8_t *received, const GFPolynomial *g, const GFElement *alpha, uint8_t *errorVector,
-                    int32_t errorVecLen, int32_t *decodeSuccess, const McelieceParams *params);
+                    const McelieceParams *params);
 
 // Generate a random vector with fixed Hamming weight t
 // Used in the encapsulation phase to generate the error vector e

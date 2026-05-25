@@ -26,9 +26,72 @@
 #include "crypt_eal_md.h"
 #include "crypt_params_key.h"
 #include "crypt_drbg.h"
+#include <stdbool.h>
 /* END_HEADER */
 
 static uint8_t gRandNumber = 32;
+
+#define MCELIECE_TEST_L_BYTES 32
+
+static uint32_t GetMcelieceNBytes(int32_t algId)
+{
+    switch (algId) {
+        case CRYPT_KEM_TYPE_MCELIECE_6688128:
+        case CRYPT_KEM_TYPE_MCELIECE_6688128_F:
+        case CRYPT_KEM_TYPE_MCELIECE_6688128_PC:
+        case CRYPT_KEM_TYPE_MCELIECE_6688128_PCF:
+            return 836;
+        case CRYPT_KEM_TYPE_MCELIECE_6960119:
+        case CRYPT_KEM_TYPE_MCELIECE_6960119_F:
+        case CRYPT_KEM_TYPE_MCELIECE_6960119_PC:
+        case CRYPT_KEM_TYPE_MCELIECE_6960119_PCF:
+            return 870;
+        case CRYPT_KEM_TYPE_MCELIECE_8192128:
+        case CRYPT_KEM_TYPE_MCELIECE_8192128_F:
+        case CRYPT_KEM_TYPE_MCELIECE_8192128_PC:
+        case CRYPT_KEM_TYPE_MCELIECE_8192128_PCF:
+            return 1024;
+        default:
+            return 0;
+    }
+}
+
+static bool IsMceliecePcParam(int32_t algId)
+{
+    return algId == CRYPT_KEM_TYPE_MCELIECE_6688128_PC || algId == CRYPT_KEM_TYPE_MCELIECE_6688128_PCF ||
+        algId == CRYPT_KEM_TYPE_MCELIECE_6960119_PC || algId == CRYPT_KEM_TYPE_MCELIECE_6960119_PCF ||
+        algId == CRYPT_KEM_TYPE_MCELIECE_8192128_PC || algId == CRYPT_KEM_TYPE_MCELIECE_8192128_PCF;
+}
+
+static int32_t GetAttackerZeroCiphertextKey(int32_t algId, uint8_t *ciphertext, uint32_t cipherLen,
+                                            uint8_t *sharedKey, uint32_t *sharedLen)
+{
+    uint32_t nBytes = GetMcelieceNBytes(algId);
+    if (nBytes == 0) {
+        return CRYPT_INVALID_ARG;
+    }
+    if (IsMceliecePcParam(algId)) {
+        uint8_t pcHashIn[1 + MCELIECE_TEST_L_BYTES] = {0};
+        uint32_t c1Len = MCELIECE_TEST_L_BYTES;
+        pcHashIn[0] = 2;
+        int32_t ret = CRYPT_EAL_Md(CRYPT_MD_SHAKE256, pcHashIn, sizeof(pcHashIn),
+            ciphertext + cipherLen - MCELIECE_TEST_L_BYTES, &c1Len);
+        if (ret != CRYPT_SUCCESS) {
+            return ret;
+        }
+    }
+
+    uint32_t hashInLen = 1 + nBytes + cipherLen;
+    uint8_t *hashIn = BSL_SAL_Calloc(hashInLen, sizeof(uint8_t));
+    if (hashIn == NULL) {
+        return CRYPT_MEM_ALLOC_FAIL;
+    }
+    hashIn[0] = 1;
+    (void)memcpy(hashIn + 1 + nBytes, ciphertext, cipherLen);
+    int32_t ret = CRYPT_EAL_Md(CRYPT_MD_SHAKE256, hashIn, hashInLen, sharedKey, sharedLen);
+    BSL_SAL_FREE(hashIn);
+    return ret;
+}
 
 /* @
 * @test  SDV_CRYPTO_MCELIECE_CTRL_API_TC001
@@ -318,6 +381,69 @@ EXIT:
     BSL_SAL_Free(ciphertext);
     BSL_SAL_Free(sharedKey);
     BSL_SAL_FREE(sharedKey2);
+    CRYPT_EAL_Cleanup(CRYPT_EAL_INIT_RAND);
+    return;
+}
+/* END_CASE */
+
+/* @
+* @test  SDV_CRYPTO_MCELIECE_DECAPS_ZERO_CIPHERTEXT_TC001
+* @spec  -
+* @title  CRYPT_EAL_PkeyDecaps rejects attacker-computable zero-error success key
+* @precon  nan
+* @brief  1.generate a McEliece key pair.
+* 2.decapsulate a zero ciphertext.
+* 3.check decapsulation does not derive SHAKE256(0x01 || zero_e || ciphertext).
+* @expect  1.success 2.success 3.keys are different.
+* @prior  nan
+* @auto  FALSE
+@ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_MCELIECE_DECAPS_ZERO_CIPHERTEXT_TC001(int algId)
+{
+    TestMemInit();
+    ASSERT_EQ(CRYPT_EAL_Init(CRYPT_EAL_INIT_RAND), CRYPT_SUCCESS);
+    CRYPT_EAL_PkeyCtx *ctx = NULL;
+#ifdef HITLS_CRYPTO_PROVIDER
+    ASSERT_EQ(CRYPT_EAL_Init(CRYPT_EAL_INIT_PROVIDER), CRYPT_SUCCESS);
+    ctx = CRYPT_EAL_ProviderPkeyNewCtx(NULL, CRYPT_PKEY_MCELIECE, CRYPT_EAL_PKEY_KEM_OPERATE, "provider=default");
+#else
+    ctx = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_MCELIECE);
+#endif
+    ASSERT_TRUE(ctx != NULL);
+
+    int32_t val = (int32_t)algId;
+    int32_t ret = CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_SET_PARA_BY_ID, &val, sizeof(val));
+    ASSERT_EQ(ret, CRYPT_SUCCESS);
+
+    ret = CRYPT_EAL_PkeyDecapsInit(ctx, NULL);
+    ASSERT_EQ(ret, CRYPT_SUCCESS);
+
+    uint32_t cipherLen = 0;
+    ret = CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_GET_CIPHERTEXT_LEN, &cipherLen, sizeof(cipherLen));
+    ASSERT_EQ(ret, CRYPT_SUCCESS);
+    uint8_t *ciphertext = BSL_SAL_Calloc(cipherLen, sizeof(uint8_t));
+    ASSERT_TRUE(ciphertext != NULL);
+
+    uint8_t sharedKey[MCELIECE_TEST_L_BYTES] = {0};
+    uint8_t attackerKey[MCELIECE_TEST_L_BYTES] = {0};
+    uint32_t sharedLen = sizeof(sharedKey);
+    uint32_t attackerLen = sizeof(attackerKey);
+
+    ret = CRYPT_EAL_PkeyGen(ctx);
+    ASSERT_EQ(ret, CRYPT_SUCCESS);
+
+    ret = GetAttackerZeroCiphertextKey(algId, ciphertext, cipherLen, attackerKey, &attackerLen);
+    ASSERT_EQ(ret, CRYPT_SUCCESS);
+    ASSERT_EQ(attackerLen, MCELIECE_TEST_L_BYTES);
+
+    ret = CRYPT_EAL_PkeyDecaps(ctx, ciphertext, cipherLen, sharedKey, &sharedLen);
+    ASSERT_EQ(ret, CRYPT_SUCCESS);
+    ASSERT_EQ(sharedLen, MCELIECE_TEST_L_BYTES);
+    ASSERT_TRUE(memcmp(sharedKey, attackerKey, MCELIECE_TEST_L_BYTES) != 0);
+EXIT:
+    CRYPT_EAL_PkeyFreeCtx(ctx);
+    BSL_SAL_FREE(ciphertext);
     CRYPT_EAL_Cleanup(CRYPT_EAL_INIT_RAND);
     return;
 }
