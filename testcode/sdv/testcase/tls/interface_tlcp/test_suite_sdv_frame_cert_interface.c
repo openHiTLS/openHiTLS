@@ -1640,13 +1640,13 @@ void SDV_HITLS_HostNameVerify_TC005()
     server = FRAME_CreateLinkWithCert(s_config, BSL_UIO_TCP, &certInfoServer);
 
     /* The wrong ip */
-    char wrongIpv6[] = "::ffff:192.0.2.000";
+    char wrongIpv6[] = "::ffff:192.0.2.0";
     ASSERT_EQ(HITLS_SetHost(client->ssl, host1), HITLS_SUCCESS);
     ASSERT_EQ(HITLS_SetHost(client->ssl, wrongIpv6), HITLS_SUCCESS);
     ASSERT_EQ(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_CERT_ERR_VERIFY_CERT_CHAIN);
 
     ASSERT_TRUE(HITLS_GetPeerName(client->ssl, &peername) == HITLS_SUCCESS);
-    ASSERT_TRUE(peername == NULL);
+    ASSERT_TRUE(strcmp(peername, host1) == 0);
 
     FRAME_FreeLink(client);
     FRAME_FreeLink(server);

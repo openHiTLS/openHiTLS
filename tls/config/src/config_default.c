@@ -435,6 +435,9 @@ int32_t DefaultConfig(HITLS_Lib_Ctx *libCtx, const char *attrName, uint16_t vers
             CFG_CleanConfig(config);
             return RETURN_ERROR_NUMBER_PROCESS(HITLS_MEMALLOC_FAIL, BINLOG_ID16573, "certMgrCtx new fail");
         }
+    } else {
+        CFG_CleanConfig(config);
+        return RETURN_ERROR_NUMBER_PROCESS(HITLS_UNREGISTERED_CALLBACK, BINLOG_ID16593, "certMgrCtx new fail");
     }
 #ifdef HITLS_TLS_FEATURE_SESSION
     config->sessMgr = SESSMGR_New(config->libCtx);
@@ -475,6 +478,9 @@ int32_t DefaultTLS13Config(HITLS_Config *config)
             CFG_CleanConfig(config);
             return HITLS_MEMALLOC_FAIL;
         }
+    } else {
+        CFG_CleanConfig(config);
+        return RETURN_ERROR_NUMBER_PROCESS(HITLS_UNREGISTERED_CALLBACK, BINLOG_ID16596, "certMgrCtx new fail");
     }
 #ifdef HITLS_TLS_FEATURE_SESSION
     config->sessMgr = SESSMGR_New(config->libCtx);
@@ -546,6 +552,9 @@ int32_t DefaultTlsAllConfig(HITLS_Config *config)
             CFG_CleanConfig(config);
             return HITLS_MEMALLOC_FAIL;
         }
+    } else {
+        CFG_CleanConfig(config);
+        return RETURN_ERROR_NUMBER_PROCESS(HITLS_UNREGISTERED_CALLBACK, BINLOG_ID16597, "certMgrCtx new fail");
     }
 #ifdef HITLS_TLS_FEATURE_SESSION
     config->sessMgr = SESSMGR_New(config->libCtx);
@@ -616,6 +625,9 @@ int32_t DefaultDtlsAllConfig(HITLS_Config *config)
             CFG_CleanConfig(config);
             return HITLS_MEMALLOC_FAIL;
         }
+    } else {
+        CFG_CleanConfig(config);
+        return RETURN_ERROR_NUMBER_PROCESS(HITLS_UNREGISTERED_CALLBACK, BINLOG_ID16615, "certMgrCtx new fail");
     }
 #ifdef HITLS_TLS_FEATURE_SESSION
     config->sessMgr = SESSMGR_New(config->libCtx);
