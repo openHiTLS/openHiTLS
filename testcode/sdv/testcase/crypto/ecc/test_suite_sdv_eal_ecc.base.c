@@ -42,9 +42,7 @@ STUB_DEFINE_RET3(int32_t, BN_RandRangeEx, void *, BN_BigNum *, const BN_BigNum *
 #define SUCCESS 0
 #define ERROR (-1)
 #define BITS_OF_BYTE 8
-#define KEY_MAX_LEN 133
-#define PUBKEY_MAX_LEN 133  // 521(The public key length of the longest curve.) * 2 + 1 1043
-#define PRVKEY_MAX_LEN 65
+#define KEY_MAX_LEN 133  // 521(The public key length of the longest curve.) * 2 + 1 1043
 #define ECC_MAX_BIT_LEN 521
 static uint8_t gkRandBuf[80];
 static uint32_t gkRandBufLen = 0;
