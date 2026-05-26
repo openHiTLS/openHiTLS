@@ -236,7 +236,7 @@ int32_t HITLS_X509_CrlEntryChoiceCheck(int32_t type, uint32_t idx, void *data, v
     (void) expVal;
     if (type == BSL_ASN1_TYPE_CHECK_CHOICE_TAG) {
         uint8_t tag = *(uint8_t *) data;
-        if ((tag & BSL_ASN1_TAG_UTCTIME) != 0 || (tag & BSL_ASN1_TAG_GENERALIZEDTIME) != 0) {
+        if (tag == BSL_ASN1_TAG_UTCTIME || tag == BSL_ASN1_TAG_GENERALIZEDTIME) {
             *(uint8_t *) expVal = tag;
             return BSL_SUCCESS;
         }
