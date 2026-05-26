@@ -18,6 +18,7 @@
 | 5.4  | [provider开发指南](../zh/5_开发指南/4_provider开发指南.md) | [provider Development Guide](../en/5_Developer%20Guide/4_provider%20Development%20Guide.md) |
 | 5.5  | [TLS证书接口参考](../zh/5_开发指南/5_TLS证书接口参考.md) | [TLS Certificate Interfaces](../en/5_Developer%20Guide/5_TLS_Certificate_Interfaces.md) |
 | 5.6  | [CMake构建系统开发配置指南](../zh/5_开发指南/6_CMake构建系统开发配置指南.md) | [CMake Build System Developer Configuration Guide](../en/5_Developer%20Guide/6_CMake%20Build%20System%20Developer%20Configuration%20Guide.md) |
+| 5.7   | [后量子证书开发指南](../zh/5_开发指南/7_后量子证书开发指南.md)   | [Post-Quantum Certificate Development Guide](../en/5_Developer%20Guide/7_Post-Quantum%20Certificate%20Development%20Guide.md)  |
 | 6    | **附录**                                   | **Appendix**                                 |
 | 6.1  | [术语列表](../zh/6_附录/1_术语列表.md)     | [Terms](../en/6_Appendix/1_Terms.md)         |
 
