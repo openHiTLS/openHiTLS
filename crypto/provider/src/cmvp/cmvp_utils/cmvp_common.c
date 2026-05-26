@@ -90,6 +90,7 @@ char *CMVP_ReadFile(const char *path, const char *mode, uint32_t *bufLen)
     GOTO_ERR_IF_TRUE(fseek(fp, 0, SEEK_END) != 0, CRYPT_CMVP_COMMON_ERR);
     len = ftell(fp);
     GOTO_ERR_IF_TRUE(len == -1, CRYPT_CMVP_COMMON_ERR);
+    GOTO_ERR_IF_TRUE((uint64_t)len > UINT32_MAX - 1, CRYPT_CMVP_COMMON_ERR);
     buf = BSL_SAL_Malloc((uint32_t)len + 1);
     GOTO_ERR_IF_TRUE(buf == NULL, CRYPT_MEM_ALLOC_FAIL);
     buf[len] = '\0';

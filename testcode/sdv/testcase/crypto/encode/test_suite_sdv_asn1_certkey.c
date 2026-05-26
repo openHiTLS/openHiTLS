@@ -2115,6 +2115,70 @@ EXIT:
 /* END_CASE */
 
 /*
+@test SDV_CRYPT_ED25519_PKCS8_INNER_OCTET_LEN_TC001
+@title Reject malformed RFC8410 PKCS#8 with mismatched inner OCTET STRING length
+@step
+1. Decode a well-formed Ed25519 PKCS#8 private key buffer and expect success
+2. Decode a malformed Ed25519 PKCS#8 buffer whose inner CurvePrivateKey length is 0 but leaves 32 trailing bytes
+@expect
+1. The well-formed buffer is accepted
+2. The malformed buffer is rejected with CRYPT_DECODE_ASN1_BUFF_FAILED
+*/
+/* BEGIN_CASE */
+void SDV_CRYPT_ED25519_PKCS8_INNER_OCTET_LEN_TC001(void)
+{
+#if defined(HITLS_CRYPTO_ED25519) && defined(HITLS_CRYPTO_KEY_DECODE)
+    static uint8_t wellformed[] = {
+        0x30, 0x2e,
+        0x02, 0x01, 0x00,
+        0x30, 0x05, 0x06, 0x03, 0x2b, 0x65, 0x70,
+        0x04, 0x22,
+        0x04, 0x20,
+        0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
+        0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f,
+        0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17,
+        0x18, 0x19, 0x1a, 0x1b, 0x1c, 0x1d, 0x1e, 0x1f
+    };
+    static uint8_t malformed[] = {
+        0x30, 0x2e,
+        0x02, 0x01, 0x00,
+        0x30, 0x05, 0x06, 0x03, 0x2b, 0x65, 0x70,
+        0x04, 0x22,
+        0x04, 0x00,
+        0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
+        0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f,
+        0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17,
+        0x18, 0x19, 0x1a, 0x1b, 0x1c, 0x1d, 0x1e, 0x1f
+    };
+    BSL_Buffer encode = {wellformed, sizeof(wellformed)};
+    CRYPT_EAL_PkeyCtx *pkeyCtx = NULL;
+#ifdef HITLS_CRYPTO_PROVIDER
+    CRYPT_EAL_Init(CRYPT_EAL_INIT_CPU|CRYPT_EAL_INIT_PROVIDER|CRYPT_EAL_INIT_PROVIDER_RAND);
+    CRYPT_RandRegist(RandFunc);
+    CRYPT_RandRegistEx(RandFuncEx);
+#endif
+
+    ASSERT_EQ(CRYPT_EAL_DecodeBuffKey(BSL_FORMAT_ASN1, CRYPT_PRIKEY_PKCS8_UNENCRYPT, &encode, NULL, 0, &pkeyCtx),
+        CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyGetId(pkeyCtx), CRYPT_PKEY_ED25519);
+    CRYPT_EAL_PkeyFreeCtx(pkeyCtx);
+    pkeyCtx = NULL;
+
+    encode.data = malformed;
+    encode.dataLen = sizeof(malformed);
+    ASSERT_EQ(CRYPT_EAL_DecodeBuffKey(BSL_FORMAT_ASN1, CRYPT_PRIKEY_PKCS8_UNENCRYPT, &encode, NULL, 0, &pkeyCtx),
+        CRYPT_DECODE_ASN1_BUFF_FAILED);
+    ASSERT_TRUE(pkeyCtx == NULL);
+
+EXIT:
+    CRYPT_EAL_PkeyFreeCtx(pkeyCtx);
+#else
+    SKIP_TEST();
+#endif
+}
+/* END_CASE */
+
+/*
 @test SDV_CRYPT_DECODE_RSAPSS_MGF1_VALIDATE_TC001
 @title Test CRYPT_EAL_ParseRsaPssAlgParam rejects non-MGF1 mask generation algorithm
 @precon None
