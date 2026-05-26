@@ -14,7 +14,8 @@
  */
 
 #include "hitls_build.h"
-#if defined(HITLS_PKI_X509_VFY_DEFAULT) || defined(HITLS_PKI_X509_VFY_CB) || defined(HITLS_PKI_X509_VFY_LOCATION)
+#if defined(HITLS_PKI_X509_VFY_DEFAULT) || defined(HITLS_PKI_X509_VFY_CB) || defined(HITLS_PKI_X509_VFY_LOCATION) || \
+    defined(HITLS_PKI_X509_VFY_IDENTITY)
 #include <stdio.h>
 #include <string.h>
 #include "hitls_pki_x509.h"
