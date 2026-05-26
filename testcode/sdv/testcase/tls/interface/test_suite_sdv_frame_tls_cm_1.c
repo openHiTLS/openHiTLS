@@ -4259,6 +4259,41 @@ EXIT:
 /* END_CASE */
 
 /* @
+* @test  HITLS_UT_TLS_GET_TLCP_LEGACY_RENEGOTIATION_SUPPORT_TC002
+* @spec  -
+* @title  HITLS_CFG_GetLegacyRenegotiateSupport for TLCP
+* @precon  nan
+* @brief  1.Create tls config . Expected result 1.
+*         2.Get LegacyRenegotiateSupport. Expected result 2.
+*         3.Get LegacyRenegotiateSupport after setting renegotiation support to false. Expected result 3.
+* @expect  1.Return HITLS_SUCCESS
+*          2.LegacyRenegotiateSupport is true
+*          3.LegacyRenegotiateSupport is true
+* @prior  Level 1
+* @auto  TRUE
+@ */
+/* BEGIN_CASE */
+void HITLS_UT_TLS_GET_TLCP_LEGACY_RENEGOTIATION_SUPPORT_TC002(void)
+{
+    FRAME_Init();
+    HITLS_Config *tlsConfig = HITLS_CFG_NewTLCPConfig();
+    ASSERT_TRUE(tlsConfig != NULL);
+    bool isSupport = false;
+    int32_t ret = HITLS_CFG_GetLegacyRenegotiateSupport(tlsConfig, &isSupport);
+    ASSERT_TRUE(ret == HITLS_SUCCESS);
+    ASSERT_TRUE(isSupport == true);
+
+    ret = HITLS_CFG_SetRenegotiationSupport(tlsConfig, false);
+    ASSERT_TRUE(ret == HITLS_SUCCESS);
+    ret = HITLS_CFG_GetLegacyRenegotiateSupport(tlsConfig, &isSupport);
+    ASSERT_TRUE(ret == HITLS_SUCCESS);
+    ASSERT_TRUE(isSupport == true);
+EXIT:
+    HITLS_CFG_FreeConfig(tlsConfig);
+}
+/* END_CASE */
+
+/* @
 * @test SDV_HiTLS_HsCtx_Get_PeerCertificate_TC001
 * @spec -
 * @title The test obtains the peer certificate chain during the handshake process, and it is expected to succeed.

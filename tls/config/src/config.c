@@ -1381,7 +1381,7 @@ int32_t HITLS_CFG_SetRenegotiationSupport(HITLS_Config *config, bool support)
         return HITLS_NULL_INPUT;
     }
 #ifdef HITLS_TLS_PROTO_TLCP11
-    if (IS_SUPPORT_TLCP(config->originVersionMask)) {
+    if (support && IS_SUPPORT_TLCP(config->originVersionMask)) {
         config->allowLegacyRenegotiate = false;
     }
 #endif
