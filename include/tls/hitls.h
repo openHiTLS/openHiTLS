@@ -1158,8 +1158,7 @@ int32_t HITLS_Renegotiate(HITLS_Ctx *ctx);
  * @ingroup tls
  * @brief   Obtain the current is whether in the renegotiation state.
  *
- * @attention For the server, the server does not enter the renegotiation state by sending only the hello request
- * message, The server enters the renegotiation state only after receiving the client hello message.
+ * @attention For the server, it has entered the renegotiation state after sending the hello request message.
  *
  * @param   ctx  [IN] TLS Connection Handle.
  * @param   isRenegotiationState  [OUT] Indicates whether the renegotiation is in the renegotiation state.

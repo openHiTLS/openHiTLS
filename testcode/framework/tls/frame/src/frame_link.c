@@ -102,7 +102,7 @@ FRAME_LinkObj *CreateLink(HITLS_Config *config, BSL_UIO_TransportType type)
 #endif
             break;
     }
-    if (sizeof(method) > sizeof(BSL_UIO_Method)) {
+    if (sizeof(method) > sizeof(BSL_UIO_Method) || ori == NULL) {
         return NULL;
     }
     memcpy(&method, ori, sizeof(method));
@@ -286,7 +286,7 @@ FRAME_LinkObj *FRAME_CreateLinkWithCerts(HITLS_Config *config, BSL_UIO_Transport
             return NULL;
         }
     }
-    
+
     return CreateLink(config, type);
 }
 

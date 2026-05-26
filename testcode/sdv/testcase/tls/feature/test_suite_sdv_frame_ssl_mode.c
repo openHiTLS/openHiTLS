@@ -131,7 +131,7 @@ void UT_TLS_CM_SSL_MODE_AUTO_RETRY_TC001()
     STUB_REPLACE(APP_Read, STUB_APP_Read);;
     ASSERT_EQ(HITLS_Read(server->ssl, readBuf, READ_BUF_SIZE, &readLen), HITLS_REC_NORMAL_RECV_BUF_EMPTY);
 
-    ASSERT_TRUE(TestIsErrStackNotEmpty());
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     HITLS_CFG_FreeConfig(config);
@@ -258,7 +258,7 @@ void UT_TLS_CM_SSL_MODE_MOVE_BUFFER_TC001()
     ASSERT_EQ(FRAME_TrasferMsgBetweenLink(client, server), HITLS_SUCCESS);
     ASSERT_EQ(HITLS_Write(client->ssl, data2, sizeof(data2), &len), HITLS_SUCCESS);
 
-    ASSERT_TRUE(TestIsErrStackNotEmpty());
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     HITLS_CFG_FreeConfig(config);
@@ -383,7 +383,7 @@ void UT_TLS_CM_SSL_MODE_RELEASE_BUFFER_TC001()
     ASSERT_TRUE(readLen == strlen("Hello World"));
     ASSERT_TRUE(memcmp("Hello World", readBuf, readLen) == 0);
 
-    ASSERT_TRUE(TestIsErrStackNotEmpty());
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     HITLS_CFG_FreeConfig(config);

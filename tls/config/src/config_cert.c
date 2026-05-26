@@ -1279,15 +1279,14 @@ static int32_t UseCertificateChainCommon(HITLS_Config *config, HITLS_CERT_Chain 
     if (ret != HITLS_SUCCESS) {
         return ret;
     }
+    ret = HITLS_CFG_ClearChainCerts(config);
+    if (ret != HITLS_SUCCESS) {
+        return ret;
+    }
 
     certNode = BSL_LIST_GetNextNode(certList, certNode);
     tempCert = (HITLS_CERT_X509 *)BSL_LIST_GetData(certNode);
     if (tempCert != NULL) {
-        ret = HITLS_CFG_ClearChainCerts(config);
-        if (ret != HITLS_SUCCESS) {
-            return ret;
-        }
-
         for (; certNode != NULL; certNode = BSL_LIST_GetNextNode(certList, certNode)) {
             tempCert = (HITLS_CERT_X509 *)BSL_LIST_GetData(certNode);
             ret = HITLS_CFG_AddChainCert(config, tempCert, true);

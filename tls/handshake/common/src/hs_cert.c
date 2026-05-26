@@ -333,34 +333,56 @@ static int32_t TlcpSelectCertByInfo(HITLS_Ctx *ctx, CERT_ExpectInfo *info)
 }
 #endif
 
+static int32_t SelectCertBySignScheme(HITLS_Ctx *ctx, CERT_ExpectInfo *info)
+{
+    bool supportServer = ctx->config.tlsConfig.isSupportServerPreference;
+    uint32_t baseSignAlgorithmsSize = supportServer ? ctx->config.tlsConfig.signAlgorithmsSize : info->signSchemeNum;
+    const uint16_t *baseSignAlgorithms = supportServer ? ctx->config.tlsConfig.signAlgorithms : info->signSchemeList;
+    uint32_t selectSignAlgorithmsSize = supportServer ? info->signSchemeNum : ctx->config.tlsConfig.signAlgorithmsSize;
+    const uint16_t *selectSignAlgorithms = supportServer ? info->signSchemeList : ctx->config.tlsConfig.signAlgorithms;
+    CERT_MgrCtx *mgrCtx = ctx->config.tlsConfig.certMgrCtx;
+    for (uint32_t i = 0; i < baseSignAlgorithmsSize; i++) {
+        const TLS_SigSchemeInfo *signInfo = ConfigGetSignatureSchemeInfo(&ctx->config.tlsConfig, baseSignAlgorithms[i]);
+        if (signInfo == NULL || CheckCertType(info->certType, signInfo->keyType) != HITLS_SUCCESS) {
+            continue;
+        }
+        if (!SAL_CERT_IsSignAlgorithmAllowed(ctx, baseSignAlgorithms[i],
+            selectSignAlgorithms, selectSignAlgorithmsSize)) {
+            continue;
+        }
+        CERT_Pair *certPair = NULL;
+        int32_t ret = BSL_HASH_At(mgrCtx->certPairs, (uintptr_t)signInfo->keyType, (uintptr_t *)&certPair);
+        if (ret != HITLS_SUCCESS || certPair == NULL || certPair->cert == NULL || certPair->privateKey == NULL) {
+            continue;
+        }
+        uint16_t *tmpsignSchemeList = info->signSchemeList;
+        uint32_t tmpSignSchemeNum = info->signSchemeNum;
+        uint16_t signScheme = baseSignAlgorithms[i];
+        info->signSchemeNum = 1;
+        info->signSchemeList = &signScheme;
+        ret = HS_CheckCertInfo(ctx, info, certPair->cert, true, true);
+        info->signSchemeNum = tmpSignSchemeNum;
+        info->signSchemeList = tmpsignSchemeList;
+        if (ret != HITLS_SUCCESS) {
+            continue;
+        }
+        mgrCtx->currentCertKeyType = (uint32_t)signInfo->keyType;
+        return HITLS_SUCCESS;
+    }
+    return HITLS_CERT_ERR_SELECT_CERTIFICATE;
+}
+
 static int32_t SelectCertByInfo(HITLS_Ctx *ctx, CERT_ExpectInfo *info)
 {
-    int32_t ret;
     CERT_MgrCtx *mgrCtx = ctx->config.tlsConfig.certMgrCtx;
     if (mgrCtx == NULL) {
         BSL_ERR_PUSH_ERROR(HITLS_UNREGISTERED_CALLBACK);
         return RETURN_ERROR_NUMBER_PROCESS(HITLS_UNREGISTERED_CALLBACK, BINLOG_ID16312, "unregistered callback");
     }
 
-    bool supportServer = ctx->config.tlsConfig.isSupportServerPreference;
-    uint32_t baseSignAlgorithmsSize = supportServer ? ctx->config.tlsConfig.signAlgorithmsSize : info->signSchemeNum;
-    const uint16_t *baseSignAlgorithms = supportServer ? ctx->config.tlsConfig.signAlgorithms : info->signSchemeList;
-    for (uint32_t i = 0; i < baseSignAlgorithmsSize; i++) {
-        const TLS_SigSchemeInfo *signInfo = ConfigGetSignatureSchemeInfo(&ctx->config.tlsConfig, baseSignAlgorithms[i]);
-        if (signInfo == NULL || CheckCertType(info->certType, signInfo->keyType) != HITLS_SUCCESS) {
-            continue;
-        }
-        CERT_Pair *certPair =  NULL;
-        ret = BSL_HASH_At(mgrCtx->certPairs, (uintptr_t)signInfo->keyType, (uintptr_t *)&certPair);
-        if (ret != HITLS_SUCCESS || certPair == NULL || certPair->cert == NULL || certPair->privateKey == NULL) {
-            continue;
-        }
-        ret = HS_CheckCertInfo(ctx, info, certPair->cert, true, true);
-        if (ret != HITLS_SUCCESS) {
-            continue;
-        }
-        mgrCtx->currentCertKeyType = (uint32_t)signInfo->keyType;
-        return HITLS_SUCCESS;
+    int32_t ret = SelectCertBySignScheme(ctx, info);
+    if (ret == HITLS_SUCCESS) {
+        return ret;
     }
 
     BSL_HASH_Hash *certPairs = mgrCtx->certPairs;

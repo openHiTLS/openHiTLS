@@ -1527,3 +1527,52 @@ EXIT:
     FRAME_FreeLink(server);
 }
 /* END_CASE */
+
+/**
+ * @test UT_TLS_TLS12_RFC5246_CONSISTENCY_SIGNATURE_PRIORITY_TC001
+ * @title Verify that SelectCertByInfo correctly negotiates the signature scheme
+ *        when the server has an RSA-PSS certificate and server preference is enabled.
+ * @precon nan
+ * @brief    1. Configure the server with an RSA-PSS certificate and set the server signature
+ *           algorithm list to {CERT_SIG_SCHEME_RSA_PKCS1_SHA512, CERT_SIG_SCHEME_ECDSA_SECP256R1_SHA256, CERT_SIG_SCHEME_RSA_PKCS1_SHA256}.
+ *           2. Enable server preference on the server side.
+ *           3. Configure the client to offer {CERT_SIG_SCHEME_ECDSA_SECP256R1_SHA256, CERT_SIG_SCHEME_RSA_PKCS1_SHA256}.
+ *           4. Establish a TLS 1.2 connection.
+ *           5. Check that the negotiated signature scheme is CERT_SIG_SCHEME_ECDSA_SECP256R1_SHA256.
+ * @expect   1. The connection is successfully established.
+ *           2. The negotiated signature scheme is CERT_SIG_SCHEME_ECDSA_SECP256R1_SHA256.
+ */
+/* BEGIN_CASE */
+void UT_TLS_TLS12_RFC5246_CONSISTENCY_SIGNATURE_PRIORITY_TC001()
+{
+    FRAME_Init();
+
+    HITLS_Config *config_c = HITLS_CFG_NewTLS12Config();
+    ASSERT_TRUE(config_c != NULL);
+    HITLS_Config *config_s = HITLS_CFG_NewTLS12Config();
+    ASSERT_TRUE(config_s != NULL);
+    HITLS_CFG_SetClientVerifySupport(config_s, true);
+    uint16_t signAlgs_s[] = {CERT_SIG_SCHEME_RSA_PKCS1_SHA512, CERT_SIG_SCHEME_ECDSA_SECP256R1_SHA256, CERT_SIG_SCHEME_RSA_PKCS1_SHA256};
+    uint32_t signAlgsSize_s = sizeof(signAlgs_s) / sizeof(uint16_t);
+    HITLS_CFG_SetSignature(config_s, signAlgs_s, signAlgsSize_s);
+
+    uint16_t signAlgs_c[] = {CERT_SIG_SCHEME_ECDSA_SECP256R1_SHA256, CERT_SIG_SCHEME_RSA_PKCS1_SHA256};
+    uint32_t signAlgsSize_c = sizeof(signAlgs_c) / sizeof(uint16_t);
+    HITLS_CFG_SetSignature(config_c, signAlgs_c, signAlgsSize_c);
+    FRAME_LinkObj *client = FRAME_CreateLink(config_c, BSL_UIO_TCP);
+    ASSERT_TRUE(client != NULL);
+    FRAME_LinkObj *server = FRAME_CreateLink(config_s, BSL_UIO_TCP);
+    ASSERT_TRUE(server != NULL);
+
+    ASSERT_EQ(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_SUCCESS);
+    ASSERT_EQ(client->ssl->negotiatedInfo.signScheme, signAlgs_c[0]);
+
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
+EXIT:
+    HITLS_CFG_FreeConfig(config_c);
+    HITLS_CFG_FreeConfig(config_s);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+}
+/* END_CASE */
