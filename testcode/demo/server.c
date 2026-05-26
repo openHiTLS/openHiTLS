@@ -124,14 +124,12 @@ int main(int32_t argc, char *argv[])
 
     ret = BSL_UIO_Ctrl(uio, BSL_UIO_SET_FD, (int32_t)sizeof(fd), &infd);
     if (ret != HITLS_SUCCESS) {
-        BSL_UIO_Free(uio);
         printf("BSL_UIO_SET_FD failed, fd = %u.\n", fd);
         goto EXIT;
     }
 
     ret = HITLS_SetUio(ctx, uio);
     if (ret != HITLS_SUCCESS) {
-        BSL_UIO_Free(uio);
         printf("HITLS_SetUio failed. ret = 0x%x.\n", ret);
         goto EXIT;
     }

@@ -2012,6 +2012,46 @@ EXIT:
 /* END_CASE */
 
 /* @
+* @test  UT_TLS_CFG_USECERTCHAINFILE_TC004
+* @title  Test HITLS_CFG_UseCertificateChainFile clears previous chain certs when loading a leaf-only file
+* @brief
+*   1. Create a config object.
+*   2. Call HITLS_CFG_UseCertificateChainFile with a chain file containing intermediate certs.
+*   3. Verify chain certs count is greater than 0.
+*   4. Call HITLS_CFG_UseCertificateChainFile again with a file containing only a leaf cert.
+*   5. Verify the previous chain certs are cleared and only the new leaf cert remains.
+* @expect
+*   1. The first load succeeds with chain certs present.
+*   2. The second load succeeds and previous chain certs are cleared.
+*   3. Chain certs count is 0 after the second load (no intermediate certs in the new file).
+@ */
+/* BEGIN_CASE */
+void UT_TLS_CFG_USECERTCHAINFILE_TC004(void)
+{
+    FRAME_Init();
+    HITLS_Config *config = HITLS_CFG_NewTLS12Config();
+    ASSERT_TRUE(config != NULL);
+
+    const char *chainPath = "../testdata/tls/certificate/pem/rsa_sha256/cert_chain.pem";
+    int32_t ret = HITLS_CFG_UseCertificateChainFile(config, chainPath);
+    ASSERT_EQ(ret, HITLS_SUCCESS);
+
+    HITLS_CERT_Chain *chain = HITLS_CFG_GetChainCerts(config);
+    ASSERT_TRUE(chain != NULL);
+    ASSERT_TRUE(chain->count == 2);
+
+    const char *leafPath = "../testdata/tls/certificate/pem/rsa_sha256/server.pem";
+    ret = HITLS_CFG_UseCertificateChainFile(config, leafPath);
+    ASSERT_EQ(ret, HITLS_SUCCESS);
+
+    chain = HITLS_CFG_GetChainCerts(config);
+    ASSERT_TRUE(chain == NULL);
+EXIT:
+    HITLS_CFG_FreeConfig(config);
+}
+/* END_CASE */
+
+/* @
 * @test  UT_TLS_CFG_LOADDEFAULTCAPATH_TC002
 * @title  Test HITLS_CFG_LoadDefaultCAPath with NULL input
 * @brief

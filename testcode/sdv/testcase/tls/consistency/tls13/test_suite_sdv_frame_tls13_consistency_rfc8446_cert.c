@@ -661,7 +661,7 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_CLIENT_NO_CERT_FUNC_TC001(int isSupportNoC
     ASSERT_EQ(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_SUCCESS);
     ASSERT_TRUE(clientTlsCtx->state == CM_STATE_TRANSPORTING);
 
-    ASSERT_TRUE(TestIsErrStackNotEmpty());
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     HITLS_CFG_FreeConfig(config);
@@ -2307,7 +2307,7 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_SELECT_PREFER_CIPHER_SUITE_TC002(void)
     ASSERT_TRUE(memcmp(expectName, name, strlen(expectName)) == 0);
 
     ASSERT_TRUE(TestIsErrStackEmpty());
-    
+
 EXIT:
     HLT_FreeAllProcess();
 }

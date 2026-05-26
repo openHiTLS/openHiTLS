@@ -99,6 +99,9 @@ FRAME_LinkObj *CreateLink(HITLS_Config *config, BSL_UIO_TransportType type)
 #endif
             break;
     }
+    if (ori == NULL) {
+        return NULL;
+    }
     if (memcpy_s(&method, sizeof(BSL_UIO_Method), ori, sizeof(method)) != EOK) {
         return NULL;
     }
@@ -289,7 +292,7 @@ FRAME_LinkObj *FRAME_CreateLinkWithCerts(HITLS_Config *config, BSL_UIO_Transport
             return NULL;
         }
     }
-    
+
     return CreateLink(config, type);
 }
 
