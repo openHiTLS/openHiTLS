@@ -43,6 +43,9 @@ STUB_DEFINE_RET1(void *, BSL_SAL_Malloc, uint32_t);
 STUB_DEFINE_RET2(int32_t, BSL_ASN1_DecodePrimitiveItem, BSL_ASN1_Buffer *, void *);
 
 static char g_sm2DefaultUserid[] = "1234567812345678";
+
+/* Directly cover the CRL entry revocationDate CHOICE tag checker. */
+extern int32_t HITLS_X509_CrlEntryChoiceCheck(int32_t type, uint32_t idx, void *data, void *expVal);
 /* END_HEADER */
 
 /* ============================================================================
@@ -262,6 +265,51 @@ void SDV_X509_CRL_PARSE_TIME_FUNC_TC001(char *path)
     ASSERT_EQ(HITLS_X509_CrlParseFile(BSL_FORMAT_ASN1, path, &crl), BSL_ASN1_FAIL);
 EXIT:
     HITLS_X509_CrlFree(crl);
+}
+/* END_CASE */
+
+/**
+ * @test   SDV_X509_CRL_ENTRY_TIME_CHOICE_TAG_FUNC_TC001
+ * @title  Verify that the CRL entry revocationDate CHOICE accepts only time tags.
+ * @brief  Call HITLS_X509_CrlEntryChoiceCheck directly with UTCTime, GeneralizedTime,
+ *         INTEGER, constructed SEQUENCE, and constructed SET tags. Valid time tags
+ *         should succeed and update expTag, while invalid tags should fail and leave
+ *         expTag unchanged.
+ * @expect Only BSL_ASN1_TAG_UTCTIME and BSL_ASN1_TAG_GENERALIZEDTIME are accepted.
+ */
+/* BEGIN_CASE */
+void SDV_X509_CRL_ENTRY_TIME_CHOICE_TAG_FUNC_TC001(void)
+{
+    uint8_t expTag = 0;
+    uint8_t tag = BSL_ASN1_TAG_UTCTIME;
+
+    ASSERT_EQ(HITLS_X509_CrlEntryChoiceCheck(BSL_ASN1_TYPE_CHECK_CHOICE_TAG, 0, &tag, &expTag), BSL_SUCCESS);
+    ASSERT_EQ(expTag, BSL_ASN1_TAG_UTCTIME);
+
+    expTag = 0;
+    tag = BSL_ASN1_TAG_GENERALIZEDTIME;
+    ASSERT_EQ(HITLS_X509_CrlEntryChoiceCheck(BSL_ASN1_TYPE_CHECK_CHOICE_TAG, 0, &tag, &expTag), BSL_SUCCESS);
+    ASSERT_EQ(expTag, BSL_ASN1_TAG_GENERALIZEDTIME);
+
+    expTag = 0;
+    tag = BSL_ASN1_TAG_INTEGER;
+    ASSERT_EQ(HITLS_X509_CrlEntryChoiceCheck(BSL_ASN1_TYPE_CHECK_CHOICE_TAG, 0, &tag, &expTag),
+        HITLS_X509_ERR_CHECK_TAG);
+    ASSERT_EQ(expTag, 0);
+
+    expTag = 0;
+    tag = BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE;
+    ASSERT_EQ(HITLS_X509_CrlEntryChoiceCheck(BSL_ASN1_TYPE_CHECK_CHOICE_TAG, 0, &tag, &expTag),
+        HITLS_X509_ERR_CHECK_TAG);
+    ASSERT_EQ(expTag, 0);
+
+    expTag = 0;
+    tag = BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SET;
+    ASSERT_EQ(HITLS_X509_CrlEntryChoiceCheck(BSL_ASN1_TYPE_CHECK_CHOICE_TAG, 0, &tag, &expTag),
+        HITLS_X509_ERR_CHECK_TAG);
+    ASSERT_EQ(expTag, 0);
+EXIT:
+    return;
 }
 /* END_CASE */
 
