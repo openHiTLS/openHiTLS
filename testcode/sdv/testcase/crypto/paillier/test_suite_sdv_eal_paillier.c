@@ -23,6 +23,7 @@
 #include "bsl_sal.h"
 #include "crypt_errno.h"
 #include "crypt_eal_pkey.h"
+#include "crypt_eal_provider.h"
 #include "crypt_eal_rand.h"
 #include "crypt_bn.h"
 #include "eal_pkey_local.h"
@@ -755,6 +756,105 @@ EXIT:
 /* END_CASE */
 
 /**
+ * @test   SDV_CRYPTO_PAILLIER_PROVIDER_HE_API_TC001
+ * @title  Test provider homomorphic add, multiply, message encode/decode and unload.
+ * @precon Load a simple Paillier provider.
+ * @brief
+ *    1. Load provider_paillier_he_test, expected result 1.
+ *    2. Create a Paillier provider pkey context, expected result 2.
+ *    3. Call CRYPT_EAL_PkeyHEAdd/HEMul/HEMsgEncode/HEMsgDecode, expected result 3.
+ *    4. Free the pkey context and unload the provider, expected result 4.
+ * @expect
+ *    1. CRYPT_SUCCESS
+ *    2. The returned context is not NULL.
+ *    3. CRYPT_SUCCESS and the provider callback output is returned.
+ *    4. CRYPT_SUCCESS
+ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_PAILLIER_PROVIDER_HE_API_TC001(void)
+{
+#ifndef HITLS_CRYPTO_PROVIDER
+    SKIP_TEST();
+#else
+    const char *providerPath = "provider_test_data/path1";
+    const char *providerName = "provider_paillier_he_test";
+    const char *providerAttr = "provider=paillier_he_test";
+    const uint8_t expectAdd[] = {0x70, 0x61, 0x2D, 0x61, 0x64, 0x64};
+    const uint8_t expectMul[] = {0x70, 0x61, 0x2D, 0x6D, 0x75, 0x6C};
+    const uint8_t expectEncode[] = {0x70, 0x61, 0x2D, 0x65, 0x6E, 0x63};
+    const uint8_t expectDecode[] = {0x70, 0x61, 0x2D, 0x64, 0x65, 0x63};
+    uint8_t ciphertext1[] = {0x01, 0x02, 0x03, 0x04};
+    uint8_t ciphertext2[] = {0x05, 0x06, 0x07, 0x08};
+    uint8_t msg[] = {0x09, 0x0A, 0x0B, 0x0C};
+    uint8_t plainMod[] = {0x0D, 0x0E};
+    uint32_t polyDegree = 4;
+    uint32_t cipherModBits = 128;
+    uint8_t out[16] = {0};
+    uint32_t outLen = sizeof(out);
+    BSL_Param addParams[3] = {0};
+    BSL_Param mulParams[3] = {0};
+    BSL_Param encodeParams[5] = {0};
+    BSL_Param decodeParams[3] = {0};
+    CRYPT_EAL_LibCtx *libCtx = NULL;
+    CRYPT_EAL_PkeyCtx *pkey = NULL;
+
+    TestMemInit();
+    libCtx = CRYPT_EAL_LibCtxNew();
+    ASSERT_TRUE(libCtx != NULL);
+    ASSERT_EQ(CRYPT_EAL_ProviderSetLoadPath(libCtx, providerPath), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_ProviderLoad(libCtx, BSL_SAL_LIB_FMT_LIBSO, providerName, NULL, NULL), CRYPT_SUCCESS);
+
+    pkey = CRYPT_EAL_ProviderPkeyNewCtx(libCtx, CRYPT_PKEY_PAILLIER, CRYPT_EAL_PKEY_CIPHER_OPERATE, providerAttr);
+    ASSERT_TRUE(pkey != NULL);
+
+    ASSERT_EQ(BSL_PARAM_InitValue(&addParams[0], CRYPT_PARAM_PKEY_HE_CIPHERTEXT1, BSL_PARAM_TYPE_OCTETS,
+        ciphertext1, sizeof(ciphertext1)), BSL_SUCCESS);
+    ASSERT_EQ(BSL_PARAM_InitValue(&addParams[1], CRYPT_PARAM_PKEY_HE_CIPHERTEXT2, BSL_PARAM_TYPE_OCTETS,
+        ciphertext2, sizeof(ciphertext2)), BSL_SUCCESS);
+    outLen = sizeof(out);
+    ASSERT_EQ(CRYPT_EAL_PkeyHEAdd(pkey, addParams, out, &outLen), CRYPT_SUCCESS);
+    ASSERT_COMPARE("paillier provider he add", out, outLen, expectAdd, sizeof(expectAdd));
+
+    ASSERT_EQ(BSL_PARAM_InitValue(&mulParams[0], CRYPT_PARAM_PKEY_HE_CIPHERTEXT1, BSL_PARAM_TYPE_OCTETS,
+        ciphertext1, sizeof(ciphertext1)), BSL_SUCCESS);
+    ASSERT_EQ(BSL_PARAM_InitValue(&mulParams[1], CRYPT_PARAM_PKEY_ENCODE_PUBKEY, BSL_PARAM_TYPE_OCTETS, msg, sizeof(msg)),
+        BSL_SUCCESS);
+    outLen = sizeof(out);
+    ASSERT_EQ(CRYPT_EAL_PkeyHEMul(pkey, mulParams, out, &outLen), CRYPT_SUCCESS);
+    ASSERT_COMPARE("paillier provider he mul", out, outLen, expectMul, sizeof(expectMul));
+
+    ASSERT_EQ(BSL_PARAM_InitValue(&encodeParams[0], CRYPT_PARAM_PKEY_ENCODE_PUBKEY, BSL_PARAM_TYPE_OCTETS, msg,
+        sizeof(msg)), BSL_SUCCESS);
+    ASSERT_EQ(BSL_PARAM_InitValue(&encodeParams[1], CRYPT_PARAM_PKEY_PROCESS_FUNC, BSL_PARAM_TYPE_UINT32,
+        &polyDegree, sizeof(polyDegree)), BSL_SUCCESS);
+    ASSERT_EQ(BSL_PARAM_InitValue(&encodeParams[2], CRYPT_PARAM_PKEY_PROCESS_ARGS, BSL_PARAM_TYPE_UINT32,
+        &cipherModBits, sizeof(cipherModBits)), BSL_SUCCESS);
+    ASSERT_EQ(BSL_PARAM_InitValue(&encodeParams[3], CRYPT_PARAM_PKEY_SIG_PAD_DIGEST, BSL_PARAM_TYPE_OCTETS,
+        plainMod, sizeof(plainMod)), BSL_SUCCESS);
+    outLen = sizeof(out);
+    ASSERT_EQ(CRYPT_EAL_PkeyHEMsgEncode(pkey, encodeParams, out, &outLen), CRYPT_SUCCESS);
+    ASSERT_COMPARE("paillier provider he msg encode", out, outLen, expectEncode, sizeof(expectEncode));
+
+    ASSERT_EQ(BSL_PARAM_InitValue(&decodeParams[0], CRYPT_PARAM_PKEY_ENCODE_PUBKEY, BSL_PARAM_TYPE_OCTETS, msg,
+        sizeof(msg)), BSL_SUCCESS);
+    ASSERT_EQ(BSL_PARAM_InitValue(&decodeParams[1], CRYPT_PARAM_PKEY_SIG_PAD_DIGEST, BSL_PARAM_TYPE_OCTETS,
+        plainMod, sizeof(plainMod)), BSL_SUCCESS);
+    outLen = sizeof(out);
+    ASSERT_EQ(CRYPT_EAL_PkeyHEMsgDecode(pkey, decodeParams, out, &outLen), CRYPT_SUCCESS);
+    ASSERT_COMPARE("paillier provider he msg decode", out, outLen, expectDecode, sizeof(expectDecode));
+
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
+EXIT:
+    CRYPT_EAL_PkeyFreeCtx(pkey);
+    CRYPT_EAL_ProviderUnload(libCtx, BSL_SAL_LIB_FMT_LIBSO, providerName);
+    CRYPT_EAL_LibCtxFree(libCtx);
+    return;
+#endif
+}
+/* END_CASE */
+
+/**
  * @test   SDV_CRYPTO_PAILLIER_DEC_API_TC001
  * @title  PAILLIER CRYPT_EAL_PkeyDecrypt: Test the validity of input parameters.
  * @precon Create the context of the paillier algorithm:
@@ -1156,3 +1256,4 @@ EXIT:
     CRYPT_EAL_PkeyFreeCtx(pkey);
     TestRandDeInit();
 }
+/* END_CASE */
