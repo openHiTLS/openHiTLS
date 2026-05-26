@@ -204,13 +204,18 @@ typedef int32_t (*CRYPT_EAL_ImplPkeyUnBlind)(const void *ctx, const uint8_t *inp
 #define CRYPT_EAL_IMPLPKEYCIPHER_DECRYPT  2
 #define CRYPT_EAL_IMPLPKEYCIPHER_HEADD    3
 #define CRYPT_EAL_IMPLPKEYCIPHER_HEMUL    4
+#define CRYPT_EAL_IMPLPKEYCIPHER_MSG_ENCODE    5
+#define CRYPT_EAL_IMPLPKEYCIPHER_MSG_DECODE    6
 
 typedef int32_t (*CRYPT_EAL_ImplPkeyEncrypt)(void *ctx, const uint8_t *data, uint32_t dataLen,
     uint8_t *out, uint32_t *outLen);
 typedef int32_t (*CRYPT_EAL_ImplPkeyDecrypt)(void *ctx, const uint8_t *data, uint32_t dataLen,
     uint8_t *out, uint32_t *outLen);
+
+typedef int32_t (*CRYPT_EAL_ImplPkeyHEMul)(const void *pkey, const BSL_Param *input, uint8_t *out, uint32_t *outLen);
 typedef int32_t (*CRYPT_EAL_ImplPkeyHEAdd)(const void *ctx, const BSL_Param *input, uint8_t *out, uint32_t *outLen);
-typedef int32_t (*CRYPT_EAL_ImplPkeyHEMul)(const void *ctx, const BSL_Param *input, uint8_t *out, uint32_t *outLen);
+typedef int32_t (*CRYPT_EAL_ImplPkeyHEMsgEncode)(const void *ctx, const BSL_Param *input, uint8_t *out, uint32_t *outLen);
+typedef int32_t (*CRYPT_EAL_ImplPkeyHEMsgDecode)(const void *ctx, const BSL_Param *input, uint8_t *out, uint32_t *outLen);
 
 // CRYPT_EAL_OPERAID_KEYEXCH
 #define CRYPT_EAL_IMPLPKEYEXCH_EXCH  1

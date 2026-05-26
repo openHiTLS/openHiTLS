@@ -65,6 +65,7 @@ set(SOURCE_FILES_PATH1_LIBSO
     provider_load_test_providerNoFree.c
     provider_self_decoder_test.c
     provider_load_p12.c
+    provider_paillier_he_test.c
 )
 
 set(SOURCE_FILES_PATH2_SO
@@ -219,6 +220,7 @@ set(PROVIDER_TARGETS
     libprovider_load_test_providerNoInit_path1
     libprovider_load_test_providerNoFree_path1
     libprovider_self_decoder_test_path1
+    libprovider_paillier_he_test_path1
     provider_load_test1_path1
     provider_new_alg_test
     # path2 providers

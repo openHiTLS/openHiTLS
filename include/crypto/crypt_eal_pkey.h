@@ -487,6 +487,34 @@ int32_t CRYPT_EAL_PkeyHEMul(const CRYPT_EAL_PkeyCtx *pkey, const BSL_Param *inpu
 
 /**
  * @ingroup crypt_eal_pkey
+ * @brief   Homomorphic message encoding operation
+ *
+ * @param   pkey      [IN] Message encoding context
+ * @param   input     [IN] Input message and encoding parameters
+ * @param   out      [OUT] The encoded message
+ * @param   outLen   [OUT/IN] Pointer to the length of the encoded message
+ *
+ * @retval  #CRYPT_SUCCESS, if successful.
+ *          For other error codes, see crypt_errno.h.
+ */
+int32_t CRYPT_EAL_PkeyHEMsgEncode(const CRYPT_EAL_PkeyCtx *pkey, const BSL_Param *input, uint8_t *out, uint32_t *outLen);
+
+/**
+ * @ingroup crypt_eal_pkey
+ * @brief   Homomorphic message decoding operation
+ *
+ * @param   pkey      [IN] Message decoding context
+ * @param   input     [IN] Input encoded message and decoding parameters
+ * @param   out      [OUT] The decoded message
+ * @param   outLen   [OUT/IN] Pointer to the length of the decoded message
+ *
+ * @retval  #CRYPT_SUCCESS, if successful.
+ *          For other error codes, see crypt_errno.h.
+ */
+int32_t CRYPT_EAL_PkeyHEMsgDecode(const CRYPT_EAL_PkeyCtx *pkey, const BSL_Param *input, uint8_t *out, uint32_t *outLen);
+
+/**
+ * @ingroup crypt_eal_pkey
  * @brief   Check whether the public and private keys match.
  * @note    pubKey and prvKey must has identical key management.
  *
