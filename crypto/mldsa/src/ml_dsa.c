@@ -791,7 +791,7 @@ static int32_t MLDSAEncodeInputData(CRYPT_ML_DSA_Ctx *ctx, int32_t hashId, const
 {
     int32_t ret;
     if (ctx->isMuMsg) {
-        if (dataLen > MLDSA_XOF_MSG_LEN) {
+        if (dataLen != MLDSA_XOF_MSG_LEN) {
             BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
             return CRYPT_INVALID_ARG;
         }

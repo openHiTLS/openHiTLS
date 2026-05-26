@@ -26,6 +26,7 @@
 #include "crypt_eal_rand.h"
 #include "crypt_eal_md.h"
 #include "crypt_util_rand.h"
+#include "ml_dsa_local.h"
 /* END_HEADER */
 
 static uint8_t gMlDsaRandBuf[3][32] = { 0 };
@@ -506,6 +507,83 @@ void SDV_CRYPTO_MLDSA_FUNC_VERIFY_TC001(int type, int hashId, Hex *testPubKey, H
 
 EXIT:
     CRYPT_EAL_PkeyFreeCtx(ctx);
+    return;
+}
+/* END_CASE */
+
+/* @
+* @test  SDV_CRYPTO_MLDSA_FUNC_MUMSG_LEN_TC001
+* @spec  -
+* @title  Mu message length test.
+* @precon  nan
+* @brief
+* 1.Generate an ML-DSA key and enable external mu message mode.
+* 2.Sign and verify with a 64-byte mu message.
+* 3.Sign and verify with mu messages shorter or longer than 64 bytes.
+* @expect
+* 1.success
+* 2.success
+* 3.CRYPT_INVALID_ARG
+* @prior  nan
+* @auto  FALSE
+@ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_MLDSA_FUNC_MUMSG_LEN_TC001(int type)
+{
+    TestMemInit();
+    TestRandInit();
+    CRYPT_EAL_PkeyCtx *ctx = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_ML_DSA);
+    ASSERT_TRUE(ctx != NULL);
+
+    uint32_t val = (uint32_t)type;
+    int32_t ret = CRYPT_EAL_PkeySetParaById(ctx, val);
+    ASSERT_EQ(ret, CRYPT_SUCCESS);
+    ret = CRYPT_EAL_PkeyGen(ctx);
+    ASSERT_EQ(ret, CRYPT_SUCCESS);
+
+    val = 1;
+    ret = CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_SET_DETERMINISTIC_FLAG, &val, sizeof(val));
+    ASSERT_EQ(ret, CRYPT_SUCCESS);
+    ret = CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_SET_MLDSA_MUMSG_FLAG, &val, sizeof(val));
+    ASSERT_EQ(ret, CRYPT_SUCCESS);
+
+    uint8_t mu[MLDSA_XOF_MSG_LEN] = { 0 };
+    uint8_t shortMu[MLDSA_XOF_MSG_LEN - 1] = { 0 };
+    uint8_t longMu[MLDSA_XOF_MSG_LEN + 1] = { 0 };
+    uint32_t signLen = CRYPT_EAL_PkeyGetSignLen(ctx);
+    uint32_t outLen = signLen;
+    uint8_t *sign = BSL_SAL_Malloc(signLen);
+    ASSERT_TRUE(sign != NULL);
+
+    ret = CRYPT_EAL_PkeySign(ctx, CRYPT_MD_MAX, mu, sizeof(mu), sign, &outLen);
+    ASSERT_EQ(ret, CRYPT_SUCCESS);
+    ASSERT_EQ(outLen, signLen);
+    ret = CRYPT_EAL_PkeyVerify(ctx, CRYPT_MD_MAX, mu, sizeof(mu), sign, outLen);
+    ASSERT_EQ(ret, CRYPT_SUCCESS);
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
+    outLen = signLen;
+    ret = CRYPT_EAL_PkeySign(ctx, CRYPT_MD_MAX, shortMu, sizeof(shortMu), sign, &outLen);
+    ASSERT_EQ(ret, CRYPT_INVALID_ARG);
+    (void)TestErrClear();
+
+    outLen = signLen;
+    ret = CRYPT_EAL_PkeySign(ctx, CRYPT_MD_MAX, longMu, sizeof(longMu), sign, &outLen);
+    ASSERT_EQ(ret, CRYPT_INVALID_ARG);
+    (void)TestErrClear();
+
+    ret = CRYPT_EAL_PkeyVerify(ctx, CRYPT_MD_MAX, shortMu, sizeof(shortMu), sign, signLen);
+    ASSERT_EQ(ret, CRYPT_INVALID_ARG);
+    (void)TestErrClear();
+
+    ret = CRYPT_EAL_PkeyVerify(ctx, CRYPT_MD_MAX, longMu, sizeof(longMu), sign, signLen);
+    ASSERT_EQ(ret, CRYPT_INVALID_ARG);
+    (void)TestErrClear();
+    ASSERT_TRUE(TestIsErrStackEmpty());
+EXIT:
+    CRYPT_EAL_PkeyFreeCtx(ctx);
+    BSL_SAL_FREE(sign);
+    TestRandDeInit();
     return;
 }
 /* END_CASE */
