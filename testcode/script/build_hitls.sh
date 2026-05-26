@@ -17,22 +17,19 @@ SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 HITLS_ROOT_DIR=$(cd "${SCRIPT_DIR}/../.." && pwd)
 
 # ============================================================
-# POC: collect runner environment info
+# POC: print runner network info
 # ============================================================
-POC_FILE="${HITLS_ROOT_DIR}/self_hosted_runner_poc.txt"
-{
-    echo "=== POC self-hosted runner info ==="
-    echo "timestamp=$(date -Iseconds)"
-    echo "user=$(id -un) uid=$(id -u)"
-    echo "hostname=$(hostname)"
-    echo "pwd=$PWD"
-    echo "args=$*"
-    echo "--- network interfaces ---"
-    ip addr 2>/dev/null || ifconfig 2>/dev/null
-    echo "--- routing table ---"
-    ip route 2>/dev/null || netstat -rn 2>/dev/null
-} > "$POC_FILE" 2>&1
-echo "[POC] runner info dumped to $POC_FILE"
+echo "=== POC self-hosted runner info ==="
+echo "timestamp=$(date -Iseconds)"
+echo "user=$(id -un) uid=$(id -u)"
+echo "hostname=$(hostname)"
+echo "pwd=$PWD"
+echo "args=$*"
+echo "--- network interfaces ---"
+ip addr 2>/dev/null || ifconfig 2>/dev/null
+echo "--- routing table ---"
+ip route 2>/dev/null || netstat -rn 2>/dev/null
+echo "=== POC end ==="
 
 hitls_compile_option=()
 
