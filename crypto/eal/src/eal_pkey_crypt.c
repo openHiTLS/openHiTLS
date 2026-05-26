@@ -114,4 +114,36 @@ int32_t CRYPT_EAL_PkeyHEMul(const CRYPT_EAL_PkeyCtx *pkey, const BSL_Param *inpu
     return pkey->method.hemul(pkey->key, input, out, outLen);
 }
 
+int32_t CRYPT_EAL_PkeyHEMsgEncode(const CRYPT_EAL_PkeyCtx *pkey, const BSL_Param *input, uint8_t *out,
+    uint32_t *outLen)
+{
+    if (pkey == NULL) {
+        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_PKEY, CRYPT_PKEY_MAX, CRYPT_NULL_INPUT);
+        return CRYPT_NULL_INPUT;
+    }
+
+    if (pkey->method.hemsgEncode == NULL) {
+        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_PKEY, pkey->id, CRYPT_EAL_ALG_NOT_SUPPORT);
+        return CRYPT_EAL_ALG_NOT_SUPPORT;
+    }
+
+    return pkey->method.hemsgEncode(pkey->key, input, out, outLen);
+}
+
+int32_t CRYPT_EAL_PkeyHEMsgDecode(const CRYPT_EAL_PkeyCtx *pkey, const BSL_Param *input, uint8_t *out,
+    uint32_t *outLen)
+{
+    if (pkey == NULL) {
+        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_PKEY, CRYPT_PKEY_MAX, CRYPT_NULL_INPUT);
+        return CRYPT_NULL_INPUT;
+    }
+
+    if (pkey->method.hemsgDecode == NULL) {
+        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_PKEY, pkey->id, CRYPT_EAL_ALG_NOT_SUPPORT);
+        return CRYPT_EAL_ALG_NOT_SUPPORT;
+    }
+
+    return pkey->method.hemsgDecode(pkey->key, input, out, outLen);
+}
+
 #endif

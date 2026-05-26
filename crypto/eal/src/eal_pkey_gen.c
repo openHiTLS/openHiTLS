@@ -62,6 +62,8 @@ static void EalPkeyCopyMethod(const EAL_PkeyMethod *method, EAL_PkeyUnitaryMetho
     dest->decrypt = method->decrypt;
     dest->headd = method->headd;
     dest->hemul = method->hemul;
+    dest->hemsgEncode = method->hemsgEncode;
+    dest->hemsgDecode = method->hemsgDecode;
     dest->check = method->check;
     dest->cmp = method->cmp;
     dest->pkeyEncaps = method->pkeyEncaps;
@@ -619,6 +621,12 @@ static int32_t CRYPT_EAL_SetCipherMethod(const CRYPT_EAL_Func *funcsAsyCipher, E
                     break;
                 case CRYPT_EAL_IMPLPKEYCIPHER_HEMUL:
                     method->hemul = funcsAsyCipher[index].func;
+                    break;
+                case CRYPT_EAL_IMPLPKEYCIPHER_MSG_ENCODE:
+                    method->hemsgEncode = funcsAsyCipher[index].func;
+                    break;
+                case CRYPT_EAL_IMPLPKEYCIPHER_MSG_DECODE:
+                    method->hemsgDecode = funcsAsyCipher[index].func;
                     break;
                 default:
                     BSL_ERR_PUSH_ERROR(CRYPT_PROVIDER_ERR_UNEXPECTED_IMPL);

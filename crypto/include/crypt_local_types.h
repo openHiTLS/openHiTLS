@@ -170,6 +170,8 @@ typedef struct EAL_PkeyMethod {
     PkeyDecapsulate pkeyDecaps;             // Key decapsulation.
     PkeyBlind blind;                        // msg blind
     PkeyUnBlind unBlind;                    // sig unBlind.
+    PkeyHEOperation hemsgEncode;            // Encode homomorphic message.
+    PkeyHEOperation hemsgDecode;            // Decode homomorphic message.
 } EAL_PkeyMethod;
 
 typedef struct EAL_PkeyUnitaryMethod {
@@ -205,6 +207,8 @@ typedef struct EAL_PkeyUnitaryMethod {
     PkeyUnBlind unBlind;                    // sig unBlind.
     PkeyImport import;                      // import key
     PkeyExport export;                      // export key
+    PkeyHEOperation hemsgEncode;            // Encode homomorphic message.
+    PkeyHEOperation hemsgDecode;            // Decode homomorphic message.
 } EAL_PkeyUnitaryMethod;
 /**
  * @ingroup  sym_algid
