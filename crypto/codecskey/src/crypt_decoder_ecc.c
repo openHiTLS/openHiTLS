@@ -356,11 +356,17 @@ static int32_t ParseCurve25519PrikeyAsn1Buff(void *libCtx, uint8_t *buffer, uint
 {
     uint8_t *tmpBuff = buffer;
     uint32_t tmpBuffLen = bufferLen;
+    uint32_t valLen = 0;
 
-    int32_t ret = BSL_ASN1_DecodeTagLen(BSL_ASN1_TAG_OCTETSTRING, &tmpBuff, &tmpBuffLen, &tmpBuffLen);
+    int32_t ret = BSL_ASN1_DecodeTagLen(BSL_ASN1_TAG_OCTETSTRING, &tmpBuff, &tmpBuffLen, &valLen);
     if (ret != BSL_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
+    }
+    // RFC8410 inner CurvePrivateKey must consume the entire outer PrivateKey OCTET STRING.
+    if (valLen != tmpBuffLen) {
+        BSL_ERR_PUSH_ERROR(CRYPT_DECODE_ASN1_BUFF_FAILED);
+        return CRYPT_DECODE_ASN1_BUFF_FAILED;
     }
 
     CRYPT_CURVE25519_Ctx *pctx = newCtx(libCtx);
