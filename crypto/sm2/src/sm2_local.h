@@ -52,6 +52,9 @@ struct SM2_Ctx {
     ECC_Point *pointR; // Local R
     const EAL_MdMethod *hashMethod;
     BN_BigNum *r; // Local r
+#ifdef HITLS_CRYPTO_SM2_SIGN
+    BN_BigNum *prvInv; // Cached (1 + dA)^-1 mod n for signing
+#endif
     uint8_t *userId;   // User ID
     uint32_t userIdLen;   // the length of User ID
     int32_t server;    // 1: the initiator, 0: the receiver, and the default value is 1.

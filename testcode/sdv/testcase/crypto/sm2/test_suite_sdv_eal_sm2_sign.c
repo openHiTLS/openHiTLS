@@ -19,12 +19,44 @@
 #include "crypt_eal_pkey.h"
 #include "eal_pkey_local.h"
 #include "eal_md_local.h"
+#include "crypt_bn.h"
+#include "crypt_errno.h"
 #include "crypt_sm2.h"
 #include "sm2_local.h"
+#include "bsl_err_internal.h"
 
 #define SM2_SIGN_MAX_LEN 72
 #define SM2_PRVKEY_MAX_LEN 32
 #define SM2_PUBKEY_LEN 65
+#define SM2_PRV_INV_CALC_BITS ((SM2_PRVKEY_MAX_LEN * 8) + 1)
+
+STUB_DEFINE_RET1(BN_BigNum *, BN_Create, uint32_t);
+STUB_DEFINE_RET1(BN_BigNum *, BN_Dup, const BN_BigNum *);
+
+static uint32_t g_bnCreateFailBits = 0;
+static const BN_BigNum *g_bnDupFailTarget = NULL;
+
+static BN_BigNum *STUB_BN_CreateFailByBits(uint32_t bits)
+{
+    if (bits == g_bnCreateFailBits) {
+        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
+        return NULL;
+    }
+
+    real_BN_Create_func_t realFunc = get_real_BN_Create();
+    return realFunc == NULL ? NULL : realFunc(bits);
+}
+
+static BN_BigNum *STUB_BN_DupFailTarget(const BN_BigNum *a)
+{
+    if (a == g_bnDupFailTarget) {
+        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
+        return NULL;
+    }
+
+    real_BN_Dup_func_t realFunc = get_real_BN_Dup();
+    return realFunc == NULL ? NULL : realFunc(a);
+}
 /* END_HEADER */
 
 /**
@@ -735,6 +767,152 @@ EXIT:
     CRYPT_RandRegistEx(NULL);
     STUB_RESTORE(BN_RandRangeEx);
     CRYPT_EAL_PkeyFreeCtx(ctx);
+}
+/* END_CASE */
+
+/**
+ * @test   SDV_CRYPTO_SM2_SIGN_FUNC_TC003
+ * @title  SM2 signature test: multi-set private key, copy context, and sign.
+ * @precon prvKeyTmp, private key, userId, random number k, msg, signature.
+ * @brief
+ *    1. Create the context(ctx) of the sm2 algorithm, expected result 1
+ *    2. Repeatedly set the userId and private key of ctx, expected result 2
+ *    3. Copy ctx to cpyCtx, expected result 3
+ *    4. Mock BN_RandRange to generate k, expected result 4
+ *    5. Call the CRYPT_EAL_PkeySign method on cpyCtx, expected result 5
+ *    6. Compare the signatures of HiTLS and vector, expected result 6
+ * @expect
+ *    1. Success, and context is not NULL.
+ *    2-5. CRYPT_SUCCESS
+ *    3. Success, and context is not NULL.
+ *    6. Both are the same.
+ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_SM2_SIGN_FUNC_TC003(
+    Hex *prvKeyTmp, Hex *prvKey, Hex *userId, Hex *k, Hex *msg, Hex *sign, int isProvider)
+{
+    uint8_t signBuf[100];
+    uint8_t userIdBuf[100] = {0};
+    uint32_t signLen = sizeof(signBuf);
+    CRYPT_EAL_PkeyCtx *cpyCtx = NULL;
+    CRYPT_EAL_PkeyPrv prv = {0};
+    SetSm2PrvKey(&prv, prvKeyTmp->x, prvKeyTmp->len);
+
+    TestMemInit();
+    CRYPT_EAL_PkeyCtx *ctx = TestPkeyNewCtx(NULL, CRYPT_PKEY_SM2,
+        CRYPT_EAL_PKEY_SIGN_OPERATE, "provider=default", isProvider);
+    ASSERT_TRUE(ctx != NULL);
+
+    ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_SET_SM2_USER_ID, userIdBuf, sizeof(userIdBuf)) == CRYPT_SUCCESS);
+    ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_SET_SM2_USER_ID, userId->x, userId->len) == CRYPT_SUCCESS);
+    ASSERT_TRUE(CRYPT_EAL_PkeySetPrv(ctx, &prv) == CRYPT_SUCCESS);
+    prv.key.eccPrv.data = prvKey->x;
+    prv.key.eccPrv.len = prvKey->len;
+    ASSERT_TRUE(CRYPT_EAL_PkeySetPrv(ctx, &prv) == CRYPT_SUCCESS);
+
+    cpyCtx = TestPkeyNewCtx(NULL, CRYPT_PKEY_SM2,
+        CRYPT_EAL_PKEY_SIGN_OPERATE, "provider=default", isProvider);
+    ASSERT_TRUE(cpyCtx != NULL);
+    ASSERT_EQ(CRYPT_EAL_PkeyCopyCtx(cpyCtx, ctx), CRYPT_SUCCESS);
+
+    CRYPT_RandRegist(FakeRandFunc);
+    CRYPT_RandRegistEx(FakeRandFuncEx);
+    ASSERT_TRUE(SetFakeRandOutput(k->x, k->len) == CRYPT_SUCCESS);
+
+    STUB_REPLACE(BN_RandRangeEx, STUB_RandRangeK);
+    ASSERT_TRUE(CRYPT_EAL_PkeySign(cpyCtx, CRYPT_MD_SM3, msg->x, msg->len, signBuf, &signLen) == CRYPT_SUCCESS);
+
+    ASSERT_TRUE(signLen == sign->len);
+    ASSERT_TRUE(memcmp(signBuf, sign->x, sign->len) == 0);
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
+EXIT:
+    CRYPT_RandRegist(NULL);
+    CRYPT_RandRegistEx(NULL);
+    STUB_RESTORE(BN_RandRangeEx);
+    CRYPT_EAL_PkeyFreeCtx(ctx);
+    CRYPT_EAL_PkeyFreeCtx(cpyCtx);
+}
+/* END_CASE */
+
+/**
+ * @test   SDV_CRYPTO_SM2_SIGN_FUNC_TC004
+ * @title  SM2 signature inverse cache failure is best-effort.
+ * @precon private key.
+ * @brief
+ *    1. Stub BN_Create to fail during private inverse cache calculation, expected result 1
+ *    2. Call CRYPT_EAL_PkeySetPrv, expected result 2
+ *    3. Call CRYPT_EAL_PkeyGen with the same stub, expected result 3
+ *    4. Stub BN_Dup to fail while copying private inverse cache, expected result 4
+ *    5. Call CRYPT_EAL_PkeyCopyCtx, expected result 5
+ * @expect
+ *    1-5. CRYPT_SUCCESS, and error stack is empty.
+ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_SM2_SIGN_FUNC_TC004(Hex *prvKey, int isProvider)
+{
+    CRYPT_EAL_PkeyCtx *setCtx = NULL;
+    CRYPT_EAL_PkeyCtx *genCtx = NULL;
+    CRYPT_EAL_PkeyCtx *srcCtx = NULL;
+    CRYPT_EAL_PkeyCtx *cpyCtx = NULL;
+    CRYPT_SM2_Ctx *sm2Ctx = NULL;
+    CRYPT_EAL_PkeyPrv prv = {0};
+    SetSm2PrvKey(&prv, prvKey->x, prvKey->len);
+
+    TestMemInit();
+
+    setCtx = TestPkeyNewCtx(NULL, CRYPT_PKEY_SM2,
+        CRYPT_EAL_PKEY_SIGN_OPERATE, "provider=default", isProvider);
+    ASSERT_TRUE(setCtx != NULL);
+
+    g_bnCreateFailBits = SM2_PRV_INV_CALC_BITS;
+    STUB_REPLACE(BN_Create, STUB_BN_CreateFailByBits);
+    ASSERT_EQ(CRYPT_EAL_PkeySetPrv(setCtx, &prv), CRYPT_SUCCESS);
+    ASSERT_TRUE(TestIsErrStackEmpty());
+    STUB_RESTORE(BN_Create);
+    g_bnCreateFailBits = 0;
+
+    genCtx = TestPkeyNewCtx(NULL, CRYPT_PKEY_SM2,
+        CRYPT_EAL_PKEY_SIGN_OPERATE, "provider=default", isProvider);
+    ASSERT_TRUE(genCtx != NULL);
+    CRYPT_RandRegist(RandFunc);
+    CRYPT_RandRegistEx(RandFuncEx);
+
+    g_bnCreateFailBits = SM2_PRV_INV_CALC_BITS;
+    STUB_REPLACE(BN_Create, STUB_BN_CreateFailByBits);
+    ASSERT_EQ(CRYPT_EAL_PkeyGen(genCtx), CRYPT_SUCCESS);
+    ASSERT_TRUE(TestIsErrStackEmpty());
+    STUB_RESTORE(BN_Create);
+    g_bnCreateFailBits = 0;
+
+    srcCtx = TestPkeyNewCtx(NULL, CRYPT_PKEY_SM2,
+        CRYPT_EAL_PKEY_SIGN_OPERATE, "provider=default", isProvider);
+    ASSERT_TRUE(srcCtx != NULL);
+    ASSERT_EQ(CRYPT_EAL_PkeySetPrv(srcCtx, &prv), CRYPT_SUCCESS);
+    sm2Ctx = (CRYPT_SM2_Ctx *)srcCtx->key;
+    ASSERT_TRUE(sm2Ctx != NULL);
+    ASSERT_TRUE(sm2Ctx->prvInv != NULL);
+
+    cpyCtx = TestPkeyNewCtx(NULL, CRYPT_PKEY_SM2,
+        CRYPT_EAL_PKEY_SIGN_OPERATE, "provider=default", isProvider);
+    ASSERT_TRUE(cpyCtx != NULL);
+
+    g_bnDupFailTarget = sm2Ctx->prvInv;
+    STUB_REPLACE(BN_Dup, STUB_BN_DupFailTarget);
+    ASSERT_EQ(CRYPT_EAL_PkeyCopyCtx(cpyCtx, srcCtx), CRYPT_SUCCESS);
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
+EXIT:
+    STUB_RESTORE(BN_Create);
+    STUB_RESTORE(BN_Dup);
+    g_bnCreateFailBits = 0;
+    g_bnDupFailTarget = NULL;
+    CRYPT_RandRegist(NULL);
+    CRYPT_RandRegistEx(NULL);
+    CRYPT_EAL_PkeyFreeCtx(setCtx);
+    CRYPT_EAL_PkeyFreeCtx(genCtx);
+    CRYPT_EAL_PkeyFreeCtx(srcCtx);
+    CRYPT_EAL_PkeyFreeCtx(cpyCtx);
 }
 /* END_CASE */
 
