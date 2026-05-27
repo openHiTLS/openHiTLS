@@ -171,4 +171,4 @@ bool CRYPT_CMVP_SelftestProviderMlkemEncapsDecaps(void *libCtx, const char *attr
     return TestMlkemEncapsDecaps(libCtx, attrName, &MLKEM_VECTOR[0]);
 }
 
-#endif /* HITLS_CRYPTO_CMVP_ISO19790 || HITLS_CRYPTO_CMVP_SM */
+#endif /* HITLS_CRYPTO_CMVP_ISO19790 */

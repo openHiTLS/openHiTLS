@@ -101,6 +101,8 @@ bool CRYPT_CMVP_SelftestSM2(void);
 
 bool CRYPT_CMVP_SelftestProviderSM2(void *libCtx, const char *attrName);
 
+#ifdef HITLS_CRYPTO_CMVP_ISO19790
+
 bool CRYPT_CMVP_SelftestMlkemEncapsDecaps(void);
 
 bool CRYPT_CMVP_SelftestProviderMlkemEncapsDecaps(void *libCtx, const char *attrName);
@@ -112,6 +114,8 @@ bool CRYPT_CMVP_SelftestProviderMldsaSignVerify(void *libCtx, const char *attrNa
 bool CRYPT_CMVP_SelftestSlhdsaSignVerify(void);
 
 bool CRYPT_CMVP_SelftestProviderSlhdsaSignVerify(void *libCtx, const char *attrName);
+
+#endif /* HITLS_CRYPTO_CMVP_ISO19790 */
 
 bool CRYPT_CMVP_SelftestPkeyPct(void *ctx, int32_t algId);
 

@@ -166,4 +166,4 @@ bool CRYPT_CMVP_SelftestProviderMldsaSignVerify(void *libCtx, const char *attrNa
     return TestMldsaSignVerify(libCtx, attrName, &MLDSA_VECTOR[0]);
 }
 
-#endif /* HITLS_CRYPTO_CMVP_ISO19790 || HITLS_CRYPTO_CMVP_SM */
+#endif /* HITLS_CRYPTO_CMVP_ISO19790 */
