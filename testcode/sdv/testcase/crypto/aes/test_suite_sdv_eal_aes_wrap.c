@@ -32,6 +32,42 @@
 #define MAX_IV_LEN        8
 /* END_HEADER */
 
+static CRYPT_EAL_CipherCtx *NewWrapCtx(int isProvider, int algId)
+{
+#ifdef HITLS_CRYPTO_PROVIDER
+    return (isProvider == 0) ? CRYPT_EAL_CipherNewCtx(algId) :
+        CRYPT_EAL_ProviderCipherNewCtx(NULL, algId, "provider=default");
+#else
+    (void)isProvider;
+    return CRYPT_EAL_CipherNewCtx(algId);
+#endif
+}
+
+static bool IsWrapPadAlg(int algId)
+{
+    return algId == CRYPT_CIPHER_AES128_WRAP_PAD || algId == CRYPT_CIPHER_AES192_WRAP_PAD ||
+        algId == CRYPT_CIPHER_AES256_WRAP_PAD;
+}
+
+static void GetWrapIvParams(int algId, uint8_t *defaultIv, uint8_t *customIv, uint32_t *ivLen)
+{
+    memset(defaultIv, 0, MAX_IV_LEN);
+    memset(customIv, 0, MAX_IV_LEN);
+    if (IsWrapPadAlg(algId)) {
+        const uint8_t defaultAiv[4] = {0xA6, 0x59, 0x59, 0xA6};
+        const uint8_t customAiv[4] = {0x12, 0x34, 0x56, 0x78};
+        memcpy(defaultIv, defaultAiv, sizeof(defaultAiv));
+        memcpy(customIv, customAiv, sizeof(customAiv));
+        *ivLen = sizeof(defaultAiv);
+        return;
+    }
+
+    const uint8_t customWrapIv[MAX_IV_LEN] = {0x10, 0x32, 0x54, 0x76, 0x98, 0xBA, 0xDC, 0xFE};
+    memset(defaultIv, 0xA6, MAX_IV_LEN);
+    memcpy(customIv, customWrapIv, sizeof(customWrapIv));
+    *ivLen = MAX_IV_LEN;
+}
+
 /**
  * @test  SDV_CRYPTO_EAL_AES_WRAP_API_TC001
  * @title  AES WRAP NOPAD abnormal input parameter test.
@@ -277,6 +313,100 @@ void SDV_CRYPTO_EAL_AES_WRAP_FUNC_TC003(int algId, Hex *key, Hex *iv, Hex *in, H
     ASSERT_EQ(CRYPT_EAL_CipherUpdate(ctx, outTmp, in->len, outTmp, &len), CRYPT_SUCCESS);
     ASSERT_EQ(len, out->len);
     ASSERT_TRUE(memcmp(outTmp, out->x, out->len) == 0);
+EXIT:
+    CRYPT_EAL_CipherDeinit(ctx);
+    CRYPT_EAL_CipherFreeCtx(ctx);
+}
+/* END_CASE */
+
+/**
+ * @test  SDV_CRYPTO_EAL_AES_WRAP_FUNC_TC004
+ * @title  Repeated CipherInit with NULL IV resets to the default IV/AIV.
+ * @precon nan
+ * @brief
+ *    1.Initialize the CTX with a caller-supplied custom IV/AIV.
+ *    2.Call CRYPT_EAL_CipherInit again with iv == NULL.
+ *    3.Verify the stored IV/AIV is reset to the algorithm default.
+ * @expect
+ *    1.Success.
+ *    2.Success.
+ *    3.The stored IV/AIV matches the default value.
+ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_EAL_AES_WRAP_FUNC_TC004(int isProvider, int algId, int KeyLen)
+{
+    TestMemInit();
+    uint8_t key1[KeyLen];
+    uint8_t key2[KeyLen];
+    uint8_t defaultIv[MAX_IV_LEN] = {0};
+    uint8_t customIv[MAX_IV_LEN] = {0};
+    uint8_t outIv[MAX_IV_LEN] = {0};
+    uint32_t ivLen = 0;
+
+    for (int i = 0; i < KeyLen; i++) {
+        key1[i] = (uint8_t)i;
+        key2[i] = (uint8_t)(0xA5u ^ (uint8_t)i);
+    }
+    GetWrapIvParams(algId, defaultIv, customIv, &ivLen);
+
+    CRYPT_EAL_CipherCtx *ctx = NewWrapCtx(isProvider, algId);
+    ASSERT_TRUE(ctx != NULL);
+
+    ASSERT_EQ(CRYPT_EAL_CipherInit(ctx, key1, KeyLen, customIv, ivLen, true), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_CipherCtrl(ctx, CRYPT_CTRL_GET_IV, outIv, ivLen), CRYPT_SUCCESS);
+    ASSERT_TRUE(memcmp(outIv, customIv, ivLen) == 0);
+
+    memset(outIv, 0, sizeof(outIv));
+    ASSERT_EQ(CRYPT_EAL_CipherInit(ctx, key2, KeyLen, NULL, 0, true), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_CipherCtrl(ctx, CRYPT_CTRL_GET_IV, outIv, ivLen), CRYPT_SUCCESS);
+    ASSERT_TRUE(memcmp(outIv, defaultIv, ivLen) == 0);
+
+EXIT:
+    CRYPT_EAL_CipherDeinit(ctx);
+    CRYPT_EAL_CipherFreeCtx(ctx);
+}
+/* END_CASE */
+
+/**
+ * @test  SDV_CRYPTO_EAL_AES_WRAP_FUNC_TC005
+ * @title  CipherReinit with NULL IV resets to the default IV/AIV.
+ * @precon nan
+ * @brief
+ *    1.Initialize the CTX with a caller-supplied custom IV/AIV.
+ *    2.Call CRYPT_EAL_CipherReinit with iv == NULL.
+ *    3.Verify the stored IV/AIV is reset to the algorithm default.
+ * @expect
+ *    1.Success.
+ *    2.Success.
+ *    3.The stored IV/AIV matches the default value.
+ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_EAL_AES_WRAP_FUNC_TC005(int isProvider, int algId, int KeyLen)
+{
+    TestMemInit();
+    uint8_t key[KeyLen];
+    uint8_t defaultIv[MAX_IV_LEN] = {0};
+    uint8_t customIv[MAX_IV_LEN] = {0};
+    uint8_t outIv[MAX_IV_LEN] = {0};
+    uint32_t ivLen = 0;
+
+    for (int i = 0; i < KeyLen; i++) {
+        key[i] = (uint8_t)(0x3Cu + (uint8_t)i);
+    }
+    GetWrapIvParams(algId, defaultIv, customIv, &ivLen);
+
+    CRYPT_EAL_CipherCtx *ctx = NewWrapCtx(isProvider, algId);
+    ASSERT_TRUE(ctx != NULL);
+
+    ASSERT_EQ(CRYPT_EAL_CipherInit(ctx, key, KeyLen, customIv, ivLen, true), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_CipherCtrl(ctx, CRYPT_CTRL_GET_IV, outIv, ivLen), CRYPT_SUCCESS);
+    ASSERT_TRUE(memcmp(outIv, customIv, ivLen) == 0);
+
+    memset(outIv, 0, sizeof(outIv));
+    ASSERT_EQ(CRYPT_EAL_CipherReinit(ctx, NULL, 0), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_CipherCtrl(ctx, CRYPT_CTRL_GET_IV, outIv, ivLen), CRYPT_SUCCESS);
+    ASSERT_TRUE(memcmp(outIv, defaultIv, ivLen) == 0);
+
 EXIT:
     CRYPT_EAL_CipherDeinit(ctx);
     CRYPT_EAL_CipherFreeCtx(ctx);

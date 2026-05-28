@@ -43,6 +43,15 @@ static const uint8_t DEFAULT_AIV[CRYPT_WRAP_AIV_SIZE] = {
     0xA6, 0x59, 0x59, 0xA6
 };
 
+static void WRAP_ResetDefaultIV(MODES_CipherWRAPCtx *ctx)
+{
+    if (ctx->flagPad) {
+        memcpy(ctx->iv, DEFAULT_AIV, sizeof(DEFAULT_AIV));
+    } else {
+        memcpy(ctx->iv, DEFAULT_IV, sizeof(DEFAULT_IV));
+    }
+}
+
 static void MODE_WRAP_Clean(MODES_CipherWRAPCtx *ctx)
 {
     if (ctx->ciphMeth == NULL || ctx->ciphMeth->cipherDeInitCtx == NULL) {
@@ -60,6 +69,7 @@ int32_t MODE_WRAP_DeInitCtx(MODES_WRAP_Ctx *modeCtx)
         return CRYPT_NULL_INPUT;
     }
     MODE_WRAP_Clean(&modeCtx->wrapCtx);
+    WRAP_ResetDefaultIV(&modeCtx->wrapCtx);
     return CRYPT_SUCCESS;
 }
 
@@ -291,7 +301,8 @@ int32_t MODE_WRAP_Decrypt(MODES_CipherWRAPCtx *ctx, const uint8_t *in, uint8_t *
 static int32_t WRAP_SetIV(MODES_CipherWRAPCtx *ctx, const uint8_t *val, uint32_t len)
 {
     if (val == NULL) {
-        return CRYPT_SUCCESS;    // Use the default iv.
+        WRAP_ResetDefaultIV(ctx); // Use the default iv.
+        return CRYPT_SUCCESS;
     }
     if ((ctx->flagPad && len != CRYPT_WRAP_AIV_SIZE) || (!ctx->flagPad && len != CRYPT_WRAP_BLOCKSIZE)) {
         return CRYPT_MODES_IVLEN_ERROR;
@@ -337,11 +348,7 @@ MODES_WRAP_Ctx *MODES_WRAP_NewCtx(int32_t algId, bool isPad)
     ctx->wrapCtx.blockSize = CRYPT_WRAP_BLOCKSIZE;
     ctx->wrapCtx.ciphMeth = method;
     ctx->wrapCtx.flagPad = isPad;
-    if (isPad) {
-        memcpy(ctx->wrapCtx.iv, DEFAULT_AIV, sizeof(DEFAULT_AIV));
-    } else {
-        memcpy(ctx->wrapCtx.iv, DEFAULT_IV, sizeof(DEFAULT_IV));
-    }
+    WRAP_ResetDefaultIV(&ctx->wrapCtx);
     return ctx;
 }
 
