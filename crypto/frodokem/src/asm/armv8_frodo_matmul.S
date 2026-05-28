@@ -45,14 +45,14 @@ AARCH64_PACIASP
     mov   x13, x6   // End S
 
 .SLoop:
-    ldr   d0, [x1 ], #8   //S0
-    ldr   d1, [x6 ], #8   //S1
-    ldr   d2, [x7 ], #8   //S2
-    ldr   d3, [x8 ], #8   //S3
-    ldr   d4, [x9 ], #8   //S4
-    ldr   d5, [x10], #8   //S5
-    ldr   d6, [x11], #8   //S6
-    ldr   d7, [x12], #8   //S7
+    ld1   {v0.4h}, [x1 ], #8   //S0
+    ld1   {v1.4h}, [x6 ], #8   //S1
+    ld1   {v2.4h}, [x7 ], #8   //S2
+    ld1   {v3.4h}, [x8 ], #8   //S3
+    ld1   {v4.4h}, [x9 ], #8   //S4
+    ld1   {v5.4h}, [x10], #8   //S5
+    ld1   {v6.4h}, [x11], #8   //S6
+    ld1   {v7.4h}, [x12], #8   //S7
 
     ld1   {v8.8h, v9.8h, v10.8h, v11.8h}, [x2], #64   // B0, B1, B2, B3
 
@@ -133,10 +133,10 @@ AARCH64_PACIASP
     ld1     {v4.8h, v5.8h, v6.8h, v7.8h}, [x1], #64
 
     // Load 4 scalars from each A row (4 half-words = 8 bytes per row)
-    ldr     d8,  [x4], #8            // A[row0][k..k+3]
-    ldr     d9,  [x5], #8            // A[row1][k..k+3]
-    ldr     d10, [x6], #8            // A[row2][k..k+3]
-    ldr     d11, [x7], #8            // A[row3][k..k+3]
+    ld1     {v8.4h},  [x4], #8       // A[row0][k..k+3]
+    ld1     {v9.4h},  [x5], #8       // A[row1][k..k+3]
+    ld1     {v10.4h}, [x6], #8       // A[row2][k..k+3]
+    ld1     {v11.4h}, [x7], #8       // A[row3][k..k+3]
 
     // Diagonal MLA: 4 output rows × 4 k-values = 16 mla, each accumulator
     // separated by 3 instructions to hide 2-3 cycle MLA write latency.
@@ -177,8 +177,9 @@ CRYPT_AARCH64_FUNC_END(MultAsPlusEAES)
 CRYPT_AARCH64_FUNC_START(MulAsPlusESHAKE)
 AARCH64_PACIASP
 
-    // Read rowNumber from stack BEFORE FRODO_SAVE_D8_D15 adjusts sp
-    ldr     w9, [sp]
+    // Read the 8-byte stack slot before FRODO_SAVE_D8_D15 adjusts sp.
+    // For big-endian AAPCS64, the 32-bit argument occupies the low 32 bits of the slot.
+    ldr     x9, [sp]
     uxtw    x9, w9
 
     FRODO_SAVE_D8_D15
@@ -192,10 +193,10 @@ AARCH64_PACIASP
 .LoopAsESHAKE:
     ld1     {v4.8h, v5.8h, v6.8h, v7.8h}, [x1], #64
 
-    ldr     d8,  [x4], #8
-    ldr     d9,  [x5], #8
-    ldr     d10, [x6], #8
-    ldr     d11, [x7], #8
+    ld1     {v8.4h},  [x4], #8
+    ld1     {v9.4h},  [x5], #8
+    ld1     {v10.4h}, [x6], #8
+    ld1     {v11.4h}, [x7], #8
 
     mla     v0.8h, v4.8h, v8.h[0]
     mla     v1.8h, v5.8h, v9.h[1]
@@ -245,14 +246,14 @@ AARCH64_PACIASP
     add   x6 , x5 , x2      //row2
     add   x7 , x6 , x2      //row3
 
-    ldr   d0 , [x1 ]      // S0
-    ldr   d1 , [x10]      // S1
-    ldr   d2 , [x11]      // S2
-    ldr   d3 , [x12]      // S3
-    ldr   d4 , [x13]      // S4
-    ldr   d5 , [x14]      // S5
-    ldr   d6 , [x15]      // S6
-    ldr   d7 , [x16]      // S7
+    ld1   {v0.4h}, [x1 ]      // S0
+    ld1   {v1.4h}, [x10]      // S1
+    ld1   {v2.4h}, [x11]      // S2
+    ld1   {v3.4h}, [x12]      // S3
+    ld1   {v4.4h}, [x13]      // S4
+    ld1   {v5.4h}, [x14]      // S5
+    ld1   {v6.4h}, [x15]      // S6
+    ld1   {v7.4h}, [x16]      // S7
 
   //add   x0 , x0 , #0    //out
     add   x10, x0 , x2    //out + n
@@ -345,8 +346,8 @@ CRYPT_AARCH64_FUNC_END(MultSaPlusEAES)
 
 CRYPT_AARCH64_FUNC_START(MulSaPlusESHAKE)
 AARCH64_PACIASP
-    // read stack arg (rowNumber) BEFORE adjusting sp
-    ldr   w9, [sp]          //rowNumber
+    // Read the 8-byte stack slot before adjusting sp; see MulAsPlusESHAKE.
+    ldr   x9, [sp]          // rowNumber
     uxtw  x9, w9
 
     FRODO_SAVE_D8_D15
@@ -361,14 +362,14 @@ AARCH64_PACIASP
     add   x15, x14, x2   // matrixST + rowNumber + 6 * n
     add   x16, x15, x2   // matrixST + rowNumber + 7 * n
 
-    ldr   d0 , [x1 ]      // S0
-    ldr   d1 , [x10]      // S1
-    ldr   d2 , [x11]      // S2
-    ldr   d3 , [x12]      // S3
-    ldr   d4 , [x13]      // S4
-    ldr   d5 , [x14]      // S5
-    ldr   d6 , [x15]      // S6
-    ldr   d7 , [x16]      // S7
+    ld1   {v0.4h}, [x1 ]      // S0
+    ld1   {v1.4h}, [x10]      // S1
+    ld1   {v2.4h}, [x11]      // S2
+    ld1   {v3.4h}, [x12]      // S3
+    ld1   {v4.4h}, [x13]      // S4
+    ld1   {v5.4h}, [x14]      // S5
+    ld1   {v6.4h}, [x15]      // S6
+    ld1   {v7.4h}, [x16]      // S7
 
   //add   x0 , x0 , #0    //out
     add   x10, x0 , x2    //out + n
@@ -462,4 +463,3 @@ AARCH64_AUTIASP
 CRYPT_AARCH64_FUNC_END(MulSaPlusESHAKE)
 
 #endif
-

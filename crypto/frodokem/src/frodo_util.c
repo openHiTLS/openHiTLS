@@ -27,11 +27,11 @@
 
 #define FRODO_MAX_SEED_LEN 64
 #define FRODO_PREFIX_LEN   1
-void FrodoCommonPack(uint8_t *out, const size_t outLen, const uint16_t *in, const size_t inLen, const uint8_t lsb)
+void FrodoCommonPack(uint8_t *out, const uint32_t outLen, const uint16_t *in, const uint32_t inLen, const uint8_t lsb)
 {
     (void)outLen;
     if (lsb == 16) {
-        for (size_t i = 0; i < inLen; i++) {
+        for (uint32_t i = 0; i < inLen; i++) {
             out[i * 2 + 0] = in[i] >> 8;
             out[i * 2 + 1] = in[i] & 0xFF;
         }
@@ -39,7 +39,7 @@ void FrodoCommonPack(uint8_t *out, const size_t outLen, const uint16_t *in, cons
     }
 
     // lsb = 15
-    for (size_t i = 0; i < inLen; i += 8) {
+    for (uint32_t i = 0; i < inLen; i += 8) {
         uint16_t a0 = in[0] & 0x7FFF;
         uint16_t a1 = in[1] & 0x7FFF;
         uint16_t a2 = in[2] & 0x7FFF;
@@ -78,17 +78,18 @@ void FrodoCommonPack(uint8_t *out, const size_t outLen, const uint16_t *in, cons
     }
 }
 
-void FrodoCommonUnpack(uint16_t *out, const size_t outLen, const uint8_t *in, const size_t inLen, const uint8_t lsb)
+void FrodoCommonUnpack(uint16_t *out, const uint32_t outLen, const uint8_t *in, const uint32_t inLen,
+                       const uint8_t lsb)
 {
     if (lsb == 16) {
-        for (size_t i = 0; i < outLen; i++) {
+        for (uint32_t i = 0; i < outLen; i++) {
             out[i] = (in[i * 2] << 8) | in[i * 2 + 1];
         }
         return;
     }
 
     // lsb = 15
-    for (size_t i = 0; i < inLen; i += 15) {
+    for (uint32_t i = 0; i < inLen; i += 15) {
         out[0] = (in[0] << 7) | (in[1] >> 1);
         out[1] = ((in[1] & 0x01) << 14) | (in[2] << 6) | (in[3] >> 2);
         out[2] = ((in[3] & 0x03) << 13) | (in[4] << 5) | (in[5] >> 3);
@@ -103,20 +104,35 @@ void FrodoCommonUnpack(uint16_t *out, const size_t outLen, const uint8_t *in, co
     }
 }
 
-int8_t FrodoCommonCtVerify(const uint16_t *a, const uint16_t *b, size_t len)
+void FrodoCommonEncodeLe16(uint8_t *out, const uint16_t *in, uint32_t len)
+{
+    for (uint32_t i = 0; i < len; i++) {
+        out[2 * i] = (uint8_t)(in[i] & 0xffu);
+        out[2 * i + 1] = (uint8_t)(in[i] >> 8);
+    }
+}
+
+void FrodoCommonDecodeLe16(uint16_t *out, const uint8_t *in, uint32_t len)
+{
+    for (uint32_t i = 0; i < len; i++) {
+        out[i] = (uint16_t)in[2 * i] | ((uint16_t)in[2 * i + 1] << 8);
+    }
+}
+
+int8_t FrodoCommonCtVerify(const uint16_t *a, const uint16_t *b, uint32_t len)
 {
     uint16_t diffAccumulator = 0;
 
-    for (size_t i = 0; i < len; i++) {
+    for (uint32_t i = 0; i < len; i++) {
         diffAccumulator |= a[i] ^ b[i];
     }
 
     return (int8_t)((-(int16_t)(diffAccumulator >> 1) | -(int16_t)(diffAccumulator & 1)) >> 15);
 }
 
-void FrodoCommonCtSelect(uint8_t *r, const uint8_t *a, const uint8_t *b, size_t len, int8_t selector)
+void FrodoCommonCtSelect(uint8_t *r, const uint8_t *a, const uint8_t *b, uint32_t len, int8_t selector)
 {
-    for (size_t i = 0; i < len; i++) {
+    for (uint32_t i = 0; i < len; i++) {
         r[i] = (~(uint8_t)selector & a[i]) | ((uint8_t)selector & b[i]);
     }
 }
@@ -146,7 +162,7 @@ int32_t FrodoExpandShakeDs(uint8_t *out, uint32_t outlen, uint8_t ds, const uint
 {
     uint8_t in[FRODO_PREFIX_LEN + FRODO_MAX_SEED_LEN] = {0};
     in[0] = ds;
-    for (size_t i = 0; i < seedlen; i++) {
+    for (uint32_t i = 0; i < seedlen; i++) {
         in[FRODO_PREFIX_LEN + i] = seed[i];
     }
     if (params->n > FRODO_PARA_640_N) {

@@ -786,7 +786,7 @@ static int32_t SetSerial(X509OptCtx *optCtx)
 static int32_t SetValidity(X509OptCtx *optCtx)
 {
     int64_t startTime = BSL_SAL_CurrentSysTimeGet();
-    if (startTime == 0) {
+    if (startTime <= 0) {
         AppPrintError("x509: Get system time failed.\n");
         return HITLS_APP_SAL_FAIL;
     }
