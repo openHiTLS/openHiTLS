@@ -39,17 +39,16 @@ int32_t CRYPT_HSS_SetPubKey(CRYPT_HSS_Ctx *ctx, BSL_Param *param)
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
-    if (ctx->para.pubKeyLen == 0) {
-        BSL_ERR_PUSH_ERROR(CRYPT_HSS_INVALID_PARAM);
-        return CRYPT_HSS_INVALID_PARAM;
-    }
-
     const BSL_Param *pubKeyParam = BSL_PARAM_FindConstParam(param, CRYPT_PARAM_HSS_PUBKEY);
     if (pubKeyParam == NULL || pubKeyParam->value == NULL) {
+        if (ctx->para.pubKeyLen == 0) {
+            BSL_ERR_PUSH_ERROR(CRYPT_HSS_INVALID_PARAM);
+            return CRYPT_HSS_INVALID_PARAM;
+        }
         BSL_ERR_PUSH_ERROR(CRYPT_HSS_NO_KEY);
         return CRYPT_HSS_NO_KEY;
     }
-    if (pubKeyParam->valueLen < HSS_PUBKEY_ROOT_OFFSET || pubKeyParam->valueLen != ctx->para.pubKeyLen) {
+    if (pubKeyParam->valueLen < HSS_PUBKEY_ROOT_OFFSET) {
         BSL_ERR_PUSH_ERROR(CRYPT_HSS_INVALID_KEY_LEN);
         return CRYPT_HSS_INVALID_KEY_LEN;
     }
@@ -58,6 +57,22 @@ int32_t CRYPT_HSS_SetPubKey(CRYPT_HSS_Ctx *ctx, BSL_Param *param)
     uint32_t levels = BSL_ByteToUint32(keyData + HSS_PUBKEY_LEVELS_OFFSET);
     uint32_t lmsType = BSL_ByteToUint32(keyData + HSS_PUBKEY_LMS_TYPE_OFFSET);
     uint32_t otsType = BSL_ByteToUint32(keyData + HSS_PUBKEY_OTS_TYPE_OFFSET);
+
+    if (ctx->para.pubKeyLen == 0) {
+        uint32_t lmsTypes[HSS_LEVELS_ARRAY_SIZE] = {0};
+        uint32_t otsTypes[HSS_LEVELS_ARRAY_SIZE] = {0};
+        lmsTypes[0] = lmsType;
+        otsTypes[0] = otsType;
+        int32_t ret = HssParaInit(&ctx->para, levels, lmsTypes, otsTypes);
+        if (ret != CRYPT_SUCCESS) {
+            BSL_ERR_PUSH_ERROR(ret);
+            return ret;
+        }
+    }
+    if (pubKeyParam->valueLen != ctx->para.pubKeyLen) {
+        BSL_ERR_PUSH_ERROR(CRYPT_HSS_INVALID_KEY_LEN);
+        return CRYPT_HSS_INVALID_KEY_LEN;
+    }
     if (ctx->para.levels != levels || ctx->para.lmsType[0] != lmsType || ctx->para.otsType[0] != otsType) {
         BSL_ERR_PUSH_ERROR(CRYPT_HSS_INVALID_PARAM);
         return CRYPT_HSS_INVALID_PARAM;

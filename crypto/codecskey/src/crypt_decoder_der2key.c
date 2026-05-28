@@ -51,6 +51,9 @@
 #ifdef HITLS_CRYPTO_XMSSMT
 #include "crypt_xmssmt.h"
 #endif
+#ifdef HITLS_CRYPTO_HSS_LMS
+#include "crypt_hss.h"
+#endif
 #include "eal_pkey.h"
 #include "crypt_errno.h"
 #include "bsl_sal.h"
@@ -64,7 +67,8 @@
 
 #if defined(HITLS_CRYPTO_RSA) || defined(HITLS_CRYPTO_ECDSA) || defined(HITLS_CRYPTO_SM2) ||      \
     defined(HITLS_CRYPTO_ED25519) || defined(HITLS_CRYPTO_MLDSA) || defined(HITLS_CRYPTO_XMSS) || \
-    defined(HITLS_CRYPTO_X25519) || defined(HITLS_CRYPTO_DSA)
+    defined(HITLS_CRYPTO_XMSSMT) || defined(HITLS_CRYPTO_X25519) || defined(HITLS_CRYPTO_DSA) ||  \
+    defined(HITLS_CRYPTO_HSS_LMS)
 typedef struct {
     CRYPT_EAL_ProvMgrCtx *provMgrCtx;
     EAL_PkeyUnitaryMethod method;
@@ -371,6 +375,10 @@ DECODER_DEFINE_DER2KEY_NEW_CTX(Composite, CRYPT_PKEY_COMPOSITE, g_defEalKeyMgmtC
 DECODER_DEFINE_DER2KEY_NEW_CTX(Xmss, CRYPT_PKEY_XMSS, g_defEalKeyMgmtXmss, NULL, NULL, \
     g_defEalSignXmss, NULL)
 #endif
+#ifdef HITLS_CRYPTO_HSS_LMS
+DECODER_DEFINE_DER2KEY_NEW_CTX(Hss, CRYPT_PKEY_HSS_LMS, g_defEalKeyMgmtHss, NULL, NULL, \
+    g_defEalSignHss, NULL)
+#endif
 #ifdef HITLS_CRYPTO_XMSSMT
 DECODER_DEFINE_DER2KEY_NEW_CTX(Xmssmt, CRYPT_PKEY_XMSSMT, g_defEalKeyMgmtXmssmt, NULL, NULL, \
     g_defEalSignXmssmt, NULL)
@@ -449,9 +457,15 @@ DECODER_DEFINE_PKCS8_DECODE(Mlkem, CRYPT_ML_KEM_Ctx, CRYPT_MLKEM_ParsePkcs8key)
 #endif
 
 #ifdef HITLS_CRYPTO_XMSS
+DECODER_DEFINE_SUBPUBKEY_DER2KEY_DECODE(Xmss, CryptXmssCtx, CRYPT_XMSS_ParseSubPubkeyAsn1Buff)
 DECODER_DEFINE_SUBPUBKEY_WITHOUT_SEQ_DER2KEY_DECODE(Xmss, CryptXmssCtx, CRYPT_XMSS_ParseSubPubkeyAsn1Buff)
 #endif
+#ifdef HITLS_CRYPTO_HSS_LMS
+DECODER_DEFINE_SUBPUBKEY_DER2KEY_DECODE(Hss, CRYPT_HSS_Ctx, CRYPT_HSS_ParseSubPubkeyAsn1Buff)
+DECODER_DEFINE_SUBPUBKEY_WITHOUT_SEQ_DER2KEY_DECODE(Hss, CRYPT_HSS_Ctx, CRYPT_HSS_ParseSubPubkeyAsn1Buff)
+#endif
 #ifdef HITLS_CRYPTO_XMSSMT
+DECODER_DEFINE_SUBPUBKEY_DER2KEY_DECODE(Xmssmt, CryptXmssmtCtx, CRYPT_XMSSMT_ParseSubPubkeyAsn1Buff)
 DECODER_DEFINE_SUBPUBKEY_WITHOUT_SEQ_DER2KEY_DECODE(Xmssmt, CryptXmssmtCtx, CRYPT_XMSSMT_ParseSubPubkeyAsn1Buff)
 #endif
 #endif /* HITLS_CRYPTO_PROVIDER */

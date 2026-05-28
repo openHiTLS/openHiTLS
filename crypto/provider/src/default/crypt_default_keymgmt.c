@@ -20,7 +20,7 @@
     defined(HITLS_CRYPTO_ELGAMAL) || defined(HITLS_CRYPTO_SLH_DSA) || defined(HITLS_CRYPTO_MLKEM) || \
     defined(HITLS_CRYPTO_MLDSA) || defined(HITLS_CRYPTO_COMPOSITE) || defined(HITLS_CRYPTO_HYBRIDKEM) || \
     defined(HITLS_CRYPTO_MCELIECE) || defined(HITLS_CRYPTO_FRODOKEM) || \
-    defined(HITLS_CRYPTO_XMSS) || defined(HITLS_CRYPTO_XMSSMT)) && \
+    defined(HITLS_CRYPTO_XMSS) || defined(HITLS_CRYPTO_XMSSMT) || defined(HITLS_CRYPTO_HSS_LMS)) && \
     defined(HITLS_CRYPTO_PROVIDER)
 
 #include "crypt_eal_implprovider.h"

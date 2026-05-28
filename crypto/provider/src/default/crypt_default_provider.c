@@ -544,6 +544,18 @@ static const CRYPT_EAL_AlgInfo g_defEalDecoders[] = {
     {CRYPT_PKEY_X25519, g_defEalSubPubKeyDer2X25519Key,
         "provider=default, inFormat=ASN1, inType=PUBKEY_SUBKEY, outFormat=OBJECT, outType=LOW_KEY"},
 #endif
+#ifdef HITLS_CRYPTO_XMSS
+    {CRYPT_PKEY_XMSS, g_defEalSubPubKeyDer2XmssKey,
+        "provider=default, inFormat=ASN1, inType=PUBKEY_SUBKEY, outFormat=OBJECT, outType=LOW_KEY"},
+#endif
+#ifdef HITLS_CRYPTO_XMSSMT
+    {CRYPT_PKEY_XMSSMT, g_defEalSubPubKeyDer2XmssmtKey,
+        "provider=default, inFormat=ASN1, inType=PUBKEY_SUBKEY, outFormat=OBJECT, outType=LOW_KEY"},
+#endif
+#ifdef HITLS_CRYPTO_HSS_LMS
+    {CRYPT_PKEY_HSS_LMS, g_defEalSubPubKeyDer2HssKey,
+        "provider=default, inFormat=ASN1, inType=PUBKEY_SUBKEY, outFormat=OBJECT, outType=LOW_KEY"},
+#endif
 #ifdef HITLS_CRYPTO_RSA
     {CRYPT_PKEY_RSA, g_defEalSubPubKeyWithoutSeqDer2RsaKey,
         "provider=default, inFormat=ASN1, inType=PUBKEY_SUBKEY_WITHOUT_SEQ, outFormat=OBJECT, outType=LOW_KEY"},
@@ -582,6 +594,10 @@ static const CRYPT_EAL_AlgInfo g_defEalDecoders[] = {
 #endif
 #ifdef HITLS_CRYPTO_XMSSMT
     {CRYPT_PKEY_XMSSMT, g_defEalSubPubKeyWithoutSeqDer2XmssmtKey,
+        "provider=default, inFormat=ASN1, inType=PUBKEY_SUBKEY_WITHOUT_SEQ, outFormat=OBJECT, outType=LOW_KEY"},
+#endif
+#ifdef HITLS_CRYPTO_HSS_LMS
+    {CRYPT_PKEY_HSS_LMS, g_defEalSubPubKeyWithoutSeqDer2HssKey,
         "provider=default, inFormat=ASN1, inType=PUBKEY_SUBKEY_WITHOUT_SEQ, outFormat=OBJECT, outType=LOW_KEY"},
 #endif
 #ifdef HITLS_CRYPTO_MLKEM

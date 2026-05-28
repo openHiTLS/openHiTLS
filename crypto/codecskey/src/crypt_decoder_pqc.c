@@ -16,7 +16,7 @@
 #include "hitls_build.h"
 #if defined(HITLS_CRYPTO_KEY_DECODE_CHAIN) &&                                                       \
     (defined(HITLS_CRYPTO_MLDSA) || defined(HITLS_CRYPTO_MLKEM) || defined(HITLS_CRYPTO_SLH_DSA) || \
-        defined(HITLS_CRYPTO_XMSS) || defined(HITLS_CRYPTO_XMSSMT))
+        defined(HITLS_CRYPTO_XMSS) || defined(HITLS_CRYPTO_XMSSMT) || defined(HITLS_CRYPTO_HSS_LMS))
 
 #include <string.h>
 
@@ -39,7 +39,12 @@
 #include "crypt_xmssmt.h"
 #endif
 
+#ifdef HITLS_CRYPTO_HSS_LMS
+#include "crypt_hss.h"
+#endif
+
 #include "crypt_params_key.h"
+#include "bsl_bytes.h"
 #include "bsl_asn1_internal.h"
 #include "bsl_params.h"
 #include "bsl_obj_internal.h"
@@ -406,6 +411,56 @@ int32_t CRYPT_MLKEM_ParsePkcs8key(void *libCtx, uint8_t *buffer, uint32_t buffer
     return CRYPT_SUCCESS;
 }
 #endif // HITLS_CRYPTO_MLKEM
+
+#ifdef HITLS_CRYPTO_HSS_LMS
+static int32_t DecodeHssLmsSubPubkeyPreCheck(uint8_t *buff, uint32_t buffLen, bool isComplete,
+    CRYPT_DECODE_SubPubkeyInfo *info)
+{
+    int32_t ret = CRYPT_DECODE_SubPubkey(buff, buffLen, NULL, info, isComplete);
+    if (ret != CRYPT_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        return ret;
+    }
+    if (info->keyType != BSL_CID_HSS_LMS) {
+        BSL_ERR_PUSH_ERROR(CRYPT_DECODE_ERR_KEY_TYPE_NOT_MATCH);
+        return CRYPT_DECODE_ERR_KEY_TYPE_NOT_MATCH;
+    }
+    if (info->pubKey.unusedBits != 0) {
+        BSL_ERR_PUSH_ERROR(CRYPT_DECODE_NO_SUPPORT_FORMAT);
+        return CRYPT_DECODE_NO_SUPPORT_FORMAT;
+    }
+    return CRYPT_SUCCESS;
+}
+
+
+int32_t CRYPT_HSS_ParseSubPubkeyAsn1Buff(void *libCtx, uint8_t *buff, uint32_t buffLen,
+    CRYPT_HSS_Ctx **pubKey, bool isComplete)
+{
+    CRYPT_DECODE_SubPubkeyInfo subPubkeyInfo = {0};
+    int32_t ret = DecodeHssLmsSubPubkeyPreCheck(buff, buffLen, isComplete, &subPubkeyInfo);
+    if (ret != CRYPT_SUCCESS) {
+        return ret;
+    }
+    CRYPT_HSS_Ctx *pctx = CRYPT_HSS_NewCtxEx(libCtx);
+    if (pctx == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
+        return CRYPT_MEM_ALLOC_FAIL;
+    }
+    BSL_Param pubParam[2] = {
+        {(int32_t)CRYPT_PARAM_HSS_PUBKEY, BSL_PARAM_TYPE_OCTETS, subPubkeyInfo.pubKey.buff,
+            subPubkeyInfo.pubKey.len, 0},
+        BSL_PARAM_END
+    };
+    ret = CRYPT_HSS_SetPubKey(pctx, pubParam);
+    if (ret != CRYPT_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        CRYPT_HSS_FreeCtx(pctx);
+        return ret;
+    }
+    *pubKey = pctx;
+    return CRYPT_SUCCESS;
+}
+#endif
 
 #if defined(HITLS_CRYPTO_XMSS) || defined(HITLS_CRYPTO_XMSSMT)
 static int32_t XmssDecodeSubPubkeyInfo(uint8_t *buff, uint32_t buffLen, bool isComplete, BslCid expectedType,

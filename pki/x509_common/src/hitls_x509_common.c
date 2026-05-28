@@ -130,6 +130,9 @@ static bool X509_SignAlgParamsMustBeOmitted(BslCid cid)
          */
         return true;
     }
+    if (cid == BSL_CID_XMSS || cid == BSL_CID_XMSSMT || cid == BSL_CID_HSS_LMS) {
+        return true;
+    }
     if (cid >= BSL_CID_MLDSA44_RSA2048_PSS_SHA256 && cid <= BSL_CID_MLDSA87_ECDSA_P521_SHA512) {
         /* draft-ietf-lamps-cms-composite-sigs-05 Section 2: composite
          * signature AlgorithmIdentifier parameters MUST be absent.
@@ -1517,6 +1520,11 @@ int32_t HITLS_X509_Sign(int32_t mdId, const CRYPT_EAL_PkeyCtx *prvKey, const HIT
 #ifdef HITLS_CRYPTO_XMSSMT
         case CRYPT_PKEY_XMSSMT:
             signAlgId.algId = (uint32_t)CRYPT_PKEY_XMSSMT;
+            break;
+#endif
+#ifdef HITLS_CRYPTO_HSS_LMS
+        case CRYPT_PKEY_HSS_LMS:
+            signAlgId.algId = BSL_CID_HSS_LMS;
             break;
 #endif
         default:

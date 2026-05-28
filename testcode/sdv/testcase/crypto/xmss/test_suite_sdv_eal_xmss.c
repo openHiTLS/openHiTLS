@@ -20,6 +20,7 @@
 #include "bsl_err.h"
 #include "bsl_sal.h"
 #include "crypt_errno.h"
+#include "crypt_eal_codecs.h"
 #include "crypt_algid.h"
 #include "crypt_params_key.h"
 #include "crypt_utils.h"
@@ -136,6 +137,21 @@ static void MockCopyKeyPairAddr(void *dest, const void *src)
     (void)src;
 }
 static uint32_t MockGetAdrsLen(void) { return 32; }
+
+#if defined(HITLS_CRYPTO_KEY_ENCODE) && defined(HITLS_CRYPTO_KEY_DECODE)
+static bool HasBytes(const uint8_t *data, uint32_t dataLen, const uint8_t *needle, uint32_t needleLen)
+{
+    if (data == NULL || needle == NULL || dataLen < needleLen) {
+        return false;
+    }
+    for (uint32_t i = 0; i <= dataLen - needleLen; i++) {
+        if (memcmp(data + i, needle, needleLen) == 0) {
+            return true;
+        }
+    }
+    return false;
+}
+#endif
 
 uint32_t g_stubRandCounter = 0;
 uint8_t **g_stubRand = NULL;
@@ -1117,7 +1133,7 @@ EXIT:
 /* END_CASE */
 
 /* @
-* @test  SDV_CRYPTO_XMSSMT_GENKEY_TC001
+* @test  SDV_CRYPTO_XMSSMT_GENKEY_PKEYTYPE_TC001
 * @spec  -
 * @title  XMSSMT key generation works with CRYPT_PKEY_XMSSMT type
 * @brief
@@ -1127,7 +1143,7 @@ EXIT:
 * @expect  genkey succeeds, pub key retrievable
 @ */
 /* BEGIN_CASE */
-void SDV_CRYPTO_XMSSMT_GENKEY_TC001(int isProvider)
+void SDV_CRYPTO_XMSSMT_GENKEY_PKEYTYPE_TC001(int isProvider)
 {
     TestMemInit();
     CRYPT_EAL_PkeyCtx *pkey = NULL;
@@ -1172,7 +1188,7 @@ EXIT:
 /* END_CASE */
 
 /* @
-* @test  SDV_CRYPTO_XMSSMT_SIGN_VERIFY_TC001
+* @test  SDV_CRYPTO_XMSSMT_SIGN_VERIFY_PKEYTYPE_TC001
 * @spec  -
 * @title  XMSSMT sign and verify work end-to-end with CRYPT_PKEY_XMSSMT type
 * @brief
@@ -1183,7 +1199,7 @@ EXIT:
 * @expect  sign and verify both succeed
 @ */
 /* BEGIN_CASE */
-void SDV_CRYPTO_XMSSMT_SIGN_VERIFY_TC001(int isProvider)
+void SDV_CRYPTO_XMSSMT_SIGN_VERIFY_PKEYTYPE_TC001(int isProvider)
 {
     TestMemInit();
     CRYPT_EAL_PkeyCtx *pkey = NULL;
@@ -1272,11 +1288,11 @@ void SDV_CRYPTO_XMSS_SET_XDR_ALG_REPEATED_TC001(void)
     ASSERT_EQ(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_SET_XMSS_XDR_ALG_TYPE,
         xdrOid, sizeof(xdrOid)), CRYPT_SUCCESS);
 
-    /* Set XDR again — must be rejected */
+    /* Set XDR again - must be rejected */
     ASSERT_EQ(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_SET_XMSS_XDR_ALG_TYPE,
         xdrOid, sizeof(xdrOid)), CRYPT_XMSS_CTRL_INIT_REPEATED);
 
-    /* Cross-path: SET_PARA_BY_ID after XDR init — also must be rejected */
+    /* Cross-path: SET_PARA_BY_ID after XDR init - also must be rejected */
     int32_t algId = CRYPT_XMSS_SHA2_10_256;
     ASSERT_EQ(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_SET_PARA_BY_ID,
         (void *)&algId, sizeof(algId)), CRYPT_XMSS_CTRL_INIT_REPEATED);
@@ -1393,6 +1409,25 @@ EXIT:
 }
 /* END_CASE */
 
+/* BEGIN_CASE */
+void SDV_CRYPTO_XMSSMT_GENKEY_TC001(int algId)
+{
+    TestMemInit();
+    ASSERT_EQ(TestRandInit(), CRYPT_SUCCESS);
+    CRYPT_EAL_PkeyCtx *pkey = NULL;
+    pkey = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_XMSSMT);
+    ASSERT_TRUE(pkey != NULL);
+    ASSERT_EQ(CRYPT_EAL_PkeySetParaById(pkey, algId), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyGen(pkey), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyGetId(pkey), CRYPT_PKEY_XMSSMT);
+    ASSERT_TRUE(TestIsErrStackEmpty());
+EXIT:
+    CRYPT_EAL_PkeyFreeCtx(pkey);
+    TestRandDeInit();
+    return;
+}
+/* END_CASE */
+
 /* @
 * @test  SDV_CRYPTO_XMSS_KEY_PARAM_MATRIX_TC001
 * @title Cover structured XMSS/XMSSMT public-key parameter validation
@@ -1481,6 +1516,32 @@ EXIT:
     BSL_ERR_ClearError();
     CRYPT_XMSSMT_FreeCtx(xmssmt);
     CRYPT_XMSS_FreeCtx(xmss);
+    return;
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_CRYPTO_XMSSMT_SIGN_VERIFY_TC001(int algId)
+{
+    TestMemInit();
+    ASSERT_EQ(TestRandInit(), CRYPT_SUCCESS);
+    CRYPT_EAL_PkeyCtx *pkey = NULL;
+    pkey = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_XMSSMT);
+    ASSERT_TRUE(pkey != NULL);
+    ASSERT_EQ(CRYPT_EAL_PkeySetParaById(pkey, algId), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyGen(pkey), CRYPT_SUCCESS);
+
+    uint8_t msg[] = "Test message for XMSSMT sign and verify";
+    uint8_t sig[50000] = {0};
+    uint32_t sigLen = sizeof(sig);
+    ASSERT_EQ(CRYPT_EAL_PkeySign(pkey, 0, msg, sizeof(msg) - 1, sig, &sigLen), CRYPT_SUCCESS);
+    ASSERT_TRUE(sigLen > 0);
+    ASSERT_EQ(CRYPT_EAL_PkeyVerify(pkey, 0, msg, sizeof(msg) - 1, sig, sigLen), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyGetId(pkey), CRYPT_PKEY_XMSSMT);
+    ASSERT_TRUE(TestIsErrStackEmpty());
+EXIT:
+    CRYPT_EAL_PkeyFreeCtx(pkey);
+    TestRandDeInit();
     return;
 }
 /* END_CASE */
@@ -1638,5 +1699,79 @@ EXIT:
     TestRandDeInit();
     BSL_ERR_ClearError();
     return;
+}
+/* END_CASE */
+/* BEGIN_CASE */
+void SDV_CRYPTO_XMSSMT_SIGN_TWICE_TC001(int algId)
+{
+    TestMemInit();
+    ASSERT_EQ(TestRandInit(), CRYPT_SUCCESS);
+    CRYPT_EAL_PkeyCtx *pkey = NULL;
+    pkey = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_XMSSMT);
+    ASSERT_TRUE(pkey != NULL);
+    ASSERT_EQ(CRYPT_EAL_PkeySetParaById(pkey, algId), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyGen(pkey), CRYPT_SUCCESS);
+
+    uint8_t msg[] = "Test message for XMSSMT sign twice";
+    uint8_t sig1[50000] = {0};
+    uint8_t sig2[50000] = {0};
+    uint32_t sigLen1 = sizeof(sig1);
+    uint32_t sigLen2 = sizeof(sig2);
+
+    ASSERT_EQ(CRYPT_EAL_PkeySign(pkey, 0, msg, sizeof(msg) - 1, sig1, &sigLen1), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeySign(pkey, 0, msg, sizeof(msg) - 1, sig2, &sigLen2), CRYPT_SUCCESS);
+
+    ASSERT_EQ(CRYPT_EAL_PkeyVerify(pkey, 0, msg, sizeof(msg) - 1, sig1, sigLen1), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyVerify(pkey, 0, msg, sizeof(msg) - 1, sig2, sigLen2), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyGetId(pkey), CRYPT_PKEY_XMSSMT);
+    ASSERT_TRUE(TestIsErrStackEmpty());
+EXIT:
+    CRYPT_EAL_PkeyFreeCtx(pkey);
+    TestRandDeInit();
+    return;
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_CRYPTO_XMSSMT_SUBPUBKEY_CODEC_TC001(int algId)
+{
+#if defined(HITLS_CRYPTO_KEY_ENCODE) && defined(HITLS_CRYPTO_KEY_DECODE)
+    TestMemInit();
+    ASSERT_EQ(TestRandInit(), CRYPT_SUCCESS);
+    CRYPT_EAL_PkeyCtx *pkey = NULL;
+    CRYPT_EAL_PkeyCtx *decodedPkey = NULL;
+    BSL_Buffer encode = {0};
+    uint8_t msg[] = "Test message for XMSSMT public key codec";
+    uint8_t sig[50000] = {0};
+    uint32_t sigLen = sizeof(sig);
+    const uint8_t xmssMtOid[] = {0x06, 0x08, 0x2B, 0x06, 0x01, 0x05, 0x05, 0x07, 0x06, 0x23};
+
+    pkey = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_XMSSMT);
+    ASSERT_TRUE(pkey != NULL);
+    ASSERT_EQ(CRYPT_EAL_PkeySetParaById(pkey, algId), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyGen(pkey), CRYPT_SUCCESS);
+
+    ASSERT_EQ(CRYPT_EAL_EncodeBuffKey(pkey, NULL, BSL_FORMAT_ASN1, CRYPT_PUBKEY_SUBKEY, &encode), CRYPT_SUCCESS);
+    ASSERT_TRUE(HasBytes(encode.data, encode.dataLen, xmssMtOid, sizeof(xmssMtOid)));
+
+    ASSERT_EQ(CRYPT_EAL_DecodeBuffKey(BSL_FORMAT_ASN1, CRYPT_PUBKEY_SUBKEY, &encode, NULL, 0, &decodedPkey),
+        CRYPT_SUCCESS);
+    ASSERT_TRUE(decodedPkey != NULL);
+    ASSERT_EQ(CRYPT_EAL_PkeyGetId(decodedPkey), CRYPT_PKEY_XMSSMT);
+    ASSERT_EQ(CRYPT_EAL_PkeyGetParaId(decodedPkey), algId);
+
+    ASSERT_EQ(CRYPT_EAL_PkeySign(pkey, 0, msg, sizeof(msg) - 1, sig, &sigLen), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyVerify(decodedPkey, 0, msg, sizeof(msg) - 1, sig, sigLen), CRYPT_SUCCESS);
+    ASSERT_TRUE(TestIsErrStackEmpty());
+EXIT:
+    CRYPT_EAL_PkeyFreeCtx(pkey);
+    CRYPT_EAL_PkeyFreeCtx(decodedPkey);
+    BSL_SAL_FREE(encode.data);
+    TestRandDeInit();
+    return;
+#else
+    (void)algId;
+    SKIP_TEST();
+#endif
 }
 /* END_CASE */

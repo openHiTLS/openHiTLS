@@ -2729,7 +2729,6 @@ EXIT:
 void SDV_CMS_NODETACHED_DIFF_MSG_FAIL_TC001(void)
 {
 #ifndef HITLS_PKI_CMS_SIGNEDDATA
-    (void)msg;
     SKIP_TEST();
 #else
     TestRandInit();
@@ -3533,6 +3532,31 @@ EXIT:
     HITLS_CMS_Free(cms);
     CRYPT_EAL_PkeyFreeCtx(pkey);
     HITLS_X509_CertFree(cert);
+#endif
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_CMS_HSS_POLICY_TC001(void)
+{
+#if !defined(HITLS_PKI_CMS_SIGNEDDATA) || !defined(HITLS_CRYPTO_HSS_LMS)
+    SKIP_TEST();
+#else
+    CMS_SignerInfo signerInfo = {0};
+
+    signerInfo.sigAlg.algId = BSL_CID_HSS_LMS;
+    signerInfo.digestAlg.id = BSL_CID_SHA256;
+    ASSERT_EQ(HITLS_CMS_CheckPqcSignAlgAndDigest(&signerInfo, false), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_CMS_CheckPqcSignAlgAndDigest(&signerInfo, true), HITLS_CMS_ERR_NOT_SUPPORT_STREAM_PQC);
+    TestErrClear();
+
+    signerInfo.digestAlg.id = BSL_CID_SHA512;
+    ASSERT_EQ(HITLS_CMS_CheckPqcSignAlgAndDigest(&signerInfo, false), HITLS_CMS_ERR_INVALID_ALGO);
+    TestErrClear();
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
+EXIT:
+    return;
 #endif
 }
 /* END_CASE */

@@ -1231,7 +1231,8 @@ static int32_t HITLS_X509_CheckCrlExtNode(void *ctx, HITLS_X509_ExtEntry *extNod
     return HITLS_PKI_SUCCESS;
 }
 
-#if defined(HITLS_CRYPTO_MLDSA) || defined(HITLS_CRYPTO_SLH_DSA) || defined(HITLS_CRYPTO_COMPOSITE)
+#if defined(HITLS_CRYPTO_MLDSA) || defined(HITLS_CRYPTO_SLH_DSA) || defined(HITLS_CRYPTO_COMPOSITE) || \
+    defined(HITLS_CRYPTO_XMSS) || defined(HITLS_CRYPTO_XMSSMT) || defined(HITLS_CRYPTO_HSS_LMS)
 static int32_t CheckPqcSigKeyUsage(HITLS_X509_Cert *cert)
 {
     // Check if the certificate's PUBLIC KEY is a PQC signature algorithm
@@ -1252,6 +1253,21 @@ static int32_t CheckPqcSigKeyUsage(HITLS_X509_Cert *cert)
 #endif
 #ifdef HITLS_CRYPTO_COMPOSITE
     if (pubKeyAlgId == CRYPT_PKEY_COMPOSITE) {
+        isPqcSignaturePubKey = true;
+    }
+#endif
+#ifdef HITLS_CRYPTO_XMSS
+    if (pubKeyAlgId == CRYPT_PKEY_XMSS) {
+        isPqcSignaturePubKey = true;
+    }
+#endif
+#ifdef HITLS_CRYPTO_XMSSMT
+    if (pubKeyAlgId == CRYPT_PKEY_XMSSMT) {
+        isPqcSignaturePubKey = true;
+    }
+#endif
+#ifdef HITLS_CRYPTO_HSS_LMS
+    if (pubKeyAlgId == CRYPT_PKEY_HSS_LMS) {
         isPqcSignaturePubKey = true;
     }
 #endif
@@ -1324,7 +1340,8 @@ static int32_t HITLS_X509_CheckCertExt(void *ctx, HITLS_X509_Cert *cert, int32_t
             (HITLS_X509_StoreCtx *)ctx, cert, depth, HITLS_X509_ERR_VFY_EXTENSIONS_REQUIRE_V3);
         return HITLS_PKI_SUCCESS;
     }
-#if defined(HITLS_CRYPTO_MLDSA) || defined(HITLS_CRYPTO_SLH_DSA) || defined(HITLS_CRYPTO_COMPOSITE)
+#if defined(HITLS_CRYPTO_MLDSA) || defined(HITLS_CRYPTO_SLH_DSA) || defined(HITLS_CRYPTO_COMPOSITE) || \
+    defined(HITLS_CRYPTO_XMSS) || defined(HITLS_CRYPTO_XMSSMT) || defined(HITLS_CRYPTO_HSS_LMS)
     int32_t pqcSigKeyUsageRet = CheckPqcSigKeyUsage(cert);
     if (pqcSigKeyUsageRet != HITLS_PKI_SUCCESS) {
         return pqcSigKeyUsageRet;

@@ -207,6 +207,9 @@ static BslCid GetDefaultPqcDigestAlg(BslCid signAlgId, bool useSignedAttrs)
             return (BslCid)mdId;
         }
     }
+    if (signAlgId == BSL_CID_HSS_LMS) {
+        return BSL_CID_SHA256;
+    }
     return BSL_CID_UNKNOWN;
 }
 
@@ -276,6 +279,22 @@ static int32_t CheckOrGetMdForComposite(BslCid algId, int32_t *mdId)
     return ValidateCompositeDigestAlg(algId, (BslCid)*mdId);
 }
 
+static int32_t CheckOrGetMdForHss(bool hasSignedAttr, int32_t *mdId, bool isStream)
+{
+    if (!hasSignedAttr && isStream) {
+        BSL_ERR_PUSH_ERROR(HITLS_CMS_ERR_NOT_SUPPORT_STREAM_PQC);
+        return HITLS_CMS_ERR_NOT_SUPPORT_STREAM_PQC;
+    }
+    if (*mdId == BSL_CID_UNKNOWN) {
+        *mdId = GetDefaultPqcDigestAlg(BSL_CID_HSS_LMS, hasSignedAttr);
+    }
+    if (*mdId != BSL_CID_SHA256) {
+        BSL_ERR_PUSH_ERROR(HITLS_CMS_ERR_INVALID_ALGO);
+        return HITLS_CMS_ERR_INVALID_ALGO;
+    }
+    return HITLS_PKI_SUCCESS;
+}
+
 int32_t HITLS_CMS_CheckOrGetPqcMd(const CRYPT_EAL_PkeyCtx *key, bool hasSignedAttr, int32_t *mdId,
     bool isStream)
 {
@@ -292,6 +311,9 @@ int32_t HITLS_CMS_CheckOrGetPqcMd(const CRYPT_EAL_PkeyCtx *key, bool hasSignedAt
     if (keyAlgId == CRYPT_PKEY_COMPOSITE) {
         algId = (BslCid)CRYPT_EAL_PkeyGetParaId(key);
         return CheckOrGetMdForComposite(algId, mdId);
+    }
+    if (keyAlgId == CRYPT_PKEY_HSS_LMS) {
+        return CheckOrGetMdForHss(hasSignedAttr, mdId, isStream);
     }
     return HITLS_PKI_SUCCESS;
 }
@@ -345,6 +367,16 @@ int32_t HITLS_CMS_CheckPqcSignAlgAndDigest(const CMS_SignerInfo *si, bool isStre
     if (IsHashSlhDsaAlg(signAlgId)) {
         BSL_ERR_PUSH_ERROR(HITLS_CMS_ERR_INVALID_ALGO);
         return HITLS_CMS_ERR_INVALID_ALGO;
+    }
+    if (signAlgId == BSL_CID_HSS_LMS) {
+        if (!hasSignedAttr && isStream) {
+            BSL_ERR_PUSH_ERROR(HITLS_CMS_ERR_NOT_SUPPORT_STREAM_PQC);
+            return HITLS_CMS_ERR_NOT_SUPPORT_STREAM_PQC;
+        }
+        if (digestAlg != BSL_CID_SHA256) {
+            BSL_ERR_PUSH_ERROR(HITLS_CMS_ERR_INVALID_ALGO);
+            return HITLS_CMS_ERR_INVALID_ALGO;
+        }
     }
     return HITLS_PKI_SUCCESS;
 }
