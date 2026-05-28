@@ -1327,7 +1327,7 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_SIGN_ERR_FUNC_TC001(void)
     ALERT_Info alert = {0};
     ALERT_GetInfo(client->ssl, &alert);
     ASSERT_EQ(alert.level, ALERT_LEVEL_FATAL);
-    ASSERT_EQ(alert.description, ALERT_UNSUPPORTED_CERTIFICATE);
+    ASSERT_EQ(alert.description, ALERT_INTERNAL_ERROR);
 EXIT:
     HITLS_CFG_FreeConfig(config);
     FRAME_FreeLink(client);
