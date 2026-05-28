@@ -38,7 +38,7 @@
         }                            \
     } while (0)
 
-static int32_t FrodoKemRandombytes(uint8_t *buffer, size_t len)
+static int32_t FrodoKemRandombytes(uint8_t *buffer, uint32_t len)
 {
     return CRYPT_Rand(buffer, len);
 }
@@ -47,15 +47,14 @@ typedef int32_t (*FrodoShakeFunc)(uint8_t *output, uint32_t outLen, const uint8_
 
 // Input: rnd = s || seedSE || z
 // Output: pk = seedA || B, sk = s || pk || S^T || H(pk), where B = A*S + E, seedA = H(z)， S and E are sampled from seedSE
-static int32_t FrodoKemKeypairInternal(const uint8_t *rnd, const FrodoKemParams *params, uint8_t *pk, uint8_t *sk,
-                                       size_t lenSk)
+static int32_t FrodoKemKeypairInternal(const uint8_t *rnd, const FrodoKemParams *params, uint8_t *pk, uint8_t *sk)
 {
     // n is the number of rows of matrix S
     const uint16_t n = params->n;
     // nBar is the number of columns of matrix S
     const uint16_t nBar = params->nBar;
     // The length of matrix
-    const size_t matrixSize = (size_t)n * nBar * sizeof(uint16_t);
+    const uint32_t matrixSize = (uint32_t)n * nBar * sizeof(uint16_t);
 
     const uint8_t *s = rnd; // secret seed s
     const uint8_t *seedSE = rnd + params->ss; // seedSE for sampling S and E
@@ -87,9 +86,9 @@ static int32_t FrodoKemKeypairInternal(const uint8_t *rnd, const FrodoKemParams 
     uint8_t *skS = skPk + params->pkSize;
     uint8_t *skPkh = skS + matrixSize;
 
-    (void)memcpy_s(skSec, lenSk, s, params->ss);
-    (void)memcpy_s(skPk, lenSk - params->ss, pk, params->pkSize);
-    (void)memcpy_s(skS, lenSk - params->ss - params->pkSize, (uint8_t *)sTranspose, matrixSize);
+    memcpy(skSec, s, params->ss);
+    memcpy(skPk, pk, params->pkSize);
+    FrodoCommonEncodeLe16(skS, sTranspose, (uint32_t)n * nBar);
 
     ret = FrodoShake(skPkh, params->lenPkHash, pk, params->pkSize);
     if (ret != CRYPT_SUCCESS) {
@@ -176,9 +175,9 @@ EXIT:
     return ret;
 }
 
-static int32_t FrodoKemKeypair(const FrodoKemParams *params, uint8_t *pk, uint8_t *sk, size_t lenSk)
+static int32_t FrodoKemKeypair(const FrodoKemParams *params, uint8_t *pk, uint8_t *sk)
 {
-    const size_t randLen = (size_t)params->ss + params->lenSeedSE + params->lenSeedA;
+    const uint32_t randLen = (uint32_t)params->ss + params->lenSeedSE + params->lenSeedA;
     uint8_t *rnd = BSL_SAL_Malloc(randLen);
     if (rnd == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
@@ -190,7 +189,7 @@ static int32_t FrodoKemKeypair(const FrodoKemParams *params, uint8_t *pk, uint8_
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
-    ret = FrodoKemKeypairInternal(rnd, params, pk, sk, lenSk);
+    ret = FrodoKemKeypairInternal(rnd, params, pk, sk);
     BSL_SAL_ClearFree(rnd, randLen);
     return ret;
 }
@@ -331,7 +330,7 @@ int32_t CRYPT_FRODOKEM_Gen(CRYPT_FRODOKEM_Ctx *ctx)
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         return CRYPT_MEM_ALLOC_FAIL;
     }
-    int32_t ret = FrodoKemKeypair(ctx->para, ctx->publicKey, ctx->privateKey, ctx->para->kemSkSize);
+    int32_t ret = FrodoKemKeypair(ctx->para, ctx->publicKey, ctx->privateKey);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         BSL_SAL_FREE(ctx->publicKey);

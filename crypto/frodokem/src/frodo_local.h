@@ -17,7 +17,6 @@
 #define FRODO_LOCAL_H
 
 #include <stdint.h>
-#include <stdlib.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -75,13 +74,19 @@ int32_t FrodoPkeKeygenSeeded(const FrodoKemParams *params, uint8_t *pk, uint16_t
 // Function Prototypes from util.c
 // =================================================================================
 
-void FrodoCommonPack(uint8_t *out, const size_t outLen, const uint16_t *in, const size_t inLen, const uint8_t lsb);
+void FrodoCommonPack(uint8_t *out, const uint32_t outLen, const uint16_t *in, const uint32_t inLen,
+                     const uint8_t lsb);
 
-void FrodoCommonUnpack(uint16_t *out, const size_t outLen, const uint8_t *in, const size_t inLen, const uint8_t lsb);
+void FrodoCommonUnpack(uint16_t *out, const uint32_t outLen, const uint8_t *in, const uint32_t inLen,
+                       const uint8_t lsb);
 
-int8_t FrodoCommonCtVerify(const uint16_t *a, const uint16_t *b, size_t len);
+void FrodoCommonEncodeLe16(uint8_t *out, const uint16_t *in, uint32_t len);
 
-void FrodoCommonCtSelect(uint8_t *r, const uint8_t *a, const uint8_t *b, size_t len, int8_t selector);
+void FrodoCommonDecodeLe16(uint16_t *out, const uint8_t *in, uint32_t len);
+
+int8_t FrodoCommonCtVerify(const uint16_t *a, const uint16_t *b, uint32_t len);
+
+void FrodoCommonCtSelect(uint8_t *r, const uint8_t *a, const uint8_t *b, uint32_t len, int8_t selector);
 
 // =================================================================================
 // Function Prototypes from core_*.c (Matrix Arithmetic)

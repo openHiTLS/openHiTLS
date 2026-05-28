@@ -58,6 +58,13 @@ static inline uint16_t leToUint16(uint16_t n)
     (bytes)[0] = (val) & 0xff;   \
     (bytes)[1] = (val) >> 8;
 
+static void LeToUint16Array(uint16_t *out, int32_t len)
+{
+    for (int32_t i = 0; i < len; i++) {
+        out[i] = LE_TO_UINT16(out[i]);
+    }
+}
+
 static void InitAESHeaderBlockNumber(uint8_t *aesBuf, const int32_t blocksPerRow)
 {
     for (int32_t blk = 0; blk < blocksPerRow; blk++) {
@@ -87,9 +94,7 @@ static int32_t AESCtrEncrypt(void *ctx, EAL_CipherMethod *method, const int32_t 
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
-    for (int32_t k = 0; k < 4 * n; k++) {
-        rows[k] = (uint16_t)LE_TO_UINT16(rows[k]);
-    }
+    LeToUint16Array(rows, 4 * n);
     return CRYPT_SUCCESS;
 }
 
@@ -231,7 +236,7 @@ static int32_t FrodoCommonMulAddAsPlusESHAKE(uint16_t *out, const uint16_t *matr
                                              uint16_t rows[FRODO_MATRIX_FOUR_ROWS_SIZE], MultFunctionShake multFunction)
 {
     int32_t ret;
-    const size_t inLen = 2 + (size_t)params->lenSeedA; // lenSeedA is FRODO_MAX_SEED_A
+    const uint32_t inLen = 2 + (uint32_t)params->lenSeedA; // lenSeedA is FRODO_MAX_SEED_A
     uint8_t in0[2 + FRODO_MAX_SEED_A];
     uint8_t in1[2 + FRODO_MAX_SEED_A];
     uint8_t in2[2 + FRODO_MAX_SEED_A];
@@ -258,6 +263,10 @@ static int32_t FrodoCommonMulAddAsPlusESHAKE(uint16_t *out, const uint16_t *matr
         RETURN_RET_IF_ERR(FrodoKemShake128((uint8_t *)row1, n * sizeof(uint16_t), in1, inLen), ret);
         RETURN_RET_IF_ERR(FrodoKemShake128((uint8_t *)row2, n * sizeof(uint16_t), in2, inLen), ret);
         RETURN_RET_IF_ERR(FrodoKemShake128((uint8_t *)row3, n * sizeof(uint16_t), in3, inLen), ret);
+        LeToUint16Array(row0, n);
+        LeToUint16Array(row1, n);
+        LeToUint16Array(row2, n);
+        LeToUint16Array(row3, n);
         multFunction(out, matrixST, n, nBar, row0, row1, row2, row3, i);
     }
     return CRYPT_SUCCESS;
@@ -298,21 +307,21 @@ int32_t FrodoCommonMulAddSaPlusEPortable(uint16_t *out, const uint16_t *s, const
 void FrodoCommonMulAddSbPlusEPortable(uint16_t *V0, const uint16_t *STp, const uint16_t *B, const uint16_t *Epp,
                                       const FrodoKemParams *params)
 {
-    const size_t n = params->n;
-    const size_t nBar = params->nBar;
+    const uint32_t n = params->n;
+    const uint32_t nBar = params->nBar;
     const uint16_t qMask = (uint16_t)((1u << params->logq) - 1u);
 
-    for (size_t i = 0; i < nBar * nBar; i++) {
+    for (uint32_t i = 0; i < nBar * nBar; i++) {
         V0[i] = (uint16_t)(Epp[i] & qMask);
     }
 
-    for (size_t i = 0; i < nBar; i++) {
-        const size_t Si = i * n;
-        const size_t Vi = i * nBar;
-        for (size_t k = 0; k < n; k++) {
+    for (uint32_t i = 0; i < nBar; i++) {
+        const uint32_t Si = i * n;
+        const uint32_t Vi = i * nBar;
+        for (uint32_t k = 0; k < n; k++) {
             const uint32_t s = (uint32_t)(STp[Si + k] & qMask);
-            const size_t Bk = k * nBar;
-            for (size_t j = 0; j < nBar; j++) {
+            const uint32_t Bk = k * nBar;
+            for (uint32_t j = 0; j < nBar; j++) {
                 const uint32_t b = (uint32_t)(B[Bk + j] & qMask);
                 uint32_t acc = (uint32_t)V0[Vi + j] + s * b;
                 V0[Vi + j] = (uint16_t)(acc & qMask);
@@ -323,13 +332,14 @@ void FrodoCommonMulAddSbPlusEPortable(uint16_t *V0, const uint16_t *STp, const u
 
 void FrodoCommonMulBs(uint16_t *out, const uint16_t *b, const uint16_t *s, const FrodoKemParams *params)
 {
-    const size_t n = params->n, nBar = params->nBar;
+    const uint32_t n = params->n;
+    const uint32_t nBar = params->nBar;
     const uint16_t qMask = (uint16_t)((1u << params->logq) - 1u);
 
-    for (size_t i = 0; i < nBar; i++) {
-        for (size_t j = 0; j < nBar; j++) {
+    for (uint32_t i = 0; i < nBar; i++) {
+        for (uint32_t j = 0; j < nBar; j++) {
             uint64_t acc = 0;
-            for (size_t k = 0; k < n; k++) {
+            for (uint32_t k = 0; k < n; k++) {
                 acc += (uint32_t)(b[i * n + k] & qMask) * (uint32_t)(s[k * nBar + j] & qMask);
             }
             out[i * nBar + j] = (uint16_t)(acc & qMask);
@@ -339,12 +349,13 @@ void FrodoCommonMulBs(uint16_t *out, const uint16_t *b, const uint16_t *s, const
 
 void FrodoCommonMulBsUsingSt(uint16_t *out, const uint16_t *b, const uint16_t *sT, const FrodoKemParams *params)
 {
-    const size_t n = params->n, nBar = params->nBar; //size_t整改一下
+    const uint32_t n = params->n;
+    const uint32_t nBar = params->nBar;
     const uint16_t qMask = (uint16_t)((1u << params->logq) - 1u);
-    for (size_t i = 0; i < nBar; i++) {
-        for (size_t j = 0; j < nBar; j++) {
+    for (uint32_t i = 0; i < nBar; i++) {
+        for (uint32_t j = 0; j < nBar; j++) {
             uint64_t acc = 0;
-            for (size_t k = 0; k < n; k++) {
+            for (uint32_t k = 0; k < n; k++) {
                 uint16_t bIk = b[i * n + k] & qMask;
                 uint16_t sKj = sT[j * n + k] & qMask;
                 acc += (uint32_t)bIk * sKj;
@@ -356,9 +367,9 @@ void FrodoCommonMulBsUsingSt(uint16_t *out, const uint16_t *b, const uint16_t *s
 
 void FrodoCommonAdd(uint16_t *out, const uint16_t *a, const uint16_t *b, const FrodoKemParams *params)
 {
-    const size_t ncoeff = (size_t)params->nBar * params->nBar;
+    const uint32_t ncoeff = (uint32_t)params->nBar * params->nBar;
     const uint16_t qMask = (uint16_t)((1u << params->logq) - 1u);
-    for (size_t t = 0; t < ncoeff; t++) {
+    for (uint32_t t = 0; t < ncoeff; t++) {
         uint32_t sum = (uint32_t)(a[t] & qMask) + (uint32_t)(b[t] & qMask);
         out[t] = (uint16_t)(sum & qMask);
     }
@@ -366,9 +377,9 @@ void FrodoCommonAdd(uint16_t *out, const uint16_t *a, const uint16_t *b, const F
 
 void FrodoCommonSub(uint16_t *out, const uint16_t *a, const uint16_t *b, const FrodoKemParams *params)
 {
-    const size_t ncoeff = (size_t)params->nBar * params->nBar;
+    const uint32_t ncoeff = (uint32_t)params->nBar * params->nBar;
     const uint16_t qMask = (uint16_t)((1u << params->logq) - 1u);
-    for (size_t t = 0; t < ncoeff; t++) {
+    for (uint32_t t = 0; t < ncoeff; t++) {
         uint32_t diff = (uint32_t)(a[t] & qMask) - (uint32_t)(b[t] & qMask);
         out[t] = (uint16_t)(diff & qMask); // when q=2^k，the operation "x & qMask" is equal to x mod q
     }
@@ -377,12 +388,12 @@ void FrodoCommonSub(uint16_t *out, const uint16_t *a, const uint16_t *b, const F
 void FrodoCommonKeyEncode(uint16_t *out, const uint16_t *in, const FrodoKemParams *params)
 {
     const uint8_t *mu = (const uint8_t *)in;
-    const size_t total = (size_t)params->nBar * params->nBar;
+    const uint32_t total = (uint32_t)params->nBar * params->nBar;
     const uint8_t b = (uint8_t)params->extractedBits;
     const uint16_t factor = (uint16_t)(1u << (params->logq - b));
 
-    size_t bitPos = 0;
-    for (size_t t = 0; t < total; t++) {
+    uint32_t bitPos = 0;
+    for (uint32_t t = 0; t < total; t++) {
         uint32_t x = 0;
         for (uint8_t r = 0; r < b; r++, bitPos++) {
             uint8_t byte = mu[bitPos >> 3];
@@ -397,7 +408,7 @@ void FrodoCommonKeyDecode(uint16_t *out, const uint16_t *in, const FrodoKemParam
 {
     uint8_t *mu = (uint8_t *)out;
 
-    const size_t total = (size_t)params->nBar * params->nBar;
+    const uint32_t total = (uint32_t)params->nBar * params->nBar;
     const uint8_t b = (uint8_t)params->extractedBits;
     const uint8_t s = (uint8_t)(params->logq - b);
     const uint16_t round = (uint16_t)(1u << (s - 1));
@@ -405,8 +416,8 @@ void FrodoCommonKeyDecode(uint16_t *out, const uint16_t *in, const FrodoKemParam
 
     (void)memset_s(mu, params->lenMu, 0, params->lenMu);
 
-    size_t bitpos = 0;
-    for (size_t t = 0; t < total; t++) {
+    uint32_t bitpos = 0;
+    for (uint32_t t = 0; t < total; t++) {
         uint16_t v = in[t];
         uint16_t piece = (uint16_t)(((uint32_t)v + round) >> s) & mask;
 

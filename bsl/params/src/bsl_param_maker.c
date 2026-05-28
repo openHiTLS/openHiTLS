@@ -51,7 +51,7 @@ static void PARAM_MAKER_DEF_Free(BSL_PARAM_MAKER_DEF *paramMakerDef)
         return;
     }
     if ((paramMakerDef->flag & PARAM_MAKER_MALLOCED_VALUE) != 0) {
-        BSL_SAL_FREE(paramMakerDef->value);
+        BSL_SAL_ClearFree(paramMakerDef->value, paramMakerDef->allocLen);
     }
     BSL_SAL_Free(paramMakerDef);
 }
