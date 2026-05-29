@@ -18,7 +18,9 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#ifdef HITLS_BSL_UI
 #include <termios.h>
+#endif
 #include <unistd.h>
 #include <errno.h>
 #include "bsl_errno.h"
@@ -175,6 +177,7 @@ int32_t SAL_FILE_Feof(bsl_sal_file_handle stream)
     return BSL_SAL_NOT_FILE_EOF;
 }
 
+#ifdef HITLS_BSL_UI
 int32_t SAL_FILE_FSetAttr(bsl_sal_file_handle stream, int cmd, const void *arg)
 {
     if (stream == NULL || arg == NULL) {
@@ -196,5 +199,6 @@ int32_t SAL_FILE_FGetAttr(bsl_sal_file_handle stream, void *arg)
     }
     return BSL_SUCCESS;
 }
+#endif
 
 #endif

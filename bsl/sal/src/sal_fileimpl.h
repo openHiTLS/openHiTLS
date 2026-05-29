@@ -58,8 +58,10 @@ char *SAL_FILE_FGets(bsl_sal_file_handle stream, char *buf, int32_t readLen);
 bool SAL_FILE_FPuts(bsl_sal_file_handle stream, const char *buf);
 bool SAL_FILE_Flush(bsl_sal_file_handle stream);
 int32_t SAL_FILE_Feof(bsl_sal_file_handle stream);
+#ifdef HITLS_BSL_UI
 int32_t SAL_FILE_FSetAttr(bsl_sal_file_handle stream, int cmd, const void *arg);
 int32_t SAL_FILE_FGetAttr(bsl_sal_file_handle stream, void *arg);
+#endif
 #endif
 
 #ifdef __cplusplus
