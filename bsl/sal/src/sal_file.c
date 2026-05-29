@@ -184,7 +184,7 @@ int32_t SAL_FSetAttr(bsl_sal_file_handle stream, int cmd, const void *arg)
     if (g_fileCallBack.pfFileSetAttr != NULL && g_fileCallBack.pfFileSetAttr != SAL_FSetAttr) {
         return g_fileCallBack.pfFileSetAttr(stream, cmd, arg);
     }
-#if defined(HITLS_BSL_SAL_LINUX) || defined(HITLS_BSL_SAL_DARWIN)
+#if (defined(HITLS_BSL_SAL_LINUX) || defined(HITLS_BSL_SAL_DARWIN)) && defined(HITLS_BSL_UI)
     return SAL_FILE_FSetAttr(stream, cmd, arg);
 #else
     return BSL_SAL_FILE_NO_REG_FUNC;
@@ -196,7 +196,7 @@ int32_t SAL_FGetAttr(bsl_sal_file_handle stream, void *arg)
     if (g_fileCallBack.pfFileGetAttr != NULL && g_fileCallBack.pfFileGetAttr != SAL_FGetAttr) {
         return g_fileCallBack.pfFileGetAttr(stream, arg);
     }
-#if defined(HITLS_BSL_SAL_LINUX) || defined(HITLS_BSL_SAL_DARWIN)
+#if (defined(HITLS_BSL_SAL_LINUX) || defined(HITLS_BSL_SAL_DARWIN)) && defined(HITLS_BSL_UI)
     return SAL_FILE_FGetAttr(stream, arg);
 #else
     return BSL_SAL_FILE_NO_REG_FUNC;
