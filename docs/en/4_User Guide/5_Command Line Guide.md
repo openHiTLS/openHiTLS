@@ -108,6 +108,43 @@ Symmetric encryption and decryption operations, supporting multiple symmetric al
 
 AES-WRAP algorithms are not supported by the `enc` command.
 
+**Function**: Symmetric encryption/decryption
+
+**Usage**:
+```
+hitls enc -cipher <alg> -enc|-dec -in <infile> -out <outfile> -pass <pass> [options]
+```
+
+**Options**:
+- `-help`: Show help information
+- `-cipher <alg>`: Specify the symmetric algorithm. Use `hitls list -cipher-algorithms` to view supported algorithms.
+- `-enc`: Encryption
+- `-dec`: Decryption
+- `-in <file>`: Input file
+- `-out <file>`: Output file
+- `-pass <pass:xxx|file:xxx>`: Passphrase source
+- `-hex`: Hex-encoded output/input
+- `-base64`: Base64-encoded output/input
+- `-md <alg>`: Digest algorithm used to derive the key (default: SHA256)
+- `-iter <count>`: Number of PBKDF2 iterations used for key derivation. If not specified, the default value `10000` is used. The valid range for `count` is `1` to `4294967295`.
+- `-provider`, `-provider-path`, `-provider-attr`: See [Provider options](#21-provider-options)
+
+**Notes**:
+- If `-hex`/`-base64` is not specified, the output is binary.
+- The decryption format must match the encryption output format (for example, use `-base64` for both).
+
+**Examples**:
+```bash
+# Binary output by default
+hitls enc -cipher aes128_ecb -enc -in in.txt -pass pass:12345678 -out out.bin
+
+# Hex output
+hitls enc -cipher aes128_ecb -enc -in in.txt -pass pass:12345678 -out out.txt -hex
+
+# Base64 output
+hitls enc -cipher aes128_ecb -enc -in in.txt -pass pass:12345678 -out out.txt -base64
+```
+
 ### 3.2.2 mac
 Message authentication code calculation and verification
 

@@ -1112,6 +1112,9 @@ static int32_t InitRand(AppInitParam *param)
     int32_t ret = CRYPT_EAL_ProviderRandInitCtx(APP_GetCurrent_LibCtx(), param->randAlgId,
         param->provider->providerAttr, NULL, 0, NULL);
 #endif
+    if (ret == CRYPT_EAL_ERR_DRBG_REPEAT_INIT) {
+        return HITLS_APP_SUCCESS;
+    }
     if (ret != CRYPT_SUCCESS) {
         AppPrintError("Failed to init rand ctx, ret: 0x%x.\n", ret);
         return HITLS_APP_CRYPTO_FAIL;

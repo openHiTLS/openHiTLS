@@ -66,6 +66,45 @@ static void AppUninit(void)
     HITLS_APP_FreeLibCtx();
 }
 
+static int32_t CompareFile(const char *file1, const char *file2)
+{
+    FILE *fp1 = fopen(file1, "rb");
+    FILE *fp2 = fopen(file2, "rb");
+    if (fp1 == NULL || fp2 == NULL) {
+        if (fp1 != NULL) {
+            if (fclose(fp1) != 0) {
+                return HITLS_APP_UIO_FAIL;
+            }
+        }
+        if (fp2 != NULL) {
+            if (fclose(fp2) != 0) {
+                return HITLS_APP_UIO_FAIL;
+            }
+        }
+        return HITLS_APP_UIO_FAIL;
+    }
+    int result = HITLS_APP_SUCCESS;
+    char buf1[1024];
+    char buf2[1024];
+    size_t bytesRead1;
+    size_t bytesRead2;
+    do {
+        bytesRead1 = fread(buf1, 1, sizeof(buf1), fp1);
+        bytesRead2 = fread(buf2, 1, sizeof(buf2), fp2);
+        if (bytesRead1 != bytesRead2 || memcmp(buf1, buf2, bytesRead1) != 0) {
+            result = HITLS_APP_UIO_FAIL;
+            break;
+        }
+    } while (bytesRead1 > 0 && bytesRead2 > 0);
+    if (fclose(fp1) != 0) {
+        result = HITLS_APP_UIO_FAIL;
+    }
+    if (fclose(fp2) != 0) {
+        result = HITLS_APP_UIO_FAIL;
+    }
+    return result;
+}
+
 /**
  * @test UT_HITLS_APP_ENC_TC001
  * @spec  -
@@ -261,6 +300,43 @@ EXIT:
         clearerr(stdin);
     }
     (void)remove(inFile);
+    return;
+}
+/* END_CASE */
+
+/**
+ * @test UT_HITLS_APP_ENC_TC006
+ * @spec  -
+ * @title  测试命令行二级命令enc的hex和base64输出
+ */
+
+/* BEGIN_CASE */
+void UT_HITLS_APP_ENC_TC006(void)
+{
+    /* Verify hex/base64 encode then decode round-trip. */
+    char *encHexArgv[] = {"enc", "-enc", "-cipher", "aes128_ecb", "-in", "../testdata/apps/enc/test_encfile",
+        "-pass", "pass:12345678", "-out", "../testdata/apps/enc/res_hex_encfile", "-hex"};
+    char *decHexArgv[] = {"enc", "-dec", "-cipher", "aes128_ecb", "-in", "../testdata/apps/enc/res_hex_encfile",
+        "-pass", "pass:12345678", "-out", "../testdata/apps/enc/res_hex_decfile", "-hex"};
+    char *encB64Argv[] = {"enc", "-enc", "-cipher", "aes128_ecb", "-in", "../testdata/apps/enc/test_encfile",
+        "-pass", "pass:12345678", "-out", "../testdata/apps/enc/res_b64_encfile", "-base64"};
+    char *decB64Argv[] = {"enc", "-dec", "-cipher", "aes128_ecb", "-in", "../testdata/apps/enc/res_b64_encfile",
+        "-pass", "pass:12345678", "-out", "../testdata/apps/enc/res_b64_decfile", "-base64"};
+
+    ASSERT_EQ(AppInit(), HITLS_APP_SUCCESS);
+
+    ASSERT_EQ(HITLS_EncMain((int)(sizeof(encHexArgv) / sizeof(encHexArgv[0])), encHexArgv), HITLS_APP_SUCCESS);
+    ASSERT_EQ(HITLS_EncMain((int)(sizeof(decHexArgv) / sizeof(decHexArgv[0])), decHexArgv), HITLS_APP_SUCCESS);
+    ASSERT_EQ(CompareFile("../testdata/apps/enc/test_encfile", "../testdata/apps/enc/res_hex_decfile"),
+        HITLS_APP_SUCCESS);
+
+    ASSERT_EQ(HITLS_EncMain((int)(sizeof(encB64Argv) / sizeof(encB64Argv[0])), encB64Argv), HITLS_APP_SUCCESS);
+    ASSERT_EQ(HITLS_EncMain((int)(sizeof(decB64Argv) / sizeof(decB64Argv[0])), decB64Argv), HITLS_APP_SUCCESS);
+    ASSERT_EQ(CompareFile("../testdata/apps/enc/test_encfile", "../testdata/apps/enc/res_b64_decfile"),
+        HITLS_APP_SUCCESS);
+
+EXIT:
+    AppUninit();
     return;
 }
 /* END_CASE */

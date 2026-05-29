@@ -32,6 +32,7 @@
 #include "app_keymgmt.h"
 #include "bsl_sal.h"
 #include "bsl_ui.h"
+#include "bsl_bytes.h"
 #include "bsl_errno.h"
 #include "crypt_eal_cipher.h"
 #include "crypt_eal_rand.h"
@@ -39,8 +40,23 @@
 #include "crypt_algid.h"
 #include "crypt_errno.h"
 #include "crypt_params_key.h"
+#include "bsl_base64.h"
 
 #define HITLS_APP_ENC_MAX_PARAM_NUM 5
+#define HITLS_APP_ENC_U32_SIZE ((uint32_t)sizeof(uint32_t))
+#define HITLS_APP_ENC_HEADER_U32_FIELDS 4U
+#define HITLS_APP_ENC_HEX_CHAR_STEP 2U
+#define HITLS_APP_ENC_BLOCK_SIZE 16U
+#define HITLS_APP_ENC_SHIFT_24 24U
+#define HITLS_APP_ENC_SHIFT_16 16U
+#define HITLS_APP_ENC_SHIFT_8 8U
+#define HITLS_APP_ENC_U32_IDX_0 0U
+#define HITLS_APP_ENC_U32_IDX_1 1U
+#define HITLS_APP_ENC_U32_IDX_2 2U
+#define HITLS_APP_ENC_U32_IDX_3 3U
+#define HITLS_APP_ENC_TAG_DEC 0
+#define HITLS_APP_ENC_TAG_ENC 1
+#define HITLS_APP_ENC_VERSION 1
 
 typedef enum {
     HITLS_APP_OPT_CIPHER_ALG = 2,
@@ -48,6 +64,8 @@ typedef enum {
     HITLS_APP_OPT_OUT_FILE,
     HITLS_APP_OPT_DEC,
     HITLS_APP_OPT_ENC,
+    HITLS_APP_OPT_HEX,
+    HITLS_APP_OPT_BASE64,
     HITLS_APP_OPT_MD,
     HITLS_APP_OPT_PASS,
     HITLS_APP_PROV_ENUM,
@@ -63,6 +81,8 @@ static const HITLS_CmdOption g_encOpts[] = {
     {"out", HITLS_APP_OPT_OUT_FILE, HITLS_APP_OPT_VALUETYPE_OUT_FILE, "Output file"},
     {"dec", HITLS_APP_OPT_DEC, HITLS_APP_OPT_VALUETYPE_NO_VALUE, "Decryption operation"},
     {"enc", HITLS_APP_OPT_ENC, HITLS_APP_OPT_VALUETYPE_NO_VALUE, "Encryption operation"},
+    {"hex", HITLS_APP_OPT_HEX, HITLS_APP_OPT_VALUETYPE_NO_VALUE, "Hex-encoded output/input"},
+    {"base64", HITLS_APP_OPT_BASE64, HITLS_APP_OPT_VALUETYPE_NO_VALUE, "Base64-encoded output/input"},
     {"md", HITLS_APP_OPT_MD, HITLS_APP_OPT_VALUETYPE_STRING, "Specified digest to create a key"},
     {"pass", HITLS_APP_OPT_PASS, HITLS_APP_OPT_VALUETYPE_STRING, "Passphrase source, such as stdin ,file etc"},
     HITLS_APP_PROV_OPTIONS,
@@ -124,63 +144,126 @@ typedef struct {
     int32_t cipherId; // Indicates the symmetric encryption algorithm ID entered by the user.
     int32_t mdId; // Indicates the HMAC algorithm ID entered by the user.
     int32_t encTag; // Indicates the encryption/decryption flag entered by the user.
+    int32_t format; // Indicates the output/input format.
     uint32_t iter; // Indicates the number of iterations entered by the user.
     EncKeyParam *keySet;
     EncUio *encUio;
     AppProvider *provider;
+    BSL_Base64Ctx *b64EncCtx;
+    uint8_t *decBuf;
+    uint32_t decBufLen;
+    uint8_t *cipherBuf;
+    uint32_t cipherBufLen;
 #ifdef HITLS_APP_SM_MODE
     HITLS_APP_SM_Param *smParam;
 #endif
 } EncCmdOpt;
 
-static int32_t Int2Hex(int32_t num, char *hexBuf)
+static void WriteUint32Be(uint8_t *buf, uint32_t value)
 {
-    int ret = snprintf(hexBuf, REC_HEX_BUF_LENGTH + 1, "%08X", num);
-    if (strlen(hexBuf) != REC_HEX_BUF_LENGTH || ret < 0) {
-        AppPrintError("enc: error in uint to hex.\n");
-        return HITLS_APP_ENCODE_FAIL;
+    BSL_Uint32ToByte(value, buf);
+}
+
+static uint32_t ReadUint32Be(const uint8_t *buf)
+{
+    return BSL_ByteToUint32(buf);
+}
+
+static int32_t AppCopyData(void *dest, uint32_t destLen, const void *src, uint32_t srcLen)
+{
+    uint32_t i;
+    if (dest == NULL || src == NULL || srcLen > destLen) {
+        return HITLS_APP_COPY_ARGS_FAILED;
+    }
+    for (i = 0; i < srcLen; i++) {
+        ((uint8_t *)dest)[i] = ((const uint8_t *)src)[i];
     }
     return HITLS_APP_SUCCESS;
 }
 
-static int32_t Hex2Int(char *hexBuf, int32_t *num)
-{
-    if (hexBuf == NULL) {
-        AppPrintError("enc: No hex buffer here.\n");
-        return HITLS_APP_INVALID_ARG;
-    }
-    char *endptr = NULL;
-    *num = strtol(hexBuf, &endptr, REC_HEX_BASE);
-    return HITLS_APP_SUCCESS;
-}
-
-static int32_t HexAndWrite(EncCmdOpt *encOpt, int32_t decData, char *buf)
+static int32_t EncWriteBinary(EncCmdOpt *encOpt, uint8_t *buf, uint32_t bufLen)
 {
     uint32_t writeLen = 0;
-    if (Int2Hex(decData, buf) != HITLS_APP_SUCCESS) {
-        return HITLS_APP_ENCODE_FAIL;
-    }
-    if (BSL_UIO_Write(encOpt->encUio->wUio, buf, REC_HEX_BUF_LENGTH, &writeLen) != BSL_SUCCESS ||
-        writeLen != REC_HEX_BUF_LENGTH) {
+    if (BSL_UIO_Write(encOpt->encUio->wUio, buf, bufLen, &writeLen) != BSL_SUCCESS || writeLen != bufLen) {
+        AppPrintError("enc: Failed to write output content.\n");
         return HITLS_APP_UIO_FAIL;
     }
     return HITLS_APP_SUCCESS;
 }
 
-static int32_t ReadAndDec(EncCmdOpt *encOpt, char *hexBuf, uint32_t hexBufLen, int32_t *decData)
+static int32_t EncBase64Init(EncCmdOpt *encOpt)
 {
-    if (hexBufLen < REC_HEX_BUF_LENGTH + 1) {
-        return HITLS_APP_INVALID_ARG;
+    if (encOpt->b64EncCtx != NULL) {
+        return HITLS_APP_SUCCESS;
     }
-    uint32_t readLen = 0;
-    if (BSL_UIO_Read(encOpt->encUio->rUio, hexBuf, REC_HEX_BUF_LENGTH, &readLen) != BSL_SUCCESS ||
-        readLen != REC_HEX_BUF_LENGTH) {
-        return HITLS_APP_UIO_FAIL;
+    encOpt->b64EncCtx = BSL_BASE64_CtxNew();
+    if (encOpt->b64EncCtx == NULL) {
+        return HITLS_APP_MEM_ALLOC_FAIL;
     }
-    if (Hex2Int(hexBuf, decData) != HITLS_APP_SUCCESS) {
+    (void)BSL_BASE64_SetFlags(encOpt->b64EncCtx, BSL_BASE64_FLAGS_NO_NEWLINE);
+    if (BSL_BASE64_EncodeInit(encOpt->b64EncCtx) != BSL_SUCCESS) {
         return HITLS_APP_ENCODE_FAIL;
     }
     return HITLS_APP_SUCCESS;
+}
+
+static int32_t EncWriteEncoded(EncCmdOpt *encOpt, uint8_t *buf, uint32_t bufLen)
+{
+    if (buf == NULL || bufLen == 0) {
+        return HITLS_APP_SUCCESS;
+    }
+    if (encOpt->format == HITLS_APP_FORMAT_BINARY) {
+        return EncWriteBinary(encOpt, buf, bufLen);
+    }
+    if (encOpt->format == HITLS_APP_FORMAT_HEX) {
+        return HITLS_APP_OptWriteUio(encOpt->encUio->wUio, (uint8_t *)buf, bufLen, HITLS_APP_FORMAT_HEX);
+    }
+    if (encOpt->format == HITLS_APP_FORMAT_BASE64) {
+        int32_t ret = EncBase64Init(encOpt);
+        if (ret != HITLS_APP_SUCCESS) {
+            return ret;
+        }
+        uint32_t outBufLen = HITLS_BASE64_ENCODE_LENGTH(bufLen);
+        char *outBuf = (char *)BSL_SAL_Calloc(outBufLen + 1, 1);
+        if (outBuf == NULL) {
+            return HITLS_APP_MEM_ALLOC_FAIL;
+        }
+        uint32_t encodeLen = outBufLen;
+        if (BSL_BASE64_EncodeUpdate(encOpt->b64EncCtx, buf, bufLen, outBuf, &encodeLen) != BSL_SUCCESS) {
+            BSL_SAL_FREE(outBuf);
+            return HITLS_APP_ENCODE_FAIL;
+        }
+        int32_t writeRet = HITLS_APP_SUCCESS;
+        if (encodeLen != 0) {
+            writeRet = EncWriteBinary(encOpt, (uint8_t *)outBuf, encodeLen);
+        }
+        BSL_SAL_FREE(outBuf);
+        return writeRet;
+    }
+    return HITLS_APP_INVALID_ARG;
+}
+
+static int32_t EncWriteEncodedFinal(EncCmdOpt *encOpt)
+{
+    if (encOpt->format != HITLS_APP_FORMAT_BASE64 || encOpt->b64EncCtx == NULL) {
+        return HITLS_APP_SUCCESS;
+    }
+    uint32_t outBufLen = HITLS_BASE64_ENCODE_LENGTH(0);
+    char *outBuf = (char *)BSL_SAL_Calloc(outBufLen + 1, 1);
+    if (outBuf == NULL) {
+        return HITLS_APP_MEM_ALLOC_FAIL;
+    }
+    uint32_t encodeLen = outBufLen;
+    if (BSL_BASE64_EncodeFinal(encOpt->b64EncCtx, outBuf, &encodeLen) != BSL_SUCCESS) {
+        BSL_SAL_FREE(outBuf);
+        return HITLS_APP_ENCODE_FAIL;
+    }
+    int32_t writeRet = HITLS_APP_SUCCESS;
+    if (encodeLen != 0) {
+        writeRet = EncWriteBinary(encOpt, (uint8_t *)outBuf, encodeLen);
+    }
+    BSL_SAL_FREE(outBuf);
+    return writeRet;
 }
 
 static int32_t GetCipherId(const char *name)
@@ -203,6 +286,53 @@ static bool IsAesWrapCipher(int32_t cipherId)
     return false;
 }
 
+static int32_t HandleOptItem(EncCmdOpt *encOpt, int32_t encOptType)
+{
+    switch (encOptType) {
+        case HITLS_APP_OPT_EOF:
+            return HITLS_APP_SUCCESS;
+        case HITLS_APP_OPT_ERR:
+            AppPrintError("enc: Use -help for summary.\n");
+            return HITLS_APP_OPT_UNKOWN;
+        case HITLS_APP_OPT_HELP:
+            HITLS_APP_OptHelpPrint(g_encOpts);
+            return HITLS_APP_HELP;
+        case HITLS_APP_OPT_ENC:
+            encOpt->encTag = HITLS_APP_ENC_TAG_ENC;
+            return HITLS_APP_SUCCESS;
+        case HITLS_APP_OPT_DEC:
+            encOpt->encTag = HITLS_APP_ENC_TAG_DEC;
+            return HITLS_APP_SUCCESS;
+        case HITLS_APP_OPT_HEX:
+            encOpt->format = HITLS_APP_FORMAT_HEX;
+            return HITLS_APP_SUCCESS;
+        case HITLS_APP_OPT_BASE64:
+            encOpt->format = HITLS_APP_FORMAT_BASE64;
+            return HITLS_APP_SUCCESS;
+        case HITLS_APP_OPT_IN_FILE:
+            encOpt->inFile = HITLS_APP_OptGetValueStr();
+            return HITLS_APP_SUCCESS;
+        case HITLS_APP_OPT_OUT_FILE:
+            encOpt->outFile = HITLS_APP_OptGetValueStr();
+            return HITLS_APP_SUCCESS;
+        case HITLS_APP_OPT_PASS:
+            encOpt->passOptStr = HITLS_APP_OptGetValueStr();
+            return HITLS_APP_SUCCESS;
+        case HITLS_APP_OPT_MD:
+            if ((encOpt->mdId = GetMacId(HITLS_APP_OptGetValueStr())) == BSL_CID_UNKNOWN) {
+                return HITLS_APP_OPT_VALUE_INVALID;
+            }
+            return HITLS_APP_SUCCESS;
+        case HITLS_APP_OPT_CIPHER_ALG:
+            if ((encOpt->cipherId = GetCipherId(HITLS_APP_OptGetValueStr())) == BSL_CID_UNKNOWN) {
+                return HITLS_APP_OPT_VALUE_INVALID;
+            }
+            return HITLS_APP_SUCCESS;
+        default:
+            return HITLS_APP_SUCCESS;
+    }
+}
+
 // process for the ENC to receive subordinate options
 static int32_t HandleOpt(EncCmdOpt *encOpt)
 {
@@ -212,42 +342,9 @@ static int32_t HandleOpt(EncCmdOpt *encOpt)
 #ifdef HITLS_APP_SM_MODE
         HITLS_APP_SM_CASES(encOptType, encOpt->smParam);
 #endif
-        switch (encOptType) {
-            case HITLS_APP_OPT_EOF:
-                break;
-            case HITLS_APP_OPT_ERR:
-                AppPrintError("enc: Use -help for summary.\n");
-                return HITLS_APP_OPT_UNKOWN;
-            case HITLS_APP_OPT_HELP:
-                HITLS_APP_OptHelpPrint(g_encOpts);
-                return HITLS_APP_HELP;
-            case HITLS_APP_OPT_ENC:
-                encOpt->encTag = 1;
-                break;
-            case HITLS_APP_OPT_DEC:
-                encOpt->encTag = 0;
-                break;
-            case HITLS_APP_OPT_IN_FILE:
-                encOpt->inFile = HITLS_APP_OptGetValueStr();
-                break;
-            case HITLS_APP_OPT_OUT_FILE:
-                encOpt->outFile = HITLS_APP_OptGetValueStr();
-                break;
-            case HITLS_APP_OPT_PASS:
-                encOpt->passOptStr = HITLS_APP_OptGetValueStr();
-                break;
-            case HITLS_APP_OPT_MD:
-                if ((encOpt->mdId = GetMacId(HITLS_APP_OptGetValueStr())) == BSL_CID_UNKNOWN) {
-                    return HITLS_APP_OPT_VALUE_INVALID;
-                }
-                break;
-            case HITLS_APP_OPT_CIPHER_ALG:
-                if ((encOpt->cipherId = GetCipherId(HITLS_APP_OptGetValueStr())) == BSL_CID_UNKNOWN) {
-                    return HITLS_APP_OPT_VALUE_INVALID;
-                }
-                break;
-            default:
-                break;
+        int32_t ret = HandleOptItem(encOpt, encOptType);
+        if (ret != HITLS_APP_SUCCESS) {
+            return ret;
         }
     }
     // Obtain the number of parameters that cannot be parsed in the current version
@@ -298,7 +395,7 @@ static int32_t CheckParam(EncCmdOpt *encOpt)
     }
     // if the user does not specify the encryption or decryption mode,
     // an error is reported and the user is prompted to enter the following information
-    if (encOpt->encTag != 1 && encOpt->encTag != 0) {
+    if (encOpt->encTag != HITLS_APP_ENC_TAG_ENC && encOpt->encTag != HITLS_APP_ENC_TAG_DEC) {
         AppPrintError("enc: Need -enc or -dec option.\n");
         AppPrintError("Use -help for summary.\n");
         return HITLS_APP_OPT_VALUE_INVALID;
@@ -306,6 +403,9 @@ static int32_t CheckParam(EncCmdOpt *encOpt)
     // if the number of iterations is not set, the default value is 10000
     if (encOpt->iter == 0) {
         encOpt->iter = REC_ITERATION_TIMES;
+    }
+    if (encOpt->format == HILTS_APP_FORMAT_UNDEF) {
+        encOpt->format = HITLS_APP_FORMAT_BINARY;
     }
     // if the user does not transfer the digest algorithm, SHA256 is used by default to generate the derived key Dkey
     if (encOpt->mdId < 0) {
@@ -373,6 +473,14 @@ static int32_t HandleIO(EncCmdOpt *encOpt)
 
 static void FreeEnc(EncCmdOpt *encOpt)
 {
+    if (encOpt->b64EncCtx != NULL) {
+        BSL_BASE64_CtxFree(encOpt->b64EncCtx);
+        encOpt->b64EncCtx = NULL;
+    }
+    if (encOpt->decBuf != NULL) {
+        BSL_SAL_FREE(encOpt->decBuf);
+        encOpt->decBuf = NULL;
+    }
     if (encOpt->keySet->pass != NULL) {
         BSL_SAL_ClearFree(encOpt->keySet->pass, encOpt->keySet->passLen);
     }
@@ -395,6 +503,70 @@ static void FreeEnc(EncCmdOpt *encOpt)
         BSL_UIO_Free(encOpt->encUio->wUio);
     }
     return;
+}
+
+static void ClearEncPass(EncCmdOpt *encOpt)
+{
+    if (encOpt->keySet->pass != NULL) {
+        BSL_SAL_ClearFree(encOpt->keySet->pass, encOpt->keySet->passLen);
+        encOpt->keySet->pass = NULL;
+        encOpt->keySet->passLen = 0;
+    }
+}
+
+static void ClearEncDKey(EncCmdOpt *encOpt)
+{
+    if (encOpt->keySet->dKey != NULL && encOpt->keySet->dKeyLen != 0) {
+        BSL_SAL_CleanseData(encOpt->keySet->dKey, encOpt->keySet->dKeyLen);
+    }
+}
+
+static int32_t ReadPasswd(EncCmdOpt *encOpt, char **pwd, uint32_t *pwdLen)
+{
+    BSL_UI_ReadPwdParam param = {"password", NULL, true};
+    if (encOpt->passOptStr == NULL) {
+        AppPrintError("enc: The password can contain the following characters:\n");
+        AppPrintError("a~z A~Z 0~9 ! \" # $ %% & ' ( ) * + , - . / : ; < = > ? @ [ \\ ] ^ _ ` { | } ~\n");
+        AppPrintError("The space is not supported.\n");
+        if (HITLS_APP_GetPasswd(&param, pwd, pwdLen) != HITLS_APP_SUCCESS) {
+            AppPrintError("Failed to read passwd from stdin.\n");
+            return HITLS_APP_PASSWD_FAIL;
+        }
+        return HITLS_APP_SUCCESS;
+    }
+    if (HITLS_APP_ParsePasswd(encOpt->passOptStr, pwd) != HITLS_APP_SUCCESS) {
+        AppPrintError("enc: Failed to read passwd. Enter '-pass file:filePath' or '-pass pass:passwd'.\n");
+        return HITLS_APP_PASSWD_FAIL;
+    }
+    *pwdLen = (uint32_t)strlen(*pwd);
+    if (*pwdLen < APP_MIN_PASS_LENGTH || *pwdLen > APP_MAX_PASS_LENGTH) {
+        AppPrintError("enc: Invalid passwd length.\n");
+        return HITLS_APP_PASSWD_FAIL;
+    }
+    return HITLS_APP_SUCCESS;
+}
+
+static int32_t ValidatePasswd(const char *pwd, uint32_t pwdLen)
+{
+    if (pwdLen == 0 || pwdLen > APP_MAX_PASS_LENGTH) {
+        AppPrintError("enc: Invalid passwd length.\n");
+        return HITLS_APP_PASSWD_FAIL;
+    }
+    if (HITLS_APP_CheckPasswd((const uint8_t *)pwd, pwdLen) != HITLS_APP_SUCCESS) {
+        AppPrintError("enc: Failed to check passwd.\n");
+        return HITLS_APP_PASSWD_FAIL;
+    }
+    return HITLS_APP_SUCCESS;
+}
+
+static int32_t CopyPasswd(EncCmdOpt *encOpt, const char *pwd, uint32_t pwdLen)
+{
+    if (AppCopyData(encOpt->keySet->pass, APP_MAX_PASS_LENGTH, pwd, pwdLen) != HITLS_APP_SUCCESS) {
+        AppPrintError("enc: Invalid passwd length.\n");
+        return HITLS_APP_PASSWD_FAIL;
+    }
+    encOpt->keySet->passLen = pwdLen;
+    return HITLS_APP_SUCCESS;
 }
 
 static int32_t ApplyForSpace(EncCmdOpt *encOpt)
@@ -432,46 +604,27 @@ static int32_t HandlePasswd(EncCmdOpt *encOpt)
 #endif
     // If the user enters the last value of -pass, the system parses the value directly.
     // If the user does not enter the value, the system reads the value from the standard input.
-    int32_t ret;
-    char *pwd = NULL;
-    uint32_t pwdLen;
-    BSL_UI_ReadPwdParam param = {"password", NULL, true};
-    if (encOpt->passOptStr == NULL) {
-        AppPrintError("enc: The password can contain the following characters:\n");
-        AppPrintError("a~z A~Z 0~9 ! \" # $ %% & ' ( ) * + , - . / : ; < = > ? @ [ \\ ] ^ _ ` { | } ~\n");
-        AppPrintError("The space is not supported.\n");
-        if (HITLS_APP_GetPasswd(&param, &pwd, &pwdLen) != HITLS_APP_SUCCESS) {
-            AppPrintError("Failed to read passwd from stdin.\n");
-            return HITLS_APP_PASSWD_FAIL;
-        }
-    } else {
-        ret = HITLS_APP_ParsePasswd(encOpt->passOptStr, &pwd);
+    int32_t ret = HITLS_APP_PASSWD_FAIL;
+    char *passBuf = NULL;
+    uint32_t passLen = 0;
+    do {
+        ret = ReadPasswd(encOpt, &passBuf, &passLen);
         if (ret != HITLS_APP_SUCCESS) {
-            AppPrintError("enc: Failed to read passwd. Enter '-pass file:filePath' or '-pass pass:passwd'.\n");
-            return HITLS_APP_PASSWD_FAIL;
+            break;
         }
-        pwdLen = (uint32_t)strlen(pwd);
-        if (pwdLen < APP_MIN_PASS_LENGTH || pwdLen > APP_MAX_PASS_LENGTH) {
-            BSL_SAL_ClearFree(pwd, pwdLen);
-            AppPrintError("enc: Invalid passwd length.\n");
-            return HITLS_APP_PASSWD_FAIL;
+        ret = ValidatePasswd(passBuf, passLen);
+        if (ret != HITLS_APP_SUCCESS) {
+            break;
         }
+        ret = CopyPasswd(encOpt, passBuf, passLen);
+    } while (0);
+    if (passBuf != NULL) {
+        if (passLen > 0) {
+            BSL_SAL_CleanseData(passBuf, passLen);
+        }
+        BSL_SAL_Free(passBuf);
     }
-    ret = HITLS_APP_CheckPasswd((uint8_t *)pwd, pwdLen);
-    if (ret != HITLS_APP_SUCCESS || pwdLen <= 0) {
-        BSL_SAL_ClearFree(pwd, pwdLen);
-        AppPrintError("enc: Failed to check passwd.\n");
-        return HITLS_APP_PASSWD_FAIL;
-    }
-    if (pwdLen > APP_MAX_PASS_LENGTH) {
-        BSL_SAL_ClearFree(pwd, pwdLen);
-        AppPrintError("enc: Invalid passwd length.\n");
-        return HITLS_APP_PASSWD_FAIL;
-    }
-    memcpy(encOpt->keySet->pass, pwd, pwdLen);
-    BSL_SAL_ClearFree(pwd, pwdLen);
-    encOpt->keySet->passLen = pwdLen;
-    return HITLS_APP_SUCCESS;
+    return ret;
 }
 
 static int32_t GenSaltAndIv(EncCmdOpt *encOpt)
@@ -497,135 +650,230 @@ static int32_t GenSaltAndIv(EncCmdOpt *encOpt)
 // The enc encryption mode writes information to the file header.
 static int32_t WriteEncFileHeader(EncCmdOpt *encOpt)
 {
-    char hexDataBuf[REC_HEX_BUF_LENGTH + 1] = {0}; // Hexadecimal Data Generic Buffer
-    // Write the version, derived algorithm ID, salt information, iteration times, and IV information to the output file
-    // (Convert the character string to hexadecimal and eliminate '\0' after the character string.)
-    // convert and write the version number
-    int32_t ret;
-    if ((ret = HexAndWrite(encOpt, (int32_t)encOpt->version, hexDataBuf)) != HITLS_APP_SUCCESS) {
-        return ret;
+    uint32_t headerLen = HITLS_APP_ENC_HEADER_U32_FIELDS * HITLS_APP_ENC_U32_SIZE + encOpt->keySet->saltLen +
+        encOpt->keySet->ivLen;
+    if (encOpt->keySet->ivLen > 0) {
+        headerLen += HITLS_APP_ENC_U32_SIZE;
     }
-    // convert and write the ID of the derived algorithm
-    if ((ret = HexAndWrite(encOpt, encOpt->cipherId, hexDataBuf)) != HITLS_APP_SUCCESS) {
-        return ret;
+    uint8_t *header = (uint8_t *)BSL_SAL_Calloc(headerLen, 1);
+    if (header == NULL) {
+        return HITLS_APP_MEM_ALLOC_FAIL;
     }
-    // convert and write the saltlen
-    if ((ret = HexAndWrite(encOpt, (int32_t)encOpt->keySet->saltLen, hexDataBuf)) != HITLS_APP_SUCCESS) {
-        return ret;
+    uint32_t offset = 0;
+    WriteUint32Be(header + offset, encOpt->version);
+    offset += HITLS_APP_ENC_U32_SIZE;
+    WriteUint32Be(header + offset, (uint32_t)encOpt->cipherId);
+    offset += HITLS_APP_ENC_U32_SIZE;
+    WriteUint32Be(header + offset, encOpt->keySet->saltLen);
+    offset += HITLS_APP_ENC_U32_SIZE;
+    if (AppCopyData(header + offset, headerLen - offset, encOpt->keySet->salt,
+        encOpt->keySet->saltLen) != HITLS_APP_SUCCESS) {
+        BSL_SAL_FREE(header);
+        return HITLS_APP_COPY_ARGS_FAILED;
     }
-    ret = HITLS_APP_OptWriteUio(encOpt->encUio->wUio, encOpt->keySet->salt, encOpt->keySet->saltLen,
-        HITLS_APP_FORMAT_HEX);
+    offset += encOpt->keySet->saltLen;
+    WriteUint32Be(header + offset, encOpt->iter);
+    offset += HITLS_APP_ENC_U32_SIZE;
+    if (encOpt->keySet->ivLen > 0) {
+        WriteUint32Be(header + offset, encOpt->keySet->ivLen);
+        offset += HITLS_APP_ENC_U32_SIZE;
+        if (AppCopyData(header + offset, headerLen - offset, encOpt->keySet->iv,
+            encOpt->keySet->ivLen) != HITLS_APP_SUCCESS) {
+            BSL_SAL_FREE(header);
+            return HITLS_APP_COPY_ARGS_FAILED;
+        }
+        offset += encOpt->keySet->ivLen;
+    }
+    int32_t ret = EncWriteEncoded(encOpt, header, headerLen);
+    BSL_SAL_FREE(header);
+    return ret;
+}
+
+static int32_t DecodeHexInput(uint8_t *readBuf, uint64_t readLen, uint8_t **decoded, uint32_t *decodedLen)
+{
+    if ((readLen % HITLS_APP_ENC_HEX_CHAR_STEP) != 0) {
+        AppPrintError("enc: Invalid hex string length, must be even.\n");
+        return HITLS_APP_ENCODE_FAIL;
+    }
+    uint32_t outLen = (uint32_t)(readLen / HITLS_APP_ENC_HEX_CHAR_STEP);
+    uint8_t *outBuf = (uint8_t *)BSL_SAL_Calloc(outLen + 1, 1);
+    if (outBuf == NULL) {
+        return HITLS_APP_MEM_ALLOC_FAIL;
+    }
+    uint32_t tmpLen = outLen;
+    if (HITLS_APP_HexToBytes((char *)readBuf, outBuf, &tmpLen) != HITLS_APP_SUCCESS) {
+        BSL_SAL_FREE(outBuf);
+        AppPrintError("enc: Failed to decode hex input.\n");
+        return HITLS_APP_ENCODE_FAIL;
+    }
+    *decoded = outBuf;
+    *decodedLen = tmpLen;
+    return HITLS_APP_SUCCESS;
+}
+
+static int32_t DecodeBase64Input(const uint8_t *readBuf, uint64_t readLen, uint8_t **decoded, uint32_t *decodedLen)
+{
+    uint32_t outLen = HITLS_BASE64_DECODE_LENGTH((uint32_t)readLen);
+    uint8_t *outBuf = (uint8_t *)BSL_SAL_Calloc(outLen + 1, 1);
+    if (outBuf == NULL) {
+        return HITLS_APP_MEM_ALLOC_FAIL;
+    }
+    uint32_t tmpLen = outLen;
+    if (BSL_BASE64_Decode((const char *)readBuf, (uint32_t)readLen, outBuf, &tmpLen) != BSL_SUCCESS) {
+        BSL_SAL_FREE(outBuf);
+        AppPrintError("enc: Failed to decode base64 input.\n");
+        return HITLS_APP_ENCODE_FAIL;
+    }
+    *decoded = outBuf;
+    *decodedLen = tmpLen;
+    return HITLS_APP_SUCCESS;
+}
+
+static int32_t DecodeInputForDec(EncCmdOpt *encOpt)
+{
+    uint8_t *readBuf = NULL;
+    uint64_t readLen = 0;
+    int32_t ret = HITLS_APP_OptReadUio(encOpt->encUio->rUio, &readBuf, &readLen, UINT64_MAX);
     if (ret != HITLS_APP_SUCCESS) {
         return ret;
     }
-    // convert and write the iteration times
-    if ((ret = HexAndWrite(encOpt, (int32_t)encOpt->iter, hexDataBuf)) != HITLS_APP_SUCCESS) {
-        return ret;
+    if (encOpt->format == HITLS_APP_FORMAT_BINARY) {
+        encOpt->decBuf = readBuf;
+        encOpt->decBufLen = (uint32_t)readLen;
+        return HITLS_APP_SUCCESS;
     }
-    if (encOpt->keySet->ivLen > 0) {
-        // convert and write the ivlen
-        if ((ret = HexAndWrite(encOpt, (int32_t)encOpt->keySet->ivLen, hexDataBuf)) != HITLS_APP_SUCCESS) {
-            return ret;
-        }
-        ret = HITLS_APP_OptWriteUio(encOpt->encUio->wUio, encOpt->keySet->iv, encOpt->keySet->ivLen,
-            HITLS_APP_FORMAT_HEX);
+    if (encOpt->format == HITLS_APP_FORMAT_HEX) {
+        uint8_t *decoded = NULL;
+        uint32_t decodedLen = 0;
+        ret = DecodeHexInput(readBuf, readLen, &decoded, &decodedLen);
+        BSL_SAL_FREE(readBuf);
         if (ret != HITLS_APP_SUCCESS) {
             return ret;
         }
+        encOpt->decBuf = decoded;
+        encOpt->decBufLen = decodedLen;
+        return HITLS_APP_SUCCESS;
+    }
+    if (encOpt->format == HITLS_APP_FORMAT_BASE64) {
+        uint8_t *decoded = NULL;
+        uint32_t decodedLen = 0;
+        ret = DecodeBase64Input(readBuf, readLen, &decoded, &decodedLen);
+        BSL_SAL_FREE(readBuf);
+        if (ret != HITLS_APP_SUCCESS) {
+            return ret;
+        }
+        encOpt->decBuf = decoded;
+        encOpt->decBufLen = decodedLen;
+        return HITLS_APP_SUCCESS;
+    }
+    BSL_SAL_FREE(readBuf);
+    return HITLS_APP_INVALID_ARG;
+}
+
+static int32_t CheckDecHeaderMinLen(const EncCmdOpt *encOpt)
+{
+    uint32_t minLen = HITLS_APP_ENC_HEADER_U32_FIELDS * HITLS_APP_ENC_U32_SIZE + REC_SALT_LEN;
+    if (encOpt->keySet->ivLen > 0) {
+        minLen += HITLS_APP_ENC_U32_SIZE + encOpt->keySet->ivLen;
+    }
+    if (encOpt->decBufLen < minLen) {
+        AppPrintError("enc: Invalid input length.\n");
+        return HITLS_APP_ENCODE_FAIL;
     }
     return HITLS_APP_SUCCESS;
 }
 
-static int32_t HandleDecFileIv(EncCmdOpt *encOpt)
+static int32_t ParseHeaderPrefix(EncCmdOpt *encOpt, uint32_t *offset)
 {
-    char hexDataBuf[REC_HEX_BUF_LENGTH + 1] = {0}; // hexadecimal data buffer
-    uint32_t hexBufLen = sizeof(hexDataBuf);
-    int32_t ret = HITLS_APP_SUCCESS;
-    // Read the length of the IV, convert it into decimal, and store it.
-    uint32_t tmpIvLen = 0;
-    if ((ret = ReadAndDec(encOpt, hexDataBuf, hexBufLen, (int32_t*)&tmpIvLen)) != HITLS_APP_SUCCESS) {
-        return ret;
-    }
-    if (tmpIvLen != encOpt->keySet->ivLen) {
-        AppPrintError("enc: Invalid iv length %u.\n", tmpIvLen);
+    uint32_t rVersion = ReadUint32Be(encOpt->decBuf + *offset);
+    *offset += HITLS_APP_ENC_U32_SIZE;
+    if (rVersion != encOpt->version) {
+        AppPrintError("enc: Invalid version %u, the file version is %u.\n", encOpt->version, rVersion);
         return HITLS_APP_INFO_CMP_FAIL;
     }
-    // Read iv based on ivLen, convert it into a decimal character string, and store it.
-    uint32_t readLen = 0;
-    char hIvBuf[REC_MAX_IV_LENGTH * REC_DOUBLE + 1] = {0}; // Hexadecimal iv buffer
-    if (BSL_UIO_Read(encOpt->encUio->rUio, hIvBuf, encOpt->keySet->ivLen * REC_DOUBLE, &readLen) != BSL_SUCCESS ||
-        readLen != encOpt->keySet->ivLen * REC_DOUBLE) {
-        return HITLS_APP_UIO_FAIL;
+    int32_t rCipherId = (int32_t)ReadUint32Be(encOpt->decBuf + *offset);
+    *offset += HITLS_APP_ENC_U32_SIZE;
+    if (encOpt->cipherId != rCipherId) {
+        AppPrintError("enc: Cipher ID is %d, cipher ID read from file is %d.\n", encOpt->cipherId, rCipherId);
+        return HITLS_APP_INFO_CMP_FAIL;
     }
-    uint32_t ivLen = REC_MAX_IV_LENGTH;
-    if (HITLS_APP_HexToBytes(hIvBuf, encOpt->keySet->iv, &ivLen) != HITLS_APP_SUCCESS) {
-        AppPrintError("enc: Failed to convert IV from hex.\n");
+    encOpt->keySet->saltLen = ReadUint32Be(encOpt->decBuf + *offset);
+    *offset += HITLS_APP_ENC_U32_SIZE;
+    if (encOpt->keySet->saltLen != REC_SALT_LEN) {
+        AppPrintError("enc: Salt length is error, Salt length read from file is %u.\n", encOpt->keySet->saltLen);
+        return HITLS_APP_INFO_CMP_FAIL;
+    }
+    if (*offset + encOpt->keySet->saltLen > encOpt->decBufLen) {
+        AppPrintError("enc: Invalid salt length.\n");
         return HITLS_APP_ENCODE_FAIL;
     }
-    return ret;
+    if (AppCopyData(encOpt->keySet->salt, encOpt->keySet->saltLen,
+        encOpt->decBuf + *offset, encOpt->keySet->saltLen) != HITLS_APP_SUCCESS) {
+        return HITLS_APP_COPY_ARGS_FAILED;
+    }
+    *offset += encOpt->keySet->saltLen;
+    if (*offset + HITLS_APP_ENC_U32_SIZE > encOpt->decBufLen) {
+        AppPrintError("enc: Invalid input length.\n");
+        return HITLS_APP_ENCODE_FAIL;
+    }
+    return HITLS_APP_SUCCESS;
+}
+
+static int32_t ParseHeaderIterAndIv(EncCmdOpt *encOpt, uint32_t *offset)
+{
+    encOpt->iter = ReadUint32Be(encOpt->decBuf + *offset);
+    *offset += HITLS_APP_ENC_U32_SIZE;
+    if (encOpt->keySet->ivLen > 0) {
+        if (*offset + HITLS_APP_ENC_U32_SIZE > encOpt->decBufLen) {
+            AppPrintError("enc: Invalid iv length.\n");
+            return HITLS_APP_ENCODE_FAIL;
+        }
+        uint32_t tmpIvLen = ReadUint32Be(encOpt->decBuf + *offset);
+        *offset += HITLS_APP_ENC_U32_SIZE;
+        if (tmpIvLen != encOpt->keySet->ivLen) {
+            AppPrintError("enc: Invalid iv length %u.\n", tmpIvLen);
+            return HITLS_APP_INFO_CMP_FAIL;
+        }
+        if (*offset + encOpt->keySet->ivLen > encOpt->decBufLen) {
+            AppPrintError("enc: Invalid iv length.\n");
+            return HITLS_APP_ENCODE_FAIL;
+        }
+        if (AppCopyData(encOpt->keySet->iv, encOpt->keySet->ivLen,
+            encOpt->decBuf + *offset, encOpt->keySet->ivLen) != HITLS_APP_SUCCESS) {
+            return HITLS_APP_COPY_ARGS_FAILED;
+        }
+        *offset += encOpt->keySet->ivLen;
+    }
+    if (*offset > encOpt->decBufLen) {
+        AppPrintError("enc: Invalid input length.\n");
+        return HITLS_APP_ENCODE_FAIL;
+    }
+    return HITLS_APP_SUCCESS;
 }
 
 // The ENC decryption mode parses the file header data and receives the ciphertext in the input file.
 static int32_t HandleDecFileHeader(EncCmdOpt *encOpt)
 {
-    char hexDataBuf[REC_HEX_BUF_LENGTH + 1] = {0}; // hexadecimal data buffer
-    uint32_t hexBufLen = sizeof(hexDataBuf);
-    // Read the version, derived algorithm ID, salt information, iteration times, and IV information from the input file
-    // convert them into decimal and store for later decryption.
-    // The read data is in hexadecimal format and needs to be converted to decimal format.
-    // Read the version number, convert it to decimal, and compare it.
-    int32_t ret = HITLS_APP_SUCCESS;
-    uint32_t rVersion = 0; // Version number in the ciphertext
-    if ((ret = ReadAndDec(encOpt, hexDataBuf, hexBufLen, (int32_t *)&rVersion)) != HITLS_APP_SUCCESS) {
+    int32_t ret = DecodeInputForDec(encOpt);
+    if (ret != HITLS_APP_SUCCESS) {
         return ret;
     }
-    // Compare the file version input by the user with the current ENC version.
-    // If the file version does not match, an error is reported.
-    if (rVersion != encOpt->version) {
-        AppPrintError("enc: Invalid version %u, the file version is %u.\n", encOpt->version, rVersion);
-        return HITLS_APP_INFO_CMP_FAIL;
-    }
-    // Read the derived algorithm in the ciphertext, convert it to decimal and compare.
-    int32_t rCipherId = -1; // Decimal cipherID read from the file
-    if ((ret = ReadAndDec(encOpt, hexDataBuf, hexBufLen, &rCipherId)) != HITLS_APP_SUCCESS) {
+    ret = CheckDecHeaderMinLen(encOpt);
+    if (ret != HITLS_APP_SUCCESS) {
         return ret;
     }
-    // Compare the algorithm entered by the user from the command line with the algorithm read.
-    // If the algorithm is incorrect, an error is reported.
-    if (encOpt->cipherId != rCipherId) {
-        AppPrintError("enc: Cipher ID is %d, cipher ID read from file is %d.\n", encOpt->cipherId, rCipherId);
-        return HITLS_APP_INFO_CMP_FAIL;
-    }
-    // Read the salt length in the ciphertext, convert the salt length into decimal, and store the salt length.
-    if ((ret = ReadAndDec(encOpt, hexDataBuf, hexBufLen, (int32_t *)&encOpt->keySet->saltLen)) != HITLS_APP_SUCCESS) {
+    uint32_t offset = 0;
+    ret = ParseHeaderPrefix(encOpt, &offset);
+    if (ret != HITLS_APP_SUCCESS) {
         return ret;
     }
-    if (encOpt->keySet->saltLen != REC_SALT_LEN) {
-        AppPrintError("enc: Salt length is error, Salt length read from file is %u.\n", encOpt->keySet->saltLen);
-        return HITLS_APP_INFO_CMP_FAIL;
-    }
-    // Read the salt value in the ciphertext, convert the salt value into a decimal string, and store the string.
-    uint32_t readLen = 0;
-    char hSaltBuf[REC_SALT_LEN * REC_DOUBLE + 1] = {0}; // Hexadecimal salt buffer
-    if (BSL_UIO_Read(encOpt->encUio->rUio, hSaltBuf, REC_SALT_LEN * REC_DOUBLE, &readLen) != BSL_SUCCESS ||
-        readLen != REC_SALT_LEN * REC_DOUBLE) {
-        return HITLS_APP_UIO_FAIL;
-    }
-    uint32_t saltLen = REC_SALT_LEN;
-    if (HITLS_APP_HexToBytes(hSaltBuf, encOpt->keySet->salt, &saltLen) != HITLS_APP_SUCCESS) {
-        AppPrintError("enc: Failed to convert salt from hex.\n");
-        return HITLS_APP_ENCODE_FAIL;
-    }
-    // Read the times of iteration, convert the number to decimal, and store the number.
-    if ((ret = ReadAndDec(encOpt, hexDataBuf, hexBufLen, (int32_t *)&encOpt->iter)) != HITLS_APP_SUCCESS) {
+    ret = ParseHeaderIterAndIv(encOpt, &offset);
+    if (ret != HITLS_APP_SUCCESS) {
         return ret;
     }
-    if (encOpt->keySet->ivLen > 0) {
-        if ((ret = HandleDecFileIv(encOpt)) != HITLS_APP_SUCCESS) {
-            return ret;
-        }
-    }
-    return ret;
+    encOpt->cipherBuf = encOpt->decBuf + offset;
+    encOpt->cipherBufLen = encOpt->decBufLen - offset;
+    return HITLS_APP_SUCCESS;
 }
 
 #ifdef HITLS_APP_SM_MODE
@@ -651,17 +899,21 @@ static int32_t GetKeyFromP12(EncCmdOpt *encOpt)
 
 static int32_t GetCipherKey(EncCmdOpt *encOpt)
 {
+    int32_t ret = HITLS_APP_SUCCESS;
     if (CRYPT_EAL_CipherGetInfo(encOpt->cipherId, CRYPT_INFO_KEY_LEN, &encOpt->keySet->dKeyLen) != CRYPT_SUCCESS) {
         return HITLS_APP_CRYPTO_FAIL;
     }
 #ifdef HITLS_APP_SM_MODE
     if (encOpt->smParam->smTag == 1) {
-        return GetKeyFromP12(encOpt);
+        ret = GetKeyFromP12(encOpt);
+        ClearEncPass(encOpt);
+        return ret;
     }
 #endif
     CRYPT_EAL_KdfCtx *ctx = CRYPT_EAL_ProviderKdfNewCtx(APP_GetCurrent_LibCtx(), CRYPT_KDF_PBKDF2,
         encOpt->provider->providerAttr);
     if (ctx == NULL) {
+        ClearEncPass(encOpt);
         return HITLS_APP_MEM_ALLOC_FAIL;
     }
     int index = 0;
@@ -674,19 +926,18 @@ static int32_t GetCipherKey(EncCmdOpt *encOpt)
         encOpt->keySet->salt, encOpt->keySet->saltLen);
     (void)BSL_PARAM_InitValue(&params[index++], CRYPT_PARAM_KDF_ITER, BSL_PARAM_TYPE_UINT32,
         &encOpt->iter, sizeof(encOpt->iter));
-    uint32_t ret = CRYPT_EAL_KdfSetParam(ctx, params);
+    ret = CRYPT_EAL_KdfSetParam(ctx, params);
     if (ret != CRYPT_SUCCESS) {
         CRYPT_EAL_KdfFreeCtx(ctx);
+        ClearEncPass(encOpt);
         return ret;
     }
-
     ret = CRYPT_EAL_KdfDerive(ctx, encOpt->keySet->dKey, encOpt->keySet->dKeyLen);
+    CRYPT_EAL_KdfFreeCtx(ctx);
+    ClearEncPass(encOpt);
     if (ret != CRYPT_SUCCESS) {
-        CRYPT_EAL_KdfFreeCtx(ctx);
         return ret;
     }
-    // Delete sensitive information after the key is used.
-    CRYPT_EAL_KdfFreeCtx(ctx);
     return BSL_SUCCESS;
 }
 
@@ -726,8 +977,7 @@ static int32_t XTSCipherUpdate(EncCmdOpt *encOpt, uint8_t *buf, uint32_t bufLen,
     if (updateLen > resLen) {
         return HITLS_APP_CRYPTO_FAIL;
     }
-    if (updateLen != 0 &&
-        (HITLS_APP_OptWriteUio(encOpt->encUio->wUio, res, updateLen, HITLS_APP_FORMAT_HEX) != HITLS_APP_SUCCESS)) {
+    if (updateLen != 0 && (EncWriteEncoded(encOpt, res, updateLen) != HITLS_APP_SUCCESS)) {
         return HITLS_APP_UIO_FAIL;
     }
     return HITLS_APP_SUCCESS;
@@ -761,9 +1011,8 @@ static int32_t StreamCipherUpdate(EncCmdOpt *encOpt, uint8_t *readBuf, uint32_t 
     if (updateLen > resLen) {
         return HITLS_APP_CRYPTO_FAIL;
     }
-    if (updateLen != 0 &&
-        (HITLS_APP_OptWriteUio(encOpt->encUio->wUio, resBuf, updateLen, HITLS_APP_FORMAT_HEX) != HITLS_APP_SUCCESS)) {
-            return HITLS_APP_UIO_FAIL;
+    if (updateLen != 0 && (EncWriteEncoded(encOpt, resBuf, updateLen) != HITLS_APP_SUCCESS)) {
+        return HITLS_APP_UIO_FAIL;
     }
     return HITLS_APP_SUCCESS;
 }
@@ -925,74 +1174,42 @@ static int32_t DoCipherUpdateEnc(EncCmdOpt *encOpt, uint64_t readFileLen)
 
 static int32_t DoCipherUpdateDec(EncCmdOpt *encOpt, uint64_t readFileLen)
 {
-    if (readFileLen == 0 && encOpt->inFile == NULL) {
-        AppPrintError("enc: In decryption mode, the standard input cannot be used to obtain the ciphertext.\n");
-        return HITLS_APP_STDIN_FAIL;
+    if (encOpt->cipherBufLen == 0) {
+        AppPrintError("enc: Failed to read the input content\n");
+        return HITLS_APP_UIO_FAIL;
     }
-    if (readFileLen < XTS_MIN_DATALEN && IsXtsCipher(encOpt->cipherId)) {
+    if (encOpt->cipherBufLen < XTS_MIN_DATALEN && IsXtsCipher(encOpt->cipherId)) {
         AppPrintError("enc: The XTS algorithm does not support ciphertext less than 16 bytes.\n");
         return HITLS_APP_CRYPTO_FAIL;
     }
-    // now readFileLen != 0
-    int32_t ret = HITLS_APP_SUCCESS;
-    uint8_t *readBuf = (uint8_t *)BSL_SAL_Calloc(MAX_BUFSIZE * REC_DOUBLE + 1, 1);
-    uint8_t *resBuf = (uint8_t *)BSL_SAL_Malloc(MAX_BUFSIZE * REC_DOUBLE);
-    if (readBuf == NULL || resBuf == NULL) {
-        BSL_SAL_FREE(readBuf);
-        BSL_SAL_FREE(resBuf);
+    uint32_t outLen = encOpt->cipherBufLen + encOpt->keySet->blockSize;
+    uint8_t *resBuf = (uint8_t *)BSL_SAL_Malloc(outLen);
+    if (resBuf == NULL) {
         AppPrintError("enc: Failed to alloc memory.\n");
         return HITLS_APP_MEM_ALLOC_FAIL;
     }
-    uint32_t readLen;
-    uint32_t bufLen = MAX_BUFSIZE * REC_DOUBLE;
-    while (readFileLen > 0) {
-        readLen = 0;
-        if (!IsXtsCipher(encOpt->cipherId)) {
-            bufLen = (readFileLen >= MAX_BUFSIZE) ? MAX_BUFSIZE : readFileLen;
-        } else {
-            bufLen = (readFileLen >= MAX_BUFSIZE * REC_DOUBLE) ? MAX_BUFSIZE * REC_DOUBLE : readFileLen;
-        }
-        if (BSL_UIO_Read(encOpt->encUio->rUio, readBuf, bufLen, &readLen) != BSL_SUCCESS || bufLen != readLen) {
-            AppPrintError("enc: Failed to read the input content\n");
-            ret = HITLS_APP_UIO_FAIL;
-            break;
-        }
-        readFileLen -= readLen;
-        // Check if hex string length is even
-        if (readLen % 2 != 0) {
-            AppPrintError("enc: Invalid hex string length, must be even.\n");
-            return HITLS_APP_CRYPTO_FAIL;
-        }
-        uint32_t decodedLen = MAX_BUFSIZE * REC_DOUBLE;
-        if (HITLS_APP_HexToBytes((char *)readBuf, readBuf, &decodedLen) != HITLS_APP_SUCCESS) {
-            AppPrintError("enc: Failed to decode the hex.\n");
-            ret = HITLS_APP_CRYPTO_FAIL;
-            break;
-        }
-        uint32_t updateLen = readLen + encOpt->keySet->blockSize;
-        if (CRYPT_EAL_CipherUpdate(encOpt->keySet->ctx, readBuf, readLen / 2, resBuf, &updateLen) != CRYPT_SUCCESS) {
-            AppPrintError("enc: Failed to update the cipher.\n");
-            ret = HITLS_APP_CRYPTO_FAIL;
-            break;
-        }
-        uint32_t writeLen = 0;
-        if (updateLen != 0 &&
-            (BSL_UIO_Write(encOpt->encUio->wUio, resBuf, updateLen, &writeLen) != BSL_SUCCESS ||
-            writeLen != updateLen)) {
-            AppPrintError("enc: Failed to write the cipher text.\n");
-            ret = HITLS_APP_UIO_FAIL;
-            break;
-        }
+    uint32_t updateLen = outLen;
+    if (CRYPT_EAL_CipherUpdate(encOpt->keySet->ctx, encOpt->cipherBuf, encOpt->cipherBufLen, resBuf, &updateLen)
+        != CRYPT_SUCCESS) {
+        BSL_SAL_FREE(resBuf);
+        AppPrintError("enc: Failed to update the cipher.\n");
+        return HITLS_APP_CRYPTO_FAIL;
     }
-    BSL_SAL_FREE(readBuf);
+    uint32_t writeLen = 0;
+    if (updateLen != 0 &&
+        (BSL_UIO_Write(encOpt->encUio->wUio, resBuf, updateLen, &writeLen) != BSL_SUCCESS || writeLen != updateLen)) {
+        BSL_SAL_FREE(resBuf);
+        AppPrintError("enc: Failed to write the cipher text.\n");
+        return HITLS_APP_UIO_FAIL;
+    }
     BSL_SAL_FREE(resBuf);
-    return ret;
+    (void)readFileLen;
+    return HITLS_APP_SUCCESS;
 }
 
 static int32_t DoCipherUpdate(EncCmdOpt *encOpt)
 {
-    const uint32_t AES_BLOCK_SIZE = 16;
-    encOpt->keySet->blockSize = AES_BLOCK_SIZE;
+    encOpt->keySet->blockSize = HITLS_APP_ENC_BLOCK_SIZE;
     uint64_t readFileLen = 0;
     if (encOpt->inFile != NULL &&
         BSL_UIO_Ctrl(encOpt->encUio->rUio, BSL_UIO_PENDING, sizeof(readFileLen), &readFileLen) != BSL_SUCCESS) {
@@ -1002,7 +1219,7 @@ static int32_t DoCipherUpdate(EncCmdOpt *encOpt)
     if (encOpt->inFile == NULL) {
         AppPrintError("enc: Need -in option. Please directly enter the file content on the terminal.\n");
     }
-    int32_t updateRet = (encOpt->encTag == 0) ? DoCipherUpdateDec(encOpt, readFileLen)
+    int32_t updateRet = (encOpt->encTag == HITLS_APP_ENC_TAG_DEC) ? DoCipherUpdateDec(encOpt, readFileLen)
                                               : DoCipherUpdateEnc(encOpt, readFileLen);
     if (updateRet != HITLS_APP_SUCCESS) {
         return updateRet;
@@ -1016,16 +1233,18 @@ static int32_t DoCipherUpdate(EncCmdOpt *encOpt)
     if (isAeadId == 1) {
         return HITLS_APP_SUCCESS;
     }
-    uint32_t finLen = AES_BLOCK_SIZE;
+    uint32_t finLen = HITLS_APP_ENC_BLOCK_SIZE;
     uint8_t resBuf[MAX_BUFSIZE] = {0};
     // Fill the data whose size is less than the block size and output the crypted data.
     if (CRYPT_EAL_CipherFinal(encOpt->keySet->ctx, resBuf, &finLen) != CRYPT_SUCCESS) {
         AppPrintError("enc: Failed to final the cipher.\n");
         return HITLS_APP_CRYPTO_FAIL;
     }
-    if (encOpt->encTag == 1) {
-        if (finLen != 0 && (HITLS_APP_OptWriteUio(encOpt->encUio->wUio, resBuf, finLen, HITLS_APP_FORMAT_HEX)
-            != HITLS_APP_SUCCESS)) {
+    if (encOpt->encTag == HITLS_APP_ENC_TAG_ENC) {
+        if (finLen != 0 && (EncWriteEncoded(encOpt, resBuf, finLen) != HITLS_APP_SUCCESS)) {
+            return HITLS_APP_UIO_FAIL;
+        }
+        if (EncWriteEncodedFinal(encOpt) != HITLS_APP_SUCCESS) {
             return HITLS_APP_UIO_FAIL;
         }
     } else {
@@ -1048,6 +1267,7 @@ static int32_t EncOrDecProc(EncCmdOpt *encOpt)
     encOpt->keySet->ctx = CRYPT_EAL_ProviderCipherNewCtx(APP_GetCurrent_LibCtx(), encOpt->cipherId,
         encOpt->provider->providerAttr);
     if (encOpt->keySet->ctx == NULL) {
+        ClearEncDKey(encOpt);
         return HITLS_APP_CRYPTO_FAIL;
     }
     // Initialize the symmetric encryption and decryption handle.
@@ -1069,7 +1289,7 @@ static int32_t EncOrDecProc(EncCmdOpt *encOpt)
     }
 #endif
     int32_t ret = HITLS_APP_SUCCESS;
-    if (encOpt->encTag == 1) {
+    if (encOpt->encTag == HITLS_APP_ENC_TAG_ENC) {
         if ((ret = WriteEncFileHeader(encOpt)) != HITLS_APP_SUCCESS) {
             return ret;
         }
@@ -1095,12 +1315,16 @@ static int32_t HandleEnc(EncCmdOpt *encOpt)
     // The ciphertext format is
     // [g_version:uint32][derived algID:uint32][saltlen:uint32][salt][iter times:uint32][ivlen:uint32][iv][ciphertext]
     // If the user identifier is encrypted
-    if (encOpt->encTag == 1 && (ret = GenSaltAndIv(encOpt)) != HITLS_APP_SUCCESS) {
+    if (encOpt->encTag == HITLS_APP_ENC_TAG_ENC && (ret = GenSaltAndIv(encOpt)) != HITLS_APP_SUCCESS) {
         // Random salt and IV are generated in encryption mode.
         return ret;
     }
     // If the user identifier is decrypted
-    if (encOpt->encTag == 0 && (ret = HandleDecFileHeader(encOpt)) != HITLS_APP_SUCCESS) {
+    if (encOpt->encTag == HITLS_APP_ENC_TAG_DEC && encOpt->inFile == NULL) {
+        AppPrintError("enc: In decryption mode, the standard input cannot be used to obtain the ciphertext.\n");
+        return HITLS_APP_STDIN_FAIL;
+    }
+    if (encOpt->encTag == HITLS_APP_ENC_TAG_DEC && (ret = HandleDecFileHeader(encOpt)) != HITLS_APP_SUCCESS) {
         // Decryption mode: Parse the file header data and receive the ciphertext in the input file.
         return ret;
     }
@@ -1121,10 +1345,20 @@ int32_t HITLS_EncMain(int argc, char *argv[])
 #ifdef HITLS_APP_SM_MODE
     HITLS_APP_SM_Param smParam = {NULL, 0, NULL, NULL, 0, HITLS_APP_SM_STATUS_OPEN};
     AppInitParam initParam = {CRYPT_RAND_SHA256, &appProvider, &smParam};
-    EncCmdOpt encOpt = {1, NULL, NULL, NULL, -1, -1, -1, 0, &keySet, &encUio, &appProvider, &smParam};
 #else
     AppInitParam initParam = {CRYPT_RAND_SHA256, &appProvider};
-    EncCmdOpt encOpt = {1, NULL, NULL, NULL, -1, -1, -1, 0, &keySet, &encUio, &appProvider};
+#endif
+    EncCmdOpt encOpt = {0};
+    encOpt.version = HITLS_APP_ENC_VERSION;
+    encOpt.cipherId = -1;
+    encOpt.mdId = -1;
+    encOpt.encTag = -1;
+    encOpt.format = HILTS_APP_FORMAT_UNDEF;
+    encOpt.keySet = &keySet;
+    encOpt.encUio = &encUio;
+    encOpt.provider = &appProvider;
+#ifdef HITLS_APP_SM_MODE
+    encOpt.smParam = &smParam;
 #endif
     if ((encRet = HITLS_APP_OptBegin(argc, argv, g_encOpts)) != HITLS_APP_SUCCESS) {
         AppPrintError("enc: Error in opt begin.\n");
