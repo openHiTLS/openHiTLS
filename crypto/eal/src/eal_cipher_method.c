@@ -53,6 +53,9 @@
 #if defined(HITLS_CRYPTO_CHACHA20) && defined(HITLS_CRYPTO_CHACHA20POLY1305)
 #include "crypt_modes_chacha20poly1305.h"
 #endif
+#ifdef HITLS_CRYPTO_ASCONAEAD
+#include "crypt_asconaead.h"
+#endif
 #ifdef HITLS_CRYPTO_CHACHA20
 #include "crypt_chacha20.h"
 #endif
@@ -81,6 +84,19 @@ static const EAL_CipherMethod CHACHA20_POLY1305_METHOD = {
     (CipherCtrl)MODES_CHACHA20POLY1305_Ctrl,
     (CipherFreeCtx)MODES_CHACHA20POLY1305_FreeCtx,
     (CipherDupCtx)MODES_CHACHA20POLY1305_DupCtx
+};
+#endif
+
+#ifdef HITLS_CRYPTO_ASCONAEAD
+static const EAL_CipherMethod ASCONAEAD_METHOD = {
+    (CipherNewCtx)CRYPT_ASCONAEAD_NewCtxEx,
+    (CipherInitCtx)CRYPT_ASCONAEAD_InitCtx,
+    (CipherDeInitCtx)CRYPT_ASCONAEAD_DeInitCtx,
+    (CipherUpdate)CRYPT_ASCONAEAD_Update,
+    (CipherFinal)CRYPT_ASCONAEAD_Final,
+    (CipherCtrl)CRYPT_ASCONAEAD_Ctrl,
+    (CipherFreeCtx)CRYPT_ASCONAEAD_FreeCtx,
+    (CipherDupCtx)CRYPT_ASCONAEAD_DupCtx
 };
 #endif
 
@@ -273,6 +289,10 @@ const EAL_CipherMethod *EAL_FindModeMethod(CRYPT_MODE_AlgId id)
         case HCRYPT_MODE_CHACHA20_POLY1305:
             return &CHACHA20_POLY1305_METHOD;
 #endif
+#ifdef HITLS_CRYPTO_ASCONAEAD
+        case HCRYPT_MODE_ASCONAEAD:
+            return &ASCONAEAD_METHOD;
+#endif
 #ifdef HITLS_CRYPTO_CFB
         case HCRYPT_MODE_CFB:
             return &CFB_METHOD;
@@ -352,6 +372,11 @@ static const EAL_SymAlgMap SYM_ID_MAP[] = {
 #endif // aes
 #ifdef HITLS_CRYPTO_CHACHA20
     {.id = CRYPT_CIPHER_CHACHA20_POLY1305, .modeId = HCRYPT_MODE_CHACHA20_POLY1305},
+#endif
+#ifdef HITLS_CRYPTO_ASCONAEAD
+    {.id = CRYPT_CIPHER_ASCON_AEAD128,  .modeId = HCRYPT_MODE_ASCONAEAD},
+    {.id = CRYPT_CIPHER_ASCON_AEAD128A, .modeId = HCRYPT_MODE_ASCONAEAD},
+    {.id = CRYPT_CIPHER_ASCON_AEAD80PQ, .modeId = HCRYPT_MODE_ASCONAEAD},
 #endif
 #ifdef HITLS_CRYPTO_SM4
 #ifdef HITLS_CRYPTO_XTS
@@ -566,6 +591,11 @@ static CRYPT_CipherInfo g_cipherInfo[] = {
 #endif
 #ifdef HITLS_CRYPTO_CHACHA20
     {.id = CRYPT_CIPHER_CHACHA20_POLY1305, .blockSize = 1, .keyLen = 32, .ivLen = 12},
+#endif
+#ifdef HITLS_CRYPTO_ASCONAEAD
+    {.id = CRYPT_CIPHER_ASCON_AEAD128, .blockSize = 1, .keyLen = 16, .ivLen = 16},
+    {.id = CRYPT_CIPHER_ASCON_AEAD128A, .blockSize = 1, .keyLen = 16, .ivLen = 16},
+    {.id = CRYPT_CIPHER_ASCON_AEAD80PQ, .blockSize = 1, .keyLen = 20, .ivLen = 16},
 #endif
 #ifdef HITLS_CRYPTO_SM4
 #ifdef HITLS_CRYPTO_XTS

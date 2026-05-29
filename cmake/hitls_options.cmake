@@ -152,6 +152,9 @@ option(HITLS_CRYPTO_MD                                         "MD" OFF)
   option(HITLS_CRYPTO_SHA3                                       "SHA3" OFF)
   option(HITLS_CRYPTO_SM3                                        "SM3" OFF)
   option(HITLS_CRYPTO_SM3_SMALL_MEM                              "SM3 Small Memory" OFF)
+  option(HITLS_CRYPTO_ASCONHASH                                  "ASCON Hash" OFF)
+    option(HITLS_CRYPTO_ASCON_HASH128                               "ASCON-HASH128" OFF)
+    option(HITLS_CRYPTO_ASCON_HASH128A                              "ASCON-HASH128a" OFF)
 
 ## Md_mb
 option(HITLS_CRYPTO_MD_MB                                      "Multi-Buffer MD" OFF)
@@ -214,6 +217,10 @@ option(HITLS_CRYPTO_CIPHER                                     "Cipher" OFF)
     option(HITLS_CRYPTO_AES_PRECALC_TABLES                         "AES Precalculated Tables" ON)
   option(HITLS_CRYPTO_SM4                                        "SM4" OFF)
   option(HITLS_CRYPTO_CHACHA20                                   "CHACHA20" OFF)
+  option(HITLS_CRYPTO_ASCONAEAD                                  "ASCON AEAD" OFF)
+    option(HITLS_CRYPTO_ASCON_AEAD128                               "ASCON-AEAD128" OFF)
+    option(HITLS_CRYPTO_ASCON_AEAD128A                              "ASCON-AEAD128a" OFF)
+    option(HITLS_CRYPTO_ASCON_AEAD80PQ                              "ASCON-AEAD80pq" OFF)
 
 ## Pkey
 option(HITLS_CRYPTO_PKEY                                       "Public Key Cryptography" OFF)

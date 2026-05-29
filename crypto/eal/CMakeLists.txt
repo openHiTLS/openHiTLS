@@ -122,6 +122,7 @@ target_include_directories(_hitls_crypto_eal
         ${PROJECT_SOURCE_DIR}/crypto/mceliece/include
         ${PROJECT_SOURCE_DIR}/crypto/codecsdata/include
         ${PROJECT_SOURCE_DIR}/crypto/codecskey/include
+        ${PROJECT_SOURCE_DIR}/crypto/ascon/include
 )
 
 hitls_register_objects(CRYPTO _hitls_crypto_eal)

@@ -77,6 +77,9 @@ static const CidInfo g_allCipherAlgInfo [] = {
     {CRYPT_CIPHER_AES256_OFB, "aes256_ofb"},
     {CRYPT_CIPHER_AES256_XTS, "aes256_xts"},
     {CRYPT_CIPHER_CHACHA20_POLY1305, "chacha20_poly1305"},
+    {CRYPT_CIPHER_ASCON_AEAD128, "ascon128"},
+ 	{CRYPT_CIPHER_ASCON_AEAD128A, "ascon128a"},
+ 	{CRYPT_CIPHER_ASCON_AEAD80PQ, "ascon80pq"},
     {CRYPT_CIPHER_SM4_CBC, "sm4_cbc"},
     {CRYPT_CIPHER_SM4_CFB, "sm4_cfb"},
     {CRYPT_CIPHER_SM4_CTR, "sm4_ctr"},
@@ -102,6 +105,8 @@ static const CidInfo g_allMdAlgInfo[] = {
     {CRYPT_MD_SHAKE128, "shake128"},
     {CRYPT_MD_SHAKE256, "shake256"},
     {CRYPT_MD_SM3, "sm3"},
+    {CRYPT_MD_ASCON_HASH128, "asconhash"},
+ 	{CRYPT_MD_ASCON_HASH128A, "asconhasha"},
 };
 
 #define MD_ALG_CNT (sizeof(g_allMdAlgInfo) / sizeof(CidInfo))

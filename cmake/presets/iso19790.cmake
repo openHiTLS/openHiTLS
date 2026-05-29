@@ -35,6 +35,17 @@ set(HITLS_CRYPTO_AES                ON CACHE BOOL "" FORCE)
 set(HITLS_CRYPTO_CHACHA20           ON CACHE BOOL "" FORCE)
 
 # ---------------------------------------------------------------
+# Crypto - Ascon Family
+# ---------------------------------------------------------------
+set(HITLS_CRYPTO_ASCONAEAD          ON CACHE BOOL "" FORCE)
+set(HITLS_CRYPTO_ASCON_AEAD128      ON CACHE BOOL "" FORCE)
+set(HITLS_CRYPTO_ASCON_AEAD128A     ON CACHE BOOL "" FORCE)
+set(HITLS_CRYPTO_ASCON_AEAD80PQ     ON CACHE BOOL "" FORCE)
+set(HITLS_CRYPTO_ASCONHASH          ON CACHE BOOL "" FORCE)
+set(HITLS_CRYPTO_ASCON_HASH128      ON CACHE BOOL "" FORCE)
+set(HITLS_CRYPTO_ASCON_HASH128A     ON CACHE BOOL "" FORCE)
+
+# ---------------------------------------------------------------
 # Crypto - AES Cipher Modes
 # ---------------------------------------------------------------
 set(HITLS_CRYPTO_MODES              ON CACHE BOOL "" FORCE)

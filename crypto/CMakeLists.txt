@@ -72,6 +72,10 @@ if(HITLS_CRYPTO_SM4)
     add_subdirectory(sm4)
 endif()
 
+if(HITLS_CRYPTO_ASCONAEAD OR HITLS_CRYPTO_ASCONHASH)
+    add_subdirectory(ascon)
+endif()
+
 # ==============================================================================
 # Cipher Modes (depends on block ciphers)
 # ==============================================================================

@@ -99,6 +99,7 @@ target_include_directories(_hitls_crypto_provider
         ${PROJECT_SOURCE_DIR}/crypto/aes/include
         ${PROJECT_SOURCE_DIR}/crypto/sm4/include
         ${PROJECT_SOURCE_DIR}/crypto/chacha20/include
+        ${PROJECT_SOURCE_DIR}/crypto/ascon/include
         ${PROJECT_SOURCE_DIR}/crypto/modes/include
         ${PROJECT_SOURCE_DIR}/crypto/bn/include
         ${PROJECT_SOURCE_DIR}/crypto/rsa/include

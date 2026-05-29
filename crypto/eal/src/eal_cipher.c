@@ -395,6 +395,9 @@ static const uint32_t CIPHER_IS_AEAD[] = {
     CRYPT_CIPHER_CHACHA20_POLY1305,
     CRYPT_CIPHER_SM4_CCM,
     CRYPT_CIPHER_SM4_GCM,
+    CRYPT_CIPHER_ASCON_AEAD128,
+    CRYPT_CIPHER_ASCON_AEAD128A,
+    CRYPT_CIPHER_ASCON_AEAD80PQ,
 };
 
 // Check whether the algorithm is the AEAD algorithm. If yes, true is returned. Otherwise, false is returned.
