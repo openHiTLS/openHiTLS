@@ -49,12 +49,8 @@ static void SlhDsaTearDown(void *ctx)
 
 static int32_t SlhDsaKeyGen(void *ctx, const BenchExecOptions *opts)
 {
-    int32_t paraId = opts->paraId;
-    int32_t rc = CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_SET_PARA_BY_ID, (void *)&paraId, sizeof(paraId));
-    if (rc != CRYPT_SUCCESS) {
-        return rc;
-    }
-    BENCH_RUN_VA(CRYPT_EAL_PkeyGen(ctx), rc, CRYPT_SUCCESS, -1, opts, "%s keyGen", GetAlgName(paraId));
+    int32_t rc = CRYPT_SUCCESS;
+    BENCH_RUN_VA(CRYPT_EAL_PkeyGen(ctx), rc, CRYPT_SUCCESS, -1, opts, "%s keyGen", GetAlgName(opts->paraId));
     return rc;
 }
 
