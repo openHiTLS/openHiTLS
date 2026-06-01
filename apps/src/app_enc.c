@@ -297,6 +297,15 @@ static int32_t CheckParam(EncCmdOpt *encOpt)
         AppPrintError("enc: AES-WRAP algorithms are not supported.\n");
         return HITLS_APP_OPT_VALUE_INVALID;
     }
+    uint32_t isAeadId = 0;
+    if (CRYPT_EAL_CipherGetInfo(encOpt->cipherId, CRYPT_INFO_IS_AEAD, &isAeadId) != CRYPT_SUCCESS) {
+        AppPrintError("enc: The cipher algorithm is invalid or not supported.\n");
+        return HITLS_APP_OPT_VALUE_INVALID;
+    }
+    if (isAeadId == 1) {
+        AppPrintError("enc: AEAD algorithms are not supported.\n");
+        return HITLS_APP_OPT_VALUE_INVALID;
+    }
     // if the user does not specify the encryption or decryption mode,
     // an error is reported and the user is prompted to enter the following information
     if (encOpt->encTag != 1 && encOpt->encTag != 0) {

@@ -1155,3 +1155,26 @@ EXIT:
     HITLS_AUTH_PrivPassFreeCtx(ctx);
 }
 /* END_CASE */
+
+/**
+ * @test SDV_AUTH_PRIVPASS_TOKEN_CHALLENGEREQUEST_LEN_TC001
+ * @brief Verify that oversized challenge request buffer is rejected
+ * @expect Deserialization fails with HITLS_AUTH_PRIVPASS_INVALID_INPUT when buffLen exceeds max
+ */
+/* BEGIN_CASE */
+void SDV_AUTH_PRIVPASS_TOKEN_CHALLENGEREQUEST_LEN_TC001(void)
+{
+    HITLS_AUTH_PrivPassToken *token = NULL;
+    HITLS_AUTH_PrivPassCtx *ctx = HITLS_AUTH_PrivPassNewCtx(HITLS_AUTH_PRIVPASS_PUB_VERIFY_TOKENS);
+    ASSERT_NE(ctx, NULL);
+
+    uint8_t dummyBuf[1] = {0};
+    ASSERT_EQ(HITLS_AUTH_PrivPassDeserialization(ctx, HITLS_AUTH_PRIVPASS_TOKEN_CHALLENGE_REQUEST,
+        dummyBuf, PRIVPASS_MAX_CHALLENGE_REQ_LEN + 1, &token), HITLS_AUTH_PRIVPASS_INVALID_INPUT);
+    ASSERT_EQ(token, NULL);
+
+EXIT:
+    HITLS_AUTH_PrivPassFreeToken(token);
+    HITLS_AUTH_PrivPassFreeCtx(ctx);
+}
+/* END_CASE */

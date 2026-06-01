@@ -1443,7 +1443,7 @@ err:
 
 int32_t HITLS_AUTH_Spake2plusRespDerive(HITLS_AUTH_PakeCtx *ctx, BSL_Buffer confirmP, BSL_Buffer *out)
 {
-    if (ctx == NULL || out == NULL || out->data == NULL) {
+    if (ctx == NULL || out == NULL || out->data == NULL || confirmP.data == NULL) {
         BSL_ERR_PUSH_ERROR(HITLS_AUTH_NULL_INPUT);
         return HITLS_AUTH_NULL_INPUT;
     }

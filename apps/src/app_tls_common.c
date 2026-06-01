@@ -733,6 +733,8 @@ int CreateUDPListenSocket(APP_NetworkAddr *addr, int timeout)
     return sockfd;
 }
 
+#define HANDSHAKE_TIMEOUT_SEC 30
+
 int AcceptTCPConnection(int listenFd)
 {
     struct sockaddr_in clientAddr;
@@ -743,12 +745,22 @@ int AcceptTCPConnection(int listenFd)
     if (clientFd < 0) {
         return -1;
     }
-    
+
+    struct timeval tv;
+    tv.tv_sec = HANDSHAKE_TIMEOUT_SEC;
+    tv.tv_usec = 0;
+    if (setsockopt(clientFd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv)) != 0 ||
+        setsockopt(clientFd, SOL_SOCKET, SO_SNDTIMEO, &tv, sizeof(tv)) != 0) {
+        AppPrintError("Failed to set TCP connection timeout: %s\n", strerror(errno));
+        BSL_SAL_SockClose(clientFd);
+        return -1;
+    }
+
     /* Print client information */
     char clientIp[INET_ADDRSTRLEN];
     inet_ntop(AF_INET, &clientAddr.sin_addr, clientIp, INET_ADDRSTRLEN);
     AppPrintInfo("Accepted connection from %s:%d\n", clientIp, ntohs(clientAddr.sin_port));
-    
+
     return clientFd;
 }
 

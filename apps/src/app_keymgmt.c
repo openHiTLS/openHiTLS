@@ -256,15 +256,27 @@ static int32_t WriteKeyFile(KeyMgmtCmdOpt *keyMgmtOpt, const char *uuid, HITLS_P
         return HITLS_APP_INVALID_ARG;
     }
 
-    int32_t ret = HITLS_PKCS12_GenFile(BSL_FORMAT_ASN1, p12, &encodeParam, true, path);
+    BSL_Buffer encode = {0};
+    int32_t ret = HITLS_PKCS12_GenBuff(BSL_FORMAT_ASN1, p12, &encodeParam, true, &encode);
     if (ret != HITLS_PKI_SUCCESS) {
         BSL_SAL_Free(path);
         AppPrintError("keymgmt: Failed to generate pkcs12 key file, errCode: 0x%x.\n", ret);
         return HITLS_APP_X509_FAIL;
     }
-    if (chmod(path, S_IRUSR | S_IWUSR) != 0) {
+    BSL_UIO *uio = HITLS_APP_UioOpenPrivate(path, 'w');
+    if (uio == NULL) {
+        BSL_SAL_ClearFree(encode.data, encode.dataLen);
         BSL_SAL_Free(path);
-        AppPrintError("keymgmt: Failed to set key file permission.\n");
+        return HITLS_APP_UIO_FAIL;
+    }
+    uint32_t writeLen = 0;
+    ret = BSL_UIO_Write(uio, encode.data, encode.dataLen, &writeLen);
+    uint32_t encodeLen = encode.dataLen;
+    BSL_UIO_Free(uio);
+    BSL_SAL_ClearFree(encode.data, encode.dataLen);
+    if (ret != BSL_SUCCESS || writeLen != encodeLen) {
+        BSL_SAL_Free(path);
+        AppPrintError("keymgmt: Failed to write key file.\n");
         return HITLS_APP_UIO_FAIL;
     }
     BSL_SAL_Free(path);

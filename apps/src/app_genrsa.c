@@ -147,7 +147,7 @@ static bool IsNumBitsValid(long num)
     return false;
 }
 
-static int32_t CheckPara(GenrsaInOpt *opt, BSL_UIO *outUio)
+static int32_t CheckPara(GenrsaInOpt *opt, BSL_UIO **outUio)
 {
     if (opt->cipherId == -1) {
         AppPrintError("The command is incorrectly used.\n");
@@ -163,20 +163,18 @@ static int32_t CheckPara(GenrsaInOpt *opt, BSL_UIO *outUio)
     }
     // Obtains the post-value of the OUT option. If there is no post-value or this option, stdout.
     if (opt->outFile == NULL) {
-        if (BSL_UIO_Ctrl(outUio, BSL_UIO_FILE_PTR, 0, (void *)stdout) != BSL_SUCCESS) {
-            AppPrintError("Failed to set stdout mode.\n");
-            return HITLS_APP_UIO_FAIL;
-        }
+        *outUio = HITLS_APP_UioOpen(NULL, 'w', 0);
     } else {
         // User input file path, which is bound to the output file.
         if (strlen(opt->outFile) >= PATH_MAX || strlen(opt->outFile) == 0) {
             AppPrintError("The length of outfile error, range is (0, 4096].\n");
             return HITLS_APP_OPT_VALUE_INVALID;
         }
-        if (BSL_UIO_Ctrl(outUio, BSL_UIO_FILE_OPEN, BSL_UIO_FILE_WRITE, opt->outFile) != BSL_SUCCESS) {
-            AppPrintError("Failed to set outfile mode.\n");
-            return HITLS_APP_UIO_FAIL;
-        }
+        *outUio = HITLS_APP_UioOpenPrivate(opt->outFile, 'w');
+    }
+    if (*outUio == NULL) {
+        AppPrintError("Failed to set outfile mode.\n");
+        return HITLS_APP_UIO_FAIL;
     }
 
     return HITLS_APP_SUCCESS;
@@ -252,11 +250,7 @@ hpEnd:
 int32_t HITLS_GenRSAMain(int argc, char *argv[])
 {
     GenrsaInOpt opt = {NULL, -1, -1};
-    BSL_UIO *outUio = BSL_UIO_New(BSL_UIO_FileMethod());
-    if (outUio == NULL) {
-        AppPrintError("Failed to create the output UIO.\n");
-        return HITLS_APP_UIO_FAIL;
-    }
+    BSL_UIO *outUio = NULL;
     int32_t ret = HITLS_APP_SUCCESS;
     char *resBuf = NULL;
     if ((ret = HITLS_APP_OptBegin(argc, argv, g_genrsaOpts)) != HITLS_APP_SUCCESS) {
@@ -266,7 +260,7 @@ int32_t HITLS_GenRSAMain(int argc, char *argv[])
     if ((ret = HandleOpt(&opt)) != HITLS_APP_SUCCESS) {
         goto GenRsaEnd;
     }
-    if ((ret = CheckPara(&opt, outUio)) != HITLS_APP_SUCCESS) {
+    if ((ret = CheckPara(&opt, &outUio)) != HITLS_APP_SUCCESS) {
         goto GenRsaEnd;
     }
     resBuf = (char *)BSL_SAL_Calloc(REC_MAX_PEM_FILELEN + 1, 1);
@@ -286,10 +280,9 @@ int32_t HITLS_GenRSAMain(int argc, char *argv[])
     }
     ret = HITLS_APP_SUCCESS;
 GenRsaEnd:
-    if (opt.outFile != NULL) {
-        BSL_UIO_SetIsUnderlyingClosedByUio(outUio, true);
+    if (outUio != NULL) {
+        BSL_UIO_Free(outUio);
     }
-    BSL_UIO_Free(outUio);
     HITLS_APP_OptEnd();
     BSL_SAL_FREE(resBuf);
     return ret;

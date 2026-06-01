@@ -222,8 +222,7 @@ static int32_t HandlePkeyOpt(int argc, char *argv[], PkeyOptCtx *optCtx)
         return HITLS_APP_PrintPubKey(optCtx->pkey, optCtx->outPara.outFilePath, optCtx->outPara.outFormat);
     }
 
-    optCtx->wUio = HITLS_APP_UioOpen(optCtx->outPara.outFilePath, 'w',
-        optCtx->outPara.outFilePath != NULL ? 1 : 0);
+    optCtx->wUio = HITLS_APP_UioOpenPrivate(optCtx->outPara.outFilePath, 'w');
     if (optCtx->wUio == NULL) {
         return HITLS_APP_UIO_FAIL;
     }

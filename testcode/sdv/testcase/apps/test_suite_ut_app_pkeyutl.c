@@ -152,8 +152,8 @@ EXIT:
     remove("R2.bin");
     remove("share1.key");
     remove("share2.key");
-    remove("r1.bin");
-    remove("r2.bin");
+    remove("self_r1.bin");
+    remove("self_r2.bin");
     remove("out_test.bin");
 }
 /* END_CASE */

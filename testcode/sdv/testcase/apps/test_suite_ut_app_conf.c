@@ -156,11 +156,6 @@ void UT_HITLS_APP_conf_X509Ext_TC001(char *confPath, int expectLoadRet, int expe
     ASSERT_NE(conf, NULL);
     ASSERT_EQ(BSL_CONF_Load(conf, confPath), expectLoadRet);
     if (expectLoadRet == HITLS_APP_SUCCESS) {
-#if !(defined(__APPLE__) || defined(__MACH__))
-        if (strstr(confPath, "test_x509_ext_san_leading_zero_ipv4.cnf") != NULL) {
-            expectResult = HITLS_APP_INVALID_IP;
-        }
-#endif
         ASSERT_EQ(HITLS_APP_CONF_ProcExt(conf, "SAN", ProcExt, ext), expectResult);
         if (expectResult == HITLS_APP_SUCCESS) {
             ASSERT_EQ(HITLS_X509_EncodeExt(BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SET, ext->extList, &asnExt),

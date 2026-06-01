@@ -78,10 +78,9 @@ static int32_t OutPemFormat(BSL_UIO *uio, void *encode)
 static int32_t BufWriteToUio(void *pkey, OutputInfo outInfo)
 {
     int32_t writeRet = HITLS_APP_SUCCESS;
-    BSL_UIO *uio = HITLS_APP_UioOpen(outInfo.outfile, 'w',
-        outInfo.outfile != NULL ? 1 : 0);  // Open the file and overwrite the file content.
+    BSL_UIO *uio = HITLS_APP_UioOpenPrivate(outInfo.outfile, 'w');
     if (uio == NULL) {
-        AppPrintError("Failed to open the file <%s> \n", outInfo.outfile);
+        AppPrintError("Failed to open the file <%s> \n", outInfo.outfile != NULL ? outInfo.outfile : "stdout");
         return HITLS_APP_UIO_FAIL;
     }
     if (outInfo.text == true) {

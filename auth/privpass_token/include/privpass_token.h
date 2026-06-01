@@ -38,6 +38,9 @@ extern "C" {
 // 2(tokenType) + 32(nonce) + 32(challengeDigest) + 32(tokenKeyId)
 #define HITLS_AUTH_PRIVPASS_TOKEN_INPUT_LEN (2 + 32 + 32 + 32)
 
+#define PRIVPASS_MAX_CHALLENGE_REQ_LEN \
+    (2 + 2 + PRIVPASS_MAX_ISSUER_NAME_LEN + 1 + PRIVPASS_REDEMPTION_LEN + 2 + PRIVPASS_MAX_ORIGIN_INFO_LEN)
+
 /* Structure for token challenge request */
 typedef struct {
     uint8_t *challengeReq;      // Challenge request data

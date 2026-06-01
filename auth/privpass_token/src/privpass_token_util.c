@@ -25,7 +25,10 @@
 static int32_t DecodeTokenChallengeReq(PrivPass_TokenChallengeReq *tokenChallengeReq, const uint8_t *buffer,
     uint32_t buffLen)
 {
-    // Allocate memory for the new buffer
+    if (buffLen > PRIVPASS_MAX_CHALLENGE_REQ_LEN) {
+        BSL_ERR_PUSH_ERROR(HITLS_AUTH_PRIVPASS_INVALID_INPUT);
+        return HITLS_AUTH_PRIVPASS_INVALID_INPUT;
+    }
     uint8_t *data = (uint8_t *)BSL_SAL_Dump(buffer, buffLen);
     if (data == NULL) {
         BSL_ERR_PUSH_ERROR(BSL_DUMP_FAIL);

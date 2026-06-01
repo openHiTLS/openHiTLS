@@ -182,7 +182,7 @@ void UT_HITLS_APP_rand_TC002(void)
 {
     char *argv[][5] = {
         {"rand", "-base64", "-out", "1.txt", "10"},
-        {"rand", "-hex", "-out", "D:\\outfile\\1.txt", "10"},
+        {"rand", "-hex", "-out", "rand_hex_out.txt", "10"},
         {"rand", "-hex", "1.txt", "10"},
         {"rand", "-out"}
     };
@@ -196,12 +196,16 @@ void UT_HITLS_APP_rand_TC002(void)
     };
 
     ASSERT_EQ(AppInit(), HITLS_APP_SUCCESS);
+    remove("1.txt");
+    remove("rand_hex_out.txt");
     for (int i = 0; i < (int)(sizeof(testData) / sizeof(OptTestData)); ++i) {
         int ret = HITLS_RandMain(testData[i].argc, testData[i].argv);
         ASSERT_EQ(ret, testData[i].expect);
     }
 
 EXIT:
+    remove("1.txt");
+    remove("rand_hex_out.txt");
     AppUninit();
     return;
 }
@@ -221,7 +225,7 @@ void UT_HITLS_APP_rand_TC003(void)
         {"rand", "2147483648"},
         {"rand", "-10"},
         {"rand", "2312/0"},
-        {"rand", "-out", "D:\\outfile\\1.txt", "123"},
+        {"rand", "-out", "rand_out_123.txt", "123"},
     };
 
     OptTestData testData[] = {
@@ -234,13 +238,15 @@ void UT_HITLS_APP_rand_TC003(void)
     };
 
     ASSERT_EQ(AppInit(), HITLS_APP_SUCCESS);
+    remove("rand_out_123.txt");
     for (int i = 0; i < (int)(sizeof(testData) / sizeof(OptTestData)); ++i) {
         int ret = HITLS_RandMain(testData[i].argc, testData[i].argv);
         ASSERT_EQ(ret, testData[i].expect);
     }
 
 EXIT:
-AppUninit();
+    remove("rand_out_123.txt");
+    AppUninit();
     return;
 }
 /* END_CASE */
@@ -333,7 +339,7 @@ void UT_HITLS_APP_rand_TC007(void)
     char *argv[][4] = {
         {"rand", "-hex", "2049"},
         {"rand", "-out", "1.txt", "10"},
-        {"rand", "-out", "D:\\outfile\\1.txt", "10"}
+        {"rand", "-out", "rand_stub_out.txt", "10"}
     };
 
     OptTestData testData[] = {
