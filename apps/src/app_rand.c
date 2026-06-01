@@ -152,7 +152,7 @@ static int32_t RandNumOut(RandCmdOpt *randCmdOpt)
 #endif
     int ret = HITLS_APP_SUCCESS;
     BSL_UIO *uio;
-    uio = HITLS_APP_UioOpen(randCmdOpt->outFile, 'w', randCmdOpt->outFile != NULL ? 1 : 0);
+    uio = HITLS_APP_UioOpenPrivate(randCmdOpt->outFile, 'w');
     if (uio == NULL) {
         return HITLS_APP_UIO_FAIL;
     }

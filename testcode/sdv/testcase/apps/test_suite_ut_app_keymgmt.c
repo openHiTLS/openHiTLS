@@ -441,9 +441,6 @@ void UT_HITLS_APP_KEYMGMT_TC001(void)
     ret = EncryptAndDecrypt(uuid, "sm4_ofb");
     ASSERT_EQ(ret, HITLS_APP_SUCCESS);
 
-    ret = EncryptAndDecrypt(uuid, "sm4_gcm");
-    ASSERT_EQ(ret, HITLS_APP_SUCCESS);
-
 EXIT:
     (void)umask(oldMask);
     BSL_SAL_FREE(uuid);

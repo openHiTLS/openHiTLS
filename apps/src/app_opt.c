@@ -22,6 +22,10 @@
 #include <libgen.h>
 #include <sys/stat.h>
 #include <stdbool.h>
+#if defined(HITLS_BSL_SAL_LINUX) || defined(HITLS_BSL_SAL_DARWIN)
+#include <fcntl.h>
+#include <unistd.h>
+#endif
 #include "app_errno.h"
 #include "bsl_sal.h"
 #include "app_print.h"
@@ -523,6 +527,76 @@ BSL_UIO *HITLS_APP_UioOpen(const char *filename, char mode, int32_t flag)
         BSL_UIO_SetIsUnderlyingClosedByUio(uio, flag == 1);
     }
     return uio;
+}
+
+BSL_UIO *HITLS_APP_UioOpenPrivate(const char *filename, char mode)
+{
+    if (mode != 'w') {
+        AppPrintError("Invalid mode, private file only support w\n");
+        return NULL;
+    }
+    if (filename == NULL) {
+        return HITLS_APP_UioOpen(NULL, mode, 0);
+    }
+#if defined(HITLS_BSL_SAL_LINUX) || defined(HITLS_BSL_SAL_DARWIN)
+    int32_t fd = open(filename, O_WRONLY | O_CREAT | O_NOFOLLOW | O_CLOEXEC, S_IRUSR | S_IWUSR);
+    if (fd < 0) {
+        AppPrintError("Failed to open private file: %s\n", strerror(errno));
+        return NULL;
+    }
+    struct stat st = {0};
+    if (fstat(fd, &st) != 0 || !S_ISREG(st.st_mode)) {
+        AppPrintError("Refuse to write private data to non-regular file\n");
+        close(fd);
+        return NULL;
+    }
+    if (st.st_uid != geteuid()) {
+        AppPrintError("Refuse to write private data to file owned by another user: %s\n", filename);
+        close(fd);
+        return NULL;
+    }
+    if ((st.st_mode & (S_IRWXG | S_IRWXO)) != 0) {
+        AppPrintError("Refuse to overwrite file with insecure permissions; chmod 600 first: %s\n", filename);
+        close(fd);
+        return NULL;
+    }
+    if (st.st_nlink != 1) {
+        AppPrintError("Refuse to write private data to file with multiple hard links: %s\n", filename);
+        close(fd);
+        return NULL;
+    }
+    if (fchmod(fd, S_IRUSR | S_IWUSR) != 0 || ftruncate(fd, 0) != 0) {
+        AppPrintError("Failed to prepare private file: %s\n", strerror(errno));
+        close(fd);
+        return NULL;
+    }
+    FILE *fp = fdopen(fd, "w");
+    if (fp == NULL) {
+        AppPrintError("Failed to bind private file: %s\n", strerror(errno));
+        close(fd);
+        return NULL;
+    }
+    BSL_UIO *uio = BSL_UIO_New(BSL_UIO_FileMethod());
+    if (uio == NULL) {
+        fclose(fp);
+        return NULL;
+    }
+    if (BSL_UIO_Ctrl(uio, BSL_UIO_FILE_PTR, 1, fp) != BSL_SUCCESS) {
+        AppPrintError("Failed to bind the private filepath\n");
+        fclose(fp);
+        BSL_UIO_Free(uio);
+        return NULL;
+    }
+    return uio;
+#else
+    BSL_UIO *uio = HITLS_APP_UioOpen(filename, mode, 1);
+    if (uio != NULL && chmod(filename, S_IRUSR | S_IWUSR) != 0) {
+        AppPrintError("Failed to set private file permission\n");
+        BSL_UIO_Free(uio);
+        return NULL;
+    }
+    return uio;
+#endif
 }
 
 int32_t HITLS_APP_OptToBase64(uint8_t *inBuf, uint32_t inBufLen, char *outBuf, uint32_t outBufLen)

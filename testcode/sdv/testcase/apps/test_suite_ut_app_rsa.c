@@ -118,6 +118,7 @@ void UT_HITLS_APP_rsa_TC001(void)
         ASSERT_EQ(ret, testData[i].expect);
     }
 EXIT:
+    remove(OUT_FILE_PATH);
     if (savedStdoutFd >= 0) {
         close(savedStdoutFd);
     }

@@ -436,7 +436,7 @@ static int32_t KdfResult(CRYPT_EAL_KdfCtx *ctx, KdfOpt *kdfOpt)
         return HITLS_APP_CRYPTO_FAIL;
     }
 
-    BSL_UIO *fileOutUio = HITLS_APP_UioOpen(kdfOpt->outFile, 'w', kdfOpt->outFile != NULL ? 1 : 0);
+    BSL_UIO *fileOutUio = HITLS_APP_UioOpenPrivate(kdfOpt->outFile, 'w');
     if (fileOutUio == NULL) {
         BSL_SAL_ClearFree(out, outLen);
         AppPrintError("kdf:UioOpen failed\n");

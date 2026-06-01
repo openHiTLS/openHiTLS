@@ -70,6 +70,7 @@ static int32_t AppInit(void)
 
 static void AppUninit(void)
 {
+    remove(OUT_FILE_PATH);
     AppPrintErrorUioUnInit();
     HITLS_APP_FreeLibCtx();
 }

@@ -924,7 +924,7 @@ static int32_t HandlePKCS12Opt(Pkcs12OptCtx *opt)
     }
 
     // 2.Create output uio
-    opt->wUio = HITLS_APP_UioOpen(opt->genOpt.outFile, 'w', opt->genOpt.outFile != NULL ? 1 : 0);
+    opt->wUio = HITLS_APP_UioOpenPrivate(opt->genOpt.outFile, 'w');
     if (opt->wUio == NULL) {
         return HITLS_APP_UIO_FAIL;
     }

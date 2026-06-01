@@ -27,6 +27,7 @@
 #include "bsl_errno.h"
 #include "bsl_params.h"
 #include "hitls_pki_errno.h"
+#include "hitls_pki_pkcs12.h"
 #include "app_opt.h"
 #include "app_function.h"
 #include "app_list.h"
@@ -754,11 +755,27 @@ static int32_t GenP12File(AppProvider *provider, const char *file, HITLS_PKCS12_
         return HITLS_APP_X509_FAIL;
     }
 
-    ret = HITLS_PKCS12_GenFile(BSL_FORMAT_ASN1, p12, encodeParam, true, file);
+    BSL_Buffer encode = {0};
+    ret = HITLS_PKCS12_GenBuff(BSL_FORMAT_ASN1, p12, encodeParam, true, &encode);
     HITLS_PKCS12_Free(p12);
     if (ret != HITLS_PKI_SUCCESS) {
         AppPrintError("pkeyutl: Failed to generate p12 file, errCode: 0x%x.\n", ret);
         return HITLS_APP_X509_FAIL;
+    }
+
+    BSL_UIO *uio = HITLS_APP_UioOpenPrivate(file, 'w');
+    if (uio == NULL) {
+        BSL_SAL_ClearFree(encode.data, encode.dataLen);
+        return HITLS_APP_UIO_FAIL;
+    }
+    uint32_t writeLen = 0;
+    ret = BSL_UIO_Write(uio, encode.data, encode.dataLen, &writeLen);
+    uint32_t encodeLen = encode.dataLen;
+    BSL_UIO_Free(uio);
+    BSL_SAL_ClearFree(encode.data, encode.dataLen);
+    if (ret != BSL_SUCCESS || writeLen != encodeLen) {
+        AppPrintError("pkeyutl: Failed to write p12 file.\n");
+        return HITLS_APP_UIO_FAIL;
     }
     return HITLS_APP_SUCCESS;
 }
@@ -924,8 +941,7 @@ static int32_t PkeyDerive(PkeyUtlOpt *pkeyUtlOpt)
         }
 
         if (pkeyUtlOpt->outRFile != NULL) {
-            BSL_UIO *fileWriteUio = HITLS_APP_UioOpen(pkeyUtlOpt->outRFile, 'w',
-                pkeyUtlOpt->outRFile != NULL ? 1 : 0);
+            BSL_UIO *fileWriteUio = HITLS_APP_UioOpenPrivate(pkeyUtlOpt->outRFile, 'w');
             if (fileWriteUio == NULL) {
                 AppPrintError("pkeyutl: Failed to open the output file for R.\n");
                 ret = HITLS_APP_UIO_FAIL;
@@ -960,8 +976,7 @@ static int32_t PkeyDerive(PkeyUtlOpt *pkeyUtlOpt)
                 ret = HITLS_APP_CRYPTO_FAIL;
                 break;
             }
-            BSL_UIO *shareFileUio = HITLS_APP_UioOpen(pkeyUtlOpt->outFile, 'w',
-                pkeyUtlOpt->outFile != NULL ? 1 : 0);
+            BSL_UIO *shareFileUio = HITLS_APP_UioOpenPrivate(pkeyUtlOpt->outFile, 'w');
             if (shareFileUio == NULL) {
                 AppPrintError("pkeyutl: Failed to open the output file for plaintext.\n");
                 ret = HITLS_APP_UIO_FAIL;

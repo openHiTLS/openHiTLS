@@ -575,7 +575,7 @@ int32_t HITLS_APP_PrintPrvKey(CRYPT_EAL_PkeyCtx *pkey, const char *outFilePath, 
         return HITLS_APP_INVALID_ARG;
     }
 
-    BSL_UIO *wPrvUio = HITLS_APP_UioOpen(outFilePath, 'w', outFilePath != NULL ? 1 : 0);
+    BSL_UIO *wPrvUio = HITLS_APP_UioOpenPrivate(outFilePath, 'w');
     if (wPrvUio == NULL) {
         return HITLS_APP_UIO_FAIL;
     }

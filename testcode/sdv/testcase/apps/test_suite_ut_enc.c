@@ -62,6 +62,9 @@ static int32_t AppInit(void)
 
 static void AppUninit(void)
 {
+    remove("../testdata/apps/enc/res_encfile");
+    remove("../testdata/apps/enc/res_decfile");
+    remove("res_tmpfile");
     AppPrintErrorUioUnInit();
     HITLS_APP_FreeLibCtx();
 }
@@ -175,10 +178,10 @@ void UT_HITLS_APP_ENC_TC002(void)
         {10, argv[5], HITLS_APP_SUCCESS},
         {10, argv[6], HITLS_APP_SUCCESS},
         {10, argv[7], HITLS_APP_SUCCESS},
-        {10, argv[8], HITLS_APP_SUCCESS},
-        {10, argv[9], HITLS_APP_SUCCESS},
-        {10, argv[10], HITLS_APP_SUCCESS},
-        {10, argv[11], HITLS_APP_SUCCESS},
+        {10, argv[8], HITLS_APP_OPT_VALUE_INVALID},
+        {10, argv[9], HITLS_APP_OPT_VALUE_INVALID},
+        {10, argv[10], HITLS_APP_OPT_VALUE_INVALID},
+        {10, argv[11], HITLS_APP_OPT_VALUE_INVALID},
         {10, argv[12], HITLS_APP_SUCCESS},
         {10, argv[13], HITLS_APP_SUCCESS}
     };

@@ -238,6 +238,7 @@ int32_t HITLS_APP_OptGetFormatType(const char *valueS, HITLS_ValueType type, BSL
  * @retval  BSL_UIO * when succeeded, NULL when failed
 */
 BSL_UIO* HITLS_APP_UioOpen(const char* filename, char mode, int32_t flag);
+BSL_UIO* HITLS_APP_UioOpenPrivate(const char* filename, char mode);
 
 /**
  * @ingroup HITLS_APP

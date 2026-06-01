@@ -502,57 +502,60 @@ EXIT:
     return ret;
 }
 
+static bool IsValidIPv4Literal(const char *value)
+{
+    if (value == NULL || value[0] == '\0') {
+        return false;
+    }
+    const char *p = value;
+    uint32_t octetCnt = 0;
+    while (*p != '\0') {
+        const char *start = p;
+        uint32_t digitCnt = 0;
+        while (*p >= '0' && *p <= '9') {
+            digitCnt++;
+            p++;
+        }
+        if (digitCnt == 0 || digitCnt > 3 || (*start == '0' && digitCnt > 1)) {
+            return false;
+        }
+        octetCnt++;
+        if (*p == '\0') {
+            break;
+        }
+        if (*p != '.') {
+            return false;
+        }
+        p++;
+    }
+    return octetCnt == IPV4_VALUE_MAX_CNT;
+}
+
 static int32_t ParseIPValue(char *value, HITLS_X509_GeneralName *generalName)
 {
     struct sockaddr_in sockIpv4 = {};
     struct sockaddr_in6 sockIpv6 = {};
-    char *ipv4ValueList[IPV4_VALUE_MAX_CNT] = {0};
-    char *ipv4ValueBase = NULL;
     uint32_t ipSize = 0;
-    if (inet_pton(AF_INET, value, &(sockIpv4.sin_addr)) == 1) {
-        uint32_t valueCnt = 0;
-        int32_t ret = HITLS_APP_SplitString(value, '.', false, ipv4ValueList, IPV4_VALUE_MAX_CNT, &valueCnt);
-        if (ret != HITLS_APP_SUCCESS) {
-            return ret;
-        }
-        ipv4ValueBase = ipv4ValueList[0];
-        if (valueCnt != IPV4_VALUE_MAX_CNT) {
-            AppPrintError("Failed to split IP string, IP: %s.\n", value);
-            BSL_SAL_FREE(ipv4ValueBase);
-            return HITLS_APP_INVALID_IP;
-        }
-        // Normalize IPv4 octets by removing leading zeros (cross-platform fix)
-        // inet_pton() behavior differs on macOS vs Linux for leading zeros
-        for (uint32_t i = 0; i < IPV4_VALUE_MAX_CNT; i++) {
-            // Skip leading zeros, but keep "0" as "0"
-            char *octet = ipv4ValueList[i];
-            while (*octet == '0' && *(octet + 1) != '\0') {
-                octet++;
-            }
-            ipv4ValueList[i] = octet;
-        }
+    uint8_t *ipBytes = NULL;
+    if (IsValidIPv4Literal(value) && inet_pton(AF_INET, value, &(sockIpv4.sin_addr)) == 1) {
         ipSize = IPV4_VALUE_MAX_CNT;
+        ipBytes = (uint8_t *)&sockIpv4.sin_addr.s_addr;
     } else if (inet_pton(AF_INET6, value, &(sockIpv6.sin6_addr)) == 1) {
         ipSize = IPV6_VALUE_MAX_CNT;
+        ipBytes = sockIpv6.sin6_addr.s6_addr;
     } else {
         AppPrintError("Invalid IP format for directory name, IP: %s.\n", value);
         return HITLS_APP_INVALID_IP;
     }
     generalName->value.data = BSL_SAL_Calloc(ipSize, 1);
     if (generalName->value.data == NULL) {
-        AppPrintError("Invalid IP format for directory name, IP: %s.\n", value);
-        BSL_SAL_FREE(ipv4ValueBase);
+        AppPrintError("Failed to alloc IP buffer, IP: %s.\n", value);
         return HITLS_APP_MEM_ALLOC_FAIL;
     }
     for (uint32_t i = 0; i < ipSize; i++) {
-        if (ipSize == IPV4_VALUE_MAX_CNT) {
-            generalName->value.data[i] = (uint8_t)BSL_SAL_Atoi(ipv4ValueList[i]);
-        } else {
-            generalName->value.data[i] = sockIpv6.sin6_addr.s6_addr[i];
-        }
+        generalName->value.data[i] = ipBytes[i];
     }
     generalName->value.dataLen = ipSize;
-    BSL_SAL_FREE(ipv4ValueBase);
     return HITLS_APP_SUCCESS;
 }
 

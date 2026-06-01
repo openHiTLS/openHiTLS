@@ -516,7 +516,7 @@ void SDV_CRYPT_EAL_SPAKE2PLUS_TC007(void)
 
     // Test NULL confirmP
     BSL_Buffer nullBuf = { .data = NULL, .dataLen = 0 };
-    ASSERT_EQ(HITLS_AUTH_PakeRespDerive(ctx, nullBuf, &buf), HITLS_AUTH_PAKE_INVALID_PARAM);
+    ASSERT_EQ(HITLS_AUTH_PakeRespDerive(ctx, nullBuf, &buf), HITLS_AUTH_NULL_INPUT);
 
     // Test excessive confirmP length
     uint8_t longData[100] = {0};
