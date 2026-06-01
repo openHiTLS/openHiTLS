@@ -65,7 +65,7 @@ int32_t FrodoPkeKeygenSeeded(const FrodoKemParams *params, uint8_t *pk, uint16_t
     int32_t ret = FrodoExpandShakeDs(rAll, bytesBoth, 0x5F, seedSE, params->lenSeedSE, params);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        BSL_SAL_FREE(rAll);
+        BSL_SAL_ClearFree(rAll, bytesBoth);
         return ret;
     }
     // S^T = Sample(r_0, r_1, ..., r_{n*nBar-1})
@@ -73,21 +73,21 @@ int32_t FrodoPkeKeygenSeeded(const FrodoKemParams *params, uint8_t *pk, uint16_t
 
     uint16_t *B = (uint16_t *)BSL_SAL_Malloc(bytesOne);
     if (B == NULL) {
-        BSL_SAL_FREE(rAll);
+        BSL_SAL_ClearFree(rAll, bytesBoth);
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         return CRYPT_MEM_ALLOC_FAIL;
     }
     // E = Sample(r_{n*nBar}, r_{n*nBar+1}, ..., r_{2*n*nBar-1}) where E is stored in varible B temporarily
     FrodoCommonSampleNFromR(B, count, params->cdfTable, params->cdfLen, rAll + bytesOne);
 
-    BSL_SAL_FREE(rAll);
+    BSL_SAL_ClearFree(rAll, bytesBoth);
 
     // step 1: A = GenerateA(seedA)
     // step2: B += A*S, output B = A*S + E
     ret = FrodoCommonMulAddAsPlusEPortable(B, matrixSTranspose, seedA, params);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        BSL_SAL_FREE(B);
+        BSL_SAL_ClearFree(B, bytesOne);
         return ret;
     }
 
@@ -95,7 +95,7 @@ int32_t FrodoPkeKeygenSeeded(const FrodoKemParams *params, uint8_t *pk, uint16_t
         pk[i] = seedA[i];
     }
     FrodoCommonPack(pk + params->lenSeedA, params->pkSize - params->lenSeedA, B, count, params->logq);
-    BSL_SAL_FREE(B);
+    BSL_SAL_ClearFree(B, bytesOne);
     return CRYPT_SUCCESS;
 }
 
@@ -128,7 +128,7 @@ int32_t FrodoPkeEncrypt(const FrodoKemParams *params, const uint8_t *pk, const u
     int32_t ret = FrodoExpandShakeDs(r96, bytesS + bytesE + bytesEp, 0x96, seedSEp, params->lenSeedSE, params);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        BSL_SAL_FREE(r96);
+        BSL_SAL_ClearFree(r96, bytesS + bytesE + bytesEp);
         return ret;
     }
     uint8_t *rS = r96;
@@ -139,7 +139,7 @@ int32_t FrodoPkeEncrypt(const FrodoKemParams *params, const uint8_t *pk, const u
     // |<-      n x nBar     ->|<-      n x nBar     ->|<-   nBar x nBar   ->|<-     n x nBar    ->|<-     n x nBar    ->|<-  nBar x nBar ->|<-  nBar x nBar   ->|
     uint16_t *matrixBuf = (uint16_t *)BSL_SAL_Malloc((4 * cntNNBar + 3 * cntNBarNBar) * sizeof(uint16_t));
     if (matrixBuf == NULL) {
-        BSL_SAL_FREE(r96);
+        BSL_SAL_ClearFree(r96, bytesS + bytesE + bytesEp);
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         return CRYPT_MEM_ALLOC_FAIL;
     }
@@ -155,11 +155,11 @@ int32_t FrodoPkeEncrypt(const FrodoKemParams *params, const uint8_t *pk, const u
     FrodoCommonSampleNFromR(Eprime, cntNNBar, params->cdfTable, params->cdfLen, rE);
     FrodoCommonSampleNFromR(Epp, cntNBarNBar, params->cdfTable, params->cdfLen, rEp);
 
-    BSL_SAL_FREE(r96);
+    BSL_SAL_ClearFree(r96, bytesS + bytesE + bytesEp);
     ret = FrodoCommonMulAddSaPlusEPortable(U, STp, Eprime, pkSeedA, params);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        BSL_SAL_FREE(matrixBuf);
+        BSL_SAL_ClearFree(matrixBuf, (4 * cntNNBar + 3 * cntNBarNBar) * sizeof(uint16_t));
         return ret;
     }
     FrodoCommonUnpack(B, (uint32_t)n * nBar, pkB, params->pkSize - params->lenSeedA, params->logq);
@@ -173,7 +173,7 @@ int32_t FrodoPkeEncrypt(const FrodoKemParams *params, const uint8_t *pk, const u
 
     FrodoCommonPack(ctC1, lenC1, U, (uint32_t)nBar * n, params->logq);
     FrodoCommonPack(ctC2, lenC2, V, (uint32_t)nBar * nBar, params->logq);
-    BSL_SAL_FREE(matrixBuf);
+    BSL_SAL_ClearFree(matrixBuf, (4 * cntNNBar + 3 * cntNBarNBar) * sizeof(uint16_t));
     return CRYPT_SUCCESS;
 }
 

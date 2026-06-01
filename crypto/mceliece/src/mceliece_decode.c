@@ -18,15 +18,15 @@
 #include "bsl_sal.h"
 #include "mceliece_local.h"
 #include "bsl_err_internal.h"
+#include "crypt_utils.h"
 
 // Calculate syndrome from a received vector r
 // Input: r is a length-n bit vector where r[0..mt-1] contains the ciphertext bits and the rest are zero
 // Output: syndrome[0..2t-1]
-static int32_t ComputeSyndrome(const uint8_t *received, const GFPolynomial *g, const GFElement *alpha,
-                               GFElement *syndrome, const McelieceParams *params)
+int32_t ComputeSyndrome(const uint8_t *received, const GFPolynomial *g, const GFElement *alpha,
+                        const McelieceParams *params, GFElement *syndrome)
 {
     const int32_t syndLen = params->t << 1;
-    const uint64_t *received64 = (const uint64_t *)received;
     uint32_t full64 = params->n >> 6;
 
     GFElement *gAlpha = (GFElement *)BSL_SAL_Malloc(params->n * sizeof(GFElement));
@@ -47,7 +47,7 @@ static int32_t ComputeSyndrome(const uint8_t *received, const GFPolynomial *g, c
     for (int32_t j = 0; j < syndLen; j++) {
         GFElement acc = 0;
         for (uint32_t i64 = 0; i64 < full64; i64++) {
-            uint64_t w = received64[i64];
+            uint64_t w = GET_UINT64_LE(received, i64 * 8);
             if (w == 0) { // Early-exit sentinel for zero 64-bit chunks (no bits set)
                 continue;
             }
@@ -76,8 +76,8 @@ static int32_t ComputeSyndrome(const uint8_t *received, const GFPolynomial *g, c
             }
         }
     }
-    BSL_SAL_FREE(gAlpha);
-    BSL_SAL_FREE(invG2);
+    BSL_SAL_ClearFree(gAlpha, params->n * sizeof(GFElement));
+    BSL_SAL_ClearFree(invG2, params->n * sizeof(GFElement));
     return CRYPT_SUCCESS;
 }
 
@@ -192,35 +192,18 @@ static int32_t ChienSearch(const GFPolynomial *sigma, const GFElement *alpha, in
             }
         }
     }
-    BSL_SAL_FREE(images);
+    BSL_SAL_ClearFree(images, params->n * sizeof(GFElement));
     return CRYPT_SUCCESS;
-}
-
-// safely allocate syndrome buffer and fill it
-static GFElement *SafeSyndrome(const uint8_t *r, const GFPolynomial *g, const GFElement *alpha, const McelieceParams *p)
-{
-    GFElement *s = BSL_SAL_Malloc(2U * p->t * sizeof(GFElement));
-    if (s == NULL) {
-        return NULL;
-    }
-    int32_t ret = ComputeSyndrome(r, g, alpha, s, p);
-    if (ret != CRYPT_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
-        BSL_SAL_FREE(s);
-        return NULL;
-    }
-    return s;
 }
 
 // true if whole syndrome is zero
-static int32_t IsZeroSyndrome(const GFElement *s, const int32_t t2)
+static bool IsZeroSyndrome(const GFElement *s, const int32_t t2)
 {
+    uint16_t accum = 0;
     for (int32_t i = 0; i < t2; i++) {
-        if (s[i] != 0) { // any non-zero syndrome byte fails the all-zero test
-            return CRYPT_MCELIECE_INVALID_ARG;
-        }
+        accum |= s[i]; // bitwise OR to accumulate any non-zero bytes in the syndrome
     }
-    return CRYPT_SUCCESS;
+    return accum == 0;
 }
 
 // BM + Chien in one shot
@@ -252,64 +235,33 @@ static void PosToBits(uint8_t *vec, const int32_t *pos, const int32_t cnt, const
     }
 }
 
-// verify recovered pattern
-static int32_t VerifyPattern(const uint8_t *vec, const GFElement *origSyn, const GFPolynomial *g,
-                             const GFElement *alpha, const McelieceParams *p)
+int32_t DecodeGoppa(const uint8_t *received, const GFPolynomial *g, const GFElement *alpha,
+                    const McelieceParams *params, uint8_t *errorVector, GFElement *decodeSyndrome)
 {
-    GFElement *check = BSL_SAL_Malloc(2U * p->t * sizeof(GFElement));
-    if (check == NULL) {
-        return CRYPT_MEM_ALLOC_FAIL; // any error occurs, clear flag
-    }
-
-    int32_t ret = ComputeSyndrome(vec, g, alpha, check, p);
-    if (ret != CRYPT_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
-        BSL_SAL_FREE(check);
-        return ret; // any error occurs, clear flag
-    }
-
-    for (int32_t i = 0; i < 2 * p->t; i++) {
-        if (origSyn[i] != check[i]) {
-            ret = CRYPT_MCELIECE_DECODE_FAIL; // any mismatch clears the verification flag
-            break;
-        }
-    }
-    BSL_SAL_FREE(check);
-    return ret;
-}
-
-int32_t DecodeGoppa(const uint8_t *received, const GFPolynomial *g, const GFElement *alpha, uint8_t *errorVector,
-                    const McelieceParams *params)
-{
-    GFElement *syndrome = SafeSyndrome(received, g, alpha, params);
-    if (syndrome == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
-        return CRYPT_MEM_ALLOC_FAIL;
-    }
-    if (IsZeroSyndrome(syndrome, 2 * params->t) == CRYPT_SUCCESS) {
-        BSL_SAL_CleanseData(errorVector, params->nBytes);
-        BSL_SAL_FREE(syndrome);
-        return CRYPT_SUCCESS;
-    }
     int32_t *errorPos = BSL_SAL_Malloc(params->t * sizeof(int32_t));
     if (errorPos == NULL) {
-        BSL_SAL_FREE(syndrome);
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         return CRYPT_MEM_ALLOC_FAIL;
     }
-    int32_t numErrors = 0;
-    int32_t ret = LocateErrors(syndrome, g, alpha, errorPos, &numErrors, params);
+    int32_t ret = ComputeSyndrome(received, g, alpha, params, decodeSyndrome);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         BSL_SAL_FREE(errorPos);
-        BSL_SAL_FREE(syndrome);
+        return ret;
+    }
+    if (IsZeroSyndrome(decodeSyndrome, 2 * params->t)) {
+        BSL_SAL_FREE(errorPos);
+        return CRYPT_SUCCESS;
+    }
+    int32_t numErrors = 0;
+    ret = LocateErrors(decodeSyndrome, g, alpha, errorPos, &numErrors, params);
+    if (ret != CRYPT_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        BSL_SAL_ClearFree(errorPos, params->t * sizeof(int32_t));
         return ret;
     }
     PosToBits(errorVector, errorPos, numErrors, params->n);
-    ret = VerifyPattern(errorVector, syndrome, g, alpha, params);
-
-    BSL_SAL_FREE(errorPos);
-    BSL_SAL_FREE(syndrome);
+    BSL_SAL_ClearFree(errorPos, params->t * sizeof(int32_t));
     return ret;
 }
 #endif

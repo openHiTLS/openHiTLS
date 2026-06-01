@@ -40,10 +40,8 @@ int32_t VectorWeight(const uint8_t *vec, const int32_t lenBytes)
     int32_t weight = 0;
     for (int32_t i = 0; i < lenBytes; i++) {
         uint8_t byte = vec[i];
-        // Brian Kernighan alg.
-        while (byte) {
-            byte &= byte - 1;
-            weight++;
+        for (uint32_t bit = 0; bit < 8; bit++) {
+            weight += (byte >> bit) & 1U;
         }
     }
     return weight;

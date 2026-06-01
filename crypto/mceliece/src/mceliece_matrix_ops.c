@@ -15,9 +15,11 @@
 
 #include "hitls_build.h"
 #ifdef HITLS_CRYPTO_MCELIECE
-#include "bsl_sal.h"
 #include <string.h>
+
+#include "bsl_sal.h"
 #include "mceliece_local.h"
+#include "crypt_utils.h"
 
 // Extract the rightmost 9-byte from the matrix, perform a tail-shift, and write it back
 #define LOAD_SHIFT_9TO8(tmp, src, tail)                                          \
@@ -44,7 +46,7 @@ static void ExtractSubmatrix(uint64_t buf[MCELIECE_MU], const uint8_t *mat, cons
     for (int32_t i = 0; i < MCELIECE_MU; i++) {
         const uint8_t *src = &mat[(row + i) * colsBytes + blockIdx];
         LOAD_SHIFT_9TO8(tmp, src, tail);
-        buf[i] = CMLoad8(tmp);
+        buf[i] = GET_UINT64_LE(tmp, 0);
     }
 }
 
@@ -99,14 +101,14 @@ static void ApplyColSwap(uint8_t *mat, const int32_t colsBytes, const int32_t bl
         uint8_t *dst = &mat[i * colsBytes + blockIdx];
         LOAD_SHIFT_9TO8(tmp, dst, tail);
 
-        uint64_t t = CMLoad8(tmp);
+        uint64_t t = GET_UINT64_LE(tmp, 0);
         for (int32_t j = 0; j < MCELIECE_MU; j++) {
             uint64_t d = (t >> j) ^ (t >> ctzList[j]);
             d &= 1;
             t ^= d << ctzList[j];
             t ^= d << j;
         }
-        CMStore8(tmp, t);
+        PUT_UINT64_LE(t, tmp, 0);
         STORE_SHIFT_8TO9(dst, tmp, tail);
     }
 }

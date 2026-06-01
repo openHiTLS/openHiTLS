@@ -21,6 +21,7 @@
 #include "bsl_err_internal.h"
 #include "eal_md_local.h"
 #include "bsl_bytes.h"
+#include "crypt_utils.h"
 
 // gen e & encode
 static int32_t GenVectorE(CRYPT_MCELIECE_Ctx *ctx, uint8_t *c, uint8_t *e)
@@ -95,9 +96,11 @@ EXIT:
     BSL_SAL_FREE(e);
     return ret;
 }
-static int32_t BuildVectorAndDecoding(uint8_t *e, const uint8_t *c0, const CMPrivateKey *sk,
-                                      const McelieceParams *params)
+
+static int32_t BuildVectorAndDecoding(const uint8_t *c0, const CMPrivateKey *sk, const McelieceParams *params,
+                                      uint8_t *e, GFElement *decodeSyndrome, GFElement *gfL)
 {
+    int32_t ret;
     uint8_t *v = BSL_SAL_Calloc(params->nBytes, 1);
     if (v == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
@@ -107,51 +110,44 @@ static int32_t BuildVectorAndDecoding(uint8_t *e, const uint8_t *c0, const CMPri
         uint32_t bit = VectorGetBit(c0, i);
         VectorSetBit(v, i, bit);
     }
-
-    GFElement *gfL = (GFElement *)BSL_SAL_Malloc(sizeof(GFElement) * params->n);
-    if (gfL == NULL) {
-        BSL_SAL_FREE(v);
-        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
-        return CRYPT_MEM_ALLOC_FAIL;
-    }
-    SupportFromCbits(gfL, sk->controlbits, params->m, params->n);
-    int32_t ret = DecodeGoppa(v, &sk->g, gfL, e, params);
-    BSL_SAL_FREE(gfL);
+    GOTO_ERR_IF(SupportFromCbits(gfL, sk->controlbits, params->m, params->n), ret);
+    ret = DecodeGoppa(v, &sk->g, gfL, params, e, decodeSyndrome);
+ERR:
     BSL_SAL_FREE(v);
-
-    if (ret != CRYPT_SUCCESS) {
-        if (ret == CRYPT_MCELIECE_DECODE_FAIL) {
-            return CRYPT_MCELIECE_INVALID_CIPHER;
-        }
-        BSL_ERR_PUSH_ERROR(ret);
-        return ret;
-    }
-    if (VectorWeight(e, params->nBytes) != params->t) {
-        return CRYPT_MCELIECE_INVALID_CIPHER;
-    }
-    return CRYPT_SUCCESS;
+    return ret;
 }
 
 // Decap algorithm (unified for both pc and non-pc parameter sets)
 int32_t McElieceDecapsInternal(const uint8_t *ciphertext, const CMPrivateKey *sk, uint8_t *sessionKey,
                                const McelieceParams *params, bool isPc)
 {
+    int32_t ret;
     const uint8_t *c0 = ciphertext;
     const uint8_t *c1 = ciphertext + params->cipherBytes - MCELIECE_L_BYTES;
-
-    uint8_t *e = (uint8_t *)BSL_SAL_Malloc(params->nBytes);
-    if (e == NULL) {
+    // e + decodeSyndrome + veirfySyndrome: params->nBytes || 2 * params->t * sizeof(GFElement) || 2 * params->t * sizeof(GFElement)
+    uint32_t memPoolBytes = params->nBytes + 4U * params->t * sizeof(GFElement) + sizeof(GFElement) * params->n;
+    uint8_t *memPool = (uint8_t *)BSL_SAL_Calloc(memPoolBytes, 1U);
+    if (memPool == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         return CRYPT_MEM_ALLOC_FAIL;
     }
-    int32_t ret = BuildVectorAndDecoding(e, c0, sk, params);
-    uint8_t b = 1;
-    if (ret == CRYPT_MCELIECE_INVALID_CIPHER) {
-        // https://classic.mceliece.org/mceliece-spec-20221023.pdf, Section 5.6
-        memcpy(e, sk->s, params->nBytes);
-        b = 0; // If e = ⊥, set b <- 0
-    } else if (ret != CRYPT_SUCCESS) {
-        goto EXIT;
+    uint8_t *e = memPool;
+    GFElement *decodeSyndrome = (GFElement *)(memPool + params->nBytes);
+    GFElement *verifySyndrome = (GFElement *)(memPool + params->nBytes + 2U * params->t * sizeof(GFElement));
+    GFElement *gfL = (GFElement *)(memPool + params->nBytes + 4U * params->t * sizeof(GFElement));
+    GOTO_ERR_IF(BuildVectorAndDecoding(c0, sk, params, e, decodeSyndrome, gfL), ret);
+    // Recompute syndrome from e
+    GOTO_ERR_IF(ComputeSyndrome(e, &sk->g, gfL, params, verifySyndrome), ret);
+    // Verify decodeSyndrome == verifySyndrome
+    uint32_t mask = ConstTimeMemcmp((uint8_t *)decodeSyndrome, (uint8_t *)verifySyndrome,
+        2U * params->t * sizeof(GFElement));
+    // Verify error weight == t
+    mask &= Uint32ConstTimeEqual(VectorWeight(e, params->nBytes), params->t);
+    // b = 1 if errorWeight == t, 0 otherwise
+    uint8_t b = (1 & mask) | (0 & (~mask));
+    // if errorWeight != t, e[i] = s[i], refernce: https://classic.mceliece.org/mceliece-spec-20221023.pdf, Section 5.6
+    for (int32_t i = 0; i < params->nBytes; i++) {
+        e[i] = (e[i] & mask) | (sk->s[i] & ~mask);
     }
     if (isPc) {
         // PC only: verify C1
@@ -159,18 +155,12 @@ int32_t McElieceDecapsInternal(const uint8_t *ciphertext, const CMPrivateKey *sk
         hashIn[0] = 2;
         memcpy(hashIn + 1, e, MCELIECE_L_BYTES);
         uint8_t c1Prime[MCELIECE_L_BYTES];
-        ret = McElieceShake256(c1Prime, MCELIECE_L_BYTES, hashIn, sizeof(hashIn));
-        if (ret != CRYPT_SUCCESS) {
-            BSL_ERR_PUSH_ERROR(ret);
-            goto EXIT;
-        }
-        b = ConstTimeMemcmp(c1Prime, c1, MCELIECE_L_BYTES) == 0 ? 0 : 1; // If C' != C1, set b <- 0
+        GOTO_ERR_IF(McElieceShake256(c1Prime, MCELIECE_L_BYTES, hashIn, sizeof(hashIn)), ret);
+        b = Uint8ConstTimeSelect(ConstTimeMemcmp(c1Prime, c1, MCELIECE_L_BYTES), 1 , 0); // If C' != C1, set b <- 0
     }
-
     ret = ComputeSessionKeyWithPrefix(sessionKey, b, e, ciphertext, params);
-EXIT:
-    BSL_SAL_CleanseData(e, params->nBytes);
-    BSL_SAL_FREE(e);
+ERR:
+    BSL_SAL_ClearFree(memPool, memPoolBytes);
     return ret;
 }
 #endif

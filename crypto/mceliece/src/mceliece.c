@@ -15,16 +15,18 @@
 
 #include "hitls_build.h"
 #ifdef HITLS_CRYPTO_MCELIECE
+#include <string.h>
+
 #include "crypt_mceliece.h"
 #include "bsl_sal.h"
 #include "crypt_params_key.h"
 #include "mceliece_local.h"
 #include "crypt_types.h"
-#include <string.h>
 #include "bsl_err_internal.h"
 #include "crypt_util_rand.h"
 #include "crypt_util_ctrl.h"
 #include "bsl_bytes.h"
+#include "crypt_utils.h"
 
 #define CHECK_IF_NULL_RET(PTR, RET)  \
     do {                             \
@@ -204,7 +206,7 @@ static void McelieceParsePrvKey(uint8_t *prvKeyBuf, CMPrivateKey *sk, const Mcel
     memcpy(sk->delta, p, MCELIECE_L_BYTES);
     p += MCELIECE_L_BYTES;
     /* 2. c (pivot mask) 8 B */
-    sk->c = CMLoad8(p);
+    sk->c = GET_UINT64_LE(p, 0);
     p += 8;
 
     /* 3. g (irr polynomial) */
@@ -296,7 +298,7 @@ static void McelieceExportPrvKey(const CMPrivateKey *sk, uint8_t *prvKeyBuf, con
     memcpy(p, sk->delta, MCELIECE_L_BYTES);
     p += MCELIECE_L_BYTES;
     /* 2. c (pivot mask) 8 B */
-    CMStore8(p, sk->c);
+    PUT_UINT64_LE(sk->c, p, 0);
     p += 8;
 
     /* 3. g (irr polynomial) */

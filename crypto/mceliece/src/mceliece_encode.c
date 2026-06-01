@@ -51,14 +51,11 @@ static inline uint64_t MatrixGetU64(const GFMatrix *matT, const int32_t row, con
     const int32_t tailBytes = (tailBits + 7) >> 3;
 
     uint64_t w = 0;
-    if (tailBytes < 8) {
-        // tail: less than 8 bits
-        memcpy(&w, p, tailBytes);
-    } else {
-        // tail: full 8 bits
-        memcpy(&w, p, 8);
+    int32_t numBytes = 0;
+    while (numBytes < tailBytes && numBytes < 8) {
+        w |= ((uint64_t)p[numBytes]) << (numBytes * 8);
+        ++numBytes;
     }
-
     w >>= (colBase & 7);
     if (tailBits < 64) {
         w &= (~0ULL >> (64 - tailBits)); // Mask to keep only valid low bits when fewer than 64 bits are requested

@@ -21,6 +21,7 @@
 #include "eal_cipher_local.h"
 #include "crypt_errno.h"
 #include "bsl_err_internal.h"
+#include "bsl_sal.h"
 #include <string.h>
 
 #define FRODO_MAX_N                  1344
@@ -167,6 +168,10 @@ static int32_t FrodoCommonMulAddAES(uint16_t *out, const uint16_t *matrixSTransp
         return ret;
     }
     void *ctx = method.newCtx(NULL, CRYPT_CIPHER_AES128_ECB);
+    if (ctx == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
+        return CRYPT_MEM_ALLOC_FAIL;
+    }
     ret = method.initCtx(ctx, seedA, 16, NULL, 0, NULL, true);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
@@ -293,6 +298,7 @@ int32_t FrodoCommonMulAddAsPlusEPortable(uint16_t *out, const uint16_t *matrixST
     const int32_t N = params->n;
     const int32_t nBar = params->nBar;
     uint16_t rows[4 * FRODO_MAX_N];
+    int32_t ret;
 #if defined(HITLS_CRYPTO_FRODOKEM_ARMV8)
     /* Transpose S^T (nBar×N) → S (N×nBar) once upfront.
      * Assembly uses outer-product MLA which requires S[k][0..7] contiguous;
@@ -307,10 +313,14 @@ int32_t FrodoCommonMulAddAsPlusEPortable(uint16_t *out, const uint16_t *matrixST
 #endif
     if (params->prg == FRODO_PRG_AES) {
         uint8_t plaintext[FRODO_PRG_AES_PLAINTEXT_SIZE];
-        return FrodoCommonMulAddAES(out, matS, seedA, N, nBar, rows, plaintext, MultAsPlusEAES);
+        ret = FrodoCommonMulAddAES(out, matS, seedA, N, nBar, rows, plaintext, MultAsPlusEAES);
     } else {
-        return FrodoCommonMulAddAsPlusESHAKE(out, matS, seedA, params, N, nBar, rows, MulAsPlusESHAKE);
+        ret = FrodoCommonMulAddAsPlusESHAKE(out, matS, seedA, params, N, nBar, rows, MulAsPlusESHAKE);
     }
+#if defined(HITLS_CRYPTO_FRODOKEM_ARMV8)
+    BSL_SAL_CleanseData(sMatrix, sizeof(sMatrix));
+#endif
+    return ret;
 }
 
 int32_t FrodoCommonMulAddSaPlusEPortable(uint16_t *out, const uint16_t *s, const uint16_t *e, const uint8_t *seedA,
