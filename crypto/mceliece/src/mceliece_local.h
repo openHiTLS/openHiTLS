@@ -123,19 +123,6 @@ static inline uint64_t CMMakeMask(uint64_t x)
     uint64_t nz = (uint64_t)((sx >> 63) | ((-sx) >> 63));
     return ~nz;
 }
-
-static inline uint64_t CMLoad8(const uint8_t *x)
-{
-    uint64_t r = 0;
-    memcpy_s(&r, 8, x, 8);
-    return r;
-}
-
-static inline void CMStore8(uint8_t *x, uint64_t v)
-{
-    memcpy_s(x, 8, &v, 8);
-}
-
 // trailing zero count
 static inline int32_t CMCtz64(uint64_t x)
 {
@@ -161,8 +148,8 @@ int32_t SupportFromCbits(GFElement *L, const uint8_t *cbits, const int64_t w, co
 // Goppa Encode and Decode Functions
 // =================================================================================
 // Goppa code decoding - recovers error vector from syndrome
-int32_t DecodeGoppa(const uint8_t *received, const GFPolynomial *g, const GFElement *alpha, uint8_t *errorVector,
-                    const McelieceParams *params);
+int32_t DecodeGoppa(const uint8_t *received, const GFPolynomial *g, const GFElement *alpha,
+                    const McelieceParams *params, uint8_t *errorVector, GFElement *decodeSyndrome);
 
 // Generate a random vector with fixed Hamming weight t
 // Used in the encapsulation phase to generate the error vector e
@@ -241,6 +228,8 @@ uint32_t VectorGetBit(const uint8_t *vec, const uint32_t bitIdx);
 // Vector utility functions
 int32_t VectorWeight(const uint8_t *vec, const int32_t lenBytes); // Calculate Hamming weight
 
+int32_t ComputeSyndrome(const uint8_t *received, const GFPolynomial *g, const GFElement *alpha,
+                        const McelieceParams *params, GFElement *syndrome);
 #ifdef __cplusplus
 }
 #endif

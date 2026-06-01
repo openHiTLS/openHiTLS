@@ -160,6 +160,10 @@ static int32_t FrodoCommonMulAddAES(uint16_t *out, const uint16_t *matrixSTransp
         return ret;
     }
     void *ctx = method.newCtx(NULL, CRYPT_CIPHER_AES128_ECB);
+    if (ctx == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
+        return CRYPT_MEM_ALLOC_FAIL;
+    }
     ret = method.initCtx(ctx, seedA, 16, NULL, 0, NULL, true);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);

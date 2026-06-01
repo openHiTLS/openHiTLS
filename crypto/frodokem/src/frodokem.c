@@ -273,7 +273,7 @@ static int32_t FrodoKemDecaps(const FrodoKemParams *params, uint8_t *ss, const u
     (void)memcpy_s(ctKBuf, ctKLen, ct, params->ctxSize);
     (void)memcpy_s(ctKBuf + ctLen, ctKLen - ctLen, kPrime, params->ss);
     ret = FrodoShake(ss, params->ss, ctKBuf, ctKLen);
-    BSL_SAL_FREE(ctKBuf);
+    BSL_SAL_ClearFree(ctKBuf, ctKLen);
 EXIT:
     BSL_SAL_ClearFree(buf, bufLen);
     return ret;

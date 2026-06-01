@@ -19,6 +19,7 @@
 #include "mceliece_local.h"
 #include "bsl_err_internal.h"
 #include "bsl_sal.h"
+#include "crypt_utils.h"
 
 #define MCELIECE_PRG_PREFIX   64
 #define MCELIECE_PRG_SEED_LEN 33
@@ -36,13 +37,6 @@ static uint16_t BitrevU16(const uint16_t x, const int32_t m)
         r = (uint16_t)((r << 1) | ((x >> j) & 1U));
     }
     return (uint16_t)(r & ((1U << m) - 1U));
-}
-
-static uint32_t Load4(const uint8_t *x)
-{
-    uint32_t r = 0;
-    (void)memcpy_s(&r, 4, x, 4);
-    return r;
 }
 
 static int32_t ComparePairs(const void *a, const void *b)
@@ -93,7 +87,7 @@ static int32_t GenerateFieldOrdering(GFElement *alpha, const uint8_t *randomBits
     }
     // random q 32-bit a_i
     for (int32_t i = 0; i < MCELIECE_Q; i++) {
-        uint32_t ai = Load4(randomBits + i * 4); // le 32-bit
+        uint32_t ai = GET_UINT32_LE(randomBits, i * 4); // le 32-bit
         pairs[i].val = ai;
         pairs[i].pos = i;
     }
