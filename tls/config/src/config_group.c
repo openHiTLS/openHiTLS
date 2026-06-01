@@ -265,7 +265,7 @@ int32_t ConfigLoadGroupInfo(HITLS_Config *config)
 #ifdef HITLS_TLS_CONFIG_CIPHER_SUITE
     return HITLS_CFG_SetGroupList(config, DEFAULT_GROUP_ID, (uint32_t)strlen(DEFAULT_GROUP_ID));
 #else
-    return HITLS_CFG_SetGroup(config, DEFAULT_GROUP_ID, sizeof(DEFAULT_GROUP_ID) / sizeof(DEFAULT_GROUP_ID[0]));
+    return HITLS_CFG_SetGroups(config, DEFAULT_GROUP_ID, sizeof(DEFAULT_GROUP_ID) / sizeof(DEFAULT_GROUP_ID[0]));
 #endif
 }
 
@@ -370,7 +370,7 @@ int32_t ConfigLoadGroupInfo(HITLS_Config *config)
 #ifdef HITLS_TLS_CONFIG_CIPHER_SUITE
     return HITLS_CFG_SetGroupList(config, DEFAULT_GROUP_ID, (uint32_t)strlen(DEFAULT_GROUP_ID));
 #else
-    return HITLS_CFG_SetGroup(config, DEFAULT_GROUP_ID, sizeof(DEFAULT_GROUP_ID) / sizeof(DEFAULT_GROUP_ID[0]));
+    return HITLS_CFG_SetGroups(config, DEFAULT_GROUP_ID, sizeof(DEFAULT_GROUP_ID) / sizeof(DEFAULT_GROUP_ID[0]));
 #endif
 }
 
