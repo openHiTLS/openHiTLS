@@ -661,10 +661,12 @@ static int32_t PkeEncrypt(CRYPT_ML_KEM_Ctx *ctx, uint8_t *ct, uint8_t *m, uint8_
     uint8_t k = ctx->info->k;
     uint8_t nonce = 0; // Step 1
     uint8_t seedE[MLKEM_SEED_LEN + 1];
-    uint8_t bufEncE[MLKEM_PRF_BLOCKSIZE * MLKEM_ETA1_MAX];
-    int16_t polyE2[MLKEM_N] = { 0 };
-    int16_t polyC2[MLKEM_N] = { 0 };
-    int16_t polyM[MLKEM_N] = { 0 };
+    ALIGN32 uint8_t encBuf[MLKEM_PRF_BLOCKSIZE * MLKEM_ETA1_MAX +
+        MLKEM_N * sizeof(int16_t) * 3];
+    uint8_t *bufEncE = encBuf;
+    int16_t *polyE2 = (int16_t *)(encBuf + MLKEM_PRF_BLOCKSIZE * MLKEM_ETA1_MAX);
+    int16_t *polyC2 = polyE2 + MLKEM_N;
+    int16_t *polyM = polyC2 + MLKEM_N;
     int16_t *polyVecY[MLKEM_K_MAX] = { 0 };
     int16_t *polyVecE1[MLKEM_K_MAX] = { 0 };
     int16_t *polyVecU[MLKEM_K_MAX] = { 0 };
@@ -717,8 +719,8 @@ static int32_t PkeEncrypt(CRYPT_ML_KEM_Ctx *ctx, uint8_t *ct, uint8_t *m, uint8_
     // Step 23
     ByteEncode(ct + MLKEM_ENCODE_BLOCKSIZE * ctx->info->du * k, polyC2, ctx->info->dv);
 ERR:
-    BSL_SAL_CleanseData(bufEncE, sizeof(bufEncE));
-    BSL_SAL_Free(tmpPolyVec);
+    BSL_SAL_CleanseData(encBuf, sizeof(encBuf));
+    BSL_SAL_ClearFree(tmpPolyVec, MLKEM_N * k * 3 * sizeof(int16_t));
     return ret;
 }
 
@@ -761,7 +763,7 @@ static int32_t PkeDecrypt(CRYPT_ML_KEM_Ctx *ctx, uint8_t *result, const uint8_t 
     PolyCompress(polyM, 1);
 
     ByteEncode(result, polyM, 1);  // Step 7
-    BSL_SAL_Free(tmpPolyVec);
+    BSL_SAL_ClearFree(tmpPolyVec, (k * 2 + 1) * MLKEM_N * sizeof(int16_t));
     return CRYPT_SUCCESS;
 }
 
@@ -838,6 +840,7 @@ int32_t MLKEM_DecapsInternal(CRYPT_ML_KEM_Ctx *ctx, uint8_t *ct, uint32_t ctLen,
 
     uint8_t mh[MLKEM_SEED_LEN + CRYPT_SHA3_256_DIGESTSIZE];    // m′ and h
     uint8_t kr[CRYPT_SHA3_512_DIGESTSIZE];    // K' and r'
+    uint8_t *newCt = NULL;
 
     // NIST.FIPS.203: test = H(dk[384k : 768k + 32]) and check test == h
     int32_t ret = HashFuncH(ctx->libCtx, ek, 384 * ctx->info->k + 32, mh, CRYPT_SHA3_256_DIGESTSIZE);
@@ -847,16 +850,19 @@ int32_t MLKEM_DecapsInternal(CRYPT_ML_KEM_Ctx *ctx, uint8_t *ct, uint32_t ctLen,
         return CRYPT_MLKEM_INVALID_PRVKEY;
     }
 
-    ret = PkeDecrypt(ctx, mh, ct);  // Step 5: 𝑚′ ← K-PKE.Decrypt(dkPKE, 𝑐)
-    RETURN_RET_IF(ret != CRYPT_SUCCESS, ret);
+    GOTO_ERR_IF(PkeDecrypt(ctx, mh, ct), ret);  // Step 5: 𝑚′ ← K-PKE.Decrypt(dkPKE, 𝑐)
     // Step 6: (K′,r′) ← G(m′ || h)
     (void)memcpy_s(mh + MLKEM_SEED_LEN, CRYPT_SHA3_256_DIGESTSIZE, h, CRYPT_SHA3_256_DIGESTSIZE);
     ret = HashFuncG(ctx->libCtx, mh, MLKEM_SEED_LEN + CRYPT_SHA3_256_DIGESTSIZE, kr, CRYPT_SHA3_512_DIGESTSIZE);
-    RETURN_RET_IF(ret != CRYPT_SUCCESS, ret);
+    GOTO_ERR_IF(ret != CRYPT_SUCCESS, ret);
     // Step 8: 𝑐′ ← K-PKE.Encrypt(ekPKE,𝑚′,𝑟′)
     uint8_t *r = kr + MLKEM_SHARED_KEY_LEN;
-    uint8_t *newCt = BSL_SAL_Malloc(ctLen + MLKEM_SEED_LEN);
-    RETURN_RET_IF(newCt == NULL, BSL_MALLOC_FAIL);
+    newCt = BSL_SAL_Malloc(ctLen + MLKEM_SEED_LEN);
+    if (newCt == NULL) {
+        ret = BSL_MALLOC_FAIL;
+        BSL_ERR_PUSH_ERROR(ret);
+        goto ERR;
+    }
     GOTO_ERR_IF(PkeEncrypt(ctx, newCt, mh, r), ret);
 
     // Step 9: if c != c′
@@ -875,6 +881,7 @@ int32_t MLKEM_DecapsInternal(CRYPT_ML_KEM_Ctx *ctx, uint8_t *ct, uint32_t ctLen,
     }
     *skLen = MLKEM_SHARED_KEY_LEN;
 ERR:
+    BSL_SAL_CleanseData(mh, sizeof(mh));
     BSL_SAL_CleanseData(kr, CRYPT_SHA3_512_DIGESTSIZE);
     BSL_SAL_Free(newCt);
     return ret;
