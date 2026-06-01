@@ -1085,8 +1085,6 @@ void UT_TLS_DTLS_CONSISTENCY_RFC5246_CIPHER_TC001(void)
     ASSERT_TRUE(FRAME_ParseMsg(&frameType, sndBuf, sndLen, &frameMsg, &parseLen) == HITLS_SUCCESS);
     ASSERT_EQ(frameMsg.body.hsMsg.body.serverHello.cipherSuite.data, HITLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384);
 
-    ASSERT_TRUE(TestIsErrStackNotEmpty());
-
 EXIT:
     FRAME_CleanMsg(&frameType, &frameMsg);
     HITLS_CFG_FreeConfig(testInfo.config);

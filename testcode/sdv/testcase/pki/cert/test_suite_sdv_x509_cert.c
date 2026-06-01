@@ -1332,6 +1332,7 @@ void SDV_X509_CERT_GEN_PROCESS_TC002(char *csrPath, char *privPath, int keyType,
     BSL_Buffer encodeCert = {0};
 
     TestMemInit();
+    TestRandInit();
     ASSERT_EQ(CRYPT_EAL_DecodeFileKey(BSL_FORMAT_ASN1, keyType, privPath, NULL, 0, &privKey), 0);
     ASSERT_EQ(HITLS_X509_CsrParseFile(BSL_FORMAT_ASN1, csrPath, &csr), HITLS_PKI_SUCCESS);
 
@@ -1384,15 +1385,12 @@ void SDV_X509_CERT_GEN_PROCESS_TC002(char *csrPath, char *privPath, int keyType,
     /* Cannot generate before signing */
     ASSERT_EQ(HITLS_X509_CertGenBuff(BSL_FORMAT_ASN1, cert, &encodeCert), HITLS_X509_ERR_CERT_NOT_SIGNED);
 
-    /* Repeat sign is allowed. */
+    /* Repeat sign is not allowed. */
     ASSERT_EQ(HITLS_X509_CertSign(mdId, privKey, NULL, cert), 0);
-    ASSERT_EQ(HITLS_X509_CertSign(mdId, privKey, NULL, cert), 0);
+    ASSERT_EQ(HITLS_X509_CertSign(mdId, privKey, NULL, cert), HITLS_X509_ERR_SIGN_REPEAT);
 
     /* Cannot parse after signing */
     ASSERT_EQ(HITLS_X509_CertParseBuff(BSL_FORMAT_ASN1, &encodeCert, &cert), HITLS_X509_ERR_INVALID_PARAM);
-
-    /* Sing after generating is allowed. */
-    ASSERT_EQ(HITLS_X509_CertSign(mdId, privKey, NULL, cert), 0);
 
     /* Repeat digest is allowed. */
     ASSERT_EQ(HITLS_X509_CertDigest(cert, mdId, md, &mdLen), 0);
@@ -1404,6 +1402,9 @@ void SDV_X509_CERT_GEN_PROCESS_TC002(char *csrPath, char *privPath, int keyType,
     encodeCert.data = NULL;
     encodeCert.dataLen = 0;
     ASSERT_EQ(HITLS_X509_CertGenBuff(BSL_FORMAT_ASN1, cert, &encodeCert), 0);
+
+    /* Sign after generating is not allowed. */
+    ASSERT_EQ(HITLS_X509_CertSign(mdId, privKey, NULL, cert), HITLS_X509_ERR_SIGN_REPEAT);
 
     /* Cannot parse after generating */
     ASSERT_EQ(HITLS_X509_CertParseBuff(BSL_FORMAT_ASN1, &encodeCert, &cert), HITLS_X509_ERR_INVALID_PARAM);

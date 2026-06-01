@@ -467,6 +467,7 @@ HITLS_X509_Ext *X509_ExtNew(HITLS_X509_Ext *ext, int32_t type)
             BSL_SAL_Free(tmp);
             return NULL;
         }
+        // This initial value -1 cannot be modified because it is used in X509_CheckExt.
         ((HITLS_X509_CertExt *)(ext->extData))->maxPathLen = -1;
     }
     return ext;

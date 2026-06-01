@@ -1101,9 +1101,9 @@ void SDV_X509_CRL_Gen_Process_TC002(void)
     ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_GET_PUBKEY, &pubKey, sizeof(CRYPT_EAL_PkeyCtx *)), 0);
     ASSERT_EQ(HITLS_X509_CrlVerify(pubKey, crl), HITLS_X509_ERR_CRL_NOT_SIGNED);
 
-    /* Repeat sign is allowed. */
+    /* Repeat sign is not allowed. */
     ASSERT_EQ(HITLS_X509_CrlSign(mdId, prvKey, NULL, crl), 0);
-    ASSERT_EQ(HITLS_X509_CrlSign(mdId, prvKey, NULL, crl), 0);
+    ASSERT_EQ(HITLS_X509_CrlSign(mdId, prvKey, NULL, crl), HITLS_X509_ERR_SIGN_REPEAT);
 
     /* Verify after signing is allowed. */
     ASSERT_EQ(HITLS_X509_CrlVerify(pubKey, crl), 0);
@@ -1118,8 +1118,8 @@ void SDV_X509_CRL_Gen_Process_TC002(void)
     encodeCrl.dataLen = 0;
     ASSERT_EQ(HITLS_X509_CrlGenBuff(BSL_FORMAT_ASN1, crl, &encodeCrl), 0);
 
-    /* Sing after generating is allowed. */
-    ASSERT_EQ(HITLS_X509_CrlSign(mdId, prvKey, NULL, crl), 0);
+    /* Sign after generating is not allowed. */
+    ASSERT_EQ(HITLS_X509_CrlSign(mdId, prvKey, NULL, crl), HITLS_X509_ERR_SIGN_REPEAT);
 
     /* Verify after generating is allowed. */
     ASSERT_EQ(HITLS_X509_CrlVerify(pubKey, crl), 0);

@@ -744,7 +744,8 @@ int32_t HITLS_X509_CsrSign(int32_t mdId, const CRYPT_EAL_PkeyCtx *prvKey, const 
         return HITLS_X509_ERR_SIGN_AFTER_PARSE;
     }
     if (csr->state == HITLS_X509_CSR_STATE_SIGN || csr->state == HITLS_X509_CSR_STATE_GEN) {
-        return HITLS_PKI_SUCCESS;
+        BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_SIGN_REPEAT);
+        return HITLS_X509_ERR_SIGN_REPEAT;
     }
 
     int32_t ret = CheckCsrValid(csr);

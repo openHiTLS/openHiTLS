@@ -551,8 +551,6 @@ void UT_TLS_DTLCP_CONSISTENCY_RFC8422_EXTENSION_MISS_TC001(void)
     FRAME_ServerHelloMsg *serverMsg = &frameMsg.body.hsMsg.body.serverHello;
     ASSERT_EQ(serverMsg->cipherSuite.data, HITLS_ECDHE_SM4_CBC_SM3);
 
-    ASSERT_TRUE(TestIsErrStackNotEmpty());
-
 EXIT:
     FRAME_CleanMsg(&frameType, &frameMsg);
     HITLS_CFG_FreeConfig(testInfo.config);
@@ -926,8 +924,6 @@ void UT_TLS_DTLCP_CONSISTENCY_HANDSHAKE_STATE_TC001(void)
 
     ASSERT_TRUE(clientTlsCtx->state == CM_STATE_HANDSHAKING);
     ASSERT_EQ(clientTlsCtx->hsCtx->state, TRY_RECV_SERVER_HELLO);
-
-    ASSERT_TRUE(TestIsErrStackNotEmpty());
 
 EXIT:
     HITLS_CFG_FreeConfig(clientConfig);

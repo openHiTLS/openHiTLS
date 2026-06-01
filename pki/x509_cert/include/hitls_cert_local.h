@@ -64,6 +64,7 @@ struct _HITLS_X509_Cert {
     HITLS_X509_Asn1AlgId signAlgId;
     BSL_ASN1_BitString signature;
 
+    bool isSelfIssued;
     BSL_SAL_RefCount references;
 
     CRYPT_EAL_LibCtx *libCtx;         // Provider context
@@ -72,6 +73,9 @@ struct _HITLS_X509_Cert {
 
 #ifdef HITLS_PKI_X509_VFY
 bool HITLS_X509_CheckIssued(HITLS_X509_Cert *issue, HITLS_X509_Cert *subject);
+bool HITLS_X509_CheckIssuedWithoutName(HITLS_X509_Cert *issue, HITLS_X509_Cert *subject);
+bool HITLS_X509_CheckSelfSignedSignature(HITLS_X509_Cert *cert);
+bool HITLS_X509_IsSelfSigned(HITLS_X509_Cert *cert);
 bool HITLS_X509_CertIsCA(HITLS_X509_Cert *cert);
 #endif
 

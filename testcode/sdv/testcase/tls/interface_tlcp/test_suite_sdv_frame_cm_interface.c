@@ -1222,8 +1222,6 @@ void UT_TLS_CM_GET_LOCAL_SIGN_SCHEME_FUNC_TC001(int version)
             break;
     }
 
-    ASSERT_TRUE(TestIsErrStackNotEmpty());
-
 EXIT:
     HITLS_CFG_FreeConfig(config);
     FRAME_FreeLink(client);

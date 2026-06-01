@@ -274,6 +274,9 @@ int32_t HITLS_X509_ParseCertTbs(BSL_ASN1_Buffer *asnArr, HITLS_X509_Cert *cert)
         goto ERR;
     }
 
+#ifdef HITLS_PKI_X509_VFY
+    cert->isSelfIssued = (HITLS_X509_CmpNameNode(cert->tbs.subjectName, cert->tbs.issuerName) == 0);
+#endif
     return ret;
 ERR:
     if (cert->tbs.ealPubKey != NULL) {
@@ -590,7 +593,7 @@ static int32_t X509_CertGetCtrlCmd(HITLS_X509_Cert *cert, int32_t cmd, void *val
                 BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
                 return HITLS_X509_ERR_INVALID_PARAM;
             }
-            *(bool *)val = HITLS_X509_CheckIssued(cert, cert);
+            *(bool *)val = HITLS_X509_IsSelfSigned(cert);
             return HITLS_PKI_SUCCESS;
         }
 #endif
@@ -798,20 +801,44 @@ HITLS_X509_Cert *HITLS_X509_CertDup(HITLS_X509_Cert *src)
  *   3. Check if the algorithm of the issuer certificate matches that of the sub certificate
  *   4. Check if the certificate keyusage has a certificate sign
  */
-bool HITLS_X509_CheckIssued(HITLS_X509_Cert *issue, HITLS_X509_Cert *subject)
+bool HITLS_X509_CheckIssuedWithoutName(HITLS_X509_Cert *issue, HITLS_X509_Cert *subject)
 {
-    int32_t ret = HITLS_X509_CmpNameNode(issue->tbs.subjectName, subject->tbs.issuerName);
-    if (ret != HITLS_PKI_SUCCESS) {
-        return false;
-    }
     if (issue->tbs.version == HITLS_X509_VERSION_3 && subject->tbs.version == HITLS_X509_VERSION_3) {
-        ret = HITLS_X509_CheckAki(&issue->tbs.ext, &subject->tbs.ext, issue->tbs.issuerName, &issue->tbs.serialNum);
+        int32_t ret = HITLS_X509_CheckAki(&issue->tbs.ext, &subject->tbs.ext, issue->tbs.issuerName, &issue->tbs.serialNum);
         if (ret != HITLS_PKI_SUCCESS) {
             return false;
         }
     }
 
     return HITLS_X509_CheckAlg(issue->tbs.ealPubKey, &subject->tbs.signAlgId) == HITLS_PKI_SUCCESS;
+}
+
+bool HITLS_X509_CheckIssued(HITLS_X509_Cert *issue, HITLS_X509_Cert *subject)
+{
+    return HITLS_X509_CmpNameNode(issue->tbs.subjectName, subject->tbs.issuerName) == HITLS_PKI_SUCCESS &&
+        HITLS_X509_CheckIssuedWithoutName(issue, subject);
+}
+
+bool HITLS_X509_CheckSelfSignedSignature(HITLS_X509_Cert *cert)
+{
+    int32_t ret = HITLS_X509_CheckSignAlgConsistency(&cert->tbs.signAlgId, &cert->signAlgId);
+    if (ret != HITLS_PKI_SUCCESS) {
+        return false;
+    }
+    /* Self-issued (subject==issuer) does not imply self-signed.
+       Verify with the cert's own public key to distinguish. */
+    ret = HITLS_X509_CheckSignature(cert->tbs.ealPubKey, cert->tbs.tbsRawData,
+        cert->tbs.tbsRawDataLen, &cert->signAlgId, &cert->signature);
+    return ret == HITLS_PKI_SUCCESS;
+}
+
+bool HITLS_X509_IsSelfSigned(HITLS_X509_Cert *cert)
+{
+    BSL_ERR_SET_MARK();
+    bool selfSigned = cert->isSelfIssued && HITLS_X509_CheckIssuedWithoutName(cert, cert) &&
+        HITLS_X509_CheckSelfSignedSignature(cert);
+    BSL_ERR_POP_TO_MARK();
+    return selfSigned;
 }
 
 bool HITLS_X509_CertIsCA(HITLS_X509_Cert *cert)
@@ -1148,6 +1175,9 @@ static int32_t CertSignCb(int32_t mdId, CRYPT_EAL_PkeyCtx *pivKey, HITLS_X509_As
 
     cert->tbs.tbsRawData = signBuff.data;
     cert->tbs.tbsRawDataLen = signBuff.dataLen;
+#ifdef HITLS_PKI_X509_VFY
+    cert->isSelfIssued = (HITLS_X509_CmpNameNode(cert->tbs.subjectName, cert->tbs.issuerName) == 0);
+#endif
     cert->state = HITLS_X509_CERT_STATE_SIGN;
     return ret;
 }
@@ -1164,7 +1194,8 @@ int32_t HITLS_X509_CertSign(int32_t mdId, const CRYPT_EAL_PkeyCtx *prvKey, const
         return HITLS_X509_ERR_SIGN_AFTER_PARSE;
     }
     if (cert->state == HITLS_X509_CERT_STATE_SIGN || cert->state == HITLS_X509_CERT_STATE_GEN) {
-        return HITLS_PKI_SUCCESS;
+        BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_SIGN_REPEAT);
+        return HITLS_X509_ERR_SIGN_REPEAT;
     }
 
     int32_t ret = CheckCertTbs(cert);

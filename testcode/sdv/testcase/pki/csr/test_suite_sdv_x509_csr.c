@@ -632,9 +632,9 @@ void SDV_X509_CSR_GEN_PROCESS_TC002(char *privPath, int keyFormat, int keyType)
     ASSERT_EQ(HITLS_X509_CsrSign(mdId, key, NULL, new), HITLS_X509_ERR_CSR_INVALID_SUBJECT_DN);
     ASSERT_EQ(HITLS_X509_CsrCtrl(new, HITLS_X509_ADD_SUBJECT_NAME, dnName, 1), 0);
 
-    /* Repeat sign is allowed. */
+    /* Repeat sign is not allowed. */
     ASSERT_EQ(HITLS_X509_CsrSign(mdId, key, NULL, new), 0);
-    ASSERT_EQ(HITLS_X509_CsrSign(mdId, key, NULL, new), 0);
+    ASSERT_EQ(HITLS_X509_CsrSign(mdId, key, NULL, new), HITLS_X509_ERR_SIGN_REPEAT);
 
     /* Cannot parse after signing */
     ASSERT_EQ(HITLS_X509_CsrParseBuff(BSL_FORMAT_ASN1, &encodeCsr, &new), HITLS_X509_ERR_INVALID_PARAM);
@@ -646,8 +646,8 @@ void SDV_X509_CSR_GEN_PROCESS_TC002(char *privPath, int keyFormat, int keyType)
     encodeCsr.dataLen = 0;
     ASSERT_EQ(HITLS_X509_CsrGenBuff(BSL_FORMAT_ASN1, new, &encodeCsr), 0);
 
-    /* Sing after generating is allowed. */
-    ASSERT_EQ(HITLS_X509_CsrSign(mdId, key, NULL, new), 0);
+    /* Sign after generating is not allowed. */
+    ASSERT_EQ(HITLS_X509_CsrSign(mdId, key, NULL, new), HITLS_X509_ERR_SIGN_REPEAT);
 
     /* Cannot parse after generating */
     ASSERT_EQ(HITLS_X509_CsrParseBuff(BSL_FORMAT_ASN1, &encodeCsr, &new), HITLS_X509_ERR_INVALID_PARAM);
