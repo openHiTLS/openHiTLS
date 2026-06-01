@@ -39,16 +39,6 @@ static int32_t CheckSignHashAlg(TLS_Ctx *ctx, uint16_t signHashAlg)
     }
 
     TLS_Config *config = &ctx->config.tlsConfig;
-#ifdef HITLS_TLS_PROTO_TLS13
-    if (ctx->negotiatedInfo.version == HITLS_VERSION_TLS13) {
-        const TLS_SigSchemeInfo *schemeInfo = ConfigGetSignatureSchemeInfo(config, signHashAlg);
-        if (schemeInfo == NULL || ((schemeInfo->certVersionBits & TLS13_VERSION_BIT) == 0)) {
-            BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16195, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-                "not allowed to use 0x%X signAlg tls1.3.", signHashAlg, 0, 0, 0);
-            return ParseErrorProcess(ctx, HITLS_PARSE_UNSUPPORT_SIGN_ALG, 0, NULL, ALERT_HANDSHAKE_FAILURE);
-        }
-    }
-#endif /* HITLS_TLS_PROTO_TLS13 */
     uint32_t i = 0;
     for (i = 0; i < config->signAlgorithmsSize; i++) {
         if (signHashAlg == config->signAlgorithms[i]) {

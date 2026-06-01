@@ -43,6 +43,29 @@
 #define ERROR (-1)
 #define SINGLE_CERT_LEN (512)
 #define CERT_FILE_LEN (4 * 1024)
+#define PEM_BEGIN_PREFIX "-----BEGIN"
+
+static bool IsPemFile(const char *file)
+{
+    char buf[sizeof(PEM_BEGIN_PREFIX) - 1] = {0};
+    FILE *fp = fopen(file, "rb");
+    if (fp == NULL) {
+        return false;
+    }
+    size_t readLen = fread(buf, 1, sizeof(buf), fp);
+    (void)fclose(fp);
+    return readLen == sizeof(buf) && memcmp(buf, PEM_BEGIN_PREFIX, sizeof(buf)) == 0;
+}
+
+static const char *GetProviderParseFormat(const char *file)
+{
+    return IsPemFile(file) ? "PEM" : "ASN1";
+}
+
+static HITLS_ParseFormat GetParseFormat(const char *file)
+{
+    return IsPemFile(file) ? TLS_PARSE_FORMAT_PEM : TLS_PARSE_FORMAT_ASN1;
+}
 
 int32_t RegCertCallback(CertCallbackType type)
 {
@@ -109,10 +132,10 @@ HITLS_CERT_X509 *HiTLS_X509_LoadCertFile(HITLS_Config *tlsCfg, const char *file)
     HITLS_Lib_Ctx *libCtx = LIBCTX_FROM_CONFIG(tlsCfg);
     const char *attrName = ATTRIBUTE_FROM_CONFIG(tlsCfg);
     return HITLS_CERT_ProviderCertParse(libCtx, attrName, (const uint8_t *)file, strlen(file) + 1,
-        TLS_PARSE_TYPE_FILE, "ASN1");
+        TLS_PARSE_TYPE_FILE, GetProviderParseFormat(file));
 #else
     return HITLS_X509_Adapt_CertParse(tlsCfg, (const uint8_t *)file, strlen(file) + 1, TLS_PARSE_TYPE_FILE,
-        TLS_PARSE_FORMAT_ASN1);
+        GetParseFormat(file));
 #endif
 }
 
@@ -233,10 +256,10 @@ int32_t HITLS_X509_LoadPrivateKeyList(HITLS_Config *tlsCfg, const char *keyFileL
 
 #ifdef HITLS_TLS_FEATURE_PROVIDER
         key = HITLS_X509_Adapt_ProviderKeyParse(tlsCfg, (const uint8_t *)filePath, strlen(filePath),
-            TLS_PARSE_TYPE_FILE, "ASN1", NULL);
+            TLS_PARSE_TYPE_FILE, GetProviderParseFormat(filePath), NULL);
 #else
         key = HITLS_X509_Adapt_KeyParse(tlsCfg, (const uint8_t *)filePath, strlen(filePath),
-            TLS_PARSE_TYPE_FILE, TLS_PARSE_FORMAT_ASN1);
+            TLS_PARSE_TYPE_FILE, GetParseFormat(filePath));
 #endif
         if (key == NULL) {
             LOG_ERROR("LoadCert Error: path = %s.", filePath);

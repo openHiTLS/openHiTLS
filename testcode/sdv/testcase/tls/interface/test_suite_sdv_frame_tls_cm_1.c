@@ -4465,13 +4465,30 @@ EXIT:
 }
 /* END_CASE */
 
-STUB_DEFINE_RET2(uint32_t, MapVersion2VersionBit, bool, uint16_t);
+STUB_DEFINE_RET2(const TLS_GroupInfo *, ConfigGetGroupInfo, const HITLS_Config *, uint16_t);
 
-uint32_t STUB_MapVersion2VersionBit(bool isDatagram, uint16_t version)
+static uint32_t g_configGetGroupInfoCallCount = 0;
+
+const TLS_GroupInfo *STUB_ConfigGetGroupInfo(const HITLS_Config *config, uint16_t groupId)
 {
-    (void)isDatagram;
-    (void)version;
-    return TLCP11_VERSION_BIT;
+    (void)config;
+    static const TLS_GroupInfo parseGroupInfo = {
+        NULL, CRYPT_ECC_NISTP256, CRYPT_PKEY_ECDH, 128, HITLS_EC_GROUP_SECP256R1, 65, 32, 0,
+        TLS_VERSION_MASK | DTLS_VERSION_MASK, false
+    };
+    static const TLS_GroupInfo processGroupInfo = {
+        NULL, CRYPT_ECC_NISTP256, CRYPT_PKEY_ECDH, 128, HITLS_EC_GROUP_SECP256R1, 65, 32, 0,
+        TLS13_VERSION_BIT, false
+    };
+
+    if (groupId != HITLS_EC_GROUP_SECP256R1) {
+        return NULL;
+    }
+
+    g_configGetGroupInfoCallCount++;
+    /* The first query is used by ParseEcdhePublicKey to check pubkeyLen, and the second one is used by
+     * ProcessServerKxMsgNamedCurve to validate versionBits. */
+    return (g_configGetGroupInfoCallCount == 1) ? &parseGroupInfo : &processGroupInfo;
 }
 
 static void Test_Fatal_Alert1(HITLS_Ctx *ctx, uint8_t *data, uint32_t *len,
@@ -4482,7 +4499,7 @@ static void Test_Fatal_Alert1(HITLS_Ctx *ctx, uint8_t *data, uint32_t *len,
     (void)len;
     (void)ctx;
     (void)data;
-    STUB_REPLACE(MapVersion2VersionBit, STUB_MapVersion2VersionBit);
+    STUB_REPLACE(ConfigGetGroupInfo, STUB_ConfigGetGroupInfo);
 
     return;
 }
@@ -4506,17 +4523,29 @@ void UT_TLS_PROCESS_SERVER_KX_NAMED_CURVE_TC001(void)
     FRAME_Init();
     FRAME_LinkObj *client = NULL;
     FRAME_LinkObj *server = NULL;
+    uint16_t cipherSuites[] = {
+        HITLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,
+        HITLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256
+    };
+    uint16_t groups[] = {HITLS_EC_GROUP_SECP256R1};
 
     HITLS_Config *c_config = HITLS_CFG_NewTLS12Config();
     HITLS_Config *s_config = HITLS_CFG_NewTLS12Config();
     ASSERT_TRUE(c_config != NULL);
     ASSERT_TRUE(s_config != NULL);
+    ASSERT_EQ(HITLS_CFG_SetCipherSuites(c_config, cipherSuites, sizeof(cipherSuites) / sizeof(uint16_t)),
+        HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_CFG_SetCipherSuites(s_config, cipherSuites, sizeof(cipherSuites) / sizeof(uint16_t)),
+        HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_CFG_SetGroups(c_config, groups, sizeof(groups) / sizeof(uint16_t)), HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_CFG_SetGroups(s_config, groups, sizeof(groups) / sizeof(uint16_t)), HITLS_SUCCESS);
 
     client = FRAME_CreateLink(c_config, BSL_UIO_TCP);
     ASSERT_TRUE(client != NULL);
     server = FRAME_CreateLink(s_config, BSL_UIO_TCP);
     ASSERT_TRUE(server != NULL);
 
+    g_configGetGroupInfoCallCount = 0;
 
     RecWrapper wrapper = {
         TRY_RECV_SERVER_KEY_EXCHANGE,
@@ -4538,7 +4567,7 @@ void UT_TLS_PROCESS_SERVER_KX_NAMED_CURVE_TC001(void)
     ASSERT_EQ(alertInfo.description, ALERT_ILLEGAL_PARAMETER);
 
 EXIT:
-    STUB_RESTORE(MapVersion2VersionBit);
+    STUB_RESTORE(ConfigGetGroupInfo);
     HITLS_CFG_FreeConfig(c_config);
     HITLS_CFG_FreeConfig(s_config);
     FRAME_FreeLink(client);

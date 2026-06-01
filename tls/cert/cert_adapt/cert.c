@@ -18,6 +18,7 @@
 #include "bsl_err_internal.h"
 #include "bsl_sal.h"
 #include "bsl_list.h"
+#include "config_check.h"
 #include "hitls_error.h"
 #include "hitls_cert_reg.h"
 #include "hitls_security.h"
@@ -101,24 +102,16 @@ bool SAL_CERT_IsSignAlgorithmAllowed(const TLS_Ctx *ctx, uint16_t signScheme,
         return false;
     }
 #endif
-
-#ifdef HITLS_TLS_PROTO_TLS13
-    if (ctx->negotiatedInfo.version == HITLS_VERSION_TLS13) {
-        const uint32_t rsaPkcsv15Mask = 0x01;
-        const uint32_t dsaMask = 0x02;
-        const uint32_t sha1Mask = 0x0200;
-        const uint32_t sha224Mask = 0x0300;
-
-        // These algorithms are not defined for use in signed TLS handshake messages in TLS 1.3
-        if (((signScheme & 0xff) == rsaPkcsv15Mask) ||
-            ((signScheme & 0xff) == dsaMask) ||
-            ((signScheme & 0xff00) == sha1Mask) ||
-            ((signScheme & 0xff00) == sha224Mask)) {
+    if (ctx->negotiatedInfo.version != 0) {
+        /* It has already been verified at the outer level that `info` is not null. */
+        const TLS_SigSchemeInfo *info = ConfigGetSignatureSchemeInfo(&ctx->config.tlsConfig, signScheme);
+        /* Check if the negotiated TLS version is supported by this signature scheme. */
+        uint32_t negotiatedVersionBit = MapVersion2VersionBit(
+            IS_SUPPORT_DATAGRAM(ctx->config.tlsConfig.originVersionMask), ctx->negotiatedInfo.version);
+        if (!(negotiatedVersionBit & info->certVersionBits)) {
             return false;
         }
     }
-#endif
-
 #ifdef HITLS_TLS_FEATURE_SM_TLS13
     if (IS_SM_TLS13(ctx->negotiatedInfo.cipherSuiteInfo.cipherSuite)) {
         if (signScheme != CERT_SIG_SCHEME_SM2_SM3) {

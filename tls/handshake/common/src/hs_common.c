@@ -600,7 +600,7 @@ uint32_t HS_MaxMessageSize(TLS_Ctx *ctx, HS_MsgType type)
         case CLIENT_KEY_EXCHANGE:
             return HITLS_CLIENT_KEY_EXCH_MAX_SIZE;
         case CERTIFICATE_VERIFY:
-            return REC_MAX_PLAIN_LENGTH;
+            return MAX_CERT_VERIFY_SIZE;
         case NEW_SESSION_TICKET:
 #ifdef HITLS_TLS_PROTO_TLS13
             if (GET_VERSION_FROM_CTX(ctx) == HITLS_VERSION_TLS13) {

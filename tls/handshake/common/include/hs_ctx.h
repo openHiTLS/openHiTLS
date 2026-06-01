@@ -141,8 +141,9 @@ typedef struct HsMsgCache {
 typedef struct {
     HITLS_HashAlgo hashAlgo;
     HITLS_HASH_Ctx *hashCtx;
-    uint8_t verifyData[MAX_SIGN_SIZE];
+    uint8_t *verifyData;
     uint32_t verifyDataSize;
+    uint32_t verifyDataCapacity;
     HsMsgCache *dataBuf; /* handshake data buffer */
 } VerifyCtx;
 

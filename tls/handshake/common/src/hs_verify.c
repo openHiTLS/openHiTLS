@@ -19,6 +19,7 @@
 #include "bsl_log.h"
 #include "bsl_err_internal.h"
 #include "bsl_sal.h"
+#include "cert.h"
 #include "hitls_error.h"
 #include "hs_kx.h"
 #include "transcript_hash.h"
@@ -41,6 +42,30 @@
 #define TLS13_CERT_VERIFY_PREFIX_LEN 64
 #endif /* #ifdef HITLS_TLS_PROTO_TLS13 */
 
+static int32_t GrowVerifyDataBuf(VerifyCtx *ctx, uint32_t len)
+{
+    if (len <= ctx->verifyDataCapacity) {
+        return HITLS_SUCCESS;
+    }
+    
+    if (len > MAX_SIGN_SIZE) {
+        return HITLS_INTERNAL_EXCEPTION;
+    }
+
+    uint8_t *data = BSL_SAL_Calloc(1, len);
+    if (data == NULL) {
+        BSL_ERR_PUSH_ERROR(HITLS_MEMALLOC_FAIL);
+        return HITLS_MEMALLOC_FAIL;
+    }
+    if (ctx->verifyData != NULL && ctx->verifyDataSize != 0) {
+        memcpy(data, ctx->verifyData, ctx->verifyDataSize);
+    }
+    BSL_SAL_FREE(ctx->verifyData);
+    ctx->verifyData = data;
+    ctx->verifyDataCapacity = len;
+    return HITLS_SUCCESS;
+}
+
 int32_t VERIFY_Init(HS_Ctx *hsCtx)
 {
     VERIFY_Deinit(hsCtx);
@@ -60,6 +85,14 @@ int32_t VERIFY_Init(HS_Ctx *hsCtx)
         BSL_ERR_PUSH_ERROR(HITLS_MEMALLOC_FAIL);
         return HITLS_MEMALLOC_FAIL;
     }
+    verifyCtx->verifyData = BSL_SAL_Calloc(1u, SIGN_INIT_SIZE);
+    if (verifyCtx->verifyData == NULL) {
+        BSL_SAL_FREE(verifyCtx->dataBuf);
+        BSL_SAL_FREE(verifyCtx);
+        BSL_ERR_PUSH_ERROR(HITLS_MEMALLOC_FAIL);
+        return HITLS_MEMALLOC_FAIL;
+    }
+    verifyCtx->verifyDataCapacity = SIGN_INIT_SIZE;
     hsCtx->verifyCtx = verifyCtx;
     return HITLS_SUCCESS;
 }
@@ -76,6 +109,7 @@ void VERIFY_Deinit(HS_Ctx *hsCtx)
     if (verifyCtx->hashCtx != NULL) {
         SAL_CRYPT_DigestFree(verifyCtx->hashCtx);
     }
+    BSL_SAL_FREE(verifyCtx->verifyData);
     VERIFY_FreeMsgCache(verifyCtx);
     BSL_SAL_Free(verifyCtx);
     hsCtx->verifyCtx = NULL;
@@ -126,6 +160,8 @@ int32_t VERIFY_CalcVerifyData(TLS_Ctx *ctx, bool isClient, const uint8_t *master
     deriveInfo.seedLen = digestLen;
     deriveInfo.libCtx = LIBCTX_FROM_CTX(ctx);
     deriveInfo.attrName = ATTRIBUTE_FROM_CTX(ctx);
+    /* There is no need to call GrowVerifyDataBuf here, as the default length of verifyData is 1024,
+     * which is greater than HS_VERIFY_DATA_LEN.  */ 
     ret = SAL_CRYPT_PRF(&deriveInfo, verifyCtx->verifyData, HS_VERIFY_DATA_LEN);
     if (ret != HITLS_SUCCESS) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15478, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
@@ -343,16 +379,29 @@ int32_t VERIFY_CalcSignData(TLS_Ctx *ctx, HITLS_CERT_Key *privateKey, HITLS_Sign
         return HITLS_MSG_HANDLE_GET_UNSIGN_DATA_FAIL;
     }
 
+    /* Query the exact signature length from the key */
+    uint32_t signBufLen = SAL_CERT_GetSignMaxLen(&ctx->config.tlsConfig, privateKey);
+    if (signBufLen < SIGN_INIT_SIZE) {
+        signBufLen = SIGN_INIT_SIZE;
+    }
+    /* Grow verifyData buffer if needed */
+    ret = GrowVerifyDataBuf(verifyCtx, signBufLen);
+    if (ret != HITLS_SUCCESS) {
+        BSL_SAL_FREE(data);
+        ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_INTERNAL_ERROR);
+        return ret;
+    }
+
     CERT_SignParam signParam = {0};
     signParam.signAlgo = signAlgo;
     signParam.hashAlgo = hashAlgo;
     signParam.data = data;
     signParam.dataLen = dataLen;
     signParam.sign = verifyCtx->verifyData;
-    signParam.signLen = MAX_SIGN_SIZE;
+    signParam.signLen = signBufLen;
 
     ret = SAL_CERT_CreateSign(ctx, privateKey, &signParam);
-    if ((ret != HITLS_SUCCESS) || (signParam.signLen > MAX_SIGN_SIZE)) {
+    if ((ret != HITLS_SUCCESS) || (signParam.signLen > signBufLen)) {
         BSL_SAL_FREE(data);
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15483, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "create signature fail.", 0, 0, 0, 0);
@@ -470,6 +519,13 @@ int32_t VERIFY_Tls13CalcVerifyData(TLS_Ctx *ctx, bool isClient)
     if (ret != HITLS_SUCCESS) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15490, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "calc session hash fail when calc tls13 verify data.", 0, 0, 0, 0);
+        ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_INTERNAL_ERROR);
+        BSL_SAL_CleanseData(finishedKey, MAX_DIGEST_SIZE);
+        return ret;
+    }
+
+    ret = GrowVerifyDataBuf(verifyCtx, hashLen);
+    if (ret != HITLS_SUCCESS) {
         ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_INTERNAL_ERROR);
         BSL_SAL_CleanseData(finishedKey, MAX_DIGEST_SIZE);
         return ret;

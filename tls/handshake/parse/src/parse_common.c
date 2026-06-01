@@ -15,6 +15,7 @@
 #include "hitls_build.h"
 #include <string.h>
 #include "bsl_bytes.h"
+#include "config_check.h"
 #include "tls_binlog_id.h"
 #include "bsl_log_internal.h"
 #include "bsl_log.h"
@@ -218,6 +219,13 @@ int32_t CheckPeerSignScheme(HITLS_Ctx *ctx, CERT_Pair *peerCert, uint16_t signSc
     if (info == NULL || info->keyType != (int32_t)keyType) {
         SAL_CERT_KeyFree(config->certMgrCtx, pubkey);
         return RETURN_ERROR_NUMBER_PROCESS(HITLS_PARSE_UNSUPPORT_SIGN_ALG, BINLOG_ID17156, "signScheme err");
+    }
+    /* Check if the negotiated TLS version is supported by this signature scheme. */
+    uint32_t negotiatedVersionBit = MapVersion2VersionBit(
+        IS_SUPPORT_DATAGRAM(ctx->config.tlsConfig.originVersionMask), ctx->negotiatedInfo.version);
+    if (!(negotiatedVersionBit & info->certVersionBits)) {
+        SAL_CERT_KeyFree(config->certMgrCtx, pubkey);
+        return RETURN_ERROR_NUMBER_PROCESS(HITLS_PARSE_UNSUPPORT_SIGN_ALG, BINLOG_ID16195, "signScheme err");
     }
     if (info->keyType == TLS_CERT_KEY_TYPE_RSA_PSS) {
         int32_t hashAlgId = HITLS_HASH_BUTT;

@@ -25,8 +25,12 @@
 extern "C" {
 #endif
 
-/* The maximum length of the RSA signature is 512. The maximum length of the ECC signature does not reach 1024. */
-#define MAX_SIGN_SIZE 1024
+/* Default signature buffer length. RSA/ECC signatures fit within this range. */
+#define SIGN_INIT_SIZE 1024
+/* Maximum signature length currently : SLH-DSA-256f = 49856 bytes, 51200 is enough */
+#define MAX_SIGN_SIZE 51200
+/* Max CertificateVerify body: UINT16_MAX (signature) + 2 (scheme) + 2 (length) = 65539 */
+#define MAX_CERT_VERIFY_SIZE 65539
 
 /* Used to transfer key derivation parameters. */
 typedef struct {

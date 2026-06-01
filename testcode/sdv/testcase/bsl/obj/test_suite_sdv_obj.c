@@ -113,7 +113,7 @@ void SDV_BSL_OBJ_CREATE_SIGN_ID_TC001(void)
 
     ASSERT_EQ(BSL_OBJ_CreateSignId(signId, BSL_CID_UNKNOWN, hashId), BSL_INVALID_ARG);
 
-    ASSERT_EQ(BSL_OBJ_CreateSignId(signId, asymId, BSL_CID_UNKNOWN), BSL_INVALID_ARG);
+    ASSERT_EQ(BSL_OBJ_CreateSignId(signId, asymId, BSL_CID_UNKNOWN), BSL_SUCCESS);
 
     BSL_OBJ_FreeSignHashTable();
 EXIT:

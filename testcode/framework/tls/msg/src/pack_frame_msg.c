@@ -326,12 +326,11 @@ int32_t PackFinishMsg(FRAME_Msg *msg)
     }
 
     tlsCtx->hsCtx->verifyCtx->verifyDataSize = finished->verifyDataSize;
-    ret = -1;
-    if ((finished->verifyDataSize) <= (MAX_SIGN_SIZE)) {
-        memcpy(tlsCtx->hsCtx->verifyCtx->verifyData, finished->verifyData, finished->verifyDataSize);
-        ret = 0;
+    if (finished->verifyDataSize != 0) {
+        tlsCtx->hsCtx->verifyCtx->verifyData = BSL_SAL_Dump(finished->verifyData, finished->verifyDataSize);
     }
-    if (ret != 0) {
+    if (finished->verifyDataSize != 0 && tlsCtx->hsCtx->verifyCtx->verifyData == NULL) {
+        ret = HITLS_MEMALLOC_FAIL;
         goto EXIT;
     }
 

@@ -48,7 +48,7 @@ static int32_t PackAndSendCertVerify(TLS_Ctx *ctx)
                 "client pack certificate verify msg fail.", 0, 0, 0, 0);
             return ret;
         }
-        /* after the signature is used up, the length is set to 0, and the signature is used by the finish */
+        /* after the signature is used up, the verify data is recalculated by the finish */
         hsCtx->verifyCtx->verifyDataSize = 0;
     }
 

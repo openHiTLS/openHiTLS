@@ -120,7 +120,7 @@ static uint32_t GetNamedCurveMsgLen(TLS_Ctx *ctx, uint32_t pubKeyLen)
     if (IsNeedKeyExchParamSignature(ctx)) {
         HITLS_CERT_Key *privateKey = SAL_CERT_GetCurrentPrivateKey(config->certMgrCtx, false);
         uint32_t signatureLen = SAL_CERT_GetSignMaxLen(config, privateKey);
-        if ((signatureLen == 0u) || (signatureLen > MAX_SIGN_SIZE)) {
+        if ((signatureLen == 0u) || (signatureLen > SIGN_INIT_SIZE)) {
             BSL_ERR_PUSH_ERROR(HITLS_PACK_SIGNATURE_ERR);
             BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15499, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
                 "pack ske error: invalid signature length = %u.", signatureLen, 0, 0, 0);
@@ -256,7 +256,7 @@ static int32_t PackEccSignature(TLS_Ctx *ctx, PackPacket *pkt, HITLS_SignAlgo si
 {
     HITLS_CERT_Key *privateKey = SAL_CERT_GetCurrentPrivateKey(ctx->config.tlsConfig.certMgrCtx, false);
     uint32_t signatureLen = SAL_CERT_GetSignMaxLen(&(ctx->config.tlsConfig), privateKey);
-    if ((signatureLen == 0u) || (signatureLen > MAX_SIGN_SIZE)) {
+    if ((signatureLen == 0u) || (signatureLen > SIGN_INIT_SIZE)) {
         BSL_ERR_PUSH_ERROR(HITLS_PACK_SIGNATURE_ERR);
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15508, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "invalid signature length.", 0, 0, 0, 0);
@@ -393,7 +393,7 @@ static int32_t PackServerKxMsgDhePre(TLS_Ctx *ctx, uint32_t *signatureLen)
     if (IsNeedKeyExchParamSignature(ctx)) {
         HITLS_CERT_Key *privateKey = SAL_CERT_GetCurrentPrivateKey(ctx->config.tlsConfig.certMgrCtx, false);
         *signatureLen = SAL_CERT_GetSignMaxLen(&(ctx->config.tlsConfig), privateKey);
-        if ((*signatureLen == 0u) || (*signatureLen > MAX_SIGN_SIZE)) {
+        if ((*signatureLen == 0u) || (*signatureLen > SIGN_INIT_SIZE)) {
             BSL_ERR_PUSH_ERROR(HITLS_PACK_SIGNATURE_ERR);
             BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15508, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
                 "invalid signature length.", 0, 0, 0, 0);

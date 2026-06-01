@@ -978,6 +978,44 @@ static const TLS_SigSchemeInfo g_signSchemeInfo[] = {
         TLS_VERSION_MASK | DTLS_VERSION_MASK,
     },
 #endif /* HITLS_CRYPTO_ED25519 */
+#ifdef HITLS_CRYPTO_MLDSA
+    {
+        CONST_CAST("mldsa44"),
+        CERT_SIG_SCHEME_MLDSA44,
+        TLS_CERT_KEY_TYPE_ML_DSA,
+        CRYPT_MLDSA_TYPE_MLDSA_44,
+        BSL_CID_ML_DSA_44,
+        HITLS_SIGN_ML_DSA,
+        BSL_CID_UNKNOWN,
+        128,
+        TLS13_VERSION_BIT,
+        TLS13_VERSION_BIT,
+    },
+    {
+        CONST_CAST("mldsa65"),
+        CERT_SIG_SCHEME_MLDSA65,
+        TLS_CERT_KEY_TYPE_ML_DSA,
+        CRYPT_MLDSA_TYPE_MLDSA_65,
+        BSL_CID_ML_DSA_65,
+        HITLS_SIGN_ML_DSA,
+        BSL_CID_UNKNOWN,
+        192,
+        TLS13_VERSION_BIT,
+        TLS13_VERSION_BIT,
+    },
+    {
+        CONST_CAST("mldsa87"),
+        CERT_SIG_SCHEME_MLDSA87,
+        TLS_CERT_KEY_TYPE_ML_DSA,
+        CRYPT_MLDSA_TYPE_MLDSA_87,
+        BSL_CID_ML_DSA_87,
+        HITLS_SIGN_ML_DSA,
+        BSL_CID_UNKNOWN,
+        256,
+        TLS13_VERSION_BIT,
+        TLS13_VERSION_BIT,
+    },
+#endif /* HITLS_CRYPTO_MLDSA */
 #ifdef HITLS_CRYPTO_CURVE_NISTP256
     {
         CONST_CAST("ecdsa_secp256r1_sha256"),

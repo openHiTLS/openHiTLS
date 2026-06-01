@@ -184,7 +184,7 @@ int32_t PackClientKxMsgRsa(TLS_Ctx *ctx, PackPacket *pkt)
         return ret;
     }
     /* Use CERT_KEY_CTRL_GET_SIGN_LEN to get encrypt length(Only by RSA and ECC) */
-    uint32_t encryptLen = MAX_SIGN_SIZE;
+    uint32_t encryptLen = SIGN_INIT_SIZE;
     uint8_t *encBuf = NULL;
     ret = PackReserveBytes(pkt, encryptLen, &encBuf);
     if (ret != HITLS_SUCCESS) {
@@ -237,7 +237,7 @@ static int32_t PackClientKxMsgEcc(TLS_Ctx *ctx, PackPacket *pkt)
     }
 
     /* Use CERT_KEY_CTRL_GET_SIGN_LEN to get encrypt length(Only by RSA and ECC) */
-    uint32_t encryptLen = MAX_SIGN_SIZE;
+    uint32_t encryptLen = SIGN_INIT_SIZE;
     uint8_t *encBuf = NULL;
     ret = PackReserveBytes(pkt, encryptLen, &encBuf);
     if (ret != HITLS_SUCCESS) {
