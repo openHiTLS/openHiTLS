@@ -81,12 +81,6 @@ static void UCAdrsSetTreeIndex(void *adrs, uint32_t index)
     PUT_UINT32_BE(index, sa->uc.padding, 8);
 }
 
-static uint32_t UCAdrsGetTreeHeight(const void *adrs)
-{
-    const SlhDsaAdrs *sa = (const SlhDsaAdrs *)adrs;
-    return GET_UINT32_BE(sa->uc.padding, 0);
-}
-
 static uint32_t UCAdrsGetTreeIndex(const void *adrs)
 {
     const SlhDsaAdrs *sa = (const SlhDsaAdrs *)adrs;
@@ -158,12 +152,6 @@ static void CAdrsSetTreeIndex(void *adrs, uint32_t index)
     PUT_UINT32_BE(index, sa->c.padding, 8);
 }
 
-static uint32_t CAdrsGetTreeHeight(const void *adrs)
-{
-    const SlhDsaAdrs *sa = (const SlhDsaAdrs *)adrs;
-    return GET_UINT32_BE(sa->c.padding, 0);
-}
-
 static uint32_t CAdrsGetTreeIndex(const void *adrs)
 {
     const SlhDsaAdrs *sa = (const SlhDsaAdrs *)adrs;
@@ -196,7 +184,6 @@ static XmssFamilyAdrsOps g_adrsOps[2] = {{
                                              .setTreeHeight = UCAdrsSetTreeHeight,
                                              .setHashAddr = UCAdrsSetHashAddr,
                                              .setTreeIndex = UCAdrsSetTreeIndex,
-                                             .getTreeHeight = UCAdrsGetTreeHeight,
                                              .getTreeIndex = UCAdrsGetTreeIndex,
                                              .copyKeyPairAddr = UCAdrsCopyKeyPairAddr,
                                              .getAdrsLen = UCAdrsGetAdrsLen,
@@ -210,7 +197,6 @@ static XmssFamilyAdrsOps g_adrsOps[2] = {{
                                              .setTreeHeight = CAdrsSetTreeHeight,
                                              .setHashAddr = CAdrsSetHashAddr,
                                              .setTreeIndex = CAdrsSetTreeIndex,
-                                             .getTreeHeight = CAdrsGetTreeHeight,
                                              .getTreeIndex = CAdrsGetTreeIndex,
                                              .copyKeyPairAddr = CAdrsCopyKeyPairAddr,
                                              .getAdrsLen = CAdrsGetAdrsLen,

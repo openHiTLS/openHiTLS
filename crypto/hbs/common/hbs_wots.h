@@ -71,7 +71,6 @@ typedef struct XmssFamilyAdrsOps {
     void (*setTreeHeight)(void *adrs, uint32_t height);
     void (*setHashAddr)(void *adrs, uint32_t hash);
     void (*setTreeIndex)(void *adrs, uint32_t index);
-    uint32_t (*getTreeHeight)(const void *adrs);
     uint32_t (*getTreeIndex)(const void *adrs);
     void (*copyKeyPairAddr)(void *dest, const void *src);
     uint32_t (*getAdrsLen)(void);
