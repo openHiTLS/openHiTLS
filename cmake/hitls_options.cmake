@@ -291,6 +291,8 @@ option(HITLS_CRYPTO_PKEY                                       "Public Key Crypt
     option(HITLS_CRYPTO_HSS_CHECK                                  "HSS Check" OFF)
   option(HITLS_CRYPTO_XMSS                                       "XMSS" OFF)
     option(HITLS_CRYPTO_XMSS_CHECK                                 "XMSS Check" OFF)
+  option(HITLS_CRYPTO_XMSSMT                                      "XMSSMT" OFF)
+    option(HITLS_CRYPTO_XMSSMT_CHECK                               "XMSSMT Check" OFF)
   option(HITLS_CRYPTO_SLH_DSA                                    "SLH DSA" OFF)
     option(HITLS_CRYPTO_SLH_DSA_CHECK                              "SLH DSA Check" OFF)
   option(HITLS_CRYPTO_MLKEM                                      "MLKEM" OFF)

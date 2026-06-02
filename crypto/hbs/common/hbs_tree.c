@@ -14,7 +14,7 @@
  */
 
 #include "hitls_build.h"
-#if defined(HITLS_CRYPTO_XMSS) || defined(HITLS_CRYPTO_SLH_DSA)
+#if defined(HITLS_CRYPTO_XMSS) || defined(HITLS_CRYPTO_XMSSMT) || defined(HITLS_CRYPTO_SLH_DSA)
 
 #include <stdint.h>
 #include <stddef.h>
@@ -362,4 +362,4 @@ int32_t HbsHyperTree_Sign(const uint8_t *msg, uint32_t msgLen, uint64_t treeIdx,
     return CRYPT_SUCCESS;
 }
 
-#endif /* HITLS_CRYPTO_XMSS || HITLS_CRYPTO_SLH_DSA */
+#endif /* HITLS_CRYPTO_XMSS || HITLS_CRYPTO_XMSSMT || HITLS_CRYPTO_SLH_DSA */

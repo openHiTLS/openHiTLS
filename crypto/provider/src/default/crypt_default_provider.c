@@ -332,6 +332,9 @@ static const CRYPT_EAL_AlgInfo g_defEalKeyMgmt[] = {
 #ifdef HITLS_CRYPTO_XMSS
     {CRYPT_PKEY_XMSS, g_defEalKeyMgmtXmss, CRYPT_EAL_DEFAULT_ATTR},
 #endif
+#ifdef HITLS_CRYPTO_XMSSMT
+    {CRYPT_PKEY_XMSSMT, g_defEalKeyMgmtXmssmt, CRYPT_EAL_DEFAULT_ATTR},
+#endif
 #ifdef HITLS_CRYPTO_LMS
     {CRYPT_PKEY_LMS, g_defEalKeyMgmtLms, CRYPT_EAL_DEFAULT_ATTR},
 #endif
@@ -408,6 +411,9 @@ static const CRYPT_EAL_AlgInfo g_defEalSigns[] = {
 #endif
 #ifdef HITLS_CRYPTO_XMSS
     {CRYPT_PKEY_XMSS, g_defEalSignXmss, CRYPT_EAL_DEFAULT_ATTR},
+#endif
+#ifdef HITLS_CRYPTO_XMSSMT
+    {CRYPT_PKEY_XMSSMT, g_defEalSignXmssmt, CRYPT_EAL_DEFAULT_ATTR},
 #endif
 #ifdef HITLS_CRYPTO_LMS
     {CRYPT_PKEY_LMS, g_defEalSignLms, CRYPT_EAL_DEFAULT_ATTR},
@@ -564,6 +570,10 @@ static const CRYPT_EAL_AlgInfo g_defEalDecoders[] = {
 #endif
 #ifdef HITLS_CRYPTO_XMSS
     {CRYPT_PKEY_XMSS, g_defEalSubPubKeyWithoutSeqDer2XmssKey,
+        "provider=default, inFormat=ASN1, inType=PUBKEY_SUBKEY_WITHOUT_SEQ, outFormat=OBJECT, outType=LOW_KEY"},
+#endif
+#ifdef HITLS_CRYPTO_XMSSMT
+    {CRYPT_PKEY_XMSSMT, g_defEalSubPubKeyWithoutSeqDer2XmssmtKey,
         "provider=default, inFormat=ASN1, inType=PUBKEY_SUBKEY_WITHOUT_SEQ, outFormat=OBJECT, outType=LOW_KEY"},
 #endif
 #ifdef HITLS_CRYPTO_MLKEM

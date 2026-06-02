@@ -14,7 +14,7 @@
  */
 
 #include "hitls_build.h"
-#if defined(HITLS_CRYPTO_XMSS) || defined(HITLS_CRYPTO_SLH_DSA)
+#if defined(HITLS_CRYPTO_XMSS) || defined(HITLS_CRYPTO_XMSSMT) || defined(HITLS_CRYPTO_SLH_DSA)
 
 #include <stdint.h>
 #include <string.h>
@@ -123,11 +123,13 @@ int32_t HbsWots_Chain(const uint8_t *x, uint32_t xLen, uint32_t start, uint32_t 
         ret = ctx->hashFuncs->chainHash((const void *)ctx->coreCtx, adrs, tmp, tmpLen, tmp);
         if (ret != CRYPT_SUCCESS) {
             BSL_ERR_PUSH_ERROR(ret);
+            BSL_SAL_CleanseData(tmp, sizeof(tmp));
             return ret;
         }
     }
 
     memcpy(output, tmp, tmpLen);
+    BSL_SAL_CleanseData(tmp, sizeof(tmp));
     return CRYPT_SUCCESS;
 }
 
@@ -194,6 +196,13 @@ ERR:
 }
 
 /* Produce a WOTS+ signature over msg by chaining each private key element according to the message digits. */
+static void WotsSignErrClean(uint32_t *msgw, uint8_t *sig, uint32_t sigBufLen, uint32_t *sigLen)
+{
+    BSL_SAL_Free(msgw);
+    BSL_SAL_CleanseData(sig, sigBufLen);
+    *sigLen = 0;
+}
+
 int32_t HbsWots_Sign(uint8_t *sig, uint32_t *sigLen, const uint8_t *msg, uint32_t msgLen, void *adrs,
                      const HbsWotsCtx *ctx)
 {
@@ -234,7 +243,8 @@ int32_t HbsWots_Sign(uint8_t *sig, uint32_t *sigLen, const uint8_t *msg, uint32_
         if (ret != CRYPT_SUCCESS) {
             BSL_SAL_CleanseData(sk, HBS_MAX_MDSIZE);
             BSL_ERR_PUSH_ERROR(ret);
-            goto ERR;
+            WotsSignErrClean(msgw, sig, len * n, sigLen);
+            return ret;
         }
         ctx->adrsOps->setChainAddr(adrs, i);
         /* Chain private key element msgw[i] steps */
@@ -242,12 +252,13 @@ int32_t HbsWots_Sign(uint8_t *sig, uint32_t *sigLen, const uint8_t *msg, uint32_
         BSL_SAL_CleanseData(sk, HBS_MAX_MDSIZE);
         if (ret != CRYPT_SUCCESS) {
             BSL_ERR_PUSH_ERROR(ret);
-            goto ERR;
+            WotsSignErrClean(msgw, sig, len * n, sigLen);
+            return ret;
         }
     }
 
-ERR:
     BSL_SAL_Free(msgw);
+    /* len: WOTS+ chain count, n: hash output length, len*n = WOTS+ signature size */
     *sigLen = len * n;
     return ret;
 }
@@ -316,4 +327,4 @@ ERR:
     return ret;
 }
 
-#endif /* HITLS_CRYPTO_XMSS || HITLS_CRYPTO_SLH_DSA */
+#endif /* HITLS_CRYPTO_XMSS || HITLS_CRYPTO_XMSSMT || HITLS_CRYPTO_SLH_DSA */

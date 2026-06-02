@@ -17,7 +17,7 @@
 #define XMSS_HASH_H
 
 #include "hitls_build.h"
-#ifdef HITLS_CRYPTO_XMSS
+#if defined(HITLS_CRYPTO_XMSS) || defined(HITLS_CRYPTO_XMSSMT)
 
 #include "hbs_wots.h"
 #include "xmss_local.h"
@@ -47,5 +47,5 @@ int32_t CalcMultiMsgHash(CRYPT_MD_AlgId mdId, const CRYPT_ConstData *hashData, u
 }
 #endif
 
-#endif /* HITLS_CRYPTO_XMSS */
+#endif /* defined(HITLS_CRYPTO_XMSS) || defined(HITLS_CRYPTO_XMSSMT) */
 #endif /* XMSS_HASH_H */

@@ -75,6 +75,8 @@ set(HITLS_CRYPTO_ECC                                   ON CACHE BOOL "" FORCE)
 set(HITLS_CRYPTO_RSA                                   ON CACHE BOOL "" FORCE)
 set(HITLS_CRYPTO_MLKEM                                 ON CACHE BOOL "" FORCE)
 set(HITLS_CRYPTO_MLDSA                                 ON CACHE BOOL "" FORCE)
+set(HITLS_CRYPTO_XMSS                                  ON CACHE BOOL "" FORCE)
+set(HITLS_CRYPTO_XMSSMT                                ON CACHE BOOL "" FORCE)
 set(HITLS_CRYPTO_SLH_DSA                               ON CACHE BOOL "" FORCE)
 set(HITLS_CRYPTO_CODECSKEY                             ON CACHE BOOL "" FORCE)
 

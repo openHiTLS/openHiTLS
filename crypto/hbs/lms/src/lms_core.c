@@ -439,6 +439,10 @@ static int32_t LmsValidateParseSignature(const uint8_t *publicKey, const uint8_t
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
+    if (info->n == 0 || info->n > LMS_MAX_HASH) {
+        BSL_ERR_PUSH_ERROR(CRYPT_LMS_INVALID_PARAM);
+        return CRYPT_LMS_INVALID_PARAM;
+    }
 
     size_t otsSigLen = LmOtsGetSigLen(info->otsType);
     if (otsSigLen == 0) {

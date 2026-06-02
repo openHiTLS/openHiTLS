@@ -315,8 +315,14 @@ int32_t PkeyProviderSetPrv(CRYPT_EAL_PkeyCtx *pkey, const CRYPT_EAL_PkeyPrv *key
             return pkey->method.setPrv(pkey->key, &slhDsaParam);
         }
 #endif
+#if defined(HITLS_CRYPTO_XMSS) || defined(HITLS_CRYPTO_XMSSMT)
 #ifdef HITLS_CRYPTO_XMSS
-        case CRYPT_PKEY_XMSS: {
+        case CRYPT_PKEY_XMSS:
+#endif
+#ifdef HITLS_CRYPTO_XMSSMT
+        case CRYPT_PKEY_XMSSMT:
+#endif
+        {
             uint64_t index = key->key.xmssPrv.index;
             BSL_Param xmssParam[6] = {
                 {CRYPT_PARAM_XMSS_PRV_SEED, BSL_PARAM_TYPE_OCTETS, key->key.xmssPrv.seed, key->key.xmssPrv.pub.len, 0},
@@ -593,7 +599,7 @@ static int32_t GetSlhDsaPrv(const CRYPT_EAL_PkeyCtx *pkey, CRYPT_SlhDsaPrv *prv)
 }
 #endif
 
-#ifdef HITLS_CRYPTO_XMSS
+#if defined(HITLS_CRYPTO_XMSS) || defined(HITLS_CRYPTO_XMSSMT)
 static int32_t GetXmssPrv(const CRYPT_EAL_PkeyCtx *pkey, CRYPT_XmssPrv *prv)
 {
     BSL_Param param[6] = {
@@ -667,8 +673,13 @@ int32_t PkeyProviderGetPrv(const CRYPT_EAL_PkeyCtx *pkey, CRYPT_EAL_PkeyPrv *key
         case CRYPT_PKEY_SLH_DSA:
             return GetSlhDsaPrv(pkey, &key->key.slhDsaPrv);
 #endif
+#if defined(HITLS_CRYPTO_XMSS) || defined(HITLS_CRYPTO_XMSSMT)
 #ifdef HITLS_CRYPTO_XMSS
         case CRYPT_PKEY_XMSS:
+#endif
+#ifdef HITLS_CRYPTO_XMSSMT
+        case CRYPT_PKEY_XMSSMT:
+#endif
             return GetXmssPrv(pkey, &key->key.xmssPrv);
 #endif
 #ifdef HITLS_CRYPTO_HYBRIDKEM
@@ -799,8 +810,14 @@ int32_t PkeyProviderSetPub(CRYPT_EAL_PkeyCtx *pkey, const CRYPT_EAL_PkeyPub *key
             return pkey->method.setPub(pkey->key, &slhDsaPub);
         }
 #endif
+#if defined(HITLS_CRYPTO_XMSS) || defined(HITLS_CRYPTO_XMSSMT)
 #ifdef HITLS_CRYPTO_XMSS
-        case CRYPT_PKEY_XMSS: {
+        case CRYPT_PKEY_XMSS:
+#endif
+#ifdef HITLS_CRYPTO_XMSSMT
+        case CRYPT_PKEY_XMSSMT:
+#endif
+        {
             BSL_Param xmssPub[3] = {
                 {CRYPT_PARAM_XMSS_PUB_SEED, BSL_PARAM_TYPE_OCTETS, key->key.xmssPub.seed, key->key.xmssPub.len, 0},
                 {CRYPT_PARAM_XMSS_PUB_ROOT, BSL_PARAM_TYPE_OCTETS, key->key.xmssPub.root, key->key.xmssPub.len, 0},
@@ -997,7 +1014,7 @@ static int32_t GetSlhDsaPub(const CRYPT_EAL_PkeyCtx *pkey, CRYPT_SlhDsaPub *pub)
 }
 #endif
 
-#ifdef HITLS_CRYPTO_XMSS
+#if defined(HITLS_CRYPTO_XMSS) || defined(HITLS_CRYPTO_XMSSMT)
 static int32_t GetXmssPub(const CRYPT_EAL_PkeyCtx *pkey, CRYPT_XmssPub *pub)
 {
     BSL_Param param[3] = {
@@ -1087,8 +1104,13 @@ int32_t PkeyProviderGetPub(const CRYPT_EAL_PkeyCtx *pkey, CRYPT_EAL_PkeyPub *key
         case CRYPT_PKEY_SLH_DSA:
             return GetSlhDsaPub(pkey, &key->key.slhDsaPub);
 #endif
+#if defined(HITLS_CRYPTO_XMSS) || defined(HITLS_CRYPTO_XMSSMT)
 #ifdef HITLS_CRYPTO_XMSS
         case CRYPT_PKEY_XMSS:
+#endif
+#ifdef HITLS_CRYPTO_XMSSMT
+        case CRYPT_PKEY_XMSSMT:
+#endif
             return GetXmssPub(pkey, &key->key.xmssPub);
 #endif
 #ifdef HITLS_CRYPTO_COMPOSITE

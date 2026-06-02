@@ -17,7 +17,7 @@
 #define XMSS_ADDRESS_H
 
 #include "hitls_build.h"
-#ifdef HITLS_CRYPTO_XMSS
+#if defined(HITLS_CRYPTO_XMSS) || defined(HITLS_CRYPTO_XMSSMT)
 
 #include <stdint.h>
 
@@ -99,5 +99,5 @@ int32_t XmssAdrsOps_Init(XmssFamilyAdrsOps *ops);
 }
 #endif /* __cplusplus */
 
-#endif /* HITLS_CRYPTO_XMSS */
+#endif /* defined(HITLS_CRYPTO_XMSS) || defined(HITLS_CRYPTO_XMSSMT) */
 #endif /* XMSS_ADDRESS_H */

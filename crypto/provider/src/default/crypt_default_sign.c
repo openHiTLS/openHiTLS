@@ -41,7 +41,7 @@
 #ifdef HITLS_CRYPTO_COMPOSITE
 #include "crypt_composite.h"
 #endif
-#ifdef HITLS_CRYPTO_XMSS
+#if defined(HITLS_CRYPTO_XMSS) || defined(HITLS_CRYPTO_XMSSMT)
 #include "crypt_xmss.h"
 #endif
 #ifdef HITLS_CRYPTO_LMS
@@ -143,6 +143,13 @@ const CRYPT_EAL_Func g_defEalSignComposite[] = {
 const CRYPT_EAL_Func g_defEalSignXmss[] = {
     {CRYPT_EAL_IMPLPKEYSIGN_SIGN, (CRYPT_EAL_ImplPkeySign)CRYPT_XMSS_Sign},
     {CRYPT_EAL_IMPLPKEYSIGN_VERIFY, (CRYPT_EAL_ImplPkeyVerify)CRYPT_XMSS_Verify},
+    CRYPT_EAL_FUNC_END,
+};
+#endif
+#ifdef HITLS_CRYPTO_XMSSMT
+const CRYPT_EAL_Func g_defEalSignXmssmt[] = {
+    {CRYPT_EAL_IMPLPKEYSIGN_SIGN, (CRYPT_EAL_ImplPkeySign)CRYPT_XMSSMT_Sign},
+    {CRYPT_EAL_IMPLPKEYSIGN_VERIFY, (CRYPT_EAL_ImplPkeyVerify)CRYPT_XMSSMT_Verify},
     CRYPT_EAL_FUNC_END,
 };
 #endif

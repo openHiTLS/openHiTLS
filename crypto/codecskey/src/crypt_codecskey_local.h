@@ -47,7 +47,7 @@
 #ifdef HITLS_CRYPTO_SLH_DSA
 #include "crypt_slh_dsa.h"
 #endif
-#ifdef HITLS_CRYPTO_XMSS
+#if defined(HITLS_CRYPTO_XMSS) || defined(HITLS_CRYPTO_XMSSMT)
 #include "crypt_xmss.h"
 #endif
 
@@ -235,6 +235,10 @@ int32_t CRYPT_X25519_ParseSubPubkeyAsn1Buff(void *libCtx, uint8_t *buff, uint32_
 
 #ifdef HITLS_CRYPTO_XMSS
 int32_t CRYPT_XMSS_ParseSubPubkeyAsn1Buff(void *libCtx, uint8_t *buff, uint32_t buffLen, CryptXmssCtx **pubKey,
+    bool isComplete);
+#endif
+#ifdef HITLS_CRYPTO_XMSSMT
+int32_t CRYPT_XMSSMT_ParseSubPubkeyAsn1Buff(void *libCtx, uint8_t *buff, uint32_t buffLen, CryptXmssCtx **pubKey,
     bool isComplete);
 #endif
 

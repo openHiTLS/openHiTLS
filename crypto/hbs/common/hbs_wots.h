@@ -17,7 +17,7 @@
 #define HBS_WOTS_H
 
 #include "hitls_build.h"
-#if defined(HITLS_CRYPTO_XMSS) || defined(HITLS_CRYPTO_SLH_DSA)
+#if defined(HITLS_CRYPTO_XMSS) || defined(HITLS_CRYPTO_XMSSMT) || defined(HITLS_CRYPTO_SLH_DSA)
 
 #include <stdint.h>
 #include <stddef.h>
@@ -153,5 +153,5 @@ int32_t HbsWots_PkFromSig(const uint8_t *msg, uint32_t msgLen, const uint8_t *si
 }
 #endif
 
-#endif /* HITLS_CRYPTO_XMSS || HITLS_CRYPTO_SLH_DSA */
+#endif /* HITLS_CRYPTO_XMSS || HITLS_CRYPTO_XMSSMT || HITLS_CRYPTO_SLH_DSA */
 #endif /* HBS_WOTS_H */

@@ -938,17 +938,18 @@ static int32_t ParseMlKemPrikeyAsn1Buff(CRYPT_EAL_LibCtx *libctx, const char *at
 }
 #endif
 
-#ifdef HITLS_CRYPTO_XMSS
+#if defined(HITLS_CRYPTO_XMSS) || defined(HITLS_CRYPTO_XMSSMT)
 
 static int32_t ParseXmssPubKeyAsn1Buff(CRYPT_EAL_LibCtx *libCtx, const char *attrName, BSL_ASN1_BitString *bitPubkey,
-     CRYPT_EAL_PkeyCtx **ealPubKey)
+                                       CRYPT_EAL_PkeyCtx **ealPubKey, bool isXmss)
 {
     uint8_t *p = bitPubkey->buff;
     if (bitPubkey->len <= 4 || bitPubkey->unusedBits != 0x00 || (bitPubkey->len - 4) % 2 != 0) {
         BSL_ERR_PUSH_ERROR(CRYPT_XMSS_ERR_INVALID_KEY);
         return CRYPT_XMSS_ERR_INVALID_KEY;
     }
-    CRYPT_EAL_PkeyCtx *pctx = CRYPT_EAL_ProviderPkeyNewCtx(libCtx, CRYPT_PKEY_XMSS, CRYPT_EAL_PKEY_UNKNOWN_OPERATE,
+    CRYPT_PKEY_AlgId pkeyAlg = isXmss ? CRYPT_PKEY_XMSS : CRYPT_PKEY_XMSSMT;
+    CRYPT_EAL_PkeyCtx *pctx = CRYPT_EAL_ProviderPkeyNewCtx(libCtx, pkeyAlg, CRYPT_EAL_PKEY_UNKNOWN_OPERATE,
         attrName);
     if (pctx == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
@@ -964,7 +965,7 @@ static int32_t ParseXmssPubKeyAsn1Buff(CRYPT_EAL_LibCtx *libCtx, const char *att
 
     uint32_t hashLen = (bitPubkey->len - 4) / 2;
     uint8_t *data = p + 4;
-    CRYPT_EAL_PkeyPub pub = {.id = CRYPT_PKEY_XMSS, .key.xmssPub = {.root = data, .seed = data + hashLen,
+    CRYPT_EAL_PkeyPub pub = {.id = pkeyAlg, .key.xmssPub = {.root = data, .seed = data + hashLen,
         .len = hashLen}};
     ret = CRYPT_EAL_PkeySetPub(pctx, &pub);
     if (ret != CRYPT_SUCCESS) {
@@ -976,7 +977,7 @@ static int32_t ParseXmssPubKeyAsn1Buff(CRYPT_EAL_LibCtx *libCtx, const char *att
     *ealPubKey = pctx;
     return ret;
 }
-#endif
+#endif /* defined(HITLS_CRYPTO_XMSS) || defined(HITLS_CRYPTO_XMSSMT) */
 
 #ifdef HITLS_CRYPTO_SLH_DSA
 static int32_t ParseSlhDsaPubkeyAsn1Buff(CRYPT_EAL_LibCtx *libctx, const char *attrName, uint8_t *buff,
@@ -1324,7 +1325,11 @@ static int32_t ParseSubPubkeyAsn1(CRYPT_EAL_LibCtx *libctx, const char *attrName
 #endif
 #ifdef HITLS_CRYPTO_XMSS
         case BSL_CID_XMSS:
-            return ParseXmssPubKeyAsn1Buff(libctx, attrName, &bitPubkey, ealPubKey);
+            return ParseXmssPubKeyAsn1Buff(libctx, attrName, &bitPubkey, ealPubKey, true);
+#endif
+#ifdef HITLS_CRYPTO_XMSSMT
+        case BSL_CID_XMSSMT:
+            return ParseXmssPubKeyAsn1Buff(libctx, attrName, &bitPubkey, ealPubKey, false);
 #endif
         default:
             BSL_ERR_PUSH_ERROR(CRYPT_DECODE_UNKNOWN_OID);
@@ -2115,7 +2120,7 @@ static int32_t EncodeMlKemPrikeyAsn1Buff(CRYPT_EAL_PkeyCtx *ealPriKey, BSL_Buffe
 }
 #endif // HITLS_CRYPTO_MLKEM
 
-#ifdef HITLS_CRYPTO_XMSS
+#if defined(HITLS_CRYPTO_XMSS) || defined(HITLS_CRYPTO_XMSSMT)
 static int32_t EncodeXmssPubkeyAsn1Buff(CRYPT_EAL_PkeyCtx *ealPubKey, BSL_Buffer *bitStr)
 {
     uint32_t pubLen = 0;
@@ -2137,7 +2142,7 @@ static int32_t EncodeXmssPubkeyAsn1Buff(CRYPT_EAL_PkeyCtx *ealPubKey, BSL_Buffer
         return ret;
     }
     CRYPT_EAL_PkeyPub pubKey = {
-        .id = CRYPT_PKEY_XMSS,
+        .id = CRYPT_EAL_PkeyGetId(ealPubKey),
         .key.xmssPub = {.seed = pub + 4 + hashLen, .root = pub + 4, .len = hashLen}
     };
     ret = CRYPT_EAL_PkeyGetPub(ealPubKey, &pubKey);
@@ -2151,7 +2156,7 @@ static int32_t EncodeXmssPubkeyAsn1Buff(CRYPT_EAL_PkeyCtx *ealPubKey, BSL_Buffer
     bitStr->dataLen = pubLen;
     return CRYPT_SUCCESS;
 }
-#endif // HITLS_CRYPTO_XMSS
+#endif /* defined(HITLS_CRYPTO_XMSS) || defined(HITLS_CRYPTO_XMSSMT) */
 
 static int32_t EncodePk8AlgidAny(CRYPT_EAL_PkeyCtx *ealPriKey, CRYPT_ENCODE_DECODE_Pk8PrikeyInfo *pk8PrikeyInfo)
 {
@@ -2366,8 +2371,9 @@ static int32_t CRYPT_EAL_SubPubkeyGetInfo(CRYPT_EAL_PkeyCtx *ealPubKey, BSL_ASN1
             ret = EncodeMlKemPubkeyAsn1Buff(ealPubKey, &bitTmp, (BslCid *)&cid);
             break;
 #endif
-#ifdef HITLS_CRYPTO_XMSS
+#if defined(HITLS_CRYPTO_XMSS) || defined(HITLS_CRYPTO_XMSSMT)
         case CRYPT_PKEY_XMSS:
+        case CRYPT_PKEY_XMSSMT:
             ret = EncodeXmssPubkeyAsn1Buff(ealPubKey, &bitTmp);
             break;
 #endif

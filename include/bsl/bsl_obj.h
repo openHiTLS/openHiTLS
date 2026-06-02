@@ -724,6 +724,7 @@ typedef enum {
     BSL_CID_MLDSA87_ECDSA_P521_SHA512 = 5226,
     BSL_CID_LMS = 5227,
     BSL_CID_HSS = 5228,
+    BSL_CID_XMSSMT = 5229,          /**< Identifies XMSS^MT algorithm (RFC 9802 id-alg-xmssmt-hashsig) */
 
     BSL_CID_MAC_AEAD = 5300,
 

@@ -17,7 +17,7 @@
 #define XMSS_PARAMS_H
 
 #include "hitls_build.h"
-#ifdef HITLS_CRYPTO_XMSS
+#if defined(HITLS_CRYPTO_XMSS) || defined(HITLS_CRYPTO_XMSSMT)
 
 #include <stdint.h>
 #include <stddef.h>
@@ -91,20 +91,31 @@ typedef struct {
 const XmssParams *FindXmssPara(CRYPT_PKEY_ParaId algId);
 
 /*
- * Find XMSS parameters pointer by XDR algorithm ID (RFC 9802)
+ * Find XMSS parameters pointer by XDR algorithm ID.
+ *   RFC 8391 defines two SEPARATE XDR enums that share the SAME value range:
+ *     - Appendix B: enum xmss_algorithm_type       (XMSS,    starts at 0x00000001)
+ *     - Appendix C: enum xmssmt_algorithm_type      (XMSS^MT, starts at 0x00000001)
+ *   IANA also maintains them as two independent sub-registries.
+ *   For example, 0x00000001 means XMSS-SHA2_10_256 (d=1) AND
+ *                 XMSSMT-SHA2_20/2_256 (d=2) simultaneously.
+ *   The 4-byte XDR value alone is ambiguous; the caller must indicate
+ *   which namespace to search, derived from the X.509 outer OID:
+ *     - id-alg-xmss-hashsig   (RFC 9802) -> isXmss = true
+ *     - id-alg-xmssmt-hashsig (RFC 9802) -> isXmss = false
  *
  * Returns a pointer to the global parameter table entry.
  * This is more memory efficient than copying the structure.
  *
  * @param xdrId  XDR algorithm ID (32-bit value, big-endian)
+ * @param isXmss true for XMSS (d == 1), false for XMSS^MT (d > 1)
  *
  * @return Pointer to XmssParams in global table, or NULL if not found
  */
-const XmssParams *XmssParams_FindByXdrId(uint32_t xdrId);
+const XmssParams *XmssParams_FindByXdrId(uint32_t xdrId, bool isXmss);
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* HITLS_CRYPTO_XMSS */
+#endif /* defined(HITLS_CRYPTO_XMSS) || defined(HITLS_CRYPTO_XMSSMT) */
 #endif /* XMSS_PARAMS_H */

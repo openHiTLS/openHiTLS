@@ -14,7 +14,7 @@
  */
 
 #include "hitls_build.h"
-#ifdef HITLS_CRYPTO_XMSS
+#if defined(HITLS_CRYPTO_XMSS) || defined(HITLS_CRYPTO_XMSSMT)
 
 #include <string.h>
 #include "bsl_sal.h"
@@ -38,14 +38,19 @@
 int32_t CalcMultiMsgHash(CRYPT_MD_AlgId mdId, const CRYPT_ConstData *hashData, uint32_t hashDataLen, uint8_t *out,
                          uint32_t outLen)
 {
+    /* tmp is the hash output buffer; skDerive writes WOTS+ private key elements
+     * into tmp, sigRandGen writes signing randomness into tmp — cleanse to
+     * prevent secret residue on the stack before return. */
     uint8_t tmp[XMSS_MAX_MDSIZE] = {0};
     uint32_t tmpLen = sizeof(tmp);
     int32_t ret = CRYPT_CalcHash(NULL, EAL_MdFindDefaultMethod(mdId), hashData, hashDataLen, tmp, &tmpLen);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
+        BSL_SAL_CleanseData(tmp, sizeof(tmp));
         return ret;
     }
     memcpy(out, tmp, outLen);
+    BSL_SAL_CleanseData(tmp, sizeof(tmp));
     return CRYPT_SUCCESS;
 }
 
@@ -288,4 +293,4 @@ int32_t XmssInitHashFuncs(CryptXmssCtx *ctx)
     return CRYPT_SUCCESS;
 }
 
-#endif /* HITLS_CRYPTO_XMSS */
+#endif /* defined(HITLS_CRYPTO_XMSS) || defined(HITLS_CRYPTO_XMSSMT) */

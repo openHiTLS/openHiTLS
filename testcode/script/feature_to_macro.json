@@ -137,5 +137,6 @@
     "x509_csr_parse": "HITLS_PKI_X509_CSR_PARSE",
     "x509_vfy": "HITLS_PKI_X509_VFY",
     "xmss": "HITLS_CRYPTO_XMSS",
+    "xmssmt": "HITLS_CRYPTO_XMSSMT",
     "xts": "HITLS_CRYPTO_XTS"
 }

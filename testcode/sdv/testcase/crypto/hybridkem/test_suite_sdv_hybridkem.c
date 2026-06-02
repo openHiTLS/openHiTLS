@@ -306,6 +306,14 @@ void SDV_CRYPTO_HYBRID_ENCAPS_DECAPS_FUNC_TC002(int algid, int type, int isProvi
 
     ASSERT_EQ(CRYPT_EAL_PkeyEncaps(ctxB, ciphertext, &cipherLen, sharedKeyB, &sharedLenB), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_PkeyDecaps(ctxA, ciphertext, cipherLen, sharedKeyA, &sharedLenA), CRYPT_SUCCESS);
+    /* Shared secret must not be all zeros */
+    {
+        uint8_t diff = 0;
+        for (uint32_t i = 0; i < sharedLenA; i++) {
+            diff |= sharedKeyA[i];
+        }
+        ASSERT_TRUE(diff != 0);
+    }
     ASSERT_COMPARE("compare sharedKey", sharedKeyB, sharedLenB, sharedKeyA, sharedLenA);
     ASSERT_TRUE(TestIsErrStackEmpty());
 EXIT:

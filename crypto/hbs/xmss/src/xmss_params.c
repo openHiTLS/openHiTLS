@@ -14,7 +14,7 @@
  */
 
 #include "hitls_build.h"
-#ifdef HITLS_CRYPTO_XMSS
+#if defined(HITLS_CRYPTO_XMSS) || defined(HITLS_CRYPTO_XMSSMT)
 
 #include <string.h>
 #include "xmss_params.h"
@@ -155,7 +155,7 @@ const XmssParams *FindXmssPara(CRYPT_PKEY_ParaId algId)
     return NULL;
 }
 
-const XmssParams *XmssParams_FindByXdrId(uint32_t xdrId)
+const XmssParams *XmssParams_FindByXdrId(uint32_t xdrId, bool isXmss)
 {
     /* Convert xdrId to 4-byte array for comparison (big-endian) */
     uint8_t xdrIdBytes[HASH_SIGN_XDR_ALG_TYPE_LEN] = {0};
@@ -163,7 +163,8 @@ const XmssParams *XmssParams_FindByXdrId(uint32_t xdrId)
 
     /* Linear search through parameter table to find matching XDR OID */
     for (uint32_t i = 0; i < sizeof(g_xmssParams) / sizeof(g_xmssParams[0]); i++) {
-        if (memcmp(g_xmssParams[i].xdrAlgId, xdrIdBytes, HASH_SIGN_XDR_ALG_TYPE_LEN) == 0) {
+        if (memcmp(g_xmssParams[i].xdrAlgId, xdrIdBytes, HASH_SIGN_XDR_ALG_TYPE_LEN) == 0 &&
+            (isXmss ? g_xmssParams[i].d == 1 : g_xmssParams[i].d > 1)) {
             /* Found matching parameter set - return pointer to global table */
             return &g_xmssParams[i];
         }
@@ -171,4 +172,4 @@ const XmssParams *XmssParams_FindByXdrId(uint32_t xdrId)
     /* No match found - invalid XDR ID */
     return NULL;
 }
-#endif /* HITLS_CRYPTO_XMSS */
+#endif /* defined(HITLS_CRYPTO_XMSS) || defined(HITLS_CRYPTO_XMSSMT) */

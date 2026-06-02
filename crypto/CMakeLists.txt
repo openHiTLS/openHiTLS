@@ -227,7 +227,7 @@ if(HITLS_CRYPTO_COMPOSITE)
     add_subdirectory(composite)
 endif()
 
-if(HITLS_CRYPTO_SLH_DSA OR HITLS_CRYPTO_XMSS OR HITLS_CRYPTO_LMS OR HITLS_CRYPTO_HSS)
+if(HITLS_CRYPTO_SLH_DSA OR HITLS_CRYPTO_XMSS OR HITLS_CRYPTO_XMSSMT OR HITLS_CRYPTO_LMS OR HITLS_CRYPTO_HSS)
     add_subdirectory(hbs/common)
 endif()
 
@@ -235,7 +235,7 @@ if(HITLS_CRYPTO_SLH_DSA)
     add_subdirectory(hbs/slh_dsa)
 endif()
 
-if(HITLS_CRYPTO_XMSS)
+if(HITLS_CRYPTO_XMSS OR HITLS_CRYPTO_XMSSMT)
     add_subdirectory(hbs/xmss)
 endif()
 
