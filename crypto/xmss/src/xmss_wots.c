@@ -170,7 +170,7 @@ ERR:
 int32_t XmssWots_Sign(uint8_t *sig, uint32_t *sigLen, const uint8_t *msg, uint32_t msgLen, void *adrs,
                       const XmssWotsCtx *ctx)
 {
-    int32_t ret;
+    int32_t ret = CRYPT_SUCCESS;
     uint32_t n = ctx->n;
     uint32_t len = ctx->wotsLen;
 

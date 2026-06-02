@@ -112,7 +112,6 @@ typedef struct CryptAdrsOps {
     void (*setTreeIndex)(void *adrs, uint32_t index);
 
     /* Get functions - retrieve address fields */
-    uint32_t (*getTreeHeight)(const void *adrs);
     uint32_t (*getTreeIndex)(const void *adrs);
 
     /* Copy function */

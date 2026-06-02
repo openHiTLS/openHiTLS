@@ -114,12 +114,6 @@ static void UCAdrsSetTreeIndex(void *adrs, uint32_t index)
     PUT_UINT32_BE(index, sa->uc.padding, 8); // tree index is 4 bytes, start from 8-th byte
 }
 
-static uint32_t UCAdrsGetTreeHeight(const void *adrs)
-{
-    const SlhDsaAdrs *sa = (const SlhDsaAdrs *)adrs;
-    return GET_UINT32_BE(sa->uc.padding, 0);
-}
-
 static uint32_t UCAdrsGetTreeIndex(const void *adrs)
 {
     const SlhDsaAdrs *sa = (const SlhDsaAdrs *)adrs;
@@ -190,12 +184,6 @@ static void CAdrsSetTreeIndex(void *adrs, uint32_t index)
     PUT_UINT32_BE(index, sa->c.padding, 8); // tree index is 4 bytes, start from 8-th byte
 }
 
-static uint32_t CAdrsGetTreeHeight(const void *adrs)
-{
-    const SlhDsaAdrs *sa = (const SlhDsaAdrs *)adrs;
-    return GET_UINT32_BE(sa->c.padding, 0); // tree height is 4 bytes, start from 0-th byte
-}
-
 static uint32_t CAdrsGetTreeIndex(const void *adrs)
 {
     const SlhDsaAdrs *sa = (const SlhDsaAdrs *)adrs;
@@ -224,7 +212,6 @@ static CryptAdrsOps g_adrsOps[2] = {{
     .setTreeHeight = UCAdrsSetTreeHeight,
     .setHashAddr = UCAdrsSetHashAddr,
     .setTreeIndex = UCAdrsSetTreeIndex,
-    .getTreeHeight = UCAdrsGetTreeHeight,
     .getTreeIndex = UCAdrsGetTreeIndex,
     .copyKeyPairAddr = UCAdrsCopyKeyPairAddr,
     .getAdrsLen = UCAdrsGetAdrsLen,
@@ -238,7 +225,6 @@ static CryptAdrsOps g_adrsOps[2] = {{
     .setTreeHeight = CAdrsSetTreeHeight,
     .setHashAddr = CAdrsSetHashAddr,
     .setTreeIndex = CAdrsSetTreeIndex,
-    .getTreeHeight = CAdrsGetTreeHeight,
     .getTreeIndex = CAdrsGetTreeIndex,
     .copyKeyPairAddr = CAdrsCopyKeyPairAddr,
     .getAdrsLen = CAdrsGetAdrsLen,
@@ -666,6 +652,14 @@ int32_t CRYPT_SLH_DSA_Sign(CryptSlhDsaCtx *ctx, int32_t algId, const uint8_t *da
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
+    if (CheckNotSlhDsaAlgId(ctx->para.algId)) {
+        BSL_ERR_PUSH_ERROR(CRYPT_SLHDSA_ERR_INVALID_ALGID);
+        return CRYPT_SLHDSA_ERR_INVALID_ALGID;
+    }
+    if ((ctx->keyType & SLH_DSA_PRVKEY) == 0) {
+        BSL_ERR_PUSH_ERROR(CRYPT_SLHDSA_ERR_NO_PRVKEY);
+        return CRYPT_SLHDSA_ERR_NO_PRVKEY;
+    }
     ret = MsgEncode(ctx, algId, data, dataLen, &mp, &mpLen);
     if (ret != CRYPT_SUCCESS) {
         return ret;
@@ -692,7 +686,14 @@ int32_t CRYPT_SLH_DSA_Verify(const CryptSlhDsaCtx *ctx, int32_t algId, const uin
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
-
+    if (CheckNotSlhDsaAlgId(ctx->para.algId)) {
+        BSL_ERR_PUSH_ERROR(CRYPT_SLHDSA_ERR_INVALID_ALGID);
+        return CRYPT_SLHDSA_ERR_INVALID_ALGID;
+    }
+    if ((ctx->keyType & (SLH_DSA_PUBKEY | SLH_DSA_PRVKEY)) == 0) {
+        BSL_ERR_PUSH_ERROR(CRYPT_SLHDSA_ERR_NO_PUBKEY);
+        return CRYPT_SLHDSA_ERR_NO_PUBKEY;
+    }
     ret = MsgEncode(ctx, algId, data, dataLen, &mp, &mpLen);
     if (ret != CRYPT_SUCCESS) {
         return ret;

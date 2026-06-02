@@ -22,6 +22,7 @@
 #include "crypt_utils.h"
 #include "bsl_errno.h"
 #include "bsl_sal.h"
+#include "bsl_bytes.h"
 #include "bsl_obj_internal.h"
 #include "bsl_err_internal.h"
 #include "ml_dsa_local.h"
@@ -539,7 +540,7 @@ int32_t CRYPT_ML_DSA_SetPrvKeyEx(CRYPT_ML_DSA_Ctx *ctx, const BSL_Param *para)
                 BSL_ERR_PUSH_ERROR(CRYPT_MLDSA_KEYLEN_ERROR);
                 return CRYPT_MLDSA_KEYLEN_ERROR;
             }
-            return memcmp(ctx->prvKey, prvKey.data, ctx->prvLen) == 0 ? CRYPT_SUCCESS :
+            return ConstTimeMemcmp(ctx->prvKey, prvKey.data, ctx->prvLen) != 0 ? CRYPT_SUCCESS :
                                                                         CRYPT_MLDSA_PRVKEY_SEED_INCONSISTENT;
         }
         return CRYPT_SUCCESS;
@@ -621,7 +622,7 @@ int32_t CRYPT_ML_DSA_SetPubKey(CRYPT_ML_DSA_Ctx *ctx, CRYPT_MlDsaPub *pub)
     }
     if (ctx->pubKey != NULL) {
         // if set prv key is called before, then ctx->pubKey is not NULL
-        if (ctx->pubLen != ctx->info->publicKeyLen || memcmp(ctx->pubKey, pub->data, ctx->pubLen) != 0) {
+        if (ctx->pubLen != ctx->info->publicKeyLen || ConstTimeMemcmp(ctx->pubKey, pub->data, ctx->pubLen) == 0) {
             BSL_ERR_PUSH_ERROR(CRYPT_MLDSA_SET_KEY_FAILED);
             return CRYPT_MLDSA_SET_KEY_FAILED;
         }
@@ -683,7 +684,7 @@ static int32_t MLDSACmpKey(uint8_t *a, uint32_t aLen, uint8_t *b, uint32_t bLen)
         return CRYPT_MLDSA_KEY_NOT_EQUAL;
     }
     if (a != NULL && b != NULL) {
-        if (memcmp(a, b, aLen) != 0) {
+        if (ConstTimeMemcmp(a, b, aLen) == 0) {
             BSL_ERR_PUSH_ERROR(CRYPT_MLDSA_KEY_NOT_EQUAL);
             return CRYPT_MLDSA_KEY_NOT_EQUAL;
         }
@@ -895,7 +896,7 @@ static int32_t MLDSAKeyPairCheck(const CRYPT_ML_DSA_Ctx *pubKey, const CRYPT_ML_
         BSL_SAL_Free(pub);
         return ret;
     }
-    if (memcmp(pub, pubKey->pubKey, pubKey->info->publicKeyLen) != 0) {
+    if (ConstTimeMemcmp(pub, pubKey->pubKey, pubKey->info->publicKeyLen) == 0) {
         BSL_SAL_Free(pub);
         BSL_ERR_PUSH_ERROR(CRYPT_MLDSA_PAIRWISE_CHECK_FAIL);
         return CRYPT_MLDSA_PAIRWISE_CHECK_FAIL;
