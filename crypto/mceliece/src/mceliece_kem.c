@@ -156,7 +156,7 @@ int32_t McElieceDecapsInternal(const uint8_t *ciphertext, const CMPrivateKey *sk
         memcpy(hashIn + 1, e, MCELIECE_L_BYTES);
         uint8_t c1Prime[MCELIECE_L_BYTES];
         GOTO_ERR_IF(McElieceShake256(c1Prime, MCELIECE_L_BYTES, hashIn, sizeof(hashIn)), ret);
-        b = Uint8ConstTimeSelect(ConstTimeMemcmp(c1Prime, c1, MCELIECE_L_BYTES), 1 , 0); // If C' != C1, set b <- 0
+        b &= Uint8ConstTimeSelect(ConstTimeMemcmp(c1Prime, c1, MCELIECE_L_BYTES), 1 , 0); // If C' != C1, set b <- 0
     }
     ret = ComputeSessionKeyWithPrefix(sessionKey, b, e, ciphertext, params);
 ERR:
