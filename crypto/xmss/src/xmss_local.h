@@ -19,6 +19,7 @@
 #include "hitls_build.h"
 #ifdef HITLS_CRYPTO_XMSS
 
+#include <stdbool.h>
 #include <stdint.h>
 #include <stddef.h>
 #include "xmss_common.h"
@@ -53,7 +54,7 @@ typedef struct CryptXmssCtx {
         uint8_t root[XMSS_MAX_MDSIZE]; // Tree root (PK.root)
         uint8_t pubSeed[XMSS_MAX_SEED_SIZE]; // Public seed (PK.seed)
     } key;
-
+    bool hasPrivateKey;
     /* Library context */
     void *libCtx;
 } CryptXmssCtx;

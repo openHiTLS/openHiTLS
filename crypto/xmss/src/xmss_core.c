@@ -44,7 +44,7 @@ int32_t CRYPT_XMSS_InitInternal(CryptXmssCtx *ctx, const XmssParams *params)
 
     /* Initialize key structure to zero */
     (void)memset_s(&ctx->key, sizeof(ctx->key), 0, sizeof(ctx->key));
-
+    ctx->hasPrivateKey = false;
     return CRYPT_SUCCESS;
 }
 
@@ -54,7 +54,7 @@ int32_t CRYPT_XMSS_KeyGenInternal(CryptXmssCtx *ctx)
     uint32_t n = ctx->params->n;
     uint32_t d = ctx->params->d;
     uint32_t hp = ctx->params->hp;
-
+    ctx->hasPrivateKey = false;
     /* Generate random private seed */
     ret = CRYPT_RandEx(ctx->libCtx, ctx->key.seed, n);
     if (ret != CRYPT_SUCCESS) {
@@ -85,6 +85,7 @@ int32_t CRYPT_XMSS_KeyGenInternal(CryptXmssCtx *ctx)
     }
     (void)memcpy_s(ctx->key.root, n, node, n);
     ctx->key.idx = 0;
+    ctx->hasPrivateKey = true;
     return CRYPT_SUCCESS;
 }
 

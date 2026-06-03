@@ -29,7 +29,7 @@
 #include "xmss_params.h"
 #include "xmss_tree.h"
 #include "xmss_address.h"
-
+#include "bsl_bytes.h"
 typedef struct {
     BSL_Param *pubXdr;    // XDR type identifier (4 bytes, optional)
     BSL_Param *pubSeed;   // Public seed (n bytes)
@@ -282,6 +282,10 @@ int32_t CRYPT_XMSS_Sign(CryptXmssCtx *ctx, int32_t algId,
         BSL_ERR_PUSH_ERROR(CRYPT_XMSS_KEYINFO_NOT_SET);
         return CRYPT_XMSS_KEYINFO_NOT_SET;
     }
+    if (!ctx->hasPrivateKey) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NOT_SUPPORT);
+        return CRYPT_NOT_SUPPORT;
+    }
     int32_t ret = CRYPT_XMSS_SignInternal(ctx, data, dataLen, sign, signLen);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
@@ -486,6 +490,10 @@ CryptXmssCtx *CRYPT_XMSS_DupCtx(CryptXmssCtx *ctx)
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return NULL;
     }
+    if (ConstTimeMemcmp(ctx->key.seed, (uint8_t[XMSS_MAX_SEED_SIZE]){0}, XMSS_MAX_SEED_SIZE) == 0) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NOT_SUPPORT);
+        return NULL;
+    }
     CryptXmssCtx *newCtx = CRYPT_XMSS_NewCtx();
     if (newCtx == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
@@ -495,6 +503,7 @@ CryptXmssCtx *CRYPT_XMSS_DupCtx(CryptXmssCtx *ctx)
     newCtx->params = ctx->params;
     newCtx->hashFuncs = ctx->hashFuncs;
     newCtx->adrsOps = ctx->adrsOps;
+    newCtx->hasPrivateKey = false;
     (void)memcpy_s(newCtx->key.pubSeed, XMSS_MAX_SEED_SIZE, ctx->key.pubSeed, XMSS_MAX_SEED_SIZE);
     (void)memcpy_s(newCtx->key.root, XMSS_MAX_MDSIZE, ctx->key.root, XMSS_MAX_MDSIZE);
     return newCtx;

@@ -309,6 +309,93 @@ EXIT:
 }
 /* END_CASE */
 
+/**
+ * @test   SDV_CRYPTO_XMSS_DUPKEY_FUNC_TC001
+ * @title  XMSS EAL Duplicate Key: Test that duplicated XMSS contexts contain only public key material.
+ * @precon Prepare valid XMSS private key material and message.
+ * @brief
+ *    1. Create an XMSS context and set private key, expected result 1
+ *    2. Duplicate the XMSS context, expected result 2
+ *    3. Export public key from the duplicated context and compare it with original public key, expected result 3
+ *    4. Sign with the duplicated context, expected result 4
+ *    5. Sign with the original private-key context, expected result 5
+ *    6. Verify the signature with both original and duplicated contexts, expected result 6
+ * @expect
+ *    1. CRYPT_SUCCESS
+ *    2. Duplicate context is not NULL
+ *    3. Public keys match
+ *    4. CRYPT_NOT_SUPPORT
+ *    5. CRYPT_SUCCESS
+ *    6. CRYPT_SUCCESS
+ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_XMSS_DUPKEY_FUNC_TC001(int id, int index, Hex *key, Hex *msg)
+{
+    TestMemInit();
+
+    CRYPT_EAL_PkeyCtx *pkey = NULL;
+    CRYPT_EAL_PkeyCtx *dupPkey = NULL;
+    uint8_t *sig = NULL;
+
+    pkey = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_XMSS);
+    ASSERT_TRUE(pkey != NULL);
+    int32_t algId = id;
+    ASSERT_EQ(CRYPT_EAL_PkeySetParaById(pkey, algId), CRYPT_SUCCESS);
+
+    uint32_t pubLen = 0;
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_GET_PUBKEY_LEN, (void *)&pubLen, sizeof(pubLen)), CRYPT_SUCCESS);
+    uint32_t keyLen = (pubLen - 4) / 2;
+    CRYPT_EAL_PkeyPrv prv;
+    memset(&prv, 0, sizeof(CRYPT_EAL_PkeyPrv));
+    prv.id = CRYPT_PKEY_XMSS;
+    prv.key.xmssPrv.index = index;
+    prv.key.xmssPrv.seed = key->x;
+    prv.key.xmssPrv.prf = key->x + keyLen;
+    prv.key.xmssPrv.pub.seed = key->x + keyLen * 2;
+    prv.key.xmssPrv.pub.root = key->x + keyLen * 3;
+    prv.key.xmssPrv.pub.len = keyLen;
+    ASSERT_EQ(CRYPT_EAL_PkeySetPrv(pkey, &prv), CRYPT_SUCCESS);
+
+    uint32_t sigLen = 0;
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_GET_SIGNLEN, (void *)&sigLen, sizeof(sigLen)), CRYPT_SUCCESS);
+    sig = BSL_SAL_Malloc(sigLen);
+    ASSERT_TRUE(sig != NULL);
+
+    dupPkey = CRYPT_EAL_PkeyDupCtx(pkey);
+    ASSERT_TRUE(dupPkey != NULL);
+
+    CRYPT_EAL_PkeyPub dupPub;
+    uint8_t dupPubSeed[64] = {0};
+    uint8_t dupPubRoot[64] = {0};
+    memset(&dupPub, 0, sizeof(CRYPT_EAL_PkeyPub));
+    dupPub.id = CRYPT_PKEY_XMSS;
+    dupPub.key.xmssPub.seed = dupPubSeed;
+    dupPub.key.xmssPub.root = dupPubRoot;
+    dupPub.key.xmssPub.len = keyLen;
+    ASSERT_EQ(CRYPT_EAL_PkeyGetPub(dupPkey, &dupPub), CRYPT_SUCCESS);
+    ASSERT_EQ(dupPub.key.xmssPub.len, keyLen);
+    ASSERT_EQ(memcmp(dupPub.key.xmssPub.seed, prv.key.xmssPrv.pub.seed, keyLen), 0);
+    ASSERT_EQ(memcmp(dupPub.key.xmssPub.root, prv.key.xmssPrv.pub.root, keyLen), 0);
+
+    uint32_t outLen = sigLen;
+    ASSERT_EQ(CRYPT_EAL_PkeySign(dupPkey, 0, msg->x, msg->len, sig, &outLen), CRYPT_NOT_SUPPORT);
+    BSL_ERR_ClearError();
+
+    outLen = sigLen;
+    ASSERT_EQ(CRYPT_EAL_PkeySign(pkey, 0, msg->x, msg->len, sig, &outLen), CRYPT_SUCCESS);
+    ASSERT_EQ(outLen, sigLen);
+    ASSERT_EQ(CRYPT_EAL_PkeyVerify(pkey, 0, msg->x, msg->len, sig, outLen), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyVerify(dupPkey, 0, msg->x, msg->len, sig, outLen), CRYPT_SUCCESS);
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
+EXIT:
+    BSL_SAL_FREE(sig);
+    CRYPT_EAL_PkeyFreeCtx(pkey);
+    CRYPT_EAL_PkeyFreeCtx(dupPkey);
+    return;
+}
+/* END_CASE */
+
 /* BEGIN_CASE */
 void SDV_CRYPTO_XMSS_PARAM_NULL_TC001(void)
 {
