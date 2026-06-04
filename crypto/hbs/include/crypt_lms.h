@@ -87,7 +87,7 @@ void CRYPT_LMS_FreeCtx(CRYPT_LMS_Ctx *ctx);
 
 /**
  * @ingroup lms
- * @brief Copy the LMS context. After the duplication is complete, invoke CRYPT_LMS_FreeCtx to release the memory.
+ * @brief Duplicate an LMS context. The duplicate contains public-key material only; private signing state is not copied.
  *
  * @param srcCtx [IN] Source LMS context
  *

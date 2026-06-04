@@ -64,18 +64,6 @@ CRYPT_LMS_Ctx *CRYPT_LMS_DupCtx(CRYPT_LMS_Ctx *srcCtx)
         return NULL;
     }
 
-    /*
-     * LMS is a stateful hash-based signature scheme: each LM-OTS leaf index q
-     * must be used at most once across all live copies of the private key.
-     * Cloning a context that holds the private key would let two contexts
-     * advance independently from the same q and inevitably reuse a one-time
-     * index, which exposes the OTS private key. Refuse the duplication.
-     */
-    if (srcCtx->privateKey != NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_NOT_SUPPORT);
-        return NULL;
-    }
-
     CRYPT_LMS_Ctx *ctx = CRYPT_LMS_NewCtx();
     if (ctx == NULL) {
         return NULL;

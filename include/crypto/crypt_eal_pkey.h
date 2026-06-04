@@ -167,6 +167,11 @@ int32_t CRYPT_EAL_PkeyCopyCtx(CRYPT_EAL_PkeyCtx *to, const CRYPT_EAL_PkeyCtx *fr
  *          After the duplication is complete, call the CRYPT_EAL_PkeyFreeCtx interface to release the memory.
  *
  * @param   pkey [IN] Source Pkey context
+ * @attention
+ * Stateful hash-based signature algorithms such as XMSS, LMS, and HSS
+ * must not duplicate private signing state. Their algorithm-level dup
+ * methods intentionally create public-key-only contexts: the duplicate can
+ * verify signatures but cannot sign.
  *
  * @retval  CRYPT_EAL_PkeyCtx, Pkey context pointer.
  *          NULL, if the operation fails.

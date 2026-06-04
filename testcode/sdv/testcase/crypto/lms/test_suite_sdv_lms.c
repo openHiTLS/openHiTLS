@@ -208,11 +208,9 @@ EXIT:
 * @spec  -
 * @title  CRYPT_LMS_DupCtx test
 * @precon  nan
-* @brief  LMS is stateful: a context holding the private key must not be
-*         duplicatable (would risk OTS index reuse). A verify-only context
-*         (public key only) may be duplicated and compares equal.
-* @expect  DupCtx on a private-key context returns NULL; DupCtx on a
-*          public-key-only context succeeds and Cmp reports equality.
+* @brief  LMS is stateful: DupCtx must not clone private signing state.
+* @expect  DupCtx on a private-key context succeeds, but the duplicate is
+*          public-key-only: it can verify but cannot sign.
 * @prior  Level 1
 * @auto  TRUE
 @ */
@@ -224,9 +222,10 @@ void SDV_CRYPTO_LMS_DUPCTX_API_TC001(void)
 
     CRYPT_LMS_Ctx *ctx1 = CRYPT_LMS_NewCtx();
     CRYPT_LMS_Ctx *ctx2 = NULL;
-    CRYPT_LMS_Ctx *pubCtx = NULL;
-    CRYPT_LMS_Ctx *pubDup = NULL;
-    uint8_t pubKeyBuf[LMS_PUBKEY_LEN];
+    const uint8_t msg[] = "Test message for LMS dup";
+    uint32_t msgLen = sizeof(msg) - 1;
+    uint8_t sig[8192];
+    uint32_t sigLen = sizeof(sig);
     ASSERT_TRUE(ctx1 != NULL);
 
     uint32_t lmsType = CRYPT_LMS_SHA256_M32_H5;
@@ -241,37 +240,21 @@ void SDV_CRYPTO_LMS_DUPCTX_API_TC001(void)
     ret = CRYPT_LMS_Gen(ctx1);
     ASSERT_EQ(ret, CRYPT_SUCCESS);
 
-    /* Cloning a context that holds the private key must be refused. */
     ctx2 = CRYPT_LMS_DupCtx(ctx1);
-    ASSERT_TRUE(ctx2 == NULL);
+    ASSERT_TRUE(ctx2 != NULL);
 
-    /* Build a verify-only context by exporting the public key from ctx1
-     * and importing it into a fresh ctx; that context has no private state
-     * and may be duplicated safely. */
-    BSL_Param getPub[2] = {
-        {CRYPT_PARAM_LMS_PUBKEY, BSL_PARAM_TYPE_OCTETS, pubKeyBuf, LMS_PUBKEY_LEN, 0},
-        BSL_PARAM_END};
-    ret = CRYPT_LMS_GetPubKey(ctx1, getPub);
+    ret = CRYPT_LMS_Sign(ctx2, 0, msg, msgLen, sig, &sigLen);
+    ASSERT_EQ(ret, CRYPT_LMS_NO_KEY);
+
+    sigLen = sizeof(sig);
+    ret = CRYPT_LMS_Sign(ctx1, 0, msg, msgLen, sig, &sigLen);
     ASSERT_EQ(ret, CRYPT_SUCCESS);
-
-    pubCtx = CRYPT_LMS_NewCtx();
-    ASSERT_TRUE(pubCtx != NULL);
-    BSL_Param setPub[2] = {
-        {CRYPT_PARAM_LMS_PUBKEY, BSL_PARAM_TYPE_OCTETS, pubKeyBuf, LMS_PUBKEY_LEN, LMS_PUBKEY_LEN},
-        BSL_PARAM_END};
-    ret = CRYPT_LMS_SetPubKey(pubCtx, setPub);
-    ASSERT_EQ(ret, CRYPT_SUCCESS);
-
-    pubDup = CRYPT_LMS_DupCtx(pubCtx);
-    ASSERT_TRUE(pubDup != NULL);
-    ret = CRYPT_LMS_Cmp(pubCtx, pubDup);
+    ret = CRYPT_LMS_Verify(ctx2, 0, msg, msgLen, sig, sigLen);
     ASSERT_EQ(ret, CRYPT_SUCCESS);
 
 EXIT:
     CRYPT_LMS_FreeCtx(ctx1);
     CRYPT_LMS_FreeCtx(ctx2);
-    CRYPT_LMS_FreeCtx(pubCtx);
-    CRYPT_LMS_FreeCtx(pubDup);
     CRYPT_EAL_SetRandCallBack(NULL);
     return;
 }

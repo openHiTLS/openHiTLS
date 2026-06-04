@@ -76,6 +76,8 @@ void SDV_CRYPTO_EAL_LMS_API_TC001(int isProvider)
     CRYPT_EAL_SetRandCallBack(LmsEalTestRand);
 
     CRYPT_EAL_PkeyCtx *ctx1 = CreateLmsContext(isProvider);
+    CRYPT_EAL_PkeyCtx *ctx2 = NULL;
+    CRYPT_EAL_PkeyCtx *ctx3 = NULL;
     ASSERT_TRUE(ctx1 != NULL);
 
     uint32_t lmsType = CRYPT_LMS_SHA256_M32_H5;
@@ -87,7 +89,7 @@ void SDV_CRYPTO_EAL_LMS_API_TC001(int isProvider)
     ret = CRYPT_EAL_PkeyGen(ctx1);
     ASSERT_EQ(ret, CRYPT_SUCCESS);
 
-    CRYPT_EAL_PkeyCtx *ctx2 = CreateLmsContext(isProvider);
+    ctx2 = CreateLmsContext(isProvider);
     ASSERT_TRUE(ctx2 != NULL);
 
     ret = SetupLmsParams(ctx2, lmsType, otsType);
@@ -99,14 +101,27 @@ void SDV_CRYPTO_EAL_LMS_API_TC001(int isProvider)
     ret = CRYPT_EAL_PkeyCmp(ctx1, ctx2);
     ASSERT_NE(ret, CRYPT_SUCCESS);
 
-    /* Stateful HBS: a context that holds the private key must not be
-     * duplicatable, otherwise both copies could reuse a one-time index. */
-    CRYPT_EAL_PkeyCtx *ctx3 = CRYPT_EAL_PkeyDupCtx(ctx1);
-    ASSERT_TRUE(ctx3 == NULL);
+    ctx3 = CRYPT_EAL_PkeyDupCtx(ctx1);
+    ASSERT_TRUE(ctx3 != NULL);
+
+    const uint8_t msg[] = "Test message for LMS EAL dup";
+    uint32_t msgLen = sizeof(msg) - 1;
+    uint8_t sig[8192] = {0};
+    uint32_t sigLen = sizeof(sig);
+
+    ret = CRYPT_EAL_PkeySign(ctx3, CRYPT_MD_SHA256, msg, msgLen, sig, &sigLen);
+    ASSERT_EQ(ret, CRYPT_LMS_NO_KEY);
+
+    sigLen = sizeof(sig);
+    ret = CRYPT_EAL_PkeySign(ctx1, CRYPT_MD_SHA256, msg, msgLen, sig, &sigLen);
+    ASSERT_EQ(ret, CRYPT_SUCCESS);
+    ret = CRYPT_EAL_PkeyVerify(ctx3, CRYPT_MD_SHA256, msg, msgLen, sig, sigLen);
+    ASSERT_EQ(ret, CRYPT_SUCCESS);
 
 EXIT:
     CRYPT_EAL_PkeyFreeCtx(ctx1);
     CRYPT_EAL_PkeyFreeCtx(ctx2);
+    CRYPT_EAL_PkeyFreeCtx(ctx3);
     CRYPT_EAL_SetRandCallBack(NULL);
     return;
 }

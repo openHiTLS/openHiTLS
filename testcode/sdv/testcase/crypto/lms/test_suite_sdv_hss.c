@@ -260,12 +260,9 @@ EXIT:
 * @spec  -
 * @title  CRYPT_HSS_DupCtx test
 * @precon  nan
-* @brief  HSS is stateful: a context holding the private key must not be
-*         duplicatable (would risk LM-OTS index reuse across copies). A
-*         verify-only context (public key only) may be duplicated and
-*         compares equal.
-* @expect  DupCtx on a private-key context returns NULL; DupCtx on a
-*          public-key-only context succeeds and Cmp reports equality.
+* @brief  HSS is stateful: DupCtx must not clone private signing state.
+* @expect  DupCtx on a private-key context succeeds, but the duplicate is
+*          public-key-only: it can verify but cannot sign.
 * @prior  Level 1
 * @auto  TRUE
 @ */
@@ -277,9 +274,10 @@ void SDV_CRYPTO_HSS_DUPCTX_API_TC001(void)
 
     CRYPT_HSS_Ctx *ctx1 = CRYPT_HSS_NewCtx();
     CRYPT_HSS_Ctx *ctx2 = NULL;
-    CRYPT_HSS_Ctx *pubCtx = NULL;
-    CRYPT_HSS_Ctx *pubDup = NULL;
-    uint8_t pubKeyBuf[CRYPT_HSS_PUBKEY_LEN];
+    const uint8_t msg[] = "Test message for HSS dup";
+    uint32_t msgLen = sizeof(msg) - 1;
+    uint8_t sig[16384];
+    uint32_t sigLen = sizeof(sig);
     ASSERT_TRUE(ctx1 != NULL);
 
     uint32_t levels = 2;
@@ -305,37 +303,21 @@ void SDV_CRYPTO_HSS_DUPCTX_API_TC001(void)
     ret = CRYPT_HSS_Gen(ctx1);
     ASSERT_EQ(ret, CRYPT_SUCCESS);
 
-    /* Cloning a context that holds the private key must be refused. */
     ctx2 = CRYPT_HSS_DupCtx(ctx1);
-    ASSERT_TRUE(ctx2 == NULL);
+    ASSERT_TRUE(ctx2 != NULL);
 
-    /* Build a verify-only context by exporting the public key from ctx1
-     * and importing it into a fresh ctx; that context has no private state
-     * and may be duplicated safely. */
-    BSL_Param getPub[2] = {
-        {CRYPT_PARAM_HSS_PUBKEY, BSL_PARAM_TYPE_OCTETS, pubKeyBuf, CRYPT_HSS_PUBKEY_LEN, 0},
-        BSL_PARAM_END};
-    ret = CRYPT_HSS_GetPubKey(ctx1, getPub);
+    ret = CRYPT_HSS_Sign(ctx2, 0, msg, msgLen, sig, &sigLen);
+    ASSERT_EQ(ret, CRYPT_HSS_NO_KEY);
+
+    sigLen = sizeof(sig);
+    ret = CRYPT_HSS_Sign(ctx1, 0, msg, msgLen, sig, &sigLen);
     ASSERT_EQ(ret, CRYPT_SUCCESS);
-
-    pubCtx = CRYPT_HSS_NewCtx();
-    ASSERT_TRUE(pubCtx != NULL);
-    BSL_Param setPub[2] = {
-        {CRYPT_PARAM_HSS_PUBKEY, BSL_PARAM_TYPE_OCTETS, pubKeyBuf, CRYPT_HSS_PUBKEY_LEN, CRYPT_HSS_PUBKEY_LEN},
-        BSL_PARAM_END};
-    ret = CRYPT_HSS_SetPubKey(pubCtx, setPub);
-    ASSERT_EQ(ret, CRYPT_SUCCESS);
-
-    pubDup = CRYPT_HSS_DupCtx(pubCtx);
-    ASSERT_TRUE(pubDup != NULL);
-    ret = CRYPT_HSS_Cmp(pubCtx, pubDup);
+    ret = CRYPT_HSS_Verify(ctx2, 0, msg, msgLen, sig, sigLen);
     ASSERT_EQ(ret, CRYPT_SUCCESS);
 
 EXIT:
     CRYPT_HSS_FreeCtx(ctx1);
     CRYPT_HSS_FreeCtx(ctx2);
-    CRYPT_HSS_FreeCtx(pubCtx);
-    CRYPT_HSS_FreeCtx(pubDup);
     CRYPT_EAL_SetRandCallBack(NULL);
     return;
 }

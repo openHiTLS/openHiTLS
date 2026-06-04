@@ -70,18 +70,6 @@ CRYPT_HSS_Ctx *CRYPT_HSS_DupCtx(CRYPT_HSS_Ctx *srcCtx)
         return NULL;
     }
 
-    /*
-     * HSS is a stateful hash-based signature scheme: each LM-OTS index q must
-     * be used at most once across all live copies of the private key.
-     * Duplicating a context that holds the private key would let two contexts
-     * advance independently from the same q and inevitably reuse a one-time
-     * index, which exposes the OTS private key. Refuse the duplication.
-     */
-    if (srcCtx->privateKey != NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_NOT_SUPPORT);
-        return NULL;
-    }
-
     CRYPT_HSS_Ctx *newCtx = (CRYPT_HSS_Ctx *)CRYPT_HSS_NewCtx();
     if (newCtx == NULL) {
         return NULL;

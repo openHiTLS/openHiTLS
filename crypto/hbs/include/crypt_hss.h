@@ -77,7 +77,7 @@ void CRYPT_HSS_FreeCtx(CRYPT_HSS_Ctx *ctx);
 
 /**
  * @ingroup hss
- * @brief Copy the HSS context. After the duplication is complete, invoke CRYPT_HSS_FreeCtx to release the memory.
+ * @brief Duplicate an HSS context. The duplicate contains public-key material only; private signing state is not copied.
  *
  * @param srcCtx [IN] Source HSS context
  *
