@@ -119,24 +119,6 @@ void FrodoCommonDecodeLe16(uint16_t *out, const uint8_t *in, uint32_t len)
     }
 }
 
-int8_t FrodoCommonCtVerify(const uint16_t *a, const uint16_t *b, uint32_t len)
-{
-    uint16_t diffAccumulator = 0;
-
-    for (uint32_t i = 0; i < len; i++) {
-        diffAccumulator |= a[i] ^ b[i];
-    }
-
-    return (int8_t)((-(int16_t)(diffAccumulator >> 1) | -(int16_t)(diffAccumulator & 1)) >> 15);
-}
-
-void FrodoCommonCtSelect(uint8_t *r, const uint8_t *a, const uint8_t *b, uint32_t len, int8_t selector)
-{
-    for (uint32_t i = 0; i < len; i++) {
-        r[i] = (~(uint8_t)selector & a[i]) | ((uint8_t)selector & b[i]);
-    }
-}
-
 int32_t FrodoKemShake128(uint8_t *output, uint32_t outLen, const uint8_t *input, uint32_t inLen)
 {
     uint32_t len = outLen;

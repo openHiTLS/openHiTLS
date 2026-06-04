@@ -27,6 +27,7 @@
 #include "crypt_util_rand.h"
 #include "bsl_err_internal.h"
 #include "crypt_util_ctrl.h"
+#include "bsl_bytes.h"
 
 #define FRODOKEM_LEN_A        16
 #define FRODO_HASH_PK_MAX_LEN 32
@@ -257,12 +258,11 @@ static int32_t FrodoKemDecaps(const FrodoKemParams *params, uint8_t *ss, const u
         BSL_ERR_PUSH_ERROR(ret);
         goto EXIT;
     }
-
-    int8_t selector = FrodoCommonCtVerify((const uint16_t *)ct, (uint16_t *)ctVerify,
-                                          (params->ctxSize - params->lenSalt) / sizeof(uint16_t));
     // if ct == ctVerify, kPrime = kPrime, else kPrime = skSec
-    FrodoCommonCtSelect(kPrime, kPrime, skSec, params->ss, selector);
-
+    uint32_t selector =  ConstTimeMemcmp(ct, ctVerify, params->ctxSize - params->lenSalt);
+    for (int32_t i = 0; i < params->ss; i++) {
+        kPrime[i] = (uint8_t)(selector & kPrime[i]) | (~selector & skSec[i]);
+    }
     uint32_t ctKLen = params->ctxSize + params->ss; // the length of ct || k
     uint8_t *ctKBuf = (uint8_t *)BSL_SAL_Malloc(ctKLen);
     if (ctKBuf == NULL) {

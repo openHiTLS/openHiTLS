@@ -477,21 +477,22 @@ int32_t CRYPT_XMSS_SetPrvKey(CryptXmssCtx *ctx, const BSL_Param *para)
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
+    ctx->hasPrivateKey = false;
     (void)memcpy_s(ctx->key.seed, sizeof(ctx->key.seed), prv.prvSeed->value, ctx->params->n);
     (void)memcpy_s(ctx->key.prf, sizeof(ctx->key.prf), prv.prvPrf->value, ctx->params->n);
     (void)memcpy_s(ctx->key.pubSeed, sizeof(ctx->key.pubSeed), prv.pubSeed->value, ctx->params->n);
     (void)memcpy_s(ctx->key.root, sizeof(ctx->key.root), prv.pubRoot->value, ctx->params->n);
-    return BSL_PARAM_GetValue(prv.prvIndex, CRYPT_PARAM_XMSS_PRV_INDEX, BSL_PARAM_TYPE_UINT64, &ctx->key.idx, &tmplen);
+    ret = BSL_PARAM_GetValue(prv.prvIndex, CRYPT_PARAM_XMSS_PRV_INDEX, BSL_PARAM_TYPE_UINT64, &ctx->key.idx, &tmplen);
+    if (ret == CRYPT_SUCCESS) {
+        ctx->hasPrivateKey = true;
+    }
+    return ret;
 }
 
 CryptXmssCtx *CRYPT_XMSS_DupCtx(CryptXmssCtx *ctx)
 {
     if (ctx == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
-        return NULL;
-    }
-    if (ConstTimeMemcmp(ctx->key.seed, (uint8_t[XMSS_MAX_SEED_SIZE]){0}, XMSS_MAX_SEED_SIZE) == 0) {
-        BSL_ERR_PUSH_ERROR(CRYPT_NOT_SUPPORT);
         return NULL;
     }
     CryptXmssCtx *newCtx = CRYPT_XMSS_NewCtx();
