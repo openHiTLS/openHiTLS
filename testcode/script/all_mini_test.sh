@@ -29,7 +29,7 @@ parse_option()
     for i in $PARAM_LIST
     do
         case "${i}" in
-            "bsl"|"md"|"mac"|"kdf"|"cipher"|"bn"|"ecc"|"pkey"|"pki"|"all"|"tls"|"provider"|"preset_iso19790")
+            "bsl"|"md"|"mac"|"kdf"|"cipher"|"bn"|"ecc"|"pkey"|"pki"|"all"|"tls"|"provider")
                 TEST=$i
                 ;;
             "x8664"|"armv8")
@@ -522,23 +522,6 @@ test_provider()
     provider_test_check
 }
 
-test_preset_iso19790()
-{
-    NO_LIB="no-tls"
-    test_features="eal,provider,aes,chacha20,cbc,ecb,xts,ctr,ofb,cfb,ccm,gcm,chacha20poly1305"
-    test_features="$test_features,sha1,sha2,sha3,sm3,hmac,cmac_aes,gmac,hkdf,pbkdf2,kdftls12"
-    test_features="$test_features,drbg_ctr,drbg_hash,dsa,ed25519,x25519,rsa,dh,ecdsa,ecdh,sm2"
-    test_features="$test_features,curve_nistp192,curve_nistp224,curve_nistp256,curve_nistp384,curve_nistp521"
-    test_features="$test_features,slh_dsa,mlkem,mldsa,codecskey"
-    bash mini_build_test.sh $COMMON_PARAM $NO_LIB test=$test_features \
-        add-feature-options="-DHITLS_BUILD_PROFILE=iso19790" \
-        add-feature-options="-DHITLS_CRYPTO_RAND_CB=ON" \
-        add-feature-options="-DHITLS_CRYPTO_EALINIT=ON" \
-        add-feature-options="-DHITLS_BSL_UIO_PLT=ON" \
-        add-feature-options="-DHITLS_CRYPTO_ENTROPY_SYS=ON" \
-        add-feature-options="-DHITLS_CRYPTO_BN=ON"
-}
-
 parse_option
 
 case $TEST in
@@ -554,7 +537,6 @@ case $TEST in
         test_pki
         test_tls
         test_provider
-        test_preset_iso19790
         ;;
     "bsl")
         test_bsl
@@ -588,9 +570,6 @@ case $TEST in
         ;;
     "provider")
         test_provider
-        ;;
-    "preset_iso19790")
-        test_preset_iso19790
         ;;
     *)
         ;;

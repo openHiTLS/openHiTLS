@@ -17,6 +17,8 @@ message(STATUS "Loading preset: ISO 19790")
 # Mark preset as loaded (prevents profile system from overriding)
 set(HITLS_PRESET_LOADED ON CACHE BOOL "" FORCE)
 
+set(HITLS_BSL_SAL_MEM            ON CACHE BOOL "" FORCE)
+
 # ---------------------------------------------------------------
 # Crypto - Base Features
 # ---------------------------------------------------------------
@@ -141,3 +143,17 @@ set(HITLS_CRYPTO_KEY_ENCODE         ON CACHE BOOL "" FORCE)
 set(HITLS_CRYPTO_KEY_DECODE         ON CACHE BOOL "" FORCE)
 set(HITLS_CRYPTO_KEY_EPKI           ON CACHE BOOL "" FORCE)
 
+set(HITLS_CRYPTO_SM4                ON CACHE BOOL "" FORCE)
+set(HITLS_CRYPTO_CMAC_SM4           ON CACHE BOOL "" FORCE)
+set(HITLS_CRYPTO_DRBG_GM            ON CACHE BOOL "" FORCE)
+set(HITLS_CRYPTO_SCRYPT             ON CACHE BOOL "" FORCE)
+set(HITLS_CRYPTO_RAND_CB            ON CACHE BOOL "" FORCE)
+set(HITLS_CRYPTO_ENTROPY_SYS        ON CACHE BOOL "" FORCE)
+set(HITLS_CRYPTO_ACVP_TESTS         ON CACHE BOOL "" FORCE)
+set(HITLS_BSL_UIO_PLT               ON CACHE BOOL "" FORCE)
+set(HITLS_CRYPTO_EALINIT            ON CACHE BOOL "" FORCE)
+# Linker flags
+set(CMAKE_SHARED_LINKER_FLAGS
+    "-Wl,--version-script=${CMAKE_SOURCE_DIR}/cmake/presets/libhitls_cmvp.ld"
+    CACHE STRING "Additional linker flags (optional)" FORCE
+)

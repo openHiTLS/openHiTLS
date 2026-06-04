@@ -198,9 +198,13 @@ build_hitls_provider()
     rm -f CMakeCache.txt
 
     if [[ $libname = "libhitls_sm${SHARED_LIB_EXT}" ]] && [[ $get_arch = "armv8_le" ]]; then
-        config_file="${subdir}_sm_feature_config.cmake"
+        config_file="${HITLS_ROOT_DIR}/testcode/config/cmake/${subdir}/${get_arch}/${subdir}_sm_feature_config.cmake"
     else
-        config_file="${subdir}_feature_config.cmake"
+        if [[ $get_arch = "C" ]]; then
+            config_file="${HITLS_ROOT_DIR}/cmake/presets/iso19790.cmake"
+        else
+            config_file="${HITLS_ROOT_DIR}/testcode/config/cmake/${subdir}/${get_arch}/${subdir}_feature_config.cmake"
+        fi
     fi
 
     # Remove SM TLS 1.3 feature for provider build, as it is only needed for main library to support GM suite in TLS 1.3
@@ -208,7 +212,7 @@ build_hitls_provider()
 
     echo "Building provider with config: ${config_file}"
     cmake .. -DCMAKE_SKIP_RPATH=TRUE -DCMAKE_INSTALL_PREFIX=../output/${subdir}/${get_arch} \
-            -C ../testcode/config/cmake/${subdir}/${get_arch}/${config_file} \
+            -C ${config_file} \
             -D_HITLS_COMPILE_OPTIONS_DEL="${del_options}" \
             -DCMAKE_C_FLAGS="${add_options}" \
             -DHITLS_BUNDLE_LIB=ON \
