@@ -29,6 +29,9 @@
 
 #define MAX_DATA_LEN 1024
 #define AES_TAG_LEN 16
+#define AES_XTS_SINGLE_UPDATE_LEN (AES_BLOCKSIZE * 5)
+#define AES_XTS_OVERFLOW_GUARD_LEN AES_BLOCKSIZE
+#define AES_XTS_OVERFLOW_GUARD_VALUE 0xA5
 
 static void Test_CipherOverLap(int algId, Hex *key, Hex *iv, Hex *in, Hex *out, int enc, uint32_t inOffset, uint32_t outOffset)
 {
@@ -1329,6 +1332,121 @@ void SDV_CRYPTO_EAL_AES_FUNC_TC005(int isProvider, int algId, Hex *key, Hex *iv,
 
 EXIT:
     CRYPT_EAL_CipherDeinit(ctx);
+    CRYPT_EAL_CipherFreeCtx(ctx);
+}
+/* END_CASE */
+
+/**
+ * @test  SDV_CRYPTO_EAL_AES_XTS_SINGLE_UPDATE_TC001
+ * @title  AES-XTS single 5-block decrypt must not overwrite following bytes.
+ * @precon Registering memory-related functions.
+ * @brief
+ *    Encrypt 80-byte plaintext in one Update, then decrypt the ciphertext in one Update.
+ *    Keep one block of guard bytes after the input and output buffers.
+ * @expect
+ *    Decrypt succeeds, plaintext is recovered, and both input and output guard bytes are unchanged.
+ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_EAL_AES_XTS_SINGLE_UPDATE_TC001(int algId, Hex *key, Hex *iv, Hex *pt)
+{
+    if (IsAesAlgDisabled(algId)) {
+        SKIP_TEST();
+    }
+    uint8_t cipherTmp[MAX_DATA_LEN] = {0};
+    uint8_t cipher[AES_XTS_SINGLE_UPDATE_LEN + AES_XTS_OVERFLOW_GUARD_LEN] = {0};
+    uint8_t plain[AES_XTS_SINGLE_UPDATE_LEN + AES_XTS_OVERFLOW_GUARD_LEN] = {0};
+    uint8_t guard[AES_XTS_OVERFLOW_GUARD_LEN] = {0};
+    uint8_t finalOut[AES_BLOCKSIZE] = {0};
+    uint32_t cipherLen = pt->len;
+    uint32_t plainLen = pt->len;
+    uint32_t finLen = sizeof(finalOut);
+    CRYPT_EAL_CipherCtx *ctx = NULL;
+
+    TestMemInit();
+    ASSERT_EQ(pt->len, AES_XTS_SINGLE_UPDATE_LEN);
+    ASSERT_TRUE(pt->len <= sizeof(cipherTmp));
+
+    /*
+     * Exact 5-block decrypt used to enter the CTS tail path and write one
+     * extra block. Keep one block of guard bytes after input/output to catch it.
+     */
+    memset(cipher + pt->len, AES_XTS_OVERFLOW_GUARD_VALUE, AES_XTS_OVERFLOW_GUARD_LEN);
+    memset(plain + pt->len, AES_XTS_OVERFLOW_GUARD_VALUE, AES_XTS_OVERFLOW_GUARD_LEN);
+    memset(guard, AES_XTS_OVERFLOW_GUARD_VALUE, sizeof(guard));
+
+    ASSERT_TRUE((ctx = CRYPT_EAL_CipherNewCtx(algId)) != NULL);
+    ASSERT_EQ(CRYPT_EAL_CipherInit(ctx, key->x, key->len, iv->x, iv->len, true), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_CipherUpdate(ctx, pt->x, pt->len, cipherTmp, &cipherLen), CRYPT_SUCCESS);
+    ASSERT_EQ(cipherLen, pt->len);
+    ASSERT_EQ(CRYPT_EAL_CipherFinal(ctx, finalOut, &finLen), CRYPT_SUCCESS);
+    ASSERT_EQ(finLen, 0);
+    memcpy(cipher, cipherTmp, pt->len);
+
+    CRYPT_EAL_CipherDeinit(ctx);
+    ASSERT_EQ(CRYPT_EAL_CipherInit(ctx, key->x, key->len, iv->x, iv->len, false), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_CipherUpdate(ctx, cipher, cipherLen, plain, &plainLen), CRYPT_SUCCESS);
+    ASSERT_EQ(plainLen, pt->len);
+    finLen = sizeof(finalOut);
+    ASSERT_EQ(CRYPT_EAL_CipherFinal(ctx, finalOut, &finLen), CRYPT_SUCCESS);
+    ASSERT_EQ(finLen, 0);
+
+    ASSERT_COMPARE("AES-XTS single Update decrypt:", plain, plainLen, pt->x, pt->len);
+    ASSERT_COMPARE("AES-XTS single Update input guard:", cipher + pt->len, AES_XTS_OVERFLOW_GUARD_LEN,
+        guard, sizeof(guard));
+    ASSERT_COMPARE("AES-XTS single Update output guard:", plain + pt->len, AES_XTS_OVERFLOW_GUARD_LEN,
+        guard, sizeof(guard));
+EXIT:
+    CRYPT_EAL_CipherFreeCtx(ctx);
+}
+/* END_CASE */
+
+/**
+ * @test  SDV_CRYPTO_EAL_AES_XTS_SINGLE_UPDATE_STACK_TC001
+ * @title  AES-XTS single 5-block decrypt with exact stack buffers for ASAN observation.
+ * @precon Registering memory-related functions.
+ * @brief
+ *    Encrypt 80-byte plaintext in one Update, then decrypt using stack input/output buffers
+ *    whose sizes are exactly 80 bytes. No extra guard bytes are provided.
+ * @expect
+ *    Decrypt succeeds and plaintext is recovered. With buggy assembly, an ARM ASAN run is
+ *    expected to abort only if ASAN can detect the stack overwrite from hand-written assembly.
+ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_EAL_AES_XTS_SINGLE_UPDATE_STACK_TC001(int algId, Hex *key, Hex *iv, Hex *pt)
+{
+    if (IsAesAlgDisabled(algId)) {
+        SKIP_TEST();
+    }
+    uint8_t cipherTmp[AES_XTS_SINGLE_UPDATE_LEN] = {0};
+    uint8_t cipher[AES_XTS_SINGLE_UPDATE_LEN] = {0};
+    uint8_t plain[AES_XTS_SINGLE_UPDATE_LEN] = {0};
+    uint8_t finalOut[AES_BLOCKSIZE] = {0};
+    uint32_t cipherLen = sizeof(cipherTmp);
+    uint32_t plainLen = sizeof(plain);
+    uint32_t finLen = sizeof(finalOut);
+    CRYPT_EAL_CipherCtx *ctx = NULL;
+
+    TestMemInit();
+    ASSERT_EQ(pt->len, AES_XTS_SINGLE_UPDATE_LEN);
+
+    ASSERT_TRUE((ctx = CRYPT_EAL_CipherNewCtx(algId)) != NULL);
+    ASSERT_EQ(CRYPT_EAL_CipherInit(ctx, key->x, key->len, iv->x, iv->len, true), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_CipherUpdate(ctx, pt->x, pt->len, cipherTmp, &cipherLen), CRYPT_SUCCESS);
+    ASSERT_EQ(cipherLen, pt->len);
+    ASSERT_EQ(CRYPT_EAL_CipherFinal(ctx, finalOut, &finLen), CRYPT_SUCCESS);
+    ASSERT_EQ(finLen, 0);
+    memcpy(cipher, cipherTmp, pt->len);
+
+    CRYPT_EAL_CipherDeinit(ctx);
+    ASSERT_EQ(CRYPT_EAL_CipherInit(ctx, key->x, key->len, iv->x, iv->len, false), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_CipherUpdate(ctx, cipher, cipherLen, plain, &plainLen), CRYPT_SUCCESS);
+    ASSERT_EQ(plainLen, pt->len);
+    finLen = sizeof(finalOut);
+    ASSERT_EQ(CRYPT_EAL_CipherFinal(ctx, finalOut, &finLen), CRYPT_SUCCESS);
+    ASSERT_EQ(finLen, 0);
+
+    ASSERT_COMPARE("AES-XTS single Update stack decrypt:", plain, plainLen, pt->x, pt->len);
+EXIT:
     CRYPT_EAL_CipherFreeCtx(ctx);
 }
 /* END_CASE */
