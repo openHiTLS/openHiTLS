@@ -84,10 +84,6 @@ void FrodoCommonEncodeLe16(uint8_t *out, const uint16_t *in, uint32_t len);
 
 void FrodoCommonDecodeLe16(uint16_t *out, const uint8_t *in, uint32_t len);
 
-int8_t FrodoCommonCtVerify(const uint16_t *a, const uint16_t *b, uint32_t len);
-
-void FrodoCommonCtSelect(uint8_t *r, const uint8_t *a, const uint8_t *b, uint32_t len, int8_t selector);
-
 // =================================================================================
 // Function Prototypes from core_*.c (Matrix Arithmetic)
 // =================================================================================
