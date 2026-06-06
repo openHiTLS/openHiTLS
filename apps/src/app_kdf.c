@@ -54,7 +54,7 @@ typedef enum OptionChoice {
 static const HITLS_CmdOption g_kdfOpts[] = {
     {"help", HITLS_APP_OPT_KDF_HELP, HITLS_APP_OPT_VALUETYPE_NO_VALUE, "Show usage information for KDF command."},
     {"mac", HITLS_APP_OPT_KDF_MAC_ALG, HITLS_APP_OPT_VALUETYPE_STRING,
-        "Specify MAC algorithm used in KDF (e.g.: hmac-sha256)."},
+        "Specify MAC algorithm used in KDF (e.g.: hmac_sha256)."},
     {"out", HITLS_APP_OPT_KDF_OUT, HITLS_APP_OPT_VALUETYPE_OUT_FILE,
         "Set output file for derived key (default: stdout, hex format)."},
     {"binary", HITLS_APP_OPT_KDF_BINARY, HITLS_APP_OPT_VALUETYPE_NO_VALUE,
