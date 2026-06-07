@@ -593,6 +593,7 @@ enum CRYPT_ERROR {
     CRYPT_SLHDSA_PAIRWISE_CHECK_FAIL,                    /**< The public and private keys are inconsistent. */
     CRYPT_SLHDSA_ERR_NO_PUBKEY,                          /**< No public key. */
     CRYPT_SLHDSA_ERR_NO_PRVKEY,                          /**< No private key. */
+    CRYPT_SLHDSA_CTRL_INIT_REPEATED,                     /**< The CTX cannot be initialized repeatedly. */
 
     CRYPT_PAILLIER_BUFF_LEN_NOT_ENOUGH = 0x01390001, /**< The buffer length is insufficient. */
     CRYPT_PAILLIER_NO_KEY_INFO,              /**< Lacks valid key information. */
@@ -615,6 +616,7 @@ enum CRYPT_ERROR {
     CRYPT_XMSS_PAIRWISE_CHECK_FAIL,                    /**< The public and private keys are inconsistent. */
     CRYPT_XMSS_INVALID_PRVKEY,                         /**< Invalid private key. */
     CRYPT_XMSS_INVALID_PUBKEY,                         /**< Invalid public key. */
+    CRYPT_XMSS_CTRL_INIT_REPEATED,                     /**< The CTX cannot be initialized repeatedly. */
 
     CRYPT_CMVP_COMMON_ERR = 0x013B0001, /**< Common error in CMVP selftest. */
     CRYPT_CMVP_ERR_INTEGRITY,           /**< Integrity error in CMVP selftest. */
@@ -678,8 +680,10 @@ enum CRYPT_ERROR {
     CRYPT_LMS_INVALID_LEAF_INDEX,                /**< LMS invalid leaf index. */
     CRYPT_LMS_BUFFER_TOO_SMALL,                  /**< LMS buffer too small. */
     CRYPT_LMS_DIVISION_BY_ZERO,                  /**< LMS division by zero error. */
+    CRYPT_LMS_PAIRWISE_CHECK_FAIL,               /**< The public and private keys are inconsistent. */
+    CRYPT_LMS_CTRL_INIT_REPEATED,                /**< The CTX cannot be initialized repeatedly. */
 
-    CRYPT_HSS_INVALID_PARAM,                     /**< HSS invalid parameter. */
+    CRYPT_HSS_INVALID_PARAM = 0x01410001,        /**< HSS invalid parameter. */
     CRYPT_HSS_INVALID_LEVEL,                     /**< HSS invalid hierarchy level. */
     CRYPT_HSS_INVALID_CMD,                       /**< HSS invalid control command. */
     CRYPT_HSS_INVALID_KEY_LEN,                   /**< HSS invalid key length. */
@@ -694,7 +698,7 @@ enum CRYPT_ERROR {
     CRYPT_HSS_SIGN_FAIL,                         /**< HSS signature generation failed. */
     CRYPT_HSS_KEYGEN_FAIL,                       /**< HSS key generation failed. */
     CRYPT_HSS_PAIRWISE_CHECK_FAIL,               /**< The public and private keys are inconsistent. */
-    CRYPT_LMS_PAIRWISE_CHECK_FAIL,               /**< The public and private keys are inconsistent. */
+    CRYPT_HSS_CTRL_INIT_REPEATED,                /**< The CTX cannot be initialized repeatedly. */
 };
 #ifdef __cplusplus
 }

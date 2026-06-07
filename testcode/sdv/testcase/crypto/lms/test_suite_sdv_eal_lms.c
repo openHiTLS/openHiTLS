@@ -127,6 +127,46 @@ EXIT:
 }
 /* END_CASE */
 
+/* @
+* @test  SDV_CRYPTO_EAL_LMS_SET_PARA_ID_REPEATED_TC001
+* @spec  -
+* @title  CRYPT_CTRL_SET_PARA_BY_ID cannot be called twice on the same LMS context
+* @brief
+* 1.Create an LMS pkey context.
+* 2.Set para by id with CRYPT_LMS_SHA256_H10_W4, expected CRYPT_SUCCESS.
+* 3.Set para by id again, expected CRYPT_LMS_CTRL_INIT_REPEATED.
+* @expect  second set returns CRYPT_LMS_CTRL_INIT_REPEATED
+@ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_EAL_LMS_SET_PARA_ID_REPEATED_TC001(void)
+{
+    TestMemInit();
+    CRYPT_EAL_PkeyCtx *ctx = NULL;
+    ctx = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_LMS);
+    ASSERT_TRUE(ctx != NULL);
+
+    int32_t algId = CRYPT_LMS_SHA256_H10_W4;
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_SET_PARA_BY_ID,
+        (void *)&algId, sizeof(algId)), CRYPT_SUCCESS);
+
+    /* Set the same algId again — must be rejected */
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_SET_PARA_BY_ID,
+        (void *)&algId, sizeof(algId)), CRYPT_LMS_CTRL_INIT_REPEATED);
+
+    /* Set a different algId — also must be rejected */
+    int32_t otherAlgId = CRYPT_LMS_SHA256_H10_W8;
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_SET_PARA_BY_ID,
+        (void *)&otherAlgId, sizeof(otherAlgId)), CRYPT_LMS_CTRL_INIT_REPEATED);
+
+    BSL_ERR_ClearError();
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
+EXIT:
+    CRYPT_EAL_PkeyFreeCtx(ctx);
+    return;
+}
+/* END_CASE */
+
 /* BEGIN_CASE */
 void SDV_CRYPTO_EAL_LMS_SIGN_VERIFY_TC001(int isProvider)
 {

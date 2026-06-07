@@ -341,8 +341,17 @@ int32_t CRYPT_MLKEM_ParsePkcs8key(void *libCtx, uint8_t *buffer, uint32_t buffer
 /* Create and initialize an XMSS/XMSSMT context from a parsed SubjectPublicKeyInfo. */
 static int32_t XmssSetCtxFromSubPubkey(void *libCtx, CRYPT_DECODE_SubPubkeyInfo *subPubkeyInfo, CryptXmssCtx **pubKey)
 {
-    bool isXmssmt = (subPubkeyInfo->keyType == BSL_CID_XMSSMT);
-    CryptXmssCtx *pctx = isXmssmt ? CRYPT_XMSSMT_NewCtxEx(libCtx) : CRYPT_XMSS_NewCtxEx(libCtx);
+    CryptXmssCtx *pctx = NULL;
+#ifdef HITLS_CRYPTO_XMSSMT
+    if (subPubkeyInfo->keyType == BSL_CID_XMSSMT) {
+        pctx = CRYPT_XMSSMT_NewCtxEx(libCtx);
+    }
+#endif
+#ifdef HITLS_CRYPTO_XMSS
+    if (subPubkeyInfo->keyType == BSL_CID_XMSS) {
+        pctx = CRYPT_XMSS_NewCtxEx(libCtx);
+    }
+#endif
     if (pctx == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         return CRYPT_MEM_ALLOC_FAIL;
@@ -393,17 +402,21 @@ static int32_t XmssParseSubPubkeyAsn1BuffImpl(void *libCtx, uint8_t *buff, uint3
     return XmssSetCtxFromSubPubkey(libCtx, &subPubkeyInfo, pubKey);
 }
 
+#ifdef HITLS_CRYPTO_XMSS
 int32_t CRYPT_XMSS_ParseSubPubkeyAsn1Buff(void *libCtx, uint8_t *buff, uint32_t buffLen,
     CryptXmssCtx **pubKey, bool isComplete)
 {
     return XmssParseSubPubkeyAsn1BuffImpl(libCtx, buff, buffLen, pubKey, isComplete, BSL_CID_XMSS);
 }
+#endif
 
+#ifdef HITLS_CRYPTO_XMSSMT
 int32_t CRYPT_XMSSMT_ParseSubPubkeyAsn1Buff(void *libCtx, uint8_t *buff, uint32_t buffLen,
     CryptXmssCtx **pubKey, bool isComplete)
 {
     return XmssParseSubPubkeyAsn1BuffImpl(libCtx, buff, buffLen, pubKey, isComplete, BSL_CID_XMSSMT);
 }
+#endif
 #endif
 
 #endif // HITLS_CRYPTO_KEY_DECODE_CHAIN && (HITLS_CRYPTO_MLDSA || HITLS_CRYPTO_MLKEM ||

@@ -21,6 +21,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
+#include <stdbool.h>
 #include "crypt_algid.h"
 
 #ifdef __cplusplus

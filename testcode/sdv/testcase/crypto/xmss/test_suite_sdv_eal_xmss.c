@@ -114,6 +114,46 @@ EXIT:
 }
 /* END_CASE */
 
+
+/* @
+* @test  SDV_CRYPTO_XMSS_SET_PARA_ID_REPEATED_TC001
+* @spec  -
+* @title  CRYPT_CTRL_SET_PARA_BY_ID cannot be called twice on the same context
+* @brief
+* 1.Create an XMSS pkey context.
+* 2.Set para by id with CRYPT_XMSS_SHA2_10_256, expected CRYPT_SUCCESS.
+* 3.Set para by id again with the same or different algId, expected CRYPT_XMSS_CTRL_INIT_REPEATED.
+* @expect  second set returns CRYPT_XMSS_CTRL_INIT_REPEATED
+@ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_XMSS_SET_PARA_ID_REPEATED_TC001(void)
+{
+    TestMemInit();
+    CRYPT_EAL_PkeyCtx *pkey = NULL;
+    pkey = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_XMSS);
+    ASSERT_TRUE(pkey != NULL);
+
+    int32_t algId = CRYPT_XMSS_SHA2_10_256;
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_SET_PARA_BY_ID,
+        (void *)&algId, sizeof(algId)), CRYPT_SUCCESS);
+
+    /* Set the same algId again — must be rejected */
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_SET_PARA_BY_ID,
+        (void *)&algId, sizeof(algId)), CRYPT_XMSS_CTRL_INIT_REPEATED);
+
+    /* Set a different algId — also must be rejected */
+    int32_t otherAlgId = CRYPT_XMSS_SHA2_16_256;
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_SET_PARA_BY_ID,
+        (void *)&otherAlgId, sizeof(otherAlgId)), CRYPT_XMSS_CTRL_INIT_REPEATED);
+
+    BSL_ERR_ClearError();
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
+EXIT:
+    CRYPT_EAL_PkeyFreeCtx(pkey);
+    return;
+}
+/* END_CASE */
 /* BEGIN_CASE */
 void SDV_CRYPTO_XMSS_GETSET_KEY_TC001(void)
 {

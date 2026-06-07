@@ -341,6 +341,10 @@ static bool CheckNotXmssAlgId(int32_t algId)
 
 static int32_t XmssSetParaId(CryptXmssCtx *ctx, void *val, uint32_t len)
 {
+    if (ctx->params != NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_XMSS_CTRL_INIT_REPEATED);
+        return CRYPT_XMSS_CTRL_INIT_REPEATED;
+    }
     if (len != sizeof(int32_t)) {
         BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
         return CRYPT_INVALID_ARG;

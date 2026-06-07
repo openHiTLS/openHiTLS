@@ -193,6 +193,10 @@ static int32_t LmsCtrlSetOtsType(CRYPT_LMS_Ctx *ctx, void *val, uint32_t valLen)
  */
 static int32_t LmsCtrlSetParaById(CRYPT_LMS_Ctx *ctx, void *val, uint32_t valLen)
 {
+    if (ctx->para.lmsType != 0) {
+        BSL_ERR_PUSH_ERROR(CRYPT_LMS_CTRL_INIT_REPEATED);
+        return CRYPT_LMS_CTRL_INIT_REPEATED;
+    }
     if (valLen != sizeof(int32_t)) {
         BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
         return CRYPT_INVALID_ARG;

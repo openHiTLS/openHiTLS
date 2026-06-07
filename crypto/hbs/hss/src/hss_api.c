@@ -352,6 +352,10 @@ static int32_t HssCtrlGetLevels(CRYPT_HSS_Ctx *ctx, void *val, uint32_t valLen)
  */
 static int32_t HssCtrlSetParaById(CRYPT_HSS_Ctx *ctx, void *val, uint32_t valLen)
 {
+    if (ctx->para.levels != 0) {
+        BSL_ERR_PUSH_ERROR(CRYPT_HSS_CTRL_INIT_REPEATED);
+        return CRYPT_HSS_CTRL_INIT_REPEATED;
+    }
     if (valLen != sizeof(int32_t)) {
         BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
         return CRYPT_INVALID_ARG;
