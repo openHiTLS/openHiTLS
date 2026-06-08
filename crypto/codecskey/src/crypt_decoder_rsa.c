@@ -71,6 +71,7 @@ static int32_t ProcRsaKeyPair(uint8_t *buff, uint32_t buffLen, CRYPT_RSA_Ctx *rs
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
+    CRYPT_CODECSKEY_NormalizeRsaPrvCrtParams(asn1);
 
     ret = ProcRsaPrivKey(asn1, rsaKey);
     if (ret != CRYPT_SUCCESS) {

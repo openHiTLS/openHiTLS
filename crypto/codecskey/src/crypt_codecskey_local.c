@@ -221,6 +221,7 @@ static int32_t ProcEalRsaKeyPair(uint8_t *buff, uint32_t buffLen, CRYPT_EAL_Pkey
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
+    CRYPT_CODECSKEY_NormalizeRsaPrvCrtParams(asn1);
 
     ret = ProcEalRsaPrivKey(asn1, ealPkey);
     if (ret != CRYPT_SUCCESS) {
