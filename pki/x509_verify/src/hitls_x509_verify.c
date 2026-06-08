@@ -33,6 +33,7 @@
 #include "crypt_algid.h"
 #include "crypt_errno.h"
 #include "hitls_x509_verify.h"
+#include "crypt_utils.h"
 #ifdef HITLS_PKI_X509_VFY_IDENTITY
 #include "sal_ip_util.h"
 #endif
@@ -42,6 +43,21 @@
 #define MAX_HOSTNAME_LEN 255
 
 typedef int32_t (*HITLS_X509_TrvListCallBack)(void *ctx, void *node, int32_t depth);
+
+typedef struct {
+    HITLS_X509_Crl *baseCrl;
+    HITLS_X509_Crl *deltaCrl;
+    HITLS_X509_Cert *issuerCert;
+    uint32_t newReasons;
+    uint32_t reasons;
+    uint8_t errorPath;
+} HITLS_X509_CrlSelection;
+
+#define HITLS_X509_CRL_ERROR_TIME  0x01
+#define HITLS_X509_CRL_ERROR_DIFF_SCOPE   0x02
+#define HITLS_X509_CRL_ERROR_CRITICAL_EXT 0x04
+
+#define HITLS_X509_REASON_FLAG_NONE                   0x0000
 
 #ifdef HITLS_PKI_X509_VFY_CB
 static int32_t VerifyCbDefault(int32_t errCode, HITLS_X509_StoreCtx *storeCtx)
@@ -926,6 +942,37 @@ int32_t HITLS_X509_CheckCrlTime(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_Crl *c
     return HITLS_PKI_SUCCESS;
 }
 
+static int32_t X509_CheckCrlTimeWithoutCb(int64_t *time, HITLS_X509_Crl *crl)
+{
+    // If time is not set, consider it as valid (no time check)
+    if (time == NULL) {
+        return HITLS_PKI_SUCCESS;
+    }
+    int64_t start = 0;
+    int64_t end = 0;
+    HITLS_X509_ValidTime *validTime = &crl->tbs.validTime;
+    int32_t ret = BSL_SAL_DateToUtcTimeConvert(&validTime->start, &start);
+    if (ret != BSL_SUCCESS) {
+        return HITLS_X509_ERR_VFY_GET_THISUPDATE_FAIL;
+    }
+    if (start > *time) {
+        return HITLS_X509_ERR_VFY_THISUPDATE_IN_FUTURE;
+    }
+
+    if ((validTime->flag & BSL_TIME_AFTER_SET) == 0) {
+        return HITLS_PKI_SUCCESS;
+    }
+
+    ret = BSL_SAL_DateToUtcTimeConvert(&validTime->end, &end);
+    if (ret != BSL_SUCCESS) {
+        return HITLS_X509_ERR_VFY_GET_NEXTUPDATE_FAIL;
+    }
+    if (end < *time) {
+        return HITLS_X509_ERR_VFY_NEXTUPDATE_EXPIRED;
+    }
+    return HITLS_PKI_SUCCESS;
+}
+
 static int32_t X509_AddCertToChain(HITLS_X509_List *chain, HITLS_X509_Cert *cert)
 {
     int ref;
@@ -1288,7 +1335,7 @@ static int32_t HITLS_X509_CheckCertExtNode(void *ctx, HITLS_X509_ExtEntry *extNo
     if (extNode->cid != BSL_CID_CE_KEYUSAGE && extNode->cid != BSL_CID_CE_BASICCONSTRAINTS &&
         extNode->cid != BSL_CID_CE_EXTKEYUSAGE && extNode->cid != BSL_CID_CE_SUBJECTALTNAME &&
         extNode->cid != BSL_CID_CE_AUTHORITYKEYIDENTIFIER && extNode->cid != BSL_CID_CE_SUBJECTKEYIDENTIFIER &&
-        extNode->critical == true) {
+        extNode->cid != BSL_CID_CE_CRLDISTRIBUTIONPOINTS && extNode->critical == true) {
 #ifdef HITLS_PKI_X509_VFY_CB
         if (VerifyCertCbk(ctx, NULL, -1, HITLS_X509_ERR_PROCESS_CRITICALEXT) != HITLS_PKI_SUCCESS) {
             BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_PROCESS_CRITICALEXT);
@@ -1300,6 +1347,24 @@ static int32_t HITLS_X509_CheckCertExtNode(void *ctx, HITLS_X509_ExtEntry *extNo
 #endif
     }
     return HITLS_PKI_SUCCESS;
+}
+
+static int32_t HITLS_X509_CheckCrlExtNode(void *ctx, HITLS_X509_ExtEntry *extNode, int32_t depth)
+{
+    (void)ctx;
+    (void)depth;
+    switch (extNode->cid) {
+        case BSL_CID_CE_AUTHORITYKEYIDENTIFIER:
+        case BSL_CID_CE_CRLNUMBER:
+        case BSL_CID_CE_ISSUINGDISTRIBUTIONPOINT:
+        case BSL_CID_CE_DELTACRLINDICATOR:
+            return HITLS_PKI_SUCCESS;
+        default:
+            if (extNode->critical == true) {
+                return HITLS_X509_ERR_PROCESS_CRITICALEXT;
+            }
+            return HITLS_PKI_SUCCESS;
+    }
 }
 
 #if defined(HITLS_CRYPTO_MLDSA) || defined(HITLS_CRYPTO_SLH_DSA)
@@ -1463,24 +1528,642 @@ static int32_t X509_StoreCheckSignature(const BSL_Buffer *sm2UserId, const CRYPT
     return ret;
 }
 
+#ifndef HITLS_PKI_X509_VFY_CRL_LITE
+static const BSL_ASN1_Buffer *X509_GetRawExtnValueByCid(HITLS_X509_Ext *ext, BslCid cid)
+{
+    if (ext == NULL || ext->extList == NULL) {
+        return NULL;
+    }
+    for (BslListNode *node = BSL_LIST_FirstNode(ext->extList); node != NULL;
+        node = BSL_LIST_GetNextNode(ext->extList, node)) {
+        HITLS_X509_ExtEntry *entry = (HITLS_X509_ExtEntry *)BSL_LIST_GetData(node);
+        if (entry->cid == cid) {
+            return &entry->extnValue;
+        }
+    }
+    return NULL;
+}
+
+static HITLS_X509_NameNode *NameNodeShallowDup(HITLS_X509_NameNode *node)
+{
+    HITLS_X509_NameNode *res = (HITLS_X509_NameNode *)BSL_SAL_Calloc(1, sizeof(HITLS_X509_NameNode));
+    if (res == NULL) {
+        BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
+        return NULL;
+    }
+    res->layer = node->layer;
+    res->nameType = node->nameType;
+    res->nameValue = node->nameValue;
+    res->utf8Value = node->utf8Value;
+    return res;
+}
+
+static BslList *X509_AppendIssuerToRelativeName(BslList *relativeName, BslList *issuerName)
+{
+    // Create a list view of issuerName || relativeName
+    BslList *completeName = BSL_LIST_Copy(issuerName, NULL, NULL);
+    if (completeName == NULL) {
+        BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
+        return NULL;
+    }
+    for (BslListNode *node = BSL_LIST_FirstNode(relativeName); node != NULL;
+        node = BSL_LIST_GetNextNode(relativeName, node)) {
+        HITLS_X509_NameNode *nameNode = (HITLS_X509_NameNode *)BSL_LIST_GetData(node);
+        HITLS_X509_NameNode *dupNode = NameNodeShallowDup(nameNode);
+        if (dupNode == NULL) {
+            BSL_LIST_FREE(completeName, NULL);
+            return NULL;
+        }
+        int32_t ret = BSL_LIST_AddElement(completeName, dupNode, BSL_LIST_POS_END);
+        if (ret != BSL_SUCCESS) {
+            BSL_SAL_Free(dupNode);
+            BSL_LIST_FREE(completeName, NULL);
+            BSL_ERR_PUSH_ERROR(ret);
+            return NULL;
+        }
+    }
+    return completeName;
+}
+
+static bool X509_CheckGeneralNameMatch(const HITLS_X509_GeneralName *name1, const HITLS_X509_GeneralName *name2)
+{
+    if (name1 == NULL || name2 == NULL) {
+        return name1 == name2;
+    }
+    if (name1->type != name2->type) {
+        return false;
+    }
+    if (name1->type == HITLS_X509_GN_DNNAME) {
+        return HITLS_X509_CmpNameNode((BslList *)(uintptr_t)name1->value.data,
+            (BslList *)(uintptr_t)name2->value.data) == 0;
+    }
+    if (name1->value.dataLen != name2->value.dataLen) {
+        return false;
+    }
+    if (name1->value.data == NULL || name2->value.data == NULL) {
+        return name1->value.data == name2->value.data;
+    }
+    return memcmp(name1->value.data, name2->value.data, name1->value.dataLen) == 0;
+}
+
+static bool X509_CheckRelativeNameInGeneralNames(BslList *relativeName, BslList *issuerName, BslList *generalNames)
+{
+    if (relativeName == NULL || generalNames == NULL) {
+        return false;
+    }
+    BslList *completeName = X509_AppendIssuerToRelativeName(relativeName, issuerName);
+    if (completeName == NULL) {
+        return false;
+    }
+    for (BslListNode *node = BSL_LIST_FirstNode(generalNames); node != NULL;
+        node = BSL_LIST_GetNextNode(generalNames, node)) {
+        HITLS_X509_GeneralName *name = (HITLS_X509_GeneralName *)BSL_LIST_GetData(node);
+        if (name == NULL || name->type != HITLS_X509_GN_DNNAME) {
+            continue;
+        }
+        bool retVal = (HITLS_X509_CmpNameNode(completeName, (BslList *)(uintptr_t)name->value.data) == 0);
+        if (retVal) {
+            BSL_LIST_FREE(completeName, NULL);
+            return true;
+        }
+    }
+    BSL_LIST_FREE(completeName, NULL);
+    return false;
+}
+
+static bool X509_CheckGeneralNamesMatch(BslList *nameList1, BslList *nameList2)
+{
+    if (nameList1 == NULL || nameList2 == NULL) {
+        return false;
+    }
+    for (BslListNode *node1 = BSL_LIST_FirstNode(nameList1); node1 != NULL;
+        node1 = BSL_LIST_GetNextNode(nameList1, node1)) {
+        HITLS_X509_GeneralName *name1 = (HITLS_X509_GeneralName *)BSL_LIST_GetData(node1);
+        for (BslListNode *node2 = BSL_LIST_FirstNode(nameList2); node2 != NULL;
+            node2 = BSL_LIST_GetNextNode(nameList2, node2)) {
+            HITLS_X509_GeneralName *name2 = (HITLS_X509_GeneralName *)BSL_LIST_GetData(node2);
+            if (X509_CheckGeneralNameMatch(name1, name2)) {
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
+/*
+    1. dp1 == NULL || dp2 == NULL, return true
+    2. relative name vs relative name: match if the two relative names are the same
+    3. relative name vs full name: match if relative name appended with issuer name is the same as one of the full names
+    4. full name vs full name: match if they have at least one same general name
+*/
+static bool X509_CheckDpNameMatch(HITLS_X509_DistPointName *dp1, BslList *issuerName1, HITLS_X509_DistPointName *dp2,
+    BslList *issuerName2)
+{
+    if (dp1 == NULL || dp2 == NULL) {
+        return true;
+    } else if (dp1->name == NULL || dp2->name == NULL) {
+        // if dp1 != NULL or dp2 != NULL, dp1->name and dp2->name MUST NOT be NULL;
+        return false;
+    }
+    // relative name vs relative name OR relative name vs full name
+    if (dp1->type == HITLS_X509_DP_RELATIVENAME) {
+        if (dp2->type == HITLS_X509_DP_RELATIVENAME) {
+            return HITLS_X509_CmpNameNode(dp1->name, dp2->name) == 0;
+        }
+        if (dp2->type == HITLS_X509_DP_FULLNAME) {
+            return X509_CheckRelativeNameInGeneralNames(dp1->name, issuerName1, dp2->name);
+        }
+        return false;
+    }
+    if (dp2->type == HITLS_X509_DP_RELATIVENAME) {
+        if (dp1->type == HITLS_X509_DP_FULLNAME) {
+            return X509_CheckRelativeNameInGeneralNames(dp2->name, issuerName2, dp1->name);
+        }
+        return false;
+    }
+    if (dp1->type != HITLS_X509_DP_FULLNAME || dp2->type != HITLS_X509_DP_FULLNAME) {
+        return false;
+    }
+    // full name vs full name
+    return X509_CheckGeneralNamesMatch(dp1->name, dp2->name);
+}
+
+static int32_t X509_GetAndCheckIdp(HITLS_X509_Crl *crl, HITLS_X509_ExtIdp *idp)
+{
+    int32_t ret = X509_ExtCtrl(&crl->tbs.crlExt, HITLS_X509_EXT_GET_IDP, idp, sizeof(HITLS_X509_ExtIdp));
+    if (ret == HITLS_PKI_SUCCESS) {
+        ret = HITLS_X509_CheckIdp(idp);
+        if (ret != HITLS_PKI_SUCCESS) {
+            HITLS_X509_ClearIdp(idp);
+            return ret;
+        }
+        // Currently we don't support indirect CRL
+        if (idp->indirectCrl) {
+            HITLS_X509_ClearIdp(idp);
+            return HITLS_X509_ERR_EXT_IDP;
+        }
+        if (!idp->hasReasons) {
+            idp->onlySomeReasons = HITLS_X509_REASON_FLAG_ALL;
+        }
+        return HITLS_PKI_SUCCESS;
+    }
+    if (ret == HITLS_X509_ERR_EXT_NOT_FOUND) {
+        idp->onlySomeReasons = HITLS_X509_REASON_FLAG_ALL;
+        return HITLS_PKI_SUCCESS;
+    }
+    return ret;
+}
+
+static int32_t X509_CheckCertInCrlIdpScope(HITLS_X509_Cert *cert, HITLS_X509_Crl *crl,
+    HITLS_X509_ExtIdp *idp)
+{
+    HITLS_X509_CertExt *certExt = (HITLS_X509_CertExt *)cert->tbs.ext.extData;
+    bool isCa = ((certExt->extFlags & HITLS_X509_EXT_FLAG_BCONS) != 0) && certExt->isCa;
+    if ((idp->onlyContainsUserCerts && isCa) || (idp->onlyContainsCACerts && !isCa) ||
+        idp->onlyContainsAttributeCerts) {
+        return HITLS_X509_ERR_VFY_DIFFERENT_CRL_SCOPE;
+    }
+    HITLS_X509_ExtCdp cdp = {0};
+    int32_t ret = X509_ExtCtrl(&cert->tbs.ext, HITLS_X509_EXT_GET_CDP, &cdp, sizeof(cdp));
+    if (ret != HITLS_PKI_SUCCESS && ret != HITLS_X509_ERR_EXT_NOT_FOUND) {
+        return ret;
+    }
+    /*
+        Reason mask computation:
+        1. idp == NULL, cdp == NULL: reason mask = idp->reasons(ALL REASON)
+        2. idp == NULL or idp->dpName == NULL, cdp != NULL: reason mask = all reasons in cdp, because idp will match with each dp
+        3. idp != NULL, cdp == NULL: if idp->dpName != NULL, don't match, else reason mask = idp->reasons;
+        4. idp != NULL and idp->dpName != NULL, cdp != NULL; reason mask = interimReasonMask & idp->reasons; where interimReasonMask = | dp_i->reasons for dp_i mathces idp;
+    */
+    if (cdp.points == NULL) {
+        if (idp->distPoint != NULL && idp->distPoint->name != NULL) {
+            return HITLS_X509_ERR_VFY_DIFFERENT_CRL_SCOPE;
+        }
+        return HITLS_PKI_SUCCESS;
+    }
+    uint16_t interimReasonMask = HITLS_X509_REASON_FLAG_NONE;
+    bool isDpNameMatched = false;
+    for (BslListNode *dpNode = BSL_LIST_FirstNode(cdp.points); dpNode != NULL;
+        dpNode = BSL_LIST_GetNextNode(cdp.points, dpNode)) {
+        HITLS_X509_CrlDistPoint *dp = (HITLS_X509_CrlDistPoint *)dpNode->data;
+        // We do not support indirect CRL, thus crlIssuer field MUST be NULL, and dpName MUST NOT be NULL
+        if (dp->crlIssuer != NULL || dp->distPointName == NULL) {
+            continue;
+        }
+        // if idp == NULL or idp->distPoint == NULL, idp will match with each dp;
+        if (X509_CheckDpNameMatch(dp->distPointName, cert->tbs.issuerName, idp->distPoint, crl->tbs.issuerName)) {
+            isDpNameMatched = true;
+            if (!dp->hasReasons) {
+                interimReasonMask = HITLS_X509_REASON_FLAG_ALL;
+            } else {
+                interimReasonMask |= dp->reasons;
+            }
+        }
+    }
+    if (!isDpNameMatched) {
+        HITLS_X509_ClearCdp(&cdp);
+        return HITLS_X509_ERR_VFY_DIFFERENT_CRL_SCOPE;
+    }
+    idp->onlySomeReasons &= interimReasonMask;
+    HITLS_X509_ClearCdp(&cdp);
+    return HITLS_PKI_SUCCESS;
+}
+
+
+static bool X509_IsDeltaCrlIssuerMatch(HITLS_X509_Crl *deltaCrl, HITLS_X509_Crl *baseCrl)
+{
+    return HITLS_X509_CmpNameNode(deltaCrl->tbs.issuerName, baseCrl->tbs.issuerName) == 0;
+}
+
+static bool X509_IsDeltaCrlAkiMatch(HITLS_X509_Crl *deltaCrl, HITLS_X509_Crl *baseCrl)
+{
+    HITLS_X509_ExtAki deltaAki = {0};
+    HITLS_X509_ExtAki baseAki = {0};
+    int32_t deltaRet = HITLS_X509_CrlCtrl(deltaCrl, HITLS_X509_EXT_GET_AKI, &deltaAki, sizeof(deltaAki));
+    int32_t baseRet = HITLS_X509_CrlCtrl(baseCrl, HITLS_X509_EXT_GET_AKI, &baseAki, sizeof(baseAki));
+    bool isMatch = false;
+    if (deltaRet != HITLS_PKI_SUCCESS || baseRet != HITLS_PKI_SUCCESS) {
+        if (deltaRet == baseRet && deltaRet == HITLS_X509_ERR_EXT_NOT_FOUND) {
+            isMatch = true;
+            goto EXIT;
+        }
+        goto EXIT;
+    }
+    isMatch = deltaAki.kid.dataLen == baseAki.kid.dataLen &&
+        memcmp(deltaAki.kid.data, baseAki.kid.data, deltaAki.kid.dataLen) == 0;
+EXIT:
+    HITLS_X509_ClearAuthorityKeyId(&deltaAki);
+    HITLS_X509_ClearAuthorityKeyId(&baseAki);
+    return isMatch;
+}
+
+static bool X509_IsDeltaIndicatorMatchBase(HITLS_X509_Crl *candidate, const HITLS_X509_ExtCrlNumber *baseCrlNumber)
+{
+    // delta crl indicator <= base crl number
+    HITLS_X509_ExtDeltaCrl deltaIndicator = {0};
+    // it must be a delta crl
+    if (HITLS_X509_CrlCtrl(candidate, HITLS_X509_EXT_GET_DELTA_CRL,
+        &deltaIndicator, sizeof(deltaIndicator)) != HITLS_PKI_SUCCESS) {
+        return false;
+    }
+    if (deltaIndicator.crlNumber.dataLen != baseCrlNumber->crlNumber.dataLen) {
+        return deltaIndicator.crlNumber.dataLen < baseCrlNumber->crlNumber.dataLen;
+    }
+    return memcmp(deltaIndicator.crlNumber.data, baseCrlNumber->crlNumber.data,
+        deltaIndicator.crlNumber.dataLen) <= 0;
+}
+
+static bool X509_IsDeltaCrlIdpMatchBase(HITLS_X509_Crl *candidate, HITLS_X509_Crl *baseCrl)
+{
+    const BSL_ASN1_Buffer *deltaIdp = X509_GetRawExtnValueByCid(&candidate->tbs.crlExt,
+        BSL_CID_CE_ISSUINGDISTRIBUTIONPOINT);
+    const BSL_ASN1_Buffer *baseIdp = X509_GetRawExtnValueByCid(&baseCrl->tbs.crlExt,
+        BSL_CID_CE_ISSUINGDISTRIBUTIONPOINT);
+    if (deltaIdp == NULL || baseIdp == NULL) {
+        return deltaIdp == baseIdp;
+    }
+    return deltaIdp->len == baseIdp->len && memcmp(deltaIdp->buff, baseIdp->buff, deltaIdp->len) == 0;
+}
+
+static bool X509_IsDeltaCrlNumberValid(HITLS_X509_Crl *candidate, const HITLS_X509_ExtCrlNumber *baseCrlNumber)
+{
+    HITLS_X509_ExtCrlNumber deltaCrlNumber = {0};
+
+    if (HITLS_X509_CrlCtrl(candidate, HITLS_X509_EXT_GET_CRLNUMBER,
+        &deltaCrlNumber, sizeof(deltaCrlNumber)) != HITLS_PKI_SUCCESS) {
+        return false;
+    }
+    // Delta crl number MUST greater than base crl number
+    if (deltaCrlNumber.crlNumber.dataLen != baseCrlNumber->crlNumber.dataLen) {
+        return deltaCrlNumber.crlNumber.dataLen > baseCrlNumber->crlNumber.dataLen;
+    }
+    return memcmp(deltaCrlNumber.crlNumber.data, baseCrlNumber->crlNumber.data, deltaCrlNumber.crlNumber.dataLen) > 0;
+}
+
+static HITLS_X509_Crl *X509_FindDeltaCrl(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_Crl *baseCrl)
+{
+    if ((storeCtx->verifyParam.flags & HITLS_X509_VFY_FLAG_CRL_USE_DELTA) == 0) {
+        return NULL;
+    }
+    HITLS_X509_ExtCrlNumber baseCrlNumber = {0};
+    int32_t ret = HITLS_X509_CrlCtrl(baseCrl, HITLS_X509_EXT_GET_CRLNUMBER, &baseCrlNumber, sizeof(baseCrlNumber));
+    // base must have baseCrlNumber
+    if (ret != HITLS_PKI_SUCCESS) {
+        return NULL;
+    }
+    HITLS_X509_Crl *retCrl = NULL;
+    // Check rules refer to RFC5280 :https://datatracker.ietf.org/doc/html/rfc5280#section-5.2.4
+    for (BslListNode *crlNode = BSL_LIST_FirstNode(storeCtx->crl); crlNode != NULL;
+         crlNode = BSL_LIST_GetNextNode(storeCtx->crl, crlNode)) {
+        HITLS_X509_Crl *candidate = (HITLS_X509_Crl *)BSL_LIST_GetData(crlNode);
+        if (candidate == baseCrl) {
+            continue;
+        }
+        if (!X509_IsDeltaIndicatorMatchBase(candidate, &baseCrlNumber)) {
+            continue;
+        }
+        if (!X509_IsDeltaCrlIssuerMatch(candidate, baseCrl)) {
+            continue;
+        }
+        if (!X509_IsDeltaCrlAkiMatch(candidate, baseCrl)) {
+            continue;
+        }
+        if (!X509_IsDeltaCrlIdpMatchBase(candidate, baseCrl)) {
+            continue;
+        }
+        if (!X509_IsDeltaCrlNumberValid(candidate, &baseCrlNumber)) {
+            continue;
+        }
+        // if there is a newer delta crl candidate, we select the newer one as the final delta crl
+        if (retCrl == NULL) {
+            retCrl = candidate;
+        } else if (BSL_SAL_DateTimeCompare(&candidate->tbs.validTime.start, &retCrl->tbs.validTime.start, NULL) ==
+                   BSL_TIME_DATE_AFTER) {
+            retCrl = candidate;
+        }
+    }
+    return retCrl;
+}
+
+static int32_t X509_CheckCrlCriticalExt(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_Crl *crl)
+{
+    return HITLS_X509_TrvList(crl->tbs.crlExt.extList,
+        (HITLS_X509_TrvListCallBack)HITLS_X509_CheckCrlExtNode, storeCtx);
+}
+
+static int32_t X509_CheckCrlIsExpire(int64_t *time, HITLS_X509_Crl *baseCrl, HITLS_X509_Crl *deltaCrl)
+{
+    int32_t baseRet = X509_CheckCrlTimeWithoutCb(time, baseCrl);
+    if (deltaCrl != NULL) {
+        int32_t deltaRet = X509_CheckCrlTimeWithoutCb(time, deltaCrl);
+        // if delta CRL has TIME ERROR, return TIME ERROR
+        if (deltaRet != HITLS_PKI_SUCCESS) {
+            return HITLS_X509_ERR_VFY_CRL_TIME_ERROR;
+        }
+        // if delta CRL is valid, ignore NEXTUPDATE_EXPIRED error of base CRL
+        if (baseRet == HITLS_PKI_SUCCESS || baseRet == HITLS_X509_ERR_VFY_NEXTUPDATE_EXPIRED) {
+            return HITLS_PKI_SUCCESS;
+        }
+        return HITLS_X509_ERR_VFY_CRL_TIME_ERROR;
+    }
+    return baseRet == HITLS_PKI_SUCCESS ? HITLS_PKI_SUCCESS : HITLS_X509_ERR_VFY_CRL_TIME_ERROR;
+}
+
+static bool X509_CompareWithCurrentCrl(const HITLS_X509_CrlSelection *selection, HITLS_X509_Crl *baseCrl,
+    uint8_t errorPath)
+{
+    if (selection->baseCrl == NULL) {
+        return true;
+    }
+    if (errorPath == selection->errorPath) {
+        return BSL_SAL_DateTimeCompare(&baseCrl->tbs.validTime.start,
+            &selection->baseCrl->tbs.validTime.start, NULL) == BSL_TIME_DATE_AFTER;
+    }
+    return errorPath < selection->errorPath;
+}
+
+typedef struct {
+    uint8_t errorPathBit;
+    uint32_t x509VfyErrorCode;
+} ErrorPathMap;
+
+static ErrorPathMap g_errorPathMap[] = {
+    {HITLS_X509_CRL_ERROR_DIFF_SCOPE, HITLS_X509_ERR_VFY_DIFFERENT_CRL_SCOPE},
+    {HITLS_X509_CRL_ERROR_CRITICAL_EXT, HITLS_X509_ERR_PROCESS_CRITICALEXT}
+};
+
+static bool X509_CheckIsDeltaCrl(HITLS_X509_Crl *crl)
+{
+    HITLS_X509_ExtDeltaCrl deltaIndicator = {0};
+    int32_t ret = HITLS_X509_CrlCtrl(crl, HITLS_X509_EXT_GET_DELTA_CRL, &deltaIndicator, sizeof(deltaIndicator));
+    return ret != HITLS_X509_ERR_EXT_NOT_FOUND;
+}
+
+static bool X509_CheckAkiSkiMatch(HITLS_X509_Cert *cert, HITLS_X509_Crl *crl)
+{
+    if (cert->tbs.version != HITLS_X509_VERSION_3 || crl->tbs.version != 1 ||
+        (HITLS_X509_CheckAki(&cert->tbs.ext, &crl->tbs.crlExt, cert->tbs.issuerName, &cert->tbs.serialNum) ==
+         HITLS_PKI_SUCCESS)) {
+        return true;
+    }
+    return false;
+}
+
+static int32_t X509_FindBaseCrlAndDeltaCrl(HITLS_X509_StoreCtx *storeCtx, int64_t *time, HITLS_X509_Cert *cert,
+                                           HITLS_X509_Cert *parent, HITLS_X509_CrlSelection *selection)
+{
+    for (BslListNode *crlNode = BSL_LIST_FirstNode(storeCtx->crl); crlNode != NULL;
+        crlNode = BSL_LIST_GetNextNode(storeCtx->crl, crlNode)) {
+        HITLS_X509_Crl *crl = (HITLS_X509_Crl *)BSL_LIST_GetData(crlNode);
+        if (X509_CheckIsDeltaCrl(crl)) {
+            continue;
+        }
+        HITLS_X509_Crl *deltaCrl = NULL;
+        uint8_t errorPath = 0;
+        HITLS_X509_ExtIdp idp = { 0 };
+        // If idp is invalid, we ignore this crl
+        int32_t ret = X509_GetAndCheckIdp(crl, &idp);
+        if (ret != HITLS_PKI_SUCCESS) {
+            goto CONTINUE;
+        }
+        // Check if this crl can cover new reasons
+        if ((idp.onlySomeReasons & (~selection->reasons)) == HITLS_X509_REASON_FLAG_NONE) {
+            goto CONTINUE;
+        }
+        // Compare crl issuer name with cert issuer name
+        ret = HITLS_X509_CmpNameNode(crl->tbs.issuerName, parent->tbs.subjectName);
+        if (ret != HITLS_PKI_SUCCESS) {
+            goto CONTINUE;
+        }
+        if (!X509_CheckAkiSkiMatch(parent, crl)) {
+            goto CONTINUE;
+        }
+        // Check if cert is in crl's scope, and if it matches crl's reasons for revocation
+        ret = X509_CheckCertInCrlIdpScope(cert, crl, &idp);
+        if (ret != HITLS_PKI_SUCCESS) {
+            errorPath |= HITLS_X509_CRL_ERROR_DIFF_SCOPE;
+        }
+        // if this crl can't cover new reasons, we ignore it
+        if ((idp.onlySomeReasons & (~selection->reasons)) == HITLS_X509_REASON_FLAG_NONE) {
+            goto CONTINUE;
+        }
+        ret = X509_CheckCrlCriticalExt(storeCtx, crl);
+        if (ret != HITLS_PKI_SUCCESS) {
+            errorPath |= HITLS_X509_CRL_ERROR_CRITICAL_EXT;
+        }
+        // Find a matched delta crl if there exists
+        deltaCrl = X509_FindDeltaCrl(storeCtx, crl);
+        ret = X509_CheckCrlIsExpire(time, crl, deltaCrl);
+        if (ret != HITLS_PKI_SUCCESS) {
+            errorPath |= HITLS_X509_CRL_ERROR_TIME;
+        }
+        /* If the selected crl is better than current crl, then update it;
+         * Selection criteria:
+         * 1. less severe errors.
+         * 2. newer ThisUpdate.
+        */
+        if (X509_CompareWithCurrentCrl(selection, crl, errorPath)) {
+            selection->baseCrl = crl;
+            selection->deltaCrl = deltaCrl;
+            selection->errorPath = errorPath;
+            selection->newReasons = idp.onlySomeReasons;
+            selection->issuerCert = parent;
+        }
+CONTINUE:
+        HITLS_X509_ClearIdp(&idp);
+    }
+    if (selection->baseCrl == NULL) {
+        return HITLS_X509_ERR_VFY_CRL_NOT_FOUND;
+    }
+    return HITLS_PKI_SUCCESS;
+}
+
+static int32_t X509_VerifyCrlSig(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_Cert *issuerCert, HITLS_X509_Crl *crl)
+{
+    int32_t ret;
+    RETURN_RET_IF_ERR(HITLS_X509_CheckSignAlgConsistency(&crl->tbs.signAlgId, &crl->signAlgId), ret);
+    RETURN_RET_IF_ERR(HITLS_X509_CheckAlg(issuerCert->tbs.ealPubKey, &crl->tbs.signAlgId), ret);
+#ifdef HITLS_CRYPTO_SM2
+    ret = X509_StoreCheckSignature(&storeCtx->verifyParam.sm2UserId, issuerCert->tbs.ealPubKey, crl->tbs.tbsRawData,
+        crl->tbs.tbsRawDataLen, &(crl->signAlgId), &(crl->signature));
+#else
+    (void)storeCtx;
+    ret = X509_StoreCheckSignature(NULL, issuerCert->tbs.ealPubKey, crl->tbs.tbsRawData,
+        crl->tbs.tbsRawDataLen, &(crl->signAlgId), &(crl->signature));
+#endif
+    if (ret != HITLS_PKI_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        return HITLS_X509_ERR_VFY_CRLSIGN_FAIL;
+    }
+    return ret;
+}
+
+static HITLS_X509_CrlEntry *X509_FindRevokedEntry(HITLS_X509_Cert *cert, HITLS_X509_Crl *crl)
+{
+    if (cert == NULL || crl == NULL || crl->tbs.revokedCerts == NULL) {
+        return NULL;
+    }
+    for (BslListNode *entryNode = BSL_LIST_FirstNode(crl->tbs.revokedCerts); entryNode != NULL;
+        entryNode = BSL_LIST_GetNextNode(crl->tbs.revokedCerts, entryNode)) {
+        HITLS_X509_CrlEntry *entry = (HITLS_X509_CrlEntry *)BSL_LIST_GetData(entryNode);
+        if (entry == NULL) {
+            continue;
+        }
+        if (cert->tbs.serialNum.tag == entry->serialNumber.tag &&
+            cert->tbs.serialNum.len == entry->serialNumber.len &&
+            memcmp(cert->tbs.serialNum.buff, entry->serialNumber.buff, entry->serialNumber.len) == 0) {
+            return entry;
+        }
+    }
+    return NULL;
+}
+
+static int32_t X509_CheckCertRevoke(HITLS_X509_Cert *cert, HITLS_X509_CrlSelection *selection)
+{
+    HITLS_X509_CrlEntry *deltaEntry = X509_FindRevokedEntry(cert, selection->deltaCrl);
+    if (deltaEntry != NULL) {
+        int32_t reason = -1;
+        int32_t ret = HITLS_X509_CrlEntryCtrl(deltaEntry, HITLS_X509_CRL_GET_REVOKED_REASON, &reason, sizeof(reason));
+        if (ret == HITLS_PKI_SUCCESS && reason == HITLS_X509_REVOKED_REASON_REMOVE_FROM_CRL) {
+            return HITLS_PKI_SUCCESS;
+        }
+        return HITLS_X509_ERR_VFY_CERT_REVOKED;
+    }
+    HITLS_X509_CrlEntry *baseEntry = X509_FindRevokedEntry(cert, selection->baseCrl);
+    if (baseEntry == NULL) {
+        return HITLS_PKI_SUCCESS;
+    }
+    return HITLS_X509_ERR_VFY_CERT_REVOKED;
+}
+
+static int32_t NotifyErrors(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_Cert *cert, HITLS_X509_CrlSelection *selection,
+    int32_t depth, int64_t *time)
+{
+#ifndef HITLS_PKI_X509_VFY_CB
+    (void)cert;
+#endif
+    if ((selection->errorPath & HITLS_X509_CRL_ERROR_TIME) != 0) {
+        if (selection->deltaCrl != NULL) {
+            int32_t ret = HITLS_X509_CheckCrlTime(storeCtx, selection->deltaCrl, depth, time);
+            if (ret != HITLS_PKI_SUCCESS) {
+                return ret;
+            }
+        }
+        return HITLS_X509_CheckCrlTime(storeCtx, selection->baseCrl, depth, time);
+    }
+    for (uint32_t i = 0; i < sizeof(g_errorPathMap) / sizeof(g_errorPathMap[0]); ++i) {
+        VFYCBK_FAIL_IF((selection->errorPath & g_errorPathMap[i].errorPathBit) != 0,
+            storeCtx, cert, depth, g_errorPathMap[i].x509VfyErrorCode);
+    }
+    return HITLS_PKI_SUCCESS;
+}
+
+static int32_t CheckCrlIssuerKeyUsage(HITLS_X509_Cert *issueCert)
+{
+ // Issuer cert keyusage MUST include HITLS_X509_EXT_KU_CRL_SIGN
+    HITLS_X509_CertExt *certExt = (HITLS_X509_CertExt *)issueCert->tbs.ext.extData;
+    if (((certExt->extFlags & HITLS_X509_EXT_FLAG_KUSAGE) != 0) &&
+        (certExt->keyUsage & HITLS_X509_EXT_KU_CRL_SIGN) == 0) {
+        return HITLS_X509_ERR_VFY_KU_NO_CRLSIGN;
+    }
+    return HITLS_PKI_SUCCESS;
+}
+
 int32_t HITLS_X509_CheckCertCrl(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_Cert *cert, HITLS_X509_Cert *parent,
     int32_t depth, int64_t *time)
+{
+    int32_t ret;
+    uint32_t reasons = HITLS_X509_REASON_FLAG_NONE;
+    while (reasons != HITLS_X509_REASON_FLAG_ALL) {
+        HITLS_X509_CrlSelection selection = {0};
+        selection.reasons = reasons;
+        // The errorPath of the selection is one of : 1. HITLS_X509_CRL_ERROR_TIME 2. HITLS_X509_CRL_ERROR_DIFF_SCOPE 3. HITLS_X509_CRL_ERROR_CRITICAL_EXT
+        ret = X509_FindBaseCrlAndDeltaCrl(storeCtx, time, cert, parent, &selection);
+        VFYCBK_FAIL_IF(ret != HITLS_PKI_SUCCESS, storeCtx, cert, depth, HITLS_X509_ERR_VFY_CRL_NOT_FOUND);
+        if (selection.baseCrl == NULL) {
+            return HITLS_PKI_SUCCESS;
+        }
+        // if the selected crl has errors, we notify these errors to determined if they can be processed
+        if (selection.errorPath != 0) {
+            RETURN_RET_IF_ERR(NotifyErrors(storeCtx, cert, &selection, depth, time), ret);
+        }
+        ret = CheckCrlIssuerKeyUsage(selection.issuerCert);
+        VFYCBK_FAIL_IF(ret != HITLS_PKI_SUCCESS, storeCtx, cert, depth, HITLS_X509_ERR_VFY_KU_NO_CRLSIGN);
+        ret = X509_VerifyCrlSig(storeCtx, selection.issuerCert, selection.baseCrl);
+        VFYCBK_FAIL_IF(ret != HITLS_PKI_SUCCESS, storeCtx, cert, depth, ret);
+        if (selection.deltaCrl != NULL) {
+            // A delta CRL can't be used to revoke a certificate if it has unhandled critical extensions
+            ret = X509_CheckCrlCriticalExt(storeCtx, selection.deltaCrl);
+            VFYCBK_FAIL_IF(ret != HITLS_PKI_SUCCESS, storeCtx, cert, depth, HITLS_X509_ERR_PROCESS_CRITICALEXT);
+            ret = X509_VerifyCrlSig(storeCtx, selection.issuerCert, selection.deltaCrl);
+            VFYCBK_FAIL_IF(ret != HITLS_PKI_SUCCESS, storeCtx, cert, depth, HITLS_X509_ERR_VFY_CRLSIGN_FAIL);
+        }
+        ret = X509_CheckCertRevoke(cert, &selection);
+        VFYCBK_FAIL_IF(ret != HITLS_PKI_SUCCESS, storeCtx, cert, depth, HITLS_X509_ERR_VFY_CERT_REVOKED);
+        reasons |= selection.newReasons;
+    }
+    return HITLS_PKI_SUCCESS;
+}
+#endif
+
+int32_t HITLS_X509_CheckCertCrlLite(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_Cert *cert, HITLS_X509_Cert *parent,
+                                    int32_t depth, int64_t *time)
 {
     int32_t ret = HITLS_X509_ERR_VFY_CRL_NOT_FOUND;
     HITLS_X509_CertExt *certExt = (HITLS_X509_CertExt *)parent->tbs.ext.extData;
     VFYCBK_FAIL_IF((((certExt->extFlags & HITLS_X509_EXT_FLAG_KUSAGE) != 0) &&
-        ((certExt->keyUsage & HITLS_X509_EXT_KU_CRL_SIGN) == 0)),
-        storeCtx, parent, depth + 1, HITLS_X509_ERR_VFY_KU_NO_CRLSIGN);
+                    ((certExt->keyUsage & HITLS_X509_EXT_KU_CRL_SIGN) == 0)),
+                   storeCtx, cert, depth, HITLS_X509_ERR_VFY_KU_NO_CRLSIGN);
 
     for (BslListNode *crlNode = BSL_LIST_FirstNode(storeCtx->crl); crlNode != NULL;
-        crlNode = BSL_LIST_GetNextNode(storeCtx->crl, crlNode)) {
+         crlNode = BSL_LIST_GetNextNode(storeCtx->crl, crlNode)) {
         HITLS_X509_Crl *crl = (HITLS_X509_Crl *)BSL_LIST_GetData(crlNode);
         if (HITLS_X509_CmpNameNode(crl->tbs.issuerName, parent->tbs.subjectName) != 0) {
             continue;
         }
         if (parent->tbs.version == HITLS_X509_VERSION_3 && crl->tbs.version == 1) {
             if (HITLS_X509_CheckAki(&parent->tbs.ext, &crl->tbs.crlExt, parent->tbs.issuerName,
-                &parent->tbs.serialNum) != HITLS_PKI_SUCCESS) {
+                                    &parent->tbs.serialNum) != HITLS_PKI_SUCCESS) {
 #ifdef HITLS_PKI_X509_VFY_CB
                 if (VerifyCertCbk(storeCtx, cert, depth, HITLS_X509_ERR_VFY_AKI_SKI_NOT_MATCH) != HITLS_PKI_SUCCESS) {
                     continue;
@@ -1493,8 +2176,8 @@ int32_t HITLS_X509_CheckCertCrl(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_Cert *
         if (HITLS_X509_CheckCrlTime(storeCtx, crl, depth, time) != HITLS_PKI_SUCCESS) {
             continue;
         }
-        ret = HITLS_X509_TrvList(crl->tbs.crlExt.extList,
-            (HITLS_X509_TrvListCallBack)HITLS_X509_CheckCertExtNode, storeCtx);
+        ret = HITLS_X509_TrvList(crl->tbs.crlExt.extList, (HITLS_X509_TrvListCallBack)HITLS_X509_CheckCrlExtNode,
+                                 storeCtx);
         if (ret != HITLS_PKI_SUCCESS) {
             BSL_ERR_PUSH_ERROR(ret);
             return ret;
@@ -1508,10 +2191,10 @@ int32_t HITLS_X509_CheckCertCrl(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_Cert *
 
 #ifdef HITLS_CRYPTO_SM2
         ret = X509_StoreCheckSignature(&storeCtx->verifyParam.sm2UserId, parent->tbs.ealPubKey, crl->tbs.tbsRawData,
-            crl->tbs.tbsRawDataLen, &(crl->signAlgId), &(crl->signature));
+                                       crl->tbs.tbsRawDataLen, &(crl->signAlgId), &(crl->signature));
 #else
-        ret = X509_StoreCheckSignature(NULL, parent->tbs.ealPubKey, crl->tbs.tbsRawData,
-            crl->tbs.tbsRawDataLen, &(crl->signAlgId), &(crl->signature));
+        ret = X509_StoreCheckSignature(NULL, parent->tbs.ealPubKey, crl->tbs.tbsRawData, crl->tbs.tbsRawDataLen,
+                                       &(crl->signAlgId), &(crl->signature));
 #endif
         VFYCBK_FAIL_IF(ret != HITLS_PKI_SUCCESS, storeCtx, cert, depth, HITLS_X509_ERR_VFY_CRLSIGN_FAIL);
 
@@ -1521,6 +2204,7 @@ int32_t HITLS_X509_CheckCertCrl(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_Cert *
     VFYCBK_FAIL_IF(ret != HITLS_PKI_SUCCESS, storeCtx, cert, depth, HITLS_X509_ERR_VFY_CRL_NOT_FOUND);
     return HITLS_PKI_SUCCESS;
 }
+
 
 int32_t HITLS_X509_VerifyCrl(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_List *chain, int64_t *time)
 {
@@ -1533,14 +2217,21 @@ int32_t HITLS_X509_VerifyCrl(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_List *cha
     if (BSL_LIST_COUNT(chain) == 1) {
         return HITLS_PKI_SUCCESS;
     }
-
     bool notCheckAll = (storeCtx->verifyParam.flags & HITLS_X509_VFY_FLAG_CRL_ALL) == 0;
     int32_t ret = HITLS_PKI_SUCCESS;
     int32_t depth = 0;
     for (BslListNode *currNode = BSL_LIST_FirstNode(chain), *nextNode = BSL_LIST_GetNextNode(chain, currNode);
          currNode != NULL && nextNode != NULL;
          currNode = nextNode, nextNode = BSL_LIST_GetNextNode(chain, nextNode), depth++) {
-        ret = HITLS_X509_CheckCertCrl(storeCtx, BSL_LIST_GetData(currNode), BSL_LIST_GetData(nextNode), depth, time);
+#ifdef HITLS_PKI_X509_VFY_CRL_LITE
+        ret = HITLS_X509_CheckCertCrlLite(storeCtx, BSL_LIST_GetData(currNode), BSL_LIST_GetData(nextNode), depth, time);
+#else
+        if ((storeCtx->verifyParam.flags & HITLS_X509_VFY_FLAG_CRL_LITE) != 0) {
+            ret = HITLS_X509_CheckCertCrlLite(storeCtx, BSL_LIST_GetData(currNode), BSL_LIST_GetData(nextNode), depth, time);
+        } else {
+            ret = HITLS_X509_CheckCertCrl(storeCtx, BSL_LIST_GetData(currNode), BSL_LIST_GetData(nextNode), depth, time);
+        }
+#endif
         if (ret != HITLS_PKI_SUCCESS) {
             return ret;
         }

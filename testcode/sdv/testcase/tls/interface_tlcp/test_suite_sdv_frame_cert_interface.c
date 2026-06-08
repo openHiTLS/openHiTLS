@@ -1049,7 +1049,7 @@ EXIT:
 * @precon  This test case covers CRL functionality during TLS handshake process
 @ */
 /* BEGIN_CASE */
-void UT_TLS_CRL_VERIFICATION_HANDSHAKE_TC001(void)
+void UT_TLS_CRL_VERIFICATION_HANDSHAKE_TC001(int vfyFlag)
 {
     HitlsInit();
     FRAME_Init();
@@ -1076,7 +1076,7 @@ void UT_TLS_CRL_VERIFICATION_HANDSHAKE_TC001(void)
     caCert = HITLS_CFG_ParseCert(config, (const uint8_t *)intCaPath, strlen(intCaPath), TLS_PARSE_TYPE_FILE, TLS_PARSE_FORMAT_ASN1);
     ASSERT_TRUE(caCert != NULL);
     ASSERT_EQ(HITLS_CFG_AddCertToStore(config, caCert, TLS_CERT_STORE_TYPE_DEFAULT, false), HITLS_SUCCESS);
-
+    ASSERT_EQ(HITLS_CFG_SetVerifyFlags(config, vfyFlag), HITLS_SUCCESS);
     FRAME_LinkObj *client = FRAME_CreateLinkBase(config, BSL_UIO_TCP, false);
     ASSERT_TRUE(client != NULL);
     FRAME_LinkObj *server = FRAME_CreateLinkBase(config, BSL_UIO_TCP, false);

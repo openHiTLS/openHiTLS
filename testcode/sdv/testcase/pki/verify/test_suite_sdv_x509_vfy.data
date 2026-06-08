@@ -16,6 +16,117 @@ SDV_X509_STORE_VFY_CRL_FUNC_TC001:1:HITLS_PKI_SUCCESS:"../testdata/cert/sm2/sign
 SDV_X509_STORE_VFY_CRL_FUNC_TC001 revoked device cert, dev crl
 SDV_X509_STORE_VFY_CRL_FUNC_TC001:1:HITLS_X509_ERR_VFY_CERT_REVOKED:"../testdata/cert/sm2/enc3.mul.der":"../testdata/cert/sm2/inter.mul.der":"../testdata/cert/sm2/ca.mul.der":"../testdata/cert/sm2/crl_v2.mul3.der":"../testdata/cert/sm2/crl_inter_v2.mul.der"
 
+SDV_X509_STORE_VFY_CRL_EXTENDED_FUNC_TC001: case1 ok
+SDV_X509_STORE_VFY_CRL_EXTENDED_FUNC_TC001:HITLS_PKI_SUCCESS:"../testdata/cert/test_for_crl/crl_verify/cases/case1/certs.pem":"../testdata/cert/test_for_crl/crl_verify/cases/case1/crls.pem"
+
+SDV_X509_STORE_VFY_CRL_EXTENDED_FUNC_TC001: case2 base crl revokes cert
+SDV_X509_STORE_VFY_CRL_EXTENDED_FUNC_TC001:HITLS_X509_ERR_VFY_CERT_REVOKED:"../testdata/cert/test_for_crl/crl_verify/cases/case2/certs.pem":"../testdata/cert/test_for_crl/crl_verify/cases/case2/crls.pem"
+
+SDV_X509_STORE_VFY_CRL_EXTENDED_FUNC_TC001: case3 delta crl revokes cert
+SDV_X509_STORE_VFY_CRL_EXTENDED_FUNC_TC001:HITLS_X509_ERR_VFY_CERT_REVOKED:"../testdata/cert/test_for_crl/crl_verify/cases/case3/certs.pem":"../testdata/cert/test_for_crl/crl_verify/cases/case3/crls.pem"
+
+SDV_X509_STORE_VFY_CRL_EXTENDED_FUNC_TC001: case4  delta crl revokes cert
+SDV_X509_STORE_VFY_CRL_EXTENDED_FUNC_TC001:HITLS_X509_ERR_VFY_CERT_REVOKED:"../testdata/cert/test_for_crl/crl_verify/cases/case4/certs.pem":"../testdata/cert/test_for_crl/crl_verify/cases/case4/crls.pem"
+
+SDV_X509_STORE_VFY_CRL_EXTENDED_FUNC_TC001: case5 delta crl matches base crl, and base crl revokes cert but delta crl is empty
+SDV_X509_STORE_VFY_CRL_EXTENDED_FUNC_TC001:HITLS_X509_ERR_VFY_CERT_REVOKED:"../testdata/cert/test_for_crl/crl_verify/cases/case5/certs.pem":"../testdata/cert/test_for_crl/crl_verify/cases/case5/crls.pem"
+
+SDV_X509_STORE_VFY_CRL_EXTENDED_FUNC_TC001: case6 base crl signature verify failed
+SDV_X509_STORE_VFY_CRL_EXTENDED_FUNC_TC001:HITLS_X509_ERR_VFY_CRLSIGN_FAIL:"../testdata/cert/test_for_crl/crl_verify/cases/case6/certs.pem":"../testdata/cert/test_for_crl/crl_verify/cases/case6/crls.pem"
+
+SDV_X509_STORE_VFY_CRL_EXTENDED_FUNC_TC001: case7 base crl revokes the cert, but delta crl marks cert as REMOVE FROM CRL, while the reason code is incomplete
+SDV_X509_STORE_VFY_CRL_EXTENDED_FUNC_TC001:HITLS_X509_ERR_VFY_CRL_NOT_FOUND:"../testdata/cert/test_for_crl/crl_verify/cases/case7/certs.pem":"../testdata/cert/test_for_crl/crl_verify/cases/case7/crls.pem"
+
+SDV_X509_STORE_VFY_CRL_EXTENDED_FUNC_TC001: case8 base crl has no idp name, but revokes cert
+SDV_X509_STORE_VFY_CRL_EXTENDED_FUNC_TC001:HITLS_X509_ERR_VFY_CERT_REVOKED:"../testdata/cert/test_for_crl/crl_verify/cases/case8/certs.pem":"../testdata/cert/test_for_crl/crl_verify/cases/case8/crls.pem"
+
+SDV_X509_STORE_VFY_CRL_EXTENDED_FUNC_TC001: case9 base crl idp name not match the cdp
+SDV_X509_STORE_VFY_CRL_EXTENDED_FUNC_TC001:HITLS_X509_ERR_VFY_DIFFERENT_CRL_SCOPE:"../testdata/cert/test_for_crl/crl_verify/cases/case9/certs.pem":"../testdata/cert/test_for_crl/crl_verify/cases/case9/crls.pem"
+
+SDV_X509_STORE_VFY_CRL_EXTENDED_FUNC_TC001: case10 similar to case7, but reason code is complete
+SDV_X509_STORE_VFY_CRL_EXTENDED_FUNC_TC001:HITLS_PKI_SUCCESS:"../testdata/cert/test_for_crl/crl_verify/cases/case10/certs.pem":"../testdata/cert/test_for_crl/crl_verify/cases/case10/crls.pem"
+
+SDV_X509_STORE_VFY_CRL_EXTENDED_FUNC_TC001: case11: relative name match test for idp and dp
+SDV_X509_STORE_VFY_CRL_EXTENDED_FUNC_TC001:HITLS_PKI_SUCCESS:"../testdata/cert/test_for_crl/crl_verify/cases/case11/certs.pem":"../testdata/cert/test_for_crl/crl_verify/cases/case11/crls.pem"
+
+SDV_X509_STORE_VFY_CRL_EXTENDED_FUNC_TC001: case12: relative name and fullname(directory name) match test for idp and dp
+SDV_X509_STORE_VFY_CRL_EXTENDED_FUNC_TC001:HITLS_PKI_SUCCESS:"../testdata/cert/test_for_crl/crl_verify/cases/case12/certs.pem":"../testdata/cert/test_for_crl/crl_verify/cases/case12/crls.pem"
+
+SDV_X509_STORE_VFY_CRL_EXTENDED_FUNC_TC001: case13: relative name and fullname(other name type) match test for idp and dp
+SDV_X509_STORE_VFY_CRL_EXTENDED_FUNC_TC001:HITLS_X509_ERR_VFY_DIFFERENT_CRL_SCOPE:"../testdata/cert/test_for_crl/crl_verify/cases/case13/certs.pem":"../testdata/cert/test_for_crl/crl_verify/cases/case13/crls.pem"
+
+SDV_X509_STORE_VFY_CRL_EXTENDED_FUNC_TC001: case14: relative name and fullname match test for idp and dp, the sequence of the fullname is different from relative name
+SDV_X509_STORE_VFY_CRL_EXTENDED_FUNC_TC001:HITLS_X509_ERR_VFY_DIFFERENT_CRL_SCOPE:"../testdata/cert/test_for_crl/crl_verify/cases/case14/certs.pem":"../testdata/cert/test_for_crl/crl_verify/cases/case14/crls.pem"
+
+SDV_X509_STORE_VFY_CRL_EXTENDED_FUNC_TC001: case15: cert chain : cert1->cert2->cert3->cert4, where cert1 and cert4 belongs to the same CA, and cert1 signed crl. crl revokes cert4; indirect crl;
+SDV_X509_STORE_VFY_CRL_EXTENDED_FUNC_TC001:HITLS_X509_ERR_VFY_CRL_NOT_FOUND:"../testdata/cert/test_for_crl/crl_verify/cases/case15/certs.pem":"../testdata/cert/test_for_crl/crl_verify/cases/case15/crls.pem"
+
+SDV_X509_STORE_VFY_CRL_EXTENDED_FUNC_TC001: case16: idp is onlyca, but leaf is not ca
+SDV_X509_STORE_VFY_CRL_EXTENDED_FUNC_TC001:HITLS_X509_ERR_VFY_DIFFERENT_CRL_SCOPE:"../testdata/cert/test_for_crl/crl_verify/cases/case16/certs.pem":"../testdata/cert/test_for_crl/crl_verify/cases/case16/crls.pem"
+
+SDV_X509_STORE_VFY_CRL_EXTENDED_FUNC_TC001: case17: idp is onlyca, and leaf is ca
+SDV_X509_STORE_VFY_CRL_EXTENDED_FUNC_TC001:HITLS_X509_ERR_VFY_CERT_REVOKED:"../testdata/cert/test_for_crl/crl_verify/cases/case17/certs.pem":"../testdata/cert/test_for_crl/crl_verify/cases/case17/crls.pem"
+
+SDV_X509_STORE_VFY_CRL_EXTENDED_FUNC_TC001: case18: idp is onlyuser, and leaf is user
+SDV_X509_STORE_VFY_CRL_EXTENDED_FUNC_TC001:HITLS_X509_ERR_VFY_CERT_REVOKED:"../testdata/cert/test_for_crl/crl_verify/cases/case18/certs.pem":"../testdata/cert/test_for_crl/crl_verify/cases/case18/crls.pem"
+
+SDV_X509_STORE_VFY_CRL_EXTENDED_FUNC_TC001: case19: idp is onlyuser, but leaf is  ca
+SDV_X509_STORE_VFY_CRL_EXTENDED_FUNC_TC001:HITLS_X509_ERR_VFY_DIFFERENT_CRL_SCOPE:"../testdata/cert/test_for_crl/crl_verify/cases/case19/certs.pem":"../testdata/cert/test_for_crl/crl_verify/cases/case19/crls.pem"
+
+SDV_X509_STORE_VFY_CRL_EXTENDED_FUNC_TC001: case20: crl nextUpdate has expired
+SDV_X509_STORE_VFY_CRL_EXTENDED_FUNC_TC001:HITLS_X509_ERR_VFY_NEXTUPDATE_EXPIRED:"../testdata/cert/test_for_crl/crl_verify/cases/case20/certs.pem":"../testdata/cert/test_for_crl/crl_verify/cases/case20/crls.pem"
+
+SDV_X509_STORE_VFY_CRL_TIME_ERR_FUNC_TC001: crl thisUpdate is in future
+SDV_X509_STORE_VFY_CRL_TIME_ERR_FUNC_TC001:HITLS_X509_ERR_VFY_THISUPDATE_IN_FUTURE:1775001600:"../testdata/cert/test_for_crl/crl_verify/cases/case20/certs.pem":"../testdata/cert/test_for_crl/crl_verify/cases/case20/crls.pem"
+
+SDV_X509_STORE_VFY_CRL_TIME_ERR_FUNC_TC001: crl nextUpdate has expired
+SDV_X509_STORE_VFY_CRL_TIME_ERR_FUNC_TC001:HITLS_X509_ERR_VFY_NEXTUPDATE_EXPIRED:1781481600:"../testdata/cert/test_for_crl/crl_verify/cases/case20/certs.pem":"../testdata/cert/test_for_crl/crl_verify/cases/case20/crls.pem"
+
+SDV_X509_STORE_VFY_CRL_MALFORMED_DELTA_FUNC_TC001: malformed deltaCRLIndicator is not treated as base CRL
+SDV_X509_STORE_VFY_CRL_MALFORMED_DELTA_FUNC_TC001:"../testdata/cert/test_for_crl/crl_verify/cases/case1/certs.pem":"../testdata/cert/test_for_crl/crl_verify/cases/case1/crls.pem"
+
+SDV_X509_STORE_VFY_CRL_EXTENDED_FUNC_TC001: case21: cdp relative name matches idp fullName
+SDV_X509_STORE_VFY_CRL_EXTENDED_FUNC_TC001:HITLS_PKI_SUCCESS:"../testdata/cert/test_for_crl/crl_verify/cases/case21/certs.pem":"../testdata/cert/test_for_crl/crl_verify/cases/case21/crls.pem"
+
+SDV_X509_STORE_VFY_CRL_EXTENDED_FUNC_TC001: case22: invalid idp has both onlyuser and onlyca
+SDV_X509_STORE_VFY_CRL_EXTENDED_FUNC_TC001:HITLS_X509_ERR_VFY_CRL_NOT_FOUND:"../testdata/cert/test_for_crl/crl_verify/cases/case22/certs.pem":"../testdata/cert/test_for_crl/crl_verify/cases/case22/crls.pem"
+
+SDV_X509_STORE_VFY_CRL_EXTENDED_FUNC_TC001: case23: indirect crl is unsupported
+SDV_X509_STORE_VFY_CRL_EXTENDED_FUNC_TC001:HITLS_X509_ERR_VFY_CRL_NOT_FOUND:"../testdata/cert/test_for_crl/crl_verify/cases/case23/certs.pem":"../testdata/cert/test_for_crl/crl_verify/cases/case23/crls.pem"
+
+SDV_X509_STORE_VFY_CRL_EXTENDED_FUNC_TC001: case24: delta crl akid does not match base crl; delta crl note verified cert as REMOVE FROM CRL;
+SDV_X509_STORE_VFY_CRL_EXTENDED_FUNC_TC001:HITLS_X509_ERR_VFY_CERT_REVOKED:"../testdata/cert/test_for_crl/crl_verify/cases/case24/certs.pem":"../testdata/cert/test_for_crl/crl_verify/cases/case24/crls.pem"
+
+SDV_X509_STORE_VFY_CRL_EXTENDED_FUNC_TC001: case25: delta crl issuer name does not match base crl; delta crl note verified cert as REMOVE FROM CRL;
+SDV_X509_STORE_VFY_CRL_EXTENDED_FUNC_TC001:HITLS_X509_ERR_VFY_CERT_REVOKED:"../testdata/cert/test_for_crl/crl_verify/cases/case25/certs.pem":"../testdata/cert/test_for_crl/crl_verify/cases/case25/crls.pem"
+
+SDV_X509_STORE_VFY_CRL_EXTENDED_FUNC_TC001: case26: multiple matching delta crls select the latest delta crl; delta crl note verified cert as REMOVE FROM CRL;
+SDV_X509_STORE_VFY_CRL_EXTENDED_FUNC_TC001:HITLS_PKI_SUCCESS:"../testdata/cert/test_for_crl/crl_verify/cases/case26/certs.pem":"../testdata/cert/test_for_crl/crl_verify/cases/case26/crls.pem"
+
+SDV_X509_STORE_VFY_CRL_EXTENDED_FUNC_TC001: case27: delta crl thisUpdate is earlier than base crl thisUpdate, delta crl revokes the cert
+SDV_X509_STORE_VFY_CRL_EXTENDED_FUNC_TC001:HITLS_X509_ERR_VFY_CERT_REVOKED:"../testdata/cert/test_for_crl/crl_verify/cases/case27/certs.pem":"../testdata/cert/test_for_crl/crl_verify/cases/case27/crls.pem"
+
+SDV_X509_STORE_VFY_CRL_EXTENDED_FUNC_TC001: case28: cert cdp contains only reasons without distributionPoint or cRLIssuer
+SDV_X509_STORE_VFY_CRL_EXTENDED_FUNC_TC001:HITLS_X509_ERR_VFY_DIFFERENT_CRL_SCOPE:"../testdata/cert/test_for_crl/crl_verify/cases/case28/certs.pem":"../testdata/cert/test_for_crl/crl_verify/cases/case28/crls.pem"
+
+SDV_X509_STORE_VFY_CRL_EXTENDED_FUNC_TC001: case29: all cert cdp distribution points do not cover all reasons
+SDV_X509_STORE_VFY_CRL_EXTENDED_FUNC_TC001:HITLS_X509_ERR_VFY_CRL_NOT_FOUND:"../testdata/cert/test_for_crl/crl_verify/cases/case29/certs.pem":"../testdata/cert/test_for_crl/crl_verify/cases/case29/crls.pem"
+
+SDV_X509_STORE_VFY_CRL_EXTENDED_FUNC_TC001: case30: cert cdp reasons are incomplete; crl idp has no name and covers all reasons
+SDV_X509_STORE_VFY_CRL_EXTENDED_FUNC_TC001:HITLS_X509_ERR_VFY_CRL_NOT_FOUND:"../testdata/cert/test_for_crl/crl_verify/cases/case30/certs.pem":"../testdata/cert/test_for_crl/crl_verify/cases/case30/crls.pem"
+
+SDV_X509_STORE_VFY_CRL_EXTENDED_FUNC_TC001: case31: cert cdp reasons are incomplete and crl has no idp
+SDV_X509_STORE_VFY_CRL_EXTENDED_FUNC_TC001:HITLS_X509_ERR_VFY_CRL_NOT_FOUND:"../testdata/cert/test_for_crl/crl_verify/cases/case31/certs.pem":"../testdata/cert/test_for_crl/crl_verify/cases/case31/crls.pem"
+
+SDV_X509_STORE_VFY_CRL_EXTENDED_FUNC_TC001: case32: cert has no cdp; crl idp has no name and covers all reasons
+SDV_X509_STORE_VFY_CRL_EXTENDED_FUNC_TC001:HITLS_PKI_SUCCESS:"../testdata/cert/test_for_crl/crl_verify/cases/case32/certs.pem":"../testdata/cert/test_for_crl/crl_verify/cases/case32/crls.pem"
+
+SDV_X509_STORE_VFY_CRL_EXTENDED_FUNC_TC001: case33: cert has no cdp and crl has no idp
+SDV_X509_STORE_VFY_CRL_EXTENDED_FUNC_TC001:HITLS_PKI_SUCCESS:"../testdata/cert/test_for_crl/crl_verify/cases/case33/certs.pem":"../testdata/cert/test_for_crl/crl_verify/cases/case33/crls.pem"
+
+SDV_X509_STORE_VFY_CRL_EXTENDED_FUNC_TC001: case34: cert has no cdp and crl idp has a distribution point name
+SDV_X509_STORE_VFY_CRL_EXTENDED_FUNC_TC001:HITLS_X509_ERR_VFY_DIFFERENT_CRL_SCOPE:"../testdata/cert/test_for_crl/crl_verify/cases/case34/certs.pem":"../testdata/cert/test_for_crl/crl_verify/cases/case34/crls.pem"
+
 SDV_X509_STORE_CTRL_FUNC_TC001
 SDV_X509_STORE_CTRL_FUNC_TC001:
 
@@ -35,25 +146,46 @@ SDV_X509_STORE_CTRL_NEW_FIELDS_INVALID_FUNC_TC004
 SDV_X509_STORE_CTRL_NEW_FIELDS_INVALID_FUNC_TC004:
 
 SDV_X509_BUILD_CERT_CHAIN_FUNC_TC001 ed25519-nocrl
-SDV_X509_BUILD_CERT_CHAIN_FUNC_TC001:"../testdata/cert/ed25519/ed25519.ca.der":"../testdata/cert/ed25519/ed25519.intca.pem":"../testdata/cert/ed25519/ed25519.end.pem":"../testdata/cert/ed25519/ed25519.crl.der"
+SDV_X509_BUILD_CERT_CHAIN_FUNC_TC001:"../testdata/cert/ed25519/ed25519.ca.der":"../testdata/cert/ed25519/ed25519.intca.pem":"../testdata/cert/ed25519/ed25519.end.pem":"../testdata/cert/ed25519/ed25519.crl.der":0
 
 SDV_X509_BUILD_CERT_CHAIN_FUNC_TC001 rsa-sha256-nocrl
-SDV_X509_BUILD_CERT_CHAIN_FUNC_TC001:"../testdata/cert/chain/rsa-v3/rootca.der":"../testdata/cert/chain/rsa-v3/ca.der":"../testdata/cert/chain/rsa-v3/cert.der":"../testdata/cert/asn1/ca-empty-rsa-sha256-v2.der"
+SDV_X509_BUILD_CERT_CHAIN_FUNC_TC001:"../testdata/cert/chain/rsa-v3/rootca.der":"../testdata/cert/chain/rsa-v3/ca.der":"../testdata/cert/chain/rsa-v3/cert.der":"../testdata/cert/asn1/ca-empty-rsa-sha256-v2.der":0
 
 SDV_X509_BUILD_CERT_CHAIN_FUNC_TC001 rsa-pss-nocrl
-SDV_X509_BUILD_CERT_CHAIN_FUNC_TC001:"../testdata/cert/chain/rsa-pss-v3/ca.der":"../testdata/cert/chain/rsa-pss-v3/inter.der":"../testdata/cert/chain/rsa-pss-v3/end.der":"../testdata/cert/asn1/ca-empty-rsa-sha256-v2.der"
+SDV_X509_BUILD_CERT_CHAIN_FUNC_TC001:"../testdata/cert/chain/rsa-pss-v3/ca.der":"../testdata/cert/chain/rsa-pss-v3/inter.der":"../testdata/cert/chain/rsa-pss-v3/end.der":"../testdata/cert/asn1/ca-empty-rsa-sha256-v2.der":0
 
 SDV_X509_BUILD_CERT_CHAIN_FUNC_TC001 ecdsa-prime192v1-nocrl
-SDV_X509_BUILD_CERT_CHAIN_FUNC_TC001:"../testdata/cert/chain/nistp192_certs/root_ca_nistp192_cert.der":"../testdata/cert/chain/nistp192_certs/int_ca_nistp192_cert.der":"../testdata/cert/chain/nistp192_certs/ee_nistp192_cert.der":"../testdata/cert/chain/nistp192_certs/root_ca_nistp192.crl"
+SDV_X509_BUILD_CERT_CHAIN_FUNC_TC001:"../testdata/cert/chain/nistp192_certs/root_ca_nistp192_cert.der":"../testdata/cert/chain/nistp192_certs/int_ca_nistp192_cert.der":"../testdata/cert/chain/nistp192_certs/ee_nistp192_cert.der":"../testdata/cert/chain/nistp192_certs/root_ca_nistp192.crl":0
 
 SDV_X509_BUILD_CERT_CHAIN_FUNC_TC001 ecdsa-nocrl
-SDV_X509_BUILD_CERT_CHAIN_FUNC_TC001:"../testdata/cert/chain/ecdsa-v3/ca.der":"../testdata/cert/chain/ecdsa-v3/inter.der":"../testdata/cert/chain/ecdsa-v3/end.der":"../testdata/cert/asn1/ca-empty-rsa-sha256-v2.der"
+SDV_X509_BUILD_CERT_CHAIN_FUNC_TC001:"../testdata/cert/chain/ecdsa-v3/ca.der":"../testdata/cert/chain/ecdsa-v3/inter.der":"../testdata/cert/chain/ecdsa-v3/end.der":"../testdata/cert/asn1/ca-empty-rsa-sha256-v2.der":0
 
 SDV_X509_BUILD_CERT_CHAIN_FUNC_TC001 sm2-nocrl
-SDV_X509_BUILD_CERT_CHAIN_FUNC_TC001:"../testdata/cert/chain/sm2-v3/ca.der":"../testdata/cert/chain/sm2-v3/inter.der":"../testdata/cert/chain/sm2-v3/end.der":"../testdata/cert/asn1/ca-empty-rsa-sha256-v2.der"
+SDV_X509_BUILD_CERT_CHAIN_FUNC_TC001:"../testdata/cert/chain/sm2-v3/ca.der":"../testdata/cert/chain/sm2-v3/inter.der":"../testdata/cert/chain/sm2-v3/end.der":"../testdata/cert/asn1/ca-empty-rsa-sha256-v2.der":0
 
 SDV_X509_BUILD_CERT_CHAIN_FUNC_TC001 rsa-sha256-nocrl-aki-authorityCertIssuer
-SDV_X509_BUILD_CERT_CHAIN_FUNC_TC001:"../testdata/cert/chain/rsa-v3-aki-certissuer/rootca.der":"../testdata/cert/chain/rsa-v3-aki-certissuer/ca.der":"../testdata/cert/chain/rsa-v3-aki-certissuer/cert.der":"../testdata/cert/asn1/ca-empty-rsa-sha256-v2.der"
+SDV_X509_BUILD_CERT_CHAIN_FUNC_TC001:"../testdata/cert/chain/rsa-v3-aki-certissuer/rootca.der":"../testdata/cert/chain/rsa-v3-aki-certissuer/ca.der":"../testdata/cert/chain/rsa-v3-aki-certissuer/cert.der":"../testdata/cert/asn1/ca-empty-rsa-sha256-v2.der":0
+
+SDV_X509_BUILD_CERT_CHAIN_FUNC_TC001 ed25519-nocrl
+SDV_X509_BUILD_CERT_CHAIN_FUNC_TC001:"../testdata/cert/ed25519/ed25519.ca.der":"../testdata/cert/ed25519/ed25519.intca.pem":"../testdata/cert/ed25519/ed25519.end.pem":"../testdata/cert/ed25519/ed25519.crl.der":HITLS_X509_VFY_FLAG_CRL_LITE
+
+SDV_X509_BUILD_CERT_CHAIN_FUNC_TC001 rsa-sha256-nocrl
+SDV_X509_BUILD_CERT_CHAIN_FUNC_TC001:"../testdata/cert/chain/rsa-v3/rootca.der":"../testdata/cert/chain/rsa-v3/ca.der":"../testdata/cert/chain/rsa-v3/cert.der":"../testdata/cert/asn1/ca-empty-rsa-sha256-v2.der":HITLS_X509_VFY_FLAG_CRL_LITE
+
+SDV_X509_BUILD_CERT_CHAIN_FUNC_TC001 rsa-pss-nocrl
+SDV_X509_BUILD_CERT_CHAIN_FUNC_TC001:"../testdata/cert/chain/rsa-pss-v3/ca.der":"../testdata/cert/chain/rsa-pss-v3/inter.der":"../testdata/cert/chain/rsa-pss-v3/end.der":"../testdata/cert/asn1/ca-empty-rsa-sha256-v2.der":HITLS_X509_VFY_FLAG_CRL_LITE
+
+SDV_X509_BUILD_CERT_CHAIN_FUNC_TC001 ecdsa-prime192v1-nocrl
+SDV_X509_BUILD_CERT_CHAIN_FUNC_TC001:"../testdata/cert/chain/nistp192_certs/root_ca_nistp192_cert.der":"../testdata/cert/chain/nistp192_certs/int_ca_nistp192_cert.der":"../testdata/cert/chain/nistp192_certs/ee_nistp192_cert.der":"../testdata/cert/chain/nistp192_certs/root_ca_nistp192.crl":HITLS_X509_VFY_FLAG_CRL_LITE
+
+SDV_X509_BUILD_CERT_CHAIN_FUNC_TC001 ecdsa-nocrl
+SDV_X509_BUILD_CERT_CHAIN_FUNC_TC001:"../testdata/cert/chain/ecdsa-v3/ca.der":"../testdata/cert/chain/ecdsa-v3/inter.der":"../testdata/cert/chain/ecdsa-v3/end.der":"../testdata/cert/asn1/ca-empty-rsa-sha256-v2.der":HITLS_X509_VFY_FLAG_CRL_LITE
+
+SDV_X509_BUILD_CERT_CHAIN_FUNC_TC001 sm2-nocrl
+SDV_X509_BUILD_CERT_CHAIN_FUNC_TC001:"../testdata/cert/chain/sm2-v3/ca.der":"../testdata/cert/chain/sm2-v3/inter.der":"../testdata/cert/chain/sm2-v3/end.der":"../testdata/cert/asn1/ca-empty-rsa-sha256-v2.der":HITLS_X509_VFY_FLAG_CRL_LITE
+
+SDV_X509_BUILD_CERT_CHAIN_FUNC_TC001 rsa-sha256-nocrl-aki-authorityCertIssuer
+SDV_X509_BUILD_CERT_CHAIN_FUNC_TC001:"../testdata/cert/chain/rsa-v3-aki-certissuer/rootca.der":"../testdata/cert/chain/rsa-v3-aki-certissuer/ca.der":"../testdata/cert/chain/rsa-v3-aki-certissuer/cert.der":"../testdata/cert/asn1/ca-empty-rsa-sha256-v2.der":HITLS_X509_VFY_FLAG_CRL_LITE
 
 SDV_X509_BUILD_CERT_CHAIN_FUNC_TC002 imcomplete certificate chain
 SDV_X509_BUILD_CERT_CHAIN_FUNC_TC002:
@@ -72,6 +204,24 @@ SDV_X509_BUILD_CERT_CHAIN_FUNC_TC006:
 
 SDV_X509_BUILD_CERT_CHAIN_FUNC_TC007 cert chain error depth
 SDV_X509_BUILD_CERT_CHAIN_FUNC_TC007:
+
+SDV_X509_BUILD_CERT_CHAIN_FUNC_TC008 test crl have no cacrl vfy dev
+SDV_X509_BUILD_CERT_CHAIN_FUNC_TC008:"../testdata/cert/chain/rsa-v3/ca1.der":"../testdata/cert/chain/rsa-v3/inter.der":"../testdata/cert/chain/rsa-v3/end.der":"":"../testdata/cert/chain/rsa-v3/crl_v2.old.der":HITLS_X509_VFY_FLAG_CRL_DEV|HITLS_X509_VFY_FLAG_CRL_LITE:0:HITLS_PKI_SUCCESS
+
+SDV_X509_BUILD_CERT_CHAIN_FUNC_TC008 test crl have no cacrl  vfy all
+SDV_X509_BUILD_CERT_CHAIN_FUNC_TC008:"../testdata/cert/chain/rsa-v3/ca1.der":"../testdata/cert/chain/rsa-v3/inter.der":"../testdata/cert/chain/rsa-v3/end.der":"":"../testdata/cert/chain/rsa-v3/crl_v2.old.der":HITLS_X509_VFY_FLAG_CRL_ALL|HITLS_X509_VFY_FLAG_CRL_LITE:0:HITLS_X509_ERR_VFY_CRL_NOT_FOUND
+ 
+SDV_X509_BUILD_CERT_CHAIN_FUNC_TC008 test revoke endcert
+SDV_X509_BUILD_CERT_CHAIN_FUNC_TC008:"../testdata/cert/chain/rsa-v3/ca1.der":"../testdata/cert/chain/rsa-v3/inter.der":"../testdata/cert/chain/rsa-v3/end.der":"":"../testdata/cert/chain/rsa-v3/crl_v1.der":HITLS_X509_VFY_FLAG_CRL_DEV|HITLS_X509_VFY_FLAG_CRL_LITE:0:HITLS_X509_ERR_VFY_CERT_REVOKED
+
+SDV_X509_BUILD_CERT_CHAIN_FUNC_TC008 test crl have no cacrl vfy all with cbk
+SDV_X509_BUILD_CERT_CHAIN_FUNC_TC008:"../testdata/cert/chain/rsa-v3/ca1.der":"../testdata/cert/chain/rsa-v3/inter.der":"../testdata/cert/chain/rsa-v3/end.der":"":"../testdata/cert/chain/rsa-v3/crl_v2.old.der":HITLS_X509_VFY_FLAG_CRL_ALL|HITLS_X509_VFY_FLAG_CRL_LITE:1:HITLS_PKI_SUCCESS
+
+SDV_X509_BUILD_CERT_CHAIN_FUNC_TC008 test revoke endcert with cbk
+SDV_X509_BUILD_CERT_CHAIN_FUNC_TC008:"../testdata/cert/chain/rsa-v3/ca1.der":"../testdata/cert/chain/rsa-v3/inter.der":"../testdata/cert/chain/rsa-v3/end.der":"":"../testdata/cert/chain/rsa-v3/crl_v1.der":HITLS_X509_VFY_FLAG_CRL_DEV|HITLS_X509_VFY_FLAG_CRL_LITE:1:HITLS_PKI_SUCCESS
+ 
+SDV_X509_BUILD_CERT_CHAIN_FUNC_TC008 test crl have no cacrl vfy dev with cbk
+SDV_X509_BUILD_CERT_CHAIN_FUNC_TC008:"../testdata/cert/chain/rsa-v3/ca1.der":"../testdata/cert/chain/rsa-v3/inter.der":"../testdata/cert/chain/rsa-v3/end.der":"":"../testdata/cert/chain/rsa-v3/crl_v2.old.der":HITLS_X509_VFY_FLAG_CRL_DEV|HITLS_X509_VFY_FLAG_CRL_LITE:2:-1
 
 SDV_X509_BUILD_CERT_CHAIN_FUNC_TC008 test crl have no cacrl vfy dev
 SDV_X509_BUILD_CERT_CHAIN_FUNC_TC008:"../testdata/cert/chain/rsa-v3/ca1.der":"../testdata/cert/chain/rsa-v3/inter.der":"../testdata/cert/chain/rsa-v3/end.der":"":"../testdata/cert/chain/rsa-v3/crl_v2.old.der":HITLS_X509_VFY_FLAG_CRL_DEV:0:HITLS_PKI_SUCCESS
@@ -389,34 +539,64 @@ SDV_X509_CERT_VERIFY_WITH_VARIOUS_CHARSET_FUNC_TC002 Standardization of content:
 SDV_X509_CERT_VERIFY_WITH_VARIOUS_CHARSET_FUNC_TC002:"../testdata/cert/chain/charset/string_canon/ca_string_canon.crt":"../testdata/cert/chain/charset/string_canon/inter_string_canon.crt":"../testdata/cert/chain/charset/string_canon/end_string_canon.crt"
 
 SDV_X509_CRL_VERIFY_WITH_VARIOUS_CHARSET_FUNC_TC001 utf8 ca and mix charset user not in the revocation list
-SDV_X509_CRL_VERIFY_WITH_VARIOUS_CHARSET_FUNC_TC001:"../testdata/cert/chain/charset/convert_to_utf8/ca_utf8.crt":"../testdata/cert/chain/charset/convert_to_utf8/user_mix.crt":"../testdata/cert/chain/charset/convert_to_utf8/crl_utf8.crl":HITLS_PKI_SUCCESS
+SDV_X509_CRL_VERIFY_WITH_VARIOUS_CHARSET_FUNC_TC001:"../testdata/cert/chain/charset/convert_to_utf8/ca_utf8.crt":"../testdata/cert/chain/charset/convert_to_utf8/user_mix.crt":"../testdata/cert/chain/charset/convert_to_utf8/crl_utf8.crl":HITLS_PKI_SUCCESS:0
 
 SDV_X509_CRL_VERIFY_WITH_VARIOUS_CHARSET_FUNC_TC001 mix charset ca and mix charset user not in the revocation list
-SDV_X509_CRL_VERIFY_WITH_VARIOUS_CHARSET_FUNC_TC001:"../testdata/cert/chain/charset/convert_to_utf8/ca_mix.crt":"../testdata/cert/chain/charset/convert_to_utf8/user_mix.crt":"../testdata/cert/chain/charset/convert_to_utf8/crl_utf8.crl":HITLS_PKI_SUCCESS
+SDV_X509_CRL_VERIFY_WITH_VARIOUS_CHARSET_FUNC_TC001:"../testdata/cert/chain/charset/convert_to_utf8/ca_mix.crt":"../testdata/cert/chain/charset/convert_to_utf8/user_mix.crt":"../testdata/cert/chain/charset/convert_to_utf8/crl_utf8.crl":HITLS_PKI_SUCCESS:0
 
 SDV_X509_CRL_VERIFY_WITH_VARIOUS_CHARSET_FUNC_TC001 utf8 ca and utf8 user not in the revocation list
-SDV_X509_CRL_VERIFY_WITH_VARIOUS_CHARSET_FUNC_TC001:"../testdata/cert/chain/charset/convert_to_utf8/ca_utf8.crt":"../testdata/cert/chain/charset/convert_to_utf8/user_utf8.crt":"../testdata/cert/chain/charset/convert_to_utf8/crl_mix.crl":HITLS_PKI_SUCCESS
+SDV_X509_CRL_VERIFY_WITH_VARIOUS_CHARSET_FUNC_TC001:"../testdata/cert/chain/charset/convert_to_utf8/ca_utf8.crt":"../testdata/cert/chain/charset/convert_to_utf8/user_utf8.crt":"../testdata/cert/chain/charset/convert_to_utf8/crl_mix.crl":HITLS_PKI_SUCCESS:0
 
 SDV_X509_CRL_VERIFY_WITH_VARIOUS_CHARSET_FUNC_TC001 mix charset ca and utf8 user not in the revocation list
-SDV_X509_CRL_VERIFY_WITH_VARIOUS_CHARSET_FUNC_TC001:"../testdata/cert/chain/charset/convert_to_utf8/ca_mix.crt":"../testdata/cert/chain/charset/convert_to_utf8/user_utf8.crt":"../testdata/cert/chain/charset/convert_to_utf8/crl_mix.crl":HITLS_PKI_SUCCESS
+SDV_X509_CRL_VERIFY_WITH_VARIOUS_CHARSET_FUNC_TC001:"../testdata/cert/chain/charset/convert_to_utf8/ca_mix.crt":"../testdata/cert/chain/charset/convert_to_utf8/user_utf8.crt":"../testdata/cert/chain/charset/convert_to_utf8/crl_mix.crl":HITLS_PKI_SUCCESS:0
 
 SDV_X509_CRL_VERIFY_WITH_VARIOUS_CHARSET_FUNC_TC001 utf8 ca and mix charset user in the revocation list
-SDV_X509_CRL_VERIFY_WITH_VARIOUS_CHARSET_FUNC_TC001:"../testdata/cert/chain/charset/convert_to_utf8/ca_utf8.crt":"../testdata/cert/chain/charset/convert_to_utf8/user_mix.crt":"../testdata/cert/chain/charset/convert_to_utf8/crl_mix.crl":HITLS_X509_ERR_VFY_CERT_REVOKED
+SDV_X509_CRL_VERIFY_WITH_VARIOUS_CHARSET_FUNC_TC001:"../testdata/cert/chain/charset/convert_to_utf8/ca_utf8.crt":"../testdata/cert/chain/charset/convert_to_utf8/user_mix.crt":"../testdata/cert/chain/charset/convert_to_utf8/crl_mix.crl":HITLS_X509_ERR_VFY_CERT_REVOKED:0
 
 SDV_X509_CRL_VERIFY_WITH_VARIOUS_CHARSET_FUNC_TC001 mix charset ca and mix charset user in the revocation list
-SDV_X509_CRL_VERIFY_WITH_VARIOUS_CHARSET_FUNC_TC001:"../testdata/cert/chain/charset/convert_to_utf8/ca_mix.crt":"../testdata/cert/chain/charset/convert_to_utf8/user_mix.crt":"../testdata/cert/chain/charset/convert_to_utf8/crl_mix.crl":HITLS_X509_ERR_VFY_CERT_REVOKED
+SDV_X509_CRL_VERIFY_WITH_VARIOUS_CHARSET_FUNC_TC001:"../testdata/cert/chain/charset/convert_to_utf8/ca_mix.crt":"../testdata/cert/chain/charset/convert_to_utf8/user_mix.crt":"../testdata/cert/chain/charset/convert_to_utf8/crl_mix.crl":HITLS_X509_ERR_VFY_CERT_REVOKED:0
 
 SDV_X509_CRL_VERIFY_WITH_VARIOUS_CHARSET_FUNC_TC001 utf8 ca and utf8 user in the revocation list
-SDV_X509_CRL_VERIFY_WITH_VARIOUS_CHARSET_FUNC_TC001:"../testdata/cert/chain/charset/convert_to_utf8/ca_utf8.crt":"../testdata/cert/chain/charset/convert_to_utf8/user_utf8.crt":"../testdata/cert/chain/charset/convert_to_utf8/crl_utf8.crl":HITLS_X509_ERR_VFY_CERT_REVOKED
+SDV_X509_CRL_VERIFY_WITH_VARIOUS_CHARSET_FUNC_TC001:"../testdata/cert/chain/charset/convert_to_utf8/ca_utf8.crt":"../testdata/cert/chain/charset/convert_to_utf8/user_utf8.crt":"../testdata/cert/chain/charset/convert_to_utf8/crl_utf8.crl":HITLS_X509_ERR_VFY_CERT_REVOKED:0
 
 SDV_X509_CRL_VERIFY_WITH_VARIOUS_CHARSET_FUNC_TC001 mix charset ca and utf8 user in the revocation list
-SDV_X509_CRL_VERIFY_WITH_VARIOUS_CHARSET_FUNC_TC001:"../testdata/cert/chain/charset/convert_to_utf8/ca_mix.crt":"../testdata/cert/chain/charset/convert_to_utf8/user_utf8.crt":"../testdata/cert/chain/charset/convert_to_utf8/crl_utf8.crl":HITLS_X509_ERR_VFY_CERT_REVOKED
+SDV_X509_CRL_VERIFY_WITH_VARIOUS_CHARSET_FUNC_TC001:"../testdata/cert/chain/charset/convert_to_utf8/ca_mix.crt":"../testdata/cert/chain/charset/convert_to_utf8/user_utf8.crt":"../testdata/cert/chain/charset/convert_to_utf8/crl_utf8.crl":HITLS_X509_ERR_VFY_CERT_REVOKED:0
 
 SDV_X509_CRL_VERIFY_WITH_VARIOUS_CHARSET_FUNC_TC001 mix charset crl with error issuer, malformed issuer now fails during parse-time DN UTF-8 canonicalization
-SDV_X509_CRL_VERIFY_WITH_VARIOUS_CHARSET_FUNC_TC001:"../testdata/cert/chain/charset/convert_to_utf8/ca_utf8.crt":"../testdata/cert/chain/charset/convert_to_utf8/user_mix.crt":"../testdata/cert/chain/charset/convert_to_utf8/crl_err_issuer.der":BSL_ASN1_ERR_INVALID_UTF8_CODE_POINT
+SDV_X509_CRL_VERIFY_WITH_VARIOUS_CHARSET_FUNC_TC001:"../testdata/cert/chain/charset/convert_to_utf8/ca_utf8.crt":"../testdata/cert/chain/charset/convert_to_utf8/user_mix.crt":"../testdata/cert/chain/charset/convert_to_utf8/crl_err_issuer.der":BSL_ASN1_ERR_INVALID_UTF8_CODE_POINT:0
 
 SDV_X509_CRL_VERIFY_WITH_VARIOUS_CHARSET_FUNC_TC001 mix charset crl with error aki
-SDV_X509_CRL_VERIFY_WITH_VARIOUS_CHARSET_FUNC_TC001:"../testdata/cert/chain/charset/convert_to_utf8/ca_utf8.crt":"../testdata/cert/chain/charset/convert_to_utf8/user_mix.crt":"../testdata/cert/chain/charset/convert_to_utf8/crl_err_aki.der":HITLS_X509_ERR_VFY_CRL_NOT_FOUND
+SDV_X509_CRL_VERIFY_WITH_VARIOUS_CHARSET_FUNC_TC001:"../testdata/cert/chain/charset/convert_to_utf8/ca_utf8.crt":"../testdata/cert/chain/charset/convert_to_utf8/user_mix.crt":"../testdata/cert/chain/charset/convert_to_utf8/crl_err_aki.der":HITLS_X509_ERR_VFY_CRL_NOT_FOUND:0
+
+SDV_X509_CRL_VERIFY_WITH_VARIOUS_CHARSET_FUNC_TC001 utf8 ca and mix charset user not in the revocation list
+SDV_X509_CRL_VERIFY_WITH_VARIOUS_CHARSET_FUNC_TC001:"../testdata/cert/chain/charset/convert_to_utf8/ca_utf8.crt":"../testdata/cert/chain/charset/convert_to_utf8/user_mix.crt":"../testdata/cert/chain/charset/convert_to_utf8/crl_utf8.crl":HITLS_PKI_SUCCESS:HITLS_X509_VFY_FLAG_CRL_LITE
+
+SDV_X509_CRL_VERIFY_WITH_VARIOUS_CHARSET_FUNC_TC001 mix charset ca and mix charset user not in the revocation list
+SDV_X509_CRL_VERIFY_WITH_VARIOUS_CHARSET_FUNC_TC001:"../testdata/cert/chain/charset/convert_to_utf8/ca_mix.crt":"../testdata/cert/chain/charset/convert_to_utf8/user_mix.crt":"../testdata/cert/chain/charset/convert_to_utf8/crl_utf8.crl":HITLS_PKI_SUCCESS:HITLS_X509_VFY_FLAG_CRL_LITE
+
+SDV_X509_CRL_VERIFY_WITH_VARIOUS_CHARSET_FUNC_TC001 utf8 ca and utf8 user not in the revocation list
+SDV_X509_CRL_VERIFY_WITH_VARIOUS_CHARSET_FUNC_TC001:"../testdata/cert/chain/charset/convert_to_utf8/ca_utf8.crt":"../testdata/cert/chain/charset/convert_to_utf8/user_utf8.crt":"../testdata/cert/chain/charset/convert_to_utf8/crl_mix.crl":HITLS_PKI_SUCCESS:HITLS_X509_VFY_FLAG_CRL_LITE
+
+SDV_X509_CRL_VERIFY_WITH_VARIOUS_CHARSET_FUNC_TC001 mix charset ca and utf8 user not in the revocation list
+SDV_X509_CRL_VERIFY_WITH_VARIOUS_CHARSET_FUNC_TC001:"../testdata/cert/chain/charset/convert_to_utf8/ca_mix.crt":"../testdata/cert/chain/charset/convert_to_utf8/user_utf8.crt":"../testdata/cert/chain/charset/convert_to_utf8/crl_mix.crl":HITLS_PKI_SUCCESS:HITLS_X509_VFY_FLAG_CRL_LITE
+
+SDV_X509_CRL_VERIFY_WITH_VARIOUS_CHARSET_FUNC_TC001 utf8 ca and mix charset user in the revocation list
+SDV_X509_CRL_VERIFY_WITH_VARIOUS_CHARSET_FUNC_TC001:"../testdata/cert/chain/charset/convert_to_utf8/ca_utf8.crt":"../testdata/cert/chain/charset/convert_to_utf8/user_mix.crt":"../testdata/cert/chain/charset/convert_to_utf8/crl_mix.crl":HITLS_X509_ERR_VFY_CERT_REVOKED:HITLS_X509_VFY_FLAG_CRL_LITE
+
+SDV_X509_CRL_VERIFY_WITH_VARIOUS_CHARSET_FUNC_TC001 mix charset ca and mix charset user in the revocation list
+SDV_X509_CRL_VERIFY_WITH_VARIOUS_CHARSET_FUNC_TC001:"../testdata/cert/chain/charset/convert_to_utf8/ca_mix.crt":"../testdata/cert/chain/charset/convert_to_utf8/user_mix.crt":"../testdata/cert/chain/charset/convert_to_utf8/crl_mix.crl":HITLS_X509_ERR_VFY_CERT_REVOKED:HITLS_X509_VFY_FLAG_CRL_LITE
+
+SDV_X509_CRL_VERIFY_WITH_VARIOUS_CHARSET_FUNC_TC001 utf8 ca and utf8 user in the revocation list
+SDV_X509_CRL_VERIFY_WITH_VARIOUS_CHARSET_FUNC_TC001:"../testdata/cert/chain/charset/convert_to_utf8/ca_utf8.crt":"../testdata/cert/chain/charset/convert_to_utf8/user_utf8.crt":"../testdata/cert/chain/charset/convert_to_utf8/crl_utf8.crl":HITLS_X509_ERR_VFY_CERT_REVOKED:HITLS_X509_VFY_FLAG_CRL_LITE
+
+SDV_X509_CRL_VERIFY_WITH_VARIOUS_CHARSET_FUNC_TC001 mix charset ca and utf8 user in the revocation list
+SDV_X509_CRL_VERIFY_WITH_VARIOUS_CHARSET_FUNC_TC001:"../testdata/cert/chain/charset/convert_to_utf8/ca_mix.crt":"../testdata/cert/chain/charset/convert_to_utf8/user_utf8.crt":"../testdata/cert/chain/charset/convert_to_utf8/crl_utf8.crl":HITLS_X509_ERR_VFY_CERT_REVOKED:HITLS_X509_VFY_FLAG_CRL_LITE
+
+SDV_X509_CRL_VERIFY_WITH_VARIOUS_CHARSET_FUNC_TC001 mix charset crl with error issuer, malformed issuer now fails during parse-time DN UTF-8 canonicalization
+SDV_X509_CRL_VERIFY_WITH_VARIOUS_CHARSET_FUNC_TC001:"../testdata/cert/chain/charset/convert_to_utf8/ca_utf8.crt":"../testdata/cert/chain/charset/convert_to_utf8/user_mix.crt":"../testdata/cert/chain/charset/convert_to_utf8/crl_err_issuer.der":BSL_ASN1_ERR_INVALID_UTF8_CODE_POINT:HITLS_X509_VFY_FLAG_CRL_LITE
+
+SDV_X509_CRL_VERIFY_WITH_VARIOUS_CHARSET_FUNC_TC001 mix charset crl with error aki
+SDV_X509_CRL_VERIFY_WITH_VARIOUS_CHARSET_FUNC_TC001:"../testdata/cert/chain/charset/convert_to_utf8/ca_utf8.crt":"../testdata/cert/chain/charset/convert_to_utf8/user_mix.crt":"../testdata/cert/chain/charset/convert_to_utf8/crl_err_aki.der":HITLS_X509_ERR_VFY_CRL_NOT_FOUND:HITLS_X509_VFY_FLAG_CRL_LITE
 
 SDV_X509_STORE_CTX_DUP_FUNC_TC001
 SDV_X509_STORE_CTX_DUP_FUNC_TC001:"../testdata/cert/test_for_crl/crl_verify/certs/ca.crt":"../testdata/cert/test_for_crl/crl_verify/intermediate/certs/intermediate.crt":"../testdata/cert/test_for_crl/crl_verify/crl/ca.crl":"../testdata/cert/test_for_crl/crl_verify/intermediate/crl/intermediate.crl"
@@ -433,6 +613,8 @@ SDV_X509_STORE_CTX_DUP_MULTI_THREAD_TC001:"../testdata/tls/certificate/der/rsa_w
 SDV_X509_CERT_VERIFY_MULTI_THREAD_WITH_VARIOUS_CHARSET_FUNC_TC001
 SDV_X509_CERT_VERIFY_MULTI_THREAD_WITH_VARIOUS_CHARSET_FUNC_TC001:"../testdata/cert/chain/charset/convert_to_utf8/ca_mix.crt":"../testdata/cert/chain/charset/convert_to_utf8/user_utf8.crt"
 
+SDV_X509_VERIFY_CRL_MULTI_THREAD_FUNC_TC001
+SDV_X509_VERIFY_CRL_MULTI_THREAD_FUNC_TC001:"../testdata/cert/test_for_crl/crl_verify/cases/case1/certs.pem":"../testdata/cert/test_for_crl/crl_verify/cases/case1/crls.pem"
 
 SDV_X509_SECBITS_COMBINED_TC001: A_112: secbits=112, Root:112>=112 PASS, Inter:128>=112 PASS, Leaf:128>=112 PASS
 SDV_X509_SECBITS_COMBINED_TC001:"../testdata/cert/chain/secbits/a_ecp256_sha256_leaf.der":"../testdata/cert/chain/secbits/a_rsa3072_sha384_inter.der":"../testdata/cert/chain/secbits/a_rsa2048_sha256_root.der":112:HITLS_PKI_SUCCESS

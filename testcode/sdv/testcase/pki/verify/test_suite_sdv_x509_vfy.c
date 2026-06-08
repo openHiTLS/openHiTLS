@@ -44,10 +44,13 @@
 
 /* END_HEADER */
 
+#define BUNDLE_TYPE_CERT 0
+#define BUNDLE_TYPE_CRL 1
 /* ============================================================================
  * Stub Definitions
  * ============================================================================ */
 STUB_DEFINE_RET4(int32_t, HITLS_X509_CheckCertTime, HITLS_X509_StoreCtx *, HITLS_X509_Cert *, int32_t, int64_t *);
+STUB_DEFINE_RET4(int32_t, HITLS_X509_CrlCtrl, HITLS_X509_Crl *, int32_t, void *, uint32_t);
 STUB_DEFINE_RET3(int32_t, BSL_LIST_AddElement, BslList *, void *, BslListPosition);
 STUB_DEFINE_VOID1(HITLS_X509_CertFree, HITLS_X509_Cert *);
 STUB_DEFINE_RET0(BslUnixTime, BSL_SAL_CurrentSysTimeGet);
@@ -206,6 +209,25 @@ static int32_t HITLS_BuildChain(BslList *list, int type, char *path1, char *path
     return ret;
 }
 
+static int32_t HITLS_AddBundlePemToChain(BslList **list, int type, char *path)
+{
+    int32_t ret;
+    BslList *tmpList = NULL;
+    if (type == BUNDLE_TYPE_CERT) {
+        ret = HITLS_X509_CertParseBundleFile(BSL_FORMAT_PEM, path, &tmpList);
+    } else {
+        ret = HITLS_X509_CrlParseBundleFile(BSL_FORMAT_PEM, path, &tmpList);
+    }
+    if (ret != HITLS_PKI_SUCCESS) {
+        return ret;
+    }
+    if (*list != NULL) {
+        BSL_LIST_FREE(*list, NULL);
+    }
+    *list = tmpList;
+    return HITLS_PKI_SUCCESS;
+}
+
 /* BEGIN_CASE */
 void SDV_X509_STORE_VFY_PARAM_EXR_FUNC_TC001(char *path1, char *path2, char *path3, int secBits, int exp)
 {
@@ -257,7 +279,106 @@ void SDV_X509_STORE_VFY_CRL_FUNC_TC001(int type, int expResult, char *path1, cha
     if (ret == HITLS_PKI_SUCCESS) {
         ASSERT_TRUE(TestIsErrStackEmpty());
     }
+    storeCtx->verifyParam.flags |= HITLS_X509_VFY_FLAG_CRL_LITE;
+    ret = HITLS_X509_VerifyCrl(storeCtx, chain, NULL);
+    ASSERT_EQ(ret, expResult);
+    if (ret == HITLS_PKI_SUCCESS) {
+        ASSERT_TRUE(TestIsErrStackEmpty());
+    }
 EXIT:
+    HITLS_X509_FreeStoreCtxMock(storeCtx);
+    BSL_LIST_FREE(chain, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_X509_STORE_VFY_CRL_EXTENDED_FUNC_TC001(int expResult, char *certPath, char *crlPath)
+{
+    int ret;
+    TestMemInit();
+    HITLS_X509_StoreCtx *storeCtx = HITLS_X509_NewStoreCtxMock();
+    ASSERT_NE(storeCtx, NULL);
+    storeCtx->verifyParam.flags |= HITLS_X509_VFY_FLAG_CRL_USE_DELTA;
+    BslList *chain = BSL_LIST_New(sizeof(HITLS_X509_Cert *));
+    ASSERT_NE(chain, NULL);
+    ret = HITLS_AddBundlePemToChain(&chain, BUNDLE_TYPE_CERT, certPath);
+    ASSERT_EQ(ret, HITLS_PKI_SUCCESS);
+    ret = HITLS_AddBundlePemToChain(&storeCtx->crl, BUNDLE_TYPE_CRL, crlPath);
+    ASSERT_EQ(ret, HITLS_PKI_SUCCESS);
+    int64_t timeval = 1781481600; /* 2026-06-15 00:00:00 UTC */
+    ret = HITLS_X509_StoreCtxCtrl(storeCtx, HITLS_X509_STORECTX_SET_TIME, &timeval, sizeof(timeval));
+    ASSERT_EQ(ret, HITLS_PKI_SUCCESS);
+    storeCtx->certChain = chain;
+    ret = HITLS_X509_VerifyCrl(storeCtx, chain, &timeval);
+    ASSERT_EQ(ret, expResult);
+    if (ret == HITLS_PKI_SUCCESS) {
+        ASSERT_TRUE(TestIsErrStackEmpty());
+    }
+EXIT:
+    HITLS_X509_FreeStoreCtxMock(storeCtx);
+    BSL_LIST_FREE(chain, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_X509_STORE_VFY_CRL_TIME_ERR_FUNC_TC001(int expResult, int verifyTime, char *certPath, char *crlPath)
+{
+    int ret;
+    TestMemInit();
+    HITLS_X509_StoreCtx *storeCtx = HITLS_X509_NewStoreCtxMock();
+    ASSERT_NE(storeCtx, NULL);
+    BslList *chain = BSL_LIST_New(sizeof(HITLS_X509_Cert *));
+    ASSERT_NE(chain, NULL);
+    ret = HITLS_AddBundlePemToChain(&chain, BUNDLE_TYPE_CERT, certPath);
+    ASSERT_EQ(ret, HITLS_PKI_SUCCESS);
+    ret = HITLS_AddBundlePemToChain(&storeCtx->crl, BUNDLE_TYPE_CRL, crlPath);
+    ASSERT_EQ(ret, HITLS_PKI_SUCCESS);
+    int64_t timeval = verifyTime;
+    ret = HITLS_X509_StoreCtxCtrl(storeCtx, HITLS_X509_STORECTX_SET_TIME, &timeval, sizeof(timeval));
+    ASSERT_EQ(ret, HITLS_PKI_SUCCESS);
+    storeCtx->certChain = chain;
+    ret = HITLS_X509_VerifyCrl(storeCtx, chain, &timeval);
+    ASSERT_EQ(ret, expResult);
+EXIT:
+    HITLS_X509_FreeStoreCtxMock(storeCtx);
+    BSL_LIST_FREE(chain, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);
+}
+/* END_CASE */
+
+static int32_t STUB_HITLS_X509_CrlCtrl_MalformedDelta(HITLS_X509_Crl *crl, int32_t cmd, void *val, uint32_t valLen)
+{
+    (void)crl;
+    (void)val;
+    (void)valLen;
+    if (cmd == HITLS_X509_EXT_GET_DELTA_CRL) {
+        return HITLS_X509_ERR_EXT_CRLNUMBER;
+    }
+    return HITLS_X509_ERR_EXT_NOT_FOUND;
+}
+
+/* BEGIN_CASE */
+void SDV_X509_STORE_VFY_CRL_MALFORMED_DELTA_FUNC_TC001(char *certPath, char *crlPath)
+{
+    int ret;
+    TestMemInit();
+    HITLS_X509_StoreCtx *storeCtx = HITLS_X509_NewStoreCtxMock();
+    ASSERT_NE(storeCtx, NULL);
+    storeCtx->verifyParam.flags |= HITLS_X509_VFY_FLAG_CRL_USE_DELTA;
+    BslList *chain = BSL_LIST_New(sizeof(HITLS_X509_Cert *));
+    ASSERT_NE(chain, NULL);
+    ret = HITLS_AddBundlePemToChain(&chain, BUNDLE_TYPE_CERT, certPath);
+    ASSERT_EQ(ret, HITLS_PKI_SUCCESS);
+    ret = HITLS_AddBundlePemToChain(&storeCtx->crl, BUNDLE_TYPE_CRL, crlPath);
+    ASSERT_EQ(ret, HITLS_PKI_SUCCESS);
+    int64_t timeval = 1781481600; /* 2026-06-15 00:00:00 UTC */
+    ret = HITLS_X509_StoreCtxCtrl(storeCtx, HITLS_X509_STORECTX_SET_TIME, &timeval, sizeof(timeval));
+    ASSERT_EQ(ret, HITLS_PKI_SUCCESS);
+    storeCtx->certChain = chain;
+    STUB_REPLACE(HITLS_X509_CrlCtrl, STUB_HITLS_X509_CrlCtrl_MalformedDelta);
+    ret = HITLS_X509_VerifyCrl(storeCtx, chain, &timeval);
+    ASSERT_EQ(ret, HITLS_X509_ERR_VFY_CRL_NOT_FOUND);
+EXIT:
+    STUB_RESTORE(HITLS_X509_CrlCtrl);
     HITLS_X509_FreeStoreCtxMock(storeCtx);
     BSL_LIST_FREE(chain, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);
 }
@@ -530,7 +651,7 @@ static BslUnixTime STUB_BSL_SAL_CurrentSysTimeGet_Zero(void)
 }
 
 /* BEGIN_CASE */
-void SDV_X509_BUILD_CERT_CHAIN_FUNC_TC001(char *rootPath, char *caPath, char *cert, char *crlPath)
+void SDV_X509_BUILD_CERT_CHAIN_FUNC_TC001(char *rootPath, char *caPath, char *cert, char *crlPath, int vfyFlag)
 {
     HITLS_X509_Cert *root = NULL;
     HITLS_X509_Cert *ca = NULL;
@@ -545,6 +666,7 @@ void SDV_X509_BUILD_CERT_CHAIN_FUNC_TC001(char *rootPath, char *caPath, char *ce
     TestMemInit();
 
     store = HITLS_X509_StoreCtxNew();
+    store->verifyParam.flags |= vfyFlag;
     ASSERT_TRUE(store != NULL);
 
     ASSERT_EQ(HITLS_AddCertToStoreTest(rootPath, store, &root), HITLS_PKI_SUCCESS);
@@ -661,6 +783,15 @@ typedef struct {
     uint32_t loops;
     int32_t result;
 } X509StoreDupVerifySharedThreadArg;
+
+#if defined(HITLS_PKI_X509_CRL_PARSE)
+typedef struct {
+    HITLS_X509_StoreCtx *srcStore;
+    HITLS_X509_List *chain;
+    uint32_t loops;
+    int32_t result;
+} X509VerifyCrlThreadArg;
+#endif
 
 static uint32_t X509_TestListCount(const BslList *list)
 {
@@ -876,6 +1007,48 @@ static void X509StoreDupVerifySharedThread(void *arg)
     }
     threadArg->result = HITLS_PKI_SUCCESS;
 }
+
+#if defined(HITLS_PKI_X509_CRL_PARSE)
+static HITLS_X509_List *X509_DupCertChain(const HITLS_X509_List *src)
+{
+    HITLS_X509_List *dst = BSL_LIST_New(sizeof(HITLS_X509_Cert *));
+    if (dst == NULL) {
+        return NULL;
+    }
+    for (BslListNode *node = BSL_LIST_FirstNode(src); node != NULL; node = BSL_LIST_GetNextNode(src, node)) {
+        if (X509_AddCertToChainTest(dst, BSL_LIST_GetData(node)) != HITLS_PKI_SUCCESS) {
+            BSL_LIST_FREE(dst, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);
+            return NULL;
+        }
+    }
+    return dst;
+}
+
+static void X509VerifyCrlThread(void *arg)
+{
+    X509VerifyCrlThreadArg *threadArg = (X509VerifyCrlThreadArg *)arg;
+    threadArg->result = BSL_INTERNAL_EXCEPTION;
+
+    for (uint32_t i = 0; i < threadArg->loops; i++) {
+        HITLS_X509_StoreCtx *dupStore = HITLS_X509_StoreCtxDup(threadArg->srcStore);
+        HITLS_X509_List *dupChain = X509_DupCertChain(threadArg->chain);
+        if (dupStore == NULL || dupChain == NULL) {
+            HITLS_X509_StoreCtxFree(dupStore);
+            BSL_LIST_FREE(dupChain, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);
+            threadArg->result = BSL_MALLOC_FAIL;
+            return;
+        }
+        dupStore->certChain = dupChain;
+        int32_t ret = HITLS_X509_VerifyCrl(dupStore, dupChain, NULL);
+        HITLS_X509_StoreCtxFree(dupStore);
+        if (ret != HITLS_PKI_SUCCESS) {
+            threadArg->result = ret;
+            return;
+        }
+    }
+    threadArg->result = HITLS_PKI_SUCCESS;
+}
+#endif
 
 /* BEGIN_CASE */
 void SDV_X509_BUILD_CERT_CHAIN_FUNC_TC003(void)
@@ -4921,7 +5094,7 @@ EXIT:
  */
 /* BEGIN_CASE */
 void SDV_X509_CRL_VERIFY_WITH_VARIOUS_CHARSET_FUNC_TC001(char *caCertPath, char *entityCertPath,
-    char *crlPath, int expectedResult)
+    char *crlPath, int expectedResult, int flag)
 {
     int32_t ret;
     HITLS_X509_StoreCtx *store = NULL;
@@ -4933,7 +5106,7 @@ void SDV_X509_CRL_VERIFY_WITH_VARIOUS_CHARSET_FUNC_TC001(char *caCertPath, char 
     TestMemInit();
     store = HITLS_X509_StoreCtxNew();
     ASSERT_NE(store, NULL);
-
+    store->verifyParam.flags |= flag;
     ret = HITLS_AddCertToStoreTest(caCertPath, store, &ca);
     ASSERT_EQ(ret, HITLS_PKI_SUCCESS);
     ret = HITLS_AddCrlToStoreTest(crlPath, store, &crl);
@@ -5500,6 +5673,66 @@ EXIT:
 #else
     (void)caCertPath;
     (void)entityCertPath;
+    SKIP_TEST();
+#endif
+}
+/* END_CASE */
+
+/**
+ * @test   SDV_X509_VERIFY_CRL_MULTI_THREAD_FUNC_TC001
+ * @title  Verify a certificate chain against CRLs concurrently.
+ * @brief  1. Parse a certificate chain and CRL bundle into a shared source context.
+ *         2. Duplicate the store context and certificate chain in each worker.
+ *         3. Call HITLS_X509_VerifyCrl repeatedly from multiple threads.
+ * @expect CRL verification succeeds in every thread without corrupting shared objects.
+ */
+/* BEGIN_CASE */
+void SDV_X509_VERIFY_CRL_MULTI_THREAD_FUNC_TC001(char *certPath, char *crlPath)
+{
+#if defined(HITLS_PKI_X509_CRL_PARSE)
+    enum {
+        VERIFY_CRL_THREAD_NUM = 10,
+        VERIFY_CRL_THREAD_LOOPS = 80
+    };
+    int64_t verifyTime = 1780272000; /* 2026-06-01 00:00:00 UTC */
+    uint64_t verifyFlags = HITLS_X509_VFY_FLAG_CRL_ALL;
+    pthread_t verifyThreads[VERIFY_CRL_THREAD_NUM] = {0};
+    HITLS_X509_StoreCtx *storeCtx = NULL;
+    HITLS_X509_List *chain = NULL;
+    X509VerifyCrlThreadArg verifyArgs[VERIFY_CRL_THREAD_NUM];
+
+    TestMemInit();
+    BSL_GLOBAL_Init();
+
+    storeCtx = HITLS_X509_StoreCtxNew();
+    ASSERT_NE(storeCtx, NULL);
+    ASSERT_EQ(HITLS_AddBundlePemToChain(&chain, BUNDLE_TYPE_CERT, certPath), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_AddBundlePemToChain(&storeCtx->crl, BUNDLE_TYPE_CRL, crlPath), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_StoreCtxCtrl(storeCtx, HITLS_X509_STORECTX_SET_PARAM_FLAGS, &verifyFlags,
+        sizeof(verifyFlags)), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_StoreCtxCtrl(storeCtx, HITLS_X509_STORECTX_SET_TIME, &verifyTime, sizeof(verifyTime)),
+        HITLS_PKI_SUCCESS);
+
+    for (uint32_t i = 0; i < VERIFY_CRL_THREAD_NUM; i++) {
+        verifyArgs[i].srcStore = storeCtx;
+        verifyArgs[i].chain = chain;
+        verifyArgs[i].loops = VERIFY_CRL_THREAD_LOOPS;
+        verifyArgs[i].result = BSL_INTERNAL_EXCEPTION;
+        ASSERT_TRUE(pthread_create(&verifyThreads[i], NULL, (void *)X509VerifyCrlThread, &verifyArgs[i]) == 0);
+    }
+
+    for (uint32_t i = 0; i < VERIFY_CRL_THREAD_NUM; i++) {
+        pthread_join(verifyThreads[i], NULL);
+        ASSERT_EQ(verifyArgs[i].result, HITLS_PKI_SUCCESS);
+    }
+    ASSERT_TRUE(TestIsErrStackEmpty());
+EXIT:
+    HITLS_X509_StoreCtxFree(storeCtx);
+    BSL_LIST_FREE(chain, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);
+    BSL_GLOBAL_DeInit();
+#else
+    (void)certPath;
+    (void)crlPath;
     SKIP_TEST();
 #endif
 }

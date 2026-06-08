@@ -435,6 +435,7 @@ option(HITLS_PKI_X509                                          "X509" OFF)
     option(HITLS_PKI_X509_VFY_CB                                   "X509 Verify Callback" OFF)
     option(HITLS_PKI_X509_VFY_LOCATION                             "X509 Verify Location" OFF)
     option(HITLS_PKI_X509_VFY_IDENTITY                             "X509 Verify Hostname" OFF)
+    option(HITLS_PKI_X509_VFY_CRL_LITE                        "X509 Verify CRL Legacy" OFF)
 
 ## CMS
 option(HITLS_PKI_CMS                                           "CMS" OFF)

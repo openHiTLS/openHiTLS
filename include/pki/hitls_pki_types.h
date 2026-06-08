@@ -385,6 +385,12 @@ typedef enum {
 
     HITLS_X509_VFY_FLAG_DISABLE_TIME_CHECK = 1 << 3,    /** Disable the check on whether the cert and crl validity
                                                             periods are within the current time. */
+    HITLS_X509_VFY_FLAG_CRL_LITE = 1 << 4,         /** Lite CRL verification mode: performs issuer name, AKI/SKI,
+                                                       time validity, critical extension, signature and
+                                                       revocation checks, but skips IDP/CDP scope/reason
+                                                       matching and delta CRL processing. */
+
+    HITLS_X509_VFY_FLAG_CRL_USE_DELTA = 1 << 5     /** use delta crl */
 } HITLS_X509_VFY_FLAGS;
 
 typedef enum {

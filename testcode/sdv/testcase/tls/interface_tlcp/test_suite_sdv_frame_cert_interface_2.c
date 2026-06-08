@@ -377,7 +377,7 @@ EXIT:
 *          4. The post-clear handshake fails with CRL-not-found instead of certificate-revoked.
 @ */
 /* BEGIN_CASE */
-void UT_TLS_CERT_CFG_CLEAR_VERIFY_CRLS_FUNC_TC001(int version)
+void UT_TLS_CERT_CFG_CLEAR_VERIFY_CRLS_FUNC_TC001(int version, int vfyFlag)
 {
     const char *serverCertPath = "../testdata/tls/certificate/der/ed25519/ed25519.end.der";
     const char *serverKeyPath = "../testdata/tls/certificate/der/ed25519/ed25519.end.key.der";
@@ -412,7 +412,7 @@ void UT_TLS_CERT_CFG_CLEAR_VERIFY_CRLS_FUNC_TC001(int version)
     ASSERT_TRUE(caCert != NULL);
     ASSERT_EQ(HITLS_CFG_AddCertToStore(tlsConfig, caCert, TLS_CERT_STORE_TYPE_VERIFY, false), HITLS_SUCCESS);
 
-    ASSERT_EQ(HITLS_CFG_SetVerifyFlags(tlsConfig, HITLS_X509_VFY_FLAG_CRL_DEV), HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_CFG_SetVerifyFlags(tlsConfig, vfyFlag), HITLS_SUCCESS);
     ASSERT_EQ(HITLS_CFG_LoadCrlFile(tlsConfig, crlPath, TLS_PARSE_FORMAT_ASN1), HITLS_SUCCESS);
 
     client = FRAME_CreateLinkBase(tlsConfig, BSL_UIO_TCP, false);

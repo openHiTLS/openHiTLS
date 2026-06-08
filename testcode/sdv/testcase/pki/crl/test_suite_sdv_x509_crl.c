@@ -788,6 +788,9 @@ void SDV_X509_CRL_ExtCtrl_FuncTest_TC001(void)
     ASSERT_EQ(memcmp(getaki.kid.data, aki.kid.data, aki.kid.dataLen), 0);
 
     HITLS_X509_ExtDeltaCrl delta = {true, {baseCrlNum, sizeof(baseCrlNum)}};
+    // the error code HITLS_X509_ERR_EXT_NOT_FOUND can not be changed
+    ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_EXT_GET_DELTA_CRL, &delta, sizeof(delta)),
+        HITLS_X509_ERR_EXT_NOT_FOUND);
     ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_EXT_SET_DELTA_CRL, &delta, sizeof(delta)),
         HITLS_PKI_SUCCESS);
     HITLS_X509_ExtDeltaCrl getDelta = {0};
