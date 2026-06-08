@@ -26,6 +26,7 @@
 #include "hbs_tree.h"
 #include "xmss_params.h"
 #include "xmss_address.h"
+#include "xmss_bds.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -55,6 +56,8 @@ typedef struct CryptXmssCtx {
         uint8_t root[XMSS_MAX_MDSIZE]; // Tree root (PK.root)
         uint8_t pubSeed[XMSS_MAX_SEED_SIZE]; // Public seed (PK.seed)
     } key;
+
+    XmssBdsCtx bds;
 
     bool hasPrivateKey; // Whether key.seed/prf/idx contain usable private signing state.
 

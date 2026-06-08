@@ -21,6 +21,7 @@
 #include "crypt_util_rand.h"
 #include "crypt_utils.h"
 #include "xmss_local.h"
+#include "xmss_bds.h"
 #include "xmss_hash.h"
 #include "bsl_bytes.h"
 
@@ -43,6 +44,8 @@ void HbsTreeCtx_InitFromXmss(HbsTreeCtx *treeCtx, const CryptXmssCtx *ctx)
 
 int32_t CRYPT_XMSS_InitInternal(CryptXmssCtx *ctx, const XmssParams *params)
 {
+    XmssBds_Free(ctx);
+
     /* Store pointer to parameters (from global param table) */
     ctx->params = params;
 
@@ -69,8 +72,6 @@ int32_t CRYPT_XMSS_KeyGenInternal(CryptXmssCtx *ctx)
 {
     int32_t ret;
     uint32_t n = ctx->params->n;
-    uint32_t d = ctx->params->d;
-    uint32_t hp = ctx->params->hp;
     ctx->hasPrivateKey = false;
 
     /* Generate random private seed */
@@ -91,19 +92,11 @@ int32_t CRYPT_XMSS_KeyGenInternal(CryptXmssCtx *ctx)
         return ret;
     }
 
-    XmssAdrs adrs = {0};
-    ctx->adrsOps.setLayerAddr(&adrs, d - 1);
-    HbsTreeCtx treeCtx;
-    HbsTreeCtx_InitFromXmss(&treeCtx, ctx);
-    uint8_t node[XMSS_MAX_MDSIZE] = {0};
-    ret = HbsTree_ComputeNode(node, 0, hp, &adrs, &treeCtx, NULL, 0);
+    ret = XmssBds_HyperTreeInit(ctx);
     if (ret != CRYPT_SUCCESS) {
-        BSL_SAL_CleanseData(node, sizeof(node));
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
-    memcpy(ctx->key.root, node, n);
-    BSL_SAL_CleanseData(node, sizeof(node));
     ctx->key.idx = 0;
     ctx->hasPrivateKey = true;
     return CRYPT_SUCCESS;
@@ -188,11 +181,15 @@ int32_t CRYPT_XMSS_SignInternal(CryptXmssCtx *ctx, const uint8_t *msg, uint32_t 
         goto ERR;
     }
     uint32_t left = *sigLen - offset;
-    uint32_t leafIdx = (uint32_t)(index & ((1ULL << hp) - 1));
-    uint64_t treeIdx = index >> hp;
-    HbsTreeCtx treeCtx;
-    HbsTreeCtx_InitFromXmss(&treeCtx, ctx);
-    ret = HbsHyperTree_Sign(digest, n, treeIdx, leafIdx, &treeCtx, sig + offset, &left);
+    if (ctx->bds.enabled) {
+        ret = XmssBds_HyperTreeSign(ctx, digest, n, index, sig + offset, &left);
+    } else {
+        uint32_t leafIdx = (uint32_t)(index & ((1ULL << hp) - 1));
+        uint64_t treeIdx = index >> hp;
+        HbsTreeCtx treeCtx;
+        HbsTreeCtx_InitFromXmss(&treeCtx, ctx);
+        ret = HbsHyperTree_Sign(digest, n, treeIdx, leafIdx, &treeCtx, sig + offset, &left);
+    }
     BSL_SAL_CleanseData(digest, sizeof(digest));
     if (ret != CRYPT_SUCCESS) {
         goto ERR;
@@ -201,6 +198,7 @@ int32_t CRYPT_XMSS_SignInternal(CryptXmssCtx *ctx, const uint8_t *msg, uint32_t 
     return CRYPT_SUCCESS;
 
 ERR:
+    XmssBds_Free(ctx);
     BSL_SAL_CleanseData(sig, sigBufLen);
     *sigLen = 0;
     BSL_ERR_PUSH_ERROR(ret);
@@ -277,6 +275,7 @@ typedef struct {
     BSL_Param *prvPrf;
     BSL_Param *pubSeed;
     BSL_Param *pubRoot;
+    BSL_Param *bdsState;
 } XmssPrvKeyParam;
 
 #ifdef HITLS_CRYPTO_XMSS
@@ -306,6 +305,7 @@ void CRYPT_XMSS_FreeCtx(CryptXmssCtx *ctx)
     if (ctx == NULL) {
         return;
     }
+    XmssBds_Free(ctx);
     BSL_SAL_ClearFree(ctx, sizeof(CryptXmssCtx));
 }
 
@@ -599,6 +599,7 @@ static int32_t XPrvKeyParamCheck(const CryptXmssCtx *ctx, BSL_Param *para, XmssP
     prv->prvPrf = BSL_PARAM_FindParam(para, CRYPT_PARAM_XMSS_PRV_PRF);
     prv->pubSeed = BSL_PARAM_FindParam(para, CRYPT_PARAM_XMSS_PUB_SEED);
     prv->pubRoot = BSL_PARAM_FindParam(para, CRYPT_PARAM_XMSS_PUB_ROOT);
+    prv->bdsState = BSL_PARAM_FindParam(para, CRYPT_PARAM_XMSS_BDS_STATE);
     if (prv->prvIndex == NULL || prv->prvIndex->value == NULL || prv->prvSeed == NULL || prv->prvSeed->value == NULL ||
         prv->prvPrf == NULL || prv->prvPrf->value == NULL || prv->pubSeed == NULL || prv->pubSeed->value == NULL ||
         prv->pubRoot == NULL || prv->pubRoot->value == NULL) {
@@ -610,6 +611,10 @@ static int32_t XPrvKeyParamCheck(const CryptXmssCtx *ctx, BSL_Param *para, XmssP
         prv->pubRoot->valueLen != ctx->params->n) {
         BSL_ERR_PUSH_ERROR(CRYPT_XMSS_ERR_INVALID_KEYLEN);
         return CRYPT_XMSS_ERR_INVALID_KEYLEN;
+    }
+    if (prv->bdsState != NULL && prv->bdsState->valueType != BSL_PARAM_TYPE_OCTETS) {
+        BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
+        return CRYPT_INVALID_ARG;
     }
     return CRYPT_SUCCESS;
 }
@@ -634,7 +639,19 @@ int32_t CRYPT_XMSS_GetPrvKey(const CryptXmssCtx *ctx, BSL_Param *para)
     memcpy(prv.prvPrf->value, ctx->key.prf, ctx->params->n);
     memcpy(prv.pubSeed->value, ctx->key.pubSeed, ctx->params->n);
     memcpy(prv.pubRoot->value, ctx->key.root, ctx->params->n);
-    return BSL_PARAM_SetValue(prv.prvIndex, CRYPT_PARAM_XMSS_PRV_INDEX, BSL_PARAM_TYPE_UINT64, &index, sizeof(index));
+    ret = BSL_PARAM_SetValue(prv.prvIndex, CRYPT_PARAM_XMSS_PRV_INDEX, BSL_PARAM_TYPE_UINT64, &index, sizeof(index));
+    if (ret != CRYPT_SUCCESS) {
+        return ret;
+    }
+    if (prv.bdsState != NULL) {
+        uint32_t bdsLen = prv.bdsState->valueLen;
+        ret = XmssBds_ExportState(ctx, (uint8_t *)prv.bdsState->value, &bdsLen);
+        prv.bdsState->useLen = bdsLen;
+        if (ret != CRYPT_SUCCESS) {
+            return ret;
+        }
+    }
+    return CRYPT_SUCCESS;
 }
 
 int32_t CRYPT_XMSS_SetPubKey(CryptXmssCtx *ctx, const BSL_Param *para)
@@ -668,6 +685,7 @@ int32_t CRYPT_XMSS_SetPubKey(CryptXmssCtx *ctx, const BSL_Param *para)
         BSL_ERR_PUSH_ERROR(CRYPT_XMSS_ERR_INVALID_KEYLEN);
         return CRYPT_XMSS_ERR_INVALID_KEYLEN;
     }
+    XmssBds_Free(ctx);
     memcpy(ctx->key.pubSeed, pub.pubSeed->value, pub.pubSeed->valueLen);
     memcpy(ctx->key.root, pub.pubRoot->value, pub.pubRoot->valueLen);
     return CRYPT_SUCCESS;
@@ -689,16 +707,29 @@ int32_t CRYPT_XMSS_SetPrvKey(CryptXmssCtx *ctx, const BSL_Param *para)
     if (ret != CRYPT_SUCCESS) {
         return ret;
     }
+    XmssBds_Free(ctx);
     ctx->hasPrivateKey = false;
     memcpy(ctx->key.seed, prv.prvSeed->value, ctx->params->n);
     memcpy(ctx->key.prf, prv.prvPrf->value, ctx->params->n);
     memcpy(ctx->key.pubSeed, prv.pubSeed->value, ctx->params->n);
     memcpy(ctx->key.root, prv.pubRoot->value, ctx->params->n);
     ret = BSL_PARAM_GetValue(prv.prvIndex, CRYPT_PARAM_XMSS_PRV_INDEX, BSL_PARAM_TYPE_UINT64, &ctx->key.idx, &tmplen);
-    if (ret == CRYPT_SUCCESS) {
-        ctx->hasPrivateKey = true;
+    if (ret != CRYPT_SUCCESS) {
+        return ret;
     }
-    return ret;
+    if (prv.bdsState != NULL && prv.bdsState->valueLen != 0) {
+        if (prv.bdsState->value == NULL) {
+            BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+            return CRYPT_NULL_INPUT;
+        }
+        ret = XmssBds_ImportState(ctx, (const uint8_t *)prv.bdsState->value, prv.bdsState->valueLen);
+        if (ret != CRYPT_SUCCESS) {
+            XmssBds_Free(ctx);
+            return ret;
+        }
+    }
+    ctx->hasPrivateKey = true;
+    return CRYPT_SUCCESS;
 }
 
 #endif /* HITLS_CRYPTO_XMSS */

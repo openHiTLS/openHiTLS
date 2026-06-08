@@ -287,6 +287,84 @@ EXIT:
 /* END_CASE */
 
 /* BEGIN_CASE */
+void SDV_CRYPTO_XMSS_BDS_SIGN_COMPARE_TC001(int id, int rounds, int compareHead, Hex *key, Hex *msg)
+{
+    TestMemInit();
+
+    CRYPT_EAL_PkeyCtx *bdsPkey = NULL;
+    CRYPT_EAL_PkeyCtx *naivePkey = NULL;
+    CRYPT_PKEY_AlgId pkeyType = (id >= CRYPT_XMSSMT_SHA2_20_2_256) ? CRYPT_PKEY_XMSSMT : CRYPT_PKEY_XMSS;
+    bdsPkey = CRYPT_EAL_PkeyNewCtx(pkeyType);
+    ASSERT_TRUE(bdsPkey != NULL);
+
+    int32_t algId = id;
+    ASSERT_EQ(CRYPT_EAL_PkeySetParaById(bdsPkey, algId), CRYPT_SUCCESS);
+
+    uint32_t pubLen = 0;
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(bdsPkey, CRYPT_CTRL_GET_PUBKEY_LEN, (void *)&pubLen, sizeof(pubLen)), CRYPT_SUCCESS);
+    uint32_t keyLen = (pubLen - 4) / 2;
+    ASSERT_TRUE(key->len >= 3U * keyLen);
+
+    RandInjectionInit();
+    uint8_t *stubRand[3] = {key->x, key->x + keyLen, key->x + keyLen * 2};
+    uint32_t stubRandLen[3] = {keyLen, keyLen, keyLen};
+    RandInjectionSet(stubRand, stubRandLen);
+    CRYPT_RandRegist(RandInjection);
+    CRYPT_RandRegistEx(RandInjectionEx);
+    ASSERT_EQ(CRYPT_EAL_PkeyGen(bdsPkey), CRYPT_SUCCESS);
+
+    CRYPT_EAL_PkeyPrv prv;
+    uint8_t prvSeed[64] = {0};
+    uint8_t prvPrf[64] = {0};
+    uint8_t pubSeed[64] = {0};
+    uint8_t pubRoot[64] = {0};
+    memset(&prv, 0, sizeof(prv));
+    prv.id = pkeyType;
+    prv.key.xmssPrv.seed = prvSeed;
+    prv.key.xmssPrv.prf = prvPrf;
+    prv.key.xmssPrv.pub.seed = pubSeed;
+    prv.key.xmssPrv.pub.root = pubRoot;
+    prv.key.xmssPrv.pub.len = keyLen;
+    ASSERT_EQ(CRYPT_EAL_PkeyGetPrv(bdsPkey, &prv), CRYPT_SUCCESS);
+
+    uint8_t bdsSig[50000] = {0};
+    uint8_t naiveSig[50000] = {0};
+    uint8_t msgBuf[256] = {0};
+    ASSERT_TRUE(msg->len <= sizeof(msgBuf));
+    for (int i = 0; i < rounds; i++) {
+        memcpy(msgBuf, msg->x, msg->len);
+        msgBuf[0] ^= (uint8_t)i;
+        uint32_t bdsSigLen = sizeof(bdsSig);
+        ASSERT_EQ(CRYPT_EAL_PkeySign(bdsPkey, 0, msgBuf, msg->len, bdsSig, &bdsSigLen), CRYPT_SUCCESS);
+        ASSERT_EQ(CRYPT_EAL_PkeyVerify(bdsPkey, 0, msgBuf, msg->len, bdsSig, bdsSigLen), CRYPT_SUCCESS);
+
+        if (i >= compareHead && i + 2 < rounds) {
+            continue;
+        }
+        naivePkey = CRYPT_EAL_PkeyNewCtx(pkeyType);
+        ASSERT_TRUE(naivePkey != NULL);
+        ASSERT_EQ(CRYPT_EAL_PkeySetParaById(naivePkey, algId), CRYPT_SUCCESS);
+        prv.key.xmssPrv.index = (uint64_t)i;
+        ASSERT_EQ(CRYPT_EAL_PkeySetPrv(naivePkey, &prv), CRYPT_SUCCESS);
+
+        uint32_t naiveSigLen = sizeof(naiveSig);
+        ASSERT_EQ(CRYPT_EAL_PkeySign(naivePkey, 0, msgBuf, msg->len, naiveSig, &naiveSigLen), CRYPT_SUCCESS);
+        ASSERT_TRUE(bdsSigLen == naiveSigLen);
+        ASSERT_TRUE(memcmp(bdsSig, naiveSig, bdsSigLen) == 0);
+        ASSERT_EQ(CRYPT_EAL_PkeyVerify(naivePkey, 0, msgBuf, msg->len, naiveSig, naiveSigLen), CRYPT_SUCCESS);
+        CRYPT_EAL_PkeyFreeCtx(naivePkey);
+        naivePkey = NULL;
+    }
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
+EXIT:
+    CRYPT_EAL_PkeyFreeCtx(naivePkey);
+    CRYPT_EAL_PkeyFreeCtx(bdsPkey);
+    return;
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
 void SDV_CRYPTO_XMSS_SIGN_KAT_TC001(int id, int index, Hex *key, Hex *msg, Hex *sig, int result)
 {
     (void)key;
