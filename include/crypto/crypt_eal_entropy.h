@@ -73,10 +73,11 @@ int32_t CRYPT_EAL_EsInit(CRYPT_EAL_Es *es);
  * @ingroup crypt_eal_entropy
  * @brief Set the mode ctx parameters in the CTX.
  *         parameter                data type              Length(len):number of data bytes
- * CRYPT_ENTROPY_SET_CF             string              Adjust the length of the function type name. For example,
-                                                        if the function type name is sm3-df, the length is 6.
+ * CRYPT_ENTROPY_SET_CF             string              NUL-terminated string specifying the conditioning function
+                                                        type name, e.g. "sm3_df" or "sha256_df". len is the
+                                                        string length excluding the NUL terminator, e.g. len is 6 for "sm3_df".
                                                         This interface can be invoked only once before the
-                                                         CRYPT_EAL_EsInit interface is invoked.
+                                                        CRYPT_EAL_EsInit interface is invoked.
  * CRYPT_ENTROPY_SET_POOL_SIZE      uint32_t            Specifies the size of the entropy pool. The recommended value
                                                          ranges from 512 to 4096. The default value is 4096.
                                                         Can only be called before CRYPT_EAL_EsInit interface.

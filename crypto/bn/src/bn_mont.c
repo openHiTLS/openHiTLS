@@ -176,9 +176,10 @@ static int32_t MontExpBin(BN_UINT *r, const BN_UINT *e, uint32_t eSize, BN_Mont 
     return CRYPT_SUCCESS;
 }
 
-static int32_t MontParaCheck(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *e, const BN_Mont *mont)
+static int32_t MontParaCheck(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *e, const BN_Mont *mont,
+    const BN_Optimizer *opt)
 {
-    if (r == NULL || a == NULL || e == NULL || mont == NULL) {
+    if (r == NULL || a == NULL || e == NULL || mont == NULL || opt == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
@@ -287,7 +288,7 @@ static int32_t MontExpCore(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *e,
 static int32_t MontExp(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *e, BN_Mont *mont,
     BN_Optimizer *opt, bool consttime)
 {
-    int32_t ret = MontParaCheck(r, a, e, mont);
+    int32_t ret = MontParaCheck(r, a, e, mont, opt);
     if (ret != CRYPT_SUCCESS) {
         return ret;
     }

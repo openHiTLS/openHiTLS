@@ -107,20 +107,23 @@ CRYPT_EAL_PkeyCtx *CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_AlgId id)
     return PkeyNewDefaultCtx(id);
 }
 
-
 static int32_t PkeyCopyCtx(CRYPT_EAL_PkeyCtx *to, const CRYPT_EAL_PkeyCtx *from)
 {
-    if (from->method.dupCtx == NULL) {
+    if (from->method.dupCtx == NULL || from->method.freeCtx == NULL) {
         EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_PKEY, from->id, CRYPT_EAL_ALG_NOT_SUPPORT);
         return CRYPT_EAL_ALG_NOT_SUPPORT;
     }
-    *to = *from;
-    (void)memset(&(to->references), 0, sizeof(BSL_SAL_RefCount));
-    to->key = from->method.dupCtx(from->key);
-    if (to->key == NULL) {
+    void *newKey = from->method.dupCtx(from->key);
+    if (newKey == NULL) {
         EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_PKEY, from->id, CRYPT_EAL_PKEY_DUP_ERROR);
         return CRYPT_EAL_PKEY_DUP_ERROR;
     }
+    BSL_SAL_ReferencesFree(&(to->references));
+    if (to->key != NULL) {
+        to->method.freeCtx(to->key);
+    }
+    memcpy(to, from, sizeof(CRYPT_EAL_PkeyCtx));
+    to->key = newKey;
     BSL_SAL_ReferencesInit(&(to->references));
     return CRYPT_SUCCESS;
 }
@@ -131,15 +134,16 @@ int32_t CRYPT_EAL_PkeyCopyCtx(CRYPT_EAL_PkeyCtx *to, const CRYPT_EAL_PkeyCtx *fr
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
+    if (to == from) {
+        BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
+        return CRYPT_INVALID_ARG;
+    }
     if (to->key != NULL) {
         if (to->method.freeCtx == NULL) {
             BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
             return CRYPT_INVALID_ARG;
         }
-        to->method.freeCtx(to->key);
-        to->key = NULL;
     }
-    BSL_SAL_ReferencesFree(&(to->references));
     return PkeyCopyCtx(to, from);
 }
 

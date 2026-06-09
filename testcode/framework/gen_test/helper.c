@@ -412,6 +412,7 @@ int GenFunctionWrapper(FILE *file, FunctionTable *function)
     }
     ret = fprintf(file,
         ");\n"
+        "    alarm(0);\n"
         "#if defined(HITLS_BSL_ERR)\n"
         "    BSL_ERR_ClearError();\n"
         "#endif\n"
@@ -959,8 +960,9 @@ int ScanFunctionFile(FILE *fpIn, FILE *fpOut, const char *dir)
     }
     if (fprintf(fpOut, "\n void handleAlarmSignal(int signum)\n{\n\
     (void)signum; \n\
-    fprintf(stderr, \"timeout 600\\n\");\n\
-    exit(-1);\n}\n") < 0) {
+    const char msg[] = \"timeout 600\\n\";\n\
+    write(STDERR_FILENO, msg, sizeof(msg) - 1);\n\
+    _exit(-1);\n}\n") < 0) {
         return 1;
     }
 

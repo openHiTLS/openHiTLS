@@ -334,7 +334,7 @@ void bn_mont_redc(uint32_t *r, const uint32_t *x, const uint32_t *m, uint32_t mc
 
 void bn_get_res(uint32_t *x, const uint32_t *m, int32_t wsize)
 {
-    if (bn_cmp(x, m, wsize) > 0)
+    if (bn_cmp(x, m, wsize) >= 0)
         bn_sub(x, x, m, wsize);
 }
 

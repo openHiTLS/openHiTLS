@@ -265,11 +265,17 @@ int32_t CRYPT_PBKDF2_SetMacMethod(CRYPT_PBKDF2_Ctx *ctx, const CRYPT_MAC_AlgId i
         return  CRYPT_PBKDF2_PARAM_ERROR;
     }
 #ifdef HITLS_CRYPTO_PROVIDER
-    return CRYPT_CTRL_SetMacMethod(ctx->libCtx, id, CRYPT_PBKDF2_ERR_MAC_METH, &ctx->macCtx, &ctx->macMeth,
+    int32_t ret = CRYPT_CTRL_SetMacMethod(ctx->libCtx, id, CRYPT_PBKDF2_ERR_MAC_METH, &ctx->macCtx, &ctx->macMeth,
         &ctx->macId);
 #else
-    return CRYPT_CTRL_SetMacMethod(NULL, id, CRYPT_PBKDF2_ERR_MAC_METH, &ctx->macCtx, &ctx->macMeth, &ctx->macId);
+    int32_t ret =  CRYPT_CTRL_SetMacMethod(NULL, id, CRYPT_PBKDF2_ERR_MAC_METH, &ctx->macCtx, &ctx->macMeth, &ctx->macId);
 #endif
+    if (ret != CRYPT_SUCCESS) {
+        return ret;
+    }
+    ctx->hasGetMdSize = false;
+    ctx->mdSize = 0;
+    return CRYPT_SUCCESS;
 }
 
 int32_t CRYPT_PBKDF2_SetCnt(CRYPT_PBKDF2_Ctx *ctx, const uint32_t iterCnt)
@@ -312,6 +318,9 @@ static int32_t CRYPT_PBKDF2_SetMdAttr(CRYPT_PBKDF2_Ctx *ctx, const char *mdAttr,
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
+
+    ctx->hasGetMdSize = false;
+    ctx->mdSize = 0;
     return Pbkdf2GetMdSize(ctx, mdAttr);
 }
 #endif

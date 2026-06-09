@@ -658,7 +658,7 @@ typedef enum {
                                               Switching back to non-deterministic is not supported. */
     CRYPT_CTRL_SET_CTX_INFO,             /**< Set the context string. */
     CRYPT_CTRL_SET_PREHASH_MODE,         /**< Change the SLH-DSA or ML-DSA mode to prehash version or pure version. */
-    CRYPT_CTRL_GEN_PARA,                 /**< Asymmetric cipher generate para. */
+    CRYPT_CTRL_GEN_PARA,                 /**< Asymmetric cipher generate para. For DSA, the maximum seed length is 256 bytes. */
     CRYPT_CTRL_SET_GEN_FLAG,             /**< Set SP800-56Ar3 generate private key flag. */
     CRYPT_CTRL_GET_PUB_KEY_BITS,         /**< Get the number of key bits. */
     CRYPT_CTRL_SET_SIGN_MD,
