@@ -1326,7 +1326,7 @@ int32_t HITLS_X509_CheckCertCrl(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_Cert *
         if (HITLS_X509_CmpNameNode(crl->tbs.issuerName, parent->tbs.subjectName) != 0) {
             continue;
         }
-        if (cert->tbs.version == HITLS_X509_VERSION_3 && crl->tbs.version == 1) {
+        if (parent->tbs.version == HITLS_X509_VERSION_3 && crl->tbs.version == 1) {
             if (HITLS_X509_CheckAki(&parent->tbs.ext, &crl->tbs.crlExt, parent->tbs.issuerName,
                 &parent->tbs.serialNum) != HITLS_PKI_SUCCESS) {
 #ifdef HITLS_PKI_X509_VFY_CB
