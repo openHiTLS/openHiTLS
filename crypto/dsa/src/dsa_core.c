@@ -1544,6 +1544,10 @@ static int32_t DSA_GetFipsPara(BSL_Param *params, DSA_FIPS186_4_Para *fipsPara, 
     fipsPara->n = *(const uint32_t *)qBits;
     fipsPara->index = *(const int32_t *)index;
     seed->dataLen = *(const uint32_t *)seedLen;
+    if (seed->dataLen > DSA_SEEDLEN_MAX) {
+        BSL_ERR_PUSH_ERROR(CRYPT_DSA_ERR_KEY_PARA);
+        return CRYPT_DSA_ERR_KEY_PARA;
+    }
     seed->data = (uint8_t *)BSL_SAL_Calloc(seed->dataLen, 1);
     if (seed->data == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);

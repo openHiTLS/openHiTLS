@@ -30,6 +30,7 @@ extern "C" {
 #define DSA_MIN_PBITS 1024 // The minimum specification of DSA: 1024 bits
 #define DSA_MAX_PBITS 3072 // The maximum specification of DSA: 3072 bits
 #define DSA_MIN_QBITS 160  // The minimum specification of parameter q of DSA
+#define DSA_SEEDLEN_MAX  256 // Maximum seed length in bytes. The seed is hashed, 256 provides sufficient margin.
 
 /* DSA key parameters */
 struct DSA_Para {

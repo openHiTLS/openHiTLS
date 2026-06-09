@@ -248,10 +248,16 @@ int32_t CRYPT_HKDF_SetMacMethod(CRYPT_HKDF_Ctx *ctx, const CRYPT_MAC_AlgId id)
         return CRYPT_HKDF_PARAM_ERROR;
     }
 #ifdef HITLS_CRYPTO_PROVIDER
-    return CRYPT_CTRL_SetMacMethod(ctx->libCtx, id, CRYPT_HKDF_ERR_MAC_METH, &ctx->macCtx, &ctx->macMeth, &ctx->macId);
+    int32_t ret = CRYPT_CTRL_SetMacMethod(ctx->libCtx, id, CRYPT_HKDF_ERR_MAC_METH, &ctx->macCtx, &ctx->macMeth, &ctx->macId);
 #else
-    return CRYPT_CTRL_SetMacMethod(NULL, id, CRYPT_HKDF_ERR_MAC_METH, &ctx->macCtx, &ctx->macMeth, &ctx->macId);
+    int32_t ret = CRYPT_CTRL_SetMacMethod(NULL, id, CRYPT_HKDF_ERR_MAC_METH, &ctx->macCtx, &ctx->macMeth, &ctx->macId);
 #endif
+    if (ret != CRYPT_SUCCESS) {
+        return ret;
+    }
+    ctx->hasGetMdSize = false;
+    ctx->mdSize = 0;
+    return CRYPT_SUCCESS;
 }
 
 int32_t CRYPT_HKDF_SetOutLen(CRYPT_HKDF_Ctx *ctx, uint32_t *outLen)
@@ -274,6 +280,8 @@ static int32_t CRYPT_HKDF_SetMdAttr(CRYPT_HKDF_Ctx *ctx, const char *mdAttr, uin
         return ret;
     }
 
+    ctx->hasGetMdSize = false;
+    ctx->mdSize = 0;
     return HkdfGetMdSize(ctx, mdAttr);
 }
 #endif

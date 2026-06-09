@@ -503,3 +503,85 @@ EXIT:
     return;
 }
 /* END_CASE */
+
+/* @
+ * @test  SDV_BSL_PARAM_MAKER_DEEP_PUSH_UTF8_STR_TC001
+ * @spec  -
+ * @title  DeepPush UTF8_STR and OCTETS then Free — verify no heap overrun on clear-free
+ * @precon  nan
+ * @brief
+ 1.Create a MAKER.
+ 2.Call BSL_PARAM_MAKER_DeepPushValue to deep-copy a UTF8_STR value.
+ 3.Call BSL_PARAM_MAKER_DeepPushValue to deep-copy an OCTETS value.
+ 4.Convert to BSL_Param and verify the string content matches, including NUL terminator.
+ 5.Free the Param and MAKER — this triggers PARAM_MAKER_DEF_Free which calls
+   BSL_SAL_ClearFree(value, allocLen). For UTF8_STR, allocLen = len+1; the allocation
+   must also be len+1 to avoid a 1-byte heap overflow during clear-free.
+ 6.Repeat with an empty string (len=0) to verify the edge case.
+ * @expect
+ 1.MAKER creation successful.
+ 2.Deep copy successful.
+ 3.Deep copy successful.
+ 4.String content matches original, NUL terminated.
+ 5.Free successful, no crash or heap corruption.
+ 6.Empty string deep copy and free successful.
+ * @prior  Level 1
+ * @auto  TRUE
+ @ */
+/* BEGIN_CASE */
+void SDV_BSL_PARAM_MAKER_DEEP_PUSH_UTF8_STR_TC001()
+{
+    char str[] = "hello";
+    uint8_t octets[] = {0x01, 0x02, 0x03};
+    int32_t key = 1;
+
+    BSL_Param *params = NULL;
+    BSL_ParamMaker *maker = BSL_PARAM_MAKER_New();
+    ASSERT_TRUE(maker != NULL);
+
+    ASSERT_EQ(BSL_PARAM_MAKER_DeepPushValue(maker, key, BSL_PARAM_TYPE_UTF8_STR, str, strlen(str)), BSL_SUCCESS);
+    key++;
+    ASSERT_EQ(BSL_PARAM_MAKER_DeepPushValue(maker, key, BSL_PARAM_TYPE_OCTETS, octets, sizeof(octets)), BSL_SUCCESS);
+
+    params = BSL_PARAM_MAKER_ToParam(maker);
+    ASSERT_TRUE(params != NULL);
+
+    BSL_Param *temp = NULL;
+    key = 1;
+    temp = BSL_PARAM_FindParam(params, key);
+    ASSERT_TRUE(temp != NULL);
+    ASSERT_EQ(temp->valueLen, strlen(str));
+    ASSERT_TRUE(memcmp(temp->value, str, strlen(str)) == 0);
+    ASSERT_TRUE(((const char *)temp->value)[temp->valueLen] == '\0');
+
+    key++;
+    temp = BSL_PARAM_FindParam(params, key);
+    ASSERT_TRUE(temp != NULL);
+    ASSERT_EQ(temp->valueLen, sizeof(octets));
+    ASSERT_TRUE(memcmp(temp->value, octets, sizeof(octets)) == 0);
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
+    BSL_PARAM_Free(params);
+    params = NULL;
+    BSL_PARAM_MAKER_Free(maker);
+    maker = NULL;
+
+    char emptyStr[] = "";
+    maker = BSL_PARAM_MAKER_New();
+    ASSERT_TRUE(maker != NULL);
+    key++;
+    ASSERT_EQ(BSL_PARAM_MAKER_DeepPushValue(maker, key, BSL_PARAM_TYPE_UTF8_STR, emptyStr, 0), BSL_SUCCESS);
+
+    params = BSL_PARAM_MAKER_ToParam(maker);
+    ASSERT_TRUE(params != NULL);
+    temp = BSL_PARAM_FindParam(params, key);
+    ASSERT_TRUE(temp != NULL);
+    ASSERT_EQ(temp->valueLen, 0);
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
+EXIT:
+    BSL_PARAM_Free(params);
+    BSL_PARAM_MAKER_Free(maker);
+    return;
+}
+/* END_CASE */

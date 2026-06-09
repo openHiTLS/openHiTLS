@@ -154,11 +154,11 @@ static int32_t HctrUniversalHash(const uint8_t *k, const uint8_t *data, uint32_t
     (void)memcpy_s(out, HCTR_BLOCK_SIZE, hashVal, HCTR_BLOCK_SIZE);
 
 ERR:
-    BSL_SAL_Free(allData);
+    BSL_SAL_ClearFree(allData, effectiveLen > 0 ? (uint32_t)effectiveLen : 1);
     if (kPowers != NULL) {
         for (i = 0; i < allocatedPowers; i++) {
             if (kPowers[i] != NULL) {
-                BSL_SAL_Free(kPowers[i]);
+                BSL_SAL_ClearFree(kPowers[i], HCTR_BLOCK_SIZE);
             }
         }
         BSL_SAL_Free(kPowers);
@@ -281,7 +281,7 @@ static int32_t HctrBufferEnsureCapacity(MODES_HCTR_Buffer *buffer, uint32_t addi
         (void)memcpy_s(newBuf, newSize, buffer->buffer, buffer->dataLen);
     }
 
-    BSL_SAL_Free(buffer->buffer);
+    BSL_SAL_ClearFree(buffer->buffer, buffer->bufSize);
     buffer->buffer = newBuf;
     buffer->bufSize = newSize;
 
