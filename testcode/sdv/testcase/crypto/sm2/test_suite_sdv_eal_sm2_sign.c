@@ -20,6 +20,7 @@
 #include "eal_pkey_local.h"
 #include "eal_md_local.h"
 #include "crypt_bn.h"
+#include "crypt_ecc.h"
 #include "crypt_errno.h"
 #include "crypt_sm2.h"
 #include "sm2_local.h"
@@ -28,23 +29,19 @@
 #define SM2_SIGN_MAX_LEN 72
 #define SM2_PRVKEY_MAX_LEN 32
 #define SM2_PUBKEY_LEN 65
-#define SM2_PRV_INV_CALC_BITS ((SM2_PRVKEY_MAX_LEN * 8) + 1)
 
-STUB_DEFINE_RET1(BN_BigNum *, BN_Create, uint32_t);
+STUB_DEFINE_RET3(int32_t, ECC_ModOrderInv, const ECC_Para *, BN_BigNum *, const BN_BigNum *);
 STUB_DEFINE_RET1(BN_BigNum *, BN_Dup, const BN_BigNum *);
 
-static uint32_t g_bnCreateFailBits = 0;
 static const BN_BigNum *g_bnDupFailTarget = NULL;
 
-static BN_BigNum *STUB_BN_CreateFailByBits(uint32_t bits)
+static int32_t STUB_ECC_ModOrderInvFail(const ECC_Para *para, BN_BigNum *r, const BN_BigNum *a)
 {
-    if (bits == g_bnCreateFailBits) {
-        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
-        return NULL;
-    }
-
-    real_BN_Create_func_t realFunc = get_real_BN_Create();
-    return realFunc == NULL ? NULL : realFunc(bits);
+    (void)para;
+    (void)r;
+    (void)a;
+    BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
+    return CRYPT_MEM_ALLOC_FAIL;
 }
 
 static BN_BigNum *STUB_BN_DupFailTarget(const BN_BigNum *a)
@@ -840,7 +837,7 @@ EXIT:
  * @title  SM2 signature inverse cache failure is best-effort.
  * @precon private key.
  * @brief
- *    1. Stub BN_Create to fail during private inverse cache calculation, expected result 1
+ *    1. Stub ECC_ModOrderInv to fail during private inverse cache calculation, expected result 1
  *    2. Call CRYPT_EAL_PkeySetPrv, expected result 2
  *    3. Call CRYPT_EAL_PkeyGen with the same stub, expected result 3
  *    4. Stub BN_Dup to fail while copying private inverse cache, expected result 4
@@ -865,12 +862,10 @@ void SDV_CRYPTO_SM2_SIGN_FUNC_TC004(Hex *prvKey, int isProvider)
         CRYPT_EAL_PKEY_SIGN_OPERATE, "provider=default", isProvider);
     ASSERT_TRUE(setCtx != NULL);
 
-    g_bnCreateFailBits = SM2_PRV_INV_CALC_BITS;
-    STUB_REPLACE(BN_Create, STUB_BN_CreateFailByBits);
+    STUB_REPLACE(ECC_ModOrderInv, STUB_ECC_ModOrderInvFail);
     ASSERT_EQ(CRYPT_EAL_PkeySetPrv(setCtx, &prv), CRYPT_SUCCESS);
     ASSERT_TRUE(TestIsErrStackEmpty());
-    STUB_RESTORE(BN_Create);
-    g_bnCreateFailBits = 0;
+    STUB_RESTORE(ECC_ModOrderInv);
 
     genCtx = TestPkeyNewCtx(NULL, CRYPT_PKEY_SM2,
         CRYPT_EAL_PKEY_SIGN_OPERATE, "provider=default", isProvider);
@@ -878,12 +873,10 @@ void SDV_CRYPTO_SM2_SIGN_FUNC_TC004(Hex *prvKey, int isProvider)
     CRYPT_RandRegist(RandFunc);
     CRYPT_RandRegistEx(RandFuncEx);
 
-    g_bnCreateFailBits = SM2_PRV_INV_CALC_BITS;
-    STUB_REPLACE(BN_Create, STUB_BN_CreateFailByBits);
+    STUB_REPLACE(ECC_ModOrderInv, STUB_ECC_ModOrderInvFail);
     ASSERT_EQ(CRYPT_EAL_PkeyGen(genCtx), CRYPT_SUCCESS);
     ASSERT_TRUE(TestIsErrStackEmpty());
-    STUB_RESTORE(BN_Create);
-    g_bnCreateFailBits = 0;
+    STUB_RESTORE(ECC_ModOrderInv);
 
     srcCtx = TestPkeyNewCtx(NULL, CRYPT_PKEY_SM2,
         CRYPT_EAL_PKEY_SIGN_OPERATE, "provider=default", isProvider);
@@ -903,9 +896,8 @@ void SDV_CRYPTO_SM2_SIGN_FUNC_TC004(Hex *prvKey, int isProvider)
     ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
-    STUB_RESTORE(BN_Create);
+    STUB_RESTORE(ECC_ModOrderInv);
     STUB_RESTORE(BN_Dup);
-    g_bnCreateFailBits = 0;
     g_bnDupFailTarget = NULL;
     CRYPT_RandRegist(NULL);
     CRYPT_RandRegistEx(NULL);
