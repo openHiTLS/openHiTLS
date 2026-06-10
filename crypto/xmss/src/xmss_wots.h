@@ -17,7 +17,7 @@
 #define XMSS_WOTS_H
 
 #include "hitls_build.h"
-#ifdef HITLS_CRYPTO_XMSS
+#if defined(HITLS_CRYPTO_XMSS) || defined(HITLS_CRYPTO_XMSSMT)
 
 #include <stdint.h>
 #include <stddef.h>
@@ -114,5 +114,5 @@ int32_t XmssWots_PkFromSig(const uint8_t *msg, uint32_t msgLen, const uint8_t *s
 }
 #endif
 
-#endif // HITLS_CRYPTO_XMSS
+#endif // HITLS_CRYPTO_XMSS || HITLS_CRYPTO_XMSSMT
 #endif // XMSS_WOTS_H

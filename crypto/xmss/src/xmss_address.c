@@ -14,7 +14,7 @@
  */
 
 #include "hitls_build.h"
-#ifdef HITLS_CRYPTO_XMSS
+#if defined(HITLS_CRYPTO_XMSS) || defined(HITLS_CRYPTO_XMSSMT)
 
 #include "securec.h"
 #include "crypt_utils.h"
@@ -110,4 +110,4 @@ int32_t XmssAdrsOps_Init(CryptAdrsOps *ops)
     return CRYPT_SUCCESS;
 }
 
-#endif // HITLS_CRYPTO_XMSS
+#endif // HITLS_CRYPTO_XMSS || HITLS_CRYPTO_XMSSMT

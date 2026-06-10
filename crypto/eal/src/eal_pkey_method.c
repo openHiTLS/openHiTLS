@@ -68,7 +68,7 @@
 #ifdef HITLS_CRYPTO_ELGAMAL
 #include "crypt_elgamal.h"
 #endif
-#ifdef HITLS_CRYPTO_XMSS
+#if defined(HITLS_CRYPTO_XMSS) || defined(HITLS_CRYPTO_XMSSMT)
 #include "crypt_xmss.h"
 #endif
 #ifdef HITLS_CRYPTO_FRODOKEM
@@ -764,6 +764,43 @@ static const EAL_PkeyMethod METHODS[] = {
         NULL, // decrypt
 #ifdef HITLS_CRYPTO_XMSS_CHECK
         CRYPT_XMSS_Check,
+#else
+        NULL, // check
+#endif
+        NULL, // cmp
+        NULL, // copyPara
+        NULL, // pkeyEncaps
+        NULL, // pkeyDecaps
+        NULL, // blind
+        NULL  // unBlind
+    ),
+#endif
+#ifdef HITLS_CRYPTO_XMSSMT
+    EAL_PKEY_METHOD_DEFINE(
+        CRYPT_PKEY_XMSSMT,
+        CRYPT_XMSSMT_NewCtx,
+        CRYPT_XMSSMT_DupCtx, // dupCtx
+        CRYPT_XMSSMT_FreeCtx,
+        NULL, // setPara
+        NULL, // getPara
+        CRYPT_XMSSMT_Gen,
+        CRYPT_XMSSMT_Ctrl,
+        CRYPT_XMSSMT_SetPubKey,
+        CRYPT_XMSSMT_SetPrvKey,
+        CRYPT_XMSSMT_GetPubKey,
+        CRYPT_XMSSMT_GetPrvKey,
+        CRYPT_XMSSMT_Sign,
+        NULL,
+        CRYPT_XMSSMT_Verify,
+        NULL,
+        NULL,
+        NULL, // verifyData
+        NULL, // recover
+        NULL, // computeShareKey
+        NULL, // encrypt
+        NULL, // decrypt
+#ifdef HITLS_CRYPTO_XMSSMT_CHECK
+        CRYPT_XMSSMT_Check,
 #else
         NULL, // check
 #endif

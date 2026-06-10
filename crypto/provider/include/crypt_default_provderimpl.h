@@ -173,6 +173,9 @@ extern const CRYPT_EAL_Func g_defEalKeyMgmtMlDsa[];
 #ifdef HITLS_CRYPTO_XMSS
 extern const CRYPT_EAL_Func g_defEalKeyMgmtXmss[];
 #endif
+#ifdef HITLS_CRYPTO_XMSSMT
+extern const CRYPT_EAL_Func g_defEalKeyMgmtXmssmt[];
+#endif
 #ifdef HITLS_CRYPTO_SLH_DSA
 extern const CRYPT_EAL_Func g_defEalKeyMgmtSlhDsa[];
 #endif
@@ -250,6 +253,9 @@ extern const CRYPT_EAL_Func g_defEalSignSlhDsa[];
 
 #ifdef HITLS_CRYPTO_XMSS
 extern const CRYPT_EAL_Func g_defEalSignXmss[];
+#endif
+#ifdef HITLS_CRYPTO_XMSSMT
+extern const CRYPT_EAL_Func g_defEalSignXmssmt[];
 #endif
 
 #ifdef HITLS_CRYPTO_MLKEM
@@ -360,6 +366,9 @@ extern const CRYPT_EAL_Func g_defEalRsaPubDer2Key[];
 #endif
 #ifdef HITLS_CRYPTO_XMSS
 extern const CRYPT_EAL_Func g_defEalSubPubKeyWithoutSeqDer2XmssKey[];
+#endif
+#ifdef HITLS_CRYPTO_XMSSMT
+extern const CRYPT_EAL_Func g_defEalSubPubKeyWithoutSeqDer2XmssmtKey[];
 #endif
 extern const CRYPT_EAL_Func g_defEalLowKeyObject2PkeyObject[];
 #endif // HITLS_CRYPTO_KEY_DECODE_CHAIN

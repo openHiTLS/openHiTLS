@@ -17,7 +17,7 @@
 #define XMSS_HASH_H
 
 #include "hitls_build.h"
-#ifdef HITLS_CRYPTO_XMSS
+#if defined(HITLS_CRYPTO_XMSS) || defined(HITLS_CRYPTO_XMSSMT)
 
 #include "xmss_common.h"
 #include "xmss_local.h"
@@ -41,5 +41,5 @@ int32_t XmssInitHashFuncs(CryptXmssCtx *ctx);
 }
 #endif
 
-#endif // HITLS_CRYPTO_XMSS
+#endif // HITLS_CRYPTO_XMSS || HITLS_CRYPTO_XMSSMT
 #endif // XMSS_HASH_H

@@ -686,6 +686,7 @@ typedef enum {
     BSL_CID_SLH_DSA = 5205,         /**< Identifies SLH-DSA algorithm */
     BSL_CID_RSASSAPSAE = 5206,       /**< Identifies RSASSAPSAE algorithm */
     BSL_CID_XMSS = 5207,
+    BSL_CID_XMSSMT = 5208,
 
     BSL_CID_MAC_AEAD = 5300,
 

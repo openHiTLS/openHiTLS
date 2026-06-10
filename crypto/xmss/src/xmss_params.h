@@ -17,10 +17,11 @@
 #define XMSS_PARAMS_H
 
 #include "hitls_build.h"
-#ifdef HITLS_CRYPTO_XMSS
+#if defined(HITLS_CRYPTO_XMSS) || defined(HITLS_CRYPTO_XMSSMT)
 
 #include <stdint.h>
 #include <stddef.h>
+#include <stdbool.h>
 #include "crypt_algid.h"
 
 #ifdef __cplusplus
@@ -91,20 +92,23 @@ typedef struct {
 const XmssParams *FindXmssPara(CRYPT_PKEY_ParaId algId);
 
 /*
- * Find XMSS parameters pointer by XDR algorithm ID (RFC 9802)
+ * Find XMSS parameters pointer by XDR algorithm ID.
+ * RFC 8391 defines separate XMSS and XMSS^MT XDR enums with overlapping values,
+ * so callers must select the namespace using the outer X.509 OID.
  *
  * Returns a pointer to the global parameter table entry.
  * This is more memory efficient than copying the structure.
  *
  * @param xdrId  XDR algorithm ID (32-bit value, big-endian)
+ * @param isXmss true for XMSS (d == 1), false for XMSS^MT (d > 1)
  *
  * @return Pointer to XmssParams in global table, or NULL if not found
  */
-const XmssParams *XmssParams_FindByXdrId(uint32_t xdrId);
+const XmssParams *XmssParams_FindByXdrId(uint32_t xdrId, bool isXmss);
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif // HITLS_CRYPTO_XMSS
+#endif // HITLS_CRYPTO_XMSS || HITLS_CRYPTO_XMSSMT
 #endif // XMSS_PARAMS_H

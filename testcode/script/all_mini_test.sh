@@ -340,7 +340,7 @@ test_pkey()
     bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=eal,slh_dsa,drbg_hash,sha2 test=slh_dsa
     
     # xmss
-    bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=eal,xmss,slh_dsa,drbg_hash,sha2 test=xmss
+    bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=eal,xmss,xmssmt,drbg_hash,sha2 test=xmss
 }
 
 test_tls()

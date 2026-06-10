@@ -187,6 +187,7 @@
                         "elgamal": {"deps":["bn_rand", "bn_prime"]},
                         "slh_dsa": { "deps": ["sha3", "obj_default", "eal", "hmac", "sha256", "sha512", "xmss"]},
                         "xmss": { "deps": ["sha3", "obj_default", "eal", "sha256", "sha512"]},
+                        "xmssmt": { "deps": ["xmss"]},
                         "deps": ["params"]
                     },
                     "provider": {"deps": ["params", "hash", "list", "sal_str"]},
@@ -212,7 +213,7 @@
                         "key_decode" : null,
                         "key_info" : {"deps": ["print"]},
                         "deps": ["asn1", "obj_default"],
-                        "opts":["ecdsa", "sm2_sign", "sm2_crypt", "ed25519", "rsa_sign", "rsa_verify", "mldsa", "xmss"]
+                        "opts":["ecdsa", "sm2_sign", "sm2_crypt", "ed25519", "rsa_sign", "rsa_verify", "mldsa", "xmss", "xmssmt"]
                     },
                     "key_decode_chain" : {"deps": ["key_decode", "codecs"]},
                     "codecs": {"deps": ["provider"]}
@@ -1311,7 +1312,7 @@
                     "sha1", "sha224", "sha256", "sha384", "sha512", "sm3",
                     "bn",
                     "drbg_hash", "drbg_hmac", "drbg_ctr",
-                    "rsa", "ed25519", "x25519", "slh_dsa",
+                    "rsa", "ed25519", "x25519", "slh_dsa", "xmss", "xmssmt",
                     "hkdf", "kdftls12", "pbkdf2", "scrypt"
                 ],
                 ".srcs": "crypto/util/*.c",
@@ -1443,7 +1444,7 @@
                 ".include": ["crypto/eal/src", "bsl/asn1/include", "crypto/xmss/src"]
             },
             "xmss": {
-                ".features": ["xmss"],
+                ".features": ["xmss", "xmssmt"],
                 ".srcs": "crypto/xmss/src/*.c",
                 ".deps": ["crypto::sha3", "crypto::sha2", "bsl::obj"],
                 ".include": ["crypto/eal/src", "bsl/asn1/include"]

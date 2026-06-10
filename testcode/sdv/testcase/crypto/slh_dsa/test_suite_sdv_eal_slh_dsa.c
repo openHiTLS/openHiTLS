@@ -81,6 +81,46 @@ EXIT:
 }
 /* END_CASE */
 
+/* @
+* @test  SDV_CRYPTO_SLH_DSA_SET_PARA_ID_REPEATED_TC001
+* @spec  -
+* @title  CRYPT_CTRL_SET_PARA_BY_ID cannot be called twice on the same SLH-DSA context
+* @brief
+* 1.Create an SLH-DSA pkey context.
+* 2.Set para by id with CRYPT_SLH_DSA_SHA2_128S, expected CRYPT_SUCCESS.
+* 3.Set para by id again, expected CRYPT_SLHDSA_CTRL_INIT_REPEATED.
+* @expect  second set returns CRYPT_SLHDSA_CTRL_INIT_REPEATED
+@ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_SLH_DSA_SET_PARA_ID_REPEATED_TC001(void)
+{
+    TestMemInit();
+    CRYPT_EAL_PkeyCtx *pkey = NULL;
+    pkey = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_SLH_DSA);
+    ASSERT_TRUE(pkey != NULL);
+
+    int32_t algId = CRYPT_SLH_DSA_SHA2_128S;
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_SET_PARA_BY_ID,
+        (void *)&algId, sizeof(algId)), CRYPT_SUCCESS);
+
+    /* Set the same algId again, must be rejected. */
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_SET_PARA_BY_ID,
+        (void *)&algId, sizeof(algId)), CRYPT_SLHDSA_CTRL_INIT_REPEATED);
+
+    /* Set a different algId, also must be rejected. */
+    int32_t otherAlgId = CRYPT_SLH_DSA_SHA2_128F;
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_SET_PARA_BY_ID,
+        (void *)&otherAlgId, sizeof(otherAlgId)), CRYPT_SLHDSA_CTRL_INIT_REPEATED);
+
+    BSL_ERR_ClearError();
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
+EXIT:
+    CRYPT_EAL_PkeyFreeCtx(pkey);
+    return;
+}
+/* END_CASE */
+
 /* BEGIN_CASE */
 void SDV_CRYPTO_SLH_DSA_API_CTRL_TC001(void)
 {

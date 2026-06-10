@@ -14,9 +14,10 @@
  */
 
 #include "hitls_build.h"
-#ifdef HITLS_CRYPTO_XMSS
+#if defined(HITLS_CRYPTO_XMSS) || defined(HITLS_CRYPTO_XMSSMT)
 
 #include "securec.h"
+#include "bsl_sal.h"
 #include "crypt_errno.h"
 #include "crypt_util_rand.h"
 #include "crypt_utils.h"
@@ -80,10 +81,12 @@ int32_t CRYPT_XMSS_KeyGenInternal(CryptXmssCtx *ctx)
     uint8_t node[XMSS_MAX_MDSIZE] = {0};
     ret = XmssTree_ComputeNode(node, 0, hp, &adrs, &treeCtx, NULL, 0);
     if (ret != CRYPT_SUCCESS) {
+        BSL_SAL_CleanseData(node, sizeof(node));
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
     (void)memcpy_s(ctx->key.root, n, node, n);
+    BSL_SAL_CleanseData(node, sizeof(node));
     ctx->key.idx = 0;
     ctx->hasPrivateKey = true;
     return CRYPT_SUCCESS;
@@ -109,6 +112,10 @@ int32_t CRYPT_XMSS_SignInternal(CryptXmssCtx *ctx, const uint8_t *msg, uint32_t 
         BSL_ERR_PUSH_ERROR(CRYPT_XMSS_ERR_INVALID_SIG_LEN);
         return CRYPT_XMSS_ERR_INVALID_SIG_LEN;
     }
+    if (h > XMSS_MAX_H) {
+        BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
+        return CRYPT_INVALID_ARG;
+    }
     /* Check key expiration before incrementing to avoid wrap-around and ensure valid range */
     uint64_t max_idx = (h == 64) ? (UINT64_MAX - 1) : ((1ULL << h) - 1);
     if (ctx->key.idx > max_idx) {
@@ -116,6 +123,7 @@ int32_t CRYPT_XMSS_SignInternal(CryptXmssCtx *ctx, const uint8_t *msg, uint32_t 
         return CRYPT_XMSS_ERR_KEY_EXPIRED;
     }
     /* Get current index and increment */
+    uint32_t sigBufLen = *sigLen;
     uint64_t index = ctx->key.idx++;
     /* XMSS: 4-bytes index_bytes, XMSSMT: (ceil(h / 8))-bytes index_bytes */
     uint32_t idxBytes = (d == 1) ? 4 : (h + 7) / 8;
@@ -130,28 +138,39 @@ int32_t CRYPT_XMSS_SignInternal(CryptXmssCtx *ctx, const uint8_t *msg, uint32_t 
 
     ret = ctx->hashFuncs->prfmsg(ctx, idx + sizeof(idx) - 32, NULL, 0, sig + offset);
     if (ret != CRYPT_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
-        return ret;
+        goto ERR;
     }
 
     uint8_t digest[XMSS_MAX_MDSIZE] = {0};
     ret = ctx->hashFuncs->hmsg(ctx, sig + offset, msg, msgLen, idx + sizeof(idx) - n, digest);
     if (ret != CRYPT_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
-        return ret;
+        BSL_SAL_CleanseData(digest, sizeof(digest));
+        goto ERR;
     }
     offset += n;
+    if (offset > *sigLen) {
+        BSL_SAL_CleanseData(digest, sizeof(digest));
+        ret = CRYPT_XMSS_ERR_INVALID_SIG_LEN;
+        goto ERR;
+    }
     uint32_t left = *sigLen - offset;
     uint32_t leafIdx = (uint32_t)(index & ((1ULL << hp) - 1));
     uint64_t treeIdx = index >> hp;
     TreeCtx treeCtx;
     InitTreeCtxFromXmssCtx(&treeCtx, ctx);
     ret = HyperTree_Sign(digest, n, treeIdx, leafIdx, &treeCtx, sig + offset, &left);
+    BSL_SAL_CleanseData(digest, sizeof(digest));
     if (ret != CRYPT_SUCCESS) {
-        return ret;
+        goto ERR;
     }
     *sigLen = offset + left;
     return CRYPT_SUCCESS;
+
+ERR:
+    BSL_SAL_CleanseData(sig, sigBufLen);
+    *sigLen = 0;
+    BSL_ERR_PUSH_ERROR(ret);
+    return ret;
 }
 
 /* big-endian bytes to integer. */
@@ -187,6 +206,7 @@ int32_t CRYPT_XMSS_VerifyInternal(const CryptXmssCtx *ctx, const uint8_t *msg, u
     uint8_t digest[XMSS_MAX_MDSIZE] = {0};
     ret = ctx->hashFuncs->hmsg(ctx, sig + offset, msg, msgLen, idx + sizeof(idx) - n, digest);
     if (ret != CRYPT_SUCCESS) {
+        BSL_SAL_CleanseData(digest, sizeof(digest));
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
@@ -196,6 +216,8 @@ int32_t CRYPT_XMSS_VerifyInternal(const CryptXmssCtx *ctx, const uint8_t *msg, u
     uint64_t treeIdx = index >> hp;
     TreeCtx treeCtx;
     InitTreeCtxFromXmssCtx(&treeCtx, ctx);
-    return HyperTree_Verify(digest, n, sig + offset, sigLen - offset, treeIdx, leafIdx, &treeCtx);
+    ret = HyperTree_Verify(digest, n, sig + offset, sigLen - offset, treeIdx, leafIdx, &treeCtx);
+    BSL_SAL_CleanseData(digest, sizeof(digest));
+    return ret;
 }
-#endif // HITLS_CRYPTO_XMSS
+#endif // HITLS_CRYPTO_XMSS || HITLS_CRYPTO_XMSSMT

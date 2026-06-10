@@ -369,6 +369,9 @@
     #ifndef HITLS_CRYPTO_XMSS
         #define HITLS_CRYPTO_XMSS
     #endif
+    #ifndef HITLS_CRYPTO_XMSSMT
+        #define HITLS_CRYPTO_XMSSMT
+    #endif
 #endif
 
 #ifdef HITLS_CRYPTO_RSA
@@ -556,10 +559,22 @@
     #endif
 #endif
 
-#ifdef HITLS_CRYPTO_XMSS
-    #ifndef HITLS_CRYPTO_SLH_DSA
-        #define HITLS_CRYPTO_SLH_DSA
+#ifdef HITLS_CRYPTO_SLH_DSA
+    #ifndef HITLS_CRYPTO_XMSS
+        #define HITLS_CRYPTO_XMSS
     #endif
+#endif
+
+#ifdef HITLS_CRYPTO_XMSSMT
+    #ifndef HITLS_CRYPTO_XMSS
+        #define HITLS_CRYPTO_XMSS
+    #endif
+    #ifndef HITLS_CRYPTO_XMSSMT_CHECK
+        #define HITLS_CRYPTO_XMSSMT_CHECK
+    #endif
+#endif
+
+#ifdef HITLS_CRYPTO_XMSS
     #ifndef HITLS_CRYPTO_XMSS_CHECK
         #define HITLS_CRYPTO_XMSS_CHECK
     #endif
@@ -725,7 +740,7 @@
     defined(HITLS_CRYPTO_SM2) || defined(HITLS_CRYPTO_SM9) || defined(HITLS_CRYPTO_PAILLIER) ||       \
     defined(HITLS_CRYPTO_ELGAMAL) || defined(HITLS_CRYPTO_MLDSA) || defined(HITLS_CRYPTO_MLKEM) ||    \
     defined(HITLS_CRYPTO_HYBRIDKEM) || defined(HITLS_CRYPTO_SLH_DSA) || defined(HITLS_CRYPTO_XMSS) || \
-    defined(HITLS_CRYPTO_FRODOKEM) || defined(HITLS_CRYPTO_MCELIECE)
+    defined(HITLS_CRYPTO_XMSSMT) || defined(HITLS_CRYPTO_FRODOKEM) || defined(HITLS_CRYPTO_MCELIECE)
     #ifndef HITLS_CRYPTO_PKEY
         #define HITLS_CRYPTO_PKEY
     #endif
@@ -750,7 +765,7 @@
 
 #if defined(HITLS_CRYPTO_DSA) || defined(HITLS_CRYPTO_RSA_SIGN) || defined(HITLS_CRYPTO_RSA_VERIFY) || \
     defined(HITLS_CRYPTO_ECDSA) || defined(HITLS_CRYPTO_SM2_SIGN) || defined(HITLS_CRYPTO_SM9) || defined(HITLS_CRYPTO_ED25519) || \
-    defined(HITLS_CRYPTO_SLH_DSA) || defined(HITLS_CRYPTO_MLDSA)
+    defined(HITLS_CRYPTO_SLH_DSA) || defined(HITLS_CRYPTO_MLDSA) || defined(HITLS_CRYPTO_XMSS) || defined(HITLS_CRYPTO_XMSSMT)
     #ifndef HITLS_CRYPTO_PKEY_SIGN
         #define HITLS_CRYPTO_PKEY_SIGN
     #endif

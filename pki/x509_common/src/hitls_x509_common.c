@@ -1257,6 +1257,11 @@ int32_t HITLS_X509_Sign(int32_t mdId, const CRYPT_EAL_PkeyCtx *prvKey, const HIT
             signAlgId.algId = (uint32_t)CRYPT_PKEY_XMSS;
             break;
 #endif
+#ifdef HITLS_CRYPTO_XMSSMT
+        case CRYPT_PKEY_XMSSMT:
+            signAlgId.algId = (uint32_t)CRYPT_PKEY_XMSSMT;
+            break;
+#endif
 #ifdef HITLS_CRYPTO_SLH_DSA
         case CRYPT_PKEY_SLH_DSA:
             if (CRYPT_EAL_PkeyCtrl(signKey, CRYPT_CTRL_GET_PARAID, &signAlgId.algId, sizeof(int32_t)) !=

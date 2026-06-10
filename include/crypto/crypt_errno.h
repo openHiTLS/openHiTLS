@@ -593,6 +593,7 @@ enum CRYPT_ERROR {
     CRYPT_SLHDSA_PAIRWISE_CHECK_FAIL,                    /**< The public and private keys are inconsistent. */
     CRYPT_SLHDSA_ERR_NO_PUBKEY,                          /**< No public key. */
     CRYPT_SLHDSA_ERR_NO_PRVKEY,                          /**< No private key. */
+    CRYPT_SLHDSA_CTRL_INIT_REPEATED,                      /**< The CTX cannot be initialized repeatedly. */
 
     CRYPT_PAILLIER_BUFF_LEN_NOT_ENOUGH = 0x01390001, /**< The buffer length is insufficient. */
     CRYPT_PAILLIER_NO_KEY_INFO,              /**< Lacks valid key information. */
@@ -615,6 +616,7 @@ enum CRYPT_ERROR {
     CRYPT_XMSS_PAIRWISE_CHECK_FAIL,                    /**< The public and private keys are inconsistent. */
     CRYPT_XMSS_INVALID_PRVKEY,                         /**< Invalid private key. */
     CRYPT_XMSS_INVALID_PUBKEY,                         /**< Invalid public key. */
+    CRYPT_XMSS_CTRL_INIT_REPEATED,                     /**< The CTX cannot be initialized repeatedly. */
 
     CRYPT_CMVP_COMMON_ERR = 0x013B0001, /**< Common error in CMVP selftest. */
     CRYPT_CMVP_ERR_INTEGRITY,           /**< Integrity error in CMVP selftest. */

@@ -445,6 +445,7 @@ int32_t CRYPT_HYBRID_KEM_Encaps(const CRYPT_HybridKemCtx *ctx, uint8_t *cipher, 
     RETURN_RET_IF((ctx == NULL || cipher == NULL || cipherLen == NULL || sharekey == NULL || shareLen == NULL),
         CRYPT_NULL_INPUT);
 
+    uint32_t shareBufLen = *shareLen;
     BSL_Param kemCT = { 0 };
     BSL_Param pubKey[2] = {{CRYPT_PARAM_EC_PUBKEY, BSL_PARAM_TYPE_OCTETS, NULL, 0, 0}, BSL_PARAM_END};
     RETURN_RET_IF_ERR(CRYPT_HybridGetCipherTextLen(ctx, &(pubKey[0].valueLen), &(kemCT.valueLen)), ret);
@@ -470,6 +471,10 @@ int32_t CRYPT_HYBRID_KEM_Encaps(const CRYPT_HybridKemCtx *ctx, uint8_t *cipher, 
     *cipherLen = pubKey[0].valueLen + kemCT.valueLen;
 
 ERR:
+    if (ret != CRYPT_SUCCESS) {
+        BSL_SAL_CleanseData(sharekey, shareBufLen);
+        *shareLen = 0;
+    }
     ctx->pKeyMethod->freeCtx(tmpKey);
     return ret;
 }
@@ -480,6 +485,7 @@ int32_t CRYPT_HYBRID_KEM_Decaps(const CRYPT_HybridKemCtx *ctx, uint8_t *cipher, 
     int32_t ret;
     RETURN_RET_IF((ctx == NULL || cipher == NULL || sharekey == NULL || shareLen == NULL), CRYPT_NULL_INPUT);
 
+    uint32_t shareBufLen = *shareLen;
     BSL_Param kemCT = { 0 };
     BSL_Param pubKey[2] = {{CRYPT_PARAM_EC_PUBKEY, BSL_PARAM_TYPE_OCTETS, NULL, 0, 0}, BSL_PARAM_END};
     RETURN_RET_IF_ERR(CRYPT_HybridGetCipherTextLen(ctx, &pubKey[0].valueLen, &kemCT.valueLen), ret);
@@ -503,6 +509,10 @@ int32_t CRYPT_HYBRID_KEM_Decaps(const CRYPT_HybridKemCtx *ctx, uint8_t *cipher, 
         kemCT.valueLen, kemSK.value, &kemSK.valueLen), ret);
     *shareLen = pkeyShared.valueLen + kemSK.valueLen;
 ERR:
+    if (ret != CRYPT_SUCCESS) {
+        BSL_SAL_CleanseData(sharekey, shareBufLen);
+        *shareLen = 0;
+    }
     ctx->pKeyMethod->freeCtx(tmpKey);
     return ret;
 }

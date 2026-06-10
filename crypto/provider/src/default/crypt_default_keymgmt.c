@@ -19,7 +19,8 @@
     defined(HITLS_CRYPTO_ECDH) || defined(HITLS_CRYPTO_SM2) || defined(HITLS_CRYPTO_PAILLIER) || \
     defined(HITLS_CRYPTO_ELGAMAL) || defined(HITLS_CRYPTO_SLH_DSA) || defined(HITLS_CRYPTO_MLKEM) || \
     defined(HITLS_CRYPTO_MLDSA) || defined(HITLS_CRYPTO_FRODOKEM) || defined(HITLS_CRYPTO_MCELIECE) || \
-    defined(HITLS_CRYPTO_HYBRIDKEM)) && defined(HITLS_CRYPTO_PROVIDER)
+    defined(HITLS_CRYPTO_HYBRIDKEM) || defined(HITLS_CRYPTO_XMSS) || defined(HITLS_CRYPTO_XMSSMT)) && \
+    defined(HITLS_CRYPTO_PROVIDER)
 
 #include "crypt_eal_implprovider.h"
 #ifdef HITLS_CRYPTO_DSA
@@ -65,7 +66,7 @@
 #ifdef HITLS_CRYPTO_MLDSA
 #include "crypt_mldsa.h"
 #endif
-#ifdef HITLS_CRYPTO_XMSS
+#if defined(HITLS_CRYPTO_XMSS) || defined(HITLS_CRYPTO_XMSSMT)
 #include "crypt_xmss.h"
 #endif
 #ifdef HITLS_CRYPTO_HYBRIDKEM
@@ -137,6 +138,10 @@ void *CRYPT_EAL_DefPkeyMgmtNewCtx(CRYPT_EAL_DefProvCtx *provCtx, int32_t algId)
 #ifdef HITLS_CRYPTO_XMSS
         case CRYPT_PKEY_XMSS:
             return CRYPT_XMSS_NewCtxEx(provCtx->libCtx);
+#endif
+#ifdef HITLS_CRYPTO_XMSSMT
+        case CRYPT_PKEY_XMSSMT:
+            return CRYPT_XMSSMT_NewCtxEx(provCtx->libCtx);
 #endif
 #ifdef HITLS_CRYPTO_FRODOKEM
         case CRYPT_PKEY_FRODOKEM:
@@ -493,6 +498,24 @@ const CRYPT_EAL_Func g_defEalKeyMgmtXmss[] = {
 #endif
     {CRYPT_EAL_IMPLPKEYMGMT_CTRL, (CRYPT_EAL_ImplPkeyMgmtCtrl)CRYPT_XMSS_Ctrl},
     {CRYPT_EAL_IMPLPKEYMGMT_FREECTX, (CRYPT_EAL_ImplPkeyMgmtFreeCtx)CRYPT_XMSS_FreeCtx},
+    CRYPT_EAL_FUNC_END,
+};
+#endif
+
+#ifdef HITLS_CRYPTO_XMSSMT
+const CRYPT_EAL_Func g_defEalKeyMgmtXmssmt[] = {
+    {CRYPT_EAL_IMPLPKEYMGMT_NEWCTX, (CRYPT_EAL_ImplPkeyMgmtNewCtx)CRYPT_EAL_DefPkeyMgmtNewCtx},
+    {CRYPT_EAL_IMPLPKEYMGMT_GENKEY, (CRYPT_EAL_ImplPkeyMgmtGenKey)CRYPT_XMSSMT_Gen},
+    {CRYPT_EAL_IMPLPKEYMGMT_SETPRV, (CRYPT_EAL_ImplPkeyMgmtSetPrv)CRYPT_XMSSMT_SetPrvKey},
+    {CRYPT_EAL_IMPLPKEYMGMT_SETPUB, (CRYPT_EAL_ImplPkeyMgmtSetPub)CRYPT_XMSSMT_SetPubKey},
+    {CRYPT_EAL_IMPLPKEYMGMT_GETPRV, (CRYPT_EAL_ImplPkeyMgmtGetPrv)CRYPT_XMSSMT_GetPrvKey},
+    {CRYPT_EAL_IMPLPKEYMGMT_GETPUB, (CRYPT_EAL_ImplPkeyMgmtGetPub)CRYPT_XMSSMT_GetPubKey},
+    {CRYPT_EAL_IMPLPKEYMGMT_DUPCTX, (CRYPT_EAL_ImplPkeyMgmtDupCtx)CRYPT_XMSSMT_DupCtx},
+#ifdef HITLS_CRYPTO_XMSSMT_CHECK
+    {CRYPT_EAL_IMPLPKEYMGMT_CHECK, (CRYPT_EAL_ImplPkeyMgmtCheck)CRYPT_XMSSMT_Check},
+#endif
+    {CRYPT_EAL_IMPLPKEYMGMT_CTRL, (CRYPT_EAL_ImplPkeyMgmtCtrl)CRYPT_XMSSMT_Ctrl},
+    {CRYPT_EAL_IMPLPKEYMGMT_FREECTX, (CRYPT_EAL_ImplPkeyMgmtFreeCtx)CRYPT_XMSSMT_FreeCtx},
     CRYPT_EAL_FUNC_END,
 };
 #endif

@@ -39,7 +39,7 @@
 #ifdef HITLS_CRYPTO_MLDSA
 #include "crypt_mldsa.h"
 #endif
-#ifdef HITLS_CRYPTO_XMSS
+#if defined(HITLS_CRYPTO_XMSS) || defined(HITLS_CRYPTO_XMSSMT)
 #include "crypt_xmss.h"
 #endif
 #include "eal_pkey.h"
@@ -55,7 +55,7 @@
 
 #if defined(HITLS_CRYPTO_RSA) || defined(HITLS_CRYPTO_ECDSA) || defined(HITLS_CRYPTO_SM2) || \
     defined(HITLS_CRYPTO_ED25519) || defined(HITLS_CRYPTO_MLDSA) || defined(HITLS_CRYPTO_XMSS) || \
-    defined(HITLS_CRYPTO_X25519)
+    defined(HITLS_CRYPTO_XMSSMT) || defined(HITLS_CRYPTO_X25519)
 typedef struct {
     CRYPT_EAL_ProvMgrCtx *provMgrCtx;
     EAL_PkeyUnitaryMethod method;
@@ -355,6 +355,10 @@ DECODER_DEFINE_DER2KEY_NEW_CTX(Mldsa, CRYPT_PKEY_ML_DSA, g_defEalKeyMgmtMlDsa, N
 DECODER_DEFINE_DER2KEY_NEW_CTX(Xmss, CRYPT_PKEY_XMSS, g_defEalKeyMgmtXmss, NULL, NULL, \
     g_defEalSignXmss, NULL)
 #endif
+#ifdef HITLS_CRYPTO_XMSSMT
+DECODER_DEFINE_DER2KEY_NEW_CTX(Xmssmt, CRYPT_PKEY_XMSSMT, g_defEalKeyMgmtXmssmt, NULL, NULL, \
+    g_defEalSignXmssmt, NULL)
+#endif
 #ifdef HITLS_CRYPTO_SLH_DSA
 DECODER_DEFINE_DER2KEY_NEW_CTX(SlhDsa, CRYPT_PKEY_SLH_DSA, g_defEalKeyMgmtSlhDsa, NULL, NULL, \
     g_defEalSignSlhDsa, NULL)
@@ -416,6 +420,9 @@ DECODER_DEFINE_PKCS8_DECODE(Mlkem, CRYPT_ML_KEM_Ctx, CRYPT_MLKEM_ParsePkcs8key)
 
 #ifdef HITLS_CRYPTO_XMSS
 DECODER_DEFINE_SUBPUBKEY_WITHOUT_SEQ_DER2KEY_DECODE(Xmss, CryptXmssCtx, CRYPT_XMSS_ParseSubPubkeyAsn1Buff)
+#endif
+#ifdef HITLS_CRYPTO_XMSSMT
+DECODER_DEFINE_SUBPUBKEY_WITHOUT_SEQ_DER2KEY_DECODE(Xmssmt, CryptXmssCtx, CRYPT_XMSSMT_ParseSubPubkeyAsn1Buff)
 #endif
 #endif /* HITLS_CRYPTO_PROVIDER */
 #endif /* HITLS_CRYPTO_KEY_DECODE_CHAIN && HITLS_CRYPTO_PROVIDER */

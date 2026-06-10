@@ -14,7 +14,7 @@
  */
 
 #include "hitls_build.h"
-#ifdef HITLS_CRYPTO_XMSS
+#if defined(HITLS_CRYPTO_XMSS) || defined(HITLS_CRYPTO_XMSSMT)
 
 #include <stdint.h>
 #include "securec.h"
@@ -37,8 +37,11 @@
  */
 static void BaseB(const uint8_t *x, uint32_t xLen, uint32_t b, uint32_t *out, uint32_t outLen)
 {
+    if (b == 0 || b > 16 || outLen == 0) {
+        return;
+    }
+    uint64_t o = 0;
     uint32_t bit = 0;
-    uint32_t o = 0;
     uint32_t xi = 0;
     for (uint32_t i = 0; i < outLen; i++) {
         while (bit < b && xi < xLen) {
@@ -47,9 +50,9 @@ static void BaseB(const uint8_t *x, uint32_t xLen, uint32_t b, uint32_t *out, ui
             xi++;
         }
         bit -= b;
-        out[i] = o >> bit;
+        out[i] = (uint32_t)(o >> bit);
         /* Keep the remaining bits */
-        o &= (1 << bit) - 1;
+        o &= ((uint64_t)1 << bit) - 1;
     }
 }
 
@@ -91,7 +94,7 @@ int32_t XmssWots_Chain(const uint8_t *x, uint32_t xLen, uint32_t start, uint32_t
 {
     (void)pubSeed; // Parameter kept for API compatibility
     int32_t ret;
-    uint8_t tmp[XMSS_MAX_MDSIZE];
+    uint8_t tmp[XMSS_MAX_MDSIZE] = {0};
     (void)memcpy_s(tmp, sizeof(tmp), x, xLen);
     uint32_t tmpLen = xLen;
 
@@ -102,11 +105,14 @@ int32_t XmssWots_Chain(const uint8_t *x, uint32_t xLen, uint32_t start, uint32_t
         /* Call F function through hash function table */
         ret = ctx->hashFuncs->f((void *)ctx->coreCtx, adrs, tmp, tmpLen, tmp);
         if (ret != CRYPT_SUCCESS) {
+            BSL_ERR_PUSH_ERROR(ret);
+            BSL_SAL_CleanseData(tmp, sizeof(tmp));
             return ret;
         }
     }
 
     (void)memcpy_s(output, tmpLen, tmp, tmpLen);
+    BSL_SAL_CleanseData(tmp, sizeof(tmp));
     return CRYPT_SUCCESS;
 }
 
@@ -119,6 +125,7 @@ int32_t XmssWots_GeneratePublicKey(uint8_t *pub, void *adrs, const XmssWotsCtx *
     /* Allocate temporary buffer for chaining results */
     uint8_t *tmp = (uint8_t *)BSL_SAL_Malloc(len * n);
     if (tmp == NULL) {
+        BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
         return BSL_MALLOC_FAIL;
     }
 
@@ -161,10 +168,21 @@ int32_t XmssWots_GeneratePublicKey(uint8_t *pub, void *adrs, const XmssWotsCtx *
     ctx->adrsOps->copyKeyPairAddr(wotspk, adrs);
 
     ret = ctx->hashFuncs->tl((void *)ctx->coreCtx, wotspk, tmp, len * n, pub);
+    if (ret != CRYPT_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+    }
 
 ERR:
+    BSL_SAL_CleanseData(tmp, len * n);
     BSL_SAL_Free(tmp);
     return ret;
+}
+
+static void WotsSignErrClean(uint32_t *msgw, uint8_t *sig, uint32_t sigBufLen, uint32_t *sigLen)
+{
+    BSL_SAL_Free(msgw);
+    BSL_SAL_CleanseData(sig, sigBufLen);
+    *sigLen = 0;
 }
 
 int32_t XmssWots_Sign(uint8_t *sig, uint32_t *sigLen, const uint8_t *msg, uint32_t msgLen, void *adrs,
@@ -175,12 +193,15 @@ int32_t XmssWots_Sign(uint8_t *sig, uint32_t *sigLen, const uint8_t *msg, uint32
     uint32_t len = ctx->wotsLen;
 
     if (*sigLen < len * n) {
-        return ctx->isXmss ? CRYPT_XMSS_ERR_INVALID_SIG_LEN : CRYPT_SLHDSA_ERR_INVALID_SIG_LEN;
+        int32_t err = ctx->isXmss ? CRYPT_XMSS_ERR_INVALID_SIG_LEN : CRYPT_SLHDSA_ERR_INVALID_SIG_LEN;
+        BSL_ERR_PUSH_ERROR(err);
+        return err;
     }
 
     /* Convert message to base-W representation */
     uint32_t *msgw = (uint32_t *)BSL_SAL_Malloc(len * sizeof(uint32_t));
     if (msgw == NULL) {
+        BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
         return BSL_MALLOC_FAIL;
     }
     XmssWots_MsgToBaseW(ctx, msg, msgLen, msgw);
@@ -202,18 +223,21 @@ int32_t XmssWots_Sign(uint8_t *sig, uint32_t *sigLen, const uint8_t *msg, uint32
         ret = ctx->hashFuncs->prf((void *)ctx->coreCtx, skAdrs, sk);
         if (ret != CRYPT_SUCCESS) {
             BSL_SAL_CleanseData(sk, XMSS_MAX_MDSIZE);
-            goto ERR;
+            BSL_ERR_PUSH_ERROR(ret);
+            WotsSignErrClean(msgw, sig, len * n, sigLen);
+            return ret;
         }
         ctx->adrsOps->setChainAddr(adrs, i);
         /* Chain private key element msgw[i] steps */
         ret = XmssWots_Chain(sk, n, 0, msgw[i], ctx->pubSeed, adrs, ctx, sig + i * n);
         BSL_SAL_CleanseData(sk, XMSS_MAX_MDSIZE);
         if (ret != CRYPT_SUCCESS) {
-            goto ERR;
+            BSL_ERR_PUSH_ERROR(ret);
+            WotsSignErrClean(msgw, sig, len * n, sigLen);
+            return ret;
         }
     }
 
-ERR:
     BSL_SAL_Free(msgw);
     *sigLen = len * n;
     return ret;
@@ -273,4 +297,4 @@ ERR:
     return ret;
 }
 
-#endif // HITLS_CRYPTO_XMSS
+#endif // HITLS_CRYPTO_XMSS || HITLS_CRYPTO_XMSSMT

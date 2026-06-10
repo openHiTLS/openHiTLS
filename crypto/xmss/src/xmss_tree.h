@@ -17,7 +17,7 @@
 #define XMSS_TREE_H
 
 #include "hitls_build.h"
-#if defined(HITLS_CRYPTO_XMSS) || defined(HITLS_CRYPTO_SLH_DSA)
+#if defined(HITLS_CRYPTO_XMSS) || defined(HITLS_CRYPTO_XMSSMT) || defined(HITLS_CRYPTO_SLH_DSA)
 
 #include <stdint.h>
 #include <stddef.h>
@@ -178,5 +178,5 @@ int32_t HyperTree_Sign(const uint8_t *msg, uint32_t msgLen, uint64_t treeIdx, ui
 }
 #endif
 
-#endif // HITLS_CRYPTO_XMSS || HITLS_CRYPTO_SLH_DSA
+#endif // HITLS_CRYPTO_XMSS || HITLS_CRYPTO_XMSSMT || HITLS_CRYPTO_SLH_DSA
 #endif // XMSS_TREE_H

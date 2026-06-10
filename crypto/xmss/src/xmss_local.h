@@ -17,7 +17,7 @@
 #define XMSS_LOCAL_H
 
 #include "hitls_build.h"
-#ifdef HITLS_CRYPTO_XMSS
+#if defined(HITLS_CRYPTO_XMSS) || defined(HITLS_CRYPTO_XMSSMT)
 
 #include <stdbool.h>
 #include <stdint.h>
@@ -42,6 +42,8 @@ extern "C" {
  */
 typedef struct CryptXmssCtx {
     const XmssParams *params; // XMSS parameters (pointer to global param table)
+
+    bool isXmssmt; // true = XMSS^MT (d > 1), false = XMSS (d == 1)
 
     const CryptHashFuncs *hashFuncs; // Hash function table (pointer to static table)
 
@@ -118,5 +120,5 @@ void InitTreeCtxFromXmssCtx(TreeCtx *treeCtx, const CryptXmssCtx *ctx);
 }
 #endif
 
-#endif // HITLS_CRYPTO_XMSS
+#endif // HITLS_CRYPTO_XMSS || HITLS_CRYPTO_XMSSMT
 #endif // XMSS_LOCAL_H

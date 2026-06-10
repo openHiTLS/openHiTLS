@@ -931,17 +931,19 @@ static int32_t ParseMlKemPrikeyAsn1Buff(CRYPT_EAL_LibCtx *libctx, const char *at
 }
 #endif
 
-#ifdef HITLS_CRYPTO_XMSS
+#if defined(HITLS_CRYPTO_XMSS) || defined(HITLS_CRYPTO_XMSSMT)
 
 static int32_t ParseXmssPubKeyAsn1Buff(CRYPT_EAL_LibCtx *libCtx, const char *attrName, BSL_ASN1_BitString *bitPubkey,
-     CRYPT_EAL_PkeyCtx **ealPubKey)
+    BslCid cid, CRYPT_EAL_PkeyCtx **ealPubKey)
 {
     uint8_t *p = bitPubkey->buff;
     if (bitPubkey->len <= 4 || bitPubkey->unusedBits != 0x00 || (bitPubkey->len - 4) % 2 != 0) {
         BSL_ERR_PUSH_ERROR(CRYPT_XMSS_ERR_INVALID_KEY);
         return CRYPT_XMSS_ERR_INVALID_KEY;
     }
-    CRYPT_EAL_PkeyCtx *pctx = CRYPT_EAL_ProviderPkeyNewCtx(libCtx, CRYPT_PKEY_XMSS, CRYPT_EAL_PKEY_UNKNOWN_OPERATE,
+    bool isXmssmt = cid == BSL_CID_XMSSMT;
+    CRYPT_PKEY_AlgId pkeyId = isXmssmt ? CRYPT_PKEY_XMSSMT : CRYPT_PKEY_XMSS;
+    CRYPT_EAL_PkeyCtx *pctx = CRYPT_EAL_ProviderPkeyNewCtx(libCtx, pkeyId, CRYPT_EAL_PKEY_UNKNOWN_OPERATE,
         attrName);
     if (pctx == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
@@ -957,7 +959,7 @@ static int32_t ParseXmssPubKeyAsn1Buff(CRYPT_EAL_LibCtx *libCtx, const char *att
 
     uint32_t hashLen = (bitPubkey->len - 4) / 2;
     uint8_t *data = p + 4;
-    CRYPT_EAL_PkeyPub pub = {.id = CRYPT_PKEY_XMSS, .key.xmssPub = {.root = data, .seed = data + hashLen,
+    CRYPT_EAL_PkeyPub pub = {.id = pkeyId, .key.xmssPub = {.root = data, .seed = data + hashLen,
         .len = hashLen}};
     ret = CRYPT_EAL_PkeySetPub(pctx, &pub);
     if (ret != CRYPT_SUCCESS) {
@@ -1206,9 +1208,10 @@ static int32_t ParseSubPubkeyAsn1(CRYPT_EAL_LibCtx *libctx, const char *attrName
         case BSL_CID_ML_KEM_1024:
             return ParseMlKemPubkeyAsn1Buff(libctx, attrName, bitPubkey.buff, bitPubkey.len, cid, ealPubKey);
 #endif
-#ifdef HITLS_CRYPTO_XMSS
+#if defined(HITLS_CRYPTO_XMSS) || defined(HITLS_CRYPTO_XMSSMT)
         case BSL_CID_XMSS:
-            return ParseXmssPubKeyAsn1Buff(libctx, attrName, &bitPubkey, ealPubKey);
+        case BSL_CID_XMSSMT:
+            return ParseXmssPubKeyAsn1Buff(libctx, attrName, &bitPubkey, cid, ealPubKey);
 #endif
         default:
             BSL_ERR_PUSH_ERROR(CRYPT_DECODE_UNKNOWN_OID);
@@ -2023,7 +2026,7 @@ static int32_t EncodeMlKemPrikeyAsn1Buff(CRYPT_EAL_PkeyCtx *ealPriKey, BSL_Buffe
 }
 #endif // HITLS_CRYPTO_MLKEM
 
-#ifdef HITLS_CRYPTO_XMSS
+#if defined(HITLS_CRYPTO_XMSS) || defined(HITLS_CRYPTO_XMSSMT)
 static int32_t EncodeXmssPubkeyAsn1Buff(CRYPT_EAL_PkeyCtx *ealPubKey, BSL_Buffer *bitStr)
 {
     uint32_t pubLen = 0;
@@ -2045,7 +2048,7 @@ static int32_t EncodeXmssPubkeyAsn1Buff(CRYPT_EAL_PkeyCtx *ealPubKey, BSL_Buffer
         return ret;
     }
     CRYPT_EAL_PkeyPub pubKey = {
-        .id = CRYPT_PKEY_XMSS,
+        .id = (CRYPT_PKEY_AlgId)CRYPT_EAL_PkeyGetId(ealPubKey),
         .key.xmssPub = {.seed = pub + 4 + hashLen, .root = pub + 4, .len = hashLen}
     };
     ret = CRYPT_EAL_PkeyGetPub(ealPubKey, &pubKey);
@@ -2059,7 +2062,7 @@ static int32_t EncodeXmssPubkeyAsn1Buff(CRYPT_EAL_PkeyCtx *ealPubKey, BSL_Buffer
     bitStr->dataLen = pubLen;
     return CRYPT_SUCCESS;
 }
-#endif // HITLS_CRYPTO_XMSS
+#endif // HITLS_CRYPTO_XMSS || HITLS_CRYPTO_XMSSMT
 
 static int32_t EncodePk8AlgidAny(CRYPT_EAL_PkeyCtx *ealPriKey, BSL_Buffer *bitStr,
     BSL_ASN1_Buffer *keyParam, BslCid *cidOut)
@@ -2271,6 +2274,11 @@ static int32_t CRYPT_EAL_SubPubkeyGetInfo(CRYPT_EAL_PkeyCtx *ealPubKey, BSL_ASN1
 #endif
 #ifdef HITLS_CRYPTO_XMSS
         case CRYPT_PKEY_XMSS:
+            ret = EncodeXmssPubkeyAsn1Buff(ealPubKey, &bitTmp);
+            break;
+#endif
+#ifdef HITLS_CRYPTO_XMSSMT
+        case CRYPT_PKEY_XMSSMT:
             ret = EncodeXmssPubkeyAsn1Buff(ealPubKey, &bitTmp);
             break;
 #endif

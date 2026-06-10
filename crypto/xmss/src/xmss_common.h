@@ -17,7 +17,7 @@
 #define XMSS_COMMON_H
 
 #include "hitls_build.h"
-#if defined(HITLS_CRYPTO_XMSS) || defined(HITLS_CRYPTO_SLH_DSA)
+#if defined(HITLS_CRYPTO_XMSS) || defined(HITLS_CRYPTO_XMSSMT) || defined(HITLS_CRYPTO_SLH_DSA)
 
 #include <stdint.h>
 #include <stddef.h>
@@ -125,5 +125,5 @@ typedef struct CryptAdrsOps {
 }
 #endif
 
-#endif // HITLS_CRYPTO_XMSS || HITLS_CRYPTO_SLH_DSA
+#endif // HITLS_CRYPTO_XMSS || HITLS_CRYPTO_XMSSMT || HITLS_CRYPTO_SLH_DSA
 #endif // XMSS_COMMON_H

@@ -236,7 +236,7 @@ EXIT:
 /* END_CASE */
 
 /* BEGIN_CASE */
-void SDV_X509_CERT_PARSE_PUBKEY_FUNC_TC002(int format, char *path, Hex *key)
+void SDV_X509_CERT_PARSE_PUBKEY_FUNC_TC002(int pkeyId, int format, char *path, Hex *key)
 {
     TestMemInit();
     BSL_GLOBAL_Init();
@@ -244,7 +244,7 @@ void SDV_X509_CERT_PARSE_PUBKEY_FUNC_TC002(int format, char *path, Hex *key)
     ASSERT_EQ(HITLS_X509_CertParseFile(format, path, &cert), HITLS_PKI_SUCCESS);
     void *pkey = cert->tbs.ealPubKey;
     uint8_t buf[68] = {0};
-    CRYPT_EAL_PkeyPub pubKey = {.id = CRYPT_PKEY_XMSS, .key.xmssPub = {.seed = buf + 4 + 32,
+    CRYPT_EAL_PkeyPub pubKey = {.id = pkeyId, .key.xmssPub = {.seed = buf + 4 + 32,
         .root = buf + 4, .len = 32}};
     ASSERT_EQ(CRYPT_EAL_PkeyGetPub(pkey, &pubKey), HITLS_PKI_SUCCESS);
     ASSERT_COMPARE("root", pubKey.key.xmssPub.root, 32, key->x + 4, (key->len - 4) / 2);

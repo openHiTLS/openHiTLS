@@ -14,7 +14,7 @@
  */
 
 #include "hitls_build.h"
-#ifdef HITLS_CRYPTO_XMSS
+#if defined(HITLS_CRYPTO_XMSS) || defined(HITLS_CRYPTO_XMSSMT)
 
 #include "securec.h"
 #include "bsl_sal.h"
@@ -42,9 +42,11 @@ int32_t CalcMultiMsgHash(CRYPT_MD_AlgId mdId, const CRYPT_ConstData *hashData, u
     int32_t ret = CRYPT_CalcHash(NULL, EAL_MdFindDefaultMethod(mdId), hashData, hashDataLen, tmp, &tmpLen);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
+        BSL_SAL_CleanseData(tmp, sizeof(tmp));
         return ret;
     }
     (void)memcpy_s(out, outLen, tmp, outLen);
+    BSL_SAL_CleanseData(tmp, sizeof(tmp));
     return CRYPT_SUCCESS;
 }
 
@@ -114,8 +116,8 @@ static int32_t XFGeneric(const void *vctx, const void *vadrs, const uint8_t *msg
     CRYPT_MD_AlgId mdId = ctx->params->mdId;
 
     uint8_t padding[XMSS_MAX_MDSIZE] = {0};
-    uint8_t key[XMSS_MAX_MDSIZE];
-    uint8_t bitmask[XMSS_MAX_MDSIZE];
+    uint8_t key[XMSS_MAX_MDSIZE] = {0};
+    uint8_t bitmask[XMSS_MAX_MDSIZE] = {0};
 
     const CRYPT_ConstData hashData[] = {{padding, paddingLen}, {ctx->key.pubSeed, n}, {xadrs.bytes, 32}};
     const CRYPT_ConstData hashData1[] = {{padding, paddingLen}, {key, n}, {bitmask, n}};
@@ -126,14 +128,14 @@ static int32_t XFGeneric(const void *vctx, const void *vadrs, const uint8_t *msg
     XmssAdrs_SetKeyAndMask(&xadrs, 0);
     ret = CalcMultiMsgHash(mdId, hashData, sizeof(hashData) / sizeof(hashData[0]), key, n);
     if (ret != CRYPT_SUCCESS) {
-        return ret;
+        goto EXIT;
     }
 
     /* Generate n-byte bitmask */
     XmssAdrs_SetKeyAndMask(&xadrs, 1);
     ret = CalcMultiMsgHash(mdId, hashData, sizeof(hashData) / sizeof(hashData[0]), bitmask, n);
     if (ret != CRYPT_SUCCESS) {
-        return ret;
+        goto EXIT;
     }
 
     /* XOR message with bitmask */
@@ -142,7 +144,12 @@ static int32_t XFGeneric(const void *vctx, const void *vadrs, const uint8_t *msg
     }
 
     PUT_UINT32_BE(PADDING_F, padding, paddingLen - 4);
-    return CalcMultiMsgHash(mdId, hashData1, sizeof(hashData1) / sizeof(hashData1[0]), out, n);
+    ret = CalcMultiMsgHash(mdId, hashData1, sizeof(hashData1) / sizeof(hashData1[0]), out, n);
+
+EXIT:
+    BSL_SAL_CleanseData(key, sizeof(key));
+    BSL_SAL_CleanseData(bitmask, sizeof(bitmask));
+    return ret;
 }
 
 /* H - Tree hash function (RAND_HASH) */
@@ -156,8 +163,8 @@ static int32_t XHGeneric(const void *vctx, const void *vadrs, const uint8_t *msg
     CRYPT_MD_AlgId mdId = ctx->params->mdId;
 
     uint8_t padding[XMSS_MAX_MDSIZE] = {0};
-    uint8_t key[XMSS_MAX_MDSIZE];
-    uint8_t bitmask[2 * XMSS_MAX_MDSIZE];
+    uint8_t key[XMSS_MAX_MDSIZE] = {0};
+    uint8_t bitmask[2 * XMSS_MAX_MDSIZE] = {0};
 
     const CRYPT_ConstData hashData[] = {{padding, paddingLen}, {ctx->key.pubSeed, n}, {xadrs.bytes, 32}};
     const CRYPT_ConstData hashData1[] = {{padding, paddingLen}, {key, n}, {bitmask, 2 * n}};
@@ -168,21 +175,21 @@ static int32_t XHGeneric(const void *vctx, const void *vadrs, const uint8_t *msg
     XmssAdrs_SetKeyAndMask(&xadrs, 0);
     int32_t ret = CalcMultiMsgHash(mdId, hashData, sizeof(hashData) / sizeof(hashData[0]), key, n);
     if (ret != CRYPT_SUCCESS) {
-        return ret;
+        goto EXIT;
     }
 
     /* Generate n-byte BM_0 */
     XmssAdrs_SetKeyAndMask(&xadrs, 1);
     ret = CalcMultiMsgHash(mdId, hashData, sizeof(hashData) / sizeof(hashData[0]), bitmask, n);
     if (ret != CRYPT_SUCCESS) {
-        return ret;
+        goto EXIT;
     }
 
     /* Generate n-byte BM_1 */
     XmssAdrs_SetKeyAndMask(&xadrs, 2);
     ret = CalcMultiMsgHash(mdId, hashData, sizeof(hashData) / sizeof(hashData[0]), bitmask + n, n);
     if (ret != CRYPT_SUCCESS) {
-        return ret;
+        goto EXIT;
     }
 
     /* XOR input with bitmasks */
@@ -191,7 +198,12 @@ static int32_t XHGeneric(const void *vctx, const void *vadrs, const uint8_t *msg
     }
 
     PUT_UINT32_BE(PADDING_H, padding, paddingLen - 4);
-    return CalcMultiMsgHash(mdId, hashData1, sizeof(hashData1) / sizeof(hashData1[0]), out, n);
+    ret = CalcMultiMsgHash(mdId, hashData1, sizeof(hashData1) / sizeof(hashData1[0]), out, n);
+
+EXIT:
+    BSL_SAL_CleanseData(key, sizeof(key));
+    BSL_SAL_CleanseData(bitmask, sizeof(bitmask));
+    return ret;
 }
 
 /* TL - L-tree compression (compress WOTS+ public key to leaf node) */
@@ -201,14 +213,15 @@ static int32_t XTlGeneric(const void *vctx, const void *vadrs, const uint8_t *ms
     const CryptXmssCtx *ctx = (const CryptXmssCtx *)vctx;
     uint32_t n = ctx->params->n;
     uint32_t len = 2 * n + 3;
+    size_t nodeLen = (size_t)len * n;
 
     /* Allocate node buffer: uint8_t node[len][n] */
-    uint8_t *node = (uint8_t *)BSL_SAL_Malloc(len * n);
+    uint8_t *node = (uint8_t *)BSL_SAL_Malloc(nodeLen);
     if (node == NULL) {
         return BSL_MALLOC_FAIL;
     }
 
-    (void)memcpy_s(node, len * n, msg, msgLen);
+    (void)memcpy_s(node, nodeLen, msg, msgLen);
     int32_t ret;
     for (uint32_t h = 0; len > 1; h++) {
         ctx->adrsOps.setTreeHeight(&xadrs, h);
@@ -232,6 +245,7 @@ static int32_t XTlGeneric(const void *vctx, const void *vadrs, const uint8_t *ms
     (void)memcpy_s(out, n, node, n);
     ret = CRYPT_SUCCESS;
 ERR:
+    BSL_SAL_CleanseData(node, nodeLen);
     BSL_SAL_Free(node);
     return ret;
 }
@@ -263,4 +277,4 @@ int32_t XmssInitHashFuncs(CryptXmssCtx *ctx)
     return CRYPT_SUCCESS;
 }
 
-#endif // HITLS_CRYPTO_XMSS
+#endif // HITLS_CRYPTO_XMSS || HITLS_CRYPTO_XMSSMT

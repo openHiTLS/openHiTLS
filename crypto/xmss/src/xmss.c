@@ -14,7 +14,7 @@
  */
 
 #include "hitls_build.h"
-#ifdef HITLS_CRYPTO_XMSS
+#if defined(HITLS_CRYPTO_XMSS) || defined(HITLS_CRYPTO_XMSSMT)
 
 #include "securec.h"
 #include "bsl_sal.h"
@@ -65,6 +65,28 @@ CryptXmssCtx *CRYPT_XMSS_NewCtxEx(void *libCtx)
     return ctx;
 }
 
+#ifdef HITLS_CRYPTO_XMSSMT
+CryptXmssCtx *CRYPT_XMSSMT_NewCtx(void)
+{
+    CryptXmssCtx *ctx = CRYPT_XMSS_NewCtx();
+    if (ctx == NULL) {
+        return NULL;
+    }
+    ctx->isXmssmt = true;
+    return ctx;
+}
+
+CryptXmssCtx *CRYPT_XMSSMT_NewCtxEx(void *libCtx)
+{
+    CryptXmssCtx *ctx = CRYPT_XMSSMT_NewCtx();
+    if (ctx == NULL) {
+        return NULL;
+    }
+    ctx->libCtx = libCtx;
+    return ctx;
+}
+#endif
+
 void CRYPT_XMSS_FreeCtx(CryptXmssCtx *ctx)
 {
     if (ctx == NULL) {
@@ -86,7 +108,7 @@ static bool CheckNotXmssAlgId(int32_t algId)
 static int32_t XmssSetAlgId(CryptXmssCtx *ctx, CRYPT_PKEY_ParaId algId)
 {
     const XmssParams *para = FindXmssPara(algId);
-    if (para == NULL) {
+    if (para == NULL || para->h > XMSS_MAX_H || (para->d > 1) != ctx->isXmssmt) {
         BSL_ERR_PUSH_ERROR(CRYPT_XMSS_ERR_INVALID_ALGID);
         return CRYPT_XMSS_ERR_INVALID_ALGID;
     }
@@ -100,6 +122,10 @@ static int32_t XmssSetAlgId(CryptXmssCtx *ctx, CRYPT_PKEY_ParaId algId)
 
 static int32_t XmssSetParaId(CryptXmssCtx *ctx, void *val, uint32_t len)
 {
+    if (ctx->params != NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_XMSS_CTRL_INIT_REPEATED);
+        return CRYPT_XMSS_CTRL_INIT_REPEATED;
+    }
     if (len != sizeof(int32_t)) {
         BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
         return CRYPT_INVALID_ARG;
@@ -208,7 +234,7 @@ static int32_t XmssSetXdrAlgId(CryptXmssCtx *ctx, void *val, uint32_t len)
     uint32_t xdrId = GET_UINT32_BE((const uint8_t *)val, 0);
 
     /* Look up parameters by XDR ID (return pointer to global table) */
-    const XmssParams *params = XmssParams_FindByXdrId(xdrId);
+    const XmssParams *params = XmssParams_FindByXdrId(xdrId, !ctx->isXmssmt);
     if (params == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_XMSS_ERR_INVALID_XDR_ID);
         return CRYPT_XMSS_ERR_INVALID_XDR_ID;
@@ -440,7 +466,7 @@ int32_t CRYPT_XMSS_SetPubKey(CryptXmssCtx *ctx, const BSL_Param *para)
     /* Validate XDR type if provided (RFC 9802 X.509 support) */
     if (pub.pubXdr != NULL) {
         uint32_t xdrId = GET_UINT32_BE((uint8_t *)pub.pubXdr->value, 0);
-        const XmssParams *params = XmssParams_FindByXdrId(xdrId);
+        const XmssParams *params = XmssParams_FindByXdrId(xdrId, !ctx->isXmssmt);
         if (params == NULL) {
             BSL_ERR_PUSH_ERROR(CRYPT_XMSS_ERR_INVALID_XDR_ID);
             return CRYPT_XMSS_ERR_INVALID_XDR_ID;
@@ -501,6 +527,7 @@ CryptXmssCtx *CRYPT_XMSS_DupCtx(CryptXmssCtx *ctx)
         return NULL;
     }
     newCtx->libCtx = ctx->libCtx;
+    newCtx->isXmssmt = ctx->isXmssmt;
     newCtx->params = ctx->params;
     newCtx->hashFuncs = ctx->hashFuncs;
     newCtx->adrsOps = ctx->adrsOps;
@@ -509,6 +536,60 @@ CryptXmssCtx *CRYPT_XMSS_DupCtx(CryptXmssCtx *ctx)
     (void)memcpy_s(newCtx->key.root, XMSS_MAX_MDSIZE, ctx->key.root, XMSS_MAX_MDSIZE);
     return newCtx;
 }
+
+#ifdef HITLS_CRYPTO_XMSSMT
+void CRYPT_XMSSMT_FreeCtx(CryptXmssCtx *ctx)
+{
+    CRYPT_XMSS_FreeCtx(ctx);
+}
+
+int32_t CRYPT_XMSSMT_Gen(CryptXmssCtx *ctx)
+{
+    return CRYPT_XMSS_Gen(ctx);
+}
+
+int32_t CRYPT_XMSSMT_Sign(CryptXmssCtx *ctx, int32_t algId, const uint8_t *data, uint32_t dataLen, uint8_t *sign,
+                          uint32_t *signLen)
+{
+    return CRYPT_XMSS_Sign(ctx, algId, data, dataLen, sign, signLen);
+}
+
+int32_t CRYPT_XMSSMT_Verify(const CryptXmssCtx *ctx, int32_t algId, const uint8_t *data, uint32_t dataLen,
+                            const uint8_t *sign, uint32_t signLen)
+{
+    return CRYPT_XMSS_Verify(ctx, algId, data, dataLen, sign, signLen);
+}
+
+int32_t CRYPT_XMSSMT_Ctrl(CryptXmssCtx *ctx, int32_t opt, void *val, uint32_t len)
+{
+    return CRYPT_XMSS_Ctrl(ctx, opt, val, len);
+}
+
+int32_t CRYPT_XMSSMT_GetPubKey(const CryptXmssCtx *ctx, BSL_Param *para)
+{
+    return CRYPT_XMSS_GetPubKey(ctx, para);
+}
+
+int32_t CRYPT_XMSSMT_GetPrvKey(const CryptXmssCtx *ctx, BSL_Param *para)
+{
+    return CRYPT_XMSS_GetPrvKey(ctx, para);
+}
+
+int32_t CRYPT_XMSSMT_SetPubKey(CryptXmssCtx *ctx, const BSL_Param *para)
+{
+    return CRYPT_XMSS_SetPubKey(ctx, para);
+}
+
+int32_t CRYPT_XMSSMT_SetPrvKey(CryptXmssCtx *ctx, const BSL_Param *para)
+{
+    return CRYPT_XMSS_SetPrvKey(ctx, para);
+}
+
+CryptXmssCtx *CRYPT_XMSSMT_DupCtx(CryptXmssCtx *ctx)
+{
+    return CRYPT_XMSS_DupCtx(ctx);
+}
+#endif
 
 void InitTreeCtxFromXmssCtx(TreeCtx *treeCtx, const CryptXmssCtx *ctx)
 {
@@ -617,4 +698,11 @@ int32_t CRYPT_XMSS_Check(uint32_t checkType, const CryptXmssCtx *pkey1, const Cr
 
 #endif // HITLS_CRYPTO_XMSS_CHECK
 
-#endif // HITLS_CRYPTO_XMSS
+#ifdef HITLS_CRYPTO_XMSSMT_CHECK
+int32_t CRYPT_XMSSMT_Check(uint32_t checkType, const CryptXmssCtx *pkey1, const CryptXmssCtx *pkey2)
+{
+    return CRYPT_XMSS_Check(checkType, pkey1, pkey2);
+}
+#endif
+
+#endif // HITLS_CRYPTO_XMSS || HITLS_CRYPTO_XMSSMT

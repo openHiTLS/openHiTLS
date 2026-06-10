@@ -710,8 +710,8 @@ static int32_t SlhDsaSetAlgId(CryptSlhDsaCtx *ctx, void *val, uint32_t len)
         return CRYPT_INVALID_ARG;
     }
     if (ctx->para.algId != 0) {
-        BSL_ERR_PUSH_ERROR(CRYPT_NOT_SUPPORT);
-        return CRYPT_NOT_SUPPORT;
+        BSL_ERR_PUSH_ERROR(CRYPT_SLHDSA_CTRL_INIT_REPEATED);
+        return CRYPT_SLHDSA_CTRL_INIT_REPEATED;
     }
     int32_t algId = *(int32_t *)val;
     if (CheckNotSlhDsaAlgId(algId)) {

@@ -17,7 +17,7 @@
 #define CRYPT_XMSS_H
 
 #include "hitls_build.h"
-#ifdef HITLS_CRYPTO_XMSS
+#if defined(HITLS_CRYPTO_XMSS) || defined(HITLS_CRYPTO_XMSSMT)
 
 #include <stdint.h>
 #include "bsl_params.h"
@@ -45,6 +45,12 @@ CryptXmssCtx *CRYPT_XMSS_NewCtx(void); // create key structure
  * @retval NULL             Invalid null pointer.
  */
 CryptXmssCtx *CRYPT_XMSS_NewCtxEx(void *libCtx);
+
+#ifdef HITLS_CRYPTO_XMSSMT
+CryptXmssCtx *CRYPT_XMSSMT_NewCtx(void);
+
+CryptXmssCtx *CRYPT_XMSSMT_NewCtxEx(void *libCtx);
+#endif
 
 /**
  * @brief release XMSS key context structure
@@ -151,6 +157,30 @@ int32_t CRYPT_XMSS_SetPrvKey(CryptXmssCtx *ctx, const BSL_Param *para);
  */
 CryptXmssCtx *CRYPT_XMSS_DupCtx(CryptXmssCtx *ctx);
 
+#ifdef HITLS_CRYPTO_XMSSMT
+void CRYPT_XMSSMT_FreeCtx(CryptXmssCtx *ctx);
+
+int32_t CRYPT_XMSSMT_Gen(CryptXmssCtx *ctx);
+
+int32_t CRYPT_XMSSMT_Sign(CryptXmssCtx *ctx, int32_t algId, const uint8_t *data, uint32_t dataLen, uint8_t *sign,
+                          uint32_t *signLen);
+
+int32_t CRYPT_XMSSMT_Verify(const CryptXmssCtx *ctx, int32_t algId, const uint8_t *data, uint32_t dataLen,
+                            const uint8_t *sign, uint32_t signLen);
+
+int32_t CRYPT_XMSSMT_Ctrl(CryptXmssCtx *ctx, int32_t opt, void *val, uint32_t len);
+
+int32_t CRYPT_XMSSMT_GetPubKey(const CryptXmssCtx *ctx, BSL_Param *para);
+
+int32_t CRYPT_XMSSMT_GetPrvKey(const CryptXmssCtx *ctx, BSL_Param *para);
+
+int32_t CRYPT_XMSSMT_SetPubKey(CryptXmssCtx *ctx, const BSL_Param *para);
+
+int32_t CRYPT_XMSSMT_SetPrvKey(CryptXmssCtx *ctx, const BSL_Param *para);
+
+CryptXmssCtx *CRYPT_XMSSMT_DupCtx(CryptXmssCtx *ctx);
+#endif
+
 #ifdef HITLS_CRYPTO_XMSS_CHECK
 
 /**
@@ -168,10 +198,14 @@ int32_t CRYPT_XMSS_Check(uint32_t checkType, const CryptXmssCtx *pkey1, const Cr
 
 #endif // HITLS_CRYPTO_XMSS_CHECK
 
+#ifdef HITLS_CRYPTO_XMSSMT_CHECK
+int32_t CRYPT_XMSSMT_Check(uint32_t checkType, const CryptXmssCtx *pkey1, const CryptXmssCtx *pkey2);
+#endif
+
 #ifdef __cplusplus
 }
 #endif
 
-#endif // HITLS_CRYPTO_XMSS
+#endif // HITLS_CRYPTO_XMSS || HITLS_CRYPTO_XMSSMT
 
 #endif // CRYPT_XMSS_H
