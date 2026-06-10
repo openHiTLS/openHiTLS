@@ -174,6 +174,7 @@ extern "C" {
 #define CRYPT_PARAM_XMSS_PUB_SEED                           (CRYPT_PARAM_XMSS_BASE + 4)
 #define CRYPT_PARAM_XMSS_PUB_ROOT                           (CRYPT_PARAM_XMSS_BASE + 5)
 #define CRYPT_PARAM_XMSS_XDR_TYPE                           (CRYPT_PARAM_XMSS_BASE + 6)
+/* BDS state is unauthenticated acceleration data and must be stored atomically with the private key index. */
 #define CRYPT_PARAM_XMSS_BDS_STATE                          (CRYPT_PARAM_XMSS_BASE + 7)
 
 #define CRYPT_PARAM_FRODOKEM_BASE                           2000

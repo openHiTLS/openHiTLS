@@ -188,9 +188,9 @@ static StrIdMap g_strIdMap[] = {
     {"mlkem-512", CRYPT_KEM_TYPE_MLKEM_512},
     {"mlkem-768", CRYPT_KEM_TYPE_MLKEM_768},
     {"mlkem-1024", CRYPT_KEM_TYPE_MLKEM_1024},
-    {"XMSS-SHA2-10-256", CRYPT_XMSS_SHA2_10_256},
-    {"XMSSMT-SHA2-20/2-256", CRYPT_XMSSMT_SHA2_20_2_256},
-    {"XMSSMT-SHA2-20/4-256", CRYPT_XMSSMT_SHA2_20_4_256},
+    {"xmss-sha2-10-256", CRYPT_XMSS_SHA2_10_256},
+    {"xmssmt-sha2-20/2-256", CRYPT_XMSSMT_SHA2_20_2_256},
+    {"xmssmt-sha2-20/4-256", CRYPT_XMSSMT_SHA2_20_4_256},
 };
 
 static uint32_t g_benchFailureCount = 0;

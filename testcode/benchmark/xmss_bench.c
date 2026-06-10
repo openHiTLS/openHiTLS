@@ -22,7 +22,10 @@
 #include "crypt_errno.h"
 
 #define XMSS_NAIVE_SIGN_ID 1024U
+#define XMSS_BDS_LONG_SIGN_ID 2048U
 #define XMSS_BENCH_MAX_N   64U
+#define XMSS_SINGLE_TREE_SIGN_ROUNDS 1024U
+#define XMSSMT_LONG_SIGN_ROUNDS 16385U
 
 typedef struct {
     CRYPT_EAL_PkeyCtx *bds;
@@ -44,9 +47,9 @@ typedef struct {
 } XmssBenchPara;
 
 static const XmssBenchPara g_xmssBenchParas[] = {
-    {CRYPT_XMSS_SHA2_10_256, "XMSS-SHA2-10-256", 32},
-    {CRYPT_XMSSMT_SHA2_20_2_256, "XMSSMT-SHA2-20/2-256", 32},
-    {CRYPT_XMSSMT_SHA2_20_4_256, "XMSSMT-SHA2-20/4-256", 32},
+    {CRYPT_XMSS_SHA2_10_256, "xmss-sha2-10-256", 32},
+    {CRYPT_XMSSMT_SHA2_20_2_256, "xmssmt-sha2-20/2-256", 32},
+    {CRYPT_XMSSMT_SHA2_20_4_256, "xmssmt-sha2-20/4-256", 32},
 };
 
 static int32_t g_paraIds[] = {
@@ -71,7 +74,7 @@ static const char *XmssGetParaName(int32_t paraId)
             return g_xmssBenchParas[i].name;
         }
     }
-    return "XMSS-unknown";
+    return "xmss-unknown";
 }
 
 static uint32_t XmssGetParaN(int32_t paraId)
@@ -221,12 +224,28 @@ static int32_t XmssSign(void *ctx, const BenchExecOptions *opts)
     return rc;
 }
 
+/*
+ * A short benchmark does not reach an XMSSMT state switch. Run one continuous
+ * sequence across multiple higher-layer boundaries so the reported long-run
+ * average includes recurring tree-state transition work.
+ */
+static int32_t XmssBdsLongSign(void *ctx, const BenchExecOptions *opts)
+{
+    XmssBenchCtx *bench = ctx;
+    uint32_t rounds = (bench->pkeyId == CRYPT_PKEY_XMSSMT) ? XMSSMT_LONG_SIGN_ROUNDS :
+        XMSS_SINGLE_TREE_SIGN_ROUNDS;
+    int32_t rc = CRYPT_SUCCESS;
+    BENCH_TIMES_VA(XmssSignOnce(bench->bds, bench, opts->len), rc, CRYPT_SUCCESS, opts->len, rounds,
+        "%s bds long-run sign", XmssGetParaName(opts->paraId));
+    return rc;
+}
+
 static int32_t XmssNaiveSign(void *ctx, const BenchExecOptions *opts)
 {
     XmssBenchCtx *bench = ctx;
     int32_t rc = CRYPT_SUCCESS;
-    BENCH_RUN_VA(XmssSignOnce(bench->naive, bench, opts->len), rc, CRYPT_SUCCESS, opts->len, opts, "%s naive sign",
-                 XmssGetParaName(opts->paraId));
+    BENCH_RUN_VA(XmssSignOnce(bench->naive, bench, opts->len), rc, CRYPT_SUCCESS, opts->len, opts,
+        "%s naive sign sample", XmssGetParaName(opts->paraId));
     return rc;
 }
 
@@ -247,6 +266,7 @@ static int32_t XmssVerify(void *ctx, const BenchExecOptions *opts)
 
 enum {
     XMSS_OPS_NUM = COUNT_OPS(DEFINE_OPER(KEY_GEN_ID, XmssKeyGen), DEFINE_OPER(SIGN_ID, XmssSign),
+                             DEFINE_OPER(XMSS_BDS_LONG_SIGN_ID, XmssBdsLongSign),
                              DEFINE_OPER(XMSS_NAIVE_SIGN_ID, XmssNaiveSign), DEFINE_OPER(VERIFY_ID, XmssVerify))
 };
 
@@ -260,6 +280,7 @@ static const CtxOps XmssCtxOps = {
         {
             DEFINE_OPER(KEY_GEN_ID, XmssKeyGen),
             DEFINE_OPER(SIGN_ID, XmssSign),
+            DEFINE_OPER(XMSS_BDS_LONG_SIGN_ID, XmssBdsLongSign),
             DEFINE_OPER(XMSS_NAIVE_SIGN_ID, XmssNaiveSign),
             DEFINE_OPER(VERIFY_ID, XmssVerify),
         },

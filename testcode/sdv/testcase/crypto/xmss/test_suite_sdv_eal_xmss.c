@@ -21,6 +21,8 @@
 #include "bsl_sal.h"
 #include "crypt_errno.h"
 #include "crypt_algid.h"
+#include "crypt_params_key.h"
+#include "crypt_utils.h"
 #include "crypt_eal_pkey.h"
 #include "crypt_util_rand.h"
 #include "crypt_bn.h"
@@ -286,6 +288,21 @@ EXIT:
 }
 /* END_CASE */
 
+/**
+ * @brief Verify that BDS acceleration does not change XMSS/XMSSMT signature output.
+ *
+ * Test procedure:
+ * 1. Generate a BDS-enabled key from deterministic seed, PRF and public-seed input.
+ * 2. Sign and verify a sequence of distinct messages with the BDS-enabled key.
+ * 3. At selected indexes, import the same private fields without BDS state into a new context.
+ * 4. Sign the same message through the original full-tree path and compare both signatures byte for byte.
+ *
+ * Expected result:
+ * 1. Every BDS signature and full-tree signature verifies successfully.
+ * 2. Both signing paths produce identical signatures at every compared index.
+ * 3. XMSSMT cases cross bottom-tree and higher-layer boundaries to exercise BDS state switching.
+ * 4. The signatures immediately before and after each final tested boundary use the same result on both paths.
+ */
 /* BEGIN_CASE */
 void SDV_CRYPTO_XMSS_BDS_SIGN_COMPARE_TC001(int id, int rounds, int compareHead, Hex *key, Hex *msg)
 {
@@ -330,10 +347,10 @@ void SDV_CRYPTO_XMSS_BDS_SIGN_COMPARE_TC001(int id, int rounds, int compareHead,
     uint8_t bdsSig[50000] = {0};
     uint8_t naiveSig[50000] = {0};
     uint8_t msgBuf[256] = {0};
-    ASSERT_TRUE(msg->len <= sizeof(msgBuf));
+    ASSERT_TRUE(msg->len >= sizeof(uint32_t) && msg->len <= sizeof(msgBuf));
     for (int i = 0; i < rounds; i++) {
         memcpy(msgBuf, msg->x, msg->len);
-        msgBuf[0] ^= (uint8_t)i;
+        PUT_UINT32_BE((uint32_t)i, msgBuf, 0);
         uint32_t bdsSigLen = sizeof(bdsSig);
         ASSERT_EQ(CRYPT_EAL_PkeySign(bdsPkey, 0, msgBuf, msg->len, bdsSig, &bdsSigLen), CRYPT_SUCCESS);
         ASSERT_EQ(CRYPT_EAL_PkeyVerify(bdsPkey, 0, msgBuf, msg->len, bdsSig, bdsSigLen), CRYPT_SUCCESS);
@@ -360,6 +377,193 @@ void SDV_CRYPTO_XMSS_BDS_SIGN_COMPARE_TC001(int id, int rounds, int compareHead,
 EXIT:
     CRYPT_EAL_PkeyFreeCtx(naivePkey);
     CRYPT_EAL_PkeyFreeCtx(bdsPkey);
+    return;
+}
+/* END_CASE */
+
+static void InitXmssPrvParams(BSL_Param *params, uint64_t *index, uint8_t *prvSeed, uint8_t *prvPrf,
+    uint8_t *pubSeed, uint8_t *pubRoot, uint32_t keyLen, uint8_t *bdsState, uint32_t bdsStateLen)
+{
+    BSL_PARAM_InitValue(&params[0], CRYPT_PARAM_XMSS_PRV_SEED, BSL_PARAM_TYPE_OCTETS, prvSeed, keyLen);
+    BSL_PARAM_InitValue(&params[1], CRYPT_PARAM_XMSS_PRV_PRF, BSL_PARAM_TYPE_OCTETS, prvPrf, keyLen);
+    BSL_PARAM_InitValue(&params[2], CRYPT_PARAM_XMSS_PRV_INDEX, BSL_PARAM_TYPE_UINT64, index, sizeof(*index));
+    BSL_PARAM_InitValue(&params[3], CRYPT_PARAM_XMSS_PUB_SEED, BSL_PARAM_TYPE_OCTETS, pubSeed, keyLen);
+    BSL_PARAM_InitValue(&params[4], CRYPT_PARAM_XMSS_PUB_ROOT, BSL_PARAM_TYPE_OCTETS, pubRoot, keyLen);
+    BSL_PARAM_InitValue(&params[5], CRYPT_PARAM_XMSS_BDS_STATE, BSL_PARAM_TYPE_OCTETS, bdsState, bdsStateLen);
+    params[6] = (BSL_Param)BSL_PARAM_END;
+}
+
+/**
+ * @brief Verify fixed-field BDS persistence for XMSS and XMSSMT.
+ *
+ * Test procedure:
+ * 1. Generate a source key and sign several messages to advance its BDS state.
+ * 2. Export the private fields and BDS blob, including a partially built XMSSMT next tree.
+ * 3. Check that the blob starts with the algorithm identifier rather than an in-memory structure marker.
+ * 4. Import all private fields into a fresh destination context.
+ * 5. Sign the next message with both contexts and compare the signatures byte for byte.
+ *
+ * Expected result:
+ * 1. The destination resumes at exactly the same BDS state and private-key index.
+ * 2. The first post-import signature is identical to the source signature.
+ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_XMSS_BDS_PERSIST_TC001(int id, int rounds)
+{
+    TestMemInit();
+    TestRandInit();
+    CRYPT_PKEY_AlgId pkeyType = (id >= CRYPT_XMSSMT_SHA2_20_2_256) ? CRYPT_PKEY_XMSSMT : CRYPT_PKEY_XMSS;
+    CRYPT_EAL_PkeyCtx *src = CRYPT_EAL_PkeyNewCtx(pkeyType);
+    CRYPT_EAL_PkeyCtx *dst = CRYPT_EAL_PkeyNewCtx(pkeyType);
+    ASSERT_TRUE(src != NULL);
+    ASSERT_TRUE(dst != NULL);
+    ASSERT_EQ(CRYPT_EAL_PkeySetParaById(src, id), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeySetParaById(dst, id), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyGen(src), CRYPT_SUCCESS);
+
+    uint8_t msg[32] = {0};
+    uint8_t warmupSig[50000] = {0};
+    for (int i = 0; i < rounds; i++) {
+        uint32_t warmupSigLen = sizeof(warmupSig);
+        msg[0] = (uint8_t)i;
+        ASSERT_EQ(CRYPT_EAL_PkeySign(src, 0, msg, sizeof(msg), warmupSig, &warmupSigLen), CRYPT_SUCCESS);
+    }
+
+    uint64_t index = 0;
+    uint8_t prvSeed[64] = {0};
+    uint8_t prvPrf[64] = {0};
+    uint8_t pubSeed[64] = {0};
+    uint8_t pubRoot[64] = {0};
+    uint8_t bdsState[50000] = {0};
+    BSL_Param params[7];
+    uint32_t pubLen = 0;
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(src, CRYPT_CTRL_GET_PUBKEY_LEN, &pubLen, sizeof(pubLen)), CRYPT_SUCCESS);
+    uint32_t keyLen = (pubLen - 4U) / 2U;
+    InitXmssPrvParams(params, &index, prvSeed, prvPrf, pubSeed, pubRoot, keyLen, bdsState, sizeof(bdsState));
+    ASSERT_EQ(CRYPT_EAL_PkeyGetPrvEx(src, params), CRYPT_SUCCESS);
+    ASSERT_TRUE(params[5].useLen > 4U);
+    ASSERT_TRUE(GET_UINT32_BE(bdsState, 0) == (uint32_t)id);
+
+    params[5].valueLen = params[5].useLen;
+    ASSERT_EQ(CRYPT_EAL_PkeySetPrvEx(dst, params), CRYPT_SUCCESS);
+
+    uint8_t srcSig[50000] = {0};
+    uint8_t dstSig[50000] = {0};
+    uint32_t srcSigLen = sizeof(srcSig);
+    uint32_t dstSigLen = sizeof(dstSig);
+    msg[0] = (uint8_t)rounds;
+    ASSERT_EQ(CRYPT_EAL_PkeySign(src, 0, msg, sizeof(msg), srcSig, &srcSigLen), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeySign(dst, 0, msg, sizeof(msg), dstSig, &dstSigLen), CRYPT_SUCCESS);
+    ASSERT_TRUE(srcSigLen == dstSigLen);
+    ASSERT_EQ(memcmp(srcSig, dstSig, srcSigLen), 0);
+
+EXIT:
+    CRYPT_EAL_PkeyFreeCtx(dst);
+    CRYPT_EAL_PkeyFreeCtx(src);
+    return;
+}
+/* END_CASE */
+
+/**
+ * @brief Verify BDS structural validation and atomic private-key import.
+ *
+ * Test procedure:
+ * 1. Generate an XMSS key and export its private fields and valid BDS blob.
+ * 2. Corrupt stack offset, treehash height/index/stack usage, next leaf, booleans and stack level.
+ * 3. Attempt to import every malformed blob into the context that already owns the valid key.
+ * 4. Export the context again after all rejected imports.
+ *
+ * Expected result:
+ * 1. Every malformed BDS blob is rejected with CRYPT_INVALID_ARG.
+ * 2. The original index, seed, PRF, public seed, root and BDS blob remain unchanged.
+ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_XMSS_BDS_IMPORT_INVALID_TC001(void)
+{
+    TestMemInit();
+    TestRandInit();
+    CRYPT_EAL_PkeyCtx *pkey = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_XMSS);
+    ASSERT_TRUE(pkey != NULL);
+    ASSERT_EQ(CRYPT_EAL_PkeySetParaById(pkey, CRYPT_XMSS_SHA2_10_256), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyGen(pkey), CRYPT_SUCCESS);
+
+    uint64_t index = 0;
+    uint8_t prvSeed[32] = {0};
+    uint8_t prvPrf[32] = {0};
+    uint8_t pubSeed[32] = {0};
+    uint8_t pubRoot[32] = {0};
+    uint8_t bdsState[20000] = {0};
+    BSL_Param params[7];
+    InitXmssPrvParams(params, &index, prvSeed, prvPrf, pubSeed, pubRoot, sizeof(prvSeed), bdsState, sizeof(bdsState));
+    ASSERT_EQ(CRYPT_EAL_PkeyGetPrvEx(pkey, params), CRYPT_SUCCESS);
+    uint32_t bdsStateLen = params[5].useLen;
+
+    uint8_t invalidBdsState[20000] = {0};
+    uint32_t headerLen = 7U * (uint32_t)sizeof(uint32_t) + (uint32_t)sizeof(uint64_t);
+    uint32_t stackLevelsPos = headerLen + 10U * 32U + 5U * 32U + 11U * 32U;
+    uint32_t stackOffsetPos = stackLevelsPos + 11U;
+    uint32_t treehashPos = stackOffsetPos + (uint32_t)sizeof(uint32_t);
+    uint32_t nextLeafPos = treehashPos + 10U * (3U * (uint32_t)sizeof(uint32_t) + 1U + 32U) + 32U;
+    uint32_t initializedPos = nextLeafPos + (uint32_t)sizeof(uint32_t) + 32U;
+    uint32_t invalidU32Pos[] = {
+        stackOffsetPos,
+        treehashPos,
+        treehashPos + sizeof(uint32_t),
+        treehashPos + 2U * (uint32_t)sizeof(uint32_t),
+        nextLeafPos,
+    };
+    ASSERT_TRUE(initializedPos < bdsStateLen);
+    for (uint32_t i = 0; i < sizeof(invalidU32Pos) / sizeof(invalidU32Pos[0]); i++) {
+        memcpy(invalidBdsState, bdsState, bdsStateLen);
+        memset(invalidBdsState + invalidU32Pos[i], 0xFF, sizeof(uint32_t));
+        params[5].value = invalidBdsState;
+        params[5].valueLen = bdsStateLen;
+        ASSERT_EQ(CRYPT_EAL_PkeySetPrvEx(pkey, params), CRYPT_INVALID_ARG);
+    }
+
+    memcpy(invalidBdsState, bdsState, bdsStateLen);
+    memset(invalidBdsState + treehashPos, 0, sizeof(uint32_t));
+    invalidBdsState[treehashPos + sizeof(uint32_t) - 1U] = 1U;
+    params[5].value = invalidBdsState;
+    params[5].valueLen = bdsStateLen;
+    ASSERT_EQ(CRYPT_EAL_PkeySetPrvEx(pkey, params), CRYPT_INVALID_ARG);
+
+    uint32_t invalidBoolPos[] = {treehashPos + 3U * (uint32_t)sizeof(uint32_t), initializedPos};
+    for (uint32_t i = 0; i < sizeof(invalidBoolPos) / sizeof(invalidBoolPos[0]); i++) {
+        memcpy(invalidBdsState, bdsState, bdsStateLen);
+        invalidBdsState[invalidBoolPos[i]] = 2U;
+        params[5].value = invalidBdsState;
+        params[5].valueLen = bdsStateLen;
+        ASSERT_EQ(CRYPT_EAL_PkeySetPrvEx(pkey, params), CRYPT_INVALID_ARG);
+    }
+
+    memcpy(invalidBdsState, bdsState, bdsStateLen);
+    invalidBdsState[stackLevelsPos] = 0xFFU;
+    memset(invalidBdsState + stackOffsetPos, 0, sizeof(uint32_t));
+    invalidBdsState[stackOffsetPos + sizeof(uint32_t) - 1U] = 1U;
+    params[5].value = invalidBdsState;
+    params[5].valueLen = bdsStateLen;
+    ASSERT_EQ(CRYPT_EAL_PkeySetPrvEx(pkey, params), CRYPT_INVALID_ARG);
+
+    uint64_t afterIndex = 0;
+    uint8_t afterPrvSeed[32] = {0};
+    uint8_t afterPrvPrf[32] = {0};
+    uint8_t afterPubSeed[32] = {0};
+    uint8_t afterPubRoot[32] = {0};
+    uint8_t afterBdsState[20000] = {0};
+    InitXmssPrvParams(params, &afterIndex, afterPrvSeed, afterPrvPrf, afterPubSeed, afterPubRoot, sizeof(afterPrvSeed),
+        afterBdsState, sizeof(afterBdsState));
+    ASSERT_EQ(CRYPT_EAL_PkeyGetPrvEx(pkey, params), CRYPT_SUCCESS);
+    ASSERT_TRUE(afterIndex == index);
+    ASSERT_TRUE(params[5].useLen == bdsStateLen);
+    ASSERT_EQ(memcmp(afterPrvSeed, prvSeed, sizeof(prvSeed)), 0);
+    ASSERT_EQ(memcmp(afterPrvPrf, prvPrf, sizeof(prvPrf)), 0);
+    ASSERT_EQ(memcmp(afterPubSeed, pubSeed, sizeof(pubSeed)), 0);
+    ASSERT_EQ(memcmp(afterPubRoot, pubRoot, sizeof(pubRoot)), 0);
+    ASSERT_EQ(memcmp(afterBdsState, bdsState, bdsStateLen), 0);
+
+EXIT:
+    CRYPT_EAL_PkeyFreeCtx(pkey);
     return;
 }
 /* END_CASE */

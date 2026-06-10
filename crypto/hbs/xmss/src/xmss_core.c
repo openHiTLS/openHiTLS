@@ -24,6 +24,7 @@
 #include "xmss_bds.h"
 #include "xmss_hash.h"
 #include "bsl_bytes.h"
+#include "bsl_sal.h"
 
 void HbsTreeCtx_InitFromXmss(HbsTreeCtx *treeCtx, const CryptXmssCtx *ctx)
 {
@@ -702,32 +703,39 @@ int32_t CRYPT_XMSS_SetPrvKey(CryptXmssCtx *ctx, const BSL_Param *para)
         return CRYPT_XMSS_KEYINFO_NOT_SET;
     }
     XmssPrvKeyParam prv;
-    uint32_t tmplen = sizeof(ctx->key.idx);
+    CryptXmssCtx tmpCtx = {0};
+    tmpCtx.params = ctx->params;
+    uint32_t tmplen = sizeof(tmpCtx.key.idx);
     int32_t ret = XPrvKeyParamCheck(ctx, (BSL_Param *)(uintptr_t)para, &prv);
     if (ret != CRYPT_SUCCESS) {
         return ret;
     }
-    XmssBds_Free(ctx);
-    ctx->hasPrivateKey = false;
-    memcpy(ctx->key.seed, prv.prvSeed->value, ctx->params->n);
-    memcpy(ctx->key.prf, prv.prvPrf->value, ctx->params->n);
-    memcpy(ctx->key.pubSeed, prv.pubSeed->value, ctx->params->n);
-    memcpy(ctx->key.root, prv.pubRoot->value, ctx->params->n);
-    ret = BSL_PARAM_GetValue(prv.prvIndex, CRYPT_PARAM_XMSS_PRV_INDEX, BSL_PARAM_TYPE_UINT64, &ctx->key.idx, &tmplen);
+    memcpy(tmpCtx.key.seed, prv.prvSeed->value, ctx->params->n);
+    memcpy(tmpCtx.key.prf, prv.prvPrf->value, ctx->params->n);
+    memcpy(tmpCtx.key.pubSeed, prv.pubSeed->value, ctx->params->n);
+    memcpy(tmpCtx.key.root, prv.pubRoot->value, ctx->params->n);
+    ret = BSL_PARAM_GetValue(prv.prvIndex, CRYPT_PARAM_XMSS_PRV_INDEX, BSL_PARAM_TYPE_UINT64, &tmpCtx.key.idx, &tmplen);
     if (ret != CRYPT_SUCCESS) {
+        BSL_SAL_CleanseData(&tmpCtx.key, sizeof(tmpCtx.key));
         return ret;
     }
     if (prv.bdsState != NULL && prv.bdsState->valueLen != 0) {
         if (prv.bdsState->value == NULL) {
+            BSL_SAL_CleanseData(&tmpCtx.key, sizeof(tmpCtx.key));
             BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
             return CRYPT_NULL_INPUT;
         }
-        ret = XmssBds_ImportState(ctx, (const uint8_t *)prv.bdsState->value, prv.bdsState->valueLen);
+        ret = XmssBds_ImportState(&tmpCtx, (const uint8_t *)prv.bdsState->value, prv.bdsState->valueLen);
         if (ret != CRYPT_SUCCESS) {
-            XmssBds_Free(ctx);
+            BSL_SAL_CleanseData(&tmpCtx.key, sizeof(tmpCtx.key));
             return ret;
         }
     }
+    XmssBds_Free(ctx);
+    ctx->key = tmpCtx.key;
+    ctx->bds = tmpCtx.bds;
+    BSL_SAL_CleanseData(&tmpCtx.key, sizeof(tmpCtx.key));
+    memset(&tmpCtx.bds, 0, sizeof(tmpCtx.bds));
     ctx->hasPrivateKey = true;
     return CRYPT_SUCCESS;
 }
