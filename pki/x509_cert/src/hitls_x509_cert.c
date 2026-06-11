@@ -720,6 +720,7 @@ static int32_t X509_CertSetCtrl(HITLS_X509_Cert *cert, int32_t cmd, void *val, u
             ret = CertSet(&cert->tbs.validTime.start, sizeof(BSL_TIME), val, valLen, TimeCheck);
             if (ret == HITLS_PKI_SUCCESS) {
                 cert->tbs.validTime.flag |= BSL_TIME_BEFORE_SET;
+                cert->tbs.validTime.flag &= ~BSL_TIME_BEFORE_IS_UTC;
                 cert->tbs.validTime.flag |=
                     cert->tbs.validTime.start.year <= BSL_TIME_UTC_MAX_YEAR ? BSL_TIME_BEFORE_IS_UTC : 0;
             }
@@ -728,6 +729,7 @@ static int32_t X509_CertSetCtrl(HITLS_X509_Cert *cert, int32_t cmd, void *val, u
             ret = CertSet(&cert->tbs.validTime.end, sizeof(BSL_TIME), val, valLen, TimeCheck);
             if (ret == HITLS_PKI_SUCCESS) {
                 cert->tbs.validTime.flag |= BSL_TIME_AFTER_SET;
+                cert->tbs.validTime.flag &= ~BSL_TIME_AFTER_IS_UTC;
                 cert->tbs.validTime.flag |=
                     cert->tbs.validTime.end.year <= BSL_TIME_UTC_MAX_YEAR ? BSL_TIME_AFTER_IS_UTC : 0;
             }

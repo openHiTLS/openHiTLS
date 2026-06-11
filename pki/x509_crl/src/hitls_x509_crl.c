@@ -1034,6 +1034,7 @@ static int32_t CrlSetThisUpdateTime(HITLS_X509_ValidTime *time, uint8_t *val, ui
      * CRL issuers conforming to this profile MUST encode thisUpdate as GeneralizedTime for dates in the year
      * 2050 or later.
      */
+    time->flag &= ~BSL_TIME_BEFORE_IS_UTC;
     if (time->start.year < 2050) {
         time->flag |= BSL_TIME_BEFORE_IS_UTC;
     }
@@ -1053,6 +1054,7 @@ static int32_t CrlSetNextUpdateTime(HITLS_X509_ValidTime *time, uint8_t *val, ui
      * CRL issuers conforming to this profile MUST encode nextUpdate as GeneralizedTime for dates in the year
      * 2050 or later.
      */
+    time->flag &= ~BSL_TIME_AFTER_IS_UTC;
     if (time->end.year < 2050) {
         time->flag |= BSL_TIME_AFTER_IS_UTC;
     }

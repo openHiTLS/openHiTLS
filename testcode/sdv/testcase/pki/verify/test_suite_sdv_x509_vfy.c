@@ -3017,6 +3017,51 @@ EXIT:
 }
 /* END_CASE */
 
+/**
+ * RFC 5280: when a certificate uses the no-well-defined-expiration notAfter
+ * value 99991231235959Z, the issuer must ensure that no valid certification
+ * path exists after status maintenance terminates. Verify that a leaf with
+ * this notAfter value still fails after the issuer CA certificate expires.
+ */
+/* BEGIN_CASE */
+void SDV_X509_VFY_CERT_TIME_LEAF_9999_CA_EXPIRED_FAIL_TC001(void)
+{
+    HITLS_X509_Cert *root = NULL;
+    HITLS_X509_Cert *inter = NULL;
+    HITLS_X509_Cert *leaf = NULL;
+    int64_t interEnd = 0;
+    BSL_TIME noWellDefinedExpiration = {9999, 12, 31, 23, 59, 59, 0, 0};
+
+    TestMemInit();
+    HITLS_X509_StoreCtx *store = HITLS_X509_StoreCtxNew();
+    HITLS_X509_List *chain = BSL_LIST_New(sizeof(HITLS_X509_Cert *));
+    ASSERT_TRUE(store != NULL && chain != NULL);
+
+    ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_ASN1, "../testdata/cert/chain/time/root_expired.der", &root), 0);
+    ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_ASN1, "../testdata/cert/chain/time/inter_expired.der", &inter), 0);
+    ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_ASN1, "../testdata/cert/chain/time/leaf_expired.der", &leaf), 0);
+    ASSERT_EQ(X509_AddCertToChainTest(chain, leaf),  HITLS_PKI_SUCCESS);
+    ASSERT_EQ(X509_AddCertToChainTest(chain, inter), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(X509_AddCertToChainTest(chain, root),  HITLS_PKI_SUCCESS);
+
+    leaf->tbs.validTime.end = noWellDefinedExpiration;
+    leaf->tbs.validTime.flag &= ~BSL_TIME_AFTER_IS_UTC;
+
+    ASSERT_EQ(HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_DEEP_COPY_SET_CA, root, sizeof(HITLS_X509_Cert)), 0);
+    ASSERT_EQ(BSL_SAL_DateToUtcTimeConvert(&inter->tbs.validTime.end, &interEnd), BSL_SUCCESS);
+    interEnd += 60;
+    ASSERT_EQ(HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_SET_TIME, &interEnd, sizeof(interEnd)), 0);
+    ASSERT_EQ(HITLS_X509_CertVerify(store, chain), HITLS_X509_ERR_VFY_NOTAFTER_EXPIRED);
+
+EXIT:
+    HITLS_X509_StoreCtxFree(store);
+    BSL_LIST_FREE(chain, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);
+    HITLS_X509_CertFree(root);
+    HITLS_X509_CertFree(inter);
+    HITLS_X509_CertFree(leaf);
+}
+/* END_CASE */
+
 
 /**
  * Constructing a certificate chain where the intermediate CA certificate contains an unsupported
