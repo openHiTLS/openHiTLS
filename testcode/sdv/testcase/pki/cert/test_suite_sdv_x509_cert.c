@@ -1040,6 +1040,10 @@ void SDV_X509_CERT_SET_TIME_FUNC_TC001(void)
 {
     TestMemInit();
     BSL_TIME time = {2024, 8, 22, 1, 1, 0, 1, 0};
+    BSL_TIME errorTime = {2025, 2, 30, 0, 0, 0, 0, 0};
+    BSL_TIME utcTime = {2049, 12, 31, 23, 59, 0, 59, 0};
+    BSL_TIME generalizedTime = {2050, 1, 1, 0, 0, 0, 0, 0};
+    BSL_TIME maxGeneralizedTime = {9999, 12, 31, 23, 59, 59, 0, 0};
 
     HITLS_X509_Cert *cert = HITLS_X509_CertNew();
     ASSERT_NE(cert, NULL);
@@ -1047,14 +1051,34 @@ void SDV_X509_CERT_SET_TIME_FUNC_TC001(void)
 
     ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_SET_BEFORE_TIME, &time, 0), HITLS_X509_ERR_INVALID_PARAM);
     TestErrClear();
+    ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_SET_BEFORE_TIME, &errorTime, sizeof(BSL_TIME)),
+        HITLS_X509_ERR_INVALID_PARAM);
+    TestErrClear();
 
     ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_SET_BEFORE_TIME, &time, sizeof(BSL_TIME)), HITLS_PKI_SUCCESS);
     ASSERT_TRUE((cert->tbs.validTime.flag & BSL_TIME_BEFORE_SET) != 0);
+    ASSERT_TRUE((cert->tbs.validTime.flag & BSL_TIME_BEFORE_IS_UTC) != 0);
     ASSERT_EQ(BSL_SAL_DateTimeCompare(&cert->tbs.validTime.start, &time, NULL), BSL_TIME_CMP_EQUAL);
+
+    ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_SET_BEFORE_TIME, &generalizedTime, sizeof(BSL_TIME)),
+        HITLS_PKI_SUCCESS);
+    ASSERT_TRUE((cert->tbs.validTime.flag & BSL_TIME_BEFORE_IS_UTC) == 0);
 
     ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_SET_AFTER_TIME, &time, sizeof(BSL_TIME)), HITLS_PKI_SUCCESS);
     ASSERT_TRUE((cert->tbs.validTime.flag & BSL_TIME_AFTER_SET) != 0);
     ASSERT_EQ(BSL_SAL_DateTimeCompare(&cert->tbs.validTime.end, &time, NULL), BSL_TIME_CMP_EQUAL);
+
+    ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_SET_AFTER_TIME, &utcTime, sizeof(BSL_TIME)), HITLS_PKI_SUCCESS);
+    ASSERT_TRUE((cert->tbs.validTime.flag & BSL_TIME_AFTER_IS_UTC) != 0);
+
+    ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_SET_AFTER_TIME, &generalizedTime, sizeof(BSL_TIME)),
+        HITLS_PKI_SUCCESS);
+    ASSERT_TRUE((cert->tbs.validTime.flag & BSL_TIME_AFTER_IS_UTC) == 0);
+
+    ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_SET_AFTER_TIME, &maxGeneralizedTime, sizeof(BSL_TIME)),
+        HITLS_PKI_SUCCESS);
+    ASSERT_TRUE((cert->tbs.validTime.flag & BSL_TIME_AFTER_IS_UTC) == 0);
+    ASSERT_EQ(BSL_SAL_DateTimeCompare(&cert->tbs.validTime.end, &maxGeneralizedTime, NULL), BSL_TIME_CMP_EQUAL);
     ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:

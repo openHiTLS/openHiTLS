@@ -56,6 +56,24 @@ SDV_X509_CERT_VERSIONCHECK_TC003
 SDV_X509_CERT_VERSIONCHECK_TC003:"../testdata/cert/asn1/certcheck/certnoissuer.der":HITLS_X509_ERR_CHECK_TAG:""
 
 SDV_X509_CERT_VERSIONCHECK_TC003
+SDV_X509_CERT_VERSIONCHECK_TC003:"../testdata/cert/asn1/certcheck/certnovalidity.der":HITLS_X509_ERR_CHECK_TAG:""
+
+SDV_X509_CERT_VERSIONCHECK_TC003
+SDV_X509_CERT_VERSIONCHECK_TC003:"../testdata/cert/asn1/certcheck/certvaliditynonotafter.der":BSL_ASN1_ERR_DECODE_LEN:""
+
+SDV_X509_CERT_VERSIONCHECK_TC003
+SDV_X509_CERT_VERSIONCHECK_TC003:"../testdata/cert/asn1/certcheck/certvaliditybadtime.der":BSL_ASN1_ERR_DECODE_TIME:""
+
+SDV_X509_CERT_VERSIONCHECK_TC003
+SDV_X509_CERT_VERSIONCHECK_TC003:"../testdata/cert/asn1/certcheck/certvalidityequal.der":HITLS_PKI_SUCCESS:"../testdata/cert/asn1/certcheck/check/certvalidityequal"
+
+SDV_X509_CERT_VERSIONCHECK_TC003
+SDV_X509_CERT_VERSIONCHECK_TC003:"../testdata/cert/asn1/certcheck/certvaliditystartlater.der":HITLS_PKI_SUCCESS:"../testdata/cert/asn1/certcheck/check/certvaliditystartlater"
+
+SDV_X509_CERT_VERSIONCHECK_TC003
+SDV_X509_CERT_VERSIONCHECK_TC003:"../testdata/cert/asn1/certcheck/certvaliditymaxafter.der":HITLS_PKI_SUCCESS:"../testdata/cert/asn1/certcheck/check/certvaliditymaxafter"
+
+SDV_X509_CERT_VERSIONCHECK_TC003
 SDV_X509_CERT_VERSIONCHECK_TC003:"../testdata/cert/asn1/certcheck/certdnvalueIA5String.der":HITLS_PKI_SUCCESS:"../testdata/cert/asn1/certcheck/check/certdnvalueIA5String"
 
 SDV_X509_CERT_VERSIONCHECK_TC003
