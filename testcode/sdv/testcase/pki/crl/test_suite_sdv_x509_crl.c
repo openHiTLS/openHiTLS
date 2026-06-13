@@ -1852,13 +1852,6 @@ EXIT:
 #define IDP_TEST_REASON_MULTI \
     (HITLS_X509_REASON_FLAG_KEY_COMPROMISE | HITLS_X509_REASON_FLAG_CA_COMPROMISE | \
      HITLS_X509_REASON_FLAG_AA_COMPROMISE)
-#define IDP_TEST_REASON_ALL \
-    (HITLS_X509_REASON_FLAG_UNUSED | HITLS_X509_REASON_FLAG_KEY_COMPROMISE | \
-     HITLS_X509_REASON_FLAG_CA_COMPROMISE | HITLS_X509_REASON_FLAG_AFFILIATION_CHANGED | \
-     HITLS_X509_REASON_FLAG_SUPERSEDED | HITLS_X509_REASON_FLAG_CESSATION_OPERATION | \
-     HITLS_X509_REASON_FLAG_CERTIFICATE_HOLD | HITLS_X509_REASON_FLAG_PRIVILEGE_WITHDRAWN | \
-     HITLS_X509_REASON_FLAG_AA_COMPROMISE)
-
 static void ClearExpectedError(void)
 {
 #ifdef HITLS_BSL_ERR
@@ -2059,7 +2052,7 @@ static int32_t BuildIdpReasonZero(HITLS_X509_ExtIdp *idp, bool critical)
 static int32_t BuildIdpReasonAll(HITLS_X509_ExtIdp *idp, bool critical)
 {
     InitIdp(idp, critical);
-    SetIdpReasons(idp, IDP_TEST_REASON_ALL);
+    SetIdpReasons(idp, HITLS_X509_REASON_FLAG_ALL);
     return HITLS_PKI_SUCCESS;
 }
 
@@ -2567,12 +2560,12 @@ EXIT:
  * @brief  1. Parse a CRL whose malformed IDP extension has an empty distributionPoint wrapper.
  *         2. Get IDP from the parsed CRL.
  * @expect 1. Raw CRL parsing succeeds.
- *         2. IDP get fails with HITLS_X509_ERR_EXT_IDP.
+ *         2. IDP get fails with HITLS_X509_ERR_EXT_DISTPOINT.
  */
 /* BEGIN_CASE */
 void SDV_X509_CRL_PARSE_IDP_ABNORMAL_TC005(char *path)
 {
-    ASSERT_EQ(CheckBadIdpGet(path, HITLS_X509_ERR_EXT_IDP), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(CheckBadIdpGet(path, HITLS_X509_ERR_EXT_DISTPOINT), HITLS_PKI_SUCCESS);
 EXIT:
     return;
 }
@@ -2625,6 +2618,35 @@ void SDV_X509_CRL_PARSE_IDP_ABNORMAL_TC008(char *path)
 {
     ASSERT_EQ(CheckBadIdpGet(path, BSL_ASN1_ERR_MISMATCH_TAG), HITLS_PKI_SUCCESS);
 EXIT:
+    return;
+}
+/* END_CASE */
+
+/**
+ * @test   SDV_X509_CRL_PARSE_IDP_ABNORMAL_TC009
+ * @title  Parse relativeName with only the outer RDN layer.
+ * @brief  1. Parse a CRL whose IDP extension encodes relativeName with only the synthetic layer-1 node.
+ *         2. Get IDP from the parsed CRL.
+ * @expect 1. Raw CRL parsing succeeds.
+ *         2. IDP get succeeds and preserves the layer-1-only relativeName.
+ */
+/* BEGIN_CASE */
+void SDV_X509_CRL_PARSE_IDP_ABNORMAL_TC009(char *path)
+{
+    HITLS_X509_ExtIdp expect = {0};
+    BslList *names = NULL;
+
+    InitIdp(&expect, true);
+    names = HITLS_X509_DnListNew();
+    ASSERT_NE(names, NULL);
+    ASSERT_EQ(HITLS_X509_AddDnNameLayer1(names), HITLS_PKI_SUCCESS);
+    expect.distPoint = NewIdpDistPoint(HITLS_X509_DP_RELATIVENAME, names);
+    ASSERT_NE(expect.distPoint, NULL);
+    names = NULL;
+    ASSERT_EQ(CheckParsedIdp(path, &expect), HITLS_PKI_SUCCESS);
+EXIT:
+    HITLS_X509_DnListFree(names);
+    FreeBuiltIdp(&expect);
     return;
 }
 /* END_CASE */

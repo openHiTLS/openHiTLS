@@ -361,6 +361,9 @@ SDV_X509_CRL_PARSE_IDP_ABNORMAL_TC007:"../testdata/cert/test_for_crl/ext_idp/bad
 SDV_X509_CRL_PARSE_IDP_ABNORMAL_TC008 relativeName DER invalid
 SDV_X509_CRL_PARSE_IDP_ABNORMAL_TC008:"../testdata/cert/test_for_crl/ext_idp/bad_relative_der.der"
 
+SDV_X509_CRL_PARSE_IDP_ABNORMAL_TC009 relativeName only layer-1 node
+SDV_X509_CRL_PARSE_IDP_ABNORMAL_TC009:"../testdata/cert/test_for_crl/ext_idp/empty_relativename.der"
+
 SDV_X509_CRL_GEN_IDP_ROUNDTRIP_TC001 fullName URI roundtrip
 SDV_X509_CRL_GEN_IDP_ROUNDTRIP_TC001:"../testdata/cert/asn1/rsa_cert/rsa_p8.crt.der":"../testdata/cert/asn1/rsa_cert/rsa_p8.key.der":CRYPT_PRIKEY_PKCS8_UNENCRYPT:"gen_idp_fullname_uri.der"
 

@@ -59,6 +59,7 @@ int32_t HITLS_PKI_PrintCtrl(int32_t cmd, void *val, uint32_t valLen, BSL_UIO *ui
  *        HITLS_X509_EXT_GET|SET_EXKUSAGE       HITLS_X509_ExtExKeyUsage
  *        HITLS_X509_EXT_GET|SET_DELTA_CRL      HITLS_X509_ExtDeltaCrl
  *        HITLS_X509_EXT_GET|SET_IDP            HITLS_X509_ExtIdp
+ *        HITLS_X509_EXT_GET|SET_CDP            HITLS_X509_ExtCdp
  *        HITLS_X509_EXT_CHECK_SKI              bool
  * @param val    [IN/OUT] input and output value
  * @param valLen [In] value length
@@ -110,6 +111,14 @@ void HITLS_X509_ClearIdp(HITLS_X509_ExtIdp *idp);
  * @param data [IN] The general name.
  */
 void HITLS_X509_FreeGeneralName(HITLS_X509_GeneralName *data);
+
+/**
+ * @ingroup pki
+ * @brief Clear a HITLS_X509_ExtCdp structure returned by GET_CRLDP.
+ *
+ * @param crldp [IN] The HITLS_X509_ExtCdp structure.
+ */
+void HITLS_X509_ClearCdp(HITLS_X509_ExtCdp *cdp);
 
 /**
  * @ingroup pki

@@ -223,6 +223,10 @@ int32_t HITLS_X509_ParseSubjectAltName(HITLS_X509_ExtEntry *extEntry,  HITLS_X50
 
 void HITLS_X509_ClearSubjectAltName(HITLS_X509_ExtSan *san);
 
+int32_t HITLS_X509_ParseCdp(HITLS_X509_ExtEntry *extEntry, HITLS_X509_ExtCdp *crldp);
+
+int32_t HITLS_X509_CheckCdp(const HITLS_X509_ExtCdp *crldp);
+
 void HITLS_X509_ClearExtendedKeyUsage(HITLS_X509_ExtExKeyUsage *exku);
 
 HITLS_X509_Ext *X509_ExtNew(HITLS_X509_Ext *ext, int32_t type);

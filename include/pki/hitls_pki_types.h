@@ -94,6 +94,7 @@ typedef enum {
                                                     Note: Only supported for custom extensions. */
     HITLS_X509_EXT_SET_DELTA_CRL,               /** Set the delta CRL indicator extension. */
     HITLS_X509_EXT_SET_IDP,                     /** Set the issuing distribution point extension. */
+    HITLS_X509_EXT_SET_CDP,                   /** Set the cRLDistributionPoints extension. */
 
     HITLS_X509_EXT_GET_SKI = 0x0500,            /** Get Subject Key Identifier from extensions.
                                                     Note: Kid is a shallow copy. */
@@ -108,6 +109,7 @@ typedef enum {
                                                     Note: Only supported for custom extensions. */
     HITLS_X509_EXT_GET_DELTA_CRL,               /** Get the delta CRL indicator extension. */
     HITLS_X509_EXT_GET_IDP,                     /** Get the issuing distribution point extension. */
+    HITLS_X509_EXT_GET_CDP,                   /** Get cRLDistributionPoints from extensions. */
 
     HITLS_X509_EXT_CHECK_SKI = 0x0600,          /** Check if ski is exists. */
 
@@ -283,6 +285,29 @@ typedef struct {
 #define HITLS_X509_REASON_FLAG_CERTIFICATE_HOLD       0x0002
 #define HITLS_X509_REASON_FLAG_PRIVILEGE_WITHDRAWN    0x0001
 #define HITLS_X509_REASON_FLAG_AA_COMPROMISE          0x8000
+#define HITLS_X509_REASON_FLAG_ALL                    0x807F
+
+/**
+ * ASN.1: DistributionPoint ::= SEQUENCE {
+ *     distributionPoint [0] DistributionPointName OPTIONAL,
+ *     reasons           [1] ReasonFlags OPTIONAL,
+ *     cRLIssuer         [2] GeneralNames OPTIONAL
+ * }
+ */
+typedef struct {
+    HITLS_X509_DistPointName *distPointName; // distributionPoint [0] DistributionPointName OPTIONAL
+    bool hasReasons; // true if reasons [1] ReasonFlags OPTIONAL is present
+    uint16_t reasons; // valid only when hasReasons is true
+    BslList *crlIssuer; // cRLIssuer [2] GeneralNames OPTIONAL
+} HITLS_X509_CrlDistPoint;
+
+/**
+ * ASN.1: CRLDistributionPoints ::= SEQUENCE SIZE (1..MAX) OF DistributionPoint
+ */
+typedef struct {
+    bool critical; // X.509 extension critical flag, not part of the ASN.1 value
+    BslList *points; // CRLDistributionPoints ::= SEQUENCE OF DistributionPoint
+} HITLS_X509_ExtCdp;
 
 /**
  * Generic extension for setting/getting arbitrary extensions by OID

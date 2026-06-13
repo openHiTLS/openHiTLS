@@ -280,6 +280,174 @@ SDV_X509_CERT_WITH_ILLEGAL_SAN_PARSE_TEST_TC001:0:"../testdata/cert/asn1/certche
 SDV_X509_CERT_WITH_ILLEGAL_SAN_DIRNAME_0_LEN_PARSE_TEST_TC001:directoryName with zero length
 SDV_X509_CERT_WITH_ILLEGAL_SAN_DIRNAME_0_LEN_PARSE_TEST_TC001:"../testdata/cert/asn1/certcheck/cert_ext_san_dirname_0_length.der"
 
+SDV_X509_CERT_CRLDP_PARSE_TC001:normal composite
+SDV_X509_CERT_CRLDP_PARSE_TC001:"../testdata/cert/asn1/crldp/normal/parse_normal_composite.der"
+
+SDV_X509_CERT_CRLDP_PARSE_TC002:critical false smoke
+SDV_X509_CERT_CRLDP_PARSE_TC002:"../testdata/cert/asn1/crldp/normal/parse_critical_false_smoke.der"
+
+SDV_X509_CERT_CRLDP_PARSE_TC003:boundary composite
+SDV_X509_CERT_CRLDP_PARSE_TC003:"../testdata/cert/asn1/crldp/boundary/parse_boundary_composite.der"
+
+SDV_X509_CERT_CRLDP_PARSE_TC004:reasons der edge
+SDV_X509_CERT_CRLDP_PARSE_TC004:"../testdata/cert/asn1/crldp/boundary/parse_reasons_der_edge.der"
+
+SDV_X509_CERT_CRLDP_PARSE_TC005:empty top
+SDV_X509_CERT_CRLDP_PARSE_TC005:"../testdata/cert/asn1/crldp/boundary/parse_empty_top.der"
+
+SDV_X509_CERT_CRLDP_PARSE_INVALID_TC001:no cdp extension
+SDV_X509_CERT_CRLDP_PARSE_INVALID_TC001:"../testdata/cert/asn1/crldp/invalid/parse_no_cdp.der"
+
+SDV_X509_CERT_CRLDP_PARSE_INVALID_TC002:duplicate cdp extension
+SDV_X509_CERT_CRLDP_PARSE_INVALID_TC002:"../testdata/cert/asn1/crldp/invalid/parse_duplicate_cdp_ext.der"
+
+SDV_X509_CERT_CRLDP_PARSE_INVALID_TC003:cdp not sequence
+SDV_X509_CERT_CRLDP_PARSE_INVALID_TC003:"../testdata/cert/asn1/crldp/invalid/parse_cdp_not_sequence.der"
+
+SDV_X509_CERT_CRLDP_PARSE_INVALID_TC004:cdp trailing bytes
+SDV_X509_CERT_CRLDP_PARSE_INVALID_TC004:"../testdata/cert/asn1/crldp/invalid/parse_cdp_trailing.der"
+
+SDV_X509_CERT_CRLDP_PARSE_INVALID_TC005:dp not sequence
+SDV_X509_CERT_CRLDP_PARSE_INVALID_TC005:"../testdata/cert/asn1/crldp/invalid/parse_dp_not_sequence.der"
+
+SDV_X509_CERT_CRLDP_PARSE_INVALID_TC006:dp bad field tag
+SDV_X509_CERT_CRLDP_PARSE_INVALID_TC006:"../testdata/cert/asn1/crldp/invalid/parse_dp_bad_field_tag.der"
+
+SDV_X509_CERT_CRLDP_PARSE_INVALID_TC007:dp bad order
+SDV_X509_CERT_CRLDP_PARSE_INVALID_TC007:"../testdata/cert/asn1/crldp/invalid/parse_dp_bad_order.der"
+
+SDV_X509_CERT_CRLDP_PARSE_INVALID_TC008:dp duplicate field
+SDV_X509_CERT_CRLDP_PARSE_INVALID_TC008:"../testdata/cert/asn1/crldp/invalid/parse_dp_duplicate_field.der"
+
+SDV_X509_CERT_CRLDP_PARSE_INVALID_TC009:distpoint outer primitive
+SDV_X509_CERT_CRLDP_PARSE_INVALID_TC009:"../testdata/cert/asn1/crldp/invalid/parse_distpoint_outer_primitive.der"
+
+SDV_X509_CERT_CRLDP_PARSE_INVALID_TC010:distpoint choice bad
+SDV_X509_CERT_CRLDP_PARSE_INVALID_TC010:"../testdata/cert/asn1/crldp/invalid/parse_distpoint_choice_bad.der"
+
+SDV_X509_CERT_CRLDP_PARSE_INVALID_TC011:distpoint choice extra
+SDV_X509_CERT_CRLDP_PARSE_INVALID_TC011:"../testdata/cert/asn1/crldp/invalid/parse_distpoint_choice_extra.der"
+
+SDV_X509_CERT_CRLDP_PARSE_INVALID_TC012:fullname bad generalname
+SDV_X509_CERT_CRLDP_PARSE_INVALID_TC012:"../testdata/cert/asn1/crldp/invalid/parse_fullname_bad_generalname.der"
+
+SDV_X509_CERT_CRLDP_PARSE_INVALID_TC013:crlissuer bad generalname
+SDV_X509_CERT_CRLDP_PARSE_INVALID_TC013:"../testdata/cert/asn1/crldp/invalid/parse_crlissuer_bad_generalname.der"
+
+SDV_X509_CERT_CRLDP_PARSE_INVALID_TC014:relative bad ava
+SDV_X509_CERT_CRLDP_PARSE_INVALID_TC014:"../testdata/cert/asn1/crldp/invalid/parse_relative_bad_ava.der"
+
+SDV_X509_CERT_CRLDP_PARSE_INVALID_TC015:reasons bad bitstring
+SDV_X509_CERT_CRLDP_PARSE_INVALID_TC015:"../testdata/cert/asn1/crldp/invalid/parse_reasons_bad_bitstring.der"
+
+SDV_X509_CERT_CRLDP_PARSE_INVALID_TC016:null crldp output
+SDV_X509_CERT_CRLDP_PARSE_INVALID_TC016:
+
+SDV_X509_CERT_CRLDP_GEN_ROUNDTRIP_TC001:normal composite
+SDV_X509_CERT_CRLDP_GEN_ROUNDTRIP_TC001:"gen-crldp-normal.cert"
+
+SDV_X509_CERT_CRLDP_GEN_ROUNDTRIP_TC002:critical false smoke
+SDV_X509_CERT_CRLDP_GEN_ROUNDTRIP_TC002:"gen-crldp-critical-false.cert"
+
+SDV_X509_CERT_CRLDP_GEN_ROUNDTRIP_TC003:boundary composite
+SDV_X509_CERT_CRLDP_GEN_ROUNDTRIP_TC003:"gen-crldp-boundary.cert"
+
+SDV_X509_CERT_CRLDP_CHECK_TC001:empty points
+SDV_X509_CERT_CRLDP_CHECK_TC001:
+
+SDV_X509_CERT_CRLDP_CHECK_TC002:fullname skip
+SDV_X509_CERT_CRLDP_CHECK_TC002:
+
+SDV_X509_CERT_CRLDP_CHECK_TC003:relativename skip
+SDV_X509_CERT_CRLDP_CHECK_TC003:
+
+SDV_X509_CERT_CRLDP_CHECK_TC004:empty dp
+SDV_X509_CERT_CRLDP_CHECK_TC004:
+
+SDV_X509_CERT_CRLDP_CHECK_TC005:only reasons
+SDV_X509_CERT_CRLDP_CHECK_TC005:
+
+SDV_X509_CERT_CRLDP_CHECK_TC006:empty issuer
+SDV_X509_CERT_CRLDP_CHECK_TC006:
+
+SDV_X509_CERT_CRLDP_CHECK_TC007:nonempty issuer
+SDV_X509_CERT_CRLDP_CHECK_TC007:
+
+SDV_X509_CERT_CRLDP_CHECK_TC008:non directory issuer
+SDV_X509_CERT_CRLDP_CHECK_TC008:
+
+SDV_X509_CERT_CRLDP_CHECK_TC009:multi success
+SDV_X509_CERT_CRLDP_CHECK_TC009:
+
+SDV_X509_CERT_CRLDP_CHECK_TC010:multi fail
+SDV_X509_CERT_CRLDP_CHECK_TC010:
+
+SDV_X509_CERT_CRLDP_SET_INVALID_TC001:null crldp
+SDV_X509_CERT_CRLDP_SET_INVALID_TC001:
+
+SDV_X509_CERT_CRLDP_SET_INVALID_TC002:null points
+SDV_X509_CERT_CRLDP_SET_INVALID_TC002:
+
+SDV_X509_CERT_CRLDP_SET_INVALID_TC003:points wrong dataSize
+SDV_X509_CERT_CRLDP_SET_INVALID_TC003:
+
+SDV_X509_CERT_CRLDP_SET_INVALID_TC004:bad distpoint type
+SDV_X509_CERT_CRLDP_SET_INVALID_TC004:
+
+SDV_X509_CERT_CRLDP_SET_INVALID_TC005:fullname null
+SDV_X509_CERT_CRLDP_SET_INVALID_TC005:
+
+SDV_X509_CERT_CRLDP_SET_INVALID_TC006:fullname wrong dataSize
+SDV_X509_CERT_CRLDP_SET_INVALID_TC006:
+
+SDV_X509_CERT_CRLDP_SET_INVALID_TC007:relativename null
+SDV_X509_CERT_CRLDP_SET_INVALID_TC007:
+
+SDV_X509_CERT_CRLDP_SET_INVALID_TC008:relativename wrong dataSize
+SDV_X509_CERT_CRLDP_SET_INVALID_TC008:
+
+SDV_X509_CERT_CRLDP_SET_INVALID_TC009:relativename empty
+SDV_X509_CERT_CRLDP_SET_INVALID_TC009:
+
+SDV_X509_CERT_CRLDP_SET_INVALID_TC010:relativename multi rdn
+SDV_X509_CERT_CRLDP_SET_INVALID_TC010:
+
+SDV_X509_CERT_CRLDP_SET_INVALID_TC011:reasons unknown
+SDV_X509_CERT_CRLDP_SET_INVALID_TC011:
+
+SDV_X509_CERT_CRLDP_SET_INVALID_TC012:issuer wrong dataSize
+SDV_X509_CERT_CRLDP_SET_INVALID_TC012:
+
+SDV_X509_CERT_CRLDP_SET_INVALID_TC013:generalname value null
+SDV_X509_CERT_CRLDP_SET_INVALID_TC013:
+
+SDV_X509_CERT_CRLDP_SET_INVALID_TC014:generalname value empty
+SDV_X509_CERT_CRLDP_SET_INVALID_TC014:
+
+SDV_X509_CERT_CRLDP_SET_INVALID_TC015:generalname unsupported
+SDV_X509_CERT_CRLDP_SET_INVALID_TC015:
+
+SDV_X509_CERT_CRLDP_SET_INVALID_TC016:directoryName invalid
+SDV_X509_CERT_CRLDP_SET_INVALID_TC016:
+
+SDV_X509_CERT_CRLDP_SET_INVALID_TC017:points null element
+SDV_X509_CERT_CRLDP_SET_INVALID_TC017:
+
+SDV_X509_CERT_CRLDP_SET_INVALID_TC018:fullname empty
+SDV_X509_CERT_CRLDP_SET_INVALID_TC018:
+
+SDV_X509_CERT_CRLDP_SET_INVALID_TC019:issuer empty
+SDV_X509_CERT_CRLDP_SET_INVALID_TC019:
+
+SDV_X509_CERT_CRLDP_SET_INVALID_TC020:top-level points empty
+SDV_X509_CERT_CRLDP_SET_INVALID_TC020:
+
+SDV_X509_CERT_CRLDP_SET_INVALID_TC021:distributionpoint empty
+SDV_X509_CERT_CRLDP_SET_INVALID_TC021:
+
+SDV_X509_CERT_CRLDP_SET_INVALID_TC022:distributionpoint reasons only
+SDV_X509_CERT_CRLDP_SET_INVALID_TC022:
+
 SDV_X509_CERT_WITH_BCON_GEN_TEST_TC001:critical, Ca, maxPathLen = 1
 SDV_X509_CERT_WITH_BCON_GEN_TEST_TC001:1:1:1:CRYPT_PKEY_RSA:CRYPT_MD_SHA256:0
 
