@@ -1474,6 +1474,19 @@ static int32_t EncodeRsaPrvKey(CRYPT_EAL_PkeyCtx *ealPriKey, BSL_ASN1_Buffer *pk
     return CRYPT_SUCCESS;
 }
 
+static bool RsaPrvPubExpIsZero(const CRYPT_RsaPrv *rsaPrv)
+{
+    if (rsaPrv->e == NULL || rsaPrv->eLen == 0) {
+        return true;
+    }
+    for (uint32_t i = 0; i < rsaPrv->eLen; i++) {
+        if (rsaPrv->e[i] != 0) {
+            return false;
+        }
+    }
+    return true;
+}
+
 int32_t EncodeRsaPrikeyAsn1Buff(CRYPT_EAL_PkeyCtx *ealPriKey, BSL_Buffer *encode)
 {
     CRYPT_EAL_PkeyPrv rsaPrv = {0};
@@ -1487,6 +1500,11 @@ int32_t EncodeRsaPrikeyAsn1Buff(CRYPT_EAL_PkeyCtx *ealPriKey, BSL_Buffer *encode
         CRYPT_EAL_DeinitRsaPrv(&rsaPrv);
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
+    }
+    if (RsaPrvPubExpIsZero(&rsaPrv.key.rsaPrv)) {
+        CRYPT_EAL_DeinitRsaPrv(&rsaPrv);
+        BSL_ERR_PUSH_ERROR(CRYPT_RSA_ERR_INPUT_VALUE);
+        return CRYPT_RSA_ERR_INPUT_VALUE;
     }
     uint8_t version = 0;
     BSL_ASN1_Buffer asn1[CRYPT_RSA_PRV_OTHER_PRIME_IDX + 1] = {

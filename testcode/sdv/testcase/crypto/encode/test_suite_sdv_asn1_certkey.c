@@ -484,6 +484,68 @@ EXIT:
     return ret;
 }
 
+static int32_t GenerateRsaNdOnlyKey(CRYPT_EAL_PkeyCtx **ndKey)
+{
+    CRYPT_EAL_PkeyCtx *fullKey = NULL;
+    CRYPT_EAL_PkeyCtx *tmpKey = NULL;
+    uint8_t *keyBuf = NULL;
+    uint32_t keyLen = 0;
+    int32_t ret = CRYPT_SUCCESS;
+
+    CRYPT_EAL_PkeyPara para = {0};
+    para.id = CRYPT_PKEY_RSA;
+    para.para.rsaPara.e = g_rsaNoCrtPubExp;
+    para.para.rsaPara.eLen = sizeof(g_rsaNoCrtPubExp);
+    para.para.rsaPara.bits = 1024;
+
+    fullKey = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_RSA);
+    tmpKey = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_RSA);
+    if (fullKey == NULL || tmpKey == NULL) {
+        ret = CRYPT_MEM_ALLOC_FAIL;
+        goto EXIT;
+    }
+    ret = CRYPT_EAL_PkeySetPara(fullKey, &para);
+    if (ret != CRYPT_SUCCESS) {
+        goto EXIT;
+    }
+    ret = CRYPT_EAL_PkeyGen(fullKey);
+    if (ret != CRYPT_SUCCESS) {
+        goto EXIT;
+    }
+
+    keyLen = CRYPT_EAL_PkeyGetKeyLen(fullKey);
+    keyBuf = BSL_SAL_Malloc(keyLen * 2); // n and d
+    if (keyBuf == NULL) {
+        ret = CRYPT_MEM_ALLOC_FAIL;
+        goto EXIT;
+    }
+
+    CRYPT_EAL_PkeyPrv prv = {0};
+    prv.id = CRYPT_PKEY_RSA;
+    prv.key.rsaPrv.n = keyBuf;
+    prv.key.rsaPrv.nLen = keyLen;
+    prv.key.rsaPrv.d = keyBuf + keyLen;
+    prv.key.rsaPrv.dLen = keyLen;
+    ret = CRYPT_EAL_PkeyGetPrv(fullKey, &prv);
+    if (ret != CRYPT_SUCCESS) {
+        goto EXIT;
+    }
+
+    ret = CRYPT_EAL_PkeySetPrv(tmpKey, &prv);
+    if (ret != CRYPT_SUCCESS) {
+        goto EXIT;
+    }
+
+    *ndKey = tmpKey;
+    tmpKey = NULL;
+    ret = CRYPT_SUCCESS;
+EXIT:
+    CRYPT_EAL_PkeyFreeCtx(fullKey);
+    CRYPT_EAL_PkeyFreeCtx(tmpKey);
+    BSL_SAL_ClearFree(keyBuf, keyBuf == NULL ? 0 : keyLen * 2);
+    return ret;
+}
+
 static void RsaNoCrtEncDec(CRYPT_EAL_PkeyCtx *noCrtKey, int isProvider, int keyType, const char *keyTypeStr,
     const CRYPT_EncodeParam *encodeParam, uint8_t *pwd, uint32_t pwdLen)
 {
@@ -556,6 +618,49 @@ EXIT:
     TestRandDeInit();
 #else
     (void)isProvider;
+    SKIP_TEST();
+#endif
+}
+/* END_CASE */
+
+/**
+ * @test SDV_CRYPT_EAL_RSA_ND_PRIKEY_ENCODE_REJECT_TC001
+ * @title RSA private key encoding rejects n/d only keys
+ */
+/* BEGIN_CASE */
+void SDV_CRYPT_EAL_RSA_ND_PRIKEY_ENCODE_REJECT_TC001(void)
+{
+#if defined(HITLS_CRYPTO_RSA) && defined(HITLS_CRYPTO_KEY_ENCODE) && defined(HITLS_CRYPTO_KEY_DECODE)
+    CRYPT_EAL_PkeyCtx *ndKey = NULL;
+    BSL_Buffer encode = {0};
+    uint8_t pwd[] = {0x31, 0x32, 0x33, 0x34};
+    CRYPT_Pbkdf2Param param = {
+        .pbesId = BSL_CID_PBES2,
+        .pbkdfId = BSL_CID_PBKDF2,
+        .hmacId = CRYPT_MAC_HMAC_SHA256,
+        .symId = CRYPT_CIPHER_AES256_CBC,
+        .saltLen = 16,
+        .pwd = pwd,
+        .pwdLen = sizeof(pwd),
+        .itCnt = 2048
+    };
+    CRYPT_EncodeParam paramEx = {CRYPT_DERIVE_PBKDF2, &param};
+
+    ASSERT_EQ(TestRandInit(), CRYPT_SUCCESS);
+    ASSERT_EQ(GenerateRsaNdOnlyKey(&ndKey), CRYPT_SUCCESS);
+
+    ASSERT_EQ(CRYPT_EAL_EncodeBuffKey(ndKey, NULL, BSL_FORMAT_ASN1, CRYPT_PRIKEY_RSA, &encode),
+        CRYPT_RSA_ERR_INPUT_VALUE);
+    ASSERT_EQ(CRYPT_EAL_EncodeBuffKey(ndKey, NULL, BSL_FORMAT_ASN1, CRYPT_PRIKEY_PKCS8_UNENCRYPT, &encode),
+        CRYPT_RSA_ERR_INPUT_VALUE);
+#if defined(HITLS_CRYPTO_KEY_EPKI)
+    ASSERT_EQ(CRYPT_EAL_EncodeBuffKey(ndKey, &paramEx, BSL_FORMAT_ASN1, CRYPT_PRIKEY_PKCS8_ENCRYPT, &encode),
+        CRYPT_RSA_ERR_INPUT_VALUE);
+#endif
+EXIT:
+    CRYPT_EAL_PkeyFreeCtx(ndKey);
+    TestRandDeInit();
+#else
     SKIP_TEST();
 #endif
 }
