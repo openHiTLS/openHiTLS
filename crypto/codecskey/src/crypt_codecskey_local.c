@@ -2390,8 +2390,12 @@ static int32_t CRYPT_EAL_SubPubkeyGetInfo(CRYPT_EAL_PkeyCtx *ealPubKey, BSL_ASN1
             ret = EncodeMlKemPubkeyAsn1Buff(ealPubKey, &bitTmp, (BslCid *)&cid);
             break;
 #endif
-#if defined(HITLS_CRYPTO_XMSS) || defined(HITLS_CRYPTO_XMSSMT)
+#ifdef HITLS_CRYPTO_XMSS
         case CRYPT_PKEY_XMSS:
+            ret = EncodeXmssPubkeyAsn1Buff(ealPubKey, &bitTmp);
+            break;
+#endif
+#ifdef HITLS_CRYPTO_XMSSMT
         case CRYPT_PKEY_XMSSMT:
             ret = EncodeXmssPubkeyAsn1Buff(ealPubKey, &bitTmp);
             break;
