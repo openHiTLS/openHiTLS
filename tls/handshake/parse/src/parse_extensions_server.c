@@ -33,7 +33,6 @@
 #include "parse_extensions.h"
 #include "custom_extensions.h"
 
-
 static int32_t StorePeerSupportGroup(TLS_Ctx *ctx, ClientHelloMsg *msg)
 {
     (void)ctx;
@@ -68,27 +67,28 @@ static int32_t ParseClientSupportGroups(ParsePacket *pkt, ClientHelloMsg *msg)
         return ParseErrorExtLengthProcess(pkt->ctx, BINLOG_ID15133, BINGLOG_STR("supported groups"));
     }
 
-    uint16_t groupLen = groupBufLen / sizeof(uint16_t);
+    uint16_t groupCount = groupBufLen / sizeof(uint16_t);
 
     /* If the length of the packet does not match the extended length, or the length is 0, the handshake message error
      * is returned */
-    if (((groupBufLen & 1) != 0) || ((groupLen * sizeof(uint16_t)) != (pkt->bufLen - sizeof(uint16_t))) ||
-        (groupLen == 0)) {
+    if (((groupBufLen & 1) != 0) || (groupBufLen != (pkt->bufLen - *pkt->bufOffset)) || (groupCount == 0)) {
         return ParseErrorExtLengthProcess(pkt->ctx, BINLOG_ID15134, BINGLOG_STR("supported groups"));
     }
 
-    msg->extension.content.supportedGroups = (uint16_t *)BSL_SAL_Calloc(groupLen, sizeof(uint16_t));
+    groupCount = groupCount > MAX_SUPPORTED_GROUPS_COUNT ? MAX_SUPPORTED_GROUPS_COUNT : groupCount;
+    msg->extension.content.supportedGroups = (uint16_t *)BSL_SAL_Calloc(groupCount, sizeof(uint16_t));
     if (msg->extension.content.supportedGroups == NULL) {
         return ParseErrorProcess(pkt->ctx, HITLS_MEMALLOC_FAIL, BINLOG_ID15135,
             BINGLOG_STR("supportedGroups malloc fail."), ALERT_UNKNOWN);
     }
 
-    for (uint32_t i = 0; i < groupLen; i++) {
+    for (uint32_t i = 0; i < groupCount; i++) {
         msg->extension.content.supportedGroups[i] = BSL_ByteToUint16(&pkt->buf[*pkt->bufOffset]);
         *pkt->bufOffset += sizeof(uint16_t);
     }
+    *pkt->bufOffset += groupBufLen - groupCount * sizeof(uint16_t);
 
-    msg->extension.content.supportedGroupsSize = groupLen;
+    msg->extension.content.supportedGroupsSize = groupCount;
     msg->extension.flag.haveSupportedGroups = true;
 
     return StorePeerSupportGroup(pkt->ctx, msg);
@@ -108,37 +108,40 @@ static int32_t ParseClientSignatureAlgorithms(ParsePacket *pkt, ClientHelloMsg *
         return ParseErrorExtLengthProcess(pkt->ctx, BINLOG_ID15129, BINGLOG_STR("signatureAlgorithms"));
     }
 
-    uint16_t signatureAlgorithmsSize = signAlgBufLen / sizeof(uint16_t);
+    uint16_t signatureAlgorithmsCount = signAlgBufLen / sizeof(uint16_t);
+    signatureAlgorithmsCount = signatureAlgorithmsCount > MAX_SIGNATURE_ALGORITHMS_COUNT ?
+        MAX_SIGNATURE_ALGORITHMS_COUNT : signatureAlgorithmsCount;
 
     // Add exception handling. The value of signAlgBufLen cannot be an odd number. Each algorithm occupies two bytes.
     /* If the packet length does not match the extended length or the length is 0, a handshake message error is
      * returned. */
     if (((signAlgBufLen & 1) != 0) || (signAlgBufLen != (pkt->bufLen - *pkt->bufOffset)) ||
-        (signatureAlgorithmsSize == 0)) {
+        (signatureAlgorithmsCount == 0)) {
         return ParseErrorExtLengthProcess(pkt->ctx, BINLOG_ID15130, BINGLOG_STR("signatureAlgorithms"));
     }
 
     /* Parse signatureAlgorithms */
-    uint16_t *signatureAlgorithms = (uint16_t *)BSL_SAL_Calloc(signatureAlgorithmsSize, sizeof(uint16_t));
+    uint16_t *signatureAlgorithms = (uint16_t *)BSL_SAL_Calloc(signatureAlgorithmsCount, sizeof(uint16_t));
     if (signatureAlgorithms == NULL) {
         return ParseErrorProcess(pkt->ctx, HITLS_MEMALLOC_FAIL, BINLOG_ID15131,
             BINGLOG_STR("signatureAlgorithms malloc fail."), ALERT_UNKNOWN);
     }
-    for (uint32_t i = 0; i < signatureAlgorithmsSize; i++) {
+    for (uint32_t i = 0; i < signatureAlgorithmsCount; i++) {
         signatureAlgorithms[i] = BSL_ByteToUint16(&pkt->buf[*pkt->bufOffset]);
         *pkt->bufOffset += sizeof(uint16_t);
     }
+    *pkt->bufOffset += signAlgBufLen - signatureAlgorithmsCount * sizeof(uint16_t);
 
-    msg->extension.content.signatureAlgorithmsSize = signatureAlgorithmsSize;
+    msg->extension.content.signatureAlgorithmsSize = signatureAlgorithmsCount;
     msg->extension.content.signatureAlgorithms = signatureAlgorithms;
     BSL_SAL_FREE(pkt->ctx->peerInfo.signatureAlgorithms);
     pkt->ctx->peerInfo.signatureAlgorithms =
-        BSL_SAL_Dump(signatureAlgorithms, signatureAlgorithmsSize * sizeof(uint16_t));
+        BSL_SAL_Dump(signatureAlgorithms, signatureAlgorithmsCount * sizeof(uint16_t));
     if (pkt->ctx->peerInfo.signatureAlgorithms == NULL) {
         return ParseErrorProcess(pkt->ctx, HITLS_MEMALLOC_FAIL, BINLOG_ID17382,
             BINGLOG_STR("signatureAlgorithms malloc fail."), ALERT_UNKNOWN);
     }
-    pkt->ctx->peerInfo.signatureAlgorithmsSize = signatureAlgorithmsSize;
+    pkt->ctx->peerInfo.signatureAlgorithmsSize = signatureAlgorithmsCount;
     msg->extension.flag.haveSignatureAlgorithms = true;
     return HITLS_SUCCESS;
 }
@@ -413,14 +416,14 @@ int32_t ParseKeyShare(KeyShare *keyshare, const uint8_t *buf, uint32_t bufLen, A
 {
     uint32_t bufOffset = 0u;
     KeyShare *node = keyshare;
-    uint16_t *groupSet = (uint16_t *)BSL_SAL_Calloc(bufLen, sizeof(uint8_t));
+    uint16_t *groupSet = (uint16_t *)BSL_SAL_Calloc(MAX_KEY_SHARE_ENTRY_COUNT, sizeof(uint16_t));
     if (groupSet == NULL) {
         *alert = ALERT_INTERNAL_ERROR;
         return RETURN_ERROR_NUMBER_PROCESS(HITLS_MEMALLOC_FAIL, BINLOG_ID16992, "Calloc fail");
     }
     uint32_t groupSetSize = 0;
-    int32_t ret = HITLS_SUCCESS;
-    while (bufOffset + sizeof(uint16_t) + sizeof(uint16_t) < bufLen) {
+    uint32_t keyShareCount = 0;
+    while (bufOffset + sizeof(uint16_t) + sizeof(uint16_t) < bufLen && keyShareCount < MAX_KEY_SHARE_ENTRY_COUNT) {
         KeyShare *tmpNode = (KeyShare *)BSL_SAL_Calloc(1u, sizeof(KeyShare));
         if (tmpNode == NULL) {
             *alert = ALERT_INTERNAL_ERROR;
@@ -432,7 +435,7 @@ int32_t ParseKeyShare(KeyShare *keyshare, const uint8_t *buf, uint32_t bufLen, A
         node = tmpNode;
         node->group = BSL_ByteToUint16(&buf[bufOffset]);
         bufOffset += sizeof(uint16_t);
-        if (!KeyShareGroupAdd(groupSet, bufLen / sizeof(uint16_t), &groupSetSize, node->group)) {
+        if (!KeyShareGroupAdd(groupSet, MAX_KEY_SHARE_ENTRY_COUNT, &groupSetSize, node->group)) {
             *alert = ALERT_ILLEGAL_PARAMETER;
             BSL_SAL_FREE(groupSet);
             return RETURN_ERROR_NUMBER_PROCESS(HITLS_PARSE_DUPLICATED_KEY_SHARE, BINLOG_ID16994, "key share repeated");
@@ -453,13 +456,14 @@ int32_t ParseKeyShare(KeyShare *keyshare, const uint8_t *buf, uint32_t bufLen, A
             return RETURN_ERROR_NUMBER_PROCESS(HITLS_MEMALLOC_FAIL, BINLOG_ID16996, "Dump fail");
         }
         bufOffset += node->keyExchangeSize;
+        keyShareCount++;
     }
     BSL_SAL_FREE(groupSet);
-    if (ret == HITLS_SUCCESS && bufOffset != bufLen) {
+    if (bufOffset != bufLen && keyShareCount != MAX_KEY_SHARE_ENTRY_COUNT) {
         *alert = ALERT_DECODE_ERROR;
         return RETURN_ERROR_NUMBER_PROCESS(HITLS_PARSE_INVALID_MSG_LEN, BINLOG_ID16997, "bufLen error");
     }
-    return ret;
+    return HITLS_SUCCESS;
 }
 
 // Parse the KeyShare message.

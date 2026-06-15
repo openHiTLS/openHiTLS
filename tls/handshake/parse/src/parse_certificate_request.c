@@ -57,9 +57,11 @@ static int32_t ParseSignatureAndHashAlgo(ParsePacket *pkt, CertificateRequestMsg
     }
 
     /* Parse the length of the signature algorithm */
-    msg->signatureAlgorithmsSize = signatureAndHashAlgLen / SINGLE_SIG_HASH_ALG_SIZE;
+    uint16_t signAlgCount = signatureAndHashAlgLen / SINGLE_SIG_HASH_ALG_SIZE;
+    signAlgCount = signAlgCount > MAX_SIGNATURE_ALGORITHMS_COUNT ? MAX_SIGNATURE_ALGORITHMS_COUNT : signAlgCount;
+    msg->signatureAlgorithmsSize = signAlgCount;
     BSL_SAL_FREE(msg->signatureAlgorithms);
-    msg->signatureAlgorithms = (uint16_t *)BSL_SAL_Malloc(signatureAndHashAlgLen);
+    msg->signatureAlgorithms = (uint16_t *)BSL_SAL_Malloc(signAlgCount * SINGLE_SIG_HASH_ALG_SIZE);
     if (msg->signatureAlgorithms == NULL) {
         return ParseErrorProcess(pkt->ctx, HITLS_MEMALLOC_FAIL, BINLOG_ID15460,
             BINGLOG_STR("signatureAlgorithms malloc fail"), ALERT_UNKNOWN);
@@ -69,6 +71,7 @@ static int32_t ParseSignatureAndHashAlgo(ParsePacket *pkt, CertificateRequestMsg
         msg->signatureAlgorithms[index] = BSL_ByteToUint16(&pkt->buf[*pkt->bufOffset]);
         *pkt->bufOffset += sizeof(uint16_t);
     }
+    *pkt->bufOffset += signatureAndHashAlgLen - signAlgCount * SINGLE_SIG_HASH_ALG_SIZE;
     BSL_SAL_FREE(pkt->ctx->peerInfo.signatureAlgorithms);
     pkt->ctx->peerInfo.signatureAlgorithms =
         BSL_SAL_Dump(msg->signatureAlgorithms, msg->signatureAlgorithmsSize * sizeof(uint16_t));

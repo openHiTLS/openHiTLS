@@ -119,6 +119,13 @@ typedef struct CustomExtMethods HITLS_CustomExts;
 /* Define the upper limit of the group type */
 #define MAX_GROUP_TYPE_NUM 32u
 
+/* Retain at most this many peer signature algorithm entries; excess valid entries are skipped. */
+#define MAX_SIGNATURE_ALGORITHMS_COUNT 128u
+/* Retain at most this many peer supported group entries; excess valid entries are skipped. */
+#define MAX_SUPPORTED_GROUPS_COUNT 128u
+/* Retain at most this many peer KeyShareEntry items; excess entries are ignored. */
+#define MAX_KEY_SHARE_ENTRY_COUNT 16u
+
 /**
  * @brief   TLS Global Configuration
  */

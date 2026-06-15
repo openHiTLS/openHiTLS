@@ -583,7 +583,7 @@ int32_t HITLS_SetClientVerifySupport(HITLS_Ctx *ctx, bool support);
  * certificate is verified.
             Client: This setting has no impact
             Server: When an NULL certificate is received from the client, indicates whether the certificate passes
-                    the verification, the verification fails by default.
+                    the verification, the verification passes by default.
  * @param   ctx [OUT] TLS connection handle
  * @param   support [IN] Indicates whether the authentication is successful when there is no client certificate.
             true: If the certificate sent by the client is NULL, the server still passes the verification.

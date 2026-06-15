@@ -512,7 +512,6 @@ int32_t HITLS_GetPeerSignScheme(const HITLS_Ctx *ctx, HITLS_SignHashAlgo *peerSi
     return HITLS_SUCCESS;
 }
 
-#define MAX_SHARED_SIGALGS 64  // Maximum number of shared signature algorithms
 static int32_t CalculateSharedSigAlgs(const HITLS_Ctx *ctx, uint16_t *sharedAlgs, int32_t maxCount)
 {
     // Check if peer's algorithms have been received
@@ -565,8 +564,8 @@ int32_t HITLS_GetSharedSigAlgs(const HITLS_Ctx *ctx, int32_t idx, uint16_t *sign
         return 0;
     }
 
-    uint16_t sharedAlgs[MAX_SHARED_SIGALGS];
-    int32_t sharedCount = CalculateSharedSigAlgs(ctx, sharedAlgs, MAX_SHARED_SIGALGS);
+    uint16_t sharedAlgs[MAX_SIGNATURE_ALGORITHMS_COUNT];
+    int32_t sharedCount = CalculateSharedSigAlgs(ctx, sharedAlgs, MAX_SIGNATURE_ALGORITHMS_COUNT);
     if (sharedCount == 0) {
         return 0;
     }

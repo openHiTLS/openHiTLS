@@ -39,7 +39,9 @@
 #include "hitls_psk.h"
 #include "common_func.h"
 #include "alert.h"
+#include "bsl_list.h"
 #include "bsl_sal.h"
+#include "parse_extensions.h"
 /* END_HEADER */
 #define MAX_BUF 16384
 
@@ -671,6 +673,212 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_ERR_HEELO_FUNC_TC007()
 void UT_TLS_TLS13_RFC8446_CONSISTENCY_ERR_HEELO_FUNC_TC008()
 {
     RepeatClientHelloExtension(&((FRAME_Msg *)0)->body.hsMsg.body.clientHello.keyshares.exState, false);
+}
+/* END_CASE */
+
+#define TEST_PARSE_MAX_SHARED_SIGALGS 128u
+#define TEST_PARSE_MAX_GROUPS 128u
+#define TEST_PARSE_MAX_KEY_SHARES 16u
+#define TEST_PARSE_OVER_LIMIT_COUNT 129u
+#define TEST_PARSE_KEY_SHARE_OVER_LIMIT_COUNT 17u
+
+static void TestPutUint16(uint8_t *buf, uint16_t value)
+{
+    buf[0] = (uint8_t)(value >> 8);
+    buf[1] = (uint8_t)value;
+}
+
+static uint32_t TestBuildArray16Extension(uint8_t *buf, uint16_t extType, uint16_t item, uint32_t itemCount)
+{
+    uint32_t offset = 0;
+    uint16_t dataLen = (uint16_t)(itemCount * sizeof(uint16_t));
+
+    /* Format: extension_type(2 bytes) + extension_data_len(2 bytes) + vector_len(2 bytes) +
+     * uint16 item list(N * 2 bytes).
+     * extension_data_len includes the inner vector_len field.
+     */
+    TestPutUint16(&buf[offset], extType);
+    offset += sizeof(uint16_t);
+    TestPutUint16(&buf[offset], (uint16_t)(sizeof(uint16_t) + dataLen));
+    offset += sizeof(uint16_t);
+    TestPutUint16(&buf[offset], dataLen);
+    offset += sizeof(uint16_t);
+    for (uint32_t i = 0; i < itemCount; i++) {
+        TestPutUint16(&buf[offset], item);
+        offset += sizeof(uint16_t);
+    }
+    return offset;
+}
+
+static uint32_t TestBuildKeyShareExtension(uint8_t *buf)
+{
+    uint32_t offset = 0;
+    uint16_t keyShareLen = TEST_PARSE_KEY_SHARE_OVER_LIMIT_COUNT * (sizeof(uint16_t) + sizeof(uint16_t) + 1u);
+
+    /* Format: extension_type(2 bytes) + extension_data_len(2 bytes) + client_shares_len(2 bytes) +
+     * KeyShareEntry list.
+     * Each test KeyShareEntry is group(2 bytes) + key_exchange_len(2 bytes) + key_exchange(1 byte).
+     * extension_data_len includes the inner client_shares_len field.
+     */
+    TestPutUint16(&buf[offset], HS_EX_TYPE_KEY_SHARE);
+    offset += sizeof(uint16_t);
+    TestPutUint16(&buf[offset], (uint16_t)(sizeof(uint16_t) + keyShareLen));
+    offset += sizeof(uint16_t);
+    TestPutUint16(&buf[offset], keyShareLen);
+    offset += sizeof(uint16_t);
+
+    for (uint32_t i = 0; i < TEST_PARSE_KEY_SHARE_OVER_LIMIT_COUNT; i++) {
+        uint16_t group = (i < TEST_PARSE_MAX_KEY_SHARES) ? (uint16_t)(i + 1u) : 1u;
+        TestPutUint16(&buf[offset], group);
+        offset += sizeof(uint16_t);
+        TestPutUint16(&buf[offset], 1u);
+        offset += sizeof(uint16_t);
+        buf[offset++] = (uint8_t)i;
+    }
+    return offset;
+}
+
+static HITLS_Ctx *TestNewParseCtx(HITLS_Config **tlsConfig, BSL_UIO **uio)
+{
+    HITLS_Ctx *ctx = NULL;
+    *tlsConfig = HITLS_CFG_NewTLS13Config();
+    ASSERT_TRUE(*tlsConfig != NULL);
+    ctx = HITLS_New(*tlsConfig);
+    ASSERT_TRUE(ctx != NULL);
+    *uio = BSL_UIO_New(BSL_UIO_TcpMethod());
+    ASSERT_TRUE(*uio != NULL);
+    ASSERT_EQ(HITLS_SetUio(ctx, *uio), HITLS_SUCCESS);
+    ASSERT_EQ(CONN_Init(ctx), HITLS_SUCCESS);
+    return ctx;
+EXIT:
+    BSL_UIO_Free(*uio);
+    HITLS_Free(ctx);
+    HITLS_CFG_FreeConfig(*tlsConfig);
+    return NULL;
+}
+
+static uint32_t TestCountKeyShare(const KeyShare *keyShare)
+{
+    uint32_t count = 0;
+    const ListHead *head = &keyShare->head;
+    const ListHead *node = head->next;
+    while (node != head) {
+        count++;
+        node = node->next;
+    }
+    return count;
+}
+
+/** @
+* @test UT_TLS_TLS13_PARSE_CLIENT_HELLO_EXT_LIMIT_FUNC_TC001
+* @spec -
+* @title The server parses a ClientHello supported_groups extension with more than 128 groups and
+*        ignores excess groups.
+* @precon nan
+* @brief 4.2.7 supported groups
+* @expect 1. Parsing succeeds and only 128 groups are stored.
+@ */
+/* BEGIN_CASE */
+void UT_TLS_TLS13_PARSE_CLIENT_HELLO_EXT_LIMIT_FUNC_TC001()
+{
+    FRAME_Init();
+    HITLS_Config *tlsConfig = NULL;
+    BSL_UIO *uio = NULL;
+    HITLS_Ctx *ctx = TestNewParseCtx(&tlsConfig, &uio);
+    ClientHelloMsg msg = {0};
+    /* Format: extension_type(2 bytes) + extension_data_len(2 bytes) + vector_len(2 bytes) +
+     * item list(TEST_PARSE_OVER_LIMIT_COUNT * 2 bytes).
+     */
+    uint8_t buf[sizeof(uint16_t) + sizeof(uint16_t) + sizeof(uint16_t) +
+        TEST_PARSE_OVER_LIMIT_COUNT * sizeof(uint16_t)] = {0};
+    uint32_t len = TestBuildArray16Extension(buf, HS_EX_TYPE_SUPPORTED_GROUPS, HITLS_EC_GROUP_SECP256R1,
+        TEST_PARSE_OVER_LIMIT_COUNT);
+
+    ASSERT_TRUE(ctx != NULL);
+    ASSERT_EQ(ParseClientExtension(ctx, buf, len, &msg), HITLS_SUCCESS);
+    ASSERT_EQ(msg.extension.content.supportedGroupsSize, TEST_PARSE_MAX_GROUPS);
+
+EXIT:
+    CleanClientHelloExtension(&msg);
+    BSL_UIO_Free(uio);
+    HITLS_Free(ctx);
+    HITLS_CFG_FreeConfig(tlsConfig);
+}
+/* END_CASE */
+
+/** @
+* @test UT_TLS_TLS13_PARSE_CLIENT_HELLO_EXT_LIMIT_FUNC_TC002
+* @spec -
+* @title The server parses a ClientHello signature_algorithms extension with more than 128 algorithms
+*        and ignores excess algorithms.
+* @precon nan
+* @brief 4.2.3 signature algorithms
+* @expect 1. Parsing succeeds and only 128 signature algorithms are stored.
+@ */
+/* BEGIN_CASE */
+void UT_TLS_TLS13_PARSE_CLIENT_HELLO_EXT_LIMIT_FUNC_TC002()
+{
+    FRAME_Init();
+    HITLS_Config *tlsConfig = NULL;
+    BSL_UIO *uio = NULL;
+    HITLS_Ctx *ctx = TestNewParseCtx(&tlsConfig, &uio);
+    ClientHelloMsg msg = {0};
+    /* Format: extension_type(2 bytes) + extension_data_len(2 bytes) + vector_len(2 bytes) +
+     * item list(TEST_PARSE_OVER_LIMIT_COUNT * 2 bytes).
+     */
+    uint8_t buf[sizeof(uint16_t) + sizeof(uint16_t) + sizeof(uint16_t) +
+        TEST_PARSE_OVER_LIMIT_COUNT * sizeof(uint16_t)] = {0};
+    uint32_t len = TestBuildArray16Extension(buf, HS_EX_TYPE_SIGNATURE_ALGORITHMS,
+        CERT_SIG_SCHEME_RSA_PSS_RSAE_SHA256, TEST_PARSE_OVER_LIMIT_COUNT);
+
+    ASSERT_TRUE(ctx != NULL);
+    ASSERT_EQ(ParseClientExtension(ctx, buf, len, &msg), HITLS_SUCCESS);
+    ASSERT_EQ(msg.extension.content.signatureAlgorithmsSize, TEST_PARSE_MAX_SHARED_SIGALGS);
+    ASSERT_EQ(ctx->peerInfo.signatureAlgorithmsSize, TEST_PARSE_MAX_SHARED_SIGALGS);
+
+EXIT:
+    CleanClientHelloExtension(&msg);
+    BSL_UIO_Free(uio);
+    HITLS_Free(ctx);
+    HITLS_CFG_FreeConfig(tlsConfig);
+}
+/* END_CASE */
+
+/** @
+* @test UT_TLS_TLS13_PARSE_CLIENT_HELLO_EXT_LIMIT_FUNC_TC003
+* @spec -
+* @title The server parses a ClientHello key_share extension with more than 16 entries and ignores excess entries.
+* @precon nan
+* @brief 4.2.8 key share
+* @expect 1. Parsing succeeds, only 16 keyshares are stored, and a duplicate group in the ignored entry
+*         is not rejected.
+@ */
+/* BEGIN_CASE */
+void UT_TLS_TLS13_PARSE_CLIENT_HELLO_EXT_LIMIT_FUNC_TC003()
+{
+    FRAME_Init();
+    HITLS_Config *tlsConfig = NULL;
+    BSL_UIO *uio = NULL;
+    HITLS_Ctx *ctx = TestNewParseCtx(&tlsConfig, &uio);
+    ClientHelloMsg msg = {0};
+    /* Format: extension_type(2 bytes) + extension_data_len(2 bytes) + client_shares_len(2 bytes) +
+     * KeyShareEntry list(TEST_PARSE_KEY_SHARE_OVER_LIMIT_COUNT entries).
+     * Each KeyShareEntry is group(2 bytes) + key_exchange_len(2 bytes) + key_exchange(1 byte).
+     */
+    uint8_t buf[sizeof(uint16_t) + sizeof(uint16_t) + sizeof(uint16_t) +
+        TEST_PARSE_KEY_SHARE_OVER_LIMIT_COUNT * (sizeof(uint16_t) + sizeof(uint16_t) + 1u)] = {0};
+    uint32_t len = TestBuildKeyShareExtension(buf);
+
+    ASSERT_TRUE(ctx != NULL);
+    ASSERT_EQ(ParseClientExtension(ctx, buf, len, &msg), HITLS_SUCCESS);
+    ASSERT_TRUE(msg.extension.content.keyShare != NULL);
+    ASSERT_EQ(TestCountKeyShare(msg.extension.content.keyShare), TEST_PARSE_MAX_KEY_SHARES);
+
+EXIT:
+    CleanClientHelloExtension(&msg);
+    BSL_UIO_Free(uio);
+    HITLS_Free(ctx);
+    HITLS_CFG_FreeConfig(tlsConfig);
 }
 /* END_CASE */
 

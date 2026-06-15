@@ -547,6 +547,7 @@ int32_t HITLS_CRYPT_Decrypt(HITLS_Lib_Ctx *libCtx, const char *attrName, const H
     }
     ret = CcmPrepare(*ctx, cipher, inLen, false);
     if (ret != CRYPT_SUCCESS) {
+        CRYPT_EAL_CipherFreeCtx(*ctx);
         *ctx = NULL;
         return RETURN_ERROR_NUMBER_PROCESS(ret, BINLOG_ID16655, "CipherUpdate fail");
     }

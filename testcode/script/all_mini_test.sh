@@ -362,6 +362,40 @@ test_tls()
     bash mini_build_test.sh $COMMON_PARAM $NO_LIB feature-config=max_send_fragment_feature test=max_send_fragment linux
     bash mini_build_test.sh $COMMON_PARAM $NO_LIB feature-config=ca_list_feature test=ca_list linux
     bash mini_build_test.sh $COMMON_PARAM $NO_LIB feature-config=no_dfx_feature test=no_dfx add-options="-fno-short-enums" linux
+    TLS_PARSE_MSG_BUILD_OPTS="add-feature-options=-DHITLS_PRESET_LOADED=ON \
+        add-feature-options=-DHITLS_BUILD_SHARED=ON \
+        add-feature-options=-DHITLS_BSL_LOG=ON \
+        add-feature-options=-DHITLS_CRYPTO_EAL=ON \
+        add-feature-options=-DHITLS_CRYPTO_EALINIT=ON \
+        add-feature-options=-DHITLS_CRYPTO_ENTROPY=ON \
+        add-feature-options=-DHITLS_CRYPTO_DRBG_HASH=ON \
+        add-feature-options=-DHITLS_CRYPTO_SHA1=ON \
+        add-feature-options=-DHITLS_CRYPTO_SHA2=ON \
+        add-feature-options=-DHITLS_CRYPTO_HKDF=ON \
+        add-feature-options=-DHITLS_CRYPTO_AES=ON \
+        add-feature-options=-DHITLS_CRYPTO_CBC=ON \
+        add-feature-options=-DHITLS_CRYPTO_BN=ON \
+        add-feature-options=-DHITLS_CRYPTO_RSA=ON \
+        add-feature-options=-DHITLS_CRYPTO_ECDH=ON \
+        add-feature-options=-DHITLS_CRYPTO_ECDSA=ON \
+        add-feature-options=-DHITLS_CRYPTO_ECC=ON \
+        add-feature-options=-DHITLS_CRYPTO_CURVE_NISTP256=ON \
+        add-feature-options=-DHITLS_CRYPTO_CODECSKEY=ON \
+        add-feature-options=-DHITLS_TLS_CALLBACK_SAL=ON \
+        add-feature-options=-DHITLS_TLS_CALLBACK_CERT=ON \
+        add-feature-options=-DHITLS_TLS_CALLBACK_CRYPT=ON \
+        add-feature-options=-DHITLS_TLS_CONFIG=ON \
+        add-feature-options=-DHITLS_TLS_FEATURE_SESSION=ON \
+        add-feature-options=-DHITLS_TLS_FEATURE_SESSION_TICKET=ON \
+        add-feature-options=-DHITLS_TLS_FEATURE_SESSION_ID=ON \
+        add-feature-options=-DHITLS_TLS_PROTO_TLS12=ON \
+        add-feature-options=-DHITLS_TLS_SUITE_ECDHE_RSA_WITH_AES_128_CBC_SHA=ON \
+        add-feature-options=-DHITLS_PKI_X509=ON"
+    # Build-only checks: shared linking catches parser references removed by host-specific macro pruning.
+    bash mini_build_test.sh $COMMON_PARAM $NO_LIB linux $TLS_PARSE_MSG_BUILD_OPTS \
+        add-feature-options=-DHITLS_TLS_HOST_CLIENT=ON
+    bash mini_build_test.sh $COMMON_PARAM $NO_LIB linux $TLS_PARSE_MSG_BUILD_OPTS \
+        add-feature-options=-DHITLS_TLS_HOST_SERVER=ON
 }
 
 test_pki()
