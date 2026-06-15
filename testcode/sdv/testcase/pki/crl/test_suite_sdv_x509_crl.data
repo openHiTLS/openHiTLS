@@ -316,6 +316,9 @@ SDV_X509_CRL_PARSE_IDP_THIRDPARTY_FUNC_TC008:"../testdata/cert/test_for_crl/ext_
 SDV_X509_CRL_PARSE_IDP_THIRDPARTY_FUNC_TC009 onlySomeReasons contains unsupported bit
 SDV_X509_CRL_PARSE_IDP_THIRDPARTY_FUNC_TC009:"../testdata/cert/test_for_crl/ext_idp/raw_reason_unknown.der"
 
+SDV_X509_CRL_PARSE_IDP_THIRDPARTY_FUNC_TC009 onlySomeReasons contains only UNUSED bit
+SDV_X509_CRL_PARSE_IDP_THIRDPARTY_FUNC_TC009:"../testdata/cert/test_for_crl/ext_idp/raw_reason_unused.der"
+
 SDV_X509_CRL_PARSE_IDP_THIRDPARTY_FUNC_TC010 explicit FALSE bool
 SDV_X509_CRL_PARSE_IDP_THIRDPARTY_FUNC_TC010:"../testdata/cert/test_for_crl/ext_idp/raw_bool_false.der"
 
@@ -625,11 +628,11 @@ SDV_X509_CRL_PARSE_STUB_TC001:BSL_FORMAT_ASN1:"../testdata/cert/asn1/ca-1-rsa-sh
 SDV_X509_CRL_PARSE_STUB_TC001 revokelist ext
 SDV_X509_CRL_PARSE_STUB_TC001:BSL_FORMAT_UNKNOWN:"../testdata/cert/pem/crl/crl_v2.mul3.crl":49
 
-SDV_X509_CRL_IDP_ENCODE_STUB_TC001 v2 CRL with fullName directoryName IDP
-SDV_X509_CRL_IDP_ENCODE_STUB_TC001:"../testdata/cert/asn1/rsa_cert/rsa_p8.crt.der":"../testdata/cert/asn1/rsa_cert/rsa_p8.key.der":CRYPT_PRIKEY_PKCS8_UNENCRYPT
+SDV_X509_CRL_IDP_ENCODE_STUB_TC001 set fullName directoryName IDP
+SDV_X509_CRL_IDP_ENCODE_STUB_TC001:
 
-SDV_X509_CRL_DELTA_ENCODE_STUB_TC001 v2 CRL with Delta CRL indicator
-SDV_X509_CRL_DELTA_ENCODE_STUB_TC001:"../testdata/cert/asn1/rsa_cert/rsa_p8.crt.der":"../testdata/cert/asn1/rsa_cert/rsa_p8.key.der":CRYPT_PRIKEY_PKCS8_UNENCRYPT
+SDV_X509_CRL_DELTA_ENCODE_STUB_TC001 set Delta CRL indicator
+SDV_X509_CRL_DELTA_ENCODE_STUB_TC001:
 
 SDV_X509_CRL_ENCODE_STUB_TC001 v1 cert ed25519
 SDV_X509_CRL_ENCODE_STUB_TC001:"../testdata/cert/ed25519/ed25519.ca.pem":"../testdata/cert/ed25519/ed25519.key.der":CRYPT_PRIKEY_PKCS8_UNENCRYPT:0:CRYPT_MD_SHA512:0:"tmp-ed25519.crl":0:3

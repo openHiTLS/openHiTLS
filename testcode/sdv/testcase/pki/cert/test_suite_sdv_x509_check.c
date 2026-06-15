@@ -41,7 +41,10 @@
 #include "hitls_cert_local.h"
 #include "hitls_x509_verify.h"
 #include "hitls_x509_local.h"
+#include "stub_utils.h"
 /* END_HEADER */
+
+STUB_DEFINE_RET1(void *, BSL_SAL_Malloc, uint32_t);
 
 #define MAX_BUFF_SIZE 4096
 #define PATH_MAX_LEN 4096
@@ -465,11 +468,6 @@ static HITLS_X509_GeneralName *GetGeneralName(BslList *names, uint32_t index)
     return NULL;
 }
 
-static void FreeOwnedGeneralNames(BslList *names)
-{
-    BSL_LIST_FREE(names, (BSL_LIST_PFUNC_FREE)HITLS_X509_FreeGeneralName);
-}
-
 static HITLS_X509_DistPointName *NewDistPointName(HITLS_X509_DistPointNameType type, BslList *name)
 {
     HITLS_X509_DistPointName *distPointName = BSL_SAL_Calloc(1, sizeof(HITLS_X509_DistPointName));
@@ -481,32 +479,21 @@ static HITLS_X509_DistPointName *NewDistPointName(HITLS_X509_DistPointNameType t
     return distPointName;
 }
 
-static void FreeDistPointNameLocal(HITLS_X509_DistPointName *name)
-{
-    if (name == NULL) {
-        return;
-    }
-    if (name->type == HITLS_X509_DP_RELATIVENAME) {
-        HITLS_X509_DnListFree(name->name);
-    } else {
-        FreeOwnedGeneralNames(name->name);
-    }
-    name->name = NULL;
-    BSL_SAL_Free(name);
-}
-
 static void FreeCrlDpPointLocal(void *data)
 {
     HITLS_X509_CrlDistPoint *point = (HITLS_X509_CrlDistPoint *)data;
     if (point == NULL) {
         return;
     }
-    FreeDistPointNameLocal(point->distPointName);
-    point->distPointName = NULL;
-    point->hasReasons = false;
-    point->reasons = 0;
-    FreeOwnedGeneralNames(point->crlIssuer);
-    point->crlIssuer = NULL;
+    if (point->distPointName != NULL) {
+        if (point->distPointName->type == HITLS_X509_DP_RELATIVENAME) {
+            HITLS_X509_DnListFree(point->distPointName->name);
+        } else {
+            BSL_LIST_FREE(point->distPointName->name, (BSL_LIST_PFUNC_FREE)HITLS_X509_FreeGeneralName);
+        }
+        BSL_SAL_Free(point->distPointName);
+    }
+    BSL_LIST_FREE(point->crlIssuer, (BSL_LIST_PFUNC_FREE)HITLS_X509_FreeGeneralName);
     BSL_SAL_Free(point);
 }
 
@@ -516,7 +503,6 @@ static void ClearCrlDpLocal(HITLS_X509_ExtCdp *crldp)
         return;
     }
     BSL_LIST_FREE(crldp->points, (BSL_LIST_PFUNC_FREE)FreeCrlDpPointLocal);
-    crldp->points = NULL;
 }
 
 static int32_t InitCrlDp(HITLS_X509_ExtCdp *crldp, bool critical)
@@ -644,7 +630,7 @@ static BslList *BuildGeneralNames1(int32_t type, const char *value)
     ASSERT_EQ(AddGeneralNameStr(names, type, value), BSL_SUCCESS);
     return names;
 EXIT:
-    FreeOwnedGeneralNames(names);
+    BSL_LIST_FREE(names, (BSL_LIST_PFUNC_FREE)HITLS_X509_FreeGeneralName);
     return NULL;
 }
 
@@ -656,7 +642,7 @@ static BslList *BuildIssuerDirName(void)
         "openhitls CRL issuer", 0, NULL)), BSL_SUCCESS);
     return names;
 EXIT:
-    FreeOwnedGeneralNames(names);
+    BSL_LIST_FREE(names, (BSL_LIST_PFUNC_FREE)HITLS_X509_FreeGeneralName);
     return NULL;
 }
 
@@ -668,7 +654,7 @@ static BslList *BuildIssuerUriDns(void)
     ASSERT_EQ(AddGeneralNameStr(names, HITLS_X509_GN_DNS, "issuer.example.com"), BSL_SUCCESS);
     return names;
 EXIT:
-    FreeOwnedGeneralNames(names);
+    BSL_LIST_FREE(names, (BSL_LIST_PFUNC_FREE)HITLS_X509_FreeGeneralName);
     return NULL;
 }
 
@@ -689,8 +675,8 @@ static int32_t AddFullNamePoint(HITLS_X509_ExtCdp *crldp, BslList *names, bool h
     ASSERT_EQ(ret, BSL_SUCCESS);
     return HITLS_PKI_SUCCESS;
 EXIT:
-    FreeOwnedGeneralNames(names);
-    FreeOwnedGeneralNames(crlIssuer);
+    BSL_LIST_FREE(names, (BSL_LIST_PFUNC_FREE)HITLS_X509_FreeGeneralName);
+    BSL_LIST_FREE(crlIssuer, (BSL_LIST_PFUNC_FREE)HITLS_X509_FreeGeneralName);
     FreeCrlDpPointLocal(point);
     return -1;
 }
@@ -709,7 +695,7 @@ static int32_t AddRelativeNamePoint(HITLS_X509_ExtCdp *crldp, BslList *relativeN
     return HITLS_PKI_SUCCESS;
 EXIT:
     HITLS_X509_DnListFree(relativeName);
-    FreeOwnedGeneralNames(crlIssuer);
+    BSL_LIST_FREE(crlIssuer, (BSL_LIST_PFUNC_FREE)HITLS_X509_FreeGeneralName);
     FreeCrlDpPointLocal(point);
     return -1;
 }
@@ -727,72 +713,91 @@ static int32_t AddNoNamePoint(HITLS_X509_ExtCdp *crldp, bool hasReasons, uint16_
     ASSERT_EQ(ret, BSL_SUCCESS);
     return HITLS_PKI_SUCCESS;
 EXIT:
-    FreeOwnedGeneralNames(crlIssuer);
+    BSL_LIST_FREE(crlIssuer, (BSL_LIST_PFUNC_FREE)HITLS_X509_FreeGeneralName);
     FreeCrlDpPointLocal(point);
     return -1;
+}
+
+static int32_t CheckCdpGetMallocStub(HITLS_X509_Cert *cert)
+{
+    uint32_t totalMallocCount = 0;
+    int32_t ret = -1;
+    HITLS_X509_ExtCdp probe = {0};
+
+    STUB_REPLACE(BSL_SAL_Malloc, STUB_BSL_SAL_Malloc);
+
+    STUB_EnableMallocFail(false);
+    STUB_ResetMallocCount();
+    ret = HITLS_X509_CertCtrl(cert, HITLS_X509_EXT_GET_CDP, &probe, sizeof(probe));
+    if (ret != HITLS_PKI_SUCCESS) {
+        goto EXIT;
+    }
+    totalMallocCount = STUB_GetMallocCallCount();
+    HITLS_X509_ClearCdp(&probe);
+
+    STUB_EnableMallocFail(true);
+    for (uint32_t i = 0; i < totalMallocCount; i++) {
+        HITLS_X509_ExtCdp crldp = {0};
+
+        STUB_ResetMallocCount();
+        STUB_SetMallocFailIndex(i);
+        ret = HITLS_X509_CertCtrl(cert, HITLS_X509_EXT_GET_CDP, &crldp, sizeof(crldp));
+        HITLS_X509_ClearCdp(&crldp);
+        ClearExpectedError();
+    }
+    ASSERT_TRUE(TestIsErrStackEmpty());
+    ret = HITLS_PKI_SUCCESS;
+EXIT:
+    STUB_EnableMallocFail(false);
+    HITLS_X509_ClearCdp(&probe);
+    STUB_RESTORE(BSL_SAL_Malloc);
+    return ret;
+}
+
+static int32_t CheckCdpSetMallocStub(HITLS_X509_ExtCdp *crldp)
+{
+    uint32_t totalMallocCount = 0;
+    int32_t ret = -1;
+    HITLS_X509_Cert *cert = NULL;
+
+    STUB_REPLACE(BSL_SAL_Malloc, STUB_BSL_SAL_Malloc);
+
+    STUB_EnableMallocFail(false);
+    cert = HITLS_X509_CertNew();
+    ASSERT_NE(cert, NULL);
+    STUB_ResetMallocCount();
+    ret = HITLS_X509_CertCtrl(cert, HITLS_X509_EXT_SET_CDP, crldp, sizeof(*crldp));
+    if (ret != HITLS_PKI_SUCCESS) {
+        goto EXIT;
+    }
+    totalMallocCount = STUB_GetMallocCallCount();
+    HITLS_X509_CertFree(cert);
+    cert = NULL;
+
+    for (uint32_t i = 0; i < totalMallocCount; i++) {
+        cert = HITLS_X509_CertNew();
+        ASSERT_NE(cert, NULL);
+        STUB_EnableMallocFail(true);
+        STUB_ResetMallocCount();
+        STUB_SetMallocFailIndex(i);
+        ret = HITLS_X509_CertCtrl(cert, HITLS_X509_EXT_SET_CDP, crldp, sizeof(*crldp));
+        STUB_EnableMallocFail(false);
+        HITLS_X509_CertFree(cert);
+        cert = NULL;
+        ClearExpectedError();
+    }
+    ASSERT_TRUE(TestIsErrStackEmpty());
+    ret = HITLS_PKI_SUCCESS;
+EXIT:
+    STUB_EnableMallocFail(false);
+    HITLS_X509_CertFree(cert);
+    STUB_RESTORE(BSL_SAL_Malloc);
+    return ret;
 }
 
 static BslList *NewWrongDataSizeList(void)
 {
     return BSL_LIST_New(sizeof(HITLS_X509_NameNode));
-}
-
-static bool NameNodeEqual(const HITLS_X509_NameNode *expected, const HITLS_X509_NameNode *actual)
-{
-    if (expected == NULL || actual == NULL) {
-        return false;
-    }
-    if (expected->layer != actual->layer ||
-        expected->nameType.tag != actual->nameType.tag ||
-        expected->nameType.len != actual->nameType.len ||
-        expected->nameValue.tag != actual->nameValue.tag ||
-        expected->nameValue.len != actual->nameValue.len) {
-        return false;
-    }
-    if (expected->nameType.len > 0 &&
-        memcmp(expected->nameType.buff, actual->nameType.buff, expected->nameType.len) != 0) {
-        return false;
-    }
-    if (expected->nameValue.len > 0 &&
-        memcmp(expected->nameValue.buff, actual->nameValue.buff, expected->nameValue.len) != 0) {
-        return false;
-    }
-    return true;
-}
-
-static int32_t CompareNameListsExact(BslList *expected, BslList *actual)
-{
-    int32_t ret = -1;
-    bool *matched = NULL;
-    ASSERT_NE(expected, NULL);
-    ASSERT_NE(actual, NULL);
-    ASSERT_EQ(BSL_LIST_COUNT(expected), BSL_LIST_COUNT(actual));
-    int32_t count = BSL_LIST_COUNT(expected);
-    matched = BSL_SAL_Calloc((uint32_t)count, sizeof(bool));
-    ASSERT_TRUE(count == 0 || matched != NULL);
-
-    BslListNode *expNode = BSL_LIST_FirstNode(expected);
-    while (expNode != NULL) {
-        HITLS_X509_NameNode *exp = (HITLS_X509_NameNode *)BSL_LIST_GetData(expNode);
-        ASSERT_NE(exp, NULL);
-        bool found = false;
-        int32_t idx = 0;
-        for (BslListNode *actNode = BSL_LIST_FirstNode(actual); actNode != NULL;
-            actNode = BSL_LIST_GetNextNode(actual, actNode), idx++) {
-            HITLS_X509_NameNode *act = (HITLS_X509_NameNode *)BSL_LIST_GetData(actNode);
-            if (!matched[idx] && NameNodeEqual(exp, act)) {
-                matched[idx] = true;
-                found = true;
-                break;
-            }
-        }
-        ASSERT_EQ(found, true);
-        expNode = BSL_LIST_GetNextNode(expected, expNode);
-    }
-    ret = 0;
-EXIT:
-    BSL_SAL_Free(matched);
-    return ret;
 }
 
 static int32_t CompareGeneralNamesExact(BslList *expected, BslList *actual)
@@ -808,7 +813,7 @@ static int32_t CompareGeneralNamesExact(BslList *expected, BslList *actual)
         ASSERT_NE(act, NULL);
         ASSERT_EQ(exp->type, act->type);
         if (exp->type == HITLS_X509_GN_DNNAME) {
-            ASSERT_EQ(CompareNameListsExact((BslList *)(uintptr_t)exp->value.data,
+            ASSERT_EQ(HITLS_X509_CmpNameNode((BslList *)(uintptr_t)exp->value.data,
                 (BslList *)(uintptr_t)act->value.data), 0);
         } else {
             ASSERT_EQ(exp->value.dataLen, act->value.dataLen);
@@ -837,7 +842,7 @@ static int32_t CompareDistPointNameExact(HITLS_X509_DistPointName *expected, HIT
     if (expected->type == HITLS_X509_DP_FULLNAME) {
         ASSERT_EQ(CompareGeneralNamesExact(expected->name, actual->name), 0);
     } else {
-        ASSERT_EQ(CompareNameListsExact(expected->name, actual->name), 0);
+        ASSERT_EQ(HITLS_X509_CmpNameNode(expected->name, actual->name), 0);
     }
     ret = 0;
 EXIT:
@@ -2193,7 +2198,7 @@ void SDV_X509_CERT_CRLDP_PARSE_TC001(char *certPath)
     ASSERT_EQ(CompareCrlDpExact(&expected, &actual), 0);
     ASSERT_TRUE(TestIsErrStackEmpty());
 EXIT:
-    FreeOwnedGeneralNames(names);
+    BSL_LIST_FREE(names, (BSL_LIST_PFUNC_FREE)HITLS_X509_FreeGeneralName);
     HITLS_X509_CertFree(cert);
     ClearCrlDpLocal(&expected);
     HITLS_X509_ClearCdp(&actual);
@@ -2281,7 +2286,7 @@ void SDV_X509_CERT_CRLDP_PARSE_TC003(char *certPath)
     ASSERT_EQ(CompareCrlDpExact(&expected, &actual), 0);
     ASSERT_TRUE(TestIsErrStackEmpty());
 EXIT:
-    FreeOwnedGeneralNames(emptyGn);
+    BSL_LIST_FREE(emptyGn, (BSL_LIST_PFUNC_FREE)HITLS_X509_FreeGeneralName);
     HITLS_X509_DnListFree(emptyDn);
     HITLS_X509_CertFree(cert);
     ClearCrlDpLocal(&expected);
@@ -2293,8 +2298,8 @@ EXIT:
 /**
  * @test   SDV_X509_CERT_CRLDP_PARSE_TC004
  * @title  Parse reasons BIT STRING DER edge cases.
- * @brief  Parse a certificate containing zero, undefined, long, and unused-bit reasons encodings.
- * @expect Certificate parsing and GET_CRLDP succeed, and reasons are normalized like OpenSSL.
+ * @brief  Parse a certificate containing zero, undefined, long, UNUSED-only, and unused-bit reasons encodings.
+ * @expect Certificate parsing and GET_CRLDP succeed, and reasons are normalized to the expected semantic result.
  */
 /* BEGIN_CASE */
 void SDV_X509_CERT_CRLDP_PARSE_TC004(char *certPath)
@@ -2315,6 +2320,8 @@ void SDV_X509_CERT_CRLDP_PARSE_TC004(char *certPath)
     ASSERT_EQ(AddFullNamePoint(&expected, BuildGeneralNames1(HITLS_X509_GN_URI,
         "http://crl.example.com/reason-long.crl"), true,
         HITLS_X509_REASON_FLAG_KEY_COMPROMISE | HITLS_X509_REASON_FLAG_AA_COMPROMISE, NULL), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(AddFullNamePoint(&expected, BuildGeneralNames1(HITLS_X509_GN_URI,
+        "http://crl.example.com/unused-only.crl"), true, 0, NULL), HITLS_PKI_SUCCESS);
     ASSERT_EQ(AddFullNamePoint(&expected, BuildGeneralNames1(HITLS_X509_GN_URI,
         "http://crl.example.com/reason-unused-set.crl"), true, HITLS_X509_REASON_FLAG_KEY_COMPROMISE, NULL),
         HITLS_PKI_SUCCESS);
@@ -2678,7 +2685,7 @@ EXIT:
  * @test   SDV_X509_CERT_CRLDP_PARSE_INVALID_TC015
  * @title  Reject invalid reasons BIT STRING DER.
  * @brief  Parse a certificate whose reasons field is not a valid ASN.1 BIT STRING.
- * @expect Certificate parsing succeeds and GET_CRLDP returns HITLS_X509_ERR_PARSE_CRLDP.
+ * @expect Certificate parsing succeeds and GET_CRLDP returns HITLS_X509_ERR_EXT_REASONFLAGS.
  */
 /* BEGIN_CASE */
 void SDV_X509_CERT_CRLDP_PARSE_INVALID_TC015(char *certPath)
@@ -2689,7 +2696,7 @@ void SDV_X509_CERT_CRLDP_PARSE_INVALID_TC015(char *certPath)
     TestMemInit();
     ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_ASN1, certPath, &cert), HITLS_PKI_SUCCESS);
     ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_EXT_GET_CDP,
-        &crldp, sizeof(HITLS_X509_ExtCdp)), HITLS_X509_ERR_PARSE_CRLDP);
+        &crldp, sizeof(HITLS_X509_ExtCdp)), HITLS_X509_ERR_EXT_REASONFLAGS);
 EXIT:
     HITLS_X509_CertFree(cert);
     HITLS_X509_ClearCdp(&crldp);
@@ -2699,19 +2706,22 @@ EXIT:
 
 /**
  * @test   SDV_X509_CERT_CRLDP_PARSE_INVALID_TC016
- * @title  Reject NULL output parameter when parsing cRLDistributionPoints directly.
- * @brief  Call HITLS_X509_ParseCdp with a NULL crldp output parameter.
- * @expect The parser returns HITLS_X509_ERR_INVALID_PARAM when crldp is NULL.
+ * @title  Reject NULL output parameter when getting cRLDistributionPoints.
+ * @brief  Parse a certificate containing the CDP extension and call HITLS_X509_CertCtrl with a NULL output buffer.
+ * @expect The GET_CRLDP path returns HITLS_X509_ERR_INVALID_PARAM when the output buffer is NULL.
  */
 /* BEGIN_CASE */
-void SDV_X509_CERT_CRLDP_PARSE_INVALID_TC016(void)
+void SDV_X509_CERT_CRLDP_PARSE_INVALID_TC016(char *certPath)
 {
-    HITLS_X509_ExtEntry extEntry = {0};
-    HITLS_X509_ExtCdp crldp = {0};
-    ASSERT_EQ(HITLS_X509_ParseCdp(&extEntry, NULL), HITLS_X509_ERR_INVALID_PARAM);
+    HITLS_X509_Cert *cert = NULL;
+
+    TestMemInit();
+    ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_ASN1, certPath, &cert), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_EXT_GET_CDP,
+        NULL, sizeof(HITLS_X509_ExtCdp)), HITLS_X509_ERR_INVALID_PARAM);
 
 EXIT:
-    HITLS_X509_ClearCdp(&crldp);
+    HITLS_X509_CertFree(cert);
     return;
 }
 /* END_CASE */
@@ -2786,7 +2796,7 @@ void SDV_X509_CERT_CRLDP_GEN_ROUNDTRIP_TC001(char *outPath)
     ASSERT_EQ(CompareCrlDpExact(&input, &parsed), 0);
     ASSERT_TRUE(TestIsErrStackEmpty());
 EXIT:
-    FreeOwnedGeneralNames(names);
+    BSL_LIST_FREE(names, (BSL_LIST_PFUNC_FREE)HITLS_X509_FreeGeneralName);
     TestRandDeInit();
     HITLS_X509_CertFree(cert);
     HITLS_X509_CertFree(parsedCert);
@@ -2905,6 +2915,167 @@ EXIT:
 /* END_CASE */
 
 /**
+ * @test   SDV_X509_CERT_CRLDP_GEN_ROUNDTRIP_TC004
+ * @title  Rebuild a pre-generated composite CDP certificate and require DER equality.
+ * @brief  Parse a pre-generated legal self-signed RSA certificate whose non-critical cRLDistributionPoints
+ *         extension covers:
+ *         1) fullName URI;
+ *         2) fullName URI/DNS/email/IP/directoryName;
+ *         3) fullName + keyCompromise;
+ *         4) fullName + CACompromise/superseded/AACompromise;
+ *         5) fullName + directoryName cRLIssuer;
+ *         6) directoryName cRLIssuer only;
+ *         7) relativeName single AVA;
+ *         8) relativeName single RDN with multiple AVAs;
+ *         9) fullName + URI/DNS cRLIssuer;
+ *         10) relativeName + directoryName cRLIssuer;
+ *         11) relativeName + keyCompromise;
+ *         12) CACompromise/AACompromise + URI/DNS cRLIssuer without distributionPoint.
+ *         OpenHiTLS parses it, rebuilds a new certificate from the parsed
+ *         fields and parsed CDP, and the final DER encodings must be identical.
+ * @expect openHiTLS parse/SET_CDP/sign succeed, and the reference/generated DER match.
+ */
+/* BEGIN_CASE */
+void SDV_X509_CERT_CRLDP_GEN_ROUNDTRIP_TC004(char *certPath, char *keyPath)
+{
+    HITLS_X509_Cert *sourceCert = NULL;
+    HITLS_X509_Cert *generatedCert = NULL;
+    CRYPT_EAL_PkeyCtx *signKey = NULL;
+    CRYPT_EAL_PkeyCtx *pubKey = NULL;
+    HITLS_X509_ExtCdp parsed = {0};
+    BslList *subject = NULL;
+    BslList *issuer = NULL;
+    BSL_Buffer serial = {0};
+    BSL_Buffer generatedDer = {0};
+    uint8_t *sourceDer = NULL;
+    uint32_t sourceDerLen = 0;
+    uint32_t version = 0;
+    BSL_TIME beforeTime = {0};
+    BSL_TIME afterTime = {0};
+
+    TestMemInit();
+    ASSERT_EQ(TestRandInit(), CRYPT_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_ASN1, certPath, &sourceCert), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CertCtrl(sourceCert, HITLS_X509_EXT_GET_CDP,
+        &parsed, sizeof(parsed)), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CertCtrl(sourceCert, HITLS_X509_GET_VERSION, &version, sizeof(version)), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CertCtrl(sourceCert, HITLS_X509_GET_SERIALNUM, &serial, sizeof(serial)), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CertCtrl(sourceCert, HITLS_X509_GET_BEFORE_TIME,
+        &beforeTime, sizeof(beforeTime)), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CertCtrl(sourceCert, HITLS_X509_GET_AFTER_TIME,
+        &afterTime, sizeof(afterTime)), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CertCtrl(sourceCert, HITLS_X509_GET_SUBJECT_DN,
+        &subject, sizeof(subject)), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CertCtrl(sourceCert, HITLS_X509_GET_ISSUER_DN,
+        &issuer, sizeof(issuer)), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CertCtrl(sourceCert, HITLS_X509_GET_PUBKEY,
+        &pubKey, sizeof(pubKey)), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_DecodeFileKey(BSL_FORMAT_UNKNOWN, CRYPT_PRIKEY_PKCS8_UNENCRYPT,
+        keyPath, NULL, 0, &signKey), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyGetId(signKey), CRYPT_PKEY_RSA);
+
+    generatedCert = HITLS_X509_CertNew();
+    ASSERT_NE(generatedCert, NULL);
+    ASSERT_EQ(SetCertBasic(generatedCert, version, serial.data, serial.dataLen,
+        &beforeTime, &afterTime, subject, issuer, pubKey), 0);
+    ASSERT_EQ(HITLS_X509_CertCtrl(generatedCert, HITLS_X509_EXT_SET_CDP,
+        &parsed, sizeof(parsed)), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CertSign(CRYPT_MD_SHA256, signKey, NULL, generatedCert), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CertCtrl(sourceCert, HITLS_X509_GET_ENCODELEN,
+        &sourceDerLen, sizeof(sourceDerLen)), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CertCtrl(sourceCert, HITLS_X509_GET_ENCODE,
+        &sourceDer, sizeof(sourceDer)), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CertGenBuff(BSL_FORMAT_ASN1, generatedCert, &generatedDer), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(generatedDer.dataLen, sourceDerLen);
+    ASSERT_COMPARE("reference/generated der", sourceDer, sourceDerLen, generatedDer.data, generatedDer.dataLen);
+    ASSERT_TRUE(TestIsErrStackEmpty());
+EXIT:
+    TestRandDeInit();
+    BSL_SAL_Free(generatedDer.data);
+    CRYPT_EAL_PkeyFreeCtx(signKey);
+    CRYPT_EAL_PkeyFreeCtx(pubKey);
+    HITLS_X509_CertFree(sourceCert);
+    HITLS_X509_CertFree(generatedCert);
+    HITLS_X509_ClearCdp(&parsed);
+    return;
+}
+/* END_CASE */
+
+/**
+ * @test   SDV_X509_CERT_CRLDP_PARSE_STUB_TC001
+ * @title  Test malloc-fail coverage when getting the CDP extension (adaptive).
+ * @brief  Parse a certificate carrying cRLDistributionPoints, probe the successful GET_CDP path to count malloc
+ *         calls, then iteratively fail each allocation and verify cleanup.
+ * @expect Certificate parsing succeeds, probe succeeds, and every malloc-fail path is handled without leaks.
+ */
+/* BEGIN_CASE */
+void SDV_X509_CERT_CRLDP_PARSE_STUB_TC001(char *certPath)
+{
+    HITLS_X509_Cert *cert = NULL;
+
+    TestMemInit();
+    ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_ASN1, certPath, &cert), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(CheckCdpGetMallocStub(cert), HITLS_PKI_SUCCESS);
+EXIT:
+    HITLS_X509_CertFree(cert);
+    return;
+}
+/* END_CASE */
+
+/**
+ * @test   SDV_X509_CERT_CRLDP_ENCODE_STUB_TC001
+ * @title  Test malloc-fail coverage when setting a composite CDP (adaptive).
+ * @brief  Build a valid cRLDistributionPoints object covering fullName directoryName, relativeName, reasons,
+ *         and cRLIssuer paths, then probe the successful HITLS_X509_EXT_SET_CDP path to count malloc calls
+ *         and iteratively fail each allocation to verify cleanup.
+ * @expect Probe succeeds, and every malloc-fail path in HITLS_X509_EXT_SET_CDP is handled without leaks.
+ */
+/* BEGIN_CASE */
+void SDV_X509_CERT_CRLDP_ENCODE_STUB_TC001(void)
+{
+    BslList *names = NULL;
+    BslList *issuer = NULL;
+    BslList *relativeName = NULL;
+    HITLS_X509_ExtCdp crldp = {0};
+
+    TestMemInit();
+    ASSERT_EQ(InitCrlDp(&crldp, true), HITLS_PKI_SUCCESS);
+
+    names = BuildIssuerDirName();
+    ASSERT_NE(names, NULL);
+    ASSERT_EQ(AddFullNamePoint(&crldp, names, false, 0, NULL), HITLS_PKI_SUCCESS);
+    names = NULL;
+
+    relativeName = NewRdnNameList(BSL_CID_AT_COMMONNAME, "stub-rel", 0, NULL);
+    ASSERT_NE(relativeName, NULL);
+    ASSERT_EQ(AddRelativeNamePoint(&crldp, relativeName, NULL), HITLS_PKI_SUCCESS);
+    relativeName = NULL;
+
+    issuer = BuildIssuerDirName();
+    ASSERT_NE(issuer, NULL);
+    ASSERT_EQ(AddNoNamePoint(&crldp, false, 0, issuer), HITLS_PKI_SUCCESS);
+    issuer = NULL;
+
+    names = BuildGeneralNames1(HITLS_X509_GN_URI, "http://crl.example.com/stub-reasons.crl");
+    ASSERT_NE(names, NULL);
+    issuer = BuildIssuerUriDns();
+    ASSERT_NE(issuer, NULL);
+    ASSERT_EQ(AddFullNamePoint(&crldp, names, true,
+        HITLS_X509_REASON_FLAG_KEY_COMPROMISE | HITLS_X509_REASON_FLAG_AA_COMPROMISE, issuer), HITLS_PKI_SUCCESS);
+    names = NULL;
+    issuer = NULL;
+
+    ASSERT_EQ(CheckCdpSetMallocStub(&crldp), HITLS_PKI_SUCCESS);
+EXIT:
+    BSL_LIST_FREE(names, (BSL_LIST_PFUNC_FREE)HITLS_X509_FreeGeneralName);
+    HITLS_X509_DnListFree(relativeName);
+    BSL_LIST_FREE(issuer, (BSL_LIST_PFUNC_FREE)HITLS_X509_FreeGeneralName);
+    ClearCrlDpLocal(&crldp);
+    return;
+}
+/* END_CASE */
+
+/**
  * @test   SDV_X509_CERT_CRLDP_CHECK_TC001
  * @title  Check CRLDP with an empty points list.
  * @brief  Build a CRLDP object whose points list contains no DistributionPoint element.
@@ -2942,7 +3113,7 @@ void SDV_X509_CERT_CRLDP_CHECK_TC002(void)
     names = NULL;
     ASSERT_EQ(HITLS_X509_CheckCdp(&crldp), HITLS_PKI_SUCCESS);
 EXIT:
-    FreeOwnedGeneralNames(names);
+    BSL_LIST_FREE(names, (BSL_LIST_PFUNC_FREE)HITLS_X509_FreeGeneralName);
     ClearCrlDpLocal(&crldp);
     return;
 }
@@ -3032,7 +3203,7 @@ void SDV_X509_CERT_CRLDP_CHECK_TC006(void)
     issuer = NULL;
     ASSERT_EQ(HITLS_X509_CheckCdp(&crldp), HITLS_X509_ERR_CRLDP_INVALID);
 EXIT:
-    FreeOwnedGeneralNames(issuer);
+    BSL_LIST_FREE(issuer, (BSL_LIST_PFUNC_FREE)HITLS_X509_FreeGeneralName);
     ClearCrlDpLocal(&crldp);
     return;
 }
@@ -3057,7 +3228,7 @@ void SDV_X509_CERT_CRLDP_CHECK_TC007(void)
     issuer = NULL;
     ASSERT_EQ(HITLS_X509_CheckCdp(&crldp), HITLS_PKI_SUCCESS);
 EXIT:
-    FreeOwnedGeneralNames(issuer);
+    BSL_LIST_FREE(issuer, (BSL_LIST_PFUNC_FREE)HITLS_X509_FreeGeneralName);
     ClearCrlDpLocal(&crldp);
     return;
 }
@@ -3082,7 +3253,7 @@ void SDV_X509_CERT_CRLDP_CHECK_TC008(void)
     issuer = NULL;
     ASSERT_EQ(HITLS_X509_CheckCdp(&crldp), HITLS_PKI_SUCCESS);
 EXIT:
-    FreeOwnedGeneralNames(issuer);
+    BSL_LIST_FREE(issuer, (BSL_LIST_PFUNC_FREE)HITLS_X509_FreeGeneralName);
     ClearCrlDpLocal(&crldp);
     return;
 }
@@ -3117,9 +3288,9 @@ void SDV_X509_CERT_CRLDP_CHECK_TC009(void)
     issuer = NULL;
     ASSERT_EQ(HITLS_X509_CheckCdp(&crldp), HITLS_PKI_SUCCESS);
 EXIT:
-    FreeOwnedGeneralNames(names);
+    BSL_LIST_FREE(names, (BSL_LIST_PFUNC_FREE)HITLS_X509_FreeGeneralName);
     HITLS_X509_DnListFree(relativeName);
-    FreeOwnedGeneralNames(issuer);
+    BSL_LIST_FREE(issuer, (BSL_LIST_PFUNC_FREE)HITLS_X509_FreeGeneralName);
     ClearCrlDpLocal(&crldp);
     return;
 }
@@ -3145,7 +3316,7 @@ void SDV_X509_CERT_CRLDP_CHECK_TC010(void)
     ASSERT_EQ(AddNoNamePoint(&crldp, false, 0, NULL), HITLS_PKI_SUCCESS);
     ASSERT_EQ(HITLS_X509_CheckCdp(&crldp), HITLS_X509_ERR_CRLDP_INVALID);
 EXIT:
-    FreeOwnedGeneralNames(names);
+    BSL_LIST_FREE(names, (BSL_LIST_PFUNC_FREE)HITLS_X509_FreeGeneralName);
     ClearCrlDpLocal(&crldp);
     return;
 }
@@ -3153,39 +3324,20 @@ EXIT:
 
 /**
  * @test   SDV_X509_CERT_CRLDP_SET_INVALID_TC001
- * @title  Reject NULL CRLDP input when setting certificate extension.
- * @brief  Call SET_CRLDP with a NULL data pointer.
+ * @title  Reject NULL or incomplete CRLDP input when setting certificate extension.
+ * @brief  Call SET_CRLDP with a NULL data pointer and with a CRLDP object whose points member is NULL.
  * @expect SET_CRLDP fails.
  */
 /* BEGIN_CASE */
 void SDV_X509_CERT_CRLDP_SET_INVALID_TC001(void)
 {
     HITLS_X509_Cert *cert = NULL;
+    HITLS_X509_ExtCdp crldp = {0};
 
     cert = HITLS_X509_CertNew();
     ASSERT_NE(cert, NULL);
     ASSERT_NE(HITLS_X509_CertCtrl(cert, HITLS_X509_EXT_SET_CDP,
         NULL, sizeof(HITLS_X509_ExtCdp)), HITLS_PKI_SUCCESS);
-EXIT:
-    HITLS_X509_CertFree(cert);
-    return;
-}
-/* END_CASE */
-
-/**
- * @test   SDV_X509_CERT_CRLDP_SET_INVALID_TC002
- * @title  Reject CRLDP with NULL points list.
- * @brief  Call SET_CRLDP with a CRLDP object whose points member is NULL.
- * @expect SET_CRLDP fails.
- */
-/* BEGIN_CASE */
-void SDV_X509_CERT_CRLDP_SET_INVALID_TC002(void)
-{
-    HITLS_X509_Cert *cert = NULL;
-    HITLS_X509_ExtCdp crldp = {0};
-
-    cert = HITLS_X509_CertNew();
-    ASSERT_NE(cert, NULL);
     ASSERT_NE(HITLS_X509_CertCtrl(cert, HITLS_X509_EXT_SET_CDP,
         &crldp, sizeof(HITLS_X509_ExtCdp)), HITLS_PKI_SUCCESS);
 EXIT:
@@ -3195,13 +3347,13 @@ EXIT:
 /* END_CASE */
 
 /**
- * @test   SDV_X509_CERT_CRLDP_SET_INVALID_TC003
+ * @test   SDV_X509_CERT_CRLDP_SET_INVALID_TC002
  * @title  Reject CRLDP points list with wrong dataSize.
  * @brief  Build a CRLDP object whose points container dataSize does not match HITLS_X509_CrlDistPoint.
  * @expect SET_CRLDP fails.
  */
 /* BEGIN_CASE */
-void SDV_X509_CERT_CRLDP_SET_INVALID_TC003(void)
+void SDV_X509_CERT_CRLDP_SET_INVALID_TC002(void)
 {
     HITLS_X509_Cert *cert = NULL;
     HITLS_X509_ExtCdp crldp = {0};
@@ -3223,13 +3375,13 @@ EXIT:
 /* END_CASE */
 
 /**
- * @test   SDV_X509_CERT_CRLDP_SET_INVALID_TC020
+ * @test   SDV_X509_CERT_CRLDP_SET_INVALID_TC003
  * @title  Reject CRLDP with an empty top-level points list.
  * @brief  Build a CRLDP object whose points container exists but contains no DistributionPoint.
  * @expect SET_CRLDP fails with HITLS_X509_ERR_EXT_CRLDP.
  */
 /* BEGIN_CASE */
-void SDV_X509_CERT_CRLDP_SET_INVALID_TC020(void)
+void SDV_X509_CERT_CRLDP_SET_INVALID_TC003(void)
 {
     HITLS_X509_ExtCdp crldp = {0};
 
@@ -3374,7 +3526,7 @@ void SDV_X509_CERT_CRLDP_SET_INVALID_TC008(void)
     point = NULL;
     ASSERT_EQ(CheckSetBadCrlDp(&crldp, HITLS_X509_ERR_EXT_DISTPOINT), HITLS_PKI_SUCCESS);
 EXIT:
-    FreeOwnedGeneralNames(relativeName);
+    BSL_LIST_FREE(relativeName, (BSL_LIST_PFUNC_FREE)HITLS_X509_FreeGeneralName);
     FreeCrlDpPointLocal(point);
     ClearCrlDpLocal(&crldp);
     return;
@@ -3451,8 +3603,9 @@ EXIT:
 
 /**
  * @test   SDV_X509_CERT_CRLDP_SET_INVALID_TC011
- * @title  Reject reasons containing undefined bits.
- * @brief  Build a DistributionPoint whose reasons value includes bits outside HITLS_X509_REASON_FLAG_ALL.
+ * @title  Reject reasons containing unsupported bits.
+ * @brief  Build a DistributionPoint whose reasons value includes bits outside HITLS_X509_REASON_FLAG_ALL,
+ *         including the filtered UNUSED bit.
  * @expect SET_CRLDP fails.
  */
 /* BEGIN_CASE */
@@ -3467,9 +3620,11 @@ void SDV_X509_CERT_CRLDP_SET_INVALID_TC011(void)
     point->distPointName = NewDistPointName(HITLS_X509_DP_FULLNAME,
         BuildGeneralNames1(HITLS_X509_GN_URI, "http://crl.example.com/unknown.crl"));
     ASSERT_NE(point->distPointName, NULL);
-    ASSERT_EQ(SetCrlDpPointReasons(point, 0x4000), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(SetCrlDpPointReasons(point, HITLS_X509_REASON_FLAG_UNUSED), HITLS_PKI_SUCCESS);
     ASSERT_EQ(BSL_LIST_AddElement(crldp.points, point, BSL_LIST_POS_END), BSL_SUCCESS);
     point = NULL;
+    ASSERT_EQ(CheckSetBadCrlDp(&crldp, HITLS_X509_ERR_EXT_DISTPOINT), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(SetCrlDpPointReasons(GetCrlDpPoint(crldp.points, 0), 0x4000), HITLS_PKI_SUCCESS);
     ASSERT_EQ(CheckSetBadCrlDp(&crldp, HITLS_X509_ERR_EXT_DISTPOINT), HITLS_PKI_SUCCESS);
 EXIT:
     FreeCrlDpPointLocal(point);
@@ -3507,13 +3662,13 @@ EXIT:
 /* END_CASE */
 
 /**
- * @test   SDV_X509_CERT_CRLDP_SET_INVALID_TC018
+ * @test   SDV_X509_CERT_CRLDP_SET_INVALID_TC013
  * @title  Reject FULLNAME with empty GeneralNames.
  * @brief  Build a DistributionPoint whose distPointName.type is FULLNAME and whose name list is present but empty.
  * @expect SET_CRLDP fails with HITLS_X509_ERR_EXT_DISTPOINT.
  */
 /* BEGIN_CASE */
-void SDV_X509_CERT_CRLDP_SET_INVALID_TC018(void)
+void SDV_X509_CERT_CRLDP_SET_INVALID_TC013(void)
 {
     HITLS_X509_ExtCdp crldp = {0};
     BslList *names = NULL;
@@ -3525,20 +3680,20 @@ void SDV_X509_CERT_CRLDP_SET_INVALID_TC018(void)
     names = NULL;
     ASSERT_EQ(CheckSetBadCrlDp(&crldp, HITLS_X509_ERR_EXT_DISTPOINT), HITLS_PKI_SUCCESS);
 EXIT:
-    FreeOwnedGeneralNames(names);
+    BSL_LIST_FREE(names, (BSL_LIST_PFUNC_FREE)HITLS_X509_FreeGeneralName);
     ClearCrlDpLocal(&crldp);
     return;
 }
 /* END_CASE */
 
 /**
- * @test   SDV_X509_CERT_CRLDP_SET_INVALID_TC019
+ * @test   SDV_X509_CERT_CRLDP_SET_INVALID_TC014
  * @title  Reject empty cRLIssuer GeneralNames.
  * @brief  Build a DistributionPoint whose cRLIssuer list is present but empty.
  * @expect SET_CRLDP fails with HITLS_X509_ERR_EXT_DISTPOINT.
  */
 /* BEGIN_CASE */
-void SDV_X509_CERT_CRLDP_SET_INVALID_TC019(void)
+void SDV_X509_CERT_CRLDP_SET_INVALID_TC014(void)
 {
     HITLS_X509_ExtCdp crldp = {0};
     BslList *issuer = NULL;
@@ -3550,20 +3705,20 @@ void SDV_X509_CERT_CRLDP_SET_INVALID_TC019(void)
     issuer = NULL;
     ASSERT_EQ(CheckSetBadCrlDp(&crldp, HITLS_X509_ERR_EXT_DISTPOINT), HITLS_PKI_SUCCESS);
 EXIT:
-    FreeOwnedGeneralNames(issuer);
+    BSL_LIST_FREE(issuer, (BSL_LIST_PFUNC_FREE)HITLS_X509_FreeGeneralName);
     ClearCrlDpLocal(&crldp);
     return;
 }
 /* END_CASE */
 
 /**
- * @test   SDV_X509_CERT_CRLDP_SET_INVALID_TC021
+ * @test   SDV_X509_CERT_CRLDP_SET_INVALID_TC015
  * @title  Reject empty DistributionPoint during generation.
  * @brief  Build a CRLDP object containing one DistributionPoint with no distributionPoint, reasons, or cRLIssuer.
  * @expect SET_CRLDP fails with HITLS_X509_ERR_EXT_DISTPOINT.
  */
 /* BEGIN_CASE */
-void SDV_X509_CERT_CRLDP_SET_INVALID_TC021(void)
+void SDV_X509_CERT_CRLDP_SET_INVALID_TC015(void)
 {
     HITLS_X509_ExtCdp crldp = {0};
 
@@ -3577,13 +3732,13 @@ EXIT:
 /* END_CASE */
 
 /**
- * @test   SDV_X509_CERT_CRLDP_SET_INVALID_TC022
+ * @test   SDV_X509_CERT_CRLDP_SET_INVALID_TC016
  * @title  Reject reasons-only DistributionPoint during generation.
  * @brief  Build a CRLDP object containing one DistributionPoint with only reasons and no distributionPoint or cRLIssuer.
  * @expect SET_CRLDP fails with HITLS_X509_ERR_CRLDP_INVALID.
  */
 /* BEGIN_CASE */
-void SDV_X509_CERT_CRLDP_SET_INVALID_TC022(void)
+void SDV_X509_CERT_CRLDP_SET_INVALID_TC016(void)
 {
     HITLS_X509_ExtCdp crldp = {0};
 
@@ -3597,13 +3752,13 @@ EXIT:
 /* END_CASE */
 
 /**
- * @test   SDV_X509_CERT_CRLDP_SET_INVALID_TC013
+ * @test   SDV_X509_CERT_CRLDP_SET_INVALID_TC017
  * @title  Reject GeneralName with NULL value pointer.
  * @brief  Build a fullName GeneralName whose value length is non-zero but value pointer is NULL.
  * @expect SET_CRLDP fails.
  */
 /* BEGIN_CASE */
-void SDV_X509_CERT_CRLDP_SET_INVALID_TC013(void)
+void SDV_X509_CERT_CRLDP_SET_INVALID_TC017(void)
 {
     HITLS_X509_Cert *cert = NULL;
     HITLS_X509_ExtCdp crldp = {0};
@@ -3628,7 +3783,7 @@ void SDV_X509_CERT_CRLDP_SET_INVALID_TC013(void)
         &crldp, sizeof(HITLS_X509_ExtCdp)), HITLS_PKI_SUCCESS);
 EXIT:
     HITLS_X509_CertFree(cert);
-    FreeOwnedGeneralNames(names);
+    BSL_LIST_FREE(names, (BSL_LIST_PFUNC_FREE)HITLS_X509_FreeGeneralName);
     FreeCrlDpPointLocal(point);
     ClearCrlDpLocal(&crldp);
     return;
@@ -3636,13 +3791,13 @@ EXIT:
 /* END_CASE */
 
 /**
- * @test   SDV_X509_CERT_CRLDP_SET_INVALID_TC014
+ * @test   SDV_X509_CERT_CRLDP_SET_INVALID_TC018
  * @title  Reject GeneralName with zero-length value.
  * @brief  Build a fullName URI GeneralName whose value length is zero.
  * @expect SET_CRLDP fails.
  */
 /* BEGIN_CASE */
-void SDV_X509_CERT_CRLDP_SET_INVALID_TC014(void)
+void SDV_X509_CERT_CRLDP_SET_INVALID_TC018(void)
 {
     HITLS_X509_Cert *cert = NULL;
     HITLS_X509_ExtCdp crldp = {0};
@@ -3667,7 +3822,7 @@ void SDV_X509_CERT_CRLDP_SET_INVALID_TC014(void)
         &crldp, sizeof(HITLS_X509_ExtCdp)), HITLS_PKI_SUCCESS);
 EXIT:
     HITLS_X509_CertFree(cert);
-    FreeOwnedGeneralNames(names);
+    BSL_LIST_FREE(names, (BSL_LIST_PFUNC_FREE)HITLS_X509_FreeGeneralName);
     FreeCrlDpPointLocal(point);
     ClearCrlDpLocal(&crldp);
     return;
@@ -3675,13 +3830,13 @@ EXIT:
 /* END_CASE */
 
 /**
- * @test   SDV_X509_CERT_CRLDP_SET_INVALID_TC015
+ * @test   SDV_X509_CERT_CRLDP_SET_INVALID_TC019
  * @title  Reject unsupported GeneralName type.
  * @brief  Build a fullName GeneralName whose type is not supported by the encoder.
  * @expect SET_CRLDP fails.
  */
 /* BEGIN_CASE */
-void SDV_X509_CERT_CRLDP_SET_INVALID_TC015(void)
+void SDV_X509_CERT_CRLDP_SET_INVALID_TC019(void)
 {
     HITLS_X509_Cert *cert = NULL;
     HITLS_X509_ExtCdp crldp = {0};
@@ -3706,7 +3861,7 @@ void SDV_X509_CERT_CRLDP_SET_INVALID_TC015(void)
         &crldp, sizeof(HITLS_X509_ExtCdp)), HITLS_PKI_SUCCESS);
 EXIT:
     HITLS_X509_CertFree(cert);
-    FreeOwnedGeneralNames(names);
+    BSL_LIST_FREE(names, (BSL_LIST_PFUNC_FREE)HITLS_X509_FreeGeneralName);
     FreeCrlDpPointLocal(point);
     ClearCrlDpLocal(&crldp);
     return;
@@ -3714,13 +3869,13 @@ EXIT:
 /* END_CASE */
 
 /**
- * @test   SDV_X509_CERT_CRLDP_SET_INVALID_TC016
+ * @test   SDV_X509_CERT_CRLDP_SET_INVALID_TC020
  * @title  Reject invalid directoryName GeneralName.
  * @brief  Build a fullName directoryName GeneralName with an empty DN list that cannot be encoded.
  * @expect SET_CRLDP fails.
  */
 /* BEGIN_CASE */
-void SDV_X509_CERT_CRLDP_SET_INVALID_TC016(void)
+void SDV_X509_CERT_CRLDP_SET_INVALID_TC020(void)
 {
     HITLS_X509_Cert *cert = NULL;
     HITLS_X509_ExtCdp crldp = {0};
@@ -3745,7 +3900,7 @@ void SDV_X509_CERT_CRLDP_SET_INVALID_TC016(void)
         &crldp, sizeof(HITLS_X509_ExtCdp)), HITLS_PKI_SUCCESS);
 EXIT:
     HITLS_X509_CertFree(cert);
-    FreeOwnedGeneralNames(names);
+    BSL_LIST_FREE(names, (BSL_LIST_PFUNC_FREE)HITLS_X509_FreeGeneralName);
     FreeCrlDpPointLocal(point);
     ClearCrlDpLocal(&crldp);
     return;
@@ -3753,13 +3908,13 @@ EXIT:
 /* END_CASE */
 
 /**
- * @test   SDV_X509_CERT_CRLDP_SET_INVALID_TC017
+ * @test   SDV_X509_CERT_CRLDP_SET_INVALID_TC021
  * @title  Reject CRLDP points list containing a NULL DistributionPoint element.
  * @brief  Manually build a damaged points list whose node data is NULL and call SET_CRLDP.
  * @expect SET_CRLDP fails.
  */
 /* BEGIN_CASE */
-void SDV_X509_CERT_CRLDP_SET_INVALID_TC017(void)
+void SDV_X509_CERT_CRLDP_SET_INVALID_TC021(void)
 {
     HITLS_X509_Cert *cert = NULL;
     HITLS_X509_ExtCdp crldp = {0};

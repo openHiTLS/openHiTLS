@@ -2564,12 +2564,12 @@ EXIT:
  * @brief  1. Parse a CRL whose malformed IDP extension contains an invalid onlySomeReasons BIT STRING.
  *         2. Get IDP from the parsed CRL.
  * @expect 1. Raw CRL parsing succeeds.
- *         2. IDP get fails with HITLS_X509_ERR_EXT_IDP.
+ *         2. IDP get fails with HITLS_X509_ERR_EXT_REASONFLAGS.
  */
 /* BEGIN_CASE */
 void SDV_X509_CRL_PARSE_IDP_ABNORMAL_TC004(char *path)
 {
-    ASSERT_EQ(CheckBadIdpGet(path, HITLS_X509_ERR_EXT_IDP), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(CheckBadIdpGet(path, HITLS_X509_ERR_EXT_REASONFLAGS), HITLS_PKI_SUCCESS);
 EXIT:
     return;
 }
@@ -3241,8 +3241,9 @@ EXIT:
 
 /**
  * @test   SDV_X509_CRL_GEN_IDP_ABNORMAL_TC011
- * @title  Reject reason flags with undefined bit.
- * @brief  1. Build a public IDP model whose reason mask contains an undefined bit.
+ * @title  Reject reason flags with unsupported bits.
+ * @brief  1. Build a public IDP model whose reason mask contains bits outside HITLS_X509_REASON_FLAG_ALL,
+ *            including the filtered UNUSED bit.
  *         2. Set the IDP on a CRL.
  * @expect 1. IDP set fails with HITLS_X509_ERR_EXT_REASONFLAGS.
  */
@@ -3252,6 +3253,10 @@ void SDV_X509_CRL_GEN_IDP_ABNORMAL_TC011(void)
     HITLS_X509_ExtIdp idp = {0};
 
     idp.critical = true;
+    SetIdpReasons(&idp, HITLS_X509_REASON_FLAG_UNUSED);
+    ASSERT_EQ(CheckSetBadIdp(&idp, HITLS_X509_ERR_EXT_REASONFLAGS), HITLS_PKI_SUCCESS);
+    idp.hasReasons = false;
+    idp.onlySomeReasons = 0;
     SetIdpReasons(&idp, 0x4000);
     ASSERT_EQ(CheckSetBadIdp(&idp, HITLS_X509_ERR_EXT_REASONFLAGS), HITLS_PKI_SUCCESS);
 EXIT:
@@ -4026,46 +4031,84 @@ EXIT:
     return ret;
 }
 
-static int32_t CheckCrlEncodeMallocStub(HITLS_X509_Crl *crl)
+static int32_t CheckIdpSetMallocStub(HITLS_X509_ExtIdp *idp)
 {
     uint32_t totalMallocCount = 0;
     int32_t ret = -1;
-    BSL_Buffer encode = {0};
+    HITLS_X509_Crl *crl = NULL;
 
     STUB_REPLACE(BSL_SAL_Malloc, STUB_BSL_SAL_Malloc);
 
     STUB_EnableMallocFail(false);
+    crl = HITLS_X509_CrlNew();
+    ASSERT_NE(crl, NULL);
     STUB_ResetMallocCount();
-    ret = HITLS_X509_CrlGenBuff(BSL_FORMAT_ASN1, crl, &encode);
+    ret = HITLS_X509_CrlCtrl(crl, HITLS_X509_EXT_SET_IDP, idp, sizeof(*idp));
     if (ret != HITLS_PKI_SUCCESS) {
         goto EXIT;
     }
     totalMallocCount = STUB_GetMallocCallCount();
-    BSL_SAL_Free(encode.data);
-    encode.data = NULL;
-    encode.dataLen = 0;
+    HITLS_X509_CrlFree(crl);
+    crl = NULL;
 
-    STUB_EnableMallocFail(true);
     for (uint32_t i = 0; i < totalMallocCount; i++) {
+        crl = HITLS_X509_CrlNew();
+        ASSERT_NE(crl, NULL);
+        STUB_EnableMallocFail(true);
         STUB_ResetMallocCount();
         STUB_SetMallocFailIndex(i);
-        ret = HITLS_X509_CrlGenBuff(BSL_FORMAT_ASN1, crl, &encode);
-        if (ret == HITLS_PKI_SUCCESS) {
-            BSL_SAL_Free(encode.data);
-            encode.data = NULL;
-            encode.dataLen = 0;
-            continue;
-        }
-        BSL_SAL_Free(encode.data);
-        encode.data = NULL;
-        encode.dataLen = 0;
+        ret = HITLS_X509_CrlCtrl(crl, HITLS_X509_EXT_SET_IDP, idp, sizeof(*idp));
+        STUB_EnableMallocFail(false);
+        HITLS_X509_CrlFree(crl);
+        crl = NULL;
         ClearExpectedError();
     }
     ASSERT_TRUE(TestIsErrStackEmpty());
     ret = HITLS_PKI_SUCCESS;
 EXIT:
     STUB_EnableMallocFail(false);
-    BSL_SAL_Free(encode.data);
+    HITLS_X509_CrlFree(crl);
+    STUB_RESTORE(BSL_SAL_Malloc);
+    return ret;
+}
+
+static int32_t CheckDeltaSetMallocStub(HITLS_X509_ExtDeltaCrl *delta)
+{
+    uint32_t totalMallocCount = 0;
+    int32_t ret = -1;
+    HITLS_X509_Crl *crl = NULL;
+
+    STUB_REPLACE(BSL_SAL_Malloc, STUB_BSL_SAL_Malloc);
+
+    STUB_EnableMallocFail(false);
+    crl = HITLS_X509_CrlNew();
+    ASSERT_NE(crl, NULL);
+    STUB_ResetMallocCount();
+    ret = HITLS_X509_CrlCtrl(crl, HITLS_X509_EXT_SET_DELTA_CRL, delta, sizeof(*delta));
+    if (ret != HITLS_PKI_SUCCESS) {
+        goto EXIT;
+    }
+    totalMallocCount = STUB_GetMallocCallCount();
+    HITLS_X509_CrlFree(crl);
+    crl = NULL;
+
+    for (uint32_t i = 0; i < totalMallocCount; i++) {
+        crl = HITLS_X509_CrlNew();
+        ASSERT_NE(crl, NULL);
+        STUB_EnableMallocFail(true);
+        STUB_ResetMallocCount();
+        STUB_SetMallocFailIndex(i);
+        ret = HITLS_X509_CrlCtrl(crl, HITLS_X509_EXT_SET_DELTA_CRL, delta, sizeof(*delta));
+        STUB_EnableMallocFail(false);
+        HITLS_X509_CrlFree(crl);
+        crl = NULL;
+        ClearExpectedError();
+    }
+    ASSERT_TRUE(TestIsErrStackEmpty());
+    ret = HITLS_PKI_SUCCESS;
+EXIT:
+    STUB_EnableMallocFail(false);
+    HITLS_X509_CrlFree(crl);
     STUB_RESTORE(BSL_SAL_Malloc);
     return ret;
 }
@@ -4193,62 +4236,84 @@ EXIT:
 
 /**
  * @test SDV_X509_CRL_IDP_ENCODE_STUB_TC001
- * title 1. Test malloc-fail coverage when encoding a CRL with the IDP extension (adaptive)
+ * title 1. Test malloc-fail coverage when setting the IDP extension on a CRL (adaptive)
  *
  */
 /* BEGIN_CASE */
-void SDV_X509_CRL_IDP_ENCODE_STUB_TC001(char *cert, char *key, int keytype)
+void SDV_X509_CRL_IDP_ENCODE_STUB_TC001(void)
 {
-    HITLS_X509_Crl *crl = NULL;
-    HITLS_X509_Cert *issuerCert = NULL;
-    CRYPT_EAL_PkeyCtx *prvKey = NULL;
+    uint8_t ip[] = {0x7F, 0x00, 0x00, 0x01};
     HITLS_X509_ExtIdp idp = {0};
+    HITLS_X509_GeneralName *name = NULL;
+    BslList *names = NULL;
+    BslList *dn = NULL;
 
-    TestRandInit();
-    ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_UNKNOWN, cert, &issuerCert), HITLS_PKI_SUCCESS);
-    ASSERT_EQ(CRYPT_EAL_DecodeFileKey(BSL_FORMAT_UNKNOWN, keytype, key, NULL, 0, &prvKey), 0);
-    crl = HITLS_X509_CrlNew();
-    ASSERT_NE(crl, NULL);
-    ASSERT_EQ(SetCrl(crl, issuerCert, true), HITLS_PKI_SUCCESS);
-    ASSERT_EQ(BuildIdpFullNameDir(&idp, true), HITLS_PKI_SUCCESS);
-    ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_EXT_SET_IDP, &idp, sizeof(idp)), HITLS_PKI_SUCCESS);
-    ASSERT_EQ(HITLS_X509_CrlSign(CRYPT_MD_SHA256, prvKey, NULL, crl), HITLS_PKI_SUCCESS);
-    ASSERT_EQ(CheckCrlEncodeMallocStub(crl), HITLS_PKI_SUCCESS);
+    InitIdp(&idp, true);
+    names = BSL_LIST_New(sizeof(HITLS_X509_GeneralName));
+    ASSERT_NE(names, NULL);
+
+    name = NewIdpGeneralName(HITLS_X509_GN_URI, (const uint8_t *)IDP_TEST_URI, (uint32_t)strlen(IDP_TEST_URI));
+    ASSERT_NE(name, NULL);
+    ASSERT_EQ(BSL_LIST_AddElement(names, name, BSL_LIST_POS_END), BSL_SUCCESS);
+    name = NULL;
+
+    name = NewIdpGeneralName(HITLS_X509_GN_DNS, (const uint8_t *)"idp.example.com",
+        (uint32_t)strlen("idp.example.com"));
+    ASSERT_NE(name, NULL);
+    ASSERT_EQ(BSL_LIST_AddElement(names, name, BSL_LIST_POS_END), BSL_SUCCESS);
+    name = NULL;
+
+    name = NewIdpGeneralName(HITLS_X509_GN_EMAIL, (const uint8_t *)"idp@example.com",
+        (uint32_t)strlen("idp@example.com"));
+    ASSERT_NE(name, NULL);
+    ASSERT_EQ(BSL_LIST_AddElement(names, name, BSL_LIST_POS_END), BSL_SUCCESS);
+    name = NULL;
+
+    name = NewIdpGeneralName(HITLS_X509_GN_IP, ip, sizeof(ip));
+    ASSERT_NE(name, NULL);
+    ASSERT_EQ(BSL_LIST_AddElement(names, name, BSL_LIST_POS_END), BSL_SUCCESS);
+    name = NULL;
+
+    dn = GenDNList();
+    ASSERT_NE(dn, NULL);
+    name = BSL_SAL_Calloc(1, sizeof(HITLS_X509_GeneralName));
+    ASSERT_NE(name, NULL);
+    name->type = HITLS_X509_GN_DNNAME;
+    name->value.data = (uint8_t *)dn;
+    name->value.dataLen = sizeof(BslList *);
+    dn = NULL;
+    ASSERT_EQ(BSL_LIST_AddElement(names, name, BSL_LIST_POS_END), BSL_SUCCESS);
+    name = NULL;
+
+    idp.distPoint = NewIdpDistPoint(HITLS_X509_DP_FULLNAME, names);
+    ASSERT_NE(idp.distPoint, NULL);
+    names = NULL;
+    idp.onlyContainsCACerts = true;
+    idp.indirectCrl = true;
+    SetIdpReasons(&idp, IDP_TEST_REASON_MULTI);
+    ASSERT_EQ(CheckIdpSetMallocStub(&idp), HITLS_PKI_SUCCESS);
 EXIT:
+    HITLS_X509_FreeGeneralName(name);
+    HITLS_X509_DnListFree(dn);
+    BSL_LIST_FREE(names, (BSL_LIST_PFUNC_FREE)HITLS_X509_FreeGeneralName);
     FreeBuiltIdp(&idp);
-    HITLS_X509_CrlFree(crl);
-    HITLS_X509_CertFree(issuerCert);
-    CRYPT_EAL_PkeyFreeCtx(prvKey);
 }
 /* END_CASE */
 
 /**
  * @test SDV_X509_CRL_DELTA_ENCODE_STUB_TC001
- * title 1. Test malloc-fail coverage when encoding a CRL with the Delta CRL Indicator extension (adaptive)
+ * title 1. Test malloc-fail coverage when setting the Delta CRL Indicator extension on a CRL (adaptive)
  *
  */
 /* BEGIN_CASE */
-void SDV_X509_CRL_DELTA_ENCODE_STUB_TC001(char *cert, char *key, int keytype)
+void SDV_X509_CRL_DELTA_ENCODE_STUB_TC001(void)
 {
     uint8_t baseCrlNumber[] = {0x01};
-    HITLS_X509_Crl *crl = NULL;
-    HITLS_X509_Cert *issuerCert = NULL;
-    CRYPT_EAL_PkeyCtx *prvKey = NULL;
     HITLS_X509_ExtDeltaCrl delta = {true, {baseCrlNumber, sizeof(baseCrlNumber)}};
 
-    TestRandInit();
-    ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_UNKNOWN, cert, &issuerCert), HITLS_PKI_SUCCESS);
-    ASSERT_EQ(CRYPT_EAL_DecodeFileKey(BSL_FORMAT_UNKNOWN, keytype, key, NULL, 0, &prvKey), 0);
-    crl = HITLS_X509_CrlNew();
-    ASSERT_NE(crl, NULL);
-    ASSERT_EQ(SetCrl(crl, issuerCert, true), HITLS_PKI_SUCCESS);
-    ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_EXT_SET_DELTA_CRL, &delta, sizeof(delta)), HITLS_PKI_SUCCESS);
-    ASSERT_EQ(HITLS_X509_CrlSign(CRYPT_MD_SHA256, prvKey, NULL, crl), HITLS_PKI_SUCCESS);
-    ASSERT_EQ(CheckCrlEncodeMallocStub(crl), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(CheckDeltaSetMallocStub(&delta), HITLS_PKI_SUCCESS);
 EXIT:
-    HITLS_X509_CrlFree(crl);
-    HITLS_X509_CertFree(issuerCert);
-    CRYPT_EAL_PkeyFreeCtx(prvKey);
+    return;
 }
 /* END_CASE */
 

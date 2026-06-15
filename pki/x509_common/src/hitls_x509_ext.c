@@ -144,7 +144,7 @@ static int32_t EncodeGeneralNamesList(BslList *names, BSL_ASN1_Buffer *out);
 static int32_t BuildGeneralNameAsns(BslList *names, BSL_ASN1_Buffer *asns);
 static void FreeGnAsns(BSL_ASN1_Buffer *asns, uint32_t number);
 #endif
-static void ClearDistPointName(HITLS_X509_DistPointName *name);
+static void FreeDistPointName(HITLS_X509_DistPointName *name);
 
 typedef enum {
     HITLS_X509_EXT_CRLDP_DPNAME_IDX,
@@ -626,18 +626,18 @@ static uint16_t ParseReasonFlags(BSL_ASN1_Buffer *asn)
     return reasons & HITLS_X509_REASON_FLAG_ALL;
 }
 
-static int32_t ParseIdpReasons(BSL_ASN1_Buffer *asn, HITLS_X509_ExtIdp *idp)
+static int32_t ParseReasons(BSL_ASN1_Buffer *asn, bool *hasReasons, uint16_t *reasons)
 {
     if (asn->tag == 0) {
         return HITLS_PKI_SUCCESS;
     }
     // Parse ReasonFlags leniently by truncating overlong octets to the uint16_t public model.
     if (asn->len == 0 || asn->buff == NULL || asn->buff[0] >= BITS_OF_BYTE) {
-        BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_EXT_IDP);
-        return HITLS_X509_ERR_EXT_IDP;
+        BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_EXT_REASONFLAGS);
+        return HITLS_X509_ERR_EXT_REASONFLAGS;
     }
-    idp->hasReasons = true;
-    idp->onlySomeReasons = ParseReasonFlags(asn);
+    *hasReasons = true;
+    *reasons = ParseReasonFlags(asn);
     return HITLS_PKI_SUCCESS;
 }
 
@@ -858,7 +858,7 @@ void HITLS_X509_ClearIdp(HITLS_X509_ExtIdp *idp)
     if (idp == NULL) {
         return;
     }
-    ClearDistPointName(idp->distPoint);
+    FreeDistPointName(idp->distPoint);
     idp->distPoint = NULL;
 }
 
@@ -991,7 +991,7 @@ static int32_t ParseDistPointName(BSL_ASN1_Buffer *asn, HITLS_X509_DistPointName
     }
     if (ret != HITLS_PKI_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        ClearDistPointName(*distPointName);
+        FreeDistPointName(*distPointName);
         *distPointName = NULL;
         return ret;
     }
@@ -1027,7 +1027,7 @@ int32_t HITLS_X509_ParseIdp(HITLS_X509_ExtEntry *extEntry, HITLS_X509_ExtIdp *id
     if (ret != HITLS_PKI_SUCCESS) {
         goto EXIT;
     }
-    ret = ParseIdpReasons(&asnArr[HITLS_X509_EXT_IDP_REASONS_IDX], idp);
+    ret = ParseReasons(&asnArr[HITLS_X509_EXT_IDP_REASONS_IDX], &idp->hasReasons, &idp->onlySomeReasons);
     if (ret != HITLS_PKI_SUCCESS) {
         goto EXIT;
     }
@@ -1161,18 +1161,7 @@ void HITLS_X509_ClearSubjectAltName(HITLS_X509_ExtSan *san)
     }
 }
 
-static int32_t ParseReasons(BSL_ASN1_Buffer *asn, HITLS_X509_CrlDistPoint *point)
-{
-    if (asn->len == 0 || asn->buff == NULL || asn->buff[0] >= BITS_OF_BYTE) {
-        BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_PARSE_CRLDP);
-        return HITLS_X509_ERR_PARSE_CRLDP;
-    }
-    point->reasons = ParseReasonFlags(asn);
-    point->hasReasons = true;
-    return HITLS_PKI_SUCCESS;
-}
-
-static void ClearDistPointName(HITLS_X509_DistPointName *name)
+static void FreeDistPointName(HITLS_X509_DistPointName *name)
 {
     if (name == NULL) {
         return;
@@ -1191,7 +1180,7 @@ static void FreeCrlDpPoint(void *data)
     if (point == NULL) {
         return;
     }
-    ClearDistPointName(point->distPointName);
+    FreeDistPointName(point->distPointName);
     HITLS_X509_FreeGeneralNames(point->crlIssuer);
     BSL_SAL_Free(point);
 }
@@ -1221,17 +1210,13 @@ static int32_t ParseDistPoint(uint8_t *encode, uint32_t encLen, HITLS_X509_CrlDi
         return HITLS_X509_ERR_PARSE_CRLDP;
     }
 
-    if (asnArr[HITLS_X509_EXT_CRLDP_DPNAME_IDX].tag != 0) {
-        ret = ParseDistPointName(&asnArr[HITLS_X509_EXT_CRLDP_DPNAME_IDX], &point->distPointName);
-        if (ret != HITLS_PKI_SUCCESS) {
-            return ret;
-        }
+    ret = ParseDistPointName(&asnArr[HITLS_X509_EXT_CRLDP_DPNAME_IDX], &point->distPointName);
+    if (ret != HITLS_PKI_SUCCESS) {
+        return ret;
     }
-    if (asnArr[HITLS_X509_EXT_CRLDP_REASONS_IDX].tag != 0) {
-        ret = ParseReasons(&asnArr[HITLS_X509_EXT_CRLDP_REASONS_IDX], point);
-        if (ret != HITLS_PKI_SUCCESS) {
-            return ret;
-        }
+    ret = ParseReasons(&asnArr[HITLS_X509_EXT_CRLDP_REASONS_IDX], &point->hasReasons, &point->reasons);
+    if (ret != HITLS_PKI_SUCCESS) {
+        return ret;
     }
     if (asnArr[HITLS_X509_EXT_CRLDP_ISSUER_IDX].tag != 0) {
         ret = HITLS_X509_ParseGeneralNames(asnArr[HITLS_X509_EXT_CRLDP_ISSUER_IDX].buff,
@@ -1306,7 +1291,8 @@ ERR:
  */
 int32_t HITLS_X509_CheckCdp(const HITLS_X509_ExtCdp *crldp)
 {
-    for (BslListNode *node = BSL_LIST_FirstNode(crldp->points); node != NULL; node = BSL_LIST_GetNextNode(crldp->points, node)) {
+    for (BslListNode *node = BSL_LIST_FirstNode(crldp->points); node != NULL;
+        node = BSL_LIST_GetNextNode(crldp->points, node)) {
         const HITLS_X509_CrlDistPoint *point = (const HITLS_X509_CrlDistPoint *)BSL_LIST_GetData(node);
         if (point->distPointName != NULL) {
             continue;
@@ -1835,15 +1821,6 @@ static int32_t SetExtDeltaCrl(HITLS_X509_Ext *ext, HITLS_X509_ExtEntry *entry, c
     return SetExtCrlNumber(ext, entry, val);
 }
 
-static int32_t CheckRelativeNameForEncode(BslList *relativeName)
-{
-    int32_t ret = CheckDistPointNameList(relativeName, (int32_t)sizeof(HITLS_X509_NameNode));
-    if (ret != HITLS_PKI_SUCCESS) {
-        return ret;
-    }
-    return CheckSingleRdnList(relativeName);
-}
-
 static int32_t CheckDistPointNameForEncode(const HITLS_X509_DistPointName *name)
 {
     if (name == NULL) {
@@ -1852,8 +1829,13 @@ static int32_t CheckDistPointNameForEncode(const HITLS_X509_DistPointName *name)
     switch (name->type) {
         case HITLS_X509_DP_FULLNAME:
             return CheckDistPointNameList(name->name, (int32_t)sizeof(HITLS_X509_GeneralName));
-        case HITLS_X509_DP_RELATIVENAME:
-            return CheckRelativeNameForEncode(name->name);
+        case HITLS_X509_DP_RELATIVENAME: {
+            int32_t ret = CheckDistPointNameList(name->name, (int32_t)sizeof(HITLS_X509_NameNode));
+            if (ret != HITLS_PKI_SUCCESS) {
+                return ret;
+            }
+            return CheckSingleRdnList(name->name);
+        }
         default:
             BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_EXT_DISTPOINT);
             return HITLS_X509_ERR_EXT_DISTPOINT;
@@ -1889,6 +1871,7 @@ static int32_t CheckCrlDpPointForEncode(const HITLS_X509_CrlDistPoint *point)
     if (point->crlIssuer != NULL) {
         return CheckDistPointNameList(point->crlIssuer, (int32_t)sizeof(HITLS_X509_GeneralName));
     }
+    /* CDP encoding does not support all three optional DistributionPoint fields being absent. */
     if (point->distPointName == NULL && !point->hasReasons) {
         BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_EXT_DISTPOINT);
         return HITLS_X509_ERR_EXT_DISTPOINT;
@@ -1935,7 +1918,7 @@ static int32_t EncodeDistPointName(const HITLS_X509_DistPointName *name, BSL_ASN
 
 static int32_t EncodeDistPoint(const HITLS_X509_CrlDistPoint *point, BSL_ASN1_Buffer *out)
 {
-    int32_t ret = HITLS_PKI_SUCCESS;
+    int32_t ret;
     uint8_t reasonBuff[3] = {0};
     BSL_ASN1_Buffer fields[HITLS_X509_EXT_CRLDP_MAX] = {0};
     BSL_ASN1_Template templ = {g_crlDpPointTempl, sizeof(g_crlDpPointTempl) / sizeof(g_crlDpPointTempl[0])};
@@ -1968,7 +1951,6 @@ static int32_t EncodeDistPoint(const HITLS_X509_CrlDistPoint *point, BSL_ASN1_Bu
         goto EXIT;
     }
     out->tag = BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE;
-    ret = HITLS_PKI_SUCCESS;
 EXIT:
     BSL_SAL_Free(fields[HITLS_X509_EXT_CRLDP_DPNAME_IDX].buff);
     BSL_SAL_Free(fields[HITLS_X509_EXT_CRLDP_ISSUER_IDX].buff);
@@ -2002,7 +1984,7 @@ static int32_t SetExtCrlDp(HITLS_X509_Ext *ext, HITLS_X509_ExtEntry *entry, cons
     for (BslListNode *node = BSL_LIST_FirstNode(crldp->points); node != NULL;
         node = BSL_LIST_GetNextNode(crldp->points, node), index++) {
         ret = EncodeDistPoint((const HITLS_X509_CrlDistPoint *)BSL_LIST_GetData(node), &asnArr[index]);
-        if (ret != HITLS_PKI_SUCCESS) {
+        if (ret != BSL_SUCCESS) {
             goto EXIT;
         }
     }
@@ -2023,12 +2005,10 @@ static int32_t SetExtCrlDp(HITLS_X509_Ext *ext, HITLS_X509_ExtEntry *entry, cons
     ret = HITLS_PKI_SUCCESS;
 EXIT:
     BSL_SAL_Free(crlDpSeqOf.buff);
-    if (asnArr != NULL) {
-        for (uint32_t i = 0; i < count; i++) {
-            BSL_SAL_Free(asnArr[i].buff);
-        }
-        BSL_SAL_Free(asnArr);
+    for (uint32_t i = 0; i < count; i++) {
+        BSL_SAL_Free(asnArr[i].buff);
     }
+    BSL_SAL_Free(asnArr);
     return ret;
 }
 
