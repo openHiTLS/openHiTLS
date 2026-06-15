@@ -85,11 +85,8 @@
 #include "hlt_type.h"
 #include "sctp_channel.h"
 #include "hitls_crypt_init.h"
-#include <stdlib.h>
-#include "bsl_sal.h"
 #include "bsl_log.h"
 #include "bsl_err.h"
-#include "bsl_uio.h"
 #include "hitls_crypt_reg.h"
 #include "hitls_session.h"
 #include "cert_method.h"

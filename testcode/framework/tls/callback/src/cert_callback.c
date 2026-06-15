@@ -25,7 +25,6 @@
 #include "hitls_type.h"
 #include "hitls_cert_reg.h"
 #include "hitls_config.h"
-#include "hitls_cert.h"
 #include "hitls_cert_init.h"
 #include "bsl_sal.h"
 #include "bsl_log.h"
@@ -35,7 +34,6 @@
 #include "tls.h"
 #include "bsl_list.h"
 #include "hitls_x509_adapt.h"
-#include "hitls_cert_init.h"
 #include "hitls_pki_x509.h"
 #include "cert_method.h"
 
