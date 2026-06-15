@@ -1044,7 +1044,7 @@ void SDV_X509_CERT_SET_TIME_FUNC_TC001(void)
     BSL_TIME errorTime = {2025, 2, 30, 0, 0, 0, 0, 0};
     BSL_TIME utcTime = {2049, 12, 31, 23, 59, 0, 59, 0};
     BSL_TIME generalizedTime = {2050, 1, 1, 0, 0, 0, 0, 0};
-    BSL_TIME maxGeneralizedTime = {9999, 12, 31, 23, 59, 59, 0, 0};
+    BSL_TIME maxGeneralizedTime = {9999, 12, 31, 23, 59, 0, 59, 0};
 
     HITLS_X509_Cert *cert = HITLS_X509_CertNew();
     ASSERT_NE(cert, NULL);

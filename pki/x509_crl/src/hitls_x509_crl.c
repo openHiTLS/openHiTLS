@@ -1074,6 +1074,7 @@ static int32_t CrlSetRevokeTime(HITLS_X509_CrlEntry *revoked, uint8_t *val, uint
      * CRL issuers conforming to this profile MUST encode revocationDate as GeneralizedTime for dates in the year
      * 2050 or later.
      */
+    revoked->flag &= ~BSL_TIME_REVOKE_TIME_IS_GMT;
     if (revoked->time.year >= 2050) {
         revoked->flag |= BSL_TIME_REVOKE_TIME_IS_GMT;
     }

@@ -3030,7 +3030,7 @@ void SDV_X509_VFY_CERT_TIME_LEAF_9999_CA_EXPIRED_FAIL_TC001(void)
     HITLS_X509_Cert *inter = NULL;
     HITLS_X509_Cert *leaf = NULL;
     int64_t interEnd = 0;
-    BSL_TIME noWellDefinedExpiration = {9999, 12, 31, 23, 59, 59, 0, 0};
+    BSL_TIME noWellDefinedExpiration = {9999, 12, 31, 23, 59, 0, 59, 0};
 
     TestMemInit();
     HITLS_X509_StoreCtx *store = HITLS_X509_StoreCtxNew();
