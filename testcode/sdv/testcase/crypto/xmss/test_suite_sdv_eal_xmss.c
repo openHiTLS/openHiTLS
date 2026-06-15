@@ -772,3 +772,42 @@ EXIT:
     return;
 }
 /* END_CASE */
+
+/* @
+* @test  SDV_CRYPTO_XMSS_SET_XDR_ALG_REPEATED_TC001
+* @spec  -
+* @title  CRYPT_CTRL_SET_XMSS_XDR_ALG_TYPE cannot be called twice on the same context
+* @brief
+* 1.Create an XMSS pkey context.
+* 2.Set XDR alg type with XMSS_SHA2_10_256 OID (0x00000001), expected CRYPT_SUCCESS.
+* 3.Set XDR alg type again, expected CRYPT_XMSS_CTRL_INIT_REPEATED.
+* 4.Also verify cross-path: SET_PARA_BY_ID after SET_XDR returns CRYPT_XMSS_CTRL_INIT_REPEATED.
+* @expect  repeated set returns CRYPT_XMSS_CTRL_INIT_REPEATED
+@ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_XMSS_SET_XDR_ALG_REPEATED_TC001(void)
+{
+    TestMemInit();
+    CRYPT_EAL_PkeyCtx *pkey = NULL;
+    pkey = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_XMSS);
+    ASSERT_TRUE(pkey != NULL);
+
+    uint8_t xdrOid[4] = {0x00, 0x00, 0x00, 0x01};
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_SET_XMSS_XDR_ALG_TYPE,
+        xdrOid, sizeof(xdrOid)), CRYPT_SUCCESS);
+
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_SET_XMSS_XDR_ALG_TYPE,
+        xdrOid, sizeof(xdrOid)), CRYPT_XMSS_CTRL_INIT_REPEATED);
+
+    int32_t algId = CRYPT_XMSS_SHA2_10_256;
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_SET_PARA_BY_ID,
+        (void *)&algId, sizeof(algId)), CRYPT_XMSS_CTRL_INIT_REPEATED);
+
+    BSL_ERR_ClearError();
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
+EXIT:
+    CRYPT_EAL_PkeyFreeCtx(pkey);
+    return;
+}
+/* END_CASE */

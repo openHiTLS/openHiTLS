@@ -225,6 +225,10 @@ static int32_t XmssGetXdrAlgBuff(CryptXmssCtx *ctx, void *val, uint32_t len)
  */
 static int32_t XmssSetXdrAlgId(CryptXmssCtx *ctx, void *val, uint32_t len)
 {
+    if (ctx->params != NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_XMSS_CTRL_INIT_REPEATED);
+        return CRYPT_XMSS_CTRL_INIT_REPEATED;
+    }
     if (val == NULL || len < HASH_SIGN_XDR_ALG_TYPE_LEN) {
         BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
         return CRYPT_INVALID_ARG;

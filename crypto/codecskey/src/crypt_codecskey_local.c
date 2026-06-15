@@ -1208,8 +1208,11 @@ static int32_t ParseSubPubkeyAsn1(CRYPT_EAL_LibCtx *libctx, const char *attrName
         case BSL_CID_ML_KEM_1024:
             return ParseMlKemPubkeyAsn1Buff(libctx, attrName, bitPubkey.buff, bitPubkey.len, cid, ealPubKey);
 #endif
-#if defined(HITLS_CRYPTO_XMSS) || defined(HITLS_CRYPTO_XMSSMT)
+#ifdef HITLS_CRYPTO_XMSS
         case BSL_CID_XMSS:
+            return ParseXmssPubKeyAsn1Buff(libctx, attrName, &bitPubkey, cid, ealPubKey);
+#endif
+#ifdef HITLS_CRYPTO_XMSSMT
         case BSL_CID_XMSSMT:
             return ParseXmssPubKeyAsn1Buff(libctx, attrName, &bitPubkey, cid, ealPubKey);
 #endif
