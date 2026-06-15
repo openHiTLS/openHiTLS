@@ -54,17 +54,16 @@ typedef struct _HITLS_X509_VerifyParam {
 #endif
 } HITLS_X509_VerifyParam;
 
+typedef struct _HITLS_X509_Store HITLS_X509_Store;
+
 struct _HITLS_X509_StoreCtx {
-    HITLS_X509_List *store;
-    HITLS_X509_List *crl;
+    HITLS_X509_Store *store;
     BSL_SAL_RefCount references;
     HITLS_X509_VerifyParam verifyParam;
     CRYPT_EAL_LibCtx *libCtx;         // Provider context
     const char *attrName;             // Provider attribute name
+    HITLS_X509_List *crls;            // CRL snapshot built during verification
     HITLS_X509_List *certChain;       // Certificate chain built during verification
-#ifdef HITLS_PKI_X509_VFY_LOCATION
-    BslList *caPaths;                 // List of CA directory paths for on-demand loading (char*)
-#endif
 #ifdef HITLS_PKI_X509_VFY_CB
     int32_t error;                    // Error code
     int32_t curDepth;                 // Current verification depth
@@ -87,8 +86,6 @@ int32_t HITLS_X509_VerifyCrl(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_List *cha
 int32_t HITLS_X509_CertCmp(HITLS_X509_Cert *certOri, HITLS_X509_Cert *cert);
 
 int32_t HITLS_X509_CrlCmp(HITLS_X509_Crl *crlOri, HITLS_X509_Crl *crl);
-
-int32_t HITLS_X509_GetIssuerFromStore(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_Cert *cert, HITLS_X509_Cert **issuer);
 
 #ifdef __cplusplus
 }

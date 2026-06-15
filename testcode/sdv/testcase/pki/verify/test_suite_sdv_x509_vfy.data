@@ -601,6 +601,9 @@ SDV_X509_CRL_VERIFY_WITH_VARIOUS_CHARSET_FUNC_TC001:"../testdata/cert/chain/char
 SDV_X509_STORE_CTX_DUP_FUNC_TC001
 SDV_X509_STORE_CTX_DUP_FUNC_TC001:"../testdata/cert/test_for_crl/crl_verify/certs/ca.crt":"../testdata/cert/test_for_crl/crl_verify/intermediate/certs/intermediate.crt":"../testdata/cert/test_for_crl/crl_verify/crl/ca.crl":"../testdata/cert/test_for_crl/crl_verify/intermediate/crl/intermediate.crl"
 
+SDV_X509_STORE_CTX_DUP_SHARED_STORE_TC001
+SDV_X509_STORE_CTX_DUP_SHARED_STORE_TC001:"../testdata/tls/certificate/der/rsa_with_san_ext/rootca.der"
+
 SDV_X509_STORE_CTX_DUP_FAIL_CLEANUP_TC001
 SDV_X509_STORE_CTX_DUP_FAIL_CLEANUP_TC001:"../testdata/tls/certificate/der/rsa_with_san_ext/rootca.der"
 

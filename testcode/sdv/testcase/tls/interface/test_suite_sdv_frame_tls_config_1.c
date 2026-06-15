@@ -37,6 +37,7 @@
 #include <sys/time.h>
 #include <sys/ioctl.h>
 #include "bsl_sal.h"
+#include "hitls_x509_store_local.h"
 #include "sal_net.h"
 #include "hitls.h"
 #include "frame_tls.h"
@@ -1818,7 +1819,7 @@ void UT_TLS_CFG_LOADVERIFYDIR_MULTI_PATH_TC001(void)
     ASSERT_TRUE(store != NULL);
 
     HITLS_X509_StoreCtx *storeCtx = (HITLS_X509_StoreCtx *)store;
-    BslList *caPaths = storeCtx->caPaths;
+    BslList *caPaths = storeCtx->store->caPaths;
     ASSERT_TRUE(caPaths != NULL);
 
     int expect_count = 3;
@@ -2097,11 +2098,11 @@ void UT_TLS_CFG_LOADDEFAULTCAPATH_TC003(void)
     // Cast to HITLS_X509_StoreCtx to access internal structure
     HITLS_X509_StoreCtx *storeCtx = (HITLS_X509_StoreCtx *)store;
     ASSERT_TRUE(storeCtx != NULL);
-    ASSERT_TRUE(storeCtx->caPaths != NULL);
-    ASSERT_TRUE(BSL_LIST_COUNT(storeCtx->caPaths) > 0);
+    ASSERT_TRUE(storeCtx->store->caPaths != NULL);
+    ASSERT_TRUE(BSL_LIST_COUNT(storeCtx->store->caPaths) > 0);
 
     // Get the first path from the caPaths list
-    char *pathPtr = (char *)BSL_LIST_GET_FIRST(storeCtx->caPaths);
+    char *pathPtr = (char *)BSL_LIST_GET_FIRST(storeCtx->store->caPaths);
     ASSERT_TRUE(pathPtr != NULL);
 
     // Construct expected default path
@@ -2586,13 +2587,13 @@ static int32_t CheckConfigCaPaths(const HITLS_Config *config, const char **expec
     }
 
     HITLS_X509_StoreCtx *storeCtx = (HITLS_X509_StoreCtx *)store;
-    if (storeCtx->caPaths == NULL || (uint32_t)BSL_LIST_COUNT(storeCtx->caPaths) != pathCount) {
+    if (storeCtx->store->caPaths == NULL || (uint32_t)BSL_LIST_COUNT(storeCtx->store->caPaths) != pathCount) {
         return HITLS_CONFIG_INVALID_LENGTH;
     }
 
     uint32_t index = 0;
-    for (BslListNode *node = BSL_LIST_FirstNode(storeCtx->caPaths); node != NULL;
-        node = BSL_LIST_GetNextNode(storeCtx->caPaths, node)) {
+    for (BslListNode *node = BSL_LIST_FirstNode(storeCtx->store->caPaths); node != NULL;
+        node = BSL_LIST_GetNextNode(storeCtx->store->caPaths, node)) {
         if (index >= pathCount || strcmp((const char *)BSL_LIST_GetData(node), expectPaths[index]) != 0) {
             return HITLS_INTERNAL_EXCEPTION;
         }
@@ -2603,7 +2604,7 @@ static int32_t CheckConfigCaPaths(const HITLS_Config *config, const char **expec
     }
 
     index = pathCount;
-    for (BslListNode *node = BSL_LIST_LastNode(storeCtx->caPaths); node != NULL;
+    for (BslListNode *node = BSL_LIST_LastNode(storeCtx->store->caPaths); node != NULL;
         node = BSL_LIST_GetPrevNode(node)) {
         index--;
         if (strcmp((const char *)BSL_LIST_GetData(node), expectPaths[index]) != 0) {
@@ -3928,6 +3929,229 @@ void SDV_CONFIG_CONCURRENT_READ_WRITE_DTLCP_TC001(void)
     FRAME_Init();
     RunConcurrentReadWriteProtocolCase(CONFIG_CONCURRENT_PROTO_DTLCP11);
 #endif
+}
+/* END_CASE */
+
+typedef struct {
+    HITLS_Config *clientConfig;
+    HITLS_Config *serverConfig;
+    HITLS_CERT_X509 *repeatCaCert;
+    const char *caFile;
+    const char *chainFile;
+    const char *clientLeafFile;
+    const char *clientKeyFile;
+    const char *serverLeafFile;
+    const char *serverKeyFile;
+    const char *repeatCaFile;
+    time_t deadline;
+    volatile bool stopRequested;
+} ConfigMutationHandshakeSharedData;
+
+typedef struct {
+    ConfigMutationHandshakeSharedData *shared;
+    int32_t result;
+    uint32_t mutationCount;
+} ConfigMutationThreadData;
+
+typedef struct {
+    ConfigMutationHandshakeSharedData *shared;
+    int32_t result;
+    uint32_t successCount;
+} HandshakeStressThreadData;
+
+static void *ConfigMutationClientThread(void *arg)
+{
+    ConfigMutationThreadData *threadData = (ConfigMutationThreadData *)arg;
+    ConfigMutationHandshakeSharedData *shared = threadData->shared;
+    int32_t ret;
+
+    threadData->result = HITLS_SUCCESS;
+    threadData->mutationCount = 0;
+    while (!shared->stopRequested && time(NULL) < shared->deadline) {
+        /* Repeatedly add the same CA cert into the shared default store.
+         * The first add may succeed, and later adds are expected to hit CERT_EXIST because there is no delete path. */
+        ret = HITLS_CFG_AddCertToStore(shared->clientConfig, shared->repeatCaCert,
+            TLS_CERT_STORE_TYPE_DEFAULT, true);
+        if (ret == HITLS_SUCCESS || ret == HITLS_X509_ERR_CERT_EXIST) {
+            threadData->mutationCount++;
+        } else {
+            threadData->result = ret;
+            shared->stopRequested = true;
+            break;
+        }
+        BSL_ERR_RemoveErrorStack(true);
+        (void)usleep(5000);
+    }
+
+    BSL_ERR_RemoveErrorStack(true);
+    return NULL;
+}
+
+static void *SharedConfigHandshakeStressThread(void *arg)
+{
+    HandshakeStressThreadData *threadData = (HandshakeStressThreadData *)arg;
+    ConfigMutationHandshakeSharedData *shared = threadData->shared;
+    FRAME_LinkObj *client = NULL;
+    FRAME_LinkObj *server = NULL;
+    int32_t ret = HITLS_SUCCESS;
+
+    threadData->result = HITLS_INTERNAL_EXCEPTION;
+    threadData->successCount = 0;
+    while (!shared->stopRequested && time(NULL) < shared->deadline) {
+        client = FRAME_CreateLinkEx(shared->clientConfig, BSL_UIO_TCP);
+        server = FRAME_CreateLinkEx(shared->serverConfig, BSL_UIO_TCP);
+        if (client == NULL || server == NULL) {
+            ret = HITLS_INTERNAL_EXCEPTION;
+            goto EXIT;
+        }
+
+        ret = FRAME_CreateConnection(client, server, true, HS_STATE_BUTT);
+        if (ret == HITLS_SUCCESS) {
+            threadData->successCount++;
+        } else {
+            goto EXIT;
+        }
+
+        FRAME_FreeLink(client);
+        FRAME_FreeLink(server);
+        client = NULL;
+        server = NULL;
+        BSL_ERR_RemoveErrorStack(true);
+        (void)usleep(1000);
+    }
+
+    ret = HITLS_SUCCESS;
+
+EXIT:
+    if (ret != HITLS_SUCCESS) {
+        shared->stopRequested = true;
+    }
+    threadData->result = ret;
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+    BSL_ERR_RemoveErrorStack(true);
+    return NULL;
+}
+
+/* @
+* @test SDV_CONFIG_CERT_MUTATION_HANDSHAKE_MULTI_THREAD_TC001
+* @spec -
+* @title Repeatedly add the same CA certificate into the shared client store while another thread keeps handshaking
+* @precon nan
+* @brief
+* 1. Create shared TLS1.2 client/server configs and configure both with a complete certificate chain.
+* 2. Parse one extra CA certificate that is not initially present in the client's default store.
+* 3. Start one worker thread that repeatedly calls AddCertToStore with that same certificate.
+* 4. Start another worker thread that repeatedly creates client/server links from the shared configs and performs
+*    the handshake for a fixed duration.
+* 5. Stop both threads, recycle resources, and confirm the repeated store writes do not break the handshake flow.
+* @expect
+* 1. The stress run completes without abnormal memory access.
+* 2. The mutation worker completes repeated add attempts, where later adds may return CERT_EXIST.
+* 3. The handshake worker continues to complete successful handshakes throughout the stress window.
+* 3. The case exits without leaving a residual error stack.
+* @prior Level 1
+* @auto TRUE
+@ */
+/* BEGIN_CASE */
+void SDV_CONFIG_CERT_MUTATION_HANDSHAKE_MULTI_THREAD_TC001(void)
+{
+    enum {
+        STRESS_DURATION_SECONDS = 10
+    };
+    pthread_t configThread = 0;
+    pthread_t handshakeThread = 0;
+    bool configThreadCreated = false;
+    bool handshakeThreadCreated = false;
+    ConfigMutationHandshakeSharedData shared = {0};
+    ConfigMutationThreadData configThreadData = {0};
+    HandshakeStressThreadData handshakeThreadData = {0};
+    FRAME_LinkObj *warmupClient = NULL;
+    FRAME_LinkObj *warmupServer = NULL;
+    int32_t createRet = HITLS_SUCCESS;
+    int32_t joinRet = HITLS_SUCCESS;
+
+    FRAME_Init();
+    shared.clientConfig = HITLS_CFG_NewTLS12Config();
+    shared.serverConfig = HITLS_CFG_NewTLS12Config();
+    ASSERT_TRUE(shared.clientConfig != NULL);
+    ASSERT_TRUE(shared.serverConfig != NULL);
+
+    shared.clientConfig->isSupportSessionTicket = false;
+    shared.serverConfig->isSupportSessionTicket = false;
+    shared.caFile = "rsa_sha256/ca.der";
+    shared.chainFile = "rsa_sha256/inter.der";
+    shared.clientLeafFile = "rsa_sha256/client.der";
+    shared.clientKeyFile = "rsa_sha256/client.key.der";
+    shared.serverLeafFile = "rsa_sha256/server.der";
+    shared.serverKeyFile = "rsa_sha256/server.key.der";
+    shared.repeatCaFile = "../testdata/tls/certificate/pem/ecdsa_sha256/ca.pem";
+    shared.repeatCaCert = HITLS_CFG_ParseCert(shared.clientConfig, (const uint8_t *)shared.repeatCaFile,
+        (uint32_t)strlen(shared.repeatCaFile) + 1, TLS_PARSE_TYPE_FILE, TLS_PARSE_FORMAT_PEM);
+    ASSERT_TRUE(shared.repeatCaCert != NULL);
+
+    ASSERT_EQ(HITLS_CFG_SetClientVerifySupport(shared.serverConfig, true), HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_CFG_SetNoClientCertSupport(shared.serverConfig, true), HITLS_SUCCESS);
+    ASSERT_EQ(HiTLS_X509_LoadCertAndKey(shared.serverConfig, shared.caFile, shared.chainFile,
+        shared.serverLeafFile, NULL, shared.serverKeyFile, NULL), HITLS_SUCCESS);
+    ASSERT_EQ(HiTLS_X509_LoadCertAndKey(shared.clientConfig, shared.caFile, shared.chainFile,
+        shared.clientLeafFile, NULL, shared.clientKeyFile, NULL), HITLS_SUCCESS);
+
+    /* Warm up once before concurrent mutation so any lazy initialization finishes in a stable state. */
+    warmupClient = FRAME_CreateLinkEx(shared.clientConfig, BSL_UIO_TCP);
+    warmupServer = FRAME_CreateLinkEx(shared.serverConfig, BSL_UIO_TCP);
+    ASSERT_TRUE(warmupClient != NULL);
+    ASSERT_TRUE(warmupServer != NULL);
+    ASSERT_EQ(FRAME_CreateConnection(warmupClient, warmupServer, true, HS_STATE_BUTT), HITLS_SUCCESS);
+    FRAME_FreeLink(warmupClient);
+    FRAME_FreeLink(warmupServer);
+    warmupClient = NULL;
+    warmupServer = NULL;
+    BSL_ERR_RemoveErrorStack(true);
+
+    shared.deadline = time(NULL) + STRESS_DURATION_SECONDS;
+    shared.stopRequested = false;
+    configThreadData.shared = &shared;
+    handshakeThreadData.shared = &shared;
+
+    if (pthread_create(&configThread, NULL, ConfigMutationClientThread, &configThreadData) != 0) {
+        createRet = HITLS_INTERNAL_EXCEPTION;
+        goto JOIN_THREADS;
+    }
+    configThreadCreated = true;
+
+    if (pthread_create(&handshakeThread, NULL, SharedConfigHandshakeStressThread, &handshakeThreadData) != 0) {
+        createRet = HITLS_INTERNAL_EXCEPTION;
+        shared.stopRequested = true;
+        goto JOIN_THREADS;
+    }
+    handshakeThreadCreated = true;
+
+JOIN_THREADS:
+    if (configThreadCreated && pthread_join(configThread, NULL) != 0) {
+        joinRet = HITLS_INTERNAL_EXCEPTION;
+    }
+    if (handshakeThreadCreated && pthread_join(handshakeThread, NULL) != 0) {
+        joinRet = HITLS_INTERNAL_EXCEPTION;
+    }
+
+    ASSERT_EQ(createRet, HITLS_SUCCESS);
+    ASSERT_EQ(joinRet, HITLS_SUCCESS);
+    ASSERT_EQ(configThreadData.result, HITLS_SUCCESS);
+    ASSERT_EQ(handshakeThreadData.result, HITLS_SUCCESS);
+    ASSERT_TRUE(configThreadData.mutationCount > 0);
+    ASSERT_TRUE(handshakeThreadData.successCount > 0);
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
+EXIT:
+    FRAME_FreeLink(warmupClient);
+    FRAME_FreeLink(warmupServer);
+    if (shared.clientConfig != NULL && shared.repeatCaCert != NULL) {
+        (void)HITLS_CFG_FreeCert(shared.clientConfig, shared.repeatCaCert);
+    }
+    HITLS_CFG_FreeConfig(shared.clientConfig);
+    HITLS_CFG_FreeConfig(shared.serverConfig);
+    CleanupConcurrentConfigCaseState();
 }
 /* END_CASE */
 

@@ -33,6 +33,7 @@
 #include "crypt_algid.h"
 #include "crypt_errno.h"
 #include "hitls_x509_verify.h"
+#include "hitls_x509_store_local.h"
 #include "crypt_utils.h"
 #ifdef HITLS_PKI_X509_VFY_IDENTITY
 #include "sal_ip_util.h"
@@ -145,16 +146,10 @@ void HITLS_X509_StoreCtxFree(HITLS_X509_StoreCtx *storeCtx)
     BSL_SAL_FREE(storeCtx->verifyParam.ip);
     BSL_SAL_FREE(storeCtx->verifyParam.peername);
 #endif
-    BSL_LIST_FREE(storeCtx->store, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);
-    BSL_LIST_FREE(storeCtx->crl, (BSL_LIST_PFUNC_FREE)HITLS_X509_CrlFree);
+    BSL_LIST_FREE(storeCtx->crls, (BSL_LIST_PFUNC_FREE)HITLS_X509_CrlFree);
+    storeCtx->crls = NULL;
+    HITLS_X509_StoreFree(storeCtx->store);
     BSL_LIST_FREE(storeCtx->certChain, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);
-
-    // Free CA paths list
-#ifdef HITLS_PKI_X509_VFY_LOCATION
-    if (storeCtx->caPaths != NULL) {
-        BSL_LIST_FREE(storeCtx->caPaths, (BSL_LIST_PFUNC_FREE)BSL_SAL_Free);
-    }
-#endif
 
     BSL_SAL_ReferencesFree(&storeCtx->references);
     BSL_SAL_Free(storeCtx);
@@ -219,31 +214,12 @@ HITLS_X509_StoreCtx *HITLS_X509_StoreCtxNew(void)
     }
 
     (void)memset(ctx, 0, sizeof(HITLS_X509_StoreCtx));
-    ctx->store = BSL_LIST_New(sizeof(HITLS_X509_Cert));
+    ctx->store = HITLS_X509_StoreNew();
     if (ctx->store == NULL) {
         BSL_SAL_Free(ctx);
         BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
         return NULL;
     }
-    ctx->crl = BSL_LIST_New(sizeof(HITLS_X509_Crl));
-    if (ctx->crl == NULL) {
-        BSL_SAL_FREE(ctx->store);
-        BSL_SAL_Free(ctx);
-        BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
-        return NULL;
-    }
-
-    // Initialize CA paths list
-#ifdef HITLS_PKI_X509_VFY_LOCATION
-    ctx->caPaths = BSL_LIST_New(sizeof(char *));
-    if (ctx->caPaths == NULL) {
-        BSL_SAL_FREE(ctx->store);
-        BSL_SAL_FREE(ctx->crl);
-        BSL_SAL_Free(ctx);
-        BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
-        return NULL;
-    }
-#endif
 
     ctx->verifyParam.maxDepth = HITLS_X509_MAX_DEPTH;
     ctx->verifyParam.securityBits = 0; // 0: The default number of secure bits.
@@ -347,146 +323,32 @@ static int32_t X509_SetPurpose(HITLS_X509_StoreCtx *storeCtx, int32_t *val, uint
     return HITLS_PKI_SUCCESS;
 }
 
-static int32_t X509_CheckCert(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_Cert *cert, HITLS_X509_Cert **findCert)
-{
-    if (!HITLS_X509_CertIsCA(cert)) {
-        BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_CERT_NOT_CA);
-        return HITLS_X509_ERR_CERT_NOT_CA;
-    }
-    HITLS_X509_List *certStore = storeCtx->store;
-    HITLS_X509_Cert *tmp = BSL_LIST_SearchDataConst(certStore, cert, (BSL_LIST_PFUNC_CMP)HITLS_X509_CertCmp, NULL);
-    if (tmp != NULL) {
-        *findCert = tmp;
-        return HITLS_X509_ERR_CERT_EXIST;
-    }
-
-    return HITLS_PKI_SUCCESS;
-}
-
 static int32_t X509_SetCA(HITLS_X509_StoreCtx *storeCtx, void *val, bool isCopy)
 {
-    HITLS_X509_Cert *findCert = NULL;
-    int32_t ret = X509_CheckCert(storeCtx, val, &findCert);
-    if (ret == HITLS_X509_ERR_CERT_EXIST) {
-        if (findCert == val) {
-            BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_CERT_EXIST);
-            return HITLS_X509_ERR_CERT_EXIST;
-        }
-        if (!isCopy) {
-            HITLS_X509_CertFree(val);
-        }
-        return HITLS_PKI_SUCCESS;
-    }
-    if (ret != HITLS_PKI_SUCCESS) {
-        return ret;
-    }
-    if (isCopy) {
-        int ref;
-        ret = HITLS_X509_CertCtrl(val, HITLS_X509_REF_UP, &ref, sizeof(int));
-        if (ret != HITLS_PKI_SUCCESS) {
-            return ret;
-        }
-    }
-
-    ret = BSL_LIST_AddElement(storeCtx->store, val, BSL_LIST_POS_BEGIN);
-    if (ret != BSL_SUCCESS) {
-        if (isCopy) {
-            HITLS_X509_CertFree(val);
-        }
-        BSL_ERR_PUSH_ERROR(ret);
-    }
-    return ret;
-}
-
-static int32_t X509_CheckCRL(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_Crl *crl)
-{
-    HITLS_X509_List *crlStore = storeCtx->crl;
-    HITLS_X509_Crl *tmp = BSL_LIST_SearchDataConst(crlStore, crl, (BSL_LIST_PFUNC_CMP)HITLS_X509_CrlCmp, NULL);
-    if (tmp != NULL) {
-        BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_CRL_EXIST);
-        return HITLS_X509_ERR_CRL_EXIST;
-    }
-
-    return HITLS_PKI_SUCCESS;
+    int32_t cmd = isCopy ? HITLS_X509_STORECTX_DEEP_COPY_SET_CA : HITLS_X509_STORECTX_SHALLOW_COPY_SET_CA;
+    return HITLS_X509_StoreCtrl(storeCtx->store, cmd, val, 0);
 }
 
 static int32_t X509_SetCRL(HITLS_X509_StoreCtx *storeCtx, void *val)
 {
-    int32_t ret = X509_CheckCRL(storeCtx, val);
-    if (ret != HITLS_PKI_SUCCESS) {
-        return ret;
-    }
-    int ref;
-    ret = HITLS_X509_CrlCtrl(val, HITLS_X509_REF_UP, &ref, sizeof(int));
-    if (ret != HITLS_PKI_SUCCESS) {
-        return ret;
-    }
-    ret = BSL_LIST_AddElement(storeCtx->crl, val, BSL_LIST_POS_BEGIN);
-    if (ret != BSL_SUCCESS) {
-        HITLS_X509_CrlFree(val);
-        BSL_ERR_PUSH_ERROR(ret);
-    }
-    return ret;
+    return HITLS_X509_StoreCtrl(storeCtx->store, HITLS_X509_STORECTX_SET_CRL, val, 0);
 }
 
 #ifdef HITLS_PKI_X509_VFY_LOCATION
-static int32_t X509_AddCAPath(HITLS_X509_StoreCtx *storeCtx, const void *val, uint32_t valLen)
+static int32_t X509_AddCAPath(HITLS_X509_StoreCtx *storeCtx, void *val, uint32_t valLen)
 {
-    if (valLen == 0 || valLen > MAX_PATH_LEN) {
-        BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
-        return HITLS_X509_ERR_INVALID_PARAM;
-    }
-
-    const char *caPath = (const char *)val;
-
-    for (BslListNode *pathNode = BSL_LIST_FirstNode(storeCtx->caPaths); pathNode != NULL;
-        pathNode = BSL_LIST_GetNextNode(storeCtx->caPaths, pathNode)) {
-        char *existPath = (char *)BSL_LIST_GetData(pathNode);
-        if (strlen(existPath) == valLen && memcmp(existPath, caPath, valLen) == 0) {
-            return HITLS_PKI_SUCCESS;
-        }
-    }
-
-    // Allocate and copy new path
-    char *pathCopy = BSL_SAL_Calloc(valLen + 1, sizeof(char));
-    if (pathCopy == NULL) {
-        BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
-        return BSL_MALLOC_FAIL;
-    }
-    memcpy(pathCopy, caPath, valLen);
-    // Add to paths list
-    int32_t ret = BSL_LIST_AddElement(storeCtx->caPaths, pathCopy, BSL_LIST_POS_END);
-    if (ret != BSL_SUCCESS) {
-        BSL_SAL_Free(pathCopy);
-        BSL_ERR_PUSH_ERROR(ret);
-        return ret;
-    }
-
-    return HITLS_PKI_SUCCESS;
+    return HITLS_X509_StoreCtrl(storeCtx->store, HITLS_X509_STORECTX_ADD_CA_PATH, val, valLen);
 }
 
 static int32_t X509_SetDefaultCAPath(HITLS_X509_StoreCtx *storeCtx)
 {
-    char defaultPath[MAX_PATH_LEN] = {0};
-    int n = snprintf(defaultPath, sizeof(defaultPath), "%s/ssl/certs", OPENHITLSDIR);
-    if (n < 0 || (size_t)n >= sizeof(defaultPath)) {
-        BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
-        return HITLS_X509_ERR_INVALID_PARAM;
-    }
-
-    /* Use X509_AddCAPath to add the default path */
-    return X509_AddCAPath(storeCtx, defaultPath, (uint32_t)strlen(defaultPath));
+    return HITLS_X509_StoreCtrl(storeCtx->store, HITLS_X509_STORECTX_SET_DEFAULT_PATH, NULL, 0);
 }
 #endif /* HITLS_PKI_X509_VFY_LOCATION */
 
 static int32_t X509_ClearCRL(HITLS_X509_StoreCtx *storeCtx)
 {
-    if (storeCtx->crl == NULL) {
-        return HITLS_PKI_SUCCESS;
-    }
-
-    BSL_LIST_DeleteAll(storeCtx->crl, (BSL_LIST_PFUNC_FREE)HITLS_X509_CrlFree);
-    return HITLS_PKI_SUCCESS;
+    return HITLS_X509_StoreCtrl(storeCtx->store, HITLS_X509_STORECTX_CLEAR_CRL, NULL, 0);
 }
 
 static int32_t X509_RefUp(HITLS_X509_StoreCtx *storeCtx, void *val, uint32_t valLen)
@@ -1047,144 +909,34 @@ static int32_t X509_CheckCrlTimeWithoutCb(int64_t *time, HITLS_X509_Crl *crl)
 static int32_t X509_AddCertToChain(HITLS_X509_List *chain, HITLS_X509_Cert *cert)
 {
     int ref;
+    /* The built chain owns its certificates, so retain one reference for the chain entry. */
     int32_t ret = HITLS_X509_CertCtrl(cert, HITLS_X509_REF_UP, &ref, sizeof(int));
     if (ret != HITLS_PKI_SUCCESS) {
         return ret;
     }
     ret = BSL_LIST_AddElement(chain, cert, BSL_LIST_POS_END);
     if (ret != BSL_SUCCESS) {
+        /* Drop the chain reference if the append fails. */
         HITLS_X509_CertFree(cert);
         BSL_ERR_PUSH_ERROR(ret);
     }
     return ret;
 }
 
-#ifdef HITLS_PKI_X509_VFY_LOCATION
-static int32_t CheckAndAddIssuerCert(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_Cert *candidateCert,
-                                     HITLS_X509_Cert *cert, HITLS_X509_Cert **issue, bool *issueInTrust)
-{
-    bool res = HITLS_X509_CheckIssued(candidateCert, cert);
-    if (res) {
-        *issue = candidateCert;
-        *issueInTrust = true;
-        int32_t ret = X509_SetCA(storeCtx, candidateCert, false);
-        if (ret == HITLS_PKI_SUCCESS) {
-            return HITLS_PKI_SUCCESS;
-        }
-    }
-    return HITLS_X509_ERR_ISSUE_CERT_NOT_FOUND;
-}
-
-static int32_t HITLS_X509_GetCertBySubjectDer(HITLS_X509_StoreCtx *storeCtx, const BSL_ASN1_Buffer *subjectDerData,
-                                              HITLS_X509_Cert *cert, HITLS_X509_Cert **issue, bool *issueInTrust)
-{
-    // Only try on-demand loading from CA paths using hash-based lookup
-    if (storeCtx->caPaths == NULL || BSL_LIST_COUNT(storeCtx->caPaths) <= 0) {
-        BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_ISSUE_CERT_NOT_FOUND);
-        return HITLS_X509_ERR_ISSUE_CERT_NOT_FOUND;
-    }
-
-    // Calculate hash from canon-encoded subject DN
-    uint32_t hash = 0;
-    uint8_t digest[CRYPT_SHA1_DIGESTSIZE];
-    uint32_t digestLen = CRYPT_SHA1_DIGESTSIZE;
-    int32_t ret = HITLS_PKI_SUCCESS;
-    CRYPT_EAL_MdCtx *mdCtx = CRYPT_EAL_ProviderMdNewCtx(storeCtx->libCtx, CRYPT_MD_SHA1, storeCtx->attrName);
-    if (mdCtx != NULL) {
-        if (CRYPT_EAL_MdInit(mdCtx) == CRYPT_SUCCESS &&
-            CRYPT_EAL_MdUpdate(mdCtx, subjectDerData->buff, subjectDerData->len) == CRYPT_SUCCESS) {
-            if (CRYPT_EAL_MdFinal(mdCtx, digest, &digestLen) == CRYPT_SUCCESS && digestLen >= 4) {
-                hash = (uint32_t)digest[0] | ((uint32_t)digest[1] << 8) |
-                       ((uint32_t)digest[2] << 16) | ((uint32_t)digest[3] << 24);
-            }
-        }
-        CRYPT_EAL_MdFreeCtx(mdCtx);
-    }
-
-    if (hash == 0) {
-        BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_ISSUE_CERT_NOT_FOUND);
-        return HITLS_X509_ERR_ISSUE_CERT_NOT_FOUND;
-    }
-
-    // Try to load certificate using hash-based file lookup from CA paths
-    for (BslListNode *pathNode = BSL_LIST_FirstNode(storeCtx->caPaths); pathNode != NULL;
-        pathNode = BSL_LIST_GetNextNode(storeCtx->caPaths, pathNode)) {
-        char *caPath = (char *)BSL_LIST_GetData(pathNode);
-        int32_t seq = 0;
-        while (1) {
-            char filename[MAX_PATH_LEN] = {0};
-            int n = snprintf(filename, sizeof(filename), "%s/%08x.%d", caPath, hash, seq);
-            if (n < 0 || (size_t)n >= sizeof(filename)) {
-                break;
-            }
-            HITLS_X509_Cert *candidateCert = NULL;
-            ret = HITLS_X509_CertParseFile(BSL_FORMAT_PEM, filename, &candidateCert);
-            if (ret != HITLS_PKI_SUCCESS) {
-                break;
-            }
-            if (CheckAndAddIssuerCert(storeCtx, candidateCert, cert, issue, issueInTrust) == HITLS_PKI_SUCCESS) {
-                return HITLS_PKI_SUCCESS;
-            }
-            HITLS_X509_CertFree(candidateCert);
-            seq++;
-        }
-    }
-    BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_ISSUE_CERT_NOT_FOUND);
-    return HITLS_X509_ERR_ISSUE_CERT_NOT_FOUND;
-}
-
-static int32_t FindIssuerByDer(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_Cert *cert, HITLS_X509_Cert **issue,
-                               bool *issueInTrust)
-{
-    BslList *rawIssuer = NULL;
-    BSL_ASN1_Buffer issuerDerData = {0};
-    int32_t ret = HITLS_X509_CertCtrl(cert, HITLS_X509_GET_ISSUER_DN, &rawIssuer, sizeof(BslList *));
-    if (ret != HITLS_PKI_SUCCESS) {
-        return ret;
-    }
-    ret = HITLS_X509_EncodeCanonNameList(rawIssuer, &issuerDerData);
-    if (ret != HITLS_PKI_SUCCESS) {
-        return ret;
-    }
-    if (issuerDerData.buff == NULL || issuerDerData.len == 0) {
-        BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_ISSUE_CERT_NOT_FOUND);
-        return HITLS_X509_ERR_ISSUE_CERT_NOT_FOUND;
-    }
-
-    ret = HITLS_X509_GetCertBySubjectDer(storeCtx, &issuerDerData, cert, issue, issueInTrust);
-    BSL_SAL_Free(issuerDerData.buff);
-    return ret;
-}
-#endif /* HITLS_PKI_X509_VFY_LOCATION */
-
-/* The function can only return success and CERT NOT FOUND */
+/* The function returns success, CERT NOT FOUND, or propagated internal errors from trust lookup. */
 static int32_t X509_FindIssueCert(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_List *certChain, HITLS_X509_Cert *cert,
     HITLS_X509_Cert **issue, bool *issueInTrust)
 {
-    // First try to find issuer in explicitly loaded store
-    HITLS_X509_List *store = storeCtx->store;
+    *issue = NULL;
+    *issueInTrust = false;
     BSL_ERR_SET_MARK();
-    for (BslListNode *certNode = BSL_LIST_FirstNode(store); certNode != NULL;
-        certNode = BSL_LIST_GetNextNode(store, certNode)) {
-        HITLS_X509_Cert *tmp = (HITLS_X509_Cert *)BSL_LIST_GetData(certNode);
-        if (HITLS_X509_CheckIssued(tmp, cert)) {
-            *issue = tmp;
-            BSL_ERR_POP_TO_MARK();
-            *issueInTrust = true;
-            return HITLS_PKI_SUCCESS;
-        }
+    // First try to find issuer in explicitly loaded store
+    int32_t ret = HITLS_X509_StoreFindIssuerInTrust(storeCtx->store, storeCtx, cert, issue);
+    if (ret == HITLS_PKI_SUCCESS) {
+        BSL_ERR_POP_TO_MARK();
+        *issueInTrust = true;
+        return HITLS_PKI_SUCCESS;
     }
-
-#ifdef HITLS_PKI_X509_VFY_LOCATION
-    // If we have CA paths set, try on-demand loading based on issuer DER-encoded DN
-    if (BSL_LIST_COUNT(storeCtx->caPaths) > 0) {
-        int32_t ret = FindIssuerByDer(storeCtx, cert, issue, issueInTrust);
-        if (ret == HITLS_PKI_SUCCESS) {
-            BSL_ERR_POP_TO_MARK();
-            return HITLS_PKI_SUCCESS;
-        }
-    }
-#endif /* HITLS_PKI_X509_VFY_LOCATION */
 
     // Then try the certificate chain if provided, skipping the cert itself
     if (certChain != NULL) {
@@ -1592,6 +1344,20 @@ static int32_t X509_StoreCheckSignature(const BSL_Buffer *sm2UserId, const CRYPT
 }
 
 #ifndef HITLS_PKI_X509_VFY_CRL_LITE
+static void X509_ClearCrlSelection(HITLS_X509_CrlSelection *selection)
+{
+    if (selection == NULL) {
+        return;
+    }
+    HITLS_X509_CrlFree(selection->baseCrl);
+    HITLS_X509_CrlFree(selection->deltaCrl);
+    selection->baseCrl = NULL;
+    selection->deltaCrl = NULL;
+    selection->issuerCert = NULL;
+    selection->newReasons = HITLS_X509_REASON_FLAG_NONE;
+    selection->errorPath = 0;
+}
+
 static const BSL_ASN1_Buffer *X509_GetRawExtnValueByCid(HITLS_X509_Ext *ext, BslCid cid)
 {
     if (ext == NULL || ext->extList == NULL) {
@@ -1834,7 +1600,6 @@ static int32_t X509_CheckCertInCrlIdpScope(HITLS_X509_Cert *cert, HITLS_X509_Crl
     return HITLS_PKI_SUCCESS;
 }
 
-
 static bool X509_IsDeltaCrlIssuerMatch(HITLS_X509_Crl *deltaCrl, HITLS_X509_Crl *baseCrl)
 {
     return HITLS_X509_CmpNameNode(deltaCrl->tbs.issuerName, baseCrl->tbs.issuerName) == 0;
@@ -1918,8 +1683,8 @@ static HITLS_X509_Crl *X509_FindDeltaCrl(HITLS_X509_StoreCtx *storeCtx, HITLS_X5
     }
     HITLS_X509_Crl *retCrl = NULL;
     // Check rules refer to RFC5280 :https://datatracker.ietf.org/doc/html/rfc5280#section-5.2.4
-    for (BslListNode *crlNode = BSL_LIST_FirstNode(storeCtx->crl); crlNode != NULL;
-         crlNode = BSL_LIST_GetNextNode(storeCtx->crl, crlNode)) {
+    for (BslListNode *crlNode = BSL_LIST_FirstNode(storeCtx->crls); crlNode != NULL;
+         crlNode = BSL_LIST_GetNextNode(storeCtx->crls, crlNode)) {
         HITLS_X509_Crl *candidate = (HITLS_X509_Crl *)BSL_LIST_GetData(crlNode);
         if (candidate == baseCrl) {
             continue;
@@ -1941,13 +1706,27 @@ static HITLS_X509_Crl *X509_FindDeltaCrl(HITLS_X509_StoreCtx *storeCtx, HITLS_X5
         }
         // if there is a newer delta crl candidate, we select the newer one as the final delta crl
         if (retCrl == NULL) {
+            int ref = 0;
+            ret = HITLS_X509_CrlCtrl(candidate, HITLS_X509_REF_UP, &ref, sizeof(ref));
+            if (ret != HITLS_PKI_SUCCESS) {
+                goto ERR;
+            }
             retCrl = candidate;
         } else if (BSL_SAL_DateTimeCompare(&candidate->tbs.validTime.start, &retCrl->tbs.validTime.start, NULL) ==
                    BSL_TIME_DATE_AFTER) {
+            int ref = 0;
+            ret = HITLS_X509_CrlCtrl(candidate, HITLS_X509_REF_UP, &ref, sizeof(ref));
+            if (ret != HITLS_PKI_SUCCESS) {
+                goto ERR;
+            }
+            HITLS_X509_CrlFree(retCrl);
             retCrl = candidate;
         }
     }
     return retCrl;
+ERR:
+    HITLS_X509_CrlFree(retCrl);
+    return NULL;
 }
 
 static int32_t X509_CheckCrlCriticalExt(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_Crl *crl)
@@ -2017,8 +1796,9 @@ static bool X509_CheckAkiSkiMatch(HITLS_X509_Cert *cert, HITLS_X509_Crl *crl)
 static int32_t X509_FindBaseCrlAndDeltaCrl(HITLS_X509_StoreCtx *storeCtx, int64_t *time, HITLS_X509_Cert *cert,
                                            HITLS_X509_Cert *parent, HITLS_X509_CrlSelection *selection)
 {
-    for (BslListNode *crlNode = BSL_LIST_FirstNode(storeCtx->crl); crlNode != NULL;
-        crlNode = BSL_LIST_GetNextNode(storeCtx->crl, crlNode)) {
+    int32_t ret;
+    for (BslListNode *crlNode = BSL_LIST_FirstNode(storeCtx->crls); crlNode != NULL;
+        crlNode = BSL_LIST_GetNextNode(storeCtx->crls, crlNode)) {
         HITLS_X509_Crl *crl = (HITLS_X509_Crl *)BSL_LIST_GetData(crlNode);
         if (X509_CheckIsDeltaCrl(crl)) {
             continue;
@@ -2027,7 +1807,7 @@ static int32_t X509_FindBaseCrlAndDeltaCrl(HITLS_X509_StoreCtx *storeCtx, int64_
         uint8_t errorPath = 0;
         HITLS_X509_ExtIdp idp = { 0 };
         // If idp is invalid, we ignore this crl
-        int32_t ret = X509_GetAndCheckIdp(crl, &idp);
+        ret = X509_GetAndCheckIdp(crl, &idp);
         if (ret != HITLS_PKI_SUCCESS) {
             goto CONTINUE;
         }
@@ -2068,13 +1848,23 @@ static int32_t X509_FindBaseCrlAndDeltaCrl(HITLS_X509_StoreCtx *storeCtx, int64_
          * 2. newer ThisUpdate.
         */
         if (X509_CompareWithCurrentCrl(selection, crl, errorPath)) {
+            int ref = 0;
+            ret = HITLS_X509_CrlCtrl(crl, HITLS_X509_REF_UP, &ref, sizeof(ref));
+            if (ret != HITLS_PKI_SUCCESS) {
+                HITLS_X509_CrlFree(deltaCrl);
+                HITLS_X509_ClearIdp(&idp);
+                return ret;
+            }
+            X509_ClearCrlSelection(selection);
             selection->baseCrl = crl;
             selection->deltaCrl = deltaCrl;
             selection->errorPath = errorPath;
             selection->newReasons = idp.onlySomeReasons;
             selection->issuerCert = parent;
+            deltaCrl = NULL;
         }
 CONTINUE:
+        HITLS_X509_CrlFree(deltaCrl);
         HITLS_X509_ClearIdp(&idp);
     }
     if (selection->baseCrl == NULL) {
@@ -2174,6 +1964,25 @@ static int32_t CheckCrlIssuerKeyUsage(HITLS_X509_Cert *issueCert)
     return HITLS_PKI_SUCCESS;
 }
 
+static int32_t X509_HandleVerifyError(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_Cert *cert,
+    int32_t depth, int32_t err)
+{
+#ifdef HITLS_PKI_X509_VFY_CB
+    int32_t cbkRet = VerifyCertCbk(storeCtx, cert, depth, err);
+    if (cbkRet != HITLS_PKI_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(err);
+        return cbkRet;
+    }
+    return HITLS_PKI_SUCCESS;
+#else
+    (void)storeCtx;
+    (void)cert;
+    (void)depth;
+    BSL_ERR_PUSH_ERROR(err);
+    return err;
+#endif
+}
+
 int32_t HITLS_X509_CheckCertCrl(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_Cert *cert, HITLS_X509_Cert *parent,
     int32_t depth, int64_t *time)
 {
@@ -2189,28 +1998,71 @@ int32_t HITLS_X509_CheckCertCrl(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_Cert *
          * 3. HITLS_X509_CRL_ERROR_CRITICAL_EXT
          */
         ret = X509_FindBaseCrlAndDeltaCrl(storeCtx, time, cert, parent, &selection);
-        VFYCBK_FAIL_IF(ret != HITLS_PKI_SUCCESS, storeCtx, cert, depth, HITLS_X509_ERR_VFY_CRL_NOT_FOUND);
+        if (ret != HITLS_PKI_SUCCESS) {
+            if (ret != HITLS_X509_ERR_VFY_CRL_NOT_FOUND) {
+                goto EXIT;
+            }
+            ret = X509_HandleVerifyError(storeCtx, cert, depth, HITLS_X509_ERR_VFY_CRL_NOT_FOUND);
+            if (ret != HITLS_PKI_SUCCESS) {
+                goto EXIT;
+            }
+        }
         if (selection.baseCrl == NULL) {
-            return HITLS_PKI_SUCCESS;
+            ret = HITLS_PKI_SUCCESS;
+            reasons = HITLS_X509_REASON_FLAG_ALL;
+            goto EXIT;
         }
         // if the selected crl has errors, we notify these errors to determined if they can be processed
         if (selection.errorPath != 0) {
-            RETURN_RET_IF_ERR(NotifyErrors(storeCtx, cert, &selection, depth, time), ret);
+            ret = NotifyErrors(storeCtx, cert, &selection, depth, time);
+            if (ret != HITLS_PKI_SUCCESS) {
+                goto EXIT;
+            }
         }
         ret = CheckCrlIssuerKeyUsage(selection.issuerCert);
-        VFYCBK_FAIL_IF(ret != HITLS_PKI_SUCCESS, storeCtx, cert, depth, HITLS_X509_ERR_VFY_KU_NO_CRLSIGN);
+        if (ret != HITLS_PKI_SUCCESS) {
+            ret = X509_HandleVerifyError(storeCtx, cert, depth, HITLS_X509_ERR_VFY_KU_NO_CRLSIGN);
+            if (ret != HITLS_PKI_SUCCESS) {
+                goto EXIT;
+            }
+        }
         ret = X509_VerifyCrlSig(storeCtx, selection.issuerCert, selection.baseCrl);
-        VFYCBK_FAIL_IF(ret != HITLS_PKI_SUCCESS, storeCtx, cert, depth, ret);
+        if (ret != HITLS_PKI_SUCCESS) {
+            ret = X509_HandleVerifyError(storeCtx, cert, depth, ret);
+            if (ret != HITLS_PKI_SUCCESS) {
+                goto EXIT;
+            }
+        }
         if (selection.deltaCrl != NULL) {
             // A delta CRL can't be used to revoke a certificate if it has unhandled critical extensions
             ret = X509_CheckCrlCriticalExt(storeCtx, selection.deltaCrl);
-            VFYCBK_FAIL_IF(ret != HITLS_PKI_SUCCESS, storeCtx, cert, depth, HITLS_X509_ERR_PROCESS_CRITICALEXT);
+            if (ret != HITLS_PKI_SUCCESS) {
+                ret = X509_HandleVerifyError(storeCtx, cert, depth, HITLS_X509_ERR_PROCESS_CRITICALEXT);
+                if (ret != HITLS_PKI_SUCCESS) {
+                    goto EXIT;
+                }
+            }
             ret = X509_VerifyCrlSig(storeCtx, selection.issuerCert, selection.deltaCrl);
-            VFYCBK_FAIL_IF(ret != HITLS_PKI_SUCCESS, storeCtx, cert, depth, HITLS_X509_ERR_VFY_CRLSIGN_FAIL);
+            if (ret != HITLS_PKI_SUCCESS) {
+                ret = X509_HandleVerifyError(storeCtx, cert, depth, HITLS_X509_ERR_VFY_CRLSIGN_FAIL);
+                if (ret != HITLS_PKI_SUCCESS) {
+                    goto EXIT;
+                }
+            }
         }
         ret = X509_CheckCertRevoke(cert, &selection);
-        VFYCBK_FAIL_IF(ret != HITLS_PKI_SUCCESS, storeCtx, cert, depth, HITLS_X509_ERR_VFY_CERT_REVOKED);
+        if (ret != HITLS_PKI_SUCCESS) {
+            ret = X509_HandleVerifyError(storeCtx, cert, depth, HITLS_X509_ERR_VFY_CERT_REVOKED);
+            if (ret != HITLS_PKI_SUCCESS) {
+                goto EXIT;
+            }
+        }
         reasons |= selection.newReasons;
+EXIT:
+        X509_ClearCrlSelection(&selection);
+        if (ret != HITLS_PKI_SUCCESS) {
+            return ret;
+        }
     }
     return HITLS_PKI_SUCCESS;
 }
@@ -2225,8 +2077,8 @@ static int32_t HITLS_X509_CheckCertCrlLite(HITLS_X509_StoreCtx *storeCtx, HITLS_
                     ((certExt->keyUsage & HITLS_X509_EXT_KU_CRL_SIGN) == 0)),
                    storeCtx, cert, depth, HITLS_X509_ERR_VFY_KU_NO_CRLSIGN);
 
-    for (BslListNode *crlNode = BSL_LIST_FirstNode(storeCtx->crl); crlNode != NULL;
-         crlNode = BSL_LIST_GetNextNode(storeCtx->crl, crlNode)) {
+    for (BslListNode *crlNode = BSL_LIST_FirstNode(storeCtx->crls); crlNode != NULL;
+         crlNode = BSL_LIST_GetNextNode(storeCtx->crls, crlNode)) {
         HITLS_X509_Crl *crl = (HITLS_X509_Crl *)BSL_LIST_GetData(crlNode);
         if (HITLS_X509_CmpNameNode(crl->tbs.issuerName, parent->tbs.subjectName) != 0) {
             continue;
@@ -2284,8 +2136,13 @@ int32_t HITLS_X509_VerifyCrl(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_List *cha
     if (BSL_LIST_COUNT(chain) == 1) {
         return HITLS_PKI_SUCCESS;
     }
+    BSL_LIST_FREE(storeCtx->crls, (BSL_LIST_PFUNC_FREE)HITLS_X509_CrlFree);
+    storeCtx->crls = NULL;
+    int32_t ret = HITLS_X509_StoreGetCrlList(storeCtx->store, &storeCtx->crls);
+    if (ret != HITLS_PKI_SUCCESS) {
+        return ret;
+    }
     bool notCheckAll = (storeCtx->verifyParam.flags & HITLS_X509_VFY_FLAG_CRL_ALL) == 0;
-    int32_t ret = HITLS_PKI_SUCCESS;
     int32_t depth = 0;
     for (BslListNode *currNode = BSL_LIST_FirstNode(chain), *nextNode = BSL_LIST_GetNextNode(chain, currNode);
          currNode != NULL && nextNode != NULL;
@@ -2303,13 +2160,16 @@ int32_t HITLS_X509_VerifyCrl(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_List *cha
         }
 #endif
         if (ret != HITLS_PKI_SUCCESS) {
-            return ret;
+            goto EXIT;
         }
         // If only checking device certificate, break after the first one
         if (notCheckAll) {
             break;
         }
     }
+EXIT:
+    BSL_LIST_FREE(storeCtx->crls, (BSL_LIST_PFUNC_FREE)HITLS_X509_CrlFree);
+    storeCtx->crls = NULL;
     return ret;
 }
 
@@ -2534,7 +2394,7 @@ int32_t X509_CheckExt(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_List *chain)
 
             /**
              * RFC5280 6.1.4
-             * (l)  If the certificate was not self-issued, verify that max_path_length is greater than zero 
+             * (l)  If the certificate was not self-issued, verify that max_path_length is greater than zero
              * and decrement max_path_length by 1.
              * (m)  If pathLenConstraint is present in the certificate and is less than max_path_length,
              * set max_path_length to the value of pathLenConstraint.
@@ -2746,36 +2606,6 @@ HITLS_X509_StoreCtx *HITLS_X509_ProviderStoreCtxNew(HITLS_PKI_LibCtx *libCtx, co
     return storeCtx;
 }
 
-static int32_t X509_RefUpCertItem(void *item)
-{
-    int ref;
-    return HITLS_X509_CertCtrl(item, HITLS_X509_REF_UP, &ref, sizeof(ref));
-}
-
-static int32_t X509_RefUpCrlItem(void *item)
-{
-    int ref;
-    return HITLS_X509_CrlCtrl(item, HITLS_X509_REF_UP, &ref, sizeof(ref));
-}
-
-static int32_t X509_CopyRefList(BslList *dst, const BslList *src, int32_t (*refUp)(void *), BSL_LIST_PFUNC_FREE freeFn)
-{
-    for (BslListNode *node = BSL_LIST_FirstNode(src); node != NULL; node = BSL_LIST_GetNextNode(src, node)) {
-        void *item = BSL_LIST_GetData(node);
-        int32_t ret = refUp(item);
-        if (ret != HITLS_PKI_SUCCESS) {
-            return ret;
-        }
-        ret = BSL_LIST_AddElement(dst, item, BSL_LIST_POS_END);
-        if (ret != BSL_SUCCESS) {
-            freeFn(item);
-            BSL_ERR_PUSH_ERROR(ret);
-            return ret;
-        }
-    }
-    return HITLS_PKI_SUCCESS;
-}
-
 #if defined(HITLS_CRYPTO_SM2) || defined(HITLS_PKI_X509_VFY_IDENTITY)
 static int32_t X509_CopyBufferData(uint8_t **dst, const uint8_t *src, uint32_t srcLen)
 {
@@ -2790,30 +2620,6 @@ static int32_t X509_CopyBufferData(uint8_t **dst, const uint8_t *src, uint32_t s
     return HITLS_PKI_SUCCESS;
 }
 #endif
-
-static int32_t X509_CopyStoreLists(HITLS_X509_StoreCtx *dst, const HITLS_X509_StoreCtx *src)
-{
-    int32_t ret;
-
-    ret = X509_CopyRefList(dst->store, src->store, X509_RefUpCertItem, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);
-    if (ret != HITLS_PKI_SUCCESS) {
-        return ret;
-    }
-
-    ret = X509_CopyRefList(dst->crl, src->crl, X509_RefUpCrlItem, (BSL_LIST_PFUNC_FREE)HITLS_X509_CrlFree);
-    if (ret != HITLS_PKI_SUCCESS) {
-        return ret;
-    }
-
-#ifdef HITLS_PKI_X509_VFY_LOCATION
-    ret = X509_CopyStringList(dst->caPaths, src->caPaths);
-    if (ret != HITLS_PKI_SUCCESS) {
-        return ret;
-    }
-#endif
-
-    return HITLS_PKI_SUCCESS;
-}
 
 static int32_t X509_CopyVerifyParams(HITLS_X509_StoreCtx *dst, const HITLS_X509_StoreCtx *src)
 {
@@ -2904,11 +2710,14 @@ HITLS_X509_StoreCtx *HITLS_X509_StoreCtxDup(const HITLS_X509_StoreCtx *ctx)
     }
 
     int32_t ret;
+    HITLS_X509_Store *oldStore = newCtx->store;
 
-    ret = X509_CopyStoreLists(newCtx, ctx);
+    ret = HITLS_X509_StoreUpRef(ctx->store);
     if (ret != HITLS_PKI_SUCCESS) {
         goto ERR;
     }
+    newCtx->store = ctx->store;
+    HITLS_X509_StoreFree(oldStore);
 
     ret = X509_CopyVerifyParams(newCtx, ctx);
     if (ret != HITLS_PKI_SUCCESS) {

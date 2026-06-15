@@ -26,12 +26,12 @@
 #include "bsl_init.h"
 #include "hitls_pki_x509.h"
 #include "hitls_pki_errno.h"
+#include "hitls_x509_store_local.h"
 #include "hitls_x509_verify.h"
 #include "hitls_cert_local.h"
 #include "hitls_crl_local.h"
 #include "bsl_list_internal.h"
 #include "sal_atomic.h"
-#include "hitls_x509_verify.h"
 #include "crypt_eal_md.h"
 #include "crypt_errno.h"
 #include "crypt_params_key.h"
@@ -54,6 +54,20 @@ STUB_DEFINE_RET4(int32_t, HITLS_X509_CrlCtrl, HITLS_X509_Crl *, int32_t, void *,
 STUB_DEFINE_RET3(int32_t, BSL_LIST_AddElement, BslList *, void *, BslListPosition);
 STUB_DEFINE_VOID1(HITLS_X509_CertFree, HITLS_X509_Cert *);
 STUB_DEFINE_RET0(BslUnixTime, BSL_SAL_CurrentSysTimeGet);
+
+static int32_t HITLS_AddCrlToStoreTest(char *path, HITLS_X509_StoreCtx *store, HITLS_X509_Crl **crl);
+static uint32_t g_storeCtxDupIdentityAddFailCount = 0;
+
+static int32_t STUB_BSL_LIST_AddElement_StoreDupIdentityFail(BslList *pList, void *pData, BslListPosition enPosition)
+{
+    if (g_storeCtxDupIdentityAddFailCount++ == 0) {
+        (void)pList;
+        (void)pData;
+        (void)enPosition;
+        return BSL_MALLOC_FAIL;
+    }
+    return get_real_BSL_LIST_AddElement()(pList, pData, enPosition);
+}
 
 /* ============================================================================
  * Helper Macros for Verification Callback
@@ -96,24 +110,107 @@ static int32_t VerifyCertCbk(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_Cert *cer
 #endif
 
 
+static HITLS_X509_Store *HITLS_X509_NewStoreMock(void)
+{
+    HITLS_X509_Store *store = BSL_SAL_Calloc(1, sizeof(HITLS_X509_Store));
+    if (store == NULL) {
+        return NULL;
+    }
+
+    store->certs = BSL_LIST_New(sizeof(HITLS_X509_Cert));
+    if (store->certs == NULL) {
+        BSL_SAL_Free(store);
+        return NULL;
+    }
+
+    store->crls = BSL_LIST_New(sizeof(HITLS_X509_Crl));
+    if (store->crls == NULL) {
+        BSL_SAL_FREE(store->certs);
+        BSL_SAL_Free(store);
+        return NULL;
+    }
+
+#ifdef HITLS_PKI_X509_VFY_LOCATION
+    store->caPaths = BSL_LIST_New(sizeof(char *));
+    if (store->caPaths == NULL) {
+        BSL_SAL_FREE(store->certs);
+        BSL_SAL_FREE(store->crls);
+        BSL_SAL_Free(store);
+        return NULL;
+    }
+#endif
+
+    if (BSL_SAL_ReferencesInit(&store->references) != BSL_SUCCESS) {
+        BSL_SAL_FREE(store->certs);
+        BSL_SAL_FREE(store->crls);
+#ifdef HITLS_PKI_X509_VFY_LOCATION
+        BSL_SAL_FREE(store->caPaths);
+#endif
+        BSL_SAL_Free(store);
+        return NULL;
+    }
+
+    if (BSL_SAL_ThreadLockNew(&store->rwLock) != BSL_SUCCESS) {
+        BSL_SAL_FREE(store->certs);
+        BSL_SAL_FREE(store->crls);
+#ifdef HITLS_PKI_X509_VFY_LOCATION
+        BSL_SAL_FREE(store->caPaths);
+#endif
+        BSL_SAL_ReferencesFree(&store->references);
+        BSL_SAL_Free(store);
+        return NULL;
+    }
+
+    return store;
+}
+
+static void HITLS_X509_FreeStoreMock(HITLS_X509_Store *store)
+{
+    if (store == NULL) {
+        return;
+    }
+
+    int ret = 0;
+    (void)BSL_SAL_AtomicDownReferences(&store->references, &ret);
+    if (ret > 0) {
+        return;
+    }
+
+    (void)BSL_SAL_ThreadWriteLock(store->rwLock);
+    BSL_LIST_FREE(store->certs, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);
+    BSL_LIST_FREE(store->crls, (BSL_LIST_PFUNC_FREE)HITLS_X509_CrlFree);
+#ifdef HITLS_PKI_X509_VFY_LOCATION
+    BSL_LIST_FREE(store->caPaths, (BSL_LIST_PFUNC_FREE)BSL_SAL_Free);
+#endif
+    (void)BSL_SAL_ThreadUnlock(store->rwLock);
+
+    BSL_SAL_ThreadLockFree(store->rwLock);
+    BSL_SAL_ReferencesFree(&store->references);
+    BSL_SAL_Free(store);
+}
+
 void HITLS_X509_FreeStoreCtxMock(HITLS_X509_StoreCtx *ctx)
 {
     if (ctx == NULL) {
         return;
     }
-    int ret;
+
+    int ret = 0;
     (void)BSL_SAL_AtomicDownReferences(&ctx->references, &ret);
     if (ret > 0) {
         return;
     }
 
-    if (ctx->store != NULL) {
-        BSL_LIST_FREE(ctx->store, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);
-    }
-    if (ctx->crl != NULL) {
-        BSL_LIST_FREE(ctx->crl, (BSL_LIST_PFUNC_FREE)HITLS_X509_CrlFree);
-    }
+#ifdef HITLS_CRYPTO_SM2
+    BSL_SAL_FREE(ctx->verifyParam.sm2UserId.data);
+#endif
+#ifdef HITLS_PKI_X509_VFY_IDENTITY
+    BSL_LIST_FREE(ctx->verifyParam.hostnames, (BSL_LIST_PFUNC_FREE)BSL_SAL_Free);
+    BSL_SAL_FREE(ctx->verifyParam.ip);
+    BSL_SAL_FREE(ctx->verifyParam.peername);
+#endif
 
+    HITLS_X509_FreeStoreMock(ctx->store);
     BSL_SAL_ReferencesFree(&ctx->references);
     BSL_SAL_Free(ctx);
 }
@@ -127,23 +224,23 @@ static int32_t HITLS_X509_VerifyCbkMock(int32_t errcode, HITLS_X509_StoreCtx *st
 
 HITLS_X509_StoreCtx *HITLS_X509_NewStoreCtxMock(void)
 {
-    HITLS_X509_StoreCtx *ctx = (HITLS_X509_StoreCtx *)BSL_SAL_Malloc(sizeof(HITLS_X509_StoreCtx));
+    HITLS_X509_StoreCtx *ctx = BSL_SAL_Calloc(1, sizeof(HITLS_X509_StoreCtx));
     if (ctx == NULL) {
         return NULL;
     }
 
-    memset(ctx, 0, sizeof(HITLS_X509_StoreCtx));
-    ctx->store = BSL_LIST_New(sizeof(HITLS_X509_Cert *));
+    ctx->store = HITLS_X509_NewStoreMock();
     if (ctx->store == NULL) {
         BSL_SAL_Free(ctx);
         return NULL;
     }
-    ctx->crl = BSL_LIST_New(sizeof(HITLS_X509_Crl *));
-    if (ctx->crl == NULL) {
-        BSL_SAL_FREE(ctx->store);
+
+    if (BSL_SAL_ReferencesInit(&(ctx->references)) != BSL_SUCCESS) {
+        HITLS_X509_FreeStoreMock(ctx->store);
         BSL_SAL_Free(ctx);
         return NULL;
     }
+
     ctx->verifyParam.maxDepth = 20;
     ctx->verifyParam.securityBits = 128;
     ctx->verifyParam.flags |= HITLS_X509_VFY_FLAG_CRL_ALL;
@@ -151,29 +248,10 @@ HITLS_X509_StoreCtx *HITLS_X509_NewStoreCtxMock(void)
 #ifdef HITLS_PKI_X509_VFY_CB
     ctx->verifyCb = HITLS_X509_VerifyCbkMock;
 #endif
-    BSL_SAL_ReferencesInit(&(ctx->references));
     return ctx;
 }
 
-static uint32_t g_storeCtxDupAddFailCount = 0;
-static uint32_t g_storeCtxDupCertFreeCount = 0;
 
-static int32_t STUB_BSL_LIST_AddElement_StoreDupFail(BslList *pList, void *pData, BslListPosition enPosition)
-{
-    if (g_storeCtxDupAddFailCount++ == 0) {
-        (void)pList;
-        (void)pData;
-        (void)enPosition;
-        return BSL_MALLOC_FAIL;
-    }
-    return get_real_BSL_LIST_AddElement()(pList, pData, enPosition);
-}
-
-static void STUB_HITLS_X509_CertFree_StoreDupCount(HITLS_X509_Cert *cert)
-{
-    g_storeCtxDupCertFreeCount++;
-    get_real_HITLS_X509_CertFree()(cert);
-}
 
 static int32_t HITLS_BuildChain(BslList *list, int type, char *path1, char *path2, char *path3, char *path4,
                                 char *path5)
@@ -222,9 +300,42 @@ static int32_t HITLS_AddBundlePemToChain(BslList **list, int type, char *path)
         return ret;
     }
     if (*list != NULL) {
-        BSL_LIST_FREE(*list, NULL);
+        if (type == BUNDLE_TYPE_CERT) {
+            BSL_LIST_FREE(*list, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);
+        } else {
+            BSL_LIST_FREE(*list, (BSL_LIST_PFUNC_FREE)HITLS_X509_CrlFree);
+        }
     }
     *list = tmpList;
+    return HITLS_PKI_SUCCESS;
+}
+
+static int32_t HITLS_LoadBundlePemToStoreCrl(HITLS_X509_StoreCtx *storeCtx, char *path)
+{
+    int32_t ret;
+    BslList *tmpList = NULL;
+
+    ret = HITLS_X509_CrlParseBundleFile(BSL_FORMAT_PEM, path, &tmpList);
+    if (ret != HITLS_PKI_SUCCESS) {
+        return ret;
+    }
+
+    ret = HITLS_X509_StoreCtxCtrl(storeCtx, HITLS_X509_STORECTX_CLEAR_CRL, NULL, 0);
+    if (ret != HITLS_PKI_SUCCESS) {
+        BSL_LIST_FREE(tmpList, (BSL_LIST_PFUNC_FREE)HITLS_X509_CrlFree);
+        return ret;
+    }
+
+    for (BslListNode *node = BSL_LIST_FirstNode(tmpList); node != NULL; node = BSL_LIST_GetNextNode(tmpList, node)) {
+        HITLS_X509_Crl *crl = (HITLS_X509_Crl *)BSL_LIST_GetData(node);
+        ret = HITLS_X509_StoreCtxCtrl(storeCtx, HITLS_X509_STORECTX_SET_CRL, crl, sizeof(HITLS_X509_Crl));
+        if (ret != HITLS_PKI_SUCCESS) {
+            BSL_LIST_FREE(tmpList, (BSL_LIST_PFUNC_FREE)HITLS_X509_CrlFree);
+            return ret;
+        }
+    }
+
+    BSL_LIST_FREE(tmpList, (BSL_LIST_PFUNC_FREE)HITLS_X509_CrlFree);
     return HITLS_PKI_SUCCESS;
 }
 
@@ -257,6 +368,8 @@ void SDV_X509_STORE_VFY_CRL_FUNC_TC001(int type, int expResult, char *path1, cha
                                        char *crl2)
 {
     int ret;
+    HITLS_X509_Crl *tmpcrl = NULL;
+    HITLS_X509_Crl *tmpcrl2 = NULL;
     TestMemInit();
     HITLS_X509_StoreCtx *storeCtx = NULL;
     storeCtx = HITLS_X509_NewStoreCtxMock();
@@ -271,7 +384,11 @@ void SDV_X509_STORE_VFY_CRL_FUNC_TC001(int type, int expResult, char *path1, cha
     ret = HITLS_BuildChain(chain, 0, path1, path2, path3, NULL, NULL);
     ASSERT_EQ(ret, HITLS_PKI_SUCCESS);
 
-    ret = HITLS_BuildChain(storeCtx->crl, 1, crl1, crl2, NULL, NULL, NULL);
+    ret = HITLS_AddCrlToStoreTest(crl1, storeCtx, &tmpcrl);
+    ASSERT_EQ(ret, HITLS_PKI_SUCCESS);
+    if (crl2 != NULL) {
+        ret = HITLS_AddCrlToStoreTest(crl2, storeCtx, &tmpcrl2);
+    }
     ASSERT_EQ(ret, HITLS_PKI_SUCCESS);
 
     ret = HITLS_X509_VerifyCrl(storeCtx, chain, NULL);
@@ -286,6 +403,8 @@ void SDV_X509_STORE_VFY_CRL_FUNC_TC001(int type, int expResult, char *path1, cha
         ASSERT_TRUE(TestIsErrStackEmpty());
     }
 EXIT:
+    HITLS_X509_CrlFree(tmpcrl);
+    HITLS_X509_CrlFree(tmpcrl2);
     HITLS_X509_FreeStoreCtxMock(storeCtx);
     BSL_LIST_FREE(chain, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);
 }
@@ -309,7 +428,7 @@ void SDV_X509_STORE_VFY_CRL_EXTENDED_FUNC_TC001(int expResult, char *certPath, c
     ASSERT_NE(chain, NULL);
     ret = HITLS_AddBundlePemToChain(&chain, BUNDLE_TYPE_CERT, certPath);
     ASSERT_EQ(ret, HITLS_PKI_SUCCESS);
-    ret = HITLS_AddBundlePemToChain(&storeCtx->crl, BUNDLE_TYPE_CRL, crlPath);
+    ret = HITLS_LoadBundlePemToStoreCrl(storeCtx, crlPath);
     ASSERT_EQ(ret, HITLS_PKI_SUCCESS);
     int64_t timeval = 1781481600; /* 2026-06-15 00:00:00 UTC */
     ret = HITLS_X509_StoreCtxCtrl(storeCtx, HITLS_X509_STORECTX_SET_TIME, &timeval, sizeof(timeval));
@@ -345,7 +464,7 @@ void SDV_X509_STORE_VFY_CRL_TIME_ERR_FUNC_TC001(int expResult, int verifyTime, c
     ASSERT_NE(chain, NULL);
     ret = HITLS_AddBundlePemToChain(&chain, BUNDLE_TYPE_CERT, certPath);
     ASSERT_EQ(ret, HITLS_PKI_SUCCESS);
-    ret = HITLS_AddBundlePemToChain(&storeCtx->crl, BUNDLE_TYPE_CRL, crlPath);
+    ret = HITLS_LoadBundlePemToStoreCrl(storeCtx, crlPath);
     ASSERT_EQ(ret, HITLS_PKI_SUCCESS);
     int64_t timeval = verifyTime;
     ret = HITLS_X509_StoreCtxCtrl(storeCtx, HITLS_X509_STORECTX_SET_TIME, &timeval, sizeof(timeval));
@@ -363,11 +482,12 @@ EXIT:
 #ifndef HITLS_PKI_X509_VFY_CRL_LITE
 static int32_t STUB_HITLS_X509_CrlCtrl_MalformedDelta(HITLS_X509_Crl *crl, int32_t cmd, void *val, uint32_t valLen)
 {
-    (void)crl;
-    (void)val;
-    (void)valLen;
     if (cmd == HITLS_X509_EXT_GET_DELTA_CRL) {
         return HITLS_X509_ERR_EXT_CRLNUMBER;
+    }
+    real_HITLS_X509_CrlCtrl_func_t realFunc = get_real_HITLS_X509_CrlCtrl();
+    if (realFunc != NULL) {
+        return realFunc(crl, cmd, val, valLen);
     }
     return HITLS_X509_ERR_EXT_NOT_FOUND;
 }
@@ -390,7 +510,7 @@ void SDV_X509_STORE_VFY_CRL_MALFORMED_DELTA_FUNC_TC001(char *certPath, char *crl
     ASSERT_NE(chain, NULL);
     ret = HITLS_AddBundlePemToChain(&chain, BUNDLE_TYPE_CERT, certPath);
     ASSERT_EQ(ret, HITLS_PKI_SUCCESS);
-    ret = HITLS_AddBundlePemToChain(&storeCtx->crl, BUNDLE_TYPE_CRL, crlPath);
+    ret = HITLS_LoadBundlePemToStoreCrl(storeCtx, crlPath);
     ASSERT_EQ(ret, HITLS_PKI_SUCCESS);
     int64_t timeval = 1781481600; /* 2026-06-15 00:00:00 UTC */
     ret = HITLS_X509_StoreCtxCtrl(storeCtx, HITLS_X509_STORECTX_SET_TIME, &timeval, sizeof(timeval));
@@ -520,7 +640,7 @@ void SDV_X509_STORE_CTRL_CERT_FUNC_TC002(void)
     ret = HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_DEEP_COPY_SET_CA, cert, sizeof(HITLS_X509_Cert));
     ASSERT_EQ(ret, HITLS_PKI_SUCCESS);
     ASSERT_EQ(cert->references.count, 2);
-    ASSERT_EQ(BSL_LIST_COUNT(store->store), 1);
+    ASSERT_EQ(BSL_LIST_COUNT(store->store->certs), 1);
     ret = HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_DEEP_COPY_SET_CA, cert, sizeof(HITLS_X509_Cert));
     ASSERT_EQ(ret, HITLS_X509_ERR_CERT_EXIST);
     HITLS_X509_Crl *crl = NULL;
@@ -528,7 +648,7 @@ void SDV_X509_STORE_CTRL_CERT_FUNC_TC002(void)
     ret = HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_SET_CRL, crl, sizeof(HITLS_X509_Crl));
     ASSERT_EQ(ret, HITLS_PKI_SUCCESS);
     ASSERT_EQ(crl->references.count, 2);
-    ASSERT_EQ(BSL_LIST_COUNT(store->crl), 1);
+    ASSERT_EQ(BSL_LIST_COUNT(store->store->crls), 1);
     ret = HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_SET_CRL, crl, sizeof(HITLS_X509_Crl));
     ASSERT_TRUE(ret != HITLS_PKI_SUCCESS);
     ASSERT_TRUE(TestIsErrStackNotEmpty());
@@ -701,11 +821,11 @@ void SDV_X509_BUILD_CERT_CHAIN_FUNC_TC001(char *rootPath, char *caPath, char *ce
     TestErrClear();
     ASSERT_EQ(HITLS_AddCrlToStoreTest(crlPath, store, &crl), HITLS_PKI_SUCCESS);
 
-    ASSERT_EQ(BSL_LIST_COUNT(store->crl), 1);
+    ASSERT_EQ(BSL_LIST_COUNT(store->store->crls), 1);
     if (withIntCa) {
-        ASSERT_EQ(BSL_LIST_COUNT(store->store), 2);
+        ASSERT_EQ(BSL_LIST_COUNT(store->store->certs), 2);
     } else {
-        ASSERT_EQ(BSL_LIST_COUNT(store->store), 1);
+        ASSERT_EQ(BSL_LIST_COUNT(store->store->certs), 1);
     }
     ASSERT_TRUE(HITLS_X509_CertChainBuild(store, false, entity, &chain) == HITLS_PKI_SUCCESS);
     if (withIntCa) {
@@ -740,7 +860,7 @@ void SDV_X509_BUILD_CERT_CHAIN_FUNC_TC002(void)
     ret = HITLS_AddCertToStoreTest("../testdata/cert/chain/rsa-pss-v3/end.der", store, &entity);
     ASSERT_TRUE(ret != HITLS_PKI_SUCCESS);
     TestErrClear();
-    ASSERT_EQ(BSL_LIST_COUNT(store->store), 1);
+    ASSERT_EQ(BSL_LIST_COUNT(store->store->certs), 1);
     HITLS_X509_List *chain = NULL;
     ret = HITLS_X509_CertChainBuild(store, false, entity, &chain);
     ASSERT_TRUE(ret == HITLS_PKI_SUCCESS);
@@ -796,7 +916,13 @@ typedef struct {
     uint32_t expectHostCount;
     uint32_t expectUriCount;
     uint32_t expectSrvCount;
+    /* hostflags is part of the duplicated identity configuration and should stay unchanged after dup. */
+    uint32_t expectHostFlags;
     int32_t expectIpLen;
+    /* Some duplication tests configure URI/SRV-ID only, so the helper must match IP presence explicitly. */
+    bool expectIpConfigured;
+    /* clone thread only duplicates the ctx, so peername should match the pre-verify expectation. */
+    const char *expectPeername;
     uint32_t loops;
     int32_t result;
 } X509StoreDupCloneThreadArg;
@@ -1002,15 +1128,22 @@ static void X509StoreDupCloneThread(void *arg)
             return;
         }
 #if defined(HITLS_PKI_X509_VFY_IDENTITY)
+        /* hostnames/ip/hostflags are configuration state copied by StoreCtxDup. */
         if (X509_TestListCount(dupStore->verifyParam.hostnames) != threadArg->expectHostCount ||
             X509_TestListCount(dupStore->verifyParam.uriIds) != threadArg->expectUriCount ||
             X509_TestListCount(dupStore->verifyParam.srvIds) != threadArg->expectSrvCount ||
-            dupStore->verifyParam.ipLen != threadArg->expectIpLen) {
+            dupStore->verifyParam.ipLen != threadArg->expectIpLen ||
+            dupStore->verifyParam.hostflags != threadArg->expectHostFlags ||
+            ((dupStore->verifyParam.ip != NULL) != threadArg->expectIpConfigured)) {
             HITLS_X509_StoreCtxFree(dupStore);
             return;
         }
+        /* peername is result/session state: clone-only path should keep it at the expected pre-verify value. */
         if (HITLS_X509_StoreCtxCtrl(dupStore, HITLS_X509_STORECTX_GET_PEERNAME, &peername,
-            sizeof(char *)) != HITLS_PKI_SUCCESS || peername != NULL) {
+            sizeof(char *)) != HITLS_PKI_SUCCESS ||
+            ((threadArg->expectPeername == NULL && peername != NULL) ||
+            (threadArg->expectPeername != NULL && (peername == NULL ||
+            strcmp(peername, threadArg->expectPeername) != 0)))) {
             HITLS_X509_StoreCtxFree(dupStore);
             return;
         }
@@ -1119,7 +1252,7 @@ void SDV_X509_BUILD_CERT_CHAIN_FUNC_TC003(void)
     ASSERT_EQ(ret, HITLS_PKI_SUCCESS);
     HITLS_X509_Cert *entity = NULL;
     ret = HITLS_X509_CertParseFile(BSL_FORMAT_ASN1, "../testdata/cert/chain/rsa-pss-v3/end.der", &entity);
-    ASSERT_EQ(BSL_LIST_COUNT(store->store), 1);
+    ASSERT_EQ(BSL_LIST_COUNT(store->store->certs), 1);
     HITLS_X509_List *chain = BSL_LIST_New(sizeof(HITLS_X509_Cert *));
     ASSERT_TRUE(chain != NULL);
     ret = X509_AddCertToChainTest(chain, entity);
@@ -1147,7 +1280,7 @@ void SDV_X509_BUILD_CERT_CHAIN_FUNC_TC004(void)
     HITLS_X509_Cert *root = NULL;
     int32_t ret = HITLS_AddCertToStoreTest("../testdata/cert/chain/rsa-pss-v3/ca.der", store, &root);
     ASSERT_EQ(ret, HITLS_PKI_SUCCESS);
-    ASSERT_EQ(BSL_LIST_COUNT(store->store), 1);
+    ASSERT_EQ(BSL_LIST_COUNT(store->store->certs), 1);
     HITLS_X509_List *chain = NULL;
     ret = HITLS_X509_CertChainBuild(store, false, root, &chain);
     ASSERT_EQ(ret, HITLS_PKI_SUCCESS);
@@ -1172,7 +1305,7 @@ void SDV_X509_BUILD_CERT_CHAIN_FUNC_TC005(void)
     HITLS_X509_Cert *root = NULL;
     int32_t ret = HITLS_X509_CertParseFile(BSL_FORMAT_ASN1, "../testdata/cert/chain/rsa-pss-v3/ca.der", &root);
     ASSERT_EQ(ret, HITLS_PKI_SUCCESS);
-    ASSERT_EQ(BSL_LIST_COUNT(store->store), 0);
+    ASSERT_EQ(BSL_LIST_COUNT(store->store->certs), 0);
     HITLS_X509_List *chain = NULL;
     ret = HITLS_X509_CertChainBuild(store, false, root, &chain);
     ASSERT_EQ(ret, HITLS_PKI_SUCCESS);
@@ -1197,7 +1330,7 @@ void SDV_X509_BUILD_CERT_CHAIN_FUNC_TC006(void)
     HITLS_X509_Cert *root = NULL;
     int32_t ret = HITLS_X509_CertParseFile(BSL_FORMAT_ASN1, "../testdata/cert/chain/rsa-pss-v3/ca.der", &root);
     ASSERT_EQ(ret, HITLS_PKI_SUCCESS);
-    ASSERT_EQ(BSL_LIST_COUNT(store->store), 0);
+    ASSERT_EQ(BSL_LIST_COUNT(store->store->certs), 0);
     HITLS_X509_List *chain = NULL;
     ret = HITLS_X509_CertChainBuild(store, false, root, &chain);
     ASSERT_EQ(ret, HITLS_PKI_SUCCESS);
@@ -1231,7 +1364,7 @@ void SDV_X509_BUILD_CERT_CHAIN_FUNC_TC007(void)
     ret = HITLS_AddCertToStoreTest("../testdata/cert/chain/rsa-v3/cert.der", store, &entity);
     ASSERT_TRUE(ret != HITLS_PKI_SUCCESS);
     TestErrClear();
-    ASSERT_EQ(BSL_LIST_COUNT(store->store), 2);
+    ASSERT_EQ(BSL_LIST_COUNT(store->store->certs), 2);
     int32_t depth = 2;
     ret = HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_SET_PARAM_DEPTH, &depth, sizeof(depth));
     ASSERT_EQ(ret, HITLS_PKI_SUCCESS);
@@ -1337,7 +1470,7 @@ void SDV_X509_BUILD_CERT_CHAIN_FUNC_TC008(char *rootPath, char *caPath, char *ce
     ret = HITLS_AddCertToStoreTest(cert, store, &entity);
     ASSERT_TRUE(ret != HITLS_PKI_SUCCESS);
     TestErrClear();
-    ASSERT_EQ(BSL_LIST_COUNT(store->store), 2);
+    ASSERT_EQ(BSL_LIST_COUNT(store->store->certs), 2);
     HITLS_X509_Crl *rootcrl = NULL;
     if (strlen(rootcrlpath) != 0) {
         ret = HITLS_AddCrlToStoreTest(rootcrlpath, store, &rootcrl);
@@ -1347,9 +1480,9 @@ void SDV_X509_BUILD_CERT_CHAIN_FUNC_TC008(char *rootPath, char *caPath, char *ce
     ret = HITLS_AddCrlToStoreTest(cacrlpath, store, &cacrl);
     ASSERT_EQ(ret, HITLS_PKI_SUCCESS);
     if (strlen(rootcrlpath) == 0) {
-        ASSERT_EQ(BSL_LIST_COUNT(store->crl), 1);
+        ASSERT_EQ(BSL_LIST_COUNT(store->store->crls), 1);
     } else {
-        ASSERT_EQ(BSL_LIST_COUNT(store->crl), 2);
+        ASSERT_EQ(BSL_LIST_COUNT(store->store->crls), 2);
     }
 #ifndef HITLS_PKI_X509_VFY_CB
     if (cbk != 0) {
@@ -1421,18 +1554,18 @@ void SDV_X509_BUILD_CERT_CHAIN_WITH_ROOT_FUNC_TC001(void)
     HITLS_X509_Cert *entity = NULL;
     int32_t ret = HITLS_AddCertToStoreTest("../testdata/cert/chain/rsa-v3/cert.der", store, &entity);
     ASSERT_TRUE(ret != HITLS_PKI_SUCCESS);
-    ASSERT_EQ(BSL_LIST_COUNT(store->store), 0);
+    ASSERT_EQ(BSL_LIST_COUNT(store->store->certs), 0);
     HITLS_X509_Cert *ca = NULL;
     ret = HITLS_AddCertToStoreTest("../testdata/cert/chain/rsa-v3/ca.der", store, &ca);
     ASSERT_EQ(ret, HITLS_PKI_SUCCESS);
-    ASSERT_EQ(BSL_LIST_COUNT(store->store), 1);
+    ASSERT_EQ(BSL_LIST_COUNT(store->store->certs), 1);
     HITLS_X509_List *chain = NULL;
     ret = HITLS_X509_CertChainBuild(store, true, entity, &chain);
     ASSERT_EQ(ret, HITLS_X509_ERR_ISSUE_CERT_NOT_FOUND);
     HITLS_X509_Cert *root = NULL;
     ret = HITLS_AddCertToStoreTest("../testdata/cert/chain/rsa-v3/rootca.der", store, &root);
     ASSERT_EQ(ret, HITLS_PKI_SUCCESS);
-    ASSERT_EQ(BSL_LIST_COUNT(store->store), 2);
+    ASSERT_EQ(BSL_LIST_COUNT(store->store->certs), 2);
     ret = HITLS_X509_CertChainBuild(store, true, entity, &chain);
     ASSERT_EQ(ret, HITLS_PKI_SUCCESS);
     ASSERT_EQ(BSL_LIST_COUNT(chain), 3);
@@ -1462,7 +1595,7 @@ void SDV_X509_SM2_CERT_USERID_FUNC_TC001(char *caCertPath, char *interCertPath, 
     ASSERT_EQ(HITLS_AddCertToStoreTest(caCertPath, storeCtx, &caCert), 0);
     ASSERT_EQ(HITLS_AddCertToStoreTest(interCertPath, storeCtx, &interCert), 0);
     ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_UNKNOWN, entityCertPath, &entityCert), 0);
-    ASSERT_EQ(BSL_LIST_COUNT(storeCtx->store), 2);
+    ASSERT_EQ(BSL_LIST_COUNT(storeCtx->store->certs), 2);
     if (isUseDefaultUserId != 0) {
         ASSERT_EQ(HITLS_X509_StoreCtxCtrl(storeCtx, HITLS_X509_STORECTX_SET_VFY_SM2_USERID, sm2DefaultUserid,
                                           strlen(sm2DefaultUserid)),
@@ -1860,7 +1993,7 @@ void SDV_X509_BUILD_CERT_CHAIN_CBK_FUNC_TC001(int flag, int ecp)
     ASSERT_TRUE(HITLS_AddCertToStoreTest("../testdata/cert/chain/rsa-pss-v3/end.der", store, &entity) !=
                 HITLS_PKI_SUCCESS);
     if (flag != HITLS_X509_ERR_ISSUE_CERT_NOT_FOUND) {
-        ASSERT_EQ(BSL_LIST_COUNT(store->store), 1);
+        ASSERT_EQ(BSL_LIST_COUNT(store->store->certs), 1);
     }
     TestErrClear();
     HITLS_X509_List *chain = NULL;
@@ -1870,7 +2003,7 @@ void SDV_X509_BUILD_CERT_CHAIN_CBK_FUNC_TC001(int flag, int ecp)
     ASSERT_EQ(HITLS_AddCertToStoreTest("../testdata/cert/chain/rsa-pss-v3/ca.der", store, &root), HITLS_PKI_SUCCESS);
     ASSERT_EQ(HITLS_X509_CertChainBuild(store, false, entity, &chain), HITLS_PKI_SUCCESS);
     if (flag != HITLS_X509_ERR_ISSUE_CERT_NOT_FOUND) {
-        ASSERT_EQ(BSL_LIST_COUNT(store->store), 2);
+        ASSERT_EQ(BSL_LIST_COUNT(store->store->certs), 2);
     }
     ASSERT_EQ(X509StoreCtrlCbk2(store, flag), HITLS_PKI_SUCCESS);
     int64_t timeval = time(NULL);
@@ -1930,7 +2063,7 @@ void SDV_X509_BUILD_CERT_CHAIN_CBK_FUNC_TC002(int flag, int ecp)
     ASSERT_TRUE(HITLS_AddCertToStoreTest("../testdata/cert/chain/rsa-pss-v3/end.der", store, &entity) !=
                 HITLS_PKI_SUCCESS);
     if (flag != HITLS_X509_ERR_ISSUE_CERT_NOT_FOUND) {
-        ASSERT_EQ(BSL_LIST_COUNT(store->store), 1);
+        ASSERT_EQ(BSL_LIST_COUNT(store->store->certs), 1);
     }
     TestErrClear();
     HITLS_X509_List *chain = NULL;
@@ -1938,7 +2071,7 @@ void SDV_X509_BUILD_CERT_CHAIN_CBK_FUNC_TC002(int flag, int ecp)
     ASSERT_EQ(HITLS_AddCertToStoreTest("../testdata/cert/chain/rsa-pss-v3/ca.der", store, &root), HITLS_PKI_SUCCESS);
     ASSERT_EQ(HITLS_X509_CertChainBuild(store, false, entity, &chain), HITLS_PKI_SUCCESS);
     if (flag != HITLS_X509_ERR_ISSUE_CERT_NOT_FOUND) {
-        ASSERT_EQ(BSL_LIST_COUNT(store->store), 2);
+        ASSERT_EQ(BSL_LIST_COUNT(store->store->certs), 2);
     }
     ASSERT_EQ(X509StoreCtrlCbk3(store, flag), HITLS_PKI_SUCCESS);
     int64_t timeval = time(NULL);
@@ -1972,7 +2105,7 @@ void SDV_X509_VERIFY_CERT_CHAIN_FUNC_TC001(void)
     HITLS_X509_Cert *entity = NULL;
     ASSERT_EQ(HITLS_AddCertToStoreTest("../testdata/cert/chain/rsa-pss-v3/ca.der", store, &root), HITLS_PKI_SUCCESS);
     ASSERT_EQ(HITLS_AddCertToStoreTest("../testdata/cert/chain/rsa-pss-v3/inter.der", store, &ca), HITLS_PKI_SUCCESS);
-    ASSERT_EQ(BSL_LIST_COUNT(store->store), 2);
+    ASSERT_EQ(BSL_LIST_COUNT(store->store->certs), 2);
     ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_ASN1, "../testdata/cert/chain/rsa-pss-v3/end.der", &entity),
               HITLS_PKI_SUCCESS);
     HITLS_X509_List *chain = BSL_LIST_New(sizeof(HITLS_X509_Cert *));
@@ -4860,7 +4993,9 @@ void SDV_X509_PARTIAL_CERT_VFY_FUNC_TC004(void)
     ASSERT_EQ(HITLS_X509_StoreCtxCtrl(storeCtx, HITLS_X509_STORECTX_SET_PARAM_FLAGS, &setFlag, sizeof(setFlag)), HITLS_PKI_SUCCESS);
     ASSERT_EQ(HITLS_X509_CertVerify(storeCtx, chain), HITLS_PKI_SUCCESS);
 
-    BSL_LIST_FREE(storeCtx->caPaths, (BSL_LIST_PFUNC_FREE)BSL_SAL_Free);
+    ASSERT_EQ(BSL_SAL_ThreadWriteLock(storeCtx->store->rwLock), BSL_SUCCESS);
+    BSL_LIST_DeleteAll(storeCtx->store->caPaths, (BSL_LIST_PFUNC_FREE)BSL_SAL_Free);
+    ASSERT_EQ(BSL_SAL_ThreadUnlock(storeCtx->store->rwLock), BSL_SUCCESS);
 
     // The test has already cached the trust store
     setFlag = HITLS_X509_VFY_FLAG_PARTIAL_CHAIN;
@@ -5058,7 +5193,7 @@ void SDV_X509_CERT_VERIFY_WITH_VARIOUS_CHARSET_FUNC_TC001(char *caCertPath, char
 
     ret = HITLS_AddCertToStoreTest(caCertPath, store, &ca);
     ASSERT_EQ(ret, HITLS_PKI_SUCCESS);
-    ASSERT_EQ(BSL_LIST_COUNT(store->store), 1);
+    ASSERT_EQ(BSL_LIST_COUNT(store->store->certs), 1);
 
     ret = HITLS_X509_CertParseFile(BSL_FORMAT_UNKNOWN, entityCertPath, &entity);
     if (ret != HITLS_PKI_SUCCESS) {
@@ -5105,7 +5240,7 @@ void SDV_X509_CERT_VERIFY_WITH_VARIOUS_CHARSET_FUNC_TC002(char *rootCertPath, ch
 
     ret = HITLS_AddCertToStoreTest(rootCertPath, store, &root);
     ASSERT_EQ(ret, HITLS_PKI_SUCCESS);
-    ASSERT_EQ(BSL_LIST_COUNT(store->store), 1);
+    ASSERT_EQ(BSL_LIST_COUNT(store->store->certs), 1);
 
     ret = HITLS_X509_CertParseFile(BSL_FORMAT_UNKNOWN, caCertPath, &ca);
     ASSERT_EQ(ret, HITLS_PKI_SUCCESS);
@@ -5169,8 +5304,8 @@ void SDV_X509_CRL_VERIFY_WITH_VARIOUS_CHARSET_FUNC_TC001(char *caCertPath, char 
         ASSERT_EQ(ret, expectedResult);
         goto EXIT;
     }
-    ASSERT_EQ(BSL_LIST_COUNT(store->store), 1);
-    ASSERT_EQ(BSL_LIST_COUNT(store->crl), 1);
+    ASSERT_EQ(BSL_LIST_COUNT(store->store->certs), 1);
+    ASSERT_EQ(BSL_LIST_COUNT(store->store->crls), 1);
 
     ret = HITLS_X509_CertParseFile(BSL_FORMAT_UNKNOWN, entityCertPath, &entity);
     ASSERT_EQ(ret, HITLS_PKI_SUCCESS);
@@ -5304,8 +5439,8 @@ void SDV_X509_STORE_CTX_DUP_FUNC_TC001(char *rootCertPath, char *intermediateCer
     ASSERT_NE(dupStore, NULL);
     ASSERT_TRUE(dupStore != storeCtx);
 
-    ASSERT_TRUE(dupStore->store != storeCtx->store);
-    ASSERT_TRUE(dupStore->crl != storeCtx->crl);
+    ASSERT_TRUE(dupStore->store == storeCtx->store);
+    ASSERT_TRUE(dupStore->store->crls == storeCtx->store->crls);
     ASSERT_EQ(dupStore->libCtx, storeCtx->libCtx);
     ASSERT_EQ(dupStore->attrName, storeCtx->attrName);
     ASSERT_TRUE(dupStore->certChain == NULL);
@@ -5315,23 +5450,6 @@ void SDV_X509_STORE_CTX_DUP_FUNC_TC001(char *rootCertPath, char *intermediateCer
     ASSERT_EQ(dupStore->verifyParam.time, storeCtx->verifyParam.time);
     ASSERT_EQ(dupStore->verifyParam.flags, storeCtx->verifyParam.flags);
     ASSERT_EQ(dupStore->verifyParam.purpose, storeCtx->verifyParam.purpose);
-
-    ASSERT_EQ(BSL_LIST_COUNT(dupStore->store), BSL_LIST_COUNT(storeCtx->store));
-    ASSERT_EQ(BSL_LIST_COUNT(dupStore->crl), BSL_LIST_COUNT(storeCtx->crl));
-    for (BslListNode *srcNode = BSL_LIST_FirstNode(storeCtx->store),
-        *dupNode = BSL_LIST_FirstNode(dupStore->store);
-        srcNode != NULL && dupNode != NULL;
-        srcNode = BSL_LIST_GetNextNode(storeCtx->store, srcNode),
-        dupNode = BSL_LIST_GetNextNode(dupStore->store, dupNode)) {
-        ASSERT_TRUE(BSL_LIST_GetData(srcNode) == BSL_LIST_GetData(dupNode));
-    }
-    for (BslListNode *srcNode = BSL_LIST_FirstNode(storeCtx->crl),
-        *dupNode = BSL_LIST_FirstNode(dupStore->crl);
-        srcNode != NULL && dupNode != NULL;
-        srcNode = BSL_LIST_GetNextNode(storeCtx->crl, srcNode),
-        dupNode = BSL_LIST_GetNextNode(dupStore->crl, dupNode)) {
-        ASSERT_TRUE(BSL_LIST_GetData(srcNode) == BSL_LIST_GetData(dupNode));
-    }
 
 #ifdef HITLS_PKI_X509_VFY_IDENTITY
     ASSERT_EQ(dupStore->verifyParam.hostflags, storeCtx->verifyParam.hostflags);
@@ -5354,16 +5472,7 @@ void SDV_X509_STORE_CTX_DUP_FUNC_TC001(char *rootCertPath, char *intermediateCer
 #endif
 
 #ifdef HITLS_PKI_X509_VFY_LOCATION
-    ASSERT_TRUE(dupStore->caPaths != storeCtx->caPaths);
-    ASSERT_EQ(BSL_LIST_COUNT(dupStore->caPaths), BSL_LIST_COUNT(storeCtx->caPaths));
-    for (BslListNode *srcNode = BSL_LIST_FirstNode(storeCtx->caPaths),
-        *dupNode = BSL_LIST_FirstNode(dupStore->caPaths);
-        srcNode != NULL && dupNode != NULL;
-        srcNode = BSL_LIST_GetNextNode(storeCtx->caPaths, srcNode),
-        dupNode = BSL_LIST_GetNextNode(dupStore->caPaths, dupNode)) {
-        ASSERT_TRUE(BSL_LIST_GetData(srcNode) != BSL_LIST_GetData(dupNode));
-        ASSERT_TRUE(strcmp((char *)BSL_LIST_GetData(srcNode), (char *)BSL_LIST_GetData(dupNode)) == 0);
-    }
+    ASSERT_TRUE(dupStore->store->caPaths == storeCtx->store->caPaths);
 #endif
 
 #ifdef HITLS_CRYPTO_SM2
@@ -5397,18 +5506,17 @@ EXIT:
 /* END_CASE */
 
 /**
- * @test   SDV_X509_STORE_CTX_DUP_FAIL_CLEANUP_TC001
- * @title  Duplicate store context cleanup on list insertion failure.
+ * @test   SDV_X509_STORE_CTX_DUP_SHARED_STORE_TC001
+ * @title  Duplicate store context keeps shared store stable across duplicate/free.
  * @brief  1. Parse a CA certificate from the input parameter and add it to the source store context.
- *         2. Stub list insertion to fail during store duplication.
- *         3. Verify that duplication returns NULL, cleanup callbacks are triggered, and the source store
- *            remains intact without reference count corruption.
+ *         2. Duplicate the store context successfully and confirm the duplicate shares the same inner Store.
+ *         3. Free the duplicate and verify the source store remains intact without reference count corruption.
  * @expect 1. Source store setup succeeds.
- *         2. Store duplication fails and cleanup is executed exactly as expected.
- *         3. The source store still contains the original certificate and its reference count is unchanged.
+ *         2. Store duplication succeeds and reuses the same shared Store object.
+ *         3. Releasing the duplicate leaves the original store contents and certificate references unchanged.
  */
 /* BEGIN_CASE */
-void SDV_X509_STORE_CTX_DUP_FAIL_CLEANUP_TC001(char *rootCertPath)
+void SDV_X509_STORE_CTX_DUP_SHARED_STORE_TC001(char *rootCertPath)
 {
     int32_t ret;
     int32_t refBeforeDup = 0;
@@ -5428,34 +5536,99 @@ void SDV_X509_STORE_CTX_DUP_FAIL_CLEANUP_TC001(char *rootCertPath)
     ASSERT_EQ(ret, HITLS_PKI_SUCCESS);
     ASSERT_EQ(HITLS_X509_StoreCtxCtrl(storeCtx, HITLS_X509_STORECTX_DEEP_COPY_SET_CA, root,
         sizeof(HITLS_X509_Cert)), HITLS_PKI_SUCCESS);
-    ASSERT_EQ(BSL_LIST_COUNT(storeCtx->store), 1);
+    ASSERT_EQ(BSL_LIST_COUNT(storeCtx->store->certs), 1);
 
-    storeCert = (HITLS_X509_Cert *)BSL_LIST_FirstNodeData(storeCtx->store);
+    storeCert = (HITLS_X509_Cert *)BSL_LIST_FirstNodeData(storeCtx->store->certs);
     ASSERT_NE(storeCert, NULL);
 
     ASSERT_EQ(HITLS_X509_CertCtrl(storeCert, HITLS_X509_REF_UP, &refBeforeDup, sizeof(refBeforeDup)), HITLS_PKI_SUCCESS);
     HITLS_X509_CertFree(storeCert);
 
-    g_storeCtxDupAddFailCount = 0;
-    g_storeCtxDupCertFreeCount = 0;
-    STUB_REPLACE(BSL_LIST_AddElement, STUB_BSL_LIST_AddElement_StoreDupFail);
-    STUB_REPLACE(HITLS_X509_CertFree, STUB_HITLS_X509_CertFree_StoreDupCount);
     dupStore = HITLS_X509_StoreCtxDup(storeCtx);
-    STUB_RESTORE(HITLS_X509_CertFree);
-    STUB_RESTORE(BSL_LIST_AddElement);
+    ASSERT_NE(dupStore, NULL);
+    ASSERT_TRUE(dupStore->store == storeCtx->store);
+    ASSERT_EQ(BSL_LIST_COUNT(storeCtx->store->certs), 1);
 
-    ASSERT_EQ(dupStore, NULL);
-    ASSERT_EQ(g_storeCtxDupAddFailCount, 1);
-    ASSERT_EQ(g_storeCtxDupCertFreeCount, 1);
-    ASSERT_EQ(BSL_LIST_COUNT(storeCtx->store), 1);
-    ASSERT_TRUE(TestIsErrStackNotEmpty());
+    HITLS_X509_StoreCtxFree(dupStore);
+    dupStore = NULL;
+    ASSERT_EQ(BSL_LIST_COUNT(storeCtx->store->certs), 1);
 
     ASSERT_EQ(HITLS_X509_CertCtrl(storeCert, HITLS_X509_REF_UP, &refAfterDup, sizeof(refAfterDup)), HITLS_PKI_SUCCESS);
     HITLS_X509_CertFree(storeCert);
     ASSERT_EQ(refAfterDup, refBeforeDup);
     ASSERT_TRUE(TestIsErrStackEmpty());
 EXIT:
-    STUB_RESTORE(HITLS_X509_CertFree);
+    HITLS_X509_StoreCtxFree(dupStore);
+    HITLS_X509_StoreCtxFree(storeCtx);
+    HITLS_X509_CertFree(root);
+    BSL_GLOBAL_DeInit();
+}
+/* END_CASE */
+
+/**
+ * @test   SDV_X509_STORE_CTX_DUP_FAIL_CLEANUP_TC001
+ * @title  Duplicate store context cleanup on identity list copy failure.
+ * @brief  1. Parse a CA certificate from the input parameter and add it to the source store context.
+ *         2. Configure identity parameters so StoreCtxDup must copy hostname state after StoreUpRef succeeds.
+ *         3. Stub list insertion to fail during hostname list copy and verify duplication rolls back cleanly.
+ * @expect 1. Source store setup and identity configuration succeed.
+ *         2. Store duplication fails and the shared Store reference count is restored.
+ *         3. The source store still contains the original certificate and its reference count is unchanged.
+ */
+/* BEGIN_CASE */
+void SDV_X509_STORE_CTX_DUP_FAIL_CLEANUP_TC001(char *rootCertPath)
+{
+    int32_t ret;
+    int32_t refBeforeDup = 0;
+    int32_t refAfterDup = 0;
+    uint32_t storeRefBeforeDup = 0;
+    HITLS_X509_StoreCtx *storeCtx = NULL;
+    HITLS_X509_StoreCtx *dupStore = NULL;
+    HITLS_X509_Cert *root = NULL;
+    HITLS_X509_Cert *storeCert = NULL;
+
+#if defined(HITLS_PKI_X509_VFY_IDENTITY)
+    TestMemInit();
+    BSL_GLOBAL_Init();
+
+    storeCtx = HITLS_X509_StoreCtxNew();
+    ASSERT_NE(storeCtx, NULL);
+
+    ret = HITLS_X509_CertParseFile(BSL_FORMAT_ASN1, rootCertPath, &root);
+    ASSERT_EQ(ret, HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_StoreCtxCtrl(storeCtx, HITLS_X509_STORECTX_DEEP_COPY_SET_CA, root,
+        sizeof(HITLS_X509_Cert)), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(X509_ConfigStoreDupIdentity(storeCtx), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(BSL_LIST_COUNT(storeCtx->store->certs), 1);
+    ASSERT_TRUE(storeCtx->verifyParam.hostnames != NULL);
+
+    storeCert = (HITLS_X509_Cert *)BSL_LIST_FirstNodeData(storeCtx->store->certs);
+    ASSERT_NE(storeCert, NULL);
+
+    ASSERT_EQ(HITLS_X509_CertCtrl(storeCert, HITLS_X509_REF_UP, &refBeforeDup, sizeof(refBeforeDup)), HITLS_PKI_SUCCESS);
+    HITLS_X509_CertFree(storeCert);
+    storeRefBeforeDup = storeCtx->store->references.count;
+
+    g_storeCtxDupIdentityAddFailCount = 0;
+    STUB_REPLACE(BSL_LIST_AddElement, STUB_BSL_LIST_AddElement_StoreDupIdentityFail);
+    dupStore = HITLS_X509_StoreCtxDup(storeCtx);
+    STUB_RESTORE(BSL_LIST_AddElement);
+
+    ASSERT_EQ(dupStore, NULL);
+    ASSERT_EQ(g_storeCtxDupIdentityAddFailCount, 1);
+    ASSERT_EQ(storeCtx->store->references.count, storeRefBeforeDup);
+    ASSERT_EQ(BSL_LIST_COUNT(storeCtx->store->certs), 1);
+    ASSERT_TRUE(TestIsErrStackNotEmpty());
+    TestErrClear();
+
+    ASSERT_EQ(HITLS_X509_CertCtrl(storeCert, HITLS_X509_REF_UP, &refAfterDup, sizeof(refAfterDup)), HITLS_PKI_SUCCESS);
+    HITLS_X509_CertFree(storeCert);
+    ASSERT_EQ(refAfterDup, refBeforeDup);
+#else
+    (void)rootCertPath;
+    SKIP_TEST();
+#endif
+EXIT:
     STUB_RESTORE(BSL_LIST_AddElement);
     HITLS_X509_StoreCtxFree(dupStore);
     HITLS_X509_StoreCtxFree(storeCtx);
@@ -5530,8 +5703,8 @@ void SDV_X509_STORE_CTX_DUP_ISOLATION_TC001(char *rootCertPath, char *entityCert
     ASSERT_EQ(storeCtx->verifyParam.purpose, 5);
     ASSERT_EQ(dupStore->verifyParam.purpose, 3);
 #ifdef HITLS_PKI_X509_VFY_LOCATION
-    ASSERT_EQ(X509_TestListCount(storeCtx->caPaths), 1);
-    ASSERT_EQ(X509_TestListCount(dupStore->caPaths), 2);
+    ASSERT_EQ(X509_TestListCount(storeCtx->store->caPaths), 2);
+    ASSERT_EQ(X509_TestListCount(dupStore->store->caPaths), 2);
 #endif
 
     ASSERT_EQ(X509_RunStoreDupVerify(storeCtx, entityCertPath, "www.example.com", &sourceChainCount),
@@ -5599,7 +5772,12 @@ void SDV_X509_STORE_CTX_DUP_MULTI_THREAD_TC001(char *rootCertPath, char *entityC
 
     cloneArg.srcStore = storeCtx;
     cloneArg.expectHostCount = X509_TestListCount(storeCtx->verifyParam.hostnames);
+    /* Clone thread verifies that StoreCtxDup preserves identity configuration bits as-is. */
+    cloneArg.expectHostFlags = storeCtx->verifyParam.hostflags;
     cloneArg.expectIpLen = storeCtx->verifyParam.ipLen;
+    cloneArg.expectIpConfigured = (storeCtx->verifyParam.ip != NULL);
+    /* peername is not copied by dup; clone-only path should still observe NULL here. */
+    cloneArg.expectPeername = NULL;
     cloneArg.loops = STORE_DUP_THREAD_LOOPS;
     cloneArg.result = BSL_INTERNAL_EXCEPTION;
 
@@ -5607,6 +5785,7 @@ void SDV_X509_STORE_CTX_DUP_MULTI_THREAD_TC001(char *rootCertPath, char *entityC
     for (uint32_t i = 0; i < STORE_DUP_VERIFY_THREAD_NUM; i++) {
         verifyArgs[i].srcStore = storeCtx;
         verifyArgs[i].entityPath = entityCertPath;
+        /* Verify threads perform dup + verify, so peername should be recomputed from hostname validation. */
         verifyArgs[i].expectPeername = "www.example.com";
         verifyArgs[i].expectChainCount = expectChainCount;
         verifyArgs[i].loops = STORE_DUP_THREAD_LOOPS;
@@ -5679,7 +5858,10 @@ void SDV_X509_STORE_CTX_DUP_URI_SRV_ID_MULTI_THREAD_TC001(char *rootCertPath, ch
     cloneArg.expectHostCount = X509_TestListCount(storeCtx->verifyParam.hostnames);
     cloneArg.expectUriCount = X509_TestListCount(storeCtx->verifyParam.uriIds);
     cloneArg.expectSrvCount = X509_TestListCount(storeCtx->verifyParam.srvIds);
+    cloneArg.expectHostFlags = storeCtx->verifyParam.hostflags;
     cloneArg.expectIpLen = storeCtx->verifyParam.ipLen;
+    cloneArg.expectIpConfigured = (storeCtx->verifyParam.ip != NULL);
+    cloneArg.expectPeername = NULL;
     cloneArg.loops = STORE_DUP_THREAD_LOOPS;
     cloneArg.result = BSL_INTERNAL_EXCEPTION;
 
@@ -5842,7 +6024,7 @@ void SDV_X509_VERIFY_CRL_MULTI_THREAD_FUNC_TC001(char *certPath, char *crlPath)
     storeCtx = HITLS_X509_StoreCtxNew();
     ASSERT_NE(storeCtx, NULL);
     ASSERT_EQ(HITLS_AddBundlePemToChain(&chain, BUNDLE_TYPE_CERT, certPath), HITLS_PKI_SUCCESS);
-    ASSERT_EQ(HITLS_AddBundlePemToChain(&storeCtx->crl, BUNDLE_TYPE_CRL, crlPath), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_LoadBundlePemToStoreCrl(storeCtx, crlPath), HITLS_PKI_SUCCESS);
     ASSERT_EQ(HITLS_X509_StoreCtxCtrl(storeCtx, HITLS_X509_STORECTX_SET_PARAM_FLAGS, &verifyFlags,
         sizeof(verifyFlags)), HITLS_PKI_SUCCESS);
     ASSERT_EQ(HITLS_X509_StoreCtxCtrl(storeCtx, HITLS_X509_STORECTX_SET_TIME, &verifyTime, sizeof(verifyTime)),

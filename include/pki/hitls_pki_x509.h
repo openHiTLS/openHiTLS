@@ -52,7 +52,7 @@ HITLS_X509_StoreCtx *HITLS_X509_StoreCtxNew(void);
 
 /**
  * @ingroup pki
- * @brief Duplicate a StoreCtx (Deep copy configuration, leave session state initialized).
+ * @brief Duplicate a StoreCtx (share Store contents, deep copy configuration, leave session state initialized).
  *
  * @param ctx [IN] The StoreCtx to duplicate.
  * @retval HITLS_X509_StoreCtx *

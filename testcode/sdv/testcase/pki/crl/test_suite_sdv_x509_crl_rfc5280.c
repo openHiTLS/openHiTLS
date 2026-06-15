@@ -30,6 +30,7 @@
 #include "hitls_cert_local.h"
 #include "hitls_pki_utils.h"
 #include "hitls_pki_x509.h"
+#include "hitls_x509_store_local.h"
 #include "hitls_x509_verify.h"
 #include "bsl_pem_internal.h"
 /* END_HEADER */
@@ -313,6 +314,32 @@ EXIT:
 }
 #endif /* HITLS_PKI_X509_CRL_LITE */
 
+static int32_t AddCertToStore(HITLS_X509_StoreCtx *storeCtx, const char *path)
+{
+    HITLS_X509_Cert *cert = NULL;
+    int32_t ret = HITLS_X509_CertParseFile(BSL_FORMAT_PEM, path, &cert);
+    if (ret != HITLS_PKI_SUCCESS) {
+        return ret;
+    }
+
+    ret = HITLS_X509_StoreCtxCtrl(storeCtx, HITLS_X509_STORECTX_DEEP_COPY_SET_CA, cert, sizeof(HITLS_X509_Cert));
+    HITLS_X509_CertFree(cert);
+    return ret;
+}
+
+static int32_t AddCrlToStore(HITLS_X509_StoreCtx *storeCtx, const char *path)
+{
+    HITLS_X509_Crl *crl = NULL;
+    int32_t ret = HITLS_X509_CrlParseFile(BSL_FORMAT_PEM, path, &crl);
+    if (ret != HITLS_PKI_SUCCESS) {
+        return ret;
+    }
+
+    ret = HITLS_X509_StoreCtxCtrl(storeCtx, HITLS_X509_STORECTX_SET_CRL, crl, sizeof(HITLS_X509_Crl));
+    HITLS_X509_CrlFree(crl);
+    return ret;
+}
+
 /* @
 * @test  SDV_X509_CRL_DELTA_THIRDPARTY_ROUNDTRIP_TC001
 * @title  Re-encode ThirdParty Delta CRL Indicator extension bytes from the public model.
@@ -425,22 +452,14 @@ void SDV_X509_CRL_FILE_VERIFY_FUNC_TC001(char *caPath, char *crlPath, char *cert
     ASSERT_TRUE(storeCtx != NULL);
     storeCtx->verifyParam.flags = flags; // HITLS_X509_VFY_FLAG_CRL_ALL or HITLS_X509_VFY_FLAG_CRL_DEV
 
-    HITLS_X509_Cert *caCert = NULL;
     HITLS_X509_Cert *testCert = NULL;
-    int32_t ret = HITLS_X509_CertParseFile(BSL_FORMAT_PEM, caPath, &caCert);
+    int32_t ret = AddCertToStore(storeCtx, caPath);
     ASSERT_EQ(ret, HITLS_PKI_SUCCESS);
 
-    ret = BSL_LIST_AddElement(storeCtx->store, caCert, BSL_LIST_POS_END);
-    ASSERT_EQ(ret, BSL_SUCCESS);
-
-    HITLS_X509_Crl *crl = NULL;
-    ret = HITLS_X509_CrlParseFile(BSL_FORMAT_PEM, crlPath, &crl);
+    ret = AddCrlToStore(storeCtx, crlPath);
     ASSERT_EQ(ret, HITLS_PKI_SUCCESS);
 
-    ret = BSL_LIST_AddElement(storeCtx->crl, crl, BSL_LIST_POS_END);
-    ASSERT_EQ(ret, BSL_SUCCESS);
-
-    ret = HITLS_X509_VerifyCrl(storeCtx, storeCtx->store, NULL);
+    ret = HITLS_X509_VerifyCrl(storeCtx, storeCtx->store->certs, NULL);
     ASSERT_EQ(ret, crlVerResult);
 
     HITLS_X509_List *certChain = BSL_LIST_New(sizeof(HITLS_X509_Cert *));
@@ -475,35 +494,21 @@ void SDV_X509_CRL_FILE_VERIFY_FUNC_TC002(char *rootCaPath, char *caPath, char *r
     ASSERT_TRUE(storeCtx != NULL);
     storeCtx->verifyParam.flags = flags; // HITLS_X509_VFY_FLAG_CRL_ALL or HITLS_X509_VFY_FLAG_CRL_DEV
 
-    HITLS_X509_Cert *rootCaCert = NULL;
-    HITLS_X509_Cert *caCert = NULL;
     HITLS_X509_Cert *testCert = NULL;
-    int32_t ret = HITLS_X509_CertParseFile(BSL_FORMAT_PEM, rootCaPath, &rootCaCert);
+    int32_t ret = AddCertToStore(storeCtx, caPath);
     ASSERT_EQ(ret, HITLS_PKI_SUCCESS);
-    ret = BSL_LIST_AddElement(storeCtx->store, rootCaCert, BSL_LIST_POS_END);
-    ASSERT_EQ(ret, BSL_SUCCESS);
-
-    ret = HITLS_X509_CertParseFile(BSL_FORMAT_PEM, caPath, &caCert);
+    ret = AddCertToStore(storeCtx, rootCaPath);
     ASSERT_EQ(ret, HITLS_PKI_SUCCESS);
-    ret = BSL_LIST_AddElement(storeCtx->store, caCert, BSL_LIST_POS_END);
-    ASSERT_EQ(ret, BSL_SUCCESS);
-
-    HITLS_X509_Crl *crl = NULL;
-    ret = HITLS_X509_CrlParseFile(BSL_FORMAT_PEM, crlPath, &crl);
-    ASSERT_EQ(ret, HITLS_PKI_SUCCESS);
-    ret = BSL_LIST_AddElement(storeCtx->crl, crl, BSL_LIST_POS_END);
-    ASSERT_EQ(ret, BSL_SUCCESS);
 
     if (strlen(rootCrlPath) > 0) {
-        HITLS_X509_Crl *rootCrl = NULL;
-        ret = HITLS_X509_CrlParseFile(BSL_FORMAT_PEM, rootCrlPath, &rootCrl);
+        ret = AddCrlToStore(storeCtx, rootCrlPath);
         ASSERT_EQ(ret, HITLS_PKI_SUCCESS);
-        ret = BSL_LIST_AddElement(storeCtx->crl, rootCrl, BSL_LIST_POS_END);
-        ASSERT_EQ(ret, BSL_SUCCESS);
     }
+    ret = AddCrlToStore(storeCtx, crlPath);
+    ASSERT_EQ(ret, HITLS_PKI_SUCCESS);
     ASSERT_TRUE(TestIsErrStackEmpty());
 
-    ret = HITLS_X509_VerifyCrl(storeCtx, storeCtx->store, NULL);
+    ret = HITLS_X509_VerifyCrl(storeCtx, storeCtx->store->certs, NULL);
     ASSERT_EQ(ret, crlVerResult);
 
     HITLS_X509_List *certChain = BSL_LIST_New(sizeof(HITLS_X509_Cert *));
@@ -540,33 +545,19 @@ void SDV_X509_CRL_FILE_VERIFY_FUNC_TC003(char *caPath, char *crlPath, char *cert
     ASSERT_TRUE(storeCtx != NULL);
     storeCtx->verifyParam.flags = flags; // HITLS_X509_VFY_FLAG_CRL_ALL or HITLS_X509_VFY_FLAG_CRL_DEV
 
-    HITLS_X509_Cert *rootCaCert = NULL;
-    HITLS_X509_Cert *caCert = NULL;
     HITLS_X509_Cert *testCert = NULL;
-    int32_t ret = HITLS_X509_CertParseFile(BSL_FORMAT_PEM, rootCaPath, &rootCaCert);
+    int32_t ret = AddCertToStore(storeCtx, caPath);
     ASSERT_EQ(ret, HITLS_PKI_SUCCESS);
-    ret = BSL_LIST_AddElement(storeCtx->store, rootCaCert, BSL_LIST_POS_END);
-    ASSERT_EQ(ret, BSL_SUCCESS);
+    ret = AddCertToStore(storeCtx, rootCaPath);
+    ASSERT_EQ(ret, HITLS_PKI_SUCCESS);
 
-    ret = HITLS_X509_CertParseFile(BSL_FORMAT_PEM, caPath, &caCert);
+    ret = AddCrlToStore(storeCtx, rootCrlPath);
     ASSERT_EQ(ret, HITLS_PKI_SUCCESS);
-    ret = BSL_LIST_AddElement(storeCtx->store, caCert, BSL_LIST_POS_END);
-    ASSERT_EQ(ret, BSL_SUCCESS);
-
-    HITLS_X509_Crl *crl = NULL;
-    ret = HITLS_X509_CrlParseFile(BSL_FORMAT_PEM, crlPath, &crl);
+    ret = AddCrlToStore(storeCtx, crlPath);
     ASSERT_EQ(ret, HITLS_PKI_SUCCESS);
-    ret = BSL_LIST_AddElement(storeCtx->crl, crl, BSL_LIST_POS_END);
-    ASSERT_EQ(ret, BSL_SUCCESS);
-
-    HITLS_X509_Crl *rootCrl = NULL;
-    ret = HITLS_X509_CrlParseFile(BSL_FORMAT_PEM, rootCrlPath, &rootCrl);
-    ASSERT_EQ(ret, HITLS_PKI_SUCCESS);
-    ret = BSL_LIST_AddElement(storeCtx->crl, rootCrl, BSL_LIST_POS_END);
-    ASSERT_EQ(ret, BSL_SUCCESS);
     ASSERT_TRUE(TestIsErrStackEmpty());
 
-    ret = HITLS_X509_VerifyCrl(storeCtx, storeCtx->store, NULL);
+    ret = HITLS_X509_VerifyCrl(storeCtx, storeCtx->store->certs, NULL);
     ASSERT_EQ(ret, crlVerResult);
 
     HITLS_X509_List *certChain = BSL_LIST_New(sizeof(HITLS_X509_Cert *));
@@ -601,20 +592,12 @@ void SDV_X509_CRL_FILE_VERIFY_FUNC_TC004(char *caPath, char *crlPath, char *cert
     ASSERT_TRUE(storeCtx != NULL);
     storeCtx->verifyParam.flags = flags; // HITLS_X509_VFY_FLAG_CRL_ALL or HITLS_X509_VFY_FLAG_CRL_DEV
 
-    HITLS_X509_Cert *caCert = NULL;
     HITLS_X509_Cert *testCert = NULL;
-    int32_t ret = HITLS_X509_CertParseFile(BSL_FORMAT_PEM, caPath, &caCert);
+    int32_t ret = AddCertToStore(storeCtx, caPath);
     ASSERT_EQ(ret, HITLS_PKI_SUCCESS);
 
-    ret = BSL_LIST_AddElement(storeCtx->store, caCert, BSL_LIST_POS_END);
-    ASSERT_EQ(ret, BSL_SUCCESS);
-
-    HITLS_X509_Crl *crl = NULL;
-    ret = HITLS_X509_CrlParseFile(BSL_FORMAT_PEM, crlPath, &crl);
+    ret = AddCrlToStore(storeCtx, crlPath);
     ASSERT_EQ(ret, HITLS_PKI_SUCCESS);
-
-    ret = BSL_LIST_AddElement(storeCtx->crl, crl, BSL_LIST_POS_END);
-    ASSERT_EQ(ret, BSL_SUCCESS);
 
     if (isUseSm2UserId != 0) {
         const char *sm2UserId = "1234567812345678";
@@ -624,7 +607,7 @@ void SDV_X509_CRL_FILE_VERIFY_FUNC_TC004(char *caPath, char *crlPath, char *cert
     }
     ASSERT_TRUE(TestIsErrStackEmpty());
 
-    ret = HITLS_X509_VerifyCrl(storeCtx, storeCtx->store, NULL);
+    ret = HITLS_X509_VerifyCrl(storeCtx, storeCtx->store->certs, NULL);
     ASSERT_EQ(ret, crlVerResult);
 
     HITLS_X509_List *certChain = BSL_LIST_New(sizeof(HITLS_X509_Cert *));
@@ -658,32 +641,18 @@ void SDV_X509_CRL_FILE_VERIFY_FUNC_TC005(char *rootCaPath, char *caPath, char *r
     ASSERT_TRUE(storeCtx != NULL);
     storeCtx->verifyParam.flags = flags; // HITLS_X509_VFY_FLAG_CRL_ALL or HITLS_X509_VFY_FLAG_CRL_DEV
 
-    HITLS_X509_Cert *rootCaCert = NULL;
-    HITLS_X509_Cert *caCert = NULL;
     HITLS_X509_Cert *testCert = NULL;
-    int32_t ret = HITLS_X509_CertParseFile(BSL_FORMAT_PEM, rootCaPath, &rootCaCert);
+    int32_t ret = AddCertToStore(storeCtx, caPath);
     ASSERT_EQ(ret, HITLS_PKI_SUCCESS);
-    ret = BSL_LIST_AddElement(storeCtx->store, rootCaCert, BSL_LIST_POS_END);
-    ASSERT_EQ(ret, BSL_SUCCESS);
-
-    ret = HITLS_X509_CertParseFile(BSL_FORMAT_PEM, caPath, &caCert);
+    ret = AddCertToStore(storeCtx, rootCaPath);
     ASSERT_EQ(ret, HITLS_PKI_SUCCESS);
-    ret = BSL_LIST_AddElement(storeCtx->store, caCert, BSL_LIST_POS_END);
-    ASSERT_EQ(ret, BSL_SUCCESS);
-
-    HITLS_X509_Crl *crl = NULL;
-    ret = HITLS_X509_CrlParseFile(BSL_FORMAT_PEM, crlPath, &crl);
-    ASSERT_EQ(ret, HITLS_PKI_SUCCESS);
-    ret = BSL_LIST_AddElement(storeCtx->crl, crl, BSL_LIST_POS_END);
-    ASSERT_EQ(ret, BSL_SUCCESS);
 
     if (strlen(rootCrlPath) > 0) {
-        HITLS_X509_Crl *rootCrl = NULL;
-        ret = HITLS_X509_CrlParseFile(BSL_FORMAT_PEM, rootCrlPath, &rootCrl);
+        ret = AddCrlToStore(storeCtx, rootCrlPath);
         ASSERT_EQ(ret, HITLS_PKI_SUCCESS);
-        ret = BSL_LIST_AddElement(storeCtx->crl, rootCrl, BSL_LIST_POS_END);
-        ASSERT_EQ(ret, BSL_SUCCESS);
     }
+    ret = AddCrlToStore(storeCtx, crlPath);
+    ASSERT_EQ(ret, HITLS_PKI_SUCCESS);
 
     if (isUseSm2UserId != 0) {
         const char *sm2UserId = "1234567812345678";
@@ -693,7 +662,7 @@ void SDV_X509_CRL_FILE_VERIFY_FUNC_TC005(char *rootCaPath, char *caPath, char *r
     }
     ASSERT_TRUE(TestIsErrStackEmpty());
 
-    ret = HITLS_X509_VerifyCrl(storeCtx, storeCtx->store, NULL);
+    ret = HITLS_X509_VerifyCrl(storeCtx, storeCtx->store->certs, NULL);
     ASSERT_EQ(ret, crlVerResult);
 
     HITLS_X509_List *certChain = BSL_LIST_New(sizeof(HITLS_X509_Cert *));
