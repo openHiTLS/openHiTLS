@@ -1,0 +1,58 @@
+{
+    "libType": [
+        "static",
+        "shared"
+    ],
+    "libs": {
+        "hitls_bsl": {
+            "c": [
+                "hash",
+                "log",
+                "uio_tcp",
+                "sal_str"
+            ]
+        },
+        "hitls_crypto": {
+            "c": [
+                "aes",
+                "bn",
+                "cbc",
+                "codecskey",
+                "curve_nistp256",
+                "drbg_hash",
+                "eal",
+                "ealinit",
+                "ecc",
+                "ecdh",
+                "ecdsa",
+                "entropy",
+                "hkdf",
+                "rsa",
+                "sha1",
+                "sha2"
+            ]
+        },
+        "hitls_tls": {
+            "c": [
+                "callback_sal",
+                "callback_cert",
+                "callback_crypt",
+                "config",
+                "feature_session",
+                "proto",
+                "proto_tls12",
+                "suite_ecdhe_rsa_with_aes_128_cbc_sha",
+                "host_client"
+            ]
+        },
+        "hitls_pki": {
+            "c": [
+                "x509"
+            ]
+        }
+    },
+    "endian": "little",
+    "bits": 64,
+    "asmType": "no_asm",
+    "system": "linux"
+}

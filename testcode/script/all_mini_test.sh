@@ -353,6 +353,8 @@ test_tls()
     bash mini_build_test.sh $COMMON_PARAM $NO_LIB feature-config=max_send_fragment_feature test=max_send_fragment linux
     bash mini_build_test.sh $COMMON_PARAM $NO_LIB feature-config=ca_list_feature test=ca_list linux
     bash mini_build_test.sh $COMMON_PARAM $NO_LIB feature-config=no_dfx_feature test=no_dfx compile-config=no_dfx_compile include-path="${include_path}" linux
+    bash mini_build_test.sh $COMMON_PARAM $NO_LIB feature-config=no_client test= add-options="-Wl,-z,defs" add-options="-pthread"
+    bash mini_build_test.sh $COMMON_PARAM $NO_LIB feature-config=no_server test= add-options="-Wl,-z,defs" add-options="-pthread"
 }
 
 test_pki()

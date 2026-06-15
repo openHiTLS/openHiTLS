@@ -103,7 +103,8 @@ int32_t HITLS_SetAlpnProtos(HITLS_Ctx *ctx, const uint8_t *protos, uint32_t prot
  * @param   ctx  [IN] Ctx context.
  * @param   proto    [OUT] Header address of the outgoing selected protocol.
  * @param   protoLen    [OUT] Length of the outgoing selected protocol.
- * @return  If success, return HITLS_SUCCESS.
+ * @return  If success, return HITLS_SUCCESS. Note: Success does not mean obtaining alpn, it requires making a
+ *          judgement on "proto"
  *          For details about other error codes, see hitls_error.h.
  */
 int32_t HITLS_GetSelectedAlpnProto(HITLS_Ctx *ctx, uint8_t **proto, uint32_t *protoLen);
@@ -119,7 +120,7 @@ int32_t HITLS_GetSelectedAlpnProto(HITLS_Ctx *ctx, uint8_t **proto, uint32_t *pr
  * @param   clientAlpnList    [IN] Client Application layer protocol list.
  * @param   clientAlpnListLen [IN] Length of the application layer protocol list.
  * @retval HITLS_SUCCESS, succeeded. Note: Success does not necessarily mean negotiating ALPN; it requires making a
- * judgment on "out."
+ * judgement on "out"
  * @retval HITLS_NULL_INPUT, the input is NULL.
  * @retval HITLS_CONFIG_INVALID_LENGTH, ALPN length does not match the actual length..
  */

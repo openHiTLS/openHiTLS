@@ -270,8 +270,10 @@ static int32_t TlsParseHsMsgHeader(TLS_Ctx *ctx, const uint8_t *data, uint32_t l
 static int32_t ParseHandShakeMsg(TLS_Ctx *ctx, const uint8_t *data, uint32_t len, HS_Msg *hsMsg)
 {
     switch (hsMsg->type) {
+#ifdef HITLS_TLS_HOST_SERVER
         case CLIENT_HELLO:
             return ParseClientHello(ctx, data, len, hsMsg);
+#endif
 #ifdef HITLS_TLS_HOST_CLIENT
         case SERVER_HELLO:
             return ParseServerHello(ctx, data, len, hsMsg);
@@ -286,16 +288,18 @@ static int32_t ParseHandShakeMsg(TLS_Ctx *ctx, const uint8_t *data, uint32_t len
 #endif
         case CERTIFICATE:
             return ParseCertificate(ctx, data, len, hsMsg);
+#ifdef HITLS_TLS_HOST_SERVER
         case CLIENT_KEY_EXCHANGE:
             return ParseClientKeyExchange(ctx, data, len, hsMsg);
+#endif
 #if defined(HITLS_TLS_HOST_SERVER) && defined(HITLS_TLS_FEATURE_CERT_MODE_CLIENT_VERIFY)
         case CERTIFICATE_VERIFY:
             return ParseCertificateVerify(ctx, data, len, hsMsg);
 #endif
-#ifdef HITLS_TLS_FEATURE_SESSION_TICKET
+#if defined(HITLS_TLS_FEATURE_SESSION_TICKET) && defined(HITLS_TLS_HOST_CLIENT)
         case NEW_SESSION_TICKET:
             return ParseNewSessionTicket(ctx, data, len, hsMsg);
-#endif /* HITLS_TLS_FEATURE_SESSION_TICKET */
+#endif /* HITLS_TLS_FEATURE_SESSION_TICKET && HITLS_TLS_HOST_CLIENT */
         case FINISHED:
             return ParseFinished(ctx, data, len, hsMsg);
         case HELLO_REQUEST:
