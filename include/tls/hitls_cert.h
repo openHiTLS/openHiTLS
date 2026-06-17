@@ -1322,6 +1322,94 @@ int32_t HITLS_ClearVerifyCrls(HITLS_Ctx *ctx);
 
 /**
  * @ingroup hitls_cert
+ * @brief   Set the URI-ID.
+ * @param   ctx [IN] TLS link object
+ * @param   uri [IN] URI-ID, type : const char *.
+ * @retval  HITLS_SUCCESS, if successful.
+ * @retval  For other error codes, see hitls_error.h.
+ */
+#define HITLS_SetUriId(ctx, uri) HITLS_CtrlSetVerifyParams(ctx, \
+    NULL, CERT_STORE_CTRL_SET_URI_ID, 0, uri)
+
+/**
+ * @ingroup hitls_cert
+ * @brief   Set the URI-ID.
+ * @param   config [IN] TLS link configuration
+ * @param   uri [IN] URI-ID, type : const char *.
+ * @retval  HITLS_SUCCESS, if successful.
+ * @retval  For other error codes, see hitls_error.h.
+ */
+#define HITLS_CFG_SetUriId(config, uri) HITLS_CFG_CtrlSetVerifyParams(config, \
+    NULL, CERT_STORE_CTRL_SET_URI_ID, 0, uri)
+
+/**
+ * @ingroup hitls_cert
+ * @brief   Add the URI-ID.
+ * @param   ctx [IN] TLS link object
+ * @param   uri [IN] URI-ID, type : const char *.
+ * @retval  HITLS_SUCCESS, if successful.
+ * @retval  For other error codes, see hitls_error.h.
+ */
+#define HITLS_AddUriId(ctx, uri) HITLS_CtrlSetVerifyParams(ctx, \
+    NULL, CERT_STORE_CTRL_ADD_URI_ID, 0, uri)
+
+/**
+ * @ingroup hitls_cert
+ * @brief   Add the URI-ID.
+ * @param   config [IN] TLS link configuration
+ * @param   uri [IN] URI-ID, type : const char *.
+ * @retval  HITLS_SUCCESS, if successful.
+ * @retval  For other error codes, see hitls_error.h.
+ */
+#define HITLS_CFG_AddUriId(config, uri) HITLS_CFG_CtrlSetVerifyParams(config, \
+    NULL, CERT_STORE_CTRL_ADD_URI_ID, 0, uri)
+
+/**
+ * @ingroup hitls_cert
+ * @brief   Set the SRV-ID.
+ * @param   ctx [IN] TLS link object
+ * @param   srv [IN] SRV-ID, type : const char *.
+ * @retval  HITLS_SUCCESS, if successful.
+ * @retval  For other error codes, see hitls_error.h.
+ */
+#define HITLS_SetSrvId(ctx, srv) HITLS_CtrlSetVerifyParams(ctx, \
+    NULL, CERT_STORE_CTRL_SET_SRV_ID, 0, srv)
+
+/**
+ * @ingroup hitls_cert
+ * @brief   Set the SRV-ID.
+ * @param   config [IN] TLS link configuration
+ * @param   srv [IN] SRV-ID, type : const char *.
+ * @retval  HITLS_SUCCESS, if successful.
+ * @retval  For other error codes, see hitls_error.h.
+ */
+#define HITLS_CFG_SetSrvId(config, srv) HITLS_CFG_CtrlSetVerifyParams(config, \
+    NULL, CERT_STORE_CTRL_SET_SRV_ID, 0, srv)
+
+/**
+ * @ingroup hitls_cert
+ * @brief   Add the SRV-ID.
+ * @param   ctx [IN] TLS link object
+ * @param   srv [IN] SRV-ID, type : const char *.
+ * @retval  HITLS_SUCCESS, if successful.
+ * @retval  For other error codes, see hitls_error.h.
+ */
+#define HITLS_AddSrvId(ctx, srv) HITLS_CtrlSetVerifyParams(ctx, \
+    NULL, CERT_STORE_CTRL_ADD_SRV_ID, 0, srv)
+
+/**
+ * @ingroup hitls_cert
+ * @brief   Add the SRV-ID.
+ * @param   config [IN] TLS link configuration
+ * @param   srv [IN] SRV-ID, type : const char *.
+ * @retval  HITLS_SUCCESS, if successful.
+ * @retval  For other error codes, see hitls_error.h.
+ */
+#define HITLS_CFG_AddSrvId(config, srv) HITLS_CFG_CtrlSetVerifyParams(config, \
+    NULL, CERT_STORE_CTRL_ADD_SRV_ID, 0, srv)
+
+/**
+ * @ingroup hitls_cert
  * @brief   Get the peername.
  * @param   ctx [IN] TLS link object
  * @param   peername [IN] peername, type : char **.

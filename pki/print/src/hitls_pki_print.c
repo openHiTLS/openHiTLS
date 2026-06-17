@@ -84,6 +84,7 @@ static HITLS_X509_TypeNameMap g_gnNameMap[] = {
     {HITLS_X509_GN_EDI, "EdiPartyName"},
     {HITLS_X509_GN_URI, "URI"},
     {HITLS_X509_GN_IP, "IP Address"},
+    {HITLS_X509_GN_SRV, "SRVName"},
     {HITLS_X509_GN_RID, "Registered ID"},
 };
 
@@ -398,6 +399,7 @@ static int32_t PrintGeneralName(HITLS_X509_GeneralName *gn, bool first, uint32_t
         case HITLS_X509_GN_EMAIL:
         case HITLS_X509_GN_DNS:
         case HITLS_X509_GN_URI:
+        case HITLS_X509_GN_SRV:
             return BSL_PRINT_Buff(0, uio, gn->value.data, gn->value.dataLen);
         case HITLS_X509_GN_IP:
             return PrintIpAddress(&gn->value, 0, uio);

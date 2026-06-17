@@ -610,6 +610,9 @@ SDV_X509_STORE_CTX_DUP_ISOLATION_TC001:"../testdata/tls/certificate/der/rsa_with
 SDV_X509_STORE_CTX_DUP_MULTI_THREAD_TC001
 SDV_X509_STORE_CTX_DUP_MULTI_THREAD_TC001:"../testdata/tls/certificate/der/rsa_with_san_ext/rootca.der":"../testdata/tls/certificate/der/rsa_with_san_ext/server.der"
 
+SDV_X509_STORE_CTX_DUP_URI_SRV_ID_MULTI_THREAD_TC001
+SDV_X509_STORE_CTX_DUP_URI_SRV_ID_MULTI_THREAD_TC001:"../testdata/tls/certificate/der/rsa_with_uri_srv_san/rootca.der":"../testdata/tls/certificate/der/rsa_with_uri_srv_san/server.der"
+
 SDV_X509_CERT_VERIFY_MULTI_THREAD_WITH_VARIOUS_CHARSET_FUNC_TC001
 SDV_X509_CERT_VERIFY_MULTI_THREAD_WITH_VARIOUS_CHARSET_FUNC_TC001:"../testdata/cert/chain/charset/convert_to_utf8/ca_mix.crt":"../testdata/cert/chain/charset/convert_to_utf8/user_utf8.crt"
 

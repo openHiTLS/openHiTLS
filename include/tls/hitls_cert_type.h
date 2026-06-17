@@ -99,6 +99,10 @@ typedef enum {
     CERT_STORE_CTRL_SET_HOST,               /**< Set the certificate host. */
     CERT_STORE_CTRL_ADD_HOST,               /**< Add the certificate host. */
     CERT_STORE_CTRL_GET_PEERNAME,           /**< Get the certificate peername. */
+    CERT_STORE_CTRL_SET_URI_ID,             /**< Set the certificate URI-ID. */
+    CERT_STORE_CTRL_ADD_URI_ID,             /**< Add the certificate URI-ID. */
+    CERT_STORE_CTRL_SET_SRV_ID,             /**< Set the certificate SRV-ID. */
+    CERT_STORE_CTRL_ADD_SRV_ID,             /**< Add the certificate SRV-ID. */
 
     CERT_CTRL_GET_ENCODE_LEN = 200,         /**< Obtain the length of the certificate code. */
     CERT_CTRL_GET_PUB_KEY,                  /**< Obtaining the Certificate Public Key (Release Required). */

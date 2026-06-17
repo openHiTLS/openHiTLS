@@ -104,6 +104,14 @@ int32_t HITLS_X509_Adapt_StoreCtrl(HITLS_Config *config, HITLS_CERT_Store *store
             return HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_SET_HOST, input, 0);
         case CERT_STORE_CTRL_ADD_HOST:
             return HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_ADD_HOST, input, 0);
+        case CERT_STORE_CTRL_SET_URI_ID:
+            return HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_SET_URI_ID, input, 0);
+        case CERT_STORE_CTRL_ADD_URI_ID:
+            return HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_ADD_URI_ID, input, 0);
+        case CERT_STORE_CTRL_SET_SRV_ID:
+            return HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_SET_SRV_ID, input, 0);
+        case CERT_STORE_CTRL_ADD_SRV_ID:
+            return HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_ADD_SRV_ID, input, 0);
         case CERT_STORE_CTRL_GET_PEERNAME:
             return HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_GET_PEERNAME, output, 0);
 #endif

@@ -1351,6 +1351,186 @@ EXIT:
 /* END_CASE */
 
 /* BEGIN_CASE */
+void SDV_HITLS_SetUriSrvId_TC001()
+{
+    HitlsInit();
+
+    HITLS_Config *config = HITLS_CFG_NewTLSConfig();
+    ASSERT_TRUE(config != NULL);
+    HITLS_Ctx *ctx = HITLS_New(config);
+    ASSERT_TRUE(ctx != NULL);
+
+    char uri[] = "sip:voice.example.edu";
+    char uri2[] = "https://example.com:443/path";
+    char srv[] = "_imaps.example.net";
+    char srv2[] = "_xmpp-client.im.example.org";
+    HITLS_X509_StoreCtx *store = (HITLS_X509_StoreCtx *)ctx->config.tlsConfig.certMgrCtx->certStore;
+
+    ASSERT_EQ(HITLS_SetUriId(ctx, NULL), HITLS_SUCCESS);
+    ASSERT_TRUE(store->verifyParam.uriIds == NULL);
+    ASSERT_EQ(HITLS_AddUriId(ctx, NULL), HITLS_X509_ERR_INVALID_PARAM);
+    ASSERT_EQ(HITLS_SetUriId(ctx, ""), HITLS_X509_ERR_INVALID_PARAM);
+    ASSERT_EQ(HITLS_AddUriId(ctx, ""), HITLS_X509_ERR_INVALID_PARAM);
+    ASSERT_EQ(HITLS_SetUriId(ctx, uri), HITLS_SUCCESS);
+    ASSERT_TRUE(store->verifyParam.uriIds != NULL);
+    ASSERT_TRUE(BSL_LIST_COUNT(store->verifyParam.uriIds) == 1);
+    ASSERT_EQ(HITLS_AddUriId(ctx, uri2), HITLS_SUCCESS);
+    ASSERT_TRUE(BSL_LIST_COUNT(store->verifyParam.uriIds) == 2);
+    char *innerUri = BSL_LIST_GET_LAST(store->verifyParam.uriIds);
+    ASSERT_TRUE(innerUri != NULL);
+    ASSERT_TRUE(strcmp(innerUri, uri2) == 0);
+
+    ASSERT_EQ(HITLS_SetSrvId(ctx, NULL), HITLS_SUCCESS);
+    ASSERT_TRUE(store->verifyParam.srvIds == NULL);
+    ASSERT_EQ(HITLS_AddSrvId(ctx, NULL), HITLS_X509_ERR_INVALID_PARAM);
+    ASSERT_EQ(HITLS_SetSrvId(ctx, ""), HITLS_X509_ERR_INVALID_PARAM);
+    ASSERT_EQ(HITLS_AddSrvId(ctx, ""), HITLS_X509_ERR_INVALID_PARAM);
+    ASSERT_EQ(HITLS_SetSrvId(ctx, srv), HITLS_SUCCESS);
+    ASSERT_TRUE(store->verifyParam.srvIds != NULL);
+    ASSERT_TRUE(BSL_LIST_COUNT(store->verifyParam.srvIds) == 1);
+    ASSERT_EQ(HITLS_AddSrvId(ctx, srv2), HITLS_SUCCESS);
+    ASSERT_TRUE(BSL_LIST_COUNT(store->verifyParam.srvIds) == 2);
+    char *innerSrv = BSL_LIST_GET_LAST(store->verifyParam.srvIds);
+    ASSERT_TRUE(innerSrv != NULL);
+    ASSERT_TRUE(strcmp(innerSrv, srv2) == 0);
+
+    ASSERT_EQ(HITLS_CFG_SetUriId(config, uri), HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_CFG_AddUriId(config, uri2), HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_CFG_SetSrvId(config, srv), HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_CFG_AddSrvId(config, srv2), HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_CFG_SetUriId(NULL, uri), HITLS_NULL_INPUT);
+    ASSERT_EQ(HITLS_CFG_SetSrvId(NULL, srv), HITLS_NULL_INPUT);
+EXIT:
+    HITLS_CFG_FreeConfig(config);
+    HITLS_Free(ctx);
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_HITLS_UriSrvIdVerify_TC001()
+{
+    HitlsInit();
+
+    HITLS_Config *c_config = HITLS_CFG_NewTLSConfig();
+    ASSERT_TRUE(c_config != NULL);
+    HITLS_Config *s_config = HITLS_CFG_NewTLSConfig();
+    ASSERT_TRUE(s_config != NULL);
+    FRAME_CertInfo certInfoClient = {
+        "rsa_with_uri_srv_san/rootca.der",
+        0,
+        "rsa_with_uri_srv_san/server.der",
+        0,
+        "rsa_with_uri_srv_san/server.key.der",
+        0
+    };
+    FRAME_CertInfo certInfoServer = {
+        "rsa_with_uri_srv_san/rootca.der",
+        0,
+        "rsa_with_uri_srv_san/server.der",
+        0,
+        "rsa_with_uri_srv_san/server.key.der",
+        0
+    };
+    FRAME_CertInfo certInfoWithoutUriSrv = {
+        "rsa_with_san_ext/rootca.der",
+        0,
+        "rsa_with_san_ext/server.der",
+        0,
+        "rsa_with_san_ext/server.key.der",
+        0
+    };
+
+    FRAME_LinkObj *client = FRAME_CreateLinkWithCert(c_config, BSL_UIO_TCP, &certInfoClient);
+    ASSERT_TRUE(client != NULL);
+    FRAME_LinkObj *server = FRAME_CreateLinkWithCert(s_config, BSL_UIO_TCP, &certInfoServer);
+    ASSERT_TRUE(server != NULL);
+
+    char uri[] = "SIP:voice.example.edu";
+    char srv[] = "_IMAPS.example.net";
+    ASSERT_EQ(HITLS_SetUriId(client->ssl, uri), HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_SetSrvId(client->ssl, srv), HITLS_SUCCESS);
+    ASSERT_EQ(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_SUCCESS);
+
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+    client = FRAME_CreateLinkWithCert(c_config, BSL_UIO_TCP, &certInfoClient);
+    server = FRAME_CreateLinkWithCert(s_config, BSL_UIO_TCP, &certInfoServer);
+    ASSERT_TRUE(client != NULL);
+    ASSERT_TRUE(server != NULL);
+
+    char wrongUri[] = "sips:voice.example.edu";
+    ASSERT_EQ(HITLS_SetUriId(client->ssl, wrongUri), HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_SetSrvId(client->ssl, srv), HITLS_SUCCESS);
+    ASSERT_EQ(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_CERT_ERR_VERIFY_CERT_CHAIN);
+
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+    client = FRAME_CreateLinkWithCert(c_config, BSL_UIO_TCP, &certInfoClient);
+    server = FRAME_CreateLinkWithCert(s_config, BSL_UIO_TCP, &certInfoServer);
+    ASSERT_TRUE(client != NULL);
+    ASSERT_TRUE(server != NULL);
+
+    char wrongSrv[] = "_imap.example.net";
+    ASSERT_EQ(HITLS_SetUriId(client->ssl, uri), HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_SetSrvId(client->ssl, wrongSrv), HITLS_SUCCESS);
+    ASSERT_EQ(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_CERT_ERR_VERIFY_CERT_CHAIN);
+
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+    client = FRAME_CreateLinkWithCert(c_config, BSL_UIO_TCP, &certInfoClient);
+    server = FRAME_CreateLinkWithCert(s_config, BSL_UIO_TCP, &certInfoServer);
+    ASSERT_TRUE(client != NULL);
+    ASSERT_TRUE(server != NULL);
+
+    char uriWithAuthority[] = "https://example.com";
+    ASSERT_EQ(HITLS_SetUriId(client->ssl, wrongUri), HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_AddUriId(client->ssl, uriWithAuthority), HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_SetSrvId(client->ssl, wrongSrv), HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_AddSrvId(client->ssl, srv), HITLS_SUCCESS);
+    ASSERT_EQ(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_SUCCESS);
+
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+    client = FRAME_CreateLinkWithCert(c_config, BSL_UIO_TCP, &certInfoClient);
+    server = FRAME_CreateLinkWithCert(s_config, BSL_UIO_TCP, &certInfoServer);
+    ASSERT_TRUE(client != NULL);
+    ASSERT_TRUE(server != NULL);
+
+    char uriWithPartialWildcard[] = "sip:foo.partial.example.com";
+    ASSERT_EQ(HITLS_SetUriId(client->ssl, uriWithPartialWildcard), HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_SetSrvId(client->ssl, srv), HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_SetHostFlags(client->ssl, HITLS_X509_FLAG_VFY_WITH_PARTIAL_WILDCARD), HITLS_SUCCESS);
+    ASSERT_EQ(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_SUCCESS);
+
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+    client = FRAME_CreateLinkWithCert(c_config, BSL_UIO_TCP, &certInfoWithoutUriSrv);
+    server = FRAME_CreateLinkWithCert(s_config, BSL_UIO_TCP, &certInfoWithoutUriSrv);
+    ASSERT_TRUE(client != NULL);
+    ASSERT_TRUE(server != NULL);
+
+    ASSERT_EQ(HITLS_SetUriId(client->ssl, uri), HITLS_SUCCESS);
+    ASSERT_EQ(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_CERT_ERR_VERIFY_CERT_CHAIN);
+
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+    client = FRAME_CreateLinkWithCert(c_config, BSL_UIO_TCP, &certInfoWithoutUriSrv);
+    server = FRAME_CreateLinkWithCert(s_config, BSL_UIO_TCP, &certInfoWithoutUriSrv);
+    ASSERT_TRUE(client != NULL);
+    ASSERT_TRUE(server != NULL);
+
+    ASSERT_EQ(HITLS_SetSrvId(client->ssl, srv), HITLS_SUCCESS);
+    ASSERT_EQ(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_CERT_ERR_VERIFY_CERT_CHAIN);
+
+EXIT:
+    HITLS_CFG_FreeConfig(c_config);
+    HITLS_CFG_FreeConfig(s_config);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
 void SDV_HITLS_HostNameVerify_TC001()
 {
     HitlsInit();

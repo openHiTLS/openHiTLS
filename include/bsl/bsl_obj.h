@@ -734,6 +734,7 @@ typedef enum {
     BSL_CID_SM4_CCM,
     BSL_CID_X509CRL,
     BSL_CID_SMIMECAP,
+    BSL_CID_ON_DNSSRV, /* identifies id-on-dnsSRV */
 
     BSL_CID_MAX,
     BSL_CID_EXTEND = 0x60000000,

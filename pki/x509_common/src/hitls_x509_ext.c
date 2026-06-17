@@ -326,12 +326,48 @@ static int32_t ParseDirName(uint8_t **encode, uint32_t *encLen, BslList **list)
     return ret;
 }
 
+static int32_t ParseSrvName(uint8_t **encode, uint32_t *encLen, uint32_t nameLen, BSL_Buffer *value, bool *isSrvName)
+{
+    uint8_t *buff = *encode;
+    uint32_t buffLen = nameLen;
+    uint32_t valueLen;
+    *isSrvName = false;
+
+    int32_t ret = BSL_ASN1_DecodeTagLen(BSL_ASN1_TAG_OBJECT_ID, &buff, &buffLen, &valueLen);
+    if (ret != BSL_SUCCESS) {
+        return HITLS_PKI_SUCCESS;
+    }
+    if (BSL_OBJ_GetCidFromOidBuff(buff, valueLen) != BSL_CID_ON_DNSSRV) {
+        return HITLS_PKI_SUCCESS;
+    }
+    buff += valueLen;
+    buffLen -= valueLen;
+
+    ret = BSL_ASN1_DecodeTagLen(BSL_ASN1_CLASS_CTX_SPECIFIC | BSL_ASN1_TAG_CONSTRUCTED, &buff, &buffLen, &valueLen);
+    if (ret != BSL_SUCCESS || buffLen != valueLen) {
+        return ret != BSL_SUCCESS ? ret : HITLS_X509_ERR_PARSE_SAN_ITEM;
+    }
+
+    ret = BSL_ASN1_DecodeTagLen(BSL_ASN1_TAG_IA5STRING, &buff, &buffLen, &valueLen);
+    if (ret != BSL_SUCCESS || buffLen != valueLen) {
+        return ret != BSL_SUCCESS ? ret : HITLS_X509_ERR_PARSE_SAN_ITEM;
+    }
+
+    value->data = buff;
+    value->dataLen = valueLen;
+    *isSrvName = true;
+    *encode += nameLen;
+    *encLen -= nameLen;
+    return HITLS_PKI_SUCCESS;
+}
+
 static int32_t ParseGeneralName(uint8_t tag, uint8_t **encode, uint32_t *encLen, uint32_t nameLen, BslList *list)
 {
     int32_t type = -1;
     int32_t ret;
     BslList *dirNames = NULL;
     BSL_Buffer value = {0};
+    bool isSrvName = false;
     for (uint32_t i = 0; i < sizeof(g_generalNameMap) / sizeof(g_generalNameMap[0]); i++) {
         if (g_generalNameMap[i].tag == tag) {
             type = g_generalNameMap[i].type;
@@ -348,6 +384,17 @@ static int32_t ParseGeneralName(uint8_t tag, uint8_t **encode, uint32_t *encLen,
         }
         value.data = (uint8_t *)dirNames;
         value.dataLen = sizeof(BslList *);
+    } else if (tag == HITLS_X509_GENERALNAME_OTHER_TAG) {
+        ret = ParseSrvName(encode, encLen, nameLen, &value, &isSrvName);
+        if (ret != HITLS_PKI_SUCCESS) {
+            return ret;
+        }
+        if (isSrvName) {
+            type = HITLS_X509_GN_SRV;
+        } else {
+            value.data = *encode;
+            value.dataLen = nameLen;
+        }
     } else {
         value.data = *encode;
         value.dataLen = nameLen;
@@ -1586,11 +1633,42 @@ static inline void SetAsn1Buffer(BSL_Buffer *value, uint8_t tag, BSL_ASN1_Buffer
 static void FreeGnAsns(BSL_ASN1_Buffer *asns, uint32_t number)
 {
     for (uint32_t i = 0; i < number; i++) {
-        if (asns[i].tag == HITLS_X509_GENERALNAME_DIR_TAG) {
+        if (asns[i].tag == HITLS_X509_GENERALNAME_DIR_TAG || asns[i].tag == HITLS_X509_GENERALNAME_OTHER_TAG) {
             BSL_SAL_Free(asns[i].buff);
         }
     }
     BSL_SAL_Free(asns);
+}
+
+static int32_t EncodeSrvNameValue(const BSL_Buffer *value, BSL_ASN1_Buffer *extnValue)
+{
+    if (value->dataLen == 0) {
+        BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_EXT_SAN_ELE);
+        return HITLS_X509_ERR_EXT_SAN_ELE;
+    }
+    BslOidString *srvNameOid = BSL_OBJ_GetOID(BSL_CID_ON_DNSSRV);
+    if (srvNameOid == NULL || srvNameOid->octs == NULL || srvNameOid->octetLen == 0) {
+        BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_EXT_OID);
+        return HITLS_X509_ERR_EXT_OID;
+    }
+    BSL_ASN1_TemplateItem items[] = {
+        {BSL_ASN1_TAG_OBJECT_ID, 0, 0},
+        {BSL_ASN1_CLASS_CTX_SPECIFIC | BSL_ASN1_TAG_CONSTRUCTED, 0, 0},
+        {BSL_ASN1_TAG_IA5STRING, 0, 1},
+    };
+    BSL_ASN1_Buffer asns[] = {
+        {BSL_ASN1_TAG_OBJECT_ID, srvNameOid->octetLen, (uint8_t *)srvNameOid->octs},
+        {BSL_ASN1_TAG_IA5STRING, value->dataLen, value->data},
+    };
+    BSL_ASN1_Template templ = {items, sizeof(items) / sizeof(items[0])};
+    int32_t ret = BSL_ASN1_EncodeTemplate(&templ, asns, sizeof(asns) / sizeof(asns[0]),
+        &extnValue->buff, &extnValue->len);
+    if (ret != BSL_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        return ret;
+    }
+    extnValue->tag = HITLS_X509_GENERALNAME_OTHER_TAG;
+    return HITLS_PKI_SUCCESS;
 }
 
 static int32_t EncodeGnDirNameValue(BslList *dirNames, BSL_ASN1_Buffer *extnValue)
@@ -1644,6 +1722,12 @@ static int32_t BuildGeneralNameAsns(BslList *names, BSL_ASN1_Buffer *asns)
                 break;
             case HITLS_X509_GN_IP:
                 SetAsn1Buffer(&name->value, HITLS_X509_GENERALNAME_IP_TAG, asn);
+                break;
+            case HITLS_X509_GN_SRV:
+                ret = EncodeSrvNameValue(&name->value, asn);
+                if (ret != HITLS_PKI_SUCCESS) {
+                    return ret;
+                }
                 break;
             default:
                 BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_EXT_GN_UNSUPPORT);

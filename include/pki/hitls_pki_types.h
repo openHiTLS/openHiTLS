@@ -144,6 +144,7 @@ typedef enum {
     HITLS_X509_GN_DNNAME, // directoryName             [4] Name
     HITLS_X509_GN_URI,    // uniformResourceIdentifier [6] IA5String
     HITLS_X509_GN_IP,     // iPAddress                 [7] Octet String
+    HITLS_X509_GN_SRV,    // otherName SRVName         [0] IA5String
 
     // Other types are not supported yet
     HITLS_X509_GN_MAX
@@ -437,6 +438,10 @@ typedef enum {
     HITLS_X509_STORECTX_SET_HOST_FLAG,
     HITLS_X509_STORECTX_SET_HOST,
     HITLS_X509_STORECTX_ADD_HOST,
+    HITLS_X509_STORECTX_SET_URI_ID,
+    HITLS_X509_STORECTX_ADD_URI_ID,
+    HITLS_X509_STORECTX_SET_SRV_ID,
+    HITLS_X509_STORECTX_ADD_SRV_ID,
 
     HITLS_X509_STORECTX_REF_UP = 0x0100,
     HITLS_X509_STORECTX_GET_PARAM_DEPTH,

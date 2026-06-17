@@ -138,6 +138,8 @@ void HITLS_X509_StoreCtxFree(HITLS_X509_StoreCtx *storeCtx)
 #endif
 #ifdef HITLS_PKI_X509_VFY_IDENTITY
     BSL_LIST_FREE(storeCtx->verifyParam.hostnames, (BSL_LIST_PFUNC_FREE)BSL_SAL_Free);
+    BSL_LIST_FREE(storeCtx->verifyParam.uriIds, (BSL_LIST_PFUNC_FREE)BSL_SAL_Free);
+    BSL_LIST_FREE(storeCtx->verifyParam.srvIds, (BSL_LIST_PFUNC_FREE)BSL_SAL_Free);
     BSL_SAL_FREE(storeCtx->verifyParam.ip);
     BSL_SAL_FREE(storeCtx->verifyParam.peername);
 #endif
@@ -691,6 +693,61 @@ static int32_t X509_SetVerifyHost(HITLS_X509_StoreCtx *storeCtx, const char *hos
     return HITLS_PKI_SUCCESS;
 }
 
+static int32_t X509_AddVerifyString(BslList **list, const char *val)
+{
+    if (val == NULL) {
+        BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
+        return HITLS_X509_ERR_INVALID_PARAM;
+    }
+
+    size_t valLen = strlen(val);
+    if (valLen > MAX_PATH_LEN || valLen == 0) {
+        return HITLS_X509_ERR_INVALID_PARAM;
+    }
+
+    char *tmp = DupString(val);
+    if (tmp == NULL) {
+        BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
+        return BSL_MALLOC_FAIL;
+    }
+
+    if (*list == NULL) {
+        *list = BSL_LIST_New(sizeof(char *));
+        if (*list == NULL) {
+            BSL_SAL_Free(tmp);
+            BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
+            return BSL_MALLOC_FAIL;
+        }
+    }
+
+    int32_t ret = BSL_LIST_AddElement(*list, tmp, BSL_LIST_POS_END);
+    if (ret != BSL_SUCCESS) {
+        BSL_SAL_Free(tmp);
+        BSL_ERR_PUSH_ERROR(ret);
+        return ret;
+    }
+    return HITLS_PKI_SUCCESS;
+}
+
+static int32_t X509_SetVerifyString(BslList **list, const char *val)
+{
+    if (val == NULL) {
+        BSL_LIST_FREE(*list, (BSL_LIST_PFUNC_FREE)BSL_SAL_Free);
+        return HITLS_PKI_SUCCESS;
+    }
+
+    BslList *newList = NULL;
+    int32_t ret = X509_AddVerifyString(&newList, val);
+    if (ret != HITLS_PKI_SUCCESS) {
+        BSL_LIST_FREE(newList, (BSL_LIST_PFUNC_FREE)BSL_SAL_Free);
+        return ret;
+    }
+
+    BSL_LIST_FREE(*list, (BSL_LIST_PFUNC_FREE)BSL_SAL_Free);
+    *list = newList;
+    return HITLS_PKI_SUCCESS;
+}
+
 static int32_t X509_SetVerifyIp(HITLS_X509_StoreCtx *storeCtx, unsigned char *ip, int32_t ipLen)
 {
     storeCtx->verifyParam.ip = BSL_SAL_Malloc(ipLen);
@@ -762,6 +819,14 @@ static int32_t X509VfyOtherCtrl(HITLS_X509_StoreCtx *storeCtx, int32_t cmd, void
             return X509_SetHost(storeCtx, val);
         case HITLS_X509_STORECTX_ADD_HOST:
             return X509_AddHost(storeCtx, val);
+        case HITLS_X509_STORECTX_SET_URI_ID:
+            return X509_SetVerifyString(&storeCtx->verifyParam.uriIds, (const char *)val);
+        case HITLS_X509_STORECTX_ADD_URI_ID:
+            return X509_AddVerifyString(&storeCtx->verifyParam.uriIds, (const char *)val);
+        case HITLS_X509_STORECTX_SET_SRV_ID:
+            return X509_SetVerifyString(&storeCtx->verifyParam.srvIds, (const char *)val);
+        case HITLS_X509_STORECTX_ADD_SRV_ID:
+            return X509_AddVerifyString(&storeCtx->verifyParam.srvIds, (const char *)val);
 #endif
         default:
             BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
@@ -879,6 +944,8 @@ int32_t HITLS_X509_StoreCtxCtrl(HITLS_X509_StoreCtx *storeCtx, int32_t cmd, void
         cmd != HITLS_X509_STORECTX_SET_PEER_CERT_CHAIN
 #ifdef HITLS_PKI_X509_VFY_IDENTITY
         && cmd != HITLS_X509_STORECTX_SET_HOST
+        && cmd != HITLS_X509_STORECTX_SET_URI_ID
+        && cmd != HITLS_X509_STORECTX_SET_SRV_ID
 #endif
     ) {
         BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
@@ -2519,6 +2586,21 @@ static int32_t CheckIp(HITLS_X509_Cert *cert, unsigned char *ip, int32_t ipLen)
     return ret;
 }
 
+static int32_t CheckIdentityList(HITLS_X509_Cert *cert, BslList *identities, uint32_t flags, uint32_t type)
+{
+    int32_t ret = HITLS_X509_ERR_VFY_HOSTNAME_FAIL;
+    for (BslListNode *node = BSL_LIST_FirstNode(identities); node != NULL; node = BSL_LIST_GetNextNode(identities,
+        node)) {
+        char *identity = (char *)BSL_LIST_GetData(node);
+        ret = HITLS_X509_VerifyIdentity(cert, flags, type, identity, strlen(identity));
+        if (ret == HITLS_PKI_SUCCESS) {
+            break;
+        }
+    }
+
+    return ret;
+}
+
 static int32_t X509_CheckHost(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_List *chain)
 {
     BSL_SAL_FREE(storeCtx->verifyParam.peername);
@@ -2532,6 +2614,16 @@ static int32_t X509_CheckHost(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_List *ch
 
     if (storeCtx->verifyParam.ip != NULL) {
         ret = CheckIp(certee, storeCtx->verifyParam.ip, storeCtx->verifyParam.ipLen);
+        VFYCBK_FAIL_IF(ret != HITLS_PKI_SUCCESS, storeCtx, certee, 0, ret);
+    }
+
+    if (storeCtx->verifyParam.uriIds != NULL && BSL_LIST_COUNT(storeCtx->verifyParam.uriIds) > 0) {
+        ret = CheckIdentityList(certee, storeCtx->verifyParam.uriIds, storeCtx->verifyParam.hostflags, HITLS_GEN_URI);
+        VFYCBK_FAIL_IF(ret != HITLS_PKI_SUCCESS, storeCtx, certee, 0, ret);
+    }
+
+    if (storeCtx->verifyParam.srvIds != NULL && BSL_LIST_COUNT(storeCtx->verifyParam.srvIds) > 0) {
+        ret = CheckIdentityList(certee, storeCtx->verifyParam.srvIds, storeCtx->verifyParam.hostflags, HITLS_GEN_SRV);
         VFYCBK_FAIL_IF(ret != HITLS_PKI_SUCCESS, storeCtx, certee, 0, ret);
     }
     return HITLS_PKI_SUCCESS;
@@ -2741,6 +2833,30 @@ static int32_t X509_CopyIdentityParams(HITLS_X509_StoreCtx *dst, const HITLS_X50
             return BSL_MALLOC_FAIL;
         }
         ret = X509_CopyStringList(dst->verifyParam.hostnames, src->verifyParam.hostnames);
+        if (ret != HITLS_PKI_SUCCESS) {
+            return ret;
+        }
+    }
+
+    if (src->verifyParam.uriIds != NULL) {
+        dst->verifyParam.uriIds = BSL_LIST_New(sizeof(char *));
+        if (dst->verifyParam.uriIds == NULL) {
+            BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
+            return BSL_MALLOC_FAIL;
+        }
+        ret = X509_CopyStringList(dst->verifyParam.uriIds, src->verifyParam.uriIds);
+        if (ret != HITLS_PKI_SUCCESS) {
+            return ret;
+        }
+    }
+
+    if (src->verifyParam.srvIds != NULL) {
+        dst->verifyParam.srvIds = BSL_LIST_New(sizeof(char *));
+        if (dst->verifyParam.srvIds == NULL) {
+            BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
+            return BSL_MALLOC_FAIL;
+        }
+        ret = X509_CopyStringList(dst->verifyParam.srvIds, src->verifyParam.srvIds);
         if (ret != HITLS_PKI_SUCCESS) {
             return ret;
         }

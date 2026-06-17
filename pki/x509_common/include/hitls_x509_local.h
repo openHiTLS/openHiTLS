@@ -52,7 +52,7 @@ extern "C" {
 /* Identifies the extended keyusage extension in the current structure */
 #define HITLS_X509_EXT_FLAG_EXKUSAGE (1 << 2)
 
-#define HITLS_X509_GN_OTHER (HITLS_X509_GN_IP + 1)
+#define HITLS_X509_GN_OTHER (HITLS_X509_GN_MAX)
 #define HITLS_X509_GN_X400  (HITLS_X509_GN_OTHER + 1)
 #define HITLS_X509_GN_EDI   (HITLS_X509_GN_X400 + 1)
 #define HITLS_X509_GN_RID   (HITLS_X509_GN_EDI + 1)

@@ -967,7 +967,7 @@ void SDV_X509_EXT_SetSan_TC001(void)
 
     // error: name type
     char *email = "test@a.com";
-    HITLS_X509_GeneralName errType = {HITLS_X509_GN_IP + 1, {(uint8_t *)email, (uint32_t)strlen(email)}};
+    HITLS_X509_GeneralName errType = {HITLS_X509_GN_MAX, {(uint8_t *)email, (uint32_t)strlen(email)}};
     ASSERT_EQ(BSL_LIST_AddElement(list, &errType, BSL_LIST_POS_END), 0);
     ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_EXT_SET_SAN, &san, sizeof(HITLS_X509_ExtSan)),
               HITLS_X509_ERR_EXT_GN_UNSUPPORT);
@@ -1220,6 +1220,25 @@ void SDV_X509_EXT_ParseGeneralNames_TC001(Hex *encode, Hex *ip, Hex *uri, Hex *r
             ASSERT_COMPARE("gn", name->value.data, name->value.dataLen, map[idx].value->x, map[idx].value->len);
         }
     }
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
+EXIT:
+    HITLS_X509_FreeGeneralNames(list);
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_X509_EXT_ParseSrvName_TC001(Hex *encode, Hex *srv)
+{
+    TestMemInit();
+    BslList *list = NULL;
+    ASSERT_EQ(HITLS_X509_ParseGeneralNames(encode->x, encode->len, &list), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(BSL_LIST_COUNT(list), 1);
+
+    HITLS_X509_GeneralName *name = BSL_LIST_GET_FIRST(list);
+    ASSERT_NE(name, NULL);
+    ASSERT_EQ(name->type, HITLS_X509_GN_SRV);
+    ASSERT_COMPARE("srv", name->value.data, name->value.dataLen, srv->x, srv->len);
     ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
@@ -3038,6 +3057,87 @@ void SDV_PKI_VERIFY_IDENTITY_TC001()
         "www.example.com", strlen("www.example.com")), HITLS_PKI_SUCCESS);
 EXIT:
     HITLS_X509_CertFree(cert);
+#endif
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_PKI_VERIFY_URI_SRV_ID_TC001()
+{
+#if defined(HITLS_PKI_X509_CRT_GEN) && defined(HITLS_PKI_X509_CRT_PARSE) && defined(HITLS_PKI_X509_VFY_IDENTITY)
+    TestMemInit();
+    HITLS_X509_Cert *cert = HITLS_X509_CertNew();
+    HITLS_X509_Cert *certNoId = NULL;
+    BslList *names = BSL_LIST_New(sizeof(HITLS_X509_GeneralName));
+    ASSERT_NE(cert, NULL);
+    ASSERT_NE(names, NULL);
+
+    char *uri = "sip:voice.example.edu";
+    char *uriWithAuthority = "https://user@example.com:443/path?query#frag";
+    char *uriWithWildcard = "sip:*.wild.example.com";
+    char *uriWithPartialWildcard = "sip:f*.partial.example.com";
+    char *srv = "_imaps.example.net";
+    HITLS_X509_GeneralName uriName = {HITLS_X509_GN_URI, {(uint8_t *)uri, (uint32_t)strlen(uri)}};
+    HITLS_X509_GeneralName uriAuthorityName = {
+        HITLS_X509_GN_URI, {(uint8_t *)uriWithAuthority, (uint32_t)strlen(uriWithAuthority)}
+    };
+    HITLS_X509_GeneralName uriWildcardName = {
+        HITLS_X509_GN_URI, {(uint8_t *)uriWithWildcard, (uint32_t)strlen(uriWithWildcard)}
+    };
+    HITLS_X509_GeneralName uriPartialWildcardName = {
+        HITLS_X509_GN_URI, {(uint8_t *)uriWithPartialWildcard, (uint32_t)strlen(uriWithPartialWildcard)}
+    };
+    HITLS_X509_GeneralName srvName = {HITLS_X509_GN_SRV, {(uint8_t *)srv, (uint32_t)strlen(srv)}};
+    HITLS_X509_ExtSan san = {false, names};
+
+    ASSERT_EQ(BSL_LIST_AddElement(names, &uriName, BSL_LIST_POS_END), BSL_SUCCESS);
+    ASSERT_EQ(BSL_LIST_AddElement(names, &uriAuthorityName, BSL_LIST_POS_END), BSL_SUCCESS);
+    ASSERT_EQ(BSL_LIST_AddElement(names, &uriWildcardName, BSL_LIST_POS_END), BSL_SUCCESS);
+    ASSERT_EQ(BSL_LIST_AddElement(names, &uriPartialWildcardName, BSL_LIST_POS_END), BSL_SUCCESS);
+    ASSERT_EQ(BSL_LIST_AddElement(names, &srvName, BSL_LIST_POS_END), BSL_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_EXT_SET_SAN, &san, sizeof(HITLS_X509_ExtSan)), HITLS_PKI_SUCCESS);
+
+    ASSERT_EQ(HITLS_X509_VerifyUriId(cert, 0, "SIP:voice.example.edu", strlen("SIP:voice.example.edu")),
+        HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_VerifyUriId(cert, 0, "sip:voice.example.edu;transport=tcp",
+        strlen("sip:voice.example.edu;transport=tcp")), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_VerifyUriId(cert, 0, "SIPS:voice.example.edu", strlen("SIPS:voice.example.edu")),
+        HITLS_X509_ERR_VFY_URI_ID_FAIL);
+    ASSERT_EQ(HITLS_X509_VerifyUriId(cert, 0, "https://example.com", strlen("https://example.com")),
+        HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_VerifyUriId(cert, 0, "sip:voice.wild.example.com",
+        strlen("sip:voice.wild.example.com")), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_VerifyUriId(cert, 0, "sip:a.b.wild.example.com",
+        strlen("sip:a.b.wild.example.com")), HITLS_X509_ERR_VFY_URI_ID_FAIL);
+    ASSERT_EQ(HITLS_X509_VerifyUriId(cert, 0, "sip:foo.partial.example.com",
+        strlen("sip:foo.partial.example.com")), HITLS_X509_ERR_VFY_URI_ID_FAIL);
+    ASSERT_EQ(HITLS_X509_VerifyUriId(cert, HITLS_X509_FLAG_VFY_WITH_PARTIAL_WILDCARD,
+        "sip:foo.partial.example.com", strlen("sip:foo.partial.example.com")), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_VerifyUriId(cert, 0, "sip:other.example.edu", strlen("sip:other.example.edu")),
+        HITLS_X509_ERR_VFY_URI_ID_FAIL);
+    TestErrClear();
+    ASSERT_EQ(HITLS_X509_VerifySrvId(cert, 0, "_IMAPS.example.net", strlen("_IMAPS.example.net")),
+        HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_VerifySrvId(cert, 0, "imaps.example.net", strlen("imaps.example.net")),
+        HITLS_X509_ERR_INVALID_PARAM);
+    TestErrClear();
+    ASSERT_EQ(HITLS_X509_VerifySrvId(cert, 0, "_imap.example.net", strlen("_imap.example.net")),
+        HITLS_X509_ERR_VFY_SRV_ID_FAIL);
+
+    certNoId = HITLS_X509_CertNew();
+    ASSERT_NE(certNoId, NULL);
+    ASSERT_EQ(HITLS_X509_VerifyUriId(certNoId, 0, "sip:voice.example.edu", strlen("sip:voice.example.edu")),
+        HITLS_X509_ERR_VFY_URI_ID_FAIL);
+    ASSERT_EQ(HITLS_X509_VerifySrvId(certNoId, 0, "_imaps.example.net", strlen("_imaps.example.net")),
+        HITLS_X509_ERR_VFY_SRV_ID_FAIL);
+    HITLS_X509_CertFree(certNoId);
+    certNoId = NULL;
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
+EXIT:
+    HITLS_X509_CertFree(certNoId);
+    HITLS_X509_CertFree(cert);
+    BSL_LIST_FREE(names, FreeSanListData);
 #endif
 }
 /* END_CASE */

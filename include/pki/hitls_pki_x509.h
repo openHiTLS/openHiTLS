@@ -26,6 +26,8 @@ extern "C" {
 typedef struct _HITLS_X509_StoreCtx HITLS_X509_StoreCtx;
 #define HITLS_GEN_DNS 1
 #define HITLS_GEN_IP 2
+#define HITLS_GEN_URI 3
+#define HITLS_GEN_SRV 4
 
 /**
  * @ingroup pki
@@ -110,6 +112,10 @@ void HITLS_X509_StoreCtxFree(HITLS_X509_StoreCtx *storeCtx);
  *        HITLS_X509_STORECTX_GET_CERT_CHAIN            HITLS_X509_List **    sizeof(HITLS_X509_List *)
  *        HITLS_X509_STORECTX_SET_PEER_CERT_CHAIN       HITLS_X509_List *     sizeof(HITLS_X509_List *)
  *        HITLS_X509_STORECTX_GET_PEER_CERT_CHAIN       HITLS_X509_List **    sizeof(HITLS_X509_List *)
+ *        HITLS_X509_STORECTX_SET_URI_ID                char *                string length
+ *        HITLS_X509_STORECTX_ADD_URI_ID                char *                string length
+ *        HITLS_X509_STORECTX_SET_SRV_ID                char *                string length
+ *        HITLS_X509_STORECTX_ADD_SRV_ID                char *                string length
  * @param val [IN/OUT] input and output value.
  * @param valLen [IN] value length.
  * @retval #HITLS_PKI_SUCCESS, success.
@@ -192,12 +198,42 @@ int32_t HITLS_X509_CertChainBuild(HITLS_X509_StoreCtx *storeCtx, bool isWithRoot
 
 /**
  * @ingroup pki
- * @brief Certificate verification, currently supports verifying hostname and IP address.
+ * @brief Verify URI-ID in certificate extension SAN.
+ *
+ * @param cert [IN] The certificate to verify, type : HITLS_X509_Cert *.
+ * @param flags [IN] A flag controlling wildcard matching behavior for the host portion, type : uint32_t.
+ * @param uri [IN] URI reference identifier, type : const char *.
+ * @param uriLen [IN] The length of the uri string, type : uint32_t.
+ * @retval #HITLS_PKI_SUCCESS if a URI-ID is successfully verified.
+ * @retval #HITLS_X509_ERR_VFY_URI_ID_FAIL if no URI-ID exists or URI-ID does not match.
+ * @retval Other error codes for parsing or parameter errors.
+ */
+#define HITLS_X509_VerifyUriId(cert, flags, uri, uriLen) HITLS_X509_VerifyIdentity(cert, flags, \
+    HITLS_GEN_URI, uri, uriLen)
+
+/**
+ * @ingroup pki
+ * @brief Verify SRV-ID in certificate extension SAN.
+ *
+ * @param cert [IN] The certificate to verify, type : HITLS_X509_Cert *.
+ * @param flags [IN] A flag controlling wildcard matching behavior for the DNS domain portion, type : uint32_t.
+ * @param srv [IN] SRV reference identifier like "_imaps.example.net", type : const char *.
+ * @param srvLen [IN] The length of the srv string, type : uint32_t.
+ * @retval #HITLS_PKI_SUCCESS if an SRV-ID is successfully verified.
+ * @retval #HITLS_X509_ERR_VFY_SRV_ID_FAIL if no SRV-ID exists or SRV-ID does not match.
+ * @retval Other error codes for parsing or parameter errors.
+ */
+#define HITLS_X509_VerifySrvId(cert, flags, srv, srvLen) HITLS_X509_VerifyIdentity(cert, flags, \
+    HITLS_GEN_SRV, srv, srvLen)
+
+/**
+ * @ingroup pki
+ * @brief Certificate verification, supports verifying hostname, IP address, URI-ID and SRV-ID.
 
  * @param cert [IN] The certificate to verify, type : HITLS_X509_Cert *.
  * @param flags [IN] A flag controlling wildcard matching behavior, type : uint32_t.
  * @param type [IN] Types that need to be verified, type : uint32_t.
- * @param val [IN] A string of ip or hostname, type : const char *.
+ * @param val [IN] A string of ip, hostname, URI-ID or SRV-ID, type : const char *.
  * @param valLen [IN] The length of the val, type : uint32_t.
  * @retval #HITLS_PKI_SUCCESS if the value is successfully verified.
  * @retval #HITLS_X509_ERR_VFY_IP_FAIL if the value is ip and does not match.

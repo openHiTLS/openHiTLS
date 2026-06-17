@@ -1063,6 +1063,10 @@ static bool IsSetVerifyParamCmd(uint32_t cmd)
         case CERT_STORE_CTRL_SET_HOST_FLAG:
         case CERT_STORE_CTRL_SET_HOST:
         case CERT_STORE_CTRL_ADD_HOST:
+        case CERT_STORE_CTRL_SET_URI_ID:
+        case CERT_STORE_CTRL_ADD_URI_ID:
+        case CERT_STORE_CTRL_SET_SRV_ID:
+        case CERT_STORE_CTRL_ADD_SRV_ID:
             return true;
         default:
             return false;

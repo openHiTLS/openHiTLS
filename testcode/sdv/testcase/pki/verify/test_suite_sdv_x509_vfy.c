@@ -771,6 +771,8 @@ typedef struct {
 typedef struct {
     HITLS_X509_StoreCtx *srcStore;
     uint32_t expectHostCount;
+    uint32_t expectUriCount;
+    uint32_t expectSrvCount;
     int32_t expectIpLen;
     uint32_t loops;
     int32_t result;
@@ -871,6 +873,35 @@ static int32_t X509_ConfigStoreDupIdentity(HITLS_X509_StoreCtx *storeCtx)
     return HITLS_PKI_SUCCESS;
 }
 
+static int32_t X509_ConfigStoreUriSrvIdentity(HITLS_X509_StoreCtx *storeCtx)
+{
+#if defined(HITLS_PKI_X509_VFY_IDENTITY)
+    int32_t ret = HITLS_X509_StoreCtxCtrl(storeCtx, HITLS_X509_STORECTX_SET_URI_ID,
+        (void *)"sip:no-match.example.edu", 0);
+    if (ret != HITLS_PKI_SUCCESS) {
+        return ret;
+    }
+    ret = HITLS_X509_StoreCtxCtrl(storeCtx, HITLS_X509_STORECTX_ADD_URI_ID,
+        (void *)"sip:voice.example.edu", 0);
+    if (ret != HITLS_PKI_SUCCESS) {
+        return ret;
+    }
+    ret = HITLS_X509_StoreCtxCtrl(storeCtx, HITLS_X509_STORECTX_SET_SRV_ID,
+        (void *)"_xmpp.example.net", 0);
+    if (ret != HITLS_PKI_SUCCESS) {
+        return ret;
+    }
+    ret = HITLS_X509_StoreCtxCtrl(storeCtx, HITLS_X509_STORECTX_ADD_SRV_ID,
+        (void *)"_imaps.example.net", 0);
+    if (ret != HITLS_PKI_SUCCESS) {
+        return ret;
+    }
+#else
+    (void)storeCtx;
+#endif
+    return HITLS_PKI_SUCCESS;
+}
+
 static int32_t X509_RunStoreDupVerify(HITLS_X509_StoreCtx *storeCtx, const char *entityPath,
     const char *expectPeername, uint32_t *chainCount)
 {
@@ -949,6 +980,8 @@ static void X509StoreDupCloneThread(void *arg)
         }
 #if defined(HITLS_PKI_X509_VFY_IDENTITY)
         if (X509_TestListCount(dupStore->verifyParam.hostnames) != threadArg->expectHostCount ||
+            X509_TestListCount(dupStore->verifyParam.uriIds) != threadArg->expectUriCount ||
+            X509_TestListCount(dupStore->verifyParam.srvIds) != threadArg->expectSrvCount ||
             dupStore->verifyParam.ipLen != threadArg->expectIpLen) {
             HITLS_X509_StoreCtxFree(dupStore);
             return;
@@ -5553,6 +5586,86 @@ void SDV_X509_STORE_CTX_DUP_MULTI_THREAD_TC001(char *rootCertPath, char *entityC
         verifyArgs[i].srcStore = storeCtx;
         verifyArgs[i].entityPath = entityCertPath;
         verifyArgs[i].expectPeername = "www.example.com";
+        verifyArgs[i].expectChainCount = expectChainCount;
+        verifyArgs[i].loops = STORE_DUP_THREAD_LOOPS;
+        verifyArgs[i].result = BSL_INTERNAL_EXCEPTION;
+        ASSERT_TRUE(pthread_create(&verifyThreads[i], NULL, (void *)X509StoreDupVerifyThread, &verifyArgs[i]) == 0);
+    }
+
+    pthread_join(cloneThread, NULL);
+    ASSERT_EQ(cloneArg.result, HITLS_PKI_SUCCESS);
+    for (uint32_t i = 0; i < STORE_DUP_VERIFY_THREAD_NUM; i++) {
+        pthread_join(verifyThreads[i], NULL);
+        ASSERT_EQ(verifyArgs[i].result, HITLS_PKI_SUCCESS);
+    }
+    ASSERT_TRUE(TestIsErrStackEmpty());
+EXIT:
+    HITLS_X509_StoreCtxFree(storeCtx);
+    HITLS_X509_CertFree(root);
+    BSL_GLOBAL_DeInit();
+#else
+    (void)rootCertPath;
+    (void)entityCertPath;
+    SKIP_TEST();
+#endif
+}
+/* END_CASE */
+
+/**
+ * @test   SDV_X509_STORE_CTX_DUP_URI_SRV_ID_MULTI_THREAD_TC001
+ * @title  Multi-threaded store context duplication with URI-ID and SRV-ID verification.
+ * @brief  1. Parse the root certificate and verification target certificate from input parameters.
+ *         2. Configure URI-ID and SRV-ID verification parameters on the source store context.
+ *         3. Let each worker thread duplicate the configured store context and verify the target certificate.
+ *         4. Verify that duplicated URI-ID and SRV-ID settings are preserved and verification succeeds.
+ * @expect 1. Source store setup succeeds.
+ *         2. Every duplicated store context completes URI-ID and SRV-ID verification successfully.
+ *         3. No unexpected error remains in the error stack.
+ */
+/* BEGIN_CASE */
+void SDV_X509_STORE_CTX_DUP_URI_SRV_ID_MULTI_THREAD_TC001(char *rootCertPath, char *entityCertPath)
+{
+#if defined(HITLS_PKI_X509_VFY_IDENTITY)
+    enum {
+        STORE_DUP_VERIFY_THREAD_NUM = 4,
+        STORE_DUP_THREAD_LOOPS = 80
+    };
+    int32_t ret;
+    uint32_t expectChainCount = 0;
+    pthread_t cloneThread = 0;
+    pthread_t verifyThreads[STORE_DUP_VERIFY_THREAD_NUM] = {0};
+    HITLS_X509_StoreCtx *storeCtx = NULL;
+    HITLS_X509_Cert *root = NULL;
+    X509StoreDupCloneThreadArg cloneArg = {0};
+    X509StoreDupVerifyThreadArg verifyArgs[STORE_DUP_VERIFY_THREAD_NUM];
+
+    TestMemInit();
+    BSL_GLOBAL_Init();
+
+    storeCtx = HITLS_X509_StoreCtxNew();
+    ASSERT_NE(storeCtx, NULL);
+    ret = HITLS_X509_CertParseFile(BSL_FORMAT_ASN1, rootCertPath, &root);
+    ASSERT_EQ(ret, HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_StoreCtxCtrl(storeCtx, HITLS_X509_STORECTX_DEEP_COPY_SET_CA, root,
+        sizeof(HITLS_X509_Cert)), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(X509_ConfigStoreUriSrvIdentity(storeCtx), HITLS_PKI_SUCCESS);
+
+    ASSERT_EQ(X509_RunStoreDupVerify(storeCtx, entityCertPath, NULL, &expectChainCount), HITLS_PKI_SUCCESS);
+    ASSERT_TRUE(expectChainCount > 0);
+
+    cloneArg.srcStore = storeCtx;
+    cloneArg.expectHostCount = X509_TestListCount(storeCtx->verifyParam.hostnames);
+    cloneArg.expectUriCount = X509_TestListCount(storeCtx->verifyParam.uriIds);
+    cloneArg.expectSrvCount = X509_TestListCount(storeCtx->verifyParam.srvIds);
+    cloneArg.expectIpLen = storeCtx->verifyParam.ipLen;
+    cloneArg.loops = STORE_DUP_THREAD_LOOPS;
+    cloneArg.result = BSL_INTERNAL_EXCEPTION;
+
+    ASSERT_TRUE(pthread_create(&cloneThread, NULL, (void *)X509StoreDupCloneThread, &cloneArg) == 0);
+    for (uint32_t i = 0; i < STORE_DUP_VERIFY_THREAD_NUM; i++) {
+        verifyArgs[i].srcStore = storeCtx;
+        verifyArgs[i].entityPath = entityCertPath;
+        verifyArgs[i].expectPeername = NULL;
         verifyArgs[i].expectChainCount = expectChainCount;
         verifyArgs[i].loops = STORE_DUP_THREAD_LOOPS;
         verifyArgs[i].result = BSL_INTERNAL_EXCEPTION;

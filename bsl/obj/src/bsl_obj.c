@@ -222,6 +222,7 @@ BslOidInfo g_oidTable[] = {
     {{8, "\53\6\1\5\5\7\6\43", BSL_OID_GLOBAL}, "XMSSMT", BSL_CID_XMSSMT}, // XMSS^MT
     {{10, "\52\206\110\206\367\15\1\11\27\1", BSL_OID_GLOBAL}, "x509crl", BSL_CID_X509CRL},
     {{9, "\52\206\110\206\367\15\1\11\17", BSL_OID_GLOBAL}, "smimeCapabilities", BSL_CID_SMIMECAP},
+    {{8, "\53\6\1\5\5\7\10\7", BSL_OID_GLOBAL}, "id-on-dnsSRV", BSL_CID_ON_DNSSRV},
 };
 
 uint32_t g_tableSize = (uint32_t)sizeof(g_oidTable)/sizeof(g_oidTable[0]);

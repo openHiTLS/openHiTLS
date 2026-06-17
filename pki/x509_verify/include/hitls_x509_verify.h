@@ -44,6 +44,8 @@ typedef struct _HITLS_X509_VerifyParam {
 #endif
 #ifdef HITLS_PKI_X509_VFY_IDENTITY
     BslList *hostnames;         // list of verify hostname
+    BslList *uriIds;            // list of verify URI-ID
+    BslList *srvIds;            // list of verify SRV-ID
     unsigned char *ip;          // verify ip
     int32_t ipLen;
     uint32_t hostflags;         // verify hostfalg
