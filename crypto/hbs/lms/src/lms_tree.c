@@ -14,7 +14,7 @@
  */
 
 #include "hitls_build.h"
-#ifdef HITLS_CRYPTO_LMS
+#if defined(HITLS_CRYPTO_LMS) && (defined(HITLS_CRYPTO_HSS_KEYGEN) || defined(HITLS_CRYPTO_HSS_SIGN))
 
 #include <string.h>
 #include "bsl_sal.h"
@@ -116,6 +116,8 @@ static int32_t LmsTree_ComputeLeafNodes(uint8_t *tree, const LmsTreeCtx *ctx, ui
             return ret;
         }
     }
+
+    BSL_SAL_CleanseData(otsPubKey, sizeof(otsPubKey));
     return CRYPT_SUCCESS;
 }
 
@@ -167,14 +169,14 @@ int32_t LmsTree_ComputeRoot(uint8_t *root, const LmsTreeCtx *ctx)
 
     int32_t ret = LmsTree_ComputeLeafNodes(tree, ctx, numLeaves);
     if (ret != CRYPT_SUCCESS) {
-        BSL_SAL_FREE(tree);
+        BSL_SAL_ClearFree(tree, treeSize);
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
 
     ret = LmsTree_ComputeInternalNodes(tree, ctx, numLeaves);
     if (ret != CRYPT_SUCCESS) {
-        BSL_SAL_FREE(tree);
+        BSL_SAL_ClearFree(tree, treeSize);
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
@@ -238,14 +240,14 @@ int32_t LmsTree_GenerateAuthPath(uint8_t *authPath, const LmsTreeCtx *ctx, uint3
 
     int32_t ret = LmsTree_ComputeLeafNodes(tree, ctx, numLeaves);
     if (ret != CRYPT_SUCCESS) {
-        BSL_SAL_FREE(tree);
+        BSL_SAL_ClearFree(tree, treeSize);
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
 
     ret = LmsTree_ComputeInternalNodes(tree, ctx, numLeaves);
     if (ret != CRYPT_SUCCESS) {
-        BSL_SAL_FREE(tree);
+        BSL_SAL_ClearFree(tree, treeSize);
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }

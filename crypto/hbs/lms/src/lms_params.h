@@ -44,25 +44,37 @@ extern "C" {
 #define LMS_D_LEAF 0x8282 // Leaf node hash
 #define LMS_D_INTR 0x8383 // Internal node hash
 
-#define LMS_HASH_SHA256 1 // Hash type identifier for SHA-256
+/**
+ * @ingroup lms
+ * @brief Hash type identifier used in the LMS_Para.h field and LmOtsParams.
+ *
+ * A new hash algorithm first appears as a new LMS or OTS type code;
+ * the lmsType value alone is sufficient to dispatch to the correct
+ * LmsFamilyHashFuncs table (see LmsGetHashFuncs).
+ */
+#define LMS_HASH_SHA256 1 /**< SHA-256 (RFC 8554 original parameter sets) */
 
 /**
  * @ingroup lms
  * @brief LMS parameter structure
+ *
+ * Populated by LmsParaInit, which reads n / height / w / p / ls from
+ * the LMS and OTS type-code lookups and copies the correct
+ * LmsFamilyHashFuncs table corresponding to the lmsType.
  */
 typedef struct LmsPara {
     uint32_t lmsType; /**< LMS parameter set identifier */
     uint32_t otsType; /**< LM-OTS parameter set identifier */
-    uint32_t h; /**< Hash type (LMS_HASH_SHA256) */
-    uint32_t n; /**< Hash output length (32 for SHA-256) */
+    uint32_t h; /**< Hash type (LMS_HASH_SHA256, …) */
+    uint32_t n; /**< Hash output length in bytes (e.g. 32 for SHA-256) */
     uint32_t height; /**< Merkle tree height */
     uint32_t w; /**< Winternitz parameter */
     uint32_t p; /**< Number of n-byte string elements in OTS signature */
     uint32_t ls; /**< Checksum left shift */
-    size_t pubKeyLen; /**< Public key length */
-    size_t prvKeyLen; /**< Private key length */
-    size_t sigLen; /**< Signature length */
-    LmsFamilyHashFuncs hashFuncs; /**< Hash function pointers for cipher suite selection */
+    uint32_t pubKeyLen; /**< Public key length (24 + n bytes) */
+    uint32_t prvKeyLen; /**< Private key length (32 + LMS_SEED_LEN) */
+    uint32_t sigLen; /**< Signature length */
+    LmsFamilyHashFuncs hashFuncs; /**< Hash function pointers for this lmsType */
 } LMS_Para;
 
 /**

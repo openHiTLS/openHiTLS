@@ -31,7 +31,7 @@
 extern "C" {
 #endif
 
-/* HSS_PUBKEY_LEN / HSS_PRVKEY_LEN are defined in hss_params.h, included above. */
+/* HSS_PUBKEY_MAX_LEN / HSS_PRVKEY_LEN are defined in hss_params.h, included above. */
 
 /**
  * @ingroup hss
@@ -39,8 +39,9 @@ extern "C" {
  */
 struct HssCtx {
     HSS_Para para; /**< HSS parameters (embedded, not heap-allocated) */
-    uint8_t *publicKey; /**< HSS public key buffer (60 bytes) */
-    uint8_t *privateKey; /**< HSS private key buffer (48 bytes) */
+    uint8_t *publicKey; /**< HSS public key buffer */
+    uint8_t *privateKey; /**< HSS private key buffer */
+    uint32_t publicLen; /**< Actual allocated length of publicKey buffer */
     uint64_t signatureIndex; /**< Current signature index (cached from private key) */
     void *libCtx; /**< Library context */
     uint8_t *cachedTrees[HSS_LEVELS_ARRAY_SIZE]; /**< Cached Merkle trees for each level */
@@ -84,7 +85,7 @@ int32_t HssDecompressParamSet(HSS_Para *para, const uint8_t compressed[8]);
  * @param para [IN] HSS parameters
  * @return Signature length in bytes
  */
-size_t HssGetSignatureLen(const HSS_Para *para);
+uint32_t HssGetSignatureLen(const HSS_Para *para);
 
 /**
  * @ingroup hss

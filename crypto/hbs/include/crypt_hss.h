@@ -23,7 +23,7 @@
 #include <stdint.h>
 #include <stddef.h>
 #include "bsl_params.h"
-#include "crypt_lms.h"
+#include "crypt_types.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -35,17 +35,20 @@ extern "C" {
  * @brief Hierarchical Signature System (HSS)
  */
 
-typedef struct HssCtx CRYPT_HSS_Ctx;
+/* LMS tree type identifiers for configuring HSS levels (RFC 8554 Section 5.1) */
+#define CRYPT_LMS_SHA256_M32_H5  0x00000005u /**< SHA-256, n=32, h=5  (32 signatures) */
+#define CRYPT_LMS_SHA256_M32_H10 0x00000006u /**< SHA-256, n=32, h=10 (1024 signatures) */
+#define CRYPT_LMS_SHA256_M32_H15 0x00000007u /**< SHA-256, n=32, h=15 (32768 signatures) */
+#define CRYPT_LMS_SHA256_M32_H20 0x00000008u /**< SHA-256, n=32, h=20 (1048576 signatures) */
+#define CRYPT_LMS_SHA256_M32_H25 0x00000009u /**< SHA-256, n=32, h=25 (33554432 signatures) */
 
-/* HSS control commands (range 950-999, avoids collision with common CRYPT_CTRL_* enum) */
-#define CRYPT_CTRL_HSS_SET_LEVELS     950 /**< Set hierarchy levels (1-3) */
-#define CRYPT_CTRL_HSS_SET_LMS_TYPE   951 /**< Set LMS type for level */
-#define CRYPT_CTRL_HSS_SET_OTS_TYPE   952 /**< Set OTS type for level */
-#define CRYPT_CTRL_HSS_GET_PUBKEY_LEN 953 /**< Get public key length */
-#define CRYPT_CTRL_HSS_GET_PRVKEY_LEN 954 /**< Get private key length */
-#define CRYPT_CTRL_HSS_GET_SIG_LEN    955 /**< Get signature length */
-#define CRYPT_CTRL_HSS_GET_REMAINING  956 /**< Get remaining signatures */
-#define CRYPT_CTRL_HSS_GET_LEVELS     957 /**< Get number of levels */
+/* LM-OTS type identifiers for configuring HSS levels (RFC 8554 Section 4.1) */
+#define CRYPT_LMOTS_SHA256_N32_W1 0x00000001u /**< SHA-256, n=32, w=1 */
+#define CRYPT_LMOTS_SHA256_N32_W2 0x00000002u /**< SHA-256, n=32, w=2 */
+#define CRYPT_LMOTS_SHA256_N32_W4 0x00000003u /**< SHA-256, n=32, w=4 */
+#define CRYPT_LMOTS_SHA256_N32_W8 0x00000004u /**< SHA-256, n=32, w=8 */
+
+typedef struct HssCtx CRYPT_HSS_Ctx;
 
 /**
  * @ingroup hss

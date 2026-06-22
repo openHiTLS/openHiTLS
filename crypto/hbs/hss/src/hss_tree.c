@@ -24,6 +24,8 @@
 #include "hss_local.h"
 #include "lms_internal.h"
 
+#if defined(HITLS_CRYPTO_HSS_SIGN)
+
 /**
  * @ingroup hss_tree
  * @brief Initialize HSS multi-tree context
@@ -163,11 +165,11 @@ static int32_t HssSignBottomLayer(uint8_t *signature, uint8_t **sigPtrInOut, con
                                   const uint8_t *message, size_t messageLen, const HssMultiTreeCtx *ctx)
 {
     uint32_t bottomLevel = ctx->levels - 1;
-    uint8_t bottomPrivKey[LMS_PRVKEY_LEN];
+    uint8_t bottomPrivKey[LMS_PRVKEY_MAX_LEN];
 
-    LmsPutBigendian(bottomPrivKey + LMS_PRVKEY_INDEX_OFFSET, ctx->leafIndices[bottomLevel], LMS_PRVKEY_INDEX_LEN);
-    LmsPutBigendian(bottomPrivKey + LMS_PRVKEY_LMS_TYPE_OFFSET, ctx->para->lmsType[bottomLevel], HSS_SIG_NSPK_LEN);
-    LmsPutBigendian(bottomPrivKey + LMS_PRVKEY_OTS_TYPE_OFFSET, ctx->para->otsType[bottomLevel], HSS_SIG_NSPK_LEN);
+    BSL_Uint64ToByte(ctx->leafIndices[bottomLevel], bottomPrivKey + LMS_PRVKEY_INDEX_OFFSET);
+    BSL_Uint32ToByte(ctx->para->lmsType[bottomLevel], bottomPrivKey + LMS_PRVKEY_LMS_TYPE_OFFSET);
+    BSL_Uint32ToByte(ctx->para->otsType[bottomLevel], bottomPrivKey + LMS_PRVKEY_OTS_TYPE_OFFSET);
     memcpy(bottomPrivKey + LMS_PRVKEY_I_OFFSET, ctx->levelI[bottomLevel], LMS_I_LEN);
     memcpy(bottomPrivKey + LMS_PRVKEY_SEED_OFFSET, ctx->levelSeed[bottomLevel], LMS_SEED_LEN);
 
@@ -207,7 +209,7 @@ int32_t HssTree_Sign(uint8_t *signature, size_t *signatureLen, const uint8_t *me
 
     uint8_t *sigPtr = signature;
     uint32_t nspk = ctx->levels - 1;
-    LmsPutBigendian(sigPtr, nspk, HSS_SIG_NSPK_LEN);
+    BSL_Uint32ToByte(nspk, sigPtr);
     sigPtr += HSS_SIG_NSPK_LEN;
 
     int32_t ret = HssSignIntermediateLayers(signature, &sigPtr, signatureLen, ctx, nspk);
@@ -222,6 +224,10 @@ int32_t HssTree_Sign(uint8_t *signature, size_t *signatureLen, const uint8_t *me
     *signatureLen = (size_t)(sigPtr - signature);
     return CRYPT_SUCCESS;
 }
+
+#endif /* HITLS_CRYPTO_HSS_SIGN */
+
+#if defined(HITLS_CRYPTO_HSS_VERIFY)
 
 /**
  * @ingroup hss_tree
@@ -243,8 +249,8 @@ int32_t HssTree_Verify(const HSS_Para *para, const uint8_t *publicKey, const uin
     }
 
     /* Extract LMS public key from HSS public key (skip levels field) */
-    uint8_t currentPubKey[LMS_PUBKEY_LEN];
-    memcpy(currentPubKey, publicKey + HSS_PUBKEY_LMS_TYPE_OFFSET, LMS_PUBKEY_LEN);
+    uint8_t currentPubKey[LMS_PUBKEY_MAX_LEN];
+    memcpy(currentPubKey, publicKey + HSS_PUBKEY_LMS_TYPE_OFFSET, LMS_PUBKEY_MAX_LEN);
 
     /* Verify each signed public key in the chain */
     for (uint32_t i = 0; i < parsed.nspk; i++) {
@@ -254,14 +260,14 @@ int32_t HssTree_Verify(const HSS_Para *para, const uint8_t *publicKey, const uin
         const uint8_t *childPubKey = signedPubKey + lmsSigLen;
 
         /* Verify: parent signs child's public key */
-        ret = LmsValidateSignature(currentPubKey, childPubKey, LMS_PUBKEY_LEN, lmsSig, lmsSigLen);
+        ret = LmsValidateSignature(currentPubKey, childPubKey, LMS_PUBKEY_MAX_LEN, lmsSig, lmsSigLen);
         if (ret != CRYPT_SUCCESS) {
             BSL_ERR_PUSH_ERROR(CRYPT_HSS_VERIFY_FAIL);
             return CRYPT_HSS_VERIFY_FAIL;
         }
 
         /* Move to next level - child becomes the new current public key */
-        memcpy(currentPubKey, childPubKey, LMS_PUBKEY_LEN);
+        memcpy(currentPubKey, childPubKey, LMS_PUBKEY_MAX_LEN);
     }
 
     /* Verify the bottom-level signature on the actual message */
@@ -273,6 +279,10 @@ int32_t HssTree_Verify(const HSS_Para *para, const uint8_t *publicKey, const uin
 
     return CRYPT_SUCCESS;
 }
+
+#endif /* HITLS_CRYPTO_HSS_VERIFY */
+
+#if defined(HITLS_CRYPTO_HSS_SIGN)
 
 void HbsTreeCtx_InitFromHss(HbsTreeCtx *treeCtx, const HssMultiTreeCtx *multiCtx, uint32_t level)
 {
@@ -293,4 +303,5 @@ void HbsTreeCtx_InitFromHss(HbsTreeCtx *treeCtx, const HssMultiTreeCtx *multiCtx
     treeCtx->algoType = HBS_ALGO_HSS;
 }
 
+#endif /* HITLS_CRYPTO_HSS_SIGN */
 #endif /* HITLS_CRYPTO_HSS */

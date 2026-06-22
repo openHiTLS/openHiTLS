@@ -35,6 +35,8 @@ typedef struct {
     const LmsFamilyHashFuncs *hashFuncs; /**< Hash function pointers */
 } LmsLeafHashCtx;
 
+#if defined(HITLS_CRYPTO_HSS_VERIFY)
+
 /**
  * @ingroup lms
  * @brief Compute leaf node hash (RFC 8554 Algorithm 1)
@@ -56,6 +58,8 @@ static int32_t LmsComputeLeafHash(uint8_t *leafHash, const LmsLeafHashCtx *ctx, 
     }
     return CRYPT_SUCCESS;
 }
+
+#endif /* HITLS_CRYPTO_HSS_VERIFY */
 
 /**
  * @ingroup lms
@@ -117,6 +121,14 @@ typedef struct {
     const LmsFamilyHashFuncs *hashFuncs; /**< Hash function pointers */
 } LmsValidateAuthPathCtx;
 
+/* ========== LMS internal functions ========== */
+/* Key generation + signing live under HITLS_CRYPTO_HSS_SIGN.       */
+/* Signature verification lives under HITLS_CRYPTO_HSS_VERIFY.      */
+/* Struct / type definitions above are always visible when LMS is   */
+/* compiled; the functions that use them are guarded.               */
+
+#if defined(HITLS_CRYPTO_HSS_VERIFY)
+
 /**
  * @ingroup lms
  * @brief Compute internal node hash (RFC 8554)
@@ -126,7 +138,6 @@ typedef struct {
  */
 static int32_t LmsComputeInternalHash(uint8_t *nodeHash, const LmsInternalHashCtx *ctx)
 {
-    /* Create a temporary tree context for hIntr function */
     LmsTreeCtx treeCtx = {.I = ctx->I, .n = ctx->n, .hashFuncs = ctx->hashFuncs};
 
     int32_t ret = ctx->hashFuncs->nodeHash(&treeCtx, ctx->r, ctx->leftChild, ctx->rightChild, nodeHash);
@@ -137,9 +148,12 @@ static int32_t LmsComputeInternalHash(uint8_t *nodeHash, const LmsInternalHashCt
     return CRYPT_SUCCESS;
 }
 
+#endif /* HITLS_CRYPTO_HSS_VERIFY */
+
+#if defined(HITLS_CRYPTO_HSS_KEYGEN) || defined(HITLS_CRYPTO_HSS_SIGN)
+
 int32_t LmsComputeRoot(uint8_t *root, const LMS_Para *para, const uint8_t *I, const uint8_t *seed)
 {
-    /* Wrapper function - use new tree operations */
     LmsTreeCtx treeCtx;
     int32_t ret = LmsTree_InitContext(&treeCtx, para, I, seed);
     if (ret != CRYPT_SUCCESS) {
@@ -154,9 +168,12 @@ int32_t LmsComputeRoot(uint8_t *root, const LMS_Para *para, const uint8_t *I, co
     return ret;
 }
 
+#endif /* HITLS_CRYPTO_HSS_KEYGEN || HITLS_CRYPTO_HSS_SIGN */
+
+#if defined(HITLS_CRYPTO_HSS_SIGN)
+
 int32_t LmsGenerateAuthPath(uint8_t *authPath, const LMS_Para *para, const uint8_t *I, const uint8_t *seed, uint32_t q)
 {
-    /* Wrapper function - use new tree operations */
     LmsTreeCtx treeCtx;
     int32_t ret = LmsTree_InitContext(&treeCtx, para, I, seed);
     if (ret != CRYPT_SUCCESS) {
@@ -174,7 +191,6 @@ int32_t LmsGenerateAuthPath(uint8_t *authPath, const LMS_Para *para, const uint8
 int32_t LmsGenerateAuthPathCached(uint8_t *authPath, const LMS_Para *para, const LMS_TreeParams *treeParams, uint32_t q,
                                   LMS_TreeCache *cache)
 {
-    /* Wrapper function - use new tree operations */
     LmsTreeCtx treeCtx;
     int32_t ret = LmsTree_InitContext(&treeCtx, para, treeParams->I, treeParams->seed);
     if (ret != CRYPT_SUCCESS) {
@@ -182,7 +198,6 @@ int32_t LmsGenerateAuthPathCached(uint8_t *authPath, const LMS_Para *para, const
         return ret;
     }
 
-    /* Set cache in tree context */
     LmsTree_SetCache(&treeCtx, cache->tree, cache->size, cache->valid);
 
     ret = LmsTree_GenerateAuthPathCached(authPath, &treeCtx, q);
@@ -191,6 +206,10 @@ int32_t LmsGenerateAuthPathCached(uint8_t *authPath, const LMS_Para *para, const
     }
     return ret;
 }
+
+#endif /* HITLS_CRYPTO_HSS_SIGN */
+
+#if defined(HITLS_CRYPTO_HSS_KEYGEN)
 
 int32_t LmsKeyGen(void *libCtx, LMS_Para *para, uint8_t *publicKey, uint8_t *privateKey)
 {
@@ -220,15 +239,15 @@ int32_t LmsKeyGen(void *libCtx, LMS_Para *para, uint8_t *publicKey, uint8_t *pri
     }
 
     // Format public key
-    LmsPutBigendian(publicKey + LMS_PUBKEY_LMS_TYPE_OFFSET, para->lmsType, LMS_TYPE_LEN); // 4 bytes
-    LmsPutBigendian(publicKey + LMS_PUBKEY_OTS_TYPE_OFFSET, para->otsType, LMS_TYPE_LEN); // 4 bytes
+    BSL_Uint32ToByte(para->lmsType, publicKey + LMS_PUBKEY_LMS_TYPE_OFFSET);
+    BSL_Uint32ToByte(para->otsType, publicKey + LMS_PUBKEY_OTS_TYPE_OFFSET);
     memcpy(publicKey + LMS_PUBKEY_I_OFFSET, I, LMS_I_LEN);
     memcpy(publicKey + LMS_PUBKEY_ROOT_OFFSET, root, para->n);
 
     // Format private key
-    LmsPutBigendian(privateKey + LMS_PRVKEY_INDEX_OFFSET, 0, LMS_PRVKEY_INDEX_LEN); // 8 bytes
-    LmsPutBigendian(privateKey + LMS_PRVKEY_LMS_TYPE_OFFSET, para->lmsType, LMS_TYPE_LEN); // 4 bytes
-    LmsPutBigendian(privateKey + LMS_PRVKEY_OTS_TYPE_OFFSET, para->otsType, LMS_TYPE_LEN); // 4 bytes
+    BSL_Uint64ToByte(0, privateKey + LMS_PRVKEY_INDEX_OFFSET);
+    BSL_Uint32ToByte(para->lmsType, privateKey + LMS_PRVKEY_LMS_TYPE_OFFSET);
+    BSL_Uint32ToByte(para->otsType, privateKey + LMS_PRVKEY_OTS_TYPE_OFFSET);
     memcpy(privateKey + LMS_PRVKEY_I_OFFSET, I, LMS_I_LEN);
     memcpy(privateKey + LMS_PRVKEY_SEED_OFFSET, seed, LMS_SEED_LEN);
 
@@ -238,6 +257,10 @@ int32_t LmsKeyGen(void *libCtx, LMS_Para *para, uint8_t *publicKey, uint8_t *pri
 
     return CRYPT_SUCCESS;
 }
+
+#endif /* HITLS_CRYPTO_HSS_KEYGEN */
+
+#if defined(HITLS_CRYPTO_HSS_SIGN)
 
 /**
  * @ingroup lms
@@ -261,7 +284,7 @@ static int32_t LmsSignValidate(const LMS_Para *para, const uint8_t *privateKey, 
         return CRYPT_LMS_INVALID_PARAM;
     }
 
-    uint64_t q = LmsGetBigendian(privateKey + LMS_PRVKEY_INDEX_OFFSET, LMS_PRVKEY_INDEX_LEN);
+    uint64_t q = BSL_ByteToUint64(privateKey + LMS_PRVKEY_INDEX_OFFSET);
     uint64_t numLeaves = 1ULL << para->height;
 
     if (q >= numLeaves) {
@@ -288,7 +311,7 @@ static int32_t LmsSignWriteSignature(const LmsSignWriteCtx *ctx)
     LmsSeedDeriveSetQ(&derive, ctx->q);
 
     size_t offset = 0;
-    LmsPutBigendian(ctx->signature + offset, ctx->q, LMS_Q_LEN);
+    BSL_Uint32ToByte(ctx->q, ctx->signature + offset);
     offset += LMS_Q_LEN;
 
     size_t otsSigLen = LmOtsGetSigLen(ctx->para->otsType);
@@ -301,7 +324,7 @@ static int32_t LmsSignWriteSignature(const LmsSignWriteCtx *ctx)
     }
     offset += otsSigLen;
 
-    LmsPutBigendian(ctx->signature + offset, ctx->para->lmsType, LMS_TYPE_LEN);
+    BSL_Uint32ToByte(ctx->para->lmsType, ctx->signature + offset);
     offset += LMS_TYPE_LEN;
 
     ret = LmsGenerateAuthPath(ctx->signature + offset, ctx->para, ctx->I, ctx->seed, ctx->q);
@@ -333,7 +356,7 @@ static int32_t LmsSignWriteSignatureCached(const LmsSignWriteCtx *ctx, LMS_TreeC
     LmsSeedDeriveSetQ(&derive, ctx->q);
 
     size_t offset = 0;
-    LmsPutBigendian(ctx->signature + offset, ctx->q, LMS_Q_LEN);
+    BSL_Uint32ToByte(ctx->q, ctx->signature + offset);
     offset += LMS_Q_LEN;
 
     size_t otsSigLen = LmOtsGetSigLen(ctx->para->otsType);
@@ -346,7 +369,7 @@ static int32_t LmsSignWriteSignatureCached(const LmsSignWriteCtx *ctx, LMS_TreeC
     }
     offset += otsSigLen;
 
-    LmsPutBigendian(ctx->signature + offset, ctx->para->lmsType, LMS_TYPE_LEN);
+    BSL_Uint32ToByte(ctx->para->lmsType, ctx->signature + offset);
     offset += LMS_TYPE_LEN;
 
     LMS_TreeParams treeParams = {ctx->I, ctx->seed};
@@ -370,7 +393,7 @@ int32_t LmsSign(const LMS_Para *para, uint8_t *privateKey, const LMS_InputBuffer
         return ret;
     }
 
-    uint64_t q = LmsGetBigendian(privateKey + LMS_PRVKEY_INDEX_OFFSET, LMS_PRVKEY_INDEX_LEN);
+    uint64_t q = BSL_ByteToUint64(privateKey + LMS_PRVKEY_INDEX_OFFSET);
     const uint8_t *I = privateKey + LMS_PRVKEY_I_OFFSET;
     const uint8_t *seed = privateKey + LMS_PRVKEY_SEED_OFFSET;
 
@@ -378,7 +401,7 @@ int32_t LmsSign(const LMS_Para *para, uint8_t *privateKey, const LMS_InputBuffer
      * sign or auth-path generation below fails, the caller might retry; a retry
      * that reused the same q with a different message would let an attacker
      * recover the LM-OTS private key.  Consume the index first (fail-closed). */
-    LmsPutBigendian(privateKey + LMS_PRVKEY_INDEX_OFFSET, q + LMS_SIGNATURE_INDEX_INCREMENT, LMS_PRVKEY_INDEX_LEN);
+    BSL_Uint64ToByte(q + LMS_SIGNATURE_INDEX_INCREMENT, privateKey + LMS_PRVKEY_INDEX_OFFSET);
 
     LmsSignWriteCtx ctx = {signature->data, signature->len, para, I, seed, (uint32_t)q, message->data, message->len};
     ret = LmsSignWriteSignature(&ctx);
@@ -399,13 +422,13 @@ int32_t LmsSignCached(const LMS_Para *para, uint8_t *privateKey, const LMS_Input
         return ret;
     }
 
-    uint64_t q = LmsGetBigendian(privateKey + LMS_PRVKEY_INDEX_OFFSET, LMS_PRVKEY_INDEX_LEN);
+    uint64_t q = BSL_ByteToUint64(privateKey + LMS_PRVKEY_INDEX_OFFSET);
     const uint8_t *I = privateKey + LMS_PRVKEY_I_OFFSET;
     const uint8_t *seed = privateKey + LMS_PRVKEY_SEED_OFFSET;
 
     /* See LmsSign: advance q before signing so a retry after partial failure
      * cannot reuse the same one-time index. */
-    LmsPutBigendian(privateKey + LMS_PRVKEY_INDEX_OFFSET, q + LMS_SIGNATURE_INDEX_INCREMENT, LMS_PRVKEY_INDEX_LEN);
+    BSL_Uint64ToByte(q + LMS_SIGNATURE_INDEX_INCREMENT, privateKey + LMS_PRVKEY_INDEX_OFFSET);
 
     LmsSignWriteCtx ctx = {signature->data, signature->len, para, I, seed, (uint32_t)q, message->data, message->len};
     ret = LmsSignWriteSignatureCached(&ctx, cache);
@@ -416,6 +439,10 @@ int32_t LmsSignCached(const LMS_Para *para, uint8_t *privateKey, const LMS_Input
 
     return CRYPT_SUCCESS;
 }
+
+#endif /* HITLS_CRYPTO_HSS_SIGN */
+
+#if defined(HITLS_CRYPTO_HSS_VERIFY)
 
 /**
  * @ingroup lms
@@ -429,8 +456,8 @@ int32_t LmsSignCached(const LMS_Para *para, uint8_t *privateKey, const LMS_Input
 static int32_t LmsValidateParseSignature(const uint8_t *publicKey, const uint8_t *signature, size_t signatureLen,
                                          LmsSignatureInfo *info)
 {
-    info->lmsType = (uint32_t)LmsGetBigendian(publicKey + LMS_PUBKEY_LMS_TYPE_OFFSET, LMS_TYPE_LEN);
-    info->otsType = (uint32_t)LmsGetBigendian(publicKey + LMS_PUBKEY_OTS_TYPE_OFFSET, LMS_TYPE_LEN);
+    info->lmsType = BSL_ByteToUint32(publicKey + LMS_PUBKEY_LMS_TYPE_OFFSET);
+    info->otsType = BSL_ByteToUint32(publicKey + LMS_PUBKEY_OTS_TYPE_OFFSET);
     info->I = publicKey + LMS_PUBKEY_I_OFFSET;
     info->expectedRoot = publicKey + LMS_PUBKEY_ROOT_OFFSET;
 
@@ -457,13 +484,13 @@ static int32_t LmsValidateParseSignature(const uint8_t *publicKey, const uint8_t
     }
 
     size_t offset = 0;
-    info->q = (uint32_t)LmsGetBigendian(signature + offset, LMS_Q_LEN);
+    info->q = BSL_ByteToUint32(signature + offset);
     offset += LMS_Q_LEN;
 
     info->otsSig = signature + offset;
     offset += otsSigLen;
 
-    uint32_t sigLmsType = (uint32_t)LmsGetBigendian(signature + offset, LMS_TYPE_LEN);
+    uint32_t sigLmsType = BSL_ByteToUint32(signature + offset);
     offset += LMS_TYPE_LEN;
 
     if (sigLmsType != info->lmsType) {
@@ -486,6 +513,7 @@ static int32_t LmsValidateAuthPath(const LmsValidateAuthPathCtx *ctx)
     uint8_t leftChild[LMS_MAX_HASH];
     uint8_t rightChild[LMS_MAX_HASH];
     uint32_t nodeNum = ctx->numLeaves + ctx->q;
+    int32_t ret = CRYPT_SUCCESS;
 
     for (uint32_t level = 0; level < ctx->height; level++) {
         uint32_t parentNode = nodeNum / LMS_LEFT_CHILD_MULTIPLIER;
@@ -499,15 +527,19 @@ static int32_t LmsValidateAuthPath(const LmsValidateAuthPathCtx *ctx)
         }
 
         LmsInternalHashCtx hashCtx = {ctx->I, parentNode, leftChild, rightChild, ctx->n, ctx->hashFuncs};
-        int32_t ret = LmsComputeInternalHash(ctx->currentHash, &hashCtx);
+        ret = LmsComputeInternalHash(ctx->currentHash, &hashCtx);
         if (ret != CRYPT_SUCCESS) {
             BSL_ERR_PUSH_ERROR(ret);
-            return ret;
+            goto cleanup;
         }
 
         nodeNum = parentNode;
     }
-    return CRYPT_SUCCESS;
+
+cleanup:
+    BSL_SAL_CleanseData(leftChild, sizeof(leftChild));
+    BSL_SAL_CleanseData(rightChild, sizeof(rightChild));
+    return ret;
 }
 
 /**
@@ -548,7 +580,9 @@ static int32_t LmsVerifyOtsAndComputeLeaf(uint8_t *currentHash, const LmsSignatu
 
     uint32_t nodeNum = numLeaves + info->q;
     LmsLeafHashCtx leafCtx = {info->I, info->n, hashFuncs};
-    return LmsComputeLeafHash(currentHash, &leafCtx, nodeNum, computedOtsPubKey);
+    ret = LmsComputeLeafHash(currentHash, &leafCtx, nodeNum, computedOtsPubKey);
+    BSL_SAL_CleanseData(computedOtsPubKey, sizeof(computedOtsPubKey));
+    return ret;
 }
 
 int32_t LmsValidateSignature(const uint8_t *publicKey, const uint8_t *message, size_t messageLen,
@@ -564,6 +598,7 @@ int32_t LmsValidateSignature(const uint8_t *publicKey, const uint8_t *message, s
     uint8_t currentHash[LMS_MAX_HASH];
     ret = LmsVerifyOtsAndComputeLeaf(currentHash, &info, message, messageLen);
     if (ret != CRYPT_SUCCESS) {
+        BSL_SAL_CleanseData(currentHash, sizeof(currentHash));
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
@@ -572,6 +607,7 @@ int32_t LmsValidateSignature(const uint8_t *publicKey, const uint8_t *message, s
     uint32_t numLeaves = (uint32_t)(1ULL << info.height);
     const LmsFamilyHashFuncs *hashFuncs = LmsGetHashFuncs(info.lmsType);
     if (hashFuncs == NULL) {
+        BSL_SAL_CleanseData(currentHash, sizeof(currentHash));
         BSL_ERR_PUSH_ERROR(CRYPT_LMS_VERIFY_FAIL);
         return CRYPT_LMS_VERIFY_FAIL;
     }
@@ -579,6 +615,7 @@ int32_t LmsValidateSignature(const uint8_t *publicKey, const uint8_t *message, s
                                   info.height, info.n, numLeaves, hashFuncs};
     ret = LmsValidateAuthPath(&ctx);
     if (ret != CRYPT_SUCCESS) {
+        BSL_SAL_CleanseData(currentHash, sizeof(currentHash));
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
@@ -587,6 +624,9 @@ int32_t LmsValidateSignature(const uint8_t *publicKey, const uint8_t *message, s
     for (uint32_t i = 0; i < info.n; i++) {
         diff |= currentHash[i] ^ info.expectedRoot[i];
     }
+
+    BSL_SAL_CleanseData(currentHash, sizeof(currentHash));
+
     if (diff != 0) {
         BSL_ERR_PUSH_ERROR(CRYPT_LMS_VERIFY_FAIL);
         return CRYPT_LMS_VERIFY_FAIL;
@@ -594,13 +634,15 @@ int32_t LmsValidateSignature(const uint8_t *publicKey, const uint8_t *message, s
     return CRYPT_SUCCESS;
 }
 
+#endif /* HITLS_CRYPTO_HSS_VERIFY */
+
 uint64_t LmsGetRemainingSignatures(const uint8_t *privateKey, uint32_t height)
 {
     if (height > LMS_MAX_HEIGHT) {
         return 0;
     }
 
-    uint64_t currentIndex = LmsGetBigendian(privateKey + LMS_PRVKEY_INDEX_OFFSET, LMS_PRVKEY_INDEX_LEN);
+    uint64_t currentIndex = BSL_ByteToUint64(privateKey + LMS_PRVKEY_INDEX_OFFSET);
     uint64_t maxSignatures = (uint64_t)1 << height;
 
     if (currentIndex >= maxSignatures) {

@@ -45,9 +45,20 @@ extern "C" {
 #define HSS_MAX_LEVELS        3 /* Maximum externally-supported levels (serialization limit) */
 #define HSS_MIN_LEVELS        1 /* Minimum hierarchy levels (1 = equivalent to LMS) */
 
-/* HSS key lengths (fixed) */
-#define HSS_PRVKEY_LEN 48 // Private key: counter(8) + params(8) + seed(32)
-#define HSS_PUBKEY_LEN 60 // Public key: levels(4) + lms_type(4) + ots_type(4) + I(16) + root(32)
+/* HSS private key length (fixed, independent of hash output size):
+ *   counter(8) + compressed_params(8) + seed(32) = 48 */
+#define HSS_PRVKEY_LEN 48
+
+/**
+ * @brief Maximum possible HSS public key size for pre-init / stack allocation.
+ *
+ * HSS public key = levels(4) + lms_type(4) + ots_type(4) + I(16) + root(n)
+ *                = 28 + n
+ * With n ≤ 32 for all currently defined parameter sets, 28+32 = 60 is the safe max.
+ * Runtime code MUST use para->pubKeyLen (set by HssParaInit / SetPubKey) instead
+ * of this macro when the actual hash output length n is known.
+ */
+#define HSS_PUBKEY_MAX_LEN 60
 
 /* HSS private key offsets */
 #define HSS_PRVKEY_COUNTER_OFFSET 0 // Signature counter (8 bytes, big-endian)
@@ -74,9 +85,10 @@ extern "C" {
 #define HSS_SEED_ROOT_SEED    0x01 // Root tree seed derivation
 #define HSS_SEED_CHILD_SUFFIX 0x01 // Child seed derivation suffix
 
-/* Compressed parameter set size */
-#define HSS_COMPRESSED_PARAMS_LEN 8 // Compressed parameter set length (8 bytes)
-#define HSS_MAX_COMPRESSED_LEVELS 3 // Maximum levels that fit in compressed format
+/* Compressed parameter set buffer size:
+ *   levels(1) + [lms_type(1) + ots_type(1)] * HSS_MAX_LEVELS = 1 + 2*3 = 7
+ *   One extra byte of padding is included for safety. */
+#define HSS_COMPRESSED_PARAMS_LEN (1 + 2 * HSS_MAX_LEVELS + 1)
 
 /* Seed derivation buffer sizes (RFC 8554) */
 #define HSS_ROOT_SEED_DERIVE_BUF_LEN  34 // masterSeed(32) + domain(1) + padding(1)
@@ -97,9 +109,9 @@ typedef struct HssPara {
     uint32_t otsType[HSS_LEVELS_ARRAY_SIZE]; /**< OTS type for each level */
 
     /* Computed parameters */
-    size_t pubKeyLen; /**< Public key length (always 60) */
-    size_t prvKeyLen; /**< Private key length (always 48) */
-    size_t sigLen; /**< Maximum signature length */
+    uint32_t pubKeyLen; /**< Public key length (always 60) */
+    uint32_t prvKeyLen; /**< Private key length (always 48) */
+    uint32_t sigLen; /**< Maximum signature length */
     uint64_t maxSignatures; /**< Total signature capacity */
 
     /* Per-level LMS parameters (populated from LMS parameter lookup) */

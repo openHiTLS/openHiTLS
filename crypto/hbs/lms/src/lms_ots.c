@@ -40,6 +40,8 @@ typedef struct {
     const LmsFamilyHashFuncs *hashFuncs; /**< Hash function pointers */
 } LmOtsContext;
 
+#if defined(HITLS_CRYPTO_HSS_SIGN) || defined(HITLS_CRYPTO_HSS_VERIFY)
+
 /**
  * @ingroup lms
  * @brief LM-OTS Chain Function (C function in RFC 8554 Section 4.1)
@@ -152,6 +154,8 @@ size_t LmOtsGetSigLen(uint32_t otsType)
     return LMS_TYPE_LEN + params.n + params.p * params.n;
 }
 
+#if defined(HITLS_CRYPTO_HSS_KEYGEN) || defined(HITLS_CRYPTO_HSS_SIGN)
+
 /**
  * @ingroup lms
  * @brief Generate all hash chains for OTS public key
@@ -202,23 +206,6 @@ int32_t LmOtsGeneratePublicKey(uint32_t otsType, LMS_SeedDerive *seed, const Lms
         return ret;
     }
 
-    if (params.w == 0) {
-        BSL_ERR_PUSH_ERROR(CRYPT_LMS_DIVISION_BY_ZERO);
-        return CRYPT_LMS_DIVISION_BY_ZERO;
-    }
-
-    /* Validate w is one of the four permitted Winternitz values (RFC 8554 §4.1) */
-    if (params.w != 1 && params.w != 2 && params.w != 4 && params.w != 8) {
-        BSL_ERR_PUSH_ERROR(CRYPT_LMS_INVALID_PARAM);
-        return CRYPT_LMS_INVALID_PARAM;
-    }
-
-    /* Ensure p is non-zero to prevent division-by-zero in downstream loops */
-    if (params.p == 0) {
-        BSL_ERR_PUSH_ERROR(CRYPT_LMS_INVALID_PARAM);
-        return CRYPT_LMS_INVALID_PARAM;
-    }
-
     if (publicKeyLen < params.n) {
         BSL_ERR_PUSH_ERROR(CRYPT_LMS_BUFFER_TOO_SMALL);
         return CRYPT_LMS_BUFFER_TOO_SMALL;
@@ -226,7 +213,8 @@ int32_t LmOtsGeneratePublicKey(uint32_t otsType, LMS_SeedDerive *seed, const Lms
 
     LmOtsContext ctx = {seed->I, seed->q, params.n, params.w, params.p, params.ls, hashFuncs};
 
-    uint8_t *chains = BSL_SAL_Malloc(params.p * params.n);
+    size_t chainsLen = params.p * params.n;
+    uint8_t *chains = BSL_SAL_Malloc(chainsLen);
     if (chains == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         return CRYPT_MEM_ALLOC_FAIL;
@@ -234,7 +222,7 @@ int32_t LmOtsGeneratePublicKey(uint32_t otsType, LMS_SeedDerive *seed, const Lms
 
     ret = LmOtsGenerateChains(chains, &ctx, seed);
     if (ret != CRYPT_SUCCESS) {
-        BSL_SAL_FREE(chains);
+        BSL_SAL_ClearFree(chains, chainsLen);
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
@@ -244,13 +232,17 @@ int32_t LmOtsGeneratePublicKey(uint32_t otsType, LMS_SeedDerive *seed, const Lms
         .I = ctx.I, .q = ctx.q, .n = ctx.n, .w = ctx.w, .p = ctx.p, .ls = ctx.ls, .hashFuncs = ctx.hashFuncs};
 
     ret = hashFuncs->pkCompress(&otsCtx, chains, publicKey);
-    BSL_SAL_FREE(chains);
+    BSL_SAL_ClearFree(chains, chainsLen);
 
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
     }
     return ret;
 }
+
+#endif /* HITLS_CRYPTO_HSS_KEYGEN || HITLS_CRYPTO_HSS_SIGN */
+
+#if defined(HITLS_CRYPTO_HSS_SIGN)
 
 /**
  * @ingroup lms
@@ -304,9 +296,11 @@ static int32_t LmOtsComputeQ(uint8_t *Q, const LmOtsContext *ctx, const uint8_t 
         return ret;
     }
 
-    LmsPutBigendian(&Q[ctx->n], LmOtsComputeChecksum(Q, ctx->n, ctx->w, ctx->ls), LMS_CHECKSUM_LEN);
+    BSL_Uint16ToByte((uint16_t)LmOtsComputeChecksum(Q, ctx->n, ctx->w, ctx->ls), &Q[ctx->n]);
     return CRYPT_SUCCESS;
 }
+
+#endif /* HITLS_CRYPTO_HSS_SIGN || HITLS_CRYPTO_HSS_VERIFY */
 
 /**
  * @ingroup lms
@@ -359,29 +353,12 @@ int32_t LmOtsSign(uint32_t otsType, LMS_SeedDerive *seed, const LmsFamilyHashFun
         return ret;
     }
 
-    if (params.w == 0) {
-        BSL_ERR_PUSH_ERROR(CRYPT_LMS_DIVISION_BY_ZERO);
-        return CRYPT_LMS_DIVISION_BY_ZERO;
-    }
-
-    /* Validate w is one of the four permitted Winternitz values (RFC 8554 §4.1) */
-    if (params.w != 1 && params.w != 2 && params.w != 4 && params.w != 8) {
-        BSL_ERR_PUSH_ERROR(CRYPT_LMS_INVALID_PARAM);
-        return CRYPT_LMS_INVALID_PARAM;
-    }
-
-    /* Ensure p is non-zero to prevent division-by-zero in downstream loops */
-    if (params.p == 0) {
-        BSL_ERR_PUSH_ERROR(CRYPT_LMS_INVALID_PARAM);
-        return CRYPT_LMS_INVALID_PARAM;
-    }
-
     if (signature->len < LMS_TYPE_LEN + params.n + params.p * params.n) {
         BSL_ERR_PUSH_ERROR(CRYPT_LMS_BUFFER_TOO_SMALL);
         return CRYPT_LMS_BUFFER_TOO_SMALL;
     }
 
-    LmsPutBigendian(signature->data, otsType, LMS_TYPE_LEN);
+    BSL_Uint32ToByte(otsType, signature->data);
     ret = LmOtsGenerateRandomizer(signature->data + LMS_TYPE_LEN, params.n, seed);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
@@ -404,6 +381,10 @@ int32_t LmOtsSign(uint32_t otsType, LMS_SeedDerive *seed, const LmsFamilyHashFun
     return ret;
 }
 
+#endif /* HITLS_CRYPTO_HSS_SIGN */
+
+#if defined(HITLS_CRYPTO_HSS_VERIFY)
+
 /**
  * @ingroup lms
  * @brief Validate OTS parameters from signature
@@ -421,7 +402,7 @@ static int32_t LmOtsValidateParams(const uint8_t *signature, size_t signatureLen
         return CRYPT_LMS_BUFFER_TOO_SMALL;
     }
 
-    uint32_t paramSet = (uint32_t)LmsGetBigendian(signature, LMS_TYPE_LEN);
+    uint32_t paramSet = BSL_ByteToUint32(signature);
     if (paramSet != expectedOtsType) {
         BSL_ERR_PUSH_ERROR(CRYPT_LMS_INVALID_PARAM);
         return CRYPT_LMS_INVALID_PARAM;
@@ -431,11 +412,6 @@ static int32_t LmOtsValidateParams(const uint8_t *signature, size_t signatureLen
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
-    }
-
-    if (params->w == 0) {
-        BSL_ERR_PUSH_ERROR(CRYPT_LMS_DIVISION_BY_ZERO);
-        return CRYPT_LMS_DIVISION_BY_ZERO;
     }
 
     if (signatureLen != LMS_TYPE_LEN + params->n * (params->p + 1)) {
@@ -502,7 +478,8 @@ int32_t LmOtsValidateSignature(uint8_t *computedPubKey, const LMS_OtsValidateCtx
         return ret;
     }
 
-    uint8_t *chains = BSL_SAL_Malloc(params.p * params.n);
+    size_t chainsLen = params.p * params.n;
+    uint8_t *chains = BSL_SAL_Malloc(chainsLen);
     if (chains == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         return CRYPT_MEM_ALLOC_FAIL;
@@ -510,7 +487,7 @@ int32_t LmOtsValidateSignature(uint8_t *computedPubKey, const LMS_OtsValidateCtx
 
     ret = LmOtsValidateChains(chains, &otsCtx, Q, y);
     if (ret != CRYPT_SUCCESS) {
-        BSL_SAL_FREE(chains);
+        BSL_SAL_ClearFree(chains, chainsLen);
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
@@ -527,7 +504,7 @@ int32_t LmOtsValidateSignature(uint8_t *computedPubKey, const LMS_OtsValidateCtx
     ret = hashFuncs->pkCompress(&otsCtxForHash, chains, computedPubKey);
 
     BSL_SAL_CleanseData(Q, sizeof(Q));
-    BSL_SAL_FREE(chains);
+    BSL_SAL_ClearFree(chains, chainsLen);
 
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
@@ -535,4 +512,5 @@ int32_t LmOtsValidateSignature(uint8_t *computedPubKey, const LMS_OtsValidateCtx
     return ret;
 }
 
+#endif /* HITLS_CRYPTO_HSS_VERIFY */
 #endif /* HITLS_CRYPTO_LMS */

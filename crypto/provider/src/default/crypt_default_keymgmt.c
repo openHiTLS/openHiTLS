@@ -156,10 +156,6 @@ void *CRYPT_EAL_DefPkeyMgmtNewCtx(CRYPT_EAL_DefProvCtx *provCtx, int32_t algId)
         case CRYPT_PKEY_XMSSMT:
             return CRYPT_XMSSMT_NewCtxEx(provCtx->libCtx);
 #endif
-#ifdef HITLS_CRYPTO_LMS
-        case CRYPT_PKEY_LMS:
-            return CRYPT_LMS_NewCtxEx(provCtx->libCtx);
-#endif
 #ifdef HITLS_CRYPTO_HSS
         case CRYPT_PKEY_HSS:
             return CRYPT_HSS_NewCtxEx(provCtx->libCtx);
@@ -562,35 +558,18 @@ const CRYPT_EAL_Func g_defEalKeyMgmtXmssmt[] = {
 };
 #endif
 
-#ifdef HITLS_CRYPTO_LMS
-const CRYPT_EAL_Func g_defEalKeyMgmtLms[] = {
-    {CRYPT_EAL_IMPLPKEYMGMT_NEWCTX, (CRYPT_EAL_ImplPkeyMgmtNewCtx)CRYPT_EAL_DefPkeyMgmtNewCtx},
-    {CRYPT_EAL_IMPLPKEYMGMT_GENKEY, (CRYPT_EAL_ImplPkeyMgmtGenKey)CRYPT_LMS_Gen},
-    {CRYPT_EAL_IMPLPKEYMGMT_SETPRV, (CRYPT_EAL_ImplPkeyMgmtSetPrv)CRYPT_LMS_SetPrvKey},
-    {CRYPT_EAL_IMPLPKEYMGMT_SETPUB, (CRYPT_EAL_ImplPkeyMgmtSetPub)CRYPT_LMS_SetPubKey},
-    {CRYPT_EAL_IMPLPKEYMGMT_GETPRV, (CRYPT_EAL_ImplPkeyMgmtGetPrv)CRYPT_LMS_GetPrvKey},
-    {CRYPT_EAL_IMPLPKEYMGMT_GETPUB, (CRYPT_EAL_ImplPkeyMgmtGetPub)CRYPT_LMS_GetPubKey},
-    {CRYPT_EAL_IMPLPKEYMGMT_DUPCTX, (CRYPT_EAL_ImplPkeyMgmtDupCtx)CRYPT_LMS_DupCtx},
-#ifdef HITLS_CRYPTO_LMS_CHECK
-    {CRYPT_EAL_IMPLPKEYMGMT_CHECK, (CRYPT_EAL_ImplPkeyMgmtCheck)CRYPT_LMS_Check},
-#endif
-    {CRYPT_EAL_IMPLPKEYMGMT_COMPARE, (CRYPT_EAL_ImplPkeyMgmtCompare)CRYPT_LMS_Cmp},
-    {CRYPT_EAL_IMPLPKEYMGMT_CTRL, (CRYPT_EAL_ImplPkeyMgmtCtrl)CRYPT_LMS_Ctrl},
-    {CRYPT_EAL_IMPLPKEYMGMT_FREECTX, (CRYPT_EAL_ImplPkeyMgmtFreeCtx)CRYPT_LMS_FreeCtx},
-    CRYPT_EAL_FUNC_END,
-};
-#endif
-
 #ifdef HITLS_CRYPTO_HSS
 const CRYPT_EAL_Func g_defEalKeyMgmtHss[] = {
     {CRYPT_EAL_IMPLPKEYMGMT_NEWCTX, (CRYPT_EAL_ImplPkeyMgmtNewCtx)CRYPT_EAL_DefPkeyMgmtNewCtx},
+#ifdef HITLS_CRYPTO_HSS_KEYGEN
     {CRYPT_EAL_IMPLPKEYMGMT_GENKEY, (CRYPT_EAL_ImplPkeyMgmtGenKey)CRYPT_HSS_Gen},
+#endif
     {CRYPT_EAL_IMPLPKEYMGMT_SETPRV, (CRYPT_EAL_ImplPkeyMgmtSetPrv)CRYPT_HSS_SetPrvKey},
     {CRYPT_EAL_IMPLPKEYMGMT_SETPUB, (CRYPT_EAL_ImplPkeyMgmtSetPub)CRYPT_HSS_SetPubKey},
     {CRYPT_EAL_IMPLPKEYMGMT_GETPRV, (CRYPT_EAL_ImplPkeyMgmtGetPrv)CRYPT_HSS_GetPrvKey},
     {CRYPT_EAL_IMPLPKEYMGMT_GETPUB, (CRYPT_EAL_ImplPkeyMgmtGetPub)CRYPT_HSS_GetPubKey},
     {CRYPT_EAL_IMPLPKEYMGMT_DUPCTX, (CRYPT_EAL_ImplPkeyMgmtDupCtx)CRYPT_HSS_DupCtx},
-#ifdef HITLS_CRYPTO_HSS_CHECK
+#if defined(HITLS_CRYPTO_HSS_KEYGEN) && defined(HITLS_CRYPTO_HSS_CHECK)
     {CRYPT_EAL_IMPLPKEYMGMT_CHECK, (CRYPT_EAL_ImplPkeyMgmtCheck)CRYPT_HSS_Check},
 #endif
     {CRYPT_EAL_IMPLPKEYMGMT_COMPARE, (CRYPT_EAL_ImplPkeyMgmtCompare)CRYPT_HSS_Cmp},

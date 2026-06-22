@@ -24,6 +24,9 @@
 #include "hss_local.h"
 #include "hss_tree.h"
 
+/* ========== Key generation (HITLS_CRYPTO_HSS_KEYGEN) ========== */
+#if defined(HITLS_CRYPTO_HSS_KEYGEN)
+
 /**
  * @ingroup hss
  * @brief Generate all cryptographic keys for HSS
@@ -70,9 +73,9 @@ static int32_t HssGenerateKeys(void *libCtx, uint8_t rootI[LMS_I_LEN], uint8_t r
 static int32_t HssFormatPublicKey(uint8_t *publicKey, const HSS_Para *para, const uint8_t *rootI,
                                   const uint8_t *rootHash)
 {
-    LmsPutBigendian(publicKey + HSS_PUBKEY_LEVELS_OFFSET, para->levels, HSS_SIG_NSPK_LEN);
-    LmsPutBigendian(publicKey + HSS_PUBKEY_LMS_TYPE_OFFSET, para->lmsType[0], HSS_SIG_NSPK_LEN);
-    LmsPutBigendian(publicKey + HSS_PUBKEY_OTS_TYPE_OFFSET, para->otsType[0], HSS_SIG_NSPK_LEN);
+    BSL_Uint32ToByte(para->levels, publicKey + HSS_PUBKEY_LEVELS_OFFSET);
+    BSL_Uint32ToByte(para->lmsType[0], publicKey + HSS_PUBKEY_LMS_TYPE_OFFSET);
+    BSL_Uint32ToByte(para->otsType[0], publicKey + HSS_PUBKEY_OTS_TYPE_OFFSET);
     memcpy(publicKey + HSS_PUBKEY_I_OFFSET, rootI, LMS_I_LEN);
     memcpy(publicKey + HSS_PUBKEY_ROOT_OFFSET, rootHash, LMS_SHA256_N);
     return CRYPT_SUCCESS;
@@ -88,7 +91,7 @@ static int32_t HssFormatPublicKey(uint8_t *publicKey, const HSS_Para *para, cons
  */
 static int32_t HssFormatPrivateKey(uint8_t *privateKey, const HSS_Para *para, const uint8_t *masterSeed)
 {
-    LmsPutBigendian(privateKey + HSS_PRVKEY_COUNTER_OFFSET, 0, HSS_PRVKEY_COUNTER_LEN);
+    BSL_Uint64ToByte(0, privateKey + HSS_PRVKEY_COUNTER_OFFSET);
 
     uint8_t compressed[HSS_COMPRESSED_PARAMS_LEN];
     int32_t ret = HssCompressParamSet(compressed, para);
@@ -109,26 +112,21 @@ static int32_t HssFormatPrivateKey(uint8_t *privateKey, const HSS_Para *para, co
  * after this helper). Mirrors the cleanup done by CRYPT_LMS_Gen. */
 static int32_t HssAllocKeyBuffers(CRYPT_HSS_Ctx *ctx)
 {
-    bool publicKeyOwnedHere = false;
-    if (ctx->publicKey == NULL) {
-        ctx->publicKey = (uint8_t *)BSL_SAL_Calloc(1, HSS_PUBKEY_LEN);
-        if (ctx->publicKey == NULL) {
-            BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
-            return CRYPT_MEM_ALLOC_FAIL;
-        }
-        publicKeyOwnedHere = true;
+    uint8_t *newPublicKey = BSL_SAL_Calloc(1, ctx->para.pubKeyLen);
+    if (newPublicKey == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
+        return CRYPT_MEM_ALLOC_FAIL;
     }
     if (ctx->privateKey == NULL) {
         ctx->privateKey = (uint8_t *)BSL_SAL_Calloc(1, HSS_PRVKEY_LEN);
         if (ctx->privateKey == NULL) {
-            if (publicKeyOwnedHere) {
-                BSL_SAL_FREE(ctx->publicKey);
-                ctx->publicKey = NULL;
-            }
+            BSL_SAL_Free(newPublicKey);
             BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
             return CRYPT_MEM_ALLOC_FAIL;
         }
     }
+    ctx->publicKey = newPublicKey;
+    ctx->publicLen = ctx->para.pubKeyLen;
     return CRYPT_SUCCESS;
 }
 
@@ -178,10 +176,6 @@ int32_t CRYPT_HSS_Gen(CRYPT_HSS_Ctx *ctx)
     }
 
 CLEANUP:
-    /* Cleanse every stack buffer that held key-derivation output, even those
-     * that ultimately become public (rootI, rootHash) — matches LmsKeyGen's
-     * defensive convention so stale crypto state doesn't linger on the stack
-     * for the lifetime of the call frame. */
     BSL_SAL_CleanseData(masterSeed, sizeof(masterSeed));
     BSL_SAL_CleanseData(rootSeed, sizeof(rootSeed));
     BSL_SAL_CleanseData(rootI, sizeof(rootI));
@@ -192,6 +186,10 @@ CLEANUP:
     return ret;
 }
 
+#endif /* HITLS_CRYPTO_HSS_KEYGEN */
+
+#if defined(HITLS_CRYPTO_HSS_SIGN)
+
 /**
  * @ingroup hss
  * @brief Create child tree public key
@@ -200,7 +198,7 @@ CLEANUP:
  * @param child       [IN]  Child tree context
  * @return CRYPT_SUCCESS on success, error code on failure
  */
-static int32_t HssCreateChildPubKey(uint8_t childPubKey[LMS_PUBKEY_LEN], const HssSignContext *signCtx,
+static int32_t HssCreateChildPubKey(uint8_t childPubKey[LMS_PUBKEY_MAX_LEN], const HssSignContext *signCtx,
                                     const HssTreeContext *child)
 {
     uint8_t childRoot[32];
@@ -210,10 +208,8 @@ static int32_t HssCreateChildPubKey(uint8_t childPubKey[LMS_PUBKEY_LEN], const H
         return ret;
     }
 
-    LmsPutBigendian(childPubKey + LMS_PUBKEY_LMS_TYPE_OFFSET, signCtx->para->lmsType[signCtx->childLevel],
-                    HSS_SIG_NSPK_LEN);
-    LmsPutBigendian(childPubKey + LMS_PUBKEY_OTS_TYPE_OFFSET, signCtx->para->otsType[signCtx->childLevel],
-                    HSS_SIG_NSPK_LEN);
+    BSL_Uint32ToByte(signCtx->para->lmsType[signCtx->childLevel], childPubKey + LMS_PUBKEY_LMS_TYPE_OFFSET);
+    BSL_Uint32ToByte(signCtx->para->otsType[signCtx->childLevel], childPubKey + LMS_PUBKEY_OTS_TYPE_OFFSET);
     memcpy(childPubKey + LMS_PUBKEY_I_OFFSET, child->I, LMS_I_LEN);
     memcpy(childPubKey + LMS_PUBKEY_ROOT_OFFSET, childRoot, LMS_SHA256_N);
     BSL_SAL_CleanseData(childRoot, sizeof(childRoot));
@@ -231,18 +227,16 @@ static int32_t HssCreateChildPubKey(uint8_t childPubKey[LMS_PUBKEY_LEN], const H
  * @return CRYPT_SUCCESS on success, error code on failure
  */
 static int32_t HssSignChildPubKey(HSS_OutputBuffer *output, const HssSignContext *signCtx, const HssTreeContext *parent,
-                                  const uint8_t childPubKey[LMS_PUBKEY_LEN], LMS_TreeCache *cache)
+                                  const uint8_t childPubKey[LMS_PUBKEY_MAX_LEN], LMS_TreeCache *cache)
 {
-    uint8_t parentPrivKey[LMS_PRVKEY_LEN];
-    LmsPutBigendian(parentPrivKey + LMS_PRVKEY_INDEX_OFFSET, parent->leafIndex, LMS_PRVKEY_INDEX_LEN);
-    LmsPutBigendian(parentPrivKey + LMS_PRVKEY_LMS_TYPE_OFFSET, signCtx->para->lmsType[signCtx->parentLevel],
-                    HSS_SIG_NSPK_LEN);
-    LmsPutBigendian(parentPrivKey + LMS_PRVKEY_OTS_TYPE_OFFSET, signCtx->para->otsType[signCtx->parentLevel],
-                    HSS_SIG_NSPK_LEN);
+    uint8_t parentPrivKey[LMS_PRVKEY_MAX_LEN];
+    BSL_Uint64ToByte(parent->leafIndex, parentPrivKey + LMS_PRVKEY_INDEX_OFFSET);
+    BSL_Uint32ToByte(signCtx->para->lmsType[signCtx->parentLevel], parentPrivKey + LMS_PRVKEY_LMS_TYPE_OFFSET);
+    BSL_Uint32ToByte(signCtx->para->otsType[signCtx->parentLevel], parentPrivKey + LMS_PRVKEY_OTS_TYPE_OFFSET);
     memcpy(parentPrivKey + LMS_PRVKEY_I_OFFSET, parent->I, LMS_I_LEN);
     memcpy(parentPrivKey + LMS_PRVKEY_SEED_OFFSET, parent->seed, LMS_SEED_LEN);
 
-    LMS_InputBuffer msgBuf = {childPubKey, LMS_PUBKEY_LEN};
+    LMS_InputBuffer msgBuf = {childPubKey, LMS_PUBKEY_MAX_LEN};
     LMS_SignatureBuffer sigBuf = {output->data, output->len};
     int32_t ret =
         LmsSignCached(&signCtx->para->levelPara[signCtx->parentLevel], parentPrivKey, &msgBuf, &sigBuf, cache);
@@ -256,7 +250,7 @@ static int32_t HssSignChildPubKey(HSS_OutputBuffer *output, const HssSignContext
 int32_t HssGenerateSignedPubKey(HSS_OutputBuffer *output, const HssSignContext *signCtx, const HssTreeContext *parent,
                                 const HssTreeContext *child, LMS_TreeCache *cache)
 {
-    uint8_t childPubKey[LMS_PUBKEY_LEN];
+    uint8_t childPubKey[LMS_PUBKEY_MAX_LEN];
     int32_t ret = HssCreateChildPubKey(childPubKey, signCtx, child);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
@@ -264,13 +258,12 @@ int32_t HssGenerateSignedPubKey(HSS_OutputBuffer *output, const HssSignContext *
     }
 
     size_t parentSigLen = signCtx->para->levelPara[signCtx->parentLevel].sigLen;
-    if (*output->len < parentSigLen + LMS_PUBKEY_LEN) {
+    if (*output->len < parentSigLen + LMS_PUBKEY_MAX_LEN) {
         BSL_SAL_CleanseData(childPubKey, sizeof(childPubKey));
         BSL_ERR_PUSH_ERROR(CRYPT_LMS_BUFFER_TOO_SMALL);
         return CRYPT_LMS_BUFFER_TOO_SMALL;
     }
 
-    /* Write parent signature directly into output buffer (no intermediate allocation) */
     HSS_OutputBuffer sigOutput = {output->data, &parentSigLen};
     ret = HssSignChildPubKey(&sigOutput, signCtx, parent, childPubKey, cache);
     if (ret != CRYPT_SUCCESS) {
@@ -279,14 +272,13 @@ int32_t HssGenerateSignedPubKey(HSS_OutputBuffer *output, const HssSignContext *
         return ret;
     }
 
-    /* Append child public key after the parent signature */
-    if (LMS_PUBKEY_LEN > *output->len - parentSigLen) {
+    if (LMS_PUBKEY_MAX_LEN > *output->len - parentSigLen) {
         BSL_SAL_CleanseData(childPubKey, sizeof(childPubKey));
         BSL_ERR_PUSH_ERROR(CRYPT_LMS_BUFFER_TOO_SMALL);
         return CRYPT_LMS_BUFFER_TOO_SMALL;
     }
-    memcpy(output->data + parentSigLen, childPubKey, LMS_PUBKEY_LEN);
-    *output->len = parentSigLen + LMS_PUBKEY_LEN;
+    memcpy(output->data + parentSigLen, childPubKey, LMS_PUBKEY_MAX_LEN);
+    *output->len = parentSigLen + LMS_PUBKEY_MAX_LEN;
     BSL_SAL_CleanseData(childPubKey, sizeof(childPubKey));
     return CRYPT_SUCCESS;
 }
@@ -356,7 +348,7 @@ static int32_t HssSignValidateAndSetup(CRYPT_HSS_Ctx *ctx, uint32_t sigLen, uint
         return CRYPT_LMS_BUFFER_TOO_SMALL;
     }
 
-    *counter = LmsGetBigendian(ctx->privateKey + HSS_PRVKEY_COUNTER_OFFSET, HSS_PRVKEY_COUNTER_LEN);
+    *counter = BSL_ByteToUint64(ctx->privateKey + HSS_PRVKEY_COUNTER_OFFSET);
     uint64_t maxSigs = HssGetMaxSignatures(&ctx->para);
     if (maxSigs == 0 || *counter >= maxSigs) {
         BSL_ERR_PUSH_ERROR(CRYPT_HSS_KEY_EXHAUSTED);
@@ -388,11 +380,9 @@ int32_t CRYPT_HSS_Sign(CRYPT_HSS_Ctx *ctx, int32_t algId, const uint8_t *msg, ui
         return ret;
     }
 
-    /* Extract master seed from private key */
     uint8_t masterSeed[LMS_SEED_LEN];
     memcpy(masterSeed, ctx->privateKey + HSS_PRVKEY_SEED_OFFSET, HSS_PRVKEY_SEED_LEN);
 
-    /* Initialize multi-tree context with seeds */
     HssMultiTreeCtx treeCtx;
     ret = HssTree_InitContextWithSeeds(&treeCtx, &ctx->para, masterSeed, counter);
     if (ret != CRYPT_SUCCESS) {
@@ -401,9 +391,6 @@ int32_t CRYPT_HSS_Sign(CRYPT_HSS_Ctx *ctx, int32_t algId, const uint8_t *msg, ui
         return ret;
     }
 
-    /* Set up tree caching for each level.  Invalidate a level's cache when its
-     * treeIndex has changed — the cached Merkle tree was built with a different
-     * (I, seed) pair and reusing it would produce wrong authentication paths. */
     for (uint32_t i = 0; i < ctx->para.levels; i++) {
         if (ctx->cachedTreeIndex[i] != treeCtx.treeIndices[i]) {
             ctx->treeCacheValid[i] = false;
@@ -414,23 +401,12 @@ int32_t CRYPT_HSS_Sign(CRYPT_HSS_Ctx *ctx, int32_t algId, const uint8_t *msg, ui
         treeCtx.lmsTrees[i].treeCacheValid = &ctx->treeCacheValid[i];
     }
 
-    /* Advance the global counter BEFORE signing.  HssTree_Sign writes
-     * intermediate signed-public-key segments into `sig` and may fail partway
-     * through (e.g. OOM in the bottom-layer auth-path generation).  If we only
-     * incremented the counter on success, a retry would reuse the same
-     * (counter -> per-level q) decomposition with the same (I, seed) — that is,
-     * the same OTS key — to sign a different message, which destroys the
-     * security of the scheme.  Persist the advance first so the index is
-     * "consumed" even on partial failure; we trade one wasted leaf for the
-     * impossibility of OTS-key reuse. */
-    LmsPutBigendian(ctx->privateKey + HSS_PRVKEY_COUNTER_OFFSET, counter + 1, HSS_PRVKEY_COUNTER_LEN);
+    BSL_Uint64ToByte(counter + 1, ctx->privateKey + HSS_PRVKEY_COUNTER_OFFSET);
     ctx->signatureIndex = counter + 1;
 
-    /* Sign using the tree operations */
     size_t actualSigLen = *sigLen;
     ret = HssTree_Sign(sig, &actualSigLen, msg, msgLen, &treeCtx);
 
-    /* Clean up sensitive data */
     BSL_SAL_CleanseData(masterSeed, sizeof(masterSeed));
     BSL_SAL_CleanseData(treeCtx.levelSeed, sizeof(treeCtx.levelSeed));
 
@@ -442,6 +418,11 @@ int32_t CRYPT_HSS_Sign(CRYPT_HSS_Ctx *ctx, int32_t algId, const uint8_t *msg, ui
     *sigLen = (uint32_t)actualSigLen;
     return CRYPT_SUCCESS;
 }
+
+#endif /* HITLS_CRYPTO_HSS_SIGN */
+
+/* ========== Signature verification (HITLS_CRYPTO_HSS_VERIFY) ========== */
+#if defined(HITLS_CRYPTO_HSS_VERIFY)
 
 /**
  * @ingroup hss
@@ -464,7 +445,7 @@ static int32_t HssGetLmsSigLenFromBytes(const uint8_t *sig, size_t remaining, si
         return CRYPT_HSS_SIGNATURE_PARSE_FAIL;
     }
 
-    uint32_t otsType = (uint32_t)LmsGetBigendian(sig + LMS_Q_LEN, LMS_TYPE_LEN);
+    uint32_t otsType = BSL_ByteToUint32(sig + LMS_Q_LEN);
     LmOtsParams ots;
     if (LmOtsLookupParamSet(otsType, &ots) != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(CRYPT_HSS_SIGNATURE_PARSE_FAIL);
@@ -480,7 +461,7 @@ static int32_t HssGetLmsSigLenFromBytes(const uint8_t *sig, size_t remaining, si
         return CRYPT_HSS_SIGNATURE_PARSE_FAIL;
     }
 
-    uint32_t lmsType = (uint32_t)LmsGetBigendian(sig + LMS_Q_LEN + otsSigLen, LMS_TYPE_LEN);
+    uint32_t lmsType = BSL_ByteToUint32(sig + LMS_Q_LEN + otsSigLen);
     uint32_t h, n, height;
     if (LmsLookupParamSet(lmsType, &h, &n, &height) != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(CRYPT_HSS_SIGNATURE_PARSE_FAIL);
@@ -514,7 +495,7 @@ static int32_t HssParseSignedPubKeys(HSS_ParsedSig *parsed, const HSS_Para *para
             return ret;
         }
 
-        size_t totalLen = lmsSigLen + LMS_PUBKEY_LEN;
+        size_t totalLen = lmsSigLen + LMS_PUBKEY_MAX_LEN;
         if (*remaining < totalLen) {
             BSL_ERR_PUSH_ERROR(CRYPT_HSS_SIGNATURE_PARSE_FAIL);
             return CRYPT_HSS_SIGNATURE_PARSE_FAIL;
@@ -540,7 +521,7 @@ int32_t HssParseSignature(HSS_ParsedSig *parsed, const HSS_Para *para, const uin
     const uint8_t *sigPtr = signature;
     size_t remaining = signatureLen;
 
-    parsed->nspk = (uint32_t)LmsGetBigendian(sigPtr, HSS_SIG_NSPK_LEN);
+    parsed->nspk = BSL_ByteToUint32(sigPtr);
     sigPtr += HSS_SIG_NSPK_LEN;
     remaining -= HSS_SIG_NSPK_LEN;
 
@@ -590,4 +571,5 @@ int32_t CRYPT_HSS_Verify(const CRYPT_HSS_Ctx *ctx, int32_t algId, const uint8_t 
     return ret;
 }
 
+#endif /* HITLS_CRYPTO_HSS_VERIFY */
 #endif /* HITLS_CRYPTO_HSS */

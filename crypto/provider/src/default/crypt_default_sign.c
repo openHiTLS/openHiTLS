@@ -157,18 +157,14 @@ const CRYPT_EAL_Func g_defEalSignXmssmt[] = {
 };
 #endif
 
-#ifdef HITLS_CRYPTO_LMS
-const CRYPT_EAL_Func g_defEalSignLms[] = {
-    {CRYPT_EAL_IMPLPKEYSIGN_SIGN, (CRYPT_EAL_ImplPkeySign)CRYPT_LMS_Sign},
-    {CRYPT_EAL_IMPLPKEYSIGN_VERIFY, (CRYPT_EAL_ImplPkeyVerify)CRYPT_LMS_Verify},
-    CRYPT_EAL_FUNC_END,
-};
-#endif
-
 #ifdef HITLS_CRYPTO_HSS
 const CRYPT_EAL_Func g_defEalSignHss[] = {
+#if defined(HITLS_CRYPTO_HSS_SIGN)
     {CRYPT_EAL_IMPLPKEYSIGN_SIGN, (CRYPT_EAL_ImplPkeySign)CRYPT_HSS_Sign},
+#endif
+#if defined(HITLS_CRYPTO_HSS_VERIFY)
     {CRYPT_EAL_IMPLPKEYSIGN_VERIFY, (CRYPT_EAL_ImplPkeyVerify)CRYPT_HSS_Verify},
+#endif
     CRYPT_EAL_FUNC_END,
 };
 #endif

@@ -32,10 +32,10 @@ void LmsAdrs_BuildOtsIterInput(uint8_t *buffer, const uint8_t *I, uint32_t q, ui
     memcpy(buffer + LMS_ITER_I_OFFSET, I, LMS_I_LEN);
 
     /* Write leaf index q (4 bytes, big-endian) */
-    LmsPutBigendian(buffer + LMS_ITER_Q_OFFSET, q, LMS_Q_LEN);
+    BSL_Uint32ToByte(q, buffer + LMS_ITER_Q_OFFSET);
 
     /* Write chain index k (2 bytes, big-endian) */
-    LmsPutBigendian(buffer + LMS_ITER_K_OFFSET, k, LMS_K_LEN);
+    BSL_Uint16ToByte((uint16_t)k, buffer + LMS_ITER_K_OFFSET);
 
     /* Write iteration index j (1 byte) */
     buffer[LMS_ITER_J_OFFSET] = (uint8_t)j;
@@ -54,7 +54,7 @@ void LmsAdrs_BuildLeafInput(uint8_t *buffer, const uint8_t *I, uint32_t r, const
     memcpy(buffer + LMS_LEAF_I_OFFSET, I, LMS_I_LEN);
 
     /* Write node index r (4 bytes, big-endian) */
-    LmsPutBigendian(buffer + LMS_LEAF_R_OFFSET, r, LMS_R_LEN);
+    BSL_Uint32ToByte(r, buffer + LMS_LEAF_R_OFFSET);
 
     /* Write domain separation value D = LMS_D_LEAF (2 bytes) */
     LmsSetD(buffer + LMS_LEAF_D_OFFSET, LMS_D_LEAF);
@@ -74,7 +74,7 @@ void LmsAdrs_BuildInternalInput(uint8_t *buffer, const uint8_t *I, uint32_t r, c
     memcpy(buffer + LMS_INTR_I_OFFSET, I, LMS_I_LEN);
 
     /* Write node index r (4 bytes, big-endian) */
-    LmsPutBigendian(buffer + LMS_INTR_R_OFFSET, r, LMS_R_LEN);
+    BSL_Uint32ToByte(r, buffer + LMS_INTR_R_OFFSET);
 
     /* Write domain separation value D = LMS_D_INTR (2 bytes) */
     LmsSetD(buffer + LMS_INTR_D_OFFSET, LMS_D_INTR);
@@ -96,7 +96,7 @@ void LmsAdrs_BuildMsgInput(uint8_t *buffer, const uint8_t *I, uint32_t q, const 
     memcpy(buffer + LMS_MESG_I_OFFSET, I, LMS_I_LEN);
 
     /* Write leaf index q (4 bytes, big-endian) */
-    LmsPutBigendian(buffer + LMS_MESG_Q_OFFSET, q, LMS_Q_LEN);
+    BSL_Uint32ToByte(q, buffer + LMS_MESG_Q_OFFSET);
 
     /* Write domain separation value D = LMS_D_MESG (2 bytes) */
     LmsSetD(buffer + LMS_MESG_D_OFFSET, LMS_D_MESG);
@@ -116,7 +116,7 @@ void LmsAdrs_BuildOtsPubKeyInput(uint8_t *buffer, const uint8_t *I, uint32_t q, 
     memcpy(buffer + LMS_PBLC_I_OFFSET, I, LMS_I_LEN);
 
     /* Write leaf index q (4 bytes, big-endian) */
-    LmsPutBigendian(buffer + LMS_PBLC_Q_OFFSET, q, LMS_Q_LEN);
+    BSL_Uint32ToByte(q, buffer + LMS_PBLC_Q_OFFSET);
 
     /* Write domain separation value D = LMS_D_PBLC (2 bytes) */
     LmsSetD(buffer + LMS_PBLC_D_OFFSET, LMS_D_PBLC);

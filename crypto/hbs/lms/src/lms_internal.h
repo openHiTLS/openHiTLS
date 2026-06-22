@@ -33,6 +33,7 @@
 #include "lms_params.h"
 #include "lms_hash.h"
 #include "lms_common.h"
+#include "bsl_bytes.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -117,14 +118,31 @@ int32_t LmsHash(uint8_t *result, const void *message, size_t messageLen);
 #define LMS_PRVKEY_OTS_TYPE_OFFSET 12
 #define LMS_PRVKEY_I_OFFSET        16
 #define LMS_PRVKEY_SEED_OFFSET     32
-#define LMS_PRVKEY_LEN             (32 + LMS_SEED_LEN)
+/**
+ * @brief Maximum possible LMS private key size for stack allocations.
+ *
+ * Private key = index(8) || lmsType(4) || otsType(4) || I(16) || seed(32) = 64 bytes.
+ * Runtime code MUST use para->prvKeyLen when the actual size is needed.
+ */
+#define LMS_PRVKEY_MAX_LEN         (32 + LMS_SEED_LEN)
 
 /* Public key field offsets (needed by HSS to construct/parse per-level public keys) */
 #define LMS_PUBKEY_LMS_TYPE_OFFSET 0
 #define LMS_PUBKEY_OTS_TYPE_OFFSET 4
 #define LMS_PUBKEY_I_OFFSET        8
 #define LMS_PUBKEY_ROOT_OFFSET     24
-#define LMS_PUBKEY_LEN             (24 + LMS_SHA256_N)
+
+/**
+ * @brief Maximum possible LMS public key size for stack allocations.
+ *
+ * The actual length depends on n (= hash output bytes):
+ *   LMS public key = type(4) || ots_type(4) || I(16) || root(n)
+ *                  = 24 + n
+ * For all currently defined parameter sets n ≤ 32, so 56 bytes is the maximum.
+ * Runtime code MUST use para->pubKeyLen (from LmsParaInit) instead of this macro
+ * when the actual n is known.
+ */
+#define LMS_PUBKEY_MAX_LEN         (24 + LMS_SHA256_N)
 
 /*
  * Compute Merkle tree root hash (RFC 8554 Algorithm 6)
@@ -145,34 +163,6 @@ int32_t LmsSignCached(const LMS_Para *para, uint8_t *privateKey, const LMS_Input
  */
 int32_t LmsValidateSignature(const uint8_t *publicKey, const uint8_t *message, size_t messageLen,
                              const uint8_t *signature, size_t signatureLen);
-
-/*
- * Write value in big-endian format
- * Used by HSS to construct private/public key buffers.
- */
-static inline int32_t LmsPutBigendian(void *target, uint64_t value, size_t bytes)
-{
-    uint8_t *b = (uint8_t *)target;
-    for (int i = (int)bytes - 1; i >= 0; i--) {
-        b[i] = value & 0xff;
-        value >>= 8;
-    }
-    return 0; /* CRYPT_SUCCESS */
-}
-
-/*
- * Read value in big-endian format
- * Used by HSS to parse signature counters and type fields.
- */
-static inline uint64_t LmsGetBigendian(const void *target, size_t bytes)
-{
-    const uint8_t *b = (const uint8_t *)target;
-    uint64_t result = 0;
-    for (size_t i = 0; i < bytes; i++) {
-        result = (result << 8) | (b[i] & 0xff);
-    }
-    return result;
-}
 
 #ifdef __cplusplus
 }

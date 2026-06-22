@@ -22,9 +22,9 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <stddef.h>
-#include "crypt_lms.h"
 #include "lms_params.h"
 #include "lms_internal.h"
+#include "lms_hash.h"
 #include "bsl_params.h"
 
 #ifdef __cplusplus
@@ -200,7 +200,7 @@ typedef struct {
     const uint8_t *seed;
 } LMS_TreeParams;
 
-/* LmsPutBigendian and LmsGetBigendian are defined as static inline in lms_internal.h */
+/* Big-endian byte conversions use BSL_ByteToUint* / BSL_Uint*ToByte from bsl_bytes.h (included via lms_internal.h). */
 
 /**
  * @ingroup lms

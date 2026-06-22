@@ -24,7 +24,7 @@
 
 int32_t HssParaInit(HSS_Para *para, uint32_t levels, const uint32_t *lmsTypes, const uint32_t *otsTypes)
 {
-    if (levels < HSS_MIN_LEVELS || levels > HSS_MAX_LEVELS || levels > HSS_MAX_COMPRESSED_LEVELS) {
+    if (levels < HSS_MIN_LEVELS || levels > HSS_MAX_LEVELS) {
         BSL_ERR_PUSH_ERROR(CRYPT_HSS_INVALID_LEVEL);
         return CRYPT_HSS_INVALID_LEVEL;
     }
@@ -58,7 +58,9 @@ int32_t HssParaInit(HSS_Para *para, uint32_t levels, const uint32_t *lmsTypes, c
     }
 
     // Set HSS-level parameters
-    para->pubKeyLen = HSS_PUBKEY_LEN;
+    // HSS public key = levels(4) + pub[0] where pub[0] = lms_type(4) + ots_type(4) + I(16) + root(n) = 24 + n
+    // Total = 4 + 24 + n = 28 + n
+    para->pubKeyLen = 28 + para->levelPara[0].n;
     para->prvKeyLen = HSS_PRVKEY_LEN;
     para->sigLen = HssGetSignatureLen(para);
     para->maxSignatures = HssGetMaxSignatures(para);
@@ -135,7 +137,7 @@ static int32_t HssCompressOtsType(uint32_t otsType, uint8_t *otsComp)
 
 int32_t HssCompressParamSet(uint8_t compressed[8], const HSS_Para *para)
 {
-    if (para->levels < HSS_MIN_LEVELS || para->levels > HSS_MAX_LEVELS || para->levels > HSS_MAX_COMPRESSED_LEVELS) {
+    if (para->levels < HSS_MIN_LEVELS || para->levels > HSS_MAX_LEVELS) {
         BSL_ERR_PUSH_ERROR(CRYPT_HSS_INVALID_LEVEL);
         return CRYPT_HSS_INVALID_LEVEL;
     }
@@ -143,7 +145,7 @@ int32_t HssCompressParamSet(uint8_t compressed[8], const HSS_Para *para)
     memset(compressed, 0, HSS_COMPRESSED_PARAMS_LEN);
     compressed[0] = (uint8_t)para->levels;
 
-    for (uint32_t i = 0; i < para->levels && i < HSS_MAX_COMPRESSED_LEVELS; i++) {
+    for (uint32_t i = 0; i < para->levels && i < HSS_MAX_LEVELS; i++) {
         uint8_t lmsComp;
         uint8_t otsComp;
         int32_t ret = HssCompressLmsType(para->lmsType[i], &lmsComp);
@@ -229,7 +231,7 @@ static int32_t HssDecompressOtsType(uint8_t otsComp, uint32_t *otsType)
 int32_t HssDecompressParamSet(HSS_Para *para, const uint8_t compressed[8])
 {
     uint32_t levels = compressed[0];
-    if (levels < HSS_MIN_LEVELS || levels > HSS_MAX_LEVELS || levels > HSS_MAX_COMPRESSED_LEVELS) {
+    if (levels < HSS_MIN_LEVELS || levels > HSS_MAX_LEVELS) {
         BSL_ERR_PUSH_ERROR(CRYPT_HSS_INVALID_LEVEL);
         return CRYPT_HSS_INVALID_LEVEL;
     }
@@ -261,7 +263,7 @@ int32_t HssDecompressParamSet(HSS_Para *para, const uint8_t compressed[8])
     return initRet;
 }
 
-size_t HssGetSignatureLen(const HSS_Para *para)
+uint32_t HssGetSignatureLen(const HSS_Para *para)
 {
     if (para->levels == 0) {
         return 0;
@@ -274,9 +276,9 @@ size_t HssGetSignatureLen(const HSS_Para *para)
     totalLen += para->levelPara[para->levels - 1].sigLen;
 
     // Signed public keys for levels 1 to L-1
+    // Each signed_pub_key = LMS_sig(child's pub key) + child's pub key (24 + n)
     for (uint32_t i = 0; i < para->levels - 1; i++) {
-        // Each signed_pub_key = LMS_sig + LMS_pubkey(56 bytes)
-        totalLen += para->levelPara[i].sigLen + LMS_PUBKEY_LEN;
+        totalLen += para->levelPara[i].sigLen + para->levelPara[i + 1].pubKeyLen;
     }
 
     return totalLen;
@@ -342,8 +344,8 @@ int32_t HssGenerateChildSeed(uint8_t childI[16], uint8_t childSeed[32], const ui
     uint8_t buffer[HSS_CHILD_SEED_DERIVE_BUF_LEN];
     memcpy(buffer, parentSeed, LMS_SEED_LEN);
     memcpy(buffer + LMS_SEED_LEN, parentI, LMS_I_LEN);
-    LmsPutBigendian(buffer + LMS_SEED_LEN + LMS_I_LEN, position->treeIndex, LMS_TREE_INDEX_BYTES);
-    LmsPutBigendian(buffer + LMS_SEED_LEN + LMS_I_LEN + LMS_TREE_INDEX_BYTES, position->level, LMS_LEVEL_INDEX_BYTES);
+    BSL_Uint64ToByte(position->treeIndex, buffer + LMS_SEED_LEN + LMS_I_LEN);
+    BSL_Uint32ToByte(position->level, buffer + LMS_SEED_LEN + LMS_I_LEN + LMS_TREE_INDEX_BYTES);
 
     // Derive child I: SHA256(buffer)
     uint8_t hash[LMS_SHA256_N];
