@@ -115,15 +115,17 @@ static void DecodeNodes(const uint8_t **pos, uint8_t nodes[][XMSS_MAX_MDSIZE], u
 /*
  * Validate fields that later control array indexes, stack traversal and leaf generation.
  *
- * This is structural validation only. It prevents malformed state from driving
- * out-of-bounds operations, but does not authenticate node values or prevent rollback.
+ * This prevents malformed state from driving out-of-bounds operations and rejects
+ * impossible BDS state-machine combinations. It does not authenticate node values
+ * or prevent rollback.
  */
 static bool IsStateValid(const XmssBdsState *state, uint32_t hp)
 {
     uint32_t stackCount = hp + 1U;
     uint32_t leafCount = 1U << hp;
-    if (state->stackOffset > stackCount || state->nextLeaf > leafCount ||
-        (!state->initialized && state->nextLeaf < leafCount && state->stackOffset == stackCount)) {
+    if (state->stackOffset > stackCount || (state->initialized && state->nextLeaf != leafCount) ||
+        (!state->initialized && state->nextLeaf >= leafCount) ||
+        (!state->initialized && state->stackOffset == stackCount)) {
         return false;
     }
     for (uint32_t i = 0; i < state->stackOffset; i++) {
@@ -524,7 +526,7 @@ int32_t XmssBds_ExportState(const CryptXmssCtx *ctx, uint8_t *out, uint32_t *out
  *
  * Header values must match the active parameter set and private-key index.
  * Decoding is performed into a temporary context; existing BDS state is replaced
- * only after every state passes structural validation.
+ * only after every state passes structural and semantic validation.
  */
 int32_t XmssBds_ImportState(CryptXmssCtx *ctx, const uint8_t *in, uint32_t inLen)
 {
@@ -593,6 +595,16 @@ int32_t XmssBds_ImportState(CryptXmssCtx *ctx, const uint8_t *in, uint32_t inLen
             BSL_ERR_PUSH_ERROR(ret);
             return ret;
         }
+        if (i < d && !tmpCtx.bds.states[i].initialized) {
+            XmssBds_Free(&tmpCtx);
+            BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
+            return CRYPT_INVALID_ARG;
+        }
+    }
+    if (memcmp(tmpCtx.bds.states[d - 1U].root, ctx->key.root, n) != 0) {
+        XmssBds_Free(&tmpCtx);
+        BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
+        return CRYPT_INVALID_ARG;
     }
     if (wotsSigsLen != 0) {
         memcpy(tmpCtx.bds.wotsSigs, pos, wotsSigsLen);
