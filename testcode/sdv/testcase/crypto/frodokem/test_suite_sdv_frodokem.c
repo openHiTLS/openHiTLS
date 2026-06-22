@@ -20,6 +20,8 @@
 #include "crypt_eal_pkey.h"
 #include "crypt_util_rand.h"
 #include "eal_pkey_local.h"
+#include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include "crypt_frodokem.h"
 #include "crypt_drbg.h"
@@ -344,7 +346,10 @@ void SDV_CRYPTO_FRODOKEM_SETPUB_API_TC001(int bits, Hex *testEK)
     ek.key.kemEk.data =  BSL_SAL_Malloc(encapsKeyLen);
     memcpy(ek.key.kemEk.data, testEK->x, testEK->len);
     ek.key.kemEk.len = encapsKeyLen - 1;
-    ASSERT_EQ(CRYPT_EAL_PkeySetPub(ctx, &ek), CRYPT_FRODOKEM_BUFLEN_NOT_ENOUGH);
+    ASSERT_EQ(CRYPT_EAL_PkeySetPub(ctx, &ek), CRYPT_INVALID_ARG);
+
+    ek.key.kemEk.len = encapsKeyLen + 1;
+    ASSERT_EQ(CRYPT_EAL_PkeySetPub(ctx, &ek), CRYPT_INVALID_ARG);
 
     ek.key.kemEk.len = encapsKeyLen;
     ASSERT_EQ(CRYPT_EAL_PkeyGetPub(ctx, &ek), CRYPT_FRODOKEM_ABSENT_PUBKEY);
@@ -404,7 +409,15 @@ void SDV_CRYPTO_FRODOKEM_SETPRV_API_TC001(int bits, Hex *testDK)
     dk.key.kemDk.data =  BSL_SAL_Malloc(decapsKeyLen);
     memcpy(dk.key.kemDk.data, testDK->x, testDK->len);
     dk.key.kemDk.len = decapsKeyLen - 1;
-    ASSERT_EQ(CRYPT_EAL_PkeySetPrv(ctx, &dk), CRYPT_FRODOKEM_BUFLEN_NOT_ENOUGH);
+    ASSERT_EQ(CRYPT_EAL_PkeySetPrv(ctx, &dk), CRYPT_INVALID_ARG);
+
+    dk.key.kemDk.len = decapsKeyLen + 1;
+    ASSERT_EQ(CRYPT_EAL_PkeySetPrv(ctx, &dk), CRYPT_INVALID_ARG);
+
+    dk.key.kemDk.len = decapsKeyLen;
+    dk.key.kemDk.data[decapsKeyLen - 1] ^= 1;
+    ASSERT_EQ(CRYPT_EAL_PkeySetPrv(ctx, &dk), CRYPT_FRODOKEM_INVALID_PRVKEY);
+    dk.key.kemDk.data[decapsKeyLen - 1] ^= 1;
 
     dk.key.kemDk.len = decapsKeyLen;
     ASSERT_EQ(CRYPT_EAL_PkeyGetPrv(ctx, &dk), CRYPT_FRODOKEM_ABSENT_PRVKEY);
@@ -571,6 +584,7 @@ static int32_t RandSetUp()
 static void RandTeardown()
 {
     DRBG_Free(g_randCtx);
+    g_randCtx = NULL;
     CRYPT_EAL_SetRandCallBack(NULL);
 }
 
@@ -636,6 +650,7 @@ EXIT:
     return;
 }
 /* END_CASE */
+
 /* @
 * @test  SDV_CRYPTO_FRODOKEM_DUPKEY_API_TC001
 * @spec  -
@@ -808,6 +823,361 @@ EXIT:
     BSL_SAL_FREE(cipher);
     BSL_SAL_FREE(sharedKey);
     STUB_RESTORE(BSL_SAL_Malloc);
+    return;
+}
+/* END_CASE */
+
+static CRYPT_EAL_PkeyCtx *NewFrodoKemCtx(void)
+{
+#ifdef HITLS_CRYPTO_PROVIDER
+    return CRYPT_EAL_ProviderPkeyNewCtx(NULL, CRYPT_PKEY_FRODOKEM, CRYPT_EAL_PKEY_KEM_OPERATE, "provider=default");
+#else
+    return CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_FRODOKEM);
+#endif
+}
+
+static void GetFrodoExpectedLens(int32_t algId, uint32_t *ctLen, uint32_t *secBits, uint32_t *pubLen,
+    uint32_t *prvLen, uint32_t *sharedLen)
+{
+    switch (algId) {
+        case CRYPT_KEM_TYPE_FRODOKEM_640_SHAKE:
+        case CRYPT_KEM_TYPE_FRODOKEM_640_AES:
+            *ctLen = 9752;
+            *secBits = 128;
+            *pubLen = 9616;
+            *prvLen = 19888;
+            *sharedLen = 16;
+            return;
+        case CRYPT_KEM_TYPE_FRODOKEM_976_SHAKE:
+        case CRYPT_KEM_TYPE_FRODOKEM_976_AES:
+            *ctLen = 15792;
+            *secBits = 192;
+            *pubLen = 15632;
+            *prvLen = 31296;
+            *sharedLen = 24;
+            return;
+        case CRYPT_KEM_TYPE_FRODOKEM_1344_SHAKE:
+        case CRYPT_KEM_TYPE_FRODOKEM_1344_AES:
+            *ctLen = 21696;
+            *secBits = 256;
+            *pubLen = 21520;
+            *prvLen = 43088;
+            *sharedLen = 32;
+            return;
+        case CRYPT_KEM_TYPE_EFRODOKEM_640_SHAKE:
+        case CRYPT_KEM_TYPE_EFRODOKEM_640_AES:
+            *ctLen = 9720;
+            *secBits = 128;
+            *pubLen = 9616;
+            *prvLen = 19888;
+            *sharedLen = 16;
+            return;
+        case CRYPT_KEM_TYPE_EFRODOKEM_976_SHAKE:
+        case CRYPT_KEM_TYPE_EFRODOKEM_976_AES:
+            *ctLen = 15744;
+            *secBits = 192;
+            *pubLen = 15632;
+            *prvLen = 31296;
+            *sharedLen = 24;
+            return;
+        case CRYPT_KEM_TYPE_EFRODOKEM_1344_SHAKE:
+        case CRYPT_KEM_TYPE_EFRODOKEM_1344_AES:
+            *ctLen = 21632;
+            *secBits = 256;
+            *pubLen = 21520;
+            *prvLen = 43088;
+            *sharedLen = 32;
+            return;
+        default:
+            *ctLen = 0;
+            *secBits = 0;
+            *pubLen = 0;
+            *prvLen = 0;
+            *sharedLen = 0;
+            return;
+    }
+}
+
+static int32_t CheckFrodoGetNumCtrl(CRYPT_EAL_PkeyCtx *ctx, int32_t cmd, uint32_t expected)
+{
+    uint32_t value = 0;
+    int32_t ret = CRYPT_EAL_PkeyCtrl(ctx, cmd, &value, sizeof(value));
+    if (ret != CRYPT_SUCCESS) {
+        return ret;
+    }
+    if (value != expected) {
+        return CRYPT_FRODOKEM_KEY_NOT_EQUAL;
+    }
+    ret = CRYPT_EAL_PkeyCtrl(ctx, cmd, &value, sizeof(value) - 1);
+    if (ret != CRYPT_INVALID_ARG) {
+        return ret;
+    }
+    return CRYPT_SUCCESS;
+}
+
+/* BEGIN_CASE */
+void SDV_CRYPTO_FRODOKEM_CTRL_GETTER_API_TC001(int algId)
+{
+    TestMemInit();
+    CRYPT_EAL_PkeyCtx *ctx = NewFrodoKemCtx();
+    ASSERT_TRUE(ctx != NULL);
+
+    uint32_t value = 0;
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_GET_CIPHERTEXT_LEN, &value, sizeof(value)),
+        CRYPT_FRODOKEM_KEYINFO_NOT_SET);
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_GET_SECBITS, &value, sizeof(value)),
+        CRYPT_FRODOKEM_KEYINFO_NOT_SET);
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_GET_PUBKEY_LEN, &value, sizeof(value)),
+        CRYPT_FRODOKEM_KEYINFO_NOT_SET);
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_GET_PRVKEY_LEN, &value, sizeof(value)),
+        CRYPT_FRODOKEM_KEYINFO_NOT_SET);
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_GET_SHARED_KEY_LEN, &value, sizeof(value)),
+        CRYPT_FRODOKEM_KEYINFO_NOT_SET);
+
+    ASSERT_EQ(CRYPT_EAL_PkeySetParaById(ctx, (uint32_t)algId), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_GET_CIPHERTEXT_LEN, NULL, sizeof(value)), CRYPT_NULL_INPUT);
+
+    uint32_t ctLen = 0;
+    uint32_t secBits = 0;
+    uint32_t pubLen = 0;
+    uint32_t prvLen = 0;
+    uint32_t sharedLen = 0;
+    GetFrodoExpectedLens(algId, &ctLen, &secBits, &pubLen, &prvLen, &sharedLen);
+
+    ASSERT_EQ(CheckFrodoGetNumCtrl(ctx, CRYPT_CTRL_GET_CIPHERTEXT_LEN, ctLen), CRYPT_SUCCESS);
+    ASSERT_EQ(CheckFrodoGetNumCtrl(ctx, CRYPT_CTRL_GET_SECBITS, secBits), CRYPT_SUCCESS);
+    ASSERT_EQ(CheckFrodoGetNumCtrl(ctx, CRYPT_CTRL_GET_PUBKEY_LEN, pubLen), CRYPT_SUCCESS);
+    ASSERT_EQ(CheckFrodoGetNumCtrl(ctx, CRYPT_CTRL_GET_PRVKEY_LEN, prvLen), CRYPT_SUCCESS);
+    ASSERT_EQ(CheckFrodoGetNumCtrl(ctx, CRYPT_CTRL_GET_SHARED_KEY_LEN, sharedLen), CRYPT_SUCCESS);
+EXIT:
+    CRYPT_EAL_PkeyFreeCtx(ctx);
+    return;
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_CRYPTO_FRODOKEM_STATE_NEG_API_TC001(int algId)
+{
+    TestMemInit();
+    CRYPT_RandRegist(TestSimpleRand);
+    CRYPT_EAL_PkeyCtx *src = NewFrodoKemCtx();
+    CRYPT_EAL_PkeyCtx *pubOnly = NewFrodoKemCtx();
+    CRYPT_EAL_PkeyCtx *prvOnly = NewFrodoKemCtx();
+    CRYPT_EAL_PkeyCtx *repeat = NewFrodoKemCtx();
+    uint8_t *pubBuf = NULL;
+    uint8_t *prvBuf = NULL;
+    uint8_t *ct = NULL;
+    uint8_t *ss = NULL;
+    ASSERT_TRUE(src != NULL);
+    ASSERT_TRUE(pubOnly != NULL);
+    ASSERT_TRUE(prvOnly != NULL);
+    ASSERT_TRUE(repeat != NULL);
+
+    ASSERT_EQ(CRYPT_EAL_PkeySetParaById(src, (uint32_t)algId), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeySetParaById(pubOnly, (uint32_t)algId), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeySetParaById(prvOnly, (uint32_t)algId), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeySetParaById(repeat, (uint32_t)algId), CRYPT_SUCCESS);
+
+    uint32_t ctLen = 0;
+    uint32_t ssLen = 0;
+    uint32_t pubLen = 0;
+    uint32_t prvLen = 0;
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(src, CRYPT_CTRL_GET_CIPHERTEXT_LEN, &ctLen, sizeof(ctLen)), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(src, CRYPT_CTRL_GET_SHARED_KEY_LEN, &ssLen, sizeof(ssLen)), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(src, CRYPT_CTRL_GET_PUBKEY_LEN, &pubLen, sizeof(pubLen)), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(src, CRYPT_CTRL_GET_PRVKEY_LEN, &prvLen, sizeof(prvLen)), CRYPT_SUCCESS);
+
+    ct = BSL_SAL_Malloc(ctLen);
+    ss = BSL_SAL_Malloc(ssLen);
+    pubBuf = BSL_SAL_Malloc(pubLen);
+    prvBuf = BSL_SAL_Malloc(prvLen);
+    ASSERT_TRUE(ct != NULL);
+    ASSERT_TRUE(ss != NULL);
+    ASSERT_TRUE(pubBuf != NULL);
+    ASSERT_TRUE(prvBuf != NULL);
+
+    ASSERT_EQ(CRYPT_EAL_PkeyEncaps(src, ct, &ctLen, ss, &ssLen), CRYPT_FRODOKEM_ABSENT_PUBKEY);
+    ASSERT_EQ(CRYPT_EAL_PkeyDecaps(src, ct, ctLen, ss, &ssLen), CRYPT_FRODOKEM_ABSENT_PRVKEY);
+
+    ASSERT_EQ(CRYPT_EAL_PkeyGen(src), CRYPT_SUCCESS);
+    CRYPT_EAL_PkeyPub pub = {0};
+    CRYPT_EAL_PkeyPrv prv = {0};
+    pub.id = CRYPT_PKEY_FRODOKEM;
+    prv.id = CRYPT_PKEY_FRODOKEM;
+    pub.key.kemEk.data = pubBuf;
+    pub.key.kemEk.len = pubLen;
+    prv.key.kemDk.data = prvBuf;
+    prv.key.kemDk.len = prvLen;
+    ASSERT_EQ(CRYPT_EAL_PkeyGetPub(src, &pub), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyGetPrv(src, &prv), CRYPT_SUCCESS);
+
+    ASSERT_EQ(CRYPT_EAL_PkeySetPub(pubOnly, &pub), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyDecaps(pubOnly, ct, ctLen, ss, &ssLen), CRYPT_FRODOKEM_ABSENT_PRVKEY);
+
+    ASSERT_EQ(CRYPT_EAL_PkeySetPrv(prvOnly, &prv), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyEncaps(prvOnly, ct, &ctLen, ss, &ssLen), CRYPT_FRODOKEM_ABSENT_PUBKEY);
+
+    ASSERT_EQ(CRYPT_EAL_PkeySetPub(repeat, &pub), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeySetPrv(repeat, &prv), CRYPT_FRODOKEM_KEY_REPEATED_SET);
+EXIT:
+    CRYPT_EAL_PkeyFreeCtx(src);
+    CRYPT_EAL_PkeyFreeCtx(pubOnly);
+    CRYPT_EAL_PkeyFreeCtx(prvOnly);
+    CRYPT_EAL_PkeyFreeCtx(repeat);
+    BSL_SAL_FREE(pubBuf);
+    BSL_SAL_FREE(prvBuf);
+    BSL_SAL_FREE(ct);
+    BSL_SAL_FREE(ss);
+    CRYPT_RandRegist(NULL);
+    return;
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_CRYPTO_FRODOKEM_WRONG_PRV_FUNC_TC001(int algId)
+{
+    TestMemInit();
+    CRYPT_RandRegist(TestRand);
+    CRYPT_RandRegistEx(TestRandEx);
+    CRYPT_EAL_PkeyCtx *ctx1 = NewFrodoKemCtx();
+    CRYPT_EAL_PkeyCtx *ctx2 = NewFrodoKemCtx();
+    uint8_t *ct = NULL;
+    uint8_t *ss1 = NULL;
+    uint8_t *ss2 = NULL;
+    ASSERT_TRUE(ctx1 != NULL);
+    ASSERT_TRUE(ctx2 != NULL);
+
+    ASSERT_EQ(CRYPT_EAL_PkeySetParaById(ctx1, (uint32_t)algId), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeySetParaById(ctx2, (uint32_t)algId), CRYPT_SUCCESS);
+    gRandNumber = 1u;
+    ASSERT_EQ(CRYPT_EAL_PkeyGen(ctx1), CRYPT_SUCCESS);
+    gRandNumber = 3u;
+    ASSERT_EQ(CRYPT_EAL_PkeyGen(ctx2), CRYPT_SUCCESS);
+
+    uint32_t ctLen = 0;
+    uint32_t ssLen1 = 0;
+    uint32_t ssLen2 = 0;
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(ctx1, CRYPT_CTRL_GET_CIPHERTEXT_LEN, &ctLen, sizeof(ctLen)), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(ctx1, CRYPT_CTRL_GET_SHARED_KEY_LEN, &ssLen1, sizeof(ssLen1)), CRYPT_SUCCESS);
+    ssLen2 = ssLen1;
+    ct = BSL_SAL_Malloc(ctLen);
+    ss1 = BSL_SAL_Malloc(ssLen1);
+    ss2 = BSL_SAL_Malloc(ssLen2);
+    ASSERT_TRUE(ct != NULL);
+    ASSERT_TRUE(ss1 != NULL);
+    ASSERT_TRUE(ss2 != NULL);
+
+    ASSERT_EQ(CRYPT_EAL_PkeyEncaps(ctx1, ct, &ctLen, ss1, &ssLen1), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyDecaps(ctx2, ct, ctLen, ss2, &ssLen2), CRYPT_SUCCESS);
+    ASSERT_EQ(ssLen1, ssLen2);
+    ASSERT_TRUE(memcmp(ss1, ss2, ssLen1) != 0);
+EXIT:
+    CRYPT_EAL_PkeyFreeCtx(ctx1);
+    CRYPT_EAL_PkeyFreeCtx(ctx2);
+    BSL_SAL_FREE(ct);
+    BSL_SAL_FREE(ss1);
+    BSL_SAL_FREE(ss2);
+    CRYPT_RandRegist(NULL);
+    CRYPT_RandRegistEx(NULL);
+    return;
+}
+/* END_CASE */
+
+/* @
+* @test  SDV_CRYPTO_FRODOKEM_MODIFIED_CT_FUNC_TC001
+* @spec  -
+* @title  Test implicit rejection after modifying each ciphertext partition
+* @precon  nan
+* @brief  1. Generate a key pair and a valid ciphertext
+*         2. Modify the first, middle, and last byte of C1 and C2 separately
+*         3. For salted variants, modify the first, middle, and last byte of salt separately
+*         4. Decapsulate each modified ciphertext twice
+* @expect  Decapsulation succeeds and returns a deterministic fallback secret
+*          The fallback secret differs from the valid shared secret
+* @prior  nan
+* @auto  TRUE
+@ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_FRODOKEM_MODIFIED_CT_FUNC_TC001(int algId, int c1Len, int c2Len, int saltLen)
+{
+    TestMemInit();
+    CRYPT_RandRegist(TestSimpleRand);
+    CRYPT_EAL_PkeyCtx *ctx = NewFrodoKemCtx();
+    uint8_t *ct = NULL;
+    uint8_t *ctOrig = NULL;
+    uint8_t *ss = NULL;
+    uint8_t *ssFallback1 = NULL;
+    uint8_t *ssFallback2 = NULL;
+    ASSERT_TRUE(ctx != NULL);
+    ASSERT_TRUE(c1Len > 0);
+    ASSERT_TRUE(c2Len > 0);
+    ASSERT_TRUE(saltLen >= 0);
+
+    ASSERT_EQ(CRYPT_EAL_PkeySetParaById(ctx, (uint32_t)algId), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyGen(ctx), CRYPT_SUCCESS);
+
+    uint32_t ctLen = 0;
+    uint32_t ssLen = 0;
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_GET_CIPHERTEXT_LEN, &ctLen, sizeof(ctLen)), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_GET_SHARED_KEY_LEN, &ssLen, sizeof(ssLen)), CRYPT_SUCCESS);
+    ASSERT_EQ((uint32_t)c1Len + (uint32_t)c2Len + (uint32_t)saltLen, ctLen);
+    const uint32_t expectedCtLen = ctLen;
+    const uint32_t expectedSsLen = ssLen;
+
+    ct = BSL_SAL_Malloc(ctLen);
+    ctOrig = BSL_SAL_Malloc(ctLen);
+    ss = BSL_SAL_Malloc(ssLen);
+    ssFallback1 = BSL_SAL_Malloc(ssLen);
+    ssFallback2 = BSL_SAL_Malloc(ssLen);
+    ASSERT_TRUE(ct != NULL);
+    ASSERT_TRUE(ctOrig != NULL);
+    ASSERT_TRUE(ss != NULL);
+    ASSERT_TRUE(ssFallback1 != NULL);
+    ASSERT_TRUE(ssFallback2 != NULL);
+
+    ASSERT_EQ(CRYPT_EAL_PkeyEncaps(ctx, ctOrig, &ctLen, ss, &ssLen), CRYPT_SUCCESS);
+    ASSERT_EQ(ctLen, expectedCtLen);
+    ASSERT_EQ(ssLen, expectedSsLen);
+    uint32_t validSsLen = ssLen;
+    ASSERT_EQ(CRYPT_EAL_PkeyDecaps(ctx, ctOrig, ctLen, ssFallback1, &validSsLen), CRYPT_SUCCESS);
+    ASSERT_EQ(validSsLen, ssLen);
+    ASSERT_EQ(memcmp(ss, ssFallback1, ssLen), 0);
+
+    const uint32_t c1Size = (uint32_t)c1Len;
+    const uint32_t c2Start = c1Size;
+    const uint32_t c2Size = (uint32_t)c2Len;
+    const uint32_t saltStart = c2Start + c2Size;
+    const uint32_t saltSize = (uint32_t)saltLen;
+    uint32_t positions[9] = {
+        0, c1Size / 2, c1Size - 1,
+        c2Start, c2Start + c2Size / 2, c2Start + c2Size - 1
+    };
+    uint32_t positionCount = 6;
+    if (saltSize > 0) {
+        positions[positionCount++] = saltStart;
+        positions[positionCount++] = saltStart + saltSize / 2;
+        positions[positionCount++] = ctLen - 1;
+    }
+    for (uint32_t i = 0; i < positionCount; i++) {
+        uint32_t fallbackLen1 = ssLen;
+        uint32_t fallbackLen2 = ssLen;
+        memcpy(ct, ctOrig, ctLen);
+        ct[positions[i]] ^= 0x01;
+        ASSERT_EQ(CRYPT_EAL_PkeyDecaps(ctx, ct, ctLen, ssFallback1, &fallbackLen1), CRYPT_SUCCESS);
+        ASSERT_EQ(CRYPT_EAL_PkeyDecaps(ctx, ct, ctLen, ssFallback2, &fallbackLen2), CRYPT_SUCCESS);
+        ASSERT_EQ(fallbackLen1, ssLen);
+        ASSERT_EQ(fallbackLen2, ssLen);
+        ASSERT_TRUE(memcmp(ss, ssFallback1, ssLen) != 0);
+        ASSERT_EQ(memcmp(ssFallback1, ssFallback2, ssLen), 0);
+    }
+EXIT:
+    CRYPT_EAL_PkeyFreeCtx(ctx);
+    BSL_SAL_FREE(ct);
+    BSL_SAL_FREE(ctOrig);
+    BSL_SAL_FREE(ss);
+    BSL_SAL_FREE(ssFallback1);
+    BSL_SAL_FREE(ssFallback2);
+    CRYPT_RandRegist(NULL);
     return;
 }
 /* END_CASE */

@@ -27,6 +27,10 @@ if(HITLS_CRYPTO_FRODOKEM_ARMV8)
         ${CMAKE_CURRENT_SOURCE_DIR}/src/asm/armv8_frodo_matmul.S
         ${CMAKE_CURRENT_SOURCE_DIR}/src/asm/armv8_frodo_sample.S
     )
+else()
+    list(APPEND _frodokem_sources
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/noasm_frodo_cal.c
+    )
 endif()
 
 add_library(_hitls_crypto_frodokem OBJECT ${_frodokem_sources})

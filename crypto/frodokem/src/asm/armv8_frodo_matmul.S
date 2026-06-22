@@ -4,6 +4,8 @@
 
 CRYPT_AARCH64_ARCH_BASE
 
+#define FRODO_PARAMS_N_OFFSET 8
+
 .macro FRODO_SAVE_D8_D15
     sub     sp, sp, #64
     stp     d8,  d9,  [sp, #0]
@@ -20,7 +22,6 @@ CRYPT_AARCH64_ARCH_BASE
     add     sp, sp, #64
 .endm
 
-
 CRYPT_AARCH64_FUNC_START(FrodoCommonMulAddSbPlusEPortable)
 AARCH64_PACIASP
 
@@ -31,7 +32,7 @@ AARCH64_PACIASP
     ld1 {v16.8h-v19.8h}, [x3]
 
 
-    ldrh  w5, [x4, #4]   //n
+    ldrh  w5, [x4, #FRODO_PARAMS_N_OFFSET]   // n
     lsl   x5, x5, #1    
 //  add   x1 , x1 , #0    //S0
     add   x6 , x1 , x5    //S1
@@ -107,15 +108,15 @@ AARCH64_AUTIASP
     ret
 CRYPT_AARCH64_FUNC_END(FrodoCommonMulAddSbPlusEPortable)
 
-// MultAsPlusEAES: compute B[rowNumber..rowNumber+3][0..7] += A_rows · S + E
-// Outer-product approach: for each k-block of 4, broadcast A scalar × S[k][0..7] vector.
-// matrixS is pre-transposed S (N×8 layout) so S[k][0..7] is always contiguous.
+// FrodoMulAddAsPlusE: compute B[rowNumber..rowNumber+3][0..7] += A_rows * S + E
+// Outer-product approach: for each k-block of 4, broadcast A scalar * S[k][0..7] vector.
+// matrixS is pre-transposed S (N x 8 layout) so S[k][0..7] is always contiguous.
 // Diagonal MLA scheduling: each accumulator register is written at most once per 3
 // instructions, eliminating 2-3 cycle RAW stalls (replaces mul+addv+ins sequence).
 //
-// x0 = out (N×8), x1 = matrixS (N×8, S[k] at &matrixS[k*8]),
+// x0 = out (N x 8), x1 = matrixS (N x 8, S[k] at &matrixS[k*8]),
 // x2 = n, x3 = nBar(=8,unused), x4 = rows (4 A rows contiguous), x5 = rowNumber
-CRYPT_AARCH64_FUNC_START(MultAsPlusEAES)
+CRYPT_AARCH64_FUNC_START(FrodoMulAddAsPlusE)
 AARCH64_PACIASP
     FRODO_SAVE_D8_D15
 
@@ -128,7 +129,7 @@ AARCH64_PACIASP
 
     ld1     {v0.8h, v1.8h, v2.8h, v3.8h}, [x0]   // load B[rowNumber..+3][0..7]
 
-.LoopAsEAES:
+.LoopAsPlusE:
     // Load 4 consecutive S rows: S[k], S[k+1], S[k+2], S[k+3] (64 bytes contiguous)
     ld1     {v4.8h, v5.8h, v6.8h, v7.8h}, [x1], #64
 
@@ -138,7 +139,7 @@ AARCH64_PACIASP
     ld1     {v10.4h}, [x6], #8       // A[row2][k..k+3]
     ld1     {v11.4h}, [x7], #8       // A[row3][k..k+3]
 
-    // Diagonal MLA: 4 output rows × 4 k-values = 16 mla, each accumulator
+    // Diagonal MLA: 4 output rows x 4 k-values = 16 mla, each accumulator
     // separated by 3 instructions to hide 2-3 cycle MLA write latency.
     // Row 1: (out0,k0),(out1,k1),(out2,k2),(out3,k3)
     mla     v0.8h, v4.8h, v8.h[0]
@@ -162,73 +163,16 @@ AARCH64_PACIASP
     mla     v3.8h, v4.8h, v11.h[0]
 
     cmp     x4, x10
-    b.mi    .LoopAsEAES
+    b.mi    .LoopAsPlusE
 
     st1     {v0.8h, v1.8h, v2.8h, v3.8h}, [x0]
 
     FRODO_RESTORE_D8_D15
 AARCH64_AUTIASP
     ret
-CRYPT_AARCH64_FUNC_END(MultAsPlusEAES)
+CRYPT_AARCH64_FUNC_END(FrodoMulAddAsPlusE)
 
-// MulAsPlusESHAKE: same outer-product strategy as MultAsPlusEAES.
-// x0=out, x1=matrixS(N×8), x2=n, x3=nBar(unused),
-// x4=row0, x5=row1, x6=row2, x7=row3, [sp+0]=rowNumber
-CRYPT_AARCH64_FUNC_START(MulAsPlusESHAKE)
-AARCH64_PACIASP
-
-    // Read the 8-byte stack slot before FRODO_SAVE_D8_D15 adjusts sp.
-    // For big-endian AAPCS64, the 32-bit argument occupies the low 32 bits of the slot.
-    ldr     x9, [sp]
-    uxtw    x9, w9
-
-    FRODO_SAVE_D8_D15
-
-    add     x0,  x0,  x9, lsl #4     // out = &out[rowNumber][0]
-    lsl     x9,  x2,  #1             // x9  = n * 2 bytes (reuse register)
-    add     x10, x4,  x9             // end = row0 + n*2
-
-    ld1     {v0.8h, v1.8h, v2.8h, v3.8h}, [x0]   // load B[rowNumber..+3][0..7]
-
-.LoopAsESHAKE:
-    ld1     {v4.8h, v5.8h, v6.8h, v7.8h}, [x1], #64
-
-    ld1     {v8.4h},  [x4], #8
-    ld1     {v9.4h},  [x5], #8
-    ld1     {v10.4h}, [x6], #8
-    ld1     {v11.4h}, [x7], #8
-
-    mla     v0.8h, v4.8h, v8.h[0]
-    mla     v1.8h, v5.8h, v9.h[1]
-    mla     v2.8h, v6.8h, v10.h[2]
-    mla     v3.8h, v7.8h, v11.h[3]
-
-    mla     v0.8h, v7.8h, v8.h[3]
-    mla     v1.8h, v4.8h, v9.h[0]
-    mla     v2.8h, v5.8h, v10.h[1]
-    mla     v3.8h, v6.8h, v11.h[2]
-
-    mla     v0.8h, v6.8h, v8.h[2]
-    mla     v1.8h, v7.8h, v9.h[3]
-    mla     v2.8h, v4.8h, v10.h[0]
-    mla     v3.8h, v5.8h, v11.h[1]
-
-    mla     v0.8h, v5.8h, v8.h[1]
-    mla     v1.8h, v6.8h, v9.h[2]
-    mla     v2.8h, v7.8h, v10.h[3]
-    mla     v3.8h, v4.8h, v11.h[0]
-
-    cmp     x4, x10
-    b.mi    .LoopAsESHAKE
-
-    st1     {v0.8h, v1.8h, v2.8h, v3.8h}, [x0]
-
-    FRODO_RESTORE_D8_D15
-AARCH64_AUTIASP
-    ret
-CRYPT_AARCH64_FUNC_END(MulAsPlusESHAKE)
-
-CRYPT_AARCH64_FUNC_START(MultSaPlusEAES)
+CRYPT_AARCH64_FUNC_START(FrodoMulAddSaPlusE)
 AARCH64_PACIASP
 
     FRODO_SAVE_D8_D15
@@ -266,7 +210,7 @@ AARCH64_PACIASP
 
     add   x9 , x4 , x2    //row0 end 
 
-.Loop4: 
+.LoopSaPlusE:
 
     ld1   {v8.8h} , [x4], #16  // row0
     ld1   {v9.8h} , [x5], #16  // row1
@@ -337,129 +281,11 @@ AARCH64_PACIASP
     st1   {v19.8h}, [x16], #16  // out7
 
     cmp   x4, x9
-    b.mi  .Loop4
+    b.mi  .LoopSaPlusE
 
     FRODO_RESTORE_D8_D15
 AARCH64_AUTIASP
     ret
-CRYPT_AARCH64_FUNC_END(MultSaPlusEAES)
-
-CRYPT_AARCH64_FUNC_START(MulSaPlusESHAKE)
-AARCH64_PACIASP
-    // Read the 8-byte stack slot before adjusting sp; see MulAsPlusESHAKE.
-    ldr   x9, [sp]          // rowNumber
-    uxtw  x9, w9
-
-    FRODO_SAVE_D8_D15
-
-    lsl   x2 , x2 , #1    // n bytes
-    add   x1 , x1 , x9, lsl #1   // matrixST + rowNumber
-    add   x10, x1 , x2   // matrixST + rowNumber + n
-    add   x11, x10, x2   // matrixST + rowNumber + 2 * n
-    add   x12, x11, x2   // matrixST + rowNumber + 3 * n
-    add   x13, x12, x2   // matrixST + rowNumber + 4 * n
-    add   x14, x13, x2   // matrixST + rowNumber + 5 * n
-    add   x15, x14, x2   // matrixST + rowNumber + 6 * n
-    add   x16, x15, x2   // matrixST + rowNumber + 7 * n
-
-    ld1   {v0.4h}, [x1 ]      // S0
-    ld1   {v1.4h}, [x10]      // S1
-    ld1   {v2.4h}, [x11]      // S2
-    ld1   {v3.4h}, [x12]      // S3
-    ld1   {v4.4h}, [x13]      // S4
-    ld1   {v5.4h}, [x14]      // S5
-    ld1   {v6.4h}, [x15]      // S6
-    ld1   {v7.4h}, [x16]      // S7
-
-  //add   x0 , x0 , #0    //out
-    add   x10, x0 , x2    //out + n
-    add   x11, x10, x2    //out + n * 2
-    add   x12, x11, x2    //out + n * 3
-    add   x13, x12, x2    //out + n * 4
-    add   x14, x13, x2    //out + n * 5
-    add   x15, x14, x2    //out + n * 6
-    add   x16, x15, x2    //out + n * 7
-
-    add   x9 , x4 , x2    //row0 end 
-
-.Loop5: 
-
-    ld1   {v8.8h} , [x4], #16  // row0
-    ld1   {v9.8h} , [x5], #16  // row1
-    ld1   {v10.8h}, [x6], #16  // row2
-    ld1   {v11.8h}, [x7], #16  // row3
-
-    ld1   {v12.8h}, [x0]  // out0
-    ld1   {v13.8h}, [x10]  // out1
-    ld1   {v14.8h}, [x11]  // out2
-    ld1   {v15.8h}, [x12]  // out3
-
-    ld1   {v16.8h}, [x13]  // out4
-    ld1   {v17.8h}, [x14]  // out5
-    ld1   {v18.8h}, [x15]  // out6
-    ld1   {v19.8h}, [x16]  // out7
-
-
-
-    mla    v12.8h, v8.8h , v0.h[0]
-    mla    v13.8h, v9.8h , v1.h[1]
-    mla    v14.8h, v10.8h, v2.h[2]
-    mla    v15.8h, v11.8h, v3.h[3]
-
-    mla    v12.8h, v11.8h, v0.h[3]
-    mla    v13.8h, v8.8h , v1.h[0]
-    mla    v14.8h, v9.8h , v2.h[1]
-    mla    v15.8h, v10.8h, v3.h[2]
-
-    
-    
-    mla    v12.8h, v10.8h, v0.h[2]
-    mla    v13.8h, v11.8h, v1.h[3]
-    mla    v14.8h, v8.8h , v2.h[0]
-    mla    v15.8h, v9.8h , v3.h[1]
-
-    mla    v12.8h, v9.8h , v0.h[1]
-    mla    v13.8h, v10.8h, v1.h[2]
-    mla    v14.8h, v11.8h, v2.h[3]
-    mla    v15.8h, v8.8h , v3.h[0]
-          
-    mla    v16.8h, v8.8h , v4.h[0]
-    mla    v17.8h, v9.8h , v5.h[1]
-    mla    v18.8h, v10.8h, v6.h[2]
-    mla    v19.8h, v11.8h, v7.h[3]
-
-    mla    v16.8h, v11.8h, v4.h[3]
-    mla    v17.8h, v8.8h , v5.h[0]
-    mla    v18.8h, v9.8h , v6.h[1]
-    mla    v19.8h, v10.8h, v7.h[2]
-
-    
-    mla    v16.8h, v10.8h, v4.h[2]
-    mla    v17.8h, v11.8h, v5.h[3]
-    mla    v18.8h, v8.8h , v6.h[0]
-    mla    v19.8h, v9.8h , v7.h[1]
-    
-    mla    v16.8h, v9.8h , v4.h[1]   
-    mla    v17.8h, v10.8h, v5.h[2]
-    mla    v18.8h, v11.8h, v6.h[3]
-    mla    v19.8h, v8.8h , v7.h[0]
-  
-    st1   {v12.8h}, [x0] , #16  // out0
-    st1   {v13.8h}, [x10], #16  // out1
-    st1   {v14.8h}, [x11], #16  // out2
-    st1   {v15.8h}, [x12], #16  // out3
-
-    st1   {v16.8h}, [x13], #16  // out4
-    st1   {v17.8h}, [x14], #16  // out5
-    st1   {v18.8h}, [x15], #16  // out6
-    st1   {v19.8h}, [x16], #16  // out7
-
-    cmp   x4, x9
-    b.mi  .Loop5
-
-    FRODO_RESTORE_D8_D15
-AARCH64_AUTIASP
-    ret
-CRYPT_AARCH64_FUNC_END(MulSaPlusESHAKE)
+CRYPT_AARCH64_FUNC_END(FrodoMulAddSaPlusE)
 
 #endif

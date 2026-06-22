@@ -27,28 +27,18 @@
 #include "crypt_util_rand.h"
 #include "bsl_err_internal.h"
 #include "crypt_util_ctrl.h"
+#include "crypt_utils.h"
 #include "bsl_bytes.h"
+#include "eal_md_local.h"
 
 #define FRODOKEM_LEN_A        16
 #define FRODO_HASH_PK_MAX_LEN 32
-#define CHECK_IF_NULL_RET(PTR, RET)  \
-    do {                             \
-        if (PTR == NULL) {           \
-            BSL_ERR_PUSH_ERROR(RET); \
-            return RET;              \
-        }                            \
-    } while (0)
-
-static int32_t FrodoKemRandombytes(uint8_t *buffer, uint32_t len)
-{
-    return CRYPT_Rand(buffer, len);
-}
-
-typedef int32_t (*FrodoShakeFunc)(uint8_t *output, uint32_t outLen, const uint8_t *input, uint32_t inLen);
 
 // Input: rnd = s || seedSE || z
-// Output: pk = seedA || B, sk = s || pk || S^T || H(pk), where B = A*S + E, seedA = H(z)， S and E are sampled from seedSE
-static int32_t FrodoKemKeypairInternal(const uint8_t *rnd, const FrodoKemParams *params, uint8_t *pk, uint8_t *sk)
+// Output: pk = seedA || B, sk = s || pk || S^T || H(pk), where B = A*S + E, seedA = H(z),
+// S and E are sampled from seedSE
+static int32_t FrodoKemKeypairInternal(const uint8_t *rnd, const FrodoKemParams *params, uint8_t *pk, uint8_t *sk,
+                                       void *libCtx)
 {
     // n is the number of rows of matrix S
     const uint16_t n = params->n;
@@ -61,8 +51,6 @@ static int32_t FrodoKemKeypairInternal(const uint8_t *rnd, const FrodoKemParams 
     const uint8_t *seedSE = rnd + params->ss; // seedSE for sampling S and E
     const uint8_t *z = rnd + params->ss + params->lenSeedSE; // seed z for generating seedA
 
-    // Select a shake function according to the param
-    FrodoShakeFunc FrodoShake = n == FRODO_PARA_640_N ? FrodoKemShake128 : FrodoKemShake256;
     // allocate S^T
     uint16_t *sTranspose = (uint16_t *)BSL_SAL_Malloc(matrixSize);
     if (sTranspose == NULL) {
@@ -71,13 +59,15 @@ static int32_t FrodoKemKeypairInternal(const uint8_t *rnd, const FrodoKemParams 
     }
 
     uint8_t seedA[FRODOKEM_LEN_A];
-    int32_t ret = FrodoShake(seedA, FRODOKEM_LEN_A, z, FRODOKEM_LEN_A);
+    uint32_t hashLen = FRODOKEM_LEN_A;
+    int32_t ret = EAL_Md(params->hashId, libCtx, NULL, z, FRODOKEM_LEN_A, seedA, &hashLen, false,
+        libCtx != NULL);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         goto EXIT;
     }
 
-    ret = FrodoPkeKeygenSeeded(params, pk, sTranspose, seedA, seedSE);
+    ret = FrodoPkeKeygenSeeded(params, pk, sTranspose, seedA, seedSE, libCtx);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         goto EXIT;
@@ -91,7 +81,8 @@ static int32_t FrodoKemKeypairInternal(const uint8_t *rnd, const FrodoKemParams 
     memcpy(skPk, pk, params->pkSize);
     FrodoCommonEncodeLe16(skS, sTranspose, (uint32_t)n * nBar);
 
-    ret = FrodoShake(skPkh, params->lenPkHash, pk, params->pkSize);
+    hashLen = params->lenPkHash;
+    ret = EAL_Md(params->hashId, libCtx, NULL, pk, params->pkSize, skPkh, &hashLen, false, libCtx != NULL);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         goto EXIT;
@@ -103,16 +94,15 @@ EXIT:
 }
 
 static int32_t FrodoKemEncapsInternal(const uint8_t *mu, const FrodoKemParams *params, uint8_t *ct, uint8_t *ss,
-                                      const uint8_t *pk)
+                                      const uint8_t *pk, void *libCtx)
 {
-    FrodoShakeFunc FrodoShake = params->n == FRODO_PARA_640_N ? FrodoKemShake128 : FrodoKemShake256;
-
     uint8_t pkh[FRODO_HASH_PK_MAX_LEN];
     if (params->lenPkHash > sizeof(pkh)) {
         BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
         return CRYPT_INVALID_ARG;
     }
-    int32_t ret = FrodoShake(pkh, params->lenPkHash, pk, params->pkSize);
+    uint32_t hashLen = params->lenPkHash;
+    int32_t ret = EAL_Md(params->hashId, libCtx, NULL, pk, params->pkSize, pkh, &hashLen, false, libCtx != NULL);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
@@ -135,7 +125,8 @@ static int32_t FrodoKemEncapsInternal(const uint8_t *mu, const FrodoKemParams *p
     memcpy(in, pkh, params->lenPkHash);
     memcpy(in + params->lenPkHash, mu, params->lenMu + params->lenSalt);
 
-    ret = FrodoShake(seedk, seedkLen, in, inLen);
+    hashLen = seedkLen;
+    ret = EAL_Md(params->hashId, libCtx, NULL, in, inLen, seedk, &hashLen, false, libCtx != NULL);
     BSL_SAL_ClearFree(in, inLen);
     if (ret != CRYPT_SUCCESS) {
         BSL_SAL_ClearFree(seedk, seedkLen);
@@ -146,16 +137,14 @@ static int32_t FrodoKemEncapsInternal(const uint8_t *mu, const FrodoKemParams *p
     uint8_t *seedSEp = seedk;
     uint8_t *k = seedk + params->lenSeedSE;
 
-    ret = FrodoPkeEncrypt(params, pk, mu, seedSEp, ct);
+    ret = FrodoPkeEncrypt(params, pk, mu, seedSEp, ct, libCtx);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         BSL_SAL_ClearFree(seedk, seedkLen);
         return ret;
     }
 
-    for (int32_t i = 0; i < params->lenSalt; i++) {
-        ct[params->ctxSize - params->lenSalt + i] = mu[params->lenMu + i];
-    }
+    memcpy(ct + params->ctxSize - params->lenSalt, mu + params->lenMu, params->lenSalt);
 
     uint32_t ctKLen = params->ctxSize + params->ss;
     uint8_t *ctK = (uint8_t *)BSL_SAL_Malloc(ctKLen);
@@ -168,7 +157,8 @@ static int32_t FrodoKemEncapsInternal(const uint8_t *mu, const FrodoKemParams *p
     memcpy(ctK, ct, params->ctxSize);
     memcpy(ctK + params->ctxSize, k, params->ss);
 
-    ret = FrodoShake(ss, params->ss, ctK, ctKLen);
+    hashLen = params->ss;
+    ret = EAL_Md(params->hashId, libCtx, NULL, ctK, ctKLen, ss, &hashLen, false, libCtx != NULL);
 
 EXIT:
     BSL_SAL_ClearFree(ctK, ctKLen);
@@ -176,7 +166,7 @@ EXIT:
     return ret;
 }
 
-static int32_t FrodoKemKeypair(const FrodoKemParams *params, uint8_t *pk, uint8_t *sk)
+static int32_t FrodoKemKeypair(const FrodoKemParams *params, uint8_t *pk, uint8_t *sk, void *libCtx)
 {
     const uint32_t randLen = (uint32_t)params->ss + params->lenSeedSE + params->lenSeedA;
     uint8_t *rnd = BSL_SAL_Malloc(randLen);
@@ -184,36 +174,59 @@ static int32_t FrodoKemKeypair(const FrodoKemParams *params, uint8_t *pk, uint8_
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         return CRYPT_MEM_ALLOC_FAIL;
     }
-    int32_t ret = FrodoKemRandombytes(rnd, randLen);
+    int32_t ret = CRYPT_RandEx(libCtx, rnd, randLen);
     if (ret != CRYPT_SUCCESS) {
-        BSL_SAL_ClearFree(rnd, randLen);
+        BSL_SAL_Free(rnd);
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
-    ret = FrodoKemKeypairInternal(rnd, params, pk, sk);
+    ret = FrodoKemKeypairInternal(rnd, params, pk, sk, libCtx);
     BSL_SAL_ClearFree(rnd, randLen);
     return ret;
 }
 
-static int32_t FrodoKemEncaps(const FrodoKemParams *params, uint8_t *ct, uint8_t *ss, const uint8_t *pk)
+static int32_t ValidateFrodoPrvKey(const FrodoKemParams *params, const uint8_t *sk, void *libCtx)
+{
+    uint8_t hash[FRODO_HASH_PK_MAX_LEN];
+    if (params->lenPkHash > sizeof(hash)) {
+        BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
+        return CRYPT_INVALID_ARG;
+    }
+
+    const uint8_t *pk = sk + params->ss;
+    const uint8_t *skPkh = pk + params->pkSize + (uint32_t)params->n * params->nBar * sizeof(uint16_t);
+    uint32_t hashLen = params->lenPkHash;
+    int32_t ret = EAL_Md(params->hashId, libCtx, NULL, pk, params->pkSize, hash, &hashLen, false,
+        libCtx != NULL);
+    if (ret != CRYPT_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        return ret;
+    }
+    if (ConstTimeMemcmp(hash, skPkh, params->lenPkHash) == 0) {
+        BSL_ERR_PUSH_ERROR(CRYPT_FRODOKEM_INVALID_PRVKEY);
+        return CRYPT_FRODOKEM_INVALID_PRVKEY;
+    }
+    return CRYPT_SUCCESS;
+}
+
+static int32_t FrodoKemEncaps(const FrodoKemParams *params, uint8_t *ct, uint8_t *ss, const uint8_t *pk, void *libCtx)
 {
     uint8_t mu[FRODO_M_SALT_LEN];
 
-    int32_t ret = FrodoKemRandombytes(mu, params->lenMu + params->lenSalt);
+    int32_t ret = CRYPT_RandEx(libCtx, mu, params->lenMu + params->lenSalt);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
 
-    ret = FrodoKemEncapsInternal(mu, params, ct, ss, pk);
+    ret = FrodoKemEncapsInternal(mu, params, ct, ss, pk, libCtx);
     BSL_SAL_CleanseData(mu, params->lenMu + params->lenSalt);
     return ret;
 }
 
-static int32_t FrodoKemDecaps(const FrodoKemParams *params, uint8_t *ss, const uint8_t *ct, const uint8_t *sk)
+static int32_t FrodoKemDecaps(const FrodoKemParams *params, uint8_t *ss, const uint8_t *ct, const uint8_t *sk,
+                              void *libCtx)
 {
-    FrodoShakeFunc FrodoShake = params->n == FRODO_PARA_640_N ? FrodoKemShake128 : FrodoKemShake256;
-
     const uint8_t *skSec = sk;
     const uint8_t *skPk = sk + params->ss;
     const uint8_t *skS = skPk + params->pkSize;
@@ -245,7 +258,9 @@ static int32_t FrodoKemDecaps(const FrodoKemParams *params, uint8_t *ss, const u
     memcpy(pkh, skPkh, params->lenPkHash);
     memcpy(salt, ct + ctLen - params->lenSalt, params->lenSalt);
 
-    ret = FrodoShake(seedK, seedKLen, pkhMuSalt, pkhMuSaltLen); //
+    uint32_t hashLen = seedKLen;
+    ret = EAL_Md(params->hashId, libCtx, NULL, pkhMuSalt, pkhMuSaltLen, seedK, &hashLen, false,
+        libCtx != NULL);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         goto EXIT;
@@ -253,13 +268,13 @@ static int32_t FrodoKemDecaps(const FrodoKemParams *params, uint8_t *ss, const u
     uint8_t *seedSEPrime = seedK;
     uint8_t *kPrime = seedK + params->lenSeedSE;
     // Re-encrypt to verify the ciphertext
-    ret = FrodoPkeEncrypt(params, skPk, mu, seedSEPrime, ctVerify);
+    ret = FrodoPkeEncrypt(params, skPk, mu, seedSEPrime, ctVerify, libCtx);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         goto EXIT;
     }
     // if ct == ctVerify, kPrime = kPrime, else kPrime = skSec
-    uint32_t selector =  ConstTimeMemcmp(ct, ctVerify, params->ctxSize - params->lenSalt);
+    uint32_t selector = ConstTimeMemcmp(ct, ctVerify, params->ctxSize - params->lenSalt);
     for (int32_t i = 0; i < params->ss; i++) {
         kPrime[i] = (uint8_t)(selector & kPrime[i]) | (~selector & skSec[i]);
     }
@@ -272,7 +287,8 @@ static int32_t FrodoKemDecaps(const FrodoKemParams *params, uint8_t *ss, const u
     }
     memcpy(ctKBuf, ct, params->ctxSize);
     memcpy(ctKBuf + ctLen, kPrime, params->ss);
-    ret = FrodoShake(ss, params->ss, ctKBuf, ctKLen);
+    hashLen = params->ss;
+    ret = EAL_Md(params->hashId, libCtx, NULL, ctKBuf, ctKLen, ss, &hashLen, false, libCtx != NULL);
     BSL_SAL_ClearFree(ctKBuf, ctKLen);
 EXIT:
     BSL_SAL_ClearFree(buf, bufLen);
@@ -330,7 +346,7 @@ int32_t CRYPT_FRODOKEM_Gen(CRYPT_FRODOKEM_Ctx *ctx)
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         return CRYPT_MEM_ALLOC_FAIL;
     }
-    int32_t ret = FrodoKemKeypair(ctx->para, ctx->publicKey, ctx->privateKey);
+    int32_t ret = FrodoKemKeypair(ctx->para, ctx->publicKey, ctx->privateKey, ctx->libCtx);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         BSL_SAL_FREE(ctx->publicKey);
@@ -359,9 +375,13 @@ int32_t CRYPT_FRODOKEM_SetPrvKeyEx(CRYPT_FRODOKEM_Ctx *ctx, BSL_Param *param)
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
-    if (ctx->para->kemSkSize > prv->valueLen) {
-        BSL_ERR_PUSH_ERROR(CRYPT_FRODOKEM_BUFLEN_NOT_ENOUGH);
-        return CRYPT_FRODOKEM_BUFLEN_NOT_ENOUGH;
+    if (ctx->para->kemSkSize != prv->valueLen) {
+        BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
+        return CRYPT_INVALID_ARG;
+    }
+    int32_t ret = ValidateFrodoPrvKey(ctx->para, prv->value, ctx->libCtx);
+    if (ret != CRYPT_SUCCESS) {
+        return ret;
     }
     if (ctx->privateKey == NULL) {
         ctx->privateKey = BSL_SAL_Calloc(ctx->para->kemSkSize, sizeof(uint8_t));
@@ -395,9 +415,9 @@ int32_t CRYPT_FRODOKEM_SetPubKeyEx(CRYPT_FRODOKEM_Ctx *ctx, BSL_Param *param)
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
-    if (ctx->para->pkSize > pub->valueLen) {
-        BSL_ERR_PUSH_ERROR(CRYPT_FRODOKEM_BUFLEN_NOT_ENOUGH);
-        return CRYPT_FRODOKEM_BUFLEN_NOT_ENOUGH;
+    if (ctx->para->pkSize != pub->valueLen) {
+        BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
+        return CRYPT_INVALID_ARG;
     }
     if (ctx->publicKey == NULL) {
         ctx->publicKey = BSL_SAL_Calloc(ctx->para->pkSize, sizeof(uint8_t));
@@ -525,7 +545,7 @@ int32_t CRYPT_FRODOKEM_Cmp(CRYPT_FRODOKEM_Ctx *ctx1, CRYPT_FRODOKEM_Ctx *ctx2)
         return CRYPT_FRODOKEM_KEY_NOT_EQUAL;
     }
     if (ctx1->privateKey != NULL && ctx2->privateKey != NULL) {
-        if (memcmp(ctx1->privateKey, ctx2->privateKey, ctx1->para->kemSkSize) != 0) {
+        if (ConstTimeMemcmp(ctx1->privateKey, ctx2->privateKey, ctx1->para->kemSkSize) == 0) {
             BSL_ERR_PUSH_ERROR(CRYPT_FRODOKEM_KEY_NOT_EQUAL);
             return CRYPT_FRODOKEM_KEY_NOT_EQUAL;
         }
@@ -565,23 +585,23 @@ int32_t CRYPT_FRODOKEM_Ctrl(CRYPT_FRODOKEM_Ctx *ctx, int32_t cmd, void *val, uin
         case CRYPT_CTRL_SET_PARA_BY_ID:
             return FrodoSetParaById(ctx, val, valLen);
         case CRYPT_CTRL_GET_CIPHERTEXT_LEN: {
-            CHECK_IF_NULL_RET(ctx->para, CRYPT_FRODOKEM_KEYINFO_NOT_SET);
+            RETURN_RET_IF(ctx->para == NULL, CRYPT_FRODOKEM_KEYINFO_NOT_SET);
             return CRYPT_CTRL_GetNum32(ctx->para->ctxSize, val, valLen);
         }
         case CRYPT_CTRL_GET_SECBITS: {
-            CHECK_IF_NULL_RET(ctx->para, CRYPT_FRODOKEM_KEYINFO_NOT_SET);
+            RETURN_RET_IF(ctx->para == NULL, CRYPT_FRODOKEM_KEYINFO_NOT_SET);
             return CRYPT_CTRL_GetNum32(ctx->para->ss * 8, val, valLen);
         }
         case CRYPT_CTRL_GET_PUBKEY_LEN: {
-            CHECK_IF_NULL_RET(ctx->para, CRYPT_FRODOKEM_KEYINFO_NOT_SET);
+            RETURN_RET_IF(ctx->para == NULL, CRYPT_FRODOKEM_KEYINFO_NOT_SET);
             return CRYPT_CTRL_GetNum32(ctx->para->pkSize, val, valLen);
         }
         case CRYPT_CTRL_GET_PRVKEY_LEN: {
-            CHECK_IF_NULL_RET(ctx->para, CRYPT_FRODOKEM_KEYINFO_NOT_SET);
+            RETURN_RET_IF(ctx->para == NULL, CRYPT_FRODOKEM_KEYINFO_NOT_SET);
             return CRYPT_CTRL_GetNum32(ctx->para->kemSkSize, val, valLen);
         }
         case CRYPT_CTRL_GET_SHARED_KEY_LEN: {
-            CHECK_IF_NULL_RET(ctx->para, CRYPT_FRODOKEM_KEYINFO_NOT_SET);
+            RETURN_RET_IF(ctx->para == NULL, CRYPT_FRODOKEM_KEYINFO_NOT_SET);
             return CRYPT_CTRL_GetNum32(ctx->para->ss, val, valLen);
         }
         default:
@@ -621,8 +641,7 @@ int32_t CRYPT_FRODOKEM_DecapsInit(CRYPT_FRODOKEM_Ctx *ctx, const BSL_Param *para
 int32_t CRYPT_FRODOKEM_Encaps(CRYPT_FRODOKEM_Ctx *ctx, uint8_t *ciphertext, uint32_t *ctLen, uint8_t *sharedSecret,
                               uint32_t *ssLen)
 {
-    if (ctx == NULL || ctx->publicKey == NULL || ciphertext == NULL || sharedSecret == NULL || ctLen == NULL ||
-        ssLen == NULL) {
+    if (ctx == NULL || ciphertext == NULL || sharedSecret == NULL || ctLen == NULL || ssLen == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
@@ -630,11 +649,15 @@ int32_t CRYPT_FRODOKEM_Encaps(CRYPT_FRODOKEM_Ctx *ctx, uint8_t *ciphertext, uint
         BSL_ERR_PUSH_ERROR(CRYPT_FRODOKEM_KEYINFO_NOT_SET);
         return CRYPT_FRODOKEM_KEYINFO_NOT_SET;
     }
+    if (ctx->publicKey == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_FRODOKEM_ABSENT_PUBKEY);
+        return CRYPT_FRODOKEM_ABSENT_PUBKEY;
+    }
     if (ctx->para->ctxSize > *ctLen || ctx->para->ss > *ssLen) {
         BSL_ERR_PUSH_ERROR(CRYPT_FRODOKEM_BUFLEN_NOT_ENOUGH);
         return CRYPT_FRODOKEM_BUFLEN_NOT_ENOUGH;
     }
-    int32_t ret = FrodoKemEncaps(ctx->para, ciphertext, sharedSecret, ctx->publicKey);
+    int32_t ret = FrodoKemEncaps(ctx->para, ciphertext, sharedSecret, ctx->publicKey, ctx->libCtx);
     if (ret == CRYPT_SUCCESS) {
         *ssLen = ctx->para->ss;
         *ctLen = ctx->para->ctxSize;
@@ -665,7 +688,7 @@ int32_t CRYPT_FRODOKEM_Decaps(CRYPT_FRODOKEM_Ctx *ctx, const uint8_t *ciphertext
         BSL_ERR_PUSH_ERROR(CRYPT_FRODOKEM_BUFLEN_NOT_ENOUGH);
         return CRYPT_FRODOKEM_BUFLEN_NOT_ENOUGH;
     }
-    int32_t ret = FrodoKemDecaps(ctx->para, sharedSecret, ciphertext, ctx->privateKey);
+    int32_t ret = FrodoKemDecaps(ctx->para, sharedSecret, ciphertext, ctx->privateKey, ctx->libCtx);
     if (ret == CRYPT_SUCCESS) {
         *ssLen = ctx->para->ss;
     }

@@ -18,15 +18,18 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "crypt_errno.h"
 #include "eal_md_local.h"
 #include "bsl_errno.h"
 #include "frodo_local.h"
+#include "bsl_sal.h"
 #include "bsl_err_internal.h"
 
 #define FRODO_MAX_SEED_LEN 64
 #define FRODO_PREFIX_LEN   1
+
 void FrodoCommonPack(uint8_t *out, const uint32_t outLen, const uint16_t *in, const uint32_t inLen, const uint8_t lsb)
 {
     (void)outLen;
@@ -119,38 +122,18 @@ void FrodoCommonDecodeLe16(uint16_t *out, const uint8_t *in, uint32_t len)
     }
 }
 
-int32_t FrodoKemShake128(uint8_t *output, uint32_t outLen, const uint8_t *input, uint32_t inLen)
-{
-    uint32_t len = outLen;
-    int32_t ret = EAL_Md(CRYPT_MD_SHAKE128, NULL, NULL, input, inLen, output, &len, false, false);
-    if (ret != CRYPT_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
-    }
-    return ret;
-}
-
-int32_t FrodoKemShake256(uint8_t *output, uint32_t outLen, const uint8_t *input, uint32_t inLen)
-{
-    uint32_t len = outLen;
-    int32_t ret = EAL_Md(CRYPT_MD_SHAKE256, NULL, NULL, input, inLen, output, &len, false, false);
-    if (ret != CRYPT_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
-    }
-    return ret;
-}
-
 int32_t FrodoExpandShakeDs(uint8_t *out, uint32_t outlen, uint8_t ds, const uint8_t *seed, uint32_t seedlen,
-                           const FrodoKemParams *params)
+                           const FrodoKemParams *params, void *libCtx)
 {
     uint8_t in[FRODO_PREFIX_LEN + FRODO_MAX_SEED_LEN] = {0};
     in[0] = ds;
-    for (uint32_t i = 0; i < seedlen; i++) {
-        in[FRODO_PREFIX_LEN + i] = seed[i];
+    memcpy(in + FRODO_PREFIX_LEN, seed, seedlen);
+    uint32_t len = outlen;
+    int32_t ret = EAL_Md(params->hashId, libCtx, NULL, in, 1 + seedlen, out, &len, false, libCtx != NULL);
+    BSL_SAL_CleanseData(in, sizeof(in));
+    if (ret != CRYPT_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
     }
-    if (params->n > FRODO_PARA_640_N) {
-        return FrodoKemShake256(out, outlen, in, 1 + seedlen);
-    } else {
-        return FrodoKemShake128(out, outlen, in, 1 + seedlen);
-    }
+    return ret;
 }
 #endif

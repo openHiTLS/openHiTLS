@@ -5,7 +5,7 @@
  *     uint16_t *samples,      // x0
  *     uint32_t n,             // x1
  *     const uint16_t *cdfTable, // x2
- *     uint32_t cdfLen,        // x3 (ignored, assumed 15)
+ *     uint32_t cdfLen,        // x3
  *     const uint8_t *rBytes   // x4
  * );
  */

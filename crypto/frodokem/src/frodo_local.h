@@ -17,6 +17,7 @@
 #define FRODO_LOCAL_H
 
 #include <stdint.h>
+#include "crypt_algid.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -24,12 +25,12 @@ extern "C" {
 
 typedef enum { FRODO_PRG_AES, FRODO_PRG_SHAKE } FrodoKemPrgType;
 
-#define FRODO_PARA_640_N 640
 #define FRODO_M_SALT_LEN 96
 typedef struct FrodoKemParams FrodoKemParams;
 
 typedef struct FrodoKemParams {
     int32_t algId;
+    CRYPT_MD_AlgId hashId;
     uint16_t n;
     uint16_t nBar;
     uint8_t logq;
@@ -61,14 +62,19 @@ typedef struct Frodokem_Ctx {
 
 FrodoKemParams *FrodoGetParamsById(int32_t algId);
 
-int32_t FrodoKemShake128(uint8_t *output, uint32_t outlen, const uint8_t *input, uint32_t inlen);
-int32_t FrodoKemShake256(uint8_t *output, uint32_t outlen, const uint8_t *input, uint32_t inlen);
-
 int32_t FrodoExpandShakeDs(uint8_t *out, uint32_t outlen, uint8_t ds, const uint8_t *seed, uint32_t seedlen,
-                           const FrodoKemParams *params);
+                           const FrodoKemParams *params, void *libCtx);
 
 int32_t FrodoPkeKeygenSeeded(const FrodoKemParams *params, uint8_t *pk, uint16_t *matrixSTranspose,
-                             const uint8_t *seedA, const uint8_t *seedSE);
+                             const uint8_t *seedA, const uint8_t *seedSE, void *libCtx);
+
+void FrodoCommonSampleNFromR(uint16_t *samples, const uint32_t n, const uint16_t *cdfTable, const uint32_t cdfLen,
+                             const uint8_t *rBytes);
+
+void FrodoMulAddAsPlusE(uint16_t *out, const uint16_t *matrixS, int32_t n, int32_t nBar, uint16_t *rows,
+                        int32_t rowNumber);
+void FrodoMulAddSaPlusE(uint16_t *out, const uint16_t *matrixS, int32_t n, int32_t nBar, uint16_t *rows,
+                        int32_t rowNumber);
 
 // =================================================================================
 // Function Prototypes from util.c
@@ -89,10 +95,10 @@ void FrodoCommonDecodeLe16(uint16_t *out, const uint8_t *in, uint32_t len);
 // =================================================================================
 
 int32_t FrodoCommonMulAddAsPlusEPortable(uint16_t *out, const uint16_t *s, const uint8_t *seedA,
-                                         const FrodoKemParams *params);
+                                         const FrodoKemParams *params, void *libCtx);
 
 int32_t FrodoCommonMulAddSaPlusEPortable(uint16_t *b, const uint16_t *s, const uint16_t *e, const uint8_t *seedA,
-                                         const FrodoKemParams *params);
+                                         const FrodoKemParams *params, void *libCtx);
 
 void FrodoCommonMulAddSbPlusEPortable(uint16_t *V0, const uint16_t *STp, const uint16_t *B, const uint16_t *Epp,
                                       const FrodoKemParams *params);
@@ -106,8 +112,8 @@ void FrodoCommonMulBsUsingSt(uint16_t *out, const uint16_t *b, const uint16_t *s
 
 void FrodoCommonAdd(uint16_t *out, const uint16_t *a, const uint16_t *b, const FrodoKemParams *params);
 void FrodoCommonSub(uint16_t *out, const uint16_t *a, const uint16_t *b, const FrodoKemParams *params);
-void FrodoCommonKeyEncode(uint16_t *out, const uint16_t *in, const FrodoKemParams *params);
-void FrodoCommonKeyDecode(uint16_t *out, const uint16_t *in, const FrodoKemParams *params);
+void FrodoCommonKeyEncode(uint16_t *out, const uint8_t *mu, const FrodoKemParams *params);
+void FrodoCommonKeyDecode(uint8_t *mu, const uint16_t *in, const FrodoKemParams *params);
 
 // =================================================================================
 // Function Prototypes from frodokem_pke.c
@@ -115,7 +121,7 @@ void FrodoCommonKeyDecode(uint16_t *out, const uint16_t *in, const FrodoKemParam
 
 int32_t FrodoPkeKeygen(const FrodoKemParams *params, uint8_t *pk, uint8_t *pke_sk);
 int32_t FrodoPkeEncrypt(const FrodoKemParams *params, const uint8_t *pk, const uint8_t *mu, const uint8_t *seedSE,
-                        uint8_t *ct);
+                        uint8_t *ct, void *libCtx);
 int32_t FrodoPkeDecrypt(const FrodoKemParams *params, const uint8_t *pke_sk, const uint8_t *ct, uint8_t *mu);
 
 #ifdef __cplusplus
