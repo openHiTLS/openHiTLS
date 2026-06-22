@@ -122,7 +122,9 @@ static int32_t PkeyCopyCtx(CRYPT_EAL_PkeyCtx *to, const CRYPT_EAL_PkeyCtx *from)
     if (to->key != NULL) {
         to->method.freeCtx(to->key);
     }
+
     memcpy(to, from, sizeof(CRYPT_EAL_PkeyCtx));
+    (void)memset(&(to->references), 0, sizeof(BSL_SAL_RefCount));
     to->key = newKey;
     BSL_SAL_ReferencesInit(&(to->references));
     return CRYPT_SUCCESS;
