@@ -60,7 +60,7 @@ option(HITLS_AARCH64_PACIASP                "AArch64 PACIASP support" ON)
 # Feature Options
 # ============================================================
 
-# Variable options 
+# Variable options
 set(HITLS_EAL_INIT_OPTS "" CACHE STRING "Eal init options")
 set(HITLS_CRYPTO_DRBG_GM_LEVEL "" CACHE STRING "Drbg gm level")
 set(HITLS_SEED_DRBG_INIT_RAND_ALG "" CACHE STRING "DRBG Initial Random Algorithm Configuration")
@@ -524,6 +524,7 @@ option(HITLS_TLS_FEATURE                                       "TLS Feature" OFF
   option(HITLS_TLS_FEATURE_SM_TLS13                              "TLS Feature SM TLS 1.3" OFF)
   option(HITLS_TLS_FEATURE_DEFAULT_COOKIE                        "TLS Feature Default Cookie" OFF)
   option(HITLS_TLS_FEATURE_ETM                                   "TLS Feature Encrypt-Then-MAC" OFF)
+  option(HITLS_TLS_FEATURE_CUSTOM_REC_TYPE                       "TLS Feature Custom Record Type" OFF)
 
 ## TLS Proto Module
 option(HITLS_TLS_PROTO                                         "TLS Proto Module" OFF)

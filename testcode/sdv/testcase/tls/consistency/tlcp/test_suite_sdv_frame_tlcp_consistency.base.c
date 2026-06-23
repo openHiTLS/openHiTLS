@@ -58,7 +58,7 @@
  * ============================================================================ */
 STUB_DEFINE_RET5(int32_t, TlsRecordRead, TLS_Ctx *, REC_Type, uint8_t *, uint32_t *, uint32_t);
 STUB_DEFINE_RET1(int32_t, GenerateEccPremasterSecret, TLS_Ctx *);
-STUB_DEFINE_RET4(int32_t, APP_Write, TLS_Ctx *, const uint8_t *, uint32_t, uint32_t *);
+STUB_DEFINE_RET5(int32_t, APP_Write, TLS_Ctx *, uint8_t, const uint8_t *, uint32_t, uint32_t *);
 
 #define PORT 11111
 #define TEMP_DATA_LEN 1024              /* Length of a single message. */

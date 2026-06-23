@@ -45,7 +45,8 @@ static int32_t WriteEventInIdleState(HITLS_Ctx *ctx, const uint8_t *data, uint32
     return HITLS_CM_LINK_UNESTABLISHED;
 }
 
-static int32_t WriteEventInTransportingState(HITLS_Ctx *ctx, const uint8_t *data, uint32_t dataLen, uint32_t *writeLen)
+static int32_t WriteRecordWithRetry(HITLS_Ctx *ctx, uint8_t recordType, const uint8_t *data, uint32_t dataLen,
+                                    uint32_t *writeLen)
 {
     int32_t ret;
     int32_t alertRet;
@@ -58,7 +59,7 @@ static int32_t WriteEventInTransportingState(HITLS_Ctx *ctx, const uint8_t *data
             return ret;
         }
 #endif
-        ret = APP_Write(ctx, data, dataLen, writeLen);
+        ret = APP_Write(ctx, recordType, data, dataLen, writeLen);
         if (ret == HITLS_SUCCESS) {
             /* The message is sent successfully */
             break;
@@ -89,6 +90,11 @@ static int32_t WriteEventInTransportingState(HITLS_Ctx *ctx, const uint8_t *data
     } while (ret != HITLS_SUCCESS);
 
     return ret;
+}
+
+static int32_t WriteEventInTransportingState(HITLS_Ctx *ctx, const uint8_t *data, uint32_t dataLen, uint32_t *writeLen)
+{
+    return WriteRecordWithRetry(ctx, REC_TYPE_APP, data, dataLen, writeLen);
 }
 
 static int32_t WriteEventInHandshakingState(HITLS_Ctx *ctx, const uint8_t *data, uint32_t dataLen, uint32_t *writeLen)
@@ -154,7 +160,7 @@ static int32_t WriteEventInClosedState(HITLS_Ctx *ctx, const uint8_t *data, uint
 {
     if ((ctx->shutdownState & HITLS_SENT_SHUTDOWN) == 0) {
         ALERT_CleanInfo(ctx);
-        int ret = APP_Write(ctx, data, dataLen, writeLen);
+        int ret = APP_Write(ctx, REC_TYPE_APP, data, dataLen, writeLen);
         if (ret == HITLS_SUCCESS || ret == HITLS_REC_NORMAL_IO_BUSY) {
             return ret;
         }
@@ -244,3 +250,33 @@ int32_t HITLS_Write(HITLS_Ctx *ctx, const uint8_t *data, uint32_t dataLen, uint3
     }
     return ret;
 }
+
+#ifdef HITLS_TLS_FEATURE_CUSTOM_REC_TYPE
+int32_t HITLS_REC_Write(HITLS_Ctx *ctx, uint8_t type, const uint8_t *data, uint32_t dataLen, uint32_t *writeLen)
+{
+    if (ctx == NULL || data == NULL || dataLen == 0 || writeLen == NULL) {
+        return HITLS_NULL_INPUT;
+    }
+
+    *writeLen = 0;
+    if (REC_IsStandardType(type)) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16540, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+            "custom type conflicts with standard REC_Type", 0, 0, 0, 0);
+        return HITLS_REC_ERR_INVALID_CUSTOM_TYPE;
+    }
+
+    if (GetConnState(ctx) != CM_STATE_TRANSPORTING) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16541, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+            "HITLS_REC_Write can only be invoked in the transporting state", 0, 0, 0, 0);
+        return HITLS_MSG_HANDLE_STATE_ILLEGAL;
+    }
+
+    if (!IS_SUPPORT_TLCP(ctx->config.tlsConfig.originVersionMask)) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16542, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+            "HITLS_REC_Write can only be invoked in the TLCP protocol", 0, 0, 0, 0);
+        return HITLS_REC_INVALID_PROTOCOL_VERSION;
+    }
+
+    return WriteRecordWithRetry(ctx, type, data, dataLen, writeLen);
+}
+#endif

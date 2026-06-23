@@ -53,11 +53,27 @@ int32_t ConnUnexpectedMsg(HITLS_Ctx *ctx, uint32_t msgType, const uint8_t *data,
         case REC_TYPE_ALERT:
             return ProcessDecryptedAlert(ctx, data, dataLen);
         default:
-            BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16512, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-                "unknown msgType", 0, 0, 0, 0);
-            ALERT_Send(ctx, ALERT_LEVEL_FATAL, ALERT_UNEXPECTED_MESSAGE);
             break;
     }
+#ifdef HITLS_TLS_FEATURE_CUSTOM_REC_TYPE
+    if (IS_SUPPORT_TLCP(ctx->config.tlsConfig.originVersionMask) && !REC_IsStandardType((uint8_t)msgType) &&
+        GetConnState(ctx) == CM_STATE_TRANSPORTING) {
+        HITLS_REC_ReadCb recReadCb = ctx->recReadCb;
+        if (recReadCb != NULL) {
+            ret = recReadCb(ctx, (uint8_t)msgType, data, dataLen, ctx->recReadCbArg);
+            if (ret == HITLS_REC_READ_CB_SUCCESS) {
+                return HITLS_REC_CB_SUCCESS;
+            } else {
+                BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16547, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+                    "recReadCb fail, ret is %d, msgType is %u", ret, msgType, 0, 0);
+                ret = HITLS_REC_CB_FAIL;
+            }
+        }
+    }
+#endif
+    BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16512, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+        "unknown msgType", 0, 0, 0, 0);
+    ALERT_Send(ctx, ALERT_LEVEL_FATAL, ALERT_UNEXPECTED_MESSAGE);
     return ret;
 }
 

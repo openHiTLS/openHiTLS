@@ -1530,7 +1530,7 @@ void UT_TLS_TLS12_RFC5246_CONSISTENCY_AEAD_EXPLICIT_IV_LENGTH_TC001()
 
     /* Write app data to the server. */
     uint32_t writeLen;
-    int32_t ret = APP_Write(testInfo.server->ssl, transportData, transportDataLen, &writeLen);
+    int32_t ret = APP_Write(testInfo.server->ssl, REC_TYPE_APP, transportData, transportDataLen, &writeLen);
     ASSERT_TRUE(ret == HITLS_SUCCESS);
 
     /* Data transmission at the record layer. */
@@ -2001,7 +2001,7 @@ void UT_TLS_TLS12_RFC5246_CONSISTENCY_SEQ_NUM_TC002(int isClient)
     /* Write app data. */
     HITLS_Ctx *localSsl = isClient ? testInfo.client->ssl : testInfo.server->ssl;
     uint32_t writeLen;
-    ASSERT_EQ(APP_Write(localSsl, transportData, transportDataLen, &writeLen), HITLS_SUCCESS);
+    ASSERT_EQ(APP_Write(localSsl, REC_TYPE_APP, transportData, transportDataLen, &writeLen), HITLS_SUCCESS);
 
     /* Obtain data from the I/O sent by the local end and parse the header and content. */
     BSL_UIO *sendIo = isClient ? testInfo.client->io : testInfo.server->io;
@@ -5753,7 +5753,7 @@ void UT_TLS_TLS1_2_RFC5246_READ_AFTER_CLOSE_TC001()
     ASSERT_TRUE(readLen == 0);
 
     ASSERT_TRUE(TestIsErrStackEmpty());
-    
+
 EXIT:
     FRAME_FreeLink(client);
     FRAME_FreeLink(server);

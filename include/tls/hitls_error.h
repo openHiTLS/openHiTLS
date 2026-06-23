@@ -282,6 +282,9 @@ typedef enum {
     HITLS_REC_ENCRYPTED_NUMBER_OVERFLOW,           /**< The number of AES-GCM encryption times cannot exceed 2^24.5. */
     HITLS_REC_ERR_DATA_BETWEEN_CCS_AND_FINISHED,   /**< When version is below TLS13,
                                                         must not have data between ccs and finished. */
+    HITLS_REC_ERR_INVALID_CUSTOM_TYPE,              /**< Record: custom type conflicts with standard REC_Type. */
+    HITLS_REC_CB_SUCCESS,                           /**< Custom read callback processed successfully. */
+    HITLS_REC_CB_FAIL,                              /**< Custom read callback: internal read operation failed. */
 
     HITLS_UIO_FAIL_START = 0x020B0001,             /**< uio module error code start bit. */
     HITLS_UIO_FAIL,                                /**< UIO internal failure. */

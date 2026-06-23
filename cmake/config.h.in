@@ -502,6 +502,7 @@
 #cmakedefine HITLS_TLS_FEATURE_SM_TLS13
 #cmakedefine HITLS_TLS_FEATURE_DEFAULT_COOKIE
 #cmakedefine HITLS_TLS_FEATURE_ETM
+#cmakedefine HITLS_TLS_FEATURE_CUSTOM_REC_TYPE
 
 // TLS Proto Module
 #cmakedefine HITLS_TLS_PROTO

@@ -13,7 +13,7 @@
 
 
 # ==============================================================================
-# This file defines the dependencies(compile related) between modules/features in the HiTLS library. 
+# This file defines the dependencies(compile related) between modules/features in the HiTLS library.
 # It is used to ensure that when a feature is enabled, all of its dependencies are also enabled.
 # The dependencies are includes two parts:
 #   1. The parent modules/features that decide whether the current module/feature is enabled or not.
@@ -643,7 +643,7 @@ hitls_define_dependency(HITLS_TLS
         HITLS_TLS_PROTO_VERSION HITLS_TLS_HOST
         HITLS_TLS_CALLBACK      HITLS_TLS_FEATURE
         HITLS_TLS_PROTO         HITLS_TLS_CONFIG
-        HITLS_TLS_CONNECTION    
+        HITLS_TLS_CONNECTION
         HITLS_TLS_SUITE_CIPHER  HITLS_TLS_SUITE_KX
         HITLS_TLS_SUITE_AUTH    HITLS_TLS_MAINTAIN
 )
@@ -711,6 +711,7 @@ hitls_define_dependency(HITLS_TLS_FEATURE
         HITLS_TLS_FEATURE_CERTIFICATE_AUTHORITIES HITLS_TLS_FEATURE_SM_TLS13
         HITLS_TLS_FEATURE_MTU_QUERY        HITLS_TLS_FEATURE_EXPORT_KEY_MATERIAL
         HITLS_TLS_FEATURE_RECORD_SIZE_LIMIT HITLS_TLS_FEATURE_DEFAULT_COOKIE
+        HITLS_TLS_FEATURE_CUSTOM_REC_TYPE
 )
 hitls_define_dependency(HITLS_TLS_FEATURE_RENEGOTIATION     DEPS HITLS_TLS_FEATURE)
 hitls_define_dependency(HITLS_TLS_FEATURE_ALPN              DEPS HITLS_TLS_FEATURE)
@@ -779,6 +780,10 @@ hitls_define_dependency(HITLS_TLS_FEATURE_SM_TLS13
     CHILDREN HITLS_TLS_SUITE_SM4_GCM_SM3 HITLS_TLS_SUITE_SM4_CCM_SM3
 )
 hitls_define_dependency(HITLS_TLS_FEATURE_ETM                       DEPS_CHECK HITLS_TLS_SUITE_CIPHER_CBC)
+hitls_define_dependency(HITLS_TLS_FEATURE_CUSTOM_REC_TYPE
+    DEPS HITLS_TLS_FEATURE
+    DEPS_CHECK HITLS_TLS_PROTO_TLCP11
+)
 
 ## Proto
 hitls_define_dependency(HITLS_TLS_PROTO
@@ -1615,7 +1620,7 @@ macro(hitls_special_depends_handle)
             hitls_feature_local_enable(HITLS_CRYPTO_ENTROPY_GETENTROPY)
         endif()
     endif()
-    
+
     if(HITLS_CRYPTO_NIST_ECC_ACCELERATE AND NOT HITLS_CRYPTO_ECC)
         set(HITLS_CRYPTO_NIST_ECC_ACCELERATE OFF CACHE BOOL "" FORCE)
     endif()

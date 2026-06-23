@@ -746,3 +746,19 @@ REC_Type REC_GetUnexpectedMsgType(TLS_Ctx *ctx)
 {
     return ctx->recCtx->unexpectedMsgType;
 }
+
+#ifdef HITLS_TLS_FEATURE_CUSTOM_REC_TYPE
+bool REC_IsStandardType(uint8_t type)
+{
+    switch (type) {
+        case 0:
+        case REC_TYPE_CHANGE_CIPHER_SPEC:
+        case REC_TYPE_ALERT:
+        case REC_TYPE_HANDSHAKE:
+        case REC_TYPE_APP:
+            return true;
+        default:
+            return false;
+    }
+}
+#endif /* HITLS_TLS_FEATURE_CUSTOM_REC_TYPE */

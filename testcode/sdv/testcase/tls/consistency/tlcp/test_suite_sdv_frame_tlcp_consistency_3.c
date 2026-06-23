@@ -1098,11 +1098,12 @@ EXIT:
 }
 /* END_CASE */
 
-static int32_t STUB_APP_Write_Fatal(TLS_Ctx *ctx, const uint8_t *data, uint32_t dataLen, uint32_t *writeLen)
+static int32_t STUB_APP_Write_Fatal(TLS_Ctx *ctx, uint8_t recType, const uint8_t *data, uint32_t dataLen, uint32_t *writeLen)
 {
     (void)data;
     (void)dataLen;
     (void)writeLen;
+    (void)recType;
     ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_UNEXPECTED_MESSAGE);
     return HITLS_INTERNAL_EXCEPTION;
 }
@@ -1253,7 +1254,7 @@ void UT_TLS_TLCP_CONSISTENCY_CLOSE_NOTIFY_TC001(void)
     ASSERT_TRUE(serverframeMsg.type == REC_TYPE_ALERT && serverframeMsg.bodyLen == ALERT_BODY_LEN);
     ASSERT_TRUE(serverframeMsg.body.alertMsg.level == ALERT_LEVEL_WARNING &&
         serverframeMsg.body.alertMsg.description == ALERT_CLOSE_NOTIFY);
-    
+
     ASSERT_TRUE(TestIsErrStackNotEmpty());
 
 EXIT:
@@ -1664,7 +1665,7 @@ EXIT:
 * @test   UT_TLS_TLCP_CONSISTENCY_KEYUSAGE_TC001
 * @title  The encryption certificate does not have a keyusage extension, and check the result.
 * @precon nan
-* @brief  1. Use the default configuration on the client and server，Server setting encryption certificate without 
+* @brief  1. Use the default configuration on the client and server，Server setting encryption certificate without
 *               keyusage extension. Expected result 1.
 *         2. Start a handshake. Expected result 2.
 * @expect 1. The initialization is successful.
@@ -1714,7 +1715,7 @@ EXIT:
 * @test   UT_TLS_TLCP_CONSISTENCY_KEYUSAGE_TC002
 * @title  The signing certificate does not have a keyusage extension, and check the result.
 * @precon nan
-* @brief  1. Use the default configuration on the client and server，Server setting signing certificate without 
+* @brief  1. Use the default configuration on the client and server，Server setting signing certificate without
 *               keyusage extension. Expected result 1.
 *         2. Start a handshake. Expected result 2.
 * @expect 1. The initialization is successful.

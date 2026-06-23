@@ -1839,6 +1839,56 @@ int32_t HITLS_GetClientRenegotiateSupport(HITLS_Ctx *ctx, bool *isSupport);
  */
 int32_t HITLS_GetLegacyRenegotiateSupport(HITLS_Ctx *ctx, bool *isSupport);
 
+/**
+ * @ingroup tls
+ * @brief   Write data with a user-defined record type. The type must not be a standard REC_Type value
+ *          (20=CCS, 21=Alert, 22=Handshake, 23=App) or 0. Only supported in TLCP1.1 protocol.
+ *
+ * @param   ctx [IN] TLS context
+ * @param   type [IN] User-defined record type byte
+ * @param   data [IN] Data to be written
+ * @param   dataLen [IN] Length to be written
+ * @param   writeLen [OUT] Length of successful writes
+ * @retval  HITLS_SUCCESS, if successful.
+ * @retval  HITLS_REC_ERR_INVALID_CUSTOM_TYPE, type is a standard REC_Type value or 0.
+ * @retval  For other error codes, see hitls_error.h.
+ */
+int32_t HITLS_REC_Write(HITLS_Ctx *ctx, uint8_t type, const uint8_t *data, uint32_t dataLen, uint32_t *writeLen);
+
+#define HITLS_REC_READ_CB_SUCCESS 0
+#define HITLS_REC_READ_CB_FAIL (-1)
+
+/**
+ * @ingroup tls
+ * @brief   Callback for reading user-defined record type messages. Only supported in TLCP1.1 protocol.
+ *          When a non-standard REC_Type message is received, this callback is invoked
+ *          through the unexpected message handling logic instead of sending a fatal alert.
+ *
+ * @param   ctx [IN] TLS context
+ * @param   type [IN] Record type of the received message
+ * @param   data [IN] Pointer to the received message data
+ * @param   dataLen [IN] Length of the received message data
+ * @param   arg [IN] User data pointer passed via HITLS_REC_SetReadCb
+ * @retval  HITLS_REC_READ_CB_SUCCESS, callback processed successfully.
+ * @retval  HITLS_REC_READ_CB_FAIL, internal read operation failed in callback.
+ * @retval  For other error codes, see hitls_error.h.
+ */
+typedef int32_t (*HITLS_REC_ReadCb)(HITLS_Ctx *ctx, uint8_t type, const uint8_t *data, uint32_t dataLen, void *arg);
+
+/**
+ * @ingroup tls
+ * @brief   Set the callback for reading user-defined record type messages. Only supported in TLCP1.1 protocol.
+ *          When a non-standard REC_Type message is received, this callback is invoked
+ *          through the unexpected message handling logic instead of sending a fatal alert.
+ *
+ * @param   ctx [IN] TLS context
+ * @param   callback [IN] Read callback function
+ * @param   arg [IN] User data pointer passed to the callback context
+ * @retval  HITLS_SUCCESS, if successful.
+ * @retval  For other error codes, see hitls_error.h.
+ */
+int32_t HITLS_REC_SetReadCb(HITLS_Ctx *ctx, HITLS_REC_ReadCb callback, void *arg);
+
 #ifdef __cplusplus
 }
 #endif

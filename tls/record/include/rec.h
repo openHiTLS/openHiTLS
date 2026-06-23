@@ -281,6 +281,8 @@ int32_t REC_RetransmitListFlush(TLS_Ctx *ctx);
 
 REC_Type REC_GetUnexpectedMsgType(TLS_Ctx *ctx);
 
+bool REC_IsStandardType(uint8_t type);
+
 bool REC_HaveReadSuiteInfo(const TLS_Ctx *ctx);
 
 /**

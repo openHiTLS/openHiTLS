@@ -55,7 +55,7 @@ int32_t APP_GetMaxWriteSize(const TLS_Ctx *ctx, uint32_t *len)
     return REC_GetMaxWriteSize(ctx, len);
 }
 
-static int32_t SavePendingData(TLS_Ctx *ctx, const uint8_t *data, uint32_t dataLen)
+static int32_t SavePendingData(TLS_Ctx *ctx, uint8_t recordType, const uint8_t *data, uint32_t dataLen)
 {
 #ifdef HITLS_TLS_PROTO_DTLS
     if (IS_SUPPORT_DATAGRAM(ctx->config.tlsConfig.originVersionMask)) {
@@ -66,10 +66,11 @@ static int32_t SavePendingData(TLS_Ctx *ctx, const uint8_t *data, uint32_t dataL
     // Stores the plaintext data to be sent.
     recCtx->pendingData = data;
     recCtx->pendingDataSize = dataLen;
+    recCtx->pendingRecordType = recordType;
     return HITLS_SUCCESS;
 }
 
-static int32_t CheckDataLen(TLS_Ctx *ctx, const uint8_t *data, uint32_t *sendLen)
+static int32_t CheckDataLen(TLS_Ctx *ctx, uint8_t recordType, const uint8_t *data, uint32_t *sendLen)
 {
     int32_t ret = HITLS_SUCCESS;
 #if defined(HITLS_TLS_PROTO_DTLS12) && defined(HITLS_BSL_UIO_UDP)
@@ -87,9 +88,10 @@ static int32_t CheckDataLen(TLS_Ctx *ctx, const uint8_t *data, uint32_t *sendLen
     if (recCtx->pendingData != NULL) {
         if ((
 #ifdef HITLS_TLS_FEATURE_MODE_ACCEPT_MOVING_WRITE_BUFFER
-            (ctx->config.tlsConfig.modeSupport & HITLS_MODE_ACCEPT_MOVING_WRITE_BUFFER) == 0 &&
+                (ctx->config.tlsConfig.modeSupport & HITLS_MODE_ACCEPT_MOVING_WRITE_BUFFER) == 0 &&
 #endif
-                recCtx->pendingData != data) || recCtx->pendingDataSize > *sendLen) {
+                recCtx->pendingData != data) ||
+            (recCtx->pendingDataSize > *sendLen) || (recCtx->pendingRecordType != recordType)) {
             ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_INTERNAL_ERROR);
             BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16241, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
                 "The two buffer addresses are inconsistent.", 0, 0, 0, 0);
@@ -110,20 +112,20 @@ static int32_t CheckDataLen(TLS_Ctx *ctx, const uint8_t *data, uint32_t *sendLen
         *sendLen = maxWriteLen;
     }
 
-    return SavePendingData(ctx, data, *sendLen);
+    return SavePendingData(ctx, recordType, data, *sendLen);
 }
 
-int32_t APP_Write(TLS_Ctx *ctx, const uint8_t *data, uint32_t dataLen, uint32_t *writeLen)
+int32_t APP_Write(TLS_Ctx *ctx, uint8_t recordType, const uint8_t *data, uint32_t dataLen, uint32_t *writeLen)
 {
     int32_t ret = HITLS_SUCCESS;
     uint32_t sendLen = dataLen;
-    ret = CheckDataLen(ctx, data, &sendLen);
+    ret = CheckDataLen(ctx, recordType, data, &sendLen);
     if (ret != HITLS_SUCCESS) {
         return ret;
     }
 	*writeLen = 0;
 
-    ret = REC_Write(ctx, REC_TYPE_APP, data, sendLen);
+    ret = REC_Write(ctx, recordType, data, sendLen);
     if (ret != HITLS_SUCCESS) {
         return RETURN_ERROR_NUMBER_PROCESS(ret, BINLOG_ID16274, "Write fail");
     }
@@ -138,5 +140,6 @@ int32_t APP_Write(TLS_Ctx *ctx, const uint8_t *data, uint32_t dataLen, uint32_t 
     *writeLen = sendLen;
     ctx->recCtx->pendingData = NULL;
     ctx->recCtx->pendingDataSize = 0;
+    ctx->recCtx->pendingRecordType = 0;
     return HITLS_SUCCESS;
 }

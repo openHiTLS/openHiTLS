@@ -290,7 +290,10 @@ int32_t DtlsCheckRecordHeader(TLS_Ctx *ctx, const RecHdr *hdr)
         return RecordSendAlertMsg(ctx, ALERT_LEVEL_FATAL, ALERT_PROTOCOL_VERSION);
     }
 
-    if (RecCastUintToRecType(ctx, hdr->type) == REC_TYPE_UNKNOWN || hdr->bodyLen == 0) {
+    REC_Type recType = RecCastUintToRecType(ctx, hdr->type);
+    if ((recType == REC_TYPE_UNKNOWN &&
+        (ctx->recReadCb == NULL || !IS_SUPPORT_TLCP(ctx->config.tlsConfig.originVersionMask))) ||
+        hdr->bodyLen == 0) {
         BSL_ERR_PUSH_ERROR(HITLS_REC_ERR_RECV_UNEXPECTED_MSG);
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15438, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "get a record with invalid type or body length(0)", 0, 0, 0, 0);
@@ -793,7 +796,8 @@ int32_t TlsCheckVersionField(TLS_Ctx *ctx, uint16_t version, uint8_t type)
 
 int32_t TlsCheckRecordHeader(TLS_Ctx *ctx, const RecHdr *recordHdr)
 {
-    if (RecCastUintToRecType(ctx, recordHdr->type) == REC_TYPE_UNKNOWN) {
+    if (RecCastUintToRecType(ctx, recordHdr->type) == REC_TYPE_UNKNOWN &&
+        (ctx->recReadCb == NULL || !IS_SUPPORT_TLCP(ctx->config.tlsConfig.originVersionMask))) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15450, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "get a record with invalid type", 0, 0, 0, 0);
         return RecordSendAlertMsg(ctx, ALERT_LEVEL_FATAL, ALERT_UNEXPECTED_MESSAGE);

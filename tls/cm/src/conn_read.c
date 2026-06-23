@@ -625,3 +625,23 @@ int32_t HITLS_DtlsGetTimeout(HITLS_Ctx *ctx, uint64_t *remainTimeOut)
     return HITLS_SUCCESS;
 }
 #endif /* HITLS_TLS_PROTO_DTLS12 && HITLS_BSL_UIO_UDP */
+
+#ifdef HITLS_TLS_FEATURE_CUSTOM_REC_TYPE
+int32_t HITLS_REC_SetReadCb(HITLS_Ctx *ctx, HITLS_REC_ReadCb callback, void *arg)
+{
+    if (ctx == NULL) {
+        BSL_ERR_PUSH_ERROR(HITLS_NULL_INPUT);
+        return HITLS_NULL_INPUT;
+    }
+
+    if (!IS_SUPPORT_TLCP(ctx->config.tlsConfig.originVersionMask)) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16543, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+            "HITLS_REC_ReadCb can only be invoked in the TLCP protocol", 0, 0, 0, 0);
+        return HITLS_REC_INVALID_PROTOCOL_VERSION;
+    }
+
+    ctx->recReadCb = callback;
+    ctx->recReadCbArg = arg;
+    return HITLS_SUCCESS;
+}
+#endif

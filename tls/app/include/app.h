@@ -62,6 +62,7 @@ int32_t APP_GetMaxWriteSize(const TLS_Ctx *ctx, uint32_t *len);
  * @brief Send in the unit of record.
  *
  * @param ctx [IN] TLS context
+ * @param recordType [IN] Record type of the data
  * @param data [IN] Data to be written
  * @param dataLen [IN] Data length
  * @param   writeLen [OUT] Length of Successful Writes
@@ -69,7 +70,7 @@ int32_t APP_GetMaxWriteSize(const TLS_Ctx *ctx, uint32_t *len);
  * @retval HITLS_SUCCESS is successfully written.
  * @retval Other Reference REC_Write
  */
-int32_t APP_Write(TLS_Ctx *ctx, const uint8_t *data, uint32_t dataLen, uint32_t *writeLen);
+int32_t APP_Write(TLS_Ctx *ctx, uint8_t recordType, const uint8_t *data, uint32_t dataLen, uint32_t *writeLen);
 
 #ifdef __cplusplus
 }

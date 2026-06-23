@@ -15,6 +15,9 @@
 
 /* BEGIN_HEADER */
 /* INCLUDE_BASE test_suite_sdv_frame_tlcp_consistency */
+#include "hitls_error.h"
+#include "hitls_func.h"
+#include "rec.h"
 /* END_HEADER */
 
 /* @
@@ -2093,7 +2096,7 @@ void UT_TLS_TLCP_CONSISTENCY_SEQ_NUM_TC002(int isClient)
     ASSERT_EQ(RandBytes(transportData, transportDataLen), HITLS_SUCCESS);
     HITLS_Ctx *localSsl = isClient ? testInfo.client->ssl : testInfo.server->ssl;
     uint32_t writeLen;
-    ASSERT_EQ(APP_Write(localSsl, transportData, transportDataLen, &writeLen), HITLS_SUCCESS);
+    ASSERT_EQ(APP_Write(localSsl, REC_TYPE_APP, transportData, transportDataLen, &writeLen), HITLS_SUCCESS);
 
     ASSERT_EQ(localSsl->recCtx->writeStates.currentState->seq , 2);
 
@@ -2267,5 +2270,305 @@ EXIT:
     HITLS_CFG_FreeConfig(s_config);
     FRAME_FreeLink(client);
     FRAME_FreeLink(server);
+}
+/* END_CASE */
+
+#ifdef HITLS_TLS_FEATURE_CUSTOM_REC_TYPE
+static bool g_customCbInvoked = false;
+static uint8_t g_customRecvType = 0;
+static uint32_t g_customRecvDataLen = 0;
+static int32_t g_customCbRet = HITLS_REC_READ_CB_SUCCESS;
+uint8_t g_data[] = "CustomMsg";
+
+static int32_t recReadCb(HITLS_Ctx *ctx, uint8_t type, const uint8_t *data, uint32_t dataLen, void *arg)
+{
+    (void)ctx;
+    (void)data;
+    (void)arg;
+    ASSERT_EQ(type, 0x63);
+    ASSERT_EQ(dataLen, sizeof(g_data));
+    ASSERT_EQ(memcmp(g_data, data, dataLen), 0);
+
+    g_customCbInvoked = true;
+    g_customRecvType = type;
+    g_customRecvDataLen = dataLen;
+EXIT:
+    return g_customCbRet;
+}
+
+static void ResetCustomCbState(void)
+{
+    g_customCbInvoked = false;
+    g_customRecvType = 0;
+    g_customRecvDataLen = 0;
+    g_customCbRet = HITLS_REC_READ_CB_SUCCESS;
+}
+#endif
+
+/* @
+* @test  UT_TLS_TLCP_CONSISTENCY_CUSTOM_RECORDTYPE_TC001
+* @title HITLS_REC_Write rejects standard REC_Type values
+* @precon nan
+* @brief  1. Use the default configuration to establish a TLCP connection. Expected result 1.
+*         2. Call HITLS_REC_Write with standard REC_Type values (CCS=20, ALERT=21, HANDSHAKE=22, APP=23, UNKNOWN=255).
+*            Expected result 2.
+* @expect 1. The connection is established successfully.
+*         2. HITLS_REC_Write returns HITLS_REC_ERR_INVALID_CUSTOM_TYPE for each standard type.
+@ */
+/* BEGIN_CASE */
+void UT_TLS_TLCP_CONSISTENCY_CUSTOM_RECORDTYPE_TC001(void)
+{
+#ifdef HITLS_TLS_FEATURE_CUSTOM_REC_TYPE
+    FRAME_Init();
+    HITLS_Config *config = HITLS_CFG_NewTLCPConfig();
+    ASSERT_TRUE(config != NULL);
+
+    FRAME_LinkObj *client = FRAME_CreateTLCPLink(config, BSL_UIO_TCP, true);
+    FRAME_LinkObj *server = FRAME_CreateTLCPLink(config, BSL_UIO_TCP, false);
+    ASSERT_TRUE(client != NULL);
+    ASSERT_TRUE(server != NULL);
+
+    ASSERT_EQ(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_SUCCESS);
+    ASSERT_TRUE(client->ssl->state == CM_STATE_TRANSPORTING);
+
+    uint8_t data[] = "Test";
+    uint32_t writeLen = 0;
+
+    ASSERT_EQ(HITLS_REC_Write(client->ssl, REC_TYPE_CHANGE_CIPHER_SPEC, data, sizeof(data), &writeLen),
+        HITLS_REC_ERR_INVALID_CUSTOM_TYPE);
+    ASSERT_EQ(HITLS_REC_Write(client->ssl, REC_TYPE_ALERT, data, sizeof(data), &writeLen),
+        HITLS_REC_ERR_INVALID_CUSTOM_TYPE);
+    ASSERT_EQ(HITLS_REC_Write(client->ssl, REC_TYPE_HANDSHAKE, data, sizeof(data), &writeLen),
+        HITLS_REC_ERR_INVALID_CUSTOM_TYPE);
+    ASSERT_EQ(HITLS_REC_Write(client->ssl, REC_TYPE_APP, data, sizeof(data), &writeLen),
+        HITLS_REC_ERR_INVALID_CUSTOM_TYPE);
+    ASSERT_EQ(HITLS_REC_Write(client->ssl, 0, data, sizeof(data), &writeLen), HITLS_REC_ERR_INVALID_CUSTOM_TYPE);
+
+EXIT:
+    HITLS_CFG_FreeConfig(config);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+#else
+    SKIP_TEST();
+#endif
+}
+/* END_CASE */
+
+/* @
+* @test  UT_TLS_TLCP_CONSISTENCY_CUSTOM_RECORDTYPE_TC002
+* @title HITLS_REC_Write returns HITLS_NULL_INPUT for invalid parameters
+* @precon nan
+* @brief  1. Use the default configuration to establish a TLCP connection. Expected result 1.
+*         2. Call HITLS_REC_Write with NULL ctx, NULL data, zero dataLen, or NULL writeLen. Expected result 2.
+* @expect 1. The connection is established successfully.
+*         2. HITLS_REC_Write returns HITLS_NULL_INPUT for each invalid parameter combination.
+@ */
+/* BEGIN_CASE */
+void UT_TLS_TLCP_CONSISTENCY_CUSTOM_RECORDTYPE_TC002(void)
+{
+#ifdef HITLS_TLS_FEATURE_CUSTOM_REC_TYPE
+    FRAME_Init();
+    HITLS_Config *config = HITLS_CFG_NewTLCPConfig();
+    ASSERT_TRUE(config != NULL);
+
+    FRAME_LinkObj *client = FRAME_CreateTLCPLink(config, BSL_UIO_TCP, true);
+    FRAME_LinkObj *server = FRAME_CreateTLCPLink(config, BSL_UIO_TCP, false);
+    ASSERT_TRUE(client != NULL);
+    ASSERT_TRUE(server != NULL);
+
+    ASSERT_EQ(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_SUCCESS);
+    ASSERT_TRUE(client->ssl->state == CM_STATE_TRANSPORTING);
+
+    uint8_t data[] = "Test";
+    uint32_t writeLen = 0;
+
+    ASSERT_EQ(HITLS_REC_Write(NULL, 0x63, data, sizeof(data), &writeLen), HITLS_NULL_INPUT);
+    ASSERT_EQ(HITLS_REC_Write(client->ssl, 0x63, NULL, sizeof(data), &writeLen), HITLS_NULL_INPUT);
+    ASSERT_EQ(HITLS_REC_Write(client->ssl, 0x63, data, 0, &writeLen), HITLS_NULL_INPUT);
+    ASSERT_EQ(HITLS_REC_Write(client->ssl, 0x63, data, sizeof(data), NULL), HITLS_NULL_INPUT);
+    ASSERT_EQ(HITLS_REC_Write(client->ssl, 0x63, data, sizeof(data), &writeLen), HITLS_SUCCESS);
+    ASSERT_EQ(writeLen, sizeof(data));
+    ResetCustomCbState();
+    ASSERT_EQ(HITLS_REC_SetReadCb(NULL, recReadCb, NULL), HITLS_NULL_INPUT);
+
+EXIT:
+    HITLS_CFG_FreeConfig(config);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+#else
+    SKIP_TEST();
+#endif
+}
+/* END_CASE */
+
+/* @
+* @test  UT_TLS_TLCP_CONSISTENCY_CUSTOM_RECORDTYPE_TC003
+* @title Receiving a custom record type without callback triggers fatal alert
+* @precon nan
+* @brief  1. Use the default configuration to establish a TLCP connection. Expected result 1.
+*         2. The client sends a custom type (0x63) message using HITLS_REC_Write and transfers it to the server.
+*            Expected result 2.
+*         3. The server calls HITLS_Read. Since no custom read callback is registered, the custom type is rejected.
+*            Expected result 3.
+* @expect 1. The connection is established successfully.
+*         2. The custom type message is sent successfully.
+*         3. The server returns HITLS_REC_ERR_RECV_UNEXPECTED_MSG and sends a fatal alert.
+@ */
+/* BEGIN_CASE */
+void UT_TLS_TLCP_CONSISTENCY_CUSTOM_RECORDTYPE_TC003(void)
+{
+#ifdef HITLS_TLS_FEATURE_CUSTOM_REC_TYPE
+    FRAME_Init();
+    HITLS_Config *config = HITLS_CFG_NewTLCPConfig();
+    ASSERT_TRUE(config != NULL);
+
+    FRAME_LinkObj *client = FRAME_CreateTLCPLink(config, BSL_UIO_TCP, true);
+    FRAME_LinkObj *server = FRAME_CreateTLCPLink(config, BSL_UIO_TCP, false);
+    ASSERT_TRUE(client != NULL);
+    ASSERT_TRUE(server != NULL);
+
+    ASSERT_EQ(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_SUCCESS);
+    ASSERT_TRUE(client->ssl->state == CM_STATE_TRANSPORTING);
+
+    uint8_t data[] = "CustomData";
+    uint32_t writeLen = 0;
+    ASSERT_EQ(HITLS_REC_Write(client->ssl, 0x63, data, sizeof(data), &writeLen), HITLS_SUCCESS);
+    ASSERT_TRUE(FRAME_TrasferMsgBetweenLink(client, server) == HITLS_SUCCESS);
+
+    uint8_t readBuf[READ_BUF_SIZE] = {0};
+    uint32_t readLen = 0;
+    ASSERT_EQ(HITLS_Read(server->ssl, readBuf, READ_BUF_SIZE, &readLen), HITLS_REC_ERR_RECV_UNEXPECTED_MSG);
+
+    ALERT_Info info = { 0 };
+    ALERT_GetInfo(server->ssl, &info);
+    ASSERT_EQ(info.flag, ALERT_FLAG_SEND);
+    ASSERT_EQ(info.level, ALERT_LEVEL_FATAL);
+    ASSERT_EQ(info.description, ALERT_UNEXPECTED_MESSAGE);
+
+EXIT:
+    HITLS_CFG_FreeConfig(config);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+#else
+    SKIP_TEST();
+#endif
+}
+/* END_CASE */
+
+/* @
+* @test  UT_TLS_TLCP_CONSISTENCY_CUSTOM_RECORDTYPE_TC004
+* @title Receiving a custom record type with callback invokes the callback
+* @precon nan
+* @brief  1. Use the default configuration to establish a TLCP connection. Expected result 1.
+*         2. Register a custom read callback on the server using HITLS_REC_SetReadCb. Expected result 2.
+*         3. The client sends a custom type (0x63) message using HITLS_REC_Write and transfers it to the server.
+*            Expected result 3.
+*         4. The server calls HITLS_Read. The custom callback is invoked with the correct type and data length.
+*            Expected result 4.
+* @expect 1. The connection is established successfully.
+*         2. The callback is registered successfully.
+*         3. The custom type message is sent successfully.
+*         4. The callback is invoked, the type is 0x63, and the data length matches.
+@ */
+/* BEGIN_CASE */
+void UT_TLS_TLCP_CONSISTENCY_CUSTOM_RECORDTYPE_TC004()
+{
+#ifdef HITLS_TLS_FEATURE_CUSTOM_REC_TYPE
+    ResetCustomCbState();
+    FRAME_Init();
+    HITLS_Config *config = HITLS_CFG_NewTLCPConfig();
+    ASSERT_TRUE(config != NULL);
+    BSL_UIO_TransportType uioType = BSL_UIO_TCP;
+    FRAME_LinkObj *client = NULL;
+    FRAME_LinkObj *server = NULL;
+    client = FRAME_CreateTLCPLink(config, uioType, true);
+    server = FRAME_CreateTLCPLink(config, uioType, false);
+    ASSERT_TRUE(client != NULL);
+    ASSERT_TRUE(server != NULL);
+
+    ASSERT_EQ(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_SUCCESS);
+    ASSERT_TRUE(client->ssl->state == CM_STATE_TRANSPORTING);
+
+    ASSERT_EQ(HITLS_REC_SetReadCb(server->ssl, recReadCb, NULL), HITLS_SUCCESS);
+
+    uint32_t writeLen = 0;
+    ASSERT_EQ(HITLS_REC_Write(client->ssl, 0x63, g_data, sizeof(g_data), &writeLen), HITLS_SUCCESS);
+    ASSERT_EQ(writeLen, sizeof(g_data));
+    ASSERT_TRUE(FRAME_TrasferMsgBetweenLink(client, server) == HITLS_SUCCESS);
+
+    uint8_t readBuf[READ_BUF_SIZE] = {0};
+    uint32_t readLen = 0;
+    ASSERT_EQ(HITLS_Read(server->ssl, readBuf, READ_BUF_SIZE, &readLen), HITLS_REC_CB_SUCCESS);
+
+    ASSERT_TRUE(g_customCbInvoked);
+    ASSERT_EQ(g_customRecvType, 0x63);
+    ASSERT_TRUE(g_customRecvDataLen > 0);
+
+EXIT:
+    HITLS_CFG_FreeConfig(config);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+#else
+    SKIP_TEST();
+#endif
+}
+/* END_CASE */
+
+/* @
+* @test  UT_TLS_TLCP_CONSISTENCY_CUSTOM_RECORDTYPE_TC005
+* @title HITLS_REC_Write retry with different data buffer returns error
+* @precon nan
+* @brief  1. Use the default configuration to establish a TLCP connection. Expected result 1.
+*         2. Call HITLS_REC_Write to send custom type (0x63) message, the output buffer is filled but not flushed.
+*            Expected result 2.
+*         3. Call HITLS_REC_Write again, the output buffer is still full (IO_BUSY), pending data is saved.
+*            Expected result 3.
+*         4. Call HITLS_REC_Write with a different data buffer. Since the pending data pointer differs from the new
+*            buffer, HITLS_APP_ERR_WRITE_BAD_RETRY is returned. Expected result 4.
+* @expect 1. The connection is established successfully.
+*         2. The first HITLS_REC_Write returns HITLS_SUCCESS.
+*         3. The second HITLS_REC_Write returns HITLS_REC_NORMAL_IO_BUSY.
+*         4. The third HITLS_REC_Write returns HITLS_APP_ERR_WRITE_BAD_RETRY.
+@ */
+/* BEGIN_CASE */
+void UT_TLS_TLCP_CONSISTENCY_CUSTOM_RECORDTYPE_TC005(int recordTypeDiff)
+{
+    (void)recordTypeDiff;
+#ifdef HITLS_TLS_FEATURE_CUSTOM_REC_TYPE
+    FRAME_Init();
+    HITLS_Config *config = HITLS_CFG_NewTLCPConfig();
+    ASSERT_TRUE(config != NULL);
+
+    FRAME_LinkObj *client = FRAME_CreateTLCPLink(config, BSL_UIO_TCP, true);
+    FRAME_LinkObj *server = FRAME_CreateTLCPLink(config, BSL_UIO_TCP, false);
+    ASSERT_TRUE(client != NULL);
+    ASSERT_TRUE(server != NULL);
+
+    ASSERT_EQ(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_SUCCESS);
+    ASSERT_TRUE(client->ssl->state == CM_STATE_TRANSPORTING);
+
+    uint8_t data1[] = "FirstCustomMsg";
+    uint8_t data2[] = "SecondCustomMsg";
+    uint8_t data3[] = "ThirdCustomMsg";
+    uint32_t writeLen = 0;
+
+    ASSERT_EQ(HITLS_REC_Write(client->ssl, 0x63, data1, sizeof(data1), &writeLen), HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_REC_Write(client->ssl, 0x63, data2, sizeof(data2), &writeLen), HITLS_REC_NORMAL_IO_BUSY);
+    ASSERT_TRUE(FRAME_TrasferMsgBetweenLink(client, server) == HITLS_SUCCESS);
+    RecBufFree(client->ssl->recCtx->outBuf);
+    client->ssl->recCtx->outBuf = NULL;
+    if (recordTypeDiff) {
+        ASSERT_EQ(HITLS_REC_Write(client->ssl, 0x66, data2, sizeof(data2), &writeLen), HITLS_APP_ERR_WRITE_BAD_RETRY);
+    } else {
+        ASSERT_EQ(HITLS_REC_Write(client->ssl, 0x63, data3, sizeof(data3), &writeLen), HITLS_APP_ERR_WRITE_BAD_RETRY);
+    }
+
+EXIT:
+    HITLS_CFG_FreeConfig(config);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+#else
+    SKIP_TEST();
+#endif
 }
 /* END_CASE */

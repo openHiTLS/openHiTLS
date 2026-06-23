@@ -83,6 +83,7 @@ typedef struct RecCtx {
     REC_Type unexpectedMsgType;
     uint32_t pendingDataSize;               /* Data length */
     const uint8_t *pendingData;             /* Plain Data content */
+    uint8_t pendingRecordType;              /* pending record type */
 } RecCtx;
 
 

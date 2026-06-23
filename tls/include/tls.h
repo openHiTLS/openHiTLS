@@ -22,6 +22,7 @@
 #include "cipher_suite.h"
 #include "tls_config.h"
 #include "hitls_error.h"
+#include "hitls.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -321,6 +322,8 @@ struct TlsCtx {
     /* To reduce the calculation amount for determining timeout, use the end time instead of the start time. If the end
      * time is exceeded, the receiving times out. */
     BSL_TIME deadline;     /* End time */
+    HITLS_REC_ReadCb recReadCb;             /* callback for reading user-defined record type messages */
+    void *recReadCbArg;                     /* user data pointer passed to the callback context */
 };
 
 typedef struct {
