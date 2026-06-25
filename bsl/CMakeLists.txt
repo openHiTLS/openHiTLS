@@ -38,6 +38,8 @@ target_include_directories(_hitls_bsl_common_include INTERFACE
     ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
 
+add_subdirectory(version)
+
 # ==============================================================================
 # Add BSL sub-modules in dependency order
 # ==============================================================================

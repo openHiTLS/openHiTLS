@@ -178,7 +178,6 @@ else()
         # Dynamically determine provider library name based on CMVP mode
         set(_hitls_provider_lib_name "libhitls${SHARED_LIB_EXT}")
 
-        set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DHITLS_VERSION='\"${OPENHITLS_VERSION_S}\"'")
         set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DHITLS_PROVIDER_LIB_NAME='\"${_hitls_provider_lib_name}\"'")
 
         add_subdirectory(apps)

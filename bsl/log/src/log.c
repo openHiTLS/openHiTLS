@@ -17,37 +17,10 @@
 #ifdef HITLS_BSL_LOG
 
 #include <stdbool.h>
-#include <string.h>
+#include <stddef.h>
 #include "bsl_errno.h"
 #include "bsl_log.h"
 #include "bsl_log_internal.h"
-
-/* string of HiTLS version */
-static char g_openHiTLSVersion[HITLS_VERSION_LEN] = OPENHITLS_VERSION_S;
-static uint64_t g_openHiTLSNumVersion = OPENHITLS_VERSION_I;
-
-int32_t BSL_LOG_GetVersion(char *version, uint32_t *versionLen)
-{
-    if (version == NULL || versionLen == NULL) {
-        return BSL_LOG_ERR_BAD_PARAM;
-    }
-
-    if (*versionLen < HITLS_VERSION_LEN) {
-        return BSL_LOG_ERR_BAD_PARAM;
-    }
-
-    uint32_t len = (uint32_t)strlen(g_openHiTLSVersion);
-
-    memcpy(version, g_openHiTLSVersion, len);
-
-    *versionLen = len;
-    return BSL_SUCCESS;
-}
-
-uint64_t BSL_LOG_GetVersionNum(void)
-{
-    return g_openHiTLSNumVersion;
-}
 
 static BSL_LOG_BinLogFixLenFunc g_fixLenFunc = NULL;
 static BSL_LOG_BinLogVarLenFunc g_varLenFunc = NULL;

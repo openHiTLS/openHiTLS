@@ -24,6 +24,7 @@
 #include "bsl_binlog_id.h"
 #include "bsl_log_internal.h"
 #include "bsl_log.h"
+#include "bsl_version.h"
 
 static uintptr_t g_binlogFlag = 0;
 
@@ -157,33 +158,22 @@ static void BinLogVarFunc(uint32_t logId, uint32_t logLevel, uint32_t logType, v
 
 /**
  * @test SDV_BSL_LOG_VERSION_API_TC001
- * @title Obtaining the HiTLS version number of the log submodule of the BSL module
+ * @title Obtaining the HiTLS version
  * @precon nan
  * @brief
- *    1. The buffer of the received version string is empty
- *       or the buffer length of the received version string is empty. Expected result 1 is obtained.
- *    2. The buffer length of the received version string is less than the minimum length.
- *       Expected result 2 is obtained.
- *    3. Received version and length of memory application. Expected result 3 is obtained.
+ *    1. Obtain the version string. Expected result 1 is obtained.
+ *    2. Obtain the version number. Expected result 2 is obtained.
  * @expect
- *    1. Return BSL_LOG_ERR_BAD_PARAM
- *    2. Return BSL_LOG_ERR_BAD_PARAM
- *    3. Succeeded. The version length is equal to the current version length,
-*        and the version string content is equal to the current version string content.
+ *    1. Succeeded. The version string content is equal to the current version string content.
+ *    2. Succeeded. The version number is equal to the current version number.
  */
 /* BEGIN_CASE */
 void SDV_BSL_LOG_VERSION_API_TC001(void)
 {
-    char version[200];
-    uint32_t versionLen = 100;
-    ASSERT_TRUE(BSL_LOG_GetVersion(NULL, NULL) == BSL_LOG_ERR_BAD_PARAM);
-    ASSERT_TRUE(BSL_LOG_GetVersion((char *)version, &versionLen) == BSL_LOG_ERR_BAD_PARAM);
-
-    versionLen = 200;
-    ASSERT_TRUE(BSL_LOG_GetVersion((char *)version, &versionLen) == BSL_SUCCESS);
-    ASSERT_TRUE(versionLen == strlen("openHiTLS 0.4.0 31 Mar. 2026"));
-    ASSERT_TRUE(memcmp(version, "openHiTLS 0.4.0 31 Mar. 2026", versionLen) == 0);
-    uint64_t versionNum = BSL_LOG_GetVersionNum();
+    const char *version = HITLS_Version();
+    ASSERT_TRUE(version != NULL);
+    ASSERT_TRUE(strcmp(version, "openHiTLS 0.4.0 31 Mar. 2026") == 0);
+    uint64_t versionNum = HITLS_VersionNum();
     ASSERT_EQ(versionNum, 0x00400000ULL);
 EXIT:
     return;

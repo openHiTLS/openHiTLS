@@ -17,9 +17,7 @@ cmake_minimum_required(VERSION 3.16 FATAL_ERROR)
 project(openHiTLS)
 include(GNUInstallDirs)
 
-# Version info and other global definitions
-set(OPENHITLS_VERSION_S "openHiTLS 0.4.0 31 Mar. 2026"  CACHE STRING "openHiTLS version string")
-set(OPENHITLS_VERSION_I "4194304"                       CACHE STRING "openHiTLS version integer")
+# Global definitions
 set(CMVP_INTEGRITYKEY   "b8fc4931453af3285f0f"          CACHE STRING "CMVP integrity key")
 
 # Set CMAKE_MODULE_PATH to include our custom CMake modules
@@ -72,8 +70,6 @@ include(hitls_config_check)
 add_compile_definitions(${_HITLS_ALL_FEATURE_MACROS})
 # Define OPENHITLSDIR macro for runtime use (e.g. cert lookup paths)
 add_compile_definitions(OPENHITLSDIR="${CMAKE_INSTALL_PREFIX}/")
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DOPENHITLS_VERSION_S='\"${OPENHITLS_VERSION_S}\"'")
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DOPENHITLS_VERSION_I=${OPENHITLS_VERSION_I}")
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DCMVP_INTEGRITYKEY='\"${CMVP_INTEGRITYKEY}\"'")
 # Define common include directories for all targets
 include_directories(${PROJECT_SOURCE_DIR}/config/macro_config)

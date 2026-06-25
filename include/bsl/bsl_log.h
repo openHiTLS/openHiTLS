@@ -72,41 +72,6 @@ extern "C" {
 
 /**
  * @ingroup bsl_log
- *
- * HiTLS version string
- */
-#ifndef OPENHITLS_VERSION_S
-#define OPENHITLS_VERSION_S "openHiTLS 0.2.0 15 May 2025"
-#endif
-
-#ifndef OPENHITLS_VERSION_I
-#define OPENHITLS_VERSION_I 0x00200000ULL
-#endif
-
-#define HITLS_VERSION_LEN 150
-
-/**
- * @ingroup bsl_log
- * @brief   Obtain the openHiTLS version string.
- *
- * @attention The length of the received version string must be greater than or equal to HITLS_VERSION_LEN.
- * @param   version [OUT] openHiTLS current version string.
- * @param   versionLen [IN/OUT] String length of the current openHiTLS version.
- * @retval  #BSL_SUCCESS, if success.
- * @retval  #BSL_LOG_ERR_MEMCPY, memory copy failure.
- */
-int32_t BSL_LOG_GetVersion(char *version, uint32_t *versionLen);
-
-/**
- * @ingroup bsl_log
- * @brief   Obtain the openHiTLS version number.
- *
- * @retval  openHiTLS version number.
- */
-uint64_t BSL_LOG_GetVersionNum(void);
-
-/**
- * @ingroup bsl_log
  * @brief   Binlog type, other types can be extended.
  */
 #define BSL_LOG_BINLOG_TYPE_RUN 0x01
