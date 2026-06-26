@@ -1678,29 +1678,90 @@ EXIT:
     return -1;
 }
 
-static int32_t CheckThirdPartyCrlExactRoundtrip(int32_t format, char *path)
+static HITLS_X509_ExtEntry *FindCrlExtEntryByCid(BslList *extList, BslCid cid)
 {
-    HITLS_X509_Crl *crl = NULL;
-    BSL_Buffer encode = {0};
-    uint8_t *data = NULL;
-    uint32_t dataLen = 0;
+    HITLS_X509_ExtEntry **entry = BSL_LIST_First(extList);
+    while (entry != NULL) {
+        if (*entry != NULL && (*entry)->cid == cid) {
+            return *entry;
+        }
+        entry = BSL_LIST_Next(extList);
+    }
+    return NULL;
+}
+
+static int32_t CompareReencodedCrlExt(HITLS_X509_Crl *expectCrl, HITLS_X509_Crl *actualCrl, BslCid cid)
+{
+    HITLS_X509_ExtEntry *expect = FindCrlExtEntryByCid(expectCrl->tbs.crlExt.extList, cid);
+    HITLS_X509_ExtEntry *actual = FindCrlExtEntryByCid(actualCrl->tbs.crlExt.extList, cid);
+
+    ASSERT_NE(expect, NULL);
+    ASSERT_NE(actual, NULL);
+    ASSERT_EQ(actual->critical, expect->critical);
+    ASSERT_EQ(actual->extnId.tag, expect->extnId.tag);
+    ASSERT_COMPARE("extnId", actual->extnId.buff, actual->extnId.len, expect->extnId.buff, expect->extnId.len);
+    ASSERT_EQ(actual->extnValue.tag, expect->extnValue.tag);
+    ASSERT_COMPARE("extnValue", actual->extnValue.buff, actual->extnValue.len,
+        expect->extnValue.buff, expect->extnValue.len);
+    return HITLS_PKI_SUCCESS;
+EXIT:
+    return -1;
+}
+
+static int32_t CheckThirdPartyCrlIdpExtRoundtrip(char *path)
+{
+    HITLS_X509_Crl *expectCrl = NULL;
+    HITLS_X509_Crl *actualCrl = NULL;
+    HITLS_X509_ExtIdp idp = {0};
     int32_t ret = -1;
 
-    ASSERT_EQ(BSL_SAL_ReadFile(path, &data, &dataLen), BSL_SUCCESS);
-    ASSERT_EQ(HITLS_X509_CrlParseFile(format, path, &crl), HITLS_PKI_SUCCESS);
-    ASSERT_EQ(HITLS_X509_CrlGenBuff(format, crl, &encode), HITLS_PKI_SUCCESS);
-    if (format == BSL_FORMAT_ASN1) {
-        ASSERT_EQ(encode.dataLen, dataLen);
-    } else {
-        ASSERT_EQ(strlen((char *)encode.data), dataLen);
-    }
-    ASSERT_EQ(memcmp(encode.data, data, dataLen), 0);
+    ASSERT_EQ(HITLS_X509_CrlParseFile(BSL_FORMAT_ASN1, path, &expectCrl), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CrlCtrl(expectCrl, HITLS_X509_EXT_GET_IDP, &idp,
+        sizeof(HITLS_X509_ExtIdp)), HITLS_PKI_SUCCESS);
+    actualCrl = HITLS_X509_CrlNew();
+    ASSERT_NE(actualCrl, NULL);
+    ASSERT_EQ(HITLS_X509_CrlCtrl(actualCrl, HITLS_X509_EXT_SET_IDP, &idp,
+        sizeof(HITLS_X509_ExtIdp)), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(CompareReencodedCrlExt(expectCrl, actualCrl, BSL_CID_CE_ISSUINGDISTRIBUTIONPOINT),
+        HITLS_PKI_SUCCESS);
     ASSERT_TRUE(TestIsErrStackEmpty());
     ret = HITLS_PKI_SUCCESS;
 EXIT:
-    BSL_SAL_Free(data);
-    BSL_SAL_Free(encode.data);
-    HITLS_X509_CrlFree(crl);
+    HITLS_X509_ClearIdp(&idp);
+    HITLS_X509_CrlFree(expectCrl);
+    HITLS_X509_CrlFree(actualCrl);
+    return ret;
+}
+
+static int32_t CheckThirdPartyCrlIdpAndDeltaExtRoundtrip(char *path)
+{
+    HITLS_X509_Crl *expectCrl = NULL;
+    HITLS_X509_Crl *actualCrl = NULL;
+    HITLS_X509_ExtIdp idp = {0};
+    HITLS_X509_ExtDeltaCrl delta = {0};
+    int32_t ret = -1;
+
+    ASSERT_EQ(HITLS_X509_CrlParseFile(BSL_FORMAT_ASN1, path, &expectCrl), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CrlCtrl(expectCrl, HITLS_X509_EXT_GET_IDP, &idp,
+        sizeof(HITLS_X509_ExtIdp)), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CrlCtrl(expectCrl, HITLS_X509_EXT_GET_DELTA_CRL, &delta,
+        sizeof(HITLS_X509_ExtDeltaCrl)), HITLS_PKI_SUCCESS);
+    actualCrl = HITLS_X509_CrlNew();
+    ASSERT_NE(actualCrl, NULL);
+    ASSERT_EQ(HITLS_X509_CrlCtrl(actualCrl, HITLS_X509_EXT_SET_IDP, &idp,
+        sizeof(HITLS_X509_ExtIdp)), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CrlCtrl(actualCrl, HITLS_X509_EXT_SET_DELTA_CRL, &delta,
+        sizeof(HITLS_X509_ExtDeltaCrl)), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(CompareReencodedCrlExt(expectCrl, actualCrl, BSL_CID_CE_ISSUINGDISTRIBUTIONPOINT),
+        HITLS_PKI_SUCCESS);
+    ASSERT_EQ(CompareReencodedCrlExt(expectCrl, actualCrl, BSL_CID_CE_DELTACRLINDICATOR),
+        HITLS_PKI_SUCCESS);
+    ASSERT_TRUE(TestIsErrStackEmpty());
+    ret = HITLS_PKI_SUCCESS;
+EXIT:
+    HITLS_X509_ClearIdp(&idp);
+    HITLS_X509_CrlFree(expectCrl);
+    HITLS_X509_CrlFree(actualCrl);
     return ret;
 }
 
@@ -2279,7 +2340,7 @@ EXIT:
 /**
  * @test   SDV_X509_CRL_PARSE_IDP_THIRDPARTY_FUNC_TC002
  * @title  Parse CRL IDP fullName directoryName.
- * @brief  1. Parse a ThirdParty-generated CRL whose IDP extension contains fullName directoryName.
+ * @brief  1. Parse a ThirdParty-generated CRL whose critical IDP extension contains fullName directoryName.
  *         2. Get the public IDP model from the parsed CRL.
  * @expect 1. CRL parsing and IDP get both succeed.
  *         2. The decoded directoryName GeneralName matches the expected DN.
@@ -2289,7 +2350,7 @@ void SDV_X509_CRL_PARSE_IDP_THIRDPARTY_FUNC_TC002(char *path)
 {
     HITLS_X509_ExtIdp expect = {0};
 
-    ASSERT_EQ(BuildIdpFullNameDir(&expect, false), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(BuildIdpFullNameDir(&expect, true), HITLS_PKI_SUCCESS);
     ASSERT_EQ(CheckParsedIdp(path, &expect), HITLS_PKI_SUCCESS);
 EXIT:
     FreeBuiltIdp(&expect);
@@ -2299,7 +2360,7 @@ EXIT:
 /**
  * @test   SDV_X509_CRL_PARSE_IDP_THIRDPARTY_FUNC_TC003
  * @title  Parse CRL IDP relativeName.
- * @brief  1. Parse a ThirdParty-generated CRL whose IDP extension contains relativeName.
+ * @brief  1. Parse a ThirdParty-generated CRL whose critical IDP extension contains relativeName.
  *         2. Get the public IDP model from the parsed CRL.
  * @expect 1. CRL parsing and IDP get both succeed.
  *         2. The decoded relativeName RDN fragment matches the expected value.
@@ -2309,7 +2370,7 @@ void SDV_X509_CRL_PARSE_IDP_THIRDPARTY_FUNC_TC003(char *path)
 {
     HITLS_X509_ExtIdp expect = {0};
 
-    ASSERT_EQ(BuildIdpRelativeName(&expect, false), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(BuildIdpRelativeName(&expect, true), HITLS_PKI_SUCCESS);
     ASSERT_EQ(CheckParsedIdp(path, &expect), HITLS_PKI_SUCCESS);
 EXIT:
     FreeBuiltIdp(&expect);
@@ -2319,7 +2380,7 @@ EXIT:
 /**
  * @test   SDV_X509_CRL_PARSE_IDP_THIRDPARTY_FUNC_TC004
  * @title  Parse CRL IDP onlyContainsUserCerts.
- * @brief  1. Parse a ThirdParty-generated CRL whose IDP extension only sets onlyContainsUserCerts.
+ * @brief  1. Parse a ThirdParty-generated CRL whose critical IDP extension only sets onlyContainsUserCerts.
  *         2. Get the public IDP model from the parsed CRL.
  * @expect 1. CRL parsing and IDP get both succeed.
  *         2. onlyContainsUserCerts is true and other IDP scope fields remain false.
@@ -2329,7 +2390,7 @@ void SDV_X509_CRL_PARSE_IDP_THIRDPARTY_FUNC_TC004(char *path)
 {
     HITLS_X509_ExtIdp expect = {0};
 
-    ASSERT_EQ(BuildIdpOnlyUserCerts(&expect, false), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(BuildIdpOnlyUserCerts(&expect, true), HITLS_PKI_SUCCESS);
     ASSERT_EQ(CheckParsedIdp(path, &expect), HITLS_PKI_SUCCESS);
 EXIT:
     FreeBuiltIdp(&expect);
@@ -2339,7 +2400,7 @@ EXIT:
 /**
  * @test   SDV_X509_CRL_PARSE_IDP_THIRDPARTY_FUNC_TC005
  * @title  Parse CRL IDP CA scope, indirectCRL, and reasons.
- * @brief  1. Parse a ThirdParty-generated CRL whose IDP extension sets onlyContainsCACerts,
+ * @brief  1. Parse a ThirdParty-generated CRL whose critical IDP extension sets onlyContainsCACerts,
  *            indirectCRL, and a multi-bit onlySomeReasons value.
  *         2. Get the public IDP model from the parsed CRL.
  * @expect 1. CRL parsing and IDP get both succeed.
@@ -2350,7 +2411,7 @@ void SDV_X509_CRL_PARSE_IDP_THIRDPARTY_FUNC_TC005(char *path)
 {
     HITLS_X509_ExtIdp expect = {0};
 
-    ASSERT_EQ(BuildIdpCaIndirectReasons(&expect, false), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(BuildIdpCaIndirectReasons(&expect, true), HITLS_PKI_SUCCESS);
     ASSERT_EQ(CheckParsedIdp(path, &expect), HITLS_PKI_SUCCESS);
 EXIT:
     FreeBuiltIdp(&expect);
@@ -2459,16 +2520,16 @@ EXIT:
 
 /**
  * @test   SDV_X509_CRL_IDP_THIRDPARTY_ROUNDTRIP_TC001
- * @title  Preserve ThirdParty-generated IDP CRL bytes through parse and encode.
+ * @title  Re-encode ThirdParty-generated IDP extension bytes from the public model.
  * @brief  1. Read a ThirdParty-generated DER CRL containing an IDP extension.
- *         2. Parse the CRL with openhitls and re-encode it as DER.
- * @expect 1. Parsing and re-encoding both succeed.
- *         2. The re-encoded CRL is byte-identical to the original DER input.
+ *         2. Parse the IDP extension to the public model and set it on a new CRL.
+ * @expect 1. Parsing, getting, and setting the IDP extension all succeed.
+ *         2. The re-encoded IDP extension critical flag and extnValue match the vector.
  */
 /* BEGIN_CASE */
 void SDV_X509_CRL_IDP_THIRDPARTY_ROUNDTRIP_TC001(char *path)
 {
-    ASSERT_EQ(CheckThirdPartyCrlExactRoundtrip(BSL_FORMAT_ASN1, path), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(CheckThirdPartyCrlIdpExtRoundtrip(path), HITLS_PKI_SUCCESS);
 EXIT:
     return;
 }
@@ -2476,16 +2537,16 @@ EXIT:
 
 /**
  * @test   SDV_X509_CRL_IDP_DELTA_EXACT_ROUNDTRIP_TC001
- * @title  Preserve ThirdParty CRL bytes when IDP and Delta CRL Indicator coexist.
+ * @title  Re-encode ThirdParty IDP and Delta CRL Indicator extension bytes from public models.
  * @brief  1. Parse a ThirdParty-generated DER CRL containing both IDP and Delta CRL Indicator extensions.
- *         2. Re-encode the parsed CRL as DER.
- * @expect 1. Parsing and re-encoding both succeed.
- *         2. The re-encoded CRL is byte-identical to the original DER input.
+ *         2. Parse the extensions to public models and set them on a new CRL.
+ * @expect 1. Parsing, getting, and setting both extensions all succeed.
+ *         2. The re-encoded extensions' critical flags and extnValues match the vector.
  */
 /* BEGIN_CASE */
 void SDV_X509_CRL_IDP_DELTA_EXACT_ROUNDTRIP_TC001(char *path)
 {
-    ASSERT_EQ(CheckThirdPartyCrlExactRoundtrip(BSL_FORMAT_ASN1, path), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(CheckThirdPartyCrlIdpAndDeltaExtRoundtrip(path), HITLS_PKI_SUCCESS);
 EXIT:
     return;
 }

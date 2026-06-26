@@ -292,16 +292,16 @@ SDV_X509_CRL_PARSE_IDP_DER_BOUNDARY_TC003:
 SDV_X509_CRL_PARSE_IDP_THIRDPARTY_FUNC_TC001 fullName URI critical
 SDV_X509_CRL_PARSE_IDP_THIRDPARTY_FUNC_TC001:"../testdata/cert/test_for_crl/ext_idp/fullname_uri.der"
 
-SDV_X509_CRL_PARSE_IDP_THIRDPARTY_FUNC_TC002 fullName directoryName
+SDV_X509_CRL_PARSE_IDP_THIRDPARTY_FUNC_TC002 fullName directoryName critical
 SDV_X509_CRL_PARSE_IDP_THIRDPARTY_FUNC_TC002:"../testdata/cert/test_for_crl/ext_idp/fullname_dir.der"
 
-SDV_X509_CRL_PARSE_IDP_THIRDPARTY_FUNC_TC003 relativeName
+SDV_X509_CRL_PARSE_IDP_THIRDPARTY_FUNC_TC003 relativeName critical
 SDV_X509_CRL_PARSE_IDP_THIRDPARTY_FUNC_TC003:"../testdata/cert/test_for_crl/ext_idp/relativename.der"
 
-SDV_X509_CRL_PARSE_IDP_THIRDPARTY_FUNC_TC004 onlyContainsUserCerts
+SDV_X509_CRL_PARSE_IDP_THIRDPARTY_FUNC_TC004 onlyContainsUserCerts critical
 SDV_X509_CRL_PARSE_IDP_THIRDPARTY_FUNC_TC004:"../testdata/cert/test_for_crl/ext_idp/onlyuser.der"
 
-SDV_X509_CRL_PARSE_IDP_THIRDPARTY_FUNC_TC005 onlyContainsCACerts + indirectCRL + onlySomeReasons
+SDV_X509_CRL_PARSE_IDP_THIRDPARTY_FUNC_TC005 onlyContainsCACerts + indirectCRL + onlySomeReasons critical
 SDV_X509_CRL_PARSE_IDP_THIRDPARTY_FUNC_TC005:"../testdata/cert/test_for_crl/ext_idp/onlyca_indirect_reasons.der"
 
 SDV_X509_CRL_PARSE_IDP_THIRDPARTY_FUNC_TC006 empty IDP
@@ -325,16 +325,16 @@ SDV_X509_CRL_PARSE_IDP_THIRDPARTY_FUNC_TC010:"../testdata/cert/test_for_crl/ext_
 SDV_X509_CRL_IDP_THIRDPARTY_ROUNDTRIP_TC001 fullname URI critical
 SDV_X509_CRL_IDP_THIRDPARTY_ROUNDTRIP_TC001:"../testdata/cert/test_for_crl/ext_idp/fullname_uri.der"
 
-SDV_X509_CRL_IDP_THIRDPARTY_ROUNDTRIP_TC001 fullname directoryName
+SDV_X509_CRL_IDP_THIRDPARTY_ROUNDTRIP_TC001 fullname directoryName critical
 SDV_X509_CRL_IDP_THIRDPARTY_ROUNDTRIP_TC001:"../testdata/cert/test_for_crl/ext_idp/fullname_dir.der"
 
-SDV_X509_CRL_IDP_THIRDPARTY_ROUNDTRIP_TC001 relativeName
+SDV_X509_CRL_IDP_THIRDPARTY_ROUNDTRIP_TC001 relativeName critical
 SDV_X509_CRL_IDP_THIRDPARTY_ROUNDTRIP_TC001:"../testdata/cert/test_for_crl/ext_idp/relativename.der"
 
-SDV_X509_CRL_IDP_THIRDPARTY_ROUNDTRIP_TC001 onlyContainsUserCerts
+SDV_X509_CRL_IDP_THIRDPARTY_ROUNDTRIP_TC001 onlyContainsUserCerts critical
 SDV_X509_CRL_IDP_THIRDPARTY_ROUNDTRIP_TC001:"../testdata/cert/test_for_crl/ext_idp/onlyuser.der"
 
-SDV_X509_CRL_IDP_THIRDPARTY_ROUNDTRIP_TC001 onlyContainsCACerts + indirectCRL + onlySomeReasons
+SDV_X509_CRL_IDP_THIRDPARTY_ROUNDTRIP_TC001 onlyContainsCACerts + indirectCRL + onlySomeReasons critical
 SDV_X509_CRL_IDP_THIRDPARTY_ROUNDTRIP_TC001:"../testdata/cert/test_for_crl/ext_idp/onlyca_indirect_reasons.der"
 
 SDV_X509_CRL_IDP_DELTA_EXACT_ROUNDTRIP_TC001 IDP + Delta CRL Indicator exact roundtrip
