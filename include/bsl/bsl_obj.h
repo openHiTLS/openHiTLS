@@ -728,13 +728,13 @@ typedef enum {
 
     BSL_CID_MAC_AEAD = 5300,
 
-    BSL_CID_AES128_CCM8,
-    BSL_CID_AES256_CCM8,
-    BSL_CID_PBKDF1, /* identifies PBKDF1 */
-    BSL_CID_SM4_CCM,
-    BSL_CID_X509CRL,
-    BSL_CID_SMIMECAP,
-    BSL_CID_ON_DNSSRV, /* identifies id-on-dnsSRV */
+    BSL_CID_AES128_CCM8 = 5301,
+    BSL_CID_AES256_CCM8 = 5302,
+    BSL_CID_PBKDF1 = 5303, /* identifies PBKDF1 */
+    BSL_CID_SM4_CCM = 5304,
+    BSL_CID_X509CRL = 5305,
+    BSL_CID_SMIMECAP = 5306,
+    BSL_CID_ON_DNSSRV = 5307, /* identifies id-on-dnsSRV */
 
     BSL_CID_MAX,
     BSL_CID_EXTEND = 0x60000000,
