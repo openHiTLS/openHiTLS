@@ -239,7 +239,7 @@ void SDV_TLS_DTLS_CONSISTENCY_RFC6347_MTU_TC001()
     HLT_Tls_Res *tlsRes = HLT_ProcessTlsInit(localProcess, DTLS1_2, serverCtxConfig, NULL);
     ASSERT_TRUE(tlsRes != NULL);
     HITLS_SetDtlsTimerCb(tlsRes->ssl, DtlsTimerCallBack);
-    (void)HLT_TlsAccept(tlsRes->ssl);
+    tlsRes->acceptId = HLT_TlsAccept(tlsRes->ssl);
 
     HITLS_Ctx *ctx = tlsRes->ssl;
     HITLS_SetNoQueryMtu(ctx, false);
