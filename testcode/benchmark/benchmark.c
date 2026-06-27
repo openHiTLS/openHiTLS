@@ -191,6 +191,18 @@ static StrIdMap g_strIdMap[] = {
     {"xmss-sha2-10-256", CRYPT_XMSS_SHA2_10_256},
     {"xmssmt-sha2-20/2-256", CRYPT_XMSSMT_SHA2_20_2_256},
     {"xmssmt-sha2-20/4-256", CRYPT_XMSSMT_SHA2_20_4_256},
+    {"mceliece-6688128", CRYPT_KEM_TYPE_MCELIECE_6688128},
+    {"mceliece-6688128f", CRYPT_KEM_TYPE_MCELIECE_6688128_F},
+    {"mceliece-6688128pc", CRYPT_KEM_TYPE_MCELIECE_6688128_PC},
+    {"mceliece-6688128pcf", CRYPT_KEM_TYPE_MCELIECE_6688128_PCF},
+    {"mceliece-6960119", CRYPT_KEM_TYPE_MCELIECE_6960119},
+    {"mceliece-6960119f", CRYPT_KEM_TYPE_MCELIECE_6960119_F},
+    {"mceliece-6960119pc", CRYPT_KEM_TYPE_MCELIECE_6960119_PC},
+    {"mceliece-6960119pcf", CRYPT_KEM_TYPE_MCELIECE_6960119_PCF},
+    {"mceliece-8192128", CRYPT_KEM_TYPE_MCELIECE_8192128},
+    {"mceliece-8192128f", CRYPT_KEM_TYPE_MCELIECE_8192128_F},
+    {"mceliece-8192128pc", CRYPT_KEM_TYPE_MCELIECE_8192128_PC},
+    {"mceliece-8192128pcf", CRYPT_KEM_TYPE_MCELIECE_8192128_PCF},
 };
 
 static uint32_t g_benchFailureCount = 0;
@@ -198,7 +210,7 @@ static uint32_t g_benchFailureCount = 0;
 static int32_t AlgStr2Id(const char *str)
 {
     for (size_t i = 0; i < SIZEOF(g_strIdMap); i++) {
-        if (strncasecmp(g_strIdMap[i].s, str, strlen(g_strIdMap[i].s)) == 0) {
+        if (strcasecmp(g_strIdMap[i].s, str) == 0) {
             return g_strIdMap[i].id;
         }
     }

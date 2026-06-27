@@ -33,7 +33,8 @@ typedef struct BenchCtx_ BenchCtx;
     X(Ed25519)            \
     X(Mldsa)              \
     X(Mlkem)              \
-    X(Xmss)
+    X(Xmss)               \
+    X(Mceliece)
 
 #define DECLARE_BENCH_GETTER(name) \
     const BenchCtx *BenchmarkGet##name(void);

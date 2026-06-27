@@ -30,8 +30,8 @@ static void RadixSortI32(uint32_t *ua, uint32_t *tmp, const int64_t n)
     }
 
     const int32_t rad = 256; // Number of buckets per radix pass (8-bit digit --> 2^8 = 256)
-    size_t cnt[256];
-    size_t pref[256];
+    uint32_t cnt[256];
+    uint32_t pref[256];
     for (int32_t pass = 0; pass < 4; pass++) { // Number of radix passes for full 32-bit key (32 / 8 = 4)
         memset(cnt, 0, sizeof(cnt));
         int32_t shift = pass * 8; // Bit-shift per radix pass (8-bit digit size)
@@ -63,7 +63,7 @@ static int32_t SortU32LE(uint32_t *a, const int64_t n)
 {
     // reinterpret as unsigned for radix order; allocate temporary buffer
     uint32_t *ua = (uint32_t *)a;
-    uint32_t *tmp = (uint32_t *)BSL_SAL_Malloc((size_t)n * sizeof(uint32_t));
+    uint32_t *tmp = (uint32_t *)BSL_SAL_Malloc((uint32_t)n * sizeof(uint32_t));
     if (tmp == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         return CRYPT_MEM_ALLOC_FAIL;
@@ -81,7 +81,7 @@ static void Write1BitLE(uint8_t *buf, uint32_t bit_pos, uint8_t bit)
 }
 
 // Build 32-bit keys: (pi[i]^1, pi[i^1])
-static void Build32BitsKeys(uint32_t *out, const int16_t *pi, const uint32_t n)
+static void Build32BitsKeys(uint32_t *out, const uint16_t *pi, const uint32_t n)
 {
     for (uint32_t i = 0; i < n; i++) {
         uint32_t lo = (uint32_t)(pi[i] ^ 1);
@@ -207,10 +207,10 @@ static int32_t ProcessLargeAlphabet(uint32_t *areaA, uint32_t *areaB, const uint
 }
 
 // Prepare parent keys for children recursion
-static int32_t PrepareParentKeys(uint32_t *areaA, const int16_t *pi, const uint32_t n)
+static int32_t PrepareParentKeys(uint32_t *areaA, const uint16_t *pi, const uint32_t n)
 {
     for (uint32_t i = 0; i < n; i++) {
-        areaA[i] = ((int32_t)pi[i] << 16) + i;
+        areaA[i] = ((uint32_t)pi[i] << 16) | i;
     }
     int32_t ret = SortU32LE(areaA, n);
     if (ret != CRYPT_SUCCESS) {
@@ -271,11 +271,11 @@ static int32_t EmitSecondHalf(uint32_t *posOut, uint8_t *out, uint32_t pos, uint
 }
 
 // Build child permutations for recursion
-static void BuildChildPerm(int16_t *q, const uint32_t *areaA, const uint32_t n)
+static void BuildChildPerm(uint16_t *q, const uint32_t *areaA, const uint32_t n)
 {
     for (uint32_t j = 0; j < n / 2; j++) {
-        q[j] = (int16_t)((areaA[2 * j] & 0xFFFFU) >> 1);
-        q[j + n / 2] = (int16_t)((areaA[2 * j + 1] & 0xFFFFU) >> 1);
+        q[j] = (uint16_t)((areaA[2 * j] & 0xFFFFU) >> 1);
+        q[j + n / 2] = (uint16_t)((areaA[2 * j + 1] & 0xFFFFU) >> 1);
     }
 }
 
@@ -288,15 +288,15 @@ static void BuildChildPerm(int16_t *q, const uint32_t *areaA, const uint32_t n)
  *    pi          - permutation over 0..n-1
  *    w           - recursion depth (number of control-bit layers)
  *    n           - current segment length (always a power of 2)
- *    temp        - scratch buffer (size >= 2*n + n/4*sizeof(int16_t))
+ *    temp        - scratch buffer (size >= 2*n + n/4*sizeof(uint16_t))
  *  The function writes control bits into 'out' and recurses on halves.
  */
-static int32_t BenesNetControlbits(uint8_t *out, uint32_t pos, uint32_t step, const int16_t *pi, const uint32_t w,
+static int32_t BenesNetControlbitsCore(uint8_t *out, uint32_t pos, uint32_t step, const uint16_t *pi, const uint32_t w,
                                    const uint32_t n, int32_t *temp)
 {
     uint32_t *areaA = (uint32_t *)temp; // work area 0
     uint32_t *areaB = (uint32_t *)(temp + n); // work area 1
-    int16_t *q = (int16_t *)(temp + n + n / 4); // perm buffer
+    uint16_t *q = (uint16_t *)(temp + n + n / 4); // perm buffer
 
     if (w == 1) { // Base-case sentinel – when only 1 control layer remains, emit single bit and stop
         Write1BitLE(out, pos, pi[0] & 1U);
@@ -370,12 +370,12 @@ static int32_t BenesNetControlbits(uint8_t *out, uint32_t pos, uint32_t step, co
     pos -= (2 * w - 2) * step * (n / 2);
 
     BuildChildPerm(q, areaA, n);
-    ret = BenesNetControlbits(out, pos, step * 2, q, w - 1, n / 2, temp);
+    ret = BenesNetControlbitsCore(out, pos, step * 2, q, w - 1, n / 2, temp);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
-    ret = BenesNetControlbits(out, pos + step, step * 2, q + n / 2, w - 1, n / 2, temp);
+    ret = BenesNetControlbitsCore(out, pos + step, step * 2, q + n / 2, w - 1, n / 2, temp);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
@@ -397,12 +397,12 @@ static uint16_t BitrevMLocal(uint16_t x, const int32_t m)
 // Bit helpers for bit-plane operations
 static uint32_t GetBitFromVec(const uint8_t *vec, const int64_t idx)
 {
-    return (vec[(size_t)(idx >> 3)] >> (idx & 7)) & 1;
+    return (vec[(uint32_t)(idx >> 3)] >> (idx & 7)) & 1;
 }
 
 static void SetBitInVec(uint8_t *vec, const int64_t idx, const uint32_t bit)
 {
-    size_t byteIndex = (size_t)(idx >> 3);
+    uint32_t byteIndex = (uint32_t)(idx >> 3);
     uint8_t mask = (uint8_t)(1u << (idx & 7));
     if (bit != 0) {
         vec[byteIndex] |= mask;
@@ -419,7 +419,7 @@ static void LayerBits(uint8_t *bitvec, const uint8_t *layerCBits, const int32_t 
     int64_t index = 0;
     for (int64_t i = 0; i < nBits; i += stride * 2) {
         for (int64_t j = 0; j < stride; j++) {
-            int32_t ctrl = (layerCBits[(size_t)(index >> 3)] >> (index & 7)) & 1;
+            int32_t ctrl = (layerCBits[(uint32_t)(index >> 3)] >> (index & 7)) & 1;
             if (ctrl != 0) {
                 int64_t a = i + j;
                 int64_t b = i + j + stride;
@@ -434,24 +434,24 @@ static void LayerBits(uint8_t *bitvec, const uint8_t *layerCBits, const int32_t 
     }
 }
 
-int32_t CbitsFromPermNs(uint8_t *out, const int16_t *pi, const int64_t w, const int64_t n)
+int32_t ControlBitsFromBenesNetwork(uint8_t *out, const uint16_t *pi, const int64_t w, const int64_t n)
 {
-    int32_t *temp = (int32_t *)BSL_SAL_Malloc(sizeof(int32_t) * (size_t)(2 * n));
+    int32_t *temp = (int32_t *)BSL_SAL_Malloc(sizeof(int32_t) * (uint32_t)(2 * n));
     if (temp == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         return CRYPT_MEM_ALLOC_FAIL;
     }
-    memset(temp, 0, sizeof(int32_t) * (size_t)(2 * n));
-    size_t outBytes = (size_t)((((2 * w - 1) * n / 2) + 7) / 8);
+    memset(temp, 0, sizeof(int32_t) * (uint32_t)(2 * n));
+    uint32_t outBytes = (uint32_t)((((2 * w - 1) * n / 2) + 7) / 8);
     memset(out, 0, outBytes);
-    int32_t ret = BenesNetControlbits(out, 0, 1, pi, w, n, temp);
+    int32_t ret = BenesNetControlbitsCore(out, 0, 1, pi, w, n, temp);
     BSL_SAL_FREE(temp);
     return ret;
 }
 
 static int32_t AllocBitPlanes(uint8_t ***planes, const int64_t w, const int64_t planeBytes)
 {
-    *planes = (uint8_t **)BSL_SAL_Malloc(sizeof(uint8_t *) * (size_t)w);
+    *planes = (uint8_t **)BSL_SAL_Malloc(sizeof(uint8_t *) * (uint32_t)w);
     if (*planes == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         return CRYPT_MEM_ALLOC_FAIL;
@@ -513,7 +513,7 @@ static void ApplyBenesLayers(uint8_t **planes, const uint8_t *cbits, const int64
     }
 }
 
-static void ReconstructSupport(GFElement *gfL, uint8_t **planes, const int32_t lenN, const int64_t w)
+static void ReconstructSupport(uint16_t *gfL, uint8_t **planes, const int32_t lenN, const int64_t w)
 {
     for (int32_t j = 0; j < lenN; j++) {
         uint16_t val = 0;
@@ -521,19 +521,15 @@ static void ReconstructSupport(GFElement *gfL, uint8_t **planes, const int32_t l
             val = (uint16_t)(val << 1);
             val |= (uint16_t)GetBitFromVec(planes[b], j);
         }
-        gfL[j] = (GFElement)val;
+        gfL[j] = (uint16_t)val;
     }
 }
 
-int32_t SupportFromCbits(GFElement *gfL, const uint8_t *cbits, const int64_t w, const int32_t lenN)
+int32_t SupportSetFromControlbits(uint16_t *gfL, const uint8_t *cbits, const int64_t w, const int32_t lenN)
 {
-    if (gfL == NULL || cbits == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
-        return CRYPT_NULL_INPUT;
-    }
     int64_t n = 1LL << w;
     int64_t layerBytes = n >> 4; // (n/2) bits / layer -> n/16 bytes? (original used n/16)
-    size_t planeBytes = (size_t)(n >> 3); // n bits -> n/8 bytes
+    uint32_t planeBytes = (uint32_t)(n >> 3); // n bits -> n/8 bytes
 
     uint8_t **planes = NULL;
     int32_t ret = AllocBitPlanes(&planes, w, planeBytes);
@@ -541,7 +537,6 @@ int32_t SupportFromCbits(GFElement *gfL, const uint8_t *cbits, const int64_t w, 
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
-
     InitPlanesWithBitrev(planes, w, n);
     ApplyBenesLayers(planes, cbits, w, n, layerBytes);
     ReconstructSupport(gfL, planes, lenN, w);
