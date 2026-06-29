@@ -45,6 +45,39 @@
 
 /* END_HEADER */
 
+/* BEGIN_CASE */
+void SDV_X509_EXT_ClearSanPublic_TC001(char *certPath)
+{
+#if defined(HITLS_PKI_X509_CRT_PARSE)
+    TestMemInit();
+    HITLS_X509_Cert *cert = NULL;
+    HITLS_X509_ExtSan san = {0};
+
+    HITLS_X509_ClearSubjectAltName(NULL);
+    HITLS_X509_ClearSubjectAltName(&san);
+    ASSERT_EQ(san.names, NULL);
+
+    ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_ASN1, certPath, &cert), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_EXT_GET_SAN, &san, sizeof(san)), HITLS_PKI_SUCCESS);
+    ASSERT_TRUE(BSL_LIST_COUNT(san.names) > 0);
+
+    HITLS_X509_ClearSubjectAltName(&san);
+    ASSERT_EQ(san.names, NULL);
+    HITLS_X509_ClearSubjectAltName(&san);
+    ASSERT_EQ(san.names, NULL);
+
+    ASSERT_TRUE(TestIsErrStackEmpty());
+EXIT:
+    HITLS_X509_ClearSubjectAltName(&san);
+    HITLS_X509_CertFree(cert);
+#else
+    (void)certPath;
+    SKIP_TEST();
+#endif
+    return;
+}
+/* END_CASE */
+
 /* ============================================================================
  * Stub Definitions
  * ============================================================================ */

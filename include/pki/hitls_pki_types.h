@@ -104,7 +104,8 @@ typedef enum {
                                                     Note: If key usage is not set, return 0xffff. */
     HITLS_X509_EXT_GET_BCONS,                   /** Get the basic constraints extension. */
     HITLS_X509_EXT_GET_SAN,                     /** Get Subject Alternative Name from extensions.
-                                                    Note: Returns a list of HITLS_X509_GeneralName. */
+                                                    Note: Returns a list of HITLS_X509_GeneralName.
+                                                    Call HITLS_X509_ClearSubjectAltName to clean the output. */
     HITLS_X509_EXT_GET_GENERIC,                 /** Get a generic extension by OID.
                                                     Note: Only supported for custom extensions. */
     HITLS_X509_EXT_GET_DELTA_CRL,               /** Get the delta CRL indicator extension. */

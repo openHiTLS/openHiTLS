@@ -1,3 +1,6 @@
+SDV_X509_EXT_ClearSanPublic_TC001
+SDV_X509_EXT_ClearSanPublic_TC001:"../testdata/cert/asn1/certcheck/cert_ext_san_element_0_length.der"
+
 SDV_HITLS_X509_FreeCert_TC001
 SDV_HITLS_X509_FreeCert_TC001
 

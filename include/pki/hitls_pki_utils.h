@@ -106,6 +106,16 @@ void HITLS_X509_ClearIdp(HITLS_X509_ExtIdp *idp);
 
 /**
  * @ingroup pki
+ * @brief Clear a HITLS_X509_ExtSan structure.
+ * @par Description: This interface needs to be called to clean up memory when obtaining SAN extensions using
+ *  the macro HITLS_X509_EXT_GET_SAN.
+ *
+ * @param san [IN] The HITLS_X509_ExtSan san.
+ */
+void HITLS_X509_ClearSubjectAltName(HITLS_X509_ExtSan *san);
+
+/**
+ * @ingroup pki
  * @brief Free a general name.
  *
  * @param data [IN] The general name.

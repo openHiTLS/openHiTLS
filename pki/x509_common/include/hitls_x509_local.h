@@ -221,8 +221,6 @@ int32_t HITLS_X509_CheckIdp(const HITLS_X509_ExtIdp *idp);
 
 int32_t HITLS_X509_ParseSubjectAltName(HITLS_X509_ExtEntry *extEntry,  HITLS_X509_ExtSan *san);
 
-void HITLS_X509_ClearSubjectAltName(HITLS_X509_ExtSan *san);
-
 int32_t HITLS_X509_ParseCdp(HITLS_X509_ExtEntry *extEntry, HITLS_X509_ExtCdp *crldp);
 
 int32_t HITLS_X509_CheckCdp(const HITLS_X509_ExtCdp *crldp);
