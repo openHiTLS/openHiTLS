@@ -28,8 +28,10 @@
 #include "indicator.h"
 #include "hs.h"
 #include "hitls_error.h"
+#include "crypt.h"
+#include "bsl_bytes.h"
 
-#ifdef HITLS_TLS_PROTO_TLS13
+#if defined(HITLS_TLS_PROTO_TLS13) || defined(HITLS_TLS_PROTO_DTLS13)
 /* 16384 + 1: RFC8446 5.4. Record Padding the full encoded TLSInnerPlaintext MUST NOT exceed 2^14 + 1 octets. */
 #define MAX_PADDING_LEN 16385
 
@@ -74,7 +76,7 @@ int32_t RecParseInnerPlaintext(TLS_Ctx *ctx, const uint8_t *text, uint32_t *text
         "Recved  UNEXPECTED_MESSAGE.", 0, 0, 0, 0);
     return RecordSendAlertMsg(ctx, ALERT_LEVEL_FATAL, ALERT_UNEXPECTED_MESSAGE);
 }
-#endif /* HITLS_TLS_PROTO_TLS13 */
+#endif /* HITLS_TLS_PROTO_TLS13 || HITLS_TLS_PROTO_DTLS13 */
 
 static int32_t DefaultDecryptPostProcess(TLS_Ctx *ctx, RecConnSuitInfo *suiteInfo, REC_TextInput *encryptedMsg,
     uint8_t *data, uint32_t *dataLen)
@@ -84,9 +86,9 @@ static int32_t DefaultDecryptPostProcess(TLS_Ctx *ctx, RecConnSuitInfo *suiteInf
     (void)encryptedMsg;
     (void)data;
     (void)dataLen;
-#ifdef HITLS_TLS_PROTO_TLS13
+#if defined(HITLS_TLS_PROTO_TLS13) || defined(HITLS_TLS_PROTO_DTLS13)
     /* If the version is tls1.3 and encryption is required, you need to create a TLSInnerPlaintext message */
-    if (ctx->negotiatedInfo.version == HITLS_VERSION_TLS13 && suiteInfo != NULL) {
+    if ((ctx->negotiatedInfo.version == HITLS_VERSION_TLS13 || ctx->negotiatedInfo.version == HITLS_VERSION_DTLS13) && suiteInfo != NULL) {
         return RecParseInnerPlaintext(ctx, data, dataLen, &encryptedMsg->type);
     }
 #endif
@@ -95,13 +97,14 @@ static int32_t DefaultDecryptPostProcess(TLS_Ctx *ctx, RecConnSuitInfo *suiteInf
 static int32_t DefaultEncryptPreProcess(TLS_Ctx *ctx, uint8_t recordType, const uint8_t *data, uint32_t plainLen,
     RecordPlaintext *recPlaintext)
 {
-#ifdef HITLS_TLS_PROTO_TLS
+#ifdef HITLS_TLS_PROTO_TLS // todo
     (void)ctx, (void)data;
     recPlaintext->recordType = recordType;
     recPlaintext->plainLen = plainLen;
     recPlaintext->plainData = NULL;
-#ifdef HITLS_TLS_PROTO_TLS13
-    if (ctx->negotiatedInfo.version != HITLS_VERSION_TLS13 ||
+#if defined(HITLS_TLS_PROTO_TLS13) || defined(HITLS_TLS_PROTO_DTLS13)
+    if ((ctx->negotiatedInfo.version != HITLS_VERSION_TLS13 &&
+         ctx->negotiatedInfo.version != HITLS_VERSION_DTLS13) ||
         ctx->recCtx->writeStates.currentState->suiteInfo == NULL) {
         return HITLS_SUCCESS;
     }
@@ -260,3 +263,73 @@ const RecCryptoFunc *RecGetCryptoFuncs(const RecConnSuitInfo *suiteInfo)
     };
     return &cryptoFuncUnsupport;
 }
+
+#ifdef HITLS_TLS_PROTO_DTLS13
+int32_t Dtls13CryptSequenceNumber(TLS_Ctx *ctx, HITLS_CipherAlgo cipherAlgo, const uint8_t *snKey, const uint8_t *ciphertext,
+    uint32_t cipherLen, const uint8_t *plaintextSeq, uint8_t *encryptedSn, uint8_t snLen)
+{
+    if (cipherLen < 16) { // rfc 9147 4.2.3 This procedure requires the ciphertext length to be at least 16 bytes
+        return HITLS_INVALID_INPUT;
+    }
+    uint8_t mask[16];
+    uint8_t output[32] = {0};
+    uint32_t outLen = 16;
+    uint32_t snKeyLen = 0;
+    HITLS_CipherAlgo algId;
+    HITLS_CipherType type;
+    uint8_t zeros[16] = {0};
+    const uint8_t *in = ciphertext;
+    uint8_t *iv = NULL;
+    uint32_t ivLen = 0;
+    uint8_t nonce[12] = {0};
+    uint8_t conter[4] = {0};
+    HITLS_CipherParameters cipherParam = {0};
+    if (cipherAlgo == HITLS_CIPHER_AES_128_GCM ||
+        cipherAlgo == HITLS_CIPHER_AES_128_CCM ||
+        cipherAlgo == HITLS_CIPHER_AES_128_CCM8) {
+        algId = HITLS_CIPHER_AES_128_ECB;
+        type = HITLS_ECB_CIPHER;
+        snKeyLen = 16;
+    } else if (cipherAlgo == HITLS_CIPHER_AES_256_GCM ||
+        cipherAlgo == HITLS_CIPHER_AES_256_CCM ||
+        cipherAlgo == HITLS_CIPHER_AES_256_CCM8) {
+        algId = HITLS_CIPHER_AES_256_ECB;
+        type = HITLS_ECB_CIPHER;
+        snKeyLen = 32;
+    } else if (cipherAlgo == HITLS_CIPHER_CHACHA20_POLY1305) {
+        // RFC 9147 §4.2.3: counter = ciphertext[0..3], nonce = ciphertext[4..15]
+        algId = HITLS_CIPHER_CHACHA20_POLY1305;
+        type = HITLS_AEAD_CIPHER;
+        snKeyLen = 32;
+        in = zeros;
+
+        memcpy(conter, ciphertext, 4);
+        memcpy(nonce, &ciphertext[4], 12);
+        iv = nonce;
+        ivLen = 12;
+        cipherParam.counter = conter;
+        cipherParam.counterLen = 4;
+    } else {
+        BSL_ERR_PUSH_ERROR(HITLS_REC_ERR_NOT_SUPPORT_CIPHER);
+        return HITLS_REC_ERR_NOT_SUPPORT_CIPHER;
+    }
+    
+    cipherParam.ctx = NULL;
+    cipherParam.type = type;
+    cipherParam.algo = algId;
+    cipherParam.key = snKey;
+    cipherParam.keyLen = snKeyLen;
+    cipherParam.iv = iv;
+    cipherParam.ivLen = ivLen;
+    int32_t ret = SAL_CRYPT_Encrypt(LIBCTX_FROM_CTX(ctx), ATTRIBUTE_FROM_CTX(ctx), &cipherParam, in, 16, output, &outLen);
+    if (ret != HITLS_SUCCESS) {
+        return ret;
+    }
+    (void)memcpy(mask, output, 16);
+    // XOR加密序列号 (加密和解密使用相同的操作)
+    for (size_t i = 0; i < snLen; i++) {
+        encryptedSn[i] = plaintextSeq[i] ^ mask[i];
+    }
+    return HITLS_SUCCESS;
+}
+#endif

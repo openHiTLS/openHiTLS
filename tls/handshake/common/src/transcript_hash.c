@@ -21,6 +21,7 @@
 #include "bsl_err_internal.h"
 #include "bsl_sal.h"
 #include "hitls_error.h"
+#include "hs_msg.h"
 #include "transcript_hash.h"
 
 int32_t VERIFY_SetHash(HITLS_Lib_Ctx *libCtx, const char *attrName, VerifyCtx *ctx, HITLS_HashAlgo hashAlgo)
@@ -107,6 +108,46 @@ int32_t VERIFY_Append(VerifyCtx *ctx, const uint8_t *data, uint32_t len)
     return HITLS_SUCCESS;
 }
 
+#ifdef HITLS_TLS_PROTO_DTLS13
+int32_t VERIFY_Dtls13BuildTranscriptMsg(const uint8_t *msg, uint32_t msgLen, uint8_t **transcript,
+    uint32_t *transcriptLen)
+{
+    if (msg == NULL || transcript == NULL || transcriptLen == NULL || msgLen < DTLS_HS_MSG_HEADER_SIZE) {
+        return HITLS_INTERNAL_EXCEPTION;
+    }
+
+    uint32_t len = HS_MSG_HEADER_SIZE + msgLen - DTLS_HS_MSG_HEADER_SIZE;
+    uint8_t *data = BSL_SAL_Calloc(1u, len);
+    if (data == NULL) {
+        BSL_ERR_PUSH_ERROR(HITLS_MEMALLOC_FAIL);
+        return HITLS_MEMALLOC_FAIL;
+    }
+    memcpy(data, msg, HS_MSG_HEADER_SIZE);
+    memcpy(&data[HS_MSG_HEADER_SIZE], &msg[DTLS_HS_MSG_HEADER_SIZE], msgLen - DTLS_HS_MSG_HEADER_SIZE);
+    *transcript = data;
+    *transcriptLen = len;
+    return HITLS_SUCCESS;
+}
+
+int32_t VERIFY_Dtls13Append(VerifyCtx *ctx, const uint8_t *data, uint32_t len)
+{
+    if (ctx == NULL) {
+        return HITLS_INTERNAL_EXCEPTION;
+    }
+
+    uint8_t *transcript = NULL;
+    uint32_t transcriptLen = 0;
+    int32_t ret = VERIFY_Dtls13BuildTranscriptMsg(data, len, &transcript, &transcriptLen);
+    if (ret != HITLS_SUCCESS) {
+        return ret;
+    }
+
+    ret = VERIFY_Append(ctx, transcript, transcriptLen);
+    BSL_SAL_FREE(transcript);
+    return ret;
+}
+#endif /* HITLS_TLS_PROTO_DTLS13 */
+
 int32_t VERIFY_CalcSessionHash(VerifyCtx *ctx, uint8_t *digest, uint32_t *digestLen)
 {
     int32_t ret;
@@ -126,7 +167,6 @@ int32_t VERIFY_CalcSessionHash(VerifyCtx *ctx, uint8_t *digest, uint32_t *digest
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15722, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "Verify data calculate error: digest final fail.", 0, 0, 0, 0);
     }
-
     return ret;
 }
 

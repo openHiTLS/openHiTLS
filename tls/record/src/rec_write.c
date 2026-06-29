@@ -12,6 +12,7 @@
  * MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
  * See the Mulan PSL v2 for more details.
  */
+#include <string.h>
 #include "hitls_build.h"
 #include "bsl_sal.h"
 #include "tls_binlog_id.h"
@@ -31,7 +32,10 @@
 #include "indicator.h"
 #endif
 #include "rec_crypto.h"
-
+#ifdef HITLS_TLS_FEATURE_DTLS_CID
+#include "dtls_cid.h"
+#endif
+#include "rec_crypto_aead.h"
 
 RecConnState *GetWriteConnState(const TLS_Ctx *ctx)
 {
@@ -69,17 +73,17 @@ static uint64_t GetCipherLimit(uint32_t cipherAlg)
     }
 }
 
-static int32_t CheckEncryptionLimits(TLS_Ctx *ctx, RecConnState *state)
+static void CheckEncryptionLimits(TLS_Ctx *ctx, RecConnState *state)
 {
     if (ctx->negotiatedInfo.version != HITLS_VERSION_TLS13 && ctx->negotiatedInfo.version != HITLS_VERSION_DTLS13) {
-        return HITLS_SUCCESS;
+        return;
     }
     if (state->suiteInfo == NULL) {
-        return HITLS_SUCCESS;
+        return;
     }
     uint64_t limit = GetCipherLimit(state->suiteInfo->cipherAlg);
     if (limit == 0) {
-        return HITLS_SUCCESS;
+        return;
     }
 #if defined(HITLS_TLS_FEATURE_KEY_UPDATE)
     uint64_t seq = RecConnGetSeqNum(state);
@@ -87,10 +91,19 @@ static int32_t CheckEncryptionLimits(TLS_Ctx *ctx, RecConnState *state)
         (void)HITLS_KeyUpdate(ctx, HITLS_UPDATE_NOT_REQUESTED);
     }
 #endif
-    return HITLS_SUCCESS;
 }
 
-#ifdef HITLS_TLS_PROTO_DTLS12
+static const uint8_t *GetPlainMsgData(RecordPlaintext *recPlaintext, const uint8_t *data)
+{
+    (void)recPlaintext;
+    return
+#if defined(HITLS_TLS_PROTO_TLS13) || defined(HITLS_TLS_PROTO_DTLS13)
+        recPlaintext->isTlsInnerPlaintext ? recPlaintext->plainData :
+#endif
+        data;
+}
+
+#if defined(HITLS_TLS_PROTO_DTLS12) || defined(HITLS_TLS_PROTO_DTLS13)
 // Write the data message.
 static int32_t DatagramWrite(TLS_Ctx *ctx, RecBuf *buf)
 {
@@ -141,25 +154,90 @@ void DtlsPlainMsgGenerate(REC_TextInput *plainMsg, const TLS_Ctx *ctx,
         plainMsg->version = HITLS_VERSION_DTLS10;
         if (IS_SUPPORT_TLCP(ctx->config.tlsConfig.originVersionMask)) {
             plainMsg->version = HITLS_VERSION_TLCP_DTLCP11;
+        } else if (ctx->config.tlsConfig.maxVersion == HITLS_VERSION_DTLS13) {
+            plainMsg->version = HITLS_VERSION_DTLS12;
         }
     } else {
         plainMsg->version = ctx->negotiatedInfo.version;
+        if (ctx->negotiatedInfo.version == HITLS_VERSION_DTLS13) {
+            plainMsg->version = HITLS_VERSION_DTLS12;
+        }
     }
 
     BSL_Uint64ToByte(epochSeq, plainMsg->seq);
 }
 
-static inline void DtlsRecordHeaderPack(uint8_t *outBuf, REC_Type recordType, uint16_t version,
-    uint64_t epochSeq, uint32_t cipherTextLen)
+#ifdef HITLS_TLS_PROTO_DTLS13
+static int32_t Dtls13RecordHeaderPack(TLS_Ctx *ctx, uint8_t *outBuf, RecConnState *state, const uint8_t *cipherText,
+    uint32_t cipherTextLen, bool protectSeq)
 {
+    size_t offset = 0;
+    uint8_t firstByte = REC_DTLS13_UNI_HEADER_FIX_BITS;  // 0x00100000: DTLS 1.3 mask
+    if (state->suiteInfo == NULL) {
+        return HITLS_REC_INVLAID_RECORD;
+    }
+    firstByte |= (RecConnGetEpoch(state) & REC_DTLS13_UNI_HEADER_EPOCH_BITS_MASK);
+    uint8_t cidLen = 0;
+#ifdef HITLS_TLS_FEATURE_DTLS_CID
+    cidLen = ctx->negotiatedInfo.peerCidEntry.cidLen;
+#endif
+    if (cidLen > 0) {
+        firstByte |= REC_DTLS13_UNI_HEADER_CID_BIT;
+    }
+    firstByte |= REC_DTLS13_UNI_HEADER_SEQ_BIT;
+    size_t snLen = 2;  // default 2 bytes
+    firstByte |= REC_DTLS13_UNI_HEADER_LEN_BIT;
+
+    outBuf[offset++] = firstByte;
+#ifdef HITLS_TLS_FEATURE_DTLS_CID
+    if (cidLen > 0) {
+        memcpy(&outBuf[offset], ctx->negotiatedInfo.peerCidEntry.cidVal, cidLen);
+        offset += cidLen;
+    }
+#endif
+
+    uint8_t seq[2];
+    BSL_Uint16ToByte(state->seq, seq);
+    if (protectSeq) {
+        uint8_t encryptedSn[2]; // 默认2字节
+        int32_t ret = Dtls13CryptSequenceNumber(ctx, state->suiteInfo->cipherAlg,
+            state->suiteInfo->snKey, cipherText, cipherTextLen, seq, encryptedSn, snLen);
+        if (ret != HITLS_SUCCESS) {
+            return ret;
+        }
+        memcpy(&outBuf[offset], encryptedSn, snLen);
+    } else {
+        memcpy(&outBuf[offset], seq, snLen);
+    }
+    offset += snLen;
+    BSL_Uint16ToByte((uint16_t)cipherTextLen, &outBuf[offset]);
+    offset += 2; // body length 2 bytes
+    return HITLS_SUCCESS;
+}
+#endif
+
+static inline int32_t DtlsRecordHeaderPack(TLS_Ctx *ctx, uint8_t *outBuf, REC_Type recordType, uint16_t version,
+    RecConnState *state, uint8_t *cipherText, uint32_t cipherTextLen)
+{
+    (void)ctx;
+    (void)cipherText;
+    (void)cipherTextLen;
+    uint16_t epoch = RecConnGetEpoch(state);
+#ifdef HITLS_TLS_PROTO_DTLS13
+    if (ctx->negotiatedInfo.version == HITLS_VERSION_DTLS13 && epoch > 0) {
+        return Dtls13RecordHeaderPack(ctx, outBuf, state, cipherText, cipherTextLen, true);
+    }
+#endif
     outBuf[0] = recordType;
     BSL_Uint16ToByte(version, &outBuf[1]);
-
+    uint64_t epochSeq = REC_EPOCHSEQ_CAL(epoch, state->seq);
     BSL_Uint64ToByte(epochSeq, &outBuf[REC_DTLS_RECORD_EPOCH_OFFSET]);
     BSL_Uint16ToByte((uint16_t)cipherTextLen, &outBuf[REC_DTLS_RECORD_LENGTH_OFFSET]);
+    return HITLS_SUCCESS;
 }
 
-static int32_t DtlsTrySendMessage(TLS_Ctx *ctx, RecCtx *recordCtx, REC_Type recordType, RecConnState *state)
+static int32_t DtlsTrySendMessage(TLS_Ctx *ctx, RecCtx *recordCtx, REC_Type recordType, RecConnState *state,
+    uint64_t epochSeq)
 {
     (void)recordType;
 #ifdef HITLS_BSL_UIO_SCTP
@@ -189,10 +267,33 @@ static int32_t DtlsTrySendMessage(TLS_Ctx *ctx, RecCtx *recordCtx, REC_Type reco
         RecTryFreeRecBuf(ctx, true);
     }
 #endif
+    recordCtx->lastWriteEpochSeq = epochSeq;
+    recordCtx->hasLastWriteEpochSeq = true;
     /** Add the record sequence */
     RecConnSetSeqNum(state, state->seq + 1);
 
     return HITLS_SUCCESS;
+}
+
+static uint32_t RecGetWriteHeaderLen(const TLS_Ctx *ctx, RecConnState *state)
+{
+#ifndef HITLS_TLS_PROTO_DTLS13
+    (void)ctx;
+    (void)state;
+#endif
+    uint32_t headerLen = REC_DTLS_RECORD_HEADER_LEN;
+#ifdef HITLS_TLS_PROTO_DTLS13
+    if (ctx->negotiatedInfo.version == HITLS_VERSION_DTLS13 &&
+        IS_SUPPORT_DATAGRAM(ctx->config.tlsConfig.originVersionMask) &&
+        RecConnGetEpoch(state) > 0) {
+        uint32_t cidLen = 0;
+#ifdef HITLS_TLS_FEATURE_DTLS_CID
+        cidLen = ctx->negotiatedInfo.peerCidEntry.cidLen;
+#endif
+        headerLen = REC_DTLS13_UNI_HEADER_LENGTH + cidLen;
+    }
+#endif
+    return headerLen;
 }
 
 // Write a record for the DTLS protocol
@@ -208,60 +309,130 @@ int32_t DtlsRecordWrite(TLS_Ctx *ctx, REC_Type recordType, const uint8_t *data, 
             "Record write: sequence number wrap.", 0, 0, 0, 0);
         return HITLS_REC_ERR_SN_WRAPPING;
     }
-
-    uint32_t cipherTextLen = RecGetCryptoFuncs(state->suiteInfo)->calCiphertextLen(ctx, state->suiteInfo, num, false);
+    const RecCryptoFunc *funcs = RecGetCryptoFuncs(state->suiteInfo);
+    int32_t ret;
+    const uint8_t *plainMsgData = data;
+    uint32_t plainLen = num;
+#ifdef HITLS_TLS_PROTO_DTLS13
+    RecordPlaintext recPlaintext = {0};
+    if (ctx->negotiatedInfo.version == HITLS_VERSION_DTLS13 && state->suiteInfo != NULL && RecConnGetEpoch(state) > 0) {
+        ret = funcs->encryptPreProcess(ctx, recordType, data, num, &recPlaintext);
+        if (ret != HITLS_SUCCESS) {
+            return ret;
+        }
+        plainLen = recPlaintext.plainLen;
+    }
+    plainMsgData = GetPlainMsgData(&recPlaintext, data);
+#endif
+    uint32_t cipherTextLen = funcs->calCiphertextLen(ctx, state->suiteInfo, plainLen, false);
     if (cipherTextLen == 0) {
+#ifdef HITLS_TLS_PROTO_DTLS13
+        BSL_SAL_ClearFree(recPlaintext.plainData, recPlaintext.plainLen);
+#endif
         BSL_ERR_PUSH_ERROR(HITLS_INTERNAL_EXCEPTION);
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15666, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "Record write: cipherTextLen(0) error.", 0, 0, 0, 0);
         return HITLS_INTERNAL_EXCEPTION;
     }
-    int32_t ret = RecIoBufInit(ctx, recordCtx, false);
+    ret = RecIoBufInit(ctx, recordCtx, false);
     if (ret != HITLS_SUCCESS) {
+#ifdef HITLS_TLS_PROTO_DTLS13
+        BSL_SAL_ClearFree(recPlaintext.plainData, recPlaintext.plainLen);
+#endif
         return ret;
     }
-
-    const uint32_t outBufLen = REC_DTLS_RECORD_HEADER_LEN + cipherTextLen;
+    /* Before encryption, construct plaintext parameters */
+    REC_TextInput plainMsg = {0};
+    uint64_t epochSeq = REC_EPOCHSEQ_CAL(RecConnGetEpoch(state), state->seq);
+    REC_Type plainType = recordType;
+#ifdef HITLS_TLS_PROTO_DTLS13
+    /* DTLS 1.3 encryptPreProcess wraps the payload into DTLSInnerPlaintext and reports
+     * APP as the outer record type. AAD must use that outer type to match the receiver. */
+    if (ctx->negotiatedInfo.version == HITLS_VERSION_DTLS13 && state->suiteInfo != NULL && RecConnGetEpoch(state) > 0) {
+        plainType = recPlaintext.recordType;
+    }
+#endif
+    DtlsPlainMsgGenerate(&plainMsg, ctx, plainType, plainMsgData, plainLen, epochSeq);
+    uint32_t headerLen = RecGetWriteHeaderLen(ctx, state);
+    const uint32_t outBufLen = headerLen + cipherTextLen;
     if (outBufLen > recordCtx->outBuf->bufSize) {
+#ifdef HITLS_TLS_PROTO_DTLS13
+        BSL_SAL_ClearFree(recPlaintext.plainData, recPlaintext.plainLen);
+#endif
         BSL_ERR_PUSH_ERROR(HITLS_REC_ERR_BUFFER_NOT_ENOUGH);
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15667, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "DTLS record write error: msg len = %u, buf len = %u.", outBufLen, recordCtx->outBuf->bufSize, 0, 0);
         return HITLS_REC_ERR_BUFFER_NOT_ENOUGH;
     }
 
-    /* Before encryption, construct plaintext parameters */
-    REC_TextInput plainMsg = {0};
-    uint64_t epochSeq = REC_EPOCHSEQ_CAL(RecConnGetEpoch(state), state->seq);
-    DtlsPlainMsgGenerate(&plainMsg, ctx, recordType, data, num, epochSeq);
-
     /** Obtain the cache address */
-    uint8_t *outBuf = &recordCtx->outBuf->buf[0];
+    uint8_t *outBuf = &recordCtx->outBuf->buf[0];   
 
-    DtlsRecordHeaderPack(outBuf, recordType, plainMsg.version, epochSeq, cipherTextLen);
-
-    ret = CheckEncryptionLimits(ctx, state);
-    if (ret != HITLS_SUCCESS) {
-        return ret;
+#ifdef HITLS_TLS_PROTO_DTLS13
+    if (ctx->negotiatedInfo.version == HITLS_VERSION_DTLS13 && RecConnGetEpoch(state) > 0) {
+        ret = Dtls13RecordHeaderPack(ctx, outBuf, state, NULL, cipherTextLen, false);
+        if (ret != HITLS_SUCCESS) {
+            return ret;
+        }
+        memcpy(plainMsg.dtls13Aad, outBuf, headerLen);
+        plainMsg.dtls13AadLen = headerLen;
+        BSL_Uint64ToByte(state->seq, plainMsg.dtls13Seq);
     }
+#endif
+
+    CheckEncryptionLimits(ctx, state);
 
     /** Encrypt the record body */
-    ret = RecConnEncrypt(ctx, state, &plainMsg, &outBuf[REC_DTLS_RECORD_HEADER_LEN], cipherTextLen);
+    ret = RecConnEncrypt(ctx, state, &plainMsg, &outBuf[headerLen], cipherTextLen);
+#ifdef HITLS_TLS_PROTO_DTLS13
+    BSL_SAL_ClearFree(recPlaintext.plainData, recPlaintext.plainLen);
+#endif
     if (ret != HITLS_SUCCESS) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17280, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "RecConnEncrypt fail", 0, 0, 0, 0);
         return ret;
     }
-
+    ret = DtlsRecordHeaderPack(ctx, outBuf, recordType, plainMsg.version, state, &outBuf[headerLen], cipherTextLen);
+    if (ret != HITLS_SUCCESS) {
+        // 加错误码
+        return ret;
+    }
     OutbufUpdate(&recordCtx->outBuf->start, 0, &recordCtx->outBuf->end, outBufLen);
 
 #ifdef HITLS_TLS_FEATURE_INDICATOR
-    INDICATOR_MessageIndicate(1, 0, RECORD_HEADER, outBuf, REC_DTLS_RECORD_HEADER_LEN,
+    INDICATOR_MessageIndicate(1, 0, RECORD_HEADER, outBuf, headerLen,
                               ctx, ctx->config.tlsConfig.msgArg);
 #endif
 
-    return DtlsTrySendMessage(ctx, recordCtx, recordType, state);
+    return DtlsTrySendMessage(ctx, recordCtx, recordType, state, epochSeq);
 }
-#endif /* HITLS_TLS_PROTO_DTLS12 */
+#endif /* HITLS_TLS_PROTO_DTLS12 || HITLS_TLS_PROTO_DTLS13 */
+
+int32_t REC_GetLastWriteRecordNum(const TLS_Ctx *ctx, RecordNumber *recordNum)
+{
+#if defined(HITLS_TLS_PROTO_DTLS12) || defined(HITLS_TLS_PROTO_DTLS13)
+    if (ctx == NULL || ctx->recCtx == NULL || recordNum == NULL) {
+        BSL_ERR_PUSH_ERROR(HITLS_NULL_INPUT);
+        return HITLS_NULL_INPUT;
+    }
+    if (!IS_SUPPORT_DATAGRAM(ctx->config.tlsConfig.originVersionMask)) {
+        BSL_ERR_PUSH_ERROR(HITLS_INTERNAL_EXCEPTION);
+        return HITLS_INTERNAL_EXCEPTION;
+    }
+    if (!ctx->recCtx->hasLastWriteEpochSeq) {
+        BSL_ERR_PUSH_ERROR(HITLS_INTERNAL_EXCEPTION);
+        return HITLS_INTERNAL_EXCEPTION;
+    }
+    recordNum->epoch = REC_EPOCH_GET(ctx->recCtx->lastWriteEpochSeq);
+    recordNum->sequenceNumber = REC_SEQ_GET(ctx->recCtx->lastWriteEpochSeq);
+    return HITLS_SUCCESS;
+#else
+    (void)ctx;
+    (void)recordNum;
+    BSL_ERR_PUSH_ERROR(HITLS_MSG_HANDLE_UNSUPPORT_VERSION);
+    return HITLS_MSG_HANDLE_UNSUPPORT_VERSION;
+#endif
+}
 
 #ifdef HITLS_TLS_PROTO_TLS
 // Writes data to the UIO of the TLS context.
@@ -409,15 +580,7 @@ static int32_t LengthCheck(uint32_t ciphertextLen, const uint32_t outBufLen, Rec
     }
     return HITLS_SUCCESS;
 }
-static const uint8_t *GetPlainMsgData(RecordPlaintext *recPlaintext, const uint8_t *data)
-{
-    (void)recPlaintext;
-    return
-#ifdef HITLS_TLS_PROTO_TLS13
-        recPlaintext->isTlsInnerPlaintext ? recPlaintext->plainData :
-#endif
-        data;
-}
+
 // Write a record in the TLS protocol, serialize a record message, and send the message
 int32_t TlsRecordWrite(TLS_Ctx *ctx, REC_Type recordType, const uint8_t *data, uint32_t num)
 {
@@ -458,11 +621,7 @@ int32_t TlsRecordWrite(TLS_Ctx *ctx, REC_Type recordType, const uint8_t *data, u
     (void)TlsPlainMsgGenerate(&plainMsg, ctx, recPlaintext.recordType, plainMsgData, recPlaintext.plainLen);
     (void)TlsRecordHeaderPack(writeBuf->buf, recPlaintext.recordType, plainMsg.version, ciphertextLen);
 
-    ret = CheckEncryptionLimits(ctx, state);
-    if (ret != HITLS_SUCCESS) {
-        BSL_SAL_ClearFree(recPlaintext.plainData, recPlaintext.plainLen);
-        return ret;
-    }
+    CheckEncryptionLimits(ctx, state);
 
     /** Encrypt the record body */
     ret = RecConnEncrypt(ctx, state, &plainMsg, writeBuf->buf + REC_TLS_RECORD_HEADER_LEN, ciphertextLen);
@@ -485,13 +644,13 @@ int32_t TlsRecordWrite(TLS_Ctx *ctx, REC_Type recordType, const uint8_t *data, u
 int32_t REC_FlightTransmit(TLS_Ctx *ctx)
 {
     int32_t ret = HITLS_SUCCESS;
-#if defined(HITLS_TLS_PROTO_DTLS12) && defined(HITLS_BSL_UIO_UDP)
+#if (defined(HITLS_TLS_PROTO_DTLS12) || defined(HITLS_TLS_PROTO_DTLS13)) && defined(HITLS_BSL_UIO_UDP)
     /* Reset the buffer uio size */
     ret = REC_QueryMtu(ctx);
     if (ret != HITLS_SUCCESS) {
         return ret;
     }
-#endif /* HITLS_TLS_PROTO_DTLS12 && HITLS_BSL_UIO_UDP */
+#endif /* (HITLS_TLS_PROTO_DTLS12 || HITLS_TLS_PROTO_DTLS13) && HITLS_BSL_UIO_UDP */
     ret = BSL_UIO_Ctrl(ctx->uio, BSL_UIO_FLUSH, 0, NULL);
     if (ret == BSL_UIO_IO_BUSY) {
 #ifdef HITLS_TLS_FEATURE_MTU_QUERY

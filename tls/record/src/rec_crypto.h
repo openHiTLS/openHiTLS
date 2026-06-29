@@ -19,7 +19,6 @@
 #include "record.h"
 #include "rec_conn.h"
 
-#ifdef HITLS_TLS_PROTO_TLS
 typedef struct {
     REC_Type recordType; /* Protocol type */
     uint32_t plainLen;   /* message length */
@@ -30,9 +29,6 @@ typedef struct {
 #endif
     bool isTlsInnerPlaintext; /* Whether it is a TLSInnerPlaintext message for tls1.3 */
 } RecordPlaintext;            /* Record protocol data before encryption */
-#else
-typedef struct DtlsRecordPlaintext RecordPlaintext;
-#endif
 
 typedef uint32_t (*CalCiphertextLenFunc)(const TLS_Ctx *ctx, RecConnSuitInfo *suitInfo,
     uint32_t plantextLen, bool isRead);
@@ -57,4 +53,10 @@ typedef struct {
 } RecCryptoFunc;
 
 const RecCryptoFunc *RecGetCryptoFuncs(const RecConnSuitInfo *suiteInfo);
+
+#ifdef HITLS_TLS_PROTO_DTLS13
+int32_t Dtls13CryptSequenceNumber(TLS_Ctx *ctx, HITLS_CipherAlgo cipherAlgo, const uint8_t *snKey, const uint8_t *ciphertext,
+    uint32_t cipherLen, const uint8_t *plaintextSeq, uint8_t *encryptedSn, uint8_t snLen);
+#endif
+
 #endif

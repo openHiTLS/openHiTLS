@@ -68,6 +68,7 @@ typedef struct BslList HITLS_CIPHER_List;
 typedef enum {
     HITLS_AEAD_CIPHER,
     HITLS_CBC_CIPHER,
+    HITLS_ECB_CIPHER,
     HITLS_CIPHER_TYPE_BUTT = 255
 } HITLS_CipherType;
 
@@ -89,6 +90,8 @@ typedef enum {
     HITLS_CIPHER_SM4_CBC = BSL_CID_SM4_CBC,
     HITLS_CIPHER_SM4_GCM = BSL_CID_SM4_GCM,
     HITLS_CIPHER_SM4_CCM = BSL_CID_SM4_CCM,
+    HITLS_CIPHER_AES_128_ECB = BSL_CID_AES128_ECB,
+    HITLS_CIPHER_AES_256_ECB = BSL_CID_AES256_ECB,
     HITLS_CIPHER_BUTT = BSL_CID_UNKNOWN // Represents an unrecognized algorithm type
 } HITLS_CipherAlgo;
 
@@ -245,6 +248,8 @@ typedef struct {
     uint32_t aadLen;                    /**< Aad length. */
     const uint8_t *hmacKey;             /**< Hmac key. */
     uint32_t hmacKeyLen;                /**< Hmac key length. */
+    uint8_t *counter;                   /**< Counter for chacha20. */
+    uint32_t counterLen;                /**< Counter length. */
     HITLS_Cipher_Ctx **ctx;             /**< HITLS_Cipher_Ctx handle */
 } HITLS_CipherParameters;
 

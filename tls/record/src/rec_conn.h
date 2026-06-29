@@ -19,9 +19,10 @@
 #include <stdint.h>
 #include <stddef.h>
 #include "rec.h"
-#if defined(HITLS_TLS_PROTO_DTLS12) && defined(HITLS_BSL_UIO_UDP)
+#include "rec_header.h"
+#if (defined(HITLS_TLS_PROTO_DTLS12) || defined(HITLS_TLS_PROTO_DTLS13)) && defined(HITLS_BSL_UIO_UDP)
 #include "rec_anti_replay.h"
-#endif /* HITLS_TLS_PROTO_DTLS12 && HITLS_BSL_UIO_UDP */
+#endif /* (HITLS_TLS_PROTO_DTLS12 || HITLS_TLS_PROTO_DTLS13) && HITLS_BSL_UIO_UDP */
 
 #ifdef __cplusplus
 extern "C" {
@@ -33,8 +34,21 @@ extern "C" {
 #define REC_MAX_KEY_BLOCK_LEN          (REC_MAX_MAC_KEY_LEN * 2 + REC_MAX_KEY_LENGTH * 2 + REC_MAX_IV_LENGTH * 2)
 #define MAX_SHA1_SIZE 20
 #define MAX_MD5_SIZE 16
+#define REC_MAX_CID_LEN 255
 
 #define REC_CONN_SEQ_SIZE 8u            /* Sequence number size */
+
+/* DTLS 1.3 Epoch历史管理 */
+#define MAX_EPOCH_HISTORY 4
+
+/* Epoch状态跟踪结构 */
+typedef struct {
+    uint64_t epochValue;              /* 完整epoch值 */
+    uint64_t highestDeprotectedSeq;   /* 该epoch最高成功解保护的序列号 */
+    bool isValid;                     /* 状态是否有效 */
+    bool hasKeys;                     /* 是否有该epoch的密钥材料 */
+    uint64_t lastUsedTime;            /* 最后使用时间 */
+} EpochState;
 
 /*
  * Cipher suite information, which is required for local encryption and decryption
@@ -50,6 +64,7 @@ typedef struct {
     uint8_t macKey[REC_MAX_MAC_KEY_LEN];
     uint8_t key[REC_MAX_KEY_LENGTH];
     uint8_t iv[REC_MAX_IV_LENGTH];
+    uint8_t snKey[REC_MAX_KEY_LENGTH];
     bool isExportIV;                /* Used by the TTO feature. The IV does not need to be randomly
                                     generated during CBC encryption If it is set by user */
     /* key length */
@@ -70,7 +85,7 @@ typedef struct {
     bool isWrapped;                         /* tls: Check whether the sequence number is wrapped */
 
     uint16_t epoch;                         /* dtls: 2 byte epoch */
-#if defined(HITLS_TLS_PROTO_DTLS12) && defined(HITLS_BSL_UIO_UDP)
+#if (defined(HITLS_TLS_PROTO_DTLS12) || defined(HITLS_TLS_PROTO_DTLS13)) && defined(HITLS_BSL_UIO_UDP)
     uint16_t reserve;                       /* Four-byte alignment is reserved */
     RecSlidWindow window;                   /* dtls record sliding window (for anti-replay) */
 #endif
@@ -89,6 +104,11 @@ typedef struct {
     uint16_t negotiatedVersion;
 
     uint8_t seq[REC_CONN_SEQ_SIZE];     /* 1. tls: sequence number 2.dtls: epoch + sequence */
+#ifdef HITLS_TLS_PROTO_DTLS13
+    uint8_t dtls13Aad[REC_DTLS13_AAD_MAX_SIZE];
+    uint32_t dtls13AadLen;
+    uint8_t dtls13Seq[REC_CONN_SEQ_SIZE];
+#endif
 
     uint32_t textLen;
     const uint8_t *text;  // fragment
@@ -123,7 +143,7 @@ uint64_t RecConnGetSeqNum(const RecConnState *state);
  */
 void RecConnSetSeqNum(RecConnState *state, uint64_t seq);
 
-#ifdef HITLS_TLS_PROTO_DTLS12
+#if defined(HITLS_TLS_PROTO_DTLS12) || defined(HITLS_TLS_PROTO_DTLS13)
 /**
  * @brief   Obtain the epoch
  *
@@ -212,8 +232,7 @@ int32_t RecConnKeyBlockGen(HITLS_Lib_Ctx *libCtx, const char *attrName,
 /**
  * @brief   TLS1.3 Key generation
  *
- * @param   libCtx [IN] library context for provider
- * @param   attrName [IN] attribute name of the provider, maybe NULL
+ * @param   ctx [IN] tls Context
  * @param   param [IN] Security parameter
  * @param   suitInfo [OUT] key material
  *
@@ -223,8 +242,7 @@ int32_t RecConnKeyBlockGen(HITLS_Lib_Ctx *libCtx, const char *attrName,
  * @retval  HITLS_CRYPT_ERR_HKDF_EXPAND HKDF-Expand calculation fails
  *
  */
-int32_t RecTLS13ConnKeyBlockGen(HITLS_Lib_Ctx *libCtx, const char *attrName,
-    const REC_SecParameters *param, RecConnSuitInfo *suitInfo);
+int32_t RecTLS13ConnKeyBlockGen(const TLS_Ctx *ctx, const REC_SecParameters *param, RecConnSuitInfo *suitInfo);
 
 /*
  * @brief   check the mac

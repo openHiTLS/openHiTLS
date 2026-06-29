@@ -17,4 +17,5 @@
 #include "rec_crypto.h"
 
 const RecCryptoFunc *RecGetAeadCryptoFuncs(DecryptPostProcess decryptPostProcess, EncryptPreProcess encryptPreProcess);
+
 #endif
