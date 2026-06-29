@@ -17,6 +17,8 @@
 #define RECORD_HEADER_H
 
 #include <stdint.h>
+#include "hitls_build.h"
+#include "hitls_type.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -26,7 +28,7 @@ extern "C" {
 #define REC_TLS_RECORD_LENGTH_OFFSET 3
 #define REC_TLS_SN_MAX_VALUE (~((uint64_t)0))       /* TLS sequence number wrap Threshold */
 
-#ifdef HITLS_TLS_PROTO_DTLS12
+#if defined(HITLS_TLS_PROTO_DTLS12) || defined(HITLS_TLS_PROTO_DTLS13)
 
 #define REC_IP_UDP_HEAD_SIZE 28                     /* IP protocol header 20 + UDP header 8 */
 #define REC_DTLS_RECORD_HEADER_LEN 13
@@ -43,14 +45,39 @@ extern "C" {
 
 #endif
 
+#ifdef HITLS_TLS_PROTO_DTLS13
+
+/* DTLS 1.3 Unified header */
+#define REC_DTLS13_UNI_HEADER_LENGTH 5
+#define REC_DTLS13_UNI_HEADER_FIX_BITS 0x20
+#define REC_DTLS13_UNI_HEADER_CID_BIT 0x10
+#define REC_DTLS13_UNI_HEADER_SEQ_BIT 0x08
+#define REC_DTLS13_UNI_HEADER_LEN_BIT 0x04
+#define REC_DTLS13_UNI_HEADER_FIX_BITS_MASK 0xe0
+#define REC_DTLS13_UNI_HEADER_EPOCH_BITS_MASK 0x03
+#define REC_DTLS13_AAD_MAX_SIZE (1u + HITLS_DTLS_CID_LEN_MAX + 2u + 2u)
+
+/* Return true when unified header fixed bits is 001 (rfc9147 section 4) */
+#define REC_DTLS13_UNI_HEADER_FIX_BITS_TYPE(byte)  (((byte) & REC_DTLS13_UNI_HEADER_FIX_BITS_MASK) == REC_DTLS13_UNI_HEADER_FIX_BITS)
+#endif
+
 typedef struct {
     uint8_t type;
-    uint8_t reverse[3];     /* Reserved, 4-byte aligned */
+    uint8_t reverse[3]; /* Reserved, 4-byte aligned */
     uint16_t version;
-    uint16_t bodyLen;       /* body length */
+    uint16_t bodyLen; /* body length */
+    uint16_t headerLen;
 
-#ifdef HITLS_TLS_PROTO_DTLS12
-    uint64_t epochSeq;      /* only for dtls */
+#if defined(HITLS_TLS_PROTO_DTLS12) || defined(HITLS_TLS_PROTO_DTLS13)
+    uint64_t
+        epochSeq; /* For DTLS 1.3 unified header, epochSeq is reconstructed from the epoch bits in the first byte and the sequence number field. */
+#endif
+#ifdef HITLS_TLS_PROTO_DTLS13
+    uint8_t cid[HITLS_DTLS_CID_LEN_MAX]; /* peer CID in unified header, max HITLS_DTLS_CID_LEN_MAX (255) */
+    uint8_t cidLen;
+    uint8_t dtls13Aad[REC_DTLS13_AAD_MAX_SIZE];
+    uint32_t dtls13AadLen;
+    uint8_t dtls13Seq[8];
 #endif
 } RecHdr;
 

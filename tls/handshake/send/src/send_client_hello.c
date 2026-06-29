@@ -26,6 +26,7 @@
 #include "hitls_session.h"
 #include "hitls.h"
 #include "hs_ctx.h"
+#include "hs.h"
 #include "hs_common.h"
 #include "hs_dtls_timer.h"
 #include "hs_verify.h"
@@ -167,7 +168,7 @@ int32_t ClientSendClientHelloProcess(TLS_Ctx *ctx)
 }
 #endif /* HITLS_TLS_PROTO_TLS_BASIC || HITLS_TLS_PROTO_DTLS12 */
 
-#ifdef HITLS_TLS_PROTO_TLS13
+#if defined(HITLS_TLS_PROTO_TLS13) || defined(HITLS_TLS_PROTO_DTLS13)
 static int32_t Tls13ClientGenKeyPair(TLS_Ctx *ctx)
 {
     KeyExchCtx *kxCtx = ctx->hsCtx->kxCtx;
@@ -287,7 +288,11 @@ static int32_t Tls13ClientPrepareKeyShare(TLS_Ctx *ctx, uint32_t tls13BasicKeyEx
 
 static int32_t Tls13ClientPrepareSession(TLS_Ctx *ctx)
 {
-    if (!ctx->config.tlsConfig.isMiddleBoxCompat) {
+    if (!ctx->config.tlsConfig.isMiddleBoxCompat
+#if defined(HITLS_TLS_PROTO_DTLS12)
+        || IS_SUPPORT_DATAGRAM(ctx->config.tlsConfig.originVersionMask)
+#endif
+    ) {
         ctx->hsCtx->sessionIdSize = 0;
         return HITLS_SUCCESS;
     }
@@ -345,18 +350,19 @@ int32_t CreatePskSession(TLS_Ctx *ctx, uint8_t *id, uint32_t idLen, HITLS_Sessio
 
     HITLS_SESS_SetMasterKey(sess, psk, pskLen);
     HITLS_SESS_SetCipherSuite(sess, HITLS_AES_128_GCM_SHA256);
-    HITLS_SESS_SetProtocolVersion(sess, HITLS_VERSION_TLS13);
+    HITLS_SESS_SetProtocolVersion(sess,
+        IS_SUPPORT_DATAGRAM(ctx->config.tlsConfig.originVersionMask) ? HITLS_VERSION_DTLS13 : HITLS_VERSION_TLS13);
     *pskSession = sess;
     BSL_SAL_CleanseData(psk, HS_PSK_MAX_LEN);
     return HITLS_SUCCESS;
 }
 
-static bool IsTls13SessionValid(HITLS_HashAlgo hashAlgo, HITLS_Session* session, uint16_t *tls13CipherSuites,
-    uint32_t tls13cipherSuitesSize)
+static bool IsTls13SessionValid(uint16_t expectedVersion, HITLS_HashAlgo hashAlgo, HITLS_Session *session,
+    uint16_t *tls13CipherSuites, uint32_t tls13cipherSuitesSize)
 {
     uint16_t version = 0;
     HITLS_SESS_GetProtocolVersion(session, &version);
-    if (version != HITLS_VERSION_TLS13) {
+    if (version != expectedVersion) {
         return false;
     }
     uint16_t cipherSuite = 0;
@@ -415,6 +421,8 @@ static int32_t Tls13ClientPreparePSK(TLS_Ctx *ctx)
     int32_t ret = 0;
     HS_Ctx *hsCtx = ctx->hsCtx;
     HITLS_HashAlgo hashAlgo = hsCtx->haveHrr ? ctx->negotiatedInfo.cipherSuiteInfo.hashAlg : HITLS_HASH_BUTT;
+    uint16_t expectedVersion =
+        IS_SUPPORT_DATAGRAM(ctx->config.tlsConfig.originVersionMask) ? HITLS_VERSION_DTLS13 : HITLS_VERSION_TLS13;
     uint8_t identity[HS_PSK_IDENTITY_MAX_LEN + 1] = {0};
     const uint8_t *id = NULL;
     uint32_t idLen = 0;
@@ -425,7 +433,7 @@ static int32_t Tls13ClientPreparePSK(TLS_Ctx *ctx)
     HITLS_SESS_Free(hsCtx->kxCtx->pskInfo13.resumeSession);
     hsCtx->kxCtx->pskInfo13.resumeSession = NULL;
     if (HITLS_SESS_HasTicket(ctx->session) &&
-        IsTls13SessionValid(hashAlgo, ctx->session, ctx->config.tlsConfig.tls13CipherSuites,
+        IsTls13SessionValid(expectedVersion, hashAlgo, ctx->session, ctx->config.tlsConfig.tls13CipherSuites,
                             ctx->config.tlsConfig.tls13cipherSuitesSize) &&
         SESS_CheckValidity(ctx->session, (uint64_t)BSL_SAL_CurrentSysTimeGet())) {
         hsCtx->kxCtx->pskInfo13.resumeSession = HITLS_SESS_Dup(ctx->session);
@@ -451,7 +459,8 @@ static int32_t Tls13ClientPreparePSK(TLS_Ctx *ctx)
         idLen = (uint32_t)strlen((char *)identity);
     }
 
-    if (pskSession != NULL && IsTls13SessionValid(hashAlgo, pskSession, ctx->config.tlsConfig.tls13CipherSuites,
+    if (pskSession != NULL && IsTls13SessionValid(expectedVersion, hashAlgo, pskSession,
+                                                  ctx->config.tlsConfig.tls13CipherSuites,
                                                   ctx->config.tlsConfig.tls13cipherSuitesSize)) {
         userPsk = ConstructUserPsk(pskSession, id, idLen, index);
     }
@@ -479,18 +488,21 @@ int32_t Tls13ClientHelloPrepare(TLS_Ctx *ctx)
             return RETURN_ERROR_NUMBER_PROCESS(ret, BINLOG_ID17118, "VERIFY_Init fail");
         }
 
-        ret = SAL_CRYPT_Rand(LIBCTX_FROM_CTX(ctx), hsCtx->clientRandom, HS_RANDOM_SIZE);
-        if (ret != HITLS_SUCCESS) {
-            return RETURN_ERROR_NUMBER_PROCESS(ret, BINLOG_ID15632, "generate random value fail");
-        }
+        if (hsCtx->haveHvr == false) {
+            ret = SAL_CRYPT_Rand(LIBCTX_FROM_CTX(ctx), hsCtx->clientRandom, HS_RANDOM_SIZE);
+            if (ret != HITLS_SUCCESS) {
+                return RETURN_ERROR_NUMBER_PROCESS(ret, BINLOG_ID15632, "generate random value fail");
+            }
 
-        /* In section 4.1.2 of RFC8446, a random session ID is required in middlebox mode. In nomiddlebox mode, the
-         * session ID is empty */
-        ret = Tls13ClientPrepareSession(ctx);
-        if (ret != HITLS_SUCCESS) {
-            return ret;
+            /* In section 4.1.2 of RFC8446, a random session ID is required in middlebox mode. In nomiddlebox mode, the
+             * session ID is empty */
+            ret = Tls13ClientPrepareSession(ctx);
+            if (ret != HITLS_SUCCESS) {
+                return ret;
+            }
         }
-    } else if (ctx->config.tlsConfig.isMiddleBoxCompat) {
+    } else if (ctx->config.tlsConfig.isMiddleBoxCompat &&
+        !IS_SUPPORT_DATAGRAM(ctx->config.tlsConfig.originVersionMask)) {
         /* If the middlebox is used, a CCS message must be sent before the second clientHello message is sent */
         ret = ctx->method.sendCCS(ctx);
         if (ret != HITLS_SUCCESS) {
@@ -529,6 +541,13 @@ int32_t Tls13ClientHelloPrepare(TLS_Ctx *ctx)
 
     return HITLS_SUCCESS;
 }
+
+static bool IsDtls13ClientCtx(const TLS_Ctx *ctx)
+{
+    return IS_SUPPORT_DATAGRAM(ctx->config.tlsConfig.originVersionMask) &&
+        ((ctx->config.tlsConfig.version & DTLS13_VERSION_BIT) != 0);
+}
+
 
 static uint32_t GetBindersOffset(const TLS_Ctx *ctx)
 {
@@ -611,13 +630,13 @@ int32_t Tls13ClientSendClientHelloProcess(TLS_Ctx *ctx)
             return ret;
         }
 
-        ctx->negotiatedInfo.clientVersion = HITLS_VERSION_TLS12;
+        ctx->negotiatedInfo.clientVersion = IsDtls13ClientCtx(ctx) ? HITLS_VERSION_DTLS12 : HITLS_VERSION_TLS12;
         /* The packed message is placed in the hsCtx->msgBuf. The length of the packed message is hsCtx->msgLen,
          * including the CH message header and body */
         ret = HS_PackMsg(ctx, CLIENT_HELLO);
         if (ret != HITLS_SUCCESS) {
             BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15633, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-                "pack tls1.3 client hello fail.", 0, 0, 0, 0);
+                "pack (d)tls1.3 client hello fail.", 0, 0, 0, 0);
             return ret;
         }
 
@@ -646,9 +665,14 @@ int32_t Tls13ClientSendClientHelloProcess(TLS_Ctx *ctx)
     }
 
     BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15634, BSL_LOG_LEVEL_INFO, BSL_LOG_BINLOG_TYPE_RUN,
-        "send tls1.3 client hello success.", 0, 0, 0, 0);
-
+        "send (d)tls1.3 client hello success.", 0, 0, 0, 0);
+#ifdef HITLS_TLS_PROTO_DTLS13
+    ret = HS_StartTimer(ctx);
+    if (ret != HITLS_SUCCESS) {
+        return ret;
+    }
+#endif
     return HS_ChangeState(ctx, TRY_RECV_SERVER_HELLO);
 }
-#endif /* HITLS_TLS_PROTO_TLS13 */
+#endif /* HITLS_TLS_PROTO_TLS13 || HITLS_TLS_PROTO_DTLS13 */
 #endif /* HITLS_TLS_HOST_CLIENT */

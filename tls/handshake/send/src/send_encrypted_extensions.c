@@ -13,7 +13,7 @@
  * See the Mulan PSL v2 for more details.
  */
 #include "hitls_build.h"
-#if defined(HITLS_TLS_PROTO_TLS13) && defined(HITLS_TLS_HOST_SERVER)
+#if (defined(HITLS_TLS_PROTO_TLS13) || defined(HITLS_TLS_PROTO_DTLS13)) && defined(HITLS_TLS_HOST_SERVER)
 #include <stdint.h>
 #include "tls_binlog_id.h"
 #include "bsl_log_internal.h"
@@ -23,6 +23,7 @@
 #include "hitls_error.h"
 #include "tls.h"
 #include "hs_ctx.h"
+#include "hs.h"
 #include "hs_kx.h"
 #include "hs_common.h"
 #include "hs_msg.h"
@@ -56,7 +57,7 @@ int32_t Tls13ServerSendEncryptedExtensionsProcess(TLS_Ctx *ctx)
         ret = HS_PackMsg(ctx, ENCRYPTED_EXTENSIONS);
         if (ret != HITLS_SUCCESS) {
             BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15875, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-                "pack tls1.3 encrypted extensions fail.", 0, 0, 0, 0);
+                "pack (d)tls1.3 encrypted extensions fail.", 0, 0, 0, 0);
             return ret;
         }
     }
@@ -67,7 +68,7 @@ int32_t Tls13ServerSendEncryptedExtensionsProcess(TLS_Ctx *ctx)
     }
 
     BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15876, BSL_LOG_LEVEL_INFO, BSL_LOG_BINLOG_TYPE_RUN,
-        "send tls1.3 encrypted extensions success.", 0, 0, 0, 0);
+        "send (d)tls1.3 encrypted extensions success.", 0, 0, 0, 0);
 
     if (ctx->hsCtx->kxCtx->pskInfo13.psk != NULL) {
         return HS_ChangeState(ctx, TRY_SEND_FINISH);
@@ -84,4 +85,4 @@ int32_t Tls13ServerSendEncryptedExtensionsProcess(TLS_Ctx *ctx)
 #endif /* HITLS_TLS_FEATURE_CERT_MODE_CLIENT_VERIFY */
     return HS_ChangeState(ctx, TRY_SEND_CERTIFICATE);
 }
-#endif /* HITLS_TLS_PROTO_TLS13 && HITLS_TLS_HOST_SERVER */
+#endif /* (HITLS_TLS_PROTO_TLS13 || HITLS_TLS_PROTO_DTLS13) && HITLS_TLS_HOST_SERVER */

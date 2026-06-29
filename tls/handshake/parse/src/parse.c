@@ -28,6 +28,9 @@
 #include "parse_common.h"
 #include "hs_extensions.h"
 #include "parse_extensions.h"
+#if defined(HITLS_TLS_FEATURE_DTLS_CID) && defined(HITLS_TLS_PROTO_DTLS13)
+#include "dtls_cid.h"
+#endif
 #ifdef HITLS_TLS_FEATURE_INDICATOR
 #include "indicator.h"
 #endif /* HITLS_TLS_FEATURE_INDICATOR */
@@ -56,6 +59,26 @@ static int32_t CheckServerHelloType(TLS_Ctx *ctx, const HS_MsgType msgType)
     /* In DTLS, When client try to receive ServerHello message, it doesn't know if server enables
      * isSupportDtlsCookieExchange. If client receives HelloVerifyRequest message, also valid */
     if (IS_SUPPORT_DATAGRAM(ctx->config.tlsConfig.originVersionMask) && msgType == HELLO_VERIFY_REQUEST) {
+#ifdef HITLS_TLS_PROTO_DTLS13
+        if (ctx->hsCtx->haveHrr) {
+            BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17331, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+                "CheckServerHelloType fail", 0, 0, 0, 0);
+            return HITLS_MSG_HANDLE_UNEXPECTED_MESSAGE;
+        }
+        if (GET_VERSION_FROM_CTX(ctx) == HITLS_VERSION_DTLS13) {
+#ifdef HITLS_TLS_PROTO_DTLS12
+            if ((ctx->config.tlsConfig.version & DTLS12_VERSION_BIT) == 0) {
+                BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17331, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+                    "CheckServerHelloType fail", 0, 0, 0, 0);
+                return HITLS_MSG_HANDLE_UNEXPECTED_MESSAGE;
+            }
+#else
+            BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17331, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+                "CheckServerHelloType fail", 0, 0, 0, 0);
+            return HITLS_MSG_HANDLE_UNEXPECTED_MESSAGE;
+#endif
+        }
+#endif
         (void)HS_ChangeState(ctx, TRY_RECV_HELLO_VERIFY_REQUEST);
         return HITLS_SUCCESS;
     }
@@ -85,15 +108,15 @@ static int32_t CheckServerKeyExchangeType(TLS_Ctx *ctx, const HS_MsgType msgType
 
 static int32_t CheckCertificateRequestType(TLS_Ctx *ctx, const HS_MsgType msgType)
 {
-#ifdef HITLS_TLS_PROTO_TLS13
+#if defined(HITLS_TLS_PROTO_TLS13) || defined(HITLS_TLS_PROTO_DTLS13)
     uint32_t version = GET_VERSION_FROM_CTX(ctx);
-    if (version == HITLS_VERSION_TLS13) {
+    if (version == HITLS_VERSION_TLS13 || version == HITLS_VERSION_DTLS13) {
         if (msgType == CERTIFICATE) {
             (void)HS_ChangeState(ctx, TRY_RECV_CERTIFICATE);
             return HITLS_SUCCESS;
         }
     } else
-#endif
+#endif /* HITLS_TLS_PROTO_TLS13 || HITLS_TLS_PROTO_DTLS13 */
     {
         if (msgType == SERVER_HELLO_DONE) {
             (void)HS_ChangeState(ctx, TRY_RECV_SERVER_HELLO_DONE);
@@ -105,6 +128,58 @@ static int32_t CheckCertificateRequestType(TLS_Ctx *ctx, const HS_MsgType msgTyp
     return HITLS_MSG_HANDLE_UNEXPECTED_MESSAGE;
 }
 
+#ifdef HITLS_TLS_PROTO_DTLS13
+static int32_t CheckDtls13RecvAnyMsgType(TLS_Ctx *ctx, const HS_MsgType msgType)
+{
+    if (ctx->negotiatedInfo.version != HITLS_VERSION_DTLS13 ||
+        ctx->state != CM_STATE_HANDSHAKING || ctx->preState != CM_STATE_TRANSPORTING) {
+        return HITLS_MSG_HANDLE_UNEXPECTED_MESSAGE;
+    }
+
+    switch (msgType) {
+#ifdef HITLS_TLS_FEATURE_KEY_UPDATE
+        case KEY_UPDATE:
+            return HS_ChangeState(ctx, TRY_RECV_KEY_UPDATE);
+#endif
+        case NEW_SESSION_TICKET:
+            if (!ctx->isClient) {
+                return HITLS_MSG_HANDLE_UNEXPECTED_MESSAGE;
+            }
+            return HS_ChangeState(ctx, TRY_RECV_NEW_SESSION_TICKET);
+        case CERTIFICATE_REQUEST:
+            if (!ctx->isClient || ctx->phaState != PHA_EXTENSION) {
+                return HITLS_MSG_HANDLE_UNEXPECTED_MESSAGE;
+            }
+            return HS_ChangeState(ctx, TRY_RECV_CERTIFICATE_REQUEST);
+        case CERTIFICATE:
+            if (ctx->isClient || ctx->phaState != PHA_REQUESTED) {
+                return HITLS_MSG_HANDLE_UNEXPECTED_MESSAGE;
+            }
+            return HS_ChangeState(ctx, TRY_RECV_CERTIFICATE);
+#if defined(HITLS_TLS_FEATURE_DTLS_CID) && defined(HITLS_TLS_PROTO_DTLS13)
+        case NEW_CONNECTION_ID:
+            /* The "negotiated receiving an empty CID" rule is detected
+             * in Dtls13RecvNewConnectionIdProcess, where a fatal
+             * unexpected_message alert can actually be emitted */
+            if (!ctx->negotiatedInfo.isCidNegotiated) {
+                return HITLS_MSG_HANDLE_UNEXPECTED_MESSAGE;
+            }
+            return HS_ChangeState(ctx, TRY_RECV_NEW_CONNECTION_ID);
+        case REQUEST_CONNECTION_ID:
+            /* The "sending an empty Connection ID" rule is detected
+             * in Dtls13RecvRequestConnectionIdProcess, where a fatal
+             * unexpected_message alert can actually be emitted */
+            if (!ctx->negotiatedInfo.isCidNegotiated) {
+                return HITLS_MSG_HANDLE_UNEXPECTED_MESSAGE;
+            }
+            return HS_ChangeState(ctx, TRY_RECV_REQUEST_CONNECTION_ID);
+#endif
+        default:
+            return HITLS_MSG_HANDLE_UNEXPECTED_MESSAGE;
+    }
+}
+#endif /* HITLS_TLS_PROTO_DTLS13 */
+
 static const HsMsgTypeCheck g_checkHsMsgTypeList[] = {
     [TRY_RECV_CLIENT_HELLO] = {.msgType = CLIENT_HELLO,
                                .checkCb = NULL},
@@ -112,9 +187,9 @@ static const HsMsgTypeCheck g_checkHsMsgTypeList[] = {
 #ifdef HITLS_TLS_PROTO_DTLS12
     [TRY_RECV_HELLO_VERIFY_REQUEST] = {.msgType = HELLO_VERIFY_REQUEST, .checkCb = CheckHelloVerifyRequestType},
 #endif
-#ifdef HITLS_TLS_PROTO_TLS13
+#if defined(HITLS_TLS_PROTO_TLS13) || defined(HITLS_TLS_PROTO_DTLS13)
     [TRY_RECV_ENCRYPTED_EXTENSIONS] = {.msgType = ENCRYPTED_EXTENSIONS, .checkCb = NULL},
-#endif
+#endif /* HITLS_TLS_PROTO_TLS13 || HITLS_TLS_PROTO_DTLS13 */
     [TRY_RECV_CERTIFICATE] = {.msgType = CERTIFICATE, .checkCb = NULL},
     [TRY_RECV_SERVER_KEY_EXCHANGE] = {.msgType = SERVER_KEY_EXCHANGE, .checkCb = CheckServerKeyExchangeType},
     [TRY_RECV_CERTIFICATE_REQUEST] = {.msgType = CERTIFICATE_REQUEST, .checkCb = CheckCertificateRequestType},
@@ -123,10 +198,17 @@ static const HsMsgTypeCheck g_checkHsMsgTypeList[] = {
     [TRY_RECV_CERTIFICATE_VERIFY] = {.msgType = CERTIFICATE_VERIFY,  .checkCb = NULL},
     [TRY_RECV_NEW_SESSION_TICKET] = {.msgType = NEW_SESSION_TICKET, .checkCb = NULL},
     [TRY_RECV_FINISH] = {.msgType = FINISHED, .checkCb = NULL},
-#ifdef HITLS_TLS_PROTO_TLS13
+#if defined(HITLS_TLS_PROTO_TLS13) || defined(HITLS_TLS_PROTO_DTLS13)
     [TRY_RECV_KEY_UPDATE] = {.msgType = KEY_UPDATE, .checkCb = NULL},
-#endif
+#endif /* HITLS_TLS_PROTO_TLS13 || HITLS_TLS_PROTO_DTLS13 */
     [TRY_RECV_HELLO_REQUEST] = {.msgType = HELLO_REQUEST, .checkCb = NULL},
+#if defined(HITLS_TLS_FEATURE_DTLS_CID) && defined(HITLS_TLS_PROTO_DTLS13)
+    [TRY_RECV_NEW_CONNECTION_ID] = {.msgType = NEW_CONNECTION_ID, .checkCb = NULL},
+    [TRY_RECV_REQUEST_CONNECTION_ID] = {.msgType = REQUEST_CONNECTION_ID, .checkCb = NULL},
+#endif
+#ifdef HITLS_TLS_PROTO_DTLS13
+    [TRY_RECV_MSG] = {.msgType = HS_MSG_TYPE_END, .checkCb = CheckDtls13RecvAnyMsgType},
+#endif
 };
 
 int32_t CheckHsMsgType(TLS_Ctx *ctx, HS_MsgType msgType)
@@ -135,13 +217,17 @@ int32_t CheckHsMsgType(TLS_Ctx *ctx, HS_MsgType msgType)
         return HITLS_SUCCESS;
     }
 
-    if ((msgType == HELLO_REQUEST) && (ctx->isClient)) {
+    HS_Ctx *hsCtx = ctx->hsCtx;
+    if ((msgType == HELLO_REQUEST) && (ctx->isClient)
+#ifdef HITLS_TLS_PROTO_DTLS13
+        && hsCtx->state != TRY_RECV_MSG
+#endif
+    ) {
         /* The HelloRequest message may appear at any time during the handshake.
            The client should ignore this message */
         return HITLS_SUCCESS;
     }
 
-    HS_Ctx *hsCtx = ctx->hsCtx;
 #ifdef HITLS_BSL_LOG
     const char *expectedMsg = NULL;
 #endif
@@ -156,7 +242,7 @@ int32_t CheckHsMsgType(TLS_Ctx *ctx, HS_MsgType msgType)
         }
     }
 
-    if (msgType == FINISHED && GET_VERSION_FROM_CTX(ctx) != HITLS_VERSION_TLS13 &&
+    if (msgType == FINISHED && GET_VERSION_FROM_CTX(ctx) != HITLS_VERSION_TLS13 && GET_VERSION_FROM_CTX(ctx) != HITLS_VERSION_DTLS13 &&
             !(ctx->state == CM_STATE_HANDSHAKING && ctx->preState == CM_STATE_TRANSPORTING)) {
         bool isCcsRecv = ctx->method.isRecvCCS(ctx);
         if (isCcsRecv != true) {
@@ -204,7 +290,7 @@ static int32_t CheckHsMsgLen(TLS_Ctx *ctx, HS_MsgInfo *hsMsgInfo)
     return ret;
 }
 
-#ifdef HITLS_TLS_PROTO_DTLS12
+#if defined(HITLS_TLS_PROTO_DTLS12) || defined(HITLS_TLS_PROTO_DTLS13)
 static int32_t DtlsParseHsMsgHeader(TLS_Ctx *ctx, const uint8_t *data, uint32_t len, HS_MsgInfo *hsMsgInfo)
 {
     const char *logStr = BINGLOG_STR("parse DTLS handshake msg header failed.");
@@ -235,7 +321,7 @@ static int32_t DtlsParseHsMsgHeader(TLS_Ctx *ctx, const uint8_t *data, uint32_t 
     return CheckHsMsgLen(ctx, hsMsgInfo);
 }
 
-#endif /* HITLS_TLS_PROTO_DTLS12 */
+#endif /* HITLS_TLS_PROTO_DTLS12 || HITLS_TLS_PROTO_DTLS13 */
 #ifdef HITLS_TLS_PROTO_TLS
 static int32_t TlsParseHsMsgHeader(TLS_Ctx *ctx, const uint8_t *data, uint32_t len, HS_MsgInfo *hsMsgInfo)
 {
@@ -321,7 +407,7 @@ static int32_t ParseHandShakeMsg(TLS_Ctx *ctx, const uint8_t *data, uint32_t len
     return HITLS_PARSE_UNSUPPORT_HANDSHAKE_MSG;
 }
 #endif /* HITLS_TLS_PROTO_TLS_BASIC || HITLS_TLS_PROTO_DTLS12 */
-#ifdef HITLS_TLS_PROTO_TLS13
+#if defined(HITLS_TLS_PROTO_TLS13) || defined(HITLS_TLS_PROTO_DTLS13)
 int32_t Tls13ParseHandShakeMsg(TLS_Ctx *ctx, const uint8_t *hsBodyData, uint32_t hsBodyLen, HS_Msg *hsMsg)
 {
     switch (hsMsg->type) {
@@ -349,6 +435,12 @@ int32_t Tls13ParseHandShakeMsg(TLS_Ctx *ctx, const uint8_t *hsBodyData, uint32_t
         case KEY_UPDATE:
             return ParseKeyUpdate(ctx, hsBodyData, hsBodyLen, hsMsg);
 #endif /* HITLS_TLS_FEATURE_KEY_UPDATE */
+#if defined(HITLS_TLS_FEATURE_DTLS_CID) && defined(HITLS_TLS_PROTO_DTLS13)
+        case NEW_CONNECTION_ID:
+            return ParseNewConnectionId(ctx, hsBodyData, hsBodyLen, hsMsg);
+        case REQUEST_CONNECTION_ID:
+            return ParseRequestConnectionId(ctx, hsBodyData, hsBodyLen, hsMsg);
+#endif
         case HELLO_REQUEST:
             if (hsBodyLen != 0u) {
                 return ParseErrorProcess(ctx, HITLS_PARSE_INVALID_MSG_LEN, BINLOG_ID15611,
@@ -364,7 +456,7 @@ int32_t Tls13ParseHandShakeMsg(TLS_Ctx *ctx, const uint8_t *hsBodyData, uint32_t
         "recv unsupport handshake msg type[%d].", hsMsg->type, 0, 0, 0);
     return HITLS_PARSE_UNSUPPORT_HANDSHAKE_MSG;
 }
-#endif /* HITLS_TLS_PROTO_TLS13 */
+#endif /* HITLS_TLS_PROTO_TLS13 || HITLS_TLS_PROTO_DTLS13 */
 int32_t HS_ParseMsgHeader(TLS_Ctx *ctx, const uint8_t *data, uint32_t len, HS_MsgInfo *hsMsgInfo)
 {
     if ((ctx == NULL) || (ctx->method.sendAlert == NULL) || (data == NULL) || (hsMsgInfo == NULL)) {
@@ -388,8 +480,9 @@ int32_t HS_ParseMsgHeader(TLS_Ctx *ctx, const uint8_t *data, uint32_t len, HS_Ms
 #endif
             return TlsParseHsMsgHeader(ctx, data, len, hsMsgInfo);
 #endif /* HITLS_TLS_PROTO_TLS */
-#ifdef HITLS_TLS_PROTO_DTLS12
+#ifdef HITLS_TLS_PROTO_DTLS
         case HITLS_VERSION_DTLS12:
+        case HITLS_VERSION_DTLS13:
             return DtlsParseHsMsgHeader(ctx, data, len, hsMsgInfo);
 #endif
         default:
@@ -419,6 +512,12 @@ int32_t HS_ParseMsg(TLS_Ctx *ctx, const HS_MsgInfo *hsMsgInfo, HS_Msg *hsMsg)
     hsMsg->fragmentLength = hsMsgInfo->fragmentLength;
 
     uint32_t version = GET_VERSION_FROM_CTX(ctx);
+#if defined(HITLS_TLS_PROTO_DTLS12) && defined(HITLS_TLS_HOST_CLIENT)
+    /* dtls13 client receive HVR, need to be parsed */
+    if (IS_SUPPORT_DATAGRAM(ctx->config.tlsConfig.originVersionMask) && hsMsg->type == HELLO_VERIFY_REQUEST) {
+        return ParseHandShakeMsg(ctx, &hsMsgInfo->rawMsg[DTLS_HS_MSG_HEADER_SIZE], hsMsgInfo->length, hsMsg);
+    }
+#endif
 
     switch (version) {
 #ifdef HITLS_TLS_PROTO_TLS_BASIC
@@ -437,6 +536,11 @@ int32_t HS_ParseMsg(TLS_Ctx *ctx, const HS_MsgInfo *hsMsgInfo, HS_Msg *hsMsg)
         case HITLS_VERSION_TLS13:
             return Tls13ParseHandShakeMsg(ctx, &hsMsgInfo->rawMsg[HS_MSG_HEADER_SIZE], hsMsgInfo->length, hsMsg);
 #endif /* HITLS_TLS_PROTO_TLS13 */
+#ifdef HITLS_TLS_PROTO_DTLS13
+        case HITLS_VERSION_DTLS13:
+            return Tls13ParseHandShakeMsg(ctx, &hsMsgInfo->rawMsg[DTLS_HS_MSG_HEADER_SIZE],
+                hsMsgInfo->length, hsMsg);
+#endif
 #ifdef HITLS_TLS_PROTO_DTLS12
         case HITLS_VERSION_DTLS12:
             return ParseHandShakeMsg(ctx, &hsMsgInfo->rawMsg[DTLS_HS_MSG_HEADER_SIZE], hsMsgInfo->length, hsMsg);
@@ -478,10 +582,10 @@ void HS_CleanMsg(HS_Msg *hsMsg)
         case SERVER_KEY_EXCHANGE:
             return CleanServerKeyExchange(&hsMsg->body.serverKeyExchange);
 #endif /* HITLS_TLS_PROTO_TLS_BASIC || HITLS_TLS_PROTO_DTLS12 */
-#ifdef HITLS_TLS_PROTO_TLS13
+#if defined(HITLS_TLS_PROTO_TLS13) || defined(HITLS_TLS_PROTO_DTLS13)
         case ENCRYPTED_EXTENSIONS:
             return CleanEncryptedExtensions(&hsMsg->body.encryptedExtensions);
-#endif /* HITLS_TLS_PROTO_TLS13 */
+#endif /* HITLS_TLS_PROTO_TLS13 || HITLS_TLS_PROTO_DTLS13 */
 #ifdef HITLS_TLS_FEATURE_SESSION_TICKET
         case NEW_SESSION_TICKET:
             return CleanNewSessionTicket(&hsMsg->body.newSessionTicket);
@@ -490,7 +594,7 @@ void HS_CleanMsg(HS_Msg *hsMsg)
         case CERTIFICATE:
             return CleanCertificate(&hsMsg->body.certificate);
 #if (defined(HITLS_TLS_HOST_SERVER) && defined(HITLS_TLS_FEATURE_CERT_MODE_CLIENT_VERIFY)) || \
-    defined(HITLS_TLS_PROTO_TLS13)    
+    defined(HITLS_TLS_PROTO_TLS13) || defined(HITLS_TLS_PROTO_DTLS13)
         case CERTIFICATE_VERIFY:
             return CleanCertificateVerify(&hsMsg->body.certificateVerify);
 #endif
@@ -499,6 +603,17 @@ void HS_CleanMsg(HS_Msg *hsMsg)
         case KEY_UPDATE:
         case HELLO_REQUEST:
         case SERVER_HELLO_DONE:
+#if defined(HITLS_TLS_FEATURE_DTLS_CID) && defined(HITLS_TLS_PROTO_DTLS13)
+        case REQUEST_CONNECTION_ID:
+        /*
+         * ParseNewConnectionId now points msg->cids into the wire buffer
+         * directly; there is no heap allocation to release here. Resetting the
+         * pointer keeps the HS_Msg shape consistent after cleanup.
+         */
+        case NEW_CONNECTION_ID:
+            hsMsg->body.newConnectionId.cids = NULL;
+            hsMsg->body.newConnectionId.cidsLen = 0;
+#endif
             return;
         default:
             break;

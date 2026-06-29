@@ -53,6 +53,13 @@ int32_t VERIFY_SetHash(HITLS_Lib_Ctx *libCtx, const char *attrName, VerifyCtx *c
  */
 int32_t VERIFY_Append(VerifyCtx *ctx, const uint8_t *data, uint32_t len);
 
+#ifdef HITLS_TLS_PROTO_DTLS13
+int32_t VERIFY_Dtls13Append(VerifyCtx *ctx, const uint8_t *data, uint32_t len);
+
+int32_t VERIFY_Dtls13BuildTranscriptMsg(const uint8_t *msg, uint32_t msgLen, uint8_t **transcript,
+    uint32_t *transcriptLen);
+#endif /* HITLS_TLS_PROTO_DTLS13 */
+
 /**
  * @brief   Calculate the SessionHash
  *

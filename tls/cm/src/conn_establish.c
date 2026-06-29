@@ -316,9 +316,19 @@ int32_t HITLS_SetEndPoint(HITLS_Ctx *ctx, bool isClient)
 
 static void SetTlsMinMaxVersion(TLS_Config *config)
 {
-    uint32_t versionBits[] = { TLS12_VERSION_BIT, TLS13_VERSION_BIT };
-    uint16_t versions[] = { HITLS_VERSION_TLS12, HITLS_VERSION_TLS13 };
-    uint32_t versionBitsSize = sizeof(versionBits) / sizeof(uint32_t);
+    const uint32_t tlsVersionBits[] = {TLS12_VERSION_BIT, TLS13_VERSION_BIT};
+    const uint16_t tlsVersions[] = {HITLS_VERSION_TLS12, HITLS_VERSION_TLS13};
+    const uint32_t dtlsVersionBits[] = {DTLS12_VERSION_BIT, DTLS13_VERSION_BIT};
+    const uint16_t dtlsVersions[] = {HITLS_VERSION_DTLS12, HITLS_VERSION_DTLS13};
+    const uint32_t *versionBits = tlsVersionBits;
+    const uint16_t *versions = tlsVersions;
+    uint32_t versionBitsSize = sizeof(tlsVersionBits) / sizeof(uint32_t);
+
+    if (IS_SUPPORT_DTLS(config->version)) {
+        versionBits = dtlsVersionBits;
+        versions = dtlsVersions;
+        versionBitsSize = sizeof(dtlsVersionBits) / sizeof(uint32_t);
+    }
     for (uint32_t i = 0; i < versionBitsSize; i++) {
         if ((config->version & versionBits[i]) == versionBits[i]) {
             config->minVersion = versions[i];
@@ -330,10 +340,6 @@ static void SetTlsMinMaxVersion(TLS_Config *config)
             config->maxVersion = versions[i];
             break;
         }
-    }
-    if ((config->version & DTLS12_VERSION_BIT) == DTLS12_VERSION_BIT) {
-        config->maxVersion = HITLS_VERSION_DTLS12;
-        config->minVersion = HITLS_VERSION_DTLS12;
     }
 }
 
@@ -370,6 +376,12 @@ int32_t HITLS_Connect(HITLS_Ctx *ctx)
         }
     }
 
+#ifdef HITLS_TLS_FEATURE_DTLS_CID
+    ret = CommonCheckPostHandshakeCid(ctx);
+    if (ret != HITLS_SUCCESS) {
+        return ret;
+    }
+#endif
     ManageEventProcess connectEventProcess[CM_STATE_END] = {
         ConnectEventInIdleState,
         CommonEventInHandshakingState,
@@ -402,6 +414,12 @@ int32_t HITLS_Accept(HITLS_Ctx *ctx)
     }
 #ifdef HITLS_TLS_FEATURE_PHA
     ret = CommonCheckPostHandshakeAuth(ctx);
+    if (ret != HITLS_SUCCESS) {
+        return ret;
+    }
+#endif
+#ifdef HITLS_TLS_FEATURE_DTLS_CID
+    ret = CommonCheckPostHandshakeCid(ctx);
     if (ret != HITLS_SUCCESS) {
         return ret;
     }

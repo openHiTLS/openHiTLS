@@ -53,6 +53,8 @@ int32_t PackTrustedCAList(HITLS_TrustedCAList *caList, PackPacket *pkt);
 
 int32_t PackCertificateReqCtx(const TLS_Ctx *ctx, PackPacket *pkt);
 
+int32_t PackHelloCommonFieldWithRandom(const TLS_Ctx *ctx, PackPacket *pkt, uint16_t version, const uint8_t *random);
+
 int32_t PackHelloCommonField(const TLS_Ctx *ctx, PackPacket *pkt, uint16_t version, bool isClient);
 #ifdef __cplusplus
 }

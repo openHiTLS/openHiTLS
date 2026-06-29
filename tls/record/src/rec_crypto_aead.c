@@ -24,10 +24,16 @@
 #include "record.h"
 #include "rec_alert.h"
 #include "rec_conn.h"
+#include "rec_header.h"
 #include "rec_crypto_aead.h"
+#include "crypt_eal_cipher.h"
 
 #define AEAD_AAD_TLS12_SIZE 13u            /* TLS1.2 AEAD additional_data length */
+#ifdef HITLS_TLS_PROTO_DTLS13
+#define AEAD_AAD_MAX_SIZE   REC_DTLS13_AAD_MAX_SIZE
+#else
 #define AEAD_AAD_MAX_SIZE   AEAD_AAD_TLS12_SIZE
+#endif
 #define AEAD_NONCE_SIZE 12u         /* The length of the AEAD nonce is fixed to 12 */
 #define AEAD_NONCE_ZEROS_SIZE 4u            /* The length of the AEAD nonce First 4 bytes */
 #ifdef HITLS_TLS_PROTO_TLS13
@@ -118,6 +124,17 @@ static void AeadGetAad(uint8_t *aad, uint32_t *aadLen, const REC_TextInput *inpu
         return;
     }
 #endif /* HITLS_TLS_PROTO_TLS13 */
+#ifdef HITLS_TLS_PROTO_DTLS13
+    if (input->negotiatedVersion == HITLS_VERSION_DTLS13) {
+        if (input->dtls13AadLen == 0 || input->dtls13AadLen > AEAD_AAD_MAX_SIZE) {
+            *aadLen = 0;
+            return;
+        }
+        memcpy(aad, input->dtls13Aad, input->dtls13AadLen);
+        *aadLen = input->dtls13AadLen;
+        return;
+    }
+#endif
     /* non-TLS1.3 generation additional_data = seq_num + TLSCompressed.type + TLSCompressed.version +
      * TLSCompressed.length */
     memcpy(aad, input->seq, REC_CONN_SEQ_SIZE);
@@ -176,7 +193,13 @@ static int32_t AeadDecrypt(TLS_Ctx *ctx, RecConnState *state, const REC_TextInpu
 
     /** Calculate NONCE */
     uint8_t nonce[AEAD_NONCE_SIZE] = {0};
-    int32_t ret = AeadGetNonce(suiteInfo, nonce, sizeof(nonce), recordIv, REC_CONN_SEQ_SIZE);
+    const uint8_t *nonceSeq = recordIv;
+#ifdef HITLS_TLS_PROTO_DTLS13
+    if (cryptMsg->negotiatedVersion == HITLS_VERSION_DTLS13) {
+        nonceSeq = cryptMsg->dtls13Seq;
+    }
+#endif
+    int32_t ret = AeadGetNonce(suiteInfo, nonce, sizeof(nonce), nonceSeq, REC_CONN_SEQ_SIZE);
     if (ret != HITLS_SUCCESS) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15395, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "Record decrypt:get nonce failed.", 0, 0, 0, 0);
@@ -198,7 +221,8 @@ static int32_t AeadDecrypt(TLS_Ctx *ctx, RecConnState *state, const REC_TextInpu
     diff: length
     */
     uint32_t plainDataLen = cryptMsg->textLen;
-    if (cryptMsg->negotiatedVersion != HITLS_VERSION_TLS13) {
+    if (cryptMsg->negotiatedVersion != HITLS_VERSION_TLS13 &&
+        cryptMsg->negotiatedVersion != HITLS_VERSION_DTLS13) {
         plainDataLen = cryptMsg->textLen - suiteInfo->recordIvLength - suiteInfo->macLen;
     }
     AeadGetAad(aad, &aadLen, cryptMsg, plainDataLen);
@@ -264,7 +288,13 @@ static int32_t AeadEncrypt(TLS_Ctx *ctx, RecConnState *state, const REC_TextInpu
 
     /** Calculate NONCE */
     uint8_t nonce[AEAD_NONCE_SIZE] = {0};
-    int32_t ret = AeadGetNonce(state->suiteInfo, nonce, sizeof(nonce), plainMsg->seq, REC_CONN_SEQ_SIZE);
+    const uint8_t *nonceSeq = plainMsg->seq;
+#ifdef HITLS_TLS_PROTO_DTLS13
+    if (plainMsg->negotiatedVersion == HITLS_VERSION_DTLS13) {
+        nonceSeq = plainMsg->dtls13Seq;
+    }
+#endif
+    int32_t ret = AeadGetNonce(state->suiteInfo, nonce, sizeof(nonce), nonceSeq, REC_CONN_SEQ_SIZE);
     if (ret != HITLS_SUCCESS) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15385, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "Record encrypt:get nonce failed.", 0, 0, 0, 0);
@@ -277,8 +307,9 @@ static int32_t AeadEncrypt(TLS_Ctx *ctx, RecConnState *state, const REC_TextInpu
     uint8_t aad[AEAD_AAD_MAX_SIZE];
     uint32_t aadLen = AEAD_AAD_MAX_SIZE;
     uint32_t textLen =
-#ifdef HITLS_TLS_PROTO_TLS13
-        (plainMsg->negotiatedVersion == HITLS_VERSION_TLS13) ? cipherTextLen :
+#if defined(HITLS_TLS_PROTO_TLS13) || defined(HITLS_TLS_PROTO_DTLS13)
+        (plainMsg->negotiatedVersion == HITLS_VERSION_TLS13 ||
+         plainMsg->negotiatedVersion == HITLS_VERSION_DTLS13) ? cipherTextLen :
 #endif /* HITLS_TLS_PROTO_TLS13 */
         plainMsg->textLen;
     AeadGetAad(aad, &aadLen, plainMsg, textLen);
@@ -307,4 +338,5 @@ const RecCryptoFunc *RecGetAeadCryptoFuncs(DecryptPostProcess decryptPostProcess
     cryptoFuncAead.encryptPreProcess = encryptPreProcess;
     return &cryptoFuncAead;
 }
+
 #endif

@@ -33,9 +33,10 @@
 #include "hs_dtls_timer.h"
 #include "hs_state_recv.h"
 #include "bsl_bytes.h"
+#include "dtls_cid.h"
 
 #define HS_MESSAGE_LEN_FIELD 3u
-#if defined(HITLS_TLS_PROTO_DTLS12) && defined(HITLS_BSL_UIO_UDP)
+#if (defined(HITLS_TLS_PROTO_DTLS12) || defined(HITLS_TLS_PROTO_DTLS13)) && defined(HITLS_BSL_UIO_UDP)
 // The HITLS protocol specifies the specification for the maximum timeout period, 3600 seconds.
 #define DTLS_SPECIFY_MAX_TIMEOUT_VALUE  3600
 #endif
@@ -74,8 +75,7 @@ int32_t RecvUnexpectMsgInTransportingStateProcess(HITLS_Ctx *ctx)
 }
 static int32_t RecvRenegoReqPreprocess(TLS_Ctx *ctx, uint8_t type)
 {
-#ifdef HITLS_TLS_PROTO_TLS13
-    /* If the version is TLS1.3, ignore the message */
+#if defined(HITLS_TLS_PROTO_TLS13)
     if (ctx->negotiatedInfo.version == HITLS_VERSION_TLS13) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16514, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "tls13 not support Renegotiation", 0, 0, 0, 0);
@@ -133,7 +133,7 @@ static int32_t RecvRenegoReqPreprocess(TLS_Ctx *ctx, uint8_t type)
     return HITLS_SUCCESS;
 }
 
-#ifdef HITLS_TLS_PROTO_TLS13
+#if defined(HITLS_TLS_PROTO_TLS13)
 static int32_t RecvKeyUpdatePreprocess(TLS_Ctx *ctx)
 {
     if (ctx->negotiatedInfo.version != HITLS_VERSION_TLS13) {
@@ -244,6 +244,12 @@ static int32_t PreprocessUnexpectHsMsg(HITLS_Ctx *ctx)
         ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_INTERNAL_ERROR);
         return ret;
     }
+#ifdef HITLS_TLS_PROTO_DTLS13
+    if (ctx->negotiatedInfo.version == HITLS_VERSION_DTLS13) {
+        ChangeConnState(ctx, CM_STATE_HANDSHAKING);
+        return HS_ChangeState(ctx, TRY_RECV_MSG);
+    }
+#endif
     // get the handshake message type
     ret = ReadHsMessage(ctx, 1);
     if (ret != HITLS_SUCCESS) {
@@ -258,7 +264,7 @@ static int32_t PreprocessUnexpectHsMsg(HITLS_Ctx *ctx)
         case HELLO_REQUEST:
         case CLIENT_HELLO:
             return RecvRenegoReqPreprocess(ctx, hsCtx->msgBuf[0]);
-#ifdef HITLS_TLS_PROTO_TLS13
+#if defined(HITLS_TLS_PROTO_TLS13)
         case KEY_UPDATE:
             return RecvKeyUpdatePreprocess(ctx);
         case CERTIFICATE_REQUEST:
@@ -314,7 +320,7 @@ static int32_t ReadEventInTransportingState(HITLS_Ctx *ctx, uint8_t *data, uint3
     int32_t unexpectMsgRet = 0;
 
     do {
-#if defined(HITLS_TLS_PROTO_DTLS12) && defined(HITLS_BSL_UIO_UDP)
+#if (defined(HITLS_TLS_PROTO_DTLS12) || defined(HITLS_TLS_PROTO_DTLS13)) && defined(HITLS_BSL_UIO_UDP)
         /* In UDP scenarios, the 2MSL timer expires */
         ret = HS_CheckAndProcess2MslTimeout(ctx);
         if (ret != HITLS_SUCCESS) {
@@ -497,6 +503,7 @@ static int32_t ReadProcess(HITLS_Ctx *ctx, uint8_t *data, uint32_t bufSize, uint
     return proc(ctx, data, bufSize, readLen);
 }
 
+
 int32_t HITLS_Read(HITLS_Ctx *ctx, uint8_t *data, uint32_t bufSize, uint32_t *readLen)
 {
     int32_t ret;
@@ -516,7 +523,21 @@ int32_t HITLS_Read(HITLS_Ctx *ctx, uint8_t *data, uint32_t bufSize, uint32_t *re
         }
     }
 
-    return ReadProcess(ctx, data, bufSize, readLen);
+#ifdef HITLS_TLS_PROTO_DTLS13
+    ret = CommonCheckDtls13BufferedHandshake(ctx);
+    if (ret != HITLS_SUCCESS) {
+        return ret;
+    }
+#endif
+
+    ret = ReadProcess(ctx, data, bufSize, readLen);
+#ifdef HITLS_TLS_PROTO_DTLS13
+    if (ctx->negotiatedInfo.version == HITLS_VERSION_DTLS13 &&
+        (ret == HITLS_SUCCESS || ret == HITLS_REC_NORMAL_RECV_BUF_EMPTY)) {
+        (void)REC_Dtls13FlushAck(ctx);
+    }
+#endif
+    return ret;
 }
 
 int32_t HITLS_Peek(HITLS_Ctx *ctx, uint8_t *data, uint32_t bufSize, uint32_t *readLen)
@@ -546,10 +567,10 @@ uint32_t HITLS_GetReadPendingBytes(const HITLS_Ctx *ctx)
     return APP_GetReadPendingBytes(ctx);
 }
 
-#if defined(HITLS_TLS_PROTO_DTLS12) && defined(HITLS_BSL_UIO_UDP)
+#if defined(HITLS_TLS_PROTO_DTLS) && defined(HITLS_BSL_UIO_UDP)
 int32_t HITLS_DtlsProcessTimeout(HITLS_Ctx *ctx)
 {
-    if (ctx == NULL || ctx->hsCtx == NULL) {
+    if (ctx == NULL) {
         return HITLS_NULL_INPUT;
     }
     bool isTimeout = false;
@@ -565,6 +586,11 @@ int32_t HITLS_DtlsProcessTimeout(HITLS_Ctx *ctx)
         if (ret != HITLS_SUCCESS) {
             return ret;
         }
+#ifdef HITLS_TLS_PROTO_DTLS13
+        if (IS_DTLS13_CTX(ctx)) {
+            (void)REC_Dtls13FlushAck(ctx);
+        }
+#endif
         /* Receive the message of the last flight when the receiving times out */
         ret = REC_RetransmitListFlush(ctx);
         if (ret != HITLS_SUCCESS) {
@@ -577,12 +603,12 @@ int32_t HITLS_DtlsProcessTimeout(HITLS_Ctx *ctx)
 
 int32_t HITLS_DtlsGetTimeout(HITLS_Ctx *ctx, uint64_t *remainTimeOut)
 {
-    if (ctx == NULL || ctx->hsCtx == NULL || remainTimeOut == NULL) {
+    if (ctx == NULL || remainTimeOut == NULL) {
         return HITLS_NULL_INPUT;
     }
 
     *remainTimeOut = 0;
-    if (!BSL_UIO_GetUioChainTransportType(ctx->uio, BSL_UIO_UDP) || ctx->hsCtx->timeoutValue == 0) {
+    if (!BSL_UIO_GetUioChainTransportType(ctx->uio, BSL_UIO_UDP) || ctx->timeoutValue == 0) {
         return HITLS_MSG_HANDLE_ERR_WITHOUT_TIMEOUT_ACTION;
     }
     BSL_TIME curTime;
@@ -624,7 +650,7 @@ int32_t HITLS_DtlsGetTimeout(HITLS_Ctx *ctx, uint64_t *remainTimeOut)
 
     return HITLS_SUCCESS;
 }
-#endif /* HITLS_TLS_PROTO_DTLS12 && HITLS_BSL_UIO_UDP */
+#endif /* HITLS_TLS_PROTO_DTLS && HITLS_BSL_UIO_UDP */
 
 #ifdef HITLS_TLS_FEATURE_CUSTOM_REC_TYPE
 int32_t HITLS_REC_SetReadCb(HITLS_Ctx *ctx, HITLS_REC_ReadCb callback, void *arg)

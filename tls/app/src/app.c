@@ -73,12 +73,12 @@ static int32_t SavePendingData(TLS_Ctx *ctx, uint8_t recordType, const uint8_t *
 static int32_t CheckDataLen(TLS_Ctx *ctx, uint8_t recordType, const uint8_t *data, uint32_t *sendLen)
 {
     int32_t ret = HITLS_SUCCESS;
-#if defined(HITLS_TLS_PROTO_DTLS12) && defined(HITLS_BSL_UIO_UDP)
+#if (defined(HITLS_TLS_PROTO_DTLS12) || defined(HITLS_TLS_PROTO_DTLS13)) && defined(HITLS_BSL_UIO_UDP)
     ret = REC_QueryMtu(ctx);
     if (ret != HITLS_SUCCESS) {
         return ret;
     }
-#endif /* HITLS_TLS_PROTO_DTLS12 && HITLS_BSL_UIO_UDP */
+#endif /* (HITLS_TLS_PROTO_DTLS12 || HITLS_TLS_PROTO_DTLS13) && HITLS_BSL_UIO_UDP */
     ret = REC_RecOutBufReSet(ctx);
     if (ret != HITLS_SUCCESS) {
         return ret;

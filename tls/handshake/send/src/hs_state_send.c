@@ -24,9 +24,13 @@
 #include "hs_common.h"
 #include "send_process.h"
 #include "hs_kx.h"
+#include "hs_dtls_timer.h"
 #include "pack.h"
 #include "bsl_uio.h"
 #include "bsl_sal.h"
+#ifdef HITLS_TLS_FEATURE_DTLS_CID
+#include "dtls_cid.h"
+#endif
 
 #ifdef HITLS_TLS_FEATURE_KEY_UPDATE
 static int32_t Tls13SendKeyUpdateProcess(TLS_Ctx *ctx)
@@ -38,7 +42,7 @@ static int32_t Tls13SendKeyUpdateProcess(TLS_Ctx *ctx)
         ret = HS_PackMsg(ctx, KEY_UPDATE);
         if (ret != HITLS_SUCCESS) {
             BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15791, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-                "pack tls1.3 key update msg fail.", 0, 0, 0, 0);
+                "pack (d)tls1.3 key update msg fail.", 0, 0, 0, 0);
             return ret;
         }
     }
@@ -48,16 +52,23 @@ static int32_t Tls13SendKeyUpdateProcess(TLS_Ctx *ctx)
         return ret;
     }
     BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15792, BSL_LOG_LEVEL_INFO, BSL_LOG_BINLOG_TYPE_RUN,
-        "send tls1.3 key update msg success.", 0, 0, 0, 0);
-    /* After the key update message is sent, the local application traffic key is updated and activated. */
-    ret = HS_TLS13UpdateTrafficSecret(ctx, true);
-    if (ret != HITLS_SUCCESS) {
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15793, BSL_LOG_LEVEL_INFO, BSL_LOG_BINLOG_TYPE_RUN,
-            "tls1.3 out key update fail", 0, 0, 0, 0);
-        return ret;
+        "send (d)tls1.3 key update msg success.", 0, 0, 0, 0);
+#ifdef HITLS_TLS_PROTO_DTLS13
+    if (GET_VERSION_FROM_CTX(ctx) != HITLS_VERSION_DTLS13) {
+#endif
+        /* TLS1.3 updates the outbound application traffic key after sending KeyUpdate.
+         * DTLS1.3 waits for the record-layer ACK and updates from the retransmit-node callback. */
+        ret = HS_TLS13UpdateTrafficSecret(ctx, true);
+        if (ret != HITLS_SUCCESS) {
+            BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15793, BSL_LOG_LEVEL_INFO, BSL_LOG_BINLOG_TYPE_RUN,
+                "(d)tls1.3 out key update fail", 0, 0, 0, 0);
+            return ret;
+        }
+#ifdef HITLS_TLS_PROTO_DTLS13
     }
+#endif
     BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15794, BSL_LOG_LEVEL_INFO, BSL_LOG_BINLOG_TYPE_RUN,
-        "tls1.3 send key update success.", 0, 0, 0, 0);
+        "(d)tls1.3 send key update success.", 0, 0, 0, 0);
 
     ctx->isKeyUpdateRequest = false;
     ctx->keyUpdateType = HITLS_KEY_UPDATE_REQ_END;
@@ -145,7 +156,11 @@ static int32_t ProcessSendHandshakeMsg(TLS_Ctx *ctx)
 int32_t Tls13SendChangeCipherSpecProcess(TLS_Ctx *ctx)
 {
     int32_t ret;
-
+#if defined(HITLS_TLS_PROTO_DTLS12)
+    if (IS_SUPPORT_DATAGRAM(ctx->config.tlsConfig.originVersionMask)) {
+        return HS_ChangeState(ctx, ctx->hsCtx->ccsNextState);
+    }
+#endif
     /* Sending message with changed cipher suites */
     ret = ctx->method.sendCCS(ctx);
     if (ret != HITLS_SUCCESS) {
@@ -154,6 +169,91 @@ int32_t Tls13SendChangeCipherSpecProcess(TLS_Ctx *ctx)
     return HS_ChangeState(ctx, ctx->hsCtx->ccsNextState);
 }
 
+#ifdef HITLS_TLS_FEATURE_DTLS_CID
+/*
+ * Pack once, then rely on the normal handshake send buffer for retransmission.
+ * HITLS_NewConnectionId has already pinned the candidate CIDs in recv slots and
+ * recorded them in cidWrittenMask; pack reads them straight from the slots.
+ */
+static int32_t Dtls13SendNewConnectionIdProcess(TLS_Ctx *ctx)
+{
+    int32_t ret = HITLS_SUCCESS;
+    HS_Ctx *hsCtx = ctx->hsCtx;
+
+    if (hsCtx->msgLen == 0) {
+        /* First send attempt: build the post-handshake message into hsCtx. */
+        ret = HS_PackMsg(ctx, NEW_CONNECTION_ID);
+        if (ret != HITLS_SUCCESS) {
+            return ret;
+        }
+    }
+
+    ret = HS_SendMsg(ctx);
+    if (ret != HITLS_SUCCESS) {
+        return ret;
+    }
+    ctx->newCidState = DTLS_CID_MSG_STATE_SENT;
+    return HS_ChangeState(ctx, TLS_CONNECTED);
+}
+
+/*
+ * Send the queued RequestConnectionId. Per RFC 9147 Section 5.2, the message is
+ * considered outstanding until its record-layer ACK is received, regardless of
+ * num_cids or any later peer NewConnectionId. The state stays SENT until
+ * DTLS_CID_OnRequestConnectionIdAcked flips it back to IDLE.
+ */
+static int32_t Dtls13SendRequestConnectionIdProcess(TLS_Ctx *ctx)
+{
+    int32_t ret = HITLS_SUCCESS;
+    HS_Ctx *hsCtx = ctx->hsCtx;
+
+    if (hsCtx->msgLen == 0) {
+        /* First send attempt: build the one-byte num_cids request. */
+        ret = HS_PackMsg(ctx, REQUEST_CONNECTION_ID);
+        if (ret != HITLS_SUCCESS) {
+            return ret;
+        }
+    }
+
+    ret = HS_SendMsg(ctx);
+    if (ret != HITLS_SUCCESS) {
+        return ret;
+    }
+    ctx->reqCidState = DTLS_CID_MSG_STATE_SENT;
+    return HS_ChangeState(ctx, TLS_CONNECTED);
+}
+#endif /* HITLS_TLS_FEATURE_DTLS_CID */
+#endif /* HITLS_TLS_PROTO_TLS13 */
+
+#ifdef HITLS_TLS_PROTO_DTLS13
+static int32_t Dtls13SendAckProcess(TLS_Ctx *ctx)
+{
+    int32_t ret = REC_Dtls13SendAck(ctx, REC_DTLS13_ACK_RETRANS);
+    if (ret != HITLS_SUCCESS) {
+        return ret;
+    }
+
+    ret = HS_Start2MslTimer(ctx);
+    if (ret != HITLS_SUCCESS) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17388, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+            "Start2MslTimer fail", 0, 0, 0, 0);
+        return ret;
+    }
+
+#ifdef HITLS_TLS_HOST_SERVER
+    if (!ctx->isClient) {
+#ifdef HITLS_TLS_FEATURE_SESSION_TICKET
+        if (ctx->hsCtx->sentTickets < ctx->config.tlsConfig.ticketNums) {
+            return HS_ChangeState(ctx, TRY_SEND_NEW_SESSION_TICKET);
+        }
+#endif /* HITLS_TLS_FEATURE_SESSION_TICKET */
+    }
+#endif /* HITLS_TLS_HOST_SERVER */
+    return HS_ChangeState(ctx, TLS_CONNECTED);
+}
+#endif /* HITLS_TLS_PROTO_DTLS13 */
+
+#if defined(HITLS_TLS_PROTO_TLS13) || defined(HITLS_TLS_PROTO_DTLS13)
 static int32_t Tls13ProcessSendHandshakeMsg(TLS_Ctx *ctx)
 {
     switch (ctx->hsCtx->state) {
@@ -195,20 +295,38 @@ static int32_t Tls13ProcessSendHandshakeMsg(TLS_Ctx *ctx)
 #ifdef HITLS_TLS_HOST_SERVER
             return Tls13ServerSendFinishedProcess(ctx);
 #endif /* HITLS_TLS_HOST_SERVER */
+#ifdef HITLS_TLS_PROTO_TLS13
         case TRY_SEND_CHANGE_CIPHER_SPEC:
             return Tls13SendChangeCipherSpecProcess(ctx);
+#endif /* HITLS_TLS_PROTO_TLS13 */
 #ifdef HITLS_TLS_FEATURE_KEY_UPDATE
         case TRY_SEND_KEY_UPDATE:
             return Tls13SendKeyUpdateProcess(ctx);
+#endif
+#ifdef HITLS_TLS_PROTO_DTLS13
+        case TRY_SEND_ACK:
+            return Dtls13SendAckProcess(ctx);
+#endif /* HITLS_TLS_PROTO_DTLS13 */
+#ifdef HITLS_TLS_FEATURE_DTLS_CID
+        case TRY_SEND_NEW_CONNECTION_ID:
+            return Dtls13SendNewConnectionIdProcess(ctx);
+        case TRY_SEND_REQUEST_CONNECTION_ID:
+            return Dtls13SendRequestConnectionIdProcess(ctx);
 #endif
         default:
             return RETURN_ERROR_NUMBER_PROCESS(HITLS_MSG_HANDLE_STATE_ILLEGAL, BINLOG_ID17101, "Handshake state error");
     }
 }
-#endif /* HITLS_TLS_PROTO_TLS13 */
+#endif /* HITLS_TLS_PROTO_TLS13 || HITLS_TLS_PROTO_DTLS13 */
 int32_t HS_SendMsgProcess(TLS_Ctx *ctx)
 {
     uint32_t version = GET_VERSION_FROM_CTX(ctx);
+
+#if defined(HITLS_TLS_PROTO_DTLS12) && defined(HITLS_BSL_UIO_UDP)
+    if (ctx->hsCtx->state == TRY_SEND_HELLO_VERIFY_REQUEST) {
+        return ProcessSendHandshakeMsg(ctx);
+    }
+#endif
 
     switch (version) {
 #ifdef HITLS_TLS_PROTO_TLS_BASIC
@@ -218,10 +336,11 @@ int32_t HS_SendMsgProcess(TLS_Ctx *ctx)
 #endif
             return ProcessSendHandshakeMsg(ctx);
 #endif /* HITLS_TLS_PROTO_TLS_BASIC */
-#ifdef HITLS_TLS_PROTO_TLS13
+#if defined(HITLS_TLS_PROTO_TLS13) || defined(HITLS_TLS_PROTO_DTLS13)
         case HITLS_VERSION_TLS13:
+        case HITLS_VERSION_DTLS13:
             return Tls13ProcessSendHandshakeMsg(ctx);
-#endif /* HITLS_TLS_PROTO_TLS13 */
+#endif /* HITLS_TLS_PROTO_TLS13 || HITLS_TLS_PROTO_DTLS13 */
 #ifdef HITLS_TLS_PROTO_DTLS12
         case HITLS_VERSION_DTLS12:
             return ProcessSendHandshakeMsg(ctx);

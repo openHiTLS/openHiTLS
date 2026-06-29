@@ -101,7 +101,7 @@ int32_t SetSessionTicketAndSessionID(TLS_Ctx *ctx, bool isTls13)
 static int32_t SessionConfig(TLS_Ctx *ctx)
 {
     int32_t ret = 0;
-    bool isTls13 = (ctx->negotiatedInfo.version == HITLS_VERSION_TLS13);
+    bool isTls13 = (ctx->negotiatedInfo.version == HITLS_VERSION_TLS13 || ctx->negotiatedInfo.version == HITLS_VERSION_DTLS13);
     HS_Ctx *hsCtx = ctx->hsCtx;
     ret = SetSessionTicketAndSessionID(ctx, isTls13);
     if (ret != HITLS_SUCCESS) {
@@ -124,7 +124,7 @@ static int32_t SessionConfig(TLS_Ctx *ctx)
     (void)HITLS_SESS_SetCipherSuite(ctx->session, ctx->negotiatedInfo.cipherSuiteInfo.cipherSuite);
 
     uint32_t masterKeySize = MASTER_SECRET_LEN;
-#ifdef HITLS_TLS_PROTO_TLS13
+#if defined(HITLS_TLS_PROTO_TLS13) || defined(HITLS_TLS_PROTO_DTLS13)
     if (isTls13) {
         masterKeySize = SAL_CRYPT_DigestSize(ctx->negotiatedInfo.cipherSuiteInfo.hashAlg);
         if (masterKeySize == 0) {
@@ -133,7 +133,7 @@ static int32_t SessionConfig(TLS_Ctx *ctx)
             return HITLS_CRYPT_ERR_DIGEST;
         }
     }
-#endif
+#endif /* HITLS_TLS_PROTO_TLS13 || HITLS_TLS_PROTO_DTLS13 */
 
     ret = HITLS_SESS_SetMasterKey(ctx->session, hsCtx->masterKey, masterKeySize);
     if (ret != HITLS_SUCCESS) {
@@ -191,7 +191,7 @@ static int32_t HsSetSessionInfo(TLS_Ctx *ctx)
     if (ret != HITLS_SUCCESS) {
         return ret;
     }
-    if (ctx->negotiatedInfo.version == HITLS_VERSION_TLS13) {
+    if (ctx->negotiatedInfo.version == HITLS_VERSION_TLS13 || ctx->negotiatedInfo.version == HITLS_VERSION_DTLS13) {
         return HITLS_SUCCESS;
     }
 #if defined(HITLS_TLS_PROTO_TLS_BASIC) || defined(HITLS_TLS_PROTO_DTLS12)
@@ -345,7 +345,7 @@ int32_t Tls12ClientRecvFinishedProcess(TLS_Ctx *ctx, const HS_Msg *msg)
 }
 #endif /* HITLS_TLS_PROTO_TLS_BASIC */
 
-#ifdef HITLS_TLS_PROTO_TLS13
+#if defined(HITLS_TLS_PROTO_TLS13) || defined(HITLS_TLS_PROTO_DTLS13)
 int32_t Tls13ClientRecvFinishedProcess(TLS_Ctx *ctx, const HS_Msg *msg)
 {
     int32_t ret = RecvFinishedProcess(ctx, msg);
@@ -368,14 +368,13 @@ int32_t Tls13ClientRecvFinishedProcess(TLS_Ctx *ctx, const HS_Msg *msg)
             "SwitchTrafficKey fail", 0, 0, 0, 0);
         return ret;
     }
-
     if (ctx->hsCtx->isNeedClientCert) {
         return HS_ChangeState(ctx, TRY_SEND_CERTIFICATE);
     }
 
     return HS_ChangeState(ctx, TRY_SEND_FINISH);
 }
-#endif /* HITLS_TLS_PROTO_TLS13 */
+#endif /* HITLS_TLS_PROTO_TLS13 || HITLS_TLS_PROTO_DTLS13 */
 #endif /* HITLS_TLS_HOST_CLIENT */
 
 #ifdef HITLS_TLS_HOST_SERVER
@@ -400,7 +399,7 @@ int32_t Tls12ServerRecvFinishedProcess(TLS_Ctx *ctx, const HS_Msg *msg)
 }
 #endif /* HITLS_TLS_PROTO_TLS_BASIC */
 
-#ifdef HITLS_TLS_PROTO_TLS13
+#if defined(HITLS_TLS_PROTO_TLS13) || defined(HITLS_TLS_PROTO_DTLS13)
 int32_t Tls13ServerRecvFinishedProcess(TLS_Ctx *ctx, const HS_Msg *msg)
 {
     /** CCS messages are not allowed to be received */
@@ -412,7 +411,8 @@ int32_t Tls13ServerRecvFinishedProcess(TLS_Ctx *ctx, const HS_Msg *msg)
         return ret;
     }
 #ifdef HITLS_TLS_FEATURE_PHA
-    if (ctx->phaState == PHA_REQUESTED) {
+    bool isPostHandshakeAuth = ctx->phaState == PHA_REQUESTED;
+    if (isPostHandshakeAuth) {
         ctx->phaState = PHA_EXTENSION;
     } else
 #endif /* HITLS_TLS_FEATURE_PHA */
@@ -443,6 +443,16 @@ int32_t Tls13ServerRecvFinishedProcess(TLS_Ctx *ctx, const HS_Msg *msg)
         }
 #endif /* HITLS_TLS_FEATURE_PHA && HITLS_TLS_FEATURE_CERT_MODE_CLIENT_VERIFY */
     }
+#ifdef HITLS_TLS_PROTO_DTLS13
+    if (ctx->negotiatedInfo.version == HITLS_VERSION_DTLS13) {
+#ifdef HITLS_TLS_FEATURE_PHA
+        if (isPostHandshakeAuth) {
+            return HS_ChangeState(ctx, TLS_CONNECTED);
+        }
+#endif /* HITLS_TLS_FEATURE_PHA */
+        return HS_ChangeState(ctx, TRY_SEND_ACK);
+    }
+#endif /* HITLS_TLS_PROTO_DTLS13 */
 #ifdef HITLS_TLS_FEATURE_SESSION_TICKET
     /* When ticketNums is 0, no ticket is sent */
     if (ctx->hsCtx->sentTickets < ctx->config.tlsConfig.ticketNums) {
@@ -451,5 +461,5 @@ int32_t Tls13ServerRecvFinishedProcess(TLS_Ctx *ctx, const HS_Msg *msg)
 #endif
     return HS_ChangeState(ctx, TLS_CONNECTED);
 }
-#endif /* HITLS_TLS_PROTO_TLS13 */
+#endif /* HITLS_TLS_PROTO_TLS13 || HITLS_TLS_PROTO_DTLS13 */
 #endif /* HITLS_TLS_HOST_SERVER */

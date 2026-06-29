@@ -26,13 +26,14 @@
 #include "hs_ctx.h"
 #include "hs_kx.h"
 #include "hs_common.h"
+#include "hs_dtls_timer.h"
 #include "session_mgr.h"
 #include "pack.h"
 #include "send_process.h"
 
-#ifdef HITLS_TLS_PROTO_TLS13
+#if defined(HITLS_TLS_PROTO_TLS13) || defined(HITLS_TLS_PROTO_DTLS13)
 #define HITLS_ONE_WEEK_SECONDS (604800)
-#endif
+#endif /* HITLS_TLS_PROTO_TLS13 || HITLS_TLS_PROTO_DTLS13 */
 #ifdef HITLS_TLS_PROTO_TLS_BASIC
 int32_t SendNewSessionTicketProcess(TLS_Ctx *ctx)
 {
@@ -73,7 +74,7 @@ int32_t SendNewSessionTicketProcess(TLS_Ctx *ctx)
     return HS_ChangeState(ctx, TRY_SEND_CHANGE_CIPHER_SPEC);
 }
 #endif /* HITLS_TLS_PROTO_TLS_BASIC */
-#ifdef HITLS_TLS_PROTO_TLS13
+#if defined(HITLS_TLS_PROTO_TLS13) || defined(HITLS_TLS_PROTO_DTLS13)
 static int32_t Tls13TicketGenerateConfigSession(TLS_Ctx *ctx, HITLS_Session **sessionPtr,
     uint8_t *resumePsk, uint32_t hashLen)
 {
@@ -189,6 +190,15 @@ int32_t Tls13SendNewSessionTicketProcess(TLS_Ctx *ctx)
     BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16053, BSL_LOG_LEVEL_INFO, BSL_LOG_BINLOG_TYPE_RUN,
         "send new session ticket msg success.", 0, 0, 0, 0);
 
+#ifdef HITLS_TLS_PROTO_DTLS13
+    if (ctx->negotiatedInfo.version == HITLS_VERSION_DTLS13) {
+        ret = HS_StartTimer(ctx);
+        if (ret != HITLS_SUCCESS) {
+            return ret;
+        }
+    }
+#endif /* HITLS_TLS_PROTO_DTLS13 */
+
     hsCtx->sentTickets++;
     hsCtx->nextTicketNonce++;
     /* When the value of ticketNums is greater than 0, a ticket is sent after the session is resumed. */
@@ -197,5 +207,5 @@ int32_t Tls13SendNewSessionTicketProcess(TLS_Ctx *ctx)
     }
     return HS_ChangeState(ctx, TRY_SEND_NEW_SESSION_TICKET);
 }
-#endif /* HITLS_TLS_PROTO_TLS13 */
+#endif /* HITLS_TLS_PROTO_TLS13 || HITLS_TLS_PROTO_DTLS13 */
 #endif /* HITLS_TLS_FEATURE_SESSION_TICKET && HITLS_TLS_HOST_SERVER */

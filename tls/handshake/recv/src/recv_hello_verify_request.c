@@ -31,6 +31,10 @@ int32_t DtlsClientRecvHelloVerifyRequestProcess(TLS_Ctx *ctx, HS_Msg *msg)
     TLS_NegotiatedInfo *negotiatedInfo = &ctx->negotiatedInfo;
     HelloVerifyRequestMsg *helloVerifyReq = &msg->body.helloVerifyReq;
 
+#if defined(HITLS_TLS_PROTO_TLS13) || defined(HITLS_TLS_PROTO_DTLS13)
+    ctx->hsCtx->haveHvr = true;
+#endif
+
     /* release the old cookie first */
     BSL_SAL_FREE(negotiatedInfo->cookie);
 

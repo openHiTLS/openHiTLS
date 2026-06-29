@@ -32,6 +32,11 @@ extern "C" {
 /* Max CertificateVerify body: UINT16_MAX (signature) + 2 (scheme) + 2 (length) = 65539 */
 #define MAX_CERT_VERIFY_SIZE 65539
 
+#ifdef HITLS_TLS_PROTO_DTLS13
+#define CRYPT_DTLS13_HKDF_LABEL_PREFIX "dtls13"
+#define CRYPT_DTLS13_HKDF_LABEL_PREFIX_LEN ((uint32_t)(sizeof(CRYPT_DTLS13_HKDF_LABEL_PREFIX) - 1u))
+#endif
+
 /* Used to transfer key derivation parameters. */
 typedef struct {
     HITLS_HashAlgo hashAlgo;    /* Hash algorithm */
@@ -43,6 +48,8 @@ typedef struct {
     uint32_t seedLen;           /* Seed length */
     HITLS_Lib_Ctx *libCtx;
     const char *attrName;
+    const uint8_t *labelPrefix; /* Optional HKDF-Expand-Label prefix. NULL means TLS 1.3 default. */
+    uint32_t labelPrefixLen;    /* Optional HKDF-Expand-Label prefix length. */
 } CRYPT_KeyDeriveParameters;
 
 enum HITLS_CryptoCallBack {

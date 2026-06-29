@@ -25,10 +25,19 @@
 #include "hitls_config.h"
 #include "tls.h"
 #include "rec.h"
+#include "record.h"
 #include "transcript_hash.h"
 #include "hs_ctx.h"
 #include "hs.h"
+#include "hs_msg.h"
+#include "hs_dtls_timer.h"
 #include "send_process.h"
+#ifdef HITLS_TLS_FEATURE_KEY_UPDATE
+#include "hs_kx.h"
+#endif
+#ifdef HITLS_TLS_FEATURE_DTLS_CID
+#include "dtls_cid.h"
+#endif
 #ifdef HITLS_TLS_FEATURE_INDICATOR
 #include "indicator.h"
 #endif /* HITLS_TLS_FEATURE_INDICATOR */
@@ -212,9 +221,105 @@ static int32_t DtlsSendHandShakeMsg(TLS_Ctx *ctx)
 }
 #endif /* HITLS_TLS_PROTO_DTLS12 */
 
+#ifdef HITLS_TLS_PROTO_DTLS13
+#ifdef HITLS_TLS_FEATURE_KEY_UPDATE
+static int32_t Dtls13KeyUpdateAckCb(TLS_Ctx *ctx)
+{
+    int32_t ret = HS_TLS13UpdateTrafficSecret(ctx, true);
+    if (ret != HITLS_SUCCESS) {
+        return ret;
+    }
+    return REC_RetransmitListFlush(ctx);
+}
+#endif /* HITLS_TLS_FEATURE_KEY_UPDATE */
+
+static REC_Dtls13RetransmitAckCb Dtls13GetRetransmitAckCb(const HS_Ctx *hsCtx)
+{
+    if (hsCtx == NULL || hsCtx->msgBuf == NULL || hsCtx->msgLen < DTLS_HS_MSG_HEADER_SIZE) {
+        return NULL;
+    }
+    switch ((HS_MsgType)hsCtx->msgBuf[0]) {
+#ifdef HITLS_TLS_FEATURE_KEY_UPDATE
+        case KEY_UPDATE:
+            return Dtls13KeyUpdateAckCb;
+#endif
+#ifdef HITLS_TLS_FEATURE_DTLS_CID
+        case NEW_CONNECTION_ID:
+            return DTLS_CID_OnNewConnectionIdAcked;
+        case REQUEST_CONNECTION_ID:
+            return DTLS_CID_OnRequestConnectionIdAcked;
+#endif
+        default:
+            return NULL;
+    }
+}
+
+static int32_t Dtls13CheckHsSendSeq(TLS_Ctx *ctx, const HS_Ctx *hsCtx)
+{
+    if (hsCtx->nextSendSeq == DTLS_HS_MSG_SEQ_MAX) {
+        BSL_ERR_PUSH_ERROR(HITLS_MSG_HANDLE_UNMATCHED_SEQUENCE);
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15351, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+            "DTLS1.3 handshake send sequence wrap.", 0, 0, 0, 0);
+        ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_UNEXPECTED_MESSAGE);
+        return HITLS_MSG_HANDLE_UNMATCHED_SEQUENCE;
+    }
+    return HITLS_SUCCESS;
+}
+
+static int32_t Dtls13SendHandShakeMsg(TLS_Ctx *ctx)
+{
+    int32_t ret = HITLS_SUCCESS;
+    HS_Ctx *hsCtx = (HS_Ctx *)ctx->hsCtx;
+    if (hsCtx == NULL || hsCtx->msgBuf == NULL || hsCtx->msgLen < DTLS_HS_MSG_HEADER_SIZE) {
+        return HITLS_INTERNAL_EXCEPTION;
+    }
+    bool isPostHandshakeSend = (ctx->state == CM_STATE_HANDSHAKING && ctx->preState == CM_STATE_TRANSPORTING);
+    ret = Dtls13CheckHsSendSeq(ctx, hsCtx);
+    if (ret != HITLS_SUCCESS) {
+        return ret;
+    }
+    ret = REC_RetransmitListPushWithAckCb(ctx, REC_TYPE_HANDSHAKE, hsCtx->msgBuf, hsCtx->msgLen,
+        Dtls13GetRetransmitAckCb(hsCtx));
+    if (ret != HITLS_SUCCESS) {
+        return ret;
+    }
+
+    ret = VERIFY_Dtls13Append(hsCtx->verifyCtx, hsCtx->msgBuf, hsCtx->msgLen);
+    if (ret != HITLS_SUCCESS) {
+        return ret;
+    }
+    if (isPostHandshakeSend) {
+        ret = HS_StartTimer(ctx);
+        if (ret != HITLS_SUCCESS) {
+            return ret;
+        }
+    }
+#ifdef HITLS_TLS_FEATURE_INDICATOR
+    INDICATOR_MessageIndicate(1, GET_VERSION_FROM_CTX(ctx), REC_TYPE_HANDSHAKE, hsCtx->msgBuf, hsCtx->msgLen,
+                              ctx, ctx->config.tlsConfig.msgArg);
+    INDICATOR_StatusIndicate(ctx, ctx->isClient ? INDICATE_EVENT_STATE_CONNECT_LOOP : INDICATE_EVENT_STATE_ACCEPT_LOOP,
+        INDICATE_VALUE_SUCCESS);
+#endif
+    hsCtx->msgLen = 0;
+    hsCtx->nextSendSeq++;
+    return HITLS_SUCCESS;
+}
+#endif
+
 int32_t HS_SendMsg(TLS_Ctx *ctx)
 {
     uint32_t version = GET_VERSION_FROM_CTX(ctx);
+#if defined(HITLS_TLS_PROTO_DTLS12) && defined(HITLS_BSL_UIO_UDP)
+    if (ctx->hsCtx->state == TRY_SEND_HELLO_VERIFY_REQUEST) {
+        return DtlsSendHandShakeMsg(ctx);
+    }
+#ifdef HITLS_TLS_PROTO_DTLS13
+    if (ctx->hsCtx->state == TRY_SEND_CLIENT_HELLO && ctx->hsCtx->haveHvr) {
+        return DtlsSendHandShakeMsg(ctx);
+    }
+#endif /* HITLS_TLS_PROTO_DTLS13 */
+#endif
+
     switch (version) {
 #ifdef HITLS_TLS_PROTO_TLS
         case HITLS_VERSION_TLS12:
@@ -229,6 +334,10 @@ int32_t HS_SendMsg(TLS_Ctx *ctx)
 #endif
             return TlsSendHandShakeMsg(ctx);
 #endif /* HITLS_TLS_PROTO_TLS */
+#ifdef HITLS_TLS_PROTO_DTLS13
+        case HITLS_VERSION_DTLS13:
+            return Dtls13SendHandShakeMsg(ctx);
+#endif
 #ifdef HITLS_TLS_PROTO_DTLS12
         case HITLS_VERSION_DTLS12:
             return DtlsSendHandShakeMsg(ctx);

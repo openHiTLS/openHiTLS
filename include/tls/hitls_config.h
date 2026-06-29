@@ -257,6 +257,22 @@ HITLS_Config *HITLS_CFG_ProviderNewDTLS12Config(HITLS_Lib_Ctx *libCtx, const cha
 
 /**
  * @ingroup hitls_config
+ * @brief   Create DTLS1.3 configuration items, including the default settings.
+ * @return  HITLS_Config, object pointer succeeded.
+ * @return  NULL, failed to apply for the object.
+ */
+HITLS_Config *HITLS_CFG_NewDTLS13Config(void);
+
+/**
+ * @ingroup hitls_config
+ * @brief   Same as HITLS_CFG_NewDTLS13Config except that it requires libCtx and attribute parameters.
+ * @retval  HITLS_Config, object pointer succeeded.
+ * @retval  NULL, failed to apply for the object.
+ */
+HITLS_Config *HITLS_CFG_ProviderNewDTLS13Config(HITLS_Lib_Ctx *libCtx, const char *attrName);
+
+/**
+ * @ingroup hitls_config
  * @brief   Create TLCP configuration items, including default settings.
  * The user can call the HITLS_CFG_SetXXX interface to modify the settings.
  * @attention   The default configuration is as follows:
@@ -1225,7 +1241,7 @@ int32_t HITLS_CFG_GetVersionSupport(const HITLS_Config *config, uint32_t *versio
  * @param   config [OUT] Config handle
  * @param   version [IN] Supported version number.
  * @attention   The maximum version number and minimum version number must be both TLS and DTLS.
- * Currently, only DTLS 1.2 is supported. This function is used together with the full configuration interfaces,
+ * Currently, DTLS 1.3 and DTLS 1.2 are supported. This function is used together with the full configuration interfaces,
  * such as HITLS_CFG_NewDTLSConfig and HITLS_CFG_NewTLSConfig.
  * If the TLS full configuration is configured, only the TLS version can be set.
  * If full DTLS configuration is configured, only the DTLS version can be set.
@@ -1763,6 +1779,26 @@ int32_t HITLS_CFG_GetLegacyRenegotiateSupport(HITLS_Config *config, bool *isSupp
  * @retval  For other error codes, see hitls_error.h.
  */
 int32_t HITLS_CFG_EnableTls13SM(HITLS_Config *config, bool isOnlySupportSM);
+
+/**
+ * @ingroup hitls_config
+ * @brief   Set whether DTLS 1.3 Connection ID support is enabled. Takes effect at the next handshake.
+ * @param   config   [IN] Config handle
+ * @param   support  [IN] true: enable CID; false: disable CID.
+ * @retval  HITLS_SUCCESS, if successful.
+ * @retval  HITLS_NULL_INPUT, config is NULL.
+ */
+int32_t HITLS_CFG_SetDtlsCidSupport(HITLS_Config *config, bool support);
+
+/**
+ * @ingroup hitls_config
+ * @brief   Query whether DTLS 1.3 Connection ID support is enabled.
+ * @param   config    [IN] Config handle
+ * @param   isSupport [OUT] Whether CID support is enabled.
+ * @retval  HITLS_SUCCESS, if successful.
+ * @retval  HITLS_NULL_INPUT, config or isSupport is NULL.
+ */
+int32_t HITLS_CFG_GetDtlsCidSupport(const HITLS_Config *config, bool *isSupport);
 #ifdef __cplusplus
 }
 #endif

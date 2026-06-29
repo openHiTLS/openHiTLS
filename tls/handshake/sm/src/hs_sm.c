@@ -109,6 +109,13 @@ bool IsHsSendState(HITLS_HandshakeState state)
         case TRY_SEND_END_OF_EARLY_DATA:
         case TRY_SEND_FINISH:
         case TRY_SEND_KEY_UPDATE:
+#ifdef HITLS_TLS_PROTO_DTLS13
+        case TRY_SEND_ACK:
+#endif /* HITLS_TLS_PROTO_DTLS13 */
+#ifdef HITLS_TLS_FEATURE_DTLS_CID
+        case TRY_SEND_NEW_CONNECTION_ID:
+        case TRY_SEND_REQUEST_CONNECTION_ID:
+#endif
             return true;
         default:
             break;
@@ -135,6 +142,13 @@ static bool IsHsRecvState(HITLS_HandshakeState state)
         case TRY_RECV_FINISH:
         case TRY_RECV_KEY_UPDATE:
         case TRY_RECV_HELLO_REQUEST:
+#ifdef HITLS_TLS_FEATURE_DTLS_CID
+        case TRY_RECV_NEW_CONNECTION_ID:
+        case TRY_RECV_REQUEST_CONNECTION_ID:
+#endif
+#ifdef HITLS_TLS_PROTO_DTLS13
+        case TRY_RECV_MSG:
+#endif
             return true;
         default:
             break;
@@ -161,7 +175,6 @@ int32_t HS_DoHandshake(TLS_Ctx *ctx)
                 "Handshake state unable to process, current state is %s.", HS_GetStateStr(hsCtx->state));
             ret = HITLS_MSG_HANDLE_STATE_ILLEGAL;
         }
-
         if (ret != HITLS_SUCCESS) {
 #ifdef HITLS_TLS_FEATURE_INDICATOR
             INDICATOR_StatusIndicate(ctx, eventType, ret);
@@ -183,19 +196,26 @@ int32_t HS_DoHandshake(TLS_Ctx *ctx)
 #ifdef HITLS_TLS_FEATURE_INDICATOR
     INDICATOR_StatusIndicate(ctx, eventType, INDICATE_VALUE_SUCCESS);
 #endif /* HITLS_TLS_FEATURE_INDICATOR */
+
     return HITLS_SUCCESS;
 }
 
 #ifdef HITLS_TLS_FEATURE_KEY_UPDATE
 int32_t HS_CheckKeyUpdateState(TLS_Ctx *ctx, uint32_t updateType)
 {
-    if (ctx->negotiatedInfo.version != HITLS_VERSION_TLS13) {
+    if (ctx->negotiatedInfo.version != HITLS_VERSION_TLS13 && ctx->negotiatedInfo.version != HITLS_VERSION_DTLS13) {
         return HITLS_MSG_HANDLE_UNSUPPORT_VERSION;
     }
 
     if (ctx->state != CM_STATE_TRANSPORTING) {
         return HITLS_MSG_HANDLE_STATE_ILLEGAL;
     }
+
+#ifdef HITLS_TLS_PROTO_DTLS13
+    if (ctx->negotiatedInfo.version == HITLS_VERSION_DTLS13 && !REC_RetransmitIsEmpty(ctx->recCtx)) {
+        return HITLS_MSG_HANDLE_STATE_ILLEGAL;
+    }
+#endif
 
     if (updateType != HITLS_UPDATE_REQUESTED && updateType != HITLS_UPDATE_NOT_REQUESTED) {
         return HITLS_MSG_HANDLE_ILLEGAL_KEY_UPDATE_TYPE;
@@ -206,7 +226,7 @@ int32_t HS_CheckKeyUpdateState(TLS_Ctx *ctx, uint32_t updateType)
 
 #endif /* HITLS_TLS_FEATURE_KEY_UPDATE */
 
-#if defined(HITLS_TLS_PROTO_DTLS12) && defined(HITLS_BSL_UIO_UDP)
+#if (defined(HITLS_TLS_PROTO_DTLS12) || defined(HITLS_TLS_PROTO_DTLS13)) && defined(HITLS_BSL_UIO_UDP)
 int32_t HS_CheckAndProcess2MslTimeout(TLS_Ctx *ctx)
 {
     /* In non-UDP scenarios, the 2MSL timer timeout does not need to be checked */
@@ -215,20 +235,29 @@ int32_t HS_CheckAndProcess2MslTimeout(TLS_Ctx *ctx)
     }
 
     bool isTimeout = false;
-    int32_t ret = HS_IsTimeout(ctx, &isTimeout);
+    int32_t ret = HS_Is2MslTimeout(ctx, &isTimeout);
     if (ret != HITLS_SUCCESS) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17189, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "HS_IsTimeout fail", 0, 0, 0, 0);
+            "HS_Is2MslTimeout fail", 0, 0, 0, 0);
         return ret;
     }
 
     /* If the retransmission queue times out, the retransmission queue is cleared and the hsCtx memory is released */
     if (isTimeout) {
+#ifdef HITLS_TLS_PROTO_DTLS13
+        if (ctx->negotiatedInfo.version == HITLS_VERSION_DTLS13) {
+            REC_Dtls13AckListClear(ctx, REC_DTLS13_ACK_RETRANS);
+        } else {
+            REC_RetransmitListClean(ctx->recCtx);
+        }
+#else
         REC_RetransmitListClean(ctx->recCtx);
+#endif
+        HS_Stop2MslTimer(ctx);
     }
     return HITLS_SUCCESS;
 }
-#endif /* HITLS_TLS_PROTO_DTLS12 && HITLS_BSL_UIO_UDP */
+#endif /* #if (defined(HITLS_TLS_PROTO_DTLS12) || defined(HITLS_TLS_PROTO_DTLS13)) && defined(HITLS_BSL_UIO_UDP) */
 
 #ifdef HITLS_TLS_FEATURE_PHA
 int32_t HS_CheckPostHandshakeAuth(TLS_Ctx *ctx)

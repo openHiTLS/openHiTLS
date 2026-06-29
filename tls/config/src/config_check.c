@@ -130,7 +130,8 @@ static int32_t CheckSign(const TLS_Config *config)
        checked.
     */
     if (config->cipherSuitesSize == 0 || ((config->minVersion == HITLS_VERSION_TLS13) &&
-        (config->maxVersion == HITLS_VERSION_TLS13))) {
+        (config->maxVersion == HITLS_VERSION_TLS13)) || ((config->minVersion == HITLS_VERSION_DTLS13) &&
+        (config->maxVersion == HITLS_VERSION_DTLS13))) {
         return HITLS_SUCCESS;
     }
 
@@ -235,7 +236,7 @@ int32_t CheckVersion(uint16_t minVersion, uint16_t maxVersion)
 #endif /* HITLS_TLS_CONFIG_VERSION */
 
 #ifdef HITLS_TLS_PROTO_DFX_CHECK
-#if defined(HITLS_TLS_PROTO_DTLS12) && defined(HITLS_BSL_UIO_UDP)
+#if (defined(HITLS_TLS_PROTO_DTLS12) || defined(HITLS_TLS_PROTO_DTLS13)) && defined(HITLS_BSL_UIO_UDP)
 static int32_t CheckCallbackFunc(const TLS_Config *config)
 {
     /* Check the cookie callback. The user must register the cookie callback at the same time or
@@ -291,7 +292,7 @@ int32_t CheckConfig(const TLS_Config *config)
     if (ret != HITLS_SUCCESS) {
         return ret;
     }
-#if defined(HITLS_TLS_PROTO_DTLS12) && defined(HITLS_BSL_UIO_UDP)
+#if (defined(HITLS_TLS_PROTO_DTLS12) || defined(HITLS_TLS_PROTO_DTLS13)) && defined(HITLS_BSL_UIO_UDP)
     ret = CheckCallbackFunc(config);
 #endif
     return ret;

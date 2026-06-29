@@ -22,6 +22,7 @@
 #include "hitls_error.h"
 #include "hitls_security.h"
 #include "tls.h"
+#include "hs_common.h"
 #ifdef HITLS_TLS_FEATURE_SECURITY
 #include "security.h"
 #endif
@@ -30,17 +31,23 @@
 #include "pack_extensions.h"
 
 // Pack the mandatory content of the ServerHello message
-static int32_t PackServerHelloMandatoryField(const TLS_Ctx *ctx, PackPacket *pkt)
+static int32_t PackServerHelloMandatoryFieldWithRandom(const TLS_Ctx *ctx, PackPacket *pkt, const uint8_t *random)
 {
     int32_t ret = HITLS_SUCCESS;
     uint16_t negotiatedVersion = ctx->negotiatedInfo.version;
 
-    uint16_t version =
+    uint16_t version = negotiatedVersion;
 #ifdef HITLS_TLS_PROTO_TLS13
-    (negotiatedVersion == HITLS_VERSION_TLS13) ? HITLS_VERSION_TLS12 :
+    if (negotiatedVersion == HITLS_VERSION_TLS13) {
+        version = HITLS_VERSION_TLS12;
+    }
 #endif
-        negotiatedVersion;
-    ret = PackHelloCommonField(ctx, pkt, version, false);
+#ifdef HITLS_TLS_PROTO_DTLS13
+    if (negotiatedVersion == HITLS_VERSION_DTLS13) {
+        version = HITLS_VERSION_DTLS12;
+    }
+#endif
+    ret = PackHelloCommonFieldWithRandom(ctx, pkt, version, random);
     if (ret != HITLS_SUCCESS) {
         return ret;
     }
@@ -58,9 +65,39 @@ static int32_t PackServerHelloMandatoryField(const TLS_Ctx *ctx, PackPacket *pkt
     return HITLS_SUCCESS;
 }
 
+static int32_t PackServerHelloMandatoryField(const TLS_Ctx *ctx, PackPacket *pkt)
+{
+    return PackServerHelloMandatoryFieldWithRandom(ctx, pkt, ctx->hsCtx->serverRandom);
+}
+
+#if defined(HITLS_TLS_PROTO_TLS13) || defined(HITLS_TLS_PROTO_DTLS13)
+int32_t PackTls13HelloRetryRequest(const TLS_Ctx *ctx, PackPacket *pkt)
+{
+    uint32_t hrrRandomLen = 0;
+    const uint8_t *hrrRandom = HS_GetHrrRandom(&hrrRandomLen);
+    if (hrrRandomLen != HS_RANDOM_SIZE) {
+        BSL_ERR_PUSH_ERROR(HITLS_MEMCPY_FAIL);
+        return HITLS_MEMCPY_FAIL;
+    }
+
+    int32_t ret = PackServerHelloMandatoryFieldWithRandom(ctx, pkt, hrrRandom);
+    if (ret != HITLS_SUCCESS) {
+        return ret;
+    }
+
+    return PackTls13HelloRetryRequestExtension(ctx, pkt);
+}
+#endif /* HITLS_TLS_PROTO_TLS13 || HITLS_TLS_PROTO_DTLS13 */
+
 // Pack the ServertHello message.
 int32_t PackServerHello(const TLS_Ctx *ctx, PackPacket *pkt)
 {
+#if defined(HITLS_TLS_PROTO_TLS13) || defined(HITLS_TLS_PROTO_DTLS13)
+    if (ctx->hsCtx->state == TRY_SEND_HELLO_RETRY_REQUEST) {
+        return PackTls13HelloRetryRequest(ctx, pkt);
+    }
+#endif /* HITLS_TLS_PROTO_TLS13 || HITLS_TLS_PROTO_DTLS13 */
+
     int32_t ret = PackServerHelloMandatoryField(ctx, pkt);
     if (ret != HITLS_SUCCESS) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15863, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,

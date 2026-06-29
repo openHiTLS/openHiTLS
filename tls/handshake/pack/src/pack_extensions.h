@@ -66,6 +66,10 @@ int32_t PackClientExtension(const TLS_Ctx *ctx, PackPacket *pkt);
  */
 int32_t PackServerExtension(const TLS_Ctx *ctx, PackPacket *pkt);
 
+#if defined(HITLS_TLS_PROTO_TLS13) || defined(HITLS_TLS_PROTO_DTLS13)
+int32_t PackTls13HelloRetryRequestExtension(const TLS_Ctx *ctx, PackPacket *pkt);
+#endif /* HITLS_TLS_PROTO_TLS13 || HITLS_TLS_PROTO_DTLS13 */
+
 /**
  * @brief   Pack an empty extension
  *

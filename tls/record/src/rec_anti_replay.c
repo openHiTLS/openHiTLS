@@ -14,7 +14,8 @@
  */
 
 #include "hitls_build.h"
-#if defined(HITLS_TLS_PROTO_DTLS12) && defined(HITLS_BSL_UIO_UDP) && defined(HITLS_TLS_FEATURE_ANTI_REPLAY)
+#if (defined(HITLS_TLS_PROTO_DTLS12) || defined(HITLS_TLS_PROTO_DTLS13)) && defined(HITLS_BSL_UIO_UDP) && \
+    defined(HITLS_TLS_FEATURE_ANTI_REPLAY)
 #include "rec_anti_replay.h"
 
 #define REC_SLID_WINDOW_SIZE 64
@@ -66,4 +67,4 @@ void RecAntiReplayUpdate(RecSlidWindow *w, uint64_t seq)
         w->window |= 1;
     }
 }
-#endif /* HITLS_TLS_PROTO_DTLS12 && HITLS_BSL_UIO_UDP && HITLS_TLS_FEATURE_ANTI_REPLAY */
+#endif /* (HITLS_TLS_PROTO_DTLS12 || HITLS_TLS_PROTO_DTLS13) && HITLS_BSL_UIO_UDP && HITLS_TLS_FEATURE_ANTI_REPLAY */

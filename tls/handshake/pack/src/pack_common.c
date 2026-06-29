@@ -32,7 +32,7 @@
 
 #define BUFFER_GROW_FACTOR 2u
 
-#ifdef HITLS_TLS_PROTO_DTLS12
+#ifdef HITLS_TLS_PROTO_DTLS
 /**
  * @brief Pack the packet header.
  *
@@ -52,7 +52,7 @@ void PackDtlsMsgHeader(HS_MsgType type, uint16_t sequence, uint32_t length, uint
     BSL_Uint24ToByte(
         length, &buf[DTLS_HS_FRAGMENT_LEN_ADDR]); /** Three bytes starting from 9 bytes are the fragment length. */
 }
-#endif /* HITLS_TLS_PROTO_DTLS12 */
+#endif /* HITLS_TLS_PROTO_DTLS */
 
 #if defined(HITLS_TLS_FEATURE_SESSION_ID) || defined(HITLS_TLS_PROTO_TLS13)
 /**
@@ -137,7 +137,7 @@ int32_t PackCertificateReqCtx(const TLS_Ctx *ctx, PackPacket *pkt)
 }
 #endif /* HITLS_TLS_PROTO_TLS13 */
 
-int32_t PackHelloCommonField(const TLS_Ctx *ctx, PackPacket *pkt, uint16_t version, bool isClient)
+int32_t PackHelloCommonFieldWithRandom(const TLS_Ctx *ctx, PackPacket *pkt, uint16_t version, const uint8_t *random)
 {
     int32_t ret = HITLS_SUCCESS;
 #ifdef HITLS_TLS_FEATURE_SECURITY
@@ -155,7 +155,7 @@ int32_t PackHelloCommonField(const TLS_Ctx *ctx, PackPacket *pkt, uint16_t versi
         return ret;
     }
 
-    ret = PackAppendDataToBuf(pkt, isClient ? ctx->hsCtx->clientRandom : ctx->hsCtx->serverRandom, HS_RANDOM_SIZE);
+    ret = PackAppendDataToBuf(pkt, random, HS_RANDOM_SIZE);
     if (ret != HITLS_SUCCESS) {
         return ret;
     }
@@ -175,6 +175,12 @@ int32_t PackHelloCommonField(const TLS_Ctx *ctx, PackPacket *pkt, uint16_t versi
     }
 #endif
     return HITLS_SUCCESS;
+}
+
+int32_t PackHelloCommonField(const TLS_Ctx *ctx, PackPacket *pkt, uint16_t version, bool isClient)
+{
+    const uint8_t *random = isClient ? ctx->hsCtx->clientRandom : ctx->hsCtx->serverRandom;
+    return PackHelloCommonFieldWithRandom(ctx, pkt, version, random);
 }
 
 static int32_t PackMsBufferGrow(PackPacket *pkt, uint32_t newSize)

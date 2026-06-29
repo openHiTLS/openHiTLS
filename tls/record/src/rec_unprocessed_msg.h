@@ -24,12 +24,7 @@
 extern "C" {
 #endif
 
-#ifdef HITLS_TLS_PROTO_DTLS12
-
-typedef struct {
-    RecHdr hdr;                     /* record header */
-    uint8_t *recordBody;            /* record body */
-} UnprocessedHsMsg;                 /* Unprocessed handshake messages */
+#if defined(HITLS_TLS_PROTO_DTLS12) || defined(HITLS_TLS_PROTO_DTLS13)
 
 /*  rfc6083 4.7 Handshake
     User messages that arrive between ChangeCipherSpec and Finished
@@ -39,26 +34,24 @@ typedef struct {
 */
 typedef struct {
     ListHead head;
-    uint32_t count;                 /* Number of cached record messages */
-    RecHdr hdr;                     /* record header */
-    uint8_t *recordBody;            /* record body */
-} UnprocessedAppMsg;                /* Unprocessed App messages: App messages that are out of order with finished */
+    uint32_t count; /* Number of cached record messages */
+    RecHdr hdr; /* record header */
+    uint8_t *recordBody; /* record body */
+} UnprocessedMsg; /* Unprocessed App messages: App messages that are out of order with finished */
 
-void CacheNextEpochHsMsg(UnprocessedHsMsg *unprocessedHsMsg, const RecHdr *hdr, const uint8_t *recordBody);
+UnprocessedMsg *UnprocessedMsgNew(void);
 
-UnprocessedAppMsg *UnprocessedAppMsgNew(void);
+void UnprocessedMsgFree(UnprocessedMsg *msg);
 
-void UnprocessedAppMsgFree(UnprocessedAppMsg *msg);
+void UnprocessedMsgListInit(UnprocessedMsg *appMsgList);
 
-void UnprocessedAppMsgListInit(UnprocessedAppMsg *appMsgList);
+void UnprocessedMsgListDeinit(UnprocessedMsg *appMsgList);
 
-void UnprocessedAppMsgListDeinit(UnprocessedAppMsg *appMsgList);
+int32_t UnprocessedMsgListAppend(UnprocessedMsg *appMsgList, const RecHdr *hdr, const uint8_t *recordBody);
 
-int32_t UnprocessedAppMsgListAppend(UnprocessedAppMsg *appMsgList, const RecHdr *hdr, const uint8_t *recordBody);
+UnprocessedMsg *UnprocessedMsgGet(UnprocessedMsg *appMsgList, uint16_t curEpoch);
 
-UnprocessedAppMsg *UnprocessedAppMsgGet(UnprocessedAppMsg *appMsgList, uint16_t curEpoch);
-
-#endif // HITLS_TLS_PROTO_DTLS12
+#endif /* HITLS_TLS_PROTO_DTLS12 || HITLS_TLS_PROTO_DTLS13 */
 
 #ifdef __cplusplus
 }

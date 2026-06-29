@@ -29,7 +29,7 @@
 #include "parse_extensions.h"
 #include "custom_extensions.h"
 
-#ifdef HITLS_TLS_PROTO_TLS13
+#if defined(HITLS_TLS_PROTO_TLS13) || defined(HITLS_TLS_PROTO_DTLS13)
 static int32_t ParseTicketNonce(ParsePacket *pkt, NewSessionTicketMsg *msg)
 {
     uint8_t ticketNonceSize = 0;
@@ -44,10 +44,10 @@ static int32_t ParseTicketNonce(ParsePacket *pkt, NewSessionTicketMsg *msg)
     msg->ticketNonceSize = (uint32_t)ticketNonceSize;
     return HITLS_SUCCESS;
 }
-#endif /* HITLS_TLS_PROTO_TLS13 */
+#endif /* HITLS_TLS_PROTO_TLS13 || HITLS_TLS_PROTO_DTLS13 */
 static int32_t ParseTicket(ParsePacket *pkt, NewSessionTicketMsg *msg)
 {
-    bool isTls13 = (pkt->ctx->negotiatedInfo.version == HITLS_VERSION_TLS13);
+    bool isTls13 = (pkt->ctx->negotiatedInfo.version == HITLS_VERSION_TLS13 || pkt->ctx->negotiatedInfo.version == HITLS_VERSION_DTLS13);
     uint16_t ticketSize = 0;
     /* rfc5077 3.3
        If the server does not include a ticket after including the SessionTicket extension in the ServerHello,
@@ -72,7 +72,7 @@ static int32_t ParseTicket(ParsePacket *pkt, NewSessionTicketMsg *msg)
     msg->ticketSize = (uint32_t)ticketSize;
     return HITLS_SUCCESS;
 }
-#ifdef HITLS_TLS_PROTO_TLS13
+#if defined(HITLS_TLS_PROTO_TLS13) || defined(HITLS_TLS_PROTO_DTLS13)
 static int32_t ParseNewSessionTicketExtension(TLS_Ctx *ctx, const uint8_t *buf, uint32_t bufLen,
     NewSessionTicketMsg *msg)
 {
@@ -146,7 +146,7 @@ static int32_t ParseNewSessionTicketExtensions(ParsePacket *pkt, NewSessionTicke
     }
     return ParseNewSessionTicketExtension(pkt->ctx, &pkt->buf[*pkt->bufOffset], exMsgLen, msg);
 }
-#endif
+#endif /* HITLS_TLS_PROTO_TLS13 || HITLS_TLS_PROTO_DTLS13 */
 
 int32_t ParseNewSessionTicket(TLS_Ctx *ctx, const uint8_t *buf, uint32_t bufLen, HS_Msg *hsMsg)
 {
@@ -159,8 +159,8 @@ int32_t ParseNewSessionTicket(TLS_Ctx *ctx, const uint8_t *buf, uint32_t bufLen,
     if (ret != HITLS_SUCCESS) {
         return ParseErrorProcess(pkt.ctx, HITLS_PARSE_INVALID_MSG_LEN, BINLOG_ID15966, logStr, ALERT_DECODE_ERROR);
     }
-#ifdef HITLS_TLS_PROTO_TLS13
-    if (ctx->negotiatedInfo.version == HITLS_VERSION_TLS13) {
+#if defined(HITLS_TLS_PROTO_TLS13) || defined(HITLS_TLS_PROTO_DTLS13)
+    if (ctx->negotiatedInfo.version == HITLS_VERSION_TLS13 || ctx->negotiatedInfo.version == HITLS_VERSION_DTLS13) {
         uint32_t ticketAgeAdd = 0;
         ret = ParseBytesToUint32(&pkt, &ticketAgeAdd);
         if (ret != HITLS_SUCCESS) {
@@ -175,14 +175,14 @@ int32_t ParseNewSessionTicket(TLS_Ctx *ctx, const uint8_t *buf, uint32_t bufLen,
             return ret;
         }
     }
-#endif /* HITLS_TLS_PROTO_TLS13 */
+#endif /* HITLS_TLS_PROTO_TLS13 || HITLS_TLS_PROTO_DTLS13 */
     ret = ParseTicket(&pkt, msg);
     if (ret != HITLS_SUCCESS) {
         return ret;
     }
 
-#ifdef HITLS_TLS_PROTO_TLS13
-    if (ctx->negotiatedInfo.version == HITLS_VERSION_TLS13) {
+#if defined(HITLS_TLS_PROTO_TLS13) || defined(HITLS_TLS_PROTO_DTLS13)
+    if (ctx->negotiatedInfo.version == HITLS_VERSION_TLS13 || ctx->negotiatedInfo.version == HITLS_VERSION_DTLS13) {
         ret = ParseNewSessionTicketExtensions(&pkt, msg);
         if (ret != HITLS_SUCCESS) {
             BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17352, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
@@ -190,7 +190,7 @@ int32_t ParseNewSessionTicket(TLS_Ctx *ctx, const uint8_t *buf, uint32_t bufLen,
             return ret;
         }
     }
-#endif /* HITLS_TLS_PROTO_TLS13 */
+#endif /* HITLS_TLS_PROTO_TLS13 || HITLS_TLS_PROTO_DTLS13 */
     return HITLS_SUCCESS;
 }
 
@@ -206,4 +206,4 @@ void CleanNewSessionTicket(NewSessionTicketMsg *msg)
     msg->ticketNonceSize = 0;
     return;
 }
-#endif /* HITLS_TLS_HOST_CLIENT || HITLS_TLS_PROTO_TLS13 */
+#endif /* HITLS_TLS_HOST_CLIENT && HITLS_TLS_FEATURE_SESSION_TICKET */

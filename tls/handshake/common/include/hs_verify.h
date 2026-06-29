@@ -124,6 +124,9 @@ int32_t VERIFY_Tls13CalcVerifyData(TLS_Ctx *ctx, bool isClient);
  */
 int32_t VERIFY_HelloRetryRequestVerifyProcess(TLS_Ctx *ctx);
 
+int32_t VERIFY_RestoreHelloRetryRequestTranscript(TLS_Ctx *ctx, const uint8_t *clientHelloHash,
+    uint32_t clientHelloHashLen, const uint8_t *helloRetryRequest, uint32_t helloRetryRequestLen);
+
 int32_t VERIFY_CalcPskBinder(const TLS_Ctx *ctx, HITLS_HashAlgo hashAlgo, bool isExternalPsk, uint8_t *psk,
     uint32_t pskLen, const uint8_t *msg, uint32_t msgLen, uint8_t *binder, uint32_t binderLen);
 

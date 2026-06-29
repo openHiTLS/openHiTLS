@@ -54,6 +54,10 @@ int32_t HS_CalcCookie(TLS_Ctx *ctx, const ClientHelloMsg *clientHello, uint8_t *
  */
 int32_t HS_CheckCookie(TLS_Ctx *ctx, const ClientHelloMsg *clientHello, bool *isCookieValid);
 
+int32_t HS_Dtls13GenerateCookie(TLS_Ctx *ctx);
+
+int32_t HS_Dtls13ProcessCookie(TLS_Ctx *ctx, const ClientHelloMsg *clientHello, bool *isCookieValid);
+
 #ifdef __cplusplus
 }
 #endif /* end __cplusplus */

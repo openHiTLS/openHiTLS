@@ -2924,7 +2924,7 @@ EXIT:
 void UT_DTLS_RFC6347_RECV_ALERT_AFTER_CCS_TC001(int uioType)
 {
     FRAME_Init();
-    HITLS_Config *tlsConfig = HITLS_CFG_NewDTLSConfig();
+    HITLS_Config *tlsConfig = HITLS_CFG_NewDTLS12Config();
     ASSERT_TRUE(tlsConfig != NULL);
     FRAME_LinkObj *client = FRAME_CreateLink(tlsConfig, uioType);
     FRAME_LinkObj *server = FRAME_CreateLink(tlsConfig, uioType);

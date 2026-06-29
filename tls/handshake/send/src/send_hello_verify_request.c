@@ -47,6 +47,9 @@ int32_t DtlsServerSendHelloVerifyRequestProcess(TLS_Ctx *ctx)
     if (ret != HITLS_SUCCESS) {
         return ret;
     }
+#if defined(HITLS_TLS_PROTO_TLS13) || defined(HITLS_TLS_PROTO_DTLS13)
+    hsCtx->haveHvr = true;
+#endif
 
     /* If HelloVerifyRequest is used, the initial ClientHello and
        HelloVerifyRequest are not included in the calculation of the

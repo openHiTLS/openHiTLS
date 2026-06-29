@@ -20,6 +20,7 @@
 #include "hitls_error.h"
 #include "tls.h"
 #include "hs_ctx.h"
+#include "hs.h"
 #include "hs_verify.h"
 #include "transcript_hash.h"
 #include "hs_common.h"
@@ -176,7 +177,22 @@ int32_t DtlsClientSendFinishedProcess(TLS_Ctx *ctx)
 }
 #endif /* HITLS_TLS_PROTO_DTLS12 */
 
-#ifdef HITLS_TLS_PROTO_TLS13
+#if defined(HITLS_TLS_PROTO_TLS13) || defined(HITLS_TLS_PROTO_DTLS13)
+static bool Tls13ClientNeedActivateHsWriteKey(const TLS_Ctx *ctx)
+{
+#ifdef HITLS_TLS_PROTO_DTLS13
+    if (ctx->negotiatedInfo.version == HITLS_VERSION_DTLS13) {
+        return false;
+    }
+#endif
+#ifdef HITLS_TLS_FEATURE_PHA
+    if (ctx->phaState == PHA_REQUESTED) {
+        return false;
+    }
+#endif
+    return true;
+}
+
 static int32_t Tls13ClientSendFinishPostProcess(TLS_Ctx *ctx)
 {
     int32_t ret = HITLS_SUCCESS;
@@ -216,6 +232,12 @@ static int32_t Tls13ClientSendFinishPostProcess(TLS_Ctx *ctx)
             }
         }
 #endif /* HITLS_TLS_FEATURE_PHA */
+#ifdef HITLS_TLS_PROTO_DTLS13
+        ret = HS_StartTimer(ctx);
+        if (ret != HITLS_SUCCESS) {
+            return ret;
+        }
+#endif
     }
     return HS_ChangeState(ctx, TLS_CONNECTED);
 }
@@ -228,7 +250,8 @@ int32_t Tls13ClientSendFinishedProcess(TLS_Ctx *ctx)
 
     /* Determine whether the message needs to be packed */
     if (hsCtx->msgLen == 0) {
-        if ((ctx->config.tlsConfig.isMiddleBoxCompat && (!ctx->hsCtx->haveHrr)) && (!ctx->hsCtx->isNeedClientCert)) {
+        if ((ctx->config.tlsConfig.isMiddleBoxCompat && (!ctx->hsCtx->haveHrr)) &&
+            !IS_SUPPORT_DATAGRAM(ctx->config.tlsConfig.originVersionMask) && (!ctx->hsCtx->isNeedClientCert)) {
             /* In the middlebox scenario, if the client does not send the hrr message and the certificate does not need
              * to be sent, a CCS message needs to be sent before the finished message */
             ret = ctx->method.sendCCS(ctx);
@@ -239,11 +262,7 @@ int32_t Tls13ClientSendFinishedProcess(TLS_Ctx *ctx)
 
         /* If the certificate of the client is sent, the key has been activated when the certificate is sent. You do not
          * need to activate the key again */
-        if (!ctx->hsCtx->isNeedClientCert
-#ifdef HITLS_TLS_FEATURE_PHA
-                 && ctx->phaState != PHA_REQUESTED
-#endif /* HITLS_TLS_FEATURE_PHA */
-                 ) {
+        if (!ctx->hsCtx->isNeedClientCert && Tls13ClientNeedActivateHsWriteKey(ctx)) {
             /* The CCS message cannot be encrypted. Therefore, the sending key of the client must be activated
              * after the CCS message is sent */
             uint32_t hashLen = SAL_CRYPT_DigestSize(ctx->negotiatedInfo.cipherSuiteInfo.hashAlg);
@@ -271,7 +290,7 @@ int32_t Tls13ClientSendFinishedProcess(TLS_Ctx *ctx)
         ret = HS_PackMsg(ctx, FINISHED);
         if (ret != HITLS_SUCCESS) {
             BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15376, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-                "client pack tls1.3 finished msg fail.", 0, 0, 0, 0);
+                "client pack (d)tls1.3 finished msg fail.", 0, 0, 0, 0);
             return ret;
         }
     }
@@ -282,11 +301,11 @@ int32_t Tls13ClientSendFinishedProcess(TLS_Ctx *ctx)
     }
 
     BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15377, BSL_LOG_LEVEL_INFO, BSL_LOG_BINLOG_TYPE_RUN,
-        "client send tls1.3 finished msg success.", 0, 0, 0, 0);
+        "client send (d)tls1.3 finished msg success.", 0, 0, 0, 0);
 
     return Tls13ClientSendFinishPostProcess(ctx);
 }
-#endif /* HITLS_TLS_PROTO_TLS13 */
+#endif /* HITLS_TLS_PROTO_TLS13 || HITLS_TLS_PROTO_DTLS13 */
 
 #endif /* HITLS_TLS_HOST_CLIENT */
 #ifdef HITLS_TLS_HOST_SERVER
@@ -441,7 +460,7 @@ int32_t DtlsServerSendFinishedProcess(TLS_Ctx *ctx)
 }
 #endif /* HITLS_TLS_PROTO_DTLS12 */
 
-#ifdef HITLS_TLS_PROTO_TLS13
+#if defined(HITLS_TLS_PROTO_TLS13) || defined(HITLS_TLS_PROTO_DTLS13)
 static int32_t PrepareServerSendFinishedMsg(TLS_Ctx *ctx)
 {
     int32_t ret = VERIFY_Tls13CalcVerifyData(ctx, false);
@@ -455,7 +474,7 @@ static int32_t PrepareServerSendFinishedMsg(TLS_Ctx *ctx)
     ret = HS_PackMsg(ctx, FINISHED);
     if (ret != HITLS_SUCCESS) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15379, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "server pack tls1.3 finished msg fail.", 0, 0, 0, 0);
+            "server pack (d)tls1.3 finished msg fail.", 0, 0, 0, 0);
     }
     return ret;
 }
@@ -480,7 +499,7 @@ int32_t Tls13ServerSendFinishedProcess(TLS_Ctx *ctx)
     }
 
     BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15380, BSL_LOG_LEVEL_INFO, BSL_LOG_BINLOG_TYPE_RUN,
-        "server send tls1.3 finished msg success.", 0, 0, 0, 0);
+        "server send (d)tls1.3 finished msg success.", 0, 0, 0, 0);
 
     ret = HS_TLS13CalcServerFinishProcessSecret(ctx);
     if (ret != HITLS_SUCCESS) {
@@ -504,20 +523,25 @@ int32_t Tls13ServerSendFinishedProcess(TLS_Ctx *ctx)
         return RETURN_ERROR_NUMBER_PROCESS(ret, BINLOG_ID17148, "SwitchTrafficKey fail");
     }
 
-    if (ctx->hsCtx->isNeedClientCert) {
-        return HS_ChangeState(ctx, TRY_RECV_CERTIFICATE);
+    HITLS_HandshakeState nextState = TRY_RECV_CERTIFICATE;
+    if (!ctx->hsCtx->isNeedClientCert) {
+        /* Calculate the client verify data */
+        ret = VERIFY_Tls13CalcVerifyData(ctx, true);
+        if (ret != HITLS_SUCCESS) {
+            BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15381, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+                "server calculate client finished data fail.", 0, 0, 0, 0);
+            ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_INTERNAL_ERROR);
+            return ret;
+        }
+        nextState = TRY_RECV_FINISH;
     }
-
-    /* Calculate the client verify data */
-    ret = VERIFY_Tls13CalcVerifyData(ctx, true);
+#ifdef HITLS_TLS_PROTO_DTLS13
+    ret = HS_StartTimer(ctx);
     if (ret != HITLS_SUCCESS) {
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15381, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "server calculate client finished data fail.", 0, 0, 0, 0);
-        ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_INTERNAL_ERROR);
         return ret;
     }
-
-    return HS_ChangeState(ctx, TRY_RECV_FINISH);
+#endif
+    return HS_ChangeState(ctx, nextState);
 }
-#endif /* HITLS_TLS_PROTO_TLS13 */
+#endif /* HITLS_TLS_PROTO_TLS13 || HITLS_TLS_PROTO_DTLS13 */
 #endif /* HITLS_TLS_HOST_SERVER */

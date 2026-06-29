@@ -175,7 +175,8 @@ int32_t EncodeCertificate(HITLS_Ctx *ctx, HITLS_CERT_X509 *cert, PackPacket *pkt
     }
 
 #ifdef HITLS_TLS_PROTO_TLS13
-    if (ctx->negotiatedInfo.version == HITLS_VERSION_TLS13) {
+    if (ctx->negotiatedInfo.version == HITLS_VERSION_TLS13 ||
+        ctx->negotiatedInfo.version == HITLS_VERSION_DTLS13) {
         /* If an extension applies to the entire chain, it SHOULD be included in the first CertificateEntry. */
         /* Start length field for extensions */
         uint32_t exLenPos = 0;

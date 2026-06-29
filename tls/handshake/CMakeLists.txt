@@ -30,7 +30,7 @@ endif()
 
 # cookie
 set(_handshake_sources_cookie)
-if(HITLS_TLS_PROTO_DTLS12 AND HITLS_BSL_UIO_UDP)
+if((HITLS_TLS_PROTO_DTLS12 OR HITLS_TLS_PROTO_DTLS13) AND HITLS_BSL_UIO_UDP)
     list(APPEND _handshake_sources_cookie ${source_dir}/cookie/src/hs_cookie.c)
 endif()
 
@@ -72,6 +72,9 @@ endif()
 if(HITLS_TLS_PROTO_DTLS12 AND HITLS_BSL_UIO_UDP AND HITLS_TLS_HOST_SERVER)
     list(APPEND _handshake_sources_pack ${source_dir}/pack/src/pack_hello_verify_request.c)
 endif()
+if(HITLS_TLS_FEATURE_DTLS_CID AND HITLS_TLS_PROTO_DTLS13)
+    list(APPEND _handshake_sources_pack ${source_dir}/pack/src/pack_new_connection_id.c)
+endif()
 
 # parse
 set(_handshake_sources_parse
@@ -111,10 +114,13 @@ endif()
 if(HITLS_TLS_PROTO_DTLS12 AND HITLS_TLS_HOST_CLIENT)
     list(APPEND _handshake_sources_parse ${source_dir}/parse/src/parse_hello_verify_request.c)
 endif()
+if(HITLS_TLS_FEATURE_DTLS_CID AND HITLS_TLS_PROTO_DTLS13)
+    list(APPEND _handshake_sources_parse ${source_dir}/parse/src/parse_new_connection_id.c)
+endif()
 
 # reass
 set(_handshake_sources_reass)
-if(HITLS_TLS_PROTO_DTLS12)
+if(HITLS_TLS_PROTO_DTLS12 OR HITLS_TLS_PROTO_DTLS13)
     list(APPEND _handshake_sources_reass ${source_dir}/reass/src/hs_reass.c)
 endif()
 

@@ -27,6 +27,7 @@
 #include "hs_ctx.h"
 #include "record.h"
 
+
 int32_t HITLS_GetMaxWriteSize(const HITLS_Ctx *ctx, uint32_t *len)
 {
     if (ctx == NULL || len == NULL) {
@@ -52,7 +53,7 @@ static int32_t WriteRecordWithRetry(HITLS_Ctx *ctx, uint8_t recordType, const ui
     int32_t alertRet;
 
     do {
-#if defined(HITLS_TLS_PROTO_DTLS12) && defined(HITLS_BSL_UIO_UDP)
+#if (defined(HITLS_TLS_PROTO_DTLS12) || defined(HITLS_TLS_PROTO_DTLS13)) && defined(HITLS_BSL_UIO_UDP)
         /* In UDP scenarios, the 2MSL timer expires */
         ret = HS_CheckAndProcess2MslTimeout(ctx);
         if (ret != HITLS_SUCCESS) {
@@ -204,10 +205,24 @@ static int32_t HITLS_WritePreporcess(HITLS_Ctx *ctx)
     }
 
 #ifdef HITLS_TLS_FEATURE_PHA
-    return CommonCheckPostHandshakeAuth(ctx);
-#else
-    return ret;
+    ret = CommonCheckPostHandshakeAuth(ctx);
+    if (ret != HITLS_SUCCESS) {
+        return ret;
+    }
 #endif
+#ifdef HITLS_TLS_FEATURE_DTLS_CID
+    ret = CommonCheckPostHandshakeCid(ctx);
+    if (ret != HITLS_SUCCESS) {
+        return ret;
+    }
+#endif
+#ifdef HITLS_TLS_PROTO_DTLS13
+    ret = CommonCheckDtls13BufferedHandshake(ctx);
+    if (ret != HITLS_SUCCESS) {
+        return ret;
+    }
+#endif
+    return ret;
 }
 
 int32_t HITLS_Write(HITLS_Ctx *ctx, const uint8_t *data, uint32_t dataLen, uint32_t *writeLen)
@@ -248,6 +263,12 @@ int32_t HITLS_Write(HITLS_Ctx *ctx, const uint8_t *data, uint32_t dataLen, uint3
     if (ret != HITLS_SUCCESS) {
         *writeLen = 0;
     }
+#ifdef HITLS_TLS_PROTO_DTLS13
+    if (ctx->negotiatedInfo.version == HITLS_VERSION_DTLS13 &&
+        (ret == HITLS_SUCCESS || ret == HITLS_REC_NORMAL_IO_BUSY)) {
+        (void)REC_Dtls13FlushAck(ctx);
+    }
+#endif
     return ret;
 }
 

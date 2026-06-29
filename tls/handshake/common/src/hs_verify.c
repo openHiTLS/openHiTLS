@@ -21,6 +21,7 @@
 #include "bsl_sal.h"
 #include "cert.h"
 #include "hitls_error.h"
+#include "crypt.h"
 #include "hs_kx.h"
 #include "transcript_hash.h"
 #include "hs_verify.h"
@@ -30,17 +31,17 @@
 #define CLIENT_FINISHED_LABEL "client finished"
 #define SERVER_FINISHED_LABEL "server finished"
 
-#ifdef HITLS_TLS_PROTO_TLS13
+#if defined(HITLS_TLS_PROTO_TLS13) || defined(HITLS_TLS_PROTO_DTLS13)
 #define MSG_HASH_HEADER_SIZE 4                                     /* message_hash message header length */
 #define MAX_MSG_HASH_SIZE (MAX_DIGEST_SIZE + MSG_HASH_HEADER_SIZE) /* Maximum message_hash message length */
-#endif /* HITLS_TLS_PROTO_TLS13 */
-#ifdef HITLS_TLS_PROTO_TLS13
+#endif /* HITLS_TLS_PROTO_TLS13 || HITLS_TLS_PROTO_DTLS13 */
+#if defined(HITLS_TLS_PROTO_TLS13) || defined(HITLS_TLS_PROTO_DTLS13)
 #define TLS13_CLIENT_CERT_VERIFY_LABEL "TLS 1.3, client CertificateVerify"
 #define TLS13_SERVER_CERT_VERIFY_LABEL "TLS 1.3, server CertificateVerify"
 
 #define TLS13_CERT_VERIFY_PREFIX 0x20 /* The signature data in TLS 1.3 is firstly filled with 64 0x20s */
 #define TLS13_CERT_VERIFY_PREFIX_LEN 64
-#endif /* #ifdef HITLS_TLS_PROTO_TLS13 */
+#endif /* HITLS_TLS_PROTO_TLS13 || HITLS_TLS_PROTO_DTLS13 */
 
 static int32_t GrowVerifyDataBuf(VerifyCtx *ctx, uint32_t len)
 {
@@ -218,7 +219,7 @@ static int32_t GetHsData(VerifyCtx *ctx, uint8_t **data, uint32_t *dataLen)
     return HITLS_SUCCESS;
 }
 
-#ifdef HITLS_TLS_PROTO_TLS13
+#if defined(HITLS_TLS_PROTO_TLS13) || defined(HITLS_TLS_PROTO_DTLS13)
 /* The sender packs the data, calculates the binder, and then appends verified data.
  *  The receiver parses the data, and then calculates the binder. */
 static int32_t GetHsDataForBinder(VerifyCtx *ctx, uint32_t *dataLen, bool isClient, uint8_t **data)
@@ -308,7 +309,7 @@ static uint8_t *Tls13GetUnsignData(TLS_Ctx *ctx, uint32_t *dataLen, bool isClien
     *dataLen = unsignDataLen;
     return unsignData;
 }
-#endif /* HITLS_TLS_PROTO_TLS13 */
+#endif /* HITLS_TLS_PROTO_TLS13 || HITLS_TLS_PROTO_DTLS13 */
 #ifdef HITLS_TLS_PROTO_TLCP11
 static uint8_t *TlcpGetUnsignData(TLS_Ctx *ctx, uint32_t *dataLen)
 {
@@ -340,11 +341,12 @@ static uint8_t *GetUnsignData(TLS_Ctx *ctx, uint32_t *dataLen, bool isClient, HI
 {
     (void)isClient;
     (void)hashAlgo;
-#ifdef HITLS_TLS_PROTO_TLS13
-    if (ctx->negotiatedInfo.version == HITLS_VERSION_TLS13) {
+#if defined(HITLS_TLS_PROTO_TLS13) || defined(HITLS_TLS_PROTO_DTLS13)
+    if (ctx->negotiatedInfo.version == HITLS_VERSION_TLS13 ||
+        ctx->negotiatedInfo.version == HITLS_VERSION_DTLS13) {
         return Tls13GetUnsignData(ctx, dataLen, isClient);
     }
-#endif /* HITLS_TLS_PROTO_TLS13 */
+#endif /* HITLS_TLS_PROTO_TLS13 || HITLS_TLS_PROTO_DTLS13 */
 #ifdef HITLS_TLS_PROTO_TLCP11
     if (ctx->negotiatedInfo.version == HITLS_VERSION_TLCP_DTLCP11) {
         return TlcpGetUnsignData(ctx, dataLen);
@@ -474,7 +476,7 @@ int32_t VERIFY_GetVerifyData(const VerifyCtx *ctx, uint8_t *verifyData, uint32_t
     *verifyDataLen = ctx->verifyDataSize;
     return HITLS_SUCCESS;
 }
-#ifdef HITLS_TLS_PROTO_TLS13
+#if defined(HITLS_TLS_PROTO_TLS13) || defined(HITLS_TLS_PROTO_DTLS13)
 static uint8_t *GetBaseKey(TLS_Ctx *ctx, bool isClient)
 {
     uint8_t *baseKey = NULL;
@@ -504,8 +506,16 @@ int32_t VERIFY_Tls13CalcVerifyData(TLS_Ctx *ctx, bool isClient)
     baseKey = GetBaseKey(ctx, isClient);
 
     /* finished_key = HKDF-Expand-Label(BaseKey, "finished", "", Hash.length) */
+    const uint8_t *labelPrefix = NULL;
+    uint32_t labelPrefixLen = 0;
+#ifdef HITLS_TLS_PROTO_DTLS13
+    if (IS_DTLS13_CTX(ctx)) {
+        labelPrefix = (const uint8_t *)CRYPT_DTLS13_HKDF_LABEL_PREFIX;
+        labelPrefixLen = CRYPT_DTLS13_HKDF_LABEL_PREFIX_LEN;
+    }
+#endif
     ret = HS_TLS13DeriveFinishedKey(LIBCTX_FROM_CTX(ctx), ATTRIBUTE_FROM_CTX(ctx),
-        hashAlg, baseKey, hashLen, finishedKey, hashLen);
+        hashAlg, baseKey, hashLen, finishedKey, hashLen, labelPrefix, labelPrefixLen);
     if (ret != HITLS_SUCCESS) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16876, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "DeriveFinishedKey fail", 0, 0, 0, 0);
@@ -646,6 +656,25 @@ int32_t VERIFY_HelloRetryRequestVerifyProcess(TLS_Ctx *ctx)
     return HITLS_SUCCESS;
 }
 
+int32_t VERIFY_RestoreHelloRetryRequestTranscript(TLS_Ctx *ctx, const uint8_t *clientHelloHash,
+    uint32_t clientHelloHashLen, const uint8_t *helloRetryRequest, uint32_t helloRetryRequestLen)
+{
+    if (ctx == NULL || ctx->hsCtx == NULL || clientHelloHash == NULL || helloRetryRequest == NULL ||
+        clientHelloHashLen == 0 || clientHelloHashLen > MAX_DIGEST_SIZE) {
+        return HITLS_NULL_INPUT;
+    }
+
+    uint8_t msgHash[MAX_MSG_HASH_SIZE] = {0};
+    msgHash[0] = MESSAGE_HASH;
+    msgHash[1] = 0;
+    msgHash[2] = 0;
+    msgHash[3] = (uint8_t)clientHelloHashLen;
+    memcpy(&msgHash[MSG_HASH_HEADER_SIZE], clientHelloHash, clientHelloHashLen);
+
+    return ReinitVerify(ctx, msgHash, clientHelloHashLen + MSG_HASH_HEADER_SIZE,
+        (uint8_t *)(uintptr_t)helloRetryRequest, helloRetryRequestLen);
+}
+
 /*
     Transcript-Hash(Truncate(ClientHello1))
     Where Truncate() removes the binders list from the ClientHello
@@ -666,6 +695,8 @@ int32_t VERIFY_CalcPskBinder(const TLS_Ctx *ctx, HITLS_HashAlgo hashAlgo, bool i
     uint32_t hashLen = SAL_CRYPT_DigestSize(hashAlgo);
     uint32_t hsDataLen = 0u;
     uint32_t calcBinderLen = binderLen;
+    const uint8_t *transcriptMsg = msg;
+    uint32_t transcriptMsgLen = msgLen;
     if (hashLen == 0) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16881, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN, "DigestSize err", 0, 0, 0, 0);
         return HITLS_CRYPT_ERR_DIGEST;
@@ -678,9 +709,17 @@ int32_t VERIFY_CalcPskBinder(const TLS_Ctx *ctx, HITLS_HashAlgo hashAlgo, bool i
             "DeriveEarlySecret fail", 0, 0, 0, 0);
         goto EXIT;
     }
+    const uint8_t *labelPrefix = NULL;
+    uint32_t labelPrefixLen = 0;
+#ifdef HITLS_TLS_PROTO_DTLS13
+    if (IS_DTLS13_CTX(ctx)) {
+        labelPrefix = (const uint8_t *)CRYPT_DTLS13_HKDF_LABEL_PREFIX;
+        labelPrefixLen = CRYPT_DTLS13_HKDF_LABEL_PREFIX_LEN;
+    }
+#endif
     // HKDF.Expand EarlySecret to compute BinderKey
     ret = HS_TLS13DeriveBinderKey(LIBCTX_FROM_CTX(ctx), ATTRIBUTE_FROM_CTX(ctx),
-        hashAlgo, isExternalPsk, earlySecret, hashLen, binderKey, hashLen);
+        hashAlgo, isExternalPsk, earlySecret, hashLen, binderKey, hashLen, labelPrefix, labelPrefixLen);
     if (ret != HITLS_SUCCESS) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16883, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "DeriveBinderKey fail", 0, 0, 0, 0);
@@ -688,7 +727,7 @@ int32_t VERIFY_CalcPskBinder(const TLS_Ctx *ctx, HITLS_HashAlgo hashAlgo, bool i
     }
     // HKDF.Expand BinderKey to compute Binder Finished Key
     ret = HS_TLS13DeriveFinishedKey(LIBCTX_FROM_CTX(ctx), ATTRIBUTE_FROM_CTX(ctx),
-        hashAlgo, binderKey, hashLen, finishedKey, hashLen);
+        hashAlgo, binderKey, hashLen, finishedKey, hashLen, labelPrefix, labelPrefixLen);
     if (ret != HITLS_SUCCESS) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16884, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "DeriveFinishedKey fail", 0, 0, 0, 0);
@@ -716,7 +755,18 @@ int32_t VERIFY_CalcPskBinder(const TLS_Ctx *ctx, HITLS_HashAlgo hashAlgo, bool i
         }
     }
 
-    if (SAL_CRYPT_DigestUpdate(hashCtx, msg, msgLen) != HITLS_SUCCESS ||
+#ifdef HITLS_TLS_PROTO_DTLS13
+    uint8_t *dtls13TranscriptMsg = NULL;
+    if (IS_DTLS13_CTX(ctx)) {
+        ret = VERIFY_Dtls13BuildTranscriptMsg(msg, msgLen, &dtls13TranscriptMsg, &transcriptMsgLen);
+        if (ret != HITLS_SUCCESS) {
+            goto EXIT;
+        }
+        transcriptMsg = dtls13TranscriptMsg;
+    }
+#endif
+
+    if (SAL_CRYPT_DigestUpdate(hashCtx, transcriptMsg, transcriptMsgLen) != HITLS_SUCCESS ||
         SAL_CRYPT_DigestFinal(hashCtx, transcriptHash, &hashLen) != HITLS_SUCCESS) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16887, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "DigestUpdate or DigestFinal fail", 0, 0, 0, 0);
@@ -732,8 +782,11 @@ EXIT:
     BSL_SAL_CleanseData(binderKey, MAX_DIGEST_SIZE);
     BSL_SAL_CleanseData(finishedKey, MAX_DIGEST_SIZE);
     BSL_SAL_FREE(hsData);
+#ifdef HITLS_TLS_PROTO_DTLS13
+    BSL_SAL_FREE(dtls13TranscriptMsg);
+#endif
     SAL_CRYPT_DigestFree(hashCtx);
     return ret;
 }
 
-#endif /* HITLS_TLS_PROTO_TLS13 */
+#endif /* HITLS_TLS_PROTO_TLS13 || HITLS_TLS_PROTO_DTLS13 */

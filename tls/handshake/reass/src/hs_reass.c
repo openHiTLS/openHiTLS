@@ -13,7 +13,7 @@
  * See the Mulan PSL v2 for more details.
  */
 #include "hitls_build.h"
-#ifdef HITLS_TLS_PROTO_DTLS12
+#if defined(HITLS_TLS_PROTO_DTLS12) || defined(HITLS_TLS_PROTO_DTLS13)
 #include <string.h>
 #include "tls_binlog_id.h"
 #include "bsl_log_internal.h"
@@ -76,37 +76,47 @@ static bool IsReassComplete(const uint8_t *reassBitMap, uint32_t msgLen)
     return true;
 }
 
-HS_ReassQueue *HS_ReassNew(void)
+int32_t HS_ReassQueueInit(TLS_Ctx *ctx)
 {
-    HS_ReassQueue *reassQueue = (HS_ReassQueue *)BSL_SAL_Calloc(1u, sizeof(HS_ReassQueue));
-    if (reassQueue == NULL) {
+    if (ctx == NULL) {
+        return HITLS_NULL_INPUT;
+    }
+    if (ctx->reassMsg != NULL) {
+        return HITLS_SUCCESS;
+    }
+    ctx->reassMsg = (HS_ReassQueue *)BSL_SAL_Calloc(1u, sizeof(HS_ReassQueue));
+    if (ctx->reassMsg == NULL) {
         BSL_ERR_PUSH_ERROR(HITLS_MEMALLOC_FAIL);
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15751, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "reassQueue malloc fail when new a reassQueue.", 0, 0, 0, 0);
-        return NULL;
+        return HITLS_MEMALLOC_FAIL;
     }
-    BSL_LIST_INIT(&reassQueue->head);
-    return reassQueue;
+    BSL_LIST_INIT(&ctx->reassMsg->head);
+    return HITLS_SUCCESS;
 }
 
-void HS_ReassFree(HS_ReassQueue *reassQueue)
+void HS_ReassQueueFree(TLS_Ctx *ctx)
 {
-    if (reassQueue == NULL) {
+    if (ctx == NULL || ctx->reassMsg == NULL) {
         return;
     }
-
     ListHead *node = NULL;
     ListHead *tmpNode = NULL;
     HS_ReassQueue *cur = NULL;
-    LIST_FOR_EACH_ITEM_SAFE(node, tmpNode, &(reassQueue->head))
-    {
+    LIST_FOR_EACH_ITEM_SAFE(node, tmpNode, &ctx->reassMsg->head) {
         cur = BSL_LIST_ENTRY(node, HS_ReassQueue, head);
-        BSL_LIST_REMOVE(&cur->head);        /* Delete the node from the queue. */
+        BSL_LIST_REMOVE(&cur->head);    /* Delete the node from the queue. */
         BSL_SAL_FREE(cur->reassBitMap); /* Release node content. */
         BSL_SAL_FREE(cur->msg);         /* Release node content. */
         BSL_SAL_FREE(cur);              /* Release the node. */
     }
-    BSL_SAL_Free(reassQueue);
+    BSL_SAL_Free(ctx->reassMsg);
+    ctx->reassMsg = NULL;
+}
+
+bool HS_ReassQueueIsEmpty(const TLS_Ctx *ctx)
+{
+    return ctx == NULL || ctx->reassMsg == NULL || LIST_IS_EMPTY(&ctx->reassMsg->head);
 }
 
 static HS_ReassQueue *GetReassNode(HS_ReassQueue *reassQueue, uint16_t sequence)
@@ -236,7 +246,7 @@ int32_t HS_ReassAppend(TLS_Ctx *ctx, HS_MsgInfo *msgInfo)
         return HITLS_SUCCESS;
     }
 
-    HS_ReassQueue *reassQueue = ctx->hsCtx->reassMsg;
+    HS_ReassQueue *reassQueue = ctx->reassMsg;
     /* Check whether there are messages in the reassembly queue */
     HS_ReassQueue *node = GetReassNode(reassQueue, msgInfo->sequence);
     if (node == NULL) {
@@ -256,7 +266,7 @@ int32_t HS_ReassAppend(TLS_Ctx *ctx, HS_MsgInfo *msgInfo)
 int32_t HS_GetReassMsg(TLS_Ctx *ctx, HS_MsgInfo *msgInfo, uint32_t *len)
 {
     /* Check whether there are messages in the reassembly queue */
-    HS_ReassQueue *node = GetReassNode(ctx->hsCtx->reassMsg, ctx->hsCtx->expectRecvSeq);
+    HS_ReassQueue *node = GetReassNode(ctx->reassMsg, ctx->hsCtx->expectRecvSeq);
     if (node == NULL) {
         *len = 0;
         return HITLS_SUCCESS;
@@ -298,4 +308,4 @@ int32_t HS_GetReassMsg(TLS_Ctx *ctx, HS_MsgInfo *msgInfo, uint32_t *len)
     return HITLS_SUCCESS;
 }
 
-#endif /* end #ifdef HITLS_TLS_PROTO_DTLS12 */
+#endif /* HITLS_TLS_PROTO_DTLS12 || HITLS_TLS_PROTO_DTLS13 */

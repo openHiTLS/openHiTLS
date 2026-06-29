@@ -24,21 +24,7 @@
 extern "C" {
 #endif
 
-#ifdef HITLS_TLS_PROTO_DTLS12
-
-/**
- * @brief Create a message reassembly queue.
- *
- * @return Return the header of the linked list. If NULL is returned, memory application fails.
- */
-HS_ReassQueue *HS_ReassNew(void);
-
-/**
- * @brief Release the reassembly message queue.
- *
- * @param reass [IN] Reassemble the message queue.
- */
-void HS_ReassFree(HS_ReassQueue *reassQueue);
+#if defined(HITLS_TLS_PROTO_DTLS12) || defined(HITLS_TLS_PROTO_DTLS13)
 
 /**
  * @brief Reassemble a fragmented handshake message.
@@ -65,7 +51,7 @@ int32_t HS_ReassAppend(TLS_Ctx *ctx, HS_MsgInfo *msgInfo);
  */
 int32_t HS_GetReassMsg(TLS_Ctx *ctx, HS_MsgInfo *msgInfo, uint32_t *len);
 
-#endif /* end #ifdef HITLS_TLS_PROTO_DTLS12 */
+#endif /* HITLS_TLS_PROTO_DTLS12 || HITLS_TLS_PROTO_DTLS13 */
 
 #ifdef __cplusplus
 }

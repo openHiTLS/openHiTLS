@@ -21,7 +21,6 @@
 #ifdef HITLS_TLS_FEATURE_INDICATOR
 #include "indicator.h"
 #endif /* HITLS_TLS_FEATURE_INDICATOR */
-#include "hs_reass.h"
 #include "hs_common.h"
 #include "hs_verify.h"
 #include "hs_kx.h"
@@ -41,7 +40,7 @@ static int32_t UIO_Init(TLS_Ctx *ctx)
         return HITLS_MEMALLOC_FAIL;
     }
 
-#if defined(HITLS_TLS_PROTO_DTLS12) && defined(HITLS_BSL_UIO_UDP)
+#if (defined(HITLS_TLS_PROTO_DTLS12) || defined(HITLS_TLS_PROTO_DTLS13)) && defined(HITLS_BSL_UIO_UDP)
     uint32_t bufferLen = (uint32_t)ctx->config.pmtu;
     if (IS_SUPPORT_DATAGRAM(ctx->config.tlsConfig.originVersionMask) &&
         BSL_UIO_GetUioChainTransportType(ctx->uio, BSL_UIO_UDP)) {
@@ -97,6 +96,33 @@ static int32_t HsInitChangeState(TLS_Ctx *ctx)
     return HS_ChangeState(ctx, TRY_RECV_CLIENT_HELLO);
 }
 
+#ifdef HITLS_TLS_PROTO_DTLS13
+static bool Dtls13HasSavedHsSeq(const TLS_Ctx *ctx)
+{
+    return ctx->dtls13NextSendSeq != 0 || ctx->dtls13ExpectRecvSeq != 0;
+}
+
+static void Dtls13RestoreHsSeq(TLS_Ctx *ctx)
+{
+    if (ctx->negotiatedInfo.version != HITLS_VERSION_DTLS13 || !Dtls13HasSavedHsSeq(ctx)) {
+        return;
+    }
+
+    ctx->hsCtx->nextSendSeq = ctx->dtls13NextSendSeq;
+    ctx->hsCtx->expectRecvSeq = ctx->dtls13ExpectRecvSeq;
+}
+
+static void Dtls13SaveHsSeq(TLS_Ctx *ctx)
+{
+    if (ctx->negotiatedInfo.version != HITLS_VERSION_DTLS13) {
+        return;
+    }
+
+    ctx->dtls13NextSendSeq = ctx->hsCtx->nextSendSeq;
+    ctx->dtls13ExpectRecvSeq = ctx->hsCtx->expectRecvSeq;
+}
+#endif
+
 int32_t NewHsCtxConfig(TLS_Ctx *ctx, HS_Ctx *hsCtx)
 {
     (void)ctx;
@@ -112,14 +138,8 @@ int32_t NewHsCtxConfig(TLS_Ctx *ctx, HS_Ctx *hsCtx)
     if (hsCtx->kxCtx == NULL) {
         return RETURN_ERROR_NUMBER_PROCESS(HITLS_MEMALLOC_FAIL, BINLOG_ID17180, "KeyExchCtxNew fail");
     }
-#ifdef HITLS_TLS_PROTO_TLS13
+#if defined(HITLS_TLS_PROTO_TLS13) || defined(HITLS_TLS_PROTO_DTLS13)
     hsCtx->firstClientHello = NULL;
-#endif /* HITLS_TLS_PROTO_TLS13 */
-#ifdef HITLS_TLS_PROTO_DTLS12
-    hsCtx->reassMsg = HS_ReassNew();
-    if (hsCtx->reassMsg == NULL) {
-        return RETURN_ERROR_NUMBER_PROCESS(HITLS_MEMALLOC_FAIL, BINLOG_ID17181, "ReassNew fail");
-    }
 #endif
 #ifdef HITLS_TLS_FEATURE_INDICATOR
     INDICATOR_StatusIndicate(ctx, INDICATE_EVENT_HANDSHAKE_START, INDICATE_VALUE_SUCCESS);
@@ -143,6 +163,9 @@ int32_t HS_Init(TLS_Ctx *ctx)
         return RETURN_ERROR_NUMBER_PROCESS(HITLS_MEMALLOC_FAIL, BINLOG_ID17176, "Calloc fail");
     }
     ctx->hsCtx = hsCtx;
+#ifdef HITLS_TLS_PROTO_DTLS13
+    Dtls13RestoreHsSeq(ctx);
+#endif
     hsCtx->clientRandom = ctx->negotiatedInfo.clientRandom;
     hsCtx->serverRandom = ctx->negotiatedInfo.serverRandom;
     hsCtx->bufferLen = HITLS_HS_INIT_BUFFER_SIZE;
@@ -168,6 +191,9 @@ void HS_DeInit(TLS_Ctx *ctx)
         return;
     }
     HS_Ctx *hsCtx = ctx->hsCtx;
+#ifdef HITLS_TLS_PROTO_DTLS13
+    Dtls13SaveHsSeq(ctx);
+#endif
     HS_CleanMsg(ctx->hsCtx->hsMsg);
     BSL_SAL_FREE(ctx->hsCtx->hsMsg);
     BSL_SAL_FREE(hsCtx->msgBuf);
@@ -177,7 +203,7 @@ void HS_DeInit(TLS_Ctx *ctx)
 #ifdef HITLS_TLS_FEATURE_SESSION_TICKET
     BSL_SAL_FREE(hsCtx->ticket);
 #endif /* HITLS_TLS_FEATURE_SESSION_TICKET */
-#ifdef HITLS_TLS_PROTO_TLS13
+#if defined(HITLS_TLS_PROTO_TLS13) || defined(HITLS_TLS_PROTO_DTLS13)
     if (ctx->hsCtx->firstClientHello != NULL) {
         HS_Msg hsMsg = {0};
         hsMsg.type = CLIENT_HELLO;
@@ -185,10 +211,10 @@ void HS_DeInit(TLS_Ctx *ctx)
         HS_CleanMsg(&hsMsg);
         BSL_SAL_FREE(ctx->hsCtx->firstClientHello);
     }
-#endif /* HITLS_TLS_PROTO_TLS13 */
+#endif
 	/* clear sensitive information */
     BSL_SAL_CleanseData(hsCtx->masterKey, MAX_DIGEST_SIZE);
-#ifdef HITLS_TLS_PROTO_TLS13
+#if defined(HITLS_TLS_PROTO_TLS13) || defined(HITLS_TLS_PROTO_DTLS13)
     BSL_SAL_CleanseData(ctx->hsCtx->earlySecret, MAX_DIGEST_SIZE);
     BSL_SAL_CleanseData(ctx->hsCtx->handshakeSecret, MAX_DIGEST_SIZE);
     BSL_SAL_CleanseData(ctx->hsCtx->serverHsTrafficSecret, MAX_DIGEST_SIZE);
@@ -206,9 +232,6 @@ void HS_DeInit(TLS_Ctx *ctx)
     }
 #endif /* HITLS_TLS_FEATURE_FLIGHT */
     HS_KeyExchCtxFree(hsCtx->kxCtx);
-#ifdef HITLS_TLS_PROTO_DTLS12
-    HS_ReassFree(hsCtx->reassMsg);
-#endif
     BSL_SAL_FREE(ctx->hsCtx);
     return;
 }

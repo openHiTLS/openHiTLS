@@ -279,7 +279,6 @@ typedef enum {
     HITLS_REC_ERR_NOT_ON_RECORD_BOUNDARY,          /**< TLS1.3: read key change not on record boundary */
     HITLS_REC_ERR_GENERATE_MAC,                    /**< Failed to generate the MAC address. */
     HITLS_REC_NORMAL_IO_EOF,                       /**< IO object has reached EOF. */
-    HITLS_REC_ENCRYPTED_NUMBER_OVERFLOW,           /**< The number of AES-GCM encryption times cannot exceed 2^24.5. */
     HITLS_REC_ERR_DATA_BETWEEN_CCS_AND_FINISHED,   /**< When version is below TLS13,
                                                         must not have data between ccs and finished. */
     HITLS_REC_ERR_INVALID_CUSTOM_TYPE,              /**< Record: custom type conflicts with standard REC_Type. */
@@ -433,6 +432,7 @@ typedef enum {
     HITLS_CALLBACK_CLIENT_HELLO_INVALID_CALL,          /**< Invalid use of HITLS_ClientHelloGet* function. */
     HITLS_CALLBACK_CLIENT_HELLO_EXTENSION_NOT_FOUND,   /**< Extension not found. */
 } HITLS_ERROR;
+
 
 /**
  * @ingroup hitls_error

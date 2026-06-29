@@ -31,6 +31,7 @@
 #include "hitls_alpn.h"
 #endif
 #include "hs.h"
+#include "hs_common.h"
 #include "alert.h"
 #include "app.h"
 #ifdef HITLS_TLS_FEATURE_SESSION
@@ -74,19 +75,34 @@ void ConnCleanSensitiveData(TLS_Ctx *ctx)
 {
     if (ctx->hsCtx != NULL) {
         BSL_SAL_CleanseData(ctx->hsCtx->masterKey, sizeof(ctx->hsCtx->masterKey));
-#ifdef HITLS_TLS_PROTO_TLS13
+#if defined(HITLS_TLS_PROTO_TLS13) || defined(HITLS_TLS_PROTO_DTLS13)
         BSL_SAL_CleanseData(ctx->hsCtx->earlySecret, MAX_DIGEST_SIZE);
         BSL_SAL_CleanseData(ctx->hsCtx->handshakeSecret, MAX_DIGEST_SIZE);
         BSL_SAL_CleanseData(ctx->hsCtx->serverHsTrafficSecret, MAX_DIGEST_SIZE);
         BSL_SAL_CleanseData(ctx->hsCtx->clientHsTrafficSecret, MAX_DIGEST_SIZE);
 #endif
     }
-#ifdef HITLS_TLS_PROTO_TLS13
+#if defined(HITLS_TLS_PROTO_TLS13) || defined(HITLS_TLS_PROTO_DTLS13)
     BSL_SAL_CleanseData(ctx->clientAppTrafficSecret, MAX_DIGEST_SIZE);
     BSL_SAL_CleanseData(ctx->serverAppTrafficSecret, MAX_DIGEST_SIZE);
     BSL_SAL_CleanseData(ctx->resumptionMasterSecret, MAX_DIGEST_SIZE);
 #endif
 }
+
+#ifdef HITLS_TLS_PROTO_DTLS13
+static bool IsDtls13RetransmitProbeConnState(const HITLS_Ctx *ctx, CM_State state)
+{
+    if (ctx == NULL || ctx->negotiatedInfo.version != HITLS_VERSION_DTLS13 || ctx->recCtx == NULL ||
+        (REC_HasBufferedHsData(ctx) && REC_RetransmitIsEmpty(ctx->recCtx))) {
+        return false;
+    }
+
+    bool enterProbe = (ctx->state == CM_STATE_TRANSPORTING && state == CM_STATE_HANDSHAKING);
+    bool leaveProbe = (ctx->state == CM_STATE_HANDSHAKING && ctx->preState == CM_STATE_TRANSPORTING &&
+        state == CM_STATE_TRANSPORTING);
+    return enterProbe || leaveProbe;
+}
+#endif
 
 void ChangeConnState(HITLS_Ctx *ctx, CM_State state)
 {
@@ -97,13 +113,41 @@ void ChangeConnState(HITLS_Ctx *ctx, CM_State state)
         return;
     }
 
+#ifdef HITLS_TLS_PROTO_DTLS13
+    bool suppressLog = IsDtls13RetransmitProbeConnState(ctx, state);
+#endif
     ctx->preState = ctx->state;
     ctx->state = state;
+#ifdef HITLS_TLS_PROTO_DTLS13
+    if (suppressLog) {
+        return;
+    }
+#endif
     BSL_LOG_BINLOG_VARLEN(BINLOG_ID15839, BSL_LOG_LEVEL_INFO, BSL_LOG_BINLOG_TYPE_RUN, "state [%s]",
         GetStateString(ctx->preState));
     BSL_LOG_BINLOG_VARLEN(BINLOG_ID15840, BSL_LOG_LEVEL_INFO, BSL_LOG_BINLOG_TYPE_RUN, "change to [%s]",
         GetStateString(state));
 }
+
+#ifdef HITLS_TLS_PROTO_DTLS13
+int32_t CommonCheckDtls13BufferedHandshake(HITLS_Ctx *ctx)
+{
+    if (ctx == NULL) {
+        return HITLS_NULL_INPUT;
+    }
+    if (ctx->negotiatedInfo.version != HITLS_VERSION_DTLS13 || ctx->state != CM_STATE_TRANSPORTING ||
+        ctx->recCtx == NULL || (!REC_HasBufferedHsData(ctx) && REC_RetransmitIsEmpty(ctx->recCtx))) {
+        return HITLS_SUCCESS;
+    }
+
+    int32_t ret = HS_Init(ctx);
+    if (ret != HITLS_SUCCESS) {
+        return ret;
+    }
+    ChangeConnState(ctx, CM_STATE_HANDSHAKING);
+    return HS_ChangeState(ctx, TRY_RECV_MSG);
+}
+#endif /* HITLS_TLS_PROTO_DTLS13 */
 
 int32_t CommonEventInAlertingState(HITLS_Ctx *ctx)
 {
@@ -310,7 +354,7 @@ HITLS_Config *HITLS_GetGlobalConfig(const HITLS_Ctx *ctx)
     return ctx->globalConfig;
 }
 
-#ifdef HITLS_TLS_PROTO_TLS13
+#if defined(HITLS_TLS_PROTO_TLS13) || defined(HITLS_TLS_PROTO_DTLS13)
 int32_t HITLS_ClearTLS13CipherSuites(HITLS_Ctx *ctx)
 {
     if (ctx == NULL) {
@@ -318,7 +362,7 @@ int32_t HITLS_ClearTLS13CipherSuites(HITLS_Ctx *ctx)
     }
     return HITLS_CFG_ClearTLS13CipherSuites(&(ctx->config.tlsConfig));
 }
-#endif
+#endif /* HITLS_TLS_PROTO_TLS13 || HITLS_TLS_PROTO_DTLS13 */
 int32_t HITLS_SetCipherSuites(HITLS_Ctx *ctx, const uint16_t *cipherSuites, uint32_t cipherSuitesSize)
 {
     if (ctx == NULL) {
@@ -464,8 +508,8 @@ HITLS_CIPHER_List *HITLS_GetSupportedCiphers(const HITLS_Ctx *ctx)
         BSL_LIST_FREE(cipherList, BSL_SAL_Free);
         return NULL;
     }
-#ifdef HITLS_TLS_PROTO_TLS13
-    if (ctx->config.tlsConfig.maxVersion == HITLS_VERSION_TLS13 && GetAvailableCipherList(ctx, cipherList,
+#if defined(HITLS_TLS_PROTO_TLS13) || defined(HITLS_TLS_PROTO_DTLS13)
+    if ((ctx->config.tlsConfig.maxVersion == HITLS_VERSION_TLS13 || ctx->config.tlsConfig.maxVersion == HITLS_VERSION_DTLS13) && GetAvailableCipherList(ctx, cipherList,
         config->tls13CipherSuites, config->tls13cipherSuitesSize) != HITLS_SUCCESS) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17149, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "GetAvailableCipherList fail", 0, 0, 0, 0);
@@ -791,7 +835,7 @@ int32_t CommonEventInRenegotiationState(HITLS_Ctx *ctx)
 }
 #endif /* HITLS_TLS_FEATURE_RENEGOTIATION */
 
-#if defined(HITLS_TLS_FEATURE_PSK) && defined(HITLS_TLS_PROTO_TLS13)
+#if defined(HITLS_TLS_FEATURE_PSK) && (defined(HITLS_TLS_PROTO_TLS13) || defined(HITLS_TLS_PROTO_DTLS13))
 int32_t HITLS_SetPskFindSessionCallback(HITLS_Ctx *ctx, HITLS_PskFindSessionCb cb)
 {
     if (ctx == NULL) {

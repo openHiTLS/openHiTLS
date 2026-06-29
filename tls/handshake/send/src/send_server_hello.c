@@ -29,6 +29,7 @@
 #include "hs_verify.h"
 #include "transcript_hash.h"
 #include "hs_common.h"
+#include "hs_dtls_timer.h"
 #include "pack.h"
 #include "send_process.h"
 #include "hs_kx.h"
@@ -119,7 +120,7 @@ static int32_t ServerChangeStateAfterSendHello(TLS_Ctx *ctx)
     }
     return HS_ChangeState(ctx, TRY_SEND_CERTIFICATE);
 }
-#if defined(HITLS_TLS_PROTO_TLS13) && defined(HITLS_TLS_PROTO_TLS_BASIC)
+#if (defined(HITLS_TLS_PROTO_TLS13) || defined(HITLS_TLS_PROTO_DTLS13)) && defined(HITLS_TLS_PROTO_TLS_BASIC)
 static int32_t DowngradeServerRandom(TLS_Ctx *ctx)
 {
     /* Obtain server information */
@@ -128,7 +129,7 @@ static int32_t DowngradeServerRandom(TLS_Ctx *ctx)
     uint32_t downgradeRandomLen = 0;
     uint32_t offset = 0;
     /* Obtain the random part to be rewritten */
-    if (ctx->negotiatedInfo.version == HITLS_VERSION_TLS12) {
+    if (ctx->negotiatedInfo.version == HITLS_VERSION_TLS12 || ctx->negotiatedInfo.version == HITLS_VERSION_DTLS12) {
         const uint8_t *downgradeRandom = HS_GetTls12DowngradeRandom(&downgradeRandomLen);
         /* Some positions need to be rewritten to obtain random */
         offset = HS_RANDOM_SIZE - downgradeRandomLen;
@@ -141,7 +142,7 @@ static int32_t DowngradeServerRandom(TLS_Ctx *ctx)
     }
     return ret;
 }
-#endif /* HITLS_TLS_PROTO_TLS13 && HITLS_TLS_PROTO_TLS_BASIC */
+#endif /* (HITLS_TLS_PROTO_TLS13 || HITLS_TLS_PROTO_DTLS13) && HITLS_TLS_PROTO_TLS_BASIC */
 int32_t ServerSendServerHelloProcess(TLS_Ctx *ctx)
 {
     int32_t ret = HITLS_SUCCESS;
@@ -162,11 +163,11 @@ int32_t ServerSendServerHelloProcess(TLS_Ctx *ctx)
                 "get server random error.", 0, 0, 0, 0);
             return ret;
         }
-#if defined(HITLS_TLS_PROTO_TLS13) && defined(HITLS_TLS_PROTO_TLS_BASIC)
+#if (defined(HITLS_TLS_PROTO_TLS13) || defined(HITLS_TLS_PROTO_DTLS13)) && defined(HITLS_TLS_PROTO_TLS_BASIC)
         TLS_Config *tlsConfig = &ctx->config.tlsConfig;
         /* If TLS 1.3 is supported but an earlier version is negotiated, the last eight bits of the random number need
          * to be rewritten */
-        if (tlsConfig->maxVersion == HITLS_VERSION_TLS13) {
+        if ((tlsConfig->originVersionMask & (TLS13_VERSION_BIT | DTLS13_VERSION_BIT)) != 0) {
             ret = DowngradeServerRandom(ctx);
             if (ret != HITLS_SUCCESS) {
                 BSL_ERR_PUSH_ERROR(HITLS_MEMCPY_FAIL);
@@ -175,7 +176,7 @@ int32_t ServerSendServerHelloProcess(TLS_Ctx *ctx)
                 return HITLS_MEMCPY_FAIL;
             }
         }
-#endif /* HITLS_TLS_PROTO_TLS13 && HITLS_TLS_PROTO_TLS_BASIC */
+#endif /* (HITLS_TLS_PROTO_TLS13 || HITLS_TLS_PROTO_DTLS13) && HITLS_TLS_PROTO_TLS_BASIC */
         /* Set the verify information. */
         ret = VERIFY_SetHash(LIBCTX_FROM_CTX(ctx), ATTRIBUTE_FROM_CTX(ctx),
             hsCtx->verifyCtx, ctx->negotiatedInfo.cipherSuiteInfo.hashAlg);
@@ -204,7 +205,7 @@ int32_t ServerSendServerHelloProcess(TLS_Ctx *ctx)
     return ServerChangeStateAfterSendHello(ctx);
 }
 #endif /* HITLS_TLS_PROTO_TLS_BASIC || HITLS_TLS_PROTO_DTLS12 */
-#ifdef HITLS_TLS_PROTO_TLS13
+#if defined(HITLS_TLS_PROTO_TLS13) || defined(HITLS_TLS_PROTO_DTLS13)
 static int32_t Tls13ServerPrepareKeyShare(TLS_Ctx *ctx)
 {
     KeyShareParam *keyShare = &ctx->hsCtx->kxCtx->keyExchParam.share;
@@ -273,7 +274,9 @@ int32_t Tls13ServerSendServerHelloProcess(TLS_Ctx *ctx)
 
         ret = HS_PackMsg(ctx, SERVER_HELLO);
         if (ret != HITLS_SUCCESS) {
-            return RETURN_ERROR_NUMBER_PROCESS(ret, BINLOG_ID15555, "pack tls1.3 server hello msg fail");
+            BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15555, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+                "pack (d)tls1.3 server hello msg fail.", 0, 0, 0, 0);
+            return ret;
         }
     }
 
@@ -288,10 +291,11 @@ int32_t Tls13ServerSendServerHelloProcess(TLS_Ctx *ctx)
     }
 
     BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15556, BSL_LOG_LEVEL_INFO, BSL_LOG_BINLOG_TYPE_RUN,
-        "send tls1.3 server hello msg success.", 0, 0, 0, 0);
+        "send (d)tls1.3 server hello msg success.", 0, 0, 0, 0);
 
     /* In the middlebox mode, If the scenario is not hrr, the CCS needs to be sent before the EE */
-    if (ctx->config.tlsConfig.isMiddleBoxCompat && !ctx->hsCtx->haveHrr) {
+    if (ctx->config.tlsConfig.isMiddleBoxCompat && !ctx->hsCtx->haveHrr &&
+        !IS_SUPPORT_DATAGRAM(ctx->config.tlsConfig.originVersionMask)) {
         ctx->hsCtx->ccsNextState = TRY_SEND_ENCRYPTED_EXTENSIONS;
         return HS_ChangeState(ctx, TRY_SEND_CHANGE_CIPHER_SPEC);
     }
@@ -321,7 +325,7 @@ int32_t Tls13ServerSendHelloRetryRequestProcess(TLS_Ctx *ctx)
         ret = HS_PackMsg(ctx, SERVER_HELLO);
         if (ret != HITLS_SUCCESS) {
             BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15558, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-                "pack tls1.3 hello retry request msg fail.", 0, 0, 0, 0);
+                "pack (d)tls1.3 hello retry request msg fail.", 0, 0, 0, 0);
             return ret;
         }
     }
@@ -332,14 +336,23 @@ int32_t Tls13ServerSendHelloRetryRequestProcess(TLS_Ctx *ctx)
     }
 
     BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15559, BSL_LOG_LEVEL_INFO, BSL_LOG_BINLOG_TYPE_RUN,
-        "send tls1.3 hello retry request msg success.", 0, 0, 0, 0);
+        "send (d)tls1.3 hello retry request msg success.", 0, 0, 0, 0);
 
     /* RFC 8446 4.4.1. Send the Hello Retry Request message and construct the Transcript-Hash data */
     ret = VERIFY_HelloRetryRequestVerifyProcess(ctx);
     if (ret != HITLS_SUCCESS) {
         return ret;
     }
-    if (!ctx->config.tlsConfig.isMiddleBoxCompat) {
+#ifdef HITLS_TLS_PROTO_DTLS13
+    if (IS_SUPPORT_DATAGRAM(ctx->config.tlsConfig.originVersionMask)) {
+        ret = HS_StartTimer(ctx);
+        if (ret != HITLS_SUCCESS) {
+            return ret;
+        }
+    }
+#endif /* HITLS_TLS_PROTO_DTLS13 */
+    if (!ctx->config.tlsConfig.isMiddleBoxCompat ||
+        IS_SUPPORT_DATAGRAM(ctx->config.tlsConfig.originVersionMask)) {
         return HS_ChangeState(ctx, TRY_RECV_CLIENT_HELLO);
     }
     /* In middlebox mode, the peer sends CCS messages. Set this parameter to allow receiving CCS messages */
@@ -348,5 +361,5 @@ int32_t Tls13ServerSendHelloRetryRequestProcess(TLS_Ctx *ctx)
     ctx->hsCtx->ccsNextState = TRY_RECV_CLIENT_HELLO;
     return HS_ChangeState(ctx, TRY_SEND_CHANGE_CIPHER_SPEC);
 }
-#endif /* HITLS_TLS_PROTO_TLS13 */
+#endif /* HITLS_TLS_PROTO_TLS13 || HITLS_TLS_PROTO_DTLS13 */
 #endif /* HITLS_TLS_HOST_SERVER */

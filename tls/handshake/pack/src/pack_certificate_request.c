@@ -24,6 +24,7 @@
 #include "hitls_error.h"
 #include "tls.h"
 #include "hs_common.h"
+#include "hs.h"
 #include "hs_ctx.h"
 #include "hs_extensions.h"
 #include "pack_common.h"
@@ -295,7 +296,7 @@ int32_t Tls13PackCertificateRequest(const TLS_Ctx *ctx, PackPacket *pkt)
     ret = Tls13PackCertReqExtensions(ctx, pkt);
     if (ret != HITLS_SUCCESS) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15690, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "pack tls1.3 certificate request msg extension content fail.", 0, 0, 0, 0);
+            "pack (d)tls1.3 certificate request msg extension content fail.", 0, 0, 0, 0);
         return ret;
     }
 

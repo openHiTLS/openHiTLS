@@ -31,7 +31,7 @@
 
 #define CIPHER_SUITES_LEN_SIZE   2u
 
-#ifdef HITLS_TLS_PROTO_DTLS12
+#if defined(HITLS_TLS_PROTO_DTLS12) || defined(HITLS_TLS_PROTO_DTLS13)
 // Pack the cookie content of the client Hello message.
 static int32_t PackClientCookie(PackPacket *pkt, const uint8_t *cookie, uint8_t cookieLen)
 {
@@ -45,12 +45,13 @@ static int32_t PackClientCookie(PackPacket *pkt, const uint8_t *cookie, uint8_t 
     }
     return PackAppendDataToBuf(pkt, cookie, cookieLen);
 }
-#endif /* HITLS_TLS_PROTO_DTLS12 */
+#endif /* HITLS_TLS_PROTO_DTLS12 || HITLS_TLS_PROTO_DTLS13 */
+
 static int32_t PackCipherSuites(const TLS_Ctx *ctx, PackPacket *pkt, bool isTls13)
 {
     uint16_t *cipherSuites = NULL;
     uint32_t cipherSuitesSize = 0;
-#ifdef HITLS_TLS_PROTO_TLS13
+#if defined(HITLS_TLS_PROTO_TLS13) || defined(HITLS_TLS_PROTO_DTLS13)
     if (isTls13) {
         cipherSuites = ctx->config.tlsConfig.tls13CipherSuites;
         cipherSuitesSize = ctx->config.tlsConfig.tls13cipherSuitesSize;
@@ -62,7 +63,7 @@ static int32_t PackCipherSuites(const TLS_Ctx *ctx, PackPacket *pkt, bool isTls1
     (void)isTls13;
     cipherSuites = ctx->config.tlsConfig.cipherSuites;
     cipherSuitesSize = ctx->config.tlsConfig.cipherSuitesSize;
-#endif /* HITLS_TLS_PROTO_TLS13 */
+#endif /* HITLS_TLS_PROTO_TLS13 || HITLS_TLS_PROTO_DTLS13 */
 
     int32_t ret = HITLS_SUCCESS;
     for (uint32_t i = 0; i < cipherSuitesSize; i++) {
@@ -110,8 +111,10 @@ static int32_t PackClientCipherSuites(const TLS_Ctx *ctx, PackPacket *pkt)
     if (ret != HITLS_SUCCESS) {
         return ret;
     }
-#ifdef HITLS_TLS_PROTO_TLS13
-    if (ctx->config.tlsConfig.maxVersion == HITLS_VERSION_TLS13) {
+#if defined(HITLS_TLS_PROTO_TLS13) || defined(HITLS_TLS_PROTO_DTLS13)
+    /* Keep the cipher suite vector stable across DTLS HelloVerifyRequest so the cookie remains verifiable. */
+    if (ctx->config.tlsConfig.maxVersion == HITLS_VERSION_TLS13 ||
+        ctx->config.tlsConfig.maxVersion == HITLS_VERSION_DTLS13) {
         ret = PackCipherSuites(ctx, pkt, 1);
         if (ret != HITLS_SUCCESS) {
             BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16925, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
@@ -119,8 +122,8 @@ static int32_t PackClientCipherSuites(const TLS_Ctx *ctx, PackPacket *pkt)
             return ret;
         }
     }
-#endif /* HITLS_TLS_PROTO_TLS13 */
-    if (ctx->config.tlsConfig.minVersion != HITLS_VERSION_TLS13) {
+#endif /* HITLS_TLS_PROTO_TLS13 || HITLS_TLS_PROTO_DTLS13 */
+    if (ctx->config.tlsConfig.minVersion != HITLS_VERSION_TLS13 && ctx->config.tlsConfig.minVersion != HITLS_VERSION_DTLS13) {
         ret = PackCipherSuites(ctx, pkt, 0);
         if (ret != HITLS_SUCCESS) {
             BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16926, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
@@ -174,25 +177,39 @@ static int32_t PackClientHelloMandatoryField(const TLS_Ctx *ctx, PackPacket *pkt
         BSL_ERR_PUSH_ERROR(HITLS_NULL_INPUT);
         return HITLS_NULL_INPUT;
     }
-    uint16_t version =
-#ifdef HITLS_TLS_PROTO_TLS13
-    (tlsConfig->maxVersion == HITLS_VERSION_TLS13) ? HITLS_VERSION_TLS12 :
+    uint16_t version = GET_VERSION_FROM_CTX(ctx);
+#ifdef HITLS_TLS_PROTO_TLS13 
+    if (version == HITLS_VERSION_TLS13) {
+        version = HITLS_VERSION_TLS12;
+    }
 #endif
-     tlsConfig->maxVersion;
+#ifdef HITLS_TLS_PROTO_DTLS13 
+    if (version == HITLS_VERSION_DTLS13) {
+        version = HITLS_VERSION_DTLS12;
+    }
+#endif
     ret = PackHelloCommonField(ctx, pkt, version, true);
     if (ret != HITLS_SUCCESS) {
         return ret;
     }
 
-#ifdef HITLS_TLS_PROTO_DTLS12
+#if defined(HITLS_TLS_PROTO_DTLS12) || defined(HITLS_TLS_PROTO_DTLS13)
     if (IS_SUPPORT_DATAGRAM(tlsConfig->originVersionMask)) {
-        ret = PackClientCookie(pkt, ctx->negotiatedInfo.cookie, (uint8_t)ctx->negotiatedInfo.cookieSize);
+        const uint8_t *cookie = ctx->negotiatedInfo.cookie;
+        uint8_t cookieLen = (uint8_t)ctx->negotiatedInfo.cookieSize;
+#ifdef HITLS_TLS_PROTO_DTLS13
+        if (GET_VERSION_FROM_CTX(ctx) == HITLS_VERSION_DTLS13 && !ctx->hsCtx->haveHvr) {
+            cookie = NULL;
+            cookieLen = 0u;
+        }
+#endif /* HITLS_TLS_PROTO_DTLS13 */
+        ret = PackClientCookie(pkt, cookie, cookieLen);
         if (ret != HITLS_SUCCESS) {
             memset(ctx->negotiatedInfo.cookie, 0, ctx->negotiatedInfo.cookieSize);
             return ret;
         }
     }
-#endif
+#endif /* HITLS_TLS_PROTO_DTLS12 || HITLS_TLS_PROTO_DTLS13 */
 
     ret = PackClientCipherSuites(ctx, pkt);
     if (ret != HITLS_SUCCESS) {

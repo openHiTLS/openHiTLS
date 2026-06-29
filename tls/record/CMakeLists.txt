@@ -24,13 +24,18 @@ set(_record_sources
     ${CMAKE_CURRENT_SOURCE_DIR}/src/record.c
 )
 
-if(HITLS_TLS_PROTO_DTLS12)
+if(HITLS_TLS_PROTO_DTLS12 OR HITLS_TLS_PROTO_DTLS13)
     list(APPEND _record_sources ${CMAKE_CURRENT_SOURCE_DIR}/src/rec_unprocessed_msg.c)
-    if(HITLS_BSL_UIO_UDP)
-        list(APPEND _record_sources ${CMAKE_CURRENT_SOURCE_DIR}/src/rec_retransmit.c)
-        if(HITLS_TLS_FEATURE_ANTI_REPLAY)
-            list(APPEND _record_sources ${CMAKE_CURRENT_SOURCE_DIR}/src/rec_anti_replay.c)
-        endif()
+endif()
+
+if(HITLS_TLS_PROTO_DTLS13)
+    list(APPEND _record_sources ${CMAKE_CURRENT_SOURCE_DIR}/src/rec_ack.c)
+endif()
+
+if((HITLS_TLS_PROTO_DTLS12 OR HITLS_TLS_PROTO_DTLS13) AND HITLS_BSL_UIO_UDP)
+    list(APPEND _record_sources ${CMAKE_CURRENT_SOURCE_DIR}/src/rec_retransmit.c)
+    if((HITLS_TLS_PROTO_DTLS12 OR HITLS_TLS_PROTO_DTLS13) AND HITLS_TLS_FEATURE_ANTI_REPLAY)
+        list(APPEND _record_sources ${CMAKE_CURRENT_SOURCE_DIR}/src/rec_anti_replay.c)
     endif()
 endif()
 

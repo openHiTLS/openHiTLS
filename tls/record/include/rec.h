@@ -46,8 +46,35 @@ typedef enum {
     REC_TYPE_ALERT = 21,
     REC_TYPE_HANDSHAKE = 22,
     REC_TYPE_APP = 23,
+    REC_TYPE_ACK = 26,
     REC_TYPE_UNKNOWN = 255
 } REC_Type;
+
+typedef struct {
+    uint32_t offset;
+    uint32_t len;
+} Dtls13FragmentRange;
+
+typedef struct {
+    uint64_t epoch;
+    uint64_t sequenceNumber;
+} RecordNumber;
+
+typedef struct {
+    Dtls13FragmentRange *frags;
+    uint32_t count;
+    uint32_t cap;
+} Dtls13FragmentList;
+
+#ifdef HITLS_TLS_PROTO_DTLS13
+typedef int32_t (*REC_Dtls13RetransmitAckCb)(TLS_Ctx *ctx);
+
+typedef struct {
+    RecordNumber *records;
+    uint32_t count;
+    uint32_t cap;
+} Dtls13AckList;
+#endif
 
 /*
  * SecurityParameters, used to generate keys and initialize the connect state
@@ -103,6 +130,15 @@ void REC_DeInit(TLS_Ctx *ctx);
  * @return  whether data exists in the read buffer
  */
 bool REC_ReadHasPending(const TLS_Ctx *ctx);
+
+/**
+ * @ingroup record
+ * @brief   Check whether the DTLS/TLS record or handshake reassembly layer has buffered handshake data.
+ *
+ * @param   ctx [IN] TLS object
+ * @return  whether buffered handshake data exists
+ */
+bool REC_HasBufferedHsData(const TLS_Ctx *ctx);
 
 /**
  * @ingroup record
@@ -269,6 +305,10 @@ int32_t REC_RetransmitListAppend(REC_Ctx *recCtx, REC_Type type, const uint8_t *
  */
 void REC_RetransmitListClean(REC_Ctx *recCtx);
 
+#ifdef HITLS_TLS_PROTO_DTLS13
+void REC_RetransmitListRemove(REC_Ctx *recCtx, uint8_t hsType);
+#endif
+
 /**
  * @brief   Send a message in the retransmission queue
  *          UDP sending will not fail. Therefore, the sending failure scenario does not need to be considered
@@ -278,6 +318,29 @@ void REC_RetransmitListClean(REC_Ctx *recCtx);
  * @retval  For other error codes, see hitls_error.h
  */
 int32_t REC_RetransmitListFlush(TLS_Ctx *ctx);
+
+int32_t REC_GetLastWriteRecordNum(const TLS_Ctx *ctx, RecordNumber *recordNum);
+int32_t REC_GetLastReadRecordNum(const TLS_Ctx *ctx, RecordNumber *recordNum);
+
+bool REC_RetransmitIsEmpty(const REC_Ctx *recCtx);
+typedef enum {
+    REC_DTLS13_ACK_NORMAL,
+    REC_DTLS13_ACK_RETRANS,
+} REC_Dtls13AckListType;
+
+#ifdef HITLS_TLS_PROTO_DTLS13
+int32_t REC_RetransmitListPushWithAckCb(TLS_Ctx *ctx, REC_Type type, const uint8_t *msg, uint32_t len,
+    REC_Dtls13RetransmitAckCb ackCb);
+bool REC_Dtls13RetransmitListHasKeyUpdate(const REC_Ctx *recCtx);
+#endif
+int32_t REC_RetransmitListProcessAck(TLS_Ctx *ctx, const uint8_t *data, uint32_t dataLen);
+
+int32_t REC_Dtls13AckListAppend(TLS_Ctx *ctx, const RecordNumber *recordNum);
+void REC_Dtls13AckListClear(TLS_Ctx *ctx, REC_Dtls13AckListType type);
+bool REC_Dtls13AckListIsEmpty(const TLS_Ctx *ctx, REC_Dtls13AckListType type);
+int32_t REC_Dtls13SendAck(TLS_Ctx *ctx, REC_Dtls13AckListType type);
+void REC_Dtls13SetNeedSendRetransAck(TLS_Ctx *ctx);
+int32_t REC_Dtls13FlushAck(TLS_Ctx *ctx);
 
 REC_Type REC_GetUnexpectedMsgType(TLS_Ctx *ctx);
 

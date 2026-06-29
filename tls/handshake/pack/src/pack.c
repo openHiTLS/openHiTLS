@@ -89,7 +89,7 @@ static int32_t PackHsMsgBody(TLS_Ctx *ctx, HS_MsgType type, PackPacket *pkt)
     return ret;
 }
 #endif /* HITLS_TLS_PROTO_TLS_BASIC || HITLS_TLS_PROTO_DTLS12 */
-#ifdef HITLS_TLS_PROTO_TLS13
+#if defined(HITLS_TLS_PROTO_TLS13) || defined(HITLS_TLS_PROTO_DTLS13)
 static int32_t PackTls13HsMsgBody(TLS_Ctx *ctx, HS_MsgType type, PackPacket *pkt)
 {
     int32_t ret = HITLS_SUCCESS;
@@ -129,6 +129,14 @@ static int32_t PackTls13HsMsgBody(TLS_Ctx *ctx, HS_MsgType type, PackPacket *pkt
             ret = PackKeyUpdate(ctx, pkt);
             break;
 #endif
+#if defined(HITLS_TLS_FEATURE_DTLS_CID) && defined(HITLS_TLS_PROTO_DTLS13)
+        case NEW_CONNECTION_ID:
+            ret = PackNewConnectionId(ctx, pkt);
+            break;
+        case REQUEST_CONNECTION_ID:
+            ret = PackAppendUint8ToBuf(pkt, ctx->reqCidNum);
+            break;
+#endif
         default:
             ret = HITLS_PACK_UNSUPPORT_HANDSHAKE_MSG;
             break;
@@ -140,7 +148,7 @@ static int32_t PackTls13HsMsgBody(TLS_Ctx *ctx, HS_MsgType type, PackPacket *pkt
     }
     return ret;
 }
-#endif /* HITLS_TLS_PROTO_TLS13 */
+#endif /* HITLS_TLS_PROTO_TLS13 || HITLS_TLS_PROTO_DTLS13 */
 #ifdef HITLS_TLS_PROTO_DTLS12
 int32_t Dtls12PackMsg(TLS_Ctx *ctx, HS_MsgType type)
 {
@@ -156,7 +164,14 @@ int32_t Dtls12PackMsg(TLS_Ctx *ctx, HS_MsgType type)
         return ret;
     }
 
-    ret = PackHsMsgBody(ctx, type, &pkt);
+#ifdef HITLS_TLS_PROTO_TLS13
+    if (ctx->negotiatedInfo.version == HITLS_VERSION_TLS13) {
+        ret = PackTls13HsMsgBody(ctx, type, &pkt);
+    } else
+#endif
+    {
+        ret = PackHsMsgBody(ctx, type, &pkt);
+    }
     if (ret != HITLS_SUCCESS) {
         return ret;
     }
@@ -174,6 +189,39 @@ int32_t Dtls12PackMsg(TLS_Ctx *ctx, HS_MsgType type)
     return HITLS_SUCCESS;
 }
 #endif
+#ifdef HITLS_TLS_PROTO_DTLS13
+static int32_t Dtls13PackMsg(TLS_Ctx *ctx, HS_MsgType type)
+{
+    uint16_t sequence = 0;
+    int32_t ret = HITLS_SUCCESS;
+    HS_Ctx *hsCtx = ctx->hsCtx;
+
+    PackPacket pkt = {.buf = &hsCtx->msgBuf, .bufLen = &hsCtx->bufferLen, .bufOffset = &hsCtx->msgLen};
+
+    uint32_t headerPosition = 0;
+    ret = PackStartLengthField(&pkt, DTLS_HS_MSG_HEADER_SIZE, &headerPosition);
+    if (ret != HITLS_SUCCESS) {
+        return ret;
+    }
+
+    ret = PackTls13HsMsgBody(ctx, type, &pkt);
+    if (ret != HITLS_SUCCESS) {
+        return ret;
+    }
+
+    sequence = hsCtx->nextSendSeq;
+    uint8_t *dtlsHeaderBuf = NULL;
+    uint32_t totalLen = 0;
+    ret = PackGetSubBuffer(&pkt, headerPosition, &totalLen, &dtlsHeaderBuf);
+    if (ret != HITLS_SUCCESS) {
+        return ret;
+    }
+
+    PackDtlsMsgHeader(type, sequence, totalLen - DTLS_HS_MSG_HEADER_SIZE, dtlsHeaderBuf);
+
+    return HITLS_SUCCESS;
+}
+#endif /* HITLS_TLS_PROTO_DTLS13 */
 #ifdef HITLS_TLS_PROTO_TLS_BASIC
 int32_t Tls12PackMsg(TLS_Ctx *ctx, HS_MsgType type)
 {
@@ -251,6 +299,12 @@ int32_t HS_PackMsg(TLS_Ctx *ctx, HS_MsgType type)
     uint32_t version = GET_VERSION_FROM_CTX(ctx);
     int32_t ret = HITLS_SUCCESS;
 
+#if defined(HITLS_TLS_PROTO_DTLS12) && defined(HITLS_BSL_UIO_UDP)
+    if (type == HELLO_VERIFY_REQUEST) {
+        return Dtls12PackMsg(ctx, type);
+    }
+#endif
+
     switch (version) {
 #ifdef HITLS_TLS_PROTO_TLS_BASIC
         case HITLS_VERSION_TLS12:
@@ -268,9 +322,20 @@ int32_t HS_PackMsg(TLS_Ctx *ctx, HS_MsgType type)
 #endif /* HITLS_TLS_PROTO_TLS_BASIC */
 #ifdef HITLS_TLS_PROTO_TLS13
         case HITLS_VERSION_TLS13:
+#if defined(HITLS_TLS_PROTO_DTLS12)
+            if (IS_SUPPORT_DATAGRAM(ctx->config.tlsConfig.originVersionMask)) {
+                ret = Dtls12PackMsg(ctx, type);
+                break;
+            }
+#endif
             ret = Tls13PackMsg(ctx, type);
             break;
 #endif /* HITLS_TLS_PROTO_TLS13 */
+#ifdef HITLS_TLS_PROTO_DTLS13
+        case HITLS_VERSION_DTLS13:
+            ret = Dtls13PackMsg(ctx, type);
+            break;
+#endif /* HITLS_TLS_PROTO_DTLS13 */
 #ifdef HITLS_TLS_PROTO_DTLS12
         case HITLS_VERSION_DTLS12:
             ret = Dtls12PackMsg(ctx, type);

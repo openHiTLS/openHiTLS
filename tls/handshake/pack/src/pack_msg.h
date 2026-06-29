@@ -56,6 +56,10 @@ int32_t PackHelloVerifyRequest(const TLS_Ctx *ctx, PackPacket *pkt);
  */
 int32_t PackServerHello(const TLS_Ctx *ctx, PackPacket *pkt);
 
+#if defined(HITLS_TLS_PROTO_TLS13) || defined(HITLS_TLS_PROTO_DTLS13)
+int32_t PackTls13HelloRetryRequest(const TLS_Ctx *ctx, PackPacket *pkt);
+#endif /* HITLS_TLS_PROTO_TLS13 || HITLS_TLS_PROTO_DTLS13 */
+
 /**
  * @brief   Pack Encrypted Extensions message
  *
@@ -184,6 +188,18 @@ int32_t PackFinished(const TLS_Ctx *ctx, PackPacket *pkt);
  * @retval  For other error codes, see hitls_error.h
  */
 int32_t PackKeyUpdate(const TLS_Ctx *ctx, PackPacket *pkt);
+
+/**
+ * @brief   Pack NewConnectionId message
+ *
+ * @param   ctx  [IN] TLS context
+ * @param   pkt [IN/OUT] Context for packing
+ *
+ * @retval  HITLS_SUCCESS
+ * @retval  For other error codes, see hitls_error.h
+ */
+int32_t PackNewConnectionId(TLS_Ctx *ctx, PackPacket *pkt);
+
 #ifdef __cplusplus
 }
 #endif /* end __cplusplus */

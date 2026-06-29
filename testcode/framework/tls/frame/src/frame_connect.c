@@ -31,6 +31,7 @@ STUB_DEFINE_RET2(int32_t, HS_ChangeState, TLS_Ctx *, uint32_t);
 #include "frame_tls.h"
 #include "frame_io.h"
 #include "frame_link.h"
+#include "simulate_io.h"
 #include "parse.h"
 #include "rec_wrapper.h"
 #define ENTER_USER_SPECIFY_STATE (HITLS_UIO_FAIL_START + 0xFFFF)
@@ -72,18 +73,20 @@ int32_t FRAME_TrasferMsgBetweenLink(FRAME_LinkObj *linkA, FRAME_LinkObj *linkB)
 
 static int32_t STUB_ChangeState(TLS_Ctx *ctx, uint32_t nextState)
 {
+    real_HS_ChangeState_func_t realFunc = get_real_HS_ChangeState();
     int32_t ret = HITLS_SUCCESS;
-    if (g_nextState == nextState) {
-        if (g_isClient == ctx->isClient) {
-            HS_CleanMsg(ctx->hsCtx->hsMsg);
-            ctx->hsCtx->hsMsg = NULL;
-            ret = HITLS_REC_NORMAL_RECV_BUF_EMPTY;
-        }
+    if (realFunc != NULL) {
+        ret = realFunc(ctx, nextState);
+    } else {
+        HS_Ctx *hsCtx = (HS_Ctx *)ctx->hsCtx;
+        hsCtx->state = nextState;
     }
-
-    HS_Ctx *hsCtx = (HS_Ctx *)ctx->hsCtx;
-    hsCtx->state = nextState;
-    return ret;
+    if (ret != HITLS_SUCCESS || g_nextState != nextState || g_isClient != ctx->isClient) {
+        return ret;
+    }
+    HS_CleanMsg(ctx->hsCtx->hsMsg);
+    ctx->hsCtx->hsMsg = NULL;
+    return HITLS_REC_NORMAL_RECV_BUF_EMPTY;
 }
 
 static bool StateCompare(FRAME_LinkObj *link, bool isClient, HITLS_HandshakeState state)
@@ -95,8 +98,10 @@ static bool StateCompare(FRAME_LinkObj *link, bool isClient, HITLS_HandshakeStat
         /* In tls1.3, if the single-end verification is used, the server may receive the CCS message in the TRY_RECV_FINISH phase */
         if (state == TRY_RECV_FINISH){
             if (link->needStopBeforeRecvCCS || CCS_IsRecv(link->ssl) == true ||
-                (link->ssl->config.tlsConfig.maxVersion == HITLS_VERSION_TLS13 && isClient == true) ||
-                (link->ssl->config.tlsConfig.maxVersion == HITLS_VERSION_TLS13 &&
+                ((link->ssl->config.tlsConfig.maxVersion == HITLS_VERSION_TLS13 ||
+                  link->ssl->config.tlsConfig.maxVersion == HITLS_VERSION_DTLS13) && isClient == true) ||
+                ((link->ssl->config.tlsConfig.maxVersion == HITLS_VERSION_TLS13 ||
+                  link->ssl->config.tlsConfig.maxVersion == HITLS_VERSION_DTLS13) &&
                 link->ssl->config.tlsConfig.isSupportClientVerify == true)) {
             return true;
             }
@@ -114,6 +119,86 @@ static bool StateCompare(FRAME_LinkObj *link, bool isClient, HITLS_HandshakeStat
         }
     }
     return false;
+}
+
+static bool FrameIsDtls13Link(const FRAME_LinkObj *link)
+{
+    return link != NULL && link->ssl != NULL && link->ssl->negotiatedInfo.version == HITLS_VERSION_DTLS13;
+}
+
+static bool FrameHasPendingRead(FRAME_LinkObj *link)
+{
+    FrameUioUserData *ioUserData = BSL_UIO_GetUserData(link->io);
+    if (ioUserData != NULL && ioUserData->recMsg.len != 0) {
+        return true;
+    }
+
+    bool isPending = false;
+    if (HITLS_ReadHasPending(link->ssl, &isPending) != HITLS_SUCCESS) {
+        return false;
+    }
+    return isPending;
+}
+
+static bool FrameHasPendingSend(FRAME_LinkObj *link)
+{
+    FrameUioUserData *ioUserData = BSL_UIO_GetUserData(link->io);
+    return ioUserData != NULL && ioUserData->sndMsg.len != 0;
+}
+
+static int32_t FrameReadDtls13ControlMsg(FRAME_LinkObj *link)
+{
+    uint8_t readBuf[READ_BUF_SIZE] = {0};
+    uint32_t readLen = 0;
+    int32_t ret = HITLS_Read(link->ssl, readBuf, READ_BUF_SIZE, &readLen);
+    if (ret == HITLS_SUCCESS || ret == HITLS_REC_NORMAL_RECV_BUF_EMPTY || ret == HITLS_REC_NORMAL_IO_BUSY) {
+        return HITLS_SUCCESS;
+    }
+    return ret;
+}
+
+static int32_t FrameDrainDtls13PostHandshake(FRAME_LinkObj *client, FRAME_LinkObj *server)
+{
+    if (!FrameIsDtls13Link(client) || !FrameIsDtls13Link(server)) {
+        return HITLS_SUCCESS;
+    }
+
+    for (uint32_t i = 0; i < 8; i++) {
+        bool hasProgress = false;
+        int32_t ret = HITLS_SUCCESS;
+        if (FrameHasPendingRead(client)) {
+            ret = FrameReadDtls13ControlMsg(client);
+            if (ret != HITLS_SUCCESS) {
+                return ret;
+            }
+            hasProgress = true;
+        }
+        if (FrameHasPendingRead(server)) {
+            ret = FrameReadDtls13ControlMsg(server);
+            if (ret != HITLS_SUCCESS) {
+                return ret;
+            }
+            hasProgress = true;
+        }
+        if (FrameHasPendingSend(server)) {
+            ret = FRAME_TrasferMsgBetweenLink(server, client);
+            if (ret != HITLS_SUCCESS) {
+                return ret;
+            }
+            hasProgress = true;
+        }
+        if (FrameHasPendingSend(client)) {
+            ret = FRAME_TrasferMsgBetweenLink(client, server);
+            if (ret != HITLS_SUCCESS) {
+                return ret;
+            }
+            hasProgress = true;
+        }
+        if (!hasProgress) {
+            return HITLS_SUCCESS;
+        }
+    }
+    return HITLS_SUCCESS;
 }
 
 int32_t FRAME_CreateConnection(FRAME_LinkObj *client, FRAME_LinkObj *server, bool isClient, HITLS_HandshakeState state)
@@ -181,12 +266,19 @@ int32_t FRAME_CreateConnection(FRAME_LinkObj *client, FRAME_LinkObj *server, boo
         }
 
         /* To receive TLS1.3 new session ticket messages */
-        if (clientRet == HITLS_SUCCESS) {
+        if (clientRet == HITLS_SUCCESS && client->ssl->config.tlsConfig.maxVersion == HITLS_VERSION_TLS13) {
             uint8_t readBuf[READ_BUF_SIZE] = {0};
             uint32_t readLen = 0;
             ret = HITLS_Read(client->ssl, readBuf, READ_BUF_SIZE, &readLen);
             // No application data. return HITLS_REC_NORMAL_RECV_BUF_EMPTY
             if (ret != HITLS_REC_NORMAL_RECV_BUF_EMPTY) {
+                return ret;
+            }
+        }
+
+        if (clientRet == HITLS_SUCCESS && client->ssl->config.tlsConfig.maxVersion == HITLS_VERSION_DTLS13) {
+            ret = FrameDrainDtls13PostHandshake(client, server);
+            if (ret != HITLS_SUCCESS) {
                 return ret;
             }
         }

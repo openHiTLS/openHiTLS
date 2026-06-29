@@ -69,7 +69,7 @@ void RecConnSetSeqNum(RecConnState *state, uint64_t seq)
     state->seq = seq;
 }
 
-#ifdef HITLS_TLS_PROTO_DTLS12
+#if defined(HITLS_TLS_PROTO_DTLS12) || defined(HITLS_TLS_PROTO_DTLS13)
 uint16_t RecConnGetEpoch(const RecConnState *state)
 {
     return state->epoch;
@@ -363,9 +363,12 @@ int32_t RecConnKeyBlockGen(HITLS_Lib_Ctx *libCtx, const char *attrName,
     return HITLS_SUCCESS;
 }
 
-#ifdef HITLS_TLS_PROTO_TLS13
+#if defined(HITLS_TLS_PROTO_TLS13) || defined(HITLS_TLS_PROTO_DTLS13)
 static const uint8_t DEVICE_INFO_KEY[] = "key";
 static const uint8_t DEVICE_INFO_IV[] = "iv";
+#ifdef HITLS_TLS_PROTO_DTLS13
+static const uint8_t DEVICE_INFO_SNKEY[] = "sn";
+#endif
 int32_t RecTLS13CalcWriteKey(CRYPT_KeyDeriveParameters *deriveInfo, uint8_t *key, uint32_t keyLen)
 {
     deriveInfo->label = DEVICE_INFO_KEY;
@@ -380,8 +383,16 @@ int32_t RecTLS13CalcWriteIv(CRYPT_KeyDeriveParameters *deriveInfo, uint8_t *iv, 
     return SAL_CRYPT_HkdfExpandLabel(deriveInfo, iv, ivLen);
 }
 
-int32_t RecTLS13ConnKeyBlockGen(HITLS_Lib_Ctx *libCtx, const char *attrName,
-    const REC_SecParameters *param, RecConnSuitInfo *suitInfo)
+#ifdef HITLS_TLS_PROTO_DTLS13
+static int32_t RecTLS13CalcSnKey(CRYPT_KeyDeriveParameters *deriveInfo, uint8_t *snKey, uint32_t snKeyLen)
+{
+    deriveInfo->label = DEVICE_INFO_SNKEY;
+    deriveInfo->labelLen = sizeof(DEVICE_INFO_SNKEY) - 1;
+    return SAL_CRYPT_HkdfExpandLabel(deriveInfo, snKey, snKeyLen);
+}
+#endif
+
+int32_t RecTLS13ConnKeyBlockGen(const TLS_Ctx *ctx, const REC_SecParameters *param, RecConnSuitInfo *suitInfo)
 {
     const uint8_t *secret = (const uint8_t *)param->masterSecret;
     uint32_t secretLen = SAL_CRYPT_DigestSize(param->prfAlg);
@@ -402,8 +413,16 @@ int32_t RecTLS13ConnKeyBlockGen(HITLS_Lib_Ctx *libCtx, const char *attrName,
     deriveInfo.hashAlgo = param->prfAlg;
     deriveInfo.secret = secret;
     deriveInfo.secretLen = secretLen;
-    deriveInfo.libCtx = libCtx;
-    deriveInfo.attrName = attrName;
+    deriveInfo.libCtx = LIBCTX_FROM_CTX(ctx);
+    deriveInfo.attrName = ATTRIBUTE_FROM_CTX(ctx);
+#ifdef HITLS_TLS_PROTO_DTLS13
+    if (ctx != NULL && ctx->negotiatedInfo.version == HITLS_VERSION_DTLS13) {
+        deriveInfo.labelPrefix = (const uint8_t *)CRYPT_DTLS13_HKDF_LABEL_PREFIX;
+        deriveInfo.labelPrefixLen = CRYPT_DTLS13_HKDF_LABEL_PREFIX_LEN;
+    }
+#else
+    (void)ctx;
+#endif
     int32_t ret = RecTLS13CalcWriteKey(&deriveInfo, suitInfo->key, keyLen);
     if (ret != HITLS_SUCCESS) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17235, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
@@ -417,7 +436,16 @@ int32_t RecTLS13ConnKeyBlockGen(HITLS_Lib_Ctx *libCtx, const char *attrName,
             "CalcWriteIv fail", 0, 0, 0, 0);
         return ret;
     }
-
+#ifdef HITLS_TLS_PROTO_DTLS13
+    if (ctx->negotiatedInfo.version == HITLS_VERSION_DTLS13) {
+        ret = RecTLS13CalcSnKey(&deriveInfo, suitInfo->snKey, keyLen);
+        if (ret != HITLS_SUCCESS) {
+            BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17237, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+                "CalcSnKey fail", 0, 0, 0, 0);
+            return ret;
+        }
+    }
+#endif
     PackSuitInfo(suitInfo, param);
     return HITLS_SUCCESS;
 }

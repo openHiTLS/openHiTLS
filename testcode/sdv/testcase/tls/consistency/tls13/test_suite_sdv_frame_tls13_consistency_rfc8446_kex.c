@@ -4432,6 +4432,125 @@ EXIT:
 /* END_CASE */
 
 /** @
+* @test UT_TLS_TLS13_RFC8446_CONSISTENCY_HRR_FORMAT_FUNC_TC007
+* @spec     Once a client has processed a TLS 1.3 HelloRetryRequest, the next
+*           ServerHello belongs to the same TLS 1.3 negotiation. A ServerHello
+*           that selects TLS 1.2 by omitting "supported_versions" is an
+*           inconsistent handshake state and must be rejected.
+* @title    The client supports TLS1.2 and TLS1.3. The server first sends a TLS1.3 HRR, then the next ServerHello is
+*           modified to TLS1.2 style. The client is expected to abort the handshake.
+* @precon nan
+* @brief    4.1.4. Hello Retry Request
+*           Trigger HRR with a key share group mismatch. After the client sends the second ClientHello, replace the
+*           server's final TLS1.3 ServerHello with a TLS1.2-style ServerHello by deleting supported_versions and
+*           TLS1.3-only extensions and using a TLS1.2 cipher suite.
+* @expect   1. The client sends a fatal alert instead of continuing the TLS1.2 handshake path.
+@ */
+/* BEGIN_CASE */
+void UT_TLS_TLS13_RFC8446_CONSISTENCY_HRR_FORMAT_FUNC_TC007()
+{
+    FRAME_Init();
+
+    HITLS_Config *tlsConfig = HITLS_CFG_NewTLSConfig();
+    ASSERT_TRUE(tlsConfig != NULL);
+    tlsConfig->isSupportClientVerify = true;
+    HITLS_CFG_SetKeyExchMode(tlsConfig, TLS13_KE_MODE_PSK_WITH_DHE);
+    HITLS_CFG_SetVersionSupport(tlsConfig, 0x00000030U);
+
+    FRAME_LinkObj *client = FRAME_CreateLink(tlsConfig, BSL_UIO_TCP);
+    FRAME_LinkObj *server = FRAME_CreateLink(tlsConfig, BSL_UIO_TCP);
+    ASSERT_TRUE(client != NULL);
+    ASSERT_TRUE(server != NULL);
+
+    HITLS_Ctx *clientTlsCtx = FRAME_GetTlsCtx(client);
+    HITLS_Ctx *serverTlsCtx = FRAME_GetTlsCtx(server);
+
+    const uint16_t groups[] = {HITLS_EC_GROUP_SECP521R1};
+    uint32_t groupsSize = sizeof(groups) / sizeof(uint16_t);
+    HITLS_CFG_SetGroups(&(serverTlsCtx->config.tlsConfig), groups, groupsSize);
+
+    ASSERT_EQ(FRAME_CreateConnection(client, server, false, TRY_RECV_CLIENT_HELLO), HITLS_SUCCESS);
+    ASSERT_EQ(clientTlsCtx->state, CM_STATE_HANDSHAKING);
+    ASSERT_EQ(serverTlsCtx->state, CM_STATE_IDLE);
+
+    CONN_Deinit(serverTlsCtx);
+
+    ASSERT_EQ(HITLS_Accept(serverTlsCtx), HITLS_REC_NORMAL_IO_BUSY);
+    ASSERT_EQ(FRAME_TrasferMsgBetweenLink(server, client), HITLS_SUCCESS);
+    ASSERT_EQ(serverTlsCtx->hsCtx->state, TRY_SEND_CHANGE_CIPHER_SPEC);
+
+    ASSERT_EQ(HITLS_Accept(serverTlsCtx), HITLS_REC_NORMAL_RECV_BUF_EMPTY);
+    ASSERT_EQ(serverTlsCtx->hsCtx->state, TRY_RECV_CLIENT_HELLO);
+
+    ASSERT_EQ(HITLS_Connect(clientTlsCtx), HITLS_REC_NORMAL_IO_BUSY);
+    ASSERT_EQ(clientTlsCtx->hsCtx->state, TRY_SEND_CLIENT_HELLO);
+    ASSERT_TRUE(clientTlsCtx->hsCtx->haveHrr);
+    ASSERT_EQ(FRAME_TrasferMsgBetweenLink(client, server), HITLS_SUCCESS);
+
+    ASSERT_EQ(HITLS_Accept(serverTlsCtx), HITLS_REC_NORMAL_RECV_BUF_EMPTY);
+    ASSERT_EQ(HITLS_Connect(clientTlsCtx), HITLS_REC_NORMAL_RECV_BUF_EMPTY);
+    ASSERT_EQ(clientTlsCtx->hsCtx->state, TRY_RECV_SERVER_HELLO);
+    ASSERT_EQ(FRAME_TrasferMsgBetweenLink(client, server), HITLS_SUCCESS);
+
+    ASSERT_EQ(HITLS_Accept(serverTlsCtx), HITLS_REC_NORMAL_IO_BUSY);
+    ASSERT_EQ(serverTlsCtx->hsCtx->state, TRY_SEND_SERVER_HELLO);
+    ASSERT_EQ(FRAME_TrasferMsgBetweenLink(server, client), HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_Connect(clientTlsCtx), HITLS_REC_NORMAL_RECV_BUF_EMPTY);
+
+    ASSERT_EQ(HITLS_Accept(serverTlsCtx), HITLS_REC_NORMAL_IO_BUSY);
+    ASSERT_EQ(serverTlsCtx->hsCtx->state, TRY_SEND_ENCRYPTED_EXTENSIONS);
+    ASSERT_EQ(FRAME_TrasferMsgBetweenLink(server, client), HITLS_SUCCESS);
+
+    FrameUioUserData *ioUserData = BSL_UIO_GetUserData(client->io);
+    uint8_t *recvBuf = ioUserData->recMsg.msg;
+    uint32_t recvLen = ioUserData->recMsg.len;
+    ASSERT_TRUE(recvLen != 0);
+
+    FRAME_Msg frameMsg = {0};
+    FRAME_Type frameType = {0};
+    uint32_t parseLen = 0;
+    SetFrameType(&frameType, HITLS_VERSION_TLS13, REC_TYPE_HANDSHAKE, SERVER_HELLO, HITLS_KEY_EXCH_ECDHE);
+    ASSERT_EQ(FRAME_ParseMsg(&frameType, recvBuf, recvLen, &frameMsg, &parseLen), HITLS_SUCCESS);
+    if ((frameMsg.recType.data != REC_TYPE_HANDSHAKE || frameMsg.body.hsMsg.type.data != SERVER_HELLO) &&
+        parseLen < recvLen) {
+        FRAME_CleanMsg(&frameType, &frameMsg);
+        ASSERT_EQ(FRAME_ParseMsg(&frameType, recvBuf + parseLen, recvLen - parseLen, &frameMsg, &parseLen),
+            HITLS_SUCCESS);
+    }
+    ASSERT_EQ(frameMsg.recType.data, REC_TYPE_HANDSHAKE);
+    ASSERT_EQ(frameMsg.body.hsMsg.type.data, SERVER_HELLO);
+
+    FRAME_ServerHelloMsg *serverMsg = &frameMsg.body.hsMsg.body.serverHello;
+    memset(serverMsg->randomValue.data, 0xA5, HS_RANDOM_SIZE);
+    serverMsg->supportedVersion.exState = MISSING_FIELD;
+    serverMsg->keyShare.exState = MISSING_FIELD;
+    serverMsg->cipherSuite.data = HITLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384;
+
+    uint32_t sendLen = MAX_RECORD_LENTH;
+    uint8_t sendBuf[MAX_RECORD_LENTH] = {0};
+    ASSERT_EQ(FRAME_PackMsg(&frameType, &frameMsg, sendBuf, sendLen, &sendLen), HITLS_SUCCESS);
+
+    ioUserData->recMsg.len = 0;
+    ASSERT_EQ(FRAME_TransportRecMsg(client->io, sendBuf, sendLen), HITLS_SUCCESS);
+
+    /* The current implementation rejects this in the legacy ServerHello path via the HRR cipher-suite check. */
+    ASSERT_EQ(HITLS_Connect(clientTlsCtx), HITLS_MSG_HANDLE_ILLEGAL_CIPHER_SUITE);
+    ASSERT_EQ(clientTlsCtx->state, CM_STATE_ALERTED);
+    ALERT_Info info = {0};
+    ALERT_GetInfo(client->ssl, &info);
+    ASSERT_EQ(info.flag, ALERT_FLAG_SEND);
+    ASSERT_EQ(info.level, ALERT_LEVEL_FATAL);
+    ASSERT_EQ(info.description, ALERT_ILLEGAL_PARAMETER);
+
+EXIT:
+    FRAME_CleanMsg(&frameType, &frameMsg);
+    HITLS_CFG_FreeConfig(tlsConfig);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+}
+/* END_CASE */
+
+/** @
 * @test UT_TLS_TLS13_RFC8446_CONSISTENCY_HRR_EXTENSION_CONTENT_FUNC_TC001
 * @spec The HelloRetryRequest extensions defined in this specification are:
 *       - supported_versions (see Section 4.2.1)

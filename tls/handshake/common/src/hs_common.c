@@ -22,6 +22,7 @@
 #include "bsl_err_internal.h"
 #include "hitls.h"
 #include "hitls_error.h"
+#include "crypt.h"
 #include "tls_config.h"
 #include "bsl_errno.h"
 #include "bsl_uio.h"
@@ -32,6 +33,7 @@
 #include "security.h"
 #endif
 #include "record.h"
+#include "rec_header.h"
 #include "hs_kx.h"
 #include "hs.h"
 #include "hs_extensions.h"
@@ -46,7 +48,7 @@
 #define LABEL_SIZE 5
 #define MAX_LABEL_SIZE 23 /* the max size of label: "extended master secret" */
 #endif
-#ifdef HITLS_TLS_PROTO_TLS13
+#if defined(HITLS_TLS_PROTO_TLS13) || defined(HITLS_TLS_PROTO_DTLS13)
 /* Fixed random value of the hello retry request packet */
 const uint8_t g_hrrRandom[HS_RANDOM_SIZE] = {
     0xcf, 0x21, 0xad, 0x74, 0xe5, 0x9a, 0x61, 0x11, 0xbe, 0x1d, 0x8c, 0x02, 0x1e, 0x65, 0xb8, 0x91,
@@ -69,7 +71,7 @@ const uint8_t *HS_GetTls12DowngradeRandom(uint32_t *len)
     return g_tls12Downgrade;
 }
 #endif /* HITLS_TLS_PROTO_TLS_BASIC */
-#endif /* HITLS_TLS_PROTO_TLS13 */
+#endif /* HITLS_TLS_PROTO_TLS13 || HITLS_TLS_PROTO_DTLS13 */
 
 #ifdef HITLS_BSL_LOG
 static const char *g_stateMachineStr[] = {
@@ -99,9 +101,18 @@ static const char *g_stateMachineStr[] = {
     [TRY_SEND_SERVER_HELLO_DONE] = "send server hello done",
     [TRY_SEND_NEW_SESSION_TICKET] = "send new session ticket",
 #endif
-#ifdef HITLS_TLS_PROTO_TLS13
+#if defined(HITLS_TLS_PROTO_TLS13) || defined(HITLS_TLS_PROTO_DTLS13)
     [TRY_RECV_KEY_UPDATE] = "recv keyupdate",
     [TRY_SEND_KEY_UPDATE] = "send keyupdate",
+#ifdef HITLS_TLS_PROTO_DTLS13
+    [TRY_RECV_MSG] = "recv dtls msg",
+#endif
+#ifdef HITLS_TLS_FEATURE_DTLS_CID
+    [TRY_SEND_NEW_CONNECTION_ID] = "send new connection id",
+    [TRY_SEND_REQUEST_CONNECTION_ID] = "send request connection id",
+    [TRY_RECV_NEW_CONNECTION_ID] = "recv new connection id",
+    [TRY_RECV_REQUEST_CONNECTION_ID] = "recv request connection id",
+#endif
 #ifdef HITLS_TLS_HOST_CLIENT
     [TRY_RECV_ENCRYPTED_EXTENSIONS] = "recv encrypted extensions",
     [TRY_SEND_END_OF_EARLY_DATA] = "send end of early data",
@@ -111,11 +122,12 @@ static const char *g_stateMachineStr[] = {
     [TRY_SEND_HELLO_RETRY_REQUEST] = "send hello retry request",
     [TRY_RECV_END_OF_EARLY_DATA] = "recv end of early data",
 #endif /* HITLS_TLS_HOST_SERVER */
-#endif /* HITLS_TLS_PROTO_TLS13 */
+#endif /* HITLS_TLS_PROTO_TLS13 || HITLS_TLS_PROTO_DTLS13 */
     [TRY_SEND_CERTIFICATE] = "send certificate",
     [TRY_SEND_CERTIFICATE_REQUEST] = "send certificate request",
     [TRY_SEND_CERTIFICATE_VERIFY] = "send certificate verify",
     [TRY_SEND_CHANGE_CIPHER_SPEC] = "send change cipher spec",
+    [TRY_SEND_ACK] = "send ack",
     [TRY_RECV_CERTIFICATE] = "recv certificate",
     [TRY_RECV_CERTIFICATE_REQUEST] = "recv certificate request",
     [TRY_RECV_CERTIFICATE_VERIFY] = "recv certificate verify",
@@ -140,10 +152,14 @@ const char *HS_GetMsgTypeStr(HS_MsgType type)
             return "client hello";
         case SERVER_HELLO:
             return "server hello";
-#ifdef HITLS_TLS_PROTO_TLS13
+#if defined(HITLS_TLS_PROTO_TLS13) || defined(HITLS_TLS_PROTO_DTLS13)
         case ENCRYPTED_EXTENSIONS:
             return "encrypted extensions";
 #endif
+        case REQUEST_CONNECTION_ID:
+            return "request connection id";
+        case NEW_CONNECTION_ID:
+            return "new connection id";
         case CERTIFICATE:
             return "certificate";
         case SERVER_KEY_EXCHANGE:
@@ -160,6 +176,8 @@ const char *HS_GetMsgTypeStr(HS_MsgType type)
             return "new session ticket";
         case FINISHED:
             return "finished";
+        case HS_MSG_TYPE_END:
+            return "handshake message type end";
         default:
             break;
     }
@@ -167,9 +185,28 @@ const char *HS_GetMsgTypeStr(HS_MsgType type)
 }
 #endif /* HITLS_BSL_LOG */
 
+#ifdef HITLS_TLS_PROTO_DTLS13
+static bool IsDtls13RetransmitProbeHsState(const TLS_Ctx *ctx, uint32_t nextState)
+{
+    if (!IS_DTLS13_CTX(ctx) || ctx->state != CM_STATE_HANDSHAKING || ctx->preState != CM_STATE_TRANSPORTING ||
+        ctx->recCtx == NULL || (REC_HasBufferedHsData(ctx) && REC_RetransmitIsEmpty(ctx->recCtx))) {
+        return false;
+    }
+    const HS_Ctx *hsCtx = (const HS_Ctx *)ctx->hsCtx;
+    return nextState == TRY_RECV_MSG || (hsCtx != NULL && hsCtx->state == TRY_RECV_MSG && nextState == TLS_CONNECTED);
+}
+#endif
+
 int32_t HS_ChangeState(TLS_Ctx *ctx, uint32_t nextState)
 {
     HS_Ctx *hsCtx = (HS_Ctx *)ctx->hsCtx;
+#ifdef HITLS_TLS_PROTO_DTLS13
+    bool suppressLog = IsDtls13RetransmitProbeHsState(ctx, nextState);
+    if (IS_DTLS13_CTX(ctx) && ctx->state == CM_STATE_HANDSHAKING &&
+        ctx->preState != CM_STATE_TRANSPORTING && IsHsSendState(nextState)) {
+        REC_Dtls13AckListClear(ctx, REC_DTLS13_ACK_NORMAL);
+    }
+#endif /* HITLS_TLS_PROTO_DTLS13 */
     hsCtx->state = nextState;
 #ifdef HITLS_TLS_FEATURE_MODE_RELEASE_BUFFERS
     if ((ctx->config.tlsConfig.modeSupport & HITLS_MODE_RELEASE_BUFFERS) != 0) {
@@ -185,7 +222,11 @@ int32_t HS_ChangeState(TLS_Ctx *ctx, uint32_t nextState)
 #endif
     /* when link state is transporting, unexpected hs message should be processed, the log shouldn't be printed during
         the hsCtx initiation */
-    if (ctx->state != CM_STATE_TRANSPORTING) {
+    if (ctx->state != CM_STATE_TRANSPORTING
+#ifdef HITLS_TLS_PROTO_DTLS13
+        && !suppressLog
+#endif
+    ) {
         BSL_LOG_BINLOG_VARLEN(BINLOG_ID15573, BSL_LOG_LEVEL_INFO, BSL_LOG_BINLOG_TYPE_RUN,
             "handshake state machine change to:%s.", HS_GetStateStr(nextState));
     }
@@ -585,7 +626,7 @@ uint32_t HS_MaxMessageSize(TLS_Ctx *ctx, HS_MsgType type)
 #endif
         case SERVER_HELLO:
             return HITLS_SERVER_HELLO_MAX_SIZE;
-#ifdef HITLS_TLS_PROTO_TLS13
+#if defined(HITLS_TLS_PROTO_TLS13) || defined(HITLS_TLS_PROTO_DTLS13)
         case ENCRYPTED_EXTENSIONS:
             return HITLS_ENCRYPTED_EXTENSIONS_MAX_SIZE;
 #endif
@@ -602,28 +643,34 @@ uint32_t HS_MaxMessageSize(TLS_Ctx *ctx, HS_MsgType type)
         case CERTIFICATE_VERIFY:
             return MAX_CERT_VERIFY_SIZE;
         case NEW_SESSION_TICKET:
-#ifdef HITLS_TLS_PROTO_TLS13
-            if (GET_VERSION_FROM_CTX(ctx) == HITLS_VERSION_TLS13) {
+#if defined(HITLS_TLS_PROTO_TLS13) || defined(HITLS_TLS_PROTO_DTLS13)
+            if (GET_VERSION_FROM_CTX(ctx) == HITLS_VERSION_TLS13 || GET_VERSION_FROM_CTX(ctx) == HITLS_VERSION_DTLS13) {
                 return HITLS_SESSION_TICKET_MAX_SIZE_TLS13;
             }
 #endif
             return HITLS_SESSION_TICKET_MAX_SIZE_TLS12;
-#ifdef HITLS_TLS_PROTO_TLS13
+#if defined(HITLS_TLS_PROTO_TLS13) || defined(HITLS_TLS_PROTO_DTLS13)
         case END_OF_EARLY_DATA:
             return HITLS_END_OF_EARLY_DATA_MAX_SIZE;
 #endif
         case FINISHED:
             return HITLS_FINISHED_MAX_SIZE;
-#ifdef HITLS_TLS_PROTO_TLS13
+#if defined(HITLS_TLS_PROTO_TLS13) || defined(HITLS_TLS_PROTO_DTLS13)
         case KEY_UPDATE:
             return HITLS_KEY_UPDATE_MAX_SIZE;
+#endif
+#ifdef HITLS_TLS_FEATURE_DTLS_CID
+        case NEW_CONNECTION_ID:
+            return HITLS_NEW_CONNECTION_ID_MAX_SIZE;
+        case REQUEST_CONNECTION_ID:
+            return HITLS_REQUEST_CONNECTION_ID_MAX_SIZE;
 #endif
         default:
             return 0;
     }
 }
 
-#ifdef HITLS_TLS_PROTO_TLS13
+#if defined(HITLS_TLS_PROTO_TLS13) || defined(HITLS_TLS_PROTO_DTLS13)
 uint32_t HS_GetBinderLen(HITLS_Session *session, HITLS_HashAlgo *hashAlg)
 {
     if (*hashAlg != HITLS_HASH_BUTT) {
@@ -651,7 +698,7 @@ uint32_t HS_GetBinderLen(HITLS_Session *session, HITLS_HashAlgo *hashAlg)
     *hashAlg = cipherInfo.hashAlg;
     return SAL_CRYPT_HmacSize(*hashAlg);
 }
-#endif /* HITLS_TLS_PROTO_TLS13 */
+#endif /* HITLS_TLS_PROTO_TLS13 || HITLS_TLS_PROTO_DTLS13 */
 
 #ifdef HITLS_TLS_FEATURE_EXPORT_KEY_MATERIAL
 /* rfc8446 7.5 Exporters
@@ -659,7 +706,7 @@ uint32_t HS_GetBinderLen(HITLS_Session *session, HITLS_HashAlgo *hashAlg)
     TLS-Exporter(label, context_value, key_length) =
         HKDF-Expand-Label(Derive-Secret(Secret, label, ""),
                         "exporter", Hash(context_value), key_length) */
-#ifdef HITLS_TLS_PROTO_TLS13
+#if defined(HITLS_TLS_PROTO_TLS13) || defined(HITLS_TLS_PROTO_DTLS13)
 static int32_t Tls13ExportKeyingMaterial(HITLS_Ctx *ctx, uint8_t *out, size_t outLen,
     const char *label, size_t labelLen, const uint8_t *context, size_t contextLen, int32_t useContext)
 {
@@ -684,6 +731,12 @@ static int32_t Tls13ExportKeyingMaterial(HITLS_Ctx *ctx, uint8_t *out, size_t ou
     deriveInfo.seedLen = 0;
     deriveInfo.libCtx = LIBCTX_FROM_CTX(ctx);
     deriveInfo.attrName = ATTRIBUTE_FROM_CTX(ctx);
+#ifdef HITLS_TLS_PROTO_DTLS13
+    if (ctx->negotiatedInfo.version == HITLS_VERSION_DTLS13) {
+        deriveInfo.labelPrefix = (const uint8_t *)CRYPT_DTLS13_HKDF_LABEL_PREFIX;
+        deriveInfo.labelPrefixLen = CRYPT_DTLS13_HKDF_LABEL_PREFIX_LEN;
+    }
+#endif
     int32_t ret = HS_TLS13DeriveSecret(&deriveInfo, false, tmpSecret, hashLen);
     if (ret != HITLS_SUCCESS) {
         BSL_SAL_CleanseData(tmpSecret, MAX_DIGEST_SIZE);
@@ -702,7 +755,7 @@ static int32_t Tls13ExportKeyingMaterial(HITLS_Ctx *ctx, uint8_t *out, size_t ou
     BSL_SAL_CleanseData(tmpSecret, MAX_DIGEST_SIZE);
     return ret;
 }
-#endif /* HITLS_TLS_PROTO_TLS13 */
+#endif /* HITLS_TLS_PROTO_TLS13 || HITLS_TLS_PROTO_DTLS13 */
 static bool IsSpecialLabel(const char *label, size_t labelLen)
 {
     const char labelArray[LABEL_SIZE][MAX_LABEL_SIZE] = {
@@ -813,11 +866,11 @@ int32_t HITLS_ExportKeyingMaterial(HITLS_Ctx *ctx, uint8_t *out, size_t outLen, 
         return HITLS_MSG_HANDLE_STATE_ILLEGAL;
     }
     int32_t ret = 0;
-#ifdef HITLS_TLS_PROTO_TLS13
-    if (ctx->negotiatedInfo.version == HITLS_VERSION_TLS13) {
+#if defined(HITLS_TLS_PROTO_TLS13) || defined(HITLS_TLS_PROTO_DTLS13)
+    if (ctx->negotiatedInfo.version == HITLS_VERSION_TLS13 || ctx->negotiatedInfo.version == HITLS_VERSION_DTLS13) {
         ret = Tls13ExportKeyingMaterial(ctx, out, outLen, label, labelLen, context, contextLen, useContext);
     } else
-#endif /* HITLS_TLS_PROTO_TLS13 */
+#endif /* HITLS_TLS_PROTO_TLS13 || HITLS_TLS_PROTO_DTLS13 */
     {
         ret = Tls12ExportKeyingMaterial(ctx, out, outLen, label, labelLen, context, contextLen, useContext);
     }
@@ -852,12 +905,12 @@ uint16_t *CheckSupportSignAlgorithms(const TLS_Ctx *ctx, const uint16_t *signAlg
         return NULL;
     }
     for (uint32_t i = 0; i < signAlgorithmsSize; i++) {
-#ifdef HITLS_TLS_PROTO_TLS13
+#if defined(HITLS_TLS_PROTO_TLS13) || defined(HITLS_TLS_PROTO_DTLS13)
         const uint32_t dsaMask = 0x02;
         const uint32_t sha1Mask = 0x0200;
         const uint32_t sha224Mask = 0x0300;
-        if (ctx->config.tlsConfig.maxVersion == HITLS_VERSION_TLS13 &&
-            ctx->config.tlsConfig.minVersion == HITLS_VERSION_TLS13) {
+        if ((ctx->config.tlsConfig.maxVersion == HITLS_VERSION_TLS13 || ctx->config.tlsConfig.maxVersion == HITLS_VERSION_DTLS13) &&
+            (ctx->config.tlsConfig.minVersion == HITLS_VERSION_TLS13 || ctx->config.tlsConfig.minVersion == HITLS_VERSION_DTLS13)) {
             if (ctx->isClient &&
                 (((signAlgorithms[i] & 0xff00) == sha1Mask) ||
                 ((signAlgorithms[i] & 0xff00) == sha224Mask))) {
@@ -869,9 +922,10 @@ uint16_t *CheckSupportSignAlgorithms(const TLS_Ctx *ctx, const uint16_t *signAlg
                 continue;
             }
         }
-#endif /* HITLS_TLS_PROTO_TLS13 */
+#endif /* HITLS_TLS_PROTO_TLS13 || HITLS_TLS_PROTO_DTLS13 */
         if (ctx->config.tlsConfig.maxVersion != HITLS_VERSION_TLCP_DTLCP11 &&
 			ctx->config.tlsConfig.maxVersion != HITLS_VERSION_TLS13 &&
+            ctx->config.tlsConfig.maxVersion != HITLS_VERSION_DTLS13 &&
             signAlgorithms[i] == CERT_SIG_SCHEME_SM2_SM3) {
             continue;
         }
@@ -907,6 +961,7 @@ uint32_t HS_GetExtensionTypeId(uint32_t hsExtensionsType)
         case HS_EX_TYPE_CERTIFICATE_AUTHORITIES: return HS_EX_TYPE_ID_CERTIFICATE_AUTHORITIES;
         case HS_EX_TYPE_POST_HS_AUTH: return HS_EX_TYPE_ID_POST_HS_AUTH;
         case HS_EX_TYPE_KEY_SHARE: return HS_EX_TYPE_ID_KEY_SHARE;
+        case HS_EX_TYPE_CONNECTION_ID: return HS_EX_TYPE_ID_CONNECTION_ID;
         case HS_EX_TYPE_RENEGOTIATION_INFO: return HS_EX_TYPE_ID_RENEGOTIATION_INFO;
         default: break;
     }

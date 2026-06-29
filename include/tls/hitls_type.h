@@ -23,6 +23,7 @@
 #define HITLS_TYPE_H
 
 #include <stdint.h>
+#include <stdbool.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -77,6 +78,40 @@ typedef struct TlsSessCtx HITLS_Session;
 */
 #define TLS13_CERT_AUTH_WITH_DHE 4u
 
+#ifndef HITLS_DTLS_CID_LOCAL_MAX_LEN
+#define HITLS_DTLS_CID_LOCAL_MAX_LEN 32u
+#endif
+#if HITLS_DTLS_CID_LOCAL_MAX_LEN > 255u
+#error "HITLS_DTLS_CID_LOCAL_MAX_LEN must not exceed 255 (RFC 9147 cid_length is a single octet)"
+#endif
+#if HITLS_DTLS_CID_LOCAL_MAX_LEN < 1u
+#error "HITLS_DTLS_CID_LOCAL_MAX_LEN must be at least 1"
+#endif
+#define HITLS_DTLS_CID_PEER_MAX_LEN 255u
+#define HITLS_DTLS_CID_LIST_MAX 16u
+#define HITLS_DTLS_CID_NO_IDX 0xFFu
+
+#ifndef HITLS_DTLS_CID_LEN_MAX
+#define HITLS_DTLS_CID_LEN_MAX HITLS_DTLS_CID_PEER_MAX_LEN
+#endif
+
+/* ConnectionIdUsage values in RFC 9147 Section 9 NewConnectionId. */
+typedef enum {
+    HITLS_DTLS_CID_IMMEDIATE = 0,
+    HITLS_DTLS_CID_SPARE = 1,
+} HITLS_DtlsCidUsage;
+
+/* A single Connection ID value and its length (public CID entry used by the CID API
+ * and reused internally as DTLS_CidSendEntry). */
+typedef struct {
+    uint8_t cidVal[HITLS_DTLS_CID_LEN_MAX];
+    uint8_t cidLen;
+} HITLS_DtlsCidEntry;
+
+/* Application hook for answering peer RequestConnectionId messages. */
+typedef int32_t (*HITLS_RecvRequestConnectionIdCb)(HITLS_Ctx *ctx, uint8_t numCids, void *userData);
+
+
 /**
  * @ingroup hitls_config
  *
@@ -109,16 +144,17 @@ typedef struct TlsSessCtx HITLS_Session;
 #define TLCP11_VERSION_BIT  0x00000080U
 #define DTLS10_VERSION_BIT  0x80000000U
 #define DTLS12_VERSION_BIT  0x40000000U
+#define DTLS13_VERSION_BIT  0x20000000U
 #define DTLCP11_VERSION_BIT 0x00000100U
 #define TLS_VERSION_MASK (TLS12_VERSION_BIT | TLS13_VERSION_BIT)
 
-/* Currently, only DTLS12 is supported. DTLS10 is not supported */
-#define DTLS_VERSION_MASK DTLS12_VERSION_BIT
+/* Currently, DTLS 1.2 and DTLS 1.3 are supported. DTLS 1.0 is not supported. */
+#define DTLS_VERSION_MASK (DTLS12_VERSION_BIT | DTLS13_VERSION_BIT)
 
 #define STREAM_VERSION_BITS                                                                              \
     (SSLV2_VERSION_BIT | SSLV3_VERSION_BIT | TLS10_VERSION_BIT | TLS11_VERSION_BIT | TLS12_VERSION_BIT | \
      TLS13_VERSION_BIT | TLCP11_VERSION_BIT)
-#define DATAGRAM_VERSION_BITS (DTLS10_VERSION_BIT | DTLS12_VERSION_BIT | DTLCP11_VERSION_BIT)
+#define DATAGRAM_VERSION_BITS (DTLS10_VERSION_BIT | DTLS12_VERSION_BIT | DTLS13_VERSION_BIT | DTLCP11_VERSION_BIT)
 
 #define TLCP_VERSION_BITS (TLCP11_VERSION_BIT | DTLCP11_VERSION_BIT)
 #define ALL_VERSION       (STREAM_VERSION_BITS | DATAGRAM_VERSION_BITS)

@@ -24,7 +24,7 @@
 extern "C" {
 #endif
 
-#ifdef HITLS_TLS_PROTO_DTLS12
+#if defined(HITLS_TLS_PROTO_DTLS12) || defined(HITLS_TLS_PROTO_DTLS13)
 
 /**
  * @brief Start the 2MSL timer.
@@ -47,6 +47,13 @@ int32_t HS_Start2MslTimer(TLS_Ctx *ctx);
 int32_t HS_StartTimer(TLS_Ctx *ctx);
 
 /**
+ * @brief Stop the DTLS retransmit timer.
+ *
+ * @param ctx [IN] tls Context
+ */
+void HS_StopTimer(TLS_Ctx *ctx);
+
+/**
  * @brief   Judge timer timeout
  *
  * @param   ctx [IN] tls Context
@@ -56,6 +63,24 @@ int32_t HS_StartTimer(TLS_Ctx *ctx);
  * @retval HITLS_MSG_HANDLE_SYS_TIME_FAIL The system time function fails to return.
  */
 int32_t HS_IsTimeout(TLS_Ctx *ctx, bool *isTimeout);
+
+/**
+ * @brief   Judge DTLS 2MSL timer timeout
+ *
+ * @param   ctx [IN] tls Context
+ * @param   isTimeout [OUT] Timeout or not
+ *
+ * @retval HITLS_SUCCESS succeeded.
+ * @retval HITLS_MSG_HANDLE_SYS_TIME_FAIL The system time function fails to return.
+ */
+int32_t HS_Is2MslTimeout(TLS_Ctx *ctx, bool *isTimeout);
+
+/**
+ * @brief Stop the DTLS 2MSL timer.
+ *
+ * @param ctx [IN] tls Context
+ */
+void HS_Stop2MslTimer(TLS_Ctx *ctx);
 
 /**
  * @brief DTLS receiving timeout timer processing
@@ -68,7 +93,7 @@ int32_t HS_IsTimeout(TLS_Ctx *ctx, bool *isTimeout);
  */
 int32_t HS_TimeoutProcess(TLS_Ctx *ctx);
 
-#endif
+#endif /* HITLS_TLS_PROTO_DTLS12 || HITLS_TLS_PROTO_DTLS13 */
 
 #ifdef __cplusplus
 }

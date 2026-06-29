@@ -16,7 +16,11 @@
 #ifndef RECORD_H
 #define RECORD_H
 
+#include <stdint.h>
+#include <string.h>
 #include "tls.h"
+#include "bsl_sal.h"
+#include "hitls_error.h"
 #include "rec.h"
 #include "rec_header.h"
 #include "rec_unprocessed_msg.h"
@@ -27,17 +31,17 @@
 extern "C" {
 #endif
 
-#define REC_MAX_PLAIN_TEXT_LENGTH 16384     /* Plain content length */
+#define REC_MAX_PLAIN_TEXT_LENGTH 16384 /* Plain content length */
 
-#define REC_MAX_ENCRYPTED_OVERHEAD 2048u                  /* Maximum Encryption Overhead rfc5246 */
+#define REC_MAX_ENCRYPTED_OVERHEAD 2048u /* Maximum Encryption Overhead rfc5246 */
 #ifdef HITLS_TLS_FEATURE_RECORD_SIZE_LIMIT
-#define REC_MAX_READ_ENCRYPTED_OVERHEAD (256u + 64u)        /* Maximum Encryption Overhead maxPadding + max(iv + mac) */
-#define REC_MAX_WRITE_ENCRYPTED_OVERHEAD (16u + 64u)        /* Maximum Encryption Overhead minPadding + max(iv + mac) */
+#define REC_MAX_READ_ENCRYPTED_OVERHEAD  (256u + 64u) /* Maximum Encryption Overhead maxPadding + max(iv + mac) */
+#define REC_MAX_WRITE_ENCRYPTED_OVERHEAD (16u + 64u) /* Maximum Encryption Overhead minPadding + max(iv + mac) */
 #else
-#define REC_MAX_READ_ENCRYPTED_OVERHEAD REC_MAX_ENCRYPTED_OVERHEAD
+#define REC_MAX_READ_ENCRYPTED_OVERHEAD  REC_MAX_ENCRYPTED_OVERHEAD
 #define REC_MAX_WRITE_ENCRYPTED_OVERHEAD REC_MAX_ENCRYPTED_OVERHEAD
 #endif /* HITLS_TLS_FEATURE_RECORD_SIZE_LIMIT */
-#define REC_MAX_CIPHER_TEXT_LEN (REC_MAX_PLAIN_LENGTH + REC_MAX_ENCRYPTED_OVERHEAD)   /* Maximum ciphertext length */
+#define REC_MAX_CIPHER_TEXT_LEN (REC_MAX_PLAIN_LENGTH + REC_MAX_ENCRYPTED_OVERHEAD) /* Maximum ciphertext length */
 
 #define REC_MAX_AES_GCM_ENCRYPTION_LIMIT 23726566u   /* RFC 8446 5.5 Limits on Key Usage AES-GCM SHOULD under 2^24.5 */
 #define REC_MAX_AES_CCM_ENCRYPTION_LIMIT 8388608u   /* 2^23 */
@@ -50,6 +54,42 @@ extern "C" {
 #define REC_MAX_AES_CCM_DECRYPTION_LIMIT        11863283u                /* 2^23.5 ≈ 11863283 */
 #define REC_MAX_AES_CCM8_DECRYPTION_LIMIT       128u                     /* 2^7 */
 
+#define REC_DTLS13_ACK_ITEM_LEN (sizeof(uint64_t) * 2u)
+#define REC_DTLS13_ACK_LIST_MAX_COUNT 128u
+#define REC_DYN_ARRAY_INIT_CAP 4u
+#define REC_DYN_ARRAY_MAX_COUNT(elemType) (UINT32_MAX / (uint32_t)sizeof(elemType))
+
+#define REC_DYN_ARRAY_GROW(arr, count, cap, elemType, maxCap) do {                        \
+    if ((count) == (cap)) {                                                               \
+        uint32_t maxCap_ = (maxCap);                                                      \
+        uint32_t typeMaxCap_ = REC_DYN_ARRAY_MAX_COUNT(elemType);                         \
+        if (maxCap_ > typeMaxCap_) {                                                      \
+            maxCap_ = typeMaxCap_;                                                        \
+        }                                                                                 \
+        uint32_t newCap_ = REC_DYN_ARRAY_INIT_CAP;                                        \
+        if ((cap) != 0) {                                                                 \
+            newCap_ = ((cap) > maxCap_ / 2u) ? maxCap_ : ((cap) * 2u);                     \
+        }                                                                                 \
+        if (newCap_ > maxCap_) {                                                          \
+            newCap_ = maxCap_;                                                            \
+        }                                                                                 \
+        if (newCap_ == 0 || newCap_ <= (cap)) {                                           \
+            return HITLS_MEMALLOC_FAIL;                                                   \
+        }                                                                                 \
+        elemType *newArr_ = (elemType *)BSL_SAL_Malloc(                                   \
+            newCap_ * (uint32_t)sizeof(elemType));                                        \
+        if (newArr_ == NULL) {                                                            \
+            return HITLS_MEMALLOC_FAIL;                                                   \
+        }                                                                                 \
+        if ((arr) != NULL) {                                                              \
+            (void)memcpy(newArr_, (arr), (count) * sizeof(elemType));                      \
+            BSL_SAL_FREE(arr);                                                            \
+        }                                                                                 \
+        (arr) = newArr_;                                                                  \
+        (cap) = newCap_;                                                                  \
+    }                                                                                     \
+} while (0)
+
 typedef struct {
     RecConnState *outdatedState;
     RecConnState *currentState;
@@ -58,43 +98,83 @@ typedef struct {
 
 typedef int32_t (*REC_ReadFunc)(TLS_Ctx *, REC_Type, uint8_t *, uint32_t *, uint32_t);
 typedef int32_t (*REC_WriteFunc)(TLS_Ctx *, REC_Type, const uint8_t *, uint32_t);
+
+typedef struct Dtls13SeqMapEntry {
+    RecordNumber recordNumber;
+    Dtls13FragmentRange frag;
+    bool valid;
+} Dtls13SeqMapEntry;
+
+typedef struct Dtls13GapNode {
+    ListHead head;
+    uint32_t start;
+    uint32_t end;
+} Dtls13GapNode;
+
 typedef struct {
-    ListHead head;          /* Linked list header */
-    bool isExistCcsMsg;     /* Check whether CCS messages exist in the retransmission message queue */
-    REC_Type type;          /* message type */
-    uint8_t *msg;           /* message data */
-    uint32_t len;           /* message length */
+    ListHead gaps;
+    uint32_t totalLen;
+    uint32_t unackedBytes;
+    Dtls13SeqMapEntry *seqMap;
+    uint32_t seqMapSize;
+    uint32_t seqMapCap;
+} Dtls13AckState;
+
+typedef struct {
+    ListHead head; /* Linked list header */
+    bool isExistCcsMsg; /* Check whether CCS messages exist in the retransmission message queue */
+    REC_Type type; /* message type */
+    uint8_t *msg; /* message data */
+    uint32_t len; /* message length */
+#ifdef HITLS_TLS_PROTO_DTLS13
+    uint8_t hsType;         /* DTLS1.3 handshake message type */
+    uint16_t epoch; /* DTLS1.3 message epoch */
+    uint64_t nextRecordSeq; /* DTLS1.3 next record sequence used when the original write state is gone */
+    uint16_t hsSeq; /* DTLS1.3 handshake message sequence */
+    uint32_t bodyLen; /* DTLS1.3 handshake body length */
+    Dtls13AckState ackState;
+    REC_Dtls13RetransmitAckCb ackCb; /* DTLS1.3 callback after this node is fully ACKed */
+#endif
 } RecRetransmitList;
 
 typedef struct RecCtx {
-    RecBuf *inBuf;                  /* Buffer for reading data */
-    RecBuf *outBuf;                 /* Buffer for writing data */
+    RecBuf *inBuf; /* Buffer for reading data */
+    RecBuf *outBuf; /* Buffer for writing data */
     RecConnStates readStates;
     RecConnStates writeStates;
-    RecBufList *hsRecList;      /* hs plaintext data cache */
-    RecBufList *appRecList;     /* app plaintext data cache */
-    uint32_t emptyRecordCnt;        /* Count of empty records */
-#ifdef HITLS_TLS_PROTO_DTLS12
+    RecBufList *hsRecList; /* hs plaintext data cache */
+    RecBufList *appRecList; /* app plaintext data cache */
+    uint32_t emptyRecordCnt; /* Count of empty records */
+#if defined(HITLS_TLS_PROTO_DTLS12) || defined(HITLS_TLS_PROTO_DTLS13)
     uint16_t writeEpoch;
     uint16_t readEpoch;
-
+    uint64_t lastWriteEpochSeq;
+    bool hasLastWriteEpochSeq;
+    uint64_t lastReadEpochSeq;
+    bool hasLastReadEpochSeq;
+#endif
+#ifdef HITLS_TLS_PROTO_DTLS13
+    Dtls13AckList ackList;
+    Dtls13AckList retransAckList;
+    bool needSendRetransAck;
+#endif
+#if defined(HITLS_TLS_PROTO_DTLS12) || defined(HITLS_TLS_PROTO_DTLS13)
     RecRetransmitList retransmitList; /* Cache the messages that may be retransmitted during the handshake */
+#endif
 
-    /* Process out-of-order messages */
-    UnprocessedHsMsg unprocessedHsMsg;          /* used to cache out-of-order finished messages */
+#if defined(HITLS_TLS_PROTO_DTLS12) || defined(HITLS_TLS_PROTO_DTLS13)
     /* unprocessed app message: app messages received in the CCS and finished receiving phases */
-    UnprocessedAppMsg unprocessedAppMsgList;
+    UnprocessedMsg UnprocessedMsgList;
 #endif
     REC_ReadFunc recRead;
     void *rUserData;
     REC_WriteFunc recWrite;
     void *wUserData;
     REC_Type unexpectedMsgType;
-    uint32_t pendingDataSize;               /* Data length */
-    const uint8_t *pendingData;             /* Plain Data content */
-    uint8_t pendingRecordType;              /* pending record type */
+    uint32_t pendingDataSize; /* Data length */
+    const uint8_t *pendingData; /* Plain Data content */
+    uint8_t pendingRecordType; /* pending record type */
 } RecCtx;
-
 
 /**
  * @brief   Obtain the size of the buffer for read and write operations
@@ -127,6 +207,8 @@ void RecTryFreeRecBuf(TLS_Ctx *ctx, bool isOut);
  * @retval  HITLS_MEMALLOC_FAIL malloc fail
  */
 int32_t RecIoBufInit(TLS_Ctx *ctx, RecCtx *recordCtx, bool isRead);
+int32_t RecRetransmitListAppendNode(RecCtx *recCtx, REC_Type type, const uint8_t *msg, uint32_t len,
+                                    RecRetransmitList **retransmitNode);
 #ifdef __cplusplus
 }
 #endif

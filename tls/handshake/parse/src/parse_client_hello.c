@@ -209,15 +209,15 @@ int32_t ParseClientHello(TLS_Ctx *ctx, const uint8_t *data, uint32_t len, HS_Msg
         return ret;
     }
 
-#ifdef HITLS_TLS_PROTO_DTLS12
+#if defined(HITLS_TLS_PROTO_DTLS12) || defined(HITLS_TLS_PROTO_DTLS13)
     if (IS_SUPPORT_DATAGRAM(ctx->config.tlsConfig.originVersionMask)) {
-        /* Cookies need to be parsed in DTLS */
+        /* DTLS ClientHello contains a legacy_cookie field before cipher_suites. */
         ret = ParseCookie(&pkt, &msg->cookieLen, &msg->cookie);
         if (ret != HITLS_SUCCESS) {
             return ret;
         }
     }
-#endif
+#endif /* HITLS_TLS_PROTO_DTLS12 || HITLS_TLS_PROTO_DTLS13 */
     /* Parse the cipher suite. After the parsing is complete, update the msg->cipherSuitesSize and msg->cipherSuites */
     ret = ParseClientHelloCipherSuites(&pkt, msg);
     if (ret != HITLS_SUCCESS) {

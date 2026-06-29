@@ -46,6 +46,11 @@ extern "C" {
 #define IS_SUPPORT_TLCP(versionBits) (((versionBits) & TLCP_VERSION_BITS) != 0x0u)
 #define IS_SUPPORT_TLS(versionBits) (((versionBits) & TLS_VERSION_MASK) != 0x0u)
 #define IS_SUPPORT_DTLS(versionBits) (((versionBits) & DTLS_VERSION_MASK) != 0x0u)
+#define IS_SUPPORT_DTLS12(versionBits) (((versionBits) & DTLS12_VERSION_BIT) != 0x0u)
+#define IS_SUPPORT_DTLS13(versionBits) (((versionBits) & DTLS13_VERSION_BIT) != 0x0u)
+#define IS_DTLS13_CTX(ctx) \
+    ((ctx) != NULL && ((ctx)->negotiatedInfo.version == HITLS_VERSION_DTLS13 || \
+        ((ctx)->negotiatedInfo.version == 0 && (ctx)->config.tlsConfig.maxVersion == HITLS_VERSION_DTLS13)))
 
 #define MAC_KEY_LEN 32u              /* the length of mac key */
 
@@ -55,6 +60,7 @@ extern "C" {
 
 typedef struct TlsCtx TLS_Ctx;
 typedef struct HsCtx HS_Ctx;
+typedef struct HsReassQueue HS_ReassQueue;
 typedef struct CcsCtx CCS_Ctx;
 typedef struct AlertCtx ALERT_Ctx;
 typedef struct RecCtx REC_Ctx;
@@ -159,6 +165,7 @@ typedef enum {
     TRY_SEND_END_OF_EARLY_DATA,     /* sends end of early data message */
     TRY_SEND_FINISH,                /* sends finished message */
     TRY_SEND_KEY_UPDATE,            /* sends keyupdate message */
+    TRY_SEND_ACK,                   /* sends ack message */
     TRY_RECV_CLIENT_HELLO,          /* attempts to receive client hello message */
     TRY_RECV_HELLO_VERIFY_REQUEST,  /* attempts to receive hello verify request message */
     TRY_RECV_SERVER_HELLO,          /* attempts to receive server hello message */
@@ -174,6 +181,15 @@ typedef enum {
     TRY_RECV_FINISH,                /* attempts to receive finished message */
     TRY_RECV_KEY_UPDATE,            /* attempts to receive keyupdate message */
     TRY_RECV_HELLO_REQUEST,         /* attempts to receive hello request message */
+#ifdef HITLS_TLS_FEATURE_DTLS_CID
+    TRY_SEND_NEW_CONNECTION_ID,     /* sends NewConnectionId message */
+    TRY_SEND_REQUEST_CONNECTION_ID, /* sends RequestConnectionId message */
+    TRY_RECV_NEW_CONNECTION_ID,     /* attempts to receive NewConnectionId message */
+    TRY_RECV_REQUEST_CONNECTION_ID, /* attempts to receive RequestConnectionId message */
+#endif
+#ifdef HITLS_TLS_PROTO_DTLS13
+    TRY_RECV_MSG,                   /* attempts to receive any buffered DTLS1.3 post-handshake message */
+#endif
     HS_STATE_BUTT = 255             /* enumerated Maximum Value */
 } HITLS_HandshakeState;
 
@@ -209,6 +225,60 @@ typedef struct {
     uint8_t macKey[MAC_KEY_LEN];       /* random key used by the current algorithm */
 } CookieInfo;
 
+typedef enum {
+    DTLS_CID_RECV_SLOT_FREE = 0,        /* empty slot, available for new CID */
+    DTLS_CID_RECV_SLOT_ACTIVE = 1,      /* valid CID, matches inbound records */
+    DTLS_CID_RECV_SLOT_DEPRECATING = 2, /* old CID after IMMEDIATE update, still matches inbound records */
+} DTLS_CidRecvSlotState;
+
+/* Send slots are peer CIDs available for outbound records. The numeric order
+ * encodes eviction preference for spare placement (smaller = preferred). */
+typedef enum {
+    DTLS_CID_SEND_SLOT_FREE = 0,   /* empty; 1st preference for spare placement */
+    DTLS_CID_SEND_SLOT_USED = 1,   /* retired peer CID; 2nd preference (safe to recycle) */
+    DTLS_CID_SEND_SLOT_UNUSED = 2, /* spare peer CID, selectable by HITLS_SwitchSendCid; 3rd preference */
+    DTLS_CID_SEND_SLOT_INUSE = 3,  /* current peer CID used by record write */
+} DTLS_CidSendSlotState;
+
+/* Small state machine for queued post-handshake CID messages. */
+typedef enum {
+    DTLS_CID_MSG_STATE_IDLE = 0,      /* no CID post-handshake message outstanding */
+    DTLS_CID_MSG_STATE_PENDING = 1,   /* API queued a send state, but HS_SendMsg has not succeeded */
+    DTLS_CID_MSG_STATE_SENT = 2,      /* message was sent and waits for peer response or explicit ACK hook */
+} DTLS_CidMsgState;
+
+typedef struct {
+    uint8_t cidVal[HITLS_DTLS_CID_LOCAL_MAX_LEN];
+    uint8_t cidLen;
+} DTLS_CidRecvEntry;
+
+/* Peer send CID entry: max HITLS_DTLS_CID_PEER_MAX_LEN (255) bytes, same layout as public HITLS_DtlsCidEntry. */
+typedef HITLS_DtlsCidEntry DTLS_CidSendEntry;
+
+typedef struct {
+    uint8_t state;                      /* DTLS_CidRecvSlotState: FREE / ACTIVE / DEPRECATING */
+    DTLS_CidRecvEntry entry;
+} DTLS_CidRecvSlot;
+
+typedef struct {
+    uint8_t state;                      /* DTLS_CidSendSlotState: FREE / UNUSED / INUSE / USED */
+    DTLS_CidSendEntry entry;
+} DTLS_CidSendSlot;
+
+/*
+ * Heap-allocated 16-slot CID table. Held as a pointer in TLS_NegotiatedInfo and
+ * materialized lazily on the first post-handshake CID operation. Connections
+ * that negotiate CID but never update keep only the inline single-CID fields,
+ * avoiding the ~4.7 KB slot table for the common case.
+ */
+typedef struct {
+    DTLS_CidRecvSlot recvSlots[HITLS_DTLS_CID_LIST_MAX];
+    DTLS_CidSendSlot sendSlots[HITLS_DTLS_CID_LIST_MAX];
+    uint8_t currentSendIdx;           /* index of the INUSE send slot, or HITLS_DTLS_CID_NO_IDX */
+    uint16_t cidWrittenMask;          /* mark which recv slots to pack into NewConnectionId message */
+    uint8_t cidUsage;                 /* cid_immediate or cid_spare */
+} DTLS_CidCtx;
+
 typedef struct {
     uint16_t version;                              /* negotiated version */
     uint16_t clientVersion;                        /* version field of client hello */
@@ -229,7 +299,6 @@ typedef struct {
     uint32_t certReqSendTime;                      /* certificate request sending times */
     uint32_t tls13BasicKeyExMode;                   /* TLS13_KE_MODE_PSK_ONLY || TLS13_KE_MODE_PSK_WITH_DHE ||
                                                       TLS13_CERT_AUTH_WITH_DHE */
-
     uint16_t negotiatedGroup;                      /* negotiated group */
     uint16_t recordSizeLimit;                      /* read record size limit */
     uint16_t renegoRecordSizeLimit;
@@ -247,6 +316,13 @@ typedef struct {
 #ifdef HITLS_TLS_FEATURE_SNI
     uint8_t *serverName;
     uint32_t serverNameSize;
+#endif
+#ifdef HITLS_TLS_FEATURE_DTLS_CID
+    bool isCidNegotiated;                           /* true once the connection_id extension was negotiated */
+    DTLS_CidRecvEntry localCidEntry;  /* negotiated local recv CID; FROZEN after handshake, all recv CIDs share one length */
+    DTLS_CidSendEntry peerCidEntry;   /* current outbound CID: set at negotiation, then kept in real-time sync
+                                         with the INUSE send slot. cidLen > 0 means the record layer packs it */
+    DTLS_CidCtx *cidCtx;                            /* heap 16-slot table, NULL until first post-handshake CID op */
 #endif
 } TLS_NegotiatedInfo;
 
@@ -304,6 +380,20 @@ struct TlsCtx {
     uint32_t keyUpdateType;                 /* TLS1.3 key update type */
     bool isKeyUpdateRequest;                /* TLS1.3 Check whether there are unsent key update messages */
     bool isWaitKeyUpdate;                   /* Suppress duplicate KeyUpdate triggers from CheckDecryptionLimits */
+#ifdef HITLS_TLS_PROTO_DTLS13
+    uint16_t dtls13NextSendSeq;             /* DTLS1.3 cumulative handshake sending sequence number */
+    uint16_t dtls13ExpectRecvSeq;           /* DTLS1.3 cumulative handshake receiving sequence number */
+#endif
+#ifdef HITLS_TLS_FEATURE_DTLS_CID
+    uint8_t newCidState;                    /* DTLS_CidMsgState for NewConnectionId send */
+    uint8_t reqCidState;                    /* DTLS_CidMsgState for RequestConnectionId send */
+    uint8_t reqCidNum;                      /* num_cids for pending RequestConnectionId send */
+    HITLS_RecvRequestConnectionIdCb onRecvRequestCidCb; /* app callback for peer request */
+    void *onRecvRequestCidUserData;         /* app callback user data */
+#endif
+#if defined(HITLS_TLS_PROTO_DTLS12) || defined(HITLS_TLS_PROTO_DTLS13)
+    HS_ReassQueue *reassMsg;                /* DTLS handshake reassembly message queue */
+#endif
     bool haveClientPointFormats;            /* whether the EC point format extension in the client hello is processed */
     uint8_t peekFlag;                       /* peekFlag equals 0, read mode; otherwise, peek mode */
     bool hasParsedHsMsgHeader;              /* has parsed current hs msg header */
@@ -325,6 +415,12 @@ struct TlsCtx {
     BSL_TIME deadline;     /* End time */
     HITLS_REC_ReadCb recReadCb;             /* callback for reading user-defined record type messages */
     void *recReadCbArg;                     /* user data pointer passed to the callback context */
+#if (defined(HITLS_TLS_PROTO_DTLS12) || defined(HITLS_TLS_PROTO_DTLS13)) && defined(HITLS_BSL_UIO_UDP)
+    uint32_t timeoutValue;                    /* DTLS retransmission timeout interval, in us */
+    uint32_t timeoutNum;                      /* DTLS retransmission timeout count */
+    BSL_TIME dtls2MslDeadline;              /* DTLS 2MSL end time */
+    bool isDtls2MslTimerActive;             /* Whether the DTLS 2MSL timer is active */
+#endif
 };
 
 typedef struct {

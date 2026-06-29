@@ -20,6 +20,7 @@
 #include "hitls_error.h"
 #include "tls.h"
 #include "hs_ctx.h"
+#include "hs.h"
 #include "hs_msg.h"
 #include "hs_common.h"
 #include "hs_kx.h"
@@ -77,7 +78,22 @@ int32_t SendCertificateProcess(TLS_Ctx *ctx)
     return HS_ChangeState(ctx, TRY_SEND_SERVER_HELLO_DONE);
 }
 #endif /* HITLS_TLS_PROTO_TLS_BASIC || HITLS_TLS_PROTO_DTLS12 */
-#ifdef HITLS_TLS_PROTO_TLS13
+#if defined(HITLS_TLS_PROTO_TLS13) || defined(HITLS_TLS_PROTO_DTLS13)
+static bool Tls13ClientNeedActivateHsWriteKey(const TLS_Ctx *ctx)
+{
+#ifdef HITLS_TLS_PROTO_DTLS13
+    if (ctx->negotiatedInfo.version == HITLS_VERSION_DTLS13) {
+        return false;
+    }
+#endif
+#ifdef HITLS_TLS_FEATURE_PHA
+    if (ctx->phaState == PHA_REQUESTED) {
+        return false;
+    }
+#endif
+    return true;
+}
+
 int32_t Tls13ClientSendCertificateProcess(TLS_Ctx *ctx)
 {
     int32_t ret = HITLS_SUCCESS;
@@ -87,7 +103,8 @@ int32_t Tls13ClientSendCertificateProcess(TLS_Ctx *ctx)
     if (hsCtx->msgLen == 0) {
         /* In the middlebox scenario, if the client does not send the hrr message, a CCS message needs to be sent
          * before the certificate */
-        if (ctx->config.tlsConfig.isMiddleBoxCompat && !ctx->hsCtx->haveHrr
+        if (ctx->config.tlsConfig.isMiddleBoxCompat && !ctx->hsCtx->haveHrr &&
+            !IS_SUPPORT_DATAGRAM(ctx->config.tlsConfig.originVersionMask)
 #ifdef HITLS_TLS_FEATURE_PHA
                 && ctx->phaState != PHA_REQUESTED
 #endif /* HITLS_TLS_FEATURE_PHA */
@@ -97,10 +114,7 @@ int32_t Tls13ClientSendCertificateProcess(TLS_Ctx *ctx)
                 return ret;
             }
         }
-#ifdef HITLS_TLS_FEATURE_PHA
-        if (ctx->phaState != PHA_REQUESTED)
-#endif /* HITLS_TLS_FEATURE_PHA */
-        {
+        if (Tls13ClientNeedActivateHsWriteKey(ctx)) {
             /* CCS messages cannot be encrypted. Therefore, you need to activate the
                 sending key of the client after sending CCS messages. */
             uint32_t hashLen = SAL_CRYPT_DigestSize(ctx->negotiatedInfo.cipherSuiteInfo.hashAlg);
@@ -120,7 +134,7 @@ int32_t Tls13ClientSendCertificateProcess(TLS_Ctx *ctx)
         ret = HS_PackMsg(ctx, CERTIFICATE);
         if (ret != HITLS_SUCCESS) {
             BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15763, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-                "pack tls1.3 client certificate msg fail.", 0, 0, 0, 0);
+                "pack (d)tls1.3 client certificate msg fail.", 0, 0, 0, 0);
             return ret;
         }
     }
@@ -131,7 +145,7 @@ int32_t Tls13ClientSendCertificateProcess(TLS_Ctx *ctx)
     }
 
     BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15764, BSL_LOG_LEVEL_INFO, BSL_LOG_BINLOG_TYPE_RUN,
-        "send tls1.3 client certificate msg success.", 0, 0, 0, 0);
+        "send (d)tls1.3 client certificate msg success.", 0, 0, 0, 0);
 
     /* If the certificate is empty, the certificate verify message does not need to be sent. */
     if (SAL_CERT_GetCurrentCert(ctx->config.tlsConfig.certMgrCtx) == NULL) {
@@ -158,7 +172,7 @@ int32_t Tls13ServerSendCertificateProcess(TLS_Ctx *ctx)
         ret = HS_PackMsg(ctx, CERTIFICATE);
         if (ret != HITLS_SUCCESS) {
             BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15766, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-                "pack server tls1.3 certificate msg fail.", 0, 0, 0, 0);
+                "pack server (d)tls1.3 certificate msg fail.", 0, 0, 0, 0);
             return ret;
         }
     }
@@ -169,8 +183,8 @@ int32_t Tls13ServerSendCertificateProcess(TLS_Ctx *ctx)
     }
 
     BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15767, BSL_LOG_LEVEL_INFO, BSL_LOG_BINLOG_TYPE_RUN,
-        "send tls1.3 server certificate msg success.", 0, 0, 0, 0);
+        "send (d)tls1.3 server certificate msg success.", 0, 0, 0, 0);
 
     return HS_ChangeState(ctx, TRY_SEND_CERTIFICATE_VERIFY);
 }
-#endif /* HITLS_TLS_PROTO_TLS13 */
+#endif /* HITLS_TLS_PROTO_TLS13 || HITLS_TLS_PROTO_DTLS13 */

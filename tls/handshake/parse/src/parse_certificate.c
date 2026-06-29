@@ -80,7 +80,8 @@ static int32_t ParseCertExtension(ParsePacket *pkt, CertificateMsg *msg, CERT_It
 {
     (void)item;
     (void)certIndex;
-    if (pkt->ctx->negotiatedInfo.version != HITLS_VERSION_TLS13) {
+    if (pkt->ctx->negotiatedInfo.version != HITLS_VERSION_TLS13 &&
+        pkt->ctx->negotiatedInfo.version != HITLS_VERSION_DTLS13) {
         return HITLS_SUCCESS;
     }
 
