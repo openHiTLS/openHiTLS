@@ -70,8 +70,11 @@
 #ifdef HITLS_CRYPTO_ELGAMAL
 #include "crypt_elgamal.h"
 #endif
-#if defined(HITLS_CRYPTO_XMSS) || defined(HITLS_CRYPTO_XMSSMT)
+#ifdef HITLS_CRYPTO_XMSS
 #include "crypt_xmss.h"
+#endif
+#ifdef HITLS_CRYPTO_XMSSMT
+#include "crypt_xmssmt.h"
 #endif
 #ifdef HITLS_CRYPTO_LMS
 #include "crypt_lms.h"

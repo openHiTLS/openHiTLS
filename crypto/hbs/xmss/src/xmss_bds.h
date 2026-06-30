@@ -21,7 +21,13 @@
 
 #include <stdbool.h>
 #include <stdint.h>
+#include "hbs_tree.h"
+#ifdef HITLS_CRYPTO_XMSS
 #include "xmss_params.h"
+#endif
+#ifdef HITLS_CRYPTO_XMSSMT
+#include "xmssmt_params.h"
+#endif
 
 #ifdef __cplusplus
 extern "C" {
@@ -61,74 +67,156 @@ typedef struct {
 
 /** BDS acceleration state owned by an XMSS or XMSSMT private-key context. */
 typedef struct {
-    XmssBdsState *states;            /* Current and next layer-tree states. */
+    XmssBdsState *state;             /* Single active tree state. */
+    bool enabled;                    /* Whether signing uses BDS state. */
+} XmssBdsCtx;
+
+/** BDS acceleration state owned by an XMSSMT private-key context. */
+typedef struct {
+    XmssBdsState *states;            /* Current states followed by next-tree states. */
     uint8_t *wotsSigs;               /* Cached upper-layer WOTS signatures. */
     uint32_t stateCount;             /* Number of entries in states. */
     uint32_t wotsSigsLen;            /* Length of wotsSigs in bytes. */
     bool enabled;                    /* Whether signing uses BDS state. */
-} XmssBdsCtx;
+} XmssmtBdsCtx;
 
-struct CryptXmssCtx;
+struct XmssCtxCommon;
 
 /**
- * Release all BDS acceleration state owned by an XMSS context.
+ * Release all single-tree XMSS BDS acceleration state.
  *
- * @param ctx  XMSS context, or NULL.
+ * @param bds  XMSS BDS context, or NULL.
  */
-void XmssBds_Free(struct CryptXmssCtx *ctx);
+void XmssBds_Free(XmssBdsCtx *bds);
 
 /**
- * Initialize all BDS layer states for a newly generated XMSS private key.
+ * Allocate the single BDS tree state used by XMSS.
  *
- * @param ctx  XMSS context containing the private seed and parameters.
- *
- * @return CRYPT_SUCCESS on success, or an error code otherwise.
+ * Existing XMSS BDS state is released first.
  */
-int32_t XmssBds_HyperTreeInit(struct CryptXmssCtx *ctx);
+int32_t XmssBds_Alloc(XmssBdsCtx *bds);
 
 /**
- * Sign a digest using the current BDS state and advance that state.
+ * Release all XMSSMT BDS acceleration state.
  *
- * @param ctx        XMSS context containing initialized BDS state.
- * @param digest     Digest to sign.
- * @param digestLen  Digest length.
- * @param globalIdx  Current global XMSS leaf index.
- * @param sig        Output hypertree signature.
- * @param sigLen     Input buffer length; receives signature length.
- *
- * @return CRYPT_SUCCESS on success, or an error code otherwise.
+ * @param bds  XMSSMT BDS context, or NULL.
  */
-int32_t XmssBds_HyperTreeSign(struct CryptXmssCtx *ctx, const uint8_t *digest, uint32_t digestLen, uint64_t globalIdx,
-                              uint8_t *sig, uint32_t *sigLen);
+void XmssmtBds_Free(XmssmtBdsCtx *bds);
 
 /**
- * Export BDS acceleration state using a fixed-field, big-endian encoding.
+ * Allocate BDS states for a concrete XMSSMT parameter set.
+ *
+ * Existing XMSSMT BDS state is released first. The allocation contains d
+ * current states, d - 1 next-tree states and d - 1 cached upper-layer WOTS
+ * signatures.
+ *
+ * @param bds      XMSSMT BDS context.
+ * @param d        Number of active layers.
+ * @param n        Security parameter in bytes.
+ * @param wotsLen  Number of n-byte strings in one WOTS+ signature.
+ */
+int32_t XmssmtBds_Alloc(XmssmtBdsCtx *bds, uint32_t d, uint32_t n, uint32_t wotsLen);
+
+/**
+ * Reset one BDS tree state to an empty, reusable state.
+ *
+ * Treehash slots are marked dormant/completed so later incremental
+ * construction can restart only the slots it needs.
+ */
+void XmssBds_ResetState(XmssBdsState *state, uint32_t hp);
+
+/**
+ * Return the number of treehash update steps scheduled after a signature.
+ */
+uint32_t XmssBds_GetTreehashUpdateBudget(uint32_t hp);
+
+/**
+ * Initialize one complete BDS state for a concrete layer tree.
+ *
+ * @param state    State to initialize.
+ * @param layer    XMSS/XMSSMT layer number.
+ * @param treeAddr Tree address inside the layer.
+ * @param treeCtx  HBS tree context for the concrete algorithm.
+ */
+int32_t XmssBds_InitTreeState(XmssBdsState *state, uint32_t layer, uint64_t treeAddr, const HbsTreeCtx *treeCtx);
+
+/**
+ * Write one layer signature from an existing BDS state without advancing it.
+ *
+ * The output is WOTS+ signature followed by the current authentication path.
+ */
+int32_t XmssBds_WriteLayerSignature(const XmssBdsState *state, const uint8_t *msg, uint32_t msgLen,
+                                    uint32_t leafIdx, uint32_t layer, uint64_t treeAddr,
+                                    const HbsTreeCtx *treeCtx, uint8_t *sig, uint32_t *sigLen);
+
+/**
+ * Copy the current authentication path of one BDS state.
+ */
+int32_t XmssBds_CopyAuthPath(const XmssBdsState *state, uint8_t *out, uint32_t hp, uint32_t n);
+
+/**
+ * Produce the WOTS+ signature used by an upper XMSSMT layer.
+ */
+int32_t XmssBds_SignWotsLayer(const uint8_t *msg, uint32_t msgLen, uint32_t layer, uint64_t treeAddr,
+                              uint32_t leafIdx, const HbsTreeCtx *treeCtx, uint8_t *sig);
+
+/**
+ * Advance one initialized BDS state to the next leaf within its tree.
+ */
+int32_t XmssBds_TreeRound(XmssBdsState *state, uint32_t leafIdx, uint32_t layer, uint64_t treeAddr,
+                          const HbsTreeCtx *treeCtx);
+
+/**
+ * Spend treehash update work on one initialized BDS state.
+ */
+int32_t XmssBds_TreehashUpdates(XmssBdsState *state, uint32_t updates, uint32_t layer, uint64_t treeAddr,
+                                const HbsTreeCtx *treeCtx, uint32_t *remaining);
+
+/**
+ * Spend one construction step on a future XMSSMT tree state.
+ */
+int32_t XmssBds_NextTreeUpdate(XmssBdsState *nextState, uint32_t layer, uint64_t treeAddr,
+                               const HbsTreeCtx *treeCtx);
+
+/**
+ * Swap an active tree state with a prepared next-tree state.
+ */
+int32_t XmssBds_StateSwap(XmssBdsState *a, XmssBdsState *b);
+
+/**
+ * Export BDS state for single-tree XMSS private-key persistence.
  *
  * The blob must be persisted atomically with the private key index. It does not
  * provide authentication, anti-rollback protection, or synchronization.
- *
- * @param ctx     XMSS context containing initialized BDS state.
- * @param out     Output buffer.
- * @param outLen  Input buffer length; receives encoded length.
- *
- * @return CRYPT_SUCCESS on success, or an error code otherwise.
  */
-int32_t XmssBds_ExportState(const struct CryptXmssCtx *ctx, uint8_t *out, uint32_t *outLen);
+#ifdef HITLS_CRYPTO_XMSS
+int32_t XmssBds_ExportTreeState(const struct XmssCtxCommon *ctx, const XmssBdsCtx *bds, const XmssParams *params,
+                                uint8_t *out, uint32_t *outLen);
 
 /**
- * Import and structurally validate fixed-field BDS acceleration state.
+ * Import and structurally validate single-tree XMSS BDS state.
  *
  * The caller must authenticate the persisted private state, prevent rollback,
  * and synchronize import/export with signing. A failed import leaves the
  * existing BDS state unchanged.
- *
- * @param ctx    XMSS context whose key index must match the encoded index.
- * @param in     Encoded BDS state.
- * @param inLen  Length of encoded BDS state.
- *
- * @return CRYPT_SUCCESS on success, or an error code otherwise.
  */
-int32_t XmssBds_ImportState(struct CryptXmssCtx *ctx, const uint8_t *in, uint32_t inLen);
+int32_t XmssBds_ImportTreeState(const struct XmssCtxCommon *ctx, XmssBdsCtx *bds, const XmssParams *params,
+                                const uint8_t *in, uint32_t inLen);
+#endif
+
+/**
+ * Export BDS state for XMSSMT hypertree private-key persistence.
+ */
+#ifdef HITLS_CRYPTO_XMSSMT
+int32_t XmssmtBds_ExportHyperTreeState(const struct XmssCtxCommon *ctx, const XmssmtBdsCtx *bds,
+                                       const XmssmtParams *params, uint8_t *out, uint32_t *outLen);
+
+/**
+ * Import and structurally validate XMSSMT hypertree BDS state.
+ */
+int32_t XmssmtBds_ImportHyperTreeState(const struct XmssCtxCommon *ctx, XmssmtBdsCtx *bds,
+                                       const XmssmtParams *params, const uint8_t *in, uint32_t inLen);
+#endif
 
 #ifdef __cplusplus
 }

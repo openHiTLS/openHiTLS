@@ -56,7 +56,7 @@ int32_t CalcMultiMsgHash(CRYPT_MD_AlgId mdId, const CRYPT_ConstData *hashData, u
 
 /*
  * Generic hash function implementations
- * These functions read algorithm parameters (mdId, paddingLen) from ctx->params
+ * These functions read algorithm parameters (n, mdId, paddingLen) from XmssCtxCommon
  * at runtime, eliminating the need for macro-based code generation.
  */
 
@@ -65,11 +65,11 @@ int32_t CalcMultiMsgHash(CRYPT_MD_AlgId mdId, const CRYPT_ConstData *hashData, u
  * Corresponds to XmssFamilyHashFuncs.skDerive (formerly: prf / XPrfGeneric) */
 static int32_t XmssSkDerive(const void *vctx, const void *vadrs, uint8_t *out)
 {
-    const CryptXmssCtx *ctx = (const CryptXmssCtx *)vctx;
+    const XmssCtxCommon *ctx = (const XmssCtxCommon *)vctx;
     const XmssAdrs *adrs = (const XmssAdrs *)vadrs;
-    uint32_t n = ctx->params->n;
-    uint32_t paddingLen = ctx->params->paddingLen;
-    CRYPT_MD_AlgId mdId = ctx->params->mdId;
+    uint32_t n = ctx->n;
+    uint32_t paddingLen = ctx->paddingLen;
+    CRYPT_MD_AlgId mdId = ctx->mdId;
 
     uint8_t padding[XMSS_MAX_MDSIZE] = {0};
     const CRYPT_ConstData hashData[] = {
@@ -85,10 +85,10 @@ static int32_t XmssSignRandGen(const void *vctx, const uint8_t *idx, const uint8
 {
     (void)msg;
     (void)msgLen;
-    const CryptXmssCtx *ctx = (const CryptXmssCtx *)vctx;
-    uint32_t n = ctx->params->n;
-    uint32_t paddingLen = ctx->params->paddingLen;
-    CRYPT_MD_AlgId mdId = ctx->params->mdId;
+    const XmssCtxCommon *ctx = (const XmssCtxCommon *)vctx;
+    uint32_t n = ctx->n;
+    uint32_t paddingLen = ctx->paddingLen;
+    CRYPT_MD_AlgId mdId = ctx->mdId;
 
     uint8_t padding[XMSS_MAX_MDSIZE] = {0};
     const CRYPT_ConstData hashData[] = {{padding, paddingLen}, {ctx->key.prf, n}, {idx, 32}};
@@ -103,10 +103,10 @@ static int32_t XmssMsgHash(const void *vctx, const uint8_t *r, const uint8_t *ms
                            uint8_t *out)
 {
     (void)idx;
-    const CryptXmssCtx *ctx = (const CryptXmssCtx *)vctx;
-    uint32_t n = ctx->params->n;
-    uint32_t paddingLen = ctx->params->paddingLen;
-    CRYPT_MD_AlgId mdId = ctx->params->mdId;
+    const XmssCtxCommon *ctx = (const XmssCtxCommon *)vctx;
+    uint32_t n = ctx->n;
+    uint32_t paddingLen = ctx->paddingLen;
+    CRYPT_MD_AlgId mdId = ctx->mdId;
 
     uint8_t padding[XMSS_MAX_MDSIZE] = {0};
     const CRYPT_ConstData hashData[] = {{padding, paddingLen}, {r, n}, {ctx->key.root, n}, {idx, n}, {msg, msgLen}};
@@ -121,11 +121,11 @@ static int32_t XmssChainHash(const void *vctx, const void *vadrs, const uint8_t 
 {
     (void)msgLen;
     int32_t ret;
-    const CryptXmssCtx *ctx = (const CryptXmssCtx *)vctx;
+    const XmssCtxCommon *ctx = (const XmssCtxCommon *)vctx;
     XmssAdrs xadrs = *(const XmssAdrs *)vadrs;
-    uint32_t n = ctx->params->n;
-    uint32_t paddingLen = ctx->params->paddingLen;
-    CRYPT_MD_AlgId mdId = ctx->params->mdId;
+    uint32_t n = ctx->n;
+    uint32_t paddingLen = ctx->paddingLen;
+    CRYPT_MD_AlgId mdId = ctx->mdId;
 
     uint8_t padding[XMSS_MAX_MDSIZE] = {0};
     uint8_t key[XMSS_MAX_MDSIZE];
@@ -167,11 +167,11 @@ static int32_t XmssChainHash(const void *vctx, const void *vadrs, const uint8_t 
 static int32_t XmssNodeHash(const void *vctx, const void *vadrs, const uint8_t *msg, uint32_t msgLen, uint8_t *out)
 {
     (void)msgLen;
-    const CryptXmssCtx *ctx = (const CryptXmssCtx *)vctx;
+    const XmssCtxCommon *ctx = (const XmssCtxCommon *)vctx;
     XmssAdrs xadrs = *(const XmssAdrs *)vadrs;
-    uint32_t n = ctx->params->n;
-    uint32_t paddingLen = ctx->params->paddingLen;
-    CRYPT_MD_AlgId mdId = ctx->params->mdId;
+    uint32_t n = ctx->n;
+    uint32_t paddingLen = ctx->paddingLen;
+    CRYPT_MD_AlgId mdId = ctx->mdId;
 
     uint8_t padding[XMSS_MAX_MDSIZE] = {0};
     uint8_t key[XMSS_MAX_MDSIZE];
@@ -223,8 +223,8 @@ static int32_t XmssNodeHash(const void *vctx, const void *vadrs, const uint8_t *
 static int32_t XmssPkCompress(const void *vctx, const void *vadrs, const uint8_t *msg, uint32_t msgLen, uint8_t *out)
 {
     XmssAdrs xadrs = *(const XmssAdrs *)vadrs;
-    const CryptXmssCtx *ctx = (const CryptXmssCtx *)vctx;
-    uint32_t n = ctx->params->n;
+    const XmssCtxCommon *ctx = (const XmssCtxCommon *)vctx;
+    uint32_t n = ctx->n;
     uint32_t len = 2 * n + 3;
 
     /* Allocate node buffer: uint8_t node[len][n] */
@@ -276,14 +276,14 @@ static const XmssFamilyHashFuncs g_xmssGenericHashFuncs = {
     .chain = NULL,
 };
 
-int32_t XmssInitHashFuncs(CryptXmssCtx *ctx)
+int32_t XmssInitHashFuncs(XmssCtxCommon *ctx)
 {
-    if (ctx == NULL || ctx->params == NULL) {
+    if (ctx == NULL || ctx->n == 0) {
         return CRYPT_NULL_INPUT;
     }
 
     /* Validate that algorithm parameters are set correctly */
-    if (ctx->params->mdId == 0 || ctx->params->paddingLen == 0) {
+    if (ctx->mdId == 0 || ctx->paddingLen == 0) {
         return CRYPT_XMSS_ERR_INVALID_ALGID;
     }
 

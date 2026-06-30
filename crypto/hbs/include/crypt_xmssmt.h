@@ -13,11 +13,11 @@
  * See the Mulan PSL v2 for more details.
  */
 
-#ifndef CRYPT_XMSS_H
-#define CRYPT_XMSS_H
+#ifndef CRYPT_XMSSMT_H
+#define CRYPT_XMSSMT_H
 
 #include "hitls_build.h"
-#ifdef HITLS_CRYPTO_XMSS
+#ifdef HITLS_CRYPTO_XMSSMT
 
 #include <stdint.h>
 #include "bsl_params.h"
@@ -26,53 +26,53 @@
 extern "C" {
 #endif /* __cplusplus */
 
-typedef struct CryptXmssCtx CryptXmssCtx;
+typedef struct CryptXmssmtCtx CryptXmssmtCtx;
 
 /**
- * @ingroup xmss
- * @brief Allocate XMSS context memory space.
+ * @ingroup xmssmt
+ * @brief Allocate XMSSMT context memory space.
  *
- * @retval (CryptXmssCtx *) Pointer to the memory space of the allocated context
+ * @retval (CryptXmssmtCtx *) Pointer to the memory space of the allocated context
  * @retval NULL             Invalid null pointer.
  */
-CryptXmssCtx *CRYPT_XMSS_NewCtx(void);
+CryptXmssmtCtx *CRYPT_XMSSMT_NewCtx(void);
 
 /**
- * @ingroup xmss
- * @brief Allocate XMSS context memory space.
+ * @ingroup xmssmt
+ * @brief Allocate XMSSMT context memory space.
  *
  * @param libCtx [IN] Library context
  *
- * @retval (CryptXmssCtx *) Pointer to the memory space of the allocated context
+ * @retval (CryptXmssmtCtx *) Pointer to the memory space of the allocated context
  * @retval NULL             Invalid null pointer.
  */
-CryptXmssCtx *CRYPT_XMSS_NewCtxEx(void *libCtx);
+CryptXmssmtCtx *CRYPT_XMSSMT_NewCtxEx(void *libCtx);
 
 /**
- * @ingroup xmss
- * @brief release XMSS key context structure
+ * @ingroup xmssmt
+ * @brief Release XMSSMT key context structure.
  *
  * @param ctx [IN] Pointer to the context structure to be released. The ctx is set NULL by the invoker.
  */
-void CRYPT_XMSS_FreeCtx(CryptXmssCtx *ctx);
+void CRYPT_XMSSMT_FreeCtx(CryptXmssmtCtx *ctx);
 
 /**
- * @ingroup xmss
- * @brief Generate the XMSS key pair.
+ * @ingroup xmssmt
+ * @brief Generate the XMSSMT key pair.
  *
- * @param ctx [IN/OUT] XMSS context structure
+ * @param ctx [IN/OUT] XMSSMT context structure
  *
  * @retval CRYPT_NULL_INPUT         Error null pointer input
  * @retval CRYPT_MEM_ALLOC_FAIL     Memory allocation failure
  * @retval CRYPT_SUCCESS            The key pair is successfully generated.
  */
-int32_t CRYPT_XMSS_Gen(CryptXmssCtx *ctx);
+int32_t CRYPT_XMSSMT_Gen(CryptXmssmtCtx *ctx);
 
 /**
- * @ingroup xmss
- * @brief Sign data using XMSS.
+ * @ingroup xmssmt
+ * @brief Sign data using XMSSMT.
  *
- * @param ctx     [IN] Pointer to the XMSS context
+ * @param ctx     [IN] Pointer to the XMSSMT context
  * @param algId   [IN] Algorithm ID
  * @param data    [IN] Pointer to the data to sign
  * @param dataLen [IN] Length of the data
@@ -84,10 +84,10 @@ int32_t CRYPT_XMSS_Gen(CryptXmssCtx *ctx);
  *
  * @attention
  * 1. Stateful private key:
- *    XMSS is a stateful signature scheme. The signing index is advanced before
+ *    XMSSMT is a stateful signature scheme. The signing index is advanced before
  *    signature generation and may be consumed even if this function later
  *    returns an error. After each signing attempt, whether it succeeds or fails,
- *    the caller MUST retrieve the updated private key via CRYPT_XMSS_GetPrvKey
+ *    the caller MUST retrieve the updated private key via CRYPT_XMSSMT_GetPrvKey
  *    and persist it (e.g., to disk or secure storage). Failure to do so may
  *    result in reuse of one-time keys and compromise security.
  * 2. Thread safety:
@@ -96,14 +96,14 @@ int32_t CRYPT_XMSS_Gen(CryptXmssCtx *ctx);
  *    the caller MUST provide external synchronization (e.g., mutex) to ensure
  *    that only one thread invokes signing at a time.
  */
-int32_t CRYPT_XMSS_Sign(CryptXmssCtx *ctx, int32_t algId, const uint8_t *data, uint32_t dataLen, uint8_t *sign,
-                        uint32_t *signLen);
+int32_t CRYPT_XMSSMT_Sign(CryptXmssmtCtx *ctx, int32_t algId, const uint8_t *data, uint32_t dataLen, uint8_t *sign,
+                          uint32_t *signLen);
 
 /**
- * @ingroup xmss
- * @brief Verify data using XMSS.
+ * @ingroup xmssmt
+ * @brief Verify data using XMSSMT.
  *
- * @param ctx     [IN] Pointer to the XMSS context
+ * @param ctx     [IN] Pointer to the XMSSMT context
  * @param algId   [IN] Algorithm ID
  * @param data    [IN] Pointer to the data to verify
  * @param dataLen [IN] Length of the data
@@ -113,14 +113,14 @@ int32_t CRYPT_XMSS_Sign(CryptXmssCtx *ctx, int32_t algId, const uint8_t *data, u
  * @retval CRYPT_SUCCESS    Success
  * @retval Other            For details, see crypt_errno.h
  */
-int32_t CRYPT_XMSS_Verify(const CryptXmssCtx *ctx, int32_t algId, const uint8_t *data, uint32_t dataLen,
-                          const uint8_t *sign, uint32_t signLen);
+int32_t CRYPT_XMSSMT_Verify(const CryptXmssmtCtx *ctx, int32_t algId, const uint8_t *data, uint32_t dataLen,
+                            const uint8_t *sign, uint32_t signLen);
 
 /**
- * @ingroup xmss
- * @brief Control function for XMSS.
+ * @ingroup xmssmt
+ * @brief Control function for XMSSMT.
  *
- * @param ctx [IN/OUT] Pointer to the XMSS context
+ * @param ctx [IN/OUT] Pointer to the XMSSMT context
  * @param opt [IN] Option
  * @param val [IN] Value
  * @param len [IN] Length of the value
@@ -128,83 +128,84 @@ int32_t CRYPT_XMSS_Verify(const CryptXmssCtx *ctx, int32_t algId, const uint8_t 
  * @retval CRYPT_SUCCESS    Success
  * @retval Other            For details, see crypt_errno.h
  */
-int32_t CRYPT_XMSS_Ctrl(CryptXmssCtx *ctx, int32_t opt, void *val, uint32_t len);
+int32_t CRYPT_XMSSMT_Ctrl(CryptXmssmtCtx *ctx, int32_t opt, void *val, uint32_t len);
 
 /**
- * @ingroup xmss
- * @brief Get the public key of XMSS.
+ * @ingroup xmssmt
+ * @brief Get the public key of XMSSMT.
  *
- * @param ctx  [IN] Pointer to the XMSS context
+ * @param ctx  [IN] Pointer to the XMSSMT context
  * @param para [OUT] Pointer to the public key
  *
  * @retval CRYPT_SUCCESS    Success
  * @retval Other            For details, see crypt_errno.h
  */
-int32_t CRYPT_XMSS_GetPubKey(const CryptXmssCtx *ctx, BSL_Param *para);
+int32_t CRYPT_XMSSMT_GetPubKey(const CryptXmssmtCtx *ctx, BSL_Param *para);
 
 /**
- * @ingroup xmss
- * @brief Get the private key of XMSS.
+ * @ingroup xmssmt
+ * @brief Get the private key of XMSSMT.
  *
- * @param ctx  [IN] Pointer to the XMSS context
+ * @param ctx  [IN] Pointer to the XMSSMT context
  * @param para [OUT] Pointer to the private key
  *
  * @retval CRYPT_SUCCESS    Success
  * @retval Other            For details, see crypt_errno.h
  */
-int32_t CRYPT_XMSS_GetPrvKey(const CryptXmssCtx *ctx, BSL_Param *para);
+int32_t CRYPT_XMSSMT_GetPrvKey(const CryptXmssmtCtx *ctx, BSL_Param *para);
 
 /**
- * @ingroup xmss
- * @brief Set the public key of XMSS.
+ * @ingroup xmssmt
+ * @brief Set the public key of XMSSMT.
  *
- * @param ctx  [IN/OUT] Pointer to the XMSS context
+ * @param ctx  [IN/OUT] Pointer to the XMSSMT context
  * @param para [IN] Pointer to the public key
  *
  * @retval CRYPT_SUCCESS    Success
  * @retval Other            For details, see crypt_errno.h
  */
-int32_t CRYPT_XMSS_SetPubKey(CryptXmssCtx *ctx, const BSL_Param *para);
+int32_t CRYPT_XMSSMT_SetPubKey(CryptXmssmtCtx *ctx, const BSL_Param *para);
 
 /**
- * @ingroup xmss
- * @brief Set the private key of XMSS.
+ * @ingroup xmssmt
+ * @brief Set the private key of XMSSMT.
  *
- * @param ctx  [IN/OUT] Pointer to the XMSS context
+ * @param ctx  [IN/OUT] Pointer to the XMSSMT context
  * @param para [IN] Pointer to the private key
  *
  * @retval CRYPT_SUCCESS    Success
  * @retval Other            For details, see crypt_errno.h
  */
-int32_t CRYPT_XMSS_SetPrvKey(CryptXmssCtx *ctx, const BSL_Param *para);
+int32_t CRYPT_XMSSMT_SetPrvKey(CryptXmssmtCtx *ctx, const BSL_Param *para);
 
 /**
- * @brief Duplicate ctx
+ * @ingroup xmssmt
+ * @brief Duplicate XMSSMT context.
  *
- * @param ctx Pointer to the XMSS context
- * @note Since XMSS is not allowed to sign with the same private key and state, the function only duplicates the public
- * key of ctx to the new ctx, without duplicating private key;
+ * @param ctx Pointer to the XMSSMT context
+ * @note Since XMSSMT is not allowed to sign with the same private key and state, the function only duplicates the
+ * public key of ctx to the new ctx, without duplicating private key.
  */
-CryptXmssCtx *CRYPT_XMSS_DupCtx(CryptXmssCtx *ctx);
+CryptXmssmtCtx *CRYPT_XMSSMT_DupCtx(CryptXmssmtCtx *ctx);
 
-#ifdef HITLS_CRYPTO_XMSS_CHECK
+#ifdef HITLS_CRYPTO_XMSSMT_CHECK
 /**
- * @ingroup xmss
+ * @ingroup xmssmt
  * @brief check the key pair consistency
  *
  * @param checkType [IN] check type
- * @param pkey1     [IN] xmss key context structure
- * @param pkey2     [IN] xmss key context structure
+ * @param pkey1     [IN] xmssmt key context structure
+ * @param pkey2     [IN] xmssmt key context structure
  *
  * @retval CRYPT_SUCCESS    check success.
  * Others. For details, see error code in errno.
  */
-int32_t CRYPT_XMSS_Check(uint32_t checkType, const CryptXmssCtx *pkey1, const CryptXmssCtx *pkey2);
-#endif /* HITLS_CRYPTO_XMSS_CHECK */
+int32_t CRYPT_XMSSMT_Check(uint32_t checkType, const CryptXmssmtCtx *pkey1, const CryptXmssmtCtx *pkey2);
+#endif /* HITLS_CRYPTO_XMSSMT_CHECK */
 
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
 
-#endif /* HITLS_CRYPTO_XMSS */
-#endif /* CRYPT_XMSS_H */
+#endif /* HITLS_CRYPTO_XMSSMT */
+#endif /* CRYPT_XMSSMT_H */

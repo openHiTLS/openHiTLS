@@ -31,9 +31,10 @@
 
 /*
  * BDS state layout:
- *   - states[0, d) hold the current tree state for each XMSSMT layer.
- *   - states[d, 2d - 1) incrementally build the next tree for each non-top layer.
- *   - wotsSigs caches upper-layer WOTS signatures over the current lower-layer roots.
+ *   - XMSS uses one active tree state and no cached WOTS signatures.
+ *   - XMSSMT states[0, d) hold current tree states for every layer.
+ *   - XMSSMT states[d, 2d - 1) incrementally build next trees for non-top layers.
+ *   - XMSSMT wotsSigs caches upper-layer WOTS signatures over lower-layer roots.
  *
  * Persisted state uses a fixed-field big-endian encoding. Only active hp-by-n
  * portions of fixed-capacity arrays are encoded, so the blob is independent of
@@ -41,18 +42,18 @@
  */
 
 /* Return the number of current-tree and next-tree BDS states required by the parameter set. */
-static uint32_t ExpectedStateCount(const CryptXmssCtx *ctx)
+static uint32_t ExpectedStateCount(uint32_t d)
 {
-    return 2U * ctx->params->d - 1U;
+    return 2U * d - 1U;
 }
 
 /* Return the number of bytes required for cached upper-layer WOTS signatures. */
-static uint32_t ExpectedWotsSigsLen(const CryptXmssCtx *ctx)
+static uint32_t ExpectedWotsSigsLen(uint32_t n, uint32_t d, uint32_t wotsLen)
 {
-    if (ctx->params->d <= 1U) {
+    if (d <= 1U) {
         return 0;
     }
-    return (ctx->params->d - 1U) * ctx->params->wotsLen * ctx->params->n;
+    return (d - 1U) * wotsLen * n;
 }
 
 /*
@@ -75,7 +76,7 @@ static uint32_t GetTreehashCount(uint32_t hp)
 }
 
 /* Return the number of treehash update steps assigned after one signature. */
-static uint32_t GetTreehashUpdateBudget(uint32_t hp)
+uint32_t XmssBds_GetTreehashUpdateBudget(uint32_t hp)
 {
     return GetTreehashCount(hp) >> 1U;
 }
@@ -84,10 +85,9 @@ static uint32_t GetTreehashUpdateBudget(uint32_t hp)
  * Calculate the encoded length of one XmssBdsState for the active parameter set.
  * The result includes active nodes, stack metadata, treehash metadata and flags.
  */
-static uint32_t GetEncodedStateLen(const CryptXmssCtx *ctx)
+static uint32_t GetEncodedStateLen(const XmssCtxCommon *ctx, uint32_t hp)
 {
-    uint32_t hp = ctx->params->hp;
-    uint32_t n = ctx->params->n;
+    uint32_t n = ctx->n;
     uint32_t keepCount = (hp + 1U) >> 1U;
     uint32_t stackCount = hp + 1U;
     uint32_t nodeCount = hp + keepCount + stackCount + hp + XMSS_BDS_MAX_RETAIN + 1U;
@@ -380,44 +380,75 @@ static void InitCompletedTreehash(XmssBdsState *state, uint32_t hp)
 }
 
 /* Clear one current/next-tree state and restore its dormant treehash metadata. */
-static void ResetSingleState(XmssBdsState *state, uint32_t hp)
+void XmssBds_ResetState(XmssBdsState *state, uint32_t hp)
 {
     memset(state, 0, sizeof(*state));
     InitCompletedTreehash(state, hp);
 }
 
 /*
- * Allocate all BDS state owned by ctx.
- *
- * Existing BDS allocations are released first. XMSS uses one state; XMSSMT uses
- * d current states, d - 1 next-tree states and d - 1 cached WOTS signatures.
+ * Allocate the one BDS tree state owned by an XMSS context.
  */
-static int32_t XmssBds_Alloc(CryptXmssCtx *ctx)
+int32_t XmssBds_Alloc(XmssBdsCtx *bds)
 {
-    if (ctx == NULL || ctx->params == NULL) {
+    if (bds == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
-    uint32_t d = ctx->params->d;
-    if (d == 0 || d > XMSS_BDS_MAX_D || ctx->params->hp == 0 || ctx->params->hp > XMSS_BDS_MAX_HP) {
+
+    XmssBds_Free(bds);
+    bds->state = (XmssBdsState *)BSL_SAL_Calloc(1U, sizeof(XmssBdsState));
+    if (bds->state == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
+        return CRYPT_MEM_ALLOC_FAIL;
+    }
+    return CRYPT_SUCCESS;
+}
+
+/*
+ * Clear and release single-tree BDS allocation, then reset BDS metadata.
+ * Accepting NULL keeps context cleanup paths simple.
+ */
+void XmssBds_Free(XmssBdsCtx *bds)
+{
+    if (bds == NULL) {
+        return;
+    }
+    if (bds->state != NULL) {
+        BSL_SAL_ClearFree(bds->state, sizeof(XmssBdsState));
+    }
+    memset(bds, 0, sizeof(*bds));
+}
+
+/*
+ * Allocate all BDS state owned by an XMSSMT context: d current states, d - 1
+ * next-tree states and d - 1 cached WOTS signatures.
+ */
+int32_t XmssmtBds_Alloc(XmssmtBdsCtx *bds, uint32_t d, uint32_t n, uint32_t wotsLen)
+{
+    if (bds == NULL || n == 0) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return CRYPT_NULL_INPUT;
+    }
+    if (d == 0 || d > XMSS_BDS_MAX_D || n > XMSS_MAX_MDSIZE || wotsLen == 0) {
         BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
         return CRYPT_INVALID_ARG;
     }
 
-    XmssBds_Free(ctx);
-    uint32_t stateCount = 2U * d - 1U;
-    ctx->bds.states = (XmssBdsState *)BSL_SAL_Calloc(stateCount, sizeof(XmssBdsState));
-    if (ctx->bds.states == NULL) {
+    XmssmtBds_Free(bds);
+    uint32_t stateCount = ExpectedStateCount(d);
+    bds->states = (XmssBdsState *)BSL_SAL_Calloc(stateCount, sizeof(XmssBdsState));
+    if (bds->states == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         return CRYPT_MEM_ALLOC_FAIL;
     }
-    ctx->bds.stateCount = stateCount;
+    bds->stateCount = stateCount;
 
-    if (d > 1U) {
-        ctx->bds.wotsSigsLen = (d - 1U) * ctx->params->wotsLen * ctx->params->n;
-        ctx->bds.wotsSigs = (uint8_t *)BSL_SAL_Calloc(ctx->bds.wotsSigsLen, 1U);
-        if (ctx->bds.wotsSigs == NULL) {
-            XmssBds_Free(ctx);
+    bds->wotsSigsLen = ExpectedWotsSigsLen(n, d, wotsLen);
+    if (bds->wotsSigsLen != 0) {
+        bds->wotsSigs = (uint8_t *)BSL_SAL_Calloc(bds->wotsSigsLen, 1U);
+        if (bds->wotsSigs == NULL) {
+            XmssmtBds_Free(bds);
             BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
             return CRYPT_MEM_ALLOC_FAIL;
         }
@@ -426,35 +457,36 @@ static int32_t XmssBds_Alloc(CryptXmssCtx *ctx)
 }
 
 /*
- * Clear and release every BDS allocation owned by ctx, then reset BDS metadata.
+ * Clear and release every XMSSMT BDS allocation, then reset BDS metadata.
  * Accepting NULL keeps context cleanup paths simple.
  */
-void XmssBds_Free(CryptXmssCtx *ctx)
+void XmssmtBds_Free(XmssmtBdsCtx *bds)
 {
-    if (ctx == NULL) {
+    if (bds == NULL) {
         return;
     }
-    if (ctx->bds.states != NULL) {
-        BSL_SAL_ClearFree(ctx->bds.states, ctx->bds.stateCount * (uint32_t)sizeof(XmssBdsState));
+    if (bds->states != NULL) {
+        BSL_SAL_ClearFree(bds->states, bds->stateCount * (uint32_t)sizeof(XmssBdsState));
     }
-    if (ctx->bds.wotsSigs != NULL) {
-        BSL_SAL_ClearFree(ctx->bds.wotsSigs, ctx->bds.wotsSigsLen);
+    if (bds->wotsSigs != NULL) {
+        BSL_SAL_ClearFree(bds->wotsSigs, bds->wotsSigsLen);
     }
-    memset(&ctx->bds, 0, sizeof(ctx->bds));
+    memset(bds, 0, sizeof(*bds));
 }
 
 /*
  * Return the complete persisted BDS blob length for a valid enabled context.
  * Return zero when no exportable BDS state is present.
  */
-static uint32_t XmssBds_GetStateLen(const CryptXmssCtx *ctx)
+static uint32_t XmssBds_GetStateLen(const XmssCtxCommon *ctx, const XmssBdsState *states, uint32_t stateCount,
+                                    bool enabled, uint32_t wotsSigsLen, uint32_t d, uint32_t hp, uint32_t wotsLen)
 {
-    if (ctx == NULL || ctx->params == NULL || ctx->bds.states == NULL || !ctx->bds.enabled ||
-        ctx->bds.stateCount != ExpectedStateCount(ctx) || ctx->bds.wotsSigsLen != ExpectedWotsSigsLen(ctx)) {
+    if (ctx == NULL || ctx->n == 0 || states == NULL || !enabled || stateCount != ExpectedStateCount(d) ||
+        wotsSigsLen != ExpectedWotsSigsLen(ctx->n, d, wotsLen)) {
         return 0;
     }
-    uint32_t stateBytes = ctx->bds.stateCount * GetEncodedStateLen(ctx);
-    return XMSS_BDS_BLOB_HEADER_LEN + stateBytes + ctx->bds.wotsSigsLen;
+    uint32_t stateBytes = stateCount * GetEncodedStateLen(ctx, hp);
+    return XMSS_BDS_BLOB_HEADER_LEN + stateBytes + wotsSigsLen;
 }
 
 /*
@@ -464,14 +496,21 @@ static uint32_t XmssBds_GetStateLen(const CryptXmssCtx *ctx)
  * If out is NULL or too short, outLen receives the required length. Runtime
  * state is structurally validated before any blob is emitted.
  */
-int32_t XmssBds_ExportState(const CryptXmssCtx *ctx, uint8_t *out, uint32_t *outLen)
+static int32_t BdsExportStateCommon(const XmssCtxCommon *ctx, const XmssBdsState *states, uint32_t stateCount,
+                                    const uint8_t *wotsSigs, uint32_t wotsSigsLen, bool enabled,
+                                    CRYPT_PKEY_ParaId algId, uint32_t h, uint32_t d, uint32_t hp,
+                                    uint32_t wotsLen, uint8_t *out, uint32_t *outLen)
 {
     if (ctx == NULL || outLen == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
+    if (algId == 0 || h == 0 || d == 0 || hp == 0 || wotsLen == 0) {
+        BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
+        return CRYPT_INVALID_ARG;
+    }
 
-    uint32_t required = XmssBds_GetStateLen(ctx);
+    uint32_t required = XmssBds_GetStateLen(ctx, states, stateCount, enabled, wotsSigsLen, d, hp, wotsLen);
     if (required == 0) {
         *outLen = 0;
         return CRYPT_SUCCESS;
@@ -481,8 +520,8 @@ int32_t XmssBds_ExportState(const CryptXmssCtx *ctx, uint8_t *out, uint32_t *out
         BSL_ERR_PUSH_ERROR(CRYPT_XMSS_LEN_NOT_ENOUGH);
         return CRYPT_XMSS_LEN_NOT_ENOUGH;
     }
-    for (uint32_t i = 0; i < ctx->bds.stateCount; i++) {
-        if (!IsStateValid(&ctx->bds.states[i], ctx->params->hp)) {
+    for (uint32_t i = 0; i < stateCount; i++) {
+        if (!IsStateValid(&states[i], hp)) {
             BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
             return CRYPT_INVALID_ARG;
         }
@@ -493,29 +532,33 @@ int32_t XmssBds_ExportState(const CryptXmssCtx *ctx, uint8_t *out, uint32_t *out
      * index. Array lengths are derived from these fields during import.
      */
     uint8_t *pos = out;
-    PUT_UINT32_BE((uint32_t)ctx->params->algId, pos, 0);
+    PUT_UINT32_BE((uint32_t)algId, pos, 0);
     pos += sizeof(uint32_t);
     Uint64ToBeBytes(ctx->key.idx, pos);
     pos += sizeof(uint64_t);
-    PUT_UINT32_BE(ctx->params->n, pos, 0);
+    PUT_UINT32_BE(ctx->n, pos, 0);
     pos += sizeof(uint32_t);
-    PUT_UINT32_BE(ctx->params->h, pos, 0);
+    PUT_UINT32_BE(h, pos, 0);
     pos += sizeof(uint32_t);
-    PUT_UINT32_BE(ctx->params->d, pos, 0);
+    PUT_UINT32_BE(d, pos, 0);
     pos += sizeof(uint32_t);
-    PUT_UINT32_BE(ctx->params->hp, pos, 0);
+    PUT_UINT32_BE(hp, pos, 0);
     pos += sizeof(uint32_t);
-    PUT_UINT32_BE(ctx->bds.stateCount, pos, 0);
+    PUT_UINT32_BE(stateCount, pos, 0);
     pos += sizeof(uint32_t);
-    PUT_UINT32_BE(ctx->bds.wotsSigsLen, pos, 0);
+    PUT_UINT32_BE(wotsSigsLen, pos, 0);
     pos += sizeof(uint32_t);
 
-    for (uint32_t i = 0; i < ctx->bds.stateCount; i++) {
-        EncodeState(&pos, &ctx->bds.states[i], ctx->params->hp, ctx->params->n);
+    for (uint32_t i = 0; i < stateCount; i++) {
+        EncodeState(&pos, &states[i], hp, ctx->n);
     }
-    if (ctx->bds.wotsSigsLen != 0) {
-        memcpy(pos, ctx->bds.wotsSigs, ctx->bds.wotsSigsLen);
-        pos += ctx->bds.wotsSigsLen;
+    if (wotsSigsLen != 0) {
+        if (wotsSigs == NULL) {
+            BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+            return CRYPT_NULL_INPUT;
+        }
+        memcpy(pos, wotsSigs, wotsSigsLen);
+        pos += wotsSigsLen;
     }
     *outLen = (uint32_t)(pos - out);
     return CRYPT_SUCCESS;
@@ -528,11 +571,17 @@ int32_t XmssBds_ExportState(const CryptXmssCtx *ctx, uint8_t *out, uint32_t *out
  * Decoding is performed into a temporary context; existing BDS state is replaced
  * only after every state passes structural and semantic validation.
  */
-int32_t XmssBds_ImportState(CryptXmssCtx *ctx, const uint8_t *in, uint32_t inLen)
+static int32_t BdsImportStateCommon(const XmssCtxCommon *ctx, XmssmtBdsCtx *tmpBds, CRYPT_PKEY_ParaId expectedAlgId,
+                                    uint32_t expectedH, uint32_t expectedD, uint32_t expectedHp,
+                                    uint32_t expectedWotsLen, const uint8_t *in, uint32_t inLen)
 {
-    if (ctx == NULL || ctx->params == NULL || in == NULL) {
+    if (ctx == NULL || tmpBds == NULL || ctx->n == 0 || in == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
+    }
+    if (expectedAlgId == 0 || expectedH == 0 || expectedD == 0 || expectedHp == 0 || expectedWotsLen == 0) {
+        BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
+        return CRYPT_INVALID_ARG;
     }
     if (inLen < XMSS_BDS_BLOB_HEADER_LEN) {
         BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
@@ -562,16 +611,16 @@ int32_t XmssBds_ImportState(CryptXmssCtx *ctx, const uint8_t *in, uint32_t inLen
      * Header fields are trusted only after they match the already selected
      * parameter set and the private key staged by SetPrvKey.
      */
-    uint32_t expectedStateCount = ExpectedStateCount(ctx);
-    uint32_t expectedWotsSigsLen = ExpectedWotsSigsLen(ctx);
-    if (algId != (uint32_t)ctx->params->algId || idx != ctx->key.idx || n != ctx->params->n ||
-        h != ctx->params->h || d != ctx->params->d || hp != ctx->params->hp || stateCount != expectedStateCount ||
+    uint32_t expectedStateCount = ExpectedStateCount(expectedD);
+    uint32_t expectedWotsSigsLen = ExpectedWotsSigsLen(ctx->n, expectedD, expectedWotsLen);
+    if (algId != (uint32_t)expectedAlgId || idx != ctx->key.idx || n != ctx->n ||
+        h != expectedH || d != expectedD || hp != expectedHp || stateCount != expectedStateCount ||
         wotsSigsLen != expectedWotsSigsLen) {
         BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
         return CRYPT_INVALID_ARG;
     }
 
-    uint32_t stateBytes = stateCount * GetEncodedStateLen(ctx);
+    uint32_t stateBytes = stateCount * GetEncodedStateLen(ctx, expectedHp);
     uint32_t expectedLen = XMSS_BDS_BLOB_HEADER_LEN + stateBytes + wotsSigsLen;
     if (expectedLen != inLen) {
         BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
@@ -579,46 +628,109 @@ int32_t XmssBds_ImportState(CryptXmssCtx *ctx, const uint8_t *in, uint32_t inLen
     }
 
     /*
-     * Decode into temporary ownership. A malformed state leaves ctx and its
-     * existing BDS state unchanged.
+     * Decode into temporary ownership. A malformed state leaves caller-owned
+     * BDS state unchanged.
      */
-    CryptXmssCtx tmpCtx = {0};
-    tmpCtx.params = ctx->params;
-    int32_t ret = XmssBds_Alloc(&tmpCtx);
+    int32_t ret = XmssmtBds_Alloc(tmpBds, expectedD, ctx->n, expectedWotsLen);
     if (ret != CRYPT_SUCCESS) {
         return ret;
     }
     for (uint32_t i = 0; i < stateCount; i++) {
-        ret = DecodeState(&pos, &tmpCtx.bds.states[i], hp, n);
+        ret = DecodeState(&pos, &tmpBds->states[i], hp, n);
         if (ret != CRYPT_SUCCESS) {
-            XmssBds_Free(&tmpCtx);
+            XmssmtBds_Free(tmpBds);
             BSL_ERR_PUSH_ERROR(ret);
             return ret;
         }
-        if (i < d && !tmpCtx.bds.states[i].initialized) {
-            XmssBds_Free(&tmpCtx);
+        if (i < d && !tmpBds->states[i].initialized) {
+            XmssmtBds_Free(tmpBds);
             BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
             return CRYPT_INVALID_ARG;
         }
     }
-    if (memcmp(tmpCtx.bds.states[d - 1U].root, ctx->key.root, n) != 0) {
-        XmssBds_Free(&tmpCtx);
+    if (memcmp(tmpBds->states[d - 1U].root, ctx->key.root, n) != 0) {
+        XmssmtBds_Free(tmpBds);
         BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
         return CRYPT_INVALID_ARG;
     }
     if (wotsSigsLen != 0) {
-        memcpy(tmpCtx.bds.wotsSigs, pos, wotsSigsLen);
+        memcpy(tmpBds->wotsSigs, pos, wotsSigsLen);
     }
-    /* All validation passed; replace the old state in one commit step. */
-    tmpCtx.bds.enabled = true;
-    XmssBds_Free(ctx);
-    ctx->bds = tmpCtx.bds;
-    memset(&tmpCtx.bds, 0, sizeof(tmpCtx.bds));
+    tmpBds->enabled = true;
     return CRYPT_SUCCESS;
 }
 
+#ifdef HITLS_CRYPTO_XMSS
+int32_t XmssBds_ExportTreeState(const XmssCtxCommon *ctx, const XmssBdsCtx *bds, const XmssParams *params,
+                                uint8_t *out, uint32_t *outLen)
+{
+    if (bds == NULL || params == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return CRYPT_NULL_INPUT;
+    }
+    return BdsExportStateCommon(ctx, bds->state, 1U, NULL, 0, bds->enabled, params->algId, params->h, 1U,
+                                params->h, params->wotsLen, out, outLen);
+}
+
+int32_t XmssBds_ImportTreeState(const XmssCtxCommon *ctx, XmssBdsCtx *bds, const XmssParams *params,
+                                const uint8_t *in, uint32_t inLen)
+{
+    if (bds == NULL || params == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return CRYPT_NULL_INPUT;
+    }
+    XmssmtBdsCtx tmpBds = {0};
+    int32_t ret = BdsImportStateCommon(ctx, &tmpBds, params->algId, params->h, 1U, params->h, params->wotsLen,
+                                       in, inLen);
+    if (ret != CRYPT_SUCCESS) {
+        return ret;
+    }
+    XmssBds_Free(bds);
+    bds->state = tmpBds.states;
+    bds->enabled = tmpBds.enabled;
+    tmpBds.states = NULL;
+    tmpBds.stateCount = 0;
+    tmpBds.enabled = false;
+    XmssmtBds_Free(&tmpBds);
+    return CRYPT_SUCCESS;
+}
+#endif
+
+#ifdef HITLS_CRYPTO_XMSSMT
+int32_t XmssmtBds_ExportHyperTreeState(const XmssCtxCommon *ctx, const XmssmtBdsCtx *bds,
+                                       const XmssmtParams *params, uint8_t *out, uint32_t *outLen)
+{
+    if (bds == NULL || params == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return CRYPT_NULL_INPUT;
+    }
+    return BdsExportStateCommon(ctx, bds->states, bds->stateCount, bds->wotsSigs, bds->wotsSigsLen,
+                                bds->enabled, params->algId, params->h, params->d, params->hp,
+                                params->wotsLen, out, outLen);
+}
+
+int32_t XmssmtBds_ImportHyperTreeState(const XmssCtxCommon *ctx, XmssmtBdsCtx *bds, const XmssmtParams *params,
+                                       const uint8_t *in, uint32_t inLen)
+{
+    if (bds == NULL || params == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return CRYPT_NULL_INPUT;
+    }
+    XmssmtBdsCtx tmpBds = {0};
+    int32_t ret = BdsImportStateCommon(ctx, &tmpBds, params->algId, params->h, params->d, params->hp,
+                                       params->wotsLen, in, inLen);
+    if (ret != CRYPT_SUCCESS) {
+        return ret;
+    }
+    XmssmtBds_Free(bds);
+    *bds = tmpBds;
+    memset(&tmpBds, 0, sizeof(tmpBds));
+    return CRYPT_SUCCESS;
+}
+#endif
+
 /* Serialize the current hp-node authentication path into a layer signature. */
-static int32_t CopyAuthPath(const XmssBdsState *state, uint8_t *out, uint32_t hp, uint32_t n)
+int32_t XmssBds_CopyAuthPath(const XmssBdsState *state, uint8_t *out, uint32_t hp, uint32_t n)
 {
     if (state == NULL || out == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
@@ -631,8 +743,8 @@ static int32_t CopyAuthPath(const XmssBdsState *state, uint8_t *out, uint32_t hp
 }
 
 /* Generate the WOTS+ signature for one XMSS tree layer without updating BDS state. */
-static int32_t WotsSignLayer(const uint8_t *msg, uint32_t msgLen, uint32_t layer, uint64_t treeAddr, uint32_t leafIdx,
-                             const HbsTreeCtx *treeCtx, uint8_t *sig)
+int32_t XmssBds_SignWotsLayer(const uint8_t *msg, uint32_t msgLen, uint32_t layer, uint64_t treeAddr,
+                              uint32_t leafIdx, const HbsTreeCtx *treeCtx, uint8_t *sig)
 {
     uint8_t adrs[HBS_MAX_ADRS_SIZE];
     BuildBaseAdrs(adrs, layer, treeAddr, treeCtx);
@@ -649,9 +761,9 @@ static int32_t WotsSignLayer(const uint8_t *msg, uint32_t msgLen, uint32_t layer
  * Write one XMSS layer signature as WOTS+ signature followed by the current
  * authentication path. This function intentionally does not advance BDS state.
  */
-static int32_t WriteLayerSignatureNoUpdate(const XmssBdsState *state, const uint8_t *msg, uint32_t msgLen,
-                                           uint32_t leafIdx, uint32_t layer, uint64_t treeAddr,
-                                           const HbsTreeCtx *treeCtx, uint8_t *sig, uint32_t *sigLen)
+int32_t XmssBds_WriteLayerSignature(const XmssBdsState *state, const uint8_t *msg, uint32_t msgLen,
+                                    uint32_t leafIdx, uint32_t layer, uint64_t treeAddr,
+                                    const HbsTreeCtx *treeCtx, uint8_t *sig, uint32_t *sigLen)
 {
     if (state == NULL || msg == NULL || sig == NULL || sigLen == NULL || !state->initialized ||
         leafIdx >= (1U << treeCtx->hp)) {
@@ -665,12 +777,12 @@ static int32_t WriteLayerSignatureNoUpdate(const XmssBdsState *state, const uint
         return CRYPT_XMSS_ERR_INVALID_SIG_LEN;
     }
 
-    int32_t ret = WotsSignLayer(msg, msgLen, layer, treeAddr, leafIdx, treeCtx, sig);
+    int32_t ret = XmssBds_SignWotsLayer(msg, msgLen, layer, treeAddr, leafIdx, treeCtx, sig);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
-    ret = CopyAuthPath(state, sig + treeCtx->otsLen * n, treeCtx->hp, n);
+    ret = XmssBds_CopyAuthPath(state, sig + treeCtx->otsLen * n, treeCtx->hp, n);
     if (ret != CRYPT_SUCCESS) {
         return ret;
     }
@@ -685,7 +797,7 @@ static int32_t WriteLayerSignatureNoUpdate(const XmssBdsState *state, const uint
  * StoreInitialBdsNode records the initial auth, treehash and retain nodes while
  * the final stack root becomes the state root.
  */
-static int32_t XmssBds_TreeInit(XmssBdsState *state, uint32_t layer, uint64_t treeAddr, const HbsTreeCtx *treeCtx)
+int32_t XmssBds_InitTreeState(XmssBdsState *state, uint32_t layer, uint64_t treeAddr, const HbsTreeCtx *treeCtx)
 {
     int32_t ret = CheckTreeInput(state, treeCtx);
     if (ret != CRYPT_SUCCESS) {
@@ -766,8 +878,8 @@ static uint32_t GetTau(uint32_t leafIdx, uint32_t hp)
  * and restarts treehash instances needed by future rounds. Treehash work itself
  * is scheduled separately by XmssBds_TreehashUpdates.
  */
-static int32_t XmssBds_TreeRound(XmssBdsState *state, uint32_t leafIdx, uint32_t layer, uint64_t treeAddr,
-                                 const HbsTreeCtx *treeCtx)
+int32_t XmssBds_TreeRound(XmssBdsState *state, uint32_t leafIdx, uint32_t layer, uint64_t treeAddr,
+                          const HbsTreeCtx *treeCtx)
 {
     int32_t ret = CheckTreeInput(state, treeCtx);
     if (ret != CRYPT_SUCCESS) {
@@ -940,8 +1052,8 @@ static int32_t TreehashUpdateOne(XmssBdsState *state, XmssBdsTreehash *treehash,
  * Each step selects the unfinished treehash instance with the lowest current
  * height. unusedUpdates receives any budget left after all instances complete.
  */
-static int32_t XmssBds_TreehashUpdates(XmssBdsState *state, uint32_t updates, uint32_t layer, uint64_t treeAddr,
-                                       const HbsTreeCtx *treeCtx, uint32_t *unusedUpdates)
+int32_t XmssBds_TreehashUpdates(XmssBdsState *state, uint32_t updates, uint32_t layer, uint64_t treeAddr,
+                                const HbsTreeCtx *treeCtx, uint32_t *unusedUpdates)
 {
     int32_t ret = CheckTreeInput(state, treeCtx);
     if (ret != CRYPT_SUCCESS) {
@@ -989,8 +1101,8 @@ static int32_t XmssBds_TreehashUpdates(XmssBdsState *state, uint32_t updates, ui
  * Repeated calls eventually produce a fully initialized next-tree state. This
  * spreads expensive future-tree construction across signatures of the current tree.
  */
-static int32_t XmssBds_NextTreeUpdate(XmssBdsState *nextState, uint32_t layer, uint64_t treeAddr,
-                                      const HbsTreeCtx *treeCtx)
+int32_t XmssBds_NextTreeUpdate(XmssBdsState *nextState, uint32_t layer, uint64_t treeAddr,
+                               const HbsTreeCtx *treeCtx)
 {
     int32_t ret = CheckTreeInput(nextState, treeCtx);
     if (ret != CRYPT_SUCCESS) {
@@ -1059,7 +1171,7 @@ static int32_t XmssBds_NextTreeUpdate(XmssBdsState *nextState, uint32_t layer, u
 }
 
 /* Swap a finished next-tree state into the active-tree slot without allocating memory. */
-static int32_t XmssBds_StateSwap(XmssBdsState *a, XmssBdsState *b)
+int32_t XmssBds_StateSwap(XmssBdsState *a, XmssBdsState *b)
 {
     if (a == NULL || b == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
@@ -1068,255 +1180,6 @@ static int32_t XmssBds_StateSwap(XmssBdsState *a, XmssBdsState *b)
     XmssBdsState tmp = *a;
     *a = *b;
     *b = tmp;
-    return CRYPT_SUCCESS;
-}
-
-/*
- * Initialize BDS acceleration for a newly generated XMSS/XMSSMT private key.
- *
- * Current trees for every layer are built immediately. XMSSMT also caches the
- * upper-layer WOTS signatures and prepares empty next-tree states. Any failure
- * releases the partially initialized BDS context.
- */
-int32_t XmssBds_HyperTreeInit(CryptXmssCtx *ctx)
-{
-    if (ctx == NULL || ctx->params == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
-        return CRYPT_NULL_INPUT;
-    }
-
-    int32_t ret = XmssBds_Alloc(ctx);
-    if (ret != CRYPT_SUCCESS) {
-        return ret;
-    }
-
-    uint32_t d = ctx->params->d;
-    uint32_t n = ctx->params->n;
-    HbsTreeCtx treeCtx;
-    HbsTreeCtx_InitFromXmss(&treeCtx, ctx);
-
-    for (uint32_t layer = 0; layer < d; layer++) {
-        ret = XmssBds_TreeInit(&ctx->bds.states[layer], layer, 0, &treeCtx);
-        if (ret != CRYPT_SUCCESS) {
-            XmssBds_Free(ctx);
-            return ret;
-        }
-        if (layer + 1U < d) {
-            uint8_t *wotsSig = ctx->bds.wotsSigs + layer * ctx->params->wotsLen * n;
-            ret = WotsSignLayer(ctx->bds.states[layer].root, n, layer + 1U, 0, 0, &treeCtx, wotsSig);
-            if (ret != CRYPT_SUCCESS) {
-                XmssBds_Free(ctx);
-                return ret;
-            }
-        }
-    }
-
-    for (uint32_t i = 0; i + 1U < d; i++) {
-        ResetSingleState(&ctx->bds.states[d + i], ctx->params->hp);
-    }
-    memcpy(ctx->key.root, ctx->bds.states[d - 1U].root, n);
-    ctx->bds.enabled = true;
-    return CRYPT_SUCCESS;
-}
-
-/* Return a low-bits mask while avoiding undefined 64-bit shifts. */
-static uint64_t MaskForBits(uint32_t bits)
-{
-    return bits >= 64U ? UINT64_MAX : ((1ULL << bits) - 1ULL);
-}
-
-/* Return true when signing globalIdx consumes the final leaf through the specified layer. */
-static bool IsLayerBoundary(uint64_t globalIdx, uint32_t hp, uint32_t layer)
-{
-    return ((globalIdx + 1U) & MaskForBits((layer + 1U) * hp)) == 0;
-}
-
-/* Return whether another tree exists after treeIdx at the specified XMSSMT layer. */
-static bool HasNextTree(const CryptXmssCtx *ctx, uint32_t layer, uint64_t treeIdx)
-{
-    uint32_t bitsAbove = ctx->params->h - (layer + 1U) * ctx->params->hp;
-    if (bitsAbove == 0) {
-        return false;
-    }
-    return treeIdx + 1U < (1ULL << bitsAbove);
-}
-
-/*
- * Refresh the cached WOTS signature that authenticates the newly active tree
- * root at the layer immediately above it.
- */
-static int32_t RefreshUpperWotsSig(CryptXmssCtx *ctx, uint32_t layer, uint64_t globalIdx, const HbsTreeCtx *treeCtx)
-{
-    uint32_t hp = ctx->params->hp;
-    uint32_t n = ctx->params->n;
-    uint64_t upperTreeAddr = (globalIdx + 1U) >> ((layer + 2U) * hp);
-    uint32_t upperLeaf = (uint32_t)(((globalIdx >> ((layer + 1U) * hp)) + 1U) & MaskForBits(hp));
-    uint8_t *wotsSig = ctx->bds.wotsSigs + layer * ctx->params->wotsLen * n;
-    return WotsSignLayer(ctx->bds.states[layer].root, n, layer + 1U, upperTreeAddr, upperLeaf, treeCtx, wotsSig);
-}
-
-/*
- * Advance all XMSSMT BDS states after signing globalIdx.
- *
- * The update budget is shared across active-tree treehash work and incremental
- * next-tree construction. At a layer boundary, the completed next tree is
- * swapped in, its upper WOTS cache is refreshed and its old slot is reset.
- */
-static int32_t HyperTreePostSignUpdate(CryptXmssCtx *ctx, uint64_t globalIdx, const HbsTreeCtx *treeCtx)
-{
-    uint32_t d = ctx->params->d;
-    uint32_t hp = ctx->params->hp;
-    uint32_t updates = GetTreehashUpdateBudget(hp);
-    int32_t needSwapUpTo = -1;
-    uint64_t maxIdx = (ctx->params->h == 64U) ? (UINT64_MAX - 1U) : ((1ULL << ctx->params->h) - 1U);
-
-    /*
-     * The bottom next tree gets one construction step on every signature while
-     * such a tree still exists.
-     */
-    if (d > 1U) {
-        uint64_t bottomTree = globalIdx >> hp;
-        if (HasNextTree(ctx, 0, bottomTree)) {
-            int32_t ret = XmssBds_NextTreeUpdate(&ctx->bds.states[d], 0, bottomTree + 1U, treeCtx);
-            if (ret != CRYPT_SUCCESS) {
-                return ret;
-            }
-        }
-    }
-
-    /*
-     * Walk bottom-up, spending the remaining update budget on active treehash
-     * work and higher-layer next-tree construction. Boundaries swap in a
-     * completed next tree and may cause the following layer to advance too.
-     */
-    for (uint32_t layer = 0; layer < d; layer++) {
-        uint32_t idxLeaf = (uint32_t)((globalIdx >> (hp * layer)) & MaskForBits(hp));
-        uint64_t idxTree = globalIdx >> (hp * (layer + 1U));
-        if (!IsLayerBoundary(globalIdx, hp, layer)) {
-            /* This layer remains active; advance its auth path only when needed. */
-            if (layer == (uint32_t)(needSwapUpTo + 1)) {
-                int32_t ret = XmssBds_TreeRound(&ctx->bds.states[layer], idxLeaf, layer, idxTree, treeCtx);
-                if (ret != CRYPT_SUCCESS) {
-                    return ret;
-                }
-            }
-            int32_t ret = XmssBds_TreehashUpdates(&ctx->bds.states[layer], updates, layer, idxTree, treeCtx, &updates);
-            if (ret != CRYPT_SUCCESS) {
-                return ret;
-            }
-            if (layer > 0 && layer + 1U < d && updates > 0 && HasNextTree(ctx, layer, idxTree)) {
-                ret = XmssBds_NextTreeUpdate(&ctx->bds.states[d + layer], layer, idxTree + 1U, treeCtx);
-                if (ret != CRYPT_SUCCESS) {
-                    return ret;
-                }
-                updates--;
-            }
-            continue;
-        }
-
-        /* The active tree is exhausted at this layer; promote its prepared successor. */
-        if (globalIdx >= maxIdx || layer + 1U >= d) {
-            continue;
-        }
-        if (!ctx->bds.states[d + layer].initialized) {
-            BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
-            return CRYPT_INVALID_ARG;
-        }
-        int32_t ret = XmssBds_StateSwap(&ctx->bds.states[layer], &ctx->bds.states[d + layer]);
-        if (ret != CRYPT_SUCCESS) {
-            return ret;
-        }
-        ret = RefreshUpperWotsSig(ctx, layer, globalIdx, treeCtx);
-        if (ret != CRYPT_SUCCESS) {
-            return ret;
-        }
-        ResetSingleState(&ctx->bds.states[d + layer], hp);
-        if (updates > 0) {
-            updates--;
-        }
-        needSwapUpTo = (int32_t)layer;
-    }
-    return CRYPT_SUCCESS;
-}
-
-/*
- * Generate one XMSS/XMSSMT hypertree signature from the current BDS state.
- *
- * The bottom layer signs digest directly. Upper layers emit cached WOTS
- * signatures and current authentication paths. After output is complete, the
- * function advances either the single XMSS tree or all affected XMSSMT layers.
- */
-int32_t XmssBds_HyperTreeSign(CryptXmssCtx *ctx, const uint8_t *digest, uint32_t digestLen, uint64_t globalIdx,
-                              uint8_t *sig, uint32_t *sigLen)
-{
-    if (ctx == NULL || digest == NULL || sig == NULL || sigLen == NULL || ctx->params == NULL ||
-        ctx->bds.states == NULL || !ctx->bds.enabled) {
-        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
-        return CRYPT_NULL_INPUT;
-    }
-
-    uint32_t n = ctx->params->n;
-    uint32_t d = ctx->params->d;
-    uint32_t hp = ctx->params->hp;
-    uint32_t layerSigLen = (ctx->params->wotsLen + hp) * n;
-    uint32_t totalSigLen = layerSigLen * d;
-    if (*sigLen < totalSigLen) {
-        BSL_ERR_PUSH_ERROR(CRYPT_XMSS_ERR_INVALID_SIG_LEN);
-        return CRYPT_XMSS_ERR_INVALID_SIG_LEN;
-    }
-
-    HbsTreeCtx treeCtx;
-    HbsTreeCtx_InitFromXmss(&treeCtx, ctx);
-    uint8_t *sigPtr = sig;
-    uint64_t treeIdx = globalIdx >> hp;
-    uint32_t leafIdx = (uint32_t)(globalIdx & MaskForBits(hp));
-
-    /* The bottom layer signs the caller-provided digest directly. */
-    uint32_t oneLayerLen = layerSigLen;
-    int32_t ret = WriteLayerSignatureNoUpdate(&ctx->bds.states[0], digest, digestLen, leafIdx, 0, treeIdx, &treeCtx,
-                                              sigPtr, &oneLayerLen);
-    if (ret != CRYPT_SUCCESS) {
-        return ret;
-    }
-    sigPtr += oneLayerLen;
-
-    for (uint32_t layer = 1; layer < d; layer++) {
-        /*
-         * Upper-layer WOTS signatures are precomputed in wotsSigs for the
-         * current lower-tree root. Signing only emits that cached WOTS
-         * signature plus the BDS auth path for this layer.
-         */
-        memcpy(sigPtr, ctx->bds.wotsSigs + (layer - 1U) * ctx->params->wotsLen * n, ctx->params->wotsLen * n);
-        ret = CopyAuthPath(&ctx->bds.states[layer], sigPtr + ctx->params->wotsLen * n, hp, n);
-        if (ret != CRYPT_SUCCESS) {
-            return ret;
-        }
-        sigPtr += layerSigLen;
-    }
-
-    /*
-     * State advances only after the complete signature has been emitted. XMSS
-     * updates one tree; XMSSMT coordinates all current and next-tree states.
-     */
-    if (d == 1U) {
-        if (globalIdx < ((1ULL << hp) - 1U)) {
-            ret = XmssBds_TreeRound(&ctx->bds.states[0], (uint32_t)globalIdx, 0, 0, &treeCtx);
-            if (ret != CRYPT_SUCCESS) {
-                return ret;
-            }
-            ret = XmssBds_TreehashUpdates(&ctx->bds.states[0], GetTreehashUpdateBudget(hp), 0, 0, &treeCtx, NULL);
-            if (ret != CRYPT_SUCCESS) {
-                return ret;
-            }
-        }
-    } else {
-        ret = HyperTreePostSignUpdate(ctx, globalIdx, &treeCtx);
-        if (ret != CRYPT_SUCCESS) {
-            return ret;
-        }
-    }
-
-    *sigLen = totalSigLen;
     return CRYPT_SUCCESS;
 }
 

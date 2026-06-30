@@ -68,7 +68,8 @@ int32_t HbsHyperTree_Sign(const uint8_t *msg, uint32_t msgLen, uint64_t treeIdx,
  *
  * Each initializer is declared in its own module header alongside the
  * implementation, since they depend on algorithm-specific context types:
- *   HbsTreeCtx_InitFromXmss   -> xmss/src/xmss_local.h
+ *   HbsTreeCtx_InitForXmss    -> xmss/src/xmss_local.h
+ *   HbsTreeCtx_InitForXmssmt  -> xmss/src/xmss_local.h
  *   HbsTreeCtx_InitFromSlhDsa -> slh_dsa/src/slh_dsa_local.h
  *   HbsTreeCtx_InitFromHss    -> hss/src/hss_tree.h
  * ----------------------------------------------------------------------- */

@@ -35,7 +35,7 @@ extern "C" {
  *
  * @return CRYPT_SUCCESS on success, error code otherwise
  */
-int32_t XmssInitHashFuncs(CryptXmssCtx *ctx);
+int32_t XmssInitHashFuncs(XmssCtxCommon *ctx);
 
 /*
  * Multi-message hash utility (used internally by XMSS/SLH-DSA hash modules)

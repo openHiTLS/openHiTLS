@@ -42,8 +42,11 @@
 #ifdef HITLS_CRYPTO_COMPOSITE
 #include "crypt_composite.h"
 #endif
-#if defined(HITLS_CRYPTO_XMSS) || defined(HITLS_CRYPTO_XMSSMT)
+#ifdef HITLS_CRYPTO_XMSS
 #include "crypt_xmss.h"
+#endif
+#ifdef HITLS_CRYPTO_XMSSMT
+#include "crypt_xmssmt.h"
 #endif
 #include "eal_pkey.h"
 #include "crypt_errno.h"
@@ -438,7 +441,7 @@ DECODER_DEFINE_PKCS8_DECODE(Mlkem, CRYPT_ML_KEM_Ctx, CRYPT_MLKEM_ParsePkcs8key)
 DECODER_DEFINE_SUBPUBKEY_WITHOUT_SEQ_DER2KEY_DECODE(Xmss, CryptXmssCtx, CRYPT_XMSS_ParseSubPubkeyAsn1Buff)
 #endif
 #ifdef HITLS_CRYPTO_XMSSMT
-DECODER_DEFINE_SUBPUBKEY_WITHOUT_SEQ_DER2KEY_DECODE(Xmssmt, CryptXmssCtx, CRYPT_XMSSMT_ParseSubPubkeyAsn1Buff)
+DECODER_DEFINE_SUBPUBKEY_WITHOUT_SEQ_DER2KEY_DECODE(Xmssmt, CryptXmssmtCtx, CRYPT_XMSSMT_ParseSubPubkeyAsn1Buff)
 #endif
 #endif /* HITLS_CRYPTO_PROVIDER */
 #endif /* HITLS_CRYPTO_KEY_DECODE_CHAIN && HITLS_CRYPTO_PROVIDER */

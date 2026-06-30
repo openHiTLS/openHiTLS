@@ -41,8 +41,11 @@
 #ifdef HITLS_CRYPTO_COMPOSITE
 #include "crypt_composite.h"
 #endif
-#if defined(HITLS_CRYPTO_XMSS) || defined(HITLS_CRYPTO_XMSSMT)
+#ifdef HITLS_CRYPTO_XMSS
 #include "crypt_xmss.h"
+#endif
+#ifdef HITLS_CRYPTO_XMSSMT
+#include "crypt_xmssmt.h"
 #endif
 #ifdef HITLS_CRYPTO_LMS
 #include "crypt_lms.h"
@@ -171,4 +174,3 @@ const CRYPT_EAL_Func g_defEalSignHss[] = {
 #endif
 
 #endif /* HITLS_CRYPTO_PROVIDER && HITLS_CRYPTO_PKEY_SIGN */
-
