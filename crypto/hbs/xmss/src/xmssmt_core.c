@@ -429,40 +429,48 @@ int32_t CRYPT_XMSSMT_Sign(CryptXmssmtCtx *ctx, int32_t algId, const uint8_t *dat
     }
 
     uint32_t signBufLen = *signLen;
-    uint64_t index = 0;
-    uint32_t offset = 0;
-    uint8_t digest[XMSS_MAX_MDSIZE] = {0};
-    bool idxConsumed = false;
     uint32_t idxBytes = (ctx->params->h + 7) / 8;
-    ret = XmssBuildSignDigest(common, data, dataLen, idxBytes, sign, signLen, &index, &offset, digest, &idxConsumed,
-                              ctx->params->h, ctx->params->sigBytes);
+    XmssSignPrepareInput prepareInput = {
+        common,
+        data,
+        dataLen,
+        idxBytes,
+        ctx->params->h,
+        ctx->params->sigBytes,
+        sign,
+        signLen
+    };
+    XmssSignPrepareResult prepareResult = {0};
+    ret = XmssPrepareSignData(&prepareInput, &prepareResult);
     if (ret != CRYPT_SUCCESS) {
         goto ERR;
     }
 
     uint32_t hp = ctx->params->hp;
-    uint32_t leafIdx = (uint32_t)(index & (((uint64_t)1 << hp) - 1));
-    uint64_t treeIdx = index >> hp;
-    uint32_t treeSigLen = *signLen - offset;
+    uint32_t leafIdx = (uint32_t)(prepareResult.index & (((uint64_t)1 << hp) - 1));
+    uint64_t treeIdx = prepareResult.index >> hp;
+    uint32_t treeSigLen = *signLen - prepareResult.offset;
     if (ctx->bds.enabled) {
-        ret = XmssmtSignWithBds(ctx, digest, ctx->params->n, index, sign + offset, &treeSigLen);
+        ret = XmssmtSignWithBds(ctx, prepareResult.digest, ctx->params->n, prepareResult.index,
+                                sign + prepareResult.offset, &treeSigLen);
     } else {
         HbsTreeCtx treeCtx;
         HbsTreeCtx_InitForXmssmt(&treeCtx, ctx);
-        ret = HbsHyperTree_Sign(digest, ctx->params->n, treeIdx, leafIdx, &treeCtx, sign + offset, &treeSigLen);
+        ret = HbsHyperTree_Sign(prepareResult.digest, ctx->params->n, treeIdx, leafIdx, &treeCtx,
+                                sign + prepareResult.offset, &treeSigLen);
     }
-    BSL_SAL_CleanseData(digest, sizeof(digest));
+    BSL_SAL_CleanseData(prepareResult.digest, sizeof(prepareResult.digest));
     if (ret != CRYPT_SUCCESS) {
         goto ERR_CLEAN_SIG;
     }
 
-    *signLen = offset + treeSigLen;
+    *signLen = prepareResult.offset + treeSigLen;
     return CRYPT_SUCCESS;
 
 ERR:
-    BSL_SAL_CleanseData(digest, sizeof(digest));
+    BSL_SAL_CleanseData(prepareResult.digest, sizeof(prepareResult.digest));
 ERR_CLEAN_SIG:
-    if (idxConsumed) {
+    if (prepareResult.idxConsumed) {
         XmssmtBds_Free(&ctx->bds);
         BSL_SAL_CleanseData(sign, signBufLen);
         *signLen = 0;

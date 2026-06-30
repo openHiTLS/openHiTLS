@@ -105,54 +105,59 @@ int32_t XmssCheckSignReady(const XmssCtxCommon *ctx, const uint8_t *data, const 
     return CRYPT_SUCCESS;
 }
 
-int32_t XmssBuildSignDigest(XmssCtxCommon *ctx, const uint8_t *msg, uint32_t msgLen, uint32_t idxBytes, uint8_t *sig,
-                            uint32_t *sigLen, uint64_t *index, uint32_t *offset, uint8_t *digest, bool *idxConsumed,
-                            uint32_t h, uint32_t sigBytes)
+int32_t XmssPrepareSignData(const XmssSignPrepareInput *input, XmssSignPrepareResult *result)
 {
     int32_t ret;
-    uint32_t n = ctx->n;
-    if (idxConsumed != NULL) {
-        *idxConsumed = false;
+    if (input == NULL || result == NULL || input->ctx == NULL || input->msg == NULL || input->sig == NULL ||
+        input->sigLen == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return CRYPT_NULL_INPUT;
     }
-    if (*sigLen < sigBytes) {
+    XmssCtxCommon *ctx = input->ctx;
+    uint32_t n = ctx->n;
+    result->idxConsumed = false;
+    if (*input->sigLen < input->sigBytes) {
         BSL_ERR_PUSH_ERROR(CRYPT_XMSS_ERR_INVALID_SIG_LEN);
         return CRYPT_XMSS_ERR_INVALID_SIG_LEN;
     }
-    if (h > XMSS_MAX_H) {
+    if (input->h > XMSS_MAX_H) {
         BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
         return CRYPT_INVALID_ARG;
     }
-    if (ctx->key.idx > (1ULL << h) - 1) {
+    if (input->idxBytes > sizeof(uint64_t)) {
+        BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
+        return CRYPT_INVALID_ARG;
+    }
+    if (ctx->key.idx > (1ULL << input->h) - 1) {
         BSL_ERR_PUSH_ERROR(CRYPT_XMSS_ERR_KEY_EXPIRED);
         return CRYPT_XMSS_ERR_KEY_EXPIRED;
     }
 
-    *index = ctx->key.idx;
-    ctx->key.idx = *index + 1;
-    if (idxConsumed != NULL) {
-        *idxConsumed = true;
-    }
-    *offset = 0;
+    result->index = ctx->key.idx;
+    ctx->key.idx = result->index + 1;
+    result->idxConsumed = true;
+    result->offset = 0;
 
     uint8_t indexBytes[sizeof(uint64_t)] = {0};
-    Uint64ToBeBytes(*index, indexBytes);
-    memcpy(sig, indexBytes + sizeof(indexBytes) - idxBytes, idxBytes);
-    *offset += idxBytes;
+    Uint64ToBeBytes(result->index, indexBytes);
+    memcpy(input->sig, indexBytes + sizeof(indexBytes) - input->idxBytes, input->idxBytes);
+    result->offset += input->idxBytes;
 
     uint8_t idx[XMSS_MAX_MDSIZE] = {0};
-    PUT_UINT64_BE(*index, idx, sizeof(idx) - 8);
+    PUT_UINT64_BE(result->index, idx, sizeof(idx) - 8);
 
-    ret = ctx->hashFuncs->sigRandGen(ctx, idx + sizeof(idx) - 32, NULL, 0, sig + *offset);
+    ret = ctx->hashFuncs->sigRandGen(ctx, idx + sizeof(idx) - 32, NULL, 0, input->sig + result->offset);
     if (ret != CRYPT_SUCCESS) {
         return ret;
     }
 
-    ret = ctx->hashFuncs->msgHash(ctx, sig + *offset, msg, msgLen, idx + sizeof(idx) - n, digest);
+    ret = ctx->hashFuncs->msgHash(ctx, input->sig + result->offset, input->msg, input->msgLen,
+                                  idx + sizeof(idx) - n, result->digest);
     if (ret != CRYPT_SUCCESS) {
         return ret;
     }
-    *offset += n;
-    if (*offset > *sigLen) {
+    result->offset += n;
+    if (result->offset > *input->sigLen) {
         return CRYPT_XMSS_ERR_INVALID_SIG_LEN;
     }
     return CRYPT_SUCCESS;

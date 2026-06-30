@@ -152,9 +152,25 @@ int32_t XmssGetXdrAlgBuff(void *val, uint32_t len, const uint8_t *xdrAlgId, bool
 int32_t XmssCheckSignReady(const XmssCtxCommon *ctx, const uint8_t *data, const uint8_t *sign,
                            const uint32_t *signLen, bool hasParams);
 
-int32_t XmssBuildSignDigest(XmssCtxCommon *ctx, const uint8_t *msg, uint32_t msgLen, uint32_t idxBytes, uint8_t *sig,
-                            uint32_t *sigLen, uint64_t *index, uint32_t *offset, uint8_t *digest, bool *idxConsumed,
-                            uint32_t h, uint32_t sigBytes);
+typedef struct {
+    XmssCtxCommon *ctx;
+    const uint8_t *msg;
+    uint32_t msgLen;
+    uint32_t idxBytes;
+    uint32_t h;
+    uint32_t sigBytes;
+    uint8_t *sig;
+    uint32_t *sigLen;
+} XmssSignPrepareInput;
+
+typedef struct {
+    uint64_t index;
+    uint32_t offset;
+    uint8_t digest[XMSS_MAX_MDSIZE];
+    bool idxConsumed;
+} XmssSignPrepareResult;
+
+int32_t XmssPrepareSignData(const XmssSignPrepareInput *input, XmssSignPrepareResult *result);
 
 int32_t XmssCheckVerifyReady(const XmssCtxCommon *ctx, const uint8_t *data, const uint8_t *sign, bool hasParams);
 
