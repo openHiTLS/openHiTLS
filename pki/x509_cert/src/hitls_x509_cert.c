@@ -186,12 +186,10 @@ void HITLS_X509_CertFree(HITLS_X509_Cert *cert)
 
 HITLS_X509_Cert *HITLS_X509_CertNew(void)
 {
-    BSL_ASN1_List *issuerName = NULL;
-    BSL_ASN1_List *subjectName = NULL;
     HITLS_X509_Ext *ext = NULL;
     HITLS_X509_Cert *cert = (HITLS_X509_Cert *)BSL_SAL_Calloc(1, sizeof(HITLS_X509_Cert));
-    issuerName = BSL_LIST_New(sizeof(HITLS_X509_NameNode));
-    subjectName = BSL_LIST_New(sizeof(HITLS_X509_NameNode));
+    BSL_ASN1_List *issuerName = BSL_LIST_New(sizeof(HITLS_X509_NameNode));
+    BSL_ASN1_List *subjectName = BSL_LIST_New(sizeof(HITLS_X509_NameNode));
     if (cert == NULL || issuerName == NULL || subjectName == NULL) {
         goto ERR;
     }
@@ -515,6 +513,11 @@ static int32_t X509_GetSerialNumStr(HITLS_X509_Cert *cert, BSL_Buffer *val)
 
 static int32_t X509_GetAsn1BslTimeStr(const BSL_TIME *time, BSL_Buffer *val)
 {
+    // Gregorian calendar month count is 1-12.
+    if (time == NULL || time->month < 1 || time->month > 12) {
+        BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_CERT_INVALID_TIME);
+        return HITLS_X509_ERR_CERT_INVALID_TIME;
+    }
     val->data = BSL_SAL_Calloc(PRINT_TIME_MAX_SIZE, sizeof(uint8_t));
     if (val->data == NULL) {
         BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);

@@ -52,7 +52,6 @@ void HITLS_PKCS12_SafeBagFree(HITLS_PKCS12_SafeBag *safeBag)
     BSL_SAL_ClearFree(safeBag->bag->data, safeBag->bag->dataLen);
     BSL_SAL_FREE(safeBag->bag);
     BSL_SAL_Free(safeBag);
-    return;
 }
 
 HITLS_PKCS12_MacData *HITLS_PKCS12_MacDataNew(void)
@@ -297,7 +296,6 @@ void HITLS_PKCS12_BagFree(HITLS_PKCS12_Bag *bag)
     HITLS_X509_AttrsFree(bag->attributes, HITLS_PKCS12_AttributesFree);
     BSL_SAL_ReferencesFree(&(bag->references));
     BSL_SAL_Free(bag);
-    return;
 }
 
 typedef struct {
@@ -596,7 +594,7 @@ static int32_t GetHmacKey(HITLS_PKCS12 *p12, BSL_Buffer *pwd, uint32_t macSize, 
     return ret;
 }
 
-static int32_t ParamCheckAndInit(HITLS_PKCS12 *p12, BSL_Buffer *pwd, int32_t *macId, uint32_t *macSize)
+static int32_t ParamCheckAndInit(HITLS_PKCS12 *p12, const BSL_Buffer *pwd, int32_t *macId, uint32_t *macSize)
 {
     if (p12 == NULL || p12->macData == NULL || p12->macData->macSalt == NULL) {
         BSL_ERR_PUSH_ERROR(HITLS_PKCS12_ERR_NULL_POINTER);

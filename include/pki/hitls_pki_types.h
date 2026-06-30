@@ -70,7 +70,7 @@ typedef enum {
     HITLS_X509_GET_SIGN_MDALG,         /** Get the hash algorithm of signature algorithm used to sign the cert/ */
     HITLS_X509_GET_ENCODE_SUBJECT_DN,  /** Get the ASN.1 DER encoded subject distinguished name */
     HITLS_X509_IS_SELF_SIGNED,         /** Determine whether the certificate is a self-signed certificate */
-    HITLS_X509_GET_SUBJECT_CN_STR,         /** Get the CN from the subject distinguished name */
+    HITLS_X509_GET_SUBJECT_CN_STR,     /** Get the CN from the subject distinguished name */
 
     HITLS_X509_SET_VERSION = 0x0200,   /** Set the version for the cert. */
     HITLS_X509_SET_SERIALNUM,          /** Set the serial number for the cert, the length range is 1 to 20. */
@@ -94,7 +94,7 @@ typedef enum {
                                                     Note: Only supported for custom extensions. */
     HITLS_X509_EXT_SET_DELTA_CRL,               /** Set the delta CRL indicator extension. */
     HITLS_X509_EXT_SET_IDP,                     /** Set the issuing distribution point extension. */
-    HITLS_X509_EXT_SET_CDP,                   /** Set the cRLDistributionPoints extension. */
+    HITLS_X509_EXT_SET_CDP,                     /** Set the cRLDistributionPoints extension. */
 
     HITLS_X509_EXT_GET_SKI = 0x0500,            /** Get Subject Key Identifier from extensions.
                                                     Note: Kid is a shallow copy. */
@@ -110,7 +110,7 @@ typedef enum {
                                                     Note: Only supported for custom extensions. */
     HITLS_X509_EXT_GET_DELTA_CRL,               /** Get the delta CRL indicator extension. */
     HITLS_X509_EXT_GET_IDP,                     /** Get the issuing distribution point extension. */
-    HITLS_X509_EXT_GET_CDP,                   /** Get cRLDistributionPoints from extensions. */
+    HITLS_X509_EXT_GET_CDP,                     /** Get cRLDistributionPoints from extensions. */
 
     HITLS_X509_EXT_CHECK_SKI = 0x0600,          /** Check if ski is exists. */
 
@@ -411,8 +411,8 @@ typedef enum {
  * @brief Commands for manipulating the X509 store context
  * Enumeration Value Segmentation Principle:
  *  0x0~0x0100: Enumeration values must be set before constructing a certificate chain or verification.
- *  0x0100~0x0200: Enumeration values corresponding to capabilities can be uesd at any time.
- *  0x0200~0x0300: Enumeration values corresponding to capabilities can only be during signature verification or
+ *  0x0100~0x0200: Enumeration values corresponding to capabilities can be used at any time.
+ *  0x0200~0x0300: Enumeration values corresponding to capabilities can only be used during signature verification or
  *                 certificate chain construction.
  *  Others: To be determined.
  */
@@ -435,7 +435,7 @@ typedef enum {
     HITLS_X509_STORECTX_CLEAR_CRL,
     HITLS_X509_STORECTX_SET_DEFAULT_PATH,  /**< Set default CA path (OPENHITLSDIR/ssl/certs) */
     HITLS_X509_STORECTX_SET_PURPOSE,
-    HITLS_X509_STORECTX_SET_PEER_CERT_CHAIN,    /**< shallow copy peer cert chain to storeCtx*/
+    HITLS_X509_STORECTX_SET_PEER_CERT_CHAIN,    /**< shallow copy peer cert chain to storeCtx */
     HITLS_X509_STORECTX_SET_HOST_FLAG,
     HITLS_X509_STORECTX_SET_HOST,
     HITLS_X509_STORECTX_ADD_HOST,

@@ -294,7 +294,7 @@ static int32_t ParseSrvId(const char *srv, uint32_t srvLen, X509_StringView *ser
 }
 
 static int32_t MatchHostView(const X509_StringView *presented, const X509_StringView *reference,
-    int32_t (*MatchCb)(const char *pattern, const char *hostname))
+    int32_t (*matchCb)(const char *pattern, const char *hostname))
 {
     char *presentedStr = NULL;
     char *referenceStr = NULL;
@@ -307,7 +307,7 @@ static int32_t MatchHostView(const X509_StringView *presented, const X509_String
         BSL_SAL_Free(presentedStr);
         return ret;
     }
-    ret = MatchCb(presentedStr, referenceStr);
+    ret = matchCb(presentedStr, referenceStr);
     BSL_SAL_Free(presentedStr);
     BSL_SAL_Free(referenceStr);
     return ret;
@@ -324,8 +324,8 @@ int32_t HITLS_X509_MatchPattern(uint32_t flags, const char *pattern, const char 
     return MatchWithSingleWildcard(pattern, hostname);
 }
 
-int32_t X509_VerifyHostnameWithSan(HITLS_X509_Cert *cert, const char *hostname,
-    int32_t (*MatchCb)(const char *pattern, const char *hostname))
+static int32_t X509_VerifyHostnameWithSan(HITLS_X509_Cert *cert, const char *hostname,
+    int32_t (*matchCb)(const char *pattern, const char *hostname))
 {
     HITLS_X509_ExtSan san = {0};
     int32_t ret = HITLS_X509_CertCtrl(cert, HITLS_X509_EXT_GET_SAN, &san, sizeof(san));
@@ -353,7 +353,7 @@ int32_t X509_VerifyHostnameWithSan(HITLS_X509_Cert *cert, const char *hostname,
         }
         memcpy(dnsName, gn->value.data, gn->value.dataLen);
         dnsName[gn->value.dataLen] = '\0';
-        ret = MatchCb(dnsName, hostname);
+        ret = matchCb(dnsName, hostname);
         BSL_SAL_Free(dnsName);
         if (ret == HITLS_PKI_SUCCESS) {
             break;
@@ -364,8 +364,8 @@ int32_t X509_VerifyHostnameWithSan(HITLS_X509_Cert *cert, const char *hostname,
     return ret;
 }
 
-int32_t X509_VerifyHostnameWithCn(HITLS_X509_Cert *cert, const char *hostname,
-    int32_t (*MatchCb)(const char *pattern, const char *hostname))
+static int32_t X509_VerifyHostnameWithCn(HITLS_X509_Cert *cert, const char *hostname,
+    int32_t (*matchCb)(const char *pattern, const char *hostname))
 {
     BSL_Buffer cnName = {0};
     int32_t ret = HITLS_X509_CertCtrl(cert, HITLS_X509_GET_SUBJECT_CN_STR, &cnName, sizeof(cnName));
@@ -378,7 +378,7 @@ int32_t X509_VerifyHostnameWithCn(HITLS_X509_Cert *cert, const char *hostname,
         return HITLS_X509_ERR_VFY_HOSTNAME_FAIL;
     }
 
-    ret = MatchCb((const char *)cnName.data, hostname);
+    ret = matchCb((const char *)cnName.data, hostname);
     BSL_SAL_Free(cnName.data);
     return ret;
 }
@@ -394,17 +394,17 @@ static int32_t X509_VerifyHostname(HITLS_X509_Cert *cert, uint32_t flags, const 
         return HITLS_X509_ERR_INVALID_PARAM;
     }
     // according to flag to select match function callback
-    int32_t (*MatchCb)(const char *pattern, const char *hostname);
+    int32_t (*matchCb)(const char *pattern, const char *hostname);
     if ((flags & HITLS_X509_FLAG_VFY_WITH_PARTIAL_WILDCARD) != 0) {
-        MatchCb = MatchWithPartialWildcard; // ref RFC6125
+        matchCb = MatchWithPartialWildcard; // ref RFC6125
     } else {
-        MatchCb = MatchWithSingleWildcard; // ref RFC9525
+        matchCb = MatchWithSingleWildcard; // ref RFC9525
     }
 
-    int32_t ret = X509_VerifyHostnameWithSan(cert, hostname, MatchCb);
+    int32_t ret = X509_VerifyHostnameWithSan(cert, hostname, matchCb);
     // For compatibility with RFC6125, if SAN is not present or there is no DNS in the SAN, fall back to checking CN.
     if (ret == HITLS_X509_ERR_EXT_NOT_FOUND) {
-        return X509_VerifyHostnameWithCn(cert, hostname, MatchCb);
+        return X509_VerifyHostnameWithCn(cert, hostname, matchCb);
     }
     if (ret != HITLS_PKI_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
@@ -464,7 +464,7 @@ static int32_t X509_VerifyUriId(HITLS_X509_Cert *cert, uint32_t flags, const cha
         return ret;
     }
 
-    int32_t (*MatchCb)(const char *pattern, const char *hostname) =
+    int32_t (*matchCb)(const char *pattern, const char *hostname) =
         ((flags & HITLS_X509_FLAG_VFY_WITH_PARTIAL_WILDCARD) != 0) ? MatchWithPartialWildcard : MatchWithSingleWildcard;
     HITLS_X509_ExtSan san = {0};
     BSL_ERR_SET_MARK();
@@ -491,13 +491,9 @@ static int32_t X509_VerifyUriId(HITLS_X509_Cert *cert, uint32_t flags, const cha
         if (CaseCmpView(&presentedScheme, &refScheme) != HITLS_PKI_SUCCESS) {
             continue;
         }
-        int32_t matchRet = MatchHostView(&presentedHost, &refHost, MatchCb);
-        if (matchRet == BSL_MALLOC_FAIL) {
+        int32_t matchRet = MatchHostView(&presentedHost, &refHost, matchCb);
+        if (matchRet == BSL_MALLOC_FAIL || matchRet == HITLS_PKI_SUCCESS) {
             ret = matchRet;
-            break;
-        }
-        if (matchRet == HITLS_PKI_SUCCESS) {
-            ret = HITLS_PKI_SUCCESS;
             break;
         }
     }
@@ -521,7 +517,7 @@ static int32_t X509_VerifySrvId(HITLS_X509_Cert *cert, uint32_t flags, const cha
         return ret;
     }
 
-    int32_t (*MatchCb)(const char *pattern, const char *hostname) =
+    int32_t (*matchCb)(const char *pattern, const char *hostname) =
         ((flags & HITLS_X509_FLAG_VFY_WITH_PARTIAL_WILDCARD) != 0) ? MatchWithPartialWildcard : MatchWithSingleWildcard;
     HITLS_X509_ExtSan san = {0};
     BSL_ERR_SET_MARK();
@@ -548,13 +544,9 @@ static int32_t X509_VerifySrvId(HITLS_X509_Cert *cert, uint32_t flags, const cha
         if (CaseCmpView(&presentedService, &refService) != HITLS_PKI_SUCCESS) {
             continue;
         }
-        int32_t matchRet = MatchHostView(&presentedDomain, &refDomain, MatchCb);
-        if (matchRet == BSL_MALLOC_FAIL) {
+        int32_t matchRet = MatchHostView(&presentedDomain, &refDomain, matchCb);
+        if (matchRet == BSL_MALLOC_FAIL || matchRet == HITLS_PKI_SUCCESS) {
             ret = matchRet;
-            break;
-        }
-        if (matchRet == HITLS_PKI_SUCCESS) {
-            ret = HITLS_PKI_SUCCESS;
             break;
         }
     }

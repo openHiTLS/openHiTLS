@@ -44,6 +44,7 @@
 
 typedef int32_t (*HITLS_X509_TrvListCallBack)(void *ctx, void *node, int32_t depth);
 
+#ifndef HITLS_PKI_X509_VFY_CRL_LITE
 typedef struct {
     HITLS_X509_Crl *baseCrl;
     HITLS_X509_Crl *deltaCrl;
@@ -58,6 +59,7 @@ typedef struct {
 #define HITLS_X509_CRL_ERROR_CRITICAL_EXT 0x04
 
 #define HITLS_X509_REASON_FLAG_NONE                   0x0000
+#endif /* HITLS_PKI_X509_VFY_CRL_LITE */
 
 #ifdef HITLS_PKI_X509_VFY_CB
 static int32_t VerifyCbDefault(int32_t errCode, HITLS_X509_StoreCtx *storeCtx)
@@ -273,14 +275,14 @@ static int32_t X509_GetMaxDepth(HITLS_X509_StoreCtx *storeCtx, int32_t *val, uin
     return HITLS_PKI_SUCCESS;
 }
 
-static int32_t X509_SetParamFlag(HITLS_X509_StoreCtx *storeCtx, uint64_t *val, uint32_t valLen)
+static int32_t X509_SetParamFlag(HITLS_X509_StoreCtx *storeCtx, const void *val, uint32_t valLen)
 {
     if (valLen == sizeof(uint64_t)) {
-        storeCtx->verifyParam.flags |= *val;
+        storeCtx->verifyParam.flags |= *(const uint64_t *)val;
         return HITLS_PKI_SUCCESS;
     }
     if (valLen == sizeof(uint32_t)) {
-        uint64_t temp = (uint64_t)(*(uint32_t *)val);
+        uint64_t temp = (uint64_t)(*(const uint32_t *)val);
         storeCtx->verifyParam.flags |= temp;
         return HITLS_PKI_SUCCESS;
     }
@@ -1009,6 +1011,7 @@ int32_t HITLS_X509_CheckCrlTime(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_Crl *c
     return HITLS_PKI_SUCCESS;
 }
 
+#ifndef HITLS_PKI_X509_VFY_CRL_LITE
 static int32_t X509_CheckCrlTimeWithoutCb(int64_t *time, HITLS_X509_Crl *crl)
 {
     // If time is not set, consider it as valid (no time check)
@@ -1039,6 +1042,7 @@ static int32_t X509_CheckCrlTimeWithoutCb(int64_t *time, HITLS_X509_Crl *crl)
     }
     return HITLS_PKI_SUCCESS;
 }
+#endif /* HITLS_PKI_X509_VFY_CRL_LITE */
 
 static int32_t X509_AddCertToChain(HITLS_X509_List *chain, HITLS_X509_Cert *cert)
 {
@@ -1489,12 +1493,8 @@ static int32_t CheckMlKemKeyUsage(HITLS_X509_Cert *cert)
 {
     // Check ML-KEM keyUsage according to draft-ietf-lamps-kyber-certificates-11 Section 5
     // keyEncipherment MUST be the only key usage set for ML-KEM-512/768/1024 certificates
-    BSL_ERR_SET_MARK();
-    CRYPT_PKEY_ParaId pubKeyParaId = CRYPT_EAL_PkeyGetParaId(cert->tbs.ealPubKey);
-    BSL_ERR_POP_TO_MARK();
-    if (pubKeyParaId != CRYPT_KEM_TYPE_MLKEM_512 &&
-        pubKeyParaId != CRYPT_KEM_TYPE_MLKEM_768 &&
-        pubKeyParaId != CRYPT_KEM_TYPE_MLKEM_1024) {
+    CRYPT_PKEY_AlgId pubKeyId = CRYPT_EAL_PkeyGetId(cert->tbs.ealPubKey);
+    if (pubKeyId != CRYPT_PKEY_ML_KEM) {
         return HITLS_PKI_SUCCESS;
     }
 
@@ -1801,9 +1801,11 @@ static int32_t X509_CheckCertInCrlIdpScope(HITLS_X509_Cert *cert, HITLS_X509_Crl
     /*
         Reason mask computation:
         1. idp == NULL, cdp == NULL: reason mask = idp->reasons(ALL REASON)
-        2. idp == NULL or idp->dpName == NULL, cdp != NULL: reason mask = all reasons in cdp, because idp will match with each dp
+        2. idp == NULL or idp->dpName == NULL, cdp != NULL:
+           reason mask = all reasons in cdp, because idp will match with each dp
         3. idp != NULL, cdp == NULL: if idp->dpName != NULL, don't match, else reason mask = idp->reasons;
-        4. idp != NULL and idp->dpName != NULL, cdp != NULL; reason mask = interimReasonMask & idp->reasons; where interimReasonMask = | dp_i->reasons for dp_i mathces idp;
+        4. idp != NULL and idp->dpName != NULL, cdp != NULL; reason mask = interimReasonMask & idp->reasons;
+           where interimReasonMask = | dp_i->reasons for dp_i mathces idp;
     */
     if (cdp.points == NULL) {
         if (idp->distPoint != NULL && idp->distPoint->name != NULL) {
@@ -2187,7 +2189,12 @@ int32_t HITLS_X509_CheckCertCrl(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_Cert *
     while (reasons != HITLS_X509_REASON_FLAG_ALL) {
         HITLS_X509_CrlSelection selection = {0};
         selection.reasons = reasons;
-        // The errorPath of the selection is one of : 1. HITLS_X509_CRL_ERROR_TIME 2. HITLS_X509_CRL_ERROR_DIFF_SCOPE 3. HITLS_X509_CRL_ERROR_CRITICAL_EXT
+        /*
+         * The errorPath of the selection is one of:
+         * 1. HITLS_X509_CRL_ERROR_TIME
+         * 2. HITLS_X509_CRL_ERROR_DIFF_SCOPE
+         * 3. HITLS_X509_CRL_ERROR_CRITICAL_EXT
+         */
         ret = X509_FindBaseCrlAndDeltaCrl(storeCtx, time, cert, parent, &selection);
         VFYCBK_FAIL_IF(ret != HITLS_PKI_SUCCESS, storeCtx, cert, depth, HITLS_X509_ERR_VFY_CRL_NOT_FOUND);
         if (selection.baseCrl == NULL) {
@@ -2214,10 +2221,10 @@ int32_t HITLS_X509_CheckCertCrl(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_Cert *
     }
     return HITLS_PKI_SUCCESS;
 }
-#endif
+#endif /* HITLS_PKI_X509_VFY_CRL_LITE */
 
-int32_t HITLS_X509_CheckCertCrlLite(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_Cert *cert, HITLS_X509_Cert *parent,
-                                    int32_t depth, int64_t *time)
+static int32_t HITLS_X509_CheckCertCrlLite(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_Cert *cert,
+                                           HITLS_X509_Cert *parent, int32_t depth, int64_t *time)
 {
     int32_t ret = HITLS_X509_ERR_VFY_CRL_NOT_FOUND;
     HITLS_X509_CertExt *certExt = (HITLS_X509_CertExt *)parent->tbs.ext.extData;
@@ -2294,12 +2301,15 @@ int32_t HITLS_X509_VerifyCrl(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_List *cha
          currNode != NULL && nextNode != NULL;
          currNode = nextNode, nextNode = BSL_LIST_GetNextNode(chain, nextNode), depth++) {
 #ifdef HITLS_PKI_X509_VFY_CRL_LITE
-        ret = HITLS_X509_CheckCertCrlLite(storeCtx, BSL_LIST_GetData(currNode), BSL_LIST_GetData(nextNode), depth, time);
+        ret = HITLS_X509_CheckCertCrlLite(storeCtx, BSL_LIST_GetData(currNode),
+            BSL_LIST_GetData(nextNode), depth, time);
 #else
         if ((storeCtx->verifyParam.flags & HITLS_X509_VFY_FLAG_CRL_LITE) != 0) {
-            ret = HITLS_X509_CheckCertCrlLite(storeCtx, BSL_LIST_GetData(currNode), BSL_LIST_GetData(nextNode), depth, time);
+            ret = HITLS_X509_CheckCertCrlLite(storeCtx, BSL_LIST_GetData(currNode),
+                BSL_LIST_GetData(nextNode), depth, time);
         } else {
-            ret = HITLS_X509_CheckCertCrl(storeCtx, BSL_LIST_GetData(currNode), BSL_LIST_GetData(nextNode), depth, time);
+            ret = HITLS_X509_CheckCertCrl(storeCtx, BSL_LIST_GetData(currNode),
+                BSL_LIST_GetData(nextNode), depth, time);
         }
 #endif
         if (ret != HITLS_PKI_SUCCESS) {

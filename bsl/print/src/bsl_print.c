@@ -174,7 +174,8 @@ const char BSL_PRINT_MONTH_STR[12][4] = {
 
 int32_t BSL_PRINT_Time(uint32_t layer, const BSL_TIME *time, BSL_UIO *uio)
 {
-    if (time == NULL || time->month < 1) {
+    // Gregorian calendar month count is 1-12.
+    if (time == NULL || time->month < 1 || time->month > 12) {
         BSL_ERR_PUSH_ERROR(BSL_INVALID_ARG);
         return BSL_INVALID_ARG;
     }

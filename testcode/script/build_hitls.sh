@@ -132,6 +132,8 @@ build_hitls_code()
         feature_options="${feature_options} -DHITLS_CRYPTO_SP800_STRICT_CHECK=ON" # open the strict check in crypto.
         feature_options="${feature_options} -DHITLS_SM2_PRECOMPUTE_512K_TBL=OFF" # close the sm2 512k pre-table
         feature_options="${feature_options} -DHITLS_ASM_X8664=ON  -DHITLS_PLATFORM_ENDIAN=little"
+        # x86_64 builds use the legacy CRL codec/verify path.
+        feature_options="${feature_options} -DHITLS_PKI_X509_CRL_LITE=ON -DHITLS_PKI_X509_VFY_CRL_LITE=ON"
         if [[ $debug_mode = false ]]; then
             add_options="${add_options} -O3"
         fi

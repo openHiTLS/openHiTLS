@@ -784,7 +784,7 @@ static int32_t PrintCertBrief(HITLS_X509_Cert *cert, BSL_UIO *uio)
     (void)BSL_PRINT_Fmt(layer, uio, "Signature Algorithm: %s\n", name ? name : HITLS_X509_UNKOWN);
 
     /* Public Key size */
-    CRYPT_EAL_PkeyCtx *pubKey = tbs->ealPubKey;
+    CRYPT_EAL_PkeyCtx *pubKey = (CRYPT_EAL_PkeyCtx *)tbs->ealPubKey;
     int32_t id = CRYPT_EAL_PkeyGetId(pubKey);
     uint32_t keyBits = 0;
     if (id == CRYPT_PKEY_ECDSA || id == CRYPT_PKEY_SM2) {

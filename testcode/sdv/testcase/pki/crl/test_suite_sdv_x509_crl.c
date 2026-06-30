@@ -46,8 +46,9 @@ static char g_sm2DefaultUserid[] = "1234567812345678";
 
 /* Directly cover the CRL entry revocationDate CHOICE tag checker. */
 extern int32_t HITLS_X509_CrlEntryChoiceCheck(int32_t type, uint32_t idx, void *data, void *expVal);
+#ifndef HITLS_PKI_X509_CRL_LITE
 static void SetIdpReasons(HITLS_X509_ExtIdp *idp, uint16_t reasons);
-static HITLS_X509_DistPointName *NewIdpDistPoint(HITLS_X509_DistPointNameType type, BslList *name);
+#endif /* HITLS_PKI_X509_CRL_LITE */
 /* END_HEADER */
 
 /* ============================================================================
@@ -763,7 +764,6 @@ void SDV_X509_CRL_ExtCtrl_FuncTest_TC001(void)
 {
     uint8_t keyId[8] = {0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08};
     uint8_t serialNum[4] = {0x11, 0x22, 0x33, 0x44};
-    uint8_t baseCrlNum[4] = {0x55, 0x66, 0x77, 0x88};
 
     HITLS_X509_Crl *crl = HITLS_X509_CrlNew();
     ASSERT_NE(crl, NULL);
@@ -787,6 +787,8 @@ void SDV_X509_CRL_ExtCtrl_FuncTest_TC001(void)
     ASSERT_EQ(getaki.kid.dataLen, aki.kid.dataLen);
     ASSERT_EQ(memcmp(getaki.kid.data, aki.kid.data, aki.kid.dataLen), 0);
 
+#ifndef HITLS_PKI_X509_CRL_LITE
+    uint8_t baseCrlNum[4] = {0x55, 0x66, 0x77, 0x88};
     HITLS_X509_ExtDeltaCrl delta = {true, {baseCrlNum, sizeof(baseCrlNum)}};
     // the error code HITLS_X509_ERR_EXT_NOT_FOUND can not be changed
     ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_EXT_GET_DELTA_CRL, &delta, sizeof(delta)),
@@ -826,18 +828,22 @@ void SDV_X509_CRL_ExtCtrl_FuncTest_TC001(void)
         HITLS_X509_ERR_EXT_REASONFLAGS);
 #ifdef HITLS_BSL_ERR
     BSL_ERR_ClearError();
-#endif
+#endif /* HITLS_BSL_ERR */
+#endif /* HITLS_PKI_X509_CRL_LITE */
     ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
+#ifndef HITLS_PKI_X509_CRL_LITE
     HITLS_X509_ClearIdp(&idp);
     HITLS_X509_ClearIdp(&badIdp);
     HITLS_X509_ClearIdp(&getIdp);
+#endif /* HITLS_PKI_X509_CRL_LITE */
     HITLS_X509_CrlFree(crl);
 }
 
 /* END_CASE */
 
+#ifndef HITLS_PKI_X509_CRL_LITE
 static int32_t ParseIdpDer(uint8_t *der, uint32_t derLen, bool critical, HITLS_X509_ExtIdp *idp)
 {
     HITLS_X509_ExtEntry entry = {BSL_CID_CE_ISSUINGDISTRIBUTIONPOINT, {0}, critical, {0, derLen, der}};
@@ -846,6 +852,7 @@ static int32_t ParseIdpDer(uint8_t *der, uint32_t derLen, bool critical, HITLS_X
 EXIT:
     return -1;
 }
+#endif /* HITLS_PKI_X509_CRL_LITE */
 
 /**
  * @test   SDV_X509_CRL_PARSE_IDP_DER_BOUNDARY_TC001
@@ -858,6 +865,9 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_X509_CRL_PARSE_IDP_DER_BOUNDARY_TC001(void)
 {
+#ifdef HITLS_PKI_X509_CRL_LITE
+    SKIP_TEST();
+#else
     uint8_t emptyIdpDer[] = {0x30, 0x00};
     HITLS_X509_ExtIdp emptyIdp = {0};
 
@@ -870,6 +880,7 @@ void SDV_X509_CRL_PARSE_IDP_DER_BOUNDARY_TC001(void)
 
 EXIT:
     HITLS_X509_ClearIdp(&emptyIdp);
+#endif
 }
 /* END_CASE */
 
@@ -885,6 +896,9 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_X509_CRL_PARSE_IDP_DER_BOUNDARY_TC002(void)
 {
+#ifdef HITLS_PKI_X509_CRL_LITE
+    SKIP_TEST();
+#else
     uint8_t multiOnlyDer[] = {0x30, 0x09, 0x81, 0x01, 0xFF, 0x82, 0x01, 0xFF, 0x85, 0x01, 0xFF};
     HITLS_X509_ExtIdp multiOnlyIdp = {0};
 
@@ -896,6 +910,7 @@ void SDV_X509_CRL_PARSE_IDP_DER_BOUNDARY_TC002(void)
 
 EXIT:
     HITLS_X509_ClearIdp(&multiOnlyIdp);
+#endif
 }
 /* END_CASE */
 
@@ -910,6 +925,9 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_X509_CRL_PARSE_IDP_DER_BOUNDARY_TC003(void)
 {
+#ifdef HITLS_PKI_X509_CRL_LITE
+    SKIP_TEST();
+#else
     uint8_t unknownReasonDer[] = {0x30, 0x05, 0x83, 0x03, 0x06, 0x00, 0x40};
     HITLS_X509_ExtIdp unknownReasonIdp = {0};
 
@@ -920,6 +938,7 @@ void SDV_X509_CRL_PARSE_IDP_DER_BOUNDARY_TC003(void)
 
 EXIT:
     HITLS_X509_ClearIdp(&unknownReasonIdp);
+#endif
 }
 /* END_CASE */
 
@@ -1678,6 +1697,7 @@ EXIT:
     return -1;
 }
 
+#ifndef HITLS_PKI_X509_CRL_LITE
 static HITLS_X509_ExtEntry *FindCrlExtEntryByCid(BslList *extList, BslCid cid)
 {
     HITLS_X509_ExtEntry **entry = BSL_LIST_First(extList);
@@ -1764,6 +1784,7 @@ EXIT:
     HITLS_X509_CrlFree(actualCrl);
     return ret;
 }
+#endif /* HITLS_PKI_X509_CRL_LITE */
 
 static int32_t ParseAllCrl(HITLS_X509_Crl *crl, HITLS_X509_Crl *parseCrl, bool includeOptional,
     bool useGMT, int isUseSm2UserId)
@@ -1932,6 +1953,7 @@ EXIT:
 }
 /* END_CASE */
 
+#ifndef HITLS_PKI_X509_CRL_LITE
 #define IDP_TEST_URI "http://example.com/idp-fullname-uri.crl"
 #define IDP_TEST_RELATIVE_CN "relativeIDP"
 #define IDP_TEST_REASON_MULTI \
@@ -2316,6 +2338,7 @@ EXIT:
     HITLS_X509_CrlFree(crl);
     return -1;
 }
+#endif /* HITLS_PKI_X509_CRL_LITE */
 
 /**
  * @test   SDV_X509_CRL_PARSE_IDP_THIRDPARTY_FUNC_TC001
@@ -2328,12 +2351,17 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_X509_CRL_PARSE_IDP_THIRDPARTY_FUNC_TC001(char *path)
 {
+#ifdef HITLS_PKI_X509_CRL_LITE
+    (void)path;
+    SKIP_TEST();
+#else
     HITLS_X509_ExtIdp expect = {0};
 
     ASSERT_EQ(BuildIdpFullNameUri(&expect, true), HITLS_PKI_SUCCESS);
     ASSERT_EQ(CheckParsedIdp(path, &expect), HITLS_PKI_SUCCESS);
 EXIT:
     FreeBuiltIdp(&expect);
+#endif
 }
 /* END_CASE */
 
@@ -2348,12 +2376,17 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_X509_CRL_PARSE_IDP_THIRDPARTY_FUNC_TC002(char *path)
 {
+#ifdef HITLS_PKI_X509_CRL_LITE
+    (void)path;
+    SKIP_TEST();
+#else
     HITLS_X509_ExtIdp expect = {0};
 
     ASSERT_EQ(BuildIdpFullNameDir(&expect, true), HITLS_PKI_SUCCESS);
     ASSERT_EQ(CheckParsedIdp(path, &expect), HITLS_PKI_SUCCESS);
 EXIT:
     FreeBuiltIdp(&expect);
+#endif
 }
 /* END_CASE */
 
@@ -2368,12 +2401,17 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_X509_CRL_PARSE_IDP_THIRDPARTY_FUNC_TC003(char *path)
 {
+#ifdef HITLS_PKI_X509_CRL_LITE
+    (void)path;
+    SKIP_TEST();
+#else
     HITLS_X509_ExtIdp expect = {0};
 
     ASSERT_EQ(BuildIdpRelativeName(&expect, true), HITLS_PKI_SUCCESS);
     ASSERT_EQ(CheckParsedIdp(path, &expect), HITLS_PKI_SUCCESS);
 EXIT:
     FreeBuiltIdp(&expect);
+#endif
 }
 /* END_CASE */
 
@@ -2388,12 +2426,17 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_X509_CRL_PARSE_IDP_THIRDPARTY_FUNC_TC004(char *path)
 {
+#ifdef HITLS_PKI_X509_CRL_LITE
+    (void)path;
+    SKIP_TEST();
+#else
     HITLS_X509_ExtIdp expect = {0};
 
     ASSERT_EQ(BuildIdpOnlyUserCerts(&expect, true), HITLS_PKI_SUCCESS);
     ASSERT_EQ(CheckParsedIdp(path, &expect), HITLS_PKI_SUCCESS);
 EXIT:
     FreeBuiltIdp(&expect);
+#endif
 }
 /* END_CASE */
 
@@ -2409,12 +2452,17 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_X509_CRL_PARSE_IDP_THIRDPARTY_FUNC_TC005(char *path)
 {
+#ifdef HITLS_PKI_X509_CRL_LITE
+    (void)path;
+    SKIP_TEST();
+#else
     HITLS_X509_ExtIdp expect = {0};
 
     ASSERT_EQ(BuildIdpCaIndirectReasons(&expect, true), HITLS_PKI_SUCCESS);
     ASSERT_EQ(CheckParsedIdp(path, &expect), HITLS_PKI_SUCCESS);
 EXIT:
     FreeBuiltIdp(&expect);
+#endif
 }
 /* END_CASE */
 
@@ -2429,12 +2477,17 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_X509_CRL_PARSE_IDP_THIRDPARTY_FUNC_TC006(char *path)
 {
+#ifdef HITLS_PKI_X509_CRL_LITE
+    (void)path;
+    SKIP_TEST();
+#else
     HITLS_X509_ExtIdp expect = {0};
 
     ASSERT_EQ(BuildIdpEmpty(&expect, true), HITLS_PKI_SUCCESS);
     ASSERT_EQ(CheckParsedIdp(path, &expect), HITLS_PKI_SUCCESS);
 EXIT:
     FreeBuiltIdp(&expect);
+#endif
 }
 /* END_CASE */
 
@@ -2449,12 +2502,17 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_X509_CRL_PARSE_IDP_THIRDPARTY_FUNC_TC007(char *path)
 {
+#ifdef HITLS_PKI_X509_CRL_LITE
+    (void)path;
+    SKIP_TEST();
+#else
     HITLS_X509_ExtIdp expect = {0};
 
     ASSERT_EQ(BuildIdpMultiOnly(&expect, false), HITLS_PKI_SUCCESS);
     ASSERT_EQ(CheckParsedIdp(path, &expect), HITLS_PKI_SUCCESS);
 EXIT:
     FreeBuiltIdp(&expect);
+#endif
 }
 /* END_CASE */
 
@@ -2469,12 +2527,17 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_X509_CRL_PARSE_IDP_THIRDPARTY_FUNC_TC008(char *path)
 {
+#ifdef HITLS_PKI_X509_CRL_LITE
+    (void)path;
+    SKIP_TEST();
+#else
     HITLS_X509_ExtIdp expect = {0};
 
     ASSERT_EQ(BuildIdpReasonZero(&expect, false), HITLS_PKI_SUCCESS);
     ASSERT_EQ(CheckParsedIdp(path, &expect), HITLS_PKI_SUCCESS);
 EXIT:
     FreeBuiltIdp(&expect);
+#endif
 }
 /* END_CASE */
 
@@ -2489,12 +2552,17 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_X509_CRL_PARSE_IDP_THIRDPARTY_FUNC_TC009(char *path)
 {
+#ifdef HITLS_PKI_X509_CRL_LITE
+    (void)path;
+    SKIP_TEST();
+#else
     HITLS_X509_ExtIdp expect = {0};
 
     ASSERT_EQ(BuildIdpReasonZero(&expect, false), HITLS_PKI_SUCCESS);
     ASSERT_EQ(CheckParsedIdp(path, &expect), HITLS_PKI_SUCCESS);
 EXIT:
     FreeBuiltIdp(&expect);
+#endif
 }
 /* END_CASE */
 
@@ -2509,12 +2577,17 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_X509_CRL_PARSE_IDP_THIRDPARTY_FUNC_TC010(char *path)
 {
+#ifdef HITLS_PKI_X509_CRL_LITE
+    (void)path;
+    SKIP_TEST();
+#else
     HITLS_X509_ExtIdp expect = {0};
 
     ASSERT_EQ(BuildIdpEmpty(&expect, false), HITLS_PKI_SUCCESS);
     ASSERT_EQ(CheckParsedIdp(path, &expect), HITLS_PKI_SUCCESS);
 EXIT:
     FreeBuiltIdp(&expect);
+#endif
 }
 /* END_CASE */
 
@@ -2529,9 +2602,14 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_X509_CRL_IDP_THIRDPARTY_ROUNDTRIP_TC001(char *path)
 {
+#ifdef HITLS_PKI_X509_CRL_LITE
+    (void)path;
+    SKIP_TEST();
+#else
     ASSERT_EQ(CheckThirdPartyCrlIdpExtRoundtrip(path), HITLS_PKI_SUCCESS);
 EXIT:
     return;
+#endif
 }
 /* END_CASE */
 
@@ -2546,12 +2624,18 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_X509_CRL_IDP_DELTA_EXACT_ROUNDTRIP_TC001(char *path)
 {
+#ifdef HITLS_PKI_X509_CRL_LITE
+    (void)path;
+    SKIP_TEST();
+#else
     ASSERT_EQ(CheckThirdPartyCrlIdpAndDeltaExtRoundtrip(path), HITLS_PKI_SUCCESS);
 EXIT:
     return;
+#endif
 }
 /* END_CASE */
 
+#ifndef HITLS_PKI_X509_CRL_LITE
 static int32_t CheckBadIdpGet(char *path, int32_t expectedRet)
 {
     HITLS_X509_Crl *crl = NULL;
@@ -2570,6 +2654,7 @@ EXIT:
     HITLS_X509_CrlFree(crl);
     return -1;
 }
+#endif /* HITLS_PKI_X509_CRL_LITE */
 
 /**
  * @test   SDV_X509_CRL_PARSE_IDP_ABNORMAL_TC001
@@ -2582,9 +2667,14 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_X509_CRL_PARSE_IDP_ABNORMAL_TC001(char *path)
 {
+#ifdef HITLS_PKI_X509_CRL_LITE
+    (void)path;
+    SKIP_TEST();
+#else
     ASSERT_EQ(CheckBadIdpGet(path, BSL_ASN1_ERR_TAG_EXPECTED), HITLS_PKI_SUCCESS);
 EXIT:
     return;
+#endif
 }
 /* END_CASE */
 
@@ -2599,9 +2689,14 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_X509_CRL_PARSE_IDP_ABNORMAL_TC002(char *path)
 {
+#ifdef HITLS_PKI_X509_CRL_LITE
+    (void)path;
+    SKIP_TEST();
+#else
     ASSERT_EQ(CheckBadIdpGet(path, HITLS_X509_ERR_PARSE_EXT_BUF), HITLS_PKI_SUCCESS);
 EXIT:
     return;
+#endif
 }
 /* END_CASE */
 
@@ -2616,9 +2711,14 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_X509_CRL_PARSE_IDP_ABNORMAL_TC003(char *path)
 {
+#ifdef HITLS_PKI_X509_CRL_LITE
+    (void)path;
+    SKIP_TEST();
+#else
     ASSERT_EQ(CheckBadIdpGet(path, BSL_ASN1_ERR_DECODE_BOOL), HITLS_PKI_SUCCESS);
 EXIT:
     return;
+#endif
 }
 /* END_CASE */
 
@@ -2633,9 +2733,14 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_X509_CRL_PARSE_IDP_ABNORMAL_TC004(char *path)
 {
+#ifdef HITLS_PKI_X509_CRL_LITE
+    (void)path;
+    SKIP_TEST();
+#else
     ASSERT_EQ(CheckBadIdpGet(path, HITLS_X509_ERR_EXT_REASONFLAGS), HITLS_PKI_SUCCESS);
 EXIT:
     return;
+#endif
 }
 /* END_CASE */
 
@@ -2650,9 +2755,14 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_X509_CRL_PARSE_IDP_ABNORMAL_TC005(char *path)
 {
+#ifdef HITLS_PKI_X509_CRL_LITE
+    (void)path;
+    SKIP_TEST();
+#else
     ASSERT_EQ(CheckBadIdpGet(path, HITLS_X509_ERR_EXT_DISTPOINT), HITLS_PKI_SUCCESS);
 EXIT:
     return;
+#endif
 }
 /* END_CASE */
 
@@ -2667,9 +2777,14 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_X509_CRL_PARSE_IDP_ABNORMAL_TC006(char *path)
 {
+#ifdef HITLS_PKI_X509_CRL_LITE
+    (void)path;
+    SKIP_TEST();
+#else
     ASSERT_EQ(CheckBadIdpGet(path, HITLS_X509_ERR_EXT_DISTPOINT), HITLS_PKI_SUCCESS);
 EXIT:
     return;
+#endif
 }
 /* END_CASE */
 
@@ -2684,9 +2799,14 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_X509_CRL_PARSE_IDP_ABNORMAL_TC007(char *path)
 {
+#ifdef HITLS_PKI_X509_CRL_LITE
+    (void)path;
+    SKIP_TEST();
+#else
     ASSERT_EQ(CheckBadIdpGet(path, HITLS_X509_ERR_PARSE_EXT_BUF), HITLS_PKI_SUCCESS);
 EXIT:
     return;
+#endif
 }
 /* END_CASE */
 
@@ -2701,9 +2821,14 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_X509_CRL_PARSE_IDP_ABNORMAL_TC008(char *path)
 {
+#ifdef HITLS_PKI_X509_CRL_LITE
+    (void)path;
+    SKIP_TEST();
+#else
     ASSERT_EQ(CheckBadIdpGet(path, BSL_ASN1_ERR_MISMATCH_TAG), HITLS_PKI_SUCCESS);
 EXIT:
     return;
+#endif
 }
 /* END_CASE */
 
@@ -2718,6 +2843,10 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_X509_CRL_PARSE_IDP_ABNORMAL_TC009(char *path)
 {
+#ifdef HITLS_PKI_X509_CRL_LITE
+    (void)path;
+    SKIP_TEST();
+#else
     HITLS_X509_ExtIdp expect = {0};
     BslList *names = NULL;
 
@@ -2733,9 +2862,11 @@ EXIT:
     HITLS_X509_DnListFree(names);
     FreeBuiltIdp(&expect);
     return;
+#endif
 }
 /* END_CASE */
 
+#ifndef HITLS_PKI_X509_CRL_LITE
 static int32_t GenerateCrlAndCheckIdp(char *cert, char *key, int keyType, HITLS_X509_ExtIdp *oldIdp,
     HITLS_X509_ExtIdp *expect, char *crlFile)
 {
@@ -2826,6 +2957,7 @@ EXIT:
     CRYPT_EAL_PkeyFreeCtx(prvKey);
     return -1;
 }
+#endif /* HITLS_PKI_X509_CRL_LITE */
 
 /**
  * @test   SDV_X509_CRL_GEN_IDP_ROUNDTRIP_TC001
@@ -2838,12 +2970,20 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_X509_CRL_GEN_IDP_ROUNDTRIP_TC001(char *cert, char *key, int keyType, char *crlFile)
 {
+#ifdef HITLS_PKI_X509_CRL_LITE
+    (void)cert;
+    (void)key;
+    (void)keyType;
+    (void)crlFile;
+    SKIP_TEST();
+#else
     HITLS_X509_ExtIdp expect = {0};
 
     ASSERT_EQ(BuildIdpFullNameUri(&expect, true), HITLS_PKI_SUCCESS);
     ASSERT_EQ(GenerateCrlAndCheckIdp(cert, key, keyType, NULL, &expect, crlFile), HITLS_PKI_SUCCESS);
 EXIT:
     FreeBuiltIdp(&expect);
+#endif
 }
 /* END_CASE */
 
@@ -2858,12 +2998,20 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_X509_CRL_GEN_IDP_ROUNDTRIP_TC002(char *cert, char *key, int keyType, char *crlFile)
 {
+#ifdef HITLS_PKI_X509_CRL_LITE
+    (void)cert;
+    (void)key;
+    (void)keyType;
+    (void)crlFile;
+    SKIP_TEST();
+#else
     HITLS_X509_ExtIdp expect = {0};
 
     ASSERT_EQ(BuildIdpFullNameDir(&expect, true), HITLS_PKI_SUCCESS);
     ASSERT_EQ(GenerateCrlAndCheckIdp(cert, key, keyType, NULL, &expect, crlFile), HITLS_PKI_SUCCESS);
 EXIT:
     FreeBuiltIdp(&expect);
+#endif
 }
 /* END_CASE */
 
@@ -2878,12 +3026,20 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_X509_CRL_GEN_IDP_ROUNDTRIP_TC003(char *cert, char *key, int keyType, char *crlFile)
 {
+#ifdef HITLS_PKI_X509_CRL_LITE
+    (void)cert;
+    (void)key;
+    (void)keyType;
+    (void)crlFile;
+    SKIP_TEST();
+#else
     HITLS_X509_ExtIdp expect = {0};
 
     ASSERT_EQ(BuildIdpRelativeName(&expect, true), HITLS_PKI_SUCCESS);
     ASSERT_EQ(GenerateCrlAndCheckIdp(cert, key, keyType, NULL, &expect, crlFile), HITLS_PKI_SUCCESS);
 EXIT:
     FreeBuiltIdp(&expect);
+#endif
 }
 /* END_CASE */
 
@@ -2898,12 +3054,20 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_X509_CRL_GEN_IDP_ROUNDTRIP_TC004(char *cert, char *key, int keyType, char *crlFile)
 {
+#ifdef HITLS_PKI_X509_CRL_LITE
+    (void)cert;
+    (void)key;
+    (void)keyType;
+    (void)crlFile;
+    SKIP_TEST();
+#else
     HITLS_X509_ExtIdp expect = {0};
 
     ASSERT_EQ(BuildIdpOnlyUserCerts(&expect, true), HITLS_PKI_SUCCESS);
     ASSERT_EQ(GenerateCrlAndCheckIdp(cert, key, keyType, NULL, &expect, crlFile), HITLS_PKI_SUCCESS);
 EXIT:
     FreeBuiltIdp(&expect);
+#endif
 }
 /* END_CASE */
 
@@ -2918,12 +3082,20 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_X509_CRL_GEN_IDP_ROUNDTRIP_TC005(char *cert, char *key, int keyType, char *crlFile)
 {
+#ifdef HITLS_PKI_X509_CRL_LITE
+    (void)cert;
+    (void)key;
+    (void)keyType;
+    (void)crlFile;
+    SKIP_TEST();
+#else
     HITLS_X509_ExtIdp expect = {0};
 
     ASSERT_EQ(BuildIdpCaIndirectReasons(&expect, true), HITLS_PKI_SUCCESS);
     ASSERT_EQ(GenerateCrlAndCheckIdp(cert, key, keyType, NULL, &expect, crlFile), HITLS_PKI_SUCCESS);
 EXIT:
     FreeBuiltIdp(&expect);
+#endif
 }
 /* END_CASE */
 
@@ -2938,12 +3110,20 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_X509_CRL_GEN_IDP_ROUNDTRIP_TC006(char *cert, char *key, int keyType, char *crlFile)
 {
+#ifdef HITLS_PKI_X509_CRL_LITE
+    (void)cert;
+    (void)key;
+    (void)keyType;
+    (void)crlFile;
+    SKIP_TEST();
+#else
     HITLS_X509_ExtIdp expect = {0};
 
     ASSERT_EQ(BuildIdpIndirectCrl(&expect, true), HITLS_PKI_SUCCESS);
     ASSERT_EQ(GenerateCrlAndCheckIdp(cert, key, keyType, NULL, &expect, crlFile), HITLS_PKI_SUCCESS);
 EXIT:
     FreeBuiltIdp(&expect);
+#endif
 }
 /* END_CASE */
 
@@ -2958,12 +3138,20 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_X509_CRL_GEN_IDP_ROUNDTRIP_TC007(char *cert, char *key, int keyType, char *crlFile)
 {
+#ifdef HITLS_PKI_X509_CRL_LITE
+    (void)cert;
+    (void)key;
+    (void)keyType;
+    (void)crlFile;
+    SKIP_TEST();
+#else
     HITLS_X509_ExtIdp expect = {0};
 
     ASSERT_EQ(BuildIdpOnlyAttrCerts(&expect, true), HITLS_PKI_SUCCESS);
     ASSERT_EQ(GenerateCrlAndCheckIdp(cert, key, keyType, NULL, &expect, crlFile), HITLS_PKI_SUCCESS);
 EXIT:
     FreeBuiltIdp(&expect);
+#endif
 }
 /* END_CASE */
 
@@ -2978,12 +3166,20 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_X509_CRL_GEN_IDP_ROUNDTRIP_TC008(char *cert, char *key, int keyType, char *crlFile)
 {
+#ifdef HITLS_PKI_X509_CRL_LITE
+    (void)cert;
+    (void)key;
+    (void)keyType;
+    (void)crlFile;
+    SKIP_TEST();
+#else
     HITLS_X509_ExtIdp expect = {0};
 
     ASSERT_EQ(BuildIdpReasonZero(&expect, true), HITLS_PKI_SUCCESS);
     ASSERT_EQ(GenerateCrlAndCheckIdp(cert, key, keyType, NULL, &expect, crlFile), HITLS_PKI_SUCCESS);
 EXIT:
     FreeBuiltIdp(&expect);
+#endif
 }
 /* END_CASE */
 
@@ -2998,12 +3194,20 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_X509_CRL_GEN_IDP_ROUNDTRIP_TC009(char *cert, char *key, int keyType, char *crlFile)
 {
+#ifdef HITLS_PKI_X509_CRL_LITE
+    (void)cert;
+    (void)key;
+    (void)keyType;
+    (void)crlFile;
+    SKIP_TEST();
+#else
     HITLS_X509_ExtIdp expect = {0};
 
     ASSERT_EQ(BuildIdpReasonAll(&expect, true), HITLS_PKI_SUCCESS);
     ASSERT_EQ(GenerateCrlAndCheckIdp(cert, key, keyType, NULL, &expect, crlFile), HITLS_PKI_SUCCESS);
 EXIT:
     FreeBuiltIdp(&expect);
+#endif
 }
 /* END_CASE */
 
@@ -3019,6 +3223,13 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_X509_CRL_GEN_IDP_ROUNDTRIP_TC010(char *cert, char *key, int keyType, char *crlFile)
 {
+#ifdef HITLS_PKI_X509_CRL_LITE
+    (void)cert;
+    (void)key;
+    (void)keyType;
+    (void)crlFile;
+    SKIP_TEST();
+#else
     HITLS_X509_ExtIdp oldIdp = {0};
     HITLS_X509_ExtIdp expect = {0};
 
@@ -3028,6 +3239,7 @@ void SDV_X509_CRL_GEN_IDP_ROUNDTRIP_TC010(char *cert, char *key, int keyType, ch
 EXIT:
     FreeBuiltIdp(&oldIdp);
     FreeBuiltIdp(&expect);
+#endif
 }
 /* END_CASE */
 
@@ -3042,6 +3254,13 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_X509_CRL_GEN_IDP_DELTA_ROUNDTRIP_TC001(char *cert, char *key, int keyType, char *crlFile)
 {
+#ifdef HITLS_PKI_X509_CRL_LITE
+    (void)cert;
+    (void)key;
+    (void)keyType;
+    (void)crlFile;
+    SKIP_TEST();
+#else
     uint8_t baseCrlNum[] = {0x01, 0x23, 0x45, 0x67};
     HITLS_X509_ExtIdp expectIdp = {0};
     HITLS_X509_ExtDeltaCrl expectDelta = {true, {baseCrlNum, sizeof(baseCrlNum)}};
@@ -3051,9 +3270,11 @@ void SDV_X509_CRL_GEN_IDP_DELTA_ROUNDTRIP_TC001(char *cert, char *key, int keyTy
         HITLS_PKI_SUCCESS);
 EXIT:
     FreeBuiltIdp(&expectIdp);
+#endif
 }
 /* END_CASE */
 
+#ifndef HITLS_PKI_X509_CRL_LITE
 static BslList *NewEmptyIdpList(int32_t dataSize)
 {
     BslList *list = BSL_LIST_New(dataSize);
@@ -3077,6 +3298,7 @@ EXIT:
     HITLS_X509_CrlFree(crl);
     return -1;
 }
+#endif /* HITLS_PKI_X509_CRL_LITE */
 
 /**
  * @test   SDV_X509_CRL_GEN_IDP_ABNORMAL_TC001
@@ -3088,6 +3310,9 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_X509_CRL_GEN_IDP_ABNORMAL_TC001(void)
 {
+#ifdef HITLS_PKI_X509_CRL_LITE
+    SKIP_TEST();
+#else
     HITLS_X509_ExtIdp idp = {0};
 
     idp.critical = true;
@@ -3098,6 +3323,7 @@ void SDV_X509_CRL_GEN_IDP_ABNORMAL_TC001(void)
     ASSERT_EQ(CheckSetBadIdp(&idp, HITLS_X509_ERR_EXT_DISTPOINT), HITLS_PKI_SUCCESS);
 EXIT:
     FreeIdpGeneralNameList(&idp);
+#endif
 }
 /* END_CASE */
 
@@ -3111,6 +3337,9 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_X509_CRL_GEN_IDP_ABNORMAL_TC002(void)
 {
+#ifdef HITLS_PKI_X509_CRL_LITE
+    SKIP_TEST();
+#else
     HITLS_X509_ExtIdp idp = {0};
 
     idp.critical = true;
@@ -3120,6 +3349,7 @@ void SDV_X509_CRL_GEN_IDP_ABNORMAL_TC002(void)
 EXIT:
     FreeIdpDistPointContainer(&idp);
     return;
+#endif
 }
 /* END_CASE */
 
@@ -3133,6 +3363,9 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_X509_CRL_GEN_IDP_ABNORMAL_TC003(void)
 {
+#ifdef HITLS_PKI_X509_CRL_LITE
+    SKIP_TEST();
+#else
     HITLS_X509_ExtIdp idp = {0};
 
     idp.critical = true;
@@ -3142,6 +3375,7 @@ void SDV_X509_CRL_GEN_IDP_ABNORMAL_TC003(void)
     ASSERT_EQ(CheckSetBadIdp(&idp, HITLS_X509_ERR_EXT_DISTPOINT), HITLS_PKI_SUCCESS);
 EXIT:
     FreeIdpGeneralNameList(&idp);
+#endif
 }
 /* END_CASE */
 
@@ -3155,6 +3389,9 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_X509_CRL_GEN_IDP_ABNORMAL_TC004(void)
 {
+#ifdef HITLS_PKI_X509_CRL_LITE
+    SKIP_TEST();
+#else
     HITLS_X509_ExtIdp idp = {0};
 
     idp.critical = true;
@@ -3164,6 +3401,7 @@ void SDV_X509_CRL_GEN_IDP_ABNORMAL_TC004(void)
     ASSERT_EQ(CheckSetBadIdp(&idp, HITLS_X509_ERR_EXT_DISTPOINT), HITLS_PKI_SUCCESS);
 EXIT:
     FreeIdpDnList(&idp);
+#endif
 }
 /* END_CASE */
 
@@ -3177,6 +3415,9 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_X509_CRL_GEN_IDP_ABNORMAL_TC005(void)
 {
+#ifdef HITLS_PKI_X509_CRL_LITE
+    SKIP_TEST();
+#else
     uint8_t val[] = {0x01};
     HITLS_X509_GeneralName *name = NULL;
     HITLS_X509_ExtIdp idp = {0};
@@ -3190,6 +3431,7 @@ void SDV_X509_CRL_GEN_IDP_ABNORMAL_TC005(void)
     ASSERT_EQ(CheckSetBadIdp(&idp, HITLS_X509_ERR_EXT_GN_UNSUPPORT), HITLS_PKI_SUCCESS);
 EXIT:
     FreeIdpGeneralNameList(&idp);
+#endif
 }
 /* END_CASE */
 
@@ -3203,6 +3445,9 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_X509_CRL_GEN_IDP_ABNORMAL_TC006(void)
 {
+#ifdef HITLS_PKI_X509_CRL_LITE
+    SKIP_TEST();
+#else
     HITLS_X509_ExtIdp idp = {0};
 
     idp.critical = true;
@@ -3212,6 +3457,7 @@ void SDV_X509_CRL_GEN_IDP_ABNORMAL_TC006(void)
 EXIT:
     FreeIdpDistPointContainer(&idp);
     return;
+#endif
 }
 /* END_CASE */
 
@@ -3225,6 +3471,9 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_X509_CRL_GEN_IDP_ABNORMAL_TC007(void)
 {
+#ifdef HITLS_PKI_X509_CRL_LITE
+    SKIP_TEST();
+#else
     HITLS_X509_ExtIdp idp = {0};
 
     idp.critical = true;
@@ -3234,6 +3483,7 @@ void SDV_X509_CRL_GEN_IDP_ABNORMAL_TC007(void)
     ASSERT_EQ(CheckSetBadIdp(&idp, HITLS_X509_ERR_EXT_DISTPOINT), HITLS_PKI_SUCCESS);
 EXIT:
     FreeIdpDnList(&idp);
+#endif
 }
 /* END_CASE */
 
@@ -3247,6 +3497,9 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_X509_CRL_GEN_IDP_ABNORMAL_TC008(void)
 {
+#ifdef HITLS_PKI_X509_CRL_LITE
+    SKIP_TEST();
+#else
     HITLS_X509_ExtIdp idp = {0};
 
     idp.critical = true;
@@ -3256,6 +3509,7 @@ void SDV_X509_CRL_GEN_IDP_ABNORMAL_TC008(void)
     ASSERT_EQ(CheckSetBadIdp(&idp, HITLS_X509_ERR_EXT_DISTPOINT), HITLS_PKI_SUCCESS);
 EXIT:
     FreeIdpGeneralNameList(&idp);
+#endif
 }
 /* END_CASE */
 
@@ -3269,6 +3523,9 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_X509_CRL_GEN_IDP_ABNORMAL_TC009(void)
 {
+#ifdef HITLS_PKI_X509_CRL_LITE
+    SKIP_TEST();
+#else
     HITLS_X509_ExtIdp idp = {0};
 
     idp.critical = true;
@@ -3278,6 +3535,7 @@ void SDV_X509_CRL_GEN_IDP_ABNORMAL_TC009(void)
     ASSERT_EQ(CheckSetBadIdp(&idp, HITLS_X509_ERR_EXT_DISTPOINT), HITLS_PKI_SUCCESS);
 EXIT:
     FreeIdpDnList(&idp);
+#endif
 }
 /* END_CASE */
 
@@ -3291,6 +3549,9 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_X509_CRL_GEN_IDP_ABNORMAL_TC010(void)
 {
+#ifdef HITLS_PKI_X509_CRL_LITE
+    SKIP_TEST();
+#else
     HITLS_X509_ExtIdp idp = {0};
 
     idp.critical = true;
@@ -3300,6 +3561,7 @@ void SDV_X509_CRL_GEN_IDP_ABNORMAL_TC010(void)
 EXIT:
     FreeIdpDistPointContainer(&idp);
     return;
+#endif
 }
 /* END_CASE */
 
@@ -3314,6 +3576,9 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_X509_CRL_GEN_IDP_ABNORMAL_TC011(void)
 {
+#ifdef HITLS_PKI_X509_CRL_LITE
+    SKIP_TEST();
+#else
     HITLS_X509_ExtIdp idp = {0};
 
     idp.critical = true;
@@ -3326,6 +3591,7 @@ void SDV_X509_CRL_GEN_IDP_ABNORMAL_TC011(void)
 EXIT:
     HITLS_X509_ClearIdp(&idp);
     return;
+#endif
 }
 /* END_CASE */
 
@@ -3339,12 +3605,16 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_X509_CRL_GEN_IDP_ABNORMAL_TC012(void)
 {
+#ifdef HITLS_PKI_X509_CRL_LITE
+    SKIP_TEST();
+#else
     HITLS_X509_ExtIdp idp = {0};
 
     ASSERT_EQ(BuildIdpFullNameUri(&idp, false), HITLS_PKI_SUCCESS);
     ASSERT_EQ(CheckSetBadIdp(&idp, HITLS_X509_ERR_EXT_SET), HITLS_PKI_SUCCESS);
 EXIT:
     FreeBuiltIdp(&idp);
+#endif
 }
 /* END_CASE */
 
@@ -3358,12 +3628,16 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_X509_CRL_GEN_IDP_ABNORMAL_TC013(void)
 {
+#ifdef HITLS_PKI_X509_CRL_LITE
+    SKIP_TEST();
+#else
     HITLS_X509_ExtIdp idp = {0};
 
     ASSERT_EQ(BuildIdpEmpty(&idp, true), HITLS_PKI_SUCCESS);
     ASSERT_EQ(CheckSetBadIdp(&idp, HITLS_X509_ERR_EXT_IDP), HITLS_PKI_SUCCESS);
 EXIT:
     FreeBuiltIdp(&idp);
+#endif
 }
 /* END_CASE */
 
@@ -3377,15 +3651,20 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_X509_CRL_GEN_IDP_ABNORMAL_TC014(void)
 {
+#ifdef HITLS_PKI_X509_CRL_LITE
+    SKIP_TEST();
+#else
     HITLS_X509_ExtIdp idp = {0};
 
     ASSERT_EQ(BuildIdpMultiOnly(&idp, true), HITLS_PKI_SUCCESS);
     ASSERT_EQ(CheckSetBadIdp(&idp, HITLS_X509_ERR_EXT_IDP), HITLS_PKI_SUCCESS);
 EXIT:
     FreeBuiltIdp(&idp);
+#endif
 }
 /* END_CASE */
 
+#ifndef HITLS_PKI_X509_CRL_LITE
 static int32_t CheckIdpSemantic(const HITLS_X509_ExtIdp *idp, int32_t expectedRet)
 {
     ASSERT_EQ(HITLS_X509_CheckIdp(idp), expectedRet);
@@ -3413,6 +3692,7 @@ EXIT:
     HITLS_X509_CrlFree(crl);
     return -1;
 }
+#endif /* HITLS_PKI_X509_CRL_LITE */
 
 /**
  * @test   SDV_X509_CRL_CHECK_IDP_PARSE_ABNORMAL_TC001
@@ -3425,9 +3705,14 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_X509_CRL_CHECK_IDP_PARSE_ABNORMAL_TC001(char *path)
 {
+#ifdef HITLS_PKI_X509_CRL_LITE
+    (void)path;
+    SKIP_TEST();
+#else
     ASSERT_EQ(ParseCrlAndCheckIdpSemantic(path, HITLS_X509_ERR_EXT_IDP), HITLS_PKI_SUCCESS);
 EXIT:
     return;
+#endif
 }
 /* END_CASE */
 
@@ -3442,9 +3727,14 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_X509_CRL_CHECK_IDP_PARSE_ABNORMAL_TC002(char *path)
 {
+#ifdef HITLS_PKI_X509_CRL_LITE
+    (void)path;
+    SKIP_TEST();
+#else
     ASSERT_EQ(ParseCrlAndCheckIdpSemantic(path, HITLS_X509_ERR_EXT_IDP), HITLS_PKI_SUCCESS);
 EXIT:
     return;
+#endif
 }
 /* END_CASE */
 
@@ -3457,9 +3747,13 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_X509_CRL_CHECK_IDP_ABNORMAL_TC001(void)
 {
+#ifdef HITLS_PKI_X509_CRL_LITE
+    SKIP_TEST();
+#else
     ASSERT_EQ(CheckIdpSemantic(NULL, HITLS_X509_ERR_INVALID_PARAM), HITLS_PKI_SUCCESS);
 EXIT:
     return;
+#endif
 }
 /* END_CASE */
 
@@ -3473,11 +3767,15 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_X509_CRL_CHECK_IDP_ABNORMAL_TC002(void)
 {
+#ifdef HITLS_PKI_X509_CRL_LITE
+    SKIP_TEST();
+#else
     HITLS_X509_ExtIdp idp = {0};
 
     ASSERT_EQ(CheckIdpSemantic(&idp, HITLS_X509_ERR_EXT_IDP), HITLS_PKI_SUCCESS);
 EXIT:
     return;
+#endif
 }
 /* END_CASE */
 
@@ -3491,6 +3789,9 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_X509_CRL_CHECK_IDP_ABNORMAL_TC003(void)
 {
+#ifdef HITLS_PKI_X509_CRL_LITE
+    SKIP_TEST();
+#else
     HITLS_X509_ExtIdp idp = {0};
 
     idp.onlyContainsUserCerts = true;
@@ -3498,6 +3799,7 @@ void SDV_X509_CRL_CHECK_IDP_ABNORMAL_TC003(void)
     ASSERT_EQ(CheckIdpSemantic(&idp, HITLS_X509_ERR_EXT_IDP), HITLS_PKI_SUCCESS);
 EXIT:
     return;
+#endif
 }
 /* END_CASE */
 
@@ -3511,6 +3813,9 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_X509_CRL_CHECK_IDP_ABNORMAL_TC004(void)
 {
+#ifdef HITLS_PKI_X509_CRL_LITE
+    SKIP_TEST();
+#else
     HITLS_X509_ExtIdp idp = {0};
 
     idp.distPoint = NewIdpDistPoint((HITLS_X509_DistPointNameType)0x7FFFFFFF, NULL);
@@ -3519,6 +3824,7 @@ void SDV_X509_CRL_CHECK_IDP_ABNORMAL_TC004(void)
 EXIT:
     FreeIdpDistPointContainer(&idp);
     return;
+#endif
 }
 /* END_CASE */
 
@@ -3532,6 +3838,9 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_X509_CRL_CHECK_IDP_ABNORMAL_TC005(void)
 {
+#ifdef HITLS_PKI_X509_CRL_LITE
+    SKIP_TEST();
+#else
     HITLS_X509_ExtIdp idp = {0};
 
     idp.distPoint = NewIdpDistPoint((HITLS_X509_DistPointNameType)0x7FFFFFFF,
@@ -3541,6 +3850,7 @@ void SDV_X509_CRL_CHECK_IDP_ABNORMAL_TC005(void)
     ASSERT_EQ(CheckIdpSemantic(&idp, HITLS_X509_ERR_EXT_DISTPOINT), HITLS_PKI_SUCCESS);
 EXIT:
     FreeIdpGeneralNameList(&idp);
+#endif
 }
 /* END_CASE */
 
@@ -3554,6 +3864,9 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_X509_CRL_CHECK_IDP_ABNORMAL_TC006(void)
 {
+#ifdef HITLS_PKI_X509_CRL_LITE
+    SKIP_TEST();
+#else
     HITLS_X509_ExtIdp idp = {0};
 
     idp.distPoint = NewIdpDistPoint(HITLS_X509_DP_FULLNAME, NULL);
@@ -3562,6 +3875,7 @@ void SDV_X509_CRL_CHECK_IDP_ABNORMAL_TC006(void)
 EXIT:
     FreeIdpDistPointContainer(&idp);
     return;
+#endif
 }
 /* END_CASE */
 
@@ -3575,6 +3889,9 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_X509_CRL_CHECK_IDP_ABNORMAL_TC007(void)
 {
+#ifdef HITLS_PKI_X509_CRL_LITE
+    SKIP_TEST();
+#else
     HITLS_X509_ExtIdp idp = {0};
 
     idp.distPoint = NewIdpDistPoint(HITLS_X509_DP_RELATIVENAME, NULL);
@@ -3583,6 +3900,7 @@ void SDV_X509_CRL_CHECK_IDP_ABNORMAL_TC007(void)
 EXIT:
     FreeIdpDistPointContainer(&idp);
     return;
+#endif
 }
 /* END_CASE */
 
@@ -3886,6 +4204,10 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_X509_CRL_GEN_ERRDELTACRLINDICATOR_FUNC_TC001(char *cert)
 {
+#ifdef HITLS_PKI_X509_CRL_LITE
+    (void)cert;
+    SKIP_TEST();
+#else
     HITLS_X509_Crl *crl = NULL;
     HITLS_X509_Cert *issuerCert = NULL;
     uint8_t baseCrlNum[] = {0x01, 0x23, 0x45, 0x67};
@@ -3903,12 +4225,17 @@ void SDV_X509_CRL_GEN_ERRDELTACRLINDICATOR_FUNC_TC001(char *cert)
 EXIT:
     HITLS_X509_CrlFree(crl);
     HITLS_X509_CertFree(issuerCert);
+#endif
 }
 /* END_CASE */
 
 /* BEGIN_CASE */
 void SDV_X509_CRL_GEN_ERRDELTACRLINDICATOR_FUNC_TC002(char *cert)
 {
+#ifdef HITLS_PKI_X509_CRL_LITE
+    (void)cert;
+    SKIP_TEST();
+#else
     HITLS_X509_Crl *crl = NULL;
     HITLS_X509_Cert *issuerCert = NULL;
     uint8_t errLen[21] = {0};
@@ -3926,6 +4253,7 @@ void SDV_X509_CRL_GEN_ERRDELTACRLINDICATOR_FUNC_TC002(char *cert)
 EXIT:
     HITLS_X509_CrlFree(crl);
     HITLS_X509_CertFree(issuerCert);
+#endif
 }
 /* END_CASE */
 
@@ -4014,6 +4342,7 @@ static void *STUB_BSL_SAL_Malloc_Crl(uint32_t size)
     return NULL;
 }
 
+#ifndef HITLS_PKI_X509_CRL_LITE
 static int32_t CheckIdpGetMallocStub(HITLS_X509_Crl *crl)
 {
     uint32_t totalMallocCount = 0;
@@ -4176,6 +4505,7 @@ EXIT:
     STUB_RESTORE(BSL_SAL_Malloc);
     return ret;
 }
+#endif /* HITLS_PKI_X509_CRL_LITE */
 
 /**
  * @test SDV_X509_CRL_PARSE_STUB_TC001
@@ -4270,6 +4600,11 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_X509_CRL_IDP_PARSE_STUB_TC001(int format, char *path)
 {
+#ifdef HITLS_PKI_X509_CRL_LITE
+    (void)format;
+    (void)path;
+    SKIP_TEST();
+#else
     HITLS_X509_Crl *crl = NULL;
 
     TestMemInit();
@@ -4279,6 +4614,7 @@ void SDV_X509_CRL_IDP_PARSE_STUB_TC001(int format, char *path)
 EXIT:
     HITLS_X509_CrlFree(crl);
     BSL_GLOBAL_DeInit();
+#endif
 }
 /* END_CASE */
 
@@ -4290,11 +4626,17 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_X509_CRL_DELTA_PARSE_STUB_TC001(int format, char *path)
 {
+#ifdef HITLS_PKI_X509_CRL_LITE
+    (void)format;
+    (void)path;
+    SKIP_TEST();
+#else
     TestMemInit();
     BSL_GLOBAL_Init();
     ASSERT_EQ(CheckDeltaCrlParseMallocStub(format, path), HITLS_PKI_SUCCESS);
 EXIT:
     BSL_GLOBAL_DeInit();
+#endif
 }
 /* END_CASE */
 
@@ -4306,6 +4648,9 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_X509_CRL_IDP_ENCODE_STUB_TC001(void)
 {
+#ifdef HITLS_PKI_X509_CRL_LITE
+    SKIP_TEST();
+#else
     uint8_t ip[] = {0x7F, 0x00, 0x00, 0x01};
     HITLS_X509_ExtIdp idp = {0};
     HITLS_X509_GeneralName *name = NULL;
@@ -4361,6 +4706,7 @@ EXIT:
     HITLS_X509_DnListFree(dn);
     BSL_LIST_FREE(names, (BSL_LIST_PFUNC_FREE)HITLS_X509_FreeGeneralName);
     FreeBuiltIdp(&idp);
+#endif
 }
 /* END_CASE */
 
@@ -4372,12 +4718,16 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_X509_CRL_DELTA_ENCODE_STUB_TC001(void)
 {
+#ifdef HITLS_PKI_X509_CRL_LITE
+    SKIP_TEST();
+#else
     uint8_t baseCrlNumber[] = {0x01};
     HITLS_X509_ExtDeltaCrl delta = {true, {baseCrlNumber, sizeof(baseCrlNumber)}};
 
     ASSERT_EQ(CheckDeltaSetMallocStub(&delta), HITLS_PKI_SUCCESS);
 EXIT:
     return;
+#endif
 }
 /* END_CASE */
 

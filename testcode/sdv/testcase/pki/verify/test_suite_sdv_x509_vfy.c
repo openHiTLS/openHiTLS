@@ -294,6 +294,12 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_X509_STORE_VFY_CRL_EXTENDED_FUNC_TC001(int expResult, char *certPath, char *crlPath)
 {
+#ifdef HITLS_PKI_X509_VFY_CRL_LITE
+    (void)expResult;
+    (void)certPath;
+    (void)crlPath;
+    SKIP_TEST();
+#else
     int ret;
     TestMemInit();
     HITLS_X509_StoreCtx *storeCtx = HITLS_X509_NewStoreCtxMock();
@@ -317,12 +323,20 @@ void SDV_X509_STORE_VFY_CRL_EXTENDED_FUNC_TC001(int expResult, char *certPath, c
 EXIT:
     HITLS_X509_FreeStoreCtxMock(storeCtx);
     BSL_LIST_FREE(chain, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);
+#endif
 }
 /* END_CASE */
 
 /* BEGIN_CASE */
 void SDV_X509_STORE_VFY_CRL_TIME_ERR_FUNC_TC001(int expResult, int verifyTime, char *certPath, char *crlPath)
 {
+#ifdef HITLS_PKI_X509_VFY_CRL_LITE
+    (void)expResult;
+    (void)verifyTime;
+    (void)certPath;
+    (void)crlPath;
+    SKIP_TEST();
+#else
     int ret;
     TestMemInit();
     HITLS_X509_StoreCtx *storeCtx = HITLS_X509_NewStoreCtxMock();
@@ -342,9 +356,11 @@ void SDV_X509_STORE_VFY_CRL_TIME_ERR_FUNC_TC001(int expResult, int verifyTime, c
 EXIT:
     HITLS_X509_FreeStoreCtxMock(storeCtx);
     BSL_LIST_FREE(chain, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);
+#endif
 }
 /* END_CASE */
 
+#ifndef HITLS_PKI_X509_VFY_CRL_LITE
 static int32_t STUB_HITLS_X509_CrlCtrl_MalformedDelta(HITLS_X509_Crl *crl, int32_t cmd, void *val, uint32_t valLen)
 {
     (void)crl;
@@ -355,10 +371,16 @@ static int32_t STUB_HITLS_X509_CrlCtrl_MalformedDelta(HITLS_X509_Crl *crl, int32
     }
     return HITLS_X509_ERR_EXT_NOT_FOUND;
 }
+#endif /* HITLS_PKI_X509_VFY_CRL_LITE */
 
 /* BEGIN_CASE */
 void SDV_X509_STORE_VFY_CRL_MALFORMED_DELTA_FUNC_TC001(char *certPath, char *crlPath)
 {
+#ifdef HITLS_PKI_X509_VFY_CRL_LITE
+    (void)certPath;
+    (void)crlPath;
+    SKIP_TEST();
+#else
     int ret;
     TestMemInit();
     HITLS_X509_StoreCtx *storeCtx = HITLS_X509_NewStoreCtxMock();
@@ -381,6 +403,7 @@ EXIT:
     STUB_RESTORE(HITLS_X509_CrlCtrl);
     HITLS_X509_FreeStoreCtxMock(storeCtx);
     BSL_LIST_FREE(chain, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);
+#endif
 }
 /* END_CASE */
 

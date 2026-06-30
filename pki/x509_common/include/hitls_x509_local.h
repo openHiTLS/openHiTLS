@@ -215,15 +215,19 @@ int32_t HITLS_X509_ParseAuthorityKeyId(HITLS_X509_ExtEntry *extEntry, HITLS_X509
 
 int32_t HITLS_X509_ParseSubjectKeyId(HITLS_X509_ExtEntry *extEntry, HITLS_X509_ExtSki *ski);
 
+#ifndef HITLS_PKI_X509_CRL_LITE
 int32_t HITLS_X509_ParseIdp(HITLS_X509_ExtEntry *extEntry, HITLS_X509_ExtIdp *idp);
 
 int32_t HITLS_X509_CheckIdp(const HITLS_X509_ExtIdp *idp);
+#endif
 
 int32_t HITLS_X509_ParseSubjectAltName(HITLS_X509_ExtEntry *extEntry,  HITLS_X509_ExtSan *san);
 
+#ifndef HITLS_PKI_X509_CRL_LITE
 int32_t HITLS_X509_ParseCdp(HITLS_X509_ExtEntry *extEntry, HITLS_X509_ExtCdp *crldp);
 
 int32_t HITLS_X509_CheckCdp(const HITLS_X509_ExtCdp *crldp);
+#endif
 
 void HITLS_X509_ClearExtendedKeyUsage(HITLS_X509_ExtExKeyUsage *exku);
 

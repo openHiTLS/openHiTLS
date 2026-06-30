@@ -437,6 +437,7 @@ EXIT:
     return ret;
 }
 
+#ifndef HITLS_PKI_X509_CRL_LITE
 static int32_t SetCrlDpPointReasons(HITLS_X509_CrlDistPoint *point, uint16_t reasons)
 {
     point->hasReasons = true;
@@ -877,6 +878,7 @@ static int32_t CompareCrlDpExact(HITLS_X509_ExtCdp *expected, HITLS_X509_ExtCdp 
 EXIT:
     return ret;
 }
+#endif /* HITLS_PKI_X509_CRL_LITE */
 
 static int32_t parsedBasicFieldsCheck(HITLS_X509_Cert *parsedCert, uint32_t version, uint8_t *serialNum,
     uint32_t serialNumLen, BSL_TIME *beforeTime, BSL_TIME *afterTime, BslList *subject, BslList *issuer, int isEdited)
@@ -2154,6 +2156,10 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_X509_CERT_CRLDP_PARSE_TC001(char *certPath)
 {
+#ifdef HITLS_PKI_X509_CRL_LITE
+    (void)certPath;
+    SKIP_TEST();
+#else
     HITLS_X509_Cert *cert = NULL;
     HITLS_X509_ExtCdp actual = {0};
     HITLS_X509_ExtCdp expected = {0};
@@ -2203,6 +2209,7 @@ EXIT:
     ClearCrlDpLocal(&expected);
     HITLS_X509_ClearCdp(&actual);
     return;
+#endif
 }
 /* END_CASE */
 
@@ -2215,6 +2222,10 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_X509_CERT_CRLDP_PARSE_TC002(char *certPath)
 {
+#ifdef HITLS_PKI_X509_CRL_LITE
+    (void)certPath;
+    SKIP_TEST();
+#else
     HITLS_X509_Cert *cert = NULL;
     HITLS_X509_ExtCdp actual = {0};
     HITLS_X509_ExtCdp expected = {0};
@@ -2233,6 +2244,7 @@ EXIT:
     ClearCrlDpLocal(&expected);
     HITLS_X509_ClearCdp(&actual);
     return;
+#endif
 }
 /* END_CASE */
 
@@ -2246,6 +2258,10 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_X509_CERT_CRLDP_PARSE_TC003(char *certPath)
 {
+#ifdef HITLS_PKI_X509_CRL_LITE
+    (void)certPath;
+    SKIP_TEST();
+#else
     HITLS_X509_Cert *cert = NULL;
     HITLS_X509_ExtCdp actual = {0};
     HITLS_X509_ExtCdp expected = {0};
@@ -2292,6 +2308,7 @@ EXIT:
     ClearCrlDpLocal(&expected);
     HITLS_X509_ClearCdp(&actual);
     return;
+#endif
 }
 /* END_CASE */
 
@@ -2304,6 +2321,10 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_X509_CERT_CRLDP_PARSE_TC004(char *certPath)
 {
+#ifdef HITLS_PKI_X509_CRL_LITE
+    (void)certPath;
+    SKIP_TEST();
+#else
     HITLS_X509_Cert *cert = NULL;
     HITLS_X509_ExtCdp actual = {0};
     HITLS_X509_ExtCdp expected = {0};
@@ -2332,6 +2353,7 @@ EXIT:
     ClearCrlDpLocal(&expected);
     HITLS_X509_ClearCdp(&actual);
     return;
+#endif
 }
 /* END_CASE */
 
@@ -2344,6 +2366,10 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_X509_CERT_CRLDP_PARSE_TC005(char *certPath)
 {
+#ifdef HITLS_PKI_X509_CRL_LITE
+    (void)certPath;
+    SKIP_TEST();
+#else
     HITLS_X509_Cert *cert = NULL;
     HITLS_X509_ExtCdp actual = {0};
     HITLS_X509_ExtCdp expected = {0};
@@ -2360,6 +2386,7 @@ EXIT:
     ClearCrlDpLocal(&expected);
     HITLS_X509_ClearCdp(&actual);
     return;
+#endif
 }
 /* END_CASE */
 
@@ -2372,6 +2399,10 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_X509_CERT_CRLDP_PARSE_INVALID_TC001(char *certPath)
 {
+#ifdef HITLS_PKI_X509_CRL_LITE
+    (void)certPath;
+    SKIP_TEST();
+#else
     HITLS_X509_Cert *cert = NULL;
     HITLS_X509_ExtCdp crldp = {0};
 
@@ -2383,6 +2414,7 @@ EXIT:
     HITLS_X509_CertFree(cert);
     HITLS_X509_ClearCdp(&crldp);
     return;
+#endif
 }
 /* END_CASE */
 
@@ -2414,6 +2446,10 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_X509_CERT_CRLDP_PARSE_INVALID_TC003(char *certPath)
 {
+#ifdef HITLS_PKI_X509_CRL_LITE
+    (void)certPath;
+    SKIP_TEST();
+#else
     HITLS_X509_Cert *cert = NULL;
     HITLS_X509_ExtCdp crldp = {0};
 
@@ -2425,6 +2461,7 @@ EXIT:
     HITLS_X509_CertFree(cert);
     HITLS_X509_ClearCdp(&crldp);
     return;
+#endif
 }
 /* END_CASE */
 
@@ -2437,6 +2474,10 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_X509_CERT_CRLDP_PARSE_INVALID_TC004(char *certPath)
 {
+#ifdef HITLS_PKI_X509_CRL_LITE
+    (void)certPath;
+    SKIP_TEST();
+#else
     HITLS_X509_Cert *cert = NULL;
     HITLS_X509_ExtCdp crldp = {0};
 
@@ -2448,6 +2489,7 @@ EXIT:
     HITLS_X509_CertFree(cert);
     HITLS_X509_ClearCdp(&crldp);
     return;
+#endif
 }
 /* END_CASE */
 
@@ -2460,6 +2502,10 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_X509_CERT_CRLDP_PARSE_INVALID_TC005(char *certPath)
 {
+#ifdef HITLS_PKI_X509_CRL_LITE
+    (void)certPath;
+    SKIP_TEST();
+#else
     HITLS_X509_Cert *cert = NULL;
     HITLS_X509_ExtCdp crldp = {0};
 
@@ -2471,6 +2517,7 @@ EXIT:
     HITLS_X509_CertFree(cert);
     HITLS_X509_ClearCdp(&crldp);
     return;
+#endif
 }
 /* END_CASE */
 
@@ -2483,6 +2530,10 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_X509_CERT_CRLDP_PARSE_INVALID_TC006(char *certPath)
 {
+#ifdef HITLS_PKI_X509_CRL_LITE
+    (void)certPath;
+    SKIP_TEST();
+#else
     HITLS_X509_Cert *cert = NULL;
     HITLS_X509_ExtCdp crldp = {0};
 
@@ -2494,6 +2545,7 @@ EXIT:
     HITLS_X509_CertFree(cert);
     HITLS_X509_ClearCdp(&crldp);
     return;
+#endif
 }
 /* END_CASE */
 
@@ -2506,6 +2558,10 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_X509_CERT_CRLDP_PARSE_INVALID_TC007(char *certPath)
 {
+#ifdef HITLS_PKI_X509_CRL_LITE
+    (void)certPath;
+    SKIP_TEST();
+#else
     HITLS_X509_Cert *cert = NULL;
     HITLS_X509_ExtCdp crldp = {0};
 
@@ -2517,6 +2573,7 @@ EXIT:
     HITLS_X509_CertFree(cert);
     HITLS_X509_ClearCdp(&crldp);
     return;
+#endif
 }
 /* END_CASE */
 
@@ -2529,6 +2586,10 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_X509_CERT_CRLDP_PARSE_INVALID_TC008(char *certPath)
 {
+#ifdef HITLS_PKI_X509_CRL_LITE
+    (void)certPath;
+    SKIP_TEST();
+#else
     HITLS_X509_Cert *cert = NULL;
     HITLS_X509_ExtCdp crldp = {0};
 
@@ -2540,6 +2601,7 @@ EXIT:
     HITLS_X509_CertFree(cert);
     HITLS_X509_ClearCdp(&crldp);
     return;
+#endif
 }
 /* END_CASE */
 
@@ -2552,6 +2614,10 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_X509_CERT_CRLDP_PARSE_INVALID_TC009(char *certPath)
 {
+#ifdef HITLS_PKI_X509_CRL_LITE
+    (void)certPath;
+    SKIP_TEST();
+#else
     HITLS_X509_Cert *cert = NULL;
     HITLS_X509_ExtCdp crldp = {0};
 
@@ -2563,6 +2629,7 @@ EXIT:
     HITLS_X509_CertFree(cert);
     HITLS_X509_ClearCdp(&crldp);
     return;
+#endif
 }
 /* END_CASE */
 
@@ -2575,6 +2642,10 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_X509_CERT_CRLDP_PARSE_INVALID_TC010(char *certPath)
 {
+#ifdef HITLS_PKI_X509_CRL_LITE
+    (void)certPath;
+    SKIP_TEST();
+#else
     HITLS_X509_Cert *cert = NULL;
     HITLS_X509_ExtCdp crldp = {0};
 
@@ -2586,6 +2657,7 @@ EXIT:
     HITLS_X509_CertFree(cert);
     HITLS_X509_ClearCdp(&crldp);
     return;
+#endif
 }
 /* END_CASE */
 
@@ -2598,6 +2670,10 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_X509_CERT_CRLDP_PARSE_INVALID_TC011(char *certPath)
 {
+#ifdef HITLS_PKI_X509_CRL_LITE
+    (void)certPath;
+    SKIP_TEST();
+#else
     HITLS_X509_Cert *cert = NULL;
     HITLS_X509_ExtCdp crldp = {0};
 
@@ -2609,6 +2685,7 @@ EXIT:
     HITLS_X509_CertFree(cert);
     HITLS_X509_ClearCdp(&crldp);
     return;
+#endif
 }
 /* END_CASE */
 
@@ -2621,6 +2698,10 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_X509_CERT_CRLDP_PARSE_INVALID_TC012(char *certPath)
 {
+#ifdef HITLS_PKI_X509_CRL_LITE
+    (void)certPath;
+    SKIP_TEST();
+#else
     HITLS_X509_Cert *cert = NULL;
     HITLS_X509_ExtCdp crldp = {0};
 
@@ -2632,6 +2713,7 @@ EXIT:
     HITLS_X509_CertFree(cert);
     HITLS_X509_ClearCdp(&crldp);
     return;
+#endif
 }
 /* END_CASE */
 
@@ -2644,6 +2726,10 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_X509_CERT_CRLDP_PARSE_INVALID_TC013(char *certPath)
 {
+#ifdef HITLS_PKI_X509_CRL_LITE
+    (void)certPath;
+    SKIP_TEST();
+#else
     HITLS_X509_Cert *cert = NULL;
     HITLS_X509_ExtCdp crldp = {0};
 
@@ -2655,6 +2741,7 @@ EXIT:
     HITLS_X509_CertFree(cert);
     HITLS_X509_ClearCdp(&crldp);
     return;
+#endif
 }
 /* END_CASE */
 
@@ -2667,6 +2754,10 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_X509_CERT_CRLDP_PARSE_INVALID_TC014(char *certPath)
 {
+#ifdef HITLS_PKI_X509_CRL_LITE
+    (void)certPath;
+    SKIP_TEST();
+#else
     HITLS_X509_Cert *cert = NULL;
     HITLS_X509_ExtCdp crldp = {0};
 
@@ -2678,6 +2769,7 @@ EXIT:
     HITLS_X509_CertFree(cert);
     HITLS_X509_ClearCdp(&crldp);
     return;
+#endif
 }
 /* END_CASE */
 
@@ -2690,6 +2782,10 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_X509_CERT_CRLDP_PARSE_INVALID_TC015(char *certPath)
 {
+#ifdef HITLS_PKI_X509_CRL_LITE
+    (void)certPath;
+    SKIP_TEST();
+#else
     HITLS_X509_Cert *cert = NULL;
     HITLS_X509_ExtCdp crldp = {0};
 
@@ -2701,6 +2797,7 @@ EXIT:
     HITLS_X509_CertFree(cert);
     HITLS_X509_ClearCdp(&crldp);
     return;
+#endif
 }
 /* END_CASE */
 
@@ -2736,6 +2833,10 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_X509_CERT_CRLDP_GEN_ROUNDTRIP_TC001(char *outPath)
 {
+#ifdef HITLS_PKI_X509_CRL_LITE
+    (void)outPath;
+    SKIP_TEST();
+#else
     HITLS_X509_Cert *cert = NULL;
     HITLS_X509_Cert *parsedCert = NULL;
     CRYPT_EAL_PkeyCtx *key = NULL;
@@ -2805,6 +2906,7 @@ EXIT:
     ClearCrlDpLocal(&input);
     HITLS_X509_ClearCdp(&parsed);
     return;
+#endif
 }
 /* END_CASE */
 
@@ -2817,6 +2919,10 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_X509_CERT_CRLDP_GEN_ROUNDTRIP_TC002(char *outPath)
 {
+#ifdef HITLS_PKI_X509_CRL_LITE
+    (void)outPath;
+    SKIP_TEST();
+#else
     HITLS_X509_Cert *cert = NULL;
     HITLS_X509_Cert *parsedCert = NULL;
     CRYPT_EAL_PkeyCtx *key = NULL;
@@ -2855,6 +2961,7 @@ EXIT:
     ClearCrlDpLocal(&input);
     HITLS_X509_ClearCdp(&parsed);
     return;
+#endif
 }
 /* END_CASE */
 
@@ -2867,6 +2974,10 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_X509_CERT_CRLDP_GEN_ROUNDTRIP_TC003(char *outPath)
 {
+#ifdef HITLS_PKI_X509_CRL_LITE
+    (void)outPath;
+    SKIP_TEST();
+#else
     HITLS_X509_Cert *cert = NULL;
     HITLS_X509_Cert *parsedCert = NULL;
     CRYPT_EAL_PkeyCtx *key = NULL;
@@ -2911,6 +3022,7 @@ EXIT:
     ClearCrlDpLocal(&input);
     HITLS_X509_ClearCdp(&parsed);
     return;
+#endif
 }
 /* END_CASE */
 
@@ -2938,6 +3050,11 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_X509_CERT_CRLDP_GEN_ROUNDTRIP_TC004(char *certPath, char *keyPath)
 {
+#ifdef HITLS_PKI_X509_CRL_LITE
+    (void)certPath;
+    (void)keyPath;
+    SKIP_TEST();
+#else
     HITLS_X509_Cert *sourceCert = NULL;
     HITLS_X509_Cert *generatedCert = NULL;
     CRYPT_EAL_PkeyCtx *signKey = NULL;
@@ -2998,6 +3115,7 @@ EXIT:
     HITLS_X509_CertFree(generatedCert);
     HITLS_X509_ClearCdp(&parsed);
     return;
+#endif
 }
 /* END_CASE */
 
@@ -3011,6 +3129,10 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_X509_CERT_CRLDP_PARSE_STUB_TC001(char *certPath)
 {
+#ifdef HITLS_PKI_X509_CRL_LITE
+    (void)certPath;
+    SKIP_TEST();
+#else
     HITLS_X509_Cert *cert = NULL;
 
     TestMemInit();
@@ -3019,6 +3141,7 @@ void SDV_X509_CERT_CRLDP_PARSE_STUB_TC001(char *certPath)
 EXIT:
     HITLS_X509_CertFree(cert);
     return;
+#endif
 }
 /* END_CASE */
 
@@ -3033,6 +3156,9 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_X509_CERT_CRLDP_ENCODE_STUB_TC001(void)
 {
+#ifdef HITLS_PKI_X509_CRL_LITE
+    SKIP_TEST();
+#else
     BslList *names = NULL;
     BslList *issuer = NULL;
     BslList *relativeName = NULL;
@@ -3072,6 +3198,7 @@ EXIT:
     BSL_LIST_FREE(issuer, (BSL_LIST_PFUNC_FREE)HITLS_X509_FreeGeneralName);
     ClearCrlDpLocal(&crldp);
     return;
+#endif
 }
 /* END_CASE */
 
@@ -3084,6 +3211,9 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_X509_CERT_CRLDP_CHECK_TC001(void)
 {
+#ifdef HITLS_PKI_X509_CRL_LITE
+    SKIP_TEST();
+#else
     HITLS_X509_ExtCdp crldp = {0};
 
     ASSERT_EQ(InitCrlDp(&crldp, false), HITLS_PKI_SUCCESS);
@@ -3091,6 +3221,7 @@ void SDV_X509_CERT_CRLDP_CHECK_TC001(void)
 EXIT:
     ClearCrlDpLocal(&crldp);
     return;
+#endif
 }
 /* END_CASE */
 
@@ -3103,6 +3234,9 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_X509_CERT_CRLDP_CHECK_TC002(void)
 {
+#ifdef HITLS_PKI_X509_CRL_LITE
+    SKIP_TEST();
+#else
     HITLS_X509_ExtCdp crldp = {0};
     BslList *names = NULL;
 
@@ -3116,6 +3250,7 @@ EXIT:
     BSL_LIST_FREE(names, (BSL_LIST_PFUNC_FREE)HITLS_X509_FreeGeneralName);
     ClearCrlDpLocal(&crldp);
     return;
+#endif
 }
 /* END_CASE */
 
@@ -3128,6 +3263,9 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_X509_CERT_CRLDP_CHECK_TC003(void)
 {
+#ifdef HITLS_PKI_X509_CRL_LITE
+    SKIP_TEST();
+#else
     HITLS_X509_ExtCdp crldp = {0};
     BslList *relativeName = NULL;
 
@@ -3141,6 +3279,7 @@ EXIT:
     HITLS_X509_DnListFree(relativeName);
     ClearCrlDpLocal(&crldp);
     return;
+#endif
 }
 /* END_CASE */
 
@@ -3153,6 +3292,9 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_X509_CERT_CRLDP_CHECK_TC004(void)
 {
+#ifdef HITLS_PKI_X509_CRL_LITE
+    SKIP_TEST();
+#else
     HITLS_X509_ExtCdp crldp = {0};
 
     ASSERT_EQ(InitCrlDp(&crldp, false), HITLS_PKI_SUCCESS);
@@ -3161,6 +3303,7 @@ void SDV_X509_CERT_CRLDP_CHECK_TC004(void)
 EXIT:
     ClearCrlDpLocal(&crldp);
     return;
+#endif
 }
 /* END_CASE */
 
@@ -3173,6 +3316,9 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_X509_CERT_CRLDP_CHECK_TC005(void)
 {
+#ifdef HITLS_PKI_X509_CRL_LITE
+    SKIP_TEST();
+#else
     HITLS_X509_ExtCdp crldp = {0};
 
     ASSERT_EQ(InitCrlDp(&crldp, false), HITLS_PKI_SUCCESS);
@@ -3181,6 +3327,7 @@ void SDV_X509_CERT_CRLDP_CHECK_TC005(void)
 EXIT:
     ClearCrlDpLocal(&crldp);
     return;
+#endif
 }
 /* END_CASE */
 
@@ -3193,6 +3340,9 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_X509_CERT_CRLDP_CHECK_TC006(void)
 {
+#ifdef HITLS_PKI_X509_CRL_LITE
+    SKIP_TEST();
+#else
     HITLS_X509_ExtCdp crldp = {0};
     BslList *issuer = NULL;
 
@@ -3206,6 +3356,7 @@ EXIT:
     BSL_LIST_FREE(issuer, (BSL_LIST_PFUNC_FREE)HITLS_X509_FreeGeneralName);
     ClearCrlDpLocal(&crldp);
     return;
+#endif
 }
 /* END_CASE */
 
@@ -3218,6 +3369,9 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_X509_CERT_CRLDP_CHECK_TC007(void)
 {
+#ifdef HITLS_PKI_X509_CRL_LITE
+    SKIP_TEST();
+#else
     HITLS_X509_ExtCdp crldp = {0};
     BslList *issuer = NULL;
 
@@ -3231,6 +3385,7 @@ EXIT:
     BSL_LIST_FREE(issuer, (BSL_LIST_PFUNC_FREE)HITLS_X509_FreeGeneralName);
     ClearCrlDpLocal(&crldp);
     return;
+#endif
 }
 /* END_CASE */
 
@@ -3243,6 +3398,9 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_X509_CERT_CRLDP_CHECK_TC008(void)
 {
+#ifdef HITLS_PKI_X509_CRL_LITE
+    SKIP_TEST();
+#else
     HITLS_X509_ExtCdp crldp = {0};
     BslList *issuer = NULL;
 
@@ -3256,6 +3414,7 @@ EXIT:
     BSL_LIST_FREE(issuer, (BSL_LIST_PFUNC_FREE)HITLS_X509_FreeGeneralName);
     ClearCrlDpLocal(&crldp);
     return;
+#endif
 }
 /* END_CASE */
 
@@ -3268,6 +3427,9 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_X509_CERT_CRLDP_CHECK_TC009(void)
 {
+#ifdef HITLS_PKI_X509_CRL_LITE
+    SKIP_TEST();
+#else
     HITLS_X509_ExtCdp crldp = {0};
     BslList *names = NULL;
     BslList *relativeName = NULL;
@@ -3293,6 +3455,7 @@ EXIT:
     BSL_LIST_FREE(issuer, (BSL_LIST_PFUNC_FREE)HITLS_X509_FreeGeneralName);
     ClearCrlDpLocal(&crldp);
     return;
+#endif
 }
 /* END_CASE */
 
@@ -3305,6 +3468,9 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_X509_CERT_CRLDP_CHECK_TC010(void)
 {
+#ifdef HITLS_PKI_X509_CRL_LITE
+    SKIP_TEST();
+#else
     HITLS_X509_ExtCdp crldp = {0};
     BslList *names = NULL;
 
@@ -3319,6 +3485,7 @@ EXIT:
     BSL_LIST_FREE(names, (BSL_LIST_PFUNC_FREE)HITLS_X509_FreeGeneralName);
     ClearCrlDpLocal(&crldp);
     return;
+#endif
 }
 /* END_CASE */
 
@@ -3331,6 +3498,9 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_X509_CERT_CRLDP_SET_INVALID_TC001(void)
 {
+#ifdef HITLS_PKI_X509_CRL_LITE
+    SKIP_TEST();
+#else
     HITLS_X509_Cert *cert = NULL;
     HITLS_X509_ExtCdp crldp = {0};
 
@@ -3343,6 +3513,7 @@ void SDV_X509_CERT_CRLDP_SET_INVALID_TC001(void)
 EXIT:
     HITLS_X509_CertFree(cert);
     return;
+#endif
 }
 /* END_CASE */
 
@@ -3355,6 +3526,9 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_X509_CERT_CRLDP_SET_INVALID_TC002(void)
 {
+#ifdef HITLS_PKI_X509_CRL_LITE
+    SKIP_TEST();
+#else
     HITLS_X509_Cert *cert = NULL;
     HITLS_X509_ExtCdp crldp = {0};
 
@@ -3371,6 +3545,7 @@ EXIT:
     HITLS_X509_CertFree(cert);
     ClearCrlDpLocal(&crldp);
     return;
+#endif
 }
 /* END_CASE */
 
@@ -3383,6 +3558,9 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_X509_CERT_CRLDP_SET_INVALID_TC003(void)
 {
+#ifdef HITLS_PKI_X509_CRL_LITE
+    SKIP_TEST();
+#else
     HITLS_X509_ExtCdp crldp = {0};
 
     ASSERT_EQ(InitCrlDp(&crldp, false), HITLS_PKI_SUCCESS);
@@ -3390,6 +3568,7 @@ void SDV_X509_CERT_CRLDP_SET_INVALID_TC003(void)
 EXIT:
     ClearCrlDpLocal(&crldp);
     return;
+#endif
 }
 /* END_CASE */
 
@@ -3402,6 +3581,9 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_X509_CERT_CRLDP_SET_INVALID_TC004(void)
 {
+#ifdef HITLS_PKI_X509_CRL_LITE
+    SKIP_TEST();
+#else
     HITLS_X509_ExtCdp crldp = {0};
     HITLS_X509_CrlDistPoint *point = NULL;
 
@@ -3417,6 +3599,7 @@ EXIT:
     FreeCrlDpPointLocal(point);
     ClearCrlDpLocal(&crldp);
     return;
+#endif
 }
 /* END_CASE */
 
@@ -3429,6 +3612,9 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_X509_CERT_CRLDP_SET_INVALID_TC005(void)
 {
+#ifdef HITLS_PKI_X509_CRL_LITE
+    SKIP_TEST();
+#else
     HITLS_X509_ExtCdp crldp = {0};
     HITLS_X509_CrlDistPoint *point = NULL;
 
@@ -3444,6 +3630,7 @@ EXIT:
     FreeCrlDpPointLocal(point);
     ClearCrlDpLocal(&crldp);
     return;
+#endif
 }
 /* END_CASE */
 
@@ -3456,6 +3643,9 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_X509_CERT_CRLDP_SET_INVALID_TC006(void)
 {
+#ifdef HITLS_PKI_X509_CRL_LITE
+    SKIP_TEST();
+#else
     HITLS_X509_ExtCdp crldp = {0};
     HITLS_X509_CrlDistPoint *point = NULL;
 
@@ -3471,6 +3661,7 @@ EXIT:
     FreeCrlDpPointLocal(point);
     ClearCrlDpLocal(&crldp);
     return;
+#endif
 }
 /* END_CASE */
 
@@ -3483,6 +3674,9 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_X509_CERT_CRLDP_SET_INVALID_TC007(void)
 {
+#ifdef HITLS_PKI_X509_CRL_LITE
+    SKIP_TEST();
+#else
     HITLS_X509_ExtCdp crldp = {0};
     HITLS_X509_CrlDistPoint *point = NULL;
 
@@ -3498,6 +3692,7 @@ EXIT:
     FreeCrlDpPointLocal(point);
     ClearCrlDpLocal(&crldp);
     return;
+#endif
 }
 /* END_CASE */
 
@@ -3510,6 +3705,9 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_X509_CERT_CRLDP_SET_INVALID_TC008(void)
 {
+#ifdef HITLS_PKI_X509_CRL_LITE
+    SKIP_TEST();
+#else
     HITLS_X509_ExtCdp crldp = {0};
     HITLS_X509_CrlDistPoint *point = NULL;
     BslList *relativeName = NULL;
@@ -3530,6 +3728,7 @@ EXIT:
     FreeCrlDpPointLocal(point);
     ClearCrlDpLocal(&crldp);
     return;
+#endif
 }
 /* END_CASE */
 
@@ -3542,6 +3741,9 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_X509_CERT_CRLDP_SET_INVALID_TC009(void)
 {
+#ifdef HITLS_PKI_X509_CRL_LITE
+    SKIP_TEST();
+#else
     HITLS_X509_ExtCdp crldp = {0};
     HITLS_X509_CrlDistPoint *point = NULL;
     BslList *relativeName = NULL;
@@ -3562,6 +3764,7 @@ EXIT:
     FreeCrlDpPointLocal(point);
     ClearCrlDpLocal(&crldp);
     return;
+#endif
 }
 /* END_CASE */
 
@@ -3574,6 +3777,9 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_X509_CERT_CRLDP_SET_INVALID_TC010(void)
 {
+#ifdef HITLS_PKI_X509_CRL_LITE
+    SKIP_TEST();
+#else
     HITLS_X509_ExtCdp crldp = {0};
     HITLS_X509_CrlDistPoint *point = NULL;
     BslList *relativeName = NULL;
@@ -3598,6 +3804,7 @@ EXIT:
     FreeCrlDpPointLocal(point);
     ClearCrlDpLocal(&crldp);
     return;
+#endif
 }
 /* END_CASE */
 
@@ -3611,6 +3818,9 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_X509_CERT_CRLDP_SET_INVALID_TC011(void)
 {
+#ifdef HITLS_PKI_X509_CRL_LITE
+    SKIP_TEST();
+#else
     HITLS_X509_ExtCdp crldp = {0};
     HITLS_X509_CrlDistPoint *point = NULL;
 
@@ -3630,6 +3840,7 @@ EXIT:
     FreeCrlDpPointLocal(point);
     ClearCrlDpLocal(&crldp);
     return;
+#endif
 }
 /* END_CASE */
 
@@ -3642,6 +3853,9 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_X509_CERT_CRLDP_SET_INVALID_TC012(void)
 {
+#ifdef HITLS_PKI_X509_CRL_LITE
+    SKIP_TEST();
+#else
     HITLS_X509_ExtCdp crldp = {0};
     HITLS_X509_CrlDistPoint *point = NULL;
 
@@ -3658,6 +3872,7 @@ EXIT:
     FreeCrlDpPointLocal(point);
     ClearCrlDpLocal(&crldp);
     return;
+#endif
 }
 /* END_CASE */
 
@@ -3670,6 +3885,9 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_X509_CERT_CRLDP_SET_INVALID_TC013(void)
 {
+#ifdef HITLS_PKI_X509_CRL_LITE
+    SKIP_TEST();
+#else
     HITLS_X509_ExtCdp crldp = {0};
     BslList *names = NULL;
 
@@ -3683,6 +3901,7 @@ EXIT:
     BSL_LIST_FREE(names, (BSL_LIST_PFUNC_FREE)HITLS_X509_FreeGeneralName);
     ClearCrlDpLocal(&crldp);
     return;
+#endif
 }
 /* END_CASE */
 
@@ -3695,6 +3914,9 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_X509_CERT_CRLDP_SET_INVALID_TC014(void)
 {
+#ifdef HITLS_PKI_X509_CRL_LITE
+    SKIP_TEST();
+#else
     HITLS_X509_ExtCdp crldp = {0};
     BslList *issuer = NULL;
 
@@ -3708,6 +3930,7 @@ EXIT:
     BSL_LIST_FREE(issuer, (BSL_LIST_PFUNC_FREE)HITLS_X509_FreeGeneralName);
     ClearCrlDpLocal(&crldp);
     return;
+#endif
 }
 /* END_CASE */
 
@@ -3720,6 +3943,9 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_X509_CERT_CRLDP_SET_INVALID_TC015(void)
 {
+#ifdef HITLS_PKI_X509_CRL_LITE
+    SKIP_TEST();
+#else
     HITLS_X509_ExtCdp crldp = {0};
 
     ASSERT_EQ(InitCrlDp(&crldp, false), HITLS_PKI_SUCCESS);
@@ -3728,6 +3954,7 @@ void SDV_X509_CERT_CRLDP_SET_INVALID_TC015(void)
 EXIT:
     ClearCrlDpLocal(&crldp);
     return;
+#endif
 }
 /* END_CASE */
 
@@ -3740,6 +3967,9 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_X509_CERT_CRLDP_SET_INVALID_TC016(void)
 {
+#ifdef HITLS_PKI_X509_CRL_LITE
+    SKIP_TEST();
+#else
     HITLS_X509_ExtCdp crldp = {0};
 
     ASSERT_EQ(InitCrlDp(&crldp, false), HITLS_PKI_SUCCESS);
@@ -3748,6 +3978,7 @@ void SDV_X509_CERT_CRLDP_SET_INVALID_TC016(void)
 EXIT:
     ClearCrlDpLocal(&crldp);
     return;
+#endif
 }
 /* END_CASE */
 
@@ -3760,6 +3991,9 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_X509_CERT_CRLDP_SET_INVALID_TC017(void)
 {
+#ifdef HITLS_PKI_X509_CRL_LITE
+    SKIP_TEST();
+#else
     HITLS_X509_Cert *cert = NULL;
     HITLS_X509_ExtCdp crldp = {0};
     HITLS_X509_CrlDistPoint *point = NULL;
@@ -3787,6 +4021,7 @@ EXIT:
     FreeCrlDpPointLocal(point);
     ClearCrlDpLocal(&crldp);
     return;
+#endif
 }
 /* END_CASE */
 
@@ -3799,6 +4034,9 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_X509_CERT_CRLDP_SET_INVALID_TC018(void)
 {
+#ifdef HITLS_PKI_X509_CRL_LITE
+    SKIP_TEST();
+#else
     HITLS_X509_Cert *cert = NULL;
     HITLS_X509_ExtCdp crldp = {0};
     HITLS_X509_CrlDistPoint *point = NULL;
@@ -3826,6 +4064,7 @@ EXIT:
     FreeCrlDpPointLocal(point);
     ClearCrlDpLocal(&crldp);
     return;
+#endif
 }
 /* END_CASE */
 
@@ -3838,6 +4077,9 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_X509_CERT_CRLDP_SET_INVALID_TC019(void)
 {
+#ifdef HITLS_PKI_X509_CRL_LITE
+    SKIP_TEST();
+#else
     HITLS_X509_Cert *cert = NULL;
     HITLS_X509_ExtCdp crldp = {0};
     HITLS_X509_CrlDistPoint *point = NULL;
@@ -3865,6 +4107,7 @@ EXIT:
     FreeCrlDpPointLocal(point);
     ClearCrlDpLocal(&crldp);
     return;
+#endif
 }
 /* END_CASE */
 
@@ -3877,6 +4120,9 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_X509_CERT_CRLDP_SET_INVALID_TC020(void)
 {
+#ifdef HITLS_PKI_X509_CRL_LITE
+    SKIP_TEST();
+#else
     HITLS_X509_Cert *cert = NULL;
     HITLS_X509_ExtCdp crldp = {0};
     HITLS_X509_CrlDistPoint *point = NULL;
@@ -3904,6 +4150,7 @@ EXIT:
     FreeCrlDpPointLocal(point);
     ClearCrlDpLocal(&crldp);
     return;
+#endif
 }
 /* END_CASE */
 
@@ -3916,6 +4163,9 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_X509_CERT_CRLDP_SET_INVALID_TC021(void)
 {
+#ifdef HITLS_PKI_X509_CRL_LITE
+    SKIP_TEST();
+#else
     HITLS_X509_Cert *cert = NULL;
     HITLS_X509_ExtCdp crldp = {0};
     BslListNode *node = NULL;
@@ -3938,6 +4188,7 @@ EXIT:
     BSL_SAL_Free(node);
     ClearCrlDpLocal(&crldp);
     return;
+#endif
 }
 /* END_CASE */
 

@@ -337,11 +337,13 @@
 #cmakedefine HITLS_PKI_X509_CRL
 #cmakedefine HITLS_PKI_X509_CRL_GEN
 #cmakedefine HITLS_PKI_X509_CRL_PARSE
+#cmakedefine HITLS_PKI_X509_CRL_LITE
 #cmakedefine HITLS_PKI_X509_VFY
 #cmakedefine HITLS_PKI_X509_VFY_DEFAULT
 #cmakedefine HITLS_PKI_X509_VFY_CB
 #cmakedefine HITLS_PKI_X509_VFY_LOCATION
 #cmakedefine HITLS_PKI_X509_VFY_IDENTITY
+#cmakedefine HITLS_PKI_X509_VFY_CRL_LITE
 // CMS
 #cmakedefine HITLS_PKI_CMS
 #cmakedefine HITLS_PKI_CMS_DATA

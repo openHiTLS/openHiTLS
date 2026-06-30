@@ -341,7 +341,6 @@ int32_t HITLS_X509_CsrParseBuff(int32_t format, const BSL_Buffer *encode, HITLS_
             break;
     }
     if (ret != HITLS_PKI_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
         HITLS_X509_CsrFree(tempCsr);
         return ret;
     }

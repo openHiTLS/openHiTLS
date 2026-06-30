@@ -1669,7 +1669,6 @@ static void DeleteAttribute(HITLS_PKCS12_Bag *bag, uint32_t type)
             return;
         }
     }
-    return;
 }
 
 static bool IsAttrExist(HITLS_PKCS12_Bag *bag, uint32_t type)

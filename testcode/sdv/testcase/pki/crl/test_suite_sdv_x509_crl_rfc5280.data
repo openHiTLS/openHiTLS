@@ -77,9 +77,6 @@ SDV_X509_CRL_PARSE_FILE_FUNC_TC014
 SDV_X509_CRL_PARSE_FILE_FUNC_TC014:"../testdata/cert/test_for_crl/crl_parse/crl/demoCA_rsa2048_v2_critical_delta_crl_indicator.crl":1:"01":HITLS_PKI_SUCCESS
 
 SDV_X509_CRL_DELTA_THIRDPARTY_ROUNDTRIP_TC001
-SDV_X509_CRL_DELTA_THIRDPARTY_ROUNDTRIP_TC001:"../testdata/cert/test_for_crl/crl_parse/crl/demoCA_rsa2048_v2_test_delta_crl_indicator.crl"
-
-SDV_X509_CRL_DELTA_THIRDPARTY_ROUNDTRIP_TC001
 SDV_X509_CRL_DELTA_THIRDPARTY_ROUNDTRIP_TC001:"../testdata/cert/test_for_crl/crl_parse/crl/demoCA_rsa2048_v2_critical_delta_crl_indicator.crl"
 
 SDV_X509_CRL_PARSE_FILE_FUNC_TC010

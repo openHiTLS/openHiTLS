@@ -1751,7 +1751,7 @@ static int32_t InitMdCtxForAlgs(CMS_SignedData *signedData, const BSL_Param *par
 static int32_t CheckSignAlgMatchesPubKey(const HITLS_X509_Asn1AlgId *alg, const CRYPT_EAL_PkeyCtx *pubKey)
 {
     CRYPT_PKEY_AlgId keyAlg = CRYPT_EAL_PkeyGetId(pubKey);
-      // Currently, we only check this consistency for ML-DSA.
+    // Currently, we only check this consistency for ML-DSA.
     if (keyAlg != CRYPT_PKEY_ML_DSA) {
         return HITLS_PKI_SUCCESS;
     }
@@ -2406,8 +2406,8 @@ static int32_t GetSignFinalParams(const BSL_Param *params, CRYPT_EAL_PkeyCtx **p
 {
     const BSL_Param *param = BSL_PARAM_FindConstParam(params, HITLS_CMS_PARAM_PRIVATE_KEY);
     if (param != NULL) {
-        if (param->valueType != BSL_PARAM_TYPE_CTX_PTR || param->valueLen != sizeof(CRYPT_EAL_PkeyCtx *)
-        || param->value == NULL) {
+        if (param->valueType != BSL_PARAM_TYPE_CTX_PTR || param->valueLen != sizeof(CRYPT_EAL_PkeyCtx *) ||
+            param->value == NULL) {
             BSL_ERR_PUSH_ERROR(HITLS_CMS_ERR_INVALID_PARAM);
             return HITLS_CMS_ERR_INVALID_PARAM;
         }
@@ -2416,8 +2416,8 @@ static int32_t GetSignFinalParams(const BSL_Param *params, CRYPT_EAL_PkeyCtx **p
 
     param = BSL_PARAM_FindConstParam(params, HITLS_CMS_PARAM_DEVICE_CERT);
     if (param != NULL) {
-        if (param->valueType != BSL_PARAM_TYPE_CTX_PTR || param->valueLen != sizeof(HITLS_X509_Cert *)
-        || param->value == NULL) {
+        if (param->valueType != BSL_PARAM_TYPE_CTX_PTR || param->valueLen != sizeof(HITLS_X509_Cert *) ||
+            param->value == NULL) {
             BSL_ERR_PUSH_ERROR(HITLS_CMS_ERR_INVALID_PARAM);
             return HITLS_CMS_ERR_INVALID_PARAM;
         }

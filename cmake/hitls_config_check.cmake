@@ -356,6 +356,13 @@ if(NOT HITLS_SKIP_CONFIG_CHECK)
         )
     endif()
 
+    ## X509_crl
+    if(HITLS_PKI_X509_CRL_LITE AND NOT HITLS_PKI_X509_VFY_CRL_LITE)
+        hitls_add_dependency_warning(
+            "[HiTLS] The x509 verify crl strict mode must not work with crl lite. (HITLS_PKI_X509_VFY_CRL_LITE)"
+        )
+    endif()
+
     # info
     if(HITLS_PKI_INFO_CRT AND NOT HITLS_PKI_X509_CRT_GEN AND NOT HITLS_PKI_X509_CRT_PARSE)
         hitls_add_dependency_warning(
