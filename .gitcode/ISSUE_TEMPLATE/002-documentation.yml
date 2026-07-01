@@ -1,4 +1,4 @@
-name: 📚 Documentation
+name: Documentation
 description: Report an issue related to https://gitcode.com/openHiTLS/openhitls
 title: "[Doc]: "
 labels: ["documentation"]
@@ -6,7 +6,7 @@ labels: ["documentation"]
 body:
 - type: textarea
   attributes:
-    label: 📚 Documentation Issue
+    label: Documentation Issue
     description: >
       Describe the documentation issue.
   validations:
@@ -22,7 +22,3 @@ body:
     description: If multiple versions are involved, please provide all version numbers.
   validations:
     required: true
-- type: markdown
-  attributes:
-    value: >
-      Thanks for contributing 🎉!

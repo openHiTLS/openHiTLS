@@ -1,4 +1,4 @@
-name: 🐞 Bug report
+name: Bug report
 description: Create a report to help us reproduce and fix the bug
 title: "[Bug]: "
 labels: ["bug"]
@@ -15,7 +15,7 @@ body:
       required: true
   - type: textarea
     attributes:
-      label: 🐞 Bug Description
+      label: Bug Description
       description: >
         Describe the bug and provide a minimal reproducible example if possible.
       placeholder: |
@@ -48,7 +48,3 @@ body:
       label: Additional Information
       description: Any other information that helps us locate the issue. 
       placeholder: "Any other things you would like to mention."
-  - type: markdown
-    attributes:
-      value: >
-        Thanks for contributing 🎉!

@@ -1,4 +1,4 @@
-name: 🚀 Feature request
+name: Feature request
 description: Submit a proposal/request for a new openHiTLS feature
 title: "[Feature]: "
 labels: ["feature"]
@@ -6,7 +6,7 @@ labels: ["feature"]
 body:
 - type: textarea
   attributes:
-    label: 🚀 Background Description
+    label: Background Description
     description: >
       Describe the feature proposal and its motivation. If related to another issue, please link it here.
   validations:
@@ -16,7 +16,3 @@ body:
     label: Module Dependencies
     description: >
       Describe relationships with other modules, if any.
-- type: markdown
-  attributes:
-    value: >
-      Thanks for contributing 🎉!
