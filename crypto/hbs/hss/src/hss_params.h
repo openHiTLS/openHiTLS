@@ -17,7 +17,7 @@
 #define HSS_PARAMS_H
 
 #include "hitls_build.h"
-#ifdef HITLS_CRYPTO_HSS
+#ifdef HITLS_CRYPTO_HSS_LMS
 
 #include <stdint.h>
 #include <stdbool.h>
@@ -122,5 +122,5 @@ typedef struct HssPara {
 }
 #endif
 
-#endif /* HITLS_CRYPTO_HSS */
+#endif /* HITLS_CRYPTO_HSS_LMS */
 #endif /* HSS_PARAMS_H */

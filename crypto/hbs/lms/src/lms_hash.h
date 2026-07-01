@@ -17,7 +17,7 @@
 #define LMS_HASH_H
 
 #include "hitls_build.h"
-#ifdef HITLS_CRYPTO_LMS
+#ifdef HITLS_CRYPTO_HSS_LMS
 
 #include <stdint.h>
 #include <stddef.h>
@@ -71,5 +71,5 @@ const LmsFamilyHashFuncs *LmsGetHashFuncs(uint32_t lmsType);
 }
 #endif /* __cplusplus */
 
-#endif /* HITLS_CRYPTO_LMS */
+#endif /* HITLS_CRYPTO_HSS_LMS */
 #endif /* LMS_HASH_H */

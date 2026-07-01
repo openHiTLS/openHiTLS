@@ -71,7 +71,6 @@ int32_t HbsHyperTree_Sign(const uint8_t *msg, uint32_t msgLen, uint64_t treeIdx,
  *   HbsTreeCtx_InitForXmss    -> xmss/src/xmss_local.h
  *   HbsTreeCtx_InitForXmssmt  -> xmss/src/xmss_local.h
  *   HbsTreeCtx_InitFromSlhDsa -> slh_dsa/src/slh_dsa_local.h
- *   HbsTreeCtx_InitFromHss    -> hss/src/hss_tree.h
  * ----------------------------------------------------------------------- */
 
 #ifdef __cplusplus

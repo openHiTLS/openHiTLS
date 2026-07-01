@@ -25,7 +25,7 @@
 #define LMS_INTERNAL_H
 
 #include "hitls_build.h"
-#if defined(HITLS_CRYPTO_LMS) || defined(HITLS_CRYPTO_HSS)
+#if defined(HITLS_CRYPTO_HSS_LMS)
 
 #include <stdint.h>
 #include <stddef.h>
@@ -168,5 +168,5 @@ int32_t LmsValidateSignature(const uint8_t *publicKey, const uint8_t *message, s
 }
 #endif
 
-#endif /* HITLS_CRYPTO_LMS || HITLS_CRYPTO_HSS */
+#endif /* HITLS_CRYPTO_HSS_LMS */
 #endif /* LMS_INTERNAL_H */

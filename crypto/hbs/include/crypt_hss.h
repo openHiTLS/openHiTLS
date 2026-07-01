@@ -18,7 +18,7 @@
 
 #include "hitls_build.h"
 
-#ifdef HITLS_CRYPTO_HSS
+#ifdef HITLS_CRYPTO_HSS_LMS
 
 #include <stdint.h>
 #include <stddef.h>
@@ -243,5 +243,5 @@ int32_t CRYPT_HSS_Check(uint32_t checkType, const CRYPT_HSS_Ctx *pkey1, const CR
 }
 #endif /* __cplusplus */
 
-#endif /* HITLS_CRYPTO_HSS */
+#endif /* HITLS_CRYPTO_HSS_LMS */
 #endif /* CRYPT_HSS_H */

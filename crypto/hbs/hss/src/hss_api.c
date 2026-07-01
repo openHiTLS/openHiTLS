@@ -14,7 +14,7 @@
  */
 
 #include "hitls_build.h"
-#ifdef HITLS_CRYPTO_HSS
+#ifdef HITLS_CRYPTO_HSS_LMS
 
 #include <string.h>
 #include "bsl_sal.h"
@@ -133,89 +133,72 @@ int32_t CRYPT_HSS_Cmp(CRYPT_HSS_Ctx *ctx1, CRYPT_HSS_Ctx *ctx2)
 
 /**
  * @ingroup hss
- * @brief Set number of hierarchy levels
+ * @brief Set all HSS parameters via BSL_Param array
  * @param ctx    [IN/OUT] HSS context
- * @param val    [IN]     Levels value (1-8)
- * @param valLen [IN]     Value length (must be sizeof(uint32_t))
+ * @param val    [IN]     BSL_Param array terminated by BSL_PARAM_END
  * @return CRYPT_SUCCESS on success, error code on failure
  */
-static int32_t HssCtrlSetLevels(CRYPT_HSS_Ctx *ctx, void *val, uint32_t valLen)
+static int32_t HssCtrlSetParam(CRYPT_HSS_Ctx *ctx, void *val)
 {
-    if (valLen != sizeof(uint32_t)) {
+    BSL_Param *params = (BSL_Param *)val;
+    if (params == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return CRYPT_NULL_INPUT;
+    }
+
+    const BSL_Param *levelParam = BSL_PARAM_FindConstParam(params, CRYPT_PARAM_HSS_LEVEL);
+    if (levelParam == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_HSS_INVALID_PARAM);
         return CRYPT_HSS_INVALID_PARAM;
     }
-    uint32_t levels = *(uint32_t *)val;
+    uint32_t levels = 0;
+    uint32_t valLen = sizeof(levels);
+    if (BSL_PARAM_GetValue(levelParam, CRYPT_PARAM_HSS_LEVEL, BSL_PARAM_TYPE_UINT32, &levels, &valLen) != CRYPT_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(CRYPT_HSS_INVALID_PARAM);
+        return CRYPT_HSS_INVALID_PARAM;
+    }
     if (levels < HSS_MIN_LEVELS || levels > HSS_MAX_LEVELS) {
         BSL_ERR_PUSH_ERROR(CRYPT_HSS_INVALID_LEVEL);
         return CRYPT_HSS_INVALID_LEVEL;
     }
-    ctx->para.levels = levels;
-    return CRYPT_SUCCESS;
-}
 
-/**
- * @ingroup hss
- * @brief Set LMS type for a specific level
- * @param ctx    [IN/OUT] HSS context
- * @param val    [IN]     Array: [level_index, lms_type]
- * @param valLen [IN]     Value length (must be 2 * sizeof(uint32_t))
- * @return CRYPT_SUCCESS on success, error code on failure
- */
-static int32_t HssCtrlSetLmsType(CRYPT_HSS_Ctx *ctx, void *val, uint32_t valLen)
-{
-    if (valLen != 2 * sizeof(uint32_t)) {
-        BSL_ERR_PUSH_ERROR(CRYPT_HSS_INVALID_PARAM);
-        return CRYPT_HSS_INVALID_PARAM;
+    uint32_t lmsTypes[HSS_LEVELS_ARRAY_SIZE] = {0};
+    uint32_t otsTypes[HSS_LEVELS_ARRAY_SIZE] = {0};
+
+    static const int32_t g_lmsTypeKeys[] = {
+        CRYPT_PARAM_HSS_LEVEL1_LMS_TYPE,
+        CRYPT_PARAM_HSS_LEVEL2_LMS_TYPE,
+        CRYPT_PARAM_HSS_LEVEL3_LMS_TYPE
+    };
+    static const int32_t g_otsTypeKeys[] = {
+        CRYPT_PARAM_HSS_LEVEL1_OTS_TYPE,
+        CRYPT_PARAM_HSS_LEVEL2_OTS_TYPE,
+        CRYPT_PARAM_HSS_LEVEL3_OTS_TYPE
+    };
+
+    for (uint32_t i = 0; i < levels; i++) {
+        const BSL_Param *lmsParam = BSL_PARAM_FindConstParam(params, g_lmsTypeKeys[i]);
+        if (lmsParam == NULL) {
+            BSL_ERR_PUSH_ERROR(CRYPT_HSS_INVALID_PARAM);
+            return CRYPT_HSS_INVALID_PARAM;
+        }
+        valLen = sizeof(lmsTypes[i]);
+        if (BSL_PARAM_GetValue(lmsParam, g_lmsTypeKeys[i], BSL_PARAM_TYPE_UINT32, &lmsTypes[i], &valLen) != CRYPT_SUCCESS) {
+            BSL_ERR_PUSH_ERROR(CRYPT_HSS_INVALID_PARAM);
+            return CRYPT_HSS_INVALID_PARAM;
+        }
+        const BSL_Param *otsParam = BSL_PARAM_FindConstParam(params, g_otsTypeKeys[i]);
+        if (otsParam == NULL) {
+            BSL_ERR_PUSH_ERROR(CRYPT_HSS_INVALID_PARAM);
+            return CRYPT_HSS_INVALID_PARAM;
+        }
+        valLen = sizeof(otsTypes[i]);
+        if (BSL_PARAM_GetValue(otsParam, g_otsTypeKeys[i], BSL_PARAM_TYPE_UINT32, &otsTypes[i], &valLen) != CRYPT_SUCCESS) {
+            BSL_ERR_PUSH_ERROR(CRYPT_HSS_INVALID_PARAM);
+            return CRYPT_HSS_INVALID_PARAM;
+        }
     }
-    uint32_t *params = (uint32_t *)val;
-    uint32_t levelIdx = params[0];
-    uint32_t lmsType = params[1];
-
-    if (levelIdx >= ctx->para.levels || levelIdx >= HSS_MAX_LEVELS) {
-        BSL_ERR_PUSH_ERROR(CRYPT_HSS_LEVEL_OUT_OF_RANGE);
-        return CRYPT_HSS_LEVEL_OUT_OF_RANGE;
-    }
-
-    if (lmsType < LMS_SHA256_M32_H5 || lmsType > LMS_SHA256_M32_H25) {
-        BSL_ERR_PUSH_ERROR(CRYPT_HSS_INVALID_PARAM);
-        return CRYPT_HSS_INVALID_PARAM;
-    }
-
-    ctx->para.lmsType[levelIdx] = lmsType;
-    return CRYPT_SUCCESS;
-}
-
-/**
- * @ingroup hss
- * @brief Set OTS type for a specific level
- * @param ctx    [IN/OUT] HSS context
- * @param val    [IN]     Array: [level_index, ots_type]
- * @param valLen [IN]     Value length (must be 2 * sizeof(uint32_t))
- * @return CRYPT_SUCCESS on success, error code on failure
- */
-static int32_t HssCtrlSetOtsType(CRYPT_HSS_Ctx *ctx, void *val, uint32_t valLen)
-{
-    if (valLen != 2 * sizeof(uint32_t)) {
-        BSL_ERR_PUSH_ERROR(CRYPT_HSS_INVALID_PARAM);
-        return CRYPT_HSS_INVALID_PARAM;
-    }
-    uint32_t *params = (uint32_t *)val;
-    uint32_t levelIdx = params[0];
-    uint32_t otsType = params[1];
-
-    if (levelIdx >= ctx->para.levels || levelIdx >= HSS_MAX_LEVELS) {
-        BSL_ERR_PUSH_ERROR(CRYPT_HSS_LEVEL_OUT_OF_RANGE);
-        return CRYPT_HSS_LEVEL_OUT_OF_RANGE;
-    }
-
-    if (otsType < LMOTS_SHA256_N32_W1 || otsType > LMOTS_SHA256_N32_W8) {
-        BSL_ERR_PUSH_ERROR(CRYPT_HSS_INVALID_PARAM);
-        return CRYPT_HSS_INVALID_PARAM;
-    }
-
-    ctx->para.otsType[levelIdx] = otsType;
-    return CRYPT_SUCCESS;
+    return HssParaInit(&ctx->para, levels, lmsTypes, otsTypes);
 }
 
 /**
@@ -372,17 +355,17 @@ static const HssAlgMapping g_hssAlgMap[] = {
     {CRYPT_HSS_SHA256_L3_H10_H10_H10, 3, {LMS_SHA256_M32_H10, LMS_SHA256_M32_H10, LMS_SHA256_M32_H10},
                                            {LMOTS_SHA256_N32_W4, LMOTS_SHA256_N32_W4, LMOTS_SHA256_N32_W4}},
     /* Old LMS single-tree presets mapped to HSS L=1 */
-    {CRYPT_LMS_SHA256_H5_W4,  1, {LMS_SHA256_M32_H5},  {LMOTS_SHA256_N32_W4}},
-    {CRYPT_LMS_SHA256_H10_W4, 1, {LMS_SHA256_M32_H10}, {LMOTS_SHA256_N32_W4}},
-    {CRYPT_LMS_SHA256_H15_W4, 1, {LMS_SHA256_M32_H15}, {LMOTS_SHA256_N32_W4}},
-    {CRYPT_LMS_SHA256_H20_W4, 1, {LMS_SHA256_M32_H20}, {LMOTS_SHA256_N32_W4}},
-    {CRYPT_LMS_SHA256_H25_W4, 1, {LMS_SHA256_M32_H25}, {LMOTS_SHA256_N32_W4}},
-    {CRYPT_LMS_SHA256_H10_W2, 1, {LMS_SHA256_M32_H10}, {LMOTS_SHA256_N32_W2}},
-    {CRYPT_LMS_SHA256_H15_W2, 1, {LMS_SHA256_M32_H15}, {LMOTS_SHA256_N32_W2}},
-    {CRYPT_LMS_SHA256_H20_W2, 1, {LMS_SHA256_M32_H20}, {LMOTS_SHA256_N32_W2}},
-    {CRYPT_LMS_SHA256_H10_W8, 1, {LMS_SHA256_M32_H10}, {LMOTS_SHA256_N32_W8}},
-    {CRYPT_LMS_SHA256_H15_W8, 1, {LMS_SHA256_M32_H15}, {LMOTS_SHA256_N32_W8}},
-    {CRYPT_LMS_SHA256_H20_W8, 1, {LMS_SHA256_M32_H20}, {LMOTS_SHA256_N32_W8}},
+    {CRYPT_HSS_SHA256_L1_H5_W4,  1, {LMS_SHA256_M32_H5},  {LMOTS_SHA256_N32_W4}},
+    {CRYPT_HSS_SHA256_L1_H10_W4, 1, {LMS_SHA256_M32_H10}, {LMOTS_SHA256_N32_W4}},
+    {CRYPT_HSS_SHA256_L1_H15_W4, 1, {LMS_SHA256_M32_H15}, {LMOTS_SHA256_N32_W4}},
+    {CRYPT_HSS_SHA256_L1_H20_W4, 1, {LMS_SHA256_M32_H20}, {LMOTS_SHA256_N32_W4}},
+    {CRYPT_HSS_SHA256_L1_H25_W4, 1, {LMS_SHA256_M32_H25}, {LMOTS_SHA256_N32_W4}},
+    {CRYPT_HSS_SHA256_L1_H10_W2, 1, {LMS_SHA256_M32_H10}, {LMOTS_SHA256_N32_W2}},
+    {CRYPT_HSS_SHA256_L1_H15_W2, 1, {LMS_SHA256_M32_H15}, {LMOTS_SHA256_N32_W2}},
+    {CRYPT_HSS_SHA256_L1_H20_W2, 1, {LMS_SHA256_M32_H20}, {LMOTS_SHA256_N32_W2}},
+    {CRYPT_HSS_SHA256_L1_H10_W8, 1, {LMS_SHA256_M32_H10}, {LMOTS_SHA256_N32_W8}},
+    {CRYPT_HSS_SHA256_L1_H15_W8, 1, {LMS_SHA256_M32_H15}, {LMOTS_SHA256_N32_W8}},
+    {CRYPT_HSS_SHA256_L1_H20_W8, 1, {LMS_SHA256_M32_H20}, {LMOTS_SHA256_N32_W8}},
 };
 
 static int32_t HssCtrlSetParaById(CRYPT_HSS_Ctx *ctx, void *val, uint32_t valLen)
@@ -418,12 +401,8 @@ int32_t CRYPT_HSS_Ctrl(CRYPT_HSS_Ctx *ctx, int32_t cmd, void *val, uint32_t valL
     switch (cmd) {
         case CRYPT_CTRL_SET_PARA_BY_ID:
             return HssCtrlSetParaById(ctx, val, valLen);
-        case CRYPT_CTRL_HSS_SET_LEVELS:
-            return HssCtrlSetLevels(ctx, val, valLen);
-        case CRYPT_CTRL_HSS_SET_LMS_TYPE:
-            return HssCtrlSetLmsType(ctx, val, valLen);
-        case CRYPT_CTRL_HSS_SET_OTS_TYPE:
-            return HssCtrlSetOtsType(ctx, val, valLen);
+        case CRYPT_CTRL_HSS_SET_PARAM:
+            return HssCtrlSetParam(ctx, val);
         case CRYPT_CTRL_HSS_GET_PUBKEY_LEN:
             return HssCtrlGetPubKeyLen(ctx, val, valLen);
         case CRYPT_CTRL_HSS_GET_PRVKEY_LEN:
@@ -494,37 +473,24 @@ int32_t CRYPT_HSS_SetPrvKey(CRYPT_HSS_Ctx *ctx, BSL_Param *param)
     return CRYPT_SUCCESS;
 }
 
-/* Validate the LMS/OTS type fields extracted from an HSS public key. */
-static int32_t HssValidatePubKeyTypes(uint32_t levels, uint32_t lmsType, uint32_t otsType)
-{
-    if (levels < HSS_MIN_LEVELS || levels > HSS_MAX_LEVELS) {
-        BSL_ERR_PUSH_ERROR(CRYPT_HSS_INVALID_PARAM);
-        return CRYPT_HSS_INVALID_PARAM;
-    }
-    if (LmsLookupParamSet(lmsType, NULL, NULL, NULL) != CRYPT_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(CRYPT_HSS_INVALID_PARAM);
-        return CRYPT_HSS_INVALID_PARAM;
-    }
-    LmOtsParams otsCheck;
-    if (LmOtsLookupParamSet(otsType, &otsCheck) != CRYPT_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(CRYPT_HSS_INVALID_PARAM);
-        return CRYPT_HSS_INVALID_PARAM;
-    }
-    return CRYPT_SUCCESS;
-}
-
 int32_t CRYPT_HSS_SetPubKey(CRYPT_HSS_Ctx *ctx, BSL_Param *param)
 {
     if (ctx == NULL || param == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
+    /* Require parameters to have been initialized by SET_PARAM or SET_PARA_BY_ID first */
+    if (ctx->para.pubKeyLen == 0) {
+        BSL_ERR_PUSH_ERROR(CRYPT_HSS_INVALID_PARAM);
+        return CRYPT_HSS_INVALID_PARAM;
+    }
+
     const BSL_Param *pubKeyParam = BSL_PARAM_FindConstParam(param, CRYPT_PARAM_HSS_PUBKEY);
     if (pubKeyParam == NULL || pubKeyParam->value == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_HSS_NO_KEY);
         return CRYPT_HSS_NO_KEY;
     }
-    if (pubKeyParam->valueLen > HSS_PUBKEY_MAX_LEN) {
+    if (pubKeyParam->valueLen < HSS_PUBKEY_ROOT_OFFSET || pubKeyParam->valueLen != ctx->para.pubKeyLen) {
         BSL_ERR_PUSH_ERROR(CRYPT_HSS_INVALID_KEY_LEN);
         return CRYPT_HSS_INVALID_KEY_LEN;
     }
@@ -534,37 +500,22 @@ int32_t CRYPT_HSS_SetPubKey(CRYPT_HSS_Ctx *ctx, BSL_Param *param)
     uint32_t lmsType = BSL_ByteToUint32(keyData + HSS_PUBKEY_LMS_TYPE_OFFSET);
     uint32_t otsType = BSL_ByteToUint32(keyData + HSS_PUBKEY_OTS_TYPE_OFFSET);
 
-    int32_t ret = HssValidatePubKeyTypes(levels, lmsType, otsType);
-    if (ret != CRYPT_SUCCESS) {
-        return ret;
+    /* Strictly validate public key parameters against the preset configuration */
+    if (ctx->para.levels != levels || ctx->para.lmsType[0] != lmsType || ctx->para.otsType[0] != otsType) {
+        BSL_ERR_PUSH_ERROR(CRYPT_HSS_INVALID_PARAM);
+        return CRYPT_HSS_INVALID_PARAM;
     }
 
-    /* Compute expected public key length from the top-level LMS type */
-    uint32_t n;
-    ret = LmsLookupParamSet(lmsType, NULL, &n, NULL);
-    if (ret != CRYPT_SUCCESS) {
-        return ret;
-    }
-    uint32_t expectedLen = 28 + n;
-    if (pubKeyParam->valueLen != expectedLen) {
-        BSL_ERR_PUSH_ERROR(CRYPT_HSS_INVALID_KEY_LEN);
-        return CRYPT_HSS_INVALID_KEY_LEN;
-    }
-
-    if (ctx->publicKey != NULL) {
-        BSL_SAL_Free(ctx->publicKey);
-    }
-
-    ctx->publicKey = BSL_SAL_Dump(pubKeyParam->value, pubKeyParam->valueLen);
-    if (ctx->publicKey == NULL) {
+    void *tmpPubKey = BSL_SAL_Dump(pubKeyParam->value, pubKeyParam->valueLen);
+    if (tmpPubKey == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         return CRYPT_MEM_ALLOC_FAIL;
     }
-
+    if (ctx->publicKey != NULL) {
+        BSL_SAL_Free(ctx->publicKey);
+    }
+    ctx->publicKey = tmpPubKey;
     ctx->publicLen = pubKeyParam->valueLen;
-    ctx->para.levels = levels;
-    ctx->para.lmsType[0] = lmsType;
-    ctx->para.otsType[0] = otsType;
     return CRYPT_SUCCESS;
 }
 
@@ -782,4 +733,4 @@ int32_t CRYPT_HSS_Check(uint32_t checkType, const CRYPT_HSS_Ctx *pkey1, const CR
 }
 #endif
 
-#endif /* HITLS_CRYPTO_HSS */
+#endif /* HITLS_CRYPTO_HSS_LMS */

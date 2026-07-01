@@ -14,7 +14,7 @@
  */
 
 #include "hitls_build.h"
-#ifdef HITLS_CRYPTO_LMS
+#ifdef HITLS_CRYPTO_HSS_LMS
 
 #include <string.h>
 #include "bsl_sal.h"
@@ -22,7 +22,6 @@
 #include "crypt_errno.h"
 #include "lms_local.h"
 #include "lms_common.h"
-#include "lms_address.h"
 
 /**
  * @ingroup lms
@@ -66,7 +65,7 @@ typedef struct {
  * @param k      [IN]     Chain index
  * @return CRYPT_SUCCESS on success, error code on failure
  */
-static int32_t LmOts_Chain(uint8_t *buffer, uint32_t start, uint32_t steps, const LmOtsContext *ctx, uint32_t k)
+static int32_t LmOtsChain(uint8_t *buffer, uint32_t start, uint32_t steps, const LmOtsContext *ctx, uint32_t k)
 {
     /* Create a temporary LmsOtsCtx for the hash function */
     LmsOtsCtx otsCtx = {
@@ -126,21 +125,6 @@ uint32_t LmOtsComputeChecksum(const uint8_t *Q, uint32_t qLen, uint32_t w, uint3
 
 /**
  * @ingroup lms
- * @brief Get OTS public key length
- * @param otsType [IN] OTS type identifier
- * @return Public key length in bytes, 0 on error
- */
-size_t LmOtsGetPubKeyLen(uint32_t otsType)
-{
-    LmOtsParams params;
-    if (LmOtsLookupParamSet(otsType, &params) != CRYPT_SUCCESS) {
-        return 0;
-    }
-    return params.n;
-}
-
-/**
- * @ingroup lms
  * @brief Get OTS signature length
  * @param otsType [IN] OTS type identifier
  * @return Signature length in bytes, 0 on error
@@ -182,7 +166,7 @@ static int32_t LmOtsGenerateChains(uint8_t *chains, const LmOtsContext *ctx, LMS
 
         /* Chain from 0 to (2^w - 1) to generate public key element */
         uint32_t maxSteps = (1 << ctx->w) - 1;
-        ret = LmOts_Chain(tmp, 0, maxSteps, ctx, i);
+        ret = LmOtsChain(tmp, 0, maxSteps, ctx, i);
         if (ret != CRYPT_SUCCESS) {
             BSL_SAL_CleanseData(tmp, sizeof(tmp));
             BSL_ERR_PUSH_ERROR(ret);
@@ -329,7 +313,7 @@ static int32_t LmOtsSignChains(uint8_t *signature, const LmOtsContext *ctx, cons
 
         /* Chain from 0 to a (where a = coef(Q, i)) */
         uint32_t a = LmOtsCoef(Q, i, ctx->w);
-        ret = LmOts_Chain(tmp, 0, a, ctx, i);
+        ret = LmOtsChain(tmp, 0, a, ctx, i);
         if (ret != CRYPT_SUCCESS) {
             BSL_SAL_CleanseData(tmp, sizeof(tmp));
             BSL_ERR_PUSH_ERROR(ret);
@@ -344,7 +328,7 @@ static int32_t LmOtsSignChains(uint8_t *signature, const LmOtsContext *ctx, cons
 }
 
 int32_t LmOtsSign(uint32_t otsType, LMS_SeedDerive *seed, const LmsFamilyHashFuncs *hashFuncs,
-                  const LMS_InputBuffer *message, LMS_OutputBuffer *signature)
+    const LMS_InputBuffer *message, LMS_OutputBuffer *signature)
 {
     LmOtsParams params;
     int32_t ret = LmOtsLookupParamSet(otsType, &params);
@@ -395,7 +379,7 @@ int32_t LmOtsSign(uint32_t otsType, LMS_SeedDerive *seed, const LmsFamilyHashFun
  * @return CRYPT_SUCCESS on success, error code on failure
  */
 static int32_t LmOtsValidateParams(const uint8_t *signature, size_t signatureLen, uint32_t expectedOtsType,
-                                   LmOtsParams *params)
+    LmOtsParams *params)
 {
     if (signatureLen < LMS_TYPE_LEN) {
         BSL_ERR_PUSH_ERROR(CRYPT_LMS_BUFFER_TOO_SMALL);
@@ -442,7 +426,7 @@ static int32_t LmOtsValidateChains(uint8_t *chains, const LmOtsContext *ctx, con
         /* Chain from a to (2^w - 1) where a = coef(Q, i) */
         uint32_t a = LmOtsCoef(Q, i, ctx->w);
         uint32_t steps = maxDigit - a;
-        int32_t ret = LmOts_Chain(tmp, a, steps, ctx, i);
+        int32_t ret = LmOtsChain(tmp, a, steps, ctx, i);
         if (ret != CRYPT_SUCCESS) {
             BSL_SAL_CleanseData(tmp, sizeof(tmp));
             BSL_ERR_PUSH_ERROR(ret);
@@ -457,8 +441,7 @@ static int32_t LmOtsValidateChains(uint8_t *chains, const LmOtsContext *ctx, con
 }
 
 int32_t LmOtsValidateSignature(uint8_t *computedPubKey, const LMS_OtsValidateCtx *ctx,
-                               const LmsFamilyHashFuncs *hashFuncs, const LMS_InputBuffer *message,
-                               const LMS_InputBuffer *signature)
+    const LmsFamilyHashFuncs *hashFuncs, const LMS_InputBuffer *message, const LMS_InputBuffer *signature)
 {
     LmOtsParams params;
     int32_t ret = LmOtsValidateParams(signature->data, signature->len, ctx->expectedOtsType, &params);
@@ -513,4 +496,4 @@ int32_t LmOtsValidateSignature(uint8_t *computedPubKey, const LMS_OtsValidateCtx
 }
 
 #endif /* HITLS_CRYPTO_HSS_VERIFY */
-#endif /* HITLS_CRYPTO_LMS */
+#endif /* HITLS_CRYPTO_HSS_LMS */

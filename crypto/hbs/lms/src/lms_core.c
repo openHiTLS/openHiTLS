@@ -14,7 +14,7 @@
  */
 
 #include "hitls_build.h"
-#ifdef HITLS_CRYPTO_LMS
+#ifdef HITLS_CRYPTO_HSS_LMS
 
 #include <string.h>
 #include "bsl_sal.h"
@@ -121,14 +121,7 @@ typedef struct {
     const LmsFamilyHashFuncs *hashFuncs; /**< Hash function pointers */
 } LmsValidateAuthPathCtx;
 
-/* ========== LMS internal functions ========== */
-/* Key generation + signing live under HITLS_CRYPTO_HSS_SIGN.       */
-/* Signature verification lives under HITLS_CRYPTO_HSS_VERIFY.      */
-/* Struct / type definitions above are always visible when LMS is   */
-/* compiled; the functions that use them are guarded.               */
-
 #if defined(HITLS_CRYPTO_HSS_VERIFY)
-
 /**
  * @ingroup lms
  * @brief Compute internal node hash (RFC 8554)
@@ -155,13 +148,13 @@ static int32_t LmsComputeInternalHash(uint8_t *nodeHash, const LmsInternalHashCt
 int32_t LmsComputeRoot(uint8_t *root, const LMS_Para *para, const uint8_t *I, const uint8_t *seed)
 {
     LmsTreeCtx treeCtx;
-    int32_t ret = LmsTree_InitContext(&treeCtx, para, I, seed);
+    int32_t ret = LmsTreeInitContext(&treeCtx, para, I, seed);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
 
-    ret = LmsTree_ComputeRoot(root, &treeCtx);
+    ret = LmsTreeComputeRoot(root, &treeCtx);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
     }
@@ -175,13 +168,13 @@ int32_t LmsComputeRoot(uint8_t *root, const LMS_Para *para, const uint8_t *I, co
 int32_t LmsGenerateAuthPath(uint8_t *authPath, const LMS_Para *para, const uint8_t *I, const uint8_t *seed, uint32_t q)
 {
     LmsTreeCtx treeCtx;
-    int32_t ret = LmsTree_InitContext(&treeCtx, para, I, seed);
+    int32_t ret = LmsTreeInitContext(&treeCtx, para, I, seed);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
 
-    ret = LmsTree_GenerateAuthPath(authPath, &treeCtx, q);
+    ret = LmsTreeGenerateAuthPath(authPath, &treeCtx, q);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
     }
@@ -189,18 +182,18 @@ int32_t LmsGenerateAuthPath(uint8_t *authPath, const LMS_Para *para, const uint8
 }
 
 int32_t LmsGenerateAuthPathCached(uint8_t *authPath, const LMS_Para *para, const LMS_TreeParams *treeParams, uint32_t q,
-                                  LMS_TreeCache *cache)
+    LMS_TreeCache *cache)
 {
     LmsTreeCtx treeCtx;
-    int32_t ret = LmsTree_InitContext(&treeCtx, para, treeParams->I, treeParams->seed);
+    int32_t ret = LmsTreeInitContext(&treeCtx, para, treeParams->I, treeParams->seed);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
 
-    LmsTree_SetCache(&treeCtx, cache->tree, cache->size, cache->valid);
+    LmsTreeSetCache(&treeCtx, cache->tree, cache->size, cache->valid);
 
-    ret = LmsTree_GenerateAuthPathCached(authPath, &treeCtx, q);
+    ret = LmsTreeGenerateAuthPathCached(authPath, &treeCtx, q);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
     }
@@ -385,7 +378,7 @@ static int32_t LmsSignWriteSignatureCached(const LmsSignWriteCtx *ctx, LMS_TreeC
 }
 
 int32_t LmsSign(const LMS_Para *para, uint8_t *privateKey, const LMS_InputBuffer *message,
-                LMS_SignatureBuffer *signature)
+    LMS_SignatureBuffer *signature)
 {
     int32_t ret = LmsSignValidate(para, privateKey, signature->len);
     if (ret != CRYPT_SUCCESS) {
@@ -414,7 +407,7 @@ int32_t LmsSign(const LMS_Para *para, uint8_t *privateKey, const LMS_InputBuffer
 }
 
 int32_t LmsSignCached(const LMS_Para *para, uint8_t *privateKey, const LMS_InputBuffer *message,
-                      LMS_SignatureBuffer *signature, LMS_TreeCache *cache)
+    LMS_SignatureBuffer *signature, LMS_TreeCache *cache)
 {
     int32_t ret = LmsSignValidate(para, privateKey, signature->len);
     if (ret != CRYPT_SUCCESS) {
@@ -454,7 +447,7 @@ int32_t LmsSignCached(const LMS_Para *para, uint8_t *privateKey, const LMS_Input
  * @return CRYPT_SUCCESS on success, error code on failure
  */
 static int32_t LmsValidateParseSignature(const uint8_t *publicKey, const uint8_t *signature, size_t signatureLen,
-                                         LmsSignatureInfo *info)
+    LmsSignatureInfo *info)
 {
     info->lmsType = BSL_ByteToUint32(publicKey + LMS_PUBKEY_LMS_TYPE_OFFSET);
     info->otsType = BSL_ByteToUint32(publicKey + LMS_PUBKEY_OTS_TYPE_OFFSET);
@@ -552,7 +545,7 @@ cleanup:
  * @return CRYPT_SUCCESS on success, error code on failure
  */
 static int32_t LmsVerifyOtsAndComputeLeaf(uint8_t *currentHash, const LmsSignatureInfo *info, const uint8_t *message,
-                                          size_t messageLen)
+    size_t messageLen)
 {
     /* info->height is guaranteed valid by LmsLookupParamSet (returns only {5,10,15,20,25}) */
     uint32_t numLeaves = (uint32_t)(1ULL << info->height);
@@ -586,7 +579,7 @@ static int32_t LmsVerifyOtsAndComputeLeaf(uint8_t *currentHash, const LmsSignatu
 }
 
 int32_t LmsValidateSignature(const uint8_t *publicKey, const uint8_t *message, size_t messageLen,
-                             const uint8_t *signature, size_t signatureLen)
+    const uint8_t *signature, size_t signatureLen)
 {
     LmsSignatureInfo info;
     int32_t ret = LmsValidateParseSignature(publicKey, signature, signatureLen, &info);
@@ -652,4 +645,4 @@ uint64_t LmsGetRemainingSignatures(const uint8_t *privateKey, uint32_t height)
     return maxSignatures - currentIndex;
 }
 
-#endif /* HITLS_CRYPTO_LMS */
+#endif /* HITLS_CRYPTO_HSS_LMS */

@@ -76,10 +76,7 @@
 #ifdef HITLS_CRYPTO_XMSSMT
 #include "crypt_xmssmt.h"
 #endif
-#ifdef HITLS_CRYPTO_LMS
-#include "crypt_lms.h"
-#endif
-#ifdef HITLS_CRYPTO_HSS
+#ifdef HITLS_CRYPTO_HSS_LMS
 #include "crypt_hss.h"
 #endif
 #ifdef HITLS_CRYPTO_FRODOKEM
@@ -824,7 +821,7 @@ static const EAL_PkeyMethod METHODS[] = {
         NULL  // unBlind
     ),
 #endif
-#ifdef HITLS_CRYPTO_HSS
+#ifdef HITLS_CRYPTO_HSS_LMS
     EAL_PKEY_METHOD_DEFINE(
         CRYPT_PKEY_HSS,
         CRYPT_HSS_NewCtx,

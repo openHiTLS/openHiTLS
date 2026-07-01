@@ -267,9 +267,7 @@
 #cmakedefine HITLS_CRYPTO_SM9_CHECK
 #cmakedefine HITLS_CRYPTO_PAILLIER
 #cmakedefine HITLS_CRYPTO_ELGAMAL
-#cmakedefine HITLS_CRYPTO_LMS
-#cmakedefine HITLS_CRYPTO_LMS_CHECK
-#cmakedefine HITLS_CRYPTO_HSS
+#cmakedefine HITLS_CRYPTO_HSS_LMS
 #cmakedefine HITLS_CRYPTO_HSS_KEYGEN
 #cmakedefine HITLS_CRYPTO_HSS_SIGN
 #cmakedefine HITLS_CRYPTO_HSS_VERIFY

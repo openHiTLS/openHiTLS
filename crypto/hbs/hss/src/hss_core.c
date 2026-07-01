@@ -14,7 +14,7 @@
  */
 
 #include "hitls_build.h"
-#ifdef HITLS_CRYPTO_HSS
+#ifdef HITLS_CRYPTO_HSS_LMS
 
 #include <string.h>
 #include "bsl_sal.h"
@@ -37,16 +37,15 @@
  * @param levelPara  [IN]  Level 0 LMS parameters
  * @return CRYPT_SUCCESS on success, error code on failure
  */
-static int32_t HssGenerateKeys(void *libCtx, uint8_t rootI[LMS_I_LEN], uint8_t rootSeed[LMS_SEED_LEN],
-                               uint8_t rootHash[LMS_SHA256_N], uint8_t masterSeed[LMS_SEED_LEN],
-                               const LMS_Para *levelPara)
+static int32_t HssGenerateKeys(void *libCtx, uint8_t rootI[LMS_I_LEN], uint8_t rootHash[LMS_SHA256_N],
+    uint8_t masterSeed[LMS_SEED_LEN], const LMS_Para *levelPara)
 {
     int32_t ret = CRYPT_RandEx(libCtx, masterSeed, LMS_SEED_LEN);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(CRYPT_HSS_KEYGEN_FAIL);
         return CRYPT_HSS_KEYGEN_FAIL;
     }
-
+    uint8_t rootSeed[LMS_SEED_LEN];
     ret = HssGenerateRootSeed(rootI, rootSeed, masterSeed);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
@@ -54,6 +53,7 @@ static int32_t HssGenerateKeys(void *libCtx, uint8_t rootI[LMS_I_LEN], uint8_t r
     }
 
     ret = LmsComputeRoot(rootHash, levelPara, rootI, rootSeed);
+    BSL_SAL_CleanseData(rootSeed, sizeof(rootSeed));
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(CRYPT_HSS_KEYGEN_FAIL);
         return CRYPT_HSS_KEYGEN_FAIL;
@@ -71,7 +71,7 @@ static int32_t HssGenerateKeys(void *libCtx, uint8_t rootI[LMS_I_LEN], uint8_t r
  * @return CRYPT_SUCCESS on success, error code on failure
  */
 static int32_t HssFormatPublicKey(uint8_t *publicKey, const HSS_Para *para, const uint8_t *rootI,
-                                  const uint8_t *rootHash)
+    const uint8_t *rootHash)
 {
     BSL_Uint32ToByte(para->levels, publicKey + HSS_PUBKEY_LEVELS_OFFSET);
     BSL_Uint32ToByte(para->lmsType[0], publicKey + HSS_PUBKEY_LMS_TYPE_OFFSET);
@@ -125,6 +125,9 @@ static int32_t HssAllocKeyBuffers(CRYPT_HSS_Ctx *ctx)
             return CRYPT_MEM_ALLOC_FAIL;
         }
     }
+    if (ctx->publicKey != NULL) {
+        BSL_SAL_Free(ctx->publicKey);
+    }
     ctx->publicKey = newPublicKey;
     ctx->publicLen = ctx->para.pubKeyLen;
     return CRYPT_SUCCESS;
@@ -132,6 +135,7 @@ static int32_t HssAllocKeyBuffers(CRYPT_HSS_Ctx *ctx)
 
 int32_t CRYPT_HSS_Gen(CRYPT_HSS_Ctx *ctx)
 {
+    int32_t ret;
     if (ctx == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
@@ -141,7 +145,7 @@ int32_t CRYPT_HSS_Gen(CRYPT_HSS_Ctx *ctx)
         return CRYPT_HSS_INVALID_PARAM;
     }
     if (ctx->para.pubKeyLen == 0) {
-        int32_t ret = HssParaInit(&ctx->para, ctx->para.levels, ctx->para.lmsType, ctx->para.otsType);
+        ret = HssParaInit(&ctx->para, ctx->para.levels, ctx->para.lmsType, ctx->para.otsType);
         if (ret != CRYPT_SUCCESS) {
             BSL_ERR_PUSH_ERROR(ret);
             return ret;
@@ -150,22 +154,23 @@ int32_t CRYPT_HSS_Gen(CRYPT_HSS_Ctx *ctx)
 
     uint8_t masterSeed[LMS_SEED_LEN];
     uint8_t rootI[LMS_I_LEN];
-    uint8_t rootSeed[LMS_SEED_LEN];
     uint8_t rootHash[LMS_SHA256_N];
-
-    int32_t ret = HssGenerateKeys(ctx->libCtx, rootI, rootSeed, rootHash, masterSeed, &ctx->para.levelPara[0]);
+    ret = HssGenerateKeys(ctx->libCtx, rootI, rootHash, masterSeed, &ctx->para.levelPara[0]);
     if (ret != CRYPT_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
         goto CLEANUP;
     }
 
     ret = HssAllocKeyBuffers(ctx);
     if (ret != CRYPT_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
         goto CLEANUP;
     }
 
     HssFormatPublicKey(ctx->publicKey, &ctx->para, rootI, rootHash);
     ret = HssFormatPrivateKey(ctx->privateKey, &ctx->para, masterSeed);
     if (ret != CRYPT_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
         goto CLEANUP;
     }
 
@@ -177,12 +182,8 @@ int32_t CRYPT_HSS_Gen(CRYPT_HSS_Ctx *ctx)
 
 CLEANUP:
     BSL_SAL_CleanseData(masterSeed, sizeof(masterSeed));
-    BSL_SAL_CleanseData(rootSeed, sizeof(rootSeed));
     BSL_SAL_CleanseData(rootI, sizeof(rootI));
     BSL_SAL_CleanseData(rootHash, sizeof(rootHash));
-    if (ret != CRYPT_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
-    }
     return ret;
 }
 
@@ -199,7 +200,7 @@ CLEANUP:
  * @return CRYPT_SUCCESS on success, error code on failure
  */
 static int32_t HssCreateChildPubKey(uint8_t childPubKey[LMS_PUBKEY_MAX_LEN], const HssSignContext *signCtx,
-                                    const HssTreeContext *child)
+    const HssTreeContext *child)
 {
     uint8_t childRoot[32];
     int32_t ret = LmsComputeRoot(childRoot, &signCtx->para->levelPara[signCtx->childLevel], child->I, child->seed);
@@ -227,7 +228,7 @@ static int32_t HssCreateChildPubKey(uint8_t childPubKey[LMS_PUBKEY_MAX_LEN], con
  * @return CRYPT_SUCCESS on success, error code on failure
  */
 static int32_t HssSignChildPubKey(HSS_OutputBuffer *output, const HssSignContext *signCtx, const HssTreeContext *parent,
-                                  const uint8_t childPubKey[LMS_PUBKEY_MAX_LEN], LMS_TreeCache *cache)
+    const uint8_t childPubKey[LMS_PUBKEY_MAX_LEN], LMS_TreeCache *cache)
 {
     uint8_t parentPrivKey[LMS_PRVKEY_MAX_LEN];
     BSL_Uint64ToByte(parent->leafIndex, parentPrivKey + LMS_PRVKEY_INDEX_OFFSET);
@@ -236,7 +237,8 @@ static int32_t HssSignChildPubKey(HSS_OutputBuffer *output, const HssSignContext
     memcpy(parentPrivKey + LMS_PRVKEY_I_OFFSET, parent->I, LMS_I_LEN);
     memcpy(parentPrivKey + LMS_PRVKEY_SEED_OFFSET, parent->seed, LMS_SEED_LEN);
 
-    LMS_InputBuffer msgBuf = {childPubKey, LMS_PUBKEY_MAX_LEN};
+    uint32_t childPubKeyLen = signCtx->para->levelPara[signCtx->childLevel].pubKeyLen;
+    LMS_InputBuffer msgBuf = {childPubKey, childPubKeyLen};
     LMS_SignatureBuffer sigBuf = {output->data, output->len};
     int32_t ret =
         LmsSignCached(&signCtx->para->levelPara[signCtx->parentLevel], parentPrivKey, &msgBuf, &sigBuf, cache);
@@ -248,7 +250,7 @@ static int32_t HssSignChildPubKey(HSS_OutputBuffer *output, const HssSignContext
 }
 
 int32_t HssGenerateSignedPubKey(HSS_OutputBuffer *output, const HssSignContext *signCtx, const HssTreeContext *parent,
-                                const HssTreeContext *child, LMS_TreeCache *cache)
+    const HssTreeContext *child, LMS_TreeCache *cache)
 {
     uint8_t childPubKey[LMS_PUBKEY_MAX_LEN];
     int32_t ret = HssCreateChildPubKey(childPubKey, signCtx, child);
@@ -258,7 +260,8 @@ int32_t HssGenerateSignedPubKey(HSS_OutputBuffer *output, const HssSignContext *
     }
 
     size_t parentSigLen = signCtx->para->levelPara[signCtx->parentLevel].sigLen;
-    if (*output->len < parentSigLen + LMS_PUBKEY_MAX_LEN) {
+    uint32_t childPubKeyLen = signCtx->para->levelPara[signCtx->childLevel].pubKeyLen;
+    if (*output->len < parentSigLen + childPubKeyLen) {
         BSL_SAL_CleanseData(childPubKey, sizeof(childPubKey));
         BSL_ERR_PUSH_ERROR(CRYPT_LMS_BUFFER_TOO_SMALL);
         return CRYPT_LMS_BUFFER_TOO_SMALL;
@@ -272,13 +275,8 @@ int32_t HssGenerateSignedPubKey(HSS_OutputBuffer *output, const HssSignContext *
         return ret;
     }
 
-    if (LMS_PUBKEY_MAX_LEN > *output->len - parentSigLen) {
-        BSL_SAL_CleanseData(childPubKey, sizeof(childPubKey));
-        BSL_ERR_PUSH_ERROR(CRYPT_LMS_BUFFER_TOO_SMALL);
-        return CRYPT_LMS_BUFFER_TOO_SMALL;
-    }
-    memcpy(output->data + parentSigLen, childPubKey, LMS_PUBKEY_MAX_LEN);
-    *output->len = parentSigLen + LMS_PUBKEY_MAX_LEN;
+    memcpy(output->data + parentSigLen, childPubKey, childPubKeyLen);
+    *output->len = parentSigLen + childPubKeyLen;
     BSL_SAL_CleanseData(childPubKey, sizeof(childPubKey));
     return CRYPT_SUCCESS;
 }
@@ -303,9 +301,8 @@ typedef struct {
  * @return CRYPT_SUCCESS on success, error code on failure
  */
 int32_t HssGenerateAllSeeds(uint8_t levelI[HSS_LEVELS_ARRAY_SIZE][LMS_I_LEN],
-                            uint8_t levelSeed[HSS_LEVELS_ARRAY_SIZE][LMS_SEED_LEN],
-                            const uint8_t masterSeed[LMS_SEED_LEN], const uint64_t treeIndex[HSS_LEVELS_ARRAY_SIZE],
-                            uint32_t levels)
+    uint8_t levelSeed[HSS_LEVELS_ARRAY_SIZE][LMS_SEED_LEN], const uint8_t masterSeed[LMS_SEED_LEN],
+    const uint64_t treeIndex[HSS_LEVELS_ARRAY_SIZE], uint32_t levels)
 {
     int32_t ret = HssGenerateRootSeed(levelI[0], levelSeed[0], masterSeed);
     if (ret != CRYPT_SUCCESS) {
@@ -335,8 +332,7 @@ int32_t HssGenerateAllSeeds(uint8_t levelI[HSS_LEVELS_ARRAY_SIZE][LMS_I_LEN],
  * @return CRYPT_SUCCESS on success, error code on failure
  */
 static int32_t HssSignValidateAndSetup(CRYPT_HSS_Ctx *ctx, uint32_t sigLen, uint64_t *counter,
-                                       uint64_t treeIndex[HSS_LEVELS_ARRAY_SIZE],
-                                       uint32_t leafIndex[HSS_LEVELS_ARRAY_SIZE])
+    uint64_t treeIndex[HSS_LEVELS_ARRAY_SIZE], uint32_t leafIndex[HSS_LEVELS_ARRAY_SIZE])
 {
     if (ctx->privateKey == NULL || ctx->para.levels == 0) {
         BSL_ERR_PUSH_ERROR(CRYPT_HSS_NO_KEY);
@@ -363,7 +359,7 @@ static int32_t HssSignValidateAndSetup(CRYPT_HSS_Ctx *ctx, uint32_t sigLen, uint
 }
 
 int32_t CRYPT_HSS_Sign(CRYPT_HSS_Ctx *ctx, int32_t algId, const uint8_t *msg, uint32_t msgLen, uint8_t *sig,
-                       uint32_t *sigLen)
+    uint32_t *sigLen)
 {
     (void)algId;
     if (ctx == NULL || msg == NULL || sig == NULL || sigLen == NULL) {
@@ -384,7 +380,7 @@ int32_t CRYPT_HSS_Sign(CRYPT_HSS_Ctx *ctx, int32_t algId, const uint8_t *msg, ui
     memcpy(masterSeed, ctx->privateKey + HSS_PRVKEY_SEED_OFFSET, HSS_PRVKEY_SEED_LEN);
 
     HssMultiTreeCtx treeCtx;
-    ret = HssTree_InitContextWithSeeds(&treeCtx, &ctx->para, masterSeed, counter);
+    ret = HssTreeInitContextWithSeeds(&treeCtx, &ctx->para, masterSeed, counter);
     if (ret != CRYPT_SUCCESS) {
         BSL_SAL_CleanseData(masterSeed, sizeof(masterSeed));
         BSL_ERR_PUSH_ERROR(ret);
@@ -405,7 +401,7 @@ int32_t CRYPT_HSS_Sign(CRYPT_HSS_Ctx *ctx, int32_t algId, const uint8_t *msg, ui
     ctx->signatureIndex = counter + 1;
 
     size_t actualSigLen = *sigLen;
-    ret = HssTree_Sign(sig, &actualSigLen, msg, msgLen, &treeCtx);
+    ret = HssTreeSign(sig, &actualSigLen, msg, msgLen, &treeCtx);
 
     BSL_SAL_CleanseData(masterSeed, sizeof(masterSeed));
     BSL_SAL_CleanseData(treeCtx.levelSeed, sizeof(treeCtx.levelSeed));
@@ -479,9 +475,8 @@ static int32_t HssGetLmsSigLenFromBytes(const uint8_t *sig, size_t remaining, si
 }
 
 static int32_t HssParseSignedPubKeys(HSS_ParsedSig *parsed, const HSS_Para *para, const uint8_t **sigPtr,
-                                     size_t *remaining)
+    size_t *remaining)
 {
-    (void)para; /* para->levelPara no longer needed: lengths parsed from signature bytes */
     for (uint32_t i = 0; i < parsed->nspk; i++) {
         if (i >= HSS_LEVELS_ARRAY_SIZE) {
             BSL_ERR_PUSH_ERROR(CRYPT_HSS_SIGNATURE_PARSE_FAIL);
@@ -495,7 +490,7 @@ static int32_t HssParseSignedPubKeys(HSS_ParsedSig *parsed, const HSS_Para *para
             return ret;
         }
 
-        size_t totalLen = lmsSigLen + LMS_PUBKEY_MAX_LEN;
+        size_t totalLen = lmsSigLen + para->levelPara[i + 1].pubKeyLen;
         if (*remaining < totalLen) {
             BSL_ERR_PUSH_ERROR(CRYPT_HSS_SIGNATURE_PARSE_FAIL);
             return CRYPT_HSS_SIGNATURE_PARSE_FAIL;
@@ -550,7 +545,7 @@ int32_t HssParseSignature(HSS_ParsedSig *parsed, const HSS_Para *para, const uin
 }
 
 int32_t CRYPT_HSS_Verify(const CRYPT_HSS_Ctx *ctx, int32_t algId, const uint8_t *msg, uint32_t msgLen,
-                         const uint8_t *sig, uint32_t sigLen)
+    const uint8_t *sig, uint32_t sigLen)
 {
     (void)algId;
     if (ctx == NULL || msg == NULL || sig == NULL) {
@@ -564,7 +559,7 @@ int32_t CRYPT_HSS_Verify(const CRYPT_HSS_Ctx *ctx, int32_t algId, const uint8_t 
     }
 
     /* Use the new tree-based verification */
-    int32_t ret = HssTree_Verify(&ctx->para, ctx->publicKey, msg, msgLen, sig, sigLen);
+    int32_t ret = HssTreeVerify(&ctx->para, ctx->publicKey, msg, msgLen, sig, sigLen);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
     }
@@ -572,4 +567,4 @@ int32_t CRYPT_HSS_Verify(const CRYPT_HSS_Ctx *ctx, int32_t algId, const uint8_t 
 }
 
 #endif /* HITLS_CRYPTO_HSS_VERIFY */
-#endif /* HITLS_CRYPTO_HSS */
+#endif /* HITLS_CRYPTO_HSS_LMS */

@@ -102,7 +102,7 @@ build_hitls_code()
     feature_options="${feature_options} -DHITLS_CRYPTO_ACVP_TESTS=ON" # enable ACVP tests
     feature_options="${feature_options} -DHITLS_CRYPTO_DSA_GEN_PARA=ON" # enable DSA genPara tests
     feature_options="${feature_options} -DHITLS_TLS_FEATURE_SM_TLS13=ON" # enable rfc8998 tests
-    feature_options="${feature_options} -DHITLS_CRYPTO_LMS=ON -DHITLS_CRYPTO_HSS=ON" # enable LMS/HSS signature algorithms
+    feature_options="${feature_options} -DHITLS_CRYPTO_HSS_LMS=ON" # enable LMS/HSS signature algorithms
 
     if [[ $executes = "ON" ]]; then
         feature_options="${feature_options} -DHITLS_BUILD_EXE=ON -DHITLS_CRYPTO_CMVP=ON"

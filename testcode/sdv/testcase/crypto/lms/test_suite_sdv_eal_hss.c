@@ -25,6 +25,7 @@
 #include "crypt_eal_pkey.h"
 #include "crypt_util_rand.h"
 #include "crypt_hss.h"
+#include "crypt_params_key.h"
 #include "test.h"
 
 /* END_HEADER */
@@ -53,28 +54,11 @@ static CRYPT_EAL_PkeyCtx *CreateHssContext(int isProvider)
     return CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_HSS);
 }
 
-static int32_t SetupHssParams(CRYPT_EAL_PkeyCtx *ctx, uint32_t levels, uint32_t *lmsType, uint32_t *otsType)
-{
-    int32_t ret = CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_HSS_SET_LEVELS, &levels, sizeof(levels));
-    if (ret != CRYPT_SUCCESS) {
-        return ret;
-    }
-    ret = CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_HSS_SET_LMS_TYPE, lmsType, sizeof(uint32_t) * 2);
-    if (ret != CRYPT_SUCCESS) {
-        return ret;
-    }
-    return CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_HSS_SET_OTS_TYPE, otsType, sizeof(uint32_t) * 2);
-}
-
 /* BEGIN_CASE */
 void SDV_CRYPTO_EAL_HSS_API_TC001(int isProvider)
 {
     TestMemInit();
-    if (isProvider) {
-        ASSERT_EQ(TestRandInitSelfCheck(), CRYPT_SUCCESS);
-    } else {
-        ASSERT_EQ(TestRandInit(), CRYPT_SUCCESS);
-    }
+    ASSERT_EQ(TestRandInit(), CRYPT_SUCCESS);
     CRYPT_EAL_SetRandCallBack(HssEalTestRand);
 
     CRYPT_EAL_PkeyCtx *ctx1 = CreateHssContext(isProvider);
@@ -83,15 +67,18 @@ void SDV_CRYPTO_EAL_HSS_API_TC001(int isProvider)
     ASSERT_TRUE(ctx1 != NULL);
 
     uint32_t levels = 2;
-    uint32_t lmsType[2] = {0, CRYPT_LMS_SHA256_M32_H5};
-    uint32_t otsType[2] = {0, CRYPT_LMOTS_SHA256_N32_W8};
+    uint32_t lmstype = CRYPT_LMS_SHA256_M32_H5;
+    uint32_t otstype = CRYPT_LMOTS_SHA256_N32_W8;
 
-    int32_t ret = SetupHssParams(ctx1, levels, lmsType, otsType);
-    ASSERT_EQ(ret, CRYPT_SUCCESS);
-
-    lmsType[0] = 1;
-    otsType[0] = 1;
-    ret = SetupHssParams(ctx1, levels, lmsType, otsType);
+    BSL_Param params[6] = {
+        {CRYPT_PARAM_HSS_LEVEL, BSL_PARAM_TYPE_UINT32, &levels, sizeof(levels), 0},
+        {CRYPT_PARAM_HSS_LEVEL1_LMS_TYPE, BSL_PARAM_TYPE_UINT32, &lmstype, sizeof(lmstype), 0},
+        {CRYPT_PARAM_HSS_LEVEL1_OTS_TYPE, BSL_PARAM_TYPE_UINT32, &otstype, sizeof(otstype), 0},
+        {CRYPT_PARAM_HSS_LEVEL2_LMS_TYPE, BSL_PARAM_TYPE_UINT32, &lmstype, sizeof(lmstype), 0},
+        {CRYPT_PARAM_HSS_LEVEL2_OTS_TYPE, BSL_PARAM_TYPE_UINT32, &otstype, sizeof(otstype), 0},
+        BSL_PARAM_END
+    };
+    int32_t ret = CRYPT_EAL_PkeyCtrl(ctx1, CRYPT_CTRL_HSS_SET_PARAM, params, 0);
     ASSERT_EQ(ret, CRYPT_SUCCESS);
 
     ret = CRYPT_EAL_PkeyGen(ctx1);
@@ -100,14 +87,7 @@ void SDV_CRYPTO_EAL_HSS_API_TC001(int isProvider)
     ctx2 = CreateHssContext(isProvider);
     ASSERT_TRUE(ctx2 != NULL);
 
-    lmsType[0] = 0;
-    otsType[0] = 0;
-    ret = SetupHssParams(ctx2, levels, lmsType, otsType);
-    ASSERT_EQ(ret, CRYPT_SUCCESS);
-
-    lmsType[0] = 1;
-    otsType[0] = 1;
-    ret = SetupHssParams(ctx2, levels, lmsType, otsType);
+    ret = CRYPT_EAL_PkeyCtrl(ctx2, CRYPT_CTRL_HSS_SET_PARAM, params, 0);
     ASSERT_EQ(ret, CRYPT_SUCCESS);
 
     ret = CRYPT_EAL_PkeyGen(ctx2);
@@ -186,31 +166,30 @@ EXIT:
 void SDV_CRYPTO_EAL_HSS_SIGN_VERIFY_TC001(int isProvider)
 {
     TestMemInit();
-    if (isProvider) {
-        ASSERT_EQ(TestRandInitSelfCheck(), CRYPT_SUCCESS);
-    } else {
-        ASSERT_EQ(TestRandInit(), CRYPT_SUCCESS);
-    }
+    ASSERT_EQ(TestRandInit(), CRYPT_SUCCESS);
     CRYPT_EAL_SetRandCallBack(HssEalTestRand);
 
     CRYPT_EAL_PkeyCtx *ctx = CreateHssContext(isProvider);
     ASSERT_TRUE(ctx != NULL);
 
     uint32_t levels = 2;
-    uint32_t lmsType[2] = {0, CRYPT_LMS_SHA256_M32_H5};
-    uint32_t otsType[2] = {0, CRYPT_LMOTS_SHA256_N32_W8};
+    uint32_t lmstype = CRYPT_LMS_SHA256_M32_H5;
+    uint32_t otstype = CRYPT_LMOTS_SHA256_N32_W8;
     const uint8_t msg[] = "Test message for HSS EAL signature";
     uint32_t msgLen = sizeof(msg) - 1;
     uint8_t sig[8192] = {0};
     uint32_t sigLen = sizeof(sig);
     const uint8_t wrongMsg[] = "Wrong message";
 
-    int32_t ret = SetupHssParams(ctx, levels, lmsType, otsType);
-    ASSERT_EQ(ret, CRYPT_SUCCESS);
-
-    lmsType[0] = 1;
-    otsType[0] = 1;
-    ret = SetupHssParams(ctx, levels, lmsType, otsType);
+    BSL_Param params[6] = {
+        {CRYPT_PARAM_HSS_LEVEL, BSL_PARAM_TYPE_UINT32, &levels, sizeof(levels), 0},
+        {CRYPT_PARAM_HSS_LEVEL1_LMS_TYPE, BSL_PARAM_TYPE_UINT32, &lmstype, sizeof(lmstype), 0},
+        {CRYPT_PARAM_HSS_LEVEL1_OTS_TYPE, BSL_PARAM_TYPE_UINT32, &otstype, sizeof(otstype), 0},
+        {CRYPT_PARAM_HSS_LEVEL2_LMS_TYPE, BSL_PARAM_TYPE_UINT32, &lmstype, sizeof(lmstype), 0},
+        {CRYPT_PARAM_HSS_LEVEL2_OTS_TYPE, BSL_PARAM_TYPE_UINT32, &otstype, sizeof(otstype), 0},
+        BSL_PARAM_END
+    };
+    int32_t ret = CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_HSS_SET_PARAM, params, 0);
     ASSERT_EQ(ret, CRYPT_SUCCESS);
 
     ret = CRYPT_EAL_PkeyGen(ctx);
@@ -244,26 +223,20 @@ void SDV_CRYPTO_EAL_HSS_CTRL_TC001(void)
     ASSERT_TRUE(ctx != NULL);
 
     uint32_t levels = 2;
-    uint32_t lmsType[2] = {0, CRYPT_LMS_SHA256_M32_H5};
-    uint32_t otsType[2] = {0, CRYPT_LMOTS_SHA256_N32_W8};
+    uint32_t lmstype = CRYPT_LMS_SHA256_M32_H5;
+    uint32_t otstype = CRYPT_LMOTS_SHA256_N32_W8;
     uint64_t remaining = 0;
     uint32_t pubKeyLen = 0;
 
-    int32_t ret = CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_HSS_SET_LEVELS, &levels, sizeof(levels));
-    ASSERT_EQ(ret, CRYPT_SUCCESS);
-
-    ret = CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_HSS_SET_LMS_TYPE, lmsType, sizeof(lmsType));
-    ASSERT_EQ(ret, CRYPT_SUCCESS);
-
-    ret = CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_HSS_SET_OTS_TYPE, otsType, sizeof(otsType));
-    ASSERT_EQ(ret, CRYPT_SUCCESS);
-
-    lmsType[0] = 1;
-    ret = CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_HSS_SET_LMS_TYPE, lmsType, sizeof(lmsType));
-    ASSERT_EQ(ret, CRYPT_SUCCESS);
-
-    otsType[0] = 1;
-    ret = CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_HSS_SET_OTS_TYPE, otsType, sizeof(otsType));
+    BSL_Param params[6] = {
+        {CRYPT_PARAM_HSS_LEVEL, BSL_PARAM_TYPE_UINT32, &levels, sizeof(levels), 0},
+        {CRYPT_PARAM_HSS_LEVEL1_LMS_TYPE, BSL_PARAM_TYPE_UINT32, &lmstype, sizeof(lmstype), 0},
+        {CRYPT_PARAM_HSS_LEVEL1_OTS_TYPE, BSL_PARAM_TYPE_UINT32, &otstype, sizeof(otstype), 0},
+        {CRYPT_PARAM_HSS_LEVEL2_LMS_TYPE, BSL_PARAM_TYPE_UINT32, &lmstype, sizeof(lmstype), 0},
+        {CRYPT_PARAM_HSS_LEVEL2_OTS_TYPE, BSL_PARAM_TYPE_UINT32, &otstype, sizeof(otstype), 0},
+        BSL_PARAM_END
+    };
+    int32_t ret = CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_HSS_SET_PARAM, params, 0);
     ASSERT_EQ(ret, CRYPT_SUCCESS);
 
     ret = CRYPT_EAL_PkeyGen(ctx);
@@ -281,6 +254,69 @@ EXIT:
     CRYPT_EAL_PkeyFreeCtx(ctx);
     CRYPT_EAL_SetRandCallBack(NULL);
     TestRandDeInit();
+    return;
+}
+/* END_CASE */
+
+/* @
+* @test  SDV_CRYPTO_HSS_LMS_ROUNDTRIP_PARAM_TC001
+* @spec  RFC 8554
+* @title  LMS keygen/sign/verify roundtrip with parameterized LMS/OTS types
+* @precon  nan
+* @brief  Generate a key pair for the given (lmsType, otsType), sign a message,
+*         verify the signature, and check that tampering with the message or
+*         signature causes verification to fail.
+* @expect  Roundtrip succeeds; tampered message or signature fails verification
+* @prior  Level 1
+* @auto  TRUE
+@ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_HSS_LMS_ROUNDTRIP_PARAM_TC001(int lmsType, int otsType)
+{
+    uint8_t *sig = NULL;
+    TestMemInit();
+    CRYPT_EAL_SetRandCallBack(HssEalTestRand);
+
+    CRYPT_HSS_Ctx *ctx = CRYPT_HSS_NewCtx();
+    ASSERT_TRUE(ctx != NULL);
+
+    uint32_t levels = 1;
+    uint32_t lms = (uint32_t)lmsType;
+    uint32_t ots = (uint32_t)otsType;
+    BSL_Param params[6] = {
+        {CRYPT_PARAM_HSS_LEVEL, BSL_PARAM_TYPE_UINT32, &levels, sizeof(levels), 0},
+        {CRYPT_PARAM_HSS_LEVEL1_LMS_TYPE, BSL_PARAM_TYPE_UINT32, &lms, sizeof(lms), 0},
+        {CRYPT_PARAM_HSS_LEVEL1_OTS_TYPE, BSL_PARAM_TYPE_UINT32, &ots, sizeof(ots), 0},
+        BSL_PARAM_END
+    };
+    ASSERT_EQ(CRYPT_HSS_Ctrl(ctx, CRYPT_CTRL_HSS_SET_PARAM, params, 0), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_HSS_Gen(ctx), CRYPT_SUCCESS);
+
+    uint32_t sigLen = 0;
+    ASSERT_EQ(CRYPT_HSS_Ctrl(ctx, CRYPT_CTRL_HSS_GET_SIG_LEN, &sigLen, sizeof(sigLen)), CRYPT_SUCCESS);
+    ASSERT_TRUE(sigLen > 0);
+    sig = (uint8_t *)BSL_SAL_Malloc(sigLen);
+    ASSERT_TRUE(sig != NULL);
+
+    const uint8_t msg[] = "LMS roundtrip coverage message";
+    uint32_t msgLen = sizeof(msg) - 1;
+    ASSERT_EQ(CRYPT_HSS_Sign(ctx, 0, msg, msgLen, sig, &sigLen), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_HSS_Verify(ctx, 0, msg, msgLen, sig, sigLen), CRYPT_SUCCESS);
+
+    /* Tampered message must fail verification */
+    uint8_t badMsg[sizeof(msg) - 1];
+    memcpy(badMsg, msg, msgLen);
+    badMsg[0] ^= 0x01;
+    ASSERT_NE(CRYPT_HSS_Verify(ctx, 0, badMsg, msgLen, sig, sigLen), CRYPT_SUCCESS);
+
+    /* Tampered signature must fail verification */
+    sig[sigLen / 2] ^= 0x01;
+    ASSERT_NE(CRYPT_HSS_Verify(ctx, 0, msg, msgLen, sig, sigLen), CRYPT_SUCCESS);
+
+EXIT:
+    BSL_SAL_Free(sig);
+    CRYPT_HSS_FreeCtx(ctx);
+    CRYPT_EAL_SetRandCallBack(NULL);
     return;
 }
 /* END_CASE */

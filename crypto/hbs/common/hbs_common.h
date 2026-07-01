@@ -18,7 +18,7 @@
 
 #include "hitls_build.h"
 #if defined(HITLS_CRYPTO_XMSS) || defined(HITLS_CRYPTO_XMSSMT) || defined(HITLS_CRYPTO_SLH_DSA) || \
-    defined(HITLS_CRYPTO_LMS) || defined(HITLS_CRYPTO_HSS)
+    defined(HITLS_CRYPTO_HSS_LMS)
 
 #include <stdint.h>
 #include <stddef.h>
@@ -82,5 +82,5 @@ typedef struct {
 }
 #endif
 
-#endif /* HITLS_CRYPTO_XMSS || HITLS_CRYPTO_XMSSMT || HITLS_CRYPTO_SLH_DSA || HITLS_CRYPTO_LMS || HITLS_CRYPTO_HSS */
+#endif /* HITLS_CRYPTO_XMSS || HITLS_CRYPTO_XMSSMT || HITLS_CRYPTO_SLH_DSA || HITLS_CRYPTO_HSS_LMS */
 #endif /* HBS_COMMON_H */

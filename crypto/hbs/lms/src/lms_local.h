@@ -17,7 +17,7 @@
 #define LMS_LOCAL_H
 
 #include "hitls_build.h"
-#ifdef HITLS_CRYPTO_LMS
+#ifdef HITLS_CRYPTO_HSS_LMS
 
 #include <stdint.h>
 #include <stdbool.h>
@@ -103,34 +103,12 @@ struct LmsCtx {
 #define LMS_MESG_D_OFFSET 20
 #define LMS_MESG_C_OFFSET 22
 
-/**
- * @ingroup lms
- * @brief Calculate message hash prefix length
- * @param n [IN] Hash output length in bytes
- * @return Message prefix length (I(16) + q(4) + D(2) + C(n))
- */
-static inline size_t LMS_MESG_PREFIX_LEN(uint32_t n)
-{
-    return 22 + n; // I(16) + q(4) + D(2) + C(n)
-}
-
 /* OTS iteration hash prefix offsets */
 #define LMS_ITER_I_OFFSET    0
 #define LMS_ITER_Q_OFFSET    16
 #define LMS_ITER_K_OFFSET    20
 #define LMS_ITER_J_OFFSET    22
 #define LMS_ITER_PREV_OFFSET 23
-
-/**
- * @ingroup lms
- * @brief Calculate OTS iteration buffer length
- * @param n [IN] Hash output length in bytes
- * @return Iteration buffer length (I(16) + q(4) + k(2) + j(1) + prev(n))
- */
-static inline size_t LMS_ITER_LEN(uint32_t n)
-{
-    return 23 + n; // I(16) + q(4) + k(2) + j(1) + prev(n)
-}
 
 /* OTS public key hash prefix offsets */
 #define LMS_PBLC_I_OFFSET   0
@@ -144,34 +122,12 @@ static inline size_t LMS_ITER_LEN(uint32_t n)
 #define LMS_LEAF_D_OFFSET  20
 #define LMS_LEAF_PK_OFFSET 22
 
-/**
- * @ingroup lms
- * @brief Calculate leaf node hash buffer length
- * @param n [IN] Hash output length in bytes
- * @return Leaf buffer length (I(16) + r(4) + D(2) + pk(n))
- */
-static inline size_t LMS_LEAF_LEN(uint32_t n)
-{
-    return 22 + n; // I(16) + r(4) + D(2) + pk(n)
-}
-
 /* Internal node hash prefix offsets */
 #define LMS_INTR_I_OFFSET        0
 #define LMS_INTR_R_OFFSET        16
 #define LMS_INTR_D_OFFSET        20
 #define LMS_INTR_LEFT_OFFSET     22
 #define LMS_INTR_RIGHT_OFFSET(n) (22 + (n))
-
-/**
- * @ingroup lms
- * @brief Calculate internal node hash buffer length
- * @param n [IN] Hash output length in bytes
- * @return Internal node buffer length (I(16) + r(4) + D(2) + left(n) + right(n))
- */
-static inline size_t LMS_INTR_LEN(uint32_t n)
-{
-    return 22 + 2 * n; // I(16) + r(4) + D(2) + left(n) + right(n)
-}
 
 /* Seed derivation hash prefix offsets */
 #define LMS_PRG_I_OFFSET    0
@@ -262,7 +218,7 @@ uint32_t LmOtsComputeChecksum(const uint8_t *Q, uint32_t qLen, uint32_t w, uint3
  * @return CRYPT_SUCCESS on success, error code on failure
  */
 int32_t LmOtsSign(uint32_t otsType, LMS_SeedDerive *seed, const LmsFamilyHashFuncs *hashFuncs,
-                  const LMS_InputBuffer *message, LMS_OutputBuffer *signature);
+    const LMS_InputBuffer *message, LMS_OutputBuffer *signature);
 
 /**
  * @ingroup lms
@@ -275,8 +231,7 @@ int32_t LmOtsSign(uint32_t otsType, LMS_SeedDerive *seed, const LmsFamilyHashFun
  * @return CRYPT_SUCCESS on success, error code on failure
  */
 int32_t LmOtsValidateSignature(uint8_t *computedPubKey, const LMS_OtsValidateCtx *ctx,
-                               const LmsFamilyHashFuncs *hashFuncs, const LMS_InputBuffer *message,
-                               const LMS_InputBuffer *signature);
+    const LmsFamilyHashFuncs *hashFuncs, const LMS_InputBuffer *message, const LMS_InputBuffer *signature);
 
 /**
  * @ingroup lms
@@ -320,7 +275,7 @@ int32_t LmsGenerateAuthPath(uint8_t *authPath, const LMS_Para *para, const uint8
  * @return CRYPT_SUCCESS on success, error code on failure
  */
 int32_t LmsGenerateAuthPathCached(uint8_t *authPath, const LMS_Para *para, const LMS_TreeParams *treeParams, uint32_t q,
-                                  LMS_TreeCache *cache);
+    LMS_TreeCache *cache);
 
 /**
  * @ingroup lms
@@ -333,7 +288,7 @@ int32_t LmsGenerateAuthPathCached(uint8_t *authPath, const LMS_Para *para, const
  * @return CRYPT_SUCCESS if valid, error code otherwise
  */
 int32_t LmsValidateSignature(const uint8_t *publicKey, const uint8_t *message, size_t messageLen,
-                             const uint8_t *signature, size_t signatureLen);
+    const uint8_t *signature, size_t signatureLen);
 
 /**
  * @ingroup lms
@@ -366,7 +321,7 @@ int32_t LmsKeyGen(void *libCtx, LMS_Para *para, uint8_t *publicKey, uint8_t *pri
  * @return CRYPT_SUCCESS on success, error code on failure
  */
 int32_t LmsSign(const LMS_Para *para, uint8_t *privateKey, const LMS_InputBuffer *message,
-                LMS_SignatureBuffer *signature);
+    LMS_SignatureBuffer *signature);
 
 /**
  * @ingroup lms
@@ -379,7 +334,7 @@ int32_t LmsSign(const LMS_Para *para, uint8_t *privateKey, const LMS_InputBuffer
  * @return CRYPT_SUCCESS on success, error code on failure
  */
 int32_t LmsSignCached(const LMS_Para *para, uint8_t *privateKey, const LMS_InputBuffer *message,
-                      LMS_SignatureBuffer *signature, LMS_TreeCache *cache);
+    LMS_SignatureBuffer *signature, LMS_TreeCache *cache);
 
 /**
  * @ingroup lms
@@ -402,6 +357,6 @@ static inline void *LIBCTX_FROM_LMS_CTX(const struct LmsCtx *ctx)
 }
 #endif
 
-#endif /* HITLS_CRYPTO_LMS */
+#endif /* HITLS_CRYPTO_HSS_LMS */
 
 #endif /* LMS_LOCAL_H */

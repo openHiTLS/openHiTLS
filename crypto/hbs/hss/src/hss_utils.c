@@ -14,7 +14,7 @@
  */
 
 #include "hitls_build.h"
-#ifdef HITLS_CRYPTO_HSS
+#ifdef HITLS_CRYPTO_HSS_LMS
 
 #include <string.h>
 #include "bsl_sal.h"
@@ -60,7 +60,7 @@ int32_t HssParaInit(HSS_Para *para, uint32_t levels, const uint32_t *lmsTypes, c
     // Set HSS-level parameters
     // HSS public key = levels(4) + pub[0] where pub[0] = lms_type(4) + ots_type(4) + I(16) + root(n) = 24 + n
     // Total = 4 + 24 + n = 28 + n
-    para->pubKeyLen = 28 + para->levelPara[0].n;
+    para->pubKeyLen = HSS_PUBKEY_ROOT_OFFSET + para->levelPara[0].n;
     para->prvKeyLen = HSS_PRVKEY_LEN;
     para->sigLen = HssGetSignatureLen(para);
     para->maxSignatures = HssGetMaxSignatures(para);
@@ -307,7 +307,8 @@ uint64_t HssGetMaxSignatures(const HSS_Para *para)
     return total;
 }
 
-int32_t HssGenerateRootSeed(uint8_t rootI[16], uint8_t rootSeed[32], const uint8_t masterSeed[32])
+int32_t HssGenerateRootSeed(uint8_t rootI[LMS_I_LEN], uint8_t rootSeed[LMS_SEED_LEN],
+    const uint8_t masterSeed[LMS_SEED_LEN])
 {
     // Derive root I: SHA256(masterSeed || 0x00 || 0x00)
     uint8_t buffer[HSS_ROOT_SEED_DERIVE_BUF_LEN];
@@ -337,8 +338,8 @@ int32_t HssGenerateRootSeed(uint8_t rootI[16], uint8_t rootSeed[32], const uint8
     return CRYPT_SUCCESS;
 }
 
-int32_t HssGenerateChildSeed(uint8_t childI[16], uint8_t childSeed[32], const uint8_t parentI[16],
-                             const uint8_t parentSeed[32], const HssChildPosition *position)
+int32_t HssGenerateChildSeed(uint8_t childI[LMS_I_LEN], uint8_t childSeed[LMS_SEED_LEN],
+    const uint8_t parentI[LMS_I_LEN], const uint8_t parentSeed[LMS_SEED_LEN], const HssChildPosition *position)
 {
     // Buffer: parentSeed(32) || parentI(16) || treeIndex(8) || level(4)
     uint8_t buffer[HSS_CHILD_SEED_DERIVE_BUF_LEN];
@@ -415,4 +416,4 @@ int32_t HssCalculateTreeIndices(const HSS_Para *para, uint64_t globalIndex, uint
     return CRYPT_SUCCESS;
 }
 
-#endif /* HITLS_CRYPTO_HSS */
+#endif /* HITLS_CRYPTO_HSS_LMS */

@@ -14,7 +14,7 @@
  */
 
 #include "hitls_build.h"
-#if defined(HITLS_CRYPTO_LMS) && (defined(HITLS_CRYPTO_HSS_KEYGEN) || defined(HITLS_CRYPTO_HSS_SIGN))
+#if defined(HITLS_CRYPTO_HSS_LMS) && (defined(HITLS_CRYPTO_HSS_KEYGEN) || defined(HITLS_CRYPTO_HSS_SIGN))
 
 #include <string.h>
 #include "bsl_sal.h"
@@ -23,13 +23,12 @@
 #include "lms_tree.h"
 #include "lms_local.h"
 #include "lms_hash.h"
-#include "lms_address.h"
 
 /**
  * @ingroup lms_common
  * @brief Initialize LMS tree context
  */
-int32_t LmsTree_InitContext(LmsTreeCtx *ctx, const LMS_Para *para, const uint8_t *I, const uint8_t *seed)
+int32_t LmsTreeInitContext(LmsTreeCtx *ctx, const LMS_Para *para, const uint8_t *I, const uint8_t *seed)
 {
     ctx->para = para;
     ctx->I = I;
@@ -37,7 +36,6 @@ int32_t LmsTree_InitContext(LmsTreeCtx *ctx, const LMS_Para *para, const uint8_t
     ctx->height = para->height;
     ctx->n = para->n;
     ctx->hashFuncs = &para->hashFuncs;
-    ctx->adrsOps = LmsAdrsOps_Init();
     ctx->cachedTree = NULL;
     ctx->cachedTreeSize = NULL;
     ctx->treeCacheValid = NULL;
@@ -49,7 +47,7 @@ int32_t LmsTree_InitContext(LmsTreeCtx *ctx, const LMS_Para *para, const uint8_t
  * @ingroup lms_common
  * @brief Set tree cache in tree context
  */
-void LmsTree_SetCache(LmsTreeCtx *ctx, uint8_t **cachedTree, size_t *cachedTreeSize, bool *treeCacheValid)
+void LmsTreeSetCache(LmsTreeCtx *ctx, uint8_t **cachedTree, size_t *cachedTreeSize, bool *treeCacheValid)
 {
     ctx->cachedTree = cachedTree;
     ctx->cachedTreeSize = cachedTreeSize;
@@ -60,7 +58,7 @@ void LmsTree_SetCache(LmsTreeCtx *ctx, uint8_t **cachedTree, size_t *cachedTreeS
  * @ingroup lms_tree
  * @brief Compute leaf node hash
  */
-static int32_t LmsTree_ComputeLeafHash(uint8_t *leafHash, const LmsTreeCtx *ctx, uint32_t r, const uint8_t *otsPubKey)
+static int32_t LmsTreeComputeLeafHash(uint8_t *leafHash, const LmsTreeCtx *ctx, uint32_t r, const uint8_t *otsPubKey)
 {
     int32_t ret = ctx->hashFuncs->leafHash(ctx, r, otsPubKey, leafHash);
     if (ret != CRYPT_SUCCESS) {
@@ -74,8 +72,8 @@ static int32_t LmsTree_ComputeLeafHash(uint8_t *leafHash, const LmsTreeCtx *ctx,
  * @ingroup lms_tree
  * @brief Compute internal node hash
  */
-static int32_t LmsTree_ComputeInternalHash(uint8_t *nodeHash, const LmsTreeCtx *ctx, uint32_t r,
-                                           const uint8_t *leftChild, const uint8_t *rightChild)
+static int32_t LmsTreeComputeInternalHash(uint8_t *nodeHash, const LmsTreeCtx *ctx, uint32_t r,
+    const uint8_t *leftChild, const uint8_t *rightChild)
 {
     int32_t ret = ctx->hashFuncs->nodeHash(ctx, r, leftChild, rightChild, nodeHash);
     if (ret != CRYPT_SUCCESS) {
@@ -89,7 +87,7 @@ static int32_t LmsTree_ComputeInternalHash(uint8_t *nodeHash, const LmsTreeCtx *
  * @ingroup lms_tree
  * @brief Compute all leaf nodes of Merkle tree
  */
-static int32_t LmsTree_ComputeLeafNodes(uint8_t *tree, const LmsTreeCtx *ctx, uint32_t numLeaves)
+static int32_t LmsTreeComputeLeafNodes(uint8_t *tree, const LmsTreeCtx *ctx, uint32_t numLeaves)
 {
     uint8_t otsPubKey[LMS_MAX_HASH];
     LMS_SeedDerive derive;
@@ -110,7 +108,7 @@ static int32_t LmsTree_ComputeLeafNodes(uint8_t *tree, const LmsTreeCtx *ctx, ui
         }
 
         uint32_t r = numLeaves + q;
-        ret = LmsTree_ComputeLeafHash(&tree[r * ctx->n], ctx, r, otsPubKey);
+        ret = LmsTreeComputeLeafHash(&tree[r * ctx->n], ctx, r, otsPubKey);
         if (ret != CRYPT_SUCCESS) {
             BSL_ERR_PUSH_ERROR(ret);
             return ret;
@@ -125,7 +123,7 @@ static int32_t LmsTree_ComputeLeafNodes(uint8_t *tree, const LmsTreeCtx *ctx, ui
  * @ingroup lms_tree
  * @brief Compute all internal nodes of Merkle tree
  */
-static int32_t LmsTree_ComputeInternalNodes(uint8_t *tree, const LmsTreeCtx *ctx, uint32_t numLeaves)
+static int32_t LmsTreeComputeInternalNodes(uint8_t *tree, const LmsTreeCtx *ctx, uint32_t numLeaves)
 {
     if (numLeaves < 2) {
         return CRYPT_SUCCESS;
@@ -134,7 +132,7 @@ static int32_t LmsTree_ComputeInternalNodes(uint8_t *tree, const LmsTreeCtx *ctx
         uint32_t leftChild = LMS_LEFT_CHILD_MULTIPLIER * r;
         uint32_t rightChild = LMS_LEFT_CHILD_MULTIPLIER * r + LMS_RIGHT_CHILD_OFFSET;
 
-        int32_t ret = LmsTree_ComputeInternalHash(&tree[r * ctx->n], ctx, r, &tree[leftChild * ctx->n],
+        int32_t ret = LmsTreeComputeInternalHash(&tree[r * ctx->n], ctx, r, &tree[leftChild * ctx->n],
                                                   &tree[rightChild * ctx->n]);
         if (ret != CRYPT_SUCCESS) {
             BSL_ERR_PUSH_ERROR(ret);
@@ -148,7 +146,7 @@ static int32_t LmsTree_ComputeInternalNodes(uint8_t *tree, const LmsTreeCtx *ctx
  * @ingroup lms_tree
  * @brief Compute Merkle tree root hash
  */
-int32_t LmsTree_ComputeRoot(uint8_t *root, const LmsTreeCtx *ctx)
+int32_t LmsTreeComputeRoot(uint8_t *root, const LmsTreeCtx *ctx)
 {
     if (ctx->height > LMS_MAX_HEIGHT) {
         BSL_ERR_PUSH_ERROR(CRYPT_LMS_INVALID_PARAM);
@@ -167,14 +165,14 @@ int32_t LmsTree_ComputeRoot(uint8_t *root, const LmsTreeCtx *ctx)
         return CRYPT_MEM_ALLOC_FAIL;
     }
 
-    int32_t ret = LmsTree_ComputeLeafNodes(tree, ctx, numLeaves);
+    int32_t ret = LmsTreeComputeLeafNodes(tree, ctx, numLeaves);
     if (ret != CRYPT_SUCCESS) {
         BSL_SAL_ClearFree(tree, treeSize);
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
 
-    ret = LmsTree_ComputeInternalNodes(tree, ctx, numLeaves);
+    ret = LmsTreeComputeInternalNodes(tree, ctx, numLeaves);
     if (ret != CRYPT_SUCCESS) {
         BSL_SAL_ClearFree(tree, treeSize);
         BSL_ERR_PUSH_ERROR(ret);
@@ -192,7 +190,7 @@ int32_t LmsTree_ComputeRoot(uint8_t *root, const LmsTreeCtx *ctx)
  * @ingroup lms_tree
  * @brief Extract authentication path from computed tree
  */
-static void LmsTree_ExtractAuthPath(uint8_t *authPath, const uint8_t *tree, uint32_t q, uint32_t height, uint32_t n)
+static void LmsTreeExtractAuthPath(uint8_t *authPath, const uint8_t *tree, uint32_t q, uint32_t height, uint32_t n)
 {
     uint32_t numLeaves = (uint32_t)(1ULL << height);
     uint32_t nodeNum = numLeaves + q;
@@ -213,7 +211,7 @@ static void LmsTree_ExtractAuthPath(uint8_t *authPath, const uint8_t *tree, uint
  * @ingroup lms_tree
  * @brief Generate authentication path for leaf node
  */
-int32_t LmsTree_GenerateAuthPath(uint8_t *authPath, const LmsTreeCtx *ctx, uint32_t q)
+int32_t LmsTreeGenerateAuthPath(uint8_t *authPath, const LmsTreeCtx *ctx, uint32_t q)
 {
     if (ctx->height > LMS_MAX_HEIGHT) {
         BSL_ERR_PUSH_ERROR(CRYPT_LMS_INVALID_PARAM);
@@ -238,21 +236,21 @@ int32_t LmsTree_GenerateAuthPath(uint8_t *authPath, const LmsTreeCtx *ctx, uint3
         return CRYPT_MEM_ALLOC_FAIL;
     }
 
-    int32_t ret = LmsTree_ComputeLeafNodes(tree, ctx, numLeaves);
+    int32_t ret = LmsTreeComputeLeafNodes(tree, ctx, numLeaves);
     if (ret != CRYPT_SUCCESS) {
         BSL_SAL_ClearFree(tree, treeSize);
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
 
-    ret = LmsTree_ComputeInternalNodes(tree, ctx, numLeaves);
+    ret = LmsTreeComputeInternalNodes(tree, ctx, numLeaves);
     if (ret != CRYPT_SUCCESS) {
         BSL_SAL_ClearFree(tree, treeSize);
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
 
-    LmsTree_ExtractAuthPath(authPath, tree, q, ctx->height, ctx->n);
+    LmsTreeExtractAuthPath(authPath, tree, q, ctx->height, ctx->n);
 
     BSL_SAL_ClearFree(tree, treeSize);
     return CRYPT_SUCCESS;
@@ -293,13 +291,13 @@ static int32_t BuildCachedTree(const LmsTreeCtx *ctx, size_t treeSize, uint32_t 
         return ret;
     }
     *treeOut = *ctx->cachedTree;
-    ret = LmsTree_ComputeLeafNodes(*treeOut, ctx, numLeaves);
+    ret = LmsTreeComputeLeafNodes(*treeOut, ctx, numLeaves);
     if (ret != CRYPT_SUCCESS) {
         *ctx->treeCacheValid = false;
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
-    ret = LmsTree_ComputeInternalNodes(*treeOut, ctx, numLeaves);
+    ret = LmsTreeComputeInternalNodes(*treeOut, ctx, numLeaves);
     if (ret != CRYPT_SUCCESS) {
         *ctx->treeCacheValid = false;
         BSL_ERR_PUSH_ERROR(ret);
@@ -309,7 +307,7 @@ static int32_t BuildCachedTree(const LmsTreeCtx *ctx, size_t treeSize, uint32_t 
     return CRYPT_SUCCESS;
 }
 
-int32_t LmsTree_GenerateAuthPathCached(uint8_t *authPath, const LmsTreeCtx *ctx, uint32_t q)
+int32_t LmsTreeGenerateAuthPathCached(uint8_t *authPath, const LmsTreeCtx *ctx, uint32_t q)
 {
     if (ctx->cachedTree == NULL || ctx->cachedTreeSize == NULL || ctx->treeCacheValid == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_LMS_INVALID_PARAM);
@@ -332,8 +330,8 @@ int32_t LmsTree_GenerateAuthPathCached(uint8_t *authPath, const LmsTreeCtx *ctx,
     if (ret != CRYPT_SUCCESS) {
         return ret;
     }
-    LmsTree_ExtractAuthPath(authPath, tree, q, ctx->height, ctx->n);
+    LmsTreeExtractAuthPath(authPath, tree, q, ctx->height, ctx->n);
     return CRYPT_SUCCESS;
 }
 
-#endif /* HITLS_CRYPTO_LMS */
+#endif /* HITLS_CRYPTO_HSS_LMS */

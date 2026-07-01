@@ -47,10 +47,7 @@
 #ifdef HITLS_CRYPTO_XMSSMT
 #include "crypt_xmssmt.h"
 #endif
-#ifdef HITLS_CRYPTO_LMS
-#include "crypt_lms.h"
-#endif
-#ifdef HITLS_CRYPTO_HSS
+#ifdef HITLS_CRYPTO_HSS_LMS
 #include "crypt_hss.h"
 #endif
 
@@ -157,7 +154,7 @@ const CRYPT_EAL_Func g_defEalSignXmssmt[] = {
 };
 #endif
 
-#ifdef HITLS_CRYPTO_HSS
+#ifdef HITLS_CRYPTO_HSS_LMS
 const CRYPT_EAL_Func g_defEalSignHss[] = {
 #if defined(HITLS_CRYPTO_HSS_SIGN)
     {CRYPT_EAL_IMPLPKEYSIGN_SIGN, (CRYPT_EAL_ImplPkeySign)CRYPT_HSS_Sign},

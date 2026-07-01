@@ -14,7 +14,7 @@
  */
 
 #include "hitls_build.h"
-#ifdef HITLS_CRYPTO_LMS
+#ifdef HITLS_CRYPTO_HSS_LMS
 
 #include <string.h>
 #include "bsl_sal.h"
@@ -72,7 +72,7 @@ static int32_t LmsHashSha256(uint8_t *result, const void *message, size_t messag
  */
 static int32_t LmsChainHashSha256(const LmsOtsCtx *ctx, uint32_t k, uint32_t j, const uint8_t *prev, uint8_t *out)
 {
-    uint8_t iterBuf[LMS_ITER_LEN(LMS_MAX_HASH)];
+    uint8_t iterBuf[LMS_ITER_PREV_OFFSET + LMS_MAX_HASH];
 
     memcpy(iterBuf + LMS_ITER_I_OFFSET, ctx->I, LMS_I_LEN);
     BSL_Uint32ToByte(ctx->q, iterBuf + LMS_ITER_Q_OFFSET);
@@ -80,7 +80,7 @@ static int32_t LmsChainHashSha256(const LmsOtsCtx *ctx, uint32_t k, uint32_t j, 
     iterBuf[LMS_ITER_J_OFFSET] = (uint8_t)j;
     memcpy(iterBuf + LMS_ITER_PREV_OFFSET, prev, ctx->n);
 
-    return LmsHashSha256(out, iterBuf, LMS_ITER_LEN(ctx->n));
+    return LmsHashSha256(out, iterBuf, LMS_ITER_PREV_OFFSET + ctx->n);
 }
 
 /**
@@ -91,14 +91,14 @@ static int32_t LmsChainHashSha256(const LmsOtsCtx *ctx, uint32_t k, uint32_t j, 
  */
 static int32_t LmsLeafHashSha256(const LmsTreeCtx *ctx, uint32_t r, const uint8_t *otsPubKey, uint8_t *out)
 {
-    uint8_t leafBuf[LMS_LEAF_LEN(LMS_MAX_HASH)];
+    uint8_t leafBuf[LMS_LEAF_PK_OFFSET + LMS_MAX_HASH];
 
     memcpy(leafBuf + LMS_LEAF_I_OFFSET, ctx->I, LMS_I_LEN);
     BSL_Uint32ToByte(r, leafBuf + LMS_LEAF_R_OFFSET);
     LmsSetD(leafBuf + LMS_LEAF_D_OFFSET, LMS_D_LEAF);
     memcpy(leafBuf + LMS_LEAF_PK_OFFSET, otsPubKey, ctx->n);
 
-    return LmsHashSha256(out, leafBuf, LMS_LEAF_LEN(ctx->n));
+    return LmsHashSha256(out, leafBuf, LMS_LEAF_PK_OFFSET + ctx->n);
 }
 
 /**
@@ -110,7 +110,7 @@ static int32_t LmsLeafHashSha256(const LmsTreeCtx *ctx, uint32_t r, const uint8_
 static int32_t LmsNodeHashSha256(const LmsTreeCtx *ctx, uint32_t r, const uint8_t *left, const uint8_t *right,
                                  uint8_t *out)
 {
-    uint8_t intrBuf[LMS_INTR_LEN(LMS_MAX_HASH)];
+    uint8_t intrBuf[LMS_INTR_LEFT_OFFSET + LMS_MAX_HASH + LMS_MAX_HASH];
 
     memcpy(intrBuf + LMS_INTR_I_OFFSET, ctx->I, LMS_I_LEN);
     BSL_Uint32ToByte(r, intrBuf + LMS_INTR_R_OFFSET);
@@ -118,7 +118,7 @@ static int32_t LmsNodeHashSha256(const LmsTreeCtx *ctx, uint32_t r, const uint8_
     memcpy(intrBuf + LMS_INTR_LEFT_OFFSET, left, ctx->n);
     memcpy(intrBuf + LMS_INTR_RIGHT_OFFSET(ctx->n), right, ctx->n);
 
-    return LmsHashSha256(out, intrBuf, LMS_INTR_LEN(ctx->n));
+    return LmsHashSha256(out, intrBuf, LMS_INTR_LEFT_OFFSET + ctx->n * 2);
 }
 
 /**
@@ -130,7 +130,7 @@ static int32_t LmsNodeHashSha256(const LmsTreeCtx *ctx, uint32_t r, const uint8_
 static int32_t LmsMsgHashSha256(const LmsTreeCtx *ctx, uint32_t q, const uint8_t *C, const uint8_t *msg,
                                 uint32_t msgLen, uint8_t *out)
 {
-    uint8_t prefix[LMS_MESG_PREFIX_LEN(LMS_MAX_HASH)];
+    uint8_t prefix[LMS_MESG_C_OFFSET + LMS_MAX_HASH];
 
     memcpy(prefix + LMS_MESG_I_OFFSET, ctx->I, LMS_I_LEN);
     BSL_Uint32ToByte(q, prefix + LMS_MESG_Q_OFFSET);
@@ -145,7 +145,7 @@ static int32_t LmsMsgHashSha256(const LmsTreeCtx *ctx, uint32_t q, const uint8_t
     }
 
     uint32_t outLen = ctx->n;
-    const CRYPT_ConstData hashData[] = {{prefix, LMS_MESG_PREFIX_LEN(ctx->n)}, {msg, msgLen}};
+    const CRYPT_ConstData hashData[] = {{prefix, LMS_MESG_C_OFFSET + ctx->n}, {msg, msgLen}};
     int32_t ret = CRYPT_CalcHash(NULL, hashMethod, hashData, 2, out, &outLen);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
@@ -428,4 +428,4 @@ int32_t LmsParaInit(LMS_Para *para, uint32_t lmsType, uint32_t otsType)
     return CRYPT_SUCCESS;
 }
 
-#endif /* HITLS_CRYPTO_LMS */
+#endif /* HITLS_CRYPTO_HSS_LMS */

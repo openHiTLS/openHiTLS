@@ -189,10 +189,7 @@ extern const CRYPT_EAL_Func g_defEalKeyMgmtXmss[];
 #ifdef HITLS_CRYPTO_XMSSMT
 extern const CRYPT_EAL_Func g_defEalKeyMgmtXmssmt[];
 #endif
-#ifdef HITLS_CRYPTO_LMS
-extern const CRYPT_EAL_Func g_defEalKeyMgmtLms[];
-#endif
-#ifdef HITLS_CRYPTO_HSS
+#ifdef HITLS_CRYPTO_HSS_LMS
 extern const CRYPT_EAL_Func g_defEalKeyMgmtHss[];
 #endif
 #ifdef HITLS_CRYPTO_SLH_DSA
@@ -279,10 +276,7 @@ extern const CRYPT_EAL_Func g_defEalSignXmss[];
 #ifdef HITLS_CRYPTO_XMSSMT
 extern const CRYPT_EAL_Func g_defEalSignXmssmt[];
 #endif
-#ifdef HITLS_CRYPTO_LMS
-extern const CRYPT_EAL_Func g_defEalSignLms[];
-#endif
-#ifdef HITLS_CRYPTO_HSS
+#ifdef HITLS_CRYPTO_HSS_LMS
 extern const CRYPT_EAL_Func g_defEalSignHss[];
 #endif
 

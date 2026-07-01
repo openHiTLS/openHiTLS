@@ -76,10 +76,7 @@
 #ifdef HITLS_CRYPTO_XMSSMT
 #include "crypt_xmssmt.h"
 #endif
-#ifdef HITLS_CRYPTO_LMS
-#include "crypt_lms.h"
-#endif
-#ifdef HITLS_CRYPTO_HSS
+#ifdef HITLS_CRYPTO_HSS_LMS
 #include "crypt_hss.h"
 #endif
 #ifdef HITLS_CRYPTO_HYBRIDKEM
@@ -156,7 +153,7 @@ void *CRYPT_EAL_DefPkeyMgmtNewCtx(CRYPT_EAL_DefProvCtx *provCtx, int32_t algId)
         case CRYPT_PKEY_XMSSMT:
             return CRYPT_XMSSMT_NewCtxEx(provCtx->libCtx);
 #endif
-#ifdef HITLS_CRYPTO_HSS
+#ifdef HITLS_CRYPTO_HSS_LMS
         case CRYPT_PKEY_HSS:
             return CRYPT_HSS_NewCtxEx(provCtx->libCtx);
 #endif
@@ -558,7 +555,7 @@ const CRYPT_EAL_Func g_defEalKeyMgmtXmssmt[] = {
 };
 #endif
 
-#ifdef HITLS_CRYPTO_HSS
+#ifdef HITLS_CRYPTO_HSS_LMS
 const CRYPT_EAL_Func g_defEalKeyMgmtHss[] = {
     {CRYPT_EAL_IMPLPKEYMGMT_NEWCTX, (CRYPT_EAL_ImplPkeyMgmtNewCtx)CRYPT_EAL_DefPkeyMgmtNewCtx},
 #ifdef HITLS_CRYPTO_HSS_KEYGEN

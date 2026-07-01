@@ -17,7 +17,7 @@
 #define HSS_TREE_H
 
 #include "hitls_build.h"
-#ifdef HITLS_CRYPTO_HSS
+#ifdef HITLS_CRYPTO_HSS_LMS
 
 #include <stdint.h>
 #include <stddef.h>
@@ -71,29 +71,10 @@ typedef struct {
     uint8_t levelSeed[HSS_LEVELS_ARRAY_SIZE][LMS_SEED_LEN]; /**< Tree seeds */
 
     /* Per-level LMS tree contexts: serve as the originalCtx targets for trees[].
-     * They also carry the tree-cache pointers used by HssTree_Sign.
+     * They also carry the tree-cache pointers used by HssTreeSign.
      * Access via lms_internal.h boundary (not lms_local.h). */
     LmsTreeCtx lmsTrees[HSS_LEVELS_ARRAY_SIZE]; /**< LMS tree contexts (originalCtx targets) */
-
-    /* Unified HBS tree contexts: algoType=HBS_ALGO_LMS, adrsOps=NULL,
-     * hashFuncs.lms from levelPara, originalCtx=&lmsTrees[i]. */
-    HbsTreeCtx trees[HSS_LEVELS_ARRAY_SIZE]; /**< Unified tree contexts for HBS layer */
 } HssMultiTreeCtx;
-
-/**
- * @ingroup hss_tree
- * @brief Initialize HbsTreeCtx for a single HSS level (design doc §3.6)
- *
- * Fills a unified HBS tree context for the specified level of an HSS hierarchy
- * so that the common HBS layer (hbs_tree.c) can operate on HSS per-level LMS trees.
- * HssMultiTreeCtx is used here (rather than HssCtx) because it already holds
- * the per-level I, seed and LmsTreeCtx data needed to populate HbsTreeCtx.
- *
- * @param treeCtx    [OUT] Unified HBS tree context to initialize
- * @param multiCtx   [IN]  HSS multi-tree context (contains per-level data)
- * @param level      [IN]  Level index (0 = top, levels-1 = bottom)
- */
-void HbsTreeCtx_InitFromHss(HbsTreeCtx *treeCtx, const HssMultiTreeCtx *multiCtx, uint32_t level);
 
 /**
  * @ingroup hss_tree
@@ -104,7 +85,7 @@ void HbsTreeCtx_InitFromHss(HbsTreeCtx *treeCtx, const HssMultiTreeCtx *multiCtx
  * @param globalIndex  [IN]  Global signature index
  * @return CRYPT_SUCCESS on success, error code on failure
  */
-int32_t HssTree_InitContext(HssMultiTreeCtx *ctx, const HSS_Para *para, uint64_t globalIndex);
+int32_t HssTreeInitContext(HssMultiTreeCtx *ctx, const HSS_Para *para, uint64_t globalIndex);
 
 /**
  * @ingroup hss_tree
@@ -118,8 +99,8 @@ int32_t HssTree_InitContext(HssMultiTreeCtx *ctx, const HSS_Para *para, uint64_t
  * @param globalIndex  [IN]  Global signature index
  * @return CRYPT_SUCCESS on success, error code on failure
  */
-int32_t HssTree_InitContextWithSeeds(HssMultiTreeCtx *ctx, const HSS_Para *para, const uint8_t masterSeed[LMS_SEED_LEN],
-                                     uint64_t globalIndex);
+int32_t HssTreeInitContextWithSeeds(HssMultiTreeCtx *ctx, const HSS_Para *para, const uint8_t masterSeed[LMS_SEED_LEN],
+    uint64_t globalIndex);
 
 /**
  * @ingroup hss_tree
@@ -133,9 +114,8 @@ int32_t HssTree_InitContextWithSeeds(HssMultiTreeCtx *ctx, const HSS_Para *para,
  * @param para        [IN]  HSS parameters
  * @return CRYPT_SUCCESS on success, error code on failure
  */
-int32_t HssTree_CalculateIndices(uint64_t treeIndices[HSS_LEVELS_ARRAY_SIZE],
-                                 uint32_t leafIndices[HSS_LEVELS_ARRAY_SIZE], uint64_t globalIndex,
-                                 const HSS_Para *para);
+int32_t HssTreeCalculateIndices(uint64_t treeIndices[HSS_LEVELS_ARRAY_SIZE],
+    uint32_t leafIndices[HSS_LEVELS_ARRAY_SIZE], uint64_t globalIndex, const HSS_Para *para);
 
 /**
  * @ingroup hss_tree
@@ -151,8 +131,8 @@ int32_t HssTree_CalculateIndices(uint64_t treeIndices[HSS_LEVELS_ARRAY_SIZE],
  * @param cache   [IN/OUT] Tree cache for parent level
  * @return CRYPT_SUCCESS on success, error code on failure
  */
-int32_t HssTree_GenerateSignedPubKey(HSS_OutputBuffer *output, const HssSignContext *signCtx,
-                                     const HssTreeContext *parent, const HssTreeContext *child, LMS_TreeCache *cache);
+int32_t HssTreeGenerateSignedPubKey(HSS_OutputBuffer *output, const HssSignContext *signCtx,
+    const HssTreeContext *parent, const HssTreeContext *child, LMS_TreeCache *cache);
 
 /**
  * @ingroup hss_tree
@@ -167,8 +147,8 @@ int32_t HssTree_GenerateSignedPubKey(HSS_OutputBuffer *output, const HssSignCont
  * @param ctx          [IN]     Multi-tree context
  * @return CRYPT_SUCCESS on success, error code on failure
  */
-int32_t HssTree_Sign(uint8_t *signature, size_t *signatureLen, const uint8_t *message, size_t messageLen,
-                     const HssMultiTreeCtx *ctx);
+int32_t HssTreeSign(uint8_t *signature, size_t *signatureLen, const uint8_t *message, size_t messageLen,
+    const HssMultiTreeCtx *ctx);
 
 /**
  * @ingroup hss_tree
@@ -184,12 +164,12 @@ int32_t HssTree_Sign(uint8_t *signature, size_t *signatureLen, const uint8_t *me
  * @param signatureLen [IN] Signature length
  * @return CRYPT_SUCCESS if valid, error code otherwise
  */
-int32_t HssTree_Verify(const HSS_Para *para, const uint8_t *publicKey, const uint8_t *message, size_t messageLen,
-                       const uint8_t *signature, size_t signatureLen);
+int32_t HssTreeVerify(const HSS_Para *para, const uint8_t *publicKey, const uint8_t *message, size_t messageLen,
+    const uint8_t *signature, size_t signatureLen);
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* HITLS_CRYPTO_HSS */
+#endif /* HITLS_CRYPTO_HSS_LMS */
 #endif /* HSS_TREE_H */

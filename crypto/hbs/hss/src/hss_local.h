@@ -17,7 +17,7 @@
 #define HSS_LOCAL_H
 
 #include "hitls_build.h"
-#ifdef HITLS_CRYPTO_HSS
+#ifdef HITLS_CRYPTO_HSS_LMS
 
 #include <stdint.h>
 #include <stdbool.h>
@@ -103,7 +103,8 @@ uint64_t HssGetMaxSignatures(const HSS_Para *para);
  * @param masterSeed [IN]  Master seed (32 bytes)
  * @return CRYPT_SUCCESS on success, error code on failure
  */
-int32_t HssGenerateRootSeed(uint8_t rootI[16], uint8_t rootSeed[32], const uint8_t masterSeed[32]);
+int32_t HssGenerateRootSeed(uint8_t rootI[LMS_I_LEN], uint8_t rootSeed[LMS_SEED_LEN],
+    const uint8_t masterSeed[LMS_SEED_LEN]);
 
 /**
  * @ingroup hss
@@ -124,8 +125,8 @@ typedef struct {
  * @param position   [IN]  Child position information
  * @return CRYPT_SUCCESS on success, error code on failure
  */
-int32_t HssGenerateChildSeed(uint8_t childI[16], uint8_t childSeed[32], const uint8_t parentI[16],
-                             const uint8_t parentSeed[32], const HssChildPosition *position);
+int32_t HssGenerateChildSeed(uint8_t childI[LMS_I_LEN], uint8_t childSeed[LMS_SEED_LEN],
+    const uint8_t parentI[LMS_I_LEN], const uint8_t parentSeed[LMS_SEED_LEN], const HssChildPosition *position);
 
 /**
  * @ingroup hss
@@ -138,9 +139,8 @@ int32_t HssGenerateChildSeed(uint8_t childI[16], uint8_t childSeed[32], const ui
  * @return CRYPT_SUCCESS on success, error code on failure
  */
 int32_t HssGenerateAllSeeds(uint8_t levelI[HSS_LEVELS_ARRAY_SIZE][LMS_I_LEN],
-                            uint8_t levelSeed[HSS_LEVELS_ARRAY_SIZE][LMS_SEED_LEN],
-                            const uint8_t masterSeed[LMS_SEED_LEN], const uint64_t treeIndex[HSS_LEVELS_ARRAY_SIZE],
-                            uint32_t levels);
+    uint8_t levelSeed[HSS_LEVELS_ARRAY_SIZE][LMS_SEED_LEN], const uint8_t masterSeed[LMS_SEED_LEN],
+    const uint64_t treeIndex[HSS_LEVELS_ARRAY_SIZE], uint32_t levels);
 
 /**
  * @ingroup hss
@@ -237,6 +237,6 @@ static inline void *LIBCTX_FROM_HSS_CTX(const struct HssCtx *ctx)
 }
 #endif
 
-#endif /* HITLS_CRYPTO_HSS */
+#endif /* HITLS_CRYPTO_HSS_LMS */
 
 #endif /* HSS_LOCAL_H */

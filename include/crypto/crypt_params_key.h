@@ -264,6 +264,15 @@ extern "C" {
 #define CRYPT_PARAM_SM9_KEY_TYPE                            (CRYPT_PARAM_SM9_BASE + 4)
 #define CRYPT_PARAM_SM9_MASTER_PUB_KEY                      (CRYPT_PARAM_SM9_BASE + 5)
 
+#define CRYPT_PARAM_HSS_LMS_BASE                            5400
+#define CRYPT_PARAM_HSS_LEVEL                               (CRYPT_PARAM_HSS_LMS_BASE + 1)
+#define CRYPT_PARAM_HSS_LEVEL1_LMS_TYPE                     (CRYPT_PARAM_HSS_LMS_BASE + 2)
+#define CRYPT_PARAM_HSS_LEVEL2_LMS_TYPE                     (CRYPT_PARAM_HSS_LMS_BASE + 3)
+#define CRYPT_PARAM_HSS_LEVEL3_LMS_TYPE                     (CRYPT_PARAM_HSS_LMS_BASE + 4)
+#define CRYPT_PARAM_HSS_LEVEL1_OTS_TYPE                     (CRYPT_PARAM_HSS_LMS_BASE + 5)
+#define CRYPT_PARAM_HSS_LEVEL2_OTS_TYPE                     (CRYPT_PARAM_HSS_LMS_BASE + 6)
+#define CRYPT_PARAM_HSS_LEVEL3_OTS_TYPE                     (CRYPT_PARAM_HSS_LMS_BASE + 7)
+
 #ifdef __cplusplus
 }
 #endif

@@ -17,7 +17,7 @@
 #define LMS_PARAMS_H
 
 #include "hitls_build.h"
-#ifdef HITLS_CRYPTO_LMS
+#ifdef HITLS_CRYPTO_HSS_LMS
 
 #include <stdint.h>
 #include <stdbool.h>
@@ -126,5 +126,5 @@ int32_t LmsParaInit(LMS_Para *para, uint32_t lmsType, uint32_t otsType);
 }
 #endif
 
-#endif /* HITLS_CRYPTO_LMS */
+#endif /* HITLS_CRYPTO_HSS_LMS */
 #endif /* LMS_PARAMS_H */

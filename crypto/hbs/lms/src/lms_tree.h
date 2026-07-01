@@ -17,7 +17,7 @@
 #define LMS_TREE_H
 
 #include "hitls_build.h"
-#ifdef HITLS_CRYPTO_LMS
+#ifdef HITLS_CRYPTO_HSS_LMS
 
 #include <stdint.h>
 #include <stddef.h>
@@ -50,7 +50,7 @@ extern "C" {
  * @param ctx  [IN]  Tree context
  * @return CRYPT_SUCCESS on success, error code on failure
  */
-int32_t LmsTree_ComputeRoot(uint8_t *root, const LmsTreeCtx *ctx);
+int32_t LmsTreeComputeRoot(uint8_t *root, const LmsTreeCtx *ctx);
 
 /**
  * @ingroup lms_tree
@@ -64,7 +64,7 @@ int32_t LmsTree_ComputeRoot(uint8_t *root, const LmsTreeCtx *ctx);
  * @param q        [IN]  Leaf index
  * @return CRYPT_SUCCESS on success, error code on failure
  */
-int32_t LmsTree_GenerateAuthPath(uint8_t *authPath, const LmsTreeCtx *ctx, uint32_t q);
+int32_t LmsTreeGenerateAuthPath(uint8_t *authPath, const LmsTreeCtx *ctx, uint32_t q);
 
 /**
  * @ingroup lms_tree
@@ -73,18 +73,18 @@ int32_t LmsTree_GenerateAuthPath(uint8_t *authPath, const LmsTreeCtx *ctx, uint3
  * Generates the authentication path using a cached tree if available.
  * This significantly improves performance for repeated signing operations.
  *
- * The cache must be set in the context using LmsTree_SetCache() before calling.
+ * The cache must be set in the context using LmsTreeSetCache() before calling.
  *
  * @param authPath [OUT] Output authentication path (h * n bytes)
  * @param ctx      [IN]  Tree context (with cache configured)
  * @param q        [IN]  Leaf index
  * @return CRYPT_SUCCESS on success, error code on failure
  */
-int32_t LmsTree_GenerateAuthPathCached(uint8_t *authPath, const LmsTreeCtx *ctx, uint32_t q);
+int32_t LmsTreeGenerateAuthPathCached(uint8_t *authPath, const LmsTreeCtx *ctx, uint32_t q);
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* HITLS_CRYPTO_LMS */
+#endif /* HITLS_CRYPTO_HSS_LMS */
 #endif /* LMS_TREE_H */
