@@ -15,6 +15,7 @@
 
 /* BEGIN_HEADER */
 #include "app_verify.h"
+#include "app_server.h"
 #include <limits.h>
 #include <stdbool.h>
 #include "string.h"
@@ -336,6 +337,84 @@ void UT_HITLS_APP_verify_TC0010(void)
 EXIT:
     AppPrintErrorUioUnInit();
     STUB_RESTORE(HITLS_X509_CertVerify);
+    return;
+}
+/* END_CASE */
+
+/**
+ * @test UT_HITLS_APP_ServerNoVerify_TC001
+ * @spec  -
+ * @title Test HITLS_ServerMain with -help, verify noverify option is present in option table
+ */
+/* BEGIN_CASE */
+void UT_HITLS_APP_ServerNoVerify_TC001(void)
+{
+    char *argv[] = {"s_server", "-help"};
+
+    OptTestData testData[] = {
+        {2, argv, HITLS_APP_HELP},
+    };
+
+    ASSERT_EQ(AppPrintErrorUioInit(stderr), HITLS_APP_SUCCESS);
+    for (int i = 0; i < (int)(sizeof(testData) / sizeof(OptTestData)); ++i) {
+        int ret = HITLS_ServerMain(testData[i].argc, testData[i].argv);
+        ASSERT_EQ(ret, testData[i].expect);
+    }
+EXIT:
+    AppPrintErrorUioUnInit();
+    return;
+}
+/* END_CASE */
+
+/**
+ * @test UT_HITLS_APP_ServerNoVerify_TC002
+ * @spec  -
+ * @title Test HITLS_ServerMain with -noverify and -help, verify noverify option is parsed correctly
+ */
+/* BEGIN_CASE */
+void UT_HITLS_APP_ServerNoVerify_TC002(void)
+{
+    char *argv[] = {"s_server", "-noverify", "-help"};
+
+    OptTestData testData[] = {
+        {3, argv, HITLS_APP_HELP},
+    };
+
+    ASSERT_EQ(AppPrintErrorUioInit(stderr), HITLS_APP_SUCCESS);
+    for (int i = 0; i < (int)(sizeof(testData) / sizeof(OptTestData)); ++i) {
+        int ret = HITLS_ServerMain(testData[i].argc, testData[i].argv);
+        ASSERT_EQ(ret, testData[i].expect);
+    }
+EXIT:
+    AppPrintErrorUioUnInit();
+    return;
+}
+/* END_CASE */
+
+/**
+ * @test UT_HITLS_APP_ServerNoVerify_TC003
+ * @spec  -
+ * @title Test HITLS_ServerMain option parsing failure via stubbed OptBegin
+ */
+/* BEGIN_CASE */
+void UT_HITLS_APP_ServerNoVerify_TC003(void)
+{
+    STUB_REPLACE(HITLS_APP_OptBegin, STUB_HITLS_APP_OptBegin);
+
+    char *argv[] = {"s_server", "-noverify"};
+
+    OptTestData testData[] = {
+        {2, argv, HITLS_APP_OPT_UNKOWN},
+    };
+
+    ASSERT_EQ(AppPrintErrorUioInit(stderr), HITLS_APP_SUCCESS);
+    for (int i = 0; i < (int)(sizeof(testData) / sizeof(OptTestData)); ++i) {
+        int ret = HITLS_ServerMain(testData[i].argc, testData[i].argv);
+        ASSERT_EQ(ret, testData[i].expect);
+    }
+EXIT:
+    AppPrintErrorUioUnInit();
+    STUB_RESTORE(HITLS_APP_OptBegin);
     return;
 }
 /* END_CASE */

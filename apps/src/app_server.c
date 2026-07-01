@@ -88,6 +88,7 @@ typedef enum {
     /* Certificate options */
     HITLS_SERVER_OPT_CAFILE,
     HITLS_SERVER_OPT_CHAINCAFILE,
+    HITLS_SERVER_OPT_NO_VERIFY,
     
     /* TLCP options */
     HITLS_SERVER_OPT_TLCP_ENC_CERT,
@@ -129,6 +130,7 @@ static const HITLS_CmdOption g_serverOptions[] = {
     /* Certificate options */
     {"CAfile",      HITLS_SERVER_OPT_CAFILE,      HITLS_APP_OPT_VALUETYPE_IN_FILE,     "CA certificate file"},
     {"chainCAfile", HITLS_SERVER_OPT_CHAINCAFILE, HITLS_APP_OPT_VALUETYPE_IN_FILE,     "CA file for certificate chain"},
+    {"noverify",    HITLS_SERVER_OPT_NO_VERIFY,   HITLS_APP_OPT_VALUETYPE_NO_VALUE,    "Don't verify client certificate"},
     
     /* TLCP options */
     {"tlcp_enc_cert", HITLS_SERVER_OPT_TLCP_ENC_CERT, HITLS_APP_OPT_VALUETYPE_IN_FILE, "TLCP encryption certificate"},
@@ -236,6 +238,11 @@ static int HandleServerChainCAFile(HITLS_ServerParams *params)
     params->caChain = HITLS_APP_OptGetValueStr();
     return HITLS_APP_SUCCESS;
 }
+static int HandleServerNoVerify(HITLS_ServerParams *params)
+{
+    params->verifyClient = false;
+    return HITLS_APP_SUCCESS;
+}
 static int HandleServerTLCPEncCert(HITLS_ServerParams *params)
 {
     params->tlcpEncCert = HITLS_APP_OptGetValueStr();
@@ -298,6 +305,7 @@ static const ServerOptHandleFuncMap g_serverOptHandleFuncMap[] = {
     {HITLS_SERVER_OPT_CIPHER, HandleServerCipher},
     {HITLS_SERVER_OPT_CAFILE, HandleServerCAFile},
     {HITLS_SERVER_OPT_CHAINCAFILE, HandleServerChainCAFile},
+    {HITLS_SERVER_OPT_NO_VERIFY, HandleServerNoVerify},
     {HITLS_SERVER_OPT_TLCP_ENC_CERT, HandleServerTLCPEncCert},
     {HITLS_SERVER_OPT_TLCP_ENC_KEY, HandleServerTLCPEncKey},
     {HITLS_SERVER_OPT_TLCP_SIGN_CERT, HandleServerTLCPSignCert},

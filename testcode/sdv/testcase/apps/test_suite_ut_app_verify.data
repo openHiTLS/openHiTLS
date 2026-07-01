@@ -21,3 +21,12 @@ UT_HITLS_APP_verify_TC009:
 
 UT_HITLS_APP_verify_TC0010 test10
 UT_HITLS_APP_verify_TC0010:
+
+UT_HITLS_APP_ServerNoVerify_TC001 test1
+UT_HITLS_APP_ServerNoVerify_TC001:
+
+UT_HITLS_APP_ServerNoVerify_TC002 test2
+UT_HITLS_APP_ServerNoVerify_TC002:
+
+UT_HITLS_APP_ServerNoVerify_TC003 test3
+UT_HITLS_APP_ServerNoVerify_TC003:
