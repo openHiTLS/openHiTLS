@@ -365,7 +365,7 @@ static CRYPT_EAL_PkeyCtx *LoadKeyFromFile(APP_CertConfig *certConfig, bool isSig
     if (keyFile == NULL) {
         return NULL;
     }
-    
+
     CRYPT_EAL_PkeyCtx *pkey = NULL;
 #ifdef HITLS_APP_SM_MODE
     if (isSignKey && certConfig->smParam->smTag == 1) {
@@ -381,7 +381,7 @@ static CRYPT_EAL_PkeyCtx *LoadKeyFromFile(APP_CertConfig *certConfig, bool isSig
         }
     }
 #endif
-    
+
     /* Load private key using the existing utility function */
     char *pass = NULL;
     if (password != NULL) {
@@ -396,11 +396,11 @@ static CRYPT_EAL_PkeyCtx *LoadKeyFromFile(APP_CertConfig *certConfig, bool isSig
     if (pkey == NULL) {
         AppPrintError("Failed to load private key from %s\n", keyFile);
     }
-    
+
     if (pass != NULL) {
         BSL_SAL_ClearFree(pass, strlen(pass));
     }
-    
+
     return pkey;
 }
 
@@ -501,15 +501,15 @@ int ConfigureTLCPCertificates(HITLS_Config *config, APP_CertConfig *certConfig)
     if (config == NULL || certConfig == NULL) {
         return HITLS_APP_INVALID_ARG;
     }
-    
+
     int ret = HITLS_SUCCESS;
-    
+
     /* Configure signature certificate */
     if (certConfig->tlcpSignCert && certConfig->tlcpSignKey) {
         HITLS_X509_Cert *sign_cert = LoadCertFromFile(certConfig->tlcpSignCert, certConfig->certFormat,
             certConfig->provider);
         CRYPT_EAL_PkeyCtx *sign_key = LoadKeyFromFile(certConfig, true);
-        
+
         if (sign_cert && sign_key) {
             ret = HITLS_CFG_SetTlcpCertificate(config, sign_cert, false, false); /* Signature cert */
             if (ret != HITLS_SUCCESS) {
@@ -530,13 +530,13 @@ int ConfigureTLCPCertificates(HITLS_Config *config, APP_CertConfig *certConfig)
             return HITLS_APP_ERR_SET_TLCP_CERT;
         }
     }
-    
+
     /* Configure encryption certificate */
     if (certConfig->tlcpEncCert && certConfig->tlcpEncKey) {
         HITLS_X509_Cert *enc_cert = LoadCertFromFile(certConfig->tlcpEncCert, certConfig->certFormat,
             certConfig->provider);
         CRYPT_EAL_PkeyCtx *enc_key = LoadKeyFromFile(certConfig, false);
-        
+
         if (enc_cert && enc_key) {
             ret = HITLS_CFG_SetTlcpCertificate(config, enc_cert, false, true); /* Encryption cert */
             if (ret != HITLS_SUCCESS) {
@@ -557,7 +557,7 @@ int ConfigureTLCPCertificates(HITLS_Config *config, APP_CertConfig *certConfig)
             return HITLS_APP_ERR_SET_TLCP_CERT;
         }
     }
-    
+
     return HITLS_APP_SUCCESS;
 }
 
@@ -566,13 +566,13 @@ int CreateTCPSocket(APP_NetworkAddr *addr, int timeout)
     if (addr == NULL || addr->host == NULL) {
         return -1;
     }
-    
+
     int sockfd = BSL_SAL_Socket(AF_INET, SOCK_STREAM, 0);
     if (sockfd < 0) {
         AppPrintError("Failed to create socket: %s\n", strerror(errno));
         return -1;
     }
-    
+
     /* Set socket timeout if specified */
     if (timeout > 0) {
         struct timeval tv;
@@ -581,13 +581,13 @@ int CreateTCPSocket(APP_NetworkAddr *addr, int timeout)
         BSL_SAL_SetSockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
         BSL_SAL_SetSockopt(sockfd, SOL_SOCKET, SO_SNDTIMEO, &tv, sizeof(tv));
     }
-    
+
     /* Connect to server */
     struct sockaddr_in serverAdd;
     memset(&serverAdd, 0, sizeof(serverAdd));
     serverAdd.sin_family = AF_INET;
     serverAdd.sin_port = htons(addr->port);
-    
+
     if (inet_pton(AF_INET, addr->host, &serverAdd.sin_addr) <= 0) {
         /* Try to resolve hostname */
         struct hostent *hostEntry = gethostbyname(addr->host);
@@ -598,13 +598,13 @@ int CreateTCPSocket(APP_NetworkAddr *addr, int timeout)
         }
         memcpy(&serverAdd.sin_addr, hostEntry->h_addr_list[0], (size_t)hostEntry->h_length);
     }
-    
+
     if (BSL_SAL_SockConnect(sockfd, (BSL_SAL_SockAddr)&serverAdd, sizeof(serverAdd)) < 0) {
         AppPrintError("Failed to connect to %s:%d: %s\n", addr->host, addr->port, strerror(errno));
         BSL_SAL_SockClose(sockfd);
         return -1;
     }
-    
+
     return sockfd;
 }
 
@@ -614,19 +614,19 @@ int CreateUDPSocket(APP_NetworkAddr *addr, int timeout)
     if (addr == NULL || addr->host == NULL) {
         return -1;
     }
-    
+
     int sockfd = BSL_SAL_Socket(AF_INET, SOCK_DGRAM, 0);
     if (sockfd < 0) {
         AppPrintError("Failed to create UDP socket: %s\n", strerror(errno));
         return -1;
     }
-    
+
     /* Connect UDP socket to server */
     struct sockaddr_in serverAdd;
     memset(&serverAdd, 0, sizeof(serverAdd));
     serverAdd.sin_family = AF_INET;
     serverAdd.sin_port = htons(addr->port);
-    
+
     if (inet_pton(AF_INET, addr->host, &serverAdd.sin_addr) <= 0) {
         /* Try to resolve hostname */
         struct hostent *hostEntry = gethostbyname(addr->host);
@@ -637,13 +637,13 @@ int CreateUDPSocket(APP_NetworkAddr *addr, int timeout)
         }
         memcpy(&serverAdd.sin_addr, hostEntry->h_addr_list[0], (size_t)hostEntry->h_length);
     }
-    
+
     if (BSL_SAL_SockConnect(sockfd, (BSL_SAL_SockAddr)&serverAdd, sizeof(serverAdd)) < 0) {
         AppPrintError("Failed to connect UDP socket to %s:%d: %s\n", addr->host, addr->port, strerror(errno));
         BSL_SAL_SockClose(sockfd);
         return -1;
     }
-    
+
     return sockfd;
 }
 
@@ -654,17 +654,17 @@ int CreateTCPListenSocket(APP_NetworkAddr *addr, int backlog)
         AppPrintError("Failed to create listen socket: %s\n", strerror(errno));
         return -1;
     }
-    
+
     /* Set socket options */
     int opt = 1;
     BSL_SAL_SetSockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
-    
+
     /* Bind to address */
     struct sockaddr_in bindAddr;
     memset(&bindAddr, 0, sizeof(bindAddr));
     bindAddr.sin_family = AF_INET;
     bindAddr.sin_port = htons(addr->port);
-    
+
     if (addr->host && strcmp(addr->host, "0.0.0.0") != 0) {
         if (inet_pton(AF_INET, addr->host, &bindAddr.sin_addr) <= 0) {
             AppPrintError("Invalid bind address: %s\n", addr->host);
@@ -674,20 +674,20 @@ int CreateTCPListenSocket(APP_NetworkAddr *addr, int backlog)
     } else {
         bindAddr.sin_addr.s_addr = INADDR_ANY;
     }
-    
+
     if (BSL_SAL_SockBind(sockfd, (BSL_SAL_SockAddr)&bindAddr, sizeof(bindAddr)) < 0) {
         AppPrintError("Failed to bind to %s:%d: %s\n",
                       addr->host ? addr->host : "0.0.0.0", addr->port, strerror(errno));
         BSL_SAL_SockClose(sockfd);
         return -1;
     }
-    
+
     if (BSL_SAL_SockListen(sockfd, backlog) < 0) {
         AppPrintError("Failed to listen: %s\n", strerror(errno));
         BSL_SAL_SockClose(sockfd);
         return -1;
     }
-    
+
     return sockfd;
 }
 
@@ -706,13 +706,13 @@ int CreateUDPListenSocket(APP_NetworkAddr *addr, int timeout)
         BSL_SAL_SetSockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
         BSL_SAL_SetSockopt(sockfd, SOL_SOCKET, SO_SNDTIMEO, &tv, sizeof(tv));
     }
-    
+
     /* Bind to address */
     struct sockaddr_in bindAddr;
     memset(&bindAddr, 0, sizeof(bindAddr));
     bindAddr.sin_family = AF_INET;
     bindAddr.sin_port = htons(addr->port);
-    
+
     if (addr->host && strcmp(addr->host, "0.0.0.0") != 0) {
         if (inet_pton(AF_INET, addr->host, &bindAddr.sin_addr) <= 0) {
             AppPrintError("Invalid bind address: %s\n", addr->host);
@@ -722,7 +722,7 @@ int CreateUDPListenSocket(APP_NetworkAddr *addr, int timeout)
     } else {
         bindAddr.sin_addr.s_addr = INADDR_ANY;
     }
-    
+
     if (BSL_SAL_SockBind(sockfd, (BSL_SAL_SockAddr)&bindAddr, sizeof(bindAddr)) < 0) {
         AppPrintError("Failed to bind UDP to %s:%d: %s\n",
                       addr->host ? addr->host : "0.0.0.0", addr->port, strerror(errno));
@@ -768,7 +768,7 @@ void PrintConnectionInfo(HITLS_Ctx *ctx, bool showState)
     if (ctx == NULL) {
         return;
     }
-    
+
     /* Print protocol version */
     uint16_t version;
     if (HITLS_GetNegotiatedVersion(ctx, &version) == HITLS_SUCCESS) {
@@ -791,13 +791,13 @@ void PrintConnectionInfo(HITLS_Ctx *ctx, bool showState)
                 break;
         }
     }
-    
+
     /* Print cipher suite */
     const HITLS_Cipher *cipher = HITLS_GetCurrentCipher(ctx);
     if (cipher != NULL) {
         AppPrintInfo("Cipher suite negotiated\n");
     }
-    
+
     if (showState) {
         PrintHandshakeState(ctx);
     }
@@ -808,7 +808,7 @@ void PrintHandshakeState(HITLS_Ctx *ctx)
     if (ctx == NULL) {
         return;
     }
-    
+
     uint32_t state;
     if (HITLS_GetHandShakeState(ctx, &state) == HITLS_SUCCESS) {
         const char *stateStr = HITLS_GetStateString(state);
@@ -821,7 +821,7 @@ int ParseConnectString(const char *connectStr, APP_NetworkAddr *addr)
     if (connectStr == NULL || addr == NULL) {
         return HITLS_APP_INVALID_ARG;
     }
-    
+
     size_t len = strlen(connectStr) + 1;
     char *strCopy = BSL_SAL_Malloc(len);
     if (strCopy == NULL) {
@@ -829,7 +829,7 @@ int ParseConnectString(const char *connectStr, APP_NetworkAddr *addr)
         return HITLS_APP_MEM_ALLOC_FAIL;
     }
     strcpy(strCopy, connectStr);
-    
+
     char *colon_pos = strrchr(strCopy, ':');
     if (colon_pos == NULL) {
         /* No port specified, use default */
@@ -837,7 +837,7 @@ int ParseConnectString(const char *connectStr, APP_NetworkAddr *addr)
         addr->port = 443; /* Default HTTPS port */
         return HITLS_APP_SUCCESS;
     }
-    
+
     *colon_pos = '\0';
     size_t host_len = strlen(strCopy) + 1;
     addr->host = BSL_SAL_Malloc(host_len);
@@ -849,9 +849,9 @@ int ParseConnectString(const char *connectStr, APP_NetworkAddr *addr)
     (void)strcpy(addr->host, strCopy);
 
     addr->port = atoi(colon_pos + 1);
-    
+
     BSL_SAL_Free(strCopy);
-    
+
     if (addr->port <= 0 || addr->port > 65535) {
         BSL_SAL_Free(addr->host);
         addr->host = NULL;

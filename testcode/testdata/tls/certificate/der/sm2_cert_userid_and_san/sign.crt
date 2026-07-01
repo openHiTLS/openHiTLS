@@ -1,0 +1,52 @@
+Certificate:
+    Data:
+        Version: 3 (0x2)
+        Serial Number: 1002 (0x3ea)
+        Signature Algorithm: SM2-with-SM3
+        Issuer: C = XX, ST = XX, O = certificate, OU = testin, CN = certificate.testin.com
+        Validity
+            Not Before: Jul  2 01:57:52 2026 GMT
+            Not After : Jun 29 01:57:52 2036 GMT
+        Subject: C = XX, ST = XX, O = certificate, OU = testsign, CN = certificate.testsign.com
+        Subject Public Key Info:
+            Public Key Algorithm: id-ecPublicKey
+                Public-Key: (256 bit)
+                pub:
+                    04:04:33:0c:80:92:a6:a4:d2:c2:9b:98:93:54:3c:
+                    48:d0:0d:00:75:71:c3:14:75:45:c0:61:23:07:b9:
+                    2b:ee:e8:46:3b:95:b8:68:2c:a6:d6:b0:69:ec:34:
+                    6b:56:33:e5:98:3e:35:8c:a7:37:e2:06:3e:58:52:
+                    96:a8:6f:75:32
+                ASN1 OID: SM2
+        X509v3 extensions:
+            X509v3 Basic Constraints: 
+                CA:FALSE
+            X509v3 Key Usage: 
+                Digital Signature, Non Repudiation
+            X509v3 Subject Alternative Name: 
+                IP Address:127.0.0.1, DNS:localhost, DNS:certificate.testsign.com
+            X509v3 Subject Key Identifier: 
+                28:2A:65:EF:4E:65:14:9D:5F:D6:96:C6:61:09:D1:0C:E9:D9:70:83
+            X509v3 Authority Key Identifier: 
+                F3:EA:05:6A:42:7E:79:8C:4C:95:0C:AB:D9:79:EF:4D:62:E4:A2:65
+    Signature Algorithm: SM2-with-SM3
+    Signature Value:
+        30:45:02:21:00:e0:2b:e5:bd:73:93:67:6e:9d:98:3d:ea:bb:
+        b6:36:d4:4c:e6:d5:db:c8:0f:5f:99:56:64:a7:bb:d5:7e:9e:
+        f4:02:20:2b:be:23:ff:a0:2d:7a:f4:b0:05:35:6b:7e:88:c2:
+        b7:bf:ea:35:97:a8:02:0f:33:b8:76:98:d5:72:bb:e3:0c
+-----BEGIN CERTIFICATE-----
+MIICSjCCAfCgAwIBAgICA+owCgYIKoEcz1UBg3UwYjELMAkGA1UEBhMCWFgxCzAJ
+BgNVBAgMAlhYMRQwEgYDVQQKDAtjZXJ0aWZpY2F0ZTEPMA0GA1UECwwGdGVzdGlu
+MR8wHQYDVQQDDBZjZXJ0aWZpY2F0ZS50ZXN0aW4uY29tMB4XDTI2MDcwMjAxNTc1
+MloXDTM2MDYyOTAxNTc1MlowZjELMAkGA1UEBhMCWFgxCzAJBgNVBAgMAlhYMRQw
+EgYDVQQKDAtjZXJ0aWZpY2F0ZTERMA8GA1UECwwIdGVzdHNpZ24xITAfBgNVBAMM
+GGNlcnRpZmljYXRlLnRlc3RzaWduLmNvbTBZMBMGByqGSM49AgEGCCqBHM9VAYIt
+A0IABAQzDICSpqTSwpuYk1Q8SNANAHVxwxR1RcBhIwe5K+7oRjuVuGgsptawaew0
+a1Yz5Zg+NYynN+IGPlhSlqhvdTKjgZEwgY4wCQYDVR0TBAIwADALBgNVHQ8EBAMC
+BsAwNAYDVR0RBC0wK4cEfwAAAYIJbG9jYWxob3N0ghhjZXJ0aWZpY2F0ZS50ZXN0
+c2lnbi5jb20wHQYDVR0OBBYEFCgqZe9OZRSdX9aWxmEJ0Qzp2XCDMB8GA1UdIwQY
+MBaAFPPqBWpCfnmMTJUMq9l5701i5KJlMAoGCCqBHM9VAYN1A0gAMEUCIQDgK+W9
+c5Nnbp2YPeq7tjbUTObV28gPX5lWZKe71X6e9AIgK74j/6AtevSwBTVrfojCt7/q
+NZeoAg8zuHaY1XK74ww=
+-----END CERTIFICATE-----
