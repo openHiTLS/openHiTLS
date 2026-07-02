@@ -28,98 +28,77 @@
 extern "C" {
 #endif
 
-/* LMS Constants and Definitions */
+#define LMS_SHA256_N         32
+#define LMS_I_LEN            16
+#define LMS_SEED_LEN         32
+#define LMS_MAX_HASH         32
+#define LMS_MAX_MESSAGE_SIZE (16 * 1024 * 1024)
 
-#define LMS_SHA256_N         32 // SHA-256 hash output length in bytes
-#define LMS_I_LEN            16 // Merkle tree identifier length
-#define LMS_SEED_LEN         32 // Seed length
-#define LMS_MAX_HASH         32 // Maximum hash length supported
-#define LMS_MIN_HEIGHT       5 // Minimum Merkle tree height
-#define LMS_MAX_HEIGHT       25 // Maximum Merkle tree height
-#define LMS_MAX_MESSAGE_SIZE (16 * 1024 * 1024) // Maximum message size (16MB) to prevent DoS
+#define LMS_D_PBLC 0x8080
+#define LMS_D_MESG 0x8181
+#define LMS_D_LEAF 0x8282
+#define LMS_D_INTR 0x8383
 
-/* Hash domain separation constants (RFC 8554) */
-#define LMS_D_PBLC 0x8080 // OTS public key hash
-#define LMS_D_MESG 0x8181 // Message hash
-#define LMS_D_LEAF 0x8282 // Leaf node hash
-#define LMS_D_INTR 0x8383 // Internal node hash
+#define LMS_HASH_SHA256 1
 
-/**
- * @ingroup lms
- * @brief Hash type identifier used in the LMS_Para.h field and LmOtsParams.
- *
- * A new hash algorithm first appears as a new LMS or OTS type code;
- * the lmsType value alone is sufficient to dispatch to the correct
- * LmsFamilyHashFuncs table (see LmsGetHashFuncs).
- */
-#define LMS_HASH_SHA256 1 /**< SHA-256 (RFC 8554 original parameter sets) */
+/* LMS implementation constants */
+#define LMS_BITS_PER_BYTE             8
+#define LMS_BYTE_MASK                 0xff
+#define LMS_CHECKSUM_LEN              2
 
-/**
- * @ingroup lms
- * @brief LMS parameter structure
- *
- * Populated by LmsParaInit, which reads n / height / w / p / ls from
- * the LMS and OTS type-code lookups and copies the correct
- * LmsFamilyHashFuncs table corresponding to the lmsType.
- */
+/* Message hash prefix offsets */
+#define LMS_MESG_Q_OFFSET 16
+#define LMS_MESG_D_OFFSET 20
+#define LMS_MESG_C_OFFSET 22
+
+/* OTS iteration hash prefix offsets */
+#define LMS_ITER_Q_OFFSET    16
+#define LMS_ITER_K_OFFSET    20
+#define LMS_ITER_J_OFFSET    22
+#define LMS_ITER_PREV_OFFSET 23
+
+/* OTS public key hash prefix offsets */
+#define LMS_PBLC_Q_OFFSET   16
+#define LMS_PBLC_D_OFFSET   20
+#define LMS_PBLC_PREFIX_LEN 22
+
+/* Leaf node hash prefix offsets */
+#define LMS_LEAF_R_OFFSET  16
+#define LMS_LEAF_D_OFFSET  20
+#define LMS_LEAF_PK_OFFSET 22
+
+/* Internal node hash prefix offsets */
+#define LMS_INTR_R_OFFSET        16
+#define LMS_INTR_D_OFFSET        20
+#define LMS_INTR_LEFT_OFFSET     22
+
 typedef struct LmsPara {
-    uint32_t lmsType; /**< LMS parameter set identifier */
-    uint32_t otsType; /**< LM-OTS parameter set identifier */
-    uint32_t h; /**< Hash type (LMS_HASH_SHA256, …) */
-    uint32_t n; /**< Hash output length in bytes (e.g. 32 for SHA-256) */
-    uint32_t height; /**< Merkle tree height */
-    uint32_t w; /**< Winternitz parameter */
-    uint32_t p; /**< Number of n-byte string elements in OTS signature */
-    uint32_t ls; /**< Checksum left shift */
-    uint32_t pubKeyLen; /**< Public key length (24 + n bytes) */
-    uint32_t prvKeyLen; /**< Private key length (32 + LMS_SEED_LEN) */
-    uint32_t sigLen; /**< Signature length */
-    LmsFamilyHashFuncs hashFuncs; /**< Hash function pointers for this lmsType */
+    uint32_t lmsType;
+    uint32_t otsType;
+    uint32_t h;
+    uint32_t n;
+    uint32_t height;
+    uint32_t w;
+    uint32_t p;
+    uint32_t ls;
+    uint32_t pubKeyLen;
+    uint32_t prvKeyLen;
+    uint32_t sigLen;
+    LmsFamilyHashFuncs hashFuncs;
 } LMS_Para;
 
-/**
- * @ingroup lms
- * @brief Look up LMS parameter set.
- *
- * @param paramSet [IN]  Parameter set identifier
- * @param h        [OUT] Hash type
- * @param n        [OUT] Hash output length
- * @param height   [OUT] Tree height
- * @return CRYPT_SUCCESS if parameter set is valid, error code otherwise
- */
 int32_t LmsLookupParamSet(uint32_t paramSet, uint32_t *h, uint32_t *n, uint32_t *height);
 
-/**
- * @ingroup lms
- * @brief LM-OTS parameter output structure
- */
 typedef struct {
-    uint32_t h; /**< Hash type */
-    uint32_t n; /**< Hash output length */
-    uint32_t w; /**< Winternitz parameter */
-    uint32_t p; /**< Number of n-byte strings */
-    uint32_t ls; /**< Checksum left shift */
+    uint32_t h;
+    uint32_t n;
+    uint32_t w;
+    uint32_t p;
+    uint32_t ls;
 } LmOtsParams;
 
-/**
- * @ingroup lms
- * @brief Look up LM-OTS parameter set.
- *
- * @param paramSet [IN]  Parameter set identifier
- * @param params   [OUT] Output parameters structure
- * @return CRYPT_SUCCESS if parameter set is valid, error code otherwise
- */
 int32_t LmOtsLookupParamSet(uint32_t paramSet, LmOtsParams *params);
 
-/**
- * @ingroup lms
- * @brief Initialize LMS parameters structure.
- *
- * @param para    [OUT] Parameter structure to initialize
- * @param lmsType [IN]  LMS parameter set
- * @param otsType [IN]  LM-OTS parameter set
- * @return 0 on success, error code on failure
- */
 int32_t LmsParaInit(LMS_Para *para, uint32_t lmsType, uint32_t otsType);
 
 #ifdef __cplusplus

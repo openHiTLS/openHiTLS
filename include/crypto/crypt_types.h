@@ -749,9 +749,7 @@ typedef enum {
     // hss
     CRYPT_CTRL_HSS_SET_PARAM = 850,              /**< Set HSS parameters via BSL_Param */
     CRYPT_CTRL_HSS_GET_PUBKEY_LEN,               /**< Get public key length */
-    CRYPT_CTRL_HSS_GET_PRVKEY_LEN,               /**< Get private key length */
     CRYPT_CTRL_HSS_GET_SIG_LEN,                  /**< Get signature length */
-    CRYPT_CTRL_HSS_GET_REMAINING,                /**< Get remaining signatures */
     CRYPT_CTRL_HSS_GET_LEVELS,                   /**< Get number of levels */
 
     // sm9

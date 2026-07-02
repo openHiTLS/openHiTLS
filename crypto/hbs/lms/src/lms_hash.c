@@ -23,10 +23,16 @@
 #include "crypt_utils.h"
 #include "eal_md_local.h"
 #include "crypt_algid.h"
-#include "lms_local.h"
-#include "lms_hash.h"
-#include "lms_common.h"
+#include "lms_internal.h"
 #include "lms_params.h"
+#include "lms_hash.h"
+
+static int32_t LmsSetD(uint8_t *p, uint16_t value)
+{
+    p[0] = (uint8_t)(value >> LMS_BITS_PER_BYTE);
+    p[1] = (uint8_t)(value & LMS_BYTE_MASK);
+    return CRYPT_SUCCESS;
+}
 
 /**
  * @ingroup lms
@@ -36,7 +42,7 @@
  * @param messageLen [IN]  Message length
  * @return CRYPT_SUCCESS on success, error code on failure
  */
-static int32_t LmsHashSha256(uint8_t *result, const void *message, size_t messageLen)
+static int32_t LmsHashSha256(uint8_t *result, const void *message, uint32_t messageLen)
 {
     const EAL_MdMethod *hashMethod = EAL_MdFindDefaultMethod(CRYPT_MD_SHA256);
     if (hashMethod == NULL) {
@@ -53,17 +59,6 @@ static int32_t LmsHashSha256(uint8_t *result, const void *message, size_t messag
     return CRYPT_SUCCESS;
 }
 
-/* LMS does not use the LmsFamilyHashFuncs.skDerive slot.  Per-leaf OTS private
- * key components are derived through LmsSeedDerive (below), which builds the
- * full RFC 8554 §4 input H(I || q || j || 0xFF || seed) from an explicit
- * LMS_SeedDerive context.  The slot exists only for structural symmetry with
- * the XMSS / SLH-DSA hash-function tables; it is intentionally left NULL in
- * g_lmsHashFuncsSha256.  An earlier placeholder implementation hashed a
- * partially-uninitialized stack buffer (missing the j and seed fields) and
- * has been removed: keeping a broken stub invites silent misuse, whereas a
- * NULL slot fails loudly at the call site if it is ever wired up by mistake.
- */
-
 /**
  * @ingroup lms
  * @brief chainHash - OTS chain iteration function (C function in RFC 8554 Section 4.1)
@@ -74,7 +69,7 @@ static int32_t LmsChainHashSha256(const LmsOtsCtx *ctx, uint32_t k, uint32_t j, 
 {
     uint8_t iterBuf[LMS_ITER_PREV_OFFSET + LMS_MAX_HASH];
 
-    memcpy(iterBuf + LMS_ITER_I_OFFSET, ctx->I, LMS_I_LEN);
+    memcpy(iterBuf, ctx->I, LMS_I_LEN);
     BSL_Uint32ToByte(ctx->q, iterBuf + LMS_ITER_Q_OFFSET);
     BSL_Uint16ToByte((uint16_t)k, iterBuf + LMS_ITER_K_OFFSET);
     iterBuf[LMS_ITER_J_OFFSET] = (uint8_t)j;
@@ -93,7 +88,7 @@ static int32_t LmsLeafHashSha256(const LmsTreeCtx *ctx, uint32_t r, const uint8_
 {
     uint8_t leafBuf[LMS_LEAF_PK_OFFSET + LMS_MAX_HASH];
 
-    memcpy(leafBuf + LMS_LEAF_I_OFFSET, ctx->I, LMS_I_LEN);
+    memcpy(leafBuf, ctx->I, LMS_I_LEN);
     BSL_Uint32ToByte(r, leafBuf + LMS_LEAF_R_OFFSET);
     LmsSetD(leafBuf + LMS_LEAF_D_OFFSET, LMS_D_LEAF);
     memcpy(leafBuf + LMS_LEAF_PK_OFFSET, otsPubKey, ctx->n);
@@ -112,11 +107,11 @@ static int32_t LmsNodeHashSha256(const LmsTreeCtx *ctx, uint32_t r, const uint8_
 {
     uint8_t intrBuf[LMS_INTR_LEFT_OFFSET + LMS_MAX_HASH + LMS_MAX_HASH];
 
-    memcpy(intrBuf + LMS_INTR_I_OFFSET, ctx->I, LMS_I_LEN);
+    memcpy(intrBuf, ctx->I, LMS_I_LEN);
     BSL_Uint32ToByte(r, intrBuf + LMS_INTR_R_OFFSET);
     LmsSetD(intrBuf + LMS_INTR_D_OFFSET, LMS_D_INTR);
     memcpy(intrBuf + LMS_INTR_LEFT_OFFSET, left, ctx->n);
-    memcpy(intrBuf + LMS_INTR_RIGHT_OFFSET(ctx->n), right, ctx->n);
+    memcpy(intrBuf + LMS_INTR_LEFT_OFFSET + ctx->n, right, ctx->n);
 
     return LmsHashSha256(out, intrBuf, LMS_INTR_LEFT_OFFSET + ctx->n * 2);
 }
@@ -132,7 +127,7 @@ static int32_t LmsMsgHashSha256(const LmsTreeCtx *ctx, uint32_t q, const uint8_t
 {
     uint8_t prefix[LMS_MESG_C_OFFSET + LMS_MAX_HASH];
 
-    memcpy(prefix + LMS_MESG_I_OFFSET, ctx->I, LMS_I_LEN);
+    memcpy(prefix, ctx->I, LMS_I_LEN);
     BSL_Uint32ToByte(q, prefix + LMS_MESG_Q_OFFSET);
     LmsSetD(prefix + LMS_MESG_D_OFFSET, LMS_D_MESG);
     memcpy(prefix + LMS_MESG_C_OFFSET, C, ctx->n);
@@ -164,7 +159,7 @@ static int32_t LmsPkCompressSha256(const LmsOtsCtx *ctx, const uint8_t *chains, 
 {
     uint8_t prefix[LMS_PBLC_PREFIX_LEN];
 
-    memcpy(prefix + LMS_PBLC_I_OFFSET, ctx->I, LMS_I_LEN);
+    memcpy(prefix, ctx->I, LMS_I_LEN);
     BSL_Uint32ToByte(ctx->q, prefix + LMS_PBLC_Q_OFFSET);
     LmsSetD(prefix + LMS_PBLC_D_OFFSET, LMS_D_PBLC);
 
@@ -224,9 +219,9 @@ static const LmsHashFamilyMapping g_lmsHashFamilies[] = {
      */
 };
 
-static const LmsFamilyHashFuncs *LmsFindHashFuncs(uint32_t lmsType)
+const LmsFamilyHashFuncs *LmsFindHashFuncs(uint32_t lmsType)
 {
-    for (size_t i = 0; i < sizeof(g_lmsHashFamilies) / sizeof(g_lmsHashFamilies[0]); i++) {
+    for (uint32_t i = 0; i < sizeof(g_lmsHashFamilies) / sizeof(g_lmsHashFamilies[0]); i++) {
         if (g_lmsHashFamilies[i].lmsType == lmsType) {
             return g_lmsHashFamilies[i].funcs;
         }
@@ -243,72 +238,9 @@ static const LmsFamilyHashFuncs *LmsFindHashFuncs(uint32_t lmsType)
  * to dispatch on a hash-family parameter so that child-seed derivation
  * uses the same hash as the LMS tree it belongs to.
  */
-int32_t LmsHash(uint8_t *result, const void *message, size_t messageLen)
+int32_t LmsHash(uint8_t *result, const void *message, uint32_t messageLen)
 {
     return LmsHashSha256(result, message, messageLen);
-}
-
-/**
- * @ingroup lms
- * @brief Get hash functions for a given algorithm type
- * @param lmsType [IN] LMS algorithm type
- * @return Pointer to hash function table, or NULL if unknown
- */
-const LmsFamilyHashFuncs *LmsGetHashFuncs(uint32_t lmsType)
-{
-    return LmsFindHashFuncs(lmsType);
-}
-
-int32_t LmsSetD(uint8_t *p, uint16_t value)
-{
-    p[0] = (uint8_t)(value >> LMS_BITS_PER_BYTE);
-    p[1] = (uint8_t)(value & LMS_BYTE_MASK);
-    return CRYPT_SUCCESS;
-}
-
-int32_t LmsSeedDeriveInit(LMS_SeedDerive *derive, const uint8_t *I, const uint8_t *seed)
-{
-    derive->I = I;
-    derive->masterSeed = seed;
-    derive->q = LMS_ZERO_INIT_VALUE;
-    derive->j = LMS_ZERO_INIT_VALUE;
-    return CRYPT_SUCCESS;
-}
-
-int32_t LmsSeedDeriveSetQ(LMS_SeedDerive *derive, uint32_t q)
-{
-    derive->q = q;
-    return CRYPT_SUCCESS;
-}
-
-int32_t LmsSeedDeriveSetJ(LMS_SeedDerive *derive, uint32_t j)
-{
-    derive->j = j;
-    return CRYPT_SUCCESS;
-}
-
-int32_t LmsSeedDerive(uint8_t *seed, LMS_SeedDerive *derive, bool incrementJ)
-{
-    uint8_t buffer[LMS_PRG_LEN];
-
-    memcpy(buffer + LMS_PRG_I_OFFSET, derive->I, LMS_I_LEN);
-    BSL_Uint32ToByte(derive->q, buffer + LMS_PRG_Q_OFFSET);
-    BSL_Uint16ToByte((uint16_t)derive->j, buffer + LMS_PRG_J_OFFSET);
-    buffer[LMS_PRG_FF_OFFSET] = LMS_PRG_FF_VALUE;
-    memcpy(buffer + LMS_PRG_SEED_OFFSET, derive->masterSeed, LMS_SEED_LEN);
-
-    int32_t ret = LmsHash(seed, buffer, LMS_PRG_LEN);
-    BSL_SAL_CleanseData(buffer, LMS_PRG_LEN);
-    if (ret != CRYPT_SUCCESS) {
-        memset(seed, 0, LMS_SEED_LEN);
-        BSL_ERR_PUSH_ERROR(ret);
-        return ret;
-    }
-
-    if (incrementJ) {
-        derive->j += 1;
-    }
-    return CRYPT_SUCCESS;
 }
 
 /* Lookup tables for LMS / LM-OTS parameter sets.                           */
@@ -331,7 +263,7 @@ static const LmsParamEntry g_lmsParamTable[] = {
 
 int32_t LmsLookupParamSet(uint32_t paramSet, uint32_t *h, uint32_t *n, uint32_t *height)
 {
-    for (size_t i = 0; i < sizeof(g_lmsParamTable) / sizeof(g_lmsParamTable[0]); i++) {
+    for (uint32_t i = 0; i < sizeof(g_lmsParamTable) / sizeof(g_lmsParamTable[0]); i++) {
         if (g_lmsParamTable[i].paramSet == paramSet) {
             if (h != NULL) {
                 *h = g_lmsParamTable[i].h;
@@ -373,7 +305,7 @@ static const LmOtsParamEntry g_lmOtsParamTable[] = {
  */
 int32_t LmOtsLookupParamSet(uint32_t paramSet, LmOtsParams *params)
 {
-    for (size_t i = 0; i < sizeof(g_lmOtsParamTable) / sizeof(g_lmOtsParamTable[0]); i++) {
+    for (uint32_t i = 0; i < sizeof(g_lmOtsParamTable) / sizeof(g_lmOtsParamTable[0]); i++) {
         if (g_lmOtsParamTable[i].paramSet == paramSet) {
             params->h = g_lmOtsParamTable[i].h;
             params->n = g_lmOtsParamTable[i].n;
@@ -419,7 +351,7 @@ int32_t LmsParaInit(LMS_Para *para, uint32_t lmsType, uint32_t otsType)
     para->sigLen = 4 + otsSigLen + 4 + para->height * para->n;
 
     // Copy hash function table for this algorithm type
-    const LmsFamilyHashFuncs *funcs = LmsGetHashFuncs(lmsType);
+    const LmsFamilyHashFuncs *funcs = LmsFindHashFuncs(lmsType);
     if (funcs == NULL) {
         return CRYPT_LMS_INVALID_PARAM;
     }

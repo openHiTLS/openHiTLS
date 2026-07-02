@@ -49,55 +49,14 @@ extern "C" {
  *   counter(8) + compressed_params(8) + seed(32) = 48 */
 #define HSS_PRVKEY_LEN 48
 
-/**
- * @brief Maximum possible HSS public key size for pre-init / stack allocation.
- *
- * HSS public key = levels(4) + lms_type(4) + ots_type(4) + I(16) + root(n)
- *                = 28 + n
- * With n ≤ 32 for all currently defined parameter sets, 28+32 = 60 is the safe max.
- * Runtime code MUST use para->pubKeyLen (set by HssParaInit / SetPubKey) instead
- * of this macro when the actual hash output length n is known.
- */
-#define HSS_PUBKEY_MAX_LEN 60
-
-/* HSS private key offsets */
-#define HSS_PRVKEY_COUNTER_OFFSET 0 // Signature counter (8 bytes, big-endian)
-#define HSS_PRVKEY_COUNTER_LEN    8
-#define HSS_PRVKEY_PARAMS_OFFSET  8 // Compressed parameter set (8 bytes)
-#define HSS_PRVKEY_PARAMS_LEN     8
-#define HSS_PRVKEY_SEED_OFFSET    16 // Master seed (32 bytes)
-#define HSS_PRVKEY_SEED_LEN       32
-
 /* HSS public key offsets */
 #define HSS_PUBKEY_LEVELS_OFFSET   0 // Number of levels (4 bytes, big-endian)
 #define HSS_PUBKEY_LMS_TYPE_OFFSET 4 // Top-level LMS type (4 bytes, big-endian)
 #define HSS_PUBKEY_OTS_TYPE_OFFSET 8 // Top-level OTS type (4 bytes, big-endian)
-#define HSS_PUBKEY_I_OFFSET        12 // Top-level I value (16 bytes)
 #define HSS_PUBKEY_ROOT_OFFSET     28 // Top-level root hash (32 bytes)
 
 /* HSS signature offsets */
-#define HSS_SIG_NSPK_OFFSET 0 // Number of signed public keys (4 bytes)
 #define HSS_SIG_NSPK_LEN    4
-#define HSS_SIG_DATA_OFFSET 4 // Start of signature data
-
-/* Seed derivation domain separators */
-#define HSS_SEED_ROOT_I       0x00 // Root tree I derivation
-#define HSS_SEED_ROOT_SEED    0x01 // Root tree seed derivation
-#define HSS_SEED_CHILD_SUFFIX 0x01 // Child seed derivation suffix
-
-/* Compressed parameter set buffer size:
- *   levels(1) + [lms_type(1) + ots_type(1)] * HSS_MAX_LEVELS = 1 + 2*3 = 7
- *   One extra byte of padding is included for safety. */
-#define HSS_COMPRESSED_PARAMS_LEN (1 + 2 * HSS_MAX_LEVELS + 1)
-
-/* Seed derivation buffer sizes (RFC 8554) */
-#define HSS_ROOT_SEED_DERIVE_BUF_LEN  34 // masterSeed(32) + domain(1) + padding(1)
-#define HSS_CHILD_SEED_DERIVE_BUF_LEN 60 // parentSeed(32) + parentI(16) + treeIndex(8) + level(4)
-#define HSS_CHILD_SEED_SUFFIX_BUF_LEN 61 // CHILD_SEED_DERIVE_BUF_LEN + suffix(1)
-
-/* Parameter compression field sizes */
-#define HSS_COMPRESSED_LEVEL_FIELD_SIZE 1 // Levels field size in compressed format
-#define HSS_COMPRESSED_PARAM_PAIR_SIZE  2 // Size of (lms_type, ots_type) pair in compressed format
 
 /**
  * @ingroup hss

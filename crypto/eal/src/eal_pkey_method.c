@@ -829,28 +829,15 @@ static const EAL_PkeyMethod METHODS[] = {
         CRYPT_HSS_FreeCtx,
         NULL, // setPara
         NULL, // getPara
-#ifdef HITLS_CRYPTO_HSS_KEYGEN
-        CRYPT_HSS_Gen,
-#else
         NULL, // gen
-#endif
         CRYPT_HSS_Ctrl,
         CRYPT_HSS_SetPubKey,
-        CRYPT_HSS_SetPrvKey,
+        NULL,
         CRYPT_HSS_GetPubKey,
-        CRYPT_HSS_GetPrvKey,
-#ifdef HITLS_CRYPTO_HSS_SIGN
-        CRYPT_HSS_Sign,
-        NULL, // signData
-#else
+        NULL,
         NULL, // sign
         NULL, // signData
-#endif
-#ifdef HITLS_CRYPTO_HSS_VERIFY
         CRYPT_HSS_Verify,
-#else
-        NULL, // verify
-#endif
         NULL, // verifyData
         NULL, // recover
         NULL, // computeShareKey
@@ -858,11 +845,7 @@ static const EAL_PkeyMethod METHODS[] = {
         NULL, // decrypt
         NULL, // headd
         NULL, // hemul
-#if defined(HITLS_CRYPTO_HSS_KEYGEN) && defined(HITLS_CRYPTO_HSS_CHECK)
-        CRYPT_HSS_Check,
-#else
         NULL, // check
-#endif
         CRYPT_HSS_Cmp,
         NULL, // copyPara
         NULL, // pkeyEncaps

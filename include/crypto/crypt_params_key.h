@@ -189,11 +189,7 @@ extern "C" {
 #define CRYPT_PARAM_COMPOSITE_PRVKEY                        (CRYPT_PARAM_COMPOSITE_BASE + 1)
 #define CRYPT_PARAM_COMPOSITE_PUBKEY                        (CRYPT_PARAM_COMPOSITE_BASE + 2)
 
-#define CRYPT_PARAM_LMS_BASE                                2200
-#define CRYPT_PARAM_LMS_PUBKEY                              (CRYPT_PARAM_LMS_BASE + 1)
-#define CRYPT_PARAM_LMS_PRVKEY                              (CRYPT_PARAM_LMS_BASE + 2)
-
-#define CRYPT_PARAM_HSS_BASE                                2250
+#define CRYPT_PARAM_HSS_BASE                                2200
 #define CRYPT_PARAM_HSS_PUBKEY                              (CRYPT_PARAM_HSS_BASE + 1)
 #define CRYPT_PARAM_HSS_PRVKEY                              (CRYPT_PARAM_HSS_BASE + 2)
 

@@ -23,13 +23,13 @@
 #include <stddef.h>
 #include "crypt_algid.h"
 
+/* Forward declarations used by LmsFamilyHashFuncs function pointers */
+typedef struct LmsOtsCtx LmsOtsCtx;
+typedef struct LmsTreeCtx LmsTreeCtx;
+
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cplusplus */
-
-typedef struct LmsPara LMS_Para;
-typedef struct LmsOtsCtx LmsOtsCtx;
-typedef struct LmsTreeCtx LmsTreeCtx;
 
 /**
  * @ingroup lms
@@ -56,16 +56,17 @@ typedef struct LmsFamilyHashFuncs {
     int32_t (*pkCompress)(const LmsOtsCtx *ctx, const uint8_t *chains, uint8_t *out);
 } LmsFamilyHashFuncs;
 
-/* NOTE: LmsHashFuncs alias removed. Use LmsFamilyHashFuncs directly. */
+const LmsFamilyHashFuncs *LmsFindHashFuncs(uint32_t lmsType);
 
 /**
  * @ingroup lms
- * @brief Get hash functions for a given LMS algorithm type.
- *
- * @param lmsType [IN] LMS algorithm type
- * @return Pointer to hash function table
+ * @brief Hash message using SHA-256
+ * @param result     [OUT] Output hash (32 bytes)
+ * @param message    [IN]  Message to hash
+ * @param messageLen [IN]  Message length
+ * @return CRYPT_SUCCESS on success, error code on failure
  */
-const LmsFamilyHashFuncs *LmsGetHashFuncs(uint32_t lmsType);
+int32_t LmsHash(uint8_t *result, const void *message, uint32_t messageLen);
 
 #ifdef __cplusplus
 }

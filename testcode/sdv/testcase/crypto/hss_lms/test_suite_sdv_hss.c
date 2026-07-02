@@ -12,6 +12,7 @@
  * MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
  * See the Mulan PSL v2 for more details.
  */
+/* INCLUDE_BASE test_suite_sdv_hss */
 
 /* BEGIN_HEADER */
 #include "bsl_sal.h"
@@ -146,7 +147,7 @@ void SDV_CRYPTO_HSS_KEYGEN_API_TC001(void)
     ASSERT_EQ(ret, CRYPT_SUCCESS);
 
     uint64_t remaining = 0;
-    ret = CRYPT_HSS_Ctrl(ctx, CRYPT_CTRL_HSS_GET_REMAINING, &remaining, sizeof(remaining));
+    ret = HssCtrlGetRemaining(ctx, &remaining, sizeof(remaining));
     ASSERT_EQ(ret, CRYPT_SUCCESS);
     ASSERT_EQ(remaining, 1024); // Signature capacity: 2^5 * 2^5 = 32 * 32 = 1024
 
@@ -317,7 +318,7 @@ void SDV_CRYPTO_HSS_MULTI_LEVEL_API_TC001(void)
     ASSERT_EQ(ret, CRYPT_SUCCESS);
 
     uint64_t remaining = 0;
-    ret = CRYPT_HSS_Ctrl(ctx, CRYPT_CTRL_HSS_GET_REMAINING, &remaining, sizeof(remaining));
+    ret = HssCtrlGetRemaining(ctx, &remaining, sizeof(remaining));
     ASSERT_EQ(ret, CRYPT_SUCCESS);
     ASSERT_EQ(remaining, 32768);
 
@@ -332,7 +333,7 @@ void SDV_CRYPTO_HSS_MULTI_LEVEL_API_TC001(void)
         ASSERT_EQ(ret, CRYPT_SUCCESS);
     }
 
-    ret = CRYPT_HSS_Ctrl(ctx, CRYPT_CTRL_HSS_GET_REMAINING, &remaining, sizeof(remaining));
+    ret = HssCtrlGetRemaining(ctx, &remaining, sizeof(remaining));
     ASSERT_EQ(ret, CRYPT_SUCCESS);
     ASSERT_EQ(remaining, 32768 - 5);
 
@@ -709,11 +710,6 @@ void SDV_CRYPTO_HSS_CTRL_LENGTHS_API_TC001(void)
     ASSERT_EQ(ret, CRYPT_SUCCESS);
     ASSERT_EQ(pubKeyLen, CRYPT_HSS_PUBKEY_LEN);
 
-    uint32_t prvKeyLen = 0;
-    ret = CRYPT_HSS_Ctrl(ctx, CRYPT_CTRL_HSS_GET_PRVKEY_LEN, &prvKeyLen, sizeof(prvKeyLen));
-    ASSERT_EQ(ret, CRYPT_SUCCESS);
-    ASSERT_EQ(prvKeyLen, CRYPT_HSS_PRVKEY_LEN);
-
     uint32_t gotLevels = 0;
     ret = CRYPT_HSS_Ctrl(ctx, CRYPT_CTRL_HSS_GET_LEVELS, &gotLevels, sizeof(gotLevels));
     ASSERT_EQ(ret, CRYPT_SUCCESS);
@@ -721,64 +717,6 @@ void SDV_CRYPTO_HSS_CTRL_LENGTHS_API_TC001(void)
 
 EXIT:
     CRYPT_HSS_FreeCtx(ctx);
-    return;
-}
-/* END_CASE */
-
-/* @
-* @test  SDV_CRYPTO_HSS_TREE_INDICES_H10H5_TC001
-* @spec  -
-* @title  HssCalculateTreeIndices correctness for heterogeneous heights (H10+H5)
-* @precon  nan
-* @brief  Verify tree and leaf indices across globalIndex values that span the
-*         level-1 tree boundary in a 2-level H10+H5 HSS configuration
-* @expect  Returned indices match the analytical values for every probed case
-* @prior  Level 0
-* @auto  TRUE
-@ */
-/* BEGIN_CASE */
-void SDV_CRYPTO_HSS_TREE_INDICES_H10H5_TC001(void)
-{
-    TestMemInit();
-
-    // Build a 2-level H10+H5 HSS parameter set directly
-    HSS_Para para;
-    uint32_t lmsTypes[2] = {CRYPT_LMS_SHA256_M32_H10, CRYPT_LMS_SHA256_M32_H5};
-    uint32_t otsTypes[2] = {CRYPT_LMOTS_SHA256_N32_W4, CRYPT_LMOTS_SHA256_N32_W4};
-    int32_t ret = HssParaInit(&para, 2, lmsTypes, otsTypes);
-    ASSERT_EQ(ret, CRYPT_SUCCESS);
-
-    // h0 = 10, h1 = 5  =>  total capacity = 2^10 * 2^5 = 32768
-    //   treeIndex[0] = g / 32768         (must be 0 for any valid g)
-    //   treeIndex[1] = g / 32
-    //   leafIndex[0] = (g / 32) % 1024
-    //   leafIndex[1] = g % 32
-    // The boundary cases g=1024 and g=2000 specifically pin down the fix:
-    // the previous buggy formula would have set treeIndex[0] = 1 there.
-    struct {
-        uint64_t globalIndex;
-        uint64_t expTree0;
-        uint64_t expTree1;
-        uint32_t expLeaf0;
-        uint32_t expLeaf1;
-    } cases[] = {
-        {0, 0, 0, 0, 0},      {31, 0, 0, 0, 31},     {32, 0, 1, 1, 0},           {1023, 0, 31, 31, 31},
-        {1024, 0, 32, 32, 0}, {2000, 0, 62, 62, 16}, {32767, 0, 1023, 1023, 31},
-    };
-    uint32_t caseNum = (uint32_t)(sizeof(cases) / sizeof(cases[0]));
-
-    for (uint32_t i = 0; i < caseNum; i++) {
-        uint64_t treeIndex[HSS_LEVELS_ARRAY_SIZE] = {0};
-        uint32_t leafIndex[HSS_LEVELS_ARRAY_SIZE] = {0};
-        ret = HssCalculateTreeIndices(&para, cases[i].globalIndex, treeIndex, leafIndex);
-        ASSERT_EQ(ret, CRYPT_SUCCESS);
-        ASSERT_EQ(treeIndex[0], cases[i].expTree0);
-        ASSERT_EQ(treeIndex[1], cases[i].expTree1);
-        ASSERT_EQ(leafIndex[0], cases[i].expLeaf0);
-        ASSERT_EQ(leafIndex[1], cases[i].expLeaf1);
-    }
-
-EXIT:
     return;
 }
 /* END_CASE */

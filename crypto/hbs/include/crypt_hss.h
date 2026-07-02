@@ -80,7 +80,8 @@ void CRYPT_HSS_FreeCtx(CRYPT_HSS_Ctx *ctx);
 
 /**
  * @ingroup hss
- * @brief Duplicate an HSS context. The duplicate contains public-key material only; private signing state is not copied.
+ * @brief Duplicate an HSS context. The duplicate contains public-key material only;
+ * private signing state is not copied.
  *
  * @param srcCtx [IN] Source HSS context
  *
@@ -118,31 +119,6 @@ int32_t CRYPT_HSS_Ctrl(CRYPT_HSS_Ctx *ctx, int32_t cmd, void *val, uint32_t valL
 
 /**
  * @ingroup hss
- * @brief Generate an HSS key pair.
- *
- * @param ctx [IN/OUT] HSS context structure
- *
- * @retval CRYPT_NULL_INPUT      Invalid null pointer input.
- * @retval CRYPT_MEM_ALLOC_FAIL  Memory allocation failure.
- * @retval CRYPT_SUCCESS         The key pair is successfully generated.
- */
-int32_t CRYPT_HSS_Gen(CRYPT_HSS_Ctx *ctx);
-
-/**
- * @ingroup hss
- * @brief Set the private key data for the HSS.
- *
- * @param ctx [IN] HSS context structure
- * @param param [IN] External private key data
- *
- * @retval CRYPT_NULL_INPUT      Invalid null pointer input.
- * @retval CRYPT_MEM_ALLOC_FAIL  Memory allocation failure.
- * @retval CRYPT_SUCCESS         Set successfully.
- */
-int32_t CRYPT_HSS_SetPrvKey(CRYPT_HSS_Ctx *ctx, BSL_Param *param);
-
-/**
- * @ingroup hss
  * @brief Set the public key data for the HSS.
  *
  * @param ctx [IN] HSS context structure
@@ -156,18 +132,6 @@ int32_t CRYPT_HSS_SetPubKey(CRYPT_HSS_Ctx *ctx, BSL_Param *param);
 
 /**
  * @ingroup hss
- * @brief Obtain the private key data of the HSS.
- *
- * @param ctx [IN] HSS context structure
- * @param param [OUT] External private key data
- *
- * @retval CRYPT_NULL_INPUT      Invalid null pointer input.
- * @retval CRYPT_SUCCESS         Obtained successfully.
- */
-int32_t CRYPT_HSS_GetPrvKey(CRYPT_HSS_Ctx *ctx, BSL_Param *param);
-
-/**
- * @ingroup hss
  * @brief Obtain the public key data of the HSS.
  *
  * @param ctx [IN] HSS context structure
@@ -177,35 +141,6 @@ int32_t CRYPT_HSS_GetPrvKey(CRYPT_HSS_Ctx *ctx, BSL_Param *param);
  * @retval CRYPT_SUCCESS         Obtained successfully.
  */
 int32_t CRYPT_HSS_GetPubKey(CRYPT_HSS_Ctx *ctx, BSL_Param *param);
-
-/**
- * @ingroup hss
- * @brief HSS Signature.
- *
- * @param ctx [IN] HSS context structure
- * @param algId [IN] Hash algorithm ID
- * @param msg [IN] Data to be signed
- * @param msgLen [IN] Length of the data to be signed
- * @param sig [OUT] Signature data
- * @param sigLen [IN/OUT] The input parameter is the space length of the sig,
- *                        and the output parameter is the valid length of the sig.
- * @attention 
- * * 1. Stateful private key:
- *    HSS is a stateful signature scheme. The private key is updated after each
- *    successful signature. The caller MUST retrieve the updated private key via
- *    CRYPT_HSS_GetPrvKey and persist it (e.g., to disk or secure storage).
- *    Failure to do so may result in reuse of one-time keys and compromise security.
- * 2. No concurrent use:
- *    The same private key MUST NOT be used concurrently across multiple contexts
- *    (e.g., threads or processes). Concurrent signing may lead to reuse of the same
- *    one-time key index, which breaks the security guarantees of HSS.
- *
- * @retval CRYPT_NULL_INPUT      Invalid null pointer input.
- * @retval CRYPT_MEM_ALLOC_FAIL  Memory allocation failure.
- * @retval CRYPT_SUCCESS         Signed successfully.
- */
-int32_t CRYPT_HSS_Sign(CRYPT_HSS_Ctx *ctx, int32_t algId, const uint8_t *msg, uint32_t msgLen, uint8_t *sig,
-                       uint32_t *sigLen);
 
 /**
  * @ingroup hss
@@ -223,21 +158,6 @@ int32_t CRYPT_HSS_Sign(CRYPT_HSS_Ctx *ctx, int32_t algId, const uint8_t *msg, ui
  */
 int32_t CRYPT_HSS_Verify(const CRYPT_HSS_Ctx *ctx, int32_t algId, const uint8_t *msg, uint32_t msgLen,
                          const uint8_t *sig, uint32_t sigLen);
-
-#ifdef HITLS_CRYPTO_HSS_CHECK
-/**
- * @ingroup hss
- * @brief Check the key pair consistency.
- *
- * @param checkType [IN] Check type
- * @param pkey1 [IN] HSS key context structure
- * @param pkey2 [IN] HSS key context structure
- *
- * @retval CRYPT_SUCCESS     Succeeded.
- * @retval Other error code  Check failed.
- */
-int32_t CRYPT_HSS_Check(uint32_t checkType, const CRYPT_HSS_Ctx *pkey1, const CRYPT_HSS_Ctx *pkey2);
-#endif
 
 #ifdef __cplusplus
 }
