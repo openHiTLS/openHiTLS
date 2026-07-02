@@ -13,12 +13,89 @@
  * See the Mulan PSL v2 for more details.
  */
 
+#include <errno.h>
 #include <setjmp.h>
+#include <stdbool.h>
+#include <stdint.h>
+#include <stdlib.h>
 #include <time.h>
 #include <sys/time.h>
+#include <sys/wait.h>
+#include <unistd.h>
 
 static sigjmp_buf env;
 static int isSubProc = 0;
+static uint16_t g_subProcNum = 0;
+static uint16_t g_subProcLimit = 0;
+
+#define DEFAULT_SUB_PROC_LIMIT 8
+#define SUB_PROC_FORK_RETRY_US 1000
+
+static uint16_t GetSubProcLimit(void)
+{
+    if (g_subProcLimit != 0) {
+        return g_subProcLimit;
+    }
+
+    g_subProcLimit = DEFAULT_SUB_PROC_LIMIT;
+    const char *envLimit = getenv("TEST_SUBPROC_LIMIT");
+    if (envLimit != NULL) {
+        char *end = NULL;
+        unsigned long limit = strtoul(envLimit, &end, 10);
+        if (end != envLimit && *end == '\0' && limit > 0 && limit <= UINT16_MAX) {
+            g_subProcLimit = (uint16_t)limit;
+        }
+    }
+    return g_subProcLimit;
+}
+
+static bool WaitOneSubProc(void)
+{
+    int status;
+    pid_t pid;
+
+    do {
+        pid = wait(&status);
+    } while (pid < 0 && errno == EINTR);
+
+    if (pid > 0 && g_subProcNum > 0) {
+        g_subProcNum--;
+        return true;
+    }
+    if (pid < 0 && errno == ECHILD) {
+        g_subProcNum = 0;
+    }
+    return false;
+}
+
+pid_t SubProcBegin(void)
+{
+    while (g_subProcNum >= GetSubProcLimit()) {
+        WaitOneSubProc();
+    }
+
+    pid_t pid;
+    do {
+        pid = fork();
+        if (pid < 0 && !WaitOneSubProc()) {
+            usleep(SUB_PROC_FORK_RETRY_US);
+        }
+    } while (pid < 0);
+
+    if (pid > 0) {
+        g_subProcNum++;
+    }
+    return pid;
+}
+
+void SubProcWait(uint16_t times)
+{
+    uint16_t waitNum = (times < g_subProcNum) ? times : g_subProcNum;
+    for (uint16_t i = 0; i < waitNum && g_subProcNum > 0; i++) {
+        WaitOneSubProc();
+    }
+}
+
 int *GetJmpAddress(void)
 {
     return &isSubProc;
