@@ -46,6 +46,12 @@ UT_HITLS_APP_REQ_TC001:"req -new -keyform PEM -key ../testdata/cert/asn1/print/s
 UT_HITLS_APP_REQ_TC001 req gen csr use sm2_key DER
 UT_HITLS_APP_REQ_TC001:"req -new -keyform DER -key ../testdata/cert/asn1/print/sm2.ca_v1.key.der -subj /C=CN -text":HITLS_APP_SUCCESS
 
+UT_HITLS_APP_REQ_TC001 req gen csr use sm2_key with userid
+UT_HITLS_APP_REQ_TC001:"req -new -mdalg sm3 -keyform PEM -key ../testdata/cert/asn1/print/sm2.root2.key.pem -subj /C=CN -userid 1234567812345678":HITLS_APP_SUCCESS
+
+UT_HITLS_APP_REQ_TC001 req gen csr use rsa_key with userid
+UT_HITLS_APP_REQ_TC001:"req -new -keyform DER -key ../testdata/cert/asn1/print/rsa.intca.key.der -subj /C=CN -userid 1234567812345678":HITLS_APP_INVALID_ARG
+
 UT_HITLS_APP_REQ_TC001 req gen key and csr with verify
 UT_HITLS_APP_REQ_TC001:"req -new -passout pass:123456 -subj /C=CN -verify -text":HITLS_APP_SUCCESS
 
@@ -66,6 +72,9 @@ UT_HITLS_APP_REQ_TC001:"req -verify -inform DER -in ../testdata/cert/asn1/print/
 
 UT_HITLS_APP_REQ_TC001 req verify sm2 DER csr with text
 UT_HITLS_APP_REQ_TC001:"req -verify -inform DER -in ../testdata/cert/asn1/print/sm2.root2.csr.der -text":HITLS_APP_SUCCESS
+
+UT_HITLS_APP_REQ_TC001 req verify sm2 csr with userid
+UT_HITLS_APP_REQ_TC001:"req -verify -in ../testdata/apps/x509/sm2.csr -userid 1234567812345678 -noout":HITLS_APP_SUCCESS
 
 UT_HITLS_APP_REQ_TC001 req pem to der
 UT_HITLS_APP_REQ_TC001:"req -in ../testdata/cert/asn1/print/rsa.intca.csr.pem -outform DER -out test.der":HITLS_APP_SUCCESS
