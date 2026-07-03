@@ -2255,10 +2255,7 @@ static int32_t HITLS_X509_CheckCertCrlLite(HITLS_X509_StoreCtx *storeCtx, HITLS_
         }
         ret = HITLS_X509_TrvList(crl->tbs.crlExt.extList, (HITLS_X509_TrvListCallBack)HITLS_X509_CheckCrlExtNode,
                                  storeCtx);
-        if (ret != HITLS_PKI_SUCCESS) {
-            BSL_ERR_PUSH_ERROR(ret);
-            return ret;
-        }
+        VFYCBK_FAIL_IF(ret != HITLS_PKI_SUCCESS, storeCtx, cert, depth, ret);
 
         ret = HITLS_X509_CheckSignAlgConsistency(&crl->tbs.signAlgId, &crl->signAlgId);
         VFYCBK_FAIL_IF(ret != HITLS_PKI_SUCCESS, storeCtx, cert, depth, ret);
