@@ -55,6 +55,8 @@ STUB_DEFINE_RET2(int32_t, HITLS_X509_CertVerify, HITLS_X509_StoreCtx *, HITLS_X5
 #define CERT_256K_FILEPATH "../testdata/certificate/VerifyCAfile/256kfuture.pem"
 #define CERT_257K_FILEPATH "../testdata/certificate/VerifyCAfile/257kfuture.pem"
 #define MISTAKE_CERT_PATH "../testdata/certificate/VerifyCAfile/mistakeCert.pem"
+#define SM2_WITH_USERID_CA "../testdata/cert/sm2_with_userid/ca.crt"
+#define SM2_WITH_USERID_INTER "../testdata/cert/sm2_with_userid/inter.crt"
 
 /* INCLUDE_SOURCE  ${HITLS_ROOT_PATH}/apps/src/app_print.c ${HITLS_ROOT_PATH}/apps/src/app_verify.c ${HITLS_ROOT_PATH}/apps/src/app_opt.c ${HITLS_ROOT_PATH}/apps/src/app_utils.c */
 
@@ -74,10 +76,14 @@ void UT_HITLS_APP_verify_TC001(void)
 {
     char *argv[][100] = {
         {"verify", "-CAfile", CAFILE_PATH, CERT_PATH},
+        {"verify", "-CAfile", SM2_WITH_USERID_CA, "-nokeyusage", "-userid", "1234567812345678", SM2_WITH_USERID_INTER},
+        {"verify", "-CAfile", SM2_WITH_USERID_CA, "-nokeyusage", "-userid", "1111111111111111", SM2_WITH_USERID_INTER},
     };
 
     OptTestData testData[] = {
         {4, argv[0], HITLS_APP_SUCCESS},
+        {7, argv[1], HITLS_APP_SUCCESS},
+        {7, argv[2], HITLS_APP_X509_FAIL},
     };
 
     ASSERT_EQ(AppPrintErrorUioInit(stderr), HITLS_APP_SUCCESS);
@@ -261,6 +267,47 @@ void UT_HITLS_APP_verify_TC008(void)
 
     OptTestData testData[] = {
         {4, argv[0], HITLS_APP_X509_FAIL},
+    };
+
+    ASSERT_EQ(AppPrintErrorUioInit(stderr), HITLS_APP_SUCCESS);
+    for (int i = 0; i < (int)(sizeof(testData) / sizeof(OptTestData)); ++i) {
+        int ret = HITLS_VerifyMain(testData[i].argc, testData[i].argv);
+        ASSERT_EQ(ret, testData[i].expect);
+    }
+EXIT:
+    AppPrintErrorUioUnInit();
+    STUB_RESTORE(HITLS_X509_StoreCtxCtrl);
+    return;
+}
+/* END_CASE */
+
+int32_t STUB_HITLS_X509_StoreCtxCtrlUserIdFail(HITLS_X509_StoreCtx *storeCtx, int32_t cmd, void *val,
+    uint32_t valLen)
+{
+    (void)storeCtx;
+    (void)val;
+    (void)valLen;
+    if (cmd == HITLS_X509_STORECTX_SET_VFY_SM2_USERID) {
+        return HITLS_APP_X509_FAIL;
+    }
+    return HITLS_APP_SUCCESS;
+}
+
+/**
+ * @test UT_HITLS_APP_verify_TC011
+ * @spec  -
+ * @title Test verify command failure when setting SM2 userid fails.
+ */
+/* BEGIN_CASE */
+void UT_HITLS_APP_verify_TC011(void)
+{
+    STUB_REPLACE(HITLS_X509_StoreCtxCtrl, STUB_HITLS_X509_StoreCtxCtrlUserIdFail);
+    char *argv[][100] = {
+        {"verify", "-CAfile", CAFILE_PATH, "-userid", "1234567812345678", CERT_PATH},
+    };
+
+    OptTestData testData[] = {
+        {6, argv[0], HITLS_APP_X509_FAIL},
     };
 
     ASSERT_EQ(AppPrintErrorUioInit(stderr), HITLS_APP_SUCCESS);

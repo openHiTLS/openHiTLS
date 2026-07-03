@@ -36,7 +36,8 @@ typedef enum OptionChoice {
     HITLS_APP_OPT_VERIFY_HELP = 1,
     HITLS_APP_OPT_VERIFY_CAFILE,
     HITLS_APP_OPT_VERIFY_VERBOSE,
-    HITLS_APP_OPT_VERIFY_NOKEYUSAGE
+    HITLS_APP_OPT_VERIFY_NOKEYUSAGE,
+    HITLS_APP_OPT_VERIFY_USERID
 } HITLSOptType;
 
 static const HITLS_CmdOption g_verifyOpts[] = {
@@ -44,6 +45,7 @@ static const HITLS_CmdOption g_verifyOpts[] = {
     {"nokeyusage", HITLS_APP_OPT_VERIFY_NOKEYUSAGE, HITLS_APP_OPT_VALUETYPE_NO_VALUE, "Set not to verify keyUsage"},
     {"CAfile", HITLS_APP_OPT_VERIFY_CAFILE, HITLS_APP_OPT_VALUETYPE_IN_FILE, "Input ca file"},
     {"verbose", HITLS_APP_OPT_VERIFY_VERBOSE, HITLS_APP_OPT_VALUETYPE_NO_VALUE, "Print extra information"},
+    {"userid", HITLS_APP_OPT_VERIFY_USERID, HITLS_APP_OPT_VALUETYPE_STRING, "User ID for SM2"},
     {"certs", HITLS_APP_OPT_VERIFY_CERTS, HITLS_APP_OPT_VALUETYPE_PARAMTERS, "Input certs"},
     {NULL, 0, 0, NULL}
 };
@@ -198,7 +200,7 @@ static int32_t VerifyCerts(HITLS_X509_StoreCtx *storeCtx, int argc, char **argv)
     return ret;
 }
 
-static int32_t OptParse(char **cafile)
+static int32_t OptParse(char **cafile, char **userId)
 {
     HITLSOptType optType;
     int ret = HITLS_APP_SUCCESS;
@@ -226,6 +228,13 @@ static int32_t OptParse(char **cafile)
             case HITLS_APP_OPT_VERIFY_NOKEYUSAGE:
                 g_noVerifyKeyUsage = true;
                 break;
+            case HITLS_APP_OPT_VERIFY_USERID:
+                *userId = HITLS_APP_OptGetValueStr();
+                if (*userId == NULL || strlen(*userId) == 0) {
+                    AppPrintError("verify: Invalid userid.\n");
+                    return HITLS_APP_OPT_VALUE_INVALID;
+                }
+                break;
             default:
                 return HITLS_APP_OPT_UNKOWN;
         }
@@ -237,6 +246,7 @@ int32_t HITLS_VerifyMain(int argc, char *argv[])
 {
     HITLS_X509_StoreCtx *store = NULL;
     char *cafile = NULL;
+    char *userId = NULL;
     int32_t mainRet = HITLS_APP_SUCCESS;
     if (CRYPT_EAL_ProviderRandInitCtx(NULL, CRYPT_RAND_AES128_CTR,
         "provider=default", NULL, 0, NULL) != CRYPT_SUCCESS) {
@@ -248,7 +258,7 @@ int32_t HITLS_VerifyMain(int argc, char *argv[])
         AppPrintError("error in opt begin.\n");
         goto end;
     }
-    mainRet = OptParse(&cafile);
+    mainRet = OptParse(&cafile, &userId);
     if (mainRet != HITLS_APP_SUCCESS) {
         goto end;
     }
@@ -264,6 +274,15 @@ int32_t HITLS_VerifyMain(int argc, char *argv[])
         mainRet = HITLS_APP_X509_FAIL;
         AppPrintError("Failed to create the store context.\n");
         goto end;
+    }
+
+    if (userId != NULL) {
+        mainRet = HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_SET_VFY_SM2_USERID, userId, strlen(userId));
+        if (mainRet != HITLS_PKI_SUCCESS) {
+            AppPrintError("verify: set userId failed, errCode = %d.\n", mainRet);
+            mainRet = HITLS_APP_X509_FAIL;
+            goto end;
+        }
     }
 
     mainRet = InitVerify(store, cafile);

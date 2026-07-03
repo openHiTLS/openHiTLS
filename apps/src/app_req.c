@@ -50,6 +50,7 @@ typedef enum {
     HITLS_REQ_APP_OPT_INFORM,
     HITLS_REQ_APP_OPT_OUT,
     HITLS_REQ_APP_OPT_OUTFORM,
+    HITLS_REQ_APP_OPT_USERID,
 } HITLSOptType;
 
 static const HITLS_CmdOption g_reqOpts[] = {
@@ -69,6 +70,7 @@ static const HITLS_CmdOption g_reqOpts[] = {
     {"inform", HITLS_REQ_APP_OPT_INFORM, HITLS_APP_OPT_VALUETYPE_FMT_PEMDER, "Input format - DER or PEM"},
     {"out", HITLS_REQ_APP_OPT_OUT, HITLS_APP_OPT_VALUETYPE_OUT_FILE, "Output file"},
     {"outform", HITLS_REQ_APP_OPT_OUTFORM, HITLS_APP_OPT_VALUETYPE_FMT_PEMDER, "Output format - DER or PEM"},
+    {"userid", HITLS_REQ_APP_OPT_USERID, HITLS_APP_OPT_VALUETYPE_STRING, "User ID for SM2"},
     {NULL, 0, 0, NULL},
 };
 
@@ -90,6 +92,7 @@ typedef struct {
     BSL_ParseFormat keyFormat;
     char *passInArg;
     char *passOutArg;
+    char *userId;
     int32_t mdalgId;
 } ReqKeysAndSignOptions;
 
@@ -224,6 +227,16 @@ static int32_t ReqOptOutFormat(ReqOptCtx *optCtx)
         &optCtx->outPutOpt.outFormat);
 }
 
+static int32_t ReqOptUserid(ReqOptCtx *optCtx)
+{
+    optCtx->keyAndSignOpt.userId = HITLS_APP_OptGetValueStr();
+    if (optCtx->keyAndSignOpt.userId == NULL || strlen(optCtx->keyAndSignOpt.userId) == 0) {
+        AppPrintError("req: Invalid userid.\n");
+        return HITLS_APP_OPT_VALUE_INVALID;
+    }
+    return HITLS_APP_SUCCESS;
+}
+
 static const ReqOptHandleTable g_reqOptHandleTable[] = {
     {HITLS_APP_OPT_ERR, ReqOptErr},
     {HITLS_APP_OPT_HELP, ReqOptHelp},
@@ -242,6 +255,7 @@ static const ReqOptHandleTable g_reqOptHandleTable[] = {
     {HITLS_REQ_APP_OPT_INFORM, ReqOptInFormat},
     {HITLS_REQ_APP_OPT_OUT, ReqOptOut},
     {HITLS_REQ_APP_OPT_OUTFORM, ReqOptOutFormat},
+    {HITLS_REQ_APP_OPT_USERID, ReqOptUserid},
 };
 
 static int32_t ParseReqOpt(ReqOptCtx *optCtx)
@@ -332,6 +346,20 @@ static int32_t GetSignMdId(ReqOptCtx *optCtx)
         }
     }
     return mdalgId;
+}
+
+static int32_t SetSignAlgParam(ReqOptCtx *optCtx, HITLS_X509_SignAlgParam *algParam)
+{
+    if (optCtx->keyAndSignOpt.userId == NULL) {
+        return HITLS_APP_SUCCESS;
+    }
+    if (CRYPT_EAL_PkeyGetId(optCtx->pkey) != CRYPT_PKEY_SM2) {
+        AppPrintError("req: -userid only supports SM2 keys.\n");
+        return HITLS_APP_INVALID_ARG;
+    }
+    algParam->sm2UserId.data = (uint8_t *)optCtx->keyAndSignOpt.userId;
+    algParam->sm2UserId.dataLen = strlen(optCtx->keyAndSignOpt.userId);
+    return HITLS_APP_SUCCESS;
 }
 
 static int32_t ProcSanExt(BslCid cid, void *val, void *ctx)
@@ -427,7 +455,14 @@ static int32_t ReqGen(ReqOptCtx *optCtx)
         return ret;
     }
 
-    ret = HITLS_X509_CsrSign(GetSignMdId(optCtx), optCtx->pkey, NULL, optCtx->csr);
+    HITLS_X509_SignAlgParam algParam = {0};
+    ret = SetSignAlgParam(optCtx, &algParam);
+    if (ret != HITLS_APP_SUCCESS) {
+        return ret;
+    }
+
+    ret = HITLS_X509_CsrSign(GetSignMdId(optCtx), optCtx->pkey,
+        optCtx->keyAndSignOpt.userId == NULL ? NULL : &algParam, optCtx->csr);
     if (ret != HITLS_PKI_SUCCESS) {
         AppPrintError("req: Failed to sign the csr, errCode = %x.\n", ret);
         return HITLS_APP_X509_FAIL;
@@ -451,14 +486,25 @@ static int32_t ReqLoad(ReqOptCtx *optCtx)
     return HITLS_APP_SUCCESS;
 }
 
-static void ReqVerify(ReqOptCtx *optCtx)
+static int32_t ReqVerify(ReqOptCtx *optCtx)
 {
-    int32_t ret = HITLS_X509_CsrVerify(optCtx->csr);
+    int32_t ret;
+    if (optCtx->keyAndSignOpt.userId != NULL) {
+        ret = HITLS_X509_CsrCtrl(optCtx->csr, HITLS_X509_SET_VFY_SM2_USER_ID,
+            optCtx->keyAndSignOpt.userId, strlen(optCtx->keyAndSignOpt.userId));
+        if (ret != HITLS_PKI_SUCCESS) {
+            AppPrintError("req: set userId failed, errCode = %d.\n", ret);
+            return ret;
+        }
+    }
+    ret = HITLS_X509_CsrVerify(optCtx->csr);
     if (ret == HITLS_PKI_SUCCESS) {
         AppPrintError("req: verify ok.\n");
     } else {
         AppPrintError("req: verify failure, errCode = %d.\n", ret);
     }
+
+    return ret;
 }
 
 static int32_t ReqOutput(ReqOptCtx *optCtx)
@@ -559,7 +605,11 @@ int32_t HITLS_ReqMain(int argc, char *argv[])
         }
 
         if (optCtx.genOpt.verify) {
-            ReqVerify(&optCtx);
+            ret = ReqVerify(&optCtx);
+        }
+
+        if (ret != HITLS_APP_SUCCESS) {
+            break;
         }
 
         ret = ReqOutput(&optCtx);

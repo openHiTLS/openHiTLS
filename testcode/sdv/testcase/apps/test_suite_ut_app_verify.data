@@ -19,6 +19,9 @@ UT_HITLS_APP_verify_TC008:
 UT_HITLS_APP_verify_TC009 test9
 UT_HITLS_APP_verify_TC009:
 
+UT_HITLS_APP_verify_TC011 test11
+UT_HITLS_APP_verify_TC011:
+
 UT_HITLS_APP_verify_TC0010 test10
 UT_HITLS_APP_verify_TC0010:
 
