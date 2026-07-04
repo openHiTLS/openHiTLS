@@ -892,6 +892,17 @@ int32_t HITLS_CFG_SetSignature(HITLS_Config *config, const uint16_t *signAlgs, u
 
 /**
  * @ingroup hitls_config
+ * @brief   Get the IANA signature scheme codepoint by its configured signature algorithm name.
+ * @param   config      [IN] Config context
+ * @param   name        [IN] Signature algorithm name
+ * @param   id          [OUT] IANA-defined signature scheme value
+ * @return  HITLS_SUCCESS, if successful.
+ *          For details about other error codes, see hitls_error.h.
+ */
+int32_t HITLS_CFG_GetSignatureSchemeId(const HITLS_Config *config, const char *name, uint16_t *id);
+
+/**
+ * @ingroup hitls_config
  * @brief   Add the CA indicator, which is used when the peer certificate is requested.
  *
  * @param   config  [OUT] TLS link configuration

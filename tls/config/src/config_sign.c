@@ -14,17 +14,18 @@
  */
 
 #include <stddef.h>
+#include <string.h>
 #include "hitls_build.h"
 #include "config_type.h"
 #include "hitls_cert_type.h"
 #include "tls_config.h"
 #include "crypt_algid.h"
 #include "hitls_error.h"
+#include "bsl_err_internal.h"
 #include "cipher_suite.h"
 #include "config.h"
 
 #ifdef HITLS_TLS_FEATURE_PROVIDER_DYNAMIC
-#include <string.h>
 #include "crypt_eal_provider.h"
 #include "crypt_params_key.h"
 #include "crypt_eal_implprovider.h"
@@ -630,3 +631,27 @@ const TLS_SigSchemeInfo *ConfigGetSignatureSchemeInfoList(const HITLS_Config *co
 }
 
 #endif /* HITLS_TLS_FEATURE_PROVIDER_DYNAMIC */
+
+int32_t HITLS_CFG_GetSignatureSchemeId(const HITLS_Config *config, const char *name, uint16_t *id)
+{
+    if (config == NULL || name == NULL || id == NULL) {
+        return HITLS_NULL_INPUT;
+    }
+
+    uint32_t size = 0;
+    const TLS_SigSchemeInfo *info = ConfigGetSignatureSchemeInfoList(config, &size);
+    if (info == NULL) {
+        BSL_ERR_PUSH_ERROR(HITLS_CONFIG_UNSUPPORT_SIGNATURE_ALGORITHM);
+        return HITLS_CONFIG_UNSUPPORT_SIGNATURE_ALGORITHM;
+    }
+
+    for (uint32_t i = 0; i < size; i++) {
+        if (info[i].name != NULL && strcmp(info[i].name, name) == 0) {
+            *id = info[i].signatureScheme;
+            return HITLS_SUCCESS;
+        }
+    }
+
+    BSL_ERR_PUSH_ERROR(HITLS_CONFIG_UNSUPPORT_SIGNATURE_ALGORITHM);
+    return HITLS_CONFIG_UNSUPPORT_SIGNATURE_ALGORITHM;
+}

@@ -499,6 +499,46 @@ EXIT:
 /* END_CASE */
 
 /** @
+ * @test     UT_TLS_CM_GET_SIGNATURE_SCHEME_ID_API_TC001
+ * @title HITLS_CFG_GetSignatureSchemeId interface validation
+ * @precon nan
+ * @brief
+ * 1. Query a signature scheme by name. Expected result 1.
+ * 2. Query another signature scheme by name. Expected result 2.
+ * 3. Query an unsupported signature scheme name. Expected result 3.
+ * 4. Pass invalid parameters. Expected result 4.
+ * @expect
+ * 1. The interface returns HITLS_SUCCESS and the RSA signature scheme ID.
+ * 2. The interface returns HITLS_SUCCESS and the ECDSA signature scheme ID.
+ * 3. The interface returns HITLS_CONFIG_UNSUPPORT_SIGNATURE_ALGORITHM.
+ * 4. The interface returns HITLS_NULL_INPUT.
+ @ */
+/* BEGIN_CASE */
+void UT_TLS_CM_GET_SIGNATURE_SCHEME_ID_API_TC001(void)
+{
+    HITLS_Config *config = HITLS_CFG_NewTLS12Config();
+    uint16_t id = 0;
+
+    ASSERT_TRUE(config != NULL);
+
+    ASSERT_EQ(HITLS_CFG_GetSignatureSchemeId(config, "rsa_pkcs1_sha256", &id), HITLS_SUCCESS);
+    ASSERT_EQ(id, CERT_SIG_SCHEME_RSA_PKCS1_SHA256);
+
+    ASSERT_EQ(HITLS_CFG_GetSignatureSchemeId(config, "ecdsa_secp256r1_sha256", &id), HITLS_SUCCESS);
+    ASSERT_EQ(id, CERT_SIG_SCHEME_ECDSA_SECP256R1_SHA256);
+
+    ASSERT_EQ(HITLS_CFG_GetSignatureSchemeId(config, "unsupported_signature_scheme", &id),
+        HITLS_CONFIG_UNSUPPORT_SIGNATURE_ALGORITHM);
+    ASSERT_EQ(HITLS_CFG_GetSignatureSchemeId(NULL, "rsa_pkcs1_sha256", &id), HITLS_NULL_INPUT);
+    ASSERT_EQ(HITLS_CFG_GetSignatureSchemeId(config, NULL, &id), HITLS_NULL_INPUT);
+    ASSERT_EQ(HITLS_CFG_GetSignatureSchemeId(config, "rsa_pkcs1_sha256", NULL), HITLS_NULL_INPUT);
+
+EXIT:
+    HITLS_CFG_FreeConfig(config);
+}
+/* END_CASE */
+
+/** @
  * @test     UT_TLS13_CREATE_LINK_WITH_CERTMGR_DISABLED_TC001
  * @title Create TLS1.3 client and server frame links with cert manager disabled
  * @precon nan
