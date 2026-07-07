@@ -90,12 +90,12 @@ void HITLS_X509_StoreCtxFree(HITLS_X509_StoreCtx *storeCtx)
 #endif
     BSL_LIST_FREE(storeCtx->store, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);
     BSL_LIST_FREE(storeCtx->crl, (BSL_LIST_PFUNC_FREE)HITLS_X509_CrlFree);
-    
+
     // Free CA paths list
     if (storeCtx->caPaths != NULL) {
         BSL_LIST_FREE(storeCtx->caPaths, (BSL_LIST_PFUNC_FREE)BSL_SAL_Free);
     }
-    
+
     BSL_SAL_ReferencesFree(&storeCtx->references);
     BSL_SAL_Free(storeCtx);
 }
@@ -150,7 +150,7 @@ HITLS_X509_StoreCtx *HITLS_X509_StoreCtxNew(void)
         BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
         return NULL;
     }
-    
+
     // Initialize CA paths list
     ctx->caPaths = BSL_LIST_New(sizeof(char *));
     if (ctx->caPaths == NULL) {
@@ -501,7 +501,7 @@ static int32_t HITLS_X509_GetCertBySubjectDer(HITLS_X509_StoreCtx *storeCtx, con
         BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_ISSUE_CERT_NOT_FOUND);
         return HITLS_X509_ERR_ISSUE_CERT_NOT_FOUND;
     }
-    
+
     // Calculate hash from canon-encoded subject DN
     uint32_t hash = 0;
     uint8_t digest[CRYPT_SHA1_DIGESTSIZE];
@@ -523,7 +523,7 @@ static int32_t HITLS_X509_GetCertBySubjectDer(HITLS_X509_StoreCtx *storeCtx, con
         BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_ISSUE_CERT_NOT_FOUND);
         return HITLS_X509_ERR_ISSUE_CERT_NOT_FOUND;
     }
-    
+
     // Try to load certificate using hash-based file lookup from CA paths
     char *caPath = BSL_LIST_GET_FIRST(storeCtx->caPaths);
     while (caPath != NULL) {
@@ -945,6 +945,46 @@ static int32_t X509_GetVerifyCertChain(HITLS_X509_StoreCtx *storeCtx, HITLS_X509
     return HITLS_PKI_SUCCESS;
 }
 
+int32_t X509_CheckExt(HITLS_X509_List *chain)
+{
+    int32_t rootDepth = BSL_LIST_COUNT(chain) - 1;
+    int32_t curDepth = rootDepth;
+    HITLS_X509_Cert *cur = BSL_LIST_GET_LAST(chain);
+
+    while (cur != NULL) {
+        HITLS_X509_CertExt *curExt = (HITLS_X509_CertExt *)cur->tbs.ext.extData;
+
+        if (curDepth > 0) { // CA certificates (root and intermediate)
+            /** RFC 5280 Section 6.1.4:
+             * (k) If certificate i is a version 3 certificate, verify that the basicConstraints extension is
+             *     present and that cA is set to TRUE. (If certificate i is a version 1 or version 2 certificate,
+             *     then the application MUST either verify that certificate i is a CA certificate through
+             *     out-of-band means or reject the certificate. Conforming implementations may choose to reject
+             *     all version 1 and version 2 intermediate certificates.)
+             */
+            if (curDepth == rootDepth) {
+                if (((cur->tbs.version == HITLS_X509_VERSION_3) &&
+                     ((curExt->extFlags & HITLS_X509_EXT_FLAG_BCONS) == 0 || !curExt->isCa))) {
+                    BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_VFY_INVALID_CA);
+                    return HITLS_X509_ERR_VFY_INVALID_CA;
+                }
+            } else {
+                if (cur->tbs.version != HITLS_X509_VERSION_3) {
+                    BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_VFY_INTERCA_INVALID_VERSION);
+                    return HITLS_X509_ERR_VFY_INTERCA_INVALID_VERSION;
+                }
+                if ((curExt->extFlags & HITLS_X509_EXT_FLAG_BCONS) == 0 || !curExt->isCa) {
+                    BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_VFY_INTERCA_INVALID_BCONS);
+                    return HITLS_X509_ERR_VFY_INTERCA_INVALID_BCONS;
+                }
+            }
+        }
+        cur = BSL_LIST_GET_PREV(chain);
+        curDepth--;
+    }
+    return HITLS_PKI_SUCCESS;
+}
+
 int32_t HITLS_X509_CertVerify(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_List *chain)
 {
     if (storeCtx == NULL || chain == NULL) {
@@ -961,6 +1001,11 @@ int32_t HITLS_X509_CertVerify(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_List *ch
         return ret;
     }
     ret = HITLS_X509_VerifyParamAndExt(storeCtx, tmpChain);
+    if (ret != HITLS_PKI_SUCCESS) {
+        BSL_LIST_FREE(tmpChain, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);
+        return ret;
+    }
+    ret = X509_CheckExt(tmpChain);
     if (ret != HITLS_PKI_SUCCESS) {
         BSL_LIST_FREE(tmpChain, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);
         return ret;

@@ -817,18 +817,6 @@ int32_t HITLS_X509_CheckIssued(HITLS_X509_Cert *issue, HITLS_X509_Cert *subject,
         }
     }
 
-    /**
-     * If the basic constraints extension is not present in a version 3 certificate,
-     * or the extension is present but the cA boolean is not asserted,
-     * then the certified public key MUST NOT be used to verify certificate signatures.
-     */
-    HITLS_X509_CertExt *certExt = (HITLS_X509_CertExt *)issue->tbs.ext.extData;
-    if (issue->tbs.version == HITLS_X509_VERSION_3 && ((certExt->extFlags & HITLS_X509_EXT_FLAG_BCONS) == 0 ||
-        !certExt->isCa)) {
-        BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_CERT_NOT_CA);
-        return HITLS_X509_ERR_CERT_NOT_CA;
-    }
-
     ret = HITLS_X509_CheckAlg(issue->tbs.ealPubKey, &subject->tbs.signAlgId);
     if (ret != HITLS_PKI_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
@@ -839,6 +827,7 @@ int32_t HITLS_X509_CheckIssued(HITLS_X509_Cert *issue, HITLS_X509_Cert *subject,
      * in certificates that contain public keys that are used to validate digital signatures on
      * other public key certificates or CRLs.
      */
+    HITLS_X509_CertExt *certExt = (HITLS_X509_CertExt *)issue->tbs.ext.extData;
     if ((certExt->extFlags & HITLS_X509_EXT_FLAG_KUSAGE) != 0) {
         if (((certExt->keyUsage & HITLS_X509_EXT_KU_KEY_CERT_SIGN)) == 0) {
             BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_VFY_KU_NO_CERTSIGN);
