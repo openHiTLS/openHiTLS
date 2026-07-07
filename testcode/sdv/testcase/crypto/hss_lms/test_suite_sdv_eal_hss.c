@@ -27,17 +27,20 @@
 #include "crypt_params_key.h"
 #include "crypt_hss.h"
 #include "test.h"
+#include "stub_utils.h"
 /* END_HEADER */
+
+STUB_DEFINE_RET1(void *, BSL_SAL_Malloc, uint32_t);
 
 static CRYPT_EAL_PkeyCtx *CreateHssContext(int isProvider)
 {
 #ifdef HITLS_CRYPTO_PROVIDER
     if (isProvider == 1) {
-        return CRYPT_EAL_ProviderPkeyNewCtx(NULL, CRYPT_PKEY_HSS, CRYPT_EAL_PKEY_SIGN_OPERATE, "provider=default");
+        return CRYPT_EAL_ProviderPkeyNewCtx(NULL, CRYPT_PKEY_HSS_LMS, CRYPT_EAL_PKEY_SIGN_OPERATE, "provider=default");
     }
 #endif
     (void)isProvider;
-    return CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_HSS);
+    return CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_HSS_LMS);
 }
 
 /* @
@@ -115,7 +118,7 @@ void SDV_CRYPTO_EAL_HSS_SET_PARA_ID_REPEATED_TC001(void)
 {
     TestMemInit();
     CRYPT_EAL_PkeyCtx *ctx2 = NULL;
-    CRYPT_EAL_PkeyCtx *ctx = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_HSS);
+    CRYPT_EAL_PkeyCtx *ctx = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_HSS_LMS);
     ASSERT_TRUE(ctx != NULL);
 
     int32_t algId = CRYPT_HSS_SHA256_L2_H10_H10_W4;
@@ -143,7 +146,7 @@ void SDV_CRYPTO_EAL_HSS_SET_PARA_ID_REPEATED_TC001(void)
     int32_t ret = CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_HSS_SET_PARAM, params, 0);
     ASSERT_EQ(ret, CRYPT_HSS_CTRL_INIT_REPEATED);
 
-    ctx2 = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_HSS);
+    ctx2 = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_HSS_LMS);
     ASSERT_TRUE(ctx2 != NULL);
     ret = CRYPT_EAL_PkeyCtrl(ctx2, CRYPT_CTRL_HSS_SET_PARAM, params, 0);
     ASSERT_EQ(ret, CRYPT_SUCCESS);
@@ -165,7 +168,7 @@ void SDV_CRYPTO_EAL_HSS_CTRL_TC001(void)
     TestMemInit();
     ASSERT_EQ(TestRandInit(), CRYPT_SUCCESS);
 
-    CRYPT_EAL_PkeyCtx *ctx = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_HSS);
+    CRYPT_EAL_PkeyCtx *ctx = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_HSS_LMS);
     ASSERT_TRUE(ctx != NULL);
 
     uint32_t levels = 2;
@@ -221,7 +224,7 @@ void SDV_CRYPTO_HSS_EAL_TC001(int lmsType0, int otsType0, int lmsType1, int otsT
     Hex *sig)
 {
     TestMemInit();
-    CRYPT_EAL_PkeyCtx *ctx = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_HSS);
+    CRYPT_EAL_PkeyCtx *ctx = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_HSS_LMS);
     ASSERT_TRUE(ctx != NULL);
 
     uint32_t levels = 2;
@@ -248,5 +251,76 @@ void SDV_CRYPTO_HSS_EAL_TC001(int lmsType0, int otsType0, int lmsType1, int otsT
 EXIT:
     CRYPT_EAL_PkeyFreeCtx(ctx);
     return;
+}
+/* END_CASE */
+
+static int32_t HssTestVerify(int lmsType0, int otsType0, int lmsType1, int otsType1, Hex *pubKey, Hex *msg,
+    Hex *sig) {
+    CRYPT_EAL_PkeyCtx *ctx = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_HSS_LMS);
+    if (ctx == NULL) {
+        return CRYPT_MEM_ALLOC_FAIL;
+    }
+
+    uint32_t levels = 2;
+    uint32_t lmstype0 = lmsType0;
+    uint32_t otstype0 = otsType0;
+    uint32_t lmstype1 = lmsType1;
+    uint32_t otstype1 = otsType1;
+    BSL_Param params[6] = {
+        {CRYPT_PARAM_HSS_LEVEL, BSL_PARAM_TYPE_UINT32, &levels, sizeof(levels), 0},
+        {CRYPT_PARAM_HSS_LEVEL1_LMS_TYPE, BSL_PARAM_TYPE_UINT32, &lmstype0, sizeof(lmstype0), 0},
+        {CRYPT_PARAM_HSS_LEVEL1_OTS_TYPE, BSL_PARAM_TYPE_UINT32, &otstype0, sizeof(otstype0), 0},
+        {CRYPT_PARAM_HSS_LEVEL2_LMS_TYPE, BSL_PARAM_TYPE_UINT32, &lmstype1, sizeof(lmstype1), 0},
+        {CRYPT_PARAM_HSS_LEVEL2_OTS_TYPE, BSL_PARAM_TYPE_UINT32, &otstype1, sizeof(otstype1), 0},
+        BSL_PARAM_END
+    };
+    int32_t ret = CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_HSS_SET_PARAM, params, 0);
+    if (ret != CRYPT_SUCCESS) {
+        CRYPT_EAL_PkeyFreeCtx(ctx);
+        return ret;
+    }
+
+    BSL_Param pubParam;
+    BSL_PARAM_InitValue(&pubParam, CRYPT_PARAM_HSS_PUBKEY, BSL_PARAM_TYPE_OCTETS, pubKey->x, pubKey->len);
+    ret = CRYPT_EAL_PkeySetPubEx(ctx, &pubParam);
+    if (ret != CRYPT_SUCCESS) {
+        CRYPT_EAL_PkeyFreeCtx(ctx);
+        return ret;
+    }
+
+    ret = CRYPT_EAL_PkeyVerify(ctx, CRYPT_MD_SHA256, msg->x, msg->len, sig->x, sig->len);
+    CRYPT_EAL_PkeyFreeCtx(ctx);
+    return ret;
+}
+
+/* @
+* @test  SDV_CRYPTO_HSS_EAL_TC002
+* @title  Test the verify with stub malloc fail.
+* @precon  nan
+* @auto  TRUE
+@ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_HSS_EAL_TC002(int lmsType0, int otsType0, int lmsType1, int otsType1, Hex *pubKey, Hex *msg,
+    Hex *sig)
+{
+    TestMemInit();
+    uint32_t totalMallocCount = 0;
+    STUB_REPLACE(BSL_SAL_Malloc, STUB_BSL_SAL_Malloc);
+
+    STUB_EnableMallocFail(false);
+    STUB_ResetMallocCount();
+    ASSERT_EQ(HssTestVerify(lmsType0, otsType0, lmsType1, otsType1, pubKey, msg, sig), CRYPT_SUCCESS);
+    totalMallocCount = STUB_GetMallocCallCount();
+
+    STUB_EnableMallocFail(true);
+    for (uint32_t j = 0; j < totalMallocCount; j++)
+    {
+        STUB_ResetMallocCount();
+        STUB_SetMallocFailIndex(j);
+        ASSERT_NE(HssTestVerify(lmsType0, otsType0, lmsType1, otsType1, pubKey, msg, sig), CRYPT_SUCCESS);
+    }
+
+EXIT:
+    STUB_RESTORE(BSL_SAL_Malloc);
 }
 /* END_CASE */

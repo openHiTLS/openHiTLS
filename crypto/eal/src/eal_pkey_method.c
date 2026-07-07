@@ -823,7 +823,7 @@ static const EAL_PkeyMethod METHODS[] = {
 #endif
 #ifdef HITLS_CRYPTO_HSS_LMS
     EAL_PKEY_METHOD_DEFINE(
-        CRYPT_PKEY_HSS,
+        CRYPT_PKEY_HSS_LMS,
         CRYPT_HSS_NewCtx,
         CRYPT_HSS_DupCtx,
         CRYPT_HSS_FreeCtx,

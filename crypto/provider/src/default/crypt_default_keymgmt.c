@@ -154,7 +154,7 @@ void *CRYPT_EAL_DefPkeyMgmtNewCtx(CRYPT_EAL_DefProvCtx *provCtx, int32_t algId)
             return CRYPT_XMSSMT_NewCtxEx(provCtx->libCtx);
 #endif
 #ifdef HITLS_CRYPTO_HSS_LMS
-        case CRYPT_PKEY_HSS:
+        case CRYPT_PKEY_HSS_LMS:
             return CRYPT_HSS_NewCtxEx(provCtx->libCtx);
 #endif
 #ifdef HITLS_CRYPTO_FRODOKEM

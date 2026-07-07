@@ -70,13 +70,13 @@ CRYPT_HSS_Ctx *CRYPT_HSS_DupCtx(CRYPT_HSS_Ctx *srcCtx)
 
     memcpy(&newCtx->para, &srcCtx->para, sizeof(HSS_Para));
     if (srcCtx->publicKey != NULL && srcCtx->publicLen > 0) {
-        newCtx->publicLen = srcCtx->publicLen;
-        newCtx->publicKey = (uint8_t *)BSL_SAL_Calloc(1, newCtx->publicLen);
+        newCtx->publicKey = (uint8_t *)BSL_SAL_Calloc(1, srcCtx->publicLen);
         if (newCtx->publicKey == NULL) {
             BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
             CRYPT_HSS_FreeCtx(newCtx);
             return NULL;
         }
+        newCtx->publicLen = srcCtx->publicLen;
         memcpy(newCtx->publicKey, srcCtx->publicKey, newCtx->publicLen);
     }
 

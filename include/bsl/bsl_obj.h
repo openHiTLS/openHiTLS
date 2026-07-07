@@ -694,6 +694,7 @@ typedef enum {
     BSL_CID_HSS_SHA256_L2_H15_H15_W4 = 2426,
     BSL_CID_HSS_SHA256_L2_H20_H20_W4 = 2427,
     BSL_CID_HSS_SHA256_L3_H10_H10_H10_W4 = 2428,
+    /* At least 100 CIDs need to be reserved for HSS. */
 
     BSL_CID_SM9 = 5201,
     BSL_CID_ECC_SM9 = 5202,
@@ -722,12 +723,10 @@ typedef enum {
     BSL_CID_MLDSA87_RSA3072_PSS_SHA512 = 5224,
     BSL_CID_MLDSA87_RSA4096_PSS_SHA512 = 5225,
     BSL_CID_MLDSA87_ECDSA_P521_SHA512 = 5226,
-    BSL_CID_LMS = 5227,
-    BSL_CID_HSS = 5228,
-    BSL_CID_XMSSMT = 5229,          /**< Identifies XMSS^MT algorithm (RFC 9802 id-alg-xmssmt-hashsig) */
+    BSL_CID_HSS_LMS = 5228,
+    BSL_CID_XMSSMT = 5229,    /**< Identifies XMSS^MT algorithm (RFC 9802 id-alg-xmssmt-hashsig) */
 
     BSL_CID_MAC_AEAD = 5300,
-
     BSL_CID_AES128_CCM8 = 5301,
     BSL_CID_AES256_CCM8 = 5302,
     BSL_CID_PBKDF1 = 5303, /* identifies PBKDF1 */

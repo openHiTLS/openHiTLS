@@ -286,7 +286,6 @@ option(HITLS_CRYPTO_PKEY                                       "Public Key Crypt
   option(HITLS_CRYPTO_PAILLIER                                   "Paillier Cryptosystem" OFF)
   option(HITLS_CRYPTO_ELGAMAL                                    "ElGamal Public Key Encryption" OFF)
   option(HITLS_CRYPTO_HSS_LMS                                    "HSS" OFF)
-    option(HITLS_CRYPTO_HSS_VERIFY                                 "HSS Verification" OFF)
   option(HITLS_CRYPTO_XMSS                                       "XMSS" OFF)
     option(HITLS_CRYPTO_XMSS_CHECK                                 "XMSS Check" OFF)
   option(HITLS_CRYPTO_XMSSMT                                      "XMSSMT" OFF)

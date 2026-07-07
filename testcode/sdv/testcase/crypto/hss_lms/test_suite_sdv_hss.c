@@ -44,30 +44,6 @@ static int32_t HssTestRand(uint8_t *randBuf, uint32_t len)
 }
 
 /* @
-* @test  SDV_CRYPTO_HSS_NEWCTX_API_TC001
-* @spec  -
-* @title  CRYPT_HSS_NewCtx basic test
-* @precon  nan
-* @brief  Create HSS context and verify it is not NULL
-* @expect  Context creation successful
-* @prior  Level 0
-* @auto  TRUE
-@ */
-/* BEGIN_CASE */
-void SDV_CRYPTO_HSS_NEWCTX_API_TC001(void)
-{
-    TestMemInit();
-
-    CRYPT_HSS_Ctx *ctx = CRYPT_HSS_NewCtx();
-    ASSERT_TRUE(ctx != NULL);
-
-EXIT:
-    CRYPT_HSS_FreeCtx(ctx);
-    return;
-}
-/* END_CASE */
-
-/* @
 * @test  SDV_CRYPTO_HSS_CTRL_API_TC001
 * @spec  -
 * @title  CRYPT_HSS_Ctrl test with various parameters
@@ -85,6 +61,13 @@ void SDV_CRYPTO_HSS_CTRL_API_TC001(void)
     CRYPT_HSS_Ctx *ctx = CRYPT_HSS_NewCtx();
     ASSERT_TRUE(ctx != NULL);
 
+    uint32_t pubKeyLen = 0;
+    uint32_t signLen = 0;
+    uint32_t level = 0;
+    int32_t ret = CRYPT_HSS_Ctrl(ctx, CRYPT_CTRL_HSS_GET_PUBKEY_LEN, &pubKeyLen, sizeof(pubKeyLen));
+    ASSERT_EQ(ret, CRYPT_HSS_INVALID_LEVEL);
+    ret = CRYPT_HSS_Ctrl(ctx, CRYPT_CTRL_HSS_GET_SIG_LEN, &signLen, sizeof(signLen));
+    ASSERT_EQ(ret, CRYPT_HSS_INVALID_LEVEL);
     uint32_t levels = 2;
     uint32_t lmstype = CRYPT_LMS_SHA256_M32_H5;
     uint32_t otstype = CRYPT_LMOTS_SHA256_N32_W8;
@@ -96,10 +79,23 @@ void SDV_CRYPTO_HSS_CTRL_API_TC001(void)
         {CRYPT_PARAM_HSS_LEVEL2_OTS_TYPE, BSL_PARAM_TYPE_UINT32, &otstype, sizeof(otstype), 0},
         BSL_PARAM_END
     };
-    int32_t ret = CRYPT_HSS_Ctrl(ctx, CRYPT_CTRL_HSS_SET_PARAM, params, 0);
+    ret = CRYPT_HSS_Ctrl(ctx, CRYPT_CTRL_HSS_SET_PARAM, params, 0);
     ASSERT_EQ(ret, CRYPT_SUCCESS);
 
-    uint32_t pubKeyLen = 0;
+    ret = CRYPT_HSS_Ctrl(ctx, CRYPT_CTRL_HSS_SET_PARAM, params, 0);
+    ASSERT_EQ(ret, CRYPT_HSS_CTRL_INIT_REPEATED);
+
+    ret = CRYPT_HSS_Ctrl(ctx, CRYPT_CTRL_HSS_GET_PUBKEY_LEN, &pubKeyLen, 1);
+    ASSERT_EQ(ret, CRYPT_HSS_INVALID_PARAM);
+    ret = CRYPT_HSS_Ctrl(ctx, CRYPT_CTRL_HSS_GET_SIG_LEN, &signLen, 1);
+    ASSERT_EQ(ret, CRYPT_HSS_INVALID_PARAM);
+    ret = CRYPT_HSS_Ctrl(ctx, CRYPT_CTRL_HSS_GET_LEVELS, &level, 1);
+    ASSERT_EQ(ret, CRYPT_HSS_INVALID_PARAM);
+
+    ret = CRYPT_HSS_Ctrl(ctx, CRYPT_CTRL_HSS_GET_PUBKEY_LEN, NULL, sizeof(pubKeyLen));
+    ASSERT_EQ(ret, CRYPT_NULL_INPUT);
+    ret = CRYPT_HSS_Ctrl(ctx, CRYPT_CTRL_HSS_SET_PARAM - 1, &pubKeyLen, sizeof(pubKeyLen));
+    ASSERT_EQ(ret, CRYPT_HSS_INVALID_CMD);
     ret = CRYPT_HSS_Ctrl(ctx, CRYPT_CTRL_HSS_GET_PUBKEY_LEN, &pubKeyLen, sizeof(pubKeyLen));
     ASSERT_EQ(ret, CRYPT_SUCCESS);
     ASSERT_EQ(pubKeyLen, CRYPT_HSS_PUBKEY_LEN);
@@ -126,7 +122,7 @@ void SDV_CRYPTO_HSS_KEYGEN_API_TC001(void)
     TestMemInit();
     CRYPT_EAL_SetRandCallBack(HssTestRand);
 
-    CRYPT_HSS_Ctx *ctx = CRYPT_HSS_NewCtx();
+    CRYPT_HSS_Ctx *ctx = CRYPT_HSS_NewCtxEx(NULL);
     ASSERT_TRUE(ctx != NULL);
 
     uint32_t levels = 2;
@@ -259,6 +255,9 @@ void SDV_CRYPTO_HSS_DUPCTX_API_TC001(void)
     ret = CRYPT_HSS_Gen(ctx1);
     ASSERT_EQ(ret, CRYPT_SUCCESS);
 
+    ctx2 = CRYPT_HSS_DupCtx(NULL);
+    ASSERT_TRUE(ctx2 == NULL);
+
     ctx2 = CRYPT_HSS_DupCtx(ctx1);
     ASSERT_TRUE(ctx2 != NULL);
 
@@ -274,6 +273,93 @@ void SDV_CRYPTO_HSS_DUPCTX_API_TC001(void)
 EXIT:
     CRYPT_HSS_FreeCtx(ctx1);
     CRYPT_HSS_FreeCtx(ctx2);
+    CRYPT_EAL_SetRandCallBack(NULL);
+    return;
+}
+/* END_CASE */
+
+/* @
+* @test  SDV_CRYPTO_HSS_DUPCTX_API_TC001
+* @spec  -
+* @title  CRYPT_HSS_DupCtx test
+* @precon  nan
+* @brief  HSS is stateful: DupCtx must not clone private signing state.
+* @expect  DupCtx on a private-key context succeeds, but the duplicate is
+*          public-key-only: it can verify but cannot sign.
+* @prior  Level 1
+* @auto  TRUE
+@ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_HSS_CMPCTX_API_TC001(void)
+{
+    TestMemInit();
+    CRYPT_EAL_SetRandCallBack(HssTestRand);
+    CRYPT_HSS_Ctx *ctx1 = CRYPT_HSS_NewCtx();
+    CRYPT_HSS_Ctx *ctx2 = NULL;
+    CRYPT_HSS_Ctx *ctx3 = NULL;
+    CRYPT_HSS_Ctx *ctx4 = NULL;
+    ASSERT_TRUE(ctx1 != NULL);
+
+    uint32_t levels = 2;
+    uint32_t lmstype = CRYPT_LMS_SHA256_M32_H5;
+    uint32_t otstype = CRYPT_LMOTS_SHA256_N32_W8;
+    BSL_Param params[6] = {
+        {CRYPT_PARAM_HSS_LEVEL, BSL_PARAM_TYPE_UINT32, &levels, sizeof(levels), 0},
+        {CRYPT_PARAM_HSS_LEVEL1_LMS_TYPE, BSL_PARAM_TYPE_UINT32, &lmstype, sizeof(lmstype), 0},
+        {CRYPT_PARAM_HSS_LEVEL1_OTS_TYPE, BSL_PARAM_TYPE_UINT32, &otstype, sizeof(otstype), 0},
+        {CRYPT_PARAM_HSS_LEVEL2_LMS_TYPE, BSL_PARAM_TYPE_UINT32, &lmstype, sizeof(lmstype), 0},
+        {CRYPT_PARAM_HSS_LEVEL2_OTS_TYPE, BSL_PARAM_TYPE_UINT32, &otstype, sizeof(otstype), 0},
+        BSL_PARAM_END
+    };
+    int32_t ret = CRYPT_HSS_Ctrl(ctx1, CRYPT_CTRL_HSS_SET_PARAM, params, 0);
+    ASSERT_EQ(ret, CRYPT_SUCCESS);
+
+    ret = CRYPT_HSS_Gen(ctx1);
+    ASSERT_EQ(ret, CRYPT_SUCCESS);
+
+    ctx2 = CRYPT_HSS_NewCtx();
+    ret = CRYPT_HSS_Ctrl(ctx2, CRYPT_CTRL_HSS_SET_PARAM, params, 0);
+    ASSERT_EQ(ret, CRYPT_SUCCESS);
+    ret = CRYPT_HSS_Gen(ctx2);
+    ASSERT_EQ(ret, CRYPT_SUCCESS);
+
+    ctx3 = CRYPT_HSS_NewCtx();
+    otstype = CRYPT_LMOTS_SHA256_N32_W4;
+    ret = CRYPT_HSS_Ctrl(ctx3, CRYPT_CTRL_HSS_SET_PARAM, params, 0);
+    ASSERT_EQ(ret, CRYPT_SUCCESS);
+    ret = CRYPT_HSS_Gen(ctx3);
+    ASSERT_EQ(ret, CRYPT_SUCCESS);
+
+    ctx4 = CRYPT_HSS_NewCtx();
+    levels = 1;
+    ret = CRYPT_HSS_Ctrl(ctx4, CRYPT_CTRL_HSS_SET_PARAM, params, 0);
+    ASSERT_EQ(ret, CRYPT_SUCCESS);
+
+    ret = CRYPT_HSS_Cmp(ctx1, NULL);
+    ASSERT_EQ(ret, CRYPT_HSS_CMP_FALSE);
+
+    ret = CRYPT_HSS_Cmp(ctx1, ctx2);
+    ASSERT_EQ(ret, CRYPT_HSS_CMP_FALSE);
+
+    ret = CRYPT_HSS_Cmp(ctx1, ctx3);
+    ASSERT_EQ(ret, CRYPT_HSS_CMP_FALSE);
+
+    ret = CRYPT_HSS_Cmp(ctx1, ctx4);
+    ASSERT_EQ(ret, CRYPT_HSS_CMP_FALSE);
+
+    ret = CRYPT_HSS_Cmp(ctx2, ctx3);
+    ASSERT_EQ(ret, CRYPT_HSS_CMP_FALSE);
+
+    ret = CRYPT_HSS_Cmp(ctx2, ctx4);
+    ASSERT_EQ(ret, CRYPT_HSS_CMP_FALSE);
+
+    ret = CRYPT_HSS_Cmp(ctx1, ctx1);
+    ASSERT_EQ(ret, CRYPT_SUCCESS);
+EXIT:
+    CRYPT_HSS_FreeCtx(ctx1);
+    CRYPT_HSS_FreeCtx(ctx2);
+    CRYPT_HSS_FreeCtx(ctx3);
+    CRYPT_HSS_FreeCtx(ctx4);
     CRYPT_EAL_SetRandCallBack(NULL);
     return;
 }
@@ -643,30 +729,6 @@ EXIT:
 /* END_CASE */
 
 /* @
-* @test  SDV_CRYPTO_HSS_NEWCTXEX_API_TC001
-* @spec  -
-* @title  CRYPT_HSS_NewCtxEx test
-* @precon  nan
-* @brief  Create HSS context with library context parameter
-* @expect  Context creation succeeds with NULL libCtx
-* @prior  Level 0
-* @auto  TRUE
-@ */
-/* BEGIN_CASE */
-void SDV_CRYPTO_HSS_NEWCTXEX_API_TC001(void)
-{
-    TestMemInit();
-
-    CRYPT_HSS_Ctx *ctx = CRYPT_HSS_NewCtxEx(NULL);
-    ASSERT_TRUE(ctx != NULL);
-
-EXIT:
-    CRYPT_HSS_FreeCtx(ctx);
-    return;
-}
-/* END_CASE */
-
-/* @
 * @test  SDV_CRYPTO_HSS_CTRL_LENGTHS_API_TC001
 * @spec  -
 * @title  HSS Ctrl length query test
@@ -905,3 +967,98 @@ EXIT:
 }
 /* END_CASE */
 
+/* @
+* @test  SDV_CRYPTO_HSS_SETPUBKEY_API_NULL_INPUT_TC001
+* @spec  -
+* @title
+* @precon  nan
+* @brief  Test that CRYPT_HSS_SetPubKey/GetPubKey return proper error on NULL inputs
+* @expect  NULL inputs return CRYPT_NULL_INPUT
+* @prior  Level 0
+* @auto  TRUE
+@ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_HSS_SETPUBKEY_API_NULL_INPUT_TC001(int lmsType0, int otsType0, Hex *pubKey)
+{
+    TestMemInit();
+    uint8_t pubKeyBuf[100];
+    CRYPT_HSS_Ctx *ctx = CRYPT_HSS_NewCtx();
+    ASSERT_TRUE(ctx != NULL);
+
+    uint32_t levels = 1;
+    uint32_t lmstype1 = lmsType0;
+    uint32_t otstype1 = otsType0;
+    BSL_Param params[4] = {
+        {0, BSL_PARAM_TYPE_UINT32, &levels, 8, 0},
+        {CRYPT_PARAM_HSS_LEVEL1_LMS_TYPE, BSL_PARAM_TYPE_UINT32, &lmstype1, 8, 0},
+        {CRYPT_PARAM_HSS_LEVEL1_OTS_TYPE, BSL_PARAM_TYPE_UINT32, &otstype1, 8, 0},
+        BSL_PARAM_END
+    };
+    int32_t ret = CRYPT_HSS_Ctrl(ctx, CRYPT_CTRL_HSS_SET_PARAM, params, 0);
+    ASSERT_EQ(ret, CRYPT_HSS_INVALID_PARAM);
+
+    params[0].key = CRYPT_PARAM_HSS_LEVEL;
+    ret = CRYPT_HSS_Ctrl(ctx, CRYPT_CTRL_HSS_SET_PARAM, params, 0);
+    ASSERT_EQ(ret, CRYPT_HSS_INVALID_PARAM);
+
+    params[0].valueLen = sizeof(levels);
+    ret = CRYPT_HSS_Ctrl(ctx, CRYPT_CTRL_HSS_SET_PARAM, params, 0);
+    ASSERT_EQ(ret, CRYPT_HSS_INVALID_PARAM);
+
+    params[1].valueLen = sizeof(lmstype1);
+    ret = CRYPT_HSS_Ctrl(ctx, CRYPT_CTRL_HSS_SET_PARAM, params, 0);
+    ASSERT_EQ(ret, CRYPT_HSS_INVALID_PARAM);
+
+    BSL_Param pubParam = {0};
+    BSL_Param getParam = {0};
+    ret = CRYPT_HSS_SetPubKey(ctx, NULL);
+    ASSERT_EQ(ret, CRYPT_NULL_INPUT);
+
+    ret = CRYPT_HSS_GetPubKey(ctx, NULL);
+    ASSERT_EQ(ret, CRYPT_NULL_INPUT);
+
+    ret = CRYPT_HSS_SetPubKey(ctx, &pubParam);
+    ASSERT_EQ(ret, CRYPT_HSS_INVALID_PARAM);
+    ret = CRYPT_HSS_GetPubKey(ctx, &getParam);
+    ASSERT_EQ(ret, CRYPT_HSS_NO_KEY);
+
+    params[2].valueLen = sizeof(otstype1);
+    ret = CRYPT_HSS_Ctrl(ctx, CRYPT_CTRL_HSS_SET_PARAM, params, 0);
+    ASSERT_EQ(ret, CRYPT_SUCCESS);
+
+    ret = CRYPT_HSS_SetPubKey(ctx, &pubParam);
+    ASSERT_EQ(ret, CRYPT_HSS_NO_KEY);
+    ret = CRYPT_HSS_GetPubKey(ctx, &getParam);
+    ASSERT_EQ(ret, CRYPT_HSS_NO_KEY);
+
+    pubParam.key = CRYPT_PARAM_HSS_PUBKEY;
+    pubParam.valueType = BSL_PARAM_TYPE_OCTETS;
+    pubParam.value = pubKey->x;
+    pubParam.valueLen = 1;
+
+    ret = CRYPT_HSS_SetPubKey(ctx, &pubParam);
+    ASSERT_EQ(ret, CRYPT_HSS_INVALID_KEY_LEN);
+    ret = CRYPT_HSS_GetPubKey(ctx, &getParam);
+    ASSERT_EQ(ret, CRYPT_HSS_NO_KEY);
+
+    pubParam.valueLen = pubKey->len;
+    ret = CRYPT_HSS_SetPubKey(ctx, &pubParam);
+    ASSERT_EQ(ret, CRYPT_SUCCESS);
+    ret = CRYPT_HSS_GetPubKey(ctx, &getParam);
+    ASSERT_EQ(ret, CRYPT_NULL_INPUT);
+
+    getParam.key = CRYPT_PARAM_HSS_PUBKEY;
+    getParam.valueType = BSL_PARAM_TYPE_OCTETS;
+    getParam.value = pubKeyBuf;
+    getParam.valueLen = 1;
+    ret = CRYPT_HSS_GetPubKey(ctx, &getParam);
+    ASSERT_EQ(ret, CRYPT_HSS_INVALID_KEY_LEN);
+
+    getParam.valueLen = pubKey->len;
+    ret = CRYPT_HSS_GetPubKey(ctx, &getParam);
+    ASSERT_EQ(ret, CRYPT_SUCCESS);
+EXIT:
+    CRYPT_HSS_FreeCtx(ctx);
+    return;
+}
+/* END_CASE */
