@@ -654,3 +654,58 @@ EXIT:
     BSL_LIST_FREE(chain, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);
 }
 /* END_CASE */
+
+/**
+ * @test   SDV_X509_VFY_V1_INTER_CA_TC001
+ * @title  v1/v2 non-trust-anchor intermediate CAs must be rejected; v1 trust anchors must be accepted.
+ * @brief
+ *   TC1: v1 intermediate (no extensions) in chain → HITLS_X509_ERR_VFY_INVALID_CA
+ *   TC2: v2 intermediate (no extensions) in chain → HITLS_X509_ERR_VFY_INVALID_CA
+ *   TC3: v1 self-signed root (no extensions) as trust anchor → HITLS_PKI_SUCCESS
+ * @expect
+ *   TC1/TC2: HITLS_X509_ERR_VFY_INVALID_CA
+ *   TC3: HITLS_PKI_SUCCESS
+ */
+/* BEGIN_CASE */
+void SDV_X509_VFY_V1_INTER_CA_TC001(char *leafPath, char *interPath, char *rootPath, int exp)
+{
+#ifdef HITLS_PKI_X509_VFY
+    TestMemInit();
+    HITLS_X509_Cert *root = NULL;
+    HITLS_X509_Cert *inter = NULL;
+    HITLS_X509_Cert *leaf = NULL;
+
+    HITLS_X509_StoreCtx *storeCtx = HITLS_X509_StoreCtxNew();
+    HITLS_X509_List *chain = BSL_LIST_New(sizeof(HITLS_X509_Cert *));
+    ASSERT_TRUE(storeCtx != NULL && chain != NULL);
+
+    ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_UNKNOWN, leafPath, &leaf), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_UNKNOWN, rootPath, &root), HITLS_PKI_SUCCESS);
+
+    ASSERT_EQ(X509_AddCertToChainTest(chain, leaf), HITLS_PKI_SUCCESS);
+    if (strlen(interPath) > 0) {
+        ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_UNKNOWN, interPath, &inter), HITLS_PKI_SUCCESS);
+        ASSERT_EQ(X509_AddCertToChainTest(chain, inter), HITLS_PKI_SUCCESS);
+    }
+    ASSERT_EQ(X509_AddCertToChainTest(chain, root), HITLS_PKI_SUCCESS);
+
+    ASSERT_EQ(HITLS_X509_StoreCtxCtrl(storeCtx, HITLS_X509_STORECTX_DEEP_COPY_SET_CA, root, sizeof(HITLS_X509_Cert)), 0);
+
+    ASSERT_EQ(HITLS_X509_CertVerify(storeCtx, chain), exp);
+EXIT:
+    HITLS_X509_StoreCtxFree(storeCtx);
+    if (chain != NULL) {
+        BSL_LIST_FREE(chain, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);
+    }
+    HITLS_X509_CertFree(leaf);
+    HITLS_X509_CertFree(inter);
+    HITLS_X509_CertFree(root);
+#else
+    (void)leafPath;
+    (void)interPath;
+    (void)rootPath;
+    (void)exp;
+    SKIP_TEST();
+#endif
+}
+/* END_CASE */
