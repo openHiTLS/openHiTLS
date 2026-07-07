@@ -32,12 +32,61 @@
 #include "hs.h"
 #include "rec_crypto.h"
 #include "bsl_list.h"
+#include "hitls.h"
 
 RecConnState *GetReadConnState(const TLS_Ctx *ctx)
 {
     /** Obtains the record structure. */
     RecCtx *recordCtx = (RecCtx *)ctx->recCtx;
     return recordCtx->readStates.currentState;
+}
+
+static uint64_t GetDecryptionLimit(uint32_t cipherAlg)
+{
+    switch (cipherAlg) {
+        case HITLS_CIPHER_AES_128_GCM:
+        case HITLS_CIPHER_AES_256_GCM:
+            return REC_MAX_AES_GCM_DECRYPTION_LIMIT;
+        case HITLS_CIPHER_AES_128_CCM:
+        case HITLS_CIPHER_AES_256_CCM:
+            return REC_MAX_AES_CCM_DECRYPTION_LIMIT;
+        case HITLS_CIPHER_AES_128_CCM8:
+        case HITLS_CIPHER_AES_256_CCM8:
+            return REC_MAX_AES_CCM8_DECRYPTION_LIMIT;
+        case HITLS_CIPHER_CHACHA20_POLY1305:
+            return REC_MAX_CHACHA20_DECRYPTION_LIMIT;
+        default:
+            return 0;
+    }
+}
+
+static int32_t CheckDecryptionLimits(TLS_Ctx *ctx, RecConnState *state)
+{
+    if (ctx->negotiatedInfo.version != HITLS_VERSION_DTLS13) {
+        return HITLS_SUCCESS;
+    }
+    if (state->suiteInfo == NULL) {
+        return HITLS_SUCCESS;
+    }
+    uint64_t limit = GetDecryptionLimit(state->suiteInfo->cipherAlg);
+    if (limit == 0) {
+        return HITLS_SUCCESS;
+    }
+    state->decryptFailCount++;
+    if (state->decryptFailCount > limit) {
+        BSL_ERR_PUSH_ERROR(HITLS_REC_DECRYPT_FAILED_LIMIT);
+        ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_DECRYPT_ERROR);
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17282, BSL_LOG_LEVEL_WARN, BSL_LOG_BINLOG_TYPE_RUN,
+            "record decryption authentication failures overflow", 0, 0, 0, 0);
+        return HITLS_REC_DECRYPT_FAILED_LIMIT;
+    }
+#if defined(HITLS_TLS_FEATURE_KEY_UPDATE)
+    if (ctx->config.tlsConfig.isAutoKeyUpdateEnabled && !ctx->isKeyUpdateRequest &&
+        !ctx->isWaitKeyUpdate && state->decryptFailCount >= limit - limit / 10) {
+        (void)HITLS_KeyUpdate(ctx, HITLS_UPDATE_REQUESTED);
+    }
+#endif
+    return HITLS_SUCCESS;
 }
 
 static bool IsNeedtoRead(const TLS_Ctx *ctx, const RecBuf *inBuf)
@@ -69,7 +118,6 @@ bool REC_HaveReadSuiteInfo(const TLS_Ctx *ctx)
     }
     return ctx->recCtx->readStates.currentState->suiteInfo != NULL;
 }
-
 
 static REC_Type RecCastUintToRecType(TLS_Ctx *ctx, uint8_t value)
 {
@@ -199,6 +247,15 @@ static int32_t RecordDecrypt(TLS_Ctx *ctx, RecBuf *decryptBuf, REC_TextInput *en
     /* The decrypted record body is in data */
     ret = RecConnDecrypt(ctx, state, encryptedMsg, decryptBuf->buf, &decryptBuf->end);
     if (ret != HITLS_SUCCESS) {
+        int32_t decryptRet = ret;
+        if (IS_SUPPORT_DATAGRAM(ctx->config.tlsConfig.originVersionMask)) {
+            int32_t limitRet = CheckDecryptionLimits(ctx, state);
+            if (limitRet != HITLS_SUCCESS) {
+                ret = limitRet;
+                goto ERR;
+            }
+        }
+        ret = decryptRet;
         goto ERR;
     }
     if (!IS_SUPPORT_DATAGRAM(ctx->config.tlsConfig.originVersionMask)) {

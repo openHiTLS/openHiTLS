@@ -172,6 +172,7 @@ static void ShallowCopy(HITLS_Ctx *ctx, const HITLS_Config *srcConfig)
     destConfig->modeSupport = srcConfig->modeSupport;
 #endif
     destConfig->readAhead = srcConfig->readAhead;
+    destConfig->isAutoKeyUpdateEnabled = srcConfig->isAutoKeyUpdateEnabled;
     destConfig->recordPaddingCb = srcConfig->recordPaddingCb;
     destConfig->recordPaddingArg = srcConfig->recordPaddingArg;
 #ifdef HITLS_TLS_CONFIG_MANUAL_DH
@@ -1372,6 +1373,26 @@ int32_t HITLS_CFG_SetSignature(HITLS_Config *config, const uint16_t *signAlgs, u
     BSL_SAL_FREE(config->signAlgorithms);
     config->signAlgorithms = newData;
     config->signAlgorithmsSize = signAlgsSize;
+    return HITLS_SUCCESS;
+}
+
+int32_t HITLS_CFG_SetAutoKeyUpdateSupport(HITLS_Config *config, bool support)
+{
+    if (config == NULL) {
+        return HITLS_NULL_INPUT;
+    }
+
+    config->isAutoKeyUpdateEnabled = support;
+    return HITLS_SUCCESS;
+}
+
+int32_t HITLS_CFG_GetAutoKeyUpdateSupport(const HITLS_Config *config, bool *isSupport)
+{
+    if (config == NULL || isSupport == NULL) {
+        return HITLS_NULL_INPUT;
+    }
+
+    *isSupport = config->isAutoKeyUpdateEnabled;
     return HITLS_SUCCESS;
 }
 

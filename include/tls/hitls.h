@@ -1365,6 +1365,29 @@ int32_t HITLS_SetRenegotiationSupport(HITLS_Ctx *ctx, bool isSupport);
 
 /**
  * @ingroup tls
+ * @brief   Set whether to automatically perform KeyUpdate near the record key usage limit.
+ *
+ * @param   ctx   [IN/OUT] TLS connection handle.
+ * @param   isSupport  [IN] Support or Not, true: yes; false: no.
+ * @attention This setting takes effect only for TLS 1.3 and future DTLS 1.3 implementations.
+ * @retval  HITLS_SUCCESS, if successful.
+ * @retval  HITLS_NULL_INPUT, the input parameter pointer is NULL.
+ */
+int32_t HITLS_SetAutoKeyUpdateSupport(HITLS_Ctx *ctx, bool isSupport);
+
+/**
+ * @ingroup tls
+ * @brief   Query whether automatic KeyUpdate is enabled.
+ *
+ * @param   ctx [IN] TLS connection handle.
+ * @param   isSupport [OUT] Support or Not.
+ * @retval  HITLS_SUCCESS, if successful.
+ * @retval  HITLS_NULL_INPUT, the input parameter pointer is NULL.
+ */
+int32_t HITLS_GetAutoKeyUpdateSupport(const HITLS_Ctx *ctx, bool *isSupport);
+
+/**
+ * @ingroup tls
  * @brief   Set whether to allow a renegotiate request from the client
  * @param   ctx   [IN/OUT] TLS connection handle.
  * @param   isSupport  [IN] Support or Not，true: yes; false: no.

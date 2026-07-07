@@ -898,3 +898,21 @@ int32_t HITLS_GetResumptionOnRenegoSupport(HITLS_Ctx *ctx, bool *isSupport)
     return HITLS_CFG_GetResumptionOnRenegoSupport(&(ctx->config.tlsConfig), isSupport);
 }
 #endif
+
+int32_t HITLS_SetAutoKeyUpdateSupport(HITLS_Ctx *ctx, bool isSupport)
+{
+    if (ctx == NULL) {
+        return HITLS_NULL_INPUT;
+    }
+
+    return HITLS_CFG_SetAutoKeyUpdateSupport(&(ctx->config.tlsConfig), isSupport);
+}
+
+int32_t HITLS_GetAutoKeyUpdateSupport(const HITLS_Ctx *ctx, bool *isSupport)
+{
+    if (ctx == NULL) {
+        return HITLS_NULL_INPUT;
+    }
+
+    return HITLS_CFG_GetAutoKeyUpdateSupport(&(ctx->config.tlsConfig), isSupport);
+}

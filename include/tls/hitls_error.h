@@ -285,6 +285,7 @@ typedef enum {
     HITLS_REC_ERR_INVALID_CUSTOM_TYPE,              /**< Record: custom type conflicts with standard REC_Type. */
     HITLS_REC_CB_SUCCESS,                           /**< Custom read callback processed successfully. */
     HITLS_REC_CB_FAIL,                              /**< Custom read callback: internal read operation failed. */
+    HITLS_REC_DECRYPT_FAILED_LIMIT,                /**< The number of decryption authentication failures exceeds the hard limit (RFC 9147 §4.5.3). */
 
     HITLS_UIO_FAIL_START = 0x020B0001,             /**< uio module error code start bit. */
     HITLS_UIO_FAIL,                                /**< UIO internal failure. */

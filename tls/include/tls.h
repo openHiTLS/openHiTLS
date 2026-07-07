@@ -303,6 +303,7 @@ struct TlsCtx {
     uint32_t bytesLeftToRead;               /* bytes left to read after hs header has parsed */
     uint32_t keyUpdateType;                 /* TLS1.3 key update type */
     bool isKeyUpdateRequest;                /* TLS1.3 Check whether there are unsent key update messages */
+    bool isWaitKeyUpdate;                   /* Suppress duplicate KeyUpdate triggers from CheckDecryptionLimits */
     bool haveClientPointFormats;            /* whether the EC point format extension in the client hello is processed */
     uint8_t peekFlag;                       /* peekFlag equals 0, read mode; otherwise, peek mode */
     bool hasParsedHsMsgHeader;              /* has parsed current hs msg header */

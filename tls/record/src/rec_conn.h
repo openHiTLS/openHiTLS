@@ -74,6 +74,7 @@ typedef struct {
     uint16_t reserve;                       /* Four-byte alignment is reserved */
     RecSlidWindow window;                   /* dtls record sliding window (for anti-replay) */
 #endif
+    uint64_t decryptFailCount;              /* Count of decryption authentication failures (RFC 9147 §4.5.3) */
 } RecConnState;
 
 /* see TLSPlaintext structure definition in rfc */

@@ -340,6 +340,8 @@ static void InitConfig(HITLS_Config *config)
     config->needCheckPmsVersion = false;
 #endif
     config->readAhead = 0;
+    config->isAutoKeyUpdateEnabled = false;
+
 #ifdef HITLS_TLS_CONFIG_KEY_USAGE
     config->needCheckKeyUsage = true;
 #endif

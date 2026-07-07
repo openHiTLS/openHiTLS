@@ -40,6 +40,15 @@ extern "C" {
 #define REC_MAX_CIPHER_TEXT_LEN (REC_MAX_PLAIN_LENGTH + REC_MAX_ENCRYPTED_OVERHEAD)   /* Maximum ciphertext length */
 
 #define REC_MAX_AES_GCM_ENCRYPTION_LIMIT 23726566u   /* RFC 8446 5.5 Limits on Key Usage AES-GCM SHOULD under 2^24.5 */
+#define REC_MAX_AES_CCM_ENCRYPTION_LIMIT 8388608u   /* 2^23 */
+#define REC_MAX_SM4_GCM_ENCRYPTION_LIMIT 4194303u  /* 2^22 - 1 */
+#define REC_MAX_SM4_CCM_ENCRYPTION_LIMIT 1023u   /* 2^10 - 1 */
+
+/* Decryption (integrity) limits per RFC 9147 §4.5.3 */
+#define REC_MAX_AES_GCM_DECRYPTION_LIMIT        68719476736u             /* 2^36 */
+#define REC_MAX_CHACHA20_DECRYPTION_LIMIT       68719476736u             /* 2^36 */
+#define REC_MAX_AES_CCM_DECRYPTION_LIMIT        11863283u                /* 2^23.5 ≈ 11863283 */
+#define REC_MAX_AES_CCM8_DECRYPTION_LIMIT       128u                     /* 2^7 */
 
 typedef struct {
     RecConnState *outdatedState;

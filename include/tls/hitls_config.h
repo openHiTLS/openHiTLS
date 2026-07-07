@@ -94,6 +94,12 @@ extern "C" {
 
 /**
   * @ingroup hitls_config
+  * @brief   DTLS 1.3 version
+ */
+#define HITLS_VERSION_DTLS13 0xfefcu
+
+/**
+  * @ingroup hitls_config
   * @brief Maximum size of the configuration data
  */
 #define HITLS_CFG_MAX_SIZE 1024
@@ -552,6 +558,29 @@ int32_t HITLS_CFG_SetVersionForbid(HITLS_Config *config, uint32_t noVersion);
  * @retval  HITLS_NULL_INPUT, config is null.
  */
 int32_t HITLS_CFG_SetRenegotiationSupport(HITLS_Config *config, bool support);
+
+/**
+ * @ingroup hitls_config
+ * @brief   Set whether to automatically perform KeyUpdate near the record key usage limit.
+ *
+ * @param   config   [OUT] Config handle
+ * @param   support  [IN] Whether to enable automatic KeyUpdate. The options are as follows: True: yes; False: no.
+ * @attention This setting takes effect only for TLS 1.3 and future DTLS 1.3 implementations.
+ * @retval  HITLS_SUCCESS, if successful.
+ * @retval  HITLS_NULL_INPUT, config is null.
+ */
+int32_t HITLS_CFG_SetAutoKeyUpdateSupport(HITLS_Config *config, bool support);
+
+/**
+ * @ingroup hitls_config
+ * @brief   Query whether automatic KeyUpdate is enabled.
+ *
+ * @param   config    [IN] Config handle
+ * @param   isSupport [OUT] Whether automatic KeyUpdate is enabled.
+ * @retval  HITLS_SUCCESS, if successful.
+ * @retval  HITLS_NULL_INPUT, config or isSupport is null.
+ */
+int32_t HITLS_CFG_GetAutoKeyUpdateSupport(const HITLS_Config *config, bool *isSupport);
 
 /**
  * @ingroup hitls_config

@@ -781,6 +781,9 @@ int32_t HITLS_KeyUpdate(HITLS_Ctx *ctx, uint32_t updateType)
             "HS_Init fail when start keyupdate.", 0, 0, 0, 0);
         return ret;
     }
+    if (updateType == HITLS_UPDATE_REQUESTED) {
+        ctx->isWaitKeyUpdate = true;
+    }
     // Successfully sendKeyUpdate. Set isKeyUpdateRequest to false and keyUpdateType to HITLS_KEY_UPDATE_REQ_END.
     ChangeConnState(ctx, CM_STATE_HANDSHAKING);
     HS_ChangeState(ctx, TRY_SEND_KEY_UPDATE);

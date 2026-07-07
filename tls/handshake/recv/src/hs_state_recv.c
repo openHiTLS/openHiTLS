@@ -84,7 +84,7 @@ static int32_t Tls13RecvKeyUpdateProcess(TLS_Ctx *ctx, const HS_Msg *hsMsg)
 
     BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15980, BSL_LOG_LEVEL_INFO, BSL_LOG_BINLOG_TYPE_RUN,
         "tls1.3 recv key update success", 0, 0, 0, 0);
-
+    ctx->isWaitKeyUpdate = false;
     if (hsMsg->body.keyUpdate.requestUpdate == HITLS_UPDATE_REQUESTED) {
         ctx->isKeyUpdateRequest = true;
         ctx->keyUpdateType = HITLS_UPDATE_NOT_REQUESTED;

@@ -2878,3 +2878,269 @@ EXIT:
     FRAME_FreeLink(server);
 }
 /* END_CASE */
+
+/** @
+* @test     UT_TLS_TLS13_RFC8446_CONSISTENCY_AEAD_LIMITS_CFG_API_TC001
+* @spec     RFC 8446 §5.5 / §4.6.3 KeyUpdate configuration API
+* @title    CFG-level Set/GetAutoKeyUpdateSupport API test
+* @precon   Create a TLS 1.3 config
+* @brief    1. Create config, verify default is false.
+*           2. Set to true, verify.
+*           3. Set to false, verify.
+*           4. Test NULL inputs.
+* @expect   All API calls return expected results.
+*/
+/* BEGIN_CASE */
+void UT_TLS_TLS13_RFC8446_CONSISTENCY_AEAD_LIMITS_CFG_API_TC001(void)
+{
+    FRAME_Init();
+    HITLS_Config *tlsConfig = HITLS_CFG_NewTLS13Config();
+    ASSERT_TRUE(tlsConfig != NULL);
+
+    bool isSupport = true;
+    ASSERT_EQ(HITLS_CFG_GetAutoKeyUpdateSupport(tlsConfig, &isSupport), HITLS_SUCCESS);
+    ASSERT_TRUE(!isSupport);
+
+    ASSERT_EQ(HITLS_CFG_SetAutoKeyUpdateSupport(tlsConfig, true), HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_CFG_GetAutoKeyUpdateSupport(tlsConfig, &isSupport), HITLS_SUCCESS);
+    ASSERT_TRUE(isSupport);
+
+    ASSERT_EQ(HITLS_CFG_SetAutoKeyUpdateSupport(tlsConfig, false), HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_CFG_GetAutoKeyUpdateSupport(tlsConfig, &isSupport), HITLS_SUCCESS);
+    ASSERT_TRUE(!isSupport);
+
+    ASSERT_EQ(HITLS_CFG_SetAutoKeyUpdateSupport(NULL, true), HITLS_NULL_INPUT);
+    ASSERT_EQ(HITLS_CFG_GetAutoKeyUpdateSupport(NULL, &isSupport), HITLS_NULL_INPUT);
+    ASSERT_EQ(HITLS_CFG_GetAutoKeyUpdateSupport(tlsConfig, NULL), HITLS_NULL_INPUT);
+
+    ASSERT_TRUE(TestIsErrStackEmpty());
+EXIT:
+    HITLS_CFG_FreeConfig(tlsConfig);
+}
+/* END_CASE */
+
+/** @
+* @test     UT_TLS_TLS13_RFC8446_CONSISTENCY_AEAD_LIMITS_CTX_API_TC001
+* @spec     RFC 8446 §5.5 / §4.6.3 KeyUpdate configuration API
+* @title    CTX-level Set/GetAutoKeyUpdateSupport API test
+* @precon   Create a TLS 1.3 config and link
+* @brief    1. Establish connection.
+*           2. Verify default is false.
+*           3. Set to true, verify.
+*           4. Set to false, verify.
+*           5. Test NULL inputs.
+* @expect   All API calls return expected results.
+*/
+/* BEGIN_CASE */
+void UT_TLS_TLS13_RFC8446_CONSISTENCY_AEAD_LIMITS_CTX_API_TC001(void)
+{
+    FRAME_Init();
+    HITLS_Config *tlsConfig = HITLS_CFG_NewTLS13Config();
+    ASSERT_TRUE(tlsConfig != NULL);
+    tlsConfig->emsMode = HITLS_EMS_MODE_FORCE;
+    tlsConfig->isSupportClientVerify = true;
+    tlsConfig->isSupportNoClientCert = true;
+
+    FRAME_LinkObj *client = FRAME_CreateLink(tlsConfig, BSL_UIO_TCP);
+    FRAME_LinkObj *server = FRAME_CreateLink(tlsConfig, BSL_UIO_TCP);
+    ASSERT_TRUE(client != NULL);
+    ASSERT_TRUE(server != NULL);
+    ASSERT_TRUE(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT) == HITLS_SUCCESS);
+
+    bool isSupport = true;
+    ASSERT_EQ(HITLS_GetAutoKeyUpdateSupport(client->ssl, &isSupport), HITLS_SUCCESS);
+    ASSERT_TRUE(!isSupport);
+
+    ASSERT_EQ(HITLS_SetAutoKeyUpdateSupport(client->ssl, true), HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_GetAutoKeyUpdateSupport(client->ssl, &isSupport), HITLS_SUCCESS);
+    ASSERT_TRUE(isSupport);
+
+    ASSERT_EQ(HITLS_SetAutoKeyUpdateSupport(client->ssl, false), HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_GetAutoKeyUpdateSupport(client->ssl, &isSupport), HITLS_SUCCESS);
+    ASSERT_TRUE(!isSupport);
+
+    ASSERT_EQ(HITLS_SetAutoKeyUpdateSupport(NULL, true), HITLS_NULL_INPUT);
+    ASSERT_EQ(HITLS_GetAutoKeyUpdateSupport(NULL, &isSupport), HITLS_NULL_INPUT);
+    ASSERT_EQ(HITLS_GetAutoKeyUpdateSupport(client->ssl, NULL), HITLS_NULL_INPUT);
+
+    ASSERT_TRUE(TestIsErrStackEmpty());
+EXIT:
+    HITLS_CFG_FreeConfig(tlsConfig);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+}
+/* END_CASE */
+
+/** @
+* @test     UT_TLS_TLS13_RFC8446_CONSISTENCY_AEAD_LIMITS_FUNC_TC001
+* @spec     RFC 8446 §5.5 Limits on Key Usage (without auto KU)
+* @title    Auto KU disabled: write succeeds even at encryption limit
+* @precon   Establish a TLS 1.3 connection (auto KU off by default)
+* @brief    1. Establish connection.
+*           2. Set seq to AES-GCM encryption limit.
+*           3. Write succeeds, isKeyUpdateRequest false.
+* @expect   HITLS_Write returns HITLS_SUCCESS, isKeyUpdateRequest false.
+*/
+/* BEGIN_CASE */
+void UT_TLS_TLS13_RFC8446_CONSISTENCY_AEAD_LIMITS_FUNC_TC001(void)
+{
+    FRAME_Init();
+    HITLS_Config *tlsConfig = HITLS_CFG_NewTLS13Config();
+    ASSERT_TRUE(tlsConfig != NULL);
+    tlsConfig->emsMode = HITLS_EMS_MODE_FORCE;
+    tlsConfig->isSupportClientVerify = true;
+    tlsConfig->isSupportNoClientCert = true;
+    FRAME_LinkObj *client = NULL;
+    FRAME_LinkObj *server = NULL;
+    client = FRAME_CreateLink(tlsConfig, BSL_UIO_TCP);
+    server = FRAME_CreateLink(tlsConfig, BSL_UIO_TCP);
+    ASSERT_TRUE(client != NULL);
+    ASSERT_TRUE(server != NULL);
+    ASSERT_TRUE(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT) == HITLS_SUCCESS);
+
+    REC_Ctx *recCtx = (REC_Ctx *)client->ssl->recCtx;
+    RecConnSetSeqNum(recCtx->writeStates.currentState, REC_MAX_AES_GCM_ENCRYPTION_LIMIT);
+
+    uint32_t writeLen;
+    ASSERT_EQ(HITLS_Write(client->ssl, (uint8_t *)"test", 4, &writeLen), HITLS_SUCCESS);
+    ASSERT_TRUE(!client->ssl->isKeyUpdateRequest);
+    ASSERT_TRUE(TestIsErrStackEmpty());
+EXIT:
+    HITLS_CFG_FreeConfig(tlsConfig);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+}
+/* END_CASE */
+
+/** @
+* @test     UT_TLS_TLS13_RFC8446_CONSISTENCY_AEAD_LIMITS_FUNC_TC002
+* @spec     RFC 8446 §5.5 / RFC 8446 §4.6.3 Automatic KeyUpdate
+* @title    Auto KU triggered when seq reaches limit - 1
+* @precon   Establish a TLS 1.3 connection with auto KU enabled
+* @brief    1. Enable auto KU via CFG API.
+*           2. Set seq to limit - 1.
+*           3. Write, verify success and isKeyUpdateRequest set.
+* @expect   HITLS_Write returns HITLS_SUCCESS, isKeyUpdateRequest true.
+*/
+/* BEGIN_CASE */
+void UT_TLS_TLS13_RFC8446_CONSISTENCY_AEAD_LIMITS_FUNC_TC002(void)
+{
+    FRAME_Init();
+    HITLS_Config *tlsConfig = HITLS_CFG_NewTLS13Config();
+    ASSERT_TRUE(tlsConfig != NULL);
+    tlsConfig->emsMode = HITLS_EMS_MODE_FORCE;
+    tlsConfig->isSupportClientVerify = true;
+    tlsConfig->isSupportNoClientCert = true;
+    HITLS_CFG_SetAutoKeyUpdateSupport(tlsConfig, true);
+    FRAME_LinkObj *client = NULL;
+    FRAME_LinkObj *server = NULL;
+    client = FRAME_CreateLink(tlsConfig, BSL_UIO_TCP);
+    server = FRAME_CreateLink(tlsConfig, BSL_UIO_TCP);
+    ASSERT_TRUE(client != NULL);
+    ASSERT_TRUE(server != NULL);
+    ASSERT_TRUE(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT) == HITLS_SUCCESS);
+
+    REC_Ctx *recCtx = (REC_Ctx *)client->ssl->recCtx;
+    RecConnSetSeqNum(recCtx->writeStates.currentState, REC_MAX_AES_GCM_ENCRYPTION_LIMIT - 1);
+
+    uint32_t writeLen;
+    ASSERT_EQ(HITLS_Write(client->ssl, (uint8_t *)"test", 4, &writeLen), HITLS_SUCCESS);
+    ASSERT_TRUE(client->ssl->isKeyUpdateRequest);
+    ASSERT_TRUE(TestIsErrStackEmpty());
+EXIT:
+    HITLS_CFG_FreeConfig(tlsConfig);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+}
+/* END_CASE */
+
+/** @
+* @test     UT_TLS_TLS13_RFC8446_CONSISTENCY_AEAD_LIMITS_FUNC_TC003
+* @spec     RFC 8446 §5.5 / RFC 8446 §4.6.3 Automatic KeyUpdate
+* @title    Auto KU enabled, seq below limit - write succeeds without KU
+* @precon   Establish a TLS 1.3 connection with auto KU enabled
+* @brief    1. Enable auto KU.
+*           2. Set seq below limit.
+*           3. Write, verify success, no KU trigger.
+* @expect   HITLS_Write returns HITLS_SUCCESS, isKeyUpdateRequest false.
+*/
+/* BEGIN_CASE */
+void UT_TLS_TLS13_RFC8446_CONSISTENCY_AEAD_LIMITS_FUNC_TC003(void)
+{
+    FRAME_Init();
+    HITLS_Config *tlsConfig = HITLS_CFG_NewTLS13Config();
+    ASSERT_TRUE(tlsConfig != NULL);
+    tlsConfig->emsMode = HITLS_EMS_MODE_FORCE;
+    tlsConfig->isSupportClientVerify = true;
+    tlsConfig->isSupportNoClientCert = true;
+    HITLS_CFG_SetAutoKeyUpdateSupport(tlsConfig, true);
+    FRAME_LinkObj *client = NULL;
+    FRAME_LinkObj *server = NULL;
+    client = FRAME_CreateLink(tlsConfig, BSL_UIO_TCP);
+    server = FRAME_CreateLink(tlsConfig, BSL_UIO_TCP);
+    ASSERT_TRUE(client != NULL);
+    ASSERT_TRUE(server != NULL);
+    ASSERT_TRUE(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT) == HITLS_SUCCESS);
+
+    REC_Ctx *recCtx = (REC_Ctx *)client->ssl->recCtx;
+    RecConnSetSeqNum(recCtx->writeStates.currentState, 100u);
+
+    uint32_t writeLen;
+    ASSERT_EQ(HITLS_Write(client->ssl, (uint8_t *)"test", 4, &writeLen), HITLS_SUCCESS);
+    ASSERT_TRUE(!client->ssl->isKeyUpdateRequest);
+    ASSERT_TRUE(TestIsErrStackEmpty());
+EXIT:
+    HITLS_CFG_FreeConfig(tlsConfig);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+}
+/* END_CASE */
+
+/** @
+* @test     UT_TLS_TLS13_RFC8446_CONSISTENCY_AEAD_LIMITS_FUNC_TC004
+* @spec     RFC 8446 §5.5 Limits on Key Usage
+* @title    Auto KU via CFG API: trigger with server Read
+* @precon   Establish a TLS 1.3 connection with auto KU enabled
+* @brief    1. Enable auto KU via CFG API, set seq to limit - 1.
+*           2. Write, transfer to server, server reads.
+*           3. Verify isKeyUpdateRequest set.
+* @expect   Write succeeds, server reads data, KU flag set.
+*/
+/* BEGIN_CASE */
+void UT_TLS_TLS13_RFC8446_CONSISTENCY_AEAD_LIMITS_FUNC_TC004(void)
+{
+    FRAME_Init();
+    HITLS_Config *tlsConfig = HITLS_CFG_NewTLS13Config();
+    ASSERT_TRUE(tlsConfig != NULL);
+    tlsConfig->emsMode = HITLS_EMS_MODE_FORCE;
+    tlsConfig->isSupportClientVerify = true;
+    tlsConfig->isSupportNoClientCert = true;
+    HITLS_CFG_SetAutoKeyUpdateSupport(tlsConfig, true);
+    FRAME_LinkObj *client = NULL;
+    FRAME_LinkObj *server = NULL;
+    client = FRAME_CreateLink(tlsConfig, BSL_UIO_TCP);
+    server = FRAME_CreateLink(tlsConfig, BSL_UIO_TCP);
+    ASSERT_TRUE(client != NULL);
+    ASSERT_TRUE(server != NULL);
+    ASSERT_TRUE(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT) == HITLS_SUCCESS);
+
+    REC_Ctx *clientRecCtx = (REC_Ctx *)client->ssl->recCtx;
+    REC_Ctx *serverRecCtx = (REC_Ctx *)server->ssl->recCtx;
+    RecConnSetSeqNum(clientRecCtx->writeStates.currentState, REC_MAX_AES_GCM_ENCRYPTION_LIMIT - 1);
+    RecConnSetSeqNum(serverRecCtx->readStates.currentState, REC_MAX_AES_GCM_ENCRYPTION_LIMIT - 1);
+
+    uint32_t writeLen;
+    ASSERT_EQ(HITLS_Write(client->ssl, (uint8_t *)"test", 4, &writeLen), HITLS_SUCCESS);
+    ASSERT_TRUE(client->ssl->isKeyUpdateRequest);
+    ASSERT_EQ(FRAME_TrasferMsgBetweenLink(client, server), HITLS_SUCCESS);
+    uint8_t readBuf[16] = {0};
+    uint32_t readLen;
+    ASSERT_EQ(HITLS_Read(server->ssl, readBuf, sizeof(readBuf), &readLen), HITLS_SUCCESS);
+    ASSERT_EQ(readLen, 4u);
+    ASSERT_TRUE(TestIsErrStackEmpty());
+EXIT:
+    HITLS_CFG_FreeConfig(tlsConfig);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+}
+/* END_CASE */

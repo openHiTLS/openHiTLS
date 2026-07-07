@@ -21,6 +21,7 @@
 #include "bsl_bytes.h"
 #include "hitls_error.h"
 #include "hitls_config.h"
+#include "hitls.h"
 #include "bsl_errno.h"
 #include "bsl_uio.h"
 #include "tls.h"
@@ -46,21 +47,46 @@ static void OutbufUpdate(uint32_t *start, uint32_t startvalue, uint32_t *end, ui
     *end = endvalue;
 }
 
+static uint64_t GetCipherLimit(uint32_t cipherAlg)
+{
+    switch (cipherAlg) {
+        case HITLS_CIPHER_AES_128_GCM:
+        case HITLS_CIPHER_AES_256_GCM:
+            return REC_MAX_AES_GCM_ENCRYPTION_LIMIT;
+        case HITLS_CIPHER_AES_128_CCM:
+        case HITLS_CIPHER_AES_256_CCM:
+        case HITLS_CIPHER_AES_128_CCM8:
+        case HITLS_CIPHER_AES_256_CCM8:
+            return REC_MAX_AES_CCM_ENCRYPTION_LIMIT;
+        case HITLS_CIPHER_CHACHA20_POLY1305:
+            return 0;
+        case HITLS_CIPHER_SM4_GCM:
+            return REC_MAX_SM4_GCM_ENCRYPTION_LIMIT;
+        case HITLS_CIPHER_SM4_CCM:
+            return REC_MAX_SM4_CCM_ENCRYPTION_LIMIT;
+        default:
+            return 0;
+    }
+}
+
 static int32_t CheckEncryptionLimits(TLS_Ctx *ctx, RecConnState *state)
 {
-    (void)ctx;
-    if (state->suiteInfo != NULL &&
-#ifdef HITLS_TLS_FEATURE_KEY_UPDATE
-        ctx->isKeyUpdateRequest == false &&
-#endif
-        (state->suiteInfo->cipherAlg == HITLS_CIPHER_AES_128_GCM ||
-        state->suiteInfo->cipherAlg == HITLS_CIPHER_AES_256_GCM) &&
-        RecConnGetSeqNum(state) > REC_MAX_AES_GCM_ENCRYPTION_LIMIT) {
-        BSL_ERR_PUSH_ERROR(HITLS_REC_ENCRYPTED_NUMBER_OVERFLOW);
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16188, BSL_LOG_LEVEL_WARN, BSL_LOG_BINLOG_TYPE_RUN,
-            "AES-GCM record encrypted times overflow", 0, 0, 0, 0);
-        return HITLS_REC_ENCRYPTED_NUMBER_OVERFLOW;
+    if (ctx->negotiatedInfo.version != HITLS_VERSION_TLS13 && ctx->negotiatedInfo.version != HITLS_VERSION_DTLS13) {
+        return HITLS_SUCCESS;
     }
+    if (state->suiteInfo == NULL) {
+        return HITLS_SUCCESS;
+    }
+    uint64_t limit = GetCipherLimit(state->suiteInfo->cipherAlg);
+    if (limit == 0) {
+        return HITLS_SUCCESS;
+    }
+#if defined(HITLS_TLS_FEATURE_KEY_UPDATE)
+    uint64_t seq = RecConnGetSeqNum(state);
+    if (seq >= limit - 1 && ctx->config.tlsConfig.isAutoKeyUpdateEnabled && ctx->isKeyUpdateRequest == false) {
+        (void)HITLS_KeyUpdate(ctx, HITLS_UPDATE_NOT_REQUESTED);
+    }
+#endif
     return HITLS_SUCCESS;
 }
 

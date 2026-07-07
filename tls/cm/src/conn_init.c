@@ -111,6 +111,7 @@ int32_t CONN_Init(TLS_Ctx *ctx)
 #ifdef HITLS_TLS_FEATURE_KEY_UPDATE
     ctx->keyUpdateType = HITLS_KEY_UPDATE_REQ_END;
     ctx->isKeyUpdateRequest = false;
+    ctx->isWaitKeyUpdate = false;
 #endif
     // default value is X509_V_OK(0)
     ctx->peerInfo.verifyResult = 0;

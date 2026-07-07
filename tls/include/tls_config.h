@@ -222,6 +222,8 @@ typedef struct TlsConfig {
 
     uint16_t recordSizeLimit;           /* record size limit RFC 8449 */
 
+    bool isAutoKeyUpdateEnabled;        /* whether to enable automatic (D)TLS1.3 key update, default off */
+
     bool needCheckKeyUsage;             /* whether to check keyusage, default on */
     bool needCheckPmsVersion;           /* whether to verify the version in premastersecret */
     bool isSupportRenegotiation;        /* support renegotiation */
