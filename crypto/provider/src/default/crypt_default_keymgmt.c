@@ -88,6 +88,76 @@
 #include "crypt_ealinit.h"
 #include "crypt_default_provider.h"
 
+typedef void *(*PkeyNewCtxFn)(void *libCtx);
+
+typedef struct {
+    int32_t algId;
+    PkeyNewCtxFn newCtxFn;
+} PkeyNewCtxEntry;
+
+static const PkeyNewCtxEntry g_pkeyNewCtxTable[] = {
+#ifdef HITLS_CRYPTO_DSA
+    {CRYPT_PKEY_DSA, (PkeyNewCtxFn)CRYPT_DSA_NewCtxEx},
+#endif
+#ifdef HITLS_CRYPTO_ED25519
+    {CRYPT_PKEY_ED25519, (PkeyNewCtxFn)CRYPT_ED25519_NewCtxEx},
+#endif
+#ifdef HITLS_CRYPTO_X25519
+    {CRYPT_PKEY_X25519, (PkeyNewCtxFn)CRYPT_X25519_NewCtxEx},
+#endif
+#ifdef HITLS_CRYPTO_RSA
+    {CRYPT_PKEY_RSA, (PkeyNewCtxFn)CRYPT_RSA_NewCtxEx},
+#endif
+#ifdef HITLS_CRYPTO_DH
+    {CRYPT_PKEY_DH, (PkeyNewCtxFn)CRYPT_DH_NewCtxEx},
+#endif
+#ifdef HITLS_CRYPTO_ECDSA
+    {CRYPT_PKEY_ECDSA, (PkeyNewCtxFn)CRYPT_ECDSA_NewCtxEx},
+#endif
+#ifdef HITLS_CRYPTO_ECDH
+    {CRYPT_PKEY_ECDH, (PkeyNewCtxFn)CRYPT_ECDH_NewCtxEx},
+#endif
+#ifdef HITLS_CRYPTO_SM2
+    {CRYPT_PKEY_SM2, (PkeyNewCtxFn)CRYPT_SM2_NewCtxEx},
+#endif
+#ifdef HITLS_CRYPTO_PAILLIER
+    {CRYPT_PKEY_PAILLIER, (PkeyNewCtxFn)CRYPT_PAILLIER_NewCtxEx},
+#endif
+#ifdef HITLS_CRYPTO_ELGAMAL
+    {CRYPT_PKEY_ELGAMAL, (PkeyNewCtxFn)CRYPT_ELGAMAL_NewCtxEx},
+#endif
+#ifdef HITLS_CRYPTO_SLH_DSA
+    {CRYPT_PKEY_SLH_DSA, (PkeyNewCtxFn)CRYPT_SLH_DSA_NewCtxEx},
+#endif
+#ifdef HITLS_CRYPTO_MLKEM
+    {CRYPT_PKEY_ML_KEM, (PkeyNewCtxFn)CRYPT_ML_KEM_NewCtxEx},
+#endif
+#ifdef HITLS_CRYPTO_XMSS
+    {CRYPT_PKEY_XMSS, (PkeyNewCtxFn)CRYPT_XMSS_NewCtxEx},
+#endif
+#ifdef HITLS_CRYPTO_XMSSMT
+    {CRYPT_PKEY_XMSSMT, (PkeyNewCtxFn)CRYPT_XMSSMT_NewCtxEx},
+#endif
+#ifdef HITLS_CRYPTO_HSS_LMS
+    {CRYPT_PKEY_HSS_LMS, (PkeyNewCtxFn)CRYPT_HSS_NewCtxEx},
+#endif
+#ifdef HITLS_CRYPTO_FRODOKEM
+    {CRYPT_PKEY_FRODOKEM, (PkeyNewCtxFn)CRYPT_FRODOKEM_NewCtxEx},
+#endif
+#ifdef HITLS_CRYPTO_MCELIECE
+    {CRYPT_PKEY_MCELIECE, (PkeyNewCtxFn)CRYPT_MCELIECE_NewCtxEx},
+#endif
+#ifdef HITLS_CRYPTO_HYBRIDKEM
+    {CRYPT_PKEY_HYBRID_KEM, (PkeyNewCtxFn)CRYPT_HYBRID_KEM_NewCtxEx},
+#endif
+#ifdef HITLS_CRYPTO_MLDSA
+    {CRYPT_PKEY_ML_DSA, (PkeyNewCtxFn)CRYPT_ML_DSA_NewCtxEx},
+#endif
+#ifdef HITLS_CRYPTO_COMPOSITE
+    {CRYPT_PKEY_COMPOSITE, (PkeyNewCtxFn)CRYPT_COMPOSITE_NewCtxEx},
+#endif
+};
+
 void *CRYPT_EAL_DefPkeyMgmtNewCtx(CRYPT_EAL_DefProvCtx *provCtx, int32_t algId)
 {
 #ifdef HITLS_CRYPTO_ASM_CHECK
@@ -96,92 +166,14 @@ void *CRYPT_EAL_DefPkeyMgmtNewCtx(CRYPT_EAL_DefProvCtx *provCtx, int32_t algId)
         return NULL;
     }
 #endif
-    switch (algId) {
-#ifdef HITLS_CRYPTO_DSA
-        case CRYPT_PKEY_DSA:
-            return CRYPT_DSA_NewCtxEx(provCtx->libCtx);
-#endif
-#ifdef HITLS_CRYPTO_ED25519
-        case CRYPT_PKEY_ED25519:
-            return CRYPT_ED25519_NewCtxEx(provCtx->libCtx);
-#endif
-#ifdef HITLS_CRYPTO_X25519
-        case CRYPT_PKEY_X25519:
-            return CRYPT_X25519_NewCtxEx(provCtx->libCtx);
-#endif
-#ifdef HITLS_CRYPTO_RSA
-        case CRYPT_PKEY_RSA:
-            return CRYPT_RSA_NewCtxEx(provCtx->libCtx);
-#endif
-#ifdef HITLS_CRYPTO_DH
-        case CRYPT_PKEY_DH:
-            return CRYPT_DH_NewCtxEx(provCtx->libCtx);
-#endif
-#ifdef HITLS_CRYPTO_ECDSA
-        case CRYPT_PKEY_ECDSA:
-            return CRYPT_ECDSA_NewCtxEx(provCtx->libCtx);
-#endif
-#ifdef HITLS_CRYPTO_ECDH
-        case CRYPT_PKEY_ECDH:
-            return CRYPT_ECDH_NewCtxEx(provCtx->libCtx);
-#endif
-#ifdef HITLS_CRYPTO_SM2
-        case CRYPT_PKEY_SM2:
-            return CRYPT_SM2_NewCtxEx(provCtx->libCtx);
-#endif
-#ifdef HITLS_CRYPTO_PAILLIER
-        case CRYPT_PKEY_PAILLIER:
-            return CRYPT_PAILLIER_NewCtxEx(provCtx->libCtx);
-#endif
-#ifdef HITLS_CRYPTO_ELGAMAL
-        case CRYPT_PKEY_ELGAMAL:
-            return CRYPT_ELGAMAL_NewCtxEx(provCtx->libCtx);
-#endif
-#ifdef HITLS_CRYPTO_SLH_DSA
-        case CRYPT_PKEY_SLH_DSA:
-            return CRYPT_SLH_DSA_NewCtxEx(provCtx->libCtx);
-#endif
-#ifdef HITLS_CRYPTO_MLKEM
-        case CRYPT_PKEY_ML_KEM:
-            return CRYPT_ML_KEM_NewCtxEx(provCtx->libCtx);
-#endif
-#ifdef HITLS_CRYPTO_XMSS
-        case CRYPT_PKEY_XMSS:
-            return CRYPT_XMSS_NewCtxEx(provCtx->libCtx);
-#endif
-#ifdef HITLS_CRYPTO_XMSSMT
-        case CRYPT_PKEY_XMSSMT:
-            return CRYPT_XMSSMT_NewCtxEx(provCtx->libCtx);
-#endif
-#ifdef HITLS_CRYPTO_HSS_LMS
-        case CRYPT_PKEY_HSS_LMS:
-            return CRYPT_HSS_NewCtxEx(provCtx->libCtx);
-#endif
-#ifdef HITLS_CRYPTO_FRODOKEM
-        case CRYPT_PKEY_FRODOKEM:
-            return CRYPT_FRODOKEM_NewCtxEx(provCtx->libCtx);
-#endif
-#ifdef HITLS_CRYPTO_MCELIECE
-        case CRYPT_PKEY_MCELIECE:
-            return CRYPT_MCELIECE_NewCtxEx(provCtx->libCtx);
-#endif
-#ifdef HITLS_CRYPTO_HYBRIDKEM
-        case CRYPT_PKEY_HYBRID_KEM:
-            return CRYPT_HYBRID_KEM_NewCtxEx(provCtx->libCtx);
-#endif
-#ifdef HITLS_CRYPTO_MLDSA
-        case CRYPT_PKEY_ML_DSA:
-            return CRYPT_ML_DSA_NewCtxEx(provCtx->libCtx);
-#endif
-#ifdef HITLS_CRYPTO_COMPOSITE
-        case CRYPT_PKEY_COMPOSITE:
-            return CRYPT_COMPOSITE_NewCtxEx(provCtx->libCtx);
-#endif
-        default:
-            BSL_ERR_PUSH_ERROR(CRYPT_PROVIDER_NOT_SUPPORT);
-            return NULL;
+    for (int32_t i = 0; i < (int32_t)(sizeof(g_pkeyNewCtxTable) / sizeof(g_pkeyNewCtxTable[0])); i++) {
+        if (g_pkeyNewCtxTable[i].algId == algId) {
+            return g_pkeyNewCtxTable[i].newCtxFn(provCtx->libCtx);
+        }
     }
-};
+    BSL_ERR_PUSH_ERROR(CRYPT_PROVIDER_NOT_SUPPORT);
+    return NULL;
+}
 
 #ifdef HITLS_CRYPTO_DSA
 const CRYPT_EAL_Func g_defEalKeyMgmtDsa[] = {
