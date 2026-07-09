@@ -254,13 +254,8 @@ EXIT:
 }
 /* END_CASE */
 
-static int32_t HssTestVerify(int lmsType0, int otsType0, int lmsType1, int otsType1, Hex *pubKey, Hex *msg,
-    Hex *sig) {
-    CRYPT_EAL_PkeyCtx *ctx = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_HSS_LMS);
-    if (ctx == NULL) {
-        return CRYPT_MEM_ALLOC_FAIL;
-    }
-
+static int32_t HssTestVerify(CRYPT_EAL_PkeyCtx *ctx, int lmsType0, int otsType0, int lmsType1, int otsType1,
+    Hex *pubKey, Hex *msg, Hex *sig) {
     uint32_t levels = 2;
     uint32_t lmstype0 = lmsType0;
     uint32_t otstype0 = otsType0;
@@ -276,7 +271,6 @@ static int32_t HssTestVerify(int lmsType0, int otsType0, int lmsType1, int otsTy
     };
     int32_t ret = CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_HSS_SET_PARAM, params, 0);
     if (ret != CRYPT_SUCCESS) {
-        CRYPT_EAL_PkeyFreeCtx(ctx);
         return ret;
     }
 
@@ -284,13 +278,10 @@ static int32_t HssTestVerify(int lmsType0, int otsType0, int lmsType1, int otsTy
     BSL_PARAM_InitValue(&pubParam, CRYPT_PARAM_HSS_PUBKEY, BSL_PARAM_TYPE_OCTETS, pubKey->x, pubKey->len);
     ret = CRYPT_EAL_PkeySetPubEx(ctx, &pubParam);
     if (ret != CRYPT_SUCCESS) {
-        CRYPT_EAL_PkeyFreeCtx(ctx);
         return ret;
     }
 
-    ret = CRYPT_EAL_PkeyVerify(ctx, CRYPT_MD_SHA256, msg->x, msg->len, sig->x, sig->len);
-    CRYPT_EAL_PkeyFreeCtx(ctx);
-    return ret;
+    return CRYPT_EAL_PkeyVerify(ctx, CRYPT_MD_SHA256, msg->x, msg->len, sig->x, sig->len);
 }
 
 /* @
@@ -305,22 +296,31 @@ void SDV_CRYPTO_HSS_EAL_TC002(int lmsType0, int otsType0, int lmsType1, int otsT
 {
     TestMemInit();
     uint32_t totalMallocCount = 0;
-    STUB_REPLACE(BSL_SAL_Malloc, STUB_BSL_SAL_Malloc);
+    CRYPT_EAL_PkeyCtx *ctx2 = NULL;
+    CRYPT_EAL_PkeyCtx *ctx1 = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_HSS_LMS);
+    ASSERT_TRUE(ctx1 != NULL);
 
+    STUB_REPLACE(BSL_SAL_Malloc, STUB_BSL_SAL_Malloc);
     STUB_EnableMallocFail(false);
     STUB_ResetMallocCount();
-    ASSERT_EQ(HssTestVerify(lmsType0, otsType0, lmsType1, otsType1, pubKey, msg, sig), CRYPT_SUCCESS);
+    ASSERT_EQ(HssTestVerify(ctx1, lmsType0, otsType0, lmsType1, otsType1, pubKey, msg, sig), CRYPT_SUCCESS);
     totalMallocCount = STUB_GetMallocCallCount();
 
-    STUB_EnableMallocFail(true);
     for (uint32_t j = 0; j < totalMallocCount; j++)
     {
+        ctx2 = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_HSS_LMS);
+        ASSERT_TRUE(ctx2 != NULL);
+        STUB_EnableMallocFail(true);
         STUB_ResetMallocCount();
         STUB_SetMallocFailIndex(j);
-        ASSERT_NE(HssTestVerify(lmsType0, otsType0, lmsType1, otsType1, pubKey, msg, sig), CRYPT_SUCCESS);
+        ASSERT_NE(HssTestVerify(ctx2, lmsType0, otsType0, lmsType1, otsType1, pubKey, msg, sig), CRYPT_SUCCESS);
+        CRYPT_EAL_PkeyFreeCtx(ctx2);
+        ctx2 = NULL;
     }
 
 EXIT:
+    CRYPT_EAL_PkeyFreeCtx(ctx1);
+    CRYPT_EAL_PkeyFreeCtx(ctx2);
     STUB_RESTORE(BSL_SAL_Malloc);
 }
 /* END_CASE */
