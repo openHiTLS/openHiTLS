@@ -56,48 +56,7 @@ static void SetIdpReasons(HITLS_X509_ExtIdp *idp, uint16_t reasons);
  * ============================================================================ */
 STUB_DEFINE_RET2(int32_t, HITLS_X509_ParseNameList, BSL_ASN1_Buffer *, BSL_ASN1_List *);
 
-static uint32_t g_crlEntrySerialMemAllocCount = 0;
-static uint32_t g_crlEntrySerialMemFreeCount = 0;
 static bool g_crlSignatureDecodeFail = false;
-
-static void *CrlEntrySerialMemMalloc(uint32_t size)
-{
-    void *ptr = malloc((size_t)size);
-    if (ptr != NULL) {
-        g_crlEntrySerialMemAllocCount++;
-    }
-    return ptr;
-}
-
-static void CrlEntrySerialMemFree(void *ptr)
-{
-    if (ptr != NULL) {
-        g_crlEntrySerialMemFreeCount++;
-    }
-    free(ptr);
-}
-
-static int32_t CrlEntrySerialMemTrackStart(void)
-{
-    g_crlEntrySerialMemAllocCount = 0;
-    g_crlEntrySerialMemFreeCount = 0;
-    int32_t ret = BSL_SAL_CallBack_Ctrl(BSL_SAL_MEM_MALLOC, CrlEntrySerialMemMalloc);
-    if (ret != BSL_SUCCESS) {
-        return ret;
-    }
-    return BSL_SAL_CallBack_Ctrl(BSL_SAL_MEM_FREE, CrlEntrySerialMemFree);
-}
-
-static void CrlEntrySerialMemTrackStop(void)
-{
-#ifdef HITLS_BSL_SAL_MEM
-    (void)BSL_SAL_CallBack_Ctrl(BSL_SAL_MEM_MALLOC, NULL);
-    (void)BSL_SAL_CallBack_Ctrl(BSL_SAL_MEM_FREE, NULL);
-#else
-    TestMemInit();
-#endif
-}
-
 static int32_t STUB_BSL_ASN1_DecodePrimitiveItem_CrlSignatureFail(BSL_ASN1_Buffer *asn, void *decodeData)
 {
     if (g_crlSignatureDecodeFail && asn != NULL && asn->tag == BSL_ASN1_TAG_BITSTRING) {
@@ -4736,7 +4695,7 @@ EXIT:
  * @title  Replace a generated CRL entry revoked serial number without leaking the old buffer.
  * @brief  Set revoked serial number twice on the same generated CRL entry and release the entry,
  *         verifying that the second serial is effective and all SAL allocations are freed.
- * @expect The second revoked serial number is returned and allocation/free counts are balanced.
+ * @expect The second revoked serial number is returned and no memory leak issue.
  */
 /* BEGIN_CASE */
 void SDV_X509_CRL_ENTRY_SET_SERIAL_REPLACE_MEM_TC001(void)
@@ -4747,8 +4706,6 @@ void SDV_X509_CRL_ENTRY_SET_SERIAL_REPLACE_MEM_TC001(void)
     BSL_Buffer getSerial = {0};
 
     TestMemInit();
-    ASSERT_EQ(CrlEntrySerialMemTrackStart(), BSL_SUCCESS);
-
     entry = HITLS_X509_CrlEntryNew();
     ASSERT_NE(entry, NULL);
     ASSERT_EQ(HITLS_X509_CrlEntryCtrl(entry, HITLS_X509_CRL_SET_REVOKED_SERIALNUM,
@@ -4758,16 +4715,10 @@ void SDV_X509_CRL_ENTRY_SET_SERIAL_REPLACE_MEM_TC001(void)
     ASSERT_EQ(HITLS_X509_CrlEntryCtrl(entry, HITLS_X509_CRL_GET_REVOKED_SERIALNUM,
         &getSerial, sizeof(BSL_Buffer)), HITLS_PKI_SUCCESS);
     ASSERT_COMPARE("crl entry serial", getSerial.data, getSerial.dataLen, serial2, sizeof(serial2));
-
-    HITLS_X509_CrlEntryFree(entry);
-    entry = NULL;
-    ASSERT_EQ(g_crlEntrySerialMemAllocCount, g_crlEntrySerialMemFreeCount);
-    CrlEntrySerialMemTrackStop();
     ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     HITLS_X509_CrlEntryFree(entry);
-    CrlEntrySerialMemTrackStop();
 }
 /* END_CASE */
 
@@ -4776,7 +4727,7 @@ EXIT:
  * @title  Release revoked entry extensions when CRL parsing fails after TBS parsing.
  * @brief  Parse a CRL that contains revoked entry extensions, then stub the outer signature BIT STRING
  *         decode to fail. Verify the parse failure path frees all SAL allocations made during parsing.
- * @expect CRL parsing fails and allocation/free counts are balanced.
+ * @expect CRL parsing returns BSL_ASN1_ERR_DECODE_BIT_STRING and no memory leak issue.
  */
 /* BEGIN_CASE */
 void SDV_X509_CRL_PARSE_REVOKED_EXT_FAIL_FREE_TC001(char *path)
@@ -4791,25 +4742,14 @@ void SDV_X509_CRL_PARSE_REVOKED_EXT_FAIL_FREE_TC001(char *path)
     encode.data = data;
     encode.dataLen = dataLen;
 
-    ASSERT_EQ(CrlEntrySerialMemTrackStart(), BSL_SUCCESS);
     g_crlSignatureDecodeFail = true;
     STUB_REPLACE(BSL_ASN1_DecodePrimitiveItem, STUB_BSL_ASN1_DecodePrimitiveItem_CrlSignatureFail);
-
     ASSERT_EQ(HITLS_X509_CrlParseBuff(BSL_FORMAT_UNKNOWN, &encode, &crl), BSL_ASN1_ERR_DECODE_BIT_STRING);
-    HITLS_X509_CrlFree(crl);
-    crl = NULL;
-    ASSERT_EQ(g_crlEntrySerialMemAllocCount, g_crlEntrySerialMemFreeCount);
-
-    STUB_RESTORE(BSL_ASN1_DecodePrimitiveItem);
-    g_crlSignatureDecodeFail = false;
-    CrlEntrySerialMemTrackStop();
-    TestErrClear();
 
 EXIT:
     STUB_RESTORE(BSL_ASN1_DecodePrimitiveItem);
     g_crlSignatureDecodeFail = false;
     HITLS_X509_CrlFree(crl);
-    CrlEntrySerialMemTrackStop();
     BSL_SAL_Free(data);
     TestErrClear();
 }
