@@ -1572,25 +1572,18 @@ int32_t HITLS_X509_CheckCertRevoked(HITLS_X509_Cert *cert, HITLS_X509_CrlEntry *
 }
 
 static int32_t X509_StoreCheckSignature(const BSL_Buffer *sm2UserId, const CRYPT_EAL_PkeyCtx *pubKey,
-    uint8_t *rawData, uint32_t rawDataLen, HITLS_X509_Asn1AlgId *alg, BSL_ASN1_BitString *signature)
+    uint8_t *rawData, uint32_t rawDataLen, const HITLS_X509_Asn1AlgId *alg, BSL_ASN1_BitString *signature)
 {
+    HITLS_X509_Asn1AlgId tmpAlg = *alg;
 #ifdef HITLS_CRYPTO_SM2
-    bool isHasUserId = true;
-    if (alg->sm2UserId.data == NULL && sm2UserId != NULL) {
-        alg->sm2UserId = *sm2UserId;
-        isHasUserId = false;
+    if (tmpAlg.algId == BSL_CID_SM2DSAWITHSM3 && tmpAlg.sm2UserId.data == NULL && sm2UserId != NULL) {
+        tmpAlg.sm2UserId = *sm2UserId;
     }
 #else
     (void)sm2UserId;
 #endif
 
-    int32_t ret = HITLS_X509_CheckSignature(pubKey, rawData, rawDataLen, alg, signature);
-#ifdef HITLS_CRYPTO_SM2
-    if (!isHasUserId) {
-        alg->sm2UserId.data = NULL;
-        alg->sm2UserId.dataLen = 0;
-    }
-#endif
+    int32_t ret = HITLS_X509_CheckSignature(pubKey, rawData, rawDataLen, &tmpAlg, signature);
     if (ret != HITLS_PKI_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
