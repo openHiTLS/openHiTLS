@@ -1,0 +1,24 @@
+* text=auto eol=lf
+*.c text
+*.h text
+*.S text
+*.s text
+*.data text
+*.pem text
+*.json text
+*.yml text
+*.yaml text
+*.txt text
+*.md text
+*.py text
+*.sh text
+*.bat text
+*.cfg text
+*.cnf text
+*.conf text
+*.policy text
+LICENSE text
+Makefile text
+*.mk text
+*.cmake text
+*.cmake.in text
