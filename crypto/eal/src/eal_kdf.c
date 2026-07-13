@@ -51,7 +51,8 @@
 
 bool CRYPT_EAL_KdfIsValidAlgId(CRYPT_KDF_AlgId id)
 {
-    return EAL_KdfFindMethod(id, NULL) == CRYPT_SUCCESS;
+    EAL_KdfMethod method = {0};
+    return EAL_KdfFindMethod(id, &method) == CRYPT_SUCCESS;
 }
 
 CRYPT_EAL_KdfCtx *KdfNewCtxInner(CRYPT_EAL_LibCtx *libCtx, int32_t algId, const char *attrName, bool isProvider)
@@ -201,7 +202,7 @@ CRYPT_EAL_KdfCtx *CRYPT_EAL_KdfDupCtx(const CRYPT_EAL_KdfCtx *from)
     }
 
     CRYPT_EAL_KdfCtx *newCtx = BSL_SAL_Dump(from, sizeof(CRYPT_EAL_KdfCtx));
-    if (newCtx == NULL ) {
+    if (newCtx == NULL) {
         EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_KDF, from->id, CRYPT_MEM_ALLOC_FAIL);
         return NULL;
     }
