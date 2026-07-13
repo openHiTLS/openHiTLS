@@ -121,18 +121,6 @@ static void ApplyColSwap(uint8_t *mat, const int32_t colsBytes, const int32_t bl
     }
 }
 
-static inline uint64_t LoadU64Fast(const uint8_t *src)
-{
-    uint64_t v = 0;
-    (void)memcpy(&v, src, sizeof(v));
-    return v;
-}
-
-static inline void StoreU64Fast(uint8_t *dst, uint64_t v)
-{
-    (void)memcpy(dst, &v, sizeof(v));
-}
-
 static inline void XorRowSpanMaskedU64(uint8_t *dst, const uint8_t *src, int32_t startByte, const int32_t width,
                                        const uint8_t mask)
 {
@@ -143,9 +131,15 @@ static inline void XorRowSpanMaskedU64(uint8_t *dst, const uint8_t *src, int32_t
     const uint64_t mask64 = 0u - (uint64_t)(mask & 1u);
     int32_t c = startByte;
     for (; c + 8 <= width; c += 8) {
-        uint64_t d = LoadU64Fast(dst + c);
-        uint64_t s = LoadU64Fast(src + c);
-        StoreU64Fast(dst + c, d ^ (s & mask64));
+#ifndef FORCE_ADDR_ALIGN
+        uint64_t d = *((uint64_t *)(dst + c));
+        uint64_t s = *((const uint64_t *)(src + c));
+        ((uint64_t *)(dst + c))[0] = d ^ (s & mask64);
+#else
+        uint64_t d = GET_UINT64_LE(dst + c, 0);
+        uint64_t s = GET_UINT64_LE(src + c, 0);
+        PUT_UINT64_LE(d ^ (s & mask64), dst + c, 0);
+#endif
     }
     for (; c < width; c++) {
         dst[c] ^= (uint8_t)(src[c] & mask);
@@ -291,11 +285,12 @@ static int32_t GenPolyOverGF(GFPolynomial *g, const GFPolynomial *f, const int32
             mat[r * t + j] = GFMultiplication(mat[r * t + j], inv);
         }
         for (int32_t k = 0; k < t; k++) {
-            if (k != j) {
-                uint16_t tk = mat[j * t + k];
-                for (int32_t r = j; r <= t; r++) {
-                    mat[r * t + k] ^= GFMultiplication(mat[r * t + j], tk);
-                }
+            if (k == j) {
+                continue;
+            }
+            uint16_t tk = mat[j * t + k];
+            for (int32_t r = j; r <= t; r++) {
+                mat[r * t + k] ^= GFMultiplication(mat[r * t + j], tk);
             }
         }
     }
@@ -368,11 +363,29 @@ static void ExtractTFromMatrix(const GFMatrix *sysH, const McelieceParams *param
     }
 }
 
+static void ParityCheckMatRow(uint16_t *goppaRow, int32_t power, const McelieceParams *params, GFMatrix *matH)
+{
+    const int32_t m = params->m;
+    const int32_t n = params->n;
+    for (int32_t j = 0; j < n; j += 8) {
+        int32_t blockLen = (j + 8 <= n) ? 8 : (n - j);
+        for (int32_t k = 0; k < m; k++) {
+            uint8_t b = 0;
+            // Reference mapping: MSB=col j+7 ... LSB=col j (for partial block, highest index first)
+            for (int32_t tbit = blockLen - 1; tbit >= 0; tbit--) {
+                b <<= 1;
+                b |= (uint8_t)((goppaRow[j + tbit] >> k) & 1);
+            }
+            int32_t row = power * m + k;
+            matH->data[row * matH->colsBytes + (uint32_t)j / 8] = b;
+        }
+    }
+}
 // Build H using the same bit-sliced packing and column grouping convention
 // as the reference path: rows are grouped by bit position (k in 0..GFBITS-1)
 // within each power i in 0..T-1; columns are packed 8-at-a-time into bytes.
 static int32_t BuildParityCheckMatrix(GFMatrix *matH, const GFPolynomial *g, const uint16_t *support,
-                                             const McelieceParams *params)
+                                      const McelieceParams *params)
 {
     const int32_t t = params->t;
     const int32_t m = params->m;
@@ -400,19 +413,7 @@ static int32_t BuildParityCheckMatrix(GFMatrix *matH, const GFPolynomial *g, con
     }
     // Fill rows: for each i (power), for each 8-column block, for each bit k
     for (int32_t i = 0; i < t; i++) {
-        for (int32_t j = 0; j < n; j += 8) {
-            int32_t blockLen = (j + 8 <= n) ? 8 : (n - j);
-            for (int32_t k = 0; k < m; k++) {
-                uint8_t b = 0;
-                // Reference mapping: MSB=col j+7 ... LSB=col j (for partial block, highest index first)
-                for (int32_t tbit = blockLen - 1; tbit >= 0; tbit--) {
-                    b <<= 1;
-                    b |= (uint8_t)((inv[j + tbit] >> k) & 1);
-                }
-                int32_t row = i * m + k;
-                matH->data[row * matH->colsBytes + (uint32_t)j / 8] = b;
-            }
-        }
+        ParityCheckMatRow(inv, i ,params, matH);
         // inv[j] *= support[j] for next power
         for (int32_t j = 0; j < n; j++) {
             uint16_t a = (uint16_t)(support[j] & ((1u << m) - 1u));
@@ -457,11 +458,9 @@ static int32_t ReduceToSystematicForm(uint8_t *mat, const int32_t colsBytes, uin
 
             uint8_t *rowPtr = mat + row * colsBytes;
             if (row == permRow && isSemi) {
-                if (ColsPermutation(mat, colsBytes, pi, pivots, mt) != CRYPT_SUCCESS) {
-                    return CRYPT_MCELIECE_KEYGEN_FAIL;
-                }
+                RETURN_RET_IF(ColsPermutation(mat, colsBytes, pi, pivots, mt) != CRYPT_SUCCESS,
+                              CRYPT_MCELIECE_KEYGEN_FAIL);
             }
-
             uint8_t pivotBit = (uint8_t)((rowPtr[i] >> j) & 1u);
 
             for (int32_t k = row + 1; k < mt; k++) {
@@ -477,12 +476,11 @@ static int32_t ReduceToSystematicForm(uint8_t *mat, const int32_t colsBytes, uin
             }
 
             for (int32_t k = 0; k < mt; k++) {
-                if (k == row) {
-                    continue;
-                }
+                uint8_t skipMask = (uint8_t)((k == row) - 1u);
                 uint8_t *curRow = mat + k * colsBytes;
                 uint8_t curBit = (uint8_t)((curRow[i] >> j) & 1u);
                 uint8_t mask = (uint8_t)(0u - curBit);
+                mask &= skipMask;
                 XorRowMaskedBits(curRow, rowPtr, i, j, colsBytes, mask);
             }
         }
@@ -491,8 +489,8 @@ static int32_t ReduceToSystematicForm(uint8_t *mat, const int32_t colsBytes, uin
 }
 
 static int32_t KeyGenLoop(const uint8_t *sBitsPtr, const uint8_t *fieldOrderingBitsPtr,
-                              const uint8_t *irreduciblePolyBitsPtr, CMPublicKey *pk, CMPrivateKey *sk,
-                              const McelieceParams *params, bool isSemi)
+                          const uint8_t *irreduciblePolyBitsPtr, CMPublicKey *pk, CMPrivateKey *sk,
+                          const McelieceParams *params, bool isSemi)
 {
     int32_t ret;
     uint16_t *pi = (uint16_t *)BSL_SAL_Malloc(sizeof(uint16_t) * MCELIECE_Q);

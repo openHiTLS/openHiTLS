@@ -115,10 +115,11 @@ static inline uint64_t CMMakeMask(uint64_t x)
 // trailing zero count
 static inline int32_t CMCtz64(uint64_t x)
 {
+    uint64_t tmpX = x;
     int32_t c = 0;
-    while ((x & 1) == 0) {
+    while ((tmpX & 1) == 0) {
         c++;
-        x >>= 1;
+        tmpX >>= 1;
     }
     return c;
 }
@@ -175,8 +176,7 @@ int32_t FixedWeightVector(CRYPT_MCELIECE_Ctx *ctx, uint8_t *output);
 
 // Encode an error vector using the public key matrix T
 // Computes C = H * e where H = [I_mt | T]
-void EncodeVector(uint8_t *errorVector, const GFMatrix *matT, uint8_t *ciphertext,
-                     const McelieceParams *params);
+void EncodeVector(uint8_t *errorVector, const GFMatrix *matT, uint8_t *ciphertext, const McelieceParams *params);
 
 // =================================================================================
 // Poly Functions

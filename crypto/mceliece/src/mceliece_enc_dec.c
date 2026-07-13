@@ -32,10 +32,11 @@
 // Count how many 1-bit in x
 static inline unsigned Pop64(uint64_t x)
 { // 64-bit SWAR pop-count constants—bit masks for 2-bit, 4-bit, 8-bit and byte-lane aggregation
-    x -= (x >> 1) & 0x5555555555555555ULL;
-    x = (x & 0x3333333333333333ULL) + ((x >> 2) & 0x3333333333333333ULL);
-    x = (x + (x >> 4)) & 0x0F0F0F0F0F0F0F0FULL;
-    return (unsigned)((x * 0x0101010101010101ULL) >> 56); // Final shift to accumulate 8 byte sums into the high byte
+    uint64_t tmpX = x;
+    tmpX -= (tmpX >> 1) & 0x5555555555555555ULL;
+    tmpX = (tmpX & 0x3333333333333333ULL) + ((tmpX >> 2) & 0x3333333333333333ULL);
+    tmpX = (tmpX + (tmpX >> 4)) & 0x0F0F0F0F0F0F0F0FULL;
+    return (unsigned)((tmpX * 0x0101010101010101ULL) >> 56); // Final shift to accumulate 8 byte sums into the high byte
 }
 
 static void CopyHeadMT(uint8_t *dst, const uint8_t *src, const McelieceParams *params)
@@ -66,14 +67,16 @@ static void ShiftErrorMt(uint8_t *src, uint8_t *dst, uint32_t mt, uint32_t k)
             }
             dst[numBytes - 1] = src[numBytes - 1] >> shift;
         }
+        default:
+            return;
     }
 }
 
 static void ComputeParity(uint8_t *ciphertext, const uint8_t *errorVector, const GFMatrix *matT,
-                             const McelieceParams *params)
+                          const McelieceParams *params)
 {
     for (int32_t r = 0; r < params->mt; r++) {
-        uint8_t *row = matT->data + r * params->kBytes;;
+        uint8_t *row = matT->data + r * params->kBytes;
         const int32_t n64 = params->kBytes >> 3;
         int32_t leftBytes = params->kBytes - (n64 << 3);
         uint64_t acc = 0;
@@ -93,8 +96,7 @@ static void ComputeParity(uint8_t *ciphertext, const uint8_t *errorVector, const
 }
 
 // Encode: C = He, where H = (I_mt | T)
-void EncodeVector(uint8_t *errorVector, const GFMatrix *matT, uint8_t *ciphertext,
-                     const McelieceParams *params)
+void EncodeVector(uint8_t *errorVector, const GFMatrix *matT, uint8_t *ciphertext, const McelieceParams *params)
 {
     // copy e[0...mt -1] to C
     CopyHeadMT(ciphertext, errorVector, params);
@@ -166,7 +168,7 @@ int32_t FixedWeightVector(CRYPT_MCELIECE_Ctx *ctx, uint8_t *e)
 
         int32_t validN = 0;
         for (int32_t i = 0; i < sampleCnt && validN < t; i++) {
-            uint16_t v = ((uint16_t)randBytes[i * 2] | (uint16_t)randBytes[i * 2 + 1] << 8) & MCELIECE_Q_1;
+            uint16_t v = (((uint16_t)randBytes[i * 2] | (uint16_t)randBytes[i * 2 + 1] << 8) & MCELIECE_Q_1);
             if (v < (uint16_t)ctx->para->n) {
                 posList[validN] = v;
                 validN++;
@@ -209,7 +211,6 @@ int32_t ComputeSyndrome(const uint8_t *received, const GFPolynomial *g, const ui
                         const McelieceParams *params, uint16_t *syndrome)
 {
     const int32_t syndLen = params->t << 1;
-    uint32_t full64 = params->n >> 6;
 
     uint16_t *gAlpha = (uint16_t *)BSL_SAL_Malloc(params->n * sizeof(uint16_t));
     uint16_t *invG2 = (uint16_t *)BSL_SAL_Malloc(params->n * sizeof(uint16_t));
@@ -227,32 +228,15 @@ int32_t ComputeSyndrome(const uint8_t *received, const GFPolynomial *g, const ui
 
     for (int32_t j = 0; j < syndLen; j++) {
         uint16_t acc = 0;
-        for (uint32_t i64 = 0; i64 < full64; i64++) {
-            uint64_t w = GET_UINT64_LE(received, i64 * 8);
-            if (w == 0) { // Early-exit sentinel for zero 64-bit chunks (no bits set)
-                continue;
-            }
-            for (int32_t b = 0; b < 64; b++) { // Number of bits processed per 64-bit word during bit-sliced syndrome accumulation
-                if ((w & (1ull << b)) != 0) {
-                    uint32_t i = (i64 << 6) + b;
-                    uint16_t t = GFMultiplication(GFPower(alpha[i], j), invG2[i]);
-                    acc = GFAddtion(acc, t);
-                }
+        for (int32_t b = 0; b < params->n; ++b) {
+            uint32_t byteIdx = b >> 3;
+            uint32_t bitIdx = b & 0x07;
+            if ((received[byteIdx] & (1u << bitIdx)) != 0) {
+                uint16_t t = GFMultiplication(GFPower(alpha[b], j), invG2[b]);
+                acc = GFAddtion(acc, t);
             }
         }
         syndrome[j] = acc;
-
-        // tail, less than 64 bits
-        for (uint32_t i = full64 * 64; i < (uint32_t)params->n; i++) {
-            if (VectorGetBit(received, i) != 0) {
-                if (gAlpha[i] != 0) {
-                    uint16_t alphaPow = GFPower(alpha[i], j);
-                    uint16_t g2 = GFMultiplication(gAlpha[i], gAlpha[i]);
-                    uint16_t term = GFDivision(alphaPow, g2);
-                    syndrome[j] = GFAddtion(syndrome[j], term);
-                }
-            }
-        }
     }
     BSL_SAL_ClearFree(gAlpha, params->n * sizeof(uint16_t));
     BSL_SAL_ClearFree(invG2, params->n * sizeof(uint16_t));
@@ -269,7 +253,7 @@ static void BmInitState(GFPolynomial *polyC, GFPolynomial *polyB, int32_t *lenLF
 
 // Compute discrepancy d_N = s_N + Σ C_i * s_{N-i}
 static uint16_t BmComputeDiscrepancy(const uint16_t *syndrome, const GFPolynomial *polyC, const int32_t lenN,
-                                      const int32_t t)
+                                     const int32_t t)
 {
     uint16_t d = 0;
     int32_t loopLen = (t <= lenN) ? t : lenN;

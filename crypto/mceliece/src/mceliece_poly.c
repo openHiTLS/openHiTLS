@@ -50,13 +50,13 @@ uint16_t GFMultiplication(uint16_t a, uint16_t b)
 uint16_t GFPower(uint16_t base, int32_t exp)
 {
     uint16_t result = 1;
-    base &= MCELIECE_Q_1;
+    uint16_t baseModQ = base & MCELIECE_Q_1;
     uint32_t exponent = (uint32_t)exp;
     for (uint32_t i = 0; i < MCELIECE_GF_BITS; i++) {
-        uint16_t product = GFMultiplication(result, base);
+        uint16_t product = GFMultiplication(result, baseModQ);
         uint16_t mask = (uint16_t)(0U - (exponent & 1U));
         result = (uint16_t)((product & mask) | (result & (uint16_t)~mask));
-        base = GFMultiplication(base, base);
+        baseModQ = GFMultiplication(baseModQ, baseModQ);
         exponent >>= 1;
     }
     return result;

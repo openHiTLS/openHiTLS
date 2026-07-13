@@ -9,14 +9,15 @@
  *
  * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND,
  * EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT,
- * MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
+ * MERCHANTABILITY OR FIT FOR a PARTICULAR PURPOSE.
  * See the Mulan PSL v2 for more details.
  */
 
 #include "hitls_build.h"
 #ifdef HITLS_CRYPTO_MCELIECE
-#include "bsl_sal.h"
 #include <string.h>
+
+#include "bsl_sal.h"
 #include "crypt_errno.h"
 #include "bsl_err_internal.h"
 #include "mceliece_local.h"
@@ -90,29 +91,29 @@ static void Build32BitsKeys(uint32_t *out, const uint16_t *pi, const uint32_t n)
     }
 }
 
-// Extract min-index: B[i] = (px<<16) | min(px,i)
-static void ExtractMinIndex(uint32_t *B, const uint32_t *A, const uint32_t n)
+// Extract min-index: b[i] = (px<<16) | min(px,i)
+static void ExtractMinIndex(uint32_t *b, const uint32_t *a, const uint32_t n)
 {
     for (uint32_t i = 0; i < n; i++) {
-        uint32_t px = A[i] & 0xFFFFU;
+        uint32_t px = a[i] & 0xFFFFU;
         uint32_t cx = (px < i) ? px : i;
-        B[i] = (px << 16) | cx;
+        b[i] = (px << 16) | cx;
     }
 }
 
-// Tag original index: A[i] = (A[i]<<16) | i
-static void TagOriginalIndex(uint32_t *A, const uint32_t n)
+// Tag original index: a[i] = (a[i]<<16) | i
+static void TagOriginalIndex(uint32_t *a, const uint32_t n)
 {
     for (uint32_t i = 0; i < n; i++) {
-        A[i] = (A[i] << 16) | i;
+        a[i] = (a[i] << 16) | i;
     }
 }
 
-// Tag parent key: A[i] = (A[i]<<16) | (B[i]>>16)
-static void TagParentKey(uint32_t *A, const uint32_t *B, const uint32_t n)
+// Tag parent key: a[i] = (a[i]<<16) | (b[i]>>16)
+static void TagParentKey(uint32_t *a, const uint32_t *b, const uint32_t n)
 {
     for (uint32_t i = 0; i < n; i++) {
-        A[i] = (A[i] << 16) | (B[i] >> 16);
+        a[i] = (a[i] << 16) | (b[i] >> 16);
     }
 }
 
@@ -224,14 +225,15 @@ static int32_t PrepareParentKeys(uint32_t *areaA, const uint16_t *pi, const uint
 static int32_t EmitFirstHalf(uint32_t *posOut, uint8_t *out, uint32_t pos, uint32_t step, uint32_t *areaA,
                              uint32_t *areaB, const uint32_t n)
 {
+    uint32_t tmpPos = pos;
     for (uint32_t j = 0; j < n / 2; j++) {
         uint32_t x = 2 * j;
         uint32_t fj = areaB[x] & 1U; // Unit bit mask to extract control bit from LSB
         uint32_t tmpFx = x + fj;
         uint32_t tmpFx1 = tmpFx ^ 1U; // Toggle mask to flip least-significant bit (select sibling)
 
-        Write1BitLE(out, pos, fj);
-        pos += step;
+        Write1BitLE(out, tmpPos, fj);
+        tmpPos += step;
 
         areaB[x] = (areaA[x] << 16) | tmpFx;
         areaB[x + 1] = (areaA[x + 1] << 16) | tmpFx1;
@@ -241,7 +243,7 @@ static int32_t EmitFirstHalf(uint32_t *posOut, uint8_t *out, uint32_t pos, uint3
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
-    *posOut = pos;
+    *posOut = tmpPos;
     return CRYPT_SUCCESS;
 }
 
@@ -249,14 +251,15 @@ static int32_t EmitFirstHalf(uint32_t *posOut, uint8_t *out, uint32_t pos, uint3
 static int32_t EmitSecondHalf(uint32_t *posOut, uint8_t *out, uint32_t pos, uint32_t step, uint32_t *areaA,
                               uint32_t *areaB, const uint32_t n)
 {
+    uint32_t tmpPos = pos;
     for (uint32_t k = 0; k < n / 2; k++) {
         uint32_t y = 2 * k;
         uint32_t lk = areaB[y] & 1U;
         uint32_t tmpLy = y + lk;
         uint32_t tmpLy1 = tmpLy ^ 1U;
 
-        Write1BitLE(out, pos, lk);
-        pos += step;
+        Write1BitLE(out, tmpPos, lk);
+        tmpPos += step;
 
         areaA[y] = (tmpLy << 16) | (areaB[y] & 0xFFFFU);
         areaA[y + 1] = (tmpLy1 << 16) | (areaB[y + 1] & 0xFFFFU);
@@ -266,7 +269,7 @@ static int32_t EmitSecondHalf(uint32_t *posOut, uint8_t *out, uint32_t pos, uint
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
-    *posOut = pos;
+    *posOut = tmpPos;
     return CRYPT_SUCCESS;
 }
 
@@ -294,12 +297,13 @@ static void BuildChildPerm(uint16_t *q, const uint32_t *areaA, const uint32_t n)
 static int32_t BenesNetControlbitsCore(uint8_t *out, uint32_t pos, uint32_t step, const uint16_t *pi, const uint32_t w,
                                    const uint32_t n, int32_t *temp)
 {
+    uint32_t tmpPos = pos;
     uint32_t *areaA = (uint32_t *)temp; // work area 0
     uint32_t *areaB = (uint32_t *)(temp + n); // work area 1
     uint16_t *q = (uint16_t *)(temp + n + n / 4); // perm buffer
 
     if (w == 1) { // Base-case sentinel – when only 1 control layer remains, emit single bit and stop
-        Write1BitLE(out, pos, pi[0] & 1U);
+        Write1BitLE(out, tmpPos, pi[0] & 1U);
         return CRYPT_SUCCESS;
     }
     int32_t ret;
@@ -352,30 +356,30 @@ static int32_t BenesNetControlbitsCore(uint8_t *out, uint32_t pos, uint32_t step
     }
 
     uint32_t posOut;
-    ret = EmitFirstHalf(&posOut, out, pos, step, areaA, areaB, n);
+    ret = EmitFirstHalf(&posOut, out, tmpPos, step, areaA, areaB, n);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
-    pos = posOut;
-    pos += (2 * w - 3) * step * (n / 2); // Coefficient 2 – total control-bit skew factor for first-half emission offset
+    tmpPos = posOut;
+    tmpPos += (2 * w - 3) * step * (n / 2); // Coefficient 2 – total control-bit skew factor for first-half emission offset
 
-    ret = EmitSecondHalf(&posOut, out, pos, step, areaA, areaB, n);
+    ret = EmitSecondHalf(&posOut, out, tmpPos, step, areaA, areaB, n);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
-    pos = posOut;
+    tmpPos = posOut;
     // Coefficient 2 – total control-bit skew factor for second-half emission correction
-    pos -= (2 * w - 2) * step * (n / 2);
+    tmpPos -= (2 * w - 2) * step * (n / 2);
 
     BuildChildPerm(q, areaA, n);
-    ret = BenesNetControlbitsCore(out, pos, step * 2, q, w - 1, n / 2, temp);
+    ret = BenesNetControlbitsCore(out, tmpPos, step * 2, q, w - 1, n / 2, temp);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
-    ret = BenesNetControlbitsCore(out, pos + step, step * 2, q + n / 2, w - 1, n / 2, temp);
+    ret = BenesNetControlbitsCore(out, tmpPos + step, step * 2, q + n / 2, w - 1, n / 2, temp);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;

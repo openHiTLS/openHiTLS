@@ -31,9 +31,9 @@
 
 #define CHECK_IF_NULL_RET(PTR, RET)  \
     do {                             \
-        if (PTR == NULL) {           \
+        if ((PTR) == NULL) {           \
             BSL_ERR_PUSH_ERROR(RET); \
-            return RET;              \
+            return (RET);              \
         }                            \
     } while (0)
 
@@ -701,7 +701,7 @@ static int32_t MceliecePrvKeyCmp(CRYPT_MCELIECE_Ctx *ctx1, CRYPT_MCELIECE_Ctx *c
     }
     if (ctx1->privateKey->controlbitsLen != ctx2->privateKey->controlbitsLen ||
         ConstTimeMemcmp(ctx1->privateKey->controlbits, ctx2->privateKey->controlbits,
-        ctx1->privateKey->controlbitsLen) == 0) {
+                        ctx1->privateKey->controlbitsLen) == 0) {
         BSL_ERR_PUSH_ERROR(CRYPT_MCELIECE_KEY_NOT_EQUAL);
         return CRYPT_MCELIECE_KEY_NOT_EQUAL;
     }
