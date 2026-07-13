@@ -561,6 +561,41 @@ EXIT:
 }
 
 /**
+ * @test   SDV_CRYPTO_EAL_KDF_API_ERR_TC001
+ * @title  CRYPT_EAL_KdfIsValidAlgId validity check.
+ * @precon nan
+ * @brief
+ *    1. For each compiled-in KDF algorithm ID, call CRYPT_EAL_KdfIsValidAlgId,
+ *       expected result 1: returns true.
+ *    2. Call CRYPT_EAL_KdfIsValidAlgId with CRYPT_KDF_MAX (invalid),
+ *       expected result 2: returns false.
+ * @expect
+ *    1. True is returned for every enabled KDF algorithm ID.
+ *    2. False is returned for the invalid ID.
+ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_EAL_KDF_API_ERR_TC001(void)
+{
+    TestMemInit();
+#ifdef HITLS_CRYPTO_HKDF
+    ASSERT_TRUE(CRYPT_EAL_KdfIsValidAlgId(CRYPT_KDF_HKDF) == true);
+#endif
+#ifdef HITLS_CRYPTO_PBKDF2
+    ASSERT_TRUE(CRYPT_EAL_KdfIsValidAlgId(CRYPT_KDF_PBKDF2) == true);
+#endif
+#ifdef HITLS_CRYPTO_KDFTLS12
+    ASSERT_TRUE(CRYPT_EAL_KdfIsValidAlgId(CRYPT_KDF_KDFTLS12) == true);
+#endif
+#ifdef HITLS_CRYPTO_SCRYPT
+    ASSERT_TRUE(CRYPT_EAL_KdfIsValidAlgId(CRYPT_KDF_SCRYPT) == true);
+#endif
+    ASSERT_TRUE(CRYPT_EAL_KdfIsValidAlgId(CRYPT_KDF_MAX) == false);
+EXIT:
+    return;
+}
+/* END_CASE */
+
+/**
  * @test SDV_CRYPTO_HKDF_COPY_CTX_STUB_TC001
  * title 1. Test the kdf copy context with stub malloc fail
  *
