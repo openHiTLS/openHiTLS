@@ -1185,14 +1185,12 @@ int32_t BN_ModSqrt(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *p, BN_Opti
  * @ingroup bn
  * @brief BigNum to BN_UINT array
  *
- * @param src  [IN] BigNum
- * @param dst  [OUT] BN_UINT array for receiving the conversion result
+ * @param src  [IN] BigNum. Caller must ensure src is not NULL.
+ * @param dst  [OUT] BN_UINT array for receiving the conversion result. Caller must ensure dst is not NULL.
  * @param size [IN] Length of the dst buffer
  *
  * @retval CRYPT_SUCCESS
- * @retval CRYPT_NULL_INPUT     Invalid null pointer
- * @retval CRYPT_MEM_ALLOC_FAIL Memory allocation failure
- * @retval CRYPT_SECUREC_FAIL   The security function returns an error.
+ * @retval CRYPT_BN_BUFF_LEN_NOT_ENOUGH The dst buffer length is less than src->size.
  */
 int32_t BN_BN2Array(const BN_BigNum *src, BN_UINT *dst, uint32_t size);
 
@@ -1200,12 +1198,11 @@ int32_t BN_BN2Array(const BN_BigNum *src, BN_UINT *dst, uint32_t size);
  * @ingroup bn
  * @brief BN_UINT array to BigNum
  *
- * @param dst [OUT] BigNum
- * @param src [IN] BN_UINT array to be converted
+ * @param dst [OUT] BigNum. Caller must ensure dst is not NULL.
+ * @param src [IN] BN_UINT array to be converted. Caller must ensure src is not NULL.
  * @param size [IN] Length of the src buffer
  *
  * @retval CRYPT_SUCCESS
- * @retval CRYPT_NULL_INPUT     Invalid null pointer.
  * @retval CRYPT_MEM_ALLOC_FAIL Memory allocation failure
  */
 int32_t BN_Array2BN(BN_BigNum *dst, const BN_UINT *src, const uint32_t size);
