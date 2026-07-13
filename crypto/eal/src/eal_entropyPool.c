@@ -32,7 +32,7 @@
 #ifdef HITLS_CRYPTO_ENTROPY_GM_CF
 #define HITLS_ENTROPY_DEFAULT_CF "sm3_df"
 #else
-#define HITLS_ENTROPY_DEFAULT_CF "sha256_df"
+#define HITLS_ENTROPY_DEFAULT_CF "sha3_256_df"
 #endif
 
 #ifdef HITLS_CRYPTO_ENTROPY_SYS
@@ -116,7 +116,6 @@ uint32_t CRYPT_EAL_EsEntropyGet(CRYPT_EAL_Es *esCtx, uint8_t *data, uint32_t len
     return resLen;
 }
 
-
 static uint32_t EAL_CfGetAlgId(const char *name)
 {
     if (strcmp(name, "sm3_df") == 0) {
@@ -133,6 +132,15 @@ static uint32_t EAL_CfGetAlgId(const char *name)
     }
     if (strcmp(name, "sha512_df") == 0) {
         return CRYPT_MD_SHA512;
+    }
+    if (strcmp(name, "sha3_256_df") == 0) {
+        return CRYPT_MD_SHA3_256;
+    }
+    if (strcmp(name, "sha3_384_df") == 0) {
+        return CRYPT_MD_SHA3_384;
+    }
+    if (strcmp(name, "sha3_512_df") == 0) {
+        return CRYPT_MD_SHA3_512;
     }
     return CRYPT_MD_MAX;
 }

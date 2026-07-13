@@ -112,15 +112,8 @@ long SAL_TIME_TicksPerSec(void)
 uint64_t SAL_TIME_GetNSec(void)
 {
 #if defined(HITLS_BSL_SAL_DARWIN)
-    /* macOS: wait for CLOCK_UPTIME_RAW to advance so back-to-back calls return a changed monotonic value. */
-    uint64_t ticks = clock_gettime_nsec_np(CLOCK_UPTIME_RAW);
-    uint64_t nextTicks = ticks;
-    while (nextTicks == ticks) {
-        nextTicks = clock_gettime_nsec_np(CLOCK_UPTIME_RAW);
-    }
-    return nextTicks;
+    return clock_gettime_nsec_np(CLOCK_UPTIME_RAW);
 #elif defined(HITLS_BSL_SAL_LINUX)
-    /* Linux: Use CLOCK_MONOTONIC (sufficient precision on Linux) */
     uint64_t ticks = 0;
     struct timespec time;
     if (clock_gettime(CLOCK_REALTIME, &time) == 0) {

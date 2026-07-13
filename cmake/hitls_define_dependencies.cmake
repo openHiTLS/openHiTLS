@@ -143,6 +143,8 @@ hitls_define_dependency(HITLS_CRYPTO_ENTROPY_HARDWARE
 hitls_define_dependency(HITLS_CRYPTO_ENTROPY_DEVRANDOM  DEPS HITLS_CRYPTO_ENTROPY)
 hitls_define_dependency(HITLS_CRYPTO_ENTROPY_GETENTROPY DEPS HITLS_CRYPTO_ENTROPY)
 hitls_define_dependency(HITLS_CRYPTO_ENTROPY_SYS        DEPS HITLS_CRYPTO_ENTROPY HITLS_BSL_SAL_TIME)
+hitls_define_dependency(HITLS_CRYPTO_ENTROPY_NS_CPUJITTER DEPS HITLS_CRYPTO_ENTROPY_SYS)
+hitls_define_dependency(HITLS_CRYPTO_ENTROPY_NS_HASHLOOP DEPS HITLS_CRYPTO_ENTROPY_SYS HITLS_CRYPTO_SHA3)
 ## Eal
 hitls_define_dependency(HITLS_CRYPTO_EAL                DEPS HITLS_CRYPTO HITLS_BSL_INIT)
 hitls_define_dependency(HITLS_CRYPTO_ENTROPY_GM_CF      DEPS HITLS_CRYPTO_EAL HITLS_CRYPTO_ENTROPY)
@@ -1623,6 +1625,17 @@ endmacro()
 
 
 macro(hitls_special_depends_handle)
+    if(HITLS_CRYPTO_ENTROPY_SYS)
+        # eal_entropyPool.c picks the default seed-pool conditioner at compile time:
+        # sm3_df under GM_CF, sha3_256_df otherwise. A static DEPS edge cannot express
+        # that branch.
+        if(HITLS_CRYPTO_ENTROPY_GM_CF)
+            hitls_feature_local_enable(HITLS_CRYPTO_SM3)
+        else()
+            hitls_feature_local_enable(HITLS_CRYPTO_SHA3)
+        endif()
+    endif()
+
     if(HITLS_CRYPTO_ENTROPY)
         # if no entropy source is selected, default to getentropy and /dev/random if available.
         if(NOT HITLS_CRYPTO_ENTROPY_GETENTROPY AND NOT HITLS_CRYPTO_ENTROPY_DEVRANDOM AND
@@ -1630,6 +1643,29 @@ macro(hitls_special_depends_handle)
             hitls_feature_local_enable(HITLS_CRYPTO_ENTROPY_DEVRANDOM)
             hitls_feature_local_enable(HITLS_CRYPTO_ENTROPY_GETENTROPY)
         endif()
+    endif()
+
+    if(NOT HITLS_CRYPTO_ENTROPY_SYS)
+        # The per-source gates are meaningless without the software entropy source;
+        # shadow them off so they do not leak into the generated feature macros.
+        set(HITLS_CRYPTO_ENTROPY_NS_CPUJITTER OFF)
+        set(HITLS_CRYPTO_ENTROPY_NS_HASHLOOP OFF)
+    endif()
+
+    if(HITLS_CRYPTO_CMVP_ISO19790 AND HITLS_CRYPTO_ENTROPY_SYS)
+        # The ISO 19790 profile pins the noise-source set instead of stripping
+        # sources from every entropy source at runtime: CPU-Jitter is credited,
+        # Hash-Loop stays out of the build.
+        set(HITLS_CRYPTO_ENTROPY_NS_CPUJITTER ON)
+        set(HITLS_CRYPTO_ENTROPY_NS_HASHLOOP OFF)
+    endif()
+
+    # Runs after the ISO 19790 pin so the warning reflects the final source set.
+    if(HITLS_CRYPTO_ENTROPY_SYS AND NOT HITLS_CRYPTO_ENTROPY_NS_CPUJITTER AND
+        NOT HITLS_CRYPTO_ENTROPY_NS_HASHLOOP)
+        message(WARNING "No credited built-in noise source is enabled: the default software entropy "
+            "source cannot produce entropy. Enable CPU-Jitter or Hash-Loop. A manually created "
+            "entropy source can use CRYPT_ENTROPY_ADD_NS before CRYPT_EAL_EsInit.")
     endif()
 
     if(HITLS_CRYPTO_NIST_ECC_ACCELERATE AND NOT HITLS_CRYPTO_ECC)

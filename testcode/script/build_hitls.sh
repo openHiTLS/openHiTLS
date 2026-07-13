@@ -98,6 +98,11 @@ build_hitls_code()
     feature_options="${feature_options} -DHITLS_CRYPTO_RAND_CB=ON" # HITLS_CRYPTO_RAND_CB: add rand callback
     feature_options="${feature_options} -DHITLS_EAL_INIT_OPTS=9 -DHITLS_CRYPTO_ASM_CHECK=ON" # Get CPU capability
     feature_options="${feature_options} -DHITLS_CRYPTO_ENTROPY=ON -DHITLS_CRYPTO_ENTROPY_DEVRANDOM=ON -DHITLS_CRYPTO_ENTROPY_GETENTROPY=ON -DHITLS_CRYPTO_ENTROPY_SYS=ON -DHITLS_CRYPTO_ENTROPY_HARDWARE=ON" # add default entropy
+    # The software entropy source needs a built-in noise source; a caller that
+    # names one picks the set itself.
+    if [[ "${feature_options}" != *"HITLS_CRYPTO_ENTROPY_NS_"* ]]; then
+        feature_options="${feature_options} -DHITLS_CRYPTO_ENTROPY_NS_CPUJITTER=ON"
+    fi
     feature_options="${feature_options} -DHITLS_CRYPTO_DRBG_GM=ON" # enable GM DRBG
     feature_options="${feature_options} -DHITLS_CRYPTO_ACVP_TESTS=ON" # enable ACVP tests
     feature_options="${feature_options} -DHITLS_CRYPTO_DSA_GEN_PARA=ON" # enable DSA genPara tests
@@ -252,7 +257,12 @@ parse_option()
                 ;;
             "gcov")
                 debug_mode=true
-                add_options="${add_options} -fno-omit-frame-pointer -fprofile-arcs -ftest-coverage -fdump-rtl-expand"
+                add_options="${add_options} -fno-omit-frame-pointer -fprofile-arcs -ftest-coverage"
+                # -fdump-rtl-expand is a GCC-only pass (RTL is GCC's IR); skip it on clang
+                # regardless of OS, else it hits -Werror as an unknown argument.
+                if ! "${CC:-cc}" --version 2>/dev/null | grep -qi clang; then
+                    add_options="${add_options} -fdump-rtl-expand"
+                fi
                 del_options="${del_options} -O3"
                 ;;
             "debug")

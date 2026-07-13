@@ -35,12 +35,20 @@ static int32_t EntropyEcf(ENTROPY_ECFCtx *enCtx, uint8_t *data, uint32_t dataLen
     uint32_t conLen = ECF_MAX_OUTPUT_LEN;
     int32_t ret = enCtx->conFunc(enCtx->algId, data, dataLen, conData, &conLen);
     if (ret != CRYPT_SUCCESS) {
+        BSL_SAL_CleanseData(conData, sizeof(conData));
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
+    if (conLen > ECF_MAX_OUTPUT_LEN) {
+        BSL_SAL_CleanseData(conData, sizeof(conData));
+        BSL_ERR_PUSH_ERROR(CRYPT_ENTROPY_CONDITION_FAILURE);
+        return CRYPT_ENTROPY_CONDITION_FAILURE;
+    }
     uint32_t cpLen = (conLen > *outLen) ? *outLen : conLen;
     memcpy(out, conData, cpLen);
-    BSL_SAL_CleanseData(conData, conLen);
+    /* The whole buffer may hold conditioner output regardless of the reported
+       length, so the wipe covers all of it. */
+    BSL_SAL_CleanseData(conData, sizeof(conData));
     *outLen = cpLen;
     return CRYPT_SUCCESS;
 }

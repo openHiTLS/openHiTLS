@@ -27,6 +27,37 @@
 #define SEEDPOOL_ES_FULL_MINENTROPY 8
 #define SEEDPOOL_ES_SYS_MINENTROPY 7
 
+#if defined(HITLS_CRYPTO_ENTROPY_GETENTROPY) || defined(HITLS_CRYPTO_ENTROPY_DEVRANDOM)
+#define ENTROPY_SEEDPOOL_HAVE_SYS_BACKEND
+#endif
+
+#if defined(HITLS_CRYPTO_ENTROPY_HARDWARE) && \
+    (defined(__x86_64__) || (defined(__aarch64__) && defined(__linux__)))
+#define ENTROPY_SEEDPOOL_HAVE_HW_BACKEND
+#endif
+
+static int32_t SeedPoolAddDefaultSys(ENTROPY_SeedPool *pool)
+{
+#ifdef ENTROPY_SEEDPOOL_HAVE_SYS_BACKEND
+    CRYPT_EAL_EsPara para = {false, SEEDPOOL_ES_SYS_MINENTROPY, NULL, ENTROPY_SysEntropyGet};
+    return ENTROPY_SeedPoolAddEs(pool, &para);
+#else
+    (void)pool;
+    return CRYPT_SUCCESS;
+#endif
+}
+
+static int32_t SeedPoolAddDefaultHw(ENTROPY_SeedPool *pool)
+{
+#ifdef ENTROPY_SEEDPOOL_HAVE_HW_BACKEND
+    CRYPT_EAL_EsPara para = {true, SEEDPOOL_ES_FULL_MINENTROPY, NULL, ENTROPY_HWEntropyGet};
+    return ENTROPY_SeedPoolAddEs(pool, &para);
+#else
+    (void)pool;
+    return CRYPT_SUCCESS;
+#endif
+}
+
 ENTROPY_SeedPool *ENTROPY_SeedPoolNew(bool isCreateNullPool)
 {
     ENTROPY_SeedPool *poolCtx = BSL_SAL_Malloc(sizeof(ENTROPY_SeedPool));
@@ -45,15 +76,15 @@ ENTROPY_SeedPool *ENTROPY_SeedPoolNew(bool isCreateNullPool)
     if (isCreateNullPool) {
         return poolCtx;
     }
-    CRYPT_EAL_EsPara para = {false, SEEDPOOL_ES_SYS_MINENTROPY, NULL, ENTROPY_SysEntropyGet};
-    int32_t ret = ENTROPY_SeedPoolAddEs(poolCtx, &para);
+
+    int32_t ret = SeedPoolAddDefaultSys(poolCtx);
     if (ret != CRYPT_SUCCESS) {
         ENTROPY_SeedPoolFree(poolCtx);
         BSL_ERR_PUSH_ERROR(ret);
         return NULL;
     }
-    CRYPT_EAL_EsPara hwPara = {true, SEEDPOOL_ES_FULL_MINENTROPY, NULL, ENTROPY_HWEntropyGet};
-    ret = ENTROPY_SeedPoolAddEs(poolCtx, &hwPara);
+
+    ret = SeedPoolAddDefaultHw(poolCtx);
     if (ret != CRYPT_SUCCESS) {
         ENTROPY_SeedPoolFree(poolCtx);
         BSL_ERR_PUSH_ERROR(ret);
@@ -131,6 +162,11 @@ static uint32_t GetMinLen(uint32_t needEntropy, uint32_t currEntropy, uint32_t m
     return bufLen >= len ? len : bufLen;
 }
 
+static uint32_t SeedPoolCreditAdd(uint32_t curEntropy, uint32_t minEntropy, uint32_t readLen)
+{
+    uint64_t total = (uint64_t)curEntropy + (uint64_t)minEntropy * readLen;
+    return total > UINT32_MAX ? UINT32_MAX : (uint32_t)total;
+}
 
 uint32_t ENTROPY_SeedPoolCollect(ENTROPY_SeedPool *pool, bool isNpesUsed, uint32_t needEntropy, uint8_t *data,
     uint32_t *len)
@@ -154,10 +190,15 @@ uint32_t ENTROPY_SeedPoolCollect(ENTROPY_SeedPool *pool, bool isNpesUsed, uint32
         }
         uint32_t tmpLen = GetMinLen(needEntropy, curEntropy, es->minEntropy, bufLen);
         uint32_t readLen = es->entropyGet(es->ctx, buf, tmpLen);
+        if (readLen > tmpLen) {
+            *len = 0;
+            BSL_ERR_PUSH_ERROR(CRYPT_SEED_POOL_STATE_ERROR);
+            return 0;
+        }
         if (readLen > 0) {
             bufLen -= readLen;
             buf += readLen;
-            curEntropy += es->minEntropy * readLen;
+            curEntropy = SeedPoolCreditAdd(curEntropy, es->minEntropy, readLen);
         }
         bool flag = (needEntropy == 0) ? (bufLen == 0) : (curEntropy >= needEntropy);
         if (flag) {

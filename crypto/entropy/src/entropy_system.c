@@ -26,8 +26,6 @@
 #include <sys/syscall.h>
 #endif
 #include <string.h>
-#include "bsl_err_internal.h"
-#include "crypt_errno.h"
 #include "entropy_seed_pool.h"
 
 
@@ -55,7 +53,6 @@ uint32_t ENTROPY_SysEntropyGet(void *ctx, uint8_t *buf, uint32_t bufLen)
 #if defined(HITLS_CRYPTO_ENTROPY_DEVRANDOM)
     int32_t fd = open("/dev/random", O_RDONLY);
     if (fd == -1) {
-        BSL_ERR_PUSH_ERROR(CRYPT_DRBG_FAIL_GET_ENTROPY);
         return 0;
     }
     uint32_t left = bufLen;
@@ -71,16 +68,12 @@ uint32_t ENTROPY_SysEntropyGet(void *ctx, uint8_t *buf, uint32_t bufLen)
         tmp += (uint32_t)count;
     } while (left > 0);
     close(fd);
-    if (left > 0) {
-        BSL_ERR_PUSH_ERROR(CRYPT_DRBG_FAIL_GET_ENTROPY);
-    }
     res = bufLen - left;
 #endif
     return res;
 #else
     (void)buf;
     (void)bufLen;
-    BSL_ERR_PUSH_ERROR(CRYPT_DRBG_FAIL_GET_ENTROPY);
     return 0;
 #endif
 }

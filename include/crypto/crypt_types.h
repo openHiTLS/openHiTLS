@@ -185,6 +185,8 @@ typedef struct {
     uint32_t n2Len; /**< Length of the Paillier private key parameter marked as n2 */
 } CRYPT_PaillierPrv;
 
+/* Callbacks report failure by return value: init returns NULL, read returns a
+   non-success code. Callbacks must not leave entries on the error stack. */
 typedef struct {
     /* Initialization parameters of the noise source */
     void *para;
@@ -215,7 +217,8 @@ typedef struct {
     const char *name;
     /* Whether the noise source automatically performs the health test */
     bool autoTest;
-    /* Minimum entropy, that is, the number of bits of entropy for a byte */
+    /* Minimum entropy in one byte, in the range [0, 8]. A zero value marks an
+       auxiliary source whose input is mixed without receiving entropy credit. */
     uint32_t minEntropy;
     CRYPT_EAL_NsMethod nsMeth;
     CRYPT_EAL_NsTestPara nsPara;
@@ -228,8 +231,8 @@ typedef struct {
   * @param ctx [IN] the entropy source handle.
   * @param buf [OUT] buffer.
   * @param bufLen [IN] the length of buffer.
-  * @return 0, success
-  *         Other error codes
+  * @return Number of bytes written to buf, in the range [0, bufLen]. A value
+  *         less than bufLen means the request was not fully satisfied.
   */
 typedef uint32_t (*CRYPT_EAL_EntropyGet)(void *ctx, uint8_t *buf, uint32_t bufLen);
 
@@ -790,7 +793,7 @@ typedef enum {
     CRYPT_ENTROPY_ADD_NS,                 /**< Adding a Noise Source. */
     CRYPT_ENTROPY_REMOVE_NS,              /**< Deleting a Noise Source. */
     CRYPT_ENTROPY_ENABLE_TEST,            /**< Sets the Health Test. */
-    CRYPT_ENTROPY_GET_STATE,              /**< Gets the entropy source state. */
+    CRYPT_ENTROPY_GET_STATE,              /**< Gets the entropy source initialization state. */
     CRYPT_ENTROPY_GET_POOL_SIZE,          /**< Gets the entropy pool size. */
     CRYPT_ENTROPY_POOL_GET_CURRSIZE,      /**< Gets the entropy pool current size. */
     CRYPT_ENTROPY_GET_CF_SIZE,            /**< Gets the cf size. */

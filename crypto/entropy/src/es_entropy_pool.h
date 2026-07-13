@@ -43,10 +43,10 @@ int32_t ES_EntropyPoolGetMaxSize(ES_EntropyPool *pool);
 /* Obtains the current data volume of the entropy pool. */
 uint32_t ES_EntropyPoolGetCurSize(ES_EntropyPool *pool);
 
-/* Obtains entropy data from the entropy pool. */
+/* Push conditioned bytes into the entropy pool. */
 int32_t ES_EntropyPoolPushBytes(ES_EntropyPool *pool, uint8_t *buf, uint32_t bufLen);
 
-/* Compress entropy data into the entropy pool. */
+/* Pop up to size bytes and wipe the slots they came from. */
 uint32_t ES_EntropyPoolPopBytes(ES_EntropyPool *pool, uint8_t *data, uint32_t size);
 
 #ifdef __cplusplus

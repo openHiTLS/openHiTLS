@@ -13,37 +13,34 @@
  * See the Mulan PSL v2 for more details.
  */
 
-#ifndef ENTROPY_SEED_POOL_H
-#define ENTROPY_SEED_POOL_H
+#ifndef ES_ENTROPY_LOCAL_H
+#define ES_ENTROPY_LOCAL_H
 
 #include "hitls_build.h"
-#ifdef HITLS_CRYPTO_ENTROPY
+#if defined(HITLS_CRYPTO_ENTROPY) && defined(HITLS_CRYPTO_ENTROPY_SYS)
 
 #include <stdint.h>
-#include "crypt_entropy.h"
+#include <stdbool.h>
 #include "bsl_list.h"
+#include "crypt_eal_entropy.h"
+#include "es_entropy_pool.h"
+#include "es_cf.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
-typedef struct {
-    bool isPhysical;
-    uint32_t minEntropy;
-    void *ctx;
-    EntropyGet entropyGet;
-} ENTROPY_Source;
 
-struct EntropySeedPool {
-    bool isContainFes;
-    bool isContainPes;
-    uint32_t minEntropy;
-    BslList *esList;
+/* Entropy-source aggregate, src-level so white-box tests can drive the
+   noise-source list directly. */
+struct ES_Entropy {
+    bool isWork;           // Whether in working state
+    bool enableTest;       // Whether to enable the health test
+    uint32_t poolSize;     // Entropy pool size
+    ES_EntropyPool *pool;  // Entropy pool
+    ES_CfMethod *cfMeth;   // compression function handle
+    BslList *nsList;
+    CRYPT_EAL_EsLogFunc runLog;
 };
-
-uint32_t ENTROPY_HWEntropyGet(void *ctx, uint8_t *buf, uint32_t bufLen);
-
-/* Returns the number of bytes written and leaves the error stack unchanged. */
-uint32_t ENTROPY_SysEntropyGet(void *ctx, uint8_t *buf, uint32_t bufLen);
 
 #ifdef __cplusplus
 }

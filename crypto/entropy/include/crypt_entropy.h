@@ -88,6 +88,7 @@ uint32_t ENTROPY_EsEntropyGet(ENTROPY_EntropySource *ctx, uint8_t *data, uint32_
 
 /* Collect entropy data. */
 int32_t ENTROPY_EsEntropyGather(ENTROPY_EntropySource *es);
+
 #endif
 
 typedef struct EntropySeedPool ENTROPY_SeedPool;

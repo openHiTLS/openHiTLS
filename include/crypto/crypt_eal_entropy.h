@@ -31,7 +31,17 @@ typedef struct CryptEalEntropySource CRYPT_EAL_Es;
  * @ingroup crypt_eal_entropy
  * @brief The log function for entropy source to log noise source collection result.
  *
- * @param ret [IN] The return value of the noise source collection.
+ * @param ret [IN] The raw per-source health/collection verdict (e.g. the
+ * RCT/APT alarm), not the escalated transaction verdict: governance may later
+ * classify the transaction as a permanent failure, but the callback observes
+ * the individual source event that triggered it.
+ *
+ * @attention The callback runs while the entropy-source write lock is held (it
+ * may be invoked from gather, from consumption, and from the runtime
+ * requalification path). It must not re-enter the same entropy context -- any
+ * CRYPT_EAL_EsCtrl / CRYPT_EAL_EsEntropyGet call on the same handle would
+ * re-acquire the write lock and deadlock (POSIX pthread_rwlock, EDEADLK). Keep
+ * the callback to non-reentrant logging only.
  */
 typedef void (*CRYPT_EAL_EsLogFunc)(int32_t ret);
 
@@ -88,14 +98,15 @@ int32_t CRYPT_EAL_EsInit(CRYPT_EAL_Es *es);
                                                         Can only be called before CRYPT_EAL_EsInit interface.
  * CRYPT_ENTROPY_REMOVE_NS           string             Length of the entropy source name.
                                                         Can only be called before CRYPT_EAL_EsInit interface.
-                                                        When an entropy source is created, two noise sources are carried
-                                                         by default, that is, timeStamp and CPU-Jitter. If the noise
-                                                         sources are not required, you can delete them by using this
+                                                        The built-in noise sources an entropy source carries are
+                                                         selected by the build configuration: CPU-Jitter and Hash-Loop.
+                                                         If a source is not required, you can delete it by using this
                                                          interface.
  * CRYPT_ENTROPY_ENABLE_TEST         bool               Sets whether to enable the health test, length is 1.
                                                         Can only be called before CRYPT_EAL_EsInit interface.
- * CRYPT_ENTROPY_GET_STATE           uint32_t           Obtains the current entropy source status, length is 4.
-                                                        Can only be called after CRYPT_EAL_EsInit interface.
+ * CRYPT_ENTROPY_GET_STATE           bool               Obtains whether the entropy source handle has completed
+                                                        initialization, length is 1. Can be called before or after
+                                                        CRYPT_EAL_EsInit.
  * CRYPT_ENTROPY_GET_POOL_SIZE       uint32_t           Obtains the total entropy pool capacity, length is 4.
                                                         Can only be called after CRYPT_EAL_EsInit interface.
  * CRYPT_ENTROPY_POOL_GET_CURRSIZE   uint32_t           Obtains the current entropy pool capacity, length is 4.
@@ -119,9 +130,9 @@ int32_t CRYPT_EAL_EsCtrl(CRYPT_EAL_Es *es, int32_t type, void *data, uint32_t le
   *
   * @param es [IN] the entropy source handle.
   * @param data [OUT] Output data
-  * @param len [IN] Data length
-  * @return CRYPT_SUCCESS, success
-  *         Other error codes see crypt_errno.h
+  * @param len [IN] Requested data length
+  * @return Number of bytes written to data, in the range [0, len]. A value
+  *         less than len means the request was not fully satisfied.
   */
 uint32_t CRYPT_EAL_EsEntropyGet(CRYPT_EAL_Es *es, uint8_t *data, uint32_t len);
 

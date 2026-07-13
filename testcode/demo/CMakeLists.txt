@@ -28,7 +28,10 @@ if(CUSTOM_CFLAGS)
 endif()
 
 if(ENABLE_GCOV)
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fprofile-arcs -ftest-coverage -lgcov")
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fprofile-arcs -ftest-coverage")
+    if(CMAKE_C_COMPILER_ID STREQUAL "GNU")
+        set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -lgcov")
+    endif()
 endif()
 
 if(ENABLE_ASAN)
@@ -48,3 +51,21 @@ foreach(testcase ${TESTS})
     add_executable(${testname} ${testcase})
     target_link_libraries(${testname} PRIVATE DEMO_INTF)
 endforeach()
+
+# es_raw_dump compiles entropy sources in-tree for its per-source modes and
+# reaches internal headers for the production-path merged capture. Hidden
+# visibility keeps those in-tree copies from preempting the same symbols inside
+# libhitls_crypto under ELF global binding.
+if(TARGET es_raw_dump)
+    target_compile_options(es_raw_dump PRIVATE -fvisibility=hidden)
+    # Private to this target: the in-tree entropy sources and the internal
+    # headers they pull in. Other demos link the library and see public
+    # headers only.
+    target_include_directories(es_raw_dump PRIVATE
+                               ${HITLS_ROOT}/crypto/include
+                               ${HITLS_ROOT}/crypto/entropy/include
+                               ${HITLS_ROOT}/crypto/entropy/src
+                               ${HITLS_ROOT}/crypto/sha3/include
+                               ${HITLS_ROOT}/bsl/list/include
+                               ${HITLS_ROOT}/bsl/err/include)
+endif()

@@ -117,7 +117,7 @@ target_include_directories(provider_new_alg_test PUBLIC ${CMAKE_CURRENT_SOURCE_D
                                                ${OPENHITLS_ROOT}/bsl/asn1/include
                                                ${OPENHITLS_ROOT}/crypto/codecskey/include)
 if(ENABLE_GCOV)
-    if(NOT APPLE)
+    if(CMAKE_C_COMPILER_ID STREQUAL "GNU")
         target_link_libraries(provider_new_alg_test hitls_crypto hitls_bsl gcov)
     else()
         target_link_libraries(provider_new_alg_test hitls_crypto hitls_bsl)
@@ -178,7 +178,7 @@ target_include_directories(provider_sha256 PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}
                                                ${OPENHITLS_ROOT}/crypto/sha2/include
                                                ${OPENHITLS_ROOT}/crypto/sha2/src)
 if(ENABLE_GCOV)
-    if(NOT APPLE)
+    if(CMAKE_C_COMPILER_ID STREQUAL "GNU")
         target_link_libraries(provider_sha256 PRIVATE gcov)
     else()
         target_link_libraries(provider_sha256 PRIVATE)
@@ -227,7 +227,7 @@ foreach(PROVIDER_TARGET ${PROVIDER_TARGETS})
             target_link_options(${PROVIDER_TARGET} PRIVATE
                 -Wl,--version-script=${CMAKE_CURRENT_SOURCE_DIR}/provider.map)
         endif()
-        if(ENABLE_GCOV AND NOT APPLE AND NOT "${PROVIDER_TARGET}" STREQUAL "provider_new_alg_test" AND NOT "${PROVIDER_TARGET}" STREQUAL "provider_sha256")
+        if(ENABLE_GCOV AND CMAKE_C_COMPILER_ID STREQUAL "GNU" AND NOT "${PROVIDER_TARGET}" STREQUAL "provider_new_alg_test" AND NOT "${PROVIDER_TARGET}" STREQUAL "provider_sha256")
             message(STATUS "Adding gcov linking to ${PROVIDER_TARGET}")
             target_link_libraries(${PROVIDER_TARGET} gcov)
         endif()

@@ -277,9 +277,6 @@ static int32_t CreateIsoEs(CRYPT_EAL_Es **es)
     ret = CRYPT_EAL_EsCtrl(esTemp, CRYPT_ENTROPY_SET_CF, "sha256_df", (uint32_t)strlen("sha256_df"));
     GOTO_ERR_IF_TRUE(ret != CRYPT_SUCCESS, ret);
 
-    ret = CRYPT_EAL_EsCtrl(esTemp, CRYPT_ENTROPY_REMOVE_NS, "timestamp", (uint32_t)strlen("timestamp"));
-    GOTO_ERR_IF_TRUE(ret != CRYPT_SUCCESS, ret);
-
     ret = CRYPT_EAL_EsCtrl(esTemp, CRYPT_ENTROPY_SET_LOG_CALLBACK, EntropyRunLogCb, 0);
     GOTO_ERR_IF_TRUE(ret != CRYPT_SUCCESS, ret);
 

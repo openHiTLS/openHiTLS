@@ -12,10 +12,10 @@
 # See the Mulan PSL v2 for more details.
 
 
-file(GLOB _entropy_sources ${CMAKE_CURRENT_SOURCE_DIR}/src/entropy*.c)
+file(GLOB _entropy_sources CONFIGURE_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/src/entropy*.c)
 
 if(HITLS_CRYPTO_ENTROPY_SYS)
-    file(GLOB _entropy_sources_es ${CMAKE_CURRENT_SOURCE_DIR}/src/es_*.c)
+    file(GLOB _entropy_sources_es CONFIGURE_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/src/es_*.c)
     list(APPEND _entropy_sources ${_entropy_sources_es})
 endif()
 
@@ -33,6 +33,9 @@ if(_entropy_sources)
         PRIVATE
             ${CMAKE_CURRENT_SOURCE_DIR}/src
             ${PROJECT_SOURCE_DIR}/bsl/list/include
+            ${PROJECT_SOURCE_DIR}/crypto/sha2/include
+            ${PROJECT_SOURCE_DIR}/crypto/sm3/include
+            ${PROJECT_SOURCE_DIR}/crypto/sha3/include
     )
 
     hitls_register_objects(CRYPTO _hitls_crypto_entropy)

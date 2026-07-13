@@ -49,7 +49,7 @@ EAL_EntropyCtx *EAL_EntropyNewCtx(CRYPT_EAL_SeedPoolCtx *seedPool, uint8_t isNpe
         BSL_ERR_PUSH_ERROR(CRYPT_SEED_POOL_STATE_ERROR);
         return NULL;
     }
-    if (entropy > maxLen * EAL_MAX_ENTROPY_EVERY_BYTE) {
+    if ((uint64_t)entropy > (uint64_t)maxLen * EAL_MAX_ENTROPY_EVERY_BYTE) {
         BSL_ERR_PUSH_ERROR(CRYPT_ENTROPY_RANGE_ERROR);
         return NULL;
     }

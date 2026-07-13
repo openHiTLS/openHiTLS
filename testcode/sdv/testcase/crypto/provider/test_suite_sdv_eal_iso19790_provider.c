@@ -440,7 +440,6 @@ void SDV_ISO19790_PROVIDER_DRBG_TEST_TC001()
     ASSERT_TRUE(es != NULL);
 
     ASSERT_EQ(CRYPT_EAL_EsCtrl(es, CRYPT_ENTROPY_SET_CF, "sha256_df", (uint32_t)strlen("sha256_df")), CRYPT_SUCCESS);
-    ASSERT_EQ(CRYPT_EAL_EsCtrl(es, CRYPT_ENTROPY_REMOVE_NS, "timestamp", (uint32_t)strlen("timestamp")), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_EsCtrl(es, CRYPT_ENTROPY_SET_LOG_CALLBACK, EntropyRunLogCb, 0), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_EsCtrl(es, CRYPT_ENTROPY_ENABLE_TEST, &healthTest, sizeof(healthTest)), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_EsCtrl(es, CRYPT_ENTROPY_SET_POOL_SIZE, &seedPoolSize, sizeof(seedPoolSize)), CRYPT_SUCCESS);

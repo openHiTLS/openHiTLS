@@ -28,6 +28,9 @@ ES_CfMethod *ES_CFGetMethod(uint32_t algId, void *md)
         case CRYPT_MD_SHA224:
         case CRYPT_MD_SHA384:
         case CRYPT_MD_SHA512:
+        case CRYPT_MD_SHA3_256:
+        case CRYPT_MD_SHA3_384:
+        case CRYPT_MD_SHA3_512:
             return ES_CFGetDfMethod((EAL_MdMethod *)md);
         default:
             BSL_ERR_PUSH_ERROR(CRYPT_ENTROPY_ECF_ALG_ERROR);

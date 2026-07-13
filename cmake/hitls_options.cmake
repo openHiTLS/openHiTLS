@@ -190,8 +190,9 @@ option(HITLS_CRYPTO_ENTROPY                                    "Entropy" OFF)
   option(HITLS_CRYPTO_ENTROPY_HARDWARE                           "Hardware Entropy" OFF)
   option(HITLS_CRYPTO_ENTROPY_DEVRANDOM                          "DevRandom Entropy" OFF)
   option(HITLS_CRYPTO_ENTROPY_GETENTROPY                         "getentropy() Entropy" OFF)
-  option(HITLS_CRYPTO_ENTROPY_SYS                                "SysRandom Entropy" OFF)
-
+  option(HITLS_CRYPTO_ENTROPY_SYS                                "Software Entropy Source (noise-source based)" OFF)
+    option(HITLS_CRYPTO_ENTROPY_NS_CPUJITTER                       "Built-in CPU-Jitter Noise Source" OFF)
+    option(HITLS_CRYPTO_ENTROPY_NS_HASHLOOP                        "Built-in Hash-Loop Noise Source (software Keccak, second independent source)" OFF)
 ## Modes
 option(HITLS_CRYPTO_MODES                                      "Cipher Modes" OFF)
   option(HITLS_CRYPTO_GCM                                        "GCM" OFF)

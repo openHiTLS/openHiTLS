@@ -125,6 +125,14 @@ find_test_suite()
         cmvp_testsuite=$(find ${HITLS_ROOT_DIR}/testcode/sdv/testcase/cmvp -name "*.data" | sed -e "s/.data//" | tr -s "\n" " ")
     fi
     RUN_TEST_SUITES="${crypto_testsuite}${bsl_testsuite}${pki_testsuite}${proto_testsuite}${auth_testsuite}${cmvp_testsuite}"
+    # Suites that install a deterministic RNG need CRYPT_EAL_SetRandCallBack,
+    # which the library exports only with HITLS_CRYPTO_RAND_CB. Without it they
+    # fail at link with an unattributed ld error, so name the cause up front.
+    if [ -f ${HITLS_ROOT_DIR}/build/macros.txt ] && \
+       ! grep -q "HITLS_CRYPTO_RAND_CB" ${HITLS_ROOT_DIR}/build/macros.txt 2>/dev/null; then
+        echo "warning: the library lacks HITLS_CRYPTO_RAND_CB; suites calling CRYPT_EAL_SetRandCallBack will not link."
+        echo "         rebuild it with -DHITLS_CRYPTO_RAND_CB=ON (testcode/script/build_hitls.sh sets this)."
+    fi
     if [[ ${ENABLE_APP} == "ON" ]]; then
         apps_testsuite=$(find ${HITLS_ROOT_DIR}/testcode/sdv/testcase/apps -name "*.data" | sed -e "s/.data//" | tr -s "\n" " ")
         RUN_TEST_SUITES="${apps_testsuite}"

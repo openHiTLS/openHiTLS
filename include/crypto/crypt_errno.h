@@ -226,6 +226,11 @@ enum CRYPT_ERROR {
     CRYPT_ENTROPY_ES_POOL_ERROR,                     /**< Entropy pool error. */
     CRYPT_ENTROPY_ES_POOL_INSUFFICIENT,              /**< Entropy pool capacity is insufficient. */
     CRYPT_ENTROPY_CTRL_INVALID_PARAM,                /**< Entropy invalid parameter. */
+    CRYPT_ENTROPY_ES_DEAD_TIMER,                     /**< Time source produced no timing samples. */
+    CRYPT_ENTROPY_ES_COARSE_TIMER,                   /**< Time-source resolution or variability is insufficient for
+                                                          the claimed entropy rate. */
+    CRYPT_ENTROPY_ES_PERMANENT_FAILURE,              /**< Entropy source cannot provide output due to a persistent
+                                                          health-test failure. */
 
     CRYPT_DSA_BUFF_LEN_NOT_ENOUGH = 0x010B0001, /**< Insufficient buffer length. */
     CRYPT_DSA_ERR_KEY_PARA,                     /**< Incorrect key parameter data. */

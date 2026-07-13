@@ -14,271 +14,190 @@
  */
 
 #include "hitls_build.h"
-#if defined(HITLS_CRYPTO_ENTROPY) && defined(HITLS_CRYPTO_ENTROPY_SYS)
+#if defined(HITLS_CRYPTO_ENTROPY) && defined(HITLS_CRYPTO_ENTROPY_SYS) && defined(HITLS_CRYPTO_ENTROPY_NS_CPUJITTER)
 
 #include <stdint.h>
 #include <string.h>
+#if defined(HITLS_BSL_SAL_DARWIN)
+#include <sys/sysctl.h>
+#else
+#include <unistd.h>
+#endif
 #include "bsl_err_internal.h"
 #include "bsl_sal.h"
 #include "crypt_errno.h"
 #include "es_noise_source.h"
+#include "es_ns_delta_common.h"
 
 #ifndef HITLS_CACHE_LINE_SIZE
-    #define HITLS_CACHE_LINE_SIZE 64
+#define HITLS_CACHE_LINE_SIZE 64
 #endif
+/* Iteration anchor for NS_CACHE_WALK_LOOPS; region size is set by
+   ES_CpuJitterRegionBytes. */
 #ifndef HITLS_CACHE_ROW_COUNT
-    #define HITLS_CACHE_ROW_COUNT 1025
+#define HITLS_CACHE_ROW_COUNT 1025
 #endif
 #if (HITLS_CACHE_LINE_SIZE == 0)
-    #error "HITLS_CACHE_LINE_SIZE must be greater than 0"
+#error "HITLS_CACHE_LINE_SIZE must be greater than 0"
+#endif
+#if (HITLS_CACHE_LINE_SIZE % 2) != 0
+#error "HITLS_CACHE_LINE_SIZE must be even: the walk stride (line size - 1) must be odd to cover a power-of-two region fully"
 #endif
 #if (HITLS_CACHE_ROW_COUNT == 0)
-    #error "HITLS_CACHE_ROW_COUNT must be greater than 0"
-#endif
-#ifndef HITLS_JITTER_APT_CUT_OFF
-/**
- * Binary WINDOW 1024, 0.8 Entropy CUT off 664 0.6 Entropy CUT off 748
- * reference to SP800-90B sec 4.4.2
- */
-    #define HITLS_JITTER_APT_CUT_OFF 594
-#endif
-#if (HITLS_JITTER_APT_CUT_OFF < 589) || (HITLS_JITTER_APT_CUT_OFF > 1000)
-    #error "HITLS_JITTER_APT_CUT_OFF must be in the range [589, 1000]"
-#endif
-#ifndef HITLS_JITTER_RCT_CUT_OFF
-/**
- * C = 1 + ceil(-log_2(alpha)/H), H = 0.991(MIN_ENTROPY), alpha = 2^(-20)
- * alpha value reference SP800-90B sec 4.4.1
- * following SP800-90B. Thus C = 1 + ceil(-log_2(alpha)/H) = 22.
- */
-#define HITLS_JITTER_RCT_CUT_OFF 22
-#endif
-#if (HITLS_JITTER_RCT_CUT_OFF < 21) || (HITLS_JITTER_RCT_CUT_OFF > 241)
-    #error "HITLS_JITTER_RCT_CUT_OFF must be in the range [21, 241]"
-#endif
-#ifndef HITLS_JITTER_MINENTROPY
-/**
- * HITLS_JITTER_RCT_CUT_OFF and HITLS_JITTER_APT_CUT_OFF are calculated based on HITLS_JITTER_MINENTROPY.
- * If HITLS_JITTER_MINENTROPY is configured manually, HITLS_JITTER_RCT_CUT_OFF and must be
- * configured simultaneously.
- */
-    #define HITLS_JITTER_MINENTROPY 5
+#error "HITLS_CACHE_ROW_COUNT must be greater than 0"
 #endif
 
-#if (HITLS_JITTER_MINENTROPY < 1) || (HITLS_JITTER_MINENTROPY > 8)
-    #error "HITLS_JITTER_MINENTROPY must be in the range [1, 8]"
+/* Claimed min-entropy h = 1/HITLS_JITTER_OSR bit per delta; default 3 holds
+   the weakest supported platform with margin. Cutoffs come from the per-osr
+   table in ES_DeltaOsrCutoffs (alpha = 2^-20). */
+#if defined(HITLS_JITTER_MINENTROPY) || defined(HITLS_JITTER_CLAIM_FLOOR) || \
+    defined(HITLS_JITTER_RCT_CUT_OFF) || defined(HITLS_JITTER_APT512_CUT_OFF) || \
+    defined(HITLS_JITTER_APT_CUT_OFF)
+#error "per-byte claim config retired: define HITLS_JITTER_OSR (deltas per entropy bit) instead"
+#endif
+#ifndef HITLS_JITTER_OSR
+#define HITLS_JITTER_OSR 3
+#endif
+#if (HITLS_JITTER_OSR < NS_DELTA_OSR_MIN) || (HITLS_JITTER_OSR > NS_DELTA_OSR_MAX)
+#error "HITLS_JITTER_OSR must be in the range [3, 15] (claims are capped at h = 1/3)"
+#endif
+#ifndef HITLS_JITTER_OSR_MAX
+#define HITLS_JITTER_OSR_MAX NS_DELTA_OSR_MAX
+#endif
+#if (HITLS_JITTER_OSR_MAX < HITLS_JITTER_OSR) || (HITLS_JITTER_OSR_MAX > NS_DELTA_OSR_MAX)
+#error "HITLS_JITTER_OSR_MAX must be in the range [HITLS_JITTER_OSR, 15]"
 #endif
 
-#define NS_APT_BIN_WINDOW_SIZE 1024
+#ifdef HITLS_JITTER_MEM_BYTES
+#if (HITLS_JITTER_MEM_BYTES & (HITLS_JITTER_MEM_BYTES - 1)) != 0
+#error "HITLS_JITTER_MEM_BYTES must be a power of two"
+#endif
+#if (HITLS_JITTER_MEM_BYTES < 0x1000) || (HITLS_JITTER_MEM_BYTES > 0x100000)
+#error "HITLS_JITTER_MEM_BYTES must be in [4KiB, 1MiB]"
+#endif
+#endif
 
-#define NS_ENTROPY_HASH_SIZE 32                            // hash size
-#define NS_ENTROPY_DATA_SIZE (NS_ENTROPY_HASH_SIZE * 4)  // 4 * 32， 128 bytes，1024 bits，one APT window
-
-/* Mainstream CPU cache access unit (cache line) 32 或者64 */
-#define NS_CACHE_SIZE (HITLS_CACHE_LINE_SIZE * HITLS_CACHE_ROW_COUNT) // total operation memory size
-#define NS_CACHE_MIN_SIZE 33                                          // minimum Length
-
-#define NS_ENTROPY_RCT_FAILURE (-1)
-#define NS_ENTROPY_APT_FAILURE (-2)
-
-#define NS_ENTROPY_MAX_LIFE 30       // maximum lifetime of entropy data: 30 seconds
+/* Detected-L1d path: floor and cap bounding the 2 x L1d rule. */
+#define NS_MEM_REGION_FLOOR (64U * 1024U)
+#define NS_MEM_REGION_CAP (1024U * 1024U)
+/* No-detection fallback: fixed 256 KiB region when L1d size is unknown. */
+#define NS_MEM_REGION_DEFAULT (256U * 1024U)
 
 typedef struct ES_JitterState {
-    int8_t testFailure;
-    uint8_t rctCount;
-    uint8_t aptBase;
-    uint8_t aptBaseSet;
-    uint16_t aptCount;
-    uint16_t aptObservations;
-    uint8_t data[NS_ENTROPY_DATA_SIZE];
-    uint64_t lastDelta;
-    uint32_t remainCount;
-    uint8_t mem[HITLS_CACHE_ROW_COUNT][HITLS_CACHE_LINE_SIZE];
+    ES_DeltaNs ns; /* shared delta health state; must stay first */
+    uint8_t *mem; /* walk region, memSize bytes, power of two */
+    uint32_t memSize;
     volatile uint32_t mID;
-    uint64_t lastTime;
-    void (*hashFunc)(uint8_t *, int, uint8_t *, int);
 } ES_JitterState;
 
-static void UpdateRctHealth(ES_JitterState *e, int stuck)
+/* L1d probe for the walk region, module-local like ES_NsTickGet: the measured
+   workload owns its platform detail. Zero means no detection path exists and
+   the caller falls back to the fixed default region. */
+uint32_t ES_CpuJitterL1dCacheSize(void)
 {
-    if (e->rctCount > HITLS_JITTER_RCT_CUT_OFF) {
-        return;
+#if defined(HITLS_BSL_SAL_DARWIN)
+    /* Prefer the performance-core value on heterogeneous SoCs: the walk
+       region must exceed the largest L1d it may be scheduled onto; plain
+       hw.l1dcachesize reports the efficiency-core size on Apple Silicon. */
+    uint64_t bytes = 0;
+    size_t len = sizeof(bytes);
+    if (sysctlbyname("hw.perflevel0.l1dcachesize", &bytes, &len, NULL, 0) != 0 || bytes == 0) {
+        bytes = 0;
+        len = sizeof(bytes);
+        (void)sysctlbyname("hw.l1dcachesize", &bytes, &len, NULL, 0);
     }
-    if (stuck > 0) {
-        e->rctCount++;
-        if (e->rctCount > HITLS_JITTER_RCT_CUT_OFF) {
-            e->testFailure = NS_ENTROPY_RCT_FAILURE;  // If the RCT test fails, the entropy source can be restarted.
-        }
-    } else {
-        e->rctCount = 0;
+    return (bytes > UINT32_MAX) ? UINT32_MAX : (uint32_t)bytes;
+#elif defined(_SC_LEVEL1_DCACHE_SIZE)
+    /* glibc extension with real detection on x86 (CPUID) only: aarch64 glibc
+       reports 0 and musl leaves the selector undefined, so on those targets
+       zero falls through to the fixed default region size. */
+    long v = sysconf(_SC_LEVEL1_DCACHE_SIZE);
+    if (v <= 0) {
+        return 0;
     }
+    return ((uint64_t)v > UINT32_MAX) ? UINT32_MAX : (uint32_t)v;
+#else
+    return 0;
+#endif
 }
-static void UpdateAptHealth(ES_JitterState *e, uint8_t data)
+
+uint32_t ES_CpuJitterRegionBytes(uint32_t l1dBytes)
 {
-    if (e->aptBaseSet == 0) {
-        e->aptBase = data;
-        e->aptBaseSet = 1;
-        e->aptCount = 1;
-        e->aptObservations = 1;
-        return;
+#ifdef HITLS_JITTER_MEM_BYTES
+    (void)l1dBytes;
+    return HITLS_JITTER_MEM_BYTES;
+#else
+    if (l1dBytes == 0) {
+        return NS_MEM_REGION_DEFAULT;
     }
-    if (e->aptBase == data) {
-        e->aptCount++;
-        if (e->aptCount > HITLS_JITTER_APT_CUT_OFF) {
-            e->testFailure = NS_ENTROPY_APT_FAILURE;  // If APT detection fails, the entropy source can be restarted.
-        }
+    /* A region equal to L1d fits the walk entirely in-cache and the
+       miss-driven timing variance collapses; 2 x L1d keeps every access
+       window in the L1-miss/L2-hit band where the variance peaks. */
+    uint64_t target = (uint64_t)l1dBytes * 2;
+    uint32_t size = NS_MEM_REGION_FLOOR;
+    while (size < target && size < NS_MEM_REGION_CAP) {
+        size <<= 1;
     }
-    e->aptObservations++;
-    if (e->aptObservations >= NS_APT_BIN_WINDOW_SIZE) {
-        e->aptBaseSet = 0;
-    }
+    return size;
+#endif
 }
 
 #define NS_MOVE_LEVEL 128
 
-// GCC uses optimize("O0"), Clang/AppleClang uses optnone
+/* Fixed workload length: the measured duration must vary only through
+   microarchitectural wait states, never through an input-derived loop bound. */
+#define NS_CACHE_WALK_LOOPS (HITLS_CACHE_ROW_COUNT + NS_MOVE_LEVEL)
+
+/* O0 guard keeps the timed walk intact under any optimizer/LTO. */
 #if defined(__clang__)
-static void __attribute__((optnone)) EntropyMemeryAccess(ES_JitterState *e, uint8_t det)
+static void __attribute__((optnone)) EntropyMemeryAccess(ES_JitterState *e)
 #elif defined(__GNUC__)
-static void __attribute__((optimize("O0"))) EntropyMemeryAccess(ES_JitterState *e, uint8_t det)
+static void __attribute__((optimize("O0"))) EntropyMemeryAccess(ES_JitterState *e)
 #else
-static void EntropyMemeryAccess(ES_JitterState *e, uint8_t det)
+static void EntropyMemeryAccess(ES_JitterState *e)
 #endif
 {
-    /*
-     * 1. Random read/write start position
-     * 2. Read and write position change by position value
-     * 3. Multiple data reads and writes
-     * 4. branch prediction mitigation
-     */
-    e->mID = (e->mID + det) % NS_CACHE_SIZE;
-    uint32_t bound = HITLS_CACHE_ROW_COUNT + det;
-    for (uint32_t i = 0; i < bound; i++) {
-        // c, l Calculate the row and column coordinate points.
-        uint32_t c = e->mID / HITLS_CACHE_LINE_SIZE;
-        uint32_t l = e->mID % HITLS_CACHE_LINE_SIZE;
-        volatile uint8_t *volatile cur = e->mem[c] + l;
-        *cur ^= det;
-        e->mID = (e->mID + (*cur & 0x0f) + NS_CACHE_MIN_SIZE) % NS_CACHE_SIZE;
+    uint8_t *mem = e->mem;
+    uint32_t wrap = e->memSize;
+
+    for (uint32_t i = 0; i < NS_CACHE_WALK_LOOPS; i++) {
+        /* The odd stride stays coprime to the region so every byte is
+           visited. */
+        volatile uint8_t *volatile cur = mem + e->mID;
+        *cur = (uint8_t)((*cur + 1) & 0xff);
+        e->mID = (e->mID + HITLS_CACHE_LINE_SIZE - 1) % wrap;
     }
 }
 
-/**
- * Get a random position: keep moving right until there is a non-zero bit in the lower eight bits,
- * then return the lower eight bits
- */
-static uint8_t GetUChar(uint64_t tick)
+/* One measurement: the timed window stays source-local so the compiled
+   tick-workload-tick path is untouched by the shared pipeline. */
+static void JitterMeasure(void *ctx)
 {
-    size_t i;
-    volatile uint64_t data = tick;
-    for (i = 0; i < sizeof(uint64_t); i++) {
-        if ((data & 1) == 1) {
-            return (uint8_t)data;
-        }
-        data >>= 1;
-    }
-    return (uint8_t)((data % HITLS_CACHE_LINE_SIZE) + NS_CACHE_MIN_SIZE);
+    ES_JitterState *e = (ES_JitterState *)ctx;
+    uint64_t tick1 = ES_NsTickGet();
+    EntropyMemeryAccess(e);
+    uint64_t tick2 = ES_NsTickGet();
+    ES_DeltaNsProcessRawDelta(&e->ns, tick2 - tick1);
 }
 
-static void EntropyMeasure(ES_JitterState *e, int32_t index)
-{
-    uint8_t data = 0;
-    int i;
-    // One byte has eight bits. Only the status of one bit can be obtained each time the memory is read or written.
-    for (i = 0; i < 8; i++) {  // 8 bit
-        uint64_t tick1 = BSL_SAL_TIME_GetNSec();
-        EntropyMemeryAccess(e, GetUChar(tick1));
-        uint64_t tick = BSL_SAL_TIME_GetNSec();
-        uint64_t delta = tick - tick1;
-        uint8_t bit;
-        if (delta & 0x01) {
-            bit = (delta >> 3) & 0x01; // 3:4th bits
-        } else {
-            bit = (delta >> 7) & 0x01; // 7:8th bits
-        }
-        data = (uint8_t)(data << 1); // Move to the left first to prevent entropy overflow.
-        data |= bit;
-        UpdateRctHealth(e, e->lastDelta == bit);
-        UpdateAptHealth(e, bit);
-        e->lastDelta = bit;
-    }
+static uint64_t JitterRawDelta(void *ctx);
 
-    e->data[index] = data;
-    data = 0;  // clean
-}
-
-static void EntropyProcess(ES_JitterState *e)
+static int32_t ES_CpuJitterRecover(void *usrdata)
 {
-    int32_t i, start;
-    uint8_t buf[NS_ENTROPY_HASH_SIZE + 1];
-    for (i = 0; i < NS_ENTROPY_DATA_SIZE; i++) {
-        EntropyMeasure(e, i);  // Obtains 1-byte entropy.
-        start = (i / NS_ENTROPY_HASH_SIZE) * NS_ENTROPY_HASH_SIZE;
-        /**
-         * Copy 32 bytes to buf at a time, but only one byte of entropy is added to e-data in each loop. Subsequently,
-         * the latest entropy is attached to the tail of the buffer each time, and the 33-byte content is hashed.
-         * The hashed content is written to the internal entropy pool of the entropy source.
-         */
-        memcpy(buf, e->data + start, NS_ENTROPY_HASH_SIZE);
-        // The latest entropy 1 byte is placed at the end. The 33-byte data is hashed to form a new 32-byte entropy.
-        buf[NS_ENTROPY_HASH_SIZE] = e->data[i];
-        e->hashFunc(buf, sizeof(buf), (e->data + start), NS_ENTROPY_HASH_SIZE);
+    if (usrdata == NULL) {
+        return CRYPT_NULL_INPUT;
     }
-    BSL_SAL_CleanseData(buf, sizeof(buf));
-}
-
-static int32_t EsCpuJitterGen(ES_JitterState *jitter, uint8_t *buf, uint32_t bufLen)
-{
-    const uint32_t entropySize = sizeof(jitter->data);
-    EntropyProcess(jitter);
-    uint8_t *out = buf;
-    uint32_t left = bufLen;
-    while (left > 0) {
-        EntropyProcess(jitter);  // 1024
-        if (jitter->testFailure != CRYPT_SUCCESS) {
-            jitter->remainCount = 0;
-            break;
-        }
-        uint32_t length = left > entropySize ? entropySize : left;
-        memcpy(out, jitter->data, length);
-        left -= length;
-        if (left <= 0) {
-            jitter->remainCount = entropySize - length;
-            jitter->lastTime = BSL_SAL_CurrentSysTimeGet();
-            break;
-        }
-        out += length;
-    }
-    return jitter->testFailure;
-}
-
-static uint32_t EsCpuJitterGet(ES_JitterState *jitter, uint8_t *buf, uint32_t bufLen)
-{
-    if (jitter->remainCount == 0) {
-        return bufLen;
-    }
-    uint64_t nowTime = BSL_SAL_CurrentSysTimeGet();
-    if (nowTime == 0 || nowTime - jitter->lastTime > NS_ENTROPY_MAX_LIFE) {
-        return bufLen;
-    }
-    uint32_t length = (bufLen < jitter->remainCount) ? bufLen : jitter->remainCount;
-    memcpy(buf, jitter->data + (NS_ENTROPY_DATA_SIZE - jitter->remainCount), length);
-    jitter->remainCount -= length;
-    return bufLen - length;
+    ES_JitterState *e = (ES_JitterState *)usrdata;
+    return ES_DeltaNsRecoveryWindow(&e->ns, JitterRawDelta, JitterMeasure, e);
 }
 
 static int32_t ES_CpuJitterRead(void *ctx, uint32_t timeout, uint8_t *buf, uint32_t bufLen)
 {
-    ES_JitterState *jitter = (ES_JitterState *)ctx;
     (void)timeout;
-    if (ctx == NULL || buf == NULL || bufLen <= 0) {
+    if (ctx == NULL || buf == NULL || bufLen == 0) {
         return CRYPT_NULL_INPUT;
     }
-    uint32_t left = EsCpuJitterGet(jitter, buf, bufLen);
-    if (left == 0) {
-        return CRYPT_SUCCESS;
-    }
-    return EsCpuJitterGen(jitter, buf + (bufLen -left), left);
+    return ES_DeltaNsRead(&((ES_JitterState *)ctx)->ns, JitterMeasure, ctx, buf, bufLen);
 }
 
 static void ES_CpuJitterFree(void *ctx)
@@ -286,36 +205,75 @@ static void ES_CpuJitterFree(void *ctx)
     if (ctx == NULL) {
         return;
     }
-    BSL_SAL_ClearFree(ctx, sizeof(ES_JitterState));
+    ES_JitterState *e = (ES_JitterState *)ctx;
+    if (e->mem != NULL) {
+        BSL_SAL_ClearFree(e->mem, e->memSize);
+    }
+    BSL_SAL_ClearFree(e, sizeof(ES_JitterState));
 }
 
-static void *ES_CpuJitterInit(void *para)
+/* Raw delta of one workload run, the timer-check sampler. */
+static uint64_t JitterRawDelta(void *ctx)
 {
-    if (para == NULL) {
-        return NULL;
-    }
+    uint64_t tick1 = ES_NsTickGet();
+    EntropyMemeryAccess((ES_JitterState *)ctx);
+    uint64_t tick2 = ES_NsTickGet();
+    return tick2 - tick1;
+}
+
+/* Allocate a calibrated state: the next measurement after this is the first
+   production sample, no output has been derived yet. */
+static int32_t JitterStateNew(ES_JitterState **out)
+{
     ES_JitterState *e = (ES_JitterState *)BSL_SAL_Malloc(sizeof(ES_JitterState));
     if (e == NULL) {
-        return NULL;
+        return CRYPT_MEM_ALLOC_FAIL;
     }
     memset(e, 0, sizeof(ES_JitterState));
-    e->hashFunc = para;
-    // Try to read 32 bytes once to check whether the environment is normal.
-    uint8_t data[32] = {0};
-    if (ES_CpuJitterRead(e, true, data, sizeof(data)) != CRYPT_SUCCESS) {
+    e->memSize = ES_CpuJitterRegionBytes(ES_CpuJitterL1dCacheSize());
+    e->mem = BSL_SAL_Malloc(e->memSize);
+    if (e->mem == NULL) {
         ES_CpuJitterFree(e);
-        return NULL;
+        return CRYPT_MEM_ALLOC_FAIL;
     }
-    return e;
+    /* Zero-fill doubles as page pre-touch so first measurements see cache
+       misses, never demand-paging faults. */
+    memset(e->mem, 0, e->memSize);
+    int32_t ret = ES_DeltaNsTimerQualify(&e->ns, JitterRawDelta, e, HITLS_JITTER_OSR);
+    if (ret != CRYPT_SUCCESS) {
+        ES_CpuJitterFree(e);
+        return ret;
+    }
+    *out = e;
+    return CRYPT_SUCCESS;
 }
 
-
-static void EmptyConditionComp(uint8_t *out, int32_t outLen, uint8_t *in, int32_t inLen)
+/* Initialize one cpu-jitter state and select a supported oversampling rate.
+   Failures keep their verdict: timer verdicts from calibration, walk
+   exhaustion from the osr ladder, allocation errors from setup. */
+static int32_t ES_CpuJitterInitAt(void *para, uint32_t startOsr, void **usrdata)
 {
-    (void)out;
-    (void)outLen;
-    (void)in;
-    (void)inLen;
+    (void)para;
+    ES_JitterState *e = NULL;
+    int32_t ret = JitterStateNew(&e);
+    if (ret != CRYPT_SUCCESS) {
+        return ret;
+    }
+    ret = ES_DeltaNsOsrWalk(&e->ns, startOsr, HITLS_JITTER_OSR_MAX, JitterMeasure, e);
+    if (ret != CRYPT_SUCCESS) {
+        ES_CpuJitterFree(e);
+        return ret;
+    }
+    *usrdata = e;
+    return CRYPT_SUCCESS;
+}
+
+uint32_t ES_CpuJitterOsrGet(const void *usrdata)
+{
+    if (usrdata == NULL) {
+        return 0;
+    }
+    return ((const ES_JitterState *)usrdata)->ns.osr;
 }
 
 ES_NoiseSource *ES_CpuJitterGetCtx(void)
@@ -335,11 +293,18 @@ ES_NoiseSource *ES_CpuJitterGetCtx(void)
     }
     (void)strcpy(ctx->name, "CPU-Jitter");
     ctx->autoTest = true;
-    ctx->para = (void *)EmptyConditionComp;
-    ctx->init = ES_CpuJitterInit;
+    ctx->para = NULL;
     ctx->read = ES_CpuJitterRead;
     ctx->deinit = ES_CpuJitterFree;
-    ctx->minEntropy = HITLS_JITTER_MINENTROPY; // one byte bring 5 bits entropy
+    ctx->osrGet = ES_CpuJitterOsrGet;
+    ctx->initAt = ES_CpuJitterInitAt;
+    ctx->recover = ES_CpuJitterRecover;
+    ctx->osr = HITLS_JITTER_OSR;
+    ctx->osrMax = HITLS_JITTER_OSR_MAX;
+    ctx->sampleBytes = NS_DELTA_RECORD_BYTES;
+    ctx->claimBitsPerOsr = 1; /* numerator of the 1/osr raw-sample claim */
+    ctx->credited = true;
     return ctx;
 }
+
 #endif

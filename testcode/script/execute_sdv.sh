@@ -304,15 +304,50 @@ run_demos()
     executales=$(find ./ -maxdepth 1 -type f -perm -a=x )
     for e in $executales
     do
-        if [[ ! "$e" == *"client"* ]] && [[ ! "$e" == *"server"* ]]; then
-            echo "${e} start"
-            eval "${e}"
-            if [ $? -ne 0 ]; then
-                echo "Demo ${e} failed"
-                exit 1
-            fi
+        if [[ "$e" == *"client"* ]] || [[ "$e" == *"server"* ]] || \
+           [[ "$e" == *"es_raw_dump"* ]] || [[ "$e" == *"entropy_dump"* ]]; then
+            continue
+        fi
+        echo "${e} start"
+        eval "${e}"
+        if [ $? -ne 0 ]; then
+            echo "Demo ${e} failed"
+            exit 1
         fi
     done
+
+    # The entropy assessment tools require arguments; run each with a minimal
+    # workload so the smoke test still exercises real output.
+    # Both tools drive the built-in noise sources directly; a build that carries
+    # none of them leaves the entropy source to a caller-registered source.
+    builtin_ns=""
+    if grep -qx -- '-DHITLS_CRYPTO_ENTROPY_NS_CPUJITTER' "${HITLS_ROOT_DIR}/build/macros.txt"; then
+        builtin_ns="jitter"
+    elif grep -qx -- '-DHITLS_CRYPTO_ENTROPY_NS_HASHLOOP' "${HITLS_ROOT_DIR}/build/macros.txt"; then
+        builtin_ns="hashloop"
+    fi
+    if [ -x ./es_raw_dump ] && [ -n "${builtin_ns}" ]; then
+        echo "./es_raw_dump start"
+        ./es_raw_dump "${builtin_ns}" seq /tmp/es_raw_dump_smoke.bin 1000 lsb8
+        if [ $? -ne 0 ]; then
+            echo "Demo ./es_raw_dump failed"
+            exit 1
+        fi
+    fi
+    if [ -x ./entropy_dump ] && [ -n "${builtin_ns}" ]; then
+        # The default conditioner follows the build: sm3_df under GM_CF,
+        # sha3_256_df otherwise.
+        smoke_df="sha3_256_df"
+        if grep -qx -- '-DHITLS_CRYPTO_ENTROPY_GM_CF' "${HITLS_ROOT_DIR}/build/macros.txt"; then
+            smoke_df="sm3_df"
+        fi
+        echo "./entropy_dump start"
+        ./entropy_dump /tmp/entropy_dump_smoke.bin 1 "${smoke_df}" drbg
+        if [ $? -ne 0 ]; then
+            echo "Demo ./entropy_dump failed"
+            exit 1
+        fi
+    fi
 
     # run server and client in order.
     ./server &

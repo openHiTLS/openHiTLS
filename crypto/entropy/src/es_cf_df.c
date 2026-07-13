@@ -16,6 +16,7 @@
 #include "hitls_build.h"
 #if defined(HITLS_CRYPTO_ENTROPY) && defined(HITLS_CRYPTO_ENTROPY_SYS)
 
+#include <stdbool.h>
 #include <stdint.h>
 #include <string.h>
 #include "bsl_err_internal.h"
@@ -24,20 +25,20 @@
 #include "crypt_errno.h"
 #include "es_cf.h"
 
-/*
- * see FIPS 140-3 section Full Entropy
- * To receive full entropy from the output of a conditioning component, the following criteria must be met:
- *   The conditioning component shall be vetted,
- *   ℎin shall be greater than or equal to 𝑛𝑛out + 64 bits,
- *   𝑛𝑛out shall be less than or equal to the security strength of the cryptographic function used as the 
- *    conditioning component.
- */
+/* Extra assessed input entropy required for a full-entropy output claim. */
 #define CF_FE_EXLEN 64
 #define CF_BYTE_TO_BIT 8
+
+/* AIS 20/31 NTG.1.4: each credited source must deliver at least this much
+   entropy during startup. The per-source startup quota is exactly this
+   conditioner's need, so a digest too narrow to reach the floor is refused
+   at selection instead of silently lowering the quota. */
+#define CF_NTG1_STARTUP_SOURCE_BITS 240
 
 typedef struct {
     void *ctx; // Hash algorithm handle
     EAL_MdMethod meth; // Hash algorithm operation function
+    bool prefixPending;
 } ES_CfDfCtx;
 
 static void ES_CfDfDeinit(void *ctx)
@@ -74,6 +75,7 @@ static void *ES_CfDfInit(void *mdMeth)
         BSL_ERR_PUSH_ERROR(ret);
         return NULL;
     }
+    ctx->prefixPending = true;
     return ctx;
 }
 
@@ -89,18 +91,16 @@ static void DfI32ToByte(uint8_t values[4], uint32_t len)
 static int32_t ES_CfDfUpdateData(void *ctx, uint8_t *data, uint32_t dataLen)
 {
     ES_CfDfCtx *cfCtx = (ES_CfDfCtx *)ctx;
-    uint8_t tmp[1] = { 0x01};
-    int32_t ret = cfCtx->meth.update(cfCtx->ctx, tmp, 1);
-    if (ret != CRYPT_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
-        return ret;
-    }
-    uint8_t values[4] = {0}; // 4 is sizeof(uint32_t)
-    DfI32ToByte(values, cfCtx->meth.mdSize);
-    ret = cfCtx->meth.update(cfCtx->ctx, values, sizeof(values));
-    if (ret != CRYPT_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
-        return ret;
+    int32_t ret;
+    if (cfCtx->prefixPending) {
+        uint8_t prefix[5] = {0x01};
+        DfI32ToByte(prefix + 1, cfCtx->meth.mdSize);
+        ret = cfCtx->meth.update(cfCtx->ctx, prefix, sizeof(prefix));
+        if (ret != CRYPT_SUCCESS) {
+            BSL_ERR_PUSH_ERROR(ret);
+            return ret;
+        }
+        cfCtx->prefixPending = false;
     }
     ret = cfCtx->meth.update(cfCtx->ctx, data, dataLen);
     if (ret != CRYPT_SUCCESS) {
@@ -120,17 +120,20 @@ static uint8_t *ES_CfDfGetEntropyData(void *cfCtx, uint32_t *len)
     }
     int32_t ret = ctx->meth.final(ctx->ctx, buf, &bufLen);
     if (ret != CRYPT_SUCCESS) {
-        BSL_SAL_Free(buf);
+        /* A failing final may still have written digest bytes. */
+        BSL_SAL_ClearFree(buf, ctx->meth.mdSize);
         BSL_ERR_PUSH_ERROR(ret);
         return NULL;
     }
     ctx->meth.deinit(ctx->ctx);
     ret = ctx->meth.init(ctx->ctx, NULL);
     if (ret != CRYPT_SUCCESS) {
-        BSL_SAL_Free(buf);
+        /* buf already holds a live conditioner output block here. */
+        BSL_SAL_ClearFree(buf, bufLen);
         BSL_ERR_PUSH_ERROR(ret);
         return NULL;
     }
+    ctx->prefixPending = true;
     *len = bufLen;
     return buf;
 }
@@ -149,6 +152,11 @@ static uint32_t ES_CfDfGetNeedEntropy(void *cfCtx)
 
 ES_CfMethod *ES_CFGetDfMethod(EAL_MdMethod *mdMeth)
 {
+    if (mdMeth == NULL ||
+        mdMeth->mdSize * CF_BYTE_TO_BIT + CF_FE_EXLEN < CF_NTG1_STARTUP_SOURCE_BITS) {
+        BSL_ERR_PUSH_ERROR(CRYPT_ENTROPY_ECF_ALG_ERROR);
+        return NULL;
+    }
     ES_CfMethod *meth = BSL_SAL_Malloc(sizeof(ES_CfMethod));
     if (meth == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);

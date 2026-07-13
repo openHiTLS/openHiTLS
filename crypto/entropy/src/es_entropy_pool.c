@@ -44,6 +44,7 @@ ES_EntropyPool *ES_EntropyPoolInit(uint32_t size)
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         return NULL;
     }
+    (void)memset(pool->buf, 0, maxSize);
 
     pool->front = 0;
     pool->rear = 0;
@@ -75,6 +76,10 @@ uint32_t ES_EntropyPoolGetCurSize(ES_EntropyPool *pool)
 int32_t ES_EntropyPoolPushBytes(ES_EntropyPool *pool, uint8_t *buf, uint32_t bufLen)
 {
     uint32_t partA, partB;
+    if (bufLen > pool->maxSize - 1 - ES_EntropyPoolGetCurSize(pool)) {
+        BSL_ERR_PUSH_ERROR(CRYPT_ENTROPY_ES_POOL_INSUFFICIENT);
+        return CRYPT_ENTROPY_ES_POOL_INSUFFICIENT;
+    }
     partA = (bufLen > (pool->maxSize - pool->rear)) ? pool->maxSize - pool->rear : bufLen;
     memcpy(&pool->buf[pool->rear], buf, partA);
     pool->rear = (pool->rear + partA) % pool->maxSize;
@@ -88,7 +93,7 @@ int32_t ES_EntropyPoolPushBytes(ES_EntropyPool *pool, uint8_t *buf, uint32_t buf
 
 uint32_t ES_EntropyPoolPopBytes(ES_EntropyPool *pool, uint8_t *data, uint32_t size)
 {
-    uint32_t bufLen, partA, partB;
+    uint32_t bufLen, partA, partB, start;
     if (ES_EntropyPoolGetMaxSize(pool) == 0 || size == 0) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return 0;
@@ -96,12 +101,16 @@ uint32_t ES_EntropyPoolPopBytes(ES_EntropyPool *pool, uint8_t *data, uint32_t si
 
     bufLen = (ES_EntropyPoolGetCurSize(pool) < size) ? ES_EntropyPoolGetCurSize(pool) : size;
 
+    start = pool->front;
     partA = (bufLen <= pool->maxSize - pool->front) ? bufLen : pool->maxSize - pool->front;
-    memcpy(data, &pool->buf[pool->front], partA);
+    memcpy(data, &pool->buf[start], partA);
+    BSL_SAL_CleanseData(&pool->buf[start], partA);
     pool->front = (pool->front + partA) % pool->maxSize;
     partB = bufLen - partA;
     if (partB != 0) {
-        memcpy(data + partA, &pool->buf[pool->front], partB);
+        start = pool->front;
+        memcpy(data + partA, &pool->buf[start], partB);
+        BSL_SAL_CleanseData(&pool->buf[start], partB);
         pool->front = (pool->front + partB) % pool->maxSize;
     }
 
