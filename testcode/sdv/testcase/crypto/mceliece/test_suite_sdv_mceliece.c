@@ -26,10 +26,38 @@
 #include "crypt_eal_md.h"
 #include "crypt_params_key.h"
 #include "crypt_drbg.h"
+#include "stub_utils.h"
+#include "mceliece_local.h"
 #include <stdbool.h>
 /* END_HEADER */
 
 static uint8_t gRandNumber = 32;
+STUB_DEFINE_RET1(void *, BSL_SAL_Malloc, uint32_t);
+STUB_DEFINE_RET2(void *, BSL_SAL_Calloc, uint32_t, uint32_t);
+
+static uint32_t g_mcelieceCallocCount = 0;
+static uint32_t g_mcelieceCallocFailIndex = 0;
+static bool g_mcelieceCallocFailEnabled = false;
+
+static void *McelieceStubCalloc(uint32_t count, uint32_t size)
+{
+    uint32_t currentIndex = g_mcelieceCallocCount++;
+    if (g_mcelieceCallocFailEnabled && currentIndex == g_mcelieceCallocFailIndex) {
+        return NULL;
+    }
+    return calloc(count, size);
+}
+
+static void McelieceResetCallocCount(void)
+{
+    g_mcelieceCallocCount = 0;
+}
+
+static void McelieceSetCallocFail(uint32_t failIndex, bool enabled)
+{
+    g_mcelieceCallocFailIndex = failIndex;
+    g_mcelieceCallocFailEnabled = enabled;
+}
 
 #define MCELIECE_TEST_L_BYTES 32
 
@@ -90,6 +118,23 @@ static int32_t GetAttackerZeroCiphertextKey(int32_t algId, uint8_t *ciphertext, 
     (void)memcpy(hashIn + 1 + nBytes, ciphertext, cipherLen);
     int32_t ret = CRYPT_EAL_Md(CRYPT_MD_SHAKE256, hashIn, hashInLen, sharedKey, sharedLen);
     BSL_SAL_FREE(hashIn);
+    return ret;
+}
+
+static int32_t GetPrefixedSessionKey(uint8_t prefix, const uint8_t *e, uint32_t nBytes,
+                                     const uint8_t *ciphertext, uint32_t cipherLen,
+                                     uint8_t *sharedKey, uint32_t *sharedLen)
+{
+    uint32_t hashInLen = 1 + nBytes + cipherLen;
+    uint8_t *hashIn = BSL_SAL_Calloc(hashInLen, sizeof(uint8_t));
+    if (hashIn == NULL) {
+        return CRYPT_MEM_ALLOC_FAIL;
+    }
+    hashIn[0] = prefix;
+    (void)memcpy(hashIn + 1, e, nBytes);
+    (void)memcpy(hashIn + 1 + nBytes, ciphertext, cipherLen);
+    int32_t ret = CRYPT_EAL_Md(CRYPT_MD_SHAKE256, hashIn, hashInLen, sharedKey, sharedLen);
+    BSL_SAL_ClearFree(hashIn, hashInLen);
     return ret;
 }
 
@@ -268,6 +313,10 @@ void SDV_CRYPTO_MCELIECE_ENCAPS_API_TC001(int algId)
     uint8_t *sharedKey = BSL_SAL_Malloc(sharedLen);
     ASSERT_TRUE(sharedKey != NULL);
 
+    // Encapsulation must fail before a public key is generated or imported.
+    ret = CRYPT_EAL_PkeyEncaps(ctx, ciphertext, &cipherLen, sharedKey, &sharedLen);
+    ASSERT_EQ(ret, CRYPT_MCELIECE_ABSENT_PUBKEY);
+
     ret = CRYPT_EAL_PkeyGen(ctx);
     ASSERT_EQ(ret, CRYPT_SUCCESS);
 
@@ -347,6 +396,10 @@ void SDV_CRYPTO_MCELIECE_DECAPS_API_TC001(int algId)
     uint8_t *sharedKey = BSL_SAL_Malloc(sharedLen);
     uint8_t *sharedKey2 = BSL_SAL_Malloc(sharedLen);
     ASSERT_TRUE(sharedKey != NULL);
+
+    // Decapsulation must fail before a private key is generated or imported.
+    ret = CRYPT_EAL_PkeyDecaps(ctx, ciphertext, cipherLen, sharedKey, &sharedLen);
+    ASSERT_EQ(ret, CRYPT_MCELIECE_ABSENT_PRVKEY);
 
     ret = CRYPT_EAL_PkeyGen(ctx);
     ASSERT_EQ(ret, CRYPT_SUCCESS);
@@ -449,6 +502,76 @@ EXIT:
 }
 /* END_CASE */
 
+/* @
+* @test  SDV_CRYPTO_MCELIECE_PC_C1_REJECT_FUNC_TC001
+* @spec  -
+* @title  McEliece PC decapsulation uses fallback secret when C1 verification fails
+* @precon  nan
+* @brief  1.generate a PC/PCF McEliece key pair and a valid ciphertext.
+* 2.tamper the PC C1 part of the ciphertext.
+* 3.compute the expected implicit-rejection key SHAKE256(0x00 || sk->s || tampered_ciphertext).
+* 4.decapsulate the tampered ciphertext and compare shared secrets.
+* @expect  1.success 2.success 3.success 4.actual key equals fallback key.
+* @prior  nan
+* @auto  FALSE
+@ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_MCELIECE_PC_C1_REJECT_FUNC_TC001(int algId)
+{
+    TestMemInit();
+    ASSERT_EQ(CRYPT_EAL_Init(CRYPT_EAL_INIT_RAND), CRYPT_SUCCESS);
+    CRYPT_EAL_PkeyCtx *ctx = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_MCELIECE);
+    ASSERT_TRUE(ctx != NULL);
+
+    int32_t val = (int32_t)algId;
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_SET_PARA_BY_ID, &val, sizeof(val)), CRYPT_SUCCESS);
+    ASSERT_TRUE(IsMceliecePcParam(algId));
+    ASSERT_EQ(CRYPT_EAL_PkeyGen(ctx), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyEncapsInit(ctx, NULL), CRYPT_SUCCESS);
+
+    uint32_t cipherLen = 0;
+    uint32_t sharedLen = 0;
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_GET_CIPHERTEXT_LEN, &cipherLen, sizeof(cipherLen)), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_GET_SHARED_KEY_LEN, &sharedLen, sizeof(sharedLen)), CRYPT_SUCCESS);
+
+    uint8_t *ciphertext = BSL_SAL_Malloc(cipherLen);
+    uint8_t *tamperedCiphertext = BSL_SAL_Malloc(cipherLen);
+    ASSERT_TRUE(ciphertext != NULL);
+    ASSERT_TRUE(tamperedCiphertext != NULL);
+
+    uint8_t sharedKey[MCELIECE_TEST_L_BYTES] = {0};
+    uint8_t badSharedKey[MCELIECE_TEST_L_BYTES] = {0};
+    uint8_t fallbackKey[MCELIECE_TEST_L_BYTES] = {0};
+    uint32_t encapsSharedLen = sharedLen;
+    uint32_t badSharedLen = sharedLen;
+    uint32_t fallbackLen = sizeof(fallbackKey);
+
+    ASSERT_EQ(CRYPT_EAL_PkeyEncaps(ctx, ciphertext, &cipherLen, sharedKey, &encapsSharedLen), CRYPT_SUCCESS);
+    (void)memcpy(tamperedCiphertext, ciphertext, cipherLen);
+    tamperedCiphertext[cipherLen - 1] ^= 0x01U; // Tamper C1 only. C0 and decoded_e remain valid.
+
+    CRYPT_MCELIECE_Ctx *mcelieceCtx = (CRYPT_MCELIECE_Ctx *)ctx->key;
+    ASSERT_TRUE(mcelieceCtx != NULL);
+    ASSERT_TRUE(mcelieceCtx->privateKey != NULL);
+
+    ASSERT_EQ(GetPrefixedSessionKey(0, mcelieceCtx->privateKey->s, (uint32_t)mcelieceCtx->para->nBytes,
+        tamperedCiphertext, cipherLen, fallbackKey, &fallbackLen), CRYPT_SUCCESS);
+    ASSERT_EQ(fallbackLen, MCELIECE_TEST_L_BYTES);
+
+    ASSERT_EQ(CRYPT_EAL_PkeyDecapsInit(ctx, NULL), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyDecaps(ctx, tamperedCiphertext, cipherLen, badSharedKey, &badSharedLen), CRYPT_SUCCESS);
+    ASSERT_EQ(badSharedLen, MCELIECE_TEST_L_BYTES);
+    ASSERT_COMPARE("pc c1 fallback key cmp", badSharedKey, badSharedLen, fallbackKey, fallbackLen);
+    ASSERT_TRUE(memcmp(badSharedKey, sharedKey, MCELIECE_TEST_L_BYTES) != 0);
+EXIT:
+    CRYPT_EAL_PkeyFreeCtx(ctx);
+    BSL_SAL_FREE(ciphertext);
+    BSL_SAL_FREE(tamperedCiphertext);
+    CRYPT_EAL_Cleanup(CRYPT_EAL_INIT_RAND);
+    return;
+}
+/* END_CASE */
+
 
 /* @
 * @test  SDV_CRYPTO_MCELIECE_SETPUB_API_TC001
@@ -465,11 +588,25 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_CRYPTO_MCELIECE_SETPUB_API_TC001(int algId, Hex *testEK)
 {
+    uint8_t *getPubKey = NULL;
     TestMemInit();
     CRYPT_RandRegist(TestSimpleRand);
 
     CRYPT_EAL_PkeyCtx *ctx = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_MCELIECE);
     ASSERT_TRUE(ctx != NULL);
+
+    BSL_Param pubParam[2] = {0};
+    BSL_PARAM_InitValue(&pubParam[0], CRYPT_PARAM_MCELIECE_PUBKEY, BSL_PARAM_TYPE_OCTETS,
+                        testEK->x, testEK->len);
+    BSL_PARAM_InitValue(&pubParam[1], 0, 0, NULL, 0);
+
+    // Parameter set and NULL input checks.
+    ASSERT_EQ(CRYPT_EAL_PkeySetPubEx(ctx, pubParam), CRYPT_MCELIECE_KEYINFO_NOT_SET);
+    ASSERT_EQ(CRYPT_EAL_PkeyGetPubEx(ctx, pubParam), CRYPT_MCELIECE_KEYINFO_NOT_SET);
+    ASSERT_EQ(CRYPT_EAL_PkeySetPubEx(NULL, pubParam), CRYPT_NULL_INPUT);
+    ASSERT_EQ(CRYPT_EAL_PkeySetPubEx(ctx, NULL), CRYPT_NULL_INPUT);
+    ASSERT_EQ(CRYPT_EAL_PkeyGetPubEx(NULL, pubParam), CRYPT_NULL_INPUT);
+    ASSERT_EQ(CRYPT_EAL_PkeyGetPubEx(ctx, NULL), CRYPT_NULL_INPUT);
 
     int32_t val = (int32_t)algId;
     int ret = CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_SET_PARA_BY_ID, &val, sizeof(val));
@@ -482,13 +619,14 @@ void SDV_CRYPTO_MCELIECE_SETPUB_API_TC001(int algId, Hex *testEK)
     ret = CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_GET_PUBKEY_LEN, &encapsKeyLen, sizeof(encapsKeyLen));
     ASSERT_EQ(ret, CRYPT_SUCCESS);
 
-    BSL_Param pubParam[2] = {0};
-    BSL_PARAM_InitValue(&pubParam[0], CRYPT_PARAM_MCELIECE_PUBKEY, BSL_PARAM_TYPE_OCTETS,
-                        testEK->x, testEK->len);
-    BSL_PARAM_InitValue(&pubParam[1], 0, 0, NULL, 0);
-
-    // Test error cases
+    // Getting a public key must fail before a key is generated or imported.
     ASSERT_EQ(CRYPT_EAL_PkeyGetPubEx(ctx, pubParam), CRYPT_MCELIECE_ABSENT_PUBKEY);
+
+    BSL_Param nullPubParam[2] = {0};
+    BSL_PARAM_InitValue(&nullPubParam[0], CRYPT_PARAM_MCELIECE_PUBKEY, BSL_PARAM_TYPE_OCTETS,
+                        NULL, encapsKeyLen);
+    BSL_PARAM_InitValue(&nullPubParam[1], 0, 0, NULL, 0);
+    ASSERT_EQ(CRYPT_EAL_PkeySetPubEx(ctx, nullPubParam), CRYPT_NULL_INPUT);
 
     // Test setting public key with incorrect length
     BSL_Param badPubParam[2] = {0};
@@ -501,13 +639,14 @@ void SDV_CRYPTO_MCELIECE_SETPUB_API_TC001(int algId, Hex *testEK)
     ASSERT_EQ(CRYPT_EAL_PkeySetPubEx(ctx, pubParam), CRYPT_SUCCESS);
 
     // Test getting public key
-    uint8_t *getPubKey = BSL_SAL_Malloc(encapsKeyLen);
+    getPubKey = BSL_SAL_Malloc(encapsKeyLen);
     ASSERT_TRUE(getPubKey != NULL);
     BSL_Param getPubParam[2] = {0};
     BSL_PARAM_InitValue(&getPubParam[0], CRYPT_PARAM_MCELIECE_PUBKEY, BSL_PARAM_TYPE_OCTETS,
                         getPubKey, encapsKeyLen);
     BSL_PARAM_InitValue(&getPubParam[1], 0, 0, NULL, 0);
 
+    ASSERT_EQ(CRYPT_EAL_PkeyGetPubEx(ctx, nullPubParam), CRYPT_NULL_INPUT);
     ASSERT_EQ(CRYPT_EAL_PkeyGetPubEx(ctx, getPubParam), CRYPT_SUCCESS);
     ASSERT_COMPARE("compare ek", getPubKey, encapsKeyLen, testEK->x, testEK->len);
 
@@ -535,11 +674,25 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_CRYPTO_MCELIECE_SETPRV_API_TC001(int algId, Hex *testDK)
 {
+    uint8_t *getPrvKey = NULL;
     TestMemInit();
     CRYPT_RandRegist(TestSimpleRand);
 
     CRYPT_EAL_PkeyCtx *ctx = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_MCELIECE);
     ASSERT_TRUE(ctx != NULL);
+
+    BSL_Param prvParam[2] = {0};
+    BSL_PARAM_InitValue(&prvParam[0], CRYPT_PARAM_MCELIECE_PRVKEY, BSL_PARAM_TYPE_OCTETS,
+                        testDK->x, testDK->len);
+    BSL_PARAM_InitValue(&prvParam[1], 0, 0, NULL, 0);
+
+    // Parameter set and NULL input checks.
+    ASSERT_EQ(CRYPT_EAL_PkeySetPrvEx(ctx, prvParam), CRYPT_MCELIECE_KEYINFO_NOT_SET);
+    ASSERT_EQ(CRYPT_EAL_PkeyGetPrvEx(ctx, prvParam), CRYPT_MCELIECE_KEYINFO_NOT_SET);
+    ASSERT_EQ(CRYPT_EAL_PkeySetPrvEx(NULL, prvParam), CRYPT_NULL_INPUT);
+    ASSERT_EQ(CRYPT_EAL_PkeySetPrvEx(ctx, NULL), CRYPT_NULL_INPUT);
+    ASSERT_EQ(CRYPT_EAL_PkeyGetPrvEx(NULL, prvParam), CRYPT_NULL_INPUT);
+    ASSERT_EQ(CRYPT_EAL_PkeyGetPrvEx(ctx, NULL), CRYPT_NULL_INPUT);
 
     int32_t val = (int32_t)algId;
     int ret = CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_SET_PARA_BY_ID, &val, sizeof(val));
@@ -552,13 +705,14 @@ void SDV_CRYPTO_MCELIECE_SETPRV_API_TC001(int algId, Hex *testDK)
     ret = CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_GET_PRVKEY_LEN, &decapsKeyLen, sizeof(decapsKeyLen));
     ASSERT_EQ(ret, CRYPT_SUCCESS);
 
-    BSL_Param prvParam[2] = {0};
-    BSL_PARAM_InitValue(&prvParam[0], CRYPT_PARAM_MCELIECE_PRVKEY, BSL_PARAM_TYPE_OCTETS,
-                        testDK->x, testDK->len);
-    BSL_PARAM_InitValue(&prvParam[1], 0, 0, NULL, 0);
-
-    // Test error cases
+    // Getting a private key must fail before a key is generated or imported.
     ASSERT_EQ(CRYPT_EAL_PkeyGetPrvEx(ctx, prvParam), CRYPT_MCELIECE_ABSENT_PRVKEY);
+
+    BSL_Param nullPrvParam[2] = {0};
+    BSL_PARAM_InitValue(&nullPrvParam[0], CRYPT_PARAM_MCELIECE_PRVKEY, BSL_PARAM_TYPE_OCTETS,
+                        NULL, decapsKeyLen);
+    BSL_PARAM_InitValue(&nullPrvParam[1], 0, 0, NULL, 0);
+    ASSERT_EQ(CRYPT_EAL_PkeySetPrvEx(ctx, nullPrvParam), CRYPT_NULL_INPUT);
 
     // Test setting private key with incorrect length
     BSL_Param badPrvParam[2] = {0};
@@ -571,13 +725,14 @@ void SDV_CRYPTO_MCELIECE_SETPRV_API_TC001(int algId, Hex *testDK)
     ASSERT_EQ(CRYPT_EAL_PkeySetPrvEx(ctx, prvParam), CRYPT_SUCCESS);
 
     // Test getting private key
-    uint8_t *getPrvKey = BSL_SAL_Malloc(decapsKeyLen);
+    getPrvKey = BSL_SAL_Malloc(decapsKeyLen);
     ASSERT_TRUE(getPrvKey != NULL);
     BSL_Param getPrvParam[2] = {0};
     BSL_PARAM_InitValue(&getPrvParam[0], CRYPT_PARAM_MCELIECE_PRVKEY, BSL_PARAM_TYPE_OCTETS,
                         getPrvKey, decapsKeyLen);
     BSL_PARAM_InitValue(&getPrvParam[1], 0, 0, NULL, 0);
 
+    ASSERT_EQ(CRYPT_EAL_PkeyGetPrvEx(ctx, nullPrvParam), CRYPT_NULL_INPUT);
     ASSERT_EQ(CRYPT_EAL_PkeyGetPrvEx(ctx, getPrvParam), CRYPT_SUCCESS);
     ASSERT_COMPARE("compare dk", getPrvKey, decapsKeyLen, testDK->x, testDK->len);
 
@@ -802,6 +957,7 @@ void SDV_CRYPTO_MCELIECE_ENCAPS_DECAPS_FUNC_TC001(int algId, Hex *seed, Hex *tes
 
     uint32_t ssLen;
     uint32_t ctLen;
+    uint32_t decapsSsLen = 32;
     uint8_t *ss = NULL;
     uint8_t *ct = NULL;
 
@@ -825,8 +981,9 @@ void SDV_CRYPTO_MCELIECE_ENCAPS_DECAPS_FUNC_TC001(int algId, Hex *seed, Hex *tes
     ASSERT_EQ(CRYPT_EAL_PkeyDecapsInit(ctx, NULL), CRYPT_SUCCESS);
 
     // Perform decapsulation and compare with test vectors
-    ASSERT_EQ(CRYPT_EAL_PkeyDecaps(ctx, testCt->x, testCt->len, ss, &ssLen), CRYPT_SUCCESS);
-    ASSERT_COMPARE("decaps ss cmp", ss, ssLen, testSs->x, testSs->len);
+    ASSERT_EQ(CRYPT_EAL_PkeyDecaps(ctx, testCt->x, testCt->len, ss, &decapsSsLen), CRYPT_SUCCESS);
+
+    ASSERT_COMPARE("decaps ss cmp", ss, decapsSsLen, testSs->x, testSs->len);
 EXIT:
     CRYPT_EAL_PkeyFreeCtx(ctx);
     BSL_SAL_FREE(dk.key.kemDk.data);
@@ -834,6 +991,345 @@ EXIT:
     BSL_SAL_FREE(ss);
     BSL_SAL_FREE(ct);
     RandTeardown();
+    return;
+}
+/* END_CASE */
+
+/* @
+* @test  SDV_CRYPTO_MCELIECE_SETPRV_DECAPS_FUNC_TC001
+* @spec  -
+* @title  Decapsulation with an imported McEliece private key
+* @precon  nan
+* @brief  1. Generate a key pair in the first context.
+* 2. Export its private key and import it into the second context.
+* 3. Encapsulate with the first context and decapsulate with the second context.
+* 4. Compare the shared secrets to verify that SetPrv restored the support set from control bits.
+* @expect  All operations succeed and shared secrets match.
+* @prior  nan
+* @auto  FALSE
+@ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_MCELIECE_SETPRV_DECAPS_FUNC_TC001(int algId)
+{
+    CRYPT_EAL_PkeyCtx *keygenCtx = NULL;
+    CRYPT_EAL_PkeyCtx *importCtx = NULL;
+    CRYPT_EAL_PkeyPrv prv = {0};
+    uint8_t *ciphertext = NULL;
+    uint8_t *encapsSharedKey = NULL;
+    uint8_t *decapsSharedKey = NULL;
+    uint32_t prvLen = 0;
+    uint32_t ciphertextLen = 0;
+    uint32_t sharedKeyLen = 0;
+
+    TestMemInit();
+    ASSERT_EQ(CRYPT_EAL_Init(CRYPT_EAL_INIT_RAND), CRYPT_SUCCESS);
+
+#ifdef HITLS_CRYPTO_PROVIDER
+    ASSERT_EQ(CRYPT_EAL_Init(CRYPT_EAL_INIT_PROVIDER), CRYPT_SUCCESS);
+    keygenCtx = CRYPT_EAL_ProviderPkeyNewCtx(NULL, CRYPT_PKEY_MCELIECE, CRYPT_EAL_PKEY_KEM_OPERATE,
+        "provider=default");
+    importCtx = CRYPT_EAL_ProviderPkeyNewCtx(NULL, CRYPT_PKEY_MCELIECE, CRYPT_EAL_PKEY_KEM_OPERATE,
+        "provider=default");
+#else
+    keygenCtx = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_MCELIECE);
+    importCtx = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_MCELIECE);
+#endif
+    ASSERT_TRUE(keygenCtx != NULL);
+    ASSERT_TRUE(importCtx != NULL);
+
+    int32_t val = algId;
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(keygenCtx, CRYPT_CTRL_SET_PARA_BY_ID, &val, sizeof(val)), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(importCtx, CRYPT_CTRL_SET_PARA_BY_ID, &val, sizeof(val)), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyGen(keygenCtx), CRYPT_SUCCESS);
+
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(keygenCtx, CRYPT_CTRL_GET_PRVKEY_LEN, &prvLen, sizeof(prvLen)), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(keygenCtx, CRYPT_CTRL_GET_CIPHERTEXT_LEN,
+        &ciphertextLen, sizeof(ciphertextLen)), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(keygenCtx, CRYPT_CTRL_GET_SHARED_KEY_LEN,
+        &sharedKeyLen, sizeof(sharedKeyLen)), CRYPT_SUCCESS);
+
+    prv.id = CRYPT_PKEY_MCELIECE;
+    prv.key.kemDk.data = BSL_SAL_Malloc(prvLen);
+    ASSERT_TRUE(prv.key.kemDk.data != NULL);
+    prv.key.kemDk.len = prvLen;
+    ASSERT_EQ(CRYPT_EAL_PkeyGetPrv(keygenCtx, &prv), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeySetPrv(importCtx, &prv), CRYPT_SUCCESS);
+
+    ciphertext = BSL_SAL_Malloc(ciphertextLen);
+    encapsSharedKey = BSL_SAL_Malloc(sharedKeyLen);
+    decapsSharedKey = BSL_SAL_Malloc(sharedKeyLen);
+    ASSERT_TRUE(ciphertext != NULL);
+    ASSERT_TRUE(encapsSharedKey != NULL);
+    ASSERT_TRUE(decapsSharedKey != NULL);
+
+    uint32_t encapsSharedKeyLen = sharedKeyLen;
+    uint32_t decapsSharedKeyLen = sharedKeyLen;
+    ASSERT_EQ(CRYPT_EAL_PkeyEncapsInit(keygenCtx, NULL), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyEncaps(keygenCtx, ciphertext, &ciphertextLen,
+        encapsSharedKey, &encapsSharedKeyLen), CRYPT_SUCCESS);
+
+    ASSERT_EQ(CRYPT_EAL_PkeyDecapsInit(importCtx, NULL), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyDecaps(importCtx, ciphertext, ciphertextLen,
+        decapsSharedKey, &decapsSharedKeyLen), CRYPT_SUCCESS);
+    ASSERT_EQ(encapsSharedKeyLen, decapsSharedKeyLen);
+    ASSERT_COMPARE("imported private key shared secret", encapsSharedKey, encapsSharedKeyLen,
+        decapsSharedKey, decapsSharedKeyLen);
+
+EXIT:
+    CRYPT_EAL_PkeyFreeCtx(keygenCtx);
+    CRYPT_EAL_PkeyFreeCtx(importCtx);
+    BSL_SAL_ClearFree(prv.key.kemDk.data, prv.key.kemDk.len);
+    BSL_SAL_Free(ciphertext);
+    BSL_SAL_ClearFree(encapsSharedKey, sharedKeyLen);
+    BSL_SAL_ClearFree(decapsSharedKey, sharedKeyLen);
+    CRYPT_EAL_Cleanup(CRYPT_EAL_INIT_RAND);
+    return;
+}
+/* END_CASE */
+
+/* @
+* @test  SDV_CRYPTO_MCELIECE_IMPORTED_KEY_MALLOC_FAIL_FUNC_TC001
+* @spec  -
+* @title  Allocation failure cleanup for imported-key operations
+* @precon  nan
+* @brief  1. Generate one source key pair and export it.
+* 2. Inject failure at every BSL_SAL_Malloc/Calloc call in SetPub, SetPrv, Encaps and Decaps.
+* 3. Reuse imported keys so KeyGen is not repeated for every failure point.
+* @expect  Normal paths succeed; every injected path fails without leaking memory.
+* @prior  nan
+* @auto  FALSE
+@ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_MCELIECE_IMPORTED_KEY_MALLOC_FAIL_FUNC_TC001(int algId)
+{
+    CRYPT_EAL_PkeyCtx *sourceCtx = NULL;
+    CRYPT_EAL_PkeyCtx *setPrvCtx = NULL;
+    CRYPT_EAL_PkeyCtx *pubCtx = NULL;
+    CRYPT_EAL_PkeyCtx *prvCtx = NULL;
+    CRYPT_EAL_PkeyPub pub = {0};
+    CRYPT_EAL_PkeyPrv prv = {0};
+    uint8_t *ciphertext = NULL;
+    uint8_t *encapsSharedKey = NULL;
+    uint8_t *decapsSharedKey = NULL;
+    uint32_t pubLen = 0;
+    uint32_t prvLen = 0;
+    uint32_t ciphertextSize = 0;
+    uint32_t sharedKeySize = 0;
+
+    TestMemInit();
+    ASSERT_EQ(CRYPT_EAL_Init(CRYPT_EAL_INIT_RAND), CRYPT_SUCCESS);
+    sourceCtx = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_MCELIECE);
+    ASSERT_TRUE(sourceCtx != NULL);
+    int32_t val = algId;
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(sourceCtx, CRYPT_CTRL_SET_PARA_BY_ID, &val, sizeof(val)), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyGen(sourceCtx), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(sourceCtx, CRYPT_CTRL_GET_PUBKEY_LEN, &pubLen, sizeof(pubLen)), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(sourceCtx, CRYPT_CTRL_GET_PRVKEY_LEN, &prvLen, sizeof(prvLen)), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(sourceCtx, CRYPT_CTRL_GET_CIPHERTEXT_LEN,
+        &ciphertextSize, sizeof(ciphertextSize)), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(sourceCtx, CRYPT_CTRL_GET_SHARED_KEY_LEN,
+        &sharedKeySize, sizeof(sharedKeySize)), CRYPT_SUCCESS);
+
+    pub.id = CRYPT_PKEY_MCELIECE;
+    pub.key.kemEk.data = BSL_SAL_Malloc(pubLen);
+    pub.key.kemEk.len = pubLen;
+    prv.id = CRYPT_PKEY_MCELIECE;
+    prv.key.kemDk.data = BSL_SAL_Malloc(prvLen);
+    prv.key.kemDk.len = prvLen;
+    ciphertext = BSL_SAL_Malloc(ciphertextSize);
+    encapsSharedKey = BSL_SAL_Malloc(sharedKeySize);
+    decapsSharedKey = BSL_SAL_Malloc(sharedKeySize);
+    ASSERT_TRUE(pub.key.kemEk.data != NULL);
+    ASSERT_TRUE(prv.key.kemDk.data != NULL);
+    ASSERT_TRUE(ciphertext != NULL);
+    ASSERT_TRUE(encapsSharedKey != NULL);
+    ASSERT_TRUE(decapsSharedKey != NULL);
+    ASSERT_EQ(CRYPT_EAL_PkeyGetPub(sourceCtx, &pub), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyGetPrv(sourceCtx, &prv), CRYPT_SUCCESS);
+
+    STUB_REPLACE(BSL_SAL_Malloc, STUB_BSL_SAL_Malloc);
+    STUB_REPLACE(BSL_SAL_Calloc, McelieceStubCalloc);
+    STUB_EnableMallocFail(false);
+
+    // SetPub currently allocates through Calloc. Fail each allocation once on a fresh context.
+    McelieceSetCallocFail(0, false);
+    setPrvCtx = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_MCELIECE);
+    ASSERT_TRUE(setPrvCtx != NULL);
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(setPrvCtx, CRYPT_CTRL_SET_PARA_BY_ID, &val, sizeof(val)), CRYPT_SUCCESS);
+    McelieceResetCallocCount();
+    ASSERT_EQ(CRYPT_EAL_PkeySetPub(setPrvCtx, &pub), CRYPT_SUCCESS);
+    uint32_t setPubCallocCount = g_mcelieceCallocCount;
+    ASSERT_TRUE(setPubCallocCount > 0);
+    CRYPT_EAL_PkeyFreeCtx(setPrvCtx);
+    setPrvCtx = NULL;
+
+    for (uint32_t i = 0; i < setPubCallocCount; i++) {
+        McelieceSetCallocFail(0, false);
+        setPrvCtx = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_MCELIECE);
+        ASSERT_TRUE(setPrvCtx != NULL);
+        ASSERT_EQ(CRYPT_EAL_PkeyCtrl(setPrvCtx, CRYPT_CTRL_SET_PARA_BY_ID, &val, sizeof(val)), CRYPT_SUCCESS);
+        McelieceResetCallocCount();
+        McelieceSetCallocFail(i, true);
+        ASSERT_NE(CRYPT_EAL_PkeySetPub(setPrvCtx, &pub), CRYPT_SUCCESS);
+        McelieceSetCallocFail(0, false);
+        CRYPT_EAL_PkeyFreeCtx(setPrvCtx);
+        setPrvCtx = NULL;
+    }
+
+    // SetPrv: count the successful path, then fail each malloc once on a fresh context.
+    STUB_EnableMallocFail(false);
+    setPrvCtx = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_MCELIECE);
+    ASSERT_TRUE(setPrvCtx != NULL);
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(setPrvCtx, CRYPT_CTRL_SET_PARA_BY_ID, &val, sizeof(val)), CRYPT_SUCCESS);
+    STUB_ResetMallocCount();
+    ASSERT_EQ(CRYPT_EAL_PkeySetPrv(setPrvCtx, &prv), CRYPT_SUCCESS);
+    uint32_t setPrvMallocCount = STUB_GetMallocCallCount();
+    ASSERT_TRUE(setPrvMallocCount > 0);
+    CRYPT_EAL_PkeyFreeCtx(setPrvCtx);
+    setPrvCtx = NULL;
+
+    for (uint32_t i = 0; i < setPrvMallocCount; i++) {
+        STUB_EnableMallocFail(false);
+        setPrvCtx = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_MCELIECE);
+        ASSERT_TRUE(setPrvCtx != NULL);
+        ASSERT_EQ(CRYPT_EAL_PkeyCtrl(setPrvCtx, CRYPT_CTRL_SET_PARA_BY_ID, &val, sizeof(val)), CRYPT_SUCCESS);
+        STUB_ResetMallocCount();
+        STUB_SetMallocFailIndex(i);
+        STUB_EnableMallocFail(true);
+        ASSERT_NE(CRYPT_EAL_PkeySetPrv(setPrvCtx, &prv), CRYPT_SUCCESS);
+        STUB_EnableMallocFail(false);
+        CRYPT_EAL_PkeyFreeCtx(setPrvCtx);
+        setPrvCtx = NULL;
+    }
+
+    // SetPrv also contains Calloc allocations; sweep those independently.
+    McelieceSetCallocFail(0, false);
+    setPrvCtx = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_MCELIECE);
+    ASSERT_TRUE(setPrvCtx != NULL);
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(setPrvCtx, CRYPT_CTRL_SET_PARA_BY_ID, &val, sizeof(val)), CRYPT_SUCCESS);
+    McelieceResetCallocCount();
+    ASSERT_EQ(CRYPT_EAL_PkeySetPrv(setPrvCtx, &prv), CRYPT_SUCCESS);
+    uint32_t setPrvCallocCount = g_mcelieceCallocCount;
+    ASSERT_TRUE(setPrvCallocCount > 0);
+    CRYPT_EAL_PkeyFreeCtx(setPrvCtx);
+    setPrvCtx = NULL;
+
+    for (uint32_t i = 0; i < setPrvCallocCount; i++) {
+        McelieceSetCallocFail(0, false);
+        setPrvCtx = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_MCELIECE);
+        ASSERT_TRUE(setPrvCtx != NULL);
+        ASSERT_EQ(CRYPT_EAL_PkeyCtrl(setPrvCtx, CRYPT_CTRL_SET_PARA_BY_ID, &val, sizeof(val)), CRYPT_SUCCESS);
+        McelieceResetCallocCount();
+        McelieceSetCallocFail(i, true);
+        ASSERT_NE(CRYPT_EAL_PkeySetPrv(setPrvCtx, &prv), CRYPT_SUCCESS);
+        McelieceSetCallocFail(0, false);
+        CRYPT_EAL_PkeyFreeCtx(setPrvCtx);
+        setPrvCtx = NULL;
+    }
+
+    // Import keys once. The following failure sweeps do not execute KeyGen.
+    pubCtx = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_MCELIECE);
+    prvCtx = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_MCELIECE);
+    ASSERT_TRUE(pubCtx != NULL);
+    ASSERT_TRUE(prvCtx != NULL);
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(pubCtx, CRYPT_CTRL_SET_PARA_BY_ID, &val, sizeof(val)), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(prvCtx, CRYPT_CTRL_SET_PARA_BY_ID, &val, sizeof(val)), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeySetPub(pubCtx, &pub), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeySetPrv(prvCtx, &prv), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyEncapsInit(pubCtx, NULL), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyDecapsInit(prvCtx, NULL), CRYPT_SUCCESS);
+
+    STUB_ResetMallocCount();
+    uint32_t ciphertextLen = ciphertextSize;
+    uint32_t encapsSharedKeyLen = sharedKeySize;
+    ASSERT_EQ(CRYPT_EAL_PkeyEncaps(pubCtx, ciphertext, &ciphertextLen,
+        encapsSharedKey, &encapsSharedKeyLen), CRYPT_SUCCESS);
+    uint32_t encapsMallocCount = STUB_GetMallocCallCount();
+    ASSERT_TRUE(encapsMallocCount > 0);
+
+    for (uint32_t i = 0; i < encapsMallocCount; i++) {
+        ciphertextLen = ciphertextSize;
+        encapsSharedKeyLen = sharedKeySize;
+        STUB_ResetMallocCount();
+        STUB_SetMallocFailIndex(i);
+        STUB_EnableMallocFail(true);
+        ASSERT_NE(CRYPT_EAL_PkeyEncaps(pubCtx, ciphertext, &ciphertextLen,
+            encapsSharedKey, &encapsSharedKeyLen), CRYPT_SUCCESS);
+        STUB_EnableMallocFail(false);
+    }
+
+    // Sweep Calloc failures in Encaps independently from Malloc failures.
+    McelieceSetCallocFail(0, false);
+    McelieceResetCallocCount();
+    ciphertextLen = ciphertextSize;
+    encapsSharedKeyLen = sharedKeySize;
+    ASSERT_EQ(CRYPT_EAL_PkeyEncaps(pubCtx, ciphertext, &ciphertextLen,
+        encapsSharedKey, &encapsSharedKeyLen), CRYPT_SUCCESS);
+    uint32_t encapsCallocCount = g_mcelieceCallocCount;
+    for (uint32_t i = 0; i < encapsCallocCount; i++) {
+        ciphertextLen = ciphertextSize;
+        encapsSharedKeyLen = sharedKeySize;
+        McelieceResetCallocCount();
+        McelieceSetCallocFail(i, true);
+        ASSERT_NE(CRYPT_EAL_PkeyEncaps(pubCtx, ciphertext, &ciphertextLen,
+            encapsSharedKey, &encapsSharedKeyLen), CRYPT_SUCCESS);
+        McelieceSetCallocFail(0, false);
+    }
+
+    // Generate a valid ciphertext again before testing Decaps failures.
+    ciphertextLen = ciphertextSize;
+    encapsSharedKeyLen = sharedKeySize;
+    ASSERT_EQ(CRYPT_EAL_PkeyEncaps(pubCtx, ciphertext, &ciphertextLen,
+        encapsSharedKey, &encapsSharedKeyLen), CRYPT_SUCCESS);
+    STUB_ResetMallocCount();
+    uint32_t decapsSharedKeyLen = sharedKeySize;
+    ASSERT_EQ(CRYPT_EAL_PkeyDecaps(prvCtx, ciphertext, ciphertextLen,
+        decapsSharedKey, &decapsSharedKeyLen), CRYPT_SUCCESS);
+    uint32_t decapsMallocCount = STUB_GetMallocCallCount();
+    ASSERT_TRUE(decapsMallocCount > 0);
+
+    for (uint32_t i = 0; i < decapsMallocCount; i++) {
+        decapsSharedKeyLen = sharedKeySize;
+        STUB_ResetMallocCount();
+        STUB_SetMallocFailIndex(i);
+        STUB_EnableMallocFail(true);
+        ASSERT_NE(CRYPT_EAL_PkeyDecaps(prvCtx, ciphertext, ciphertextLen,
+            decapsSharedKey, &decapsSharedKeyLen), CRYPT_SUCCESS);
+        STUB_EnableMallocFail(false);
+    }
+
+    // Sweep Calloc failures in Decaps independently from Malloc failures.
+    McelieceSetCallocFail(0, false);
+    McelieceResetCallocCount();
+    decapsSharedKeyLen = sharedKeySize;
+    ASSERT_EQ(CRYPT_EAL_PkeyDecaps(prvCtx, ciphertext, ciphertextLen,
+        decapsSharedKey, &decapsSharedKeyLen), CRYPT_SUCCESS);
+    uint32_t decapsCallocCount = g_mcelieceCallocCount;
+    ASSERT_TRUE(decapsCallocCount > 0);
+    for (uint32_t i = 0; i < decapsCallocCount; i++) {
+        decapsSharedKeyLen = sharedKeySize;
+        McelieceResetCallocCount();
+        McelieceSetCallocFail(i, true);
+        ASSERT_NE(CRYPT_EAL_PkeyDecaps(prvCtx, ciphertext, ciphertextLen,
+            decapsSharedKey, &decapsSharedKeyLen), CRYPT_SUCCESS);
+        McelieceSetCallocFail(0, false);
+    }
+
+EXIT:
+    STUB_EnableMallocFail(false);
+    McelieceSetCallocFail(0, false);
+    STUB_RESTORE(BSL_SAL_Malloc);
+    STUB_RESTORE(BSL_SAL_Calloc);
+    CRYPT_EAL_PkeyFreeCtx(sourceCtx);
+    CRYPT_EAL_PkeyFreeCtx(setPrvCtx);
+    CRYPT_EAL_PkeyFreeCtx(pubCtx);
+    CRYPT_EAL_PkeyFreeCtx(prvCtx);
+    BSL_SAL_FREE(pub.key.kemEk.data);
+    BSL_SAL_ClearFree(prv.key.kemDk.data, prv.key.kemDk.len);
+    BSL_SAL_FREE(ciphertext);
+    BSL_SAL_ClearFree(encapsSharedKey, sharedKeySize);
+    BSL_SAL_ClearFree(decapsSharedKey, sharedKeySize);
+    CRYPT_EAL_Cleanup(CRYPT_EAL_INIT_RAND);
     return;
 }
 /* END_CASE */

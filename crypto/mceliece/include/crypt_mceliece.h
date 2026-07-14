@@ -32,7 +32,7 @@ int32_t CRYPT_MCELIECE_SetPrvKeyEx(CRYPT_MCELIECE_Ctx *ctx, const BSL_Param *par
 int32_t CRYPT_MCELIECE_SetPubKeyEx(CRYPT_MCELIECE_Ctx *ctx, const BSL_Param *param);
 int32_t CRYPT_MCELIECE_GetPrvKeyEx(CRYPT_MCELIECE_Ctx *ctx, BSL_Param *param);
 int32_t CRYPT_MCELIECE_GetPubKeyEx(CRYPT_MCELIECE_Ctx *ctx, BSL_Param *param);
-CRYPT_MCELIECE_Ctx *CRYPT_MCELIECE_DupCtx(const CRYPT_MCELIECE_Ctx *src_ctx);
+CRYPT_MCELIECE_Ctx *CRYPT_MCELIECE_DupCtx(const CRYPT_MCELIECE_Ctx *src);
 int32_t CRYPT_MCELIECE_Cmp(CRYPT_MCELIECE_Ctx *ctx1, CRYPT_MCELIECE_Ctx *ctx2);
 int32_t CRYPT_MCELIECE_Ctrl(CRYPT_MCELIECE_Ctx *ctx, int32_t cmd, void *val, uint32_t valLen);
 void CRYPT_MCELIECE_FreeCtx(CRYPT_MCELIECE_Ctx *ctx);

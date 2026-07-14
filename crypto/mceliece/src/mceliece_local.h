@@ -24,11 +24,12 @@
 
 #include "crypt_errno.h"
 #include "crypt_algid.h"
-#include "crypt_drbg.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+#define MCELIECE_GF_BITS 13
 
 #define MCELIECE_GF_POLY    0x201B
 #define MCELIECE_SEED_BYTES 48
@@ -38,30 +39,20 @@ extern "C" {
 #define MCELIECE_SIGMA2 32
 #define MCELIECE_MU     32
 #define MCELIECE_NU     64
+#define MCELIECE_T_MAX  128
+#define MCELIECE_NBYTES_MAX 1024
 
 #define MCELIECE_Q   8192 // Q = 2^m
 #define MCELIECE_Q_1 8191 // Q-1
 
-#define MCELIECE_PARA_6688_N 6688
-#define MCELIECE_PARA_6960_N 6960
-#define MCELIECE_PARA_8192_N 8192
-
 #define MCELIECE_L_BYTES ((MCELIECE_L) / (8))
+#define MCELIECE_NBYTES_MAX 1024
+
+#define MCELIECE_MAX_TRY_COUNT 50
 
 #define SAME_MASK(k, val) ((uint64_t)(-(int64_t)(((((uint32_t)((k) ^ (val)))) - (1U)) >> (31))))
 
-typedef uint16_t GFElement;
-typedef struct {
-    int32_t rows;
-    int32_t cols;
-    GFElement *data;
-} GFMatrixFq;
-
-typedef struct {
-    GFElement *coeffs;
-    int32_t degree;
-    int32_t maxDegree;
-} GFPolynomial;
+typedef struct GFPolynomial GFPolynomial;
 
 typedef struct {
     uint8_t *data;
@@ -73,11 +64,11 @@ typedef struct {
 typedef struct {
     uint8_t delta[MCELIECE_L_BYTES];
     uint64_t c;
-    GFPolynomial g;
-    GFElement *alpha;
+    GFPolynomial *g;
+    uint16_t *alpha;
     uint8_t *s;
     uint8_t *controlbits;
-    size_t controlbitsLen;
+    uint32_t controlbitsLen;
 } CMPrivateKey;
 
 typedef struct {
@@ -126,12 +117,42 @@ static inline uint64_t CMMakeMask(uint64_t x)
 // trailing zero count
 static inline int32_t CMCtz64(uint64_t x)
 {
+    uint64_t tmpX = x;
     int32_t c = 0;
-    while ((x & 1) == 0) {
+    while ((tmpX & 1) == 0) {
         c++;
-        x >>= 1;
+        tmpX >>= 1;
     }
     return c;
+}
+
+// Bit manipulation functions for binary vectors
+static inline void VectorSetBitMasked(uint8_t *vec, const uint32_t bitIdx, const uint32_t value)
+{
+    const uint32_t byteIdx = bitIdx >> 3; // bitIdx / 8
+    const uint32_t bitPos = bitIdx & 7;   // bitIdx % 8
+    const uint8_t bitMask = (uint8_t)(1u << bitPos);
+    const uint8_t valueMask = (uint8_t)(0u - (value & 1u));
+    vec[byteIdx] = (uint8_t)((vec[byteIdx] & (uint8_t)~bitMask) | (valueMask & bitMask));
+}
+
+static inline uint32_t VectorGetBit(const uint8_t *vec, const uint32_t bitIdx)
+{
+    const uint32_t byteIdx = bitIdx >> 3; // bitIdx / 8
+    const uint32_t bitPos = bitIdx & 7;   // bitIdx % 8
+    return (uint32_t)((vec[byteIdx] >> bitPos) & 1u); // lsb
+}
+
+static inline int32_t VectoWeight(const uint8_t *vec, const int32_t lenBytes)
+{
+    int32_t weight = 0;
+    for (int32_t i = 0; i < lenBytes; i++) {
+        uint8_t byte = vec[i];
+        for (uint32_t bit = 0; bit < 8; bit++) {
+            weight += (int32_t)((byte >> bit) & 1u);
+        }
+    }
+    return weight;
 }
 
 // =================================================================================
@@ -139,17 +160,17 @@ static inline int32_t CMCtz64(uint64_t x)
 // =================================================================================
 /* Compute control bits for a Benes network from a permutation pi of size n=2^w.
  * out must point to ((2*w-1)*n/16) bytes, zeroed by the caller or by the impl. */
-int32_t CbitsFromPermNs(uint8_t *out, const int16_t *pi, const int64_t w, const int64_t n);
+int32_t ControlBitsFromBenesNetwork(uint8_t *out, const uint16_t *pi, const int64_t w, const int64_t n);
 
 // Derive support L[0..N-1] from control bits
-int32_t SupportFromCbits(GFElement *L, const uint8_t *cbits, const int64_t w, const int32_t lenN);
+int32_t SupportSetFromControlbits(uint16_t *L, const uint8_t *cbits, const int64_t w, const int32_t lenN);
 
 // =================================================================================
 // Goppa Encode and Decode Functions
 // =================================================================================
 // Goppa code decoding - recovers error vector from syndrome
-int32_t DecodeGoppa(const uint8_t *received, const GFPolynomial *g, const GFElement *alpha,
-                    const McelieceParams *params, uint8_t *errorVector, GFElement *decodeSyndrome);
+int32_t DecodeGoppa(const uint8_t *received, const GFPolynomial *g, const uint16_t *alpha,
+                    const McelieceParams *params, uint8_t *errorVector, uint16_t *decodeSyndrome);
 
 // Generate a random vector with fixed Hamming weight t
 // Used in the encapsulation phase to generate the error vector e
@@ -157,39 +178,54 @@ int32_t FixedWeightVector(CRYPT_MCELIECE_Ctx *ctx, uint8_t *output);
 
 // Encode an error vector using the public key matrix T
 // Computes C = H * e where H = [I_mt | T]
-int32_t EncodeVector(const uint8_t *errorVector, const GFMatrix *matT, uint8_t *ciphertext,
-                     const McelieceParams *params);
+void EncodeVector(uint8_t *errorVector, const GFMatrix *matT, uint8_t *ciphertext, const McelieceParams *params);
 
 // =================================================================================
 // Poly Functions
 // =================================================================================
-// Compute the minimal/connection polynomial g(x) of f over GF(2^m)
-// out[0..t-1] are coefficients g_0..g_{t-1} with monic leading coeff implied
-// f[0..t-1] are coefficients of f(x) in GF(2^m)
-// Returns 0 on success, -1 on failure (singular system)
-int32_t GenPolyOverGF(GFElement *out, const GFElement *f, const int32_t t, const int32_t m);
-// GF(2^13) add(/xor)
-GFElement GFAddtion(GFElement a, GFElement b);
-// GF(2^13) mul
-GFElement GFMultiplication(GFElement a, GFElement b);
-// GF(2^13) inverse
-GFElement GFInverse(GFElement a);
-// GF(2^13) division
-GFElement GFDivision(GFElement a, GFElement b);
-// GF(2^13) power
-GFElement GFPower(GFElement base, int32_t exp);
+uint16_t GFDivision(uint16_t a, uint16_t b);
 
-// Polynomial creation and destruction
-GFPolynomial *PolynomialCreate(const int32_t maxDegree);
-void PolynomialFree(GFPolynomial *poly);
+uint16_t GFInverse(uint16_t a);
 
-void PolynomialRoots(GFElement *out, const GFElement *f, const GFElement *L, const int32_t n, const int32_t t);
+uint16_t GFPower(uint16_t base, int32_t exp);
 
-GFElement PolynomialEval(const GFPolynomial *poly, GFElement x);
+uint16_t GFMultiplication(uint16_t a, uint16_t b);
 
-int32_t PolynomialSetCoeff(GFPolynomial *poly, const int32_t degree, const GFElement coeff);
+uint16_t GFAddtion(uint16_t a, uint16_t b);
 
-int32_t PolynomialCopy(GFPolynomial *dst, const GFPolynomial *src);
+void GFPolyMul(GFPolynomial *out, const GFPolynomial *in0, const GFPolynomial *in1);
+
+// Allocate a zero polynomial with a fixed coefficient range [0, degree].
+GFPolynomial *GFPolyCreate(const int32_t degree);
+
+// Cleanse and release a polynomial and its coefficient storage. Accepts NULL.
+void GFPolyFree(GFPolynomial *poly);
+// Evaluate poly(x) over GF(2^m).
+uint16_t GFPolyEval(const GFPolynomial *poly, uint16_t x);
+
+// Return the coefficient of poly[degree]. The caller guarantees a valid polynomial and index.
+uint16_t GFPolyGetCoeff(const GFPolynomial *poly, const int32_t degree);
+
+// Set the coefficient of poly[degree] within the polynomial's fixed degree range.
+void GFPolySetCoeff(GFPolynomial *poly, const int32_t degree, const uint16_t coeff);
+
+// Copy src into dst.
+void GFPolyCopy(GFPolynomial *dst, const GFPolynomial *src);
+
+// Return an 0xffff when a == b; otherwise return 0x0000.
+uint32_t GFPolyConstTimeEqual(const GFPolynomial *a, const GFPolynomial *b);
+
+// Reverse all coefficients across the fixed range [0, degree].
+void GFPolyReverse(GFPolynomial *dst, const GFPolynomial *src);
+
+// Compute dst[i] ^= scale * src[i] & mask.
+void GFPolyAddScaledMasked(GFPolynomial *dst, const GFPolynomial *src, uint16_t scale, uint16_t mask);
+
+// Select src into dst when mask is 0xffff, retaining dst when mask is 0x0000.
+void GFPolySelectMasked(GFPolynomial *dst, const GFPolynomial *src, uint16_t mask);
+
+// Multiply by x within the fixed range: [a0, a1, a2] -> [0, a0, a1].
+void GFPolyShiftUp(GFPolynomial *poly);
 
 // =================================================================================
 // Kem Functions
@@ -197,39 +233,20 @@ int32_t PolynomialCopy(GFPolynomial *dst, const GFPolynomial *src);
 int32_t SeededKeyGenInternal(const uint8_t *delta, CMPublicKey *pk, CMPrivateKey *sk, const McelieceParams *params,
                              bool isSemi);
 int32_t McElieceEncapsInternal(CRYPT_MCELIECE_Ctx *ctx, uint8_t *ciphertext, uint8_t *sessionKey, bool isPc);
+
 int32_t McElieceDecapsInternal(const uint8_t *ciphertext, const CMPrivateKey *sk, uint8_t *sessionKey,
                                const McelieceParams *params, bool isPc);
-McelieceParams *McelieceGetParamsById(int32_t algID);
 
 // Matrix creation and destruction
 GFMatrix *MatrixCreate(const int32_t rows, const int32_t cols);
+
 void MatrixFree(GFMatrix *mat);
 
-// Matrix element access (bit-level operations)
-void MatrixSetBit(GFMatrix *mat, const int32_t row, const int32_t col, const int32_t value);
-int32_t MatrixGetBit(const GFMatrix *mat, const int32_t row, const int32_t col);
-
-// Reference-style matrix operations (matching NIST implementation)
-int32_t BuildParityCheckMatrixReferenceStyle(GFMatrix *matH, const GFPolynomial *g, const GFElement *support,
-                                             const McelieceParams *params);
-int32_t ReduceToSystematicFormReferenceStyle(GFMatrix *matH);
-
-int32_t ColsRermutation(uint8_t *mat, const int32_t colsBytes, int16_t *pi, uint64_t *pivots, const int32_t mt);
-int32_t GaussPartialSemiSystematic(uint8_t *mat, const int32_t colsBytes, int16_t *pi, uint64_t *pivots,
-                                   const int32_t mt, const int32_t paramN);
-
 // High-level SHAKE256 function
-int32_t McElieceShake256(uint8_t *output, const size_t outlen, const uint8_t *input, size_t inlen);
+int32_t McElieceShake256(uint8_t *output, const uint32_t outlen, const uint8_t *input, uint32_t inlen);
 
-// Bit manipulation functions for binary vectors
-void VectorSetBit(uint8_t *vec, const uint32_t bitIdx, const uint32_t value);
-uint32_t VectorGetBit(const uint8_t *vec, const uint32_t bitIdx);
-
-// Vector utility functions
-int32_t VectorWeight(const uint8_t *vec, const int32_t lenBytes); // Calculate Hamming weight
-
-int32_t ComputeSyndrome(const uint8_t *received, const GFPolynomial *g, const GFElement *alpha,
-                        const McelieceParams *params, GFElement *syndrome);
+int32_t ComputeSyndrome(const uint8_t *received, const GFPolynomial *g, const uint16_t *alpha,
+                        const McelieceParams *params, uint16_t *syndrome);
 #ifdef __cplusplus
 }
 #endif

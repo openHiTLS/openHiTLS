@@ -191,6 +191,30 @@ static uint8_t g_iv[16];
             },                                                           \
     }
 
+#define DEFINE_OPS_PKEY(alg, id, hId)                                    \
+    enum { alg##_OPS_NUM = COUNT_OPS(                                    \
+        DEFINE_OPER(KEY_GEN_ID, alg##KeyGen),                            \
+        DEFINE_OPER(ENC_ID, alg##Enc),                                   \
+        DEFINE_OPER(DEC_ID, alg##Dec),                                   \
+        DEFINE_OPER(SIGN_ID, alg##Sign),                                 \
+        DEFINE_OPER(VERIFY_ID, alg##Verify)                              \
+    ) };                                                                 \
+    static const CtxOps alg##CtxOps = {                                  \
+        .algId = id,                                                     \
+        .hashId = hId,                                                   \
+        .opsNum = alg##_OPS_NUM,                                         \
+        .setUp = alg##SetUp,                                             \
+        .tearDown = alg##TearDown,                                       \
+        .ops =                                                           \
+            {                                                            \
+                DEFINE_OPER(KEY_GEN_ID, alg##KeyGen),                    \
+                DEFINE_OPER(ENC_ID, alg##Enc),                           \
+                DEFINE_OPER(DEC_ID, alg##Dec),                           \
+                DEFINE_OPER(SIGN_ID, alg##Sign),                         \
+                DEFINE_OPER(VERIFY_ID, alg##Verify),                     \
+            },                                                           \
+    }
+
 #define DEFINE_OPS_SIGN(alg, id, hId)                              \
     enum { alg##_OPS_NUM = COUNT_OPS(                              \
         DEFINE_OPER(KEY_GEN_ID, alg##KeyGen),                      \

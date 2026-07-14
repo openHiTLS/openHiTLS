@@ -168,6 +168,7 @@ set(TEST_INTF_INCLUDE_DIRS
     ${openHiTLS_SRC}/crypto/codecskey/src
     ${openHiTLS_SRC}/crypto/entropy/src
     ${openHiTLS_SRC}/crypto/provider/src/cmvp/cmvp_utils
+    ${openHiTLS_SRC}/crypto/mceliece/src
     ${openHiTLS_SRC}/bsl/err/include
     ${openHiTLS_SRC}/bsl/err/src
     ${openHiTLS_SRC}/include/tls
