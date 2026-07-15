@@ -825,6 +825,141 @@ EXIT:
 }
 /* END_CASE */
 
+/* BEGIN_CASE */
+void SDV_ISO19790_PROVIDER_SLH_DSA_TEST_TC001()
+{
+#ifndef HITLS_CRYPTO_CMVP_ISO19790
+    SKIP_TEST();
+#else
+    Iso19790_ProviderLoadCtx ctx = {0};
+    CRYPT_EAL_PkeyCtx *pkeyCtx = NULL;
+    uint8_t *signature = NULL;
+    uint32_t signatureLen = 0;
+    uint8_t testData[] = "Test data for signing and verification with SLH-DSA";
+    uint32_t testDataLen = sizeof(testData) - 1;
+
+    ASSERT_EQ(Iso19790_ProviderLoad(&ctx), CRYPT_SUCCESS);
+
+    pkeyCtx = CRYPT_EAL_ProviderPkeyNewCtx(ctx.libCtx, CRYPT_PKEY_SLH_DSA, 0, HITLS_ISO_PROVIDER_ATTR);
+    ASSERT_TRUE(pkeyCtx != NULL);
+
+    int32_t val = CRYPT_SLH_DSA_SHA2_128S;
+    int32_t ret = CRYPT_EAL_PkeyCtrl(pkeyCtx, CRYPT_CTRL_SET_PARA_BY_ID, &val, sizeof(val));
+    ASSERT_EQ(ret, CRYPT_SUCCESS);
+
+    ret = CRYPT_EAL_PkeyCtrl(pkeyCtx, CRYPT_CTRL_GET_SIGNLEN, &signatureLen, sizeof(signatureLen));
+    ASSERT_EQ(ret, CRYPT_SUCCESS);
+
+    signature = BSL_SAL_Malloc(signatureLen);
+    ASSERT_TRUE(signature != NULL);
+
+    ASSERT_EQ(CRYPT_EAL_PkeyGen(pkeyCtx), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeySign(pkeyCtx, CRYPT_MD_SHA256, testData, testDataLen, signature, &signatureLen), 0);
+    ASSERT_TRUE(signatureLen > 0);
+
+    ASSERT_EQ(CRYPT_EAL_PkeyVerify(pkeyCtx, CRYPT_MD_SHA256, testData, testDataLen, signature, signatureLen),
+        CRYPT_SUCCESS);
+
+EXIT:
+    BSL_SAL_Free(signature);
+    CRYPT_EAL_PkeyFreeCtx(pkeyCtx);
+    Iso19790_ProviderUnload(&ctx);
+#endif
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_ISO19790_PROVIDER_ML_DSA_TEST_TC001()
+{
+#ifndef HITLS_CRYPTO_CMVP_ISO19790
+    SKIP_TEST();
+#else
+    Iso19790_ProviderLoadCtx ctx = {0};
+    CRYPT_EAL_PkeyCtx *pkeyCtx = NULL;
+    int32_t mdId = CRYPT_MD_SHAKE128;
+    uint8_t signature[4627] = {0};
+    uint32_t signatureLen = sizeof(signature);
+    uint8_t testData[] = "Test data for signing and verification with ML-DSA";
+    uint32_t testDataLen = sizeof(testData) - 1;
+
+    ASSERT_EQ(Iso19790_ProviderLoad(&ctx), CRYPT_SUCCESS);
+
+    pkeyCtx = CRYPT_EAL_ProviderPkeyNewCtx(ctx.libCtx, CRYPT_PKEY_ML_DSA, 0, HITLS_ISO_PROVIDER_ATTR);
+    ASSERT_TRUE(pkeyCtx != NULL);
+
+    uint32_t val = CRYPT_MLDSA_TYPE_MLDSA_44;
+    int32_t ret = CRYPT_EAL_PkeyCtrl(pkeyCtx, CRYPT_CTRL_SET_PARA_BY_ID, &val, sizeof(val));
+    ASSERT_EQ(ret, CRYPT_SUCCESS);
+
+    ASSERT_EQ(CRYPT_EAL_PkeyGen(pkeyCtx), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeySign(pkeyCtx, mdId, testData, testDataLen, signature, &signatureLen), 0);
+    ASSERT_TRUE(signatureLen > 0);
+
+    ASSERT_EQ(CRYPT_EAL_PkeyVerify(pkeyCtx, mdId, testData, testDataLen, signature, signatureLen), CRYPT_SUCCESS);
+
+EXIT:
+    CRYPT_EAL_PkeyFreeCtx(pkeyCtx);
+    Iso19790_ProviderUnload(&ctx);
+#endif
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_ISO19790_PROVIDER_ML_KEM_TEST_TC001()
+{
+#ifndef HITLS_CRYPTO_CMVP_ISO19790
+    SKIP_TEST();
+#else
+    Iso19790_ProviderLoadCtx ctx = {0};
+    CRYPT_EAL_PkeyCtx *pkeyCtx = NULL;
+
+    uint32_t cipherLen = 0;
+    uint8_t *ciphertext = NULL;
+    uint32_t sharedLen = 32;
+    uint8_t *sharedKey = NULL;
+    uint32_t decapsLen = 32;
+    uint8_t *decapsKey = NULL;
+
+    ASSERT_EQ(Iso19790_ProviderLoad(&ctx), CRYPT_SUCCESS);
+
+    pkeyCtx = CRYPT_EAL_ProviderPkeyNewCtx(ctx.libCtx, CRYPT_PKEY_ML_KEM, 0, HITLS_ISO_PROVIDER_ATTR);
+    ASSERT_TRUE(pkeyCtx != NULL);
+
+    uint32_t val = CRYPT_KEM_TYPE_MLKEM_512;
+    int32_t ret = CRYPT_EAL_PkeyCtrl(pkeyCtx, CRYPT_CTRL_SET_PARA_BY_ID, &val, sizeof(val));
+    ASSERT_EQ(ret, CRYPT_SUCCESS);
+
+    ASSERT_EQ(CRYPT_EAL_PkeyGen(pkeyCtx), CRYPT_SUCCESS);
+
+    ret = CRYPT_EAL_PkeyCtrl(pkeyCtx, CRYPT_CTRL_GET_CIPHERTEXT_LEN, &cipherLen, sizeof(cipherLen));
+    ASSERT_EQ(ret, CRYPT_SUCCESS);
+
+    ciphertext = BSL_SAL_Malloc(cipherLen);
+    ASSERT_TRUE(ciphertext != NULL);
+
+    sharedKey = BSL_SAL_Malloc(sharedLen);
+    ASSERT_TRUE(sharedKey != NULL);
+
+    ret = CRYPT_EAL_PkeyEncaps(pkeyCtx, ciphertext, &cipherLen, sharedKey, &sharedLen);
+    ASSERT_EQ(ret, CRYPT_SUCCESS);
+
+    decapsKey = BSL_SAL_Malloc(sharedLen);
+    ASSERT_TRUE(decapsKey != NULL);
+
+    ret = CRYPT_EAL_PkeyDecaps(pkeyCtx, ciphertext, cipherLen, decapsKey, &decapsLen);
+    ASSERT_EQ(ret, CRYPT_SUCCESS);
+    ASSERT_EQ(decapsLen, sharedLen);
+    ASSERT_EQ(memcmp(decapsKey, sharedKey, sharedLen), 0);
+EXIT:
+    BSL_SAL_Free(ciphertext);
+    BSL_SAL_Free(sharedKey);
+    BSL_SAL_Free(decapsKey);
+    CRYPT_EAL_PkeyFreeCtx(pkeyCtx);
+    Iso19790_ProviderUnload(&ctx);
+#endif
+}
+/* END_CASE */
+
 
 /* BEGIN_CASE */
 void SDV_ISO19790_PROVIDER_CIPHPER_TEST_TC001()
