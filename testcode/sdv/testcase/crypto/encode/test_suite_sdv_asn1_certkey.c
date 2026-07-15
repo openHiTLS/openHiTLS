@@ -2497,6 +2497,76 @@ EXIT:
 }
 /* END_CASE */
 
+/*
+@test SDV_CRYPT_DECODE_RSA_PRIKEY_VERSION_TC001
+@title Reject unsupported RSAPrivateKey versions
+@step
+1. Decode a two-prime PKCS#1 RSA private key with version 0
+2. Decode the same structure with invalid version 17
+3. Decode the same structure with multi-prime version 1 but without OtherPrimeInfos
+4. Decode a multi-prime version 1 structure with OtherPrimeInfos
+@expect
+1. Version 0 is accepted
+2. Version 17 is rejected
+3. Version 1 without OtherPrimeInfos is rejected
+4. Version 1 is rejected because multi-prime RSA is unsupported and its extra parameters must not be discarded
+*/
+/* BEGIN_CASE */
+void SDV_CRYPT_DECODE_RSA_PRIKEY_VERSION_TC001(void)
+{
+#if defined(HITLS_CRYPTO_RSA) && defined(HITLS_CRYPTO_KEY_DECODE)
+    uint8_t twoPrimeKey[] = {
+        0x30, 0x1b,
+        0x02, 0x01, 0x00, /* version */
+        0x02, 0x01, 0x01, /* n */
+        0x02, 0x01, 0x03, /* e */
+        0x02, 0x01, 0x01, /* d */
+        0x02, 0x01, 0x01, /* p */
+        0x02, 0x01, 0x01, /* q */
+        0x02, 0x01, 0x01, /* dP */
+        0x02, 0x01, 0x01, /* dQ */
+        0x02, 0x01, 0x01  /* qInv */
+    };
+    uint8_t multiPrimeKey[] = {
+        0x30, 0x26,
+        0x02, 0x01, 0x01, /* version */
+        0x02, 0x01, 0x01, /* n */
+        0x02, 0x01, 0x03, /* e */
+        0x02, 0x01, 0x01, /* d */
+        0x02, 0x01, 0x01, /* p */
+        0x02, 0x01, 0x01, /* q */
+        0x02, 0x01, 0x01, /* dP */
+        0x02, 0x01, 0x01, /* dQ */
+        0x02, 0x01, 0x01, /* qInv */
+        0x30, 0x09,
+        0x02, 0x01, 0x01, /* otherPrimeInfo.prime */
+        0x02, 0x01, 0x01, /* otherPrimeInfo.exponent */
+        0x02, 0x01, 0x01  /* otherPrimeInfo.coefficient */
+    };
+    BSL_ASN1_Buffer asn1[CRYPT_RSA_PRV_OTHER_PRIME_IDX + 1] = {0};
+
+    ASSERT_EQ(CRYPT_DECODE_RsaPrikeyAsn1Buff(twoPrimeKey, sizeof(twoPrimeKey), asn1,
+        CRYPT_RSA_PRV_OTHER_PRIME_IDX + 1), CRYPT_SUCCESS);
+
+    twoPrimeKey[4] = 17;
+    ASSERT_EQ(CRYPT_DECODE_RsaPrikeyAsn1Buff(twoPrimeKey, sizeof(twoPrimeKey), asn1,
+        CRYPT_RSA_PRV_OTHER_PRIME_IDX + 1), CRYPT_DECODE_ASN1_BUFF_FAILED);
+
+    twoPrimeKey[4] = 1;
+    ASSERT_EQ(CRYPT_DECODE_RsaPrikeyAsn1Buff(twoPrimeKey, sizeof(twoPrimeKey), asn1,
+        CRYPT_RSA_PRV_OTHER_PRIME_IDX + 1), CRYPT_DECODE_ASN1_BUFF_FAILED);
+
+    ASSERT_EQ(CRYPT_DECODE_RsaPrikeyAsn1Buff(multiPrimeKey, sizeof(multiPrimeKey), asn1,
+        CRYPT_RSA_PRV_OTHER_PRIME_IDX + 1), CRYPT_DECODE_ASN1_BUFF_FAILED);
+
+EXIT:
+    return;
+#else
+    SKIP_TEST();
+#endif
+}
+/* END_CASE */
+
 /**
  * @test SDV_CRYPT_EAL_PROVIDER_DECODE_BUFF_KEY_ALGID_TC001
  * @title Test CRYPT_EAL_ProviderDecodeBuffKey with mismatched pkeyAlgId

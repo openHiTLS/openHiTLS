@@ -431,6 +431,27 @@ int32_t CRYPT_DECODE_RsaPubkeyAsn1Buff(uint8_t *buff, uint32_t buffLen, BSL_ASN1
     return ret;
 }
 
+static int32_t ValidateRsaPrikeyVersion(BSL_ASN1_Buffer *asn1)
+{
+    int32_t version = 0;
+    int32_t ret = BSL_ASN1_DecodePrimitiveItem(&asn1[CRYPT_RSA_PRV_VERSION_IDX], &version);
+    if (ret != BSL_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        return ret;
+    }
+
+    /*
+     * RFC 8017 defines version 0 for two-prime RSA and version 1 for multi-prime RSA.
+     * Multi-prime RSA is not supported by the current key representation, so accepting
+     * version 1 would silently discard OtherPrimeInfos.
+     */
+    if (version != 0 || asn1[CRYPT_RSA_PRV_OTHER_PRIME_IDX].buff != NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_DECODE_ASN1_BUFF_FAILED);
+        return CRYPT_DECODE_ASN1_BUFF_FAILED;
+    }
+    return CRYPT_SUCCESS;
+}
+
 int32_t CRYPT_DECODE_RsaPrikeyAsn1Buff(uint8_t *buff, uint32_t buffLen, BSL_ASN1_Buffer *asn1, uint32_t asn1Num)
 {
     uint8_t *tmpBuff = buff;
@@ -440,8 +461,9 @@ int32_t CRYPT_DECODE_RsaPrikeyAsn1Buff(uint8_t *buff, uint32_t buffLen, BSL_ASN1
     int32_t ret = BSL_ASN1_DecodeTemplate(&templ, NULL, &tmpBuff, &tmpBuffLen, asn1, asn1Num);
     if (ret != BSL_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
+        return ret;
     }
-    return ret;
+    return ValidateRsaPrikeyVersion(asn1);
 }
 
 static int32_t RsaPssTagGetOrCheck(int32_t type, uint32_t idx, void *data, void *expVal)
