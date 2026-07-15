@@ -777,6 +777,7 @@ static int32_t CreateConfigAndListenSocket(HITLS_ServerParams *params, HITLS_Con
 static void RegisterSignal(void)
 {
     (void)signal(SIGCHLD, SIG_IGN);
+    (void)signal(SIGPIPE, SIG_IGN);
     (void)signal(SIGINT, SignalHandler);
     (void)signal(SIGTERM, SignalHandler);
 }
