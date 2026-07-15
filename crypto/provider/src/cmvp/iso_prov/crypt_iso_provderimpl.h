@@ -62,6 +62,9 @@ extern const CRYPT_EAL_Func g_isoKeyMgmtDh[];
 extern const CRYPT_EAL_Func g_isoKeyMgmtEcdsa[];
 extern const CRYPT_EAL_Func g_isoKeyMgmtEcdh[];
 extern const CRYPT_EAL_Func g_isoKeyMgmtSm2[];
+extern const CRYPT_EAL_Func g_isoKeyMgmtSlhDsa[];
+extern const CRYPT_EAL_Func g_isoKeyMgmtMlKem[];
+extern const CRYPT_EAL_Func g_isoKeyMgmtMlDsa[];
 
 extern const CRYPT_EAL_Func g_isoExchX25519[];
 extern const CRYPT_EAL_Func g_isoExchDh[];
@@ -77,6 +80,11 @@ extern const CRYPT_EAL_Func g_isoSignEd25519[];
 extern const CRYPT_EAL_Func g_isoSignRsa[];
 extern const CRYPT_EAL_Func g_isoSignEcdsa[];
 extern const CRYPT_EAL_Func g_isoSignSm2[];
+extern const CRYPT_EAL_Func g_isoSignMlDsa[];
+extern const CRYPT_EAL_Func g_isoSignSlhDsa[];
+
+extern const CRYPT_EAL_Func g_isoMlKem[];
+
 extern const CRYPT_EAL_Func g_isoMacHmac[];
 extern const CRYPT_EAL_Func g_isoMacCmac[];
 extern const CRYPT_EAL_Func g_isoMacGmac[];

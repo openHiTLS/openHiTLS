@@ -75,6 +75,10 @@ static int32_t GetPkey(void *libCtx, const char *attrName, const CMVP_SlhdsaSign
     uint32_t keyLen = 0;
     ret = CRYPT_EAL_PkeyCtrl(*pkeyPrv, CRYPT_CTRL_GET_SLH_DSA_KEY_LEN, (void *)&keyLen, sizeof(keyLen));
 
+    uint32_t deterministic = 1;
+    ret = CRYPT_EAL_PkeyCtrl(*pkeyPrv, CRYPT_CTRL_SET_DETERMINISTIC_FLAG, &deterministic, sizeof(deterministic));
+    GOTO_ERR_IF_TRUE(ret != CRYPT_SUCCESS, ret);
+
     uint32_t randLen = 0;
     rand = CMVP_StringsToBins(vector->rnd, &randLen);
     ret = CRYPT_EAL_PkeyCtrl(*pkeyPrv, CRYPT_CTRL_SET_SLH_DSA_ADDRAND, (void *)rand, randLen);
