@@ -830,7 +830,7 @@ void SDV_PKI_GEN_CERT_TC001(int algId, int hashId, int curveId)
         SKIP_TEST();
     }
 
-    char *path = "tmp.cert";
+    char *path = "test_sdv_x509_tmp.cert";
     HITLS_X509_Cert *cert = NULL;
     uint32_t version = 2; // v3 cert
     uint8_t serialNum[4] = {0x11, 0x22, 0x33, 0x44};
@@ -1111,7 +1111,7 @@ EXIT:
 void SDV_HITLS_MLDSA_PQCCert_TC006()
 {
 #if defined(HITLS_PKI_X509_CRT_PARSE) && defined(HITLS_PKI_X509_CRT_GEN) && defined(HITLS_BSL_SAL_FILE)
-    char *path = "tmp.cert";
+    char *path = "test_sdv_x509_tmp.cert";
     HITLS_X509_Cert *cert = NULL;
     uint32_t version = 2; // v3 cert
     uint8_t serialNum[4] = {0x11, 0x22, 0x33, 0x44};
@@ -1169,7 +1169,7 @@ void SDV_HITLS_MLDSA_PQCCert_TC007(char *keypath)
 {
 #if defined(HITLS_PKI_X509_CRT_PARSE) && defined(HITLS_PKI_X509_CRT_GEN) && defined(HITLS_BSL_SAL_FILE) && \
     defined(HITLS_CRYPTO_CODECSKEY)
-    char *path = "tmp.cert";
+    char *path = "test_sdv_x509_tmp.cert";
     HITLS_X509_Cert *cert = NULL;
     uint32_t version = 2; // v3 cert
     uint8_t serialNum[4] = {0x11, 0x22, 0x33, 0x44};
