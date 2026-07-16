@@ -15,6 +15,7 @@
 
 /* BEGIN_HEADER */
 #include "app_verify.h"
+#include "app_client.h"
 #include "app_server.h"
 #include <limits.h>
 #include <stdbool.h>
@@ -462,6 +463,27 @@ void UT_HITLS_APP_ServerNoVerify_TC003(void)
 EXIT:
     AppPrintErrorUioUnInit();
     STUB_RESTORE(HITLS_APP_OptBegin);
+    return;
+}
+/* END_CASE */
+
+/**
+ * @test UT_HITLS_APP_TlsCertOptions_TC001
+ * @spec  -
+ * @title Test generic TLS certificate options for s_client and s_server
+ */
+/* BEGIN_CASE */
+void UT_HITLS_APP_TlsCertOptions_TC001(void)
+{
+    char *clientArgv[] = {"s_client", "-cert", "client.pem", "-key", "client.key", "-help"};
+    char *serverArgv[] = {"s_server", "-cert", "server.pem", "-key", "server.key", "-help"};
+
+    ASSERT_EQ(AppPrintErrorUioInit(stderr), HITLS_APP_SUCCESS);
+    ASSERT_EQ(HITLS_ClientMain(6, clientArgv), HITLS_APP_HELP);
+    ASSERT_EQ(HITLS_ServerMain(6, serverArgv), HITLS_APP_HELP);
+
+EXIT:
+    AppPrintErrorUioUnInit();
     return;
 }
 /* END_CASE */

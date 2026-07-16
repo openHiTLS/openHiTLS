@@ -88,6 +88,8 @@ typedef enum {
     /* Certificate options */
     HITLS_SERVER_OPT_CAFILE,
     HITLS_SERVER_OPT_CHAINCAFILE,
+    HITLS_SERVER_OPT_CERT,
+    HITLS_SERVER_OPT_KEY,
     HITLS_SERVER_OPT_NO_VERIFY,
     
     /* TLCP options */
@@ -130,6 +132,8 @@ static const HITLS_CmdOption g_serverOptions[] = {
     /* Certificate options */
     {"CAfile",      HITLS_SERVER_OPT_CAFILE,      HITLS_APP_OPT_VALUETYPE_IN_FILE,     "CA certificate file"},
     {"chainCAfile", HITLS_SERVER_OPT_CHAINCAFILE, HITLS_APP_OPT_VALUETYPE_IN_FILE,     "CA file for certificate chain"},
+    {"cert",        HITLS_SERVER_OPT_CERT,        HITLS_APP_OPT_VALUETYPE_IN_FILE,     "Server certificate for TLS"},
+    {"key",         HITLS_SERVER_OPT_KEY,         HITLS_APP_OPT_VALUETYPE_IN_FILE,     "Server private key for TLS"},
     {"noverify",    HITLS_SERVER_OPT_NO_VERIFY,   HITLS_APP_OPT_VALUETYPE_NO_VALUE,    "Don't verify client certificate"},
     
     /* TLCP options */
@@ -238,6 +242,19 @@ static int HandleServerChainCAFile(HITLS_ServerParams *params)
     params->caChain = HITLS_APP_OptGetValueStr();
     return HITLS_APP_SUCCESS;
 }
+
+static int HandleServerCert(HITLS_ServerParams *params)
+{
+    params->cert = HITLS_APP_OptGetValueStr();
+    return HITLS_APP_SUCCESS;
+}
+
+static int HandleServerKey(HITLS_ServerParams *params)
+{
+    params->key = HITLS_APP_OptGetValueStr();
+    return HITLS_APP_SUCCESS;
+}
+
 static int HandleServerNoVerify(HITLS_ServerParams *params)
 {
     params->verifyClient = false;
@@ -305,6 +322,8 @@ static const ServerOptHandleFuncMap g_serverOptHandleFuncMap[] = {
     {HITLS_SERVER_OPT_CIPHER, HandleServerCipher},
     {HITLS_SERVER_OPT_CAFILE, HandleServerCAFile},
     {HITLS_SERVER_OPT_CHAINCAFILE, HandleServerChainCAFile},
+    {HITLS_SERVER_OPT_CERT, HandleServerCert},
+    {HITLS_SERVER_OPT_KEY, HandleServerKey},
     {HITLS_SERVER_OPT_NO_VERIFY, HandleServerNoVerify},
     {HITLS_SERVER_OPT_TLCP_ENC_CERT, HandleServerTLCPEncCert},
     {HITLS_SERVER_OPT_TLCP_ENC_KEY, HandleServerTLCPEncKey},
@@ -417,6 +436,8 @@ static HITLS_Config *CreateServerConfig(HITLS_ServerParams *params)
     APP_CertConfig certConfig = {
         .caFile = params->caFile,
         .caChain = params->caChain,
+        .cert = params->cert,
+        .key = params->key,
         .certFormat = params->certFormat,
         .keyFormat = params->keyFormat,
         .tlcpEncCert = params->tlcpEncCert,
@@ -435,7 +456,7 @@ static HITLS_Config *CreateServerConfig(HITLS_ServerParams *params)
         return NULL;
     }
     
-    ret = ConfigureTLCPCertificates(config, &certConfig);
+    ret = ConfigureProtocolCertificates(config, &certConfig, protocol);
     if (ret != HITLS_APP_SUCCESS) {
         HITLS_CFG_FreeConfig(config);
         return NULL;

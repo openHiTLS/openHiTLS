@@ -233,6 +233,10 @@ static int32_t GetKdfAlg(KdfOpt *kdfOpt)
         AppPrintError("Not support KDF algorithm.\n");
         return HITLS_APP_OPT_VALUE_INVALID;
     }
+    if (kdfOpt->kdfId != CRYPT_KDF_PBKDF2) {
+        AppPrintError("The kdf command currently supports pbkdf2 only.\n");
+        return HITLS_APP_OPT_VALUE_INVALID;
+    }
     if (argc - 1 != 0) {
         AppPrintError("Extra arguments given.\n");
         AppPrintError("kdf: Use -help for summary.\n");

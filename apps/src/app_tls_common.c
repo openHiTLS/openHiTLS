@@ -48,7 +48,7 @@
 
 #define HEARTBEAT_STR "heartbeat"
 
-static CRYPT_EAL_PkeyCtx *LoadKeyFromFile(APP_CertConfig *certConfig, bool isSignKey);
+static CRYPT_EAL_PkeyCtx *LoadTlcpKeyFromFile(APP_CertConfig *certConfig, bool isSignKey);
 
 APP_ProtocolType ParseProtocolType(const char *protocolStr)
 {
@@ -154,7 +154,21 @@ int ConfigureCipherSuites(HITLS_Config *config, const char *cipherStr, APP_Proto
     char *nextTmp = NULL;
     char *token = strtok_s(cipherStrCopy, ":", &nextTmp);
     while (token != NULL && index < cipherCount) {
-        const HITLS_Cipher *cipher = HITLS_CFG_GetCipherSuiteByStdName((const uint8_t *)token);
+        char *stdName = NULL;
+        const char *lookupName = token;
+        if (strncmp(token, "HITLS_", strlen("HITLS_")) == 0) {
+            size_t stdNameLen = strlen("TLS_") + strlen(token + strlen("HITLS_")) + 1;
+            stdName = BSL_SAL_Malloc(stdNameLen);
+            if (stdName == NULL) {
+                BSL_SAL_Free(cipherStrCopy);
+                BSL_SAL_Free(cipherSuites);
+                return HITLS_APP_MEM_ALLOC_FAIL;
+            }
+            (void)snprintf(stdName, stdNameLen, "TLS_%s", token + strlen("HITLS_"));
+            lookupName = stdName;
+        }
+        const HITLS_Cipher *cipher = HITLS_CFG_GetCipherSuiteByStdName((const uint8_t *)lookupName);
+        BSL_SAL_Free(stdName);
         if (cipher == NULL) {
             AppPrintError("Invalid cipher suite: %s\n", token);
             BSL_SAL_Free(cipherStrCopy);
@@ -322,7 +336,7 @@ static CRYPT_EAL_PkeyCtx *LoadEncKeyBySignKey(APP_CertConfig *certConfig)
     if (ReadEncKeyCipher(cipherFile, &cipher, &cipherLen) != BSL_SUCCESS) {
         return NULL;
     }
-    signKey = LoadKeyFromFile(certConfig, true);
+    signKey = LoadTlcpKeyFromFile(certConfig, true);
     if (signKey == NULL) {
         AppPrintError("Failed to load TLCP signature private key for decrypt\n");
         goto ERR;
@@ -356,7 +370,35 @@ ERR:
 }
 #endif
 
-static CRYPT_EAL_PkeyCtx *LoadKeyFromFile(APP_CertConfig *certConfig, bool isSignKey)
+static CRYPT_EAL_PkeyCtx *LoadKeyFileWithProvider(const char *keyFile, BSL_ParseFormat format,
+    const char *password, AppProvider *provider)
+{
+    if (keyFile == NULL) {
+        return NULL;
+    }
+
+    char *pass = NULL;
+    if (password != NULL) {
+        size_t len = strlen(password) + 1;
+        pass = BSL_SAL_Malloc(len);
+        if (pass != NULL) {
+            strcpy_s(pass, len, password);
+        }
+    }
+
+    CRYPT_EAL_PkeyCtx *pkey = HITLS_APP_ProviderLoadPrvKey(APP_GetCurrent_LibCtx(), provider->providerAttr,
+        keyFile, format, &pass);
+    if (pkey == NULL) {
+        AppPrintError("Failed to load private key from %s\n", keyFile);
+    }
+
+    if (pass != NULL) {
+        BSL_SAL_ClearFree(pass, strlen(pass));
+    }
+    return pkey;
+}
+
+static CRYPT_EAL_PkeyCtx *LoadTlcpKeyFromFile(APP_CertConfig *certConfig, bool isSignKey)
 {
     char *keyFile = isSignKey ? certConfig->tlcpSignKey : certConfig->tlcpEncKey;
     BSL_ParseFormat format = certConfig->keyFormat;
@@ -367,8 +409,8 @@ static CRYPT_EAL_PkeyCtx *LoadKeyFromFile(APP_CertConfig *certConfig, bool isSig
         return NULL;
     }
 
-    CRYPT_EAL_PkeyCtx *pkey = NULL;
 #ifdef HITLS_APP_SM_MODE
+    CRYPT_EAL_PkeyCtx *pkey = NULL;
     if (isSignKey && certConfig->smParam->smTag == 1) {
         int32_t ret = GetPkeyCtxFromUuid(provider, certConfig->smParam, keyFile, &pkey);
         if (ret == HITLS_APP_SUCCESS) {
@@ -383,26 +425,7 @@ static CRYPT_EAL_PkeyCtx *LoadKeyFromFile(APP_CertConfig *certConfig, bool isSig
     }
 #endif
 
-    /* Load private key using the existing utility function */
-    char *pass = NULL;
-    if (password != NULL) {
-        size_t len = strlen(password) + 1;
-        pass = BSL_SAL_Malloc(len);
-        if (pass != NULL) {
-            strcpy_s(pass, len, password);
-        }
-    }
-
-    pkey = HITLS_APP_ProviderLoadPrvKey(APP_GetCurrent_LibCtx(), provider->providerAttr, keyFile, format, &pass);
-    if (pkey == NULL) {
-        AppPrintError("Failed to load private key from %s\n", keyFile);
-    }
-
-    if (pass != NULL) {
-        BSL_SAL_ClearFree(pass, strlen(pass));
-    }
-
-    return pkey;
+    return LoadKeyFileWithProvider(keyFile, format, password, provider);
 }
 
 int ConfCertVerification(HITLS_Config *config, APP_CertConfig *certConfig,
@@ -509,7 +532,7 @@ int ConfigureTLCPCertificates(HITLS_Config *config, APP_CertConfig *certConfig)
     if (certConfig->tlcpSignCert && certConfig->tlcpSignKey) {
         HITLS_X509_Cert *sign_cert = LoadCertFromFile(certConfig->tlcpSignCert, certConfig->certFormat,
             certConfig->provider);
-        CRYPT_EAL_PkeyCtx *sign_key = LoadKeyFromFile(certConfig, true);
+        CRYPT_EAL_PkeyCtx *sign_key = LoadTlcpKeyFromFile(certConfig, true);
 
         if (sign_cert && sign_key) {
             ret = HITLS_CFG_SetTlcpCertificate(config, sign_cert, false, false); /* Signature cert */
@@ -536,7 +559,7 @@ int ConfigureTLCPCertificates(HITLS_Config *config, APP_CertConfig *certConfig)
     if (certConfig->tlcpEncCert && certConfig->tlcpEncKey) {
         HITLS_X509_Cert *enc_cert = LoadCertFromFile(certConfig->tlcpEncCert, certConfig->certFormat,
             certConfig->provider);
-        CRYPT_EAL_PkeyCtx *enc_key = LoadKeyFromFile(certConfig, false);
+        CRYPT_EAL_PkeyCtx *enc_key = LoadTlcpKeyFromFile(certConfig, false);
 
         if (enc_cert && enc_key) {
             ret = HITLS_CFG_SetTlcpCertificate(config, enc_cert, false, true); /* Encryption cert */
@@ -560,6 +583,67 @@ int ConfigureTLCPCertificates(HITLS_Config *config, APP_CertConfig *certConfig)
     }
 
     return HITLS_APP_SUCCESS;
+}
+
+static int ConfigureTLSCertificate(HITLS_Config *config, APP_CertConfig *certConfig)
+{
+    const char *certFile = certConfig->cert;
+    const char *keyFile = certConfig->key;
+
+    /* Keep the legacy options working for TLS while applications migrate to -cert/-key. */
+    if (certFile == NULL && keyFile == NULL) {
+        certFile = certConfig->tlcpSignCert;
+        keyFile = certConfig->tlcpSignKey;
+    }
+    if (certFile == NULL && keyFile == NULL) {
+        return HITLS_APP_SUCCESS;
+    }
+    if (certFile == NULL || keyFile == NULL) {
+        AppPrintError("Both -cert and -key must be specified for TLS\n");
+        return HITLS_APP_OPT_VALUE_INVALID;
+    }
+
+    HITLS_X509_Cert *cert = LoadCertFromFile(certFile, certConfig->certFormat, certConfig->provider);
+    if (cert == NULL) {
+        return HITLS_APP_LOAD_CERT_FAIL;
+    }
+    CRYPT_EAL_PkeyCtx *key = LoadKeyFileWithProvider(keyFile, certConfig->keyFormat,
+        certConfig->keyPass, certConfig->provider);
+    if (key == NULL) {
+        HITLS_X509_CertFree(cert);
+        return HITLS_APP_LOAD_KEY_FAIL;
+    }
+
+    int32_t ret = HITLS_CFG_SetCertificate(config, cert, false);
+    if (ret != HITLS_SUCCESS) {
+        AppPrintError("Failed to set TLS certificate: 0x%x\n", ret);
+        HITLS_X509_CertFree(cert);
+        CRYPT_EAL_PkeyFreeCtx(key);
+        return HITLS_APP_LOAD_CERT_FAIL;
+    }
+    ret = HITLS_CFG_SetPrivateKey(config, key, false);
+    if (ret != HITLS_SUCCESS) {
+        AppPrintError("Failed to set TLS private key: 0x%x\n", ret);
+        CRYPT_EAL_PkeyFreeCtx(key);
+        return HITLS_APP_LOAD_KEY_FAIL;
+    }
+    ret = HITLS_CFG_CheckPrivateKey(config);
+    if (ret != HITLS_SUCCESS) {
+        AppPrintError("TLS certificate and private key do not match: 0x%x\n", ret);
+        return HITLS_APP_LOAD_KEY_FAIL;
+    }
+    return HITLS_APP_SUCCESS;
+}
+
+int ConfigureProtocolCertificates(HITLS_Config *config, APP_CertConfig *certConfig, APP_ProtocolType protocol)
+{
+    if (config == NULL || certConfig == NULL) {
+        return HITLS_APP_INVALID_ARG;
+    }
+    if (protocol == APP_PROTOCOL_TLCP || protocol == APP_PROTOCOL_DTLCP) {
+        return ConfigureTLCPCertificates(config, certConfig);
+    }
+    return ConfigureTLSCertificate(config, certConfig);
 }
 
 int CreateTCPSocket(APP_NetworkAddr *addr, int timeout)

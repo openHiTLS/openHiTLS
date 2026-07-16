@@ -182,18 +182,10 @@ static const CidInfo g_allRandAlgInfo[] = {
 #define RAND_ALG_CNT (sizeof(g_allRandAlgInfo) / sizeof(CidInfo))
 
 static const CidInfo g_allKdfAlgInfo[] = {
-    {CRYPT_MAC_HMAC_MD5, "hmac_md5"},
-    {CRYPT_MAC_HMAC_SHA1, "hmac_sha1"},
-    {CRYPT_MAC_HMAC_SHA224, "hmac_sha224"},
-    {CRYPT_MAC_HMAC_SHA256, "hmac_sha256"},
-    {CRYPT_MAC_HMAC_SHA384, "hmac_sha384"},
-    {CRYPT_MAC_HMAC_SHA512, "hmac_sha512"},
-    {CRYPT_MAC_HMAC_SHA3_224, "hmac_sha3_224"},
-    {CRYPT_MAC_HMAC_SHA3_256, "hmac_sha3_256"},
-    {CRYPT_MAC_HMAC_SHA3_384, "hmac_sha3_384"},
-    {CRYPT_MAC_HMAC_SHA3_512, "hmac_sha3_512"},
-    {CRYPT_MAC_HMAC_SM3, "hmac_sm3"},
+    {CRYPT_KDF_HKDF, "hkdf"},
     {CRYPT_KDF_PBKDF2, "pbkdf2"},
+    {CRYPT_KDF_KDFTLS12, "kdftls12"},
+    {CRYPT_KDF_SCRYPT, "scrypt"},
 };
 
 #define KDF_ALG_CNT (sizeof(g_allKdfAlgInfo) / sizeof(CidInfo))
@@ -389,49 +381,16 @@ static void PrintRandAlg(void)
     }
 }
 
-static void PrintHkdfAlg(void)
-{
-    AppPrint(g_stdout, "List  Hkdf  Algorithms:\n");
-    AppPrint(g_stdout, "%-20s\t%s\n", "NAME", "CID");
-    for (size_t i = 0; i < KDF_ALG_CNT; ++i) {
-        if (!CRYPT_EAL_KdfIsValidAlgId(g_allKdfAlgInfo[i].cid)) {
-            continue;
-        }
-        AppPrint(g_stdout, "%-20s\t%3ld\n", g_allKdfAlgInfo[i].name, (long)g_allKdfAlgInfo[i].cid);
-    }
-}
-
-static void PrintPbkdf2Alg(void)
-{
-    AppPrint(g_stdout, "List  Pbkdf2  Algorithms:\n");
-    AppPrint(g_stdout, "%-20s\t%s\n", "NAME", "CID");
-    for (size_t i = 0; i < KDF_ALG_CNT; ++i) {
-        if (!CRYPT_EAL_KdfIsValidAlgId(g_allKdfAlgInfo[i].cid)) {
-            continue;
-        }
-        AppPrint(g_stdout, "%-20s\t%3ld\n", g_allKdfAlgInfo[i].name, (long)g_allKdfAlgInfo[i].cid);
-    }
-}
-
-static void PrintKdftls12Alg(void)
-{
-    AppPrint(g_stdout, "List  Kdftls12  Algorithms:\n");
-    AppPrint(g_stdout, "%-20s\t%s\n", "NAME", "CID");
-    for (size_t i = 0; i < KDF_ALG_CNT; ++i) {
-        if (!CRYPT_EAL_KdfIsValidAlgId(g_allKdfAlgInfo[i].cid)) {
-            continue;
-        }
-        AppPrint(g_stdout, "%-20s\t%3ld\n", g_allKdfAlgInfo[i].name, (long)g_allKdfAlgInfo[i].cid);
-    }
-}
-
 static void PrintKdfAlg(void)
 {
-    PrintHkdfAlg();
-    AppPrint(g_stdout, "\n");
-    PrintPbkdf2Alg();
-    AppPrint(g_stdout, "\n");
-    PrintKdftls12Alg();
+    AppPrint(g_stdout, "List Kdf Algorithms:\n");
+    AppPrint(g_stdout, "%-20s\t%s\n", "NAME", "CID");
+    for (size_t i = 0; i < KDF_ALG_CNT; ++i) {
+        if (!CRYPT_EAL_KdfIsValidAlgId(g_allKdfAlgInfo[i].cid)) {
+            continue;
+        }
+        AppPrint(g_stdout, "%-20s\t%3ld\n", g_allKdfAlgInfo[i].name, (long)g_allKdfAlgInfo[i].cid);
+    }
 }
 
 static void PrintAllAlg(void)

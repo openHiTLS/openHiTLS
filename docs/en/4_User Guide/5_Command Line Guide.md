@@ -159,10 +159,55 @@ Generation and processing of certificate signing requests
 ## 3.5 SSL/TLS Communication
 
 ### 3.5.1 s_client
-SSL/TLS client tool
+
+**Function**: Establish a TLS, TLCP, or DTLCP client connection with a cipher list, trust chain, and optional client certificate.
+
+**Usage**:
+
+```bash
+hitls s_client -host <host> [-port <port>] [-tls|-tlcp|-dtlcp]
+    [-cipher <suites>] [-CAfile <file>] [-chainCAfile <file>]
+    [-cert <file> -key <file>] [-noverify] [-state] [-prexit]
+```
+
+**Main Options**:
+
+- `-tls`: Use TLS (default).
+- `-cert <file>`, `-key <file>`: Configure the TLS client certificate and private key for mutual authentication. They must be used together.
+- `-cipher <suites>`: Specify a colon-separated cipher suite list. Both standard `TLS_*` names and openHiTLS `HITLS_*` names are accepted.
+- `-CAfile <file>`, `-chainCAfile <file>`: Configure the CA and intermediate certificates used to verify the server.
+- `-noverify`: Do not verify the server certificate. This does not prevent the client from sending its own certificate.
+- `-tlcp_sign_cert/-tlcp_sign_key`, `-tlcp_enc_cert/-tlcp_enc_key`: Configure the TLCP/DTLCP signing and encryption certificate pairs.
+
+**TLS Mutual Authentication Example**:
+
+```bash
+hitls s_client -host 127.0.0.1 -port 4433 -tls \
+    -CAfile ca.pem -chainCAfile intermediate.pem \
+    -cert client.pem -key client.key.pem
+```
 
 ### 3.5.2 s_server
-SSL/TLS server tool
+
+**Function**: Start a TLS, TLCP, or DTLCP server with a cipher list, server certificate, and client-certificate verification policy.
+
+**Usage**:
+
+```bash
+hitls s_server [-accept <host:port>] [-port <port>] [-tls|-tlcp|-dtlcp]
+    [-cipher <suites>] [-CAfile <file>] [-chainCAfile <file>]
+    [-cert <file> -key <file>] [-noverify] [-accept_once] [-state]
+```
+
+`-cert/-key` configure the TLS server certificate and private key. The server verifies client certificates by default; use `-CAfile/-chainCAfile` for its trust chain or `-noverify` to disable client-certificate verification. Cipher and TLCP certificate options follow the same rules as `s_client`.
+
+**TLS Mutual Authentication Example**:
+
+```bash
+hitls s_server -accept 127.0.0.1:4433 -tls \
+    -cert server.pem -key server.key.pem \
+    -CAfile ca.pem -chainCAfile intermediate.pem
+```
 
 ## 3.6 Other Utility Tools
 

@@ -54,6 +54,8 @@ typedef struct {
     char *keyPass;
     char *caFile;
     char *caChain;
+    char *cert;
+    char *key;
     BSL_ParseFormat certFormat;
     BSL_ParseFormat keyFormat;
     
@@ -120,6 +122,15 @@ int ConfCertVerification(HITLS_Config *config, APP_CertConfig *certConfig,
  * @return Success or error code
  */
 int ConfigureTLCPCertificates(HITLS_Config *config, APP_CertConfig *certConfig);
+
+/**
+ * @brief Configure the local certificate and private key for a protocol
+ * @param config TLS configuration
+ * @param certConfig Certificate configuration
+ * @param protocol Selected protocol
+ * @return Success or error code
+ */
+int ConfigureProtocolCertificates(HITLS_Config *config, APP_CertConfig *certConfig, APP_ProtocolType protocol);
 
 /**
  * @brief Create TCP socket and connect to server
