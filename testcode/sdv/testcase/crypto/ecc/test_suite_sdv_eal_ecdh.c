@@ -284,6 +284,31 @@ EXIT:
 /* END_CASE */
 
 /**
+ * @test   SDV_CRYPTO_ECDH_GET_PRV_API_TC002
+ * @title  ECDH CRYPT_EAL_PkeyGetPrv: Test abnormal internal ECC parameter states.
+ * @precon Registering memory-related functions.
+ *         private key
+ * @brief
+ *    1. Create the context of the ecdh algorithm without setting para, expected result 1
+ *    2. Call the CRYPT_EAL_PkeyGetPrv method, expected result 2
+ *    3. Set the para and private key, expected result 3
+ *    4. Set ctx->para->p to null and call the CRYPT_EAL_PkeyGetPrv method, expected result 4
+ * @expect
+ *    1. Success, and the context is not NULL.
+ *    2. CRYPT_NULL_INPUT
+ *    3. CRYPT_SUCCESS
+ *    4. CRYPT_INVALID_ARG
+ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_ECDH_GET_PRV_API_TC002(Hex *prvKey)
+{
+    ASSERT_TRUE(EAL_PkeyGetPrv_Api_TC002(CRYPT_PKEY_ECDH, prvKey) == 0);
+EXIT:
+    return;
+}
+/* END_CASE */
+
+/**
  * @test   SDV_CRYPTO_ECDH_GET_PUB_API_TC001
  * @title  ECDH CRYPT_EAL_PkeyGetPub: Test the validity of parameters.
  * @precon Registering memory-related functions.

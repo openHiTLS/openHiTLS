@@ -1338,6 +1338,15 @@ int32_t HITLS_X509_Sign(int32_t mdId, const CRYPT_EAL_PkeyCtx *prvKey, const HIT
             }
             break;
 #endif
+#ifdef HITLS_CRYPTO_COMPOSITE
+        case CRYPT_PKEY_COMPOSITE:
+            if (CRYPT_EAL_PkeyCtrl(signKey, CRYPT_CTRL_GET_PARAID, &signAlgId.algId, sizeof(int32_t)) !=
+                CRYPT_SUCCESS) {
+                BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_CERT_SIGN_ALG);
+                return HITLS_X509_ERR_CERT_SIGN_ALG;
+            }
+            break;
+#endif
 #ifdef HITLS_CRYPTO_XMSS
         case CRYPT_PKEY_XMSS:
             signAlgId.algId = (uint32_t)CRYPT_PKEY_XMSS;

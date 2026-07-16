@@ -337,56 +337,63 @@ SDV_X509_CERT_PARSE_FUNC_TC001:BSL_FORMAT_ASN1:"../testdata/cert/asn1/sm2_cert/i
 SDV_X509_CERT_PARSE_FUNC_TC001 parse sm2_inter.notCA cert
 SDV_X509_CERT_PARSE_FUNC_TC001:BSL_FORMAT_ASN1:"../testdata/cert/asn1/sm2_cert/inter.notCA.der"
 
-SDV_X509_CERT_PARSE_FUNC_TC001 parse parse composite_mldsa cert pem 1
-SDV_X509_CERT_PARSE_FUNC_TC001:BSL_FORMAT_PEM:"../testdata/cert/asn1/composite_cert/mldsa44_rsa2048_pss_sha256_cert.pem"
+SDV_X509_CERT_PARSE_COMPOSITE_FORMAT_TC001 parse composite mldsa cert pem 1
+SDV_X509_CERT_PARSE_COMPOSITE_FORMAT_TC001:"../testdata/cert/asn1/composite_cert/mldsa44_rsa2048_pss_sha256_cert.pem":BSL_CID_MLDSA44_RSA2048_PSS_SHA256
 
-SDV_X509_CERT_PARSE_FUNC_TC001 parse parse composite_mldsa cert pem 2
-SDV_X509_CERT_PARSE_FUNC_TC001:BSL_FORMAT_PEM:"../testdata/cert/asn1/composite_cert/mldsa44_rsa2048_pkcs15_sha256_cert.pem"
+SDV_X509_CERT_PARSE_COMPOSITE_FORMAT_TC001 parse composite mldsa cert pem 2
+SDV_X509_CERT_PARSE_COMPOSITE_FORMAT_TC001:"../testdata/cert/asn1/composite_cert/mldsa44_rsa2048_pkcs15_sha256_cert.pem":BSL_CID_MLDSA44_RSA2048_PKCS15_SHA256
 
-SDV_X509_CERT_PARSE_FUNC_TC001 parse parse composite_mldsa cert pem 3
-SDV_X509_CERT_PARSE_FUNC_TC001:BSL_FORMAT_PEM:"../testdata/cert/asn1/composite_cert/mldsa44_ed25519_sha512_cert.pem"
+SDV_X509_CERT_PARSE_COMPOSITE_FORMAT_TC001 parse composite mldsa cert pem 3
+SDV_X509_CERT_PARSE_COMPOSITE_FORMAT_TC001:"../testdata/cert/asn1/composite_cert/mldsa44_ed25519_sha512_cert.pem":BSL_CID_MLDSA44_ED25519_SHA512
 
-SDV_X509_CERT_PARSE_FUNC_TC001 parse parse composite_mldsa cert pem 4
-SDV_X509_CERT_PARSE_FUNC_TC001:BSL_FORMAT_PEM:"../testdata/cert/asn1/composite_cert/mldsa44_ecdsa_p256_sha256_cert.pem"
+SDV_X509_CERT_PARSE_COMPOSITE_FORMAT_TC001 parse composite mldsa cert pem 4
+SDV_X509_CERT_PARSE_COMPOSITE_FORMAT_TC001:"../testdata/cert/asn1/composite_cert/mldsa44_ecdsa_p256_sha256_cert.pem":BSL_CID_MLDSA44_ECDSA_P256_SHA256
 
-SDV_X509_CERT_PARSE_FUNC_TC001 parse parse composite_mldsa cert pem 5
-SDV_X509_CERT_PARSE_FUNC_TC001:BSL_FORMAT_PEM:"../testdata/cert/asn1/composite_cert/mldsa65_rsa3072_pss_sha512_cert.pem"
+SDV_X509_CERT_PARSE_COMPOSITE_FORMAT_TC001 parse composite mldsa cert pem 5
+SDV_X509_CERT_PARSE_COMPOSITE_FORMAT_TC001:"../testdata/cert/asn1/composite_cert/mldsa65_rsa3072_pss_sha512_cert.pem":BSL_CID_MLDSA65_RSA3072_PSS_SHA512
 
-SDV_X509_CERT_PARSE_FUNC_TC001 parse parse composite_mldsa cert pem 6
-SDV_X509_CERT_PARSE_FUNC_TC001:BSL_FORMAT_PEM:"../testdata/cert/asn1/composite_cert/mldsa65_rsa3072_pkcs15_sha512_cert.pem"
+SDV_X509_CERT_PARSE_COMPOSITE_FORMAT_TC001 parse composite mldsa cert pem 6
+SDV_X509_CERT_PARSE_COMPOSITE_FORMAT_TC001:"../testdata/cert/asn1/composite_cert/mldsa65_rsa3072_pkcs15_sha512_cert.pem":BSL_CID_MLDSA65_RSA3072_PKCS15_SHA512
 
-SDV_X509_CERT_PARSE_FUNC_TC001 parse parse composite_mldsa cert pem 7
-SDV_X509_CERT_PARSE_FUNC_TC001:BSL_FORMAT_PEM:"../testdata/cert/asn1/composite_cert/mldsa65_rsa4096_pss_sha512_cert.pem"
+SDV_X509_CERT_PARSE_COMPOSITE_FORMAT_TC001 parse composite mldsa cert pem 7
+SDV_X509_CERT_PARSE_COMPOSITE_FORMAT_TC001:"../testdata/cert/asn1/composite_cert/mldsa65_rsa4096_pss_sha512_cert.pem":BSL_CID_MLDSA65_RSA4096_PSS_SHA512
 
-SDV_X509_CERT_PARSE_FUNC_TC001 parse parse composite_mldsa cert pem 8
-SDV_X509_CERT_PARSE_FUNC_TC001:BSL_FORMAT_PEM:"../testdata/cert/asn1/composite_cert/mldsa65_rsa4096_pkcs15_sha512_cert.pem"
+SDV_X509_CERT_PARSE_COMPOSITE_FORMAT_TC001 parse composite mldsa cert pem 8
+SDV_X509_CERT_PARSE_COMPOSITE_FORMAT_TC001:"../testdata/cert/asn1/composite_cert/mldsa65_rsa4096_pkcs15_sha512_cert.pem":BSL_CID_MLDSA65_RSA4096_PKCS15_SHA512
 
-SDV_X509_CERT_PARSE_FUNC_TC001 parse parse composite_mldsa cert pem 9
-SDV_X509_CERT_PARSE_FUNC_TC001:BSL_FORMAT_PEM:"../testdata/cert/asn1/composite_cert/mldsa65_ecdsa_p256_sha512_cert.pem"
+SDV_X509_CERT_PARSE_COMPOSITE_FORMAT_TC001 parse composite mldsa cert pem 9
+SDV_X509_CERT_PARSE_COMPOSITE_FORMAT_TC001:"../testdata/cert/asn1/composite_cert/mldsa65_ecdsa_p256_sha512_cert.pem":BSL_CID_MLDSA65_ECDSA_P256_SHA512
 
-SDV_X509_CERT_PARSE_FUNC_TC001 parse parse composite_mldsa cert pem 10
-SDV_X509_CERT_PARSE_FUNC_TC001:BSL_FORMAT_PEM:"../testdata/cert/asn1/composite_cert/mldsa65_ecdsa_p384_sha512_cert.pem"
+SDV_X509_CERT_PARSE_COMPOSITE_FORMAT_TC001 parse composite mldsa cert pem 10
+SDV_X509_CERT_PARSE_COMPOSITE_FORMAT_TC001:"../testdata/cert/asn1/composite_cert/mldsa65_ecdsa_p384_sha512_cert.pem":BSL_CID_MLDSA65_ECDSA_P384_SHA512
 
-SDV_X509_CERT_PARSE_FUNC_TC001 parse parse composite_mldsa cert pem 11
-SDV_X509_CERT_PARSE_FUNC_TC001:BSL_FORMAT_PEM:"../testdata/cert/asn1/composite_cert/mldsa65_ecdsa_brainpoolp256r1_sha512_cert.pem"
+SDV_X509_CERT_PARSE_COMPOSITE_FORMAT_TC001 parse composite mldsa cert pem 11
+SDV_X509_CERT_PARSE_COMPOSITE_FORMAT_TC001:"../testdata/cert/asn1/composite_cert/mldsa65_ecdsa_brainpoolp256r1_sha512_cert.pem":BSL_CID_MLDSA65_ECDSA_BRAINPOOLP256R1_SHA512
 
-SDV_X509_CERT_PARSE_FUNC_TC001 parse parse composite_mldsa cert pem 12
-SDV_X509_CERT_PARSE_FUNC_TC001:BSL_FORMAT_PEM:"../testdata/cert/asn1/composite_cert/mldsa65_ed25519_sha512_cert.pem"
+SDV_X509_CERT_PARSE_COMPOSITE_FORMAT_TC001 parse composite mldsa cert pem 12
+SDV_X509_CERT_PARSE_COMPOSITE_FORMAT_TC001:"../testdata/cert/asn1/composite_cert/mldsa65_ed25519_sha512_cert.pem":BSL_CID_MLDSA65_ED25519_SHA512
 
-SDV_X509_CERT_PARSE_FUNC_TC001 parse parse composite_mldsa cert pem 13
-SDV_X509_CERT_PARSE_FUNC_TC001:BSL_FORMAT_PEM:"../testdata/cert/asn1/composite_cert/mldsa87_ecdsa_p384_sha512_cert.pem"
+SDV_X509_CERT_PARSE_COMPOSITE_FORMAT_TC001 parse composite mldsa cert pem 13
+SDV_X509_CERT_PARSE_COMPOSITE_FORMAT_TC001:"../testdata/cert/asn1/composite_cert/mldsa87_ecdsa_p384_sha512_cert.pem":BSL_CID_MLDSA87_ECDSA_P384_SHA512
 
-SDV_X509_CERT_PARSE_FUNC_TC001 parse parse composite_mldsa cert pem 14
-SDV_X509_CERT_PARSE_FUNC_TC001:BSL_FORMAT_PEM:"../testdata/cert/asn1/composite_cert/mldsa87_ecdsa_brainpoolp384r1_sha512_cert.pem"
+SDV_X509_CERT_PARSE_COMPOSITE_FORMAT_TC001 parse composite mldsa cert pem 14
+SDV_X509_CERT_PARSE_COMPOSITE_FORMAT_TC001:"../testdata/cert/asn1/composite_cert/mldsa87_ecdsa_brainpoolp384r1_sha512_cert.pem":BSL_CID_MLDSA87_ECDSA_BRAINPOOLP384R1_SHA512
 
-SDV_X509_CERT_PARSE_FUNC_TC001 parse parse composite_mldsa cert pem 15
-SDV_X509_CERT_PARSE_FUNC_TC001:BSL_FORMAT_PEM:"../testdata/cert/asn1/composite_cert/mldsa87_rsa3072_pss_sha512_cert.pem"
+SDV_X509_CERT_PARSE_COMPOSITE_FORMAT_TC001 parse composite mldsa cert pem 15
+SDV_X509_CERT_PARSE_COMPOSITE_FORMAT_TC001:"../testdata/cert/asn1/composite_cert/mldsa87_rsa3072_pss_sha512_cert.pem":BSL_CID_MLDSA87_RSA3072_PSS_SHA512
 
-SDV_X509_CERT_PARSE_FUNC_TC001 parse parse composite_mldsa cert pem 16
-SDV_X509_CERT_PARSE_FUNC_TC001:BSL_FORMAT_PEM:"../testdata/cert/asn1/composite_cert/mldsa87_rsa4096_pss_sha512_cert.pem"
+SDV_X509_CERT_PARSE_COMPOSITE_FORMAT_TC001 parse composite mldsa cert pem 16
+SDV_X509_CERT_PARSE_COMPOSITE_FORMAT_TC001:"../testdata/cert/asn1/composite_cert/mldsa87_rsa4096_pss_sha512_cert.pem":BSL_CID_MLDSA87_RSA4096_PSS_SHA512
 
-SDV_X509_CERT_PARSE_FUNC_TC001 parse parse composite_mldsa cert pem 17
-SDV_X509_CERT_PARSE_FUNC_TC001:BSL_FORMAT_PEM:"../testdata/cert/asn1/composite_cert/mldsa87_ecdsa_p521_sha512_cert.pem"
+SDV_X509_CERT_PARSE_COMPOSITE_FORMAT_TC001 parse composite mldsa cert pem 17
+SDV_X509_CERT_PARSE_COMPOSITE_FORMAT_TC001:"../testdata/cert/asn1/composite_cert/mldsa87_ecdsa_p521_sha512_cert.pem":BSL_CID_MLDSA87_ECDSA_P521_SHA512
+
+SDV_X509_CERT_PARSE_COMPOSITE_NEGATIVE_TC001 reject composite cert when outer signatureAlgorithm encodes explicit NULL parameters
+SDV_X509_CERT_PARSE_COMPOSITE_NEGATIVE_TC001:"../testdata/cert/asn1/composite_cert/mldsa44_rsa2048_pss_sha256_cert_signalg_param_null.pem":HITLS_X509_ERR_SIGN_PARAM
+
+SDV_X509_CERT_PARSE_COMPOSITE_NEGATIVE_TC001 reject composite cert when tbsCertificate.signature encodes explicit NULL parameters
+SDV_X509_CERT_PARSE_COMPOSITE_NEGATIVE_TC001:"../testdata/cert/asn1/composite_cert/mldsa44_rsa2048_pss_sha256_cert_tbs_signalg_param_null.pem":HITLS_X509_ERR_SIGN_PARAM
+
 SDV_X509_CERT_PARSE_FUNC_TC001 parse ml-kem cert pem
 SDV_X509_CERT_PARSE_FUNC_TC001:BSL_FORMAT_PEM:"../testdata/cert/asn1/mlkem_keys/mlkem512/mlkem512_cert.pem"
 

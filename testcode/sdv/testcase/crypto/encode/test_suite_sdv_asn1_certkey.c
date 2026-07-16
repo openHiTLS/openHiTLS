@@ -31,6 +31,7 @@
 #include "crypt_errno.h"
 #include "crypt_eal_codecs.h"
 #include "crypt_eal_init.h"
+#include "crypt_eal_md.h"
 #include "crypt_codecskey_local.h"
 #include "crypt_codecskey.h"
 #include "crypt_util_rand.h"
@@ -2825,6 +2826,141 @@ void SDV_CRYPT_EAL_PROVIDER_DECODE_BUFF_KEY_ALGID_TC001(char *path, char *format
 EXIT:
     CRYPT_EAL_PkeyFreeCtx(pkeyCtx);
     BSL_SAL_FREE(data);
+#endif
+}
+/* END_CASE */
+
+/**
+ * @test SDV_CRYPT_EAL_PROVIDER_DECODE_BUFF_KEY_COMPOSITE_TC001
+ * @title Test composite key decode through ProviderDecodeBuffKey on decoder-chain path
+ * @precon None
+ * @brief
+ *    1. Build with HITLS_CRYPTO_PROVIDER, HITLS_CRYPTO_KEY_DECODE_CHAIN and HITLS_CRYPTO_COMPOSITE enabled
+ *    2. Read composite DER key file into buffer
+ *    3. Decode with CRYPT_EAL_ProviderDecodeBuffKey
+ *    4. On success, verify the decoded key is composite and paraId matches the input OID
+ *    5. On failure, verify the decoder returns the expected composite-specific error
+ */
+/* BEGIN_CASE */
+void SDV_CRYPT_EAL_PROVIDER_DECODE_BUFF_KEY_COMPOSITE_TC001(char *path, char *formatStr, char *typeStr,
+    int expectRet, int expectParaId)
+{
+#if !defined(HITLS_CRYPTO_PROVIDER) || !defined(HITLS_CRYPTO_KEY_DECODE_CHAIN) || !defined(HITLS_CRYPTO_COMPOSITE)
+    (void)path;
+    (void)formatStr;
+    (void)typeStr;
+    (void)expectRet;
+    (void)expectParaId;
+    SKIP_TEST();
+#else
+    uint8_t *data = NULL;
+    uint32_t dataLen = 0;
+    int32_t paraId = BSL_CID_UNKNOWN;
+    CRYPT_EAL_PkeyCtx *pkeyCtx = NULL;
+
+    CRYPT_EAL_Init(CRYPT_EAL_INIT_CPU | CRYPT_EAL_INIT_PROVIDER | CRYPT_EAL_INIT_PROVIDER_RAND);
+    CRYPT_RandRegist(RandFunc);
+    CRYPT_RandRegistEx(RandFuncEx);
+
+    ASSERT_EQ(BSL_SAL_ReadFile(path, &data, &dataLen), BSL_SUCCESS);
+    BSL_Buffer encode = {data, dataLen};
+
+    ASSERT_EQ(CRYPT_EAL_ProviderDecodeBuffKey(NULL, NULL, BSL_CID_UNKNOWN, formatStr, typeStr, &encode,
+        NULL, &pkeyCtx), expectRet);
+    if (expectRet == CRYPT_SUCCESS) {
+        ASSERT_TRUE(pkeyCtx != NULL);
+        ASSERT_EQ(CRYPT_EAL_PkeyGetId(pkeyCtx), CRYPT_PKEY_COMPOSITE);
+        ASSERT_EQ(CRYPT_EAL_PkeyCtrl(pkeyCtx, CRYPT_CTRL_GET_PARAID, &paraId, sizeof(paraId)), CRYPT_SUCCESS);
+        ASSERT_EQ(paraId, expectParaId);
+        ASSERT_TRUE(TestIsErrStackEmpty());
+    } else {
+        ASSERT_TRUE(pkeyCtx == NULL);
+        TestErrClear();
+    }
+
+EXIT:
+    CRYPT_EAL_PkeyFreeCtx(pkeyCtx);
+    BSL_SAL_FREE(data);
+    CRYPT_EAL_Cleanup(CRYPT_EAL_INIT_CPU | CRYPT_EAL_INIT_PROVIDER | CRYPT_EAL_INIT_PROVIDER_RAND);
+#endif
+}
+/* END_CASE */
+
+/**
+ * @test SDV_CRYPT_EAL_PROVIDER_COMPOSITE_SIGN_VERIFY_TC001
+ * @title Test composite Sign/Verify and SignData/VerifyData after provider decoder-chain decode
+ * @precon None
+ * @brief
+ *    1. Build with HITLS_CRYPTO_PROVIDER, HITLS_CRYPTO_KEY_DECODE_CHAIN and HITLS_CRYPTO_COMPOSITE enabled
+ *    2. Read composite DER private/public key files into buffers
+ *    3. Decode private/public keys with CRYPT_EAL_ProviderDecodeBuffKey
+ *    4. Perform Sign/Verify on the message with the decoded composite key pair
+ *    5. Perform SignData/VerifyData on the digest of the same message, using the mdId passed by the test data
+ */
+/* BEGIN_CASE */
+void SDV_CRYPT_EAL_PROVIDER_COMPOSITE_SIGN_VERIFY_TC001(char *prvPath, char *pubPath, int mdId, Hex *msg)
+{
+#if !defined(HITLS_CRYPTO_PROVIDER) || !defined(HITLS_CRYPTO_KEY_DECODE_CHAIN) || !defined(HITLS_CRYPTO_COMPOSITE)
+    (void)prvPath;
+    (void)pubPath;
+    (void)mdId;
+    (void)msg;
+    SKIP_TEST();
+#else
+    uint8_t *prvData = NULL;
+    uint8_t *pubData = NULL;
+    uint32_t prvDataLen = 0;
+    uint32_t pubDataLen = 0;
+    uint8_t *sign = NULL;
+    uint8_t *signData = NULL;
+    uint32_t signLen = 0;
+    uint32_t curSignLen = 0;
+    uint32_t curSignDataLen = 0;
+    uint8_t digest[64] = {0};
+    uint32_t digestLen = sizeof(digest);
+    CRYPT_EAL_PkeyCtx *prvCtx = NULL;
+    CRYPT_EAL_PkeyCtx *pubCtx = NULL;
+
+    CRYPT_EAL_Init(CRYPT_EAL_INIT_CPU | CRYPT_EAL_INIT_PROVIDER | CRYPT_EAL_INIT_PROVIDER_RAND);
+    CRYPT_RandRegist(RandFunc);
+    CRYPT_RandRegistEx(RandFuncEx);
+    ASSERT_EQ(BSL_SAL_ReadFile(prvPath, &prvData, &prvDataLen), BSL_SUCCESS);
+    ASSERT_EQ(BSL_SAL_ReadFile(pubPath, &pubData, &pubDataLen), BSL_SUCCESS);
+    BSL_Buffer prvEncode = {prvData, prvDataLen};
+    BSL_Buffer pubEncode = {pubData, pubDataLen};
+    ASSERT_EQ(CRYPT_EAL_ProviderDecodeBuffKey(NULL, NULL, BSL_CID_UNKNOWN, "ASN1", "PRIKEY_PKCS8_UNENCRYPT",
+        &prvEncode, NULL, &prvCtx), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_ProviderDecodeBuffKey(NULL, NULL, BSL_CID_UNKNOWN, "ASN1", "PUBKEY_SUBKEY",
+        &pubEncode, NULL, &pubCtx), CRYPT_SUCCESS);
+    ASSERT_TRUE(prvCtx != NULL);
+    ASSERT_TRUE(pubCtx != NULL);
+
+    signLen = CRYPT_EAL_PkeyGetSignLen(prvCtx);
+    ASSERT_TRUE(signLen > 0);
+    sign = BSL_SAL_Malloc(signLen);
+    signData = BSL_SAL_Malloc(signLen);
+    ASSERT_TRUE(sign != NULL);
+    ASSERT_TRUE(signData != NULL);
+
+    curSignLen = signLen;
+    ASSERT_EQ(CRYPT_EAL_PkeySign(prvCtx, mdId, msg->x, msg->len, sign, &curSignLen), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyVerify(pubCtx, mdId, msg->x, msg->len, sign, curSignLen), CRYPT_SUCCESS);
+
+    ASSERT_EQ(CRYPT_EAL_Md(mdId, msg->x, msg->len, digest, &digestLen), CRYPT_SUCCESS);
+
+    curSignDataLen = signLen;
+    ASSERT_EQ(CRYPT_EAL_PkeySignData(prvCtx, digest, digestLen, signData, &curSignDataLen), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyVerifyData(pubCtx, digest, digestLen, signData, curSignDataLen), CRYPT_SUCCESS);
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
+EXIT:
+    BSL_SAL_Free(signData);
+    BSL_SAL_Free(sign);
+    CRYPT_EAL_PkeyFreeCtx(pubCtx);
+    CRYPT_EAL_PkeyFreeCtx(prvCtx);
+    BSL_SAL_FREE(pubData);
+    BSL_SAL_FREE(prvData);
+    CRYPT_EAL_Cleanup(CRYPT_EAL_INIT_CPU | CRYPT_EAL_INIT_PROVIDER | CRYPT_EAL_INIT_PROVIDER_RAND);
 #endif
 }
 /* END_CASE */

@@ -231,6 +231,14 @@ if(NOT HITLS_SKIP_CONFIG_CHECK)
             )
         endif()
     endif()
+    if(HITLS_CRYPTO_COMPOSITE_CHECK)
+        if(NOT HITLS_CRYPTO_RSA_CHECK AND NOT HITLS_CRYPTO_ECDSA_CHECK AND NOT HITLS_CRYPTO_ED25519_CHECK)
+            hitls_add_dependency_warning(
+                "[HiTLS] The composite check must work with at least one enabled traditional signature check. "
+                "(HITLS_CRYPTO_RSA_CHECK/HITLS_CRYPTO_ECDSA_CHECK/HITLS_CRYPTO_ED25519_CHECK)"
+            )
+        endif()
+    endif()
 
     # RSA
     if(HITLS_CRYPTO_RSA)

@@ -133,6 +133,77 @@ EXIT:
 /* END_CASE */
 
 /**
+ * @test   SDV_X509_CERT_PARSE_COMPOSITE_FORMAT_TC001
+ * @title  Parse a composite certificate and verify its public-key and signature algorithm identifiers.
+ * @precon HITLS_PKI_X509_CRT_PARSE and HITLS_CRYPTO_COMPOSITE are enabled.
+ * @brief  Parse the PEM certificate, extract its subject public key and signature algorithm,
+ *         then verify the public key type is composite and both identifiers match the expected OID.
+ * @expect Certificate parsing succeeds, the extracted public key is composite, and the public-key
+ *         parameter OID and certificate signature algorithm OID both equal expOid.
+ */
+/* BEGIN_CASE */
+void SDV_X509_CERT_PARSE_COMPOSITE_FORMAT_TC001(char *path, int expOid)
+{
+#if !defined(HITLS_PKI_X509_CRT_PARSE) || !defined(HITLS_CRYPTO_COMPOSITE)
+    (void)path;
+    (void)expOid;
+    SKIP_TEST();
+#else
+    HITLS_X509_Cert *cert = NULL;
+    CRYPT_EAL_PkeyCtx *pubKey = NULL;
+    int32_t signAlg = 0;
+
+    TestMemInit();
+    BSL_GLOBAL_Init();
+    ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_PEM, path, &cert), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_GET_PUBKEY, &pubKey, 0), HITLS_PKI_SUCCESS);
+    ASSERT_NE(pubKey, NULL);
+    ASSERT_EQ(CRYPT_EAL_PkeyGetId(pubKey), CRYPT_PKEY_COMPOSITE);
+    ASSERT_EQ(CRYPT_EAL_PkeyGetParaId(pubKey), expOid);
+    ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_GET_SIGNALG, &signAlg, sizeof(signAlg)), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(signAlg, expOid);
+    ASSERT_TRUE(TestIsErrStackEmpty());
+EXIT:
+    CRYPT_EAL_PkeyFreeCtx(pubKey);
+    HITLS_X509_CertFree(cert);
+    BSL_GLOBAL_DeInit();
+#endif
+}
+/* END_CASE */
+
+/**
+ * @test   SDV_X509_CERT_PARSE_COMPOSITE_NEGATIVE_TC001
+ * @title  Reject a composite certificate whose signature AlgorithmIdentifier carries an explicit NULL parameter.
+ * @precon HITLS_PKI_X509_CRT_PARSE and HITLS_CRYPTO_COMPOSITE are enabled.
+ * @brief
+ *   1. Load a pre-generated malformed composite PEM certificate sample from testdata.
+ *   2. Parse the malformed certificate file and verify the parser rejects it.
+ * @expect
+ *   1. Composite certificate parsing fails with expRet.
+ *   2. No usable certificate object is returned.
+ */
+/* BEGIN_CASE */
+void SDV_X509_CERT_PARSE_COMPOSITE_NEGATIVE_TC001(char *path, int expRet)
+{
+#if !defined(HITLS_PKI_X509_CRT_PARSE) || !defined(HITLS_CRYPTO_COMPOSITE)
+    (void)path;
+    (void)expRet;
+    SKIP_TEST();
+#else
+    HITLS_X509_Cert *cert = NULL;
+    TestMemInit();
+    BSL_GLOBAL_Init();
+
+    ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_PEM, path, &cert), expRet);
+    ASSERT_TRUE(cert == NULL);
+EXIT:
+    HITLS_X509_CertFree(cert);
+    BSL_GLOBAL_DeInit();
+#endif
+}
+/* END_CASE */
+
+/**
  * @test SDV_X509_CERT_PARSE_NO_NUL_TERMINATOR_TC001
  * title 1. Test parsing a PEM certificate buffer whose byte after encode.dataLen is nonzero.
  *       2. Verify CertParseBuff uses encode.dataLen as the boundary and does not require a trailing '\0'.

@@ -2383,6 +2383,98 @@ EXIT:
 }
 /* END_CASE */
 
+/**
+ * @test SDV_X509_VFY_COMPOSITE_MLDSA_KEYUSAGE_TC001
+ * @title Test Composite ML-DSA certificate keyUsage representative validation
+ * @precon Composite ML-DSA is enabled and one representative Composite cert sample is available
+ * @brief
+ *   1. Parse one representative Composite ML-DSA certificate sample.
+ *   2. Reuse the parsed certificate object and modify keyUsage in memory.
+ *   3. Verify representative allowed keyUsage cases, including single allowed bits and
+ *      typical allowed-bit combinations.
+ *   4. Verify that keyUsage = 0, representative forbidden bits alone, and representative
+ *      allowed+forbidden mixed bitmaps all fail.
+ *   5. Verify that omitting keyUsage still passes.
+ * @expect
+ *   1. Representative allowed keyUsage cases succeed.
+ *   2. keyUsage = 0 fails with HITLS_X509_ERR_EXT_KU.
+ *   3. Representative forbidden-only and allowed+forbidden mixed bitmaps fail with
+ *      HITLS_X509_ERR_EXT_KU.
+ *   4. Absent keyUsage succeeds.
+ */
+/* BEGIN_CASE */
+void SDV_X509_VFY_COMPOSITE_MLDSA_KEYUSAGE_TC001(void)
+{
+#ifndef HITLS_CRYPTO_COMPOSITE
+    SKIP_TEST();
+#else
+    const char *certPath = NULL;
+    const uint32_t validKeyUsageCases[] = {
+        HITLS_X509_EXT_KU_DIGITAL_SIGN,
+        HITLS_X509_EXT_KU_NON_REPUDIATION,
+        HITLS_X509_EXT_KU_KEY_CERT_SIGN,
+        HITLS_X509_EXT_KU_CRL_SIGN,
+        HITLS_X509_EXT_KU_DIGITAL_SIGN | HITLS_X509_EXT_KU_NON_REPUDIATION,
+        HITLS_X509_EXT_KU_KEY_CERT_SIGN | HITLS_X509_EXT_KU_CRL_SIGN
+    };
+    const uint32_t invalidKeyUsageCases[] = {
+        0,
+        HITLS_X509_EXT_KU_KEY_ENCIPHERMENT,
+        HITLS_X509_EXT_KU_KEY_AGREEMENT,
+        HITLS_X509_EXT_KU_DIGITAL_SIGN | HITLS_X509_EXT_KU_KEY_ENCIPHERMENT,
+        HITLS_X509_EXT_KU_CRL_SIGN | HITLS_X509_EXT_KU_DATA_ENCIPHERMENT
+    };
+    const uint32_t validCaseCnt = sizeof(validKeyUsageCases) / sizeof(validKeyUsageCases[0]);
+    const uint32_t invalidCaseCnt = sizeof(invalidKeyUsageCases) / sizeof(invalidKeyUsageCases[0]);
+    uint32_t i = 0;
+#if defined(HITLS_CRYPTO_RSA)
+    certPath = "../testdata/cert/asn1/composite_cert/mldsa44_rsa2048_pss_sha256_cert.pem";
+#elif defined(HITLS_CRYPTO_ECDSA)
+    certPath = "../testdata/cert/asn1/composite_cert/mldsa65_ecdsa_p256_sha512_cert.pem";
+#elif defined(HITLS_CRYPTO_ED25519)
+    certPath = "../testdata/cert/asn1/composite_cert/mldsa44_ed25519_sha512_cert.pem";
+#else
+    SKIP_TEST();
+#endif
+    HITLS_X509_StoreCtx *storeCtx = NULL;
+    HITLS_X509_Cert *cert = NULL;
+    HITLS_X509_CertExt *certExt = NULL;
+    HITLS_X509_List *chain = NULL;
+    ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_PEM, certPath, &cert), HITLS_PKI_SUCCESS);
+
+    certExt = (HITLS_X509_CertExt *)cert->tbs.ext.extData;
+    ASSERT_NE(certExt, NULL);
+    certExt->extFlags |= HITLS_X509_EXT_FLAG_KUSAGE;
+    chain = BSL_LIST_New(sizeof(HITLS_X509_Cert *));
+    ASSERT_NE(chain, NULL);
+    ASSERT_EQ(BSL_LIST_AddElement(chain, cert, BSL_LIST_POS_END), BSL_SUCCESS);
+    cert = NULL;
+    storeCtx = HITLS_X509_NewStoreCtxMock();
+    ASSERT_NE(storeCtx, NULL);
+    storeCtx->verifyParam.flags &= ~HITLS_X509_VFY_FLAG_SECBITS;
+
+    for (i = 0; i < validCaseCnt; i++) {
+        certExt->keyUsage = validKeyUsageCases[i];
+        ASSERT_EQ(HITLS_X509_VerifyParamAndExt(storeCtx, chain), HITLS_PKI_SUCCESS);
+        ASSERT_TRUE(TestIsErrStackEmpty());
+    }
+    for (i = 0; i < invalidCaseCnt; i++) {
+        certExt->keyUsage = invalidKeyUsageCases[i];
+        ASSERT_EQ(HITLS_X509_VerifyParamAndExt(storeCtx, chain), HITLS_X509_ERR_EXT_KU);
+        TestErrClear();
+    }
+    certExt->extFlags &= ~HITLS_X509_EXT_FLAG_KUSAGE;
+    ASSERT_EQ(HITLS_X509_VerifyParamAndExt(storeCtx, chain), HITLS_PKI_SUCCESS);
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
+EXIT:
+    HITLS_X509_FreeStoreCtxMock(storeCtx);
+    BSL_LIST_FREE(chain, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);
+    HITLS_X509_CertFree(cert);
+#endif
+}
+/* END_CASE */
+
 // root(pathLen=0);leaf->inter->root;non-self-issued intermediate CA appears → expected PATHLEN_EXCEEDED
 /* BEGIN_CASE */
 void SDV_X509_VFY_PATHLEN_FAIL_TC001(void)

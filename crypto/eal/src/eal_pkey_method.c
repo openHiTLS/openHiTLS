@@ -944,9 +944,9 @@ static const EAL_PkeyMethod METHODS[] = {
         CRYPT_COMPOSITE_GetPubKeyEx,
         CRYPT_COMPOSITE_GetPrvKeyEx,
         CRYPT_COMPOSITE_Sign,
-        NULL, // signData
+        CRYPT_COMPOSITE_SignData,
         CRYPT_COMPOSITE_Verify,
-        NULL, // verifyData
+        CRYPT_COMPOSITE_VerifyData,
         NULL, // recover
         NULL, // computeShareKey
         NULL, // encrypt

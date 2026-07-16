@@ -590,8 +590,13 @@ static int32_t DecSubKeyInfoCb(int32_t type, uint32_t idx, void *data, void *exp
                 *(uint8_t *)expVal = BSL_ASN1_TAG_OBJECT_ID;
             } else if (cid == BSL_CID_DSA || cid == BSL_CID_DH || cid == BSL_CID_RSASSAPSS) {
                 *(uint8_t *)expVal = BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE;
-            } else if (cid == BSL_CID_ED25519 || cid == BSL_CID_X25519) {
-                /* RFC8410: Ed25519/X25519 has no algorithm parameters */
+            } else if (cid == BSL_CID_ED25519 || cid == BSL_CID_X25519 ||
+                cid == BSL_CID_ML_DSA_44 || cid == BSL_CID_ML_DSA_65 || cid == BSL_CID_ML_DSA_87 ||
+                cid == BSL_CID_ML_KEM_512 || cid == BSL_CID_ML_KEM_768 || cid == BSL_CID_ML_KEM_1024 ||
+                cid == BSL_CID_XMSS || cid == BSL_CID_XMSSMT ||
+                (cid >= BSL_CID_SLH_DSA_SHA2_128S && cid <= BSL_CID_SLH_DSA_SHAKE_256F) ||
+                (cid >= BSL_CID_MLDSA44_RSA2048_PSS_SHA256 && cid <= BSL_CID_MLDSA87_ECDSA_P521_SHA512)) {
+                /* These algorithms identify the key type directly by OID, so parameters must be absent. */
                 *(uint8_t *)expVal = BSL_ASN1_TAG_EMPTY; // is empty
             } else {
                 *(uint8_t *)expVal = BSL_ASN1_TAG_NULL; // is null

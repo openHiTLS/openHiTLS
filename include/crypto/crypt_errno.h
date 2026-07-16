@@ -662,6 +662,7 @@ enum CRYPT_ERROR {
     CRYPT_COMPOSITE_LEN_NOT_ENOUGH,                         /**< The buffer size of output is insufficient. */
     CRYPT_COMPOSITE_KEYLEN_ERROR,                           /**< Incorrect input data length. */
     CRYPT_COMPOSITE_KEY_REPEATED_SET,                       /**< The key is repeatedly set. */
+    CRYPT_COMPOSITE_ERR_BITS_MISMATCH,                      /**< The traditional key bits do not match the composite parameter. */
 
     CRYPT_LMS_INVALID_PARAM = 0x01400001,        /**< LMS invalid parameter. */
     CRYPT_LMS_INVALID_CMD,                       /**< LMS invalid control command. */

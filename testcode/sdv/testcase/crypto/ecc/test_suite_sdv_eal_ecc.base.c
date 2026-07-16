@@ -32,6 +32,7 @@
 #include "crypt_ecdh.h"
 #include "crypt_ecdsa.h"
 #include "crypt_ecc.h"
+#include "ecc_local.h"
 #include "eal_pkey_local.h"
 
 /* ============================================================================
@@ -479,6 +480,45 @@ int EAL_PkeyGetPrv_Api_TC001(int algId, Hex *prvKey)
 
     ret = SUCCESS;
 EXIT:
+    CRYPT_EAL_PkeyFreeCtx(ctx);
+    return ret;
+}
+
+int EAL_PkeyGetPrv_Api_TC002(int algId, Hex *prvKey)
+{
+    int ret = ERROR;
+    CRYPT_EAL_PkeyCtx *ctx = NULL;
+    CRYPT_EAL_PkeyPrv prv1 = {0};
+    CRYPT_EAL_PkeyPrv prv2 = {0};
+    KeyData prvKeyBuffer = {{0}, KEY_MAX_LEN};
+    ECC_Pkey *ecc = NULL;
+    BN_BigNum *curveP = NULL;
+
+    TestMemInit();
+
+    ctx = CRYPT_EAL_PkeyNewCtx(algId);
+    ASSERT_TRUE_AND_LOG("NewCtx", ctx != NULL);
+
+    Ecc_SetPrvKey(&prv2, algId, prvKeyBuffer.data, GetPrvKeyLen(CRYPT_ECC_NISTP224));
+    ASSERT_EQ(CRYPT_EAL_PkeyGetPrv(ctx, &prv2), CRYPT_NULL_INPUT);
+
+    ASSERT_TRUE_AND_LOG("SetParaById", CRYPT_EAL_PkeySetParaById(ctx, CRYPT_ECC_NISTP224) == CRYPT_SUCCESS);
+
+    Ecc_SetPrvKey(&prv1, algId, prvKey->x, prvKey->len);
+    ASSERT_EQ(CRYPT_EAL_PkeySetPrv(ctx, &prv1), CRYPT_SUCCESS);
+
+    ecc = (ECC_Pkey *)ctx->key;
+    ASSERT_TRUE(ecc != NULL);
+    ASSERT_TRUE(ecc->para != NULL);
+    curveP = ecc->para->p;
+    ecc->para->p = NULL;
+    ASSERT_EQ(CRYPT_EAL_PkeyGetPrv(ctx, &prv2), CRYPT_INVALID_ARG);
+
+    ret = SUCCESS;
+EXIT:
+    if ((ecc != NULL) && (ecc->para != NULL) && (ecc->para->p == NULL)) {
+        ecc->para->p = curveP;
+    }
     CRYPT_EAL_PkeyFreeCtx(ctx);
     return ret;
 }
@@ -963,4 +1003,3 @@ EXIT:
     CRYPT_EAL_PkeyFreeCtx(ctx);
     return ret;
 }
-

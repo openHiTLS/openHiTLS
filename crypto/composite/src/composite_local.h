@@ -28,8 +28,6 @@ extern "C" {
 
 #define COMPOSITE_SIGNATURE_PREFIX_LEN 32
 #define COMPOSITE_MAX_CTX_BYTES 255
-#define MD_SHA256_SIZE 32
-#define MD_SHA512_SIZE 64
 #define BITS_TO_BYTES(x) (((x) + 7) >> 3)
 
 
@@ -53,14 +51,8 @@ typedef struct {
 struct CompositeCtx {
     void *pqcCtx;
     void *tradCtx;
-    uint8_t *pubKey;
     uint32_t pubLen;
-    uint8_t *prvKey;
     uint32_t prvLen;
-    uint8_t *e;
-    uint32_t eLen;
-    const EAL_PkeyMethod *pqcMethod;
-    const EAL_PkeyMethod *tradMethod;
     const COMPOSITE_ALG_INFO *info;
     uint8_t *ctxInfo;
     uint32_t ctxLen;

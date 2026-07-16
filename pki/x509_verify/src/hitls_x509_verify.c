@@ -1193,10 +1193,11 @@ static int32_t HITLS_X509_CheckCrlExtNode(void *ctx, HITLS_X509_ExtEntry *extNod
     }
 }
 
-#if defined(HITLS_CRYPTO_MLDSA) || defined(HITLS_CRYPTO_SLH_DSA)
+#if defined(HITLS_CRYPTO_MLDSA) || defined(HITLS_CRYPTO_SLH_DSA) || defined(HITLS_CRYPTO_COMPOSITE)
 static int32_t CheckPqcSigKeyUsage(HITLS_X509_Cert *cert)
 {
-    // Check if the certificate's PUBLIC KEY is a PQC signature algorithm (ML-DSA or SLH-DSA)
+    // Check if the certificate's PUBLIC KEY is a PQC signature algorithm
+    // (ML-DSA, SLH-DSA, or a composite ML-DSA SubjectPublicKeyInfo OID).
     // Note: We check the public key type, not the signature algorithm used to sign this certificate
     // This is because keyUsage applies to what the certificate holder's public key can do
     CRYPT_PKEY_AlgId pubKeyAlgId = CRYPT_EAL_PkeyGetId(cert->tbs.ealPubKey);
@@ -1208,6 +1209,11 @@ static int32_t CheckPqcSigKeyUsage(HITLS_X509_Cert *cert)
 #endif
 #ifdef HITLS_CRYPTO_SLH_DSA
     if (pubKeyAlgId == CRYPT_PKEY_SLH_DSA) {
+        isPqcSignaturePubKey = true;
+    }
+#endif
+#ifdef HITLS_CRYPTO_COMPOSITE
+    if (pubKeyAlgId == CRYPT_PKEY_COMPOSITE) {
         isPqcSignaturePubKey = true;
     }
 #endif
@@ -1280,7 +1286,7 @@ static int32_t HITLS_X509_CheckCertExt(void *ctx, HITLS_X509_Cert *cert, int32_t
             (HITLS_X509_StoreCtx *)ctx, cert, depth, HITLS_X509_ERR_VFY_EXTENSIONS_REQUIRE_V3);
         return HITLS_PKI_SUCCESS;
     }
-#if defined(HITLS_CRYPTO_MLDSA) || defined(HITLS_CRYPTO_SLH_DSA)
+#if defined(HITLS_CRYPTO_MLDSA) || defined(HITLS_CRYPTO_SLH_DSA) || defined(HITLS_CRYPTO_COMPOSITE)
     int32_t pqcSigKeyUsageRet = CheckPqcSigKeyUsage(cert);
     if (pqcSigKeyUsageRet != HITLS_PKI_SUCCESS) {
         return pqcSigKeyUsageRet;

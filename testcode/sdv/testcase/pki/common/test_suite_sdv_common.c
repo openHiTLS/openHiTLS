@@ -577,6 +577,31 @@ EXIT:
 }
 /* END_CASE */
 
+/**
+ * @test SDV_CRYPT_EAL_ParseFilePriKeyFormat_TC002
+ * @title Test private key file decode failure path with expected return code
+ * @precon Prepare a private key file and its expected decode result
+ * @brief
+ *   1. Initialize the test memory and global state.
+ *   2. Decode the specified private key file with the given format and type.
+ *   3. Check that the returned error code matches the expected value.
+ * @expect
+ *   1. The private key decode result matches the expected return code.
+ *   2. The allocated key context is released correctly.
+ */
+/* BEGIN_CASE */
+void SDV_CRYPT_EAL_ParseFilePriKeyFormat_TC002(int format, int type, char *path, int ret)
+{
+    TestMemInit();
+    BSL_GLOBAL_Init();
+    CRYPT_EAL_PkeyCtx *key = NULL;
+    ASSERT_EQ(CRYPT_EAL_DecodeFileKey(format, type, path, NULL, 0, &key), ret);
+EXIT:
+    CRYPT_EAL_PkeyFreeCtx(key);
+    BSL_GLOBAL_DeInit();
+}
+/* END_CASE */
+
 /* BEGIN_CASE */
 void SDV_CRYPT_EAL_ParseFilePubKeyFormat_TC001(int format, int type, char *path)
 {
@@ -588,6 +613,70 @@ void SDV_CRYPT_EAL_ParseFilePubKeyFormat_TC001(int format, int type, char *path)
 EXIT:
     CRYPT_EAL_PkeyFreeCtx(key);
     BSL_GLOBAL_DeInit();
+}
+/* END_CASE */
+
+/**
+ * @test SDV_CRYPT_EAL_ParseFilePubKeyFormat_TC002
+ * @title Test public key file decode failure path with expected return code
+ * @precon Prepare a public key file and its expected decode result
+ * @brief
+ *   1. Initialize the test memory and global state.
+ *   2. Decode the specified public key file with the given format and type.
+ *   3. Check that the returned error code matches the expected value.
+ * @expect
+ *   1. The public key decode result matches the expected return code.
+ *   2. The allocated key context is released correctly.
+ */
+/* BEGIN_CASE */
+void SDV_CRYPT_EAL_ParseFilePubKeyFormat_TC002(int format, int type, char *path, int ret)
+{
+    TestMemInit();
+    BSL_GLOBAL_Init();
+    CRYPT_EAL_PkeyCtx *key = NULL;
+    ASSERT_EQ(CRYPT_EAL_DecodeFileKey(format, type, path, NULL, 0, &key), ret);
+EXIT:
+    CRYPT_EAL_PkeyFreeCtx(key);
+    BSL_GLOBAL_DeInit();
+}
+/* END_CASE */
+
+/**
+ * @test SDV_CRYPT_EAL_COMPOSITE_PARSE_KEY_MULTI_FAMILY_TC001
+ * @title Test composite DER key parsing across multiple algorithm families
+ * @precon Prepare composite DER public/private key files with expected paraId
+ * @brief
+ *   1. Initialize the test memory and global state.
+ *   2. Decode the specified composite key file.
+ *   3. Verify the decoded key id and paraId.
+ * @expect
+ *   1. Composite DER key parsing succeeds.
+ *   2. The decoded key keeps CRYPT_PKEY_COMPOSITE and the expected paraId.
+ */
+/* BEGIN_CASE */
+void SDV_CRYPT_EAL_COMPOSITE_PARSE_KEY_MULTI_FAMILY_TC001(int format, int type, char *path, int expectParaId)
+{
+#if !defined(HITLS_CRYPTO_COMPOSITE) || !defined(HITLS_CRYPTO_CODECSKEY) || \
+    !defined(HITLS_BSL_SAL_FILE) || !defined(HITLS_CRYPTO_KEY_DECODE)
+    (void)format;
+    (void)type;
+    (void)path;
+    (void)expectParaId;
+    SKIP_TEST();
+#else
+    CRYPT_EAL_PkeyCtx *key = NULL;
+    TestMemInit();
+    BSL_GLOBAL_Init();
+
+    ASSERT_EQ(CRYPT_EAL_DecodeFileKey(format, type, path, NULL, 0, &key), CRYPT_SUCCESS);
+    ASSERT_TRUE(key != NULL);
+    ASSERT_EQ(CRYPT_EAL_PkeyGetId(key), CRYPT_PKEY_COMPOSITE);
+    ASSERT_EQ(CRYPT_EAL_PkeyGetParaId(key), expectParaId);
+    ASSERT_TRUE(TestIsErrStackEmpty());
+EXIT:
+    CRYPT_EAL_PkeyFreeCtx(key);
+    BSL_GLOBAL_DeInit();
+#endif
 }
 /* END_CASE */
 
