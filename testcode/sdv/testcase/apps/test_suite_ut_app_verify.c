@@ -15,7 +15,9 @@
 
 /* BEGIN_HEADER */
 #include "app_verify.h"
+#include "app_client.h"
 #include "app_server.h"
+#include "app_tls_common.h"
 #include <limits.h>
 #include <stdbool.h>
 #include "string.h"
@@ -461,6 +463,29 @@ void UT_HITLS_APP_ServerNoVerify_TC003(void)
 EXIT:
     AppPrintErrorUioUnInit();
     STUB_RESTORE(HITLS_APP_OptBegin);
+    return;
+}
+/* END_CASE */
+
+/**
+ * @test UT_HITLS_APP_TlsOptions_TC001
+ * @spec  -
+ * @title Test TLS version and generic certificate options for s_client and s_server
+ */
+/* BEGIN_CASE */
+void UT_HITLS_APP_TlsOptions_TC001(void)
+{
+    char *clientArgv[] = {"s_client", "-tls1_2", "-cert", "client.pem", "-key", "client.key", "-help"};
+    char *serverArgv[] = {"s_server", "-tls1_3", "-cert", "server.pem", "-key", "server.key", "-help"};
+
+    ASSERT_EQ(AppPrintErrorUioInit(stderr), HITLS_APP_SUCCESS);
+    ASSERT_EQ(HITLS_ClientMain(7, clientArgv), HITLS_APP_HELP);
+    ASSERT_EQ(HITLS_ServerMain(7, serverArgv), HITLS_APP_HELP);
+    ASSERT_EQ(ParseProtocolType("tls1_2"), APP_PROTOCOL_TLS12);
+    ASSERT_EQ(ParseProtocolType("tls1_3"), APP_PROTOCOL_TLS13);
+
+EXIT:
+    AppPrintErrorUioUnInit();
     return;
 }
 /* END_CASE */

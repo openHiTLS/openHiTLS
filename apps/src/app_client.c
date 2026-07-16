@@ -55,6 +55,8 @@ typedef enum {
 
     /* Protocol options */
     HITLS_CLIENT_OPT_TLS,
+    HITLS_CLIENT_OPT_TLS1_2,
+    HITLS_CLIENT_OPT_TLS1_3,
     HITLS_CLIENT_OPT_TLCP,
     HITLS_CLIENT_OPT_DTLCP,
     HITLS_CLIENT_OPT_CIPHER,
@@ -62,6 +64,8 @@ typedef enum {
     /* Certificate options */
     HITLS_CLIENT_OPT_CAFILE,
     HITLS_CLIENT_OPT_CHAINCAFILE,
+    HITLS_CLIENT_OPT_CERT,
+    HITLS_CLIENT_OPT_KEY,
     HITLS_CLIENT_OPT_NO_VERIFY,
 
     /* TLCP options */
@@ -93,6 +97,8 @@ static const HITLS_CmdOption g_clientOptions[] = {
 
     /* Protocol options */
     {"tls",         HITLS_CLIENT_OPT_TLS,         HITLS_APP_OPT_VALUETYPE_NO_VALUE, "Use TLS protocol (default)"},
+    {"tls1_2",      HITLS_CLIENT_OPT_TLS1_2,      HITLS_APP_OPT_VALUETYPE_NO_VALUE, "Use TLS 1.2 only"},
+    {"tls1_3",      HITLS_CLIENT_OPT_TLS1_3,      HITLS_APP_OPT_VALUETYPE_NO_VALUE, "Use TLS 1.3 only"},
     {"tlcp",        HITLS_CLIENT_OPT_TLCP,        HITLS_APP_OPT_VALUETYPE_NO_VALUE, "Use TLCP protocol"},
     {"dtlcp",       HITLS_CLIENT_OPT_DTLCP,       HITLS_APP_OPT_VALUETYPE_NO_VALUE, "Use DTLCP protocol"},
     {"cipher",      HITLS_CLIENT_OPT_CIPHER,      HITLS_APP_OPT_VALUETYPE_STRING,   "Specify cipher suites"},
@@ -100,6 +106,8 @@ static const HITLS_CmdOption g_clientOptions[] = {
     /* Certificate options */
     {"CAfile",      HITLS_CLIENT_OPT_CAFILE,      HITLS_APP_OPT_VALUETYPE_IN_FILE,  "CA certificate file"},
     {"chainCAfile", HITLS_CLIENT_OPT_CHAINCAFILE, HITLS_APP_OPT_VALUETYPE_IN_FILE,  "CA file for certificate chain"},
+    {"cert",        HITLS_CLIENT_OPT_CERT,        HITLS_APP_OPT_VALUETYPE_IN_FILE,  "Client certificate for TLS"},
+    {"key",         HITLS_CLIENT_OPT_KEY,         HITLS_APP_OPT_VALUETYPE_IN_FILE,  "Client private key for TLS"},
     {"noverify",    HITLS_CLIENT_OPT_NO_VERIFY,   HITLS_APP_OPT_VALUETYPE_NO_VALUE, "Don't verify server certificate"},
 
     /* TLCP options */
@@ -188,6 +196,18 @@ static int HandleClientTLS(HITLS_ClientParams *params)
     return HITLS_APP_SUCCESS;
 }
 
+static int HandleClientTLS12(HITLS_ClientParams *params)
+{
+    params->protocol = "tls1_2";
+    return HITLS_APP_SUCCESS;
+}
+
+static int HandleClientTLS13(HITLS_ClientParams *params)
+{
+    params->protocol = "tls1_3";
+    return HITLS_APP_SUCCESS;
+}
+
 static int HandleClientTLCP(HITLS_ClientParams *params)
 {
     params->protocol = "tlcp";
@@ -212,6 +232,18 @@ static int HandleClientCAFile(HITLS_ClientParams *params)
 static int HandleClientCAChain(HITLS_ClientParams *params)
 {
     params->caChain = HITLS_APP_OptGetValueStr();
+    return HITLS_APP_SUCCESS;
+}
+
+static int HandleClientCert(HITLS_ClientParams *params)
+{
+    params->cert = HITLS_APP_OptGetValueStr();
+    return HITLS_APP_SUCCESS;
+}
+
+static int HandleClientKey(HITLS_ClientParams *params)
+{
+    params->key = HITLS_APP_OptGetValueStr();
     return HITLS_APP_SUCCESS;
 }
 
@@ -278,11 +310,15 @@ static const ClientOptHandleFuncMap g_clientOptHandleFuncMap[] = {
     {HITLS_CLIENT_OPT_HOST, HandleClientHost},
     {HITLS_CLIENT_OPT_PORT, HandleClientPort},
     {HITLS_CLIENT_OPT_TLS, HandleClientTLS},
+    {HITLS_CLIENT_OPT_TLS1_2, HandleClientTLS12},
+    {HITLS_CLIENT_OPT_TLS1_3, HandleClientTLS13},
     {HITLS_CLIENT_OPT_TLCP, HandleClientTLCP},
     {HITLS_CLIENT_OPT_DTLCP, HandleClientDTLCP},
     {HITLS_CLIENT_OPT_CIPHER, HandleClientCipher},
     {HITLS_CLIENT_OPT_CAFILE, HandleClientCAFile},
     {HITLS_CLIENT_OPT_CHAINCAFILE, HandleClientCAChain},
+    {HITLS_CLIENT_OPT_CERT, HandleClientCert},
+    {HITLS_CLIENT_OPT_KEY, HandleClientKey},
     {HITLS_CLIENT_OPT_NO_VERIFY, HandleClientNoVerify},
     {HITLS_CLIENT_OPT_TLCP_ENC_CERT, HandleClientTLCPEncCert},
     {HITLS_CLIENT_OPT_TLCP_ENC_KEY, HandleClientTLCPEncKey},
@@ -407,6 +443,8 @@ static HITLS_Config *CreateClientConfig(HITLS_ClientParams *params)
     APP_CertConfig certConfig = {
         .caFile = params->caFile,
         .caChain = params->caChain,
+        .cert = params->cert,
+        .key = params->key,
         .certFormat = params->certFormat,
         .keyFormat = params->keyFormat,
         .tlcpEncCert = params->tlcpEncCert,
@@ -433,13 +471,11 @@ static HITLS_Config *CreateClientConfig(HITLS_ClientParams *params)
         }
     }
 
-    /* Configure client certificate if provided */
-    if (protocol == APP_PROTOCOL_TLCP || protocol == APP_PROTOCOL_DTLCP) {
-        ret = ConfigureTLCPCertificates(config, &certConfig);
-        if (ret != HITLS_APP_SUCCESS) {
-            HITLS_CFG_FreeConfig(config);
-            return NULL;
-        }
+    /* Configure client certificate if provided. */
+    ret = ConfigureProtocolCertificates(config, &certConfig, protocol);
+    if (ret != HITLS_APP_SUCCESS) {
+        HITLS_CFG_FreeConfig(config);
+        return NULL;
     }
 
     return config;

@@ -880,73 +880,37 @@ ASN.1 Encoding Structure Parsing and Cryptographic Object Diagnosis
 
 ### 3.5.1 s_client
 
-**Function**: SSL/TLS client tool
+**Function**: Establish a TLS, TLCP, or DTLCP client connection with an explicit protocol version, cipher list, trust chain, and optional client certificate.
 
 **Usage**:
 
+```bash
+hitls s_client -host <host> [-port <port>] [-tls|-tls1_2|-tls1_3|-tlcp|-dtlcp]
+    [-cipher <suites>] [-CAfile <file>] [-chainCAfile <file>]
+    [-cert <file> -key <file>] [-noverify] [-state] [-prexit]
 ```
-hitls s_client -host <hostname|IP> [-port <port>] [-tls | -tlcp | -dtlcp] [-cipher <cipher suite list>] [-CAfile <CA certificate file>] [-chainCAfile <CA chain file>] [-noverify] [-tlcp_enc_cert <file> -tlcp_enc_key <file>] [-tlcp_sign_cert <file> -tlcp_sign_key <file>] [-certform PEM|DER] [-keyform PEM|DER] [-quiet] [-state] [-prexit] [-provider <name>] [-provider-path <path>] [-provider-attr <attr>]
-```
 
-**Supported Options**:
+**Main Options**:
 
-- `-help`: Display help information
-- `-host <hostname|IP>`: Required. Hostname or IP address of the target server
-- `-port <port>`: Target server port, defaults to 4433
-- `-tls`: Use TLS protocol, this is the default
-- `-tlcp`: Use TLCP protocol, defaults to TLS
-- `-dtlcp`: Use DTLCP protocol, defaults to TLS
-- `-cipher <suite list>`: Specify cipher suites, multiple suites separated by `:`. If not specified, protocol default suites will be used
-- `-CAfile <file>`: Single CA certificate file for verifying the server certificate. If not specified, system default CA will be used
-- `-chainCAfile <file>`: Bundle file containing multiple CA certificates for intermediate CA chain
-- `-noverify`: Skip server certificate verification
-- `-tlcp_enc_cert <file>`: TLCP/DTLCP encryption certificate
-- `-tlcp_enc_key <file>`: TLCP/DTLCP encryption private key
-- `-tlcp_sign_cert <file>`: TLCP/DTLCP signing certificate
-- `-tlcp_sign_key <file>`: TLCP/DTLCP signing private key
-- `-certform PEM|DER`: Certificate file format, choose from `PEM` or `DER`, defaults to PEM
-- `-keyform PEM|DER`: Private key file format, choose from `PEM` or `DER`, defaults to PEM
-- `-quiet`: Quiet mode, suppress all informational output
-- `-state`: Display TLS handshake state
-- `-prexit`: Exit immediately after handshake completes
-- `-provider`, `-provider-path`, `-provider-attr`: See [Provider Options](#21-provider-options)
+- `-tls`: Use TLS and allow TLS 1.2 or TLS 1.3 negotiation by default.
+- `-tls1_2`, `-tls1_3`: Allow only the selected TLS version.
+- `-cert <file>`, `-key <file>`: Configure the TLS client certificate and private key for mutual authentication. They must be used together.
+- `-cipher <suites>`: Specify a colon-separated cipher suite list. Both standard `TLS_*` names and openHiTLS `HITLS_*` names are accepted.
+- `-CAfile <file>`, `-chainCAfile <file>`: Configure the CA and intermediate certificates used to verify the server.
+- `-noverify`: Do not verify the server certificate. This does not prevent the client from sending its own certificate.
+- `-tlcp_sign_cert/-tlcp_sign_key`, `-tlcp_enc_cert/-tlcp_enc_key`: Configure the TLCP/DTLCP signing and encryption certificate pairs.
 
-**Examples**:
+**TLS 1.3 Mutual Authentication Example**:
 
 ```bash
-# Basic TLS connection
-hitls s_client -host 192.168.1.1 -port 8443 -noverify -prexit
-
-# Verify server certificate with specified CA
-hitls s_client -host 192.168.1.1 -port 8443 -CAfile ca_cert.pem -prexit
-
-# Use CA certificate chain
-hitls s_client -host 192.168.1.1 -port 8443 -chainCAfile ca_bundle.pem -prexit
-
-# Specify a single cipher suite
-hitls s_client -host 192.168.1.1 -port 8443 -noverify -prexit -cipher "TLS_RSA_WITH_AES_128_CBC_SHA256"
-
-# Specify multiple cipher suites
-hitls s_client -host 192.168.1.1 -port 8443 -noverify -prexit -cipher "TLS_AES_128_GCM_SHA256:TLS_AES_256_GCM_SHA384"
-
-# Display handshake state information
-hitls s_client -host 192.168.1.1 -port 8443 -noverify -prexit -state
-
-# Quiet mode
-hitls s_client -host 192.168.1.1 -port 8443 -noverify -prexit -quiet
-
-# Use DER format CA certificate
-hitls s_client -host 192.168.1.1 -port 8443 -prexit -CAfile ca_cert.der -certform DER
-
-# Interactive mode
-hitls s_client -host 192.168.1.1 -port 8443 -noverify
-
-# TLCP connection
-hitls s_client -tlcp -host 192.168.1.1 -port 4433 -CAfile sm2_ca.pem -tlcp_sign_cert sm2_sign_cert.pem -tlcp_sign_key sm2_sign_key.pem -tlcp_enc_cert  sm2_enc_cert.pem -tlcp_enc_key sm2_enc_key.pem -prexit
+hitls s_client -host 127.0.0.1 -port 4433 -tls1_3 \
+    -CAfile ca.pem -chainCAfile intermediate.pem \
+    -cert client.pem -key client.key.pem
 ```
 
 ### 3.5.2 s_server
 
+<<<<<<< HEAD
 **Function**: SSL/TLS server tool
 
 **Usage**:
@@ -1006,6 +970,26 @@ hitls s_server -tlcp -tlcp_sign_cert sm2_sign.der -tlcp_sign_key sm2_sign_key.de
 
 # DTLCP mode
 hitls s_server -dtlcp -port 5433 -tlcp_sign_cert sm2_sign.pem -tlcp_sign_key sm2_sign.key -tlcp_enc_cert sm2_enc.pem -tlcp_enc_key sm2_enc.key
+=======
+**Function**: Start a TLS, TLCP, or DTLCP server with an explicit protocol version, cipher list, server certificate, and client-certificate verification policy.
+
+**Usage**:
+
+```bash
+hitls s_server [-accept <host:port>] [-port <port>] [-tls|-tls1_2|-tls1_3|-tlcp|-dtlcp]
+    [-cipher <suites>] [-CAfile <file>] [-chainCAfile <file>]
+    [-cert <file> -key <file>] [-noverify] [-accept_once] [-state]
+```
+
+`-cert/-key` configure the TLS server certificate and private key. The server verifies client certificates by default; use `-CAfile/-chainCAfile` for its trust chain or `-noverify` to disable client-certificate verification. Protocol, cipher, and TLCP certificate options follow the same rules as `s_client`.
+
+**TLS 1.3 Mutual Authentication Example**:
+
+```bash
+hitls s_server -accept 127.0.0.1:4433 -tls1_3 \
+    -cert server.pem -key server.key.pem \
+    -CAfile ca.pem -chainCAfile intermediate.pem
+>>>>>>> 0ad9d860 (fix(apps): improve TLS CLI certificate and cipher handling)
 ```
 
 ## 3.6 Other Utility Tools

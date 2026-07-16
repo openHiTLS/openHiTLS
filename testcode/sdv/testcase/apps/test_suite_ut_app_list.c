@@ -21,6 +21,7 @@
 #include "uio_abstraction.h"
 #include "app_errno.h"
 #include "crypt_errno.h"
+#include "crypt_algid.h"
 #include "app_list.h"
 #include "app_function.h"
 #include "bsl_errno.h"
@@ -101,6 +102,25 @@ void UT_HITLS_APP_LIST_TC002(void)
 
 EXIT:
     AppPrintErrorUioUnInit();
+    return;
+}
+/* END_CASE */
+
+/**
+ * @test UT_HITLS_APP_LIST_TC003
+ * @spec  -
+ * @title Verify KDF names map to KDF identifiers instead of HMAC identifiers
+ */
+/* BEGIN_CASE */
+void UT_HITLS_APP_LIST_TC003(void)
+{
+    ASSERT_EQ(HITLS_APP_GetCidByName("hkdf", HITLS_APP_LIST_OPT_KDF_ALG), CRYPT_KDF_HKDF);
+    ASSERT_EQ(HITLS_APP_GetCidByName("pbkdf2", HITLS_APP_LIST_OPT_KDF_ALG), CRYPT_KDF_PBKDF2);
+    ASSERT_EQ(HITLS_APP_GetCidByName("kdftls12", HITLS_APP_LIST_OPT_KDF_ALG), CRYPT_KDF_KDFTLS12);
+    ASSERT_EQ(HITLS_APP_GetCidByName("scrypt", HITLS_APP_LIST_OPT_KDF_ALG), CRYPT_KDF_SCRYPT);
+    ASSERT_EQ(HITLS_APP_GetCidByName("hmac_sha256", HITLS_APP_LIST_OPT_KDF_ALG), BSL_CID_UNKNOWN);
+
+EXIT:
     return;
 }
 /* END_CASE */

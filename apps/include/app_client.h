@@ -37,6 +37,8 @@ typedef struct {
     /* Certificate parameters */
     char *caFile;
     char *caChain;
+    char *cert;
+    char *key;
     int verifyDepth;
     bool verifyNone;
     

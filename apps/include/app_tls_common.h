@@ -39,6 +39,8 @@ extern "C" {
 /* Protocol types */
 typedef enum {
     APP_PROTOCOL_TLS,      // International standard TLS protocol (default)
+    APP_PROTOCOL_TLS12,
+    APP_PROTOCOL_TLS13,
     APP_PROTOCOL_TLCP,
     APP_PROTOCOL_DTLCP,
 } APP_ProtocolType;
@@ -54,6 +56,8 @@ typedef struct {
     char *keyPass;
     char *caFile;
     char *caChain;
+    char *cert;
+    char *key;
     BSL_ParseFormat certFormat;
     BSL_ParseFormat keyFormat;
     
@@ -70,8 +74,8 @@ typedef struct {
 
 /**
  * @brief Parse protocol type from string
- * @param protocolStr Protocol string (tls12, tls13, dtls12, tlcp)
- * @return Protocol type or -1 on error
+ * @param protocolStr Protocol string (tls, tls1_2, tls1_3, tlcp, dtlcp)
+ * @return Protocol type
  */
 APP_ProtocolType ParseProtocolType(const char *protocolStr);
 
@@ -86,7 +90,7 @@ HITLS_Config *CreateProtocolConfig(APP_ProtocolType protocol, AppProvider *provi
  * @brief Configure cipher suites
  * @param config TLS configuration
  * @param cipherStr Cipher suite string
- * @param is_tls13 Whether it's TLS1.3 cipher suites
+ * @param protocol Selected protocol
  * @return Success or error code
  */
 int ConfigureCipherSuites(HITLS_Config *config, const char *cipherStr, APP_ProtocolType protocol);
@@ -104,7 +108,6 @@ HITLS_X509_Cert *LoadCertFromFile(const char *certFile, BSL_ParseFormat format, 
  * @brief Configure certificate verification
  * @param config TLS configuration
  * @param certConfig Certificate configuration
- * @param  isClient Whether it's client configuration
  * @param verifyPeer Whether to verify peer certificate
  * @param verifyDepth Certificate chain verification depth
  * @return Success or error code
@@ -116,10 +119,18 @@ int ConfCertVerification(HITLS_Config *config, APP_CertConfig *certConfig,
  * @brief Configure TLCP certificates (dual certificates)
  * @param config TLS configuration
  * @param certConfig Certificate configuration
- * @param  isClient Whether it's client configuration
  * @return Success or error code
  */
 int ConfigureTLCPCertificates(HITLS_Config *config, APP_CertConfig *certConfig);
+
+/**
+ * @brief Configure the local certificate and private key for a protocol
+ * @param config TLS configuration
+ * @param certConfig Certificate configuration
+ * @param protocol Selected protocol
+ * @return Success or error code
+ */
+int ConfigureProtocolCertificates(HITLS_Config *config, APP_CertConfig *certConfig, APP_ProtocolType protocol);
 
 /**
  * @brief Create TCP socket and connect to server
