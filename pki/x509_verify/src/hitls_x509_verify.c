@@ -1768,7 +1768,7 @@ static bool X509_CompareWithCurrentCrl(const HITLS_X509_CrlSelection *selection,
 
 typedef struct {
     uint8_t errorPathBit;
-    uint32_t x509VfyErrorCode;
+    int32_t x509VfyErrorCode;
 } ErrorPathMap;
 
 static ErrorPathMap g_errorPathMap[] = {
@@ -2468,7 +2468,7 @@ static int32_t CheckIdentityList(HITLS_X509_Cert *cert, BslList *identities, uin
     for (BslListNode *node = BSL_LIST_FirstNode(identities); node != NULL; node = BSL_LIST_GetNextNode(identities,
         node)) {
         char *identity = (char *)BSL_LIST_GetData(node);
-        ret = HITLS_X509_VerifyIdentity(cert, flags, type, identity, strlen(identity));
+        ret = HITLS_X509_VerifyIdentity(cert, flags, type, identity, (uint32_t)strlen(identity));
         if (ret == HITLS_PKI_SUCCESS) {
             break;
         }

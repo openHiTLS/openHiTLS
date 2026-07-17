@@ -24,32 +24,28 @@
 
 // Radix sort for 32-bit values (treat as unsigned for ordering)
 // Sort values in ascending SIGNED order using radix with sign bias
-static void RadixSortI32(uint32_t *ua, uint32_t *tmp, const int64_t n)
+static void RadixSortI32(uint32_t *ua, uint32_t *tmp, uint32_t n)
 {
-    if (ua == NULL || tmp == NULL) {
-        return;
-    }
-
     const int32_t rad = 256; // Number of buckets per radix pass (8-bit digit --> 2^8 = 256)
     uint32_t cnt[256];
     uint32_t pref[256];
-    for (int32_t pass = 0; pass < 4; pass++) { // Number of radix passes for full 32-bit key (32 / 8 = 4)
+    for (uint32_t pass = 0; pass < 4; pass++) { // Number of radix passes for full 32-bit key (32 / 8 = 4)
         memset(cnt, 0, sizeof(cnt));
-        int32_t shift = pass * 8; // Bit-shift per radix pass (8-bit digit size)
-        for (int64_t i = 0; i < n; i++) {
+        uint32_t shift = pass * 8; // Bit-shift per radix pass (8-bit digit size)
+        for (uint32_t i = 0; i < n; i++) {
             // bias for signed order: flip sign bit once across full 32-bit key
             uint32_t key =
                 ua[i] ^ 0x80000000u; // Bias XOR to convert signed 32-bit values into unsigned lexicographic order
-            uint32_t b = (uint32_t)((key >> shift) & 0xFFu); // 8-bit mask to extract current radix digit
+            uint32_t b = (key >> shift) & 0xFFu; // 8-bit mask to extract current radix digit
             cnt[b]++;
         }
         pref[0] = 0;
         for (int32_t r = 1; r < rad; r++) {
             pref[r] = pref[r - 1] + cnt[r - 1];
         }
-        for (int64_t i = 0; i < n; i++) {
+        for (uint32_t i = 0; i < n; i++) {
             uint32_t key = ua[i] ^ 0x80000000u;
-            uint32_t b = (uint32_t)((key >> shift) & 0xFFu);
+            uint32_t b = (key >> shift) & 0xFFu; // 8-bit mask to extract current radix digit
             tmp[pref[b]++] = ua[i];
         }
         // swap buffers
@@ -60,11 +56,11 @@ static void RadixSortI32(uint32_t *ua, uint32_t *tmp, const int64_t n)
 }
 
 // 32-bit le sort
-static int32_t SortU32LE(uint32_t *a, const int64_t n)
+static int32_t SortU32LE(uint32_t *a, uint32_t n)
 {
     // reinterpret as unsigned for radix order; allocate temporary buffer
-    uint32_t *ua = (uint32_t *)a;
-    uint32_t *tmp = (uint32_t *)BSL_SAL_Malloc((uint32_t)n * sizeof(uint32_t));
+    uint32_t *ua = a;
+    uint32_t *tmp = BSL_SAL_Malloc(n * (uint32_t)sizeof(uint32_t));
     if (tmp == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         return CRYPT_MEM_ALLOC_FAIL;
@@ -82,10 +78,10 @@ static void Write1BitLE(uint8_t *buf, uint32_t bit_pos, uint8_t bit)
 }
 
 // Build 32-bit keys: (pi[i]^1, pi[i^1])
-static void Build32BitsKeys(uint32_t *out, const uint16_t *pi, const uint32_t n)
+static void Build32BitsKeys(uint32_t *out, const uint16_t *pi, uint32_t n)
 {
     for (uint32_t i = 0; i < n; i++) {
-        uint32_t lo = (uint32_t)(pi[i] ^ 1);
+        uint32_t lo = (uint32_t)pi[i] ^ 1;
         uint32_t hi = (uint32_t)pi[i ^ 1];
         out[i] = (lo << 16) | hi; // Bit-shift to pack high and low 16-bit halves into one 32-bit key
     }
@@ -223,7 +219,7 @@ static int32_t PrepareParentKeys(uint32_t *areaA, const uint16_t *pi, const uint
 
 // Emit first half control bits and reorder
 static int32_t EmitFirstHalf(uint32_t *posOut, uint8_t *out, uint32_t pos, uint32_t step, uint32_t *areaA,
-                             uint32_t *areaB, const uint32_t n)
+    uint32_t *areaB, const uint32_t n)
 {
     uint32_t tmpPos = pos;
     for (uint32_t j = 0; j < n / 2; j++) {
@@ -249,7 +245,7 @@ static int32_t EmitFirstHalf(uint32_t *posOut, uint8_t *out, uint32_t pos, uint3
 
 // Emit second half control bits and reorder
 static int32_t EmitSecondHalf(uint32_t *posOut, uint8_t *out, uint32_t pos, uint32_t step, uint32_t *areaA,
-                              uint32_t *areaB, const uint32_t n)
+    uint32_t *areaB, const uint32_t n)
 {
     uint32_t tmpPos = pos;
     for (uint32_t k = 0; k < n / 2; k++) {
@@ -295,7 +291,7 @@ static void BuildChildPerm(uint16_t *q, const uint32_t *areaA, const uint32_t n)
  *  The function writes control bits into 'out' and recurses on halves.
  */
 static int32_t BenesNetControlbitsCore(uint8_t *out, uint32_t pos, uint32_t step, const uint16_t *pi, const uint32_t w,
-                                   const uint32_t n, int32_t *temp)
+    const uint32_t n, int32_t *temp)
 {
     uint32_t tmpPos = pos;
     uint32_t *areaA = (uint32_t *)temp; // work area 0
@@ -388,25 +384,25 @@ static int32_t BenesNetControlbitsCore(uint8_t *out, uint32_t pos, uint32_t step
 }
 
 // Produce L[0..N-1] equal to support_gen (bitrev of domain, then Benes, then extract low N indices)
-static uint16_t BitrevMLocal(uint16_t x, const int32_t m)
+static uint16_t BitrevMLocal(uint16_t x, uint32_t m)
 {
     // Reverse only the lower m bits of x
     uint16_t r = 0;
-    for (int32_t i = 0; i < m; i++) {
+    for (uint32_t i = 0; i < m; i++) {
         r = (uint16_t)((r << 1) | ((x >> i) & 1u)); // Unit bit mask – isolate single bit during bit-reversal loop
     }
     return (uint16_t)(r & ((1u << m) - 1u));
 }
 
 // Bit helpers for bit-plane operations
-static uint32_t GetBitFromVec(const uint8_t *vec, const int64_t idx)
+static uint32_t GetBitFromVec(const uint8_t *vec, uint32_t idx)
 {
-    return (vec[(uint32_t)(idx >> 3)] >> (idx & 7)) & 1;
+    return (uint32_t)(vec[idx >> 3] >> (idx & 7)) & 1;
 }
 
-static void SetBitInVec(uint8_t *vec, const int64_t idx, const uint32_t bit)
+static void SetBitInVec(uint8_t *vec, uint32_t idx, uint32_t bit)
 {
-    uint32_t byteIndex = (uint32_t)(idx >> 3);
+    uint32_t byteIndex = idx >> 3;
     uint8_t mask = (uint8_t)(1u << (idx & 7));
     if (bit != 0) {
         vec[byteIndex] |= mask;
@@ -416,21 +412,20 @@ static void SetBitInVec(uint8_t *vec, const int64_t idx, const uint32_t bit)
 }
 
 // Apply one Benes layer to a bit-vector using the given control bits
-static void LayerBits(uint8_t *bitvec, const uint8_t *layerCBits, const int32_t s, const int64_t nBits)
+static void LayerBits(uint8_t *bitvec, const uint8_t *layerCBits, uint32_t s, uint32_t nBits)
 {
     // Mask to keep shift amount within 5-bit range (prevents UB for s >= 32)
-    int64_t stride = 1LL << (unsigned)(s & 31);
-    int64_t index = 0;
-    for (int64_t i = 0; i < nBits; i += stride * 2) {
-        for (int64_t j = 0; j < stride; j++) {
-            int32_t ctrl = (layerCBits[(uint32_t)(index >> 3)] >> (index & 7)) & 1;
+    uint32_t stride = 1ULL << s;
+    uint32_t index = 0;
+    for (uint32_t i = 0; i < nBits; i += stride * 2) {
+        for (uint32_t j = 0; j < stride; j++) {
+            uint32_t ctrl = (uint32_t)(layerCBits[index >> 3] >> (index & 7)) & 1;
             if (ctrl != 0) {
-                int64_t a = i + j;
-                int64_t b = i + j + stride;
-                uint32_t ba =
-                    GetBitFromVec(bitvec, a); // Unit bit value – represent Boolean 0/1 state in bit-vector operations
+                uint32_t a = i + j;
+                uint32_t b = i + j + stride;
+                uint32_t ba = GetBitFromVec(bitvec, a);
                 uint32_t bb = GetBitFromVec(bitvec, b);
-                SetBitInVec(bitvec, a, bb); // Unit bit value – represent Boolean 0/1 state in bit-vector operations
+                SetBitInVec(bitvec, a, bb);
                 SetBitInVec(bitvec, b, ba);
             }
             index++;
@@ -438,33 +433,33 @@ static void LayerBits(uint8_t *bitvec, const uint8_t *layerCBits, const int32_t 
     }
 }
 
-int32_t ControlBitsFromBenesNetwork(uint8_t *out, const uint16_t *pi, const int64_t w, const int64_t n)
+int32_t ControlBitsFromBenesNetwork(uint8_t *out, const uint16_t *pi, uint32_t w, uint32_t n)
 {
-    int32_t *temp = (int32_t *)BSL_SAL_Malloc(sizeof(int32_t) * (uint32_t)(2 * n));
+    int32_t *temp = BSL_SAL_Malloc((uint32_t)(2 * n) * (uint32_t)sizeof(int32_t));
     if (temp == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         return CRYPT_MEM_ALLOC_FAIL;
     }
-    memset(temp, 0, sizeof(int32_t) * (uint32_t)(2 * n));
-    uint32_t outBytes = (uint32_t)((((2 * w - 1) * n / 2) + 7) / 8);
+    memset(temp, 0, (uint32_t)(2 * n) * (uint32_t)sizeof(int32_t));
+    uint32_t outBytes = (((2 * w - 1) * n / 2) + 7) / 8;
     memset(out, 0, outBytes);
     int32_t ret = BenesNetControlbitsCore(out, 0, 1, pi, w, n, temp);
     BSL_SAL_FREE(temp);
     return ret;
 }
 
-static int32_t AllocBitPlanes(uint8_t ***planes, const int64_t w, const int64_t planeBytes)
+static int32_t AllocBitPlanes(uint8_t ***planes, uint32_t w, uint32_t planeBytes)
 {
-    *planes = (uint8_t **)BSL_SAL_Malloc(sizeof(uint8_t *) * (uint32_t)w);
+    *planes = BSL_SAL_Malloc(w * (uint32_t)sizeof(uint8_t *));
     if (*planes == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         return CRYPT_MEM_ALLOC_FAIL;
     }
 
-    for (int64_t b = 0; b < w; b++) {
-        (*planes)[b] = (uint8_t *)BSL_SAL_Malloc(planeBytes);
+    for (uint32_t b = 0; b < w; b++) {
+        (*planes)[b] = BSL_SAL_Malloc(planeBytes);
         if ((*planes)[b] == NULL) {
-            for (int64_t k = 0; k < b; k++) {
+            for (uint32_t k = 0; k < b; k++) {
                 BSL_SAL_FREE((*planes)[k]);
             }
             BSL_SAL_FREE(*planes);
@@ -476,20 +471,20 @@ static int32_t AllocBitPlanes(uint8_t ***planes, const int64_t w, const int64_t 
     return CRYPT_SUCCESS;
 }
 
-static void FreeBitPlanes(uint8_t **planes, int64_t w)
+static void FreeBitPlanes(uint8_t **planes, uint32_t w)
 {
-    for (int64_t b = 0; b < w; b++) {
+    for (uint32_t b = 0; b < w; b++) {
         BSL_SAL_FREE(planes[b]);
     }
     BSL_SAL_FREE(planes);
 }
 
-static void InitPlanesWithBitrev(uint8_t **planes, const int64_t w, const int64_t n)
+static void InitPlanesWithBitrev(uint8_t **planes, uint32_t w, uint32_t n)
 {
-    for (int64_t i = 0; i < n; i++) {
-        uint16_t br = BitrevMLocal((uint16_t)i, (int32_t)w);
-        for (int64_t b = 0; b < w; b++) {
-            uint32_t bit = (br >> b) & 1;
+    for (uint32_t i = 0; i < n; i++) {
+        uint16_t br = BitrevMLocal((uint16_t)i, w);
+        for (uint32_t b = 0; b < w; b++) {
+            uint32_t bit = (uint32_t)(br >> b) & 1;
             if (bit != 0) {
                 SetBitInVec(planes[b], i, 1);
             }
@@ -497,43 +492,43 @@ static void InitPlanesWithBitrev(uint8_t **planes, const int64_t w, const int64_
     }
 }
 
-static void ApplyBenesLayers(uint8_t **planes, const uint8_t *cbits, const int64_t w, const int64_t n,
-                             const int64_t layerBytes)
+static void ApplyBenesLayers(uint8_t **planes, const uint8_t *cbits, uint32_t w, uint32_t n,
+                             uint32_t layerBytes)
 {
     const uint8_t *ptr = cbits;
     // forward 0..w-1
-    for (int32_t s = 0; s < w; s++) {
-        for (int64_t b = 0; b < w; b++) {
+    for (uint32_t s = 0; s < w; s++) {
+        for (uint32_t b = 0; b < w; b++) {
             LayerBits(planes[b], ptr, s, n);
         }
         ptr += layerBytes;
     }
     // backward w-2..0
-    for (int32_t s = w - 2; s >= 0; s--) {
-        for (int64_t b = 0; b < w; b++) {
-            LayerBits(planes[b], ptr, s, n);
+    for (int32_t s = (int32_t)w - 2; s >= 0; s--) {
+        for (uint32_t b = 0; b < w; b++) {
+            LayerBits(planes[b], ptr, (uint32_t)s, n);
         }
         ptr += layerBytes;
     }
 }
 
-static void ReconstructSupport(uint16_t *gfL, uint8_t **planes, const int32_t lenN, const int64_t w)
+static void ReconstructSupport(uint16_t *gfL, uint8_t **planes, int32_t lenN, uint32_t w)
 {
-    for (int32_t j = 0; j < lenN; j++) {
+    for (uint32_t j = 0; j < (uint32_t)lenN; j++) {
         uint16_t val = 0;
         for (int32_t b = (int32_t)w - 1; b >= 0; b--) {
-            val = (uint16_t)(val << 1);
+            val = (uint16_t)((uint32_t)val << 1);
             val |= (uint16_t)GetBitFromVec(planes[b], j);
         }
-        gfL[j] = (uint16_t)val;
+        gfL[j] = val;
     }
 }
 
-int32_t SupportSetFromControlbits(uint16_t *gfL, const uint8_t *cbits, const int64_t w, const int32_t lenN)
+int32_t SupportSetFromControlbits(uint16_t *gfL, const uint8_t *cbits, uint32_t w, int32_t lenN)
 {
-    int64_t n = 1LL << w;
-    int64_t layerBytes = n >> 4; // (n/2) bits / layer -> n/16 bytes? (original used n/16)
-    uint32_t planeBytes = (uint32_t)(n >> 3); // n bits -> n/8 bytes
+    uint32_t n = 1ULL << w;
+    uint32_t layerBytes = n >> 4; // (n/2) bits / layer -> n/16 bytes? (original used n/16)
+    uint32_t planeBytes = n >> 3; // n bits -> n/8 bytes
 
     uint8_t **planes = NULL;
     int32_t ret = AllocBitPlanes(&planes, w, planeBytes);

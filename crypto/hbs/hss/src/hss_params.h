@@ -20,7 +20,6 @@
 #ifdef HITLS_CRYPTO_HSS_LMS
 
 #include <stdint.h>
-#include <stdbool.h>
 #include <stddef.h>
 #include "lms_params.h"
 

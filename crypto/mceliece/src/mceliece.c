@@ -301,7 +301,7 @@ static void PrivateKeyFree(CMPrivateKey *sk, const McelieceParams *params)
         }
         GFPolyFree(sk->g);
         if (sk->alpha != NULL) {
-            BSL_SAL_CleanseData(sk->alpha, MCELIECE_Q * sizeof(uint16_t));
+            BSL_SAL_CleanseData(sk->alpha, MCELIECE_Q * (uint32_t)sizeof(uint16_t));
             BSL_SAL_FREE(sk->alpha);
         }
         if (sk->s != NULL) {
@@ -320,10 +320,10 @@ static CMPrivateKey *PrivateKeyCreate(const McelieceParams *params)
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         return NULL;
     }
-    uint32_t cbLen = (uint32_t)((((2 * params->m - 1) * MCELIECE_Q / 2) + 7) / 8);
+    uint32_t cbLen = (((2 * params->m - 1) * MCELIECE_Q / 2) + 7) / 8;
     sk->controlbitsLen = cbLen;
 
-    sk->controlbits = (uint8_t *)BSL_SAL_Malloc(sk->controlbitsLen);
+    sk->controlbits = BSL_SAL_Malloc(sk->controlbitsLen);
     if (sk->controlbits == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         PrivateKeyFree(sk, params);
@@ -458,7 +458,7 @@ static int32_t McelieceParsePrvKey(uint8_t *prvKeyBuf, CMPrivateKey *sk, const M
     p += 8;
 
     /* 3. g (irr polynomial) */
-    for (int32_t i = 0; i < params->t; i++) {
+    for (uint32_t i = 0; i < params->t; i++) {
         uint16_t temp = ((uint16_t)p[1] << 8) | p[0];
         GFPolySetCoeff(sk->g, i, temp);
         p += 2;
@@ -497,7 +497,7 @@ int32_t CRYPT_MCELIECE_SetPrvKeyEx(CRYPT_MCELIECE_Ctx *ctx, const BSL_Param *par
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
-    if ((uint32_t)ctx->para->privateKeyBytes > prv->valueLen) {
+    if (ctx->para->privateKeyBytes > prv->valueLen) {
         BSL_ERR_PUSH_ERROR(CRYPT_MCELIECE_BUFLEN_NOT_ENOUGH);
         return CRYPT_MCELIECE_BUFLEN_NOT_ENOUGH;
     }
@@ -535,7 +535,7 @@ int32_t CRYPT_MCELIECE_SetPubKeyEx(CRYPT_MCELIECE_Ctx *ctx, const BSL_Param *par
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
-    if ((uint32_t)ctx->para->publicKeyBytes > pub->valueLen) {
+    if (ctx->para->publicKeyBytes > pub->valueLen) {
         BSL_ERR_PUSH_ERROR(CRYPT_MCELIECE_BUFLEN_NOT_ENOUGH);
         return CRYPT_MCELIECE_BUFLEN_NOT_ENOUGH;
     }
@@ -560,7 +560,7 @@ static void McelieceExportPrvKey(const CMPrivateKey *sk, uint8_t *prvKeyBuf, con
     p += 8;
 
     /* 3. g (irr polynomial) */
-    for (int32_t i = 0; i < params->t; i++) {
+    for (uint32_t i = 0; i < params->t; i++) {
         uint16_t coeff = GFPolyGetCoeff(sk->g, i);
         p[0] = coeff & 0xFF;
         p[1] = (coeff >> 8) & 0xFF;
@@ -594,7 +594,7 @@ int32_t CRYPT_MCELIECE_GetPrvKeyEx(CRYPT_MCELIECE_Ctx *ctx, BSL_Param *param)
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
-    if ((uint32_t)ctx->para->privateKeyBytes > prv->valueLen) {
+    if (ctx->para->privateKeyBytes > prv->valueLen) {
         BSL_ERR_PUSH_ERROR(CRYPT_MCELIECE_BUFLEN_NOT_ENOUGH);
         return CRYPT_MCELIECE_BUFLEN_NOT_ENOUGH;
     }
@@ -622,7 +622,7 @@ int32_t CRYPT_MCELIECE_GetPubKeyEx(CRYPT_MCELIECE_Ctx *ctx, BSL_Param *param)
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
-    if ((uint32_t)ctx->para->publicKeyBytes > pub->valueLen) {
+    if (ctx->para->publicKeyBytes > pub->valueLen) {
         BSL_ERR_PUSH_ERROR(CRYPT_MCELIECE_BUFLEN_NOT_ENOUGH);
         return CRYPT_MCELIECE_BUFLEN_NOT_ENOUGH;
     }
@@ -842,10 +842,10 @@ int32_t CRYPT_MCELIECE_DecapsInit(CRYPT_MCELIECE_Ctx *ctx, const BSL_Param *para
 
 // K = Hash(prefix, e, C)
 static int32_t ComputeSessionKeyWithPrefix(uint8_t *sessionKey, uint8_t prefix, const uint8_t *e, const uint8_t *c,
-                                           const McelieceParams *params)
+    const McelieceParams *params)
 {
-    uint32_t inLen = (uint32_t)(1 + params->nBytes + params->cipherBytes);
-    uint8_t *hashIn = (uint8_t *)BSL_SAL_Malloc(inLen);
+    uint32_t inLen = 1 + params->nBytes + params->cipherBytes;
+    uint8_t *hashIn = BSL_SAL_Malloc(inLen);
     if (hashIn == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         return CRYPT_MEM_ALLOC_FAIL;
@@ -870,7 +870,7 @@ int32_t McElieceEncapsInternal(CRYPT_MCELIECE_Ctx *ctx, uint8_t *ciphertext, uin
     uint8_t *c0 = ciphertext;
     uint8_t *c1 = ciphertext + ctx->para->cipherBytes - MCELIECE_L_BYTES;
     memset(c0, 0, ctx->para->cipherBytes);
-    uint8_t *e = (uint8_t *)BSL_SAL_Malloc(ctx->para->nBytes);
+    uint8_t *e = BSL_SAL_Malloc(ctx->para->nBytes);
     if (e == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         return CRYPT_MEM_ALLOC_FAIL;
@@ -893,14 +893,14 @@ ERR:
 }
 
 static int32_t BuildVectorAndDecoding(const uint8_t *c0, const CMPrivateKey *sk, const McelieceParams *params,
-                                      uint8_t *e, uint16_t *decodeSyndrome)
+    uint8_t *e, uint16_t *decodeSyndrome)
 {
     uint8_t *v = BSL_SAL_Calloc(params->nBytes, 1);
     if (v == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         return CRYPT_MEM_ALLOC_FAIL;
     }
-    for (int32_t i = 0; i < params->mt; i++) {
+    for (uint32_t i = 0; i < params->mt; i++) {
         uint32_t bit = VectorGetBit(c0, i);
         VectorSetBitMasked(v, i, bit);
     }
@@ -911,14 +911,14 @@ static int32_t BuildVectorAndDecoding(const uint8_t *c0, const CMPrivateKey *sk,
 
 // Decap algorithm (unified for both pc and non-pc parameter sets)
 int32_t McElieceDecapsInternal(const uint8_t *ciphertext, const CMPrivateKey *sk, uint8_t *sessionKey,
-                               const McelieceParams *params, bool isPc)
+    const McelieceParams *params, bool isPc)
 {
     int32_t ret;
     const uint8_t *c0 = ciphertext;
     const uint8_t *c1 = ciphertext + params->cipherBytes - MCELIECE_L_BYTES;
     // e + decodeSyndrome + veirfySyndrome: params->nBytes || 2 * params->t * sizeof(uint16_t) || 2 * params->t * sizeof(uint16_t)
-    uint32_t memPoolBytes = params->nBytes + 4U * params->t * sizeof(uint16_t);
-    uint8_t *memPool = (uint8_t *)BSL_SAL_Calloc(memPoolBytes, 1U);
+    uint32_t memPoolBytes = params->nBytes + 4U * params->t * (uint32_t)sizeof(uint16_t);
+    uint8_t *memPool = BSL_SAL_Calloc(memPoolBytes, 1U);
     if (memPool == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         return CRYPT_MEM_ALLOC_FAIL;
@@ -931,7 +931,7 @@ int32_t McElieceDecapsInternal(const uint8_t *ciphertext, const CMPrivateKey *sk
     GOTO_ERR_IF(ComputeSyndrome(e, sk->g, sk->alpha, params, verifySyndrome), ret);
     // Verify decodeSyndrome == verifySyndrome
     uint32_t mask = ConstTimeMemcmp((uint8_t *)decodeSyndrome, (uint8_t *)verifySyndrome,
-        2U * params->t * sizeof(uint16_t));
+        2U * params->t * (uint32_t)sizeof(uint16_t));
     // Verify error weight == t
     mask &= Uint32ConstTimeEqual(VectoWeight(e, params->nBytes), params->t);
     if (isPc) {
@@ -946,7 +946,7 @@ int32_t McElieceDecapsInternal(const uint8_t *ciphertext, const CMPrivateKey *sk
     // b = 1 if errorWeight == t, 0 otherwise
     uint8_t b = (1 & mask) | (0 & (~mask));
     // if mask is invalid (0), e[i] = s[i], refernce: https://classic.mceliece.org/mceliece-spec-20221023.pdf, Section 5.6
-    for (int32_t i = 0; i < params->nBytes; i++) {
+    for (uint32_t i = 0; i < params->nBytes; i++) {
         e[i] = (e[i] & mask) | (sk->s[i] & ~mask);
     }
     ret = ComputeSessionKeyWithPrefix(sessionKey, b, e, ciphertext, params);
@@ -956,7 +956,7 @@ ERR:
 }
 
 int32_t CRYPT_MCELIECE_Encaps(CRYPT_MCELIECE_Ctx *ctx, uint8_t *ciphertext, uint32_t *ctLen, uint8_t *sharedSecret,
-                              uint32_t *ssLen)
+    uint32_t *ssLen)
 {
     if (ctx == NULL || ctLen == NULL || ciphertext == NULL || sharedSecret == NULL || ssLen == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
@@ -970,7 +970,7 @@ int32_t CRYPT_MCELIECE_Encaps(CRYPT_MCELIECE_Ctx *ctx, uint8_t *ciphertext, uint
         BSL_ERR_PUSH_ERROR(CRYPT_MCELIECE_ABSENT_PUBKEY);
         return CRYPT_MCELIECE_ABSENT_PUBKEY;
     }
-    if (*ctLen < (uint32_t)ctx->para->cipherBytes || *ssLen < (uint32_t)ctx->para->sharedKeyBytes) {
+    if (*ctLen < ctx->para->cipherBytes || *ssLen < ctx->para->sharedKeyBytes) {
         BSL_ERR_PUSH_ERROR(CRYPT_MCELIECE_BUFLEN_NOT_ENOUGH);
         return CRYPT_MCELIECE_BUFLEN_NOT_ENOUGH;
     }
@@ -983,7 +983,7 @@ int32_t CRYPT_MCELIECE_Encaps(CRYPT_MCELIECE_Ctx *ctx, uint8_t *ciphertext, uint
 }
 
 int32_t CRYPT_MCELIECE_Decaps(CRYPT_MCELIECE_Ctx *ctx, const uint8_t *ciphertext, uint32_t ctLen, uint8_t *sharedSecret,
-                              uint32_t *ssLen)
+    uint32_t *ssLen)
 {
     if (ctx == NULL || ssLen == NULL || ciphertext == NULL || sharedSecret == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
@@ -997,11 +997,11 @@ int32_t CRYPT_MCELIECE_Decaps(CRYPT_MCELIECE_Ctx *ctx, const uint8_t *ciphertext
         BSL_ERR_PUSH_ERROR(CRYPT_MCELIECE_ABSENT_PRVKEY);
         return CRYPT_MCELIECE_ABSENT_PRVKEY;
     }
-    if (ctLen != (uint32_t)ctx->para->cipherBytes) {
+    if (ctLen != ctx->para->cipherBytes) {
         BSL_ERR_PUSH_ERROR(CRYPT_MCELIECE_INVALID_CIPHER);
         return CRYPT_MCELIECE_INVALID_CIPHER;
     }
-    if (*ssLen < (uint32_t)ctx->para->sharedKeyBytes) {
+    if (*ssLen < ctx->para->sharedKeyBytes) {
         BSL_ERR_PUSH_ERROR(CRYPT_MCELIECE_BUFLEN_NOT_ENOUGH);
         return CRYPT_MCELIECE_BUFLEN_NOT_ENOUGH;
     }

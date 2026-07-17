@@ -554,7 +554,7 @@ void SDV_CRYPTO_MCELIECE_PC_C1_REJECT_FUNC_TC001(int algId)
     ASSERT_TRUE(mcelieceCtx != NULL);
     ASSERT_TRUE(mcelieceCtx->privateKey != NULL);
 
-    ASSERT_EQ(GetPrefixedSessionKey(0, mcelieceCtx->privateKey->s, (uint32_t)mcelieceCtx->para->nBytes,
+    ASSERT_EQ(GetPrefixedSessionKey(0, mcelieceCtx->privateKey->s, mcelieceCtx->para->nBytes,
         tamperedCiphertext, cipherLen, fallbackKey, &fallbackLen), CRYPT_SUCCESS);
     ASSERT_EQ(fallbackLen, MCELIECE_TEST_L_BYTES);
 

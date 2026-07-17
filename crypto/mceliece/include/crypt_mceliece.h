@@ -40,9 +40,9 @@ void CRYPT_MCELIECE_FreeCtx(CRYPT_MCELIECE_Ctx *ctx);
 int32_t CRYPT_MCELIECE_EncapsInit(CRYPT_MCELIECE_Ctx *ctx, const BSL_Param *params);
 int32_t CRYPT_MCELIECE_DecapsInit(CRYPT_MCELIECE_Ctx *ctx, const BSL_Param *params);
 int32_t CRYPT_MCELIECE_Encaps(CRYPT_MCELIECE_Ctx *ctx, uint8_t *ciphertext, uint32_t *ctLen, uint8_t *sharedSecret,
-                              uint32_t *ssLen);
+    uint32_t *ssLen);
 int32_t CRYPT_MCELIECE_Decaps(CRYPT_MCELIECE_Ctx *ctx, const uint8_t *ciphertext, uint32_t ctLen, uint8_t *sharedSecret,
-                              uint32_t *ssLen);
+    uint32_t *ssLen);
 
 #ifdef __cplusplus
 }

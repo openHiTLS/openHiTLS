@@ -20,6 +20,7 @@
 #ifdef HITLS_PKI_INFO
 #include <stdint.h>
 #include "bsl_uio.h"
+#include "bsl_list.h"
 
 #ifdef __cplusplus
 extern "C" {

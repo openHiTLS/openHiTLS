@@ -48,15 +48,15 @@ extern "C" {
 
 #define MCELIECE_MAX_TRY_COUNT 50
 
-#define SAME_MASK(k, val) ((uint64_t)(-(int64_t)(((((uint32_t)((k) ^ (val)))) - (1U)) >> (31))))
+#define SAME_MASK(k, val) ((uint64_t)(-(int64_t)((((uint32_t)(k) ^ (uint32_t)(val)) - 1U) >> 31)))
 
 typedef struct GFPolynomial GFPolynomial;
 
 typedef struct {
     uint8_t *data;
-    int32_t rows;
-    int32_t cols;
-    int32_t colsBytes;
+    uint32_t rows;
+    uint32_t cols;
+    uint32_t colsBytes;
 } GFMatrix;
 
 typedef struct {
@@ -76,23 +76,23 @@ typedef struct {
 typedef struct McelieceParams {
     int32_t algId;
 
-    int32_t m;
-    int32_t n;
-    int32_t t;
+    uint32_t m;
+    uint32_t n;
+    uint32_t t;
 
-    int32_t mt;
-    int32_t k;
-    int32_t q;
-    int32_t q1;
+    uint32_t mt;
+    uint32_t k;
+    uint32_t q;
+    uint32_t q1;
 
-    int32_t nBytes;
-    int32_t mtBytes;
-    int32_t kBytes;
+    uint32_t nBytes;
+    uint32_t mtBytes;
+    uint32_t kBytes;
 
-    int32_t privateKeyBytes;
-    int32_t publicKeyBytes;
-    int32_t sharedKeyBytes;
-    int32_t cipherBytes;
+    uint32_t privateKeyBytes;
+    uint32_t publicKeyBytes;
+    uint32_t sharedKeyBytes;
+    uint32_t cipherBytes;
 
     uint8_t semi;
     uint8_t pc;
@@ -108,15 +108,14 @@ typedef struct Mceliece_Ctx {
 
 static inline uint64_t CMMakeMask(uint64_t x)
 {
-    int64_t sx = (int64_t)x;
-    uint64_t nz = (uint64_t)((sx >> 63) | ((-sx) >> 63));
-    return ~nz;
+    uint64_t isNonzero = (x | (~x + 1)) >> 63;
+    return isNonzero - 1;
 }
 // trailing zero count
-static inline int32_t CMCtz64(uint64_t x)
+static inline uint32_t CMCtz64(uint64_t x)
 {
     uint64_t tmpX = x;
-    int32_t c = 0;
+    uint32_t c = 0;
     while ((tmpX & 1) == 0) {
         c++;
         tmpX >>= 1;
@@ -141,11 +140,11 @@ static inline uint32_t VectorGetBit(const uint8_t *vec, const uint32_t bitIdx)
     return (uint32_t)((vec[byteIdx] >> bitPos) & 1u); // lsb
 }
 
-static inline int32_t VectoWeight(const uint8_t *vec, const int32_t lenBytes)
+static inline int32_t VectoWeight(const uint8_t *vec, uint32_t lenBytes)
 {
     int32_t weight = 0;
-    for (int32_t i = 0; i < lenBytes; i++) {
-        uint8_t byte = vec[i];
+    for (uint32_t i = 0; i < lenBytes; i++) {
+        uint32_t byte = vec[i];
         for (uint32_t bit = 0; bit < 8; bit++) {
             weight += (int32_t)((byte >> bit) & 1u);
         }
@@ -158,17 +157,17 @@ static inline int32_t VectoWeight(const uint8_t *vec, const int32_t lenBytes)
 // =================================================================================
 /* Compute control bits for a Benes network from a permutation pi of size n=2^w.
  * out must point to ((2*w-1)*n/16) bytes, zeroed by the caller or by the impl. */
-int32_t ControlBitsFromBenesNetwork(uint8_t *out, const uint16_t *pi, const int64_t w, const int64_t n);
+int32_t ControlBitsFromBenesNetwork(uint8_t *out, const uint16_t *pi, uint32_t w, uint32_t n);
 
 // Derive support L[0..N-1] from control bits
-int32_t SupportSetFromControlbits(uint16_t *L, const uint8_t *cbits, const int64_t w, const int32_t lenN);
+int32_t SupportSetFromControlbits(uint16_t *L, const uint8_t *cbits, uint32_t w, int32_t lenN);
 
 // =================================================================================
 // Goppa Encode and Decode Functions
 // =================================================================================
 // Goppa code decoding - recovers error vector from syndrome
 int32_t DecodeGoppa(const uint8_t *received, const GFPolynomial *g, const uint16_t *alpha,
-                    const McelieceParams *params, uint8_t *errorVector, uint16_t *decodeSyndrome);
+    const McelieceParams *params, uint8_t *errorVector, uint16_t *decodeSyndrome);
 
 // Generate a random vector with fixed Hamming weight t
 // Used in the encapsulation phase to generate the error vector e
@@ -185,7 +184,7 @@ uint16_t GFDivision(uint16_t a, uint16_t b);
 
 uint16_t GFInverse(uint16_t a);
 
-uint16_t GFPower(uint16_t base, int32_t exp);
+uint16_t GFPower(uint16_t base, uint32_t exp);
 
 uint16_t GFMultiplication(uint16_t a, uint16_t b);
 
@@ -194,7 +193,7 @@ uint16_t GFAddtion(uint16_t a, uint16_t b);
 void GFPolyMul(GFPolynomial *out, const GFPolynomial *in0, const GFPolynomial *in1);
 
 // Allocate a zero polynomial with a fixed coefficient range [0, degree].
-GFPolynomial *GFPolyCreate(const int32_t degree);
+GFPolynomial *GFPolyCreate(uint32_t degree);
 
 // Cleanse and release a polynomial and its coefficient storage. Accepts NULL.
 void GFPolyFree(GFPolynomial *poly);
@@ -202,10 +201,10 @@ void GFPolyFree(GFPolynomial *poly);
 uint16_t GFPolyEval(const GFPolynomial *poly, uint16_t x);
 
 // Return the coefficient of poly[degree]. The caller guarantees a valid polynomial and index.
-uint16_t GFPolyGetCoeff(const GFPolynomial *poly, const int32_t degree);
+uint16_t GFPolyGetCoeff(const GFPolynomial *poly, uint32_t degree);
 
 // Set the coefficient of poly[degree] within the polynomial's fixed degree range.
-void GFPolySetCoeff(GFPolynomial *poly, const int32_t degree, const uint16_t coeff);
+void GFPolySetCoeff(GFPolynomial *poly, uint32_t degree, uint16_t coeff);
 
 // Copy src into dst.
 void GFPolyCopy(GFPolynomial *dst, const GFPolynomial *src);
@@ -229,14 +228,14 @@ void GFPolyShiftUp(GFPolynomial *poly);
 // Kem Functions
 // =================================================================================
 int32_t SeededKeyGenInternal(const uint8_t *delta, CMPublicKey *pk, CMPrivateKey *sk, const McelieceParams *params,
-                             bool isSemi);
+    bool isSemi);
 int32_t McElieceEncapsInternal(CRYPT_MCELIECE_Ctx *ctx, uint8_t *ciphertext, uint8_t *sessionKey, bool isPc);
 
 int32_t McElieceDecapsInternal(const uint8_t *ciphertext, const CMPrivateKey *sk, uint8_t *sessionKey,
-                               const McelieceParams *params, bool isPc);
+    const McelieceParams *params, bool isPc);
 
 // Matrix creation and destruction
-GFMatrix *MatrixCreate(const int32_t rows, const int32_t cols);
+GFMatrix *MatrixCreate(uint32_t rows, uint32_t cols);
 
 void MatrixFree(GFMatrix *mat);
 
@@ -244,7 +243,7 @@ void MatrixFree(GFMatrix *mat);
 int32_t McElieceShake256(uint8_t *output, const uint32_t outlen, const uint8_t *input, uint32_t inlen);
 
 int32_t ComputeSyndrome(const uint8_t *received, const GFPolynomial *g, const uint16_t *alpha,
-                        const McelieceParams *params, uint16_t *syndrome);
+    const McelieceParams *params, uint16_t *syndrome);
 #ifdef __cplusplus
 }
 #endif
