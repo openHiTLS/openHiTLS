@@ -132,6 +132,10 @@ struct SlhDsaCtx {
     void *libCtx;
 };
 
+int32_t CRYPT_SLH_DSA_SignInternal(CryptSlhDsaCtx *ctx, const uint8_t *msg, uint32_t msgLen, uint8_t *sig, uint32_t *sigLen);
+
+int32_t CRYPT_SLH_DSA_VerifyInternal(const CryptSlhDsaCtx *ctx, const uint8_t *msg, uint32_t msgLen, const uint8_t *sig, uint32_t sigLen);
+
 void InitTreeCtxFromSlhDsaCtx(TreeCtx* treeCtx, const CryptSlhDsaCtx *ctx);
 #endif // HITLS_CRYPTO_SLH_DSA
 #endif // SLH_DSA_LOCAL_H
