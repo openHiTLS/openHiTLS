@@ -590,7 +590,7 @@ static int32_t AddOtherCertListBagToP12(char **caName, uint32_t caNameSize, HITL
     }
 
     if (index < caNameSize) {
-        AppPrintError("pkcs12: Warning: Redundant %zu -caname options.\n", caNameSize - index);
+        AppPrintError("pkcs12: Warning: Redundant %lu -caname options.\n", (unsigned long)(caNameSize - index));
     }
     return HITLS_APP_SUCCESS;
 }

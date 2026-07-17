@@ -316,7 +316,7 @@ void HITLS_APP_PrintCipherAlg(void)
         if (!CRYPT_EAL_CipherIsValidAlgId(g_allCipherAlgInfo[i].cid)) {
             continue;
         }
-        AppPrint(g_stdout, "%-20s\t%3zu\n", g_allCipherAlgInfo[i].name, g_allCipherAlgInfo[i].cid);
+        AppPrint(g_stdout, "%-20s\t%3ld\n", g_allCipherAlgInfo[i].name, (long)g_allCipherAlgInfo[i].cid);
     }
 }
 
@@ -328,7 +328,7 @@ void HITLS_APP_PrintPkcs12MacIdAlg(void)
         if (!CRYPT_EAL_MdIsValidAlgId(g_pkcs12MacIdList[i].cid)) {
             continue;
         }
-        AppPrint(g_stdout, "%-20s\t%3zu\n", g_pkcs12MacIdList[i].name, g_pkcs12MacIdList[i].cid);
+        AppPrint(g_stdout, "%-20s\t%3ld\n", g_pkcs12MacIdList[i].name, (long)g_pkcs12MacIdList[i].cid);
     }
 }
 
@@ -337,7 +337,7 @@ void HITLS_APP_PrintPbeAlg(void)
     AppPrint(g_stdout, "List pbe Algorithms:\n");
     AppPrint(g_stdout, "%-20s\t%s\n", "NAME", "CID");
     for (size_t i = 0; i < KEY_PBE_CNT; ++i) {
-        AppPrint(g_stdout, "%-20s\t%3zu\n", g_keyPbeList[i].name, g_keyPbeList[i].cid);
+        AppPrint(g_stdout, "%-20s\t%3ld\n", g_keyPbeList[i].name, (long)g_keyPbeList[i].cid);
     }
 }
 
@@ -349,7 +349,7 @@ static void PrintMdAlg(void)
         if (!CRYPT_EAL_MdIsValidAlgId(g_allMdAlgInfo[i].cid)) {
             continue;
         }
-        AppPrint(g_stdout, "%-20s\t%3zu\n", g_allMdAlgInfo[i].name, g_allMdAlgInfo[i].cid);
+        AppPrint(g_stdout, "%-20s\t%3ld\n", g_allMdAlgInfo[i].name, (long)g_allMdAlgInfo[i].cid);
     }
 }
 
@@ -361,7 +361,7 @@ static void PrintPkeyAlg(void)
         if (!CRYPT_EAL_PkeyIsValidAlgId(g_allPkeyAlgInfo[i].cid)) {
             continue;
         }
-        AppPrint(g_stdout, "%-20s\t%3zu\n", g_allPkeyAlgInfo[i].name, g_allPkeyAlgInfo[i].cid);
+        AppPrint(g_stdout, "%-20s\t%3ld\n", g_allPkeyAlgInfo[i].name, (long)g_allPkeyAlgInfo[i].cid);
     }
 }
 
@@ -373,7 +373,7 @@ void PrintMacAlg(void)
         if (!CRYPT_EAL_MacIsValidAlgId(g_allMacAlgInfo[i].cid)) {
             continue;
         }
-        AppPrint(g_stdout, "%-20s\t%3zu\n", g_allMacAlgInfo[i].name, g_allMacAlgInfo[i].cid);
+        AppPrint(g_stdout, "%-20s\t%3ld\n", g_allMacAlgInfo[i].name, (long)g_allMacAlgInfo[i].cid);
     }
 }
 
@@ -385,7 +385,7 @@ static void PrintRandAlg(void)
         if (!CRYPT_EAL_RandIsValidAlgId(g_allRandAlgInfo[i].cid)) {
             continue;
         }
-        AppPrint(g_stdout, "%-20s\t%3zu\n", g_allRandAlgInfo[i].name, g_allRandAlgInfo[i].cid);
+        AppPrint(g_stdout, "%-20s\t%3ld\n", g_allRandAlgInfo[i].name, (long)g_allRandAlgInfo[i].cid);
     }
 }
 
@@ -397,7 +397,7 @@ static void PrintHkdfAlg(void)
         if (!CRYPT_EAL_KdfIsValidAlgId(g_allKdfAlgInfo[i].cid)) {
             continue;
         }
-        AppPrint(g_stdout, "%-20s\t%3zu\n", g_allKdfAlgInfo[i].name, g_allKdfAlgInfo[i].cid);
+        AppPrint(g_stdout, "%-20s\t%3ld\n", g_allKdfAlgInfo[i].name, (long)g_allKdfAlgInfo[i].cid);
     }
 }
 
@@ -409,7 +409,7 @@ static void PrintPbkdf2Alg(void)
         if (!CRYPT_EAL_KdfIsValidAlgId(g_allKdfAlgInfo[i].cid)) {
             continue;
         }
-        AppPrint(g_stdout, "%-20s\t%3zu\n", g_allKdfAlgInfo[i].name, g_allKdfAlgInfo[i].cid);
+        AppPrint(g_stdout, "%-20s\t%3ld\n", g_allKdfAlgInfo[i].name, (long)g_allKdfAlgInfo[i].cid);
     }
 }
 
@@ -421,7 +421,7 @@ static void PrintKdftls12Alg(void)
         if (!CRYPT_EAL_KdfIsValidAlgId(g_allKdfAlgInfo[i].cid)) {
             continue;
         }
-        AppPrint(g_stdout, "%-20s\t%3zu\n", g_allKdfAlgInfo[i].name, g_allKdfAlgInfo[i].cid);
+        AppPrint(g_stdout, "%-20s\t%3ld\n", g_allKdfAlgInfo[i].name, (long)g_allKdfAlgInfo[i].cid);
     }
 }
 
@@ -454,7 +454,7 @@ static void PrintCurves(void)
     AppPrint(g_stdout, "List  Curves:\n");
     AppPrint(g_stdout, "%-20s\t%s\n", "NAME", "CID");
     for (size_t i = 0; i < CURVES_CNT; ++i) {
-        AppPrint(g_stdout, "%-20s\t%3zu\n", g_allCurves[i].name, g_allCurves[i].cid);
+        AppPrint(g_stdout, "%-20s\t%3ld\n", g_allCurves[i].name, (long)g_allCurves[i].cid);
     }
 }
 
