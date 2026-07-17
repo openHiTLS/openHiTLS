@@ -525,7 +525,7 @@ int32_t CRYPT_FRODOKEM_Cmp(CRYPT_FRODOKEM_Ctx *ctx1, CRYPT_FRODOKEM_Ctx *ctx2)
         return CRYPT_FRODOKEM_KEY_NOT_EQUAL;
     }
     if (ctx1->privateKey != NULL && ctx2->privateKey != NULL) {
-        if (memcmp(ctx1->privateKey, ctx2->privateKey, ctx1->para->kemSkSize) != 0) {
+        if (ConstTimeMemcmp(ctx1->privateKey, ctx2->privateKey, ctx1->para->kemSkSize) == 0) {
             BSL_ERR_PUSH_ERROR(CRYPT_FRODOKEM_KEY_NOT_EQUAL);
             return CRYPT_FRODOKEM_KEY_NOT_EQUAL;
         }

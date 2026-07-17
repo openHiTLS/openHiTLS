@@ -143,7 +143,7 @@ static FrodoKemParams g_allFrodoParams[FRODOKEM_PARA_NUM] = {
      .cdfLen = 7,
      .prg = FRODO_PRG_AES},
     /* [eFRODOKEM_640_SHAKE] */
-    {.algId = CRYPT_KEM_TYPE_eFRODOKEM_640_SHAKE,
+    {.algId = CRYPT_KEM_TYPE_EFRODOKEM_640_SHAKE,
      .n = 640,
      .nBar = 8,
      .logq = 15,
@@ -162,7 +162,7 @@ static FrodoKemParams g_allFrodoParams[FRODOKEM_PARA_NUM] = {
      .cdfLen = 13,
      .prg = FRODO_PRG_SHAKE},
     /* [eFRODOKEM_976_SHAKE] */
-    {.algId = CRYPT_KEM_TYPE_eFRODOKEM_976_SHAKE,
+    {.algId = CRYPT_KEM_TYPE_EFRODOKEM_976_SHAKE,
      .n = 976,
      .nBar = 8,
      .logq = 16,
@@ -181,7 +181,7 @@ static FrodoKemParams g_allFrodoParams[FRODOKEM_PARA_NUM] = {
      .cdfLen = 11,
      .prg = FRODO_PRG_SHAKE},
     /* [eFRODOKEM_1344_SHAKE] */
-    {.algId = CRYPT_KEM_TYPE_eFRODOKEM_1344_SHAKE,
+    {.algId = CRYPT_KEM_TYPE_EFRODOKEM_1344_SHAKE,
      .n = 1344,
      .nBar = 8,
      .logq = 16,
@@ -200,7 +200,7 @@ static FrodoKemParams g_allFrodoParams[FRODOKEM_PARA_NUM] = {
      .cdfLen = 7,
      .prg = FRODO_PRG_SHAKE},
     /* [eFRODOKEM_640_AES] */
-    {.algId = CRYPT_KEM_TYPE_eFRODOKEM_640_AES,
+    {.algId = CRYPT_KEM_TYPE_EFRODOKEM_640_AES,
      .n = 640,
      .nBar = 8,
      .logq = 15,
@@ -219,7 +219,7 @@ static FrodoKemParams g_allFrodoParams[FRODOKEM_PARA_NUM] = {
      .cdfLen = 13,
      .prg = FRODO_PRG_AES},
     /* [eFRODOKEM_976_AES] */
-    {.algId = CRYPT_KEM_TYPE_eFRODOKEM_976_AES,
+    {.algId = CRYPT_KEM_TYPE_EFRODOKEM_976_AES,
      .n = 976,
      .nBar = 8,
      .logq = 16,
@@ -238,7 +238,7 @@ static FrodoKemParams g_allFrodoParams[FRODOKEM_PARA_NUM] = {
      .cdfLen = 11,
      .prg = FRODO_PRG_AES},
     /* [eFRODOKEM_1344_AES] */
-    {.algId = CRYPT_KEM_TYPE_eFRODOKEM_1344_AES,
+    {.algId = CRYPT_KEM_TYPE_EFRODOKEM_1344_AES,
      .n = 1344,
      .nBar = 8,
      .logq = 16,
@@ -260,7 +260,7 @@ static FrodoKemParams g_allFrodoParams[FRODOKEM_PARA_NUM] = {
 
 FrodoKemParams *FrodoGetParamsById(int32_t algId)
 {
-    if (algId >= CRYPT_KEM_TYPE_FRODOKEM_640_SHAKE && algId <= CRYPT_KEM_TYPE_eFRODOKEM_1344_AES) {
+    if (algId >= CRYPT_KEM_TYPE_FRODOKEM_640_SHAKE && algId <= CRYPT_KEM_TYPE_EFRODOKEM_1344_AES) {
         return &g_allFrodoParams[algId - CRYPT_KEM_TYPE_FRODOKEM_640_SHAKE];
     }
     return NULL;

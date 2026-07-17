@@ -426,9 +426,9 @@ void FrodoCommonKeyDecode(uint16_t *out, const uint16_t *in, const FrodoKemParam
         uint16_t piece = (uint16_t)(((uint32_t)v + round) >> s) & mask;
 
         for (uint8_t r = 0; r < b; r++, bitpos++) {
-            if ((piece >> r) & 1u) {
-                mu[bitpos >> 3] |= (uint8_t)(1u << (bitpos & 7));
-            }
+            uint8_t bit = (uint8_t)((piece >> r) & 1u);
+            uint8_t bitMask = (uint8_t)(0u - (uint32_t)bit);
+            mu[bitpos >> 3] |= bitMask & (uint8_t)(1u << (bitpos & 7));
         }
     }
 }
