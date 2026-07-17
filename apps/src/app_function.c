@@ -15,6 +15,7 @@
 #include "app_function.h"
 #include <string.h>
 #include <stddef.h>
+#include <limits.h>
 #include "app_errno.h"
 #include "app_help.h"
 #include "app_print.h"
@@ -69,19 +70,23 @@ HITLS_CmdFunc g_cmdFunc[] = {
     {"asn1parse", FUNC_TYPE_GENERAL, HITLS_Asn1Main},
     {NULL,      FUNC_TYPE_NONE, NULL}
 };
-static void AppGetFuncPrintfLen(size_t *maxLen)
+static void AppGetFuncPrintfLen(int *maxLen)
 {
     size_t len = 0;
     for (size_t i = 0; g_cmdFunc[i].name != NULL; i++) {
         len = (len > strlen(g_cmdFunc[i].name)) ? len : strlen(g_cmdFunc[i].name);
     }
-    *maxLen = len + 5; // The relative maximum length is filled with 5 spaces.
+    if (len > (size_t)(INT_MAX - 5)) {
+        *maxLen = INT_MAX;
+        return;
+    }
+    *maxLen = (int)(len + 5); // The relative maximum length is filled with 5 spaces.
 }
 
 void AppPrintFuncList(void)
 {
     AppPrintError("function: HiTLS supports the following commands:\n");
-    size_t maxLen = 0;
+    int maxLen = 0;
     AppGetFuncPrintfLen(&maxLen);
     for (size_t i = 0; g_cmdFunc[i].name != NULL; i++) {
         if (((i % 4) == 0) && (i != 0)) { // Print 4 functions in one line
