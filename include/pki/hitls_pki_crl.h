@@ -187,10 +187,16 @@ int32_t HITLS_X509_CrlVerify(void *pubkey, const HITLS_X509_Crl *crl);
  *
  * @attention 1. This function can only be used when generating a new crl.
  *            2. Before signing, you need to call the HITLS_X509_CrlCtrl interface to set the CRL information.
- *
- * @attention The interface can be called multiple times, and the signature is regenerated on each call.
+ *            3. The interface can be called multiple times, and the signature is regenerated on each call.
+ *            4. With an XMSS or XMSSMT private key, each private-key state MUST
+ *               have one active signing owner. Every signing attempt may consume
+ *               state, including an attempt that returns an error.
+ *            5. A child process MUST NOT sign with a private-key context inherited
+ *               across fork().
+ *            6. After each attempt, export and durably persist the updated state.
+ *               Do not publish or export a successfully signed CRL first.
  * @param mdId           [IN] hash algorithm.
- * @param prvKey         [IN] private key.
+ * @param prvKey         [IN/OUT] private key.
  * @param algParam       [IN] signature parameter, for example, rsa-pss parameter.
  * @param crl            [IN/OUT] CRL info.
  * @return Error code

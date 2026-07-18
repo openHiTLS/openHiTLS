@@ -59,9 +59,16 @@ void HITLS_X509_CsrFree(HITLS_X509_Csr *csr);
  *
  * @attention 1. This function can only be used when generating a new csr.
  *            2. You need to first call interfaces HITLS_X509_CsrCtrl and HITLS_X509_AttrCtrl to set csr information.
+ *            3. With an XMSS or XMSSMT private key, each private-key state MUST
+ *               have one active signing owner. Every signing attempt may consume
+ *               state, including an attempt that returns an error.
+ *            4. A child process MUST NOT sign with a private-key context inherited
+ *               across fork().
+ *            5. After each attempt, export and durably persist the updated state.
+ *               Do not publish or export a successfully signed CSR first.
  *
  * @param mdId     [IN] The message digest algorithm ID.
- * @param prvKey   [IN] The private key context used for signing.
+ * @param prvKey   [IN/OUT] The private key context used for signing.
  * @param algParam [IN] The signature algorithm parameters.
  * @param csr      [IN] The CSR to be signed.
  * @retval #HITLS_PKI_SUCCESS, success.

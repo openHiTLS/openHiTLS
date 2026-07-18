@@ -71,24 +71,38 @@ void CRYPT_XMSS_FreeCtx(CryptXmssCtx *ctx);
 int32_t CRYPT_XMSS_Gen(CryptXmssCtx *ctx);
 
 /**
- * @brief Sign data using XMSS
- * 
- * @param ctx Pointer to the XMSS context
- * @param algId Algorithm ID
- * @param data Pointer to the data to sign
- * @param dataLen Length of the data
- * @param sign Pointer to the signature
- * @param signLen Length of the signature
- * @attention 
+ * @brief Sign data using XMSS.
+ *
+ * @param ctx     [IN/OUT] Pointer to the XMSS context
+ * @param algId   [IN] Algorithm ID
+ * @param data    [IN] Pointer to the data to sign
+ * @param dataLen [IN] Length of the data
+ * @param sign    [OUT] Pointer to the signature
+ * @param signLen [IN/OUT] Length of the signature
+ *
+ * @attention
  * 1. Stateful private key:
- *    XMSS is a stateful signature scheme. The private key is updated after each
- *    successful signature. The caller MUST retrieve the updated private key via
- *    CRYPT_XMSS_GetPrvKey and persist it (e.g., to disk or secure storage).
- *    Failure to do so may result in reuse of one-time keys and compromise security.
- * 2. No concurrent use:
- *    The same private key MUST NOT be used concurrently across multiple contexts
- *    (e.g., threads or processes). Concurrent signing may lead to reuse of the same
- *    one-time key index, which breaks the security guarantees of XMSS.
+ *    XMSS is a stateful signature scheme. The signing index is advanced before
+ *    signature generation and may be consumed even if this function later
+ *    returns an error. After each signing attempt, whether it succeeds or fails,
+ *    the caller MUST retrieve the updated private key via CRYPT_XMSS_GetPrvKey
+ *    and durably persist it. A successful signature MUST NOT be published or
+ *    used before the updated state is durably persisted. Failure to do so may
+ *    result in reuse of one-time keys and compromise security.
+ * 2. Exclusive private-key ownership:
+ *    Each private-key state MUST have exactly one active signing owner. The same
+ *    exported state MUST NOT be loaded into multiple signing contexts or used
+ *    independently by multiple processes, containers, or virtual-machine
+ *    snapshots.
+ * 3. Process forking:
+ *    After fork(), the child process MUST NOT sign with an inherited private-key
+ *    context. Load or generate the signing key after forking, or keep the state
+ *    exclusively in one signing process.
+ * 4. Thread safety:
+ *    This function is NOT thread-safe. The internal index increment (idx++) is
+ *    not atomic and no locking is performed. If concurrent access is required,
+ *    the caller MUST provide external synchronization (e.g., mutex) to ensure
+ *    that only one thread invokes signing at a time.
  */
 int32_t CRYPT_XMSS_Sign(CryptXmssCtx *ctx, int32_t algId, const uint8_t *data, uint32_t dataLen, uint8_t *sign,
                         uint32_t *signLen);
@@ -129,6 +143,10 @@ int32_t CRYPT_XMSS_GetPubKey(const CryptXmssCtx *ctx, BSL_Param *para);
  * 
  * @param ctx Pointer to the XMSS context
  * @param para Pointer to the private key
+ *
+ * @attention The returned data is a mutable private-key state snapshot, not a
+ * reusable backup. It MUST NOT be loaded into multiple active signing contexts
+ * or restored after a newer state has been used.
  */
 int32_t CRYPT_XMSS_GetPrvKey(const CryptXmssCtx *ctx, BSL_Param *para);
 
@@ -145,6 +163,10 @@ int32_t CRYPT_XMSS_SetPubKey(CryptXmssCtx *ctx, const BSL_Param *para);
  * 
  * @param ctx Pointer to the XMSS context
  * @param para Pointer to the private key
+ *
+ * @attention The imported state MUST have one active signing owner and MUST NOT
+ * be loaded into another signing context at the same time. Importing a stale or
+ * duplicated state can reuse a one-time key and compromise security.
  */
 int32_t CRYPT_XMSS_SetPrvKey(CryptXmssCtx *ctx, const BSL_Param *para);
 
@@ -152,8 +174,8 @@ int32_t CRYPT_XMSS_SetPrvKey(CryptXmssCtx *ctx, const BSL_Param *para);
  * @brief Duplicate ctx
  *
  * @param ctx Pointer to the XMSS context
- * @note Since XMSS is not allowed to sign with the same private key and state, the function only duplicates the public
- * key of ctx to the new ctx, without duplicating private key;
+ * @note The function duplicates only the public key, not the private signing
+ * state. The returned context can verify signatures but cannot sign.
  */
 CryptXmssCtx *CRYPT_XMSS_DupCtx(CryptXmssCtx *ctx);
 
@@ -162,6 +184,40 @@ void CRYPT_XMSSMT_FreeCtx(CryptXmssCtx *ctx);
 
 int32_t CRYPT_XMSSMT_Gen(CryptXmssCtx *ctx);
 
+/**
+ * @brief Sign data using XMSSMT.
+ *
+ * @param ctx     [IN/OUT] Pointer to the XMSSMT context
+ * @param algId   [IN] Algorithm ID
+ * @param data    [IN] Pointer to the data to sign
+ * @param dataLen [IN] Length of the data
+ * @param sign    [OUT] Pointer to the signature
+ * @param signLen [IN/OUT] Length of the signature
+ *
+ * @attention
+ * 1. Stateful private key:
+ *    XMSSMT is a stateful signature scheme. The signing index is advanced before
+ *    signature generation and may be consumed even if this function later
+ *    returns an error. After each signing attempt, whether it succeeds or fails,
+ *    the caller MUST retrieve the updated private key via CRYPT_XMSSMT_GetPrvKey
+ *    and durably persist it. A successful signature MUST NOT be published or
+ *    used before the updated state is durably persisted. Failure to do so may
+ *    result in reuse of one-time keys and compromise security.
+ * 2. Exclusive private-key ownership:
+ *    Each private-key state MUST have exactly one active signing owner. The same
+ *    exported state MUST NOT be loaded into multiple signing contexts or used
+ *    independently by multiple processes, containers, or virtual-machine
+ *    snapshots.
+ * 3. Process forking:
+ *    After fork(), the child process MUST NOT sign with an inherited private-key
+ *    context. Load or generate the signing key after forking, or keep the state
+ *    exclusively in one signing process.
+ * 4. Thread safety:
+ *    This function is NOT thread-safe. The internal index increment (idx++) is
+ *    not atomic and no locking is performed. If concurrent access is required,
+ *    the caller MUST provide external synchronization (e.g., mutex) to ensure
+ *    that only one thread invokes signing at a time.
+ */
 int32_t CRYPT_XMSSMT_Sign(CryptXmssCtx *ctx, int32_t algId, const uint8_t *data, uint32_t dataLen, uint8_t *sign,
                           uint32_t *signLen);
 
@@ -172,12 +228,39 @@ int32_t CRYPT_XMSSMT_Ctrl(CryptXmssCtx *ctx, int32_t opt, void *val, uint32_t le
 
 int32_t CRYPT_XMSSMT_GetPubKey(const CryptXmssCtx *ctx, BSL_Param *para);
 
+/**
+ * @brief Get the private key of XMSSMT.
+ *
+ * @param ctx  [IN] Pointer to the XMSSMT context
+ * @param para [OUT] Pointer to the private key
+ *
+ * @attention The returned data is a mutable private-key state snapshot, not a
+ * reusable backup. It MUST NOT be loaded into multiple active signing contexts
+ * or restored after a newer state has been used.
+ */
 int32_t CRYPT_XMSSMT_GetPrvKey(const CryptXmssCtx *ctx, BSL_Param *para);
 
 int32_t CRYPT_XMSSMT_SetPubKey(CryptXmssCtx *ctx, const BSL_Param *para);
 
+/**
+ * @brief Set the private key of XMSSMT.
+ *
+ * @param ctx  [IN/OUT] Pointer to the XMSSMT context
+ * @param para [IN] Pointer to the private key
+ *
+ * @attention The imported state MUST have one active signing owner and MUST NOT
+ * be loaded into another signing context at the same time. Importing a stale or
+ * duplicated state can reuse a one-time key and compromise security.
+ */
 int32_t CRYPT_XMSSMT_SetPrvKey(CryptXmssCtx *ctx, const BSL_Param *para);
 
+/**
+ * @brief Duplicate an XMSSMT context.
+ *
+ * @param ctx Pointer to the XMSSMT context
+ * @note The function duplicates only the public key, not the private signing
+ * state. The returned context can verify signatures but cannot sign.
+ */
 CryptXmssCtx *CRYPT_XMSSMT_DupCtx(CryptXmssCtx *ctx);
 #endif
 

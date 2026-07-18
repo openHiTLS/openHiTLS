@@ -153,6 +153,9 @@ CRYPT_EAL_PkeyCtx *CRYPT_EAL_ProviderPkeyNewCtx(CRYPT_EAL_LibCtx *libCtx, int32_
  *
  * @param   to [IN/OUT] Target pkey context
  * @param   from [IN] Source pkey context
+ * @attention Stateful hash-based signature algorithms such as XMSS and XMSSMT
+ * must not copy private signing state. Their algorithm-level copy creates a
+ * public-key-only context that can verify signatures but cannot sign.
  *
  * @retval  CRYPT_SUCCESS
  *          For other error codes, see crypt_errno.h.
@@ -166,10 +169,10 @@ int32_t CRYPT_EAL_PkeyCopyCtx(CRYPT_EAL_PkeyCtx *to, const CRYPT_EAL_PkeyCtx *fr
  *
  * @param   pkey [IN] Source Pkey context
  * @attention
- * Stateful hash-based signature algorithms such as XMSS, LMS, and HSS
- * must not duplicate private signing state. Their algorithm-level dup
- * methods intentionally create public-key-only contexts: the duplicate can
- * verify signatures but cannot sign.
+ * Stateful hash-based signature algorithms such as XMSS and XMSSMT must not
+ * duplicate private signing state. Their algorithm-level duplication creates a
+ * public-key-only context that can verify signatures but cannot sign.
+ *
  * @retval  CRYPT_EAL_PkeyCtx, Pkey context pointer.
  *          NULL, if the operation fails.
  */
@@ -275,6 +278,9 @@ int32_t CRYPT_EAL_PkeySetPubEx(CRYPT_EAL_PkeyCtx *pkey, const BSL_Param *param);
  *
  * @param   pkey [OUT] Key pair structure for receiving key data
  * @param   key  [IN] Private key data
+ * @attention For a stateful hash-based signature private key, the imported data
+ * is mutable signing state. It MUST have one active signing owner and MUST NOT
+ * be loaded into multiple active signing contexts.
  *
  * @retval  CRYPT_SUCCESS
  *          For other error codes, see crypt_errno.h.
@@ -290,6 +296,9 @@ int32_t CRYPT_EAL_PkeySetPrv(CRYPT_EAL_PkeyCtx *pkey, const CRYPT_EAL_PkeyPrv *k
  *
  * @param   pkey [OUT] Key pair structure for receiving key data
  * @param   param  [IN] Private key data
+ * @attention For a stateful hash-based signature private key, the imported data
+ * is mutable signing state. It MUST have one active signing owner and MUST NOT
+ * be loaded into multiple active signing contexts.
  *
  * @retval  CRYPT_SUCCESS
  *          For other error codes, see crypt_errno.h.
@@ -329,6 +338,9 @@ int32_t CRYPT_EAL_PkeyGetPubEx(const CRYPT_EAL_PkeyCtx *pkey, BSL_Param *param);
  *
  * @param   pkey [IN] Key session
  * @param   key  [OUT] Private key data
+ * @attention For a stateful hash-based signature private key, the returned data
+ * is a mutable state snapshot, not a reusable backup. It MUST NOT be loaded into
+ * multiple active signing contexts or restored after a newer state has been used.
  *
  * @retval  CRYPT_SUCCESS
  *          For other error codes, see crypt_errno.h.
@@ -344,6 +356,9 @@ int32_t CRYPT_EAL_PkeyGetPrv(const CRYPT_EAL_PkeyCtx *pkey, CRYPT_EAL_PkeyPrv *k
  *
  * @param   pkey [IN] Key session
  * @param   param  [OUT] Private key data
+ * @attention For a stateful hash-based signature private key, the returned data
+ * is a mutable state snapshot, not a reusable backup. It MUST NOT be loaded into
+ * multiple active signing contexts or restored after a newer state has been used.
  *
  * @retval  CRYPT_SUCCESS
  *          For other error codes, see crypt_errno.h.
@@ -354,7 +369,7 @@ int32_t CRYPT_EAL_PkeyGetPrvEx(const CRYPT_EAL_PkeyCtx *pkey, BSL_Param *param);
  * @ingroup crypt_eal_pkey
  * @brief   Signature interface
  *
- * @param   pkey     [IN] Key session
+ * @param   pkey     [IN/OUT] Key session. Stateful algorithms update the private-key state.
  * @param   id       [IN] Hash algorithm ID.
  * @param   data     [IN] Plaintext data
  * @param   dataLen  [IN] Plaintext length. The maximum length is [0, 0xffffffff].
@@ -362,6 +377,13 @@ int32_t CRYPT_EAL_PkeyGetPrvEx(const CRYPT_EAL_PkeyCtx *pkey, BSL_Param *param);
  * greater than or equal to the key modulo length.
  * @param   signLen  [OUT/IN] Length of the signature data, You can obtain the value by calling
  * CRYPT_EAL_PkeyGetSignLen.
+ *
+ * @attention For stateful hash-based signature algorithms such as XMSS and
+ * XMSSMT, each private-key state MUST have one active signing owner. A child
+ * process MUST NOT sign with a context inherited across fork(). Every signing
+ * attempt may consume state, including an attempt that returns an error; export
+ * and durably persist the updated state before publishing or using a successful
+ * signature.
  *
  * @retval  CRYPT_SUCCESS
  *          For other error codes, see crypt_errno.h.
