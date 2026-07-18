@@ -382,6 +382,10 @@ typedef CRYPT_SlhDsaPub CRYPT_XmssPub;
 
 /**
  * @brief XMSS private key structure
+ *
+ * @attention This structure contains mutable signing state for XMSS or XMSSMT.
+ * A state snapshot MUST have one active signing owner and MUST NOT be copied
+ * into multiple active signing contexts.
  */
 typedef struct {
     uint8_t *seed; // Seed for generating keys
