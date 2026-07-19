@@ -17,7 +17,7 @@
 #ifdef HITLS_CRYPTO_XMSSMT
 
 #include <string.h>
-#include "xmssmt_params.h"
+#include "xmss_params.h"
 #include "crypt_utils.h"
 
 /*

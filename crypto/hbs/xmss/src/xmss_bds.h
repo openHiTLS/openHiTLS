@@ -22,12 +22,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include "hbs_tree.h"
-#ifdef HITLS_CRYPTO_XMSS
 #include "xmss_params.h"
-#endif
-#ifdef HITLS_CRYPTO_XMSSMT
-#include "xmssmt_params.h"
-#endif
 
 #ifdef __cplusplus
 extern "C" {

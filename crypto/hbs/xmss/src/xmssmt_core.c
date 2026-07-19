@@ -25,7 +25,7 @@
 #include "crypt_xmssmt.h"
 #include "xmss_bds.h"
 #include "xmss_local.h"
-#include "xmssmt_params.h"
+#include "xmss_params.h"
 
 CryptXmssmtCtx *CRYPT_XMSSMT_NewCtx(void)
 {

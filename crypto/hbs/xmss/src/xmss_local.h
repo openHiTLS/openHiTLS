@@ -26,12 +26,7 @@
 #include "crypt_algid.h"
 #include "hbs_wots.h"
 #include "hbs_tree.h"
-#ifdef HITLS_CRYPTO_XMSS
 #include "xmss_params.h"
-#endif
-#ifdef HITLS_CRYPTO_XMSSMT
-#include "xmssmt_params.h"
-#endif
 #include "xmss_address.h"
 
 typedef struct XmssCtxCommon XmssCtxCommon;
@@ -46,8 +41,6 @@ typedef void (*XmssBdsFreeStateCb)(void *bdsCtx);
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-/* XMSS_MAX_SEED_SIZE is defined in xmss_params.h, included above. */
 
 typedef struct {
     uint8_t seed[XMSS_MAX_SEED_SIZE]; // Private seed (SK.seed)
