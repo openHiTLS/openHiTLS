@@ -109,7 +109,7 @@ int32_t full_client_hello_callback(HITLS_Ctx *ctx, int32_t *alert, void *arg)
     // Compare expected_extensions and exts
     ASSERT_TRUE(extLen == sizeof(expected_extensions) / sizeof(expected_extensions[0]));
 
-    for (uint16_t i = 0; i < extLen; ++i) {
+    for (uint32_t i = 0; i < extLen; ++i) {
         ASSERT_TRUE(exts[i] == expected_extensions[i]);
     }
     BSL_SAL_FREE(exts);
