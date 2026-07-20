@@ -425,7 +425,6 @@ static int32_t ChainShake256(const uint8_t *x, uint32_t xLen, uint32_t start, ui
     uint32_t nQwords = n >> 3; // pkSeed u64 num
     uint32_t msgOffset = nQwords + 4; // 4 = ((adrsLen = 32) >> 3)
     uint32_t padOffset = msgOffset + nQwords;
-    uint32_t byteNum = padOffset << 3;
     uint32_t i;
     uint32_t j;
     // state: |---pkseed--|--adrs--|--msg--|0x1f|-----|
@@ -455,8 +454,8 @@ static int32_t ChainShake256(const uint8_t *x, uint32_t xLen, uint32_t start, ui
             pSt[j] = 0;
         }
 
-        state[byteNum] = 0x1f; // char for padding, sha3_* use 0x06 and shake_* use 0x1f
-        state[CRYPT_SHAKE256_BLOCKSIZE - 1] = 0x80; // 0x80 is the last 1 of pad 10*1 mode
+        pSt[padOffset] = 0x1f; // char for padding, sha3_* use 0x06 and shake_* use 0x1f
+        pSt[CRYPT_SHAKE256_BLOCKSIZE / sizeof(uint64_t) - 1] = (uint64_t)1 << 63;
         SHA3_Keccak(state);
     }
     for (j = 0; j < nQwords; ++j) {
