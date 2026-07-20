@@ -28,7 +28,49 @@
 #include "ml_dsa_local.h"
 #include "crypt_eal_pkey.h"
 #include "eal_pkey_local.h"
+#include "crypto_test_util.h"
 /* END_HEADER */
+
+/**
+ * @test   SDV_CRYPTO_MLDSA_ARMV8_ABI_TC001
+ * @title  ML-DSA Armv8 vector operations preserve the AAPCS64 callee-saved registers.
+ * @precon nan
+ * @brief
+ *    Set distinct canaries in d8-d15 and x19-x28, call each vector operation,
+ *    and verify that every callee-saved register retains its value.
+ * @expect
+ *    MLDSA_VectorsAdd, MLDSA_VectorsSub, and MLDSA_VectorsAddQ preserve the canaries.
+ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_MLDSA_ARMV8_ABI_TC001(void)
+{
+#if !defined(__aarch64__) || !defined(HITLS_CRYPTO_MLDSA_ARMV8)
+    SKIP_TEST();
+#else
+    int32_t t[256] = {0};
+    int32_t a[256] = {0};
+    int32_t b[256] = {0};
+
+    {
+        AARCH64_PUT_CANARY();
+        MLDSA_VectorsAdd(t, a, b);
+        AARCH64_CHECK_CANARY();
+    }
+    {
+        AARCH64_PUT_CANARY();
+        MLDSA_VectorsSub(t, a, b);
+        AARCH64_CHECK_CANARY();
+    }
+    {
+        AARCH64_PUT_CANARY();
+        MLDSA_VectorsAddQ(t, a, b);
+        AARCH64_CHECK_CANARY();
+    }
+EXIT:
+    return;
+#endif
+}
+/* END_CASE */
 
 /* @
 * @test  SDV_CRYPTO_MLDSA_CHECK_KEYPAIR_TC001
@@ -47,8 +89,8 @@ void SDV_CRYPTO_MLDSA_CHECK_KEYPAIR_TC001(int type)
     CRYPT_EAL_PkeyCtx *ctx = NULL;
     CRYPT_EAL_PkeyCtx *pubCtx = NULL;
     CRYPT_EAL_PkeyCtx *prvCtx = NULL;
-    CRYPT_EAL_PkeyPrv prvKey = { 0 };
-    CRYPT_EAL_PkeyPub pubKey = { 0 };
+    CRYPT_EAL_PkeyPrv prvKey = {0};
+    CRYPT_EAL_PkeyPub pubKey = {0};
     uint32_t prvKeyLen = 4896; // max len = 4896
     uint32_t pubKeyLen = 2592; // max len = 2592
     uint8_t *prvKeyBuf = BSL_SAL_Malloc(prvKeyLen);
@@ -74,9 +116,9 @@ void SDV_CRYPTO_MLDSA_CHECK_KEYPAIR_TC001(int type)
     ASSERT_EQ(CRYPT_EAL_PkeySetParaById(pubCtx, type), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_PkeySetParaById(prvCtx, type), CRYPT_SUCCESS);
     prvKey.key.mldsaPrv.len = prvKeyLen;
-    prvKey.key.mldsaPrv.data =  prvKeyBuf;
+    prvKey.key.mldsaPrv.data = prvKeyBuf;
     pubKey.key.mldsaPub.len = pubKeyLen;
-    pubKey.key.mldsaPub.data =  pubKeyBuf;
+    pubKey.key.mldsaPub.data = pubKeyBuf;
 
     ASSERT_EQ(CRYPT_EAL_PkeyGen(ctx), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_PkeyPairCheck(ctx, ctx), CRYPT_SUCCESS);
@@ -175,7 +217,7 @@ void SDV_CRYPTO_MLDSA_CHECK_PRVKEY_TC001(int type)
     TestRandInit();
     CRYPT_EAL_PkeyCtx *ctx = NULL;
     CRYPT_EAL_PkeyCtx *prvCtx = NULL;
-    CRYPT_EAL_PkeyPrv sk = { 0 };
+    CRYPT_EAL_PkeyPrv sk = {0};
     uint32_t skLen = 0;
     CRYPT_ML_DSA_Ctx *tmp = NULL;
 #ifdef HITLS_CRYPTO_PROVIDER
@@ -198,7 +240,7 @@ void SDV_CRYPTO_MLDSA_CHECK_PRVKEY_TC001(int type)
 
     ASSERT_EQ(CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_GET_PRVKEY_LEN, &skLen, sizeof(skLen)), CRYPT_SUCCESS);
     sk.key.mldsaPrv.len = skLen;
-    sk.key.mldsaPrv.data =  BSL_SAL_Malloc(skLen);
+    sk.key.mldsaPrv.data = BSL_SAL_Malloc(skLen);
 
     ASSERT_EQ(CRYPT_EAL_PkeyGen(ctx), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_PkeyGetPrv(ctx, &sk), CRYPT_SUCCESS);

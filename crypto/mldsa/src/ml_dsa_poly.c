@@ -15,7 +15,6 @@
 
 #include "hitls_build.h"
 #ifdef HITLS_CRYPTO_MLDSA
-#include <stdio.h>
 #include <stdint.h>
 #include "crypt_errno.h"
 #include "crypt_sha3.h"
@@ -23,7 +22,6 @@
 #include "bsl_err_internal.h"
 #include "crypt_utils.h"
 #include "ml_dsa_local.h"
-
 
 void MLDSA_VectorsMul(int32_t *t, const int32_t *matrix, const int32_t *s)
 {
@@ -33,9 +31,9 @@ void MLDSA_VectorsMul(int32_t *t, const int32_t *matrix, const int32_t *s)
 }
 
 void MLDSA_MatrixMul(const CRYPT_ML_DSA_Ctx *ctx, int32_t *t, int32_t *const matrix[MLDSA_L_MAX],
-    int32_t *const s[MLDSA_L_MAX])
+                     int32_t *const s[MLDSA_L_MAX])
 {
-    int64_t tmp[MLDSA_N] = { 0 };
+    int64_t tmp[MLDSA_N] = {0};
     for (uint32_t i = 0; i < ctx->info->l; i++) {
         for (uint32_t j = 0; j < MLDSA_N; j++) {
             tmp[j] += (int64_t)matrix[i][j] * s[i][j];
@@ -45,7 +43,6 @@ void MLDSA_MatrixMul(const CRYPT_ML_DSA_Ctx *ctx, int32_t *t, int32_t *const mat
         t[j] = MLDSA_PlantardMulReduce((uint64_t)tmp[j] * (uint64_t)MLDSA_PLANTARD_INV);
     }
 }
-
 
 /**
  * MLDSA_UseHint - Apply hint bits to correct rounding in signature verification
@@ -72,18 +69,18 @@ void MLDSA_UseHint(const CRYPT_ML_DSA_Ctx *ctx, int32_t *const h[MLDSA_K_MAX], i
             // Normalize w[i][j] to positive range [0, q) by adding q if negative
             // if w[i][j] < 0 then w[i][j] >> 31 is 0xFFFFFFFF else w[i][j] >> 31 is 0.
             w[i][j] = w[i][j] + (MLDSA_Q & (w[i][j] >> 31));
-            
+
             // Decompose w[i][j] into high and low parts using Power2Round
             MLDSA_Decompose(ctx, w[i][j], &r1, &r0);
-            
+
             // If hint bit is 0, no correction needed
             if (h[i][j] == 0) {
                 w[i][j] = r1;
                 continue;
             }
-            
+
             // Apply hint correction based on gamma2 parameter
-            if (ctx->info->gamma2 == 95232) {  // 95232 is (MLDSA_Q-1) / 88; for ML-DSA-44/65
+            if (ctx->info->gamma2 == 95232) { // 95232 is (MLDSA_Q-1) / 88; for ML-DSA-44/65
                 // m = (q - 1) / (2*gamma2) = 44
                 // Adjust r1 by ±1 (mod m) based on sign of r0
                 // If r0 > 0: increment r1 (mod m)
@@ -91,7 +88,7 @@ void MLDSA_UseHint(const CRYPT_ML_DSA_Ctx *ctx, int32_t *const h[MLDSA_K_MAX], i
                 w[i][j] = (r0 > 0) ? ((r1 == 43) ? 0 : (r1 + 1)) : ((r1 == 0) ? 43 : (r1 - 1)); // 43 is (m - 1)
                 continue;
             }
-            
+
             // For ML-DSA-87 with gamma2 = 261888
             // m = (q - 1) / (2*gamma2) = 16, result masked to 4 bits
             w[i][j] = ((r0 > 0) ? (r1 + 1) : (r1 - 1)) & 0x0f;
@@ -102,7 +99,7 @@ void MLDSA_UseHint(const CRYPT_ML_DSA_Ctx *ctx, int32_t *const h[MLDSA_K_MAX], i
 void MLDSA_Decompose(const CRYPT_ML_DSA_Ctx *ctx, int32_t r, int32_t *r1, int32_t *r0)
 {
     int32_t t = (int32_t)(((uint32_t)r + 0x7f) >> 7u);
-    if (ctx->info->k == K_VALUE_OF_MLDSA_44) {  // If is MLDSA44
+    if (ctx->info->k == K_VALUE_OF_MLDSA_44) { // If is MLDSA44
         // This is Barrett Modular Multiplication, mod is 2𝛾2.
         t = (t * 11275u + (1 << 23u)) >> 24u;
         t ^= ((43 - t) >> 31u) & t;
@@ -111,9 +108,9 @@ void MLDSA_Decompose(const CRYPT_ML_DSA_Ctx *ctx, int32_t r, int32_t *r1, int32_
         t &= 0x0f;
     }
 
-    *r0 = r - t * 2 * ctx->info->gamma2;  // r1 ← (r+ − r0)/(2𝛾2)
+    *r0 = r - t * 2 * ctx->info->gamma2; // r1 ← (r+ − r0)/(2𝛾2)
     *r0 -= (((MLDSA_Q - 1) / 2 - *r0) >> 31u) & MLDSA_Q;
-    *r1 = t;  // high bits.
+    *r1 = t; // high bits.
 }
 
 void MLDSA_Batch_Decompose(const CRYPT_ML_DSA_Ctx *ctx, int32_t a[MLDSA_N], int32_t r1[MLDSA_N])
@@ -211,7 +208,7 @@ int32_t MLDSA_RejBoundedPolyEta2(int32_t *a, const uint8_t *s)
         return CRYPT_MEM_ALLOC_FAIL;
     }
     GOTO_ERR_IF(hashMethod->init(mdCtx, NULL), ret);
-    GOTO_ERR_IF(hashMethod->update(mdCtx, s, MLDSA_PRIVATE_SEED_LEN + 2), ret);  // k and l used 2 bytes.
+    GOTO_ERR_IF(hashMethod->update(mdCtx, s, MLDSA_PRIVATE_SEED_LEN + 2), ret); // k and l used 2 bytes.
     GOTO_ERR_IF(hashMethod->squeeze(mdCtx, buf, bufLen), ret);
     for (uint32_t i = 0, j = 0; i < MLDSA_N; j++) {
         if (j == CRYPT_SHAKE256_BLOCKSIZE) {
@@ -258,7 +255,7 @@ int32_t MLDSA_RejBoundedPolyEta4(int32_t *a, const uint8_t *s)
         return CRYPT_MEM_ALLOC_FAIL;
     }
     GOTO_ERR_IF(hashMethod->init(mdCtx, NULL), ret);
-    GOTO_ERR_IF(hashMethod->update(mdCtx, s, MLDSA_PRIVATE_SEED_LEN + 2), ret);  // k and l used 2 bytes.
+    GOTO_ERR_IF(hashMethod->update(mdCtx, s, MLDSA_PRIVATE_SEED_LEN + 2), ret); // k and l used 2 bytes.
     GOTO_ERR_IF(hashMethod->squeeze(mdCtx, buf, bufLen), ret);
     for (uint32_t i = 0, j = 0; i < MLDSA_N; j++) {
         if (j == CRYPT_SHAKE256_BLOCKSIZE) {
