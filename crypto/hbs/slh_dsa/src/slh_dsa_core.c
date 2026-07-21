@@ -263,8 +263,7 @@ static void GetTreeAndLeafIdx(const uint8_t *digest, const CryptSlhDsaCtx *ctx, 
     *leafIdx = (uint32_t)ToIntMod(digest + mdIdx + treeIdxLen, leafIdxLen, h / d);
 }
 
-static int32_t SlhDsaSignInternal(CryptSlhDsaCtx *ctx, const uint8_t *msg, uint32_t msgLen, uint8_t *sig,
-                                  uint32_t *sigLen)
+int32_t SlhDsaSignInternal(CryptSlhDsaCtx *ctx, const uint8_t *msg, uint32_t msgLen, uint8_t *sig, uint32_t *sigLen)
 {
     uint32_t n = ctx->para.n;
     uint32_t a = ctx->para.a;
@@ -329,8 +328,7 @@ static int32_t SlhDsaSignInternal(CryptSlhDsaCtx *ctx, const uint8_t *msg, uint3
     return CRYPT_SUCCESS;
 }
 
-static int32_t SlhDsaVerifyInternal(const CryptSlhDsaCtx *ctx, const uint8_t *msg, uint32_t msgLen, const uint8_t *sig,
-                                    uint32_t sigLen)
+int32_t SlhDsaVerifyInternal(const CryptSlhDsaCtx *ctx, const uint8_t *msg, uint32_t msgLen, const uint8_t *sig, uint32_t sigLen)
 {
     uint32_t n = ctx->para.n;
     uint32_t a = ctx->para.a;

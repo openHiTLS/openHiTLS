@@ -143,6 +143,10 @@ void HbsTreeCtx_InitFromSlhDsa(HbsTreeCtx *treeCtx, const CryptSlhDsaCtx *ctx);
 /* Returns the UC or C address operation table (defined in slh_dsa_address.c) */
 const XmssFamilyAdrsOps *SlhDsaGetAdrsOps(bool isCompressed);
 
+int32_t SlhDsaSignInternal(CryptSlhDsaCtx *ctx, const uint8_t *msg, uint32_t msgLen, uint8_t *sig, uint32_t *sigLen);
+
+int32_t SlhDsaVerifyInternal(const CryptSlhDsaCtx *ctx, const uint8_t *msg, uint32_t msgLen, const uint8_t *sig, uint32_t sigLen);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
