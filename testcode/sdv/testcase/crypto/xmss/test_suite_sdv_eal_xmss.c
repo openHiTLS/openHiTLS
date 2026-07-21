@@ -24,12 +24,17 @@
 #include "crypt_params_key.h"
 #include "crypt_utils.h"
 #include "crypt_eal_pkey.h"
+#include "crypt_xmss.h"
+#include "crypt_xmssmt.h"
 #include "crypt_util_rand.h"
 #include "crypt_bn.h"
 #include "eal_pkey_local.h"
 #include "hbs_wots.h"
+#include "stub_utils.h"
 #include "test.h"
 /* END_HEADER */
+
+STUB_DEFINE_RET1(void *, BSL_SAL_Malloc, uint32_t);
 
 static int32_t MockSkDeriveFail(const void *ctx, const void *adrs, uint8_t *out)
 {
@@ -1092,6 +1097,357 @@ void SDV_CRYPTO_XMSS_SET_XDR_ALG_REPEATED_TC001(void)
 
 EXIT:
     CRYPT_EAL_PkeyFreeCtx(pkey);
+    return;
+}
+/* END_CASE */
+
+/* @
+* @test  SDV_CRYPTO_XMSS_CTRL_MATRIX_TC001
+* @title Cover XMSS/XMSSMT control options before and after parameter initialization
+@ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_XMSS_CTRL_MATRIX_TC001(int pkeyType, int algId)
+{
+    TestMemInit();
+    CRYPT_EAL_PkeyCtx *ctx = CRYPT_EAL_PkeyNewCtx((CRYPT_PKEY_AlgId)pkeyType);
+    int32_t paraId = 0;
+    int32_t invalidId = 0;
+    uint32_t value = 0;
+    uint8_t xdrId[4] = {0};
+    ASSERT_TRUE(ctx != NULL);
+
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_GET_PARAID, &paraId, sizeof(paraId)),
+        CRYPT_XMSS_KEYINFO_NOT_SET);
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_GET_XMSS_XDR_ALG_TYPE, xdrId, sizeof(xdrId)),
+        CRYPT_XMSS_KEYINFO_NOT_SET);
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_GET_SIGNLEN, &value, sizeof(value)),
+        CRYPT_XMSS_KEYINFO_NOT_SET);
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_GET_PUBKEY_LEN, &value, sizeof(value)),
+        CRYPT_XMSS_KEYINFO_NOT_SET);
+
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_GET_PARAID, &paraId, sizeof(paraId) - 1U), CRYPT_INVALID_ARG);
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_GET_XMSS_XDR_ALG_TYPE, xdrId, sizeof(xdrId) - 1U),
+        CRYPT_INVALID_ARG);
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_GET_SIGNLEN, &value, sizeof(value) - 1U), CRYPT_INVALID_ARG);
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_GET_PUBKEY_LEN, &value, sizeof(value) - 1U), CRYPT_INVALID_ARG);
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_SET_PARA_BY_ID, &algId, sizeof(algId) - 1U), CRYPT_INVALID_ARG);
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_SET_PARA_BY_ID, &invalidId, sizeof(invalidId)),
+        CRYPT_XMSS_ERR_INVALID_ALGID);
+
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_SET_PARA_BY_ID, &algId, sizeof(algId)), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_GET_PARAID, &paraId, sizeof(paraId)), CRYPT_SUCCESS);
+    ASSERT_EQ(paraId, algId);
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_GET_XMSS_XDR_ALG_TYPE, xdrId, sizeof(xdrId)), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_GET_SIGNLEN, &value, sizeof(value)), CRYPT_SUCCESS);
+    ASSERT_TRUE(value > 0);
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_GET_PUBKEY_LEN, &value, sizeof(value)), CRYPT_SUCCESS);
+    ASSERT_TRUE(value > sizeof(xdrId));
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_SET_XMSS_XDR_ALG_TYPE, xdrId, sizeof(xdrId)),
+        CRYPT_XMSS_CTRL_INIT_REPEATED);
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(ctx, -1, &value, sizeof(value)), CRYPT_NOT_SUPPORT);
+
+EXIT:
+    BSL_ERR_ClearError();
+    CRYPT_EAL_PkeyFreeCtx(ctx);
+    return;
+}
+/* END_CASE */
+
+/* @
+* @test  SDV_CRYPTO_XMSS_CHECK_MATRIX_TC001
+* @title Cover XMSS/XMSSMT private-key and key-pair check combinations
+@ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_XMSS_CHECK_MATRIX_TC001(int pkeyType, int algId, int otherAlgId)
+{
+    TestMemInit();
+    ASSERT_EQ(TestRandInit(), CRYPT_SUCCESS);
+    CRYPT_EAL_PkeyCtx *empty = CRYPT_EAL_PkeyNewCtx((CRYPT_PKEY_AlgId)pkeyType);
+    CRYPT_EAL_PkeyCtx *prv = CRYPT_EAL_PkeyNewCtx((CRYPT_PKEY_AlgId)pkeyType);
+    CRYPT_EAL_PkeyCtx *other = CRYPT_EAL_PkeyNewCtx((CRYPT_PKEY_AlgId)pkeyType);
+    CRYPT_EAL_PkeyCtx *badPub = CRYPT_EAL_PkeyNewCtx((CRYPT_PKEY_AlgId)pkeyType);
+    CRYPT_EAL_PkeyPub pub = {0};
+    uint8_t pubSeed[32] = {0};
+    uint8_t pubRoot[32] = {0};
+    ASSERT_TRUE(empty != NULL);
+    ASSERT_TRUE(prv != NULL);
+    ASSERT_TRUE(other != NULL);
+    ASSERT_TRUE(badPub != NULL);
+
+    ASSERT_EQ(CRYPT_EAL_PkeyPrvCheck(empty), CRYPT_XMSS_KEYINFO_NOT_SET);
+    ASSERT_EQ(CRYPT_EAL_PkeyPairCheck(empty, prv), CRYPT_XMSS_KEYINFO_NOT_SET);
+    ASSERT_EQ(CRYPT_EAL_PkeySetParaById(prv, algId), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeySetParaById(other, otherAlgId), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeySetParaById(badPub, algId), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyPrvCheck(prv), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyPairCheck(prv, other), CRYPT_XMSS_PAIRWISE_CHECK_FAIL);
+
+    ASSERT_EQ(CRYPT_EAL_PkeyGen(prv), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyPairCheck(prv, prv), CRYPT_SUCCESS);
+    pub.id = (CRYPT_PKEY_AlgId)pkeyType;
+    pub.key.xmssPub.seed = pubSeed;
+    pub.key.xmssPub.root = pubRoot;
+    pub.key.xmssPub.len = sizeof(pubSeed);
+    ASSERT_EQ(CRYPT_EAL_PkeyGetPub(prv, &pub), CRYPT_SUCCESS);
+    pubRoot[0] ^= 1U;
+    ASSERT_EQ(CRYPT_EAL_PkeySetPub(badPub, &pub), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyPairCheck(badPub, prv), CRYPT_XMSS_PAIRWISE_CHECK_FAIL);
+
+EXIT:
+    BSL_ERR_ClearError();
+    CRYPT_EAL_PkeyFreeCtx(badPub);
+    CRYPT_EAL_PkeyFreeCtx(other);
+    CRYPT_EAL_PkeyFreeCtx(prv);
+    CRYPT_EAL_PkeyFreeCtx(empty);
+    TestRandDeInit();
+    return;
+}
+/* END_CASE */
+
+/* @
+* @test  SDV_CRYPTO_XMSS_KEY_PARAM_MATRIX_TC001
+* @title Cover structured XMSS/XMSSMT public-key parameter validation
+@ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_XMSS_KEY_PARAM_MATRIX_TC001(int pkeyType, int algId)
+{
+    TestMemInit();
+    CRYPT_EAL_PkeyCtx *ctx = CRYPT_EAL_PkeyNewCtx((CRYPT_PKEY_AlgId)pkeyType);
+    uint8_t xdrId[4] = {0};
+    uint8_t wrongXdrId[4] = {0};
+    uint8_t pubSeed[32] = {0};
+    uint8_t pubRoot[32] = {0};
+    BSL_Param params[4];
+    ASSERT_TRUE(ctx != NULL);
+    ASSERT_EQ(CRYPT_EAL_PkeySetParaById(ctx, algId), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_GET_XMSS_XDR_ALG_TYPE, xdrId, sizeof(xdrId)), CRYPT_SUCCESS);
+
+    BSL_PARAM_InitValue(&params[0], CRYPT_PARAM_XMSS_XDR_TYPE, BSL_PARAM_TYPE_OCTETS, xdrId, sizeof(xdrId));
+    BSL_PARAM_InitValue(&params[1], CRYPT_PARAM_XMSS_PUB_SEED, BSL_PARAM_TYPE_OCTETS, pubSeed, sizeof(pubSeed));
+    BSL_PARAM_InitValue(&params[2], CRYPT_PARAM_XMSS_PUB_ROOT, BSL_PARAM_TYPE_OCTETS, pubRoot, sizeof(pubRoot));
+    params[3] = (BSL_Param)BSL_PARAM_END;
+    ASSERT_EQ(CRYPT_EAL_PkeyGetPubEx(ctx, params), CRYPT_SUCCESS);
+    ASSERT_EQ(params[0].useLen, sizeof(xdrId));
+    ASSERT_EQ(params[1].useLen, sizeof(pubSeed));
+    ASSERT_EQ(params[2].useLen, sizeof(pubRoot));
+
+    params[0].value = wrongXdrId;
+    ASSERT_EQ(CRYPT_EAL_PkeySetPubEx(ctx, params), CRYPT_XMSS_ERR_XDR_ID_UNMATCH);
+    params[0].value = xdrId;
+    params[2].valueLen = sizeof(pubRoot) - 1U;
+    ASSERT_EQ(CRYPT_EAL_PkeySetPubEx(ctx, params), CRYPT_XMSS_ERR_INVALID_KEYLEN);
+    params[2].valueLen = sizeof(pubRoot);
+    ASSERT_EQ(CRYPT_EAL_PkeySetPubEx(ctx, params), CRYPT_SUCCESS);
+
+    params[0].valueLen = sizeof(xdrId) - 1U;
+    ASSERT_EQ(CRYPT_EAL_PkeyGetPubEx(ctx, params), CRYPT_INVALID_KEY);
+    params[0].valueLen = sizeof(xdrId);
+    params[1].valueLen = sizeof(pubSeed) - 1U;
+    ASSERT_EQ(CRYPT_EAL_PkeyGetPubEx(ctx, params), CRYPT_XMSS_LEN_NOT_ENOUGH);
+    params[1].valueLen = sizeof(pubSeed);
+    params[2].value = NULL;
+    ASSERT_EQ(CRYPT_EAL_PkeyGetPubEx(ctx, params), CRYPT_NULL_INPUT);
+
+EXIT:
+    BSL_ERR_ClearError();
+    CRYPT_EAL_PkeyFreeCtx(ctx);
+    return;
+}
+/* END_CASE */
+
+/* @
+* @test  SDV_CRYPTO_XMSS_DIRECT_ERROR_MATRIX_TC001
+* @title Cover direct XMSS/XMSSMT null-input and invalid-XDR paths
+@ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_XMSS_DIRECT_ERROR_MATRIX_TC001(void)
+{
+    TestMemInit();
+    CryptXmssCtx *xmss = CRYPT_XMSS_NewCtx();
+    CryptXmssmtCtx *xmssmt = CRYPT_XMSSMT_NewCtx();
+    uint8_t msg[1] = {0};
+    uint8_t sig[1] = {0};
+    uint8_t invalidXdr[4] = {0xff, 0xff, 0xff, 0xff};
+    uint32_t sigLen = sizeof(sig);
+    ASSERT_TRUE(xmss != NULL);
+    ASSERT_TRUE(xmssmt != NULL);
+
+    ASSERT_TRUE(CRYPT_XMSS_DupCtx(NULL) == NULL);
+    ASSERT_EQ(CRYPT_XMSS_Check(UINT32_MAX, xmss, NULL), CRYPT_INVALID_ARG);
+    ASSERT_EQ(CRYPT_XMSS_Sign(NULL, 0, msg, sizeof(msg), sig, &sigLen), CRYPT_NULL_INPUT);
+    ASSERT_EQ(CRYPT_XMSS_Ctrl(xmss, CRYPT_CTRL_SET_XMSS_XDR_ALG_TYPE, invalidXdr, sizeof(invalidXdr) - 1U),
+        CRYPT_INVALID_ARG);
+    ASSERT_EQ(CRYPT_XMSS_Ctrl(xmss, CRYPT_CTRL_SET_XMSS_XDR_ALG_TYPE, invalidXdr, sizeof(invalidXdr)),
+        CRYPT_XMSS_ERR_INVALID_XDR_ID);
+
+    ASSERT_TRUE(CRYPT_XMSSMT_DupCtx(NULL) == NULL);
+    ASSERT_EQ(CRYPT_XMSSMT_Check(UINT32_MAX, xmssmt, NULL), CRYPT_INVALID_ARG);
+    ASSERT_EQ(CRYPT_XMSSMT_Sign(NULL, 0, msg, sizeof(msg), sig, &sigLen), CRYPT_NULL_INPUT);
+    ASSERT_EQ(CRYPT_XMSSMT_Ctrl(xmssmt, CRYPT_CTRL_SET_XMSS_XDR_ALG_TYPE, invalidXdr,
+        sizeof(invalidXdr) - 1U), CRYPT_INVALID_ARG);
+    ASSERT_EQ(CRYPT_XMSSMT_Ctrl(xmssmt, CRYPT_CTRL_SET_XMSS_XDR_ALG_TYPE, invalidXdr, sizeof(invalidXdr)),
+        CRYPT_XMSS_ERR_INVALID_XDR_ID);
+
+EXIT:
+    BSL_ERR_ClearError();
+    CRYPT_XMSSMT_FreeCtx(xmssmt);
+    CRYPT_XMSS_FreeCtx(xmss);
+    return;
+}
+/* END_CASE */
+
+/* @
+* @test  SDV_CRYPTO_XMSS_ALL_SPEC_BOUNDARY_TC001
+* @title Validate public-key and signature length boundaries for every XMSS/XMSSMT parameter set
+* @brief
+* 1.Compare Ctrl results with the static expected public-key and signature lengths.
+* 2.Check public-key input lengths n-1, n and n+1 and output capacities n-1, n and n+1.
+* 3.Check signature output L-1 and verify input L-1/L+1 without executing an expensive tree traversal.
+* 4.Verify failed short-buffer signing does not consume the stateful XMSS index or overwrite canaries.
+@ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_XMSS_ALL_SPEC_BOUNDARY_TC001(int pkeyType, int algId, int keyLen,
+    int expectedPubLen, int expectedSigLen)
+{
+    TestMemInit();
+    CRYPT_EAL_PkeyCtx *ctx = CRYPT_EAL_PkeyNewCtx((CRYPT_PKEY_AlgId)pkeyType);
+    uint8_t pubSeed[66];
+    uint8_t pubRoot[66];
+    uint8_t prvSeed[64] = {0};
+    uint8_t prvPrf[64] = {0};
+    uint8_t msg[1] = {0x5a};
+    uint8_t sigGuard[3] = {0xa5, 0xa5, 0xa5};
+    CRYPT_EAL_PkeyPub pub = {0};
+    CRYPT_EAL_PkeyPrv prv = {0};
+    CRYPT_EAL_PkeyPrv outPrv = {0};
+    uint32_t actualPubLen = 0;
+    uint32_t actualSigLen = 0;
+    uint32_t shortSigLen = (uint32_t)expectedSigLen - 1U;
+    uint64_t initialIndex = 7;
+
+    ASSERT_TRUE(ctx != NULL);
+    ASSERT_TRUE(keyLen > 0 && keyLen <= (int)sizeof(prvSeed));
+    ASSERT_TRUE(expectedSigLen > 1);
+    ASSERT_EQ(CRYPT_EAL_PkeySetParaById(ctx, algId), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_GET_PUBKEY_LEN, &actualPubLen, sizeof(actualPubLen)),
+        CRYPT_SUCCESS);
+    ASSERT_EQ(actualPubLen, expectedPubLen);
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_GET_SIGNLEN, &actualSigLen, sizeof(actualSigLen)),
+        CRYPT_SUCCESS);
+    ASSERT_EQ(actualSigLen, expectedSigLen);
+
+    memset(pubSeed, 0x11, sizeof(pubSeed));
+    memset(pubRoot, 0x22, sizeof(pubRoot));
+    pub.id = (CRYPT_PKEY_AlgId)pkeyType;
+    pub.key.xmssPub.seed = pubSeed + 1;
+    pub.key.xmssPub.root = pubRoot + 1;
+    pub.key.xmssPub.len = (uint32_t)keyLen - 1U;
+    ASSERT_EQ(CRYPT_EAL_PkeySetPub(ctx, &pub), CRYPT_XMSS_ERR_INVALID_KEYLEN);
+    pub.key.xmssPub.len = (uint32_t)keyLen + 1U;
+    ASSERT_EQ(CRYPT_EAL_PkeySetPub(ctx, &pub), CRYPT_XMSS_ERR_INVALID_KEYLEN);
+    pub.key.xmssPub.len = (uint32_t)keyLen;
+    ASSERT_EQ(CRYPT_EAL_PkeySetPub(ctx, &pub), CRYPT_SUCCESS);
+
+    pub.key.xmssPub.len = (uint32_t)keyLen - 1U;
+    ASSERT_EQ(CRYPT_EAL_PkeyGetPub(ctx, &pub), CRYPT_XMSS_LEN_NOT_ENOUGH);
+    pub.key.xmssPub.len = (uint32_t)keyLen;
+    ASSERT_EQ(CRYPT_EAL_PkeyGetPub(ctx, &pub), CRYPT_SUCCESS);
+    pub.key.xmssPub.len = (uint32_t)keyLen + 1U;
+    pubSeed[keyLen + 1] = 0xa5;
+    pubRoot[keyLen + 1] = 0xa5;
+    ASSERT_EQ(CRYPT_EAL_PkeyGetPub(ctx, &pub), CRYPT_SUCCESS);
+    ASSERT_EQ(pubSeed[0], 0x11);
+    ASSERT_EQ(pubRoot[0], 0x22);
+    ASSERT_EQ(pubSeed[keyLen + 1], 0xa5);
+    ASSERT_EQ(pubRoot[keyLen + 1], 0xa5);
+
+    prv.id = (CRYPT_PKEY_AlgId)pkeyType;
+    prv.key.xmssPrv.index = initialIndex;
+    prv.key.xmssPrv.seed = prvSeed;
+    prv.key.xmssPrv.prf = prvPrf;
+    prv.key.xmssPrv.pub.seed = pubSeed + 1;
+    prv.key.xmssPrv.pub.root = pubRoot + 1;
+    prv.key.xmssPrv.pub.len = (uint32_t)keyLen;
+    ASSERT_EQ(CRYPT_EAL_PkeySetPrv(ctx, &prv), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeySign(ctx, 0, msg, sizeof(msg), sigGuard + 1, &shortSigLen),
+        CRYPT_XMSS_ERR_INVALID_SIG_LEN);
+    ASSERT_EQ(shortSigLen, (uint32_t)expectedSigLen - 1U);
+    ASSERT_EQ(sigGuard[0], 0xa5);
+    ASSERT_EQ(sigGuard[1], 0xa5);
+    ASSERT_EQ(sigGuard[2], 0xa5);
+
+    outPrv.id = (CRYPT_PKEY_AlgId)pkeyType;
+    outPrv.key.xmssPrv.seed = prvSeed;
+    outPrv.key.xmssPrv.prf = prvPrf;
+    outPrv.key.xmssPrv.pub.seed = pubSeed + 1;
+    outPrv.key.xmssPrv.pub.root = pubRoot + 1;
+    outPrv.key.xmssPrv.pub.len = (uint32_t)keyLen;
+    ASSERT_EQ(CRYPT_EAL_PkeyGetPrv(ctx, &outPrv), CRYPT_SUCCESS);
+    ASSERT_TRUE(outPrv.key.xmssPrv.index == initialIndex);
+
+    ASSERT_EQ(CRYPT_EAL_PkeyVerify(ctx, 0, msg, sizeof(msg), sigGuard + 1,
+        (uint32_t)expectedSigLen - 1U), CRYPT_XMSS_ERR_INVALID_SIG_LEN);
+    ASSERT_EQ(CRYPT_EAL_PkeyVerify(ctx, 0, msg, sizeof(msg), sigGuard + 1,
+        (uint32_t)expectedSigLen + 1U), CRYPT_XMSS_ERR_INVALID_SIG_LEN);
+    ASSERT_EQ(sigGuard[0], 0xa5);
+    ASSERT_EQ(sigGuard[1], 0xa5);
+    ASSERT_EQ(sigGuard[2], 0xa5);
+
+EXIT:
+    BSL_ERR_ClearError();
+    CRYPT_EAL_PkeyFreeCtx(ctx);
+    return;
+}
+/* END_CASE */
+
+/* @
+* @test  SDV_CRYPTO_XMSS_SIGN_MALLOC_STUB_TC001
+* @title Sweep every malloc failure point through the XMSS/XMSSMT Sign API
+* @brief
+* 1.Generate a private key and sign successfully to count malloc calls.
+* 2.Fail each malloc once while signing with the same context.
+@ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_XMSS_SIGN_MALLOC_STUB_TC001(int pkeyType, int algId)
+{
+    TestMemInit();
+    ASSERT_EQ(TestRandInit(), CRYPT_SUCCESS);
+    CRYPT_EAL_PkeyCtx *ctx = CRYPT_EAL_PkeyNewCtx((CRYPT_PKEY_AlgId)pkeyType);
+    uint8_t msg[1] = {0x5a};
+    uint8_t *sig = NULL;
+    uint32_t sigLen = 0;
+    uint32_t totalMallocCount = 0;
+    uint32_t outLen = 0;
+
+    ASSERT_TRUE(ctx != NULL);
+    ASSERT_EQ(CRYPT_EAL_PkeySetParaById(ctx, algId), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_GET_SIGNLEN, &sigLen, sizeof(sigLen)), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyGen(ctx), CRYPT_SUCCESS);
+    sig = (uint8_t *)malloc(sigLen);
+    ASSERT_TRUE(sig != NULL);
+
+    STUB_REPLACE(BSL_SAL_Malloc, STUB_BSL_SAL_Malloc);
+    STUB_EnableMallocFail(false);
+    STUB_ResetMallocCount();
+    outLen = sigLen;
+    ASSERT_EQ(CRYPT_EAL_PkeySign(ctx, 0, msg, sizeof(msg), sig, &outLen), CRYPT_SUCCESS);
+    totalMallocCount = STUB_GetMallocCallCount();
+
+    STUB_EnableMallocFail(true);
+    for (uint32_t i = 0; i < totalMallocCount; i++) {
+        outLen = sigLen;
+        STUB_ResetMallocCount();
+        STUB_SetMallocFailIndex(i);
+        (void)CRYPT_EAL_PkeySign(ctx, 0, msg, sizeof(msg), sig, &outLen);
+    }
+
+EXIT:
+    STUB_EnableMallocFail(false);
+    STUB_RESTORE(BSL_SAL_Malloc);
+    CRYPT_EAL_PkeyFreeCtx(ctx);
+    free(sig);
+    TestRandDeInit();
+    BSL_ERR_ClearError();
     return;
 }
 /* END_CASE */

@@ -21,12 +21,17 @@
 #include "bsl_sal.h"
 #include "crypt_errno.h"
 #include "crypt_algid.h"
+#include "crypt_params_key.h"
 #include "crypt_eal_pkey.h"
+#include "crypt_slh_dsa.h"
 #include "crypt_util_rand.h"
 #include "crypt_bn.h"
 #include "eal_pkey_local.h"
+#include "stub_utils.h"
 #include "test.h"
 /* END_HEADER */
+
+STUB_DEFINE_RET1(void *, BSL_SAL_Malloc, uint32_t);
 
 uint32_t g_stubRandCounter = 0;
 uint8_t **g_stubRand = NULL;
@@ -676,6 +681,370 @@ void SDV_CRYPTO_SLH_DSA_SIGN_ADDRAND_TC002(int id)
 EXIT:
     CRYPT_EAL_PkeyFreeCtx(pkey);
     TestRandDeInit();
+    return;
+}
+/* END_CASE */
+
+static void InitSlhDsaPubParams(BSL_Param *params, uint8_t *pubSeed, uint8_t *pubRoot, uint32_t keyLen)
+{
+    BSL_PARAM_InitValue(&params[0], CRYPT_PARAM_SLH_DSA_PUB_SEED, BSL_PARAM_TYPE_OCTETS, pubSeed, keyLen);
+    BSL_PARAM_InitValue(&params[1], CRYPT_PARAM_SLH_DSA_PUB_ROOT, BSL_PARAM_TYPE_OCTETS, pubRoot, keyLen);
+    params[2] = (BSL_Param)BSL_PARAM_END;
+}
+
+static void InitSlhDsaPrvParams(BSL_Param *params, uint8_t *prvSeed, uint8_t *prvPrf, uint8_t *pubSeed,
+    uint8_t *pubRoot, uint32_t keyLen)
+{
+    BSL_PARAM_InitValue(&params[0], CRYPT_PARAM_SLH_DSA_PRV_SEED, BSL_PARAM_TYPE_OCTETS, prvSeed, keyLen);
+    BSL_PARAM_InitValue(&params[1], CRYPT_PARAM_SLH_DSA_PRV_PRF, BSL_PARAM_TYPE_OCTETS, prvPrf, keyLen);
+    BSL_PARAM_InitValue(&params[2], CRYPT_PARAM_SLH_DSA_PUB_SEED, BSL_PARAM_TYPE_OCTETS, pubSeed, keyLen);
+    BSL_PARAM_InitValue(&params[3], CRYPT_PARAM_SLH_DSA_PUB_ROOT, BSL_PARAM_TYPE_OCTETS, pubRoot, keyLen);
+    params[4] = (BSL_Param)BSL_PARAM_END;
+}
+
+/* @
+* @test  SDV_CRYPTO_SLH_DSA_DIRECT_KEY_EX_TC001
+* @title Cover direct SLH-DSA structured key APIs and parameter validation
+@ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_SLH_DSA_DIRECT_KEY_EX_TC001(void)
+{
+    TestMemInit();
+    CryptSlhDsaCtx *ctx = CRYPT_SLH_DSA_NewCtx();
+    int32_t algId = CRYPT_SLH_DSA_SHA2_128S;
+    uint8_t prvSeed[16] = {0};
+    uint8_t prvPrf[16] = {0};
+    uint8_t pubSeed[16] = {0};
+    uint8_t pubRoot[16] = {0};
+    BSL_Param pubParams[3];
+    BSL_Param prvParams[5];
+    ASSERT_TRUE(ctx != NULL);
+    ASSERT_EQ(CRYPT_SLH_DSA_Ctrl(ctx, CRYPT_CTRL_SET_PARA_BY_ID, &algId, sizeof(algId)), CRYPT_SUCCESS);
+    InitSlhDsaPubParams(pubParams, pubSeed, pubRoot, sizeof(pubSeed));
+    InitSlhDsaPrvParams(prvParams, prvSeed, prvPrf, pubSeed, pubRoot, sizeof(prvSeed));
+
+    ASSERT_EQ(CRYPT_SLH_DSA_GetPubKeyEx(ctx, NULL), CRYPT_NULL_INPUT);
+    ASSERT_EQ(CRYPT_SLH_DSA_GetPubKeyEx(ctx, pubParams), CRYPT_SLHDSA_ERR_NO_PUBKEY);
+    ASSERT_EQ(CRYPT_SLH_DSA_GetPrvKeyEx(ctx, prvParams), CRYPT_SLHDSA_ERR_NO_PRVKEY);
+
+    pubParams[1].value = NULL;
+    ASSERT_EQ(CRYPT_SLH_DSA_SetPubKeyEx(ctx, pubParams), CRYPT_NULL_INPUT);
+    pubParams[1].value = pubRoot;
+    pubParams[1].valueLen = sizeof(pubRoot) - 1U;
+    ASSERT_EQ(CRYPT_SLH_DSA_SetPubKeyEx(ctx, pubParams), CRYPT_SLHDSA_ERR_INVALID_KEYLEN);
+    pubParams[1].valueLen = sizeof(pubRoot);
+    ASSERT_EQ(CRYPT_SLH_DSA_SetPubKeyEx(ctx, pubParams), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_SLH_DSA_GetPubKeyEx(ctx, pubParams), CRYPT_SUCCESS);
+    ASSERT_EQ(pubParams[0].useLen, sizeof(pubSeed));
+    ASSERT_EQ(pubParams[1].useLen, sizeof(pubRoot));
+
+    prvParams[1].valueLen = sizeof(prvPrf) - 1U;
+    ASSERT_EQ(CRYPT_SLH_DSA_SetPrvKeyEx(ctx, prvParams), CRYPT_SLHDSA_ERR_INVALID_KEYLEN);
+    prvParams[1].valueLen = sizeof(prvPrf);
+    ASSERT_EQ(CRYPT_SLH_DSA_SetPrvKeyEx(ctx, prvParams), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_SLH_DSA_GetPrvKeyEx(ctx, prvParams), CRYPT_SUCCESS);
+    ASSERT_EQ(prvParams[0].useLen, sizeof(prvSeed));
+    ASSERT_EQ(prvParams[1].useLen, sizeof(prvPrf));
+
+EXIT:
+    BSL_ERR_ClearError();
+    CRYPT_SLH_DSA_FreeCtx(ctx);
+    return;
+}
+/* END_CASE */
+
+/* @
+* @test  SDV_CRYPTO_SLH_DSA_CTRL_MATRIX_TC001
+* @title Cover SLH-DSA control options, security categories, and boundary lengths
+@ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_SLH_DSA_CTRL_MATRIX_TC001(int algId, int keyLen, int expectedSecBits)
+{
+    TestMemInit();
+    CryptSlhDsaCtx *ctx = CRYPT_SLH_DSA_NewCtx();
+    int32_t gotAlgId = 0;
+    int32_t secBits = 0;
+    int32_t flag = 1;
+    int32_t invalidAlgId = 0;
+    uint32_t value = 0;
+    uint8_t context[256] = {0};
+    uint8_t addrand[32] = {0};
+    ASSERT_TRUE(ctx != NULL);
+
+    ASSERT_EQ(CRYPT_SLH_DSA_Ctrl(NULL, CRYPT_CTRL_GET_SIGNLEN, &value, sizeof(value)), CRYPT_NULL_INPUT);
+    ASSERT_EQ(CRYPT_SLH_DSA_Ctrl(ctx, CRYPT_CTRL_GET_PARAID, &gotAlgId, sizeof(gotAlgId)),
+        CRYPT_SLHDSA_ERR_INVALID_ALGID);
+    ASSERT_EQ(CRYPT_SLH_DSA_Ctrl(ctx, CRYPT_CTRL_GET_SIGNLEN, &value, sizeof(value)), CRYPT_SUCCESS);
+    ASSERT_EQ(value, 0);
+    ASSERT_EQ(CRYPT_SLH_DSA_Ctrl(ctx, CRYPT_CTRL_GET_SLH_DSA_KEY_LEN, &value, sizeof(value)), CRYPT_SUCCESS);
+    ASSERT_EQ(value, 0);
+    ASSERT_EQ(CRYPT_SLH_DSA_Ctrl(ctx, CRYPT_CTRL_GET_SECBITS, &secBits, sizeof(secBits)), CRYPT_INVALID_ARG);
+    ASSERT_EQ(CRYPT_SLH_DSA_Ctrl(ctx, CRYPT_CTRL_SET_PARA_BY_ID, &algId, sizeof(algId) - 1U), CRYPT_INVALID_ARG);
+    ASSERT_EQ(CRYPT_SLH_DSA_Ctrl(ctx, CRYPT_CTRL_SET_PARA_BY_ID, &invalidAlgId, sizeof(invalidAlgId)),
+        CRYPT_SLHDSA_ERR_INVALID_ALGID);
+
+    ASSERT_EQ(CRYPT_SLH_DSA_Ctrl(ctx, CRYPT_CTRL_SET_PARA_BY_ID, &algId, sizeof(algId)), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_SLH_DSA_Ctrl(ctx, CRYPT_CTRL_GET_PARAID, &gotAlgId, sizeof(gotAlgId)), CRYPT_SUCCESS);
+    ASSERT_EQ(gotAlgId, algId);
+    ASSERT_EQ(CRYPT_SLH_DSA_Ctrl(ctx, CRYPT_CTRL_GET_SECBITS, &secBits, sizeof(secBits)), CRYPT_SUCCESS);
+    ASSERT_EQ(secBits, expectedSecBits);
+    ASSERT_EQ(CRYPT_SLH_DSA_Ctrl(ctx, CRYPT_CTRL_GET_SLH_DSA_KEY_LEN, &value, sizeof(value)), CRYPT_SUCCESS);
+    ASSERT_EQ(value, keyLen);
+    ASSERT_EQ(CRYPT_SLH_DSA_Ctrl(ctx, CRYPT_CTRL_GET_SIGNLEN, &value, sizeof(value)), CRYPT_SUCCESS);
+    ASSERT_TRUE(value > 0);
+
+    ASSERT_EQ(CRYPT_SLH_DSA_Ctrl(ctx, CRYPT_CTRL_SET_CTX_INFO, context, sizeof(context)),
+        CRYPT_SLHDSA_ERR_CONTEXT_LEN_OVERFLOW);
+    ASSERT_EQ(CRYPT_SLH_DSA_Ctrl(ctx, CRYPT_CTRL_SET_CTX_INFO, context, sizeof(context) - 1U), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_SLH_DSA_Ctrl(ctx, CRYPT_CTRL_SET_SLH_DSA_ADDRAND, addrand, (uint32_t)keyLen - 1U),
+        CRYPT_INVALID_ARG);
+    ASSERT_EQ(CRYPT_SLH_DSA_Ctrl(ctx, CRYPT_CTRL_SET_SLH_DSA_ADDRAND, addrand, (uint32_t)keyLen), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_SLH_DSA_Ctrl(ctx, CRYPT_CTRL_SET_DETERMINISTIC_FLAG, &flag, sizeof(flag) - 1U),
+        CRYPT_INVALID_ARG);
+    ASSERT_EQ(CRYPT_SLH_DSA_Ctrl(ctx, CRYPT_CTRL_SET_DETERMINISTIC_FLAG, &flag, sizeof(flag)), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_SLH_DSA_Ctrl(ctx, CRYPT_CTRL_SET_PREHASH_MODE, &flag, sizeof(flag) - 1U), CRYPT_INVALID_ARG);
+    ASSERT_EQ(CRYPT_SLH_DSA_Ctrl(ctx, CRYPT_CTRL_SET_PREHASH_MODE, &flag, sizeof(flag)), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_SLH_DSA_Ctrl(ctx, CRYPT_CTRL_CLEAN_PUB_KEY, &value, sizeof(value)), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_SLH_DSA_Ctrl(ctx, -1, &value, sizeof(value)), CRYPT_NOT_SUPPORT);
+    ASSERT_EQ(CRYPT_SLH_DSA_Ctrl(ctx, CRYPT_CTRL_SET_PARA_BY_ID, &algId, sizeof(algId)),
+        CRYPT_SLHDSA_CTRL_INIT_REPEATED);
+
+EXIT:
+    BSL_ERR_ClearError();
+    CRYPT_SLH_DSA_FreeCtx(ctx);
+    return;
+}
+/* END_CASE */
+
+/* @
+* @test  SDV_CRYPTO_SLH_DSA_SIGN_VERIFY_PARAM_TC001
+* @title Cover SLH-DSA sign and verify argument short-circuit paths
+@ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_SLH_DSA_SIGN_VERIFY_PARAM_TC001(void)
+{
+    TestMemInit();
+    CryptSlhDsaCtx *ctx = CRYPT_SLH_DSA_NewCtx();
+    int32_t algId = CRYPT_SLH_DSA_SHA2_128S;
+    int32_t prehash = 1;
+    uint8_t msg[1] = {0};
+    uint8_t sig[1] = {0};
+    uint32_t sigLen = 0;
+    uint8_t prvSeed[16] = {0};
+    uint8_t prvPrf[16] = {0};
+    uint8_t pubSeed[16] = {0};
+    uint8_t pubRoot[16] = {0};
+    BSL_Param prvParams[5];
+    ASSERT_TRUE(ctx != NULL);
+
+    ASSERT_EQ(CRYPT_SLH_DSA_Sign(NULL, 0, msg, sizeof(msg), sig, &sigLen), CRYPT_NULL_INPUT);
+    ASSERT_EQ(CRYPT_SLH_DSA_Verify(ctx, 0, msg, sizeof(msg), NULL, sizeof(sig)), CRYPT_NULL_INPUT);
+
+    ASSERT_EQ(CRYPT_SLH_DSA_Ctrl(ctx, CRYPT_CTRL_SET_PARA_BY_ID, &algId, sizeof(algId)), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_SLH_DSA_Sign(ctx, 0, msg, sizeof(msg), sig, &sigLen), CRYPT_SLHDSA_ERR_NO_PRVKEY);
+    ASSERT_EQ(CRYPT_SLH_DSA_Verify(ctx, 0, msg, sizeof(msg), sig, sizeof(sig)), CRYPT_SLHDSA_ERR_NO_PUBKEY);
+    InitSlhDsaPrvParams(prvParams, prvSeed, prvPrf, pubSeed, pubRoot, sizeof(prvSeed));
+    ASSERT_EQ(CRYPT_SLH_DSA_SetPrvKeyEx(ctx, prvParams), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_SLH_DSA_Sign(ctx, 0, msg, sizeof(msg), sig, &sigLen), CRYPT_SLHDSA_ERR_INVALID_SIG_LEN);
+    ASSERT_EQ(CRYPT_SLH_DSA_Verify(ctx, 0, msg, sizeof(msg), sig, sizeof(sig)),
+        CRYPT_SLHDSA_ERR_INVALID_SIG_LEN);
+
+    ASSERT_EQ(CRYPT_SLH_DSA_Ctrl(ctx, CRYPT_CTRL_SET_PREHASH_MODE, &prehash, sizeof(prehash)), CRYPT_SUCCESS);
+    sigLen = sizeof(sig);
+    ASSERT_EQ(CRYPT_SLH_DSA_Sign(ctx, -1, msg, sizeof(msg), sig, &sigLen),
+        CRYPT_SLHDSA_ERR_PREHASH_ID_NOT_SUPPORTED);
+    ASSERT_EQ(CRYPT_SLH_DSA_Verify(ctx, -1, msg, sizeof(msg), sig, sizeof(sig)),
+        CRYPT_SLHDSA_ERR_PREHASH_ID_NOT_SUPPORTED);
+
+EXIT:
+    BSL_ERR_ClearError();
+    CRYPT_SLH_DSA_FreeCtx(ctx);
+    return;
+}
+/* END_CASE */
+
+/* @
+* @test  SDV_CRYPTO_SLH_DSA_ALL_SPEC_BOUNDARY_TC001
+* @title Validate key and signature length boundaries for every SLH-DSA parameter set
+* @brief
+* 1.Compare Ctrl results with static expected key-component and signature lengths.
+* 2.Check public/private key lengths n-1, n and n+1.
+* 3.Check context, addrand, short signature output and invalid verify input boundaries.
+* 4.Verify failed operations do not overwrite input/output canaries.
+@ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_SLH_DSA_ALL_SPEC_BOUNDARY_TC001(int algId, int keyLen, int expectedSigLen)
+{
+    TestMemInit();
+    CryptSlhDsaCtx *ctx = CRYPT_SLH_DSA_NewCtx();
+    uint8_t prvSeed[34];
+    uint8_t prvPrf[34];
+    uint8_t pubSeed[34];
+    uint8_t pubRoot[34];
+    uint8_t context[256] = {0};
+    uint8_t msg[1] = {0x5a};
+    uint8_t sigGuard[3] = {0xa5, 0xa5, 0xa5};
+    BSL_Param pubParams[3];
+    BSL_Param prvParams[5];
+    uint32_t actualKeyLen = 0;
+    uint32_t actualSigLen = 0;
+    uint32_t shortSigLen = (uint32_t)expectedSigLen - 1U;
+
+    ASSERT_TRUE(ctx != NULL);
+    ASSERT_TRUE(keyLen > 0 && keyLen <= 32);
+    ASSERT_TRUE(expectedSigLen > 1);
+    memset(prvSeed, 0x11, sizeof(prvSeed));
+    memset(prvPrf, 0x22, sizeof(prvPrf));
+    memset(pubSeed, 0x33, sizeof(pubSeed));
+    memset(pubRoot, 0x44, sizeof(pubRoot));
+    ASSERT_EQ(CRYPT_SLH_DSA_Ctrl(ctx, CRYPT_CTRL_SET_PARA_BY_ID, &algId, sizeof(algId)), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_SLH_DSA_Ctrl(ctx, CRYPT_CTRL_GET_SLH_DSA_KEY_LEN, &actualKeyLen, sizeof(actualKeyLen)),
+        CRYPT_SUCCESS);
+    ASSERT_EQ(actualKeyLen, keyLen);
+    ASSERT_EQ(CRYPT_SLH_DSA_Ctrl(ctx, CRYPT_CTRL_GET_SIGNLEN, &actualSigLen, sizeof(actualSigLen)),
+        CRYPT_SUCCESS);
+    ASSERT_EQ(actualSigLen, expectedSigLen);
+
+    InitSlhDsaPubParams(pubParams, pubSeed + 1, pubRoot + 1, (uint32_t)keyLen - 1U);
+    ASSERT_EQ(CRYPT_SLH_DSA_SetPubKeyEx(ctx, pubParams), CRYPT_SLHDSA_ERR_INVALID_KEYLEN);
+    InitSlhDsaPubParams(pubParams, pubSeed + 1, pubRoot + 1, (uint32_t)keyLen + 1U);
+    ASSERT_EQ(CRYPT_SLH_DSA_SetPubKeyEx(ctx, pubParams), CRYPT_SLHDSA_ERR_INVALID_KEYLEN);
+    InitSlhDsaPubParams(pubParams, pubSeed + 1, pubRoot + 1, (uint32_t)keyLen);
+    ASSERT_EQ(CRYPT_SLH_DSA_SetPubKeyEx(ctx, pubParams), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_SLH_DSA_GetPubKeyEx(ctx, pubParams), CRYPT_SUCCESS);
+    ASSERT_EQ(pubParams[0].useLen, keyLen);
+    ASSERT_EQ(pubParams[1].useLen, keyLen);
+    pubParams[0].valueLen = (uint32_t)keyLen - 1U;
+    ASSERT_EQ(CRYPT_SLH_DSA_GetPubKeyEx(ctx, pubParams), CRYPT_SLHDSA_ERR_INVALID_KEYLEN);
+    pubParams[0].valueLen = (uint32_t)keyLen + 1U;
+    pubParams[1].valueLen = (uint32_t)keyLen + 1U;
+    ASSERT_EQ(CRYPT_SLH_DSA_GetPubKeyEx(ctx, pubParams), CRYPT_SLHDSA_ERR_INVALID_KEYLEN);
+
+    InitSlhDsaPrvParams(prvParams, prvSeed + 1, prvPrf + 1, pubSeed + 1, pubRoot + 1,
+        (uint32_t)keyLen - 1U);
+    ASSERT_EQ(CRYPT_SLH_DSA_SetPrvKeyEx(ctx, prvParams), CRYPT_SLHDSA_ERR_INVALID_KEYLEN);
+    InitSlhDsaPrvParams(prvParams, prvSeed + 1, prvPrf + 1, pubSeed + 1, pubRoot + 1,
+        (uint32_t)keyLen + 1U);
+    ASSERT_EQ(CRYPT_SLH_DSA_SetPrvKeyEx(ctx, prvParams), CRYPT_SLHDSA_ERR_INVALID_KEYLEN);
+    InitSlhDsaPrvParams(prvParams, prvSeed + 1, prvPrf + 1, pubSeed + 1, pubRoot + 1,
+        (uint32_t)keyLen);
+    ASSERT_EQ(CRYPT_SLH_DSA_SetPrvKeyEx(ctx, prvParams), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_SLH_DSA_GetPrvKeyEx(ctx, prvParams), CRYPT_SUCCESS);
+    ASSERT_EQ(prvParams[0].useLen, keyLen);
+    ASSERT_EQ(prvParams[1].useLen, keyLen);
+
+    if (algId == CRYPT_SLH_DSA_SHA2_128S) {
+        ASSERT_EQ(CRYPT_SLH_DSA_Ctrl(ctx, CRYPT_CTRL_SET_CTX_INFO, context, 255), CRYPT_SUCCESS);
+        ASSERT_EQ(CRYPT_SLH_DSA_Ctrl(ctx, CRYPT_CTRL_SET_CTX_INFO, context, 256),
+            CRYPT_SLHDSA_ERR_CONTEXT_LEN_OVERFLOW);
+    }
+    if (algId == CRYPT_SLH_DSA_SHA2_128S || algId == CRYPT_SLH_DSA_SHA2_192S ||
+        algId == CRYPT_SLH_DSA_SHA2_256S) {
+        ASSERT_EQ(CRYPT_SLH_DSA_Ctrl(ctx, CRYPT_CTRL_SET_SLH_DSA_ADDRAND, pubSeed + 1,
+            (uint32_t)keyLen - 1U), CRYPT_INVALID_ARG);
+        ASSERT_EQ(CRYPT_SLH_DSA_Ctrl(ctx, CRYPT_CTRL_SET_SLH_DSA_ADDRAND, pubSeed + 1,
+            (uint32_t)keyLen + 1U), CRYPT_INVALID_ARG);
+        ASSERT_EQ(CRYPT_SLH_DSA_Ctrl(ctx, CRYPT_CTRL_SET_SLH_DSA_ADDRAND, pubSeed + 1,
+            (uint32_t)keyLen), CRYPT_SUCCESS);
+    }
+
+    ASSERT_EQ(CRYPT_SLH_DSA_Sign(ctx, 0, msg, sizeof(msg), sigGuard + 1, &shortSigLen),
+        CRYPT_SLHDSA_ERR_INVALID_SIG_LEN);
+    ASSERT_EQ(shortSigLen, (uint32_t)expectedSigLen - 1U);
+    ASSERT_EQ(CRYPT_SLH_DSA_Verify(ctx, 0, msg, sizeof(msg), sigGuard + 1,
+        (uint32_t)expectedSigLen - 1U), CRYPT_SLHDSA_ERR_INVALID_SIG_LEN);
+    ASSERT_EQ(CRYPT_SLH_DSA_Verify(ctx, 0, msg, sizeof(msg), sigGuard + 1,
+        (uint32_t)expectedSigLen + 1U), CRYPT_SLHDSA_ERR_INVALID_SIG_LEN);
+    ASSERT_EQ(sigGuard[0], 0xa5);
+    ASSERT_EQ(sigGuard[1], 0xa5);
+    ASSERT_EQ(sigGuard[2], 0xa5);
+    ASSERT_EQ(prvSeed[0], 0x11);
+    ASSERT_EQ(prvSeed[keyLen + 1], 0x11);
+    ASSERT_EQ(pubRoot[0], 0x44);
+    ASSERT_EQ(pubRoot[keyLen + 1], 0x44);
+
+EXIT:
+    BSL_ERR_ClearError();
+    CRYPT_SLH_DSA_FreeCtx(ctx);
+    return;
+}
+/* END_CASE */
+
+static CryptSlhDsaCtx *SlhDsaNewSignCtx(int32_t algId, uint32_t keyLen)
+{
+    CryptSlhDsaCtx *ctx = CRYPT_SLH_DSA_NewCtx();
+    uint8_t prvSeed[32] = {0};
+    uint8_t prvPrf[32] = {0};
+    uint8_t pubSeed[32] = {0};
+    uint8_t pubRoot[32] = {0};
+    BSL_Param prvParams[5];
+    int32_t deterministic = 1;
+    if (ctx == NULL) {
+        return NULL;
+    }
+    if (CRYPT_SLH_DSA_Ctrl(ctx, CRYPT_CTRL_SET_PARA_BY_ID, &algId, sizeof(algId)) != CRYPT_SUCCESS ||
+        CRYPT_SLH_DSA_Ctrl(ctx, CRYPT_CTRL_SET_DETERMINISTIC_FLAG, &deterministic,
+            sizeof(deterministic)) != CRYPT_SUCCESS) {
+        CRYPT_SLH_DSA_FreeCtx(ctx);
+        return NULL;
+    }
+    memset(prvSeed, 0x11, keyLen);
+    memset(prvPrf, 0x22, keyLen);
+    memset(pubSeed, 0x33, keyLen);
+    memset(pubRoot, 0x44, keyLen);
+    InitSlhDsaPrvParams(prvParams, prvSeed, prvPrf, pubSeed, pubRoot, keyLen);
+    if (CRYPT_SLH_DSA_SetPrvKeyEx(ctx, prvParams) != CRYPT_SUCCESS) {
+        CRYPT_SLH_DSA_FreeCtx(ctx);
+        return NULL;
+    }
+    return ctx;
+}
+
+/* @
+* @test  SDV_CRYPTO_SLH_DSA_SIGN_MALLOC_STUB_TC001
+* @title Sweep every malloc failure point through the SLH-DSA Sign API
+* @brief
+* 1.Sign successfully to count malloc calls.
+* 2.Fail each malloc once while signing with the same context.
+@ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_SLH_DSA_SIGN_MALLOC_STUB_TC001(int algId, int keyLen)
+{
+    TestMemInit();
+    CryptSlhDsaCtx *ctx = NULL;
+    uint8_t msg[1] = {0x5a};
+    uint8_t *sig = NULL;
+    uint32_t sigLen = 0;
+    uint32_t totalMallocCount = 0;
+    uint32_t outLen = 0;
+
+    ctx = SlhDsaNewSignCtx(algId, (uint32_t)keyLen);
+    ASSERT_TRUE(ctx != NULL);
+    ASSERT_EQ(CRYPT_SLH_DSA_Ctrl(ctx, CRYPT_CTRL_GET_SIGNLEN, &sigLen, sizeof(sigLen)), CRYPT_SUCCESS);
+    sig = (uint8_t *)malloc(sigLen);
+    ASSERT_TRUE(sig != NULL);
+
+    STUB_REPLACE(BSL_SAL_Malloc, STUB_BSL_SAL_Malloc);
+    STUB_EnableMallocFail(false);
+    STUB_ResetMallocCount();
+    outLen = sigLen;
+    ASSERT_EQ(CRYPT_SLH_DSA_Sign(ctx, 0, msg, sizeof(msg), sig, &outLen), CRYPT_SUCCESS);
+    totalMallocCount = STUB_GetMallocCallCount();
+
+    STUB_EnableMallocFail(true);
+    for (uint32_t i = 0; i < totalMallocCount; i++) {
+        outLen = sigLen;
+        STUB_ResetMallocCount();
+        STUB_SetMallocFailIndex(i);
+        (void)CRYPT_SLH_DSA_Sign(ctx, 0, msg, sizeof(msg), sig, &outLen);
+    }
+
+EXIT:
+    STUB_EnableMallocFail(false);
+    STUB_RESTORE(BSL_SAL_Malloc);
+    CRYPT_SLH_DSA_FreeCtx(ctx);
+    free(sig);
+    BSL_ERR_ClearError();
     return;
 }
 /* END_CASE */
