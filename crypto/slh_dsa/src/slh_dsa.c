@@ -450,7 +450,7 @@ static void GetTreeAndLeafIdx(const uint8_t *digest, const CryptSlhDsaCtx *ctx, 
     *leafIdx = (uint32_t)ToIntMod(digest + mdIdx + treeIdxLen, leafIdxLen, h / d);
 }
 
-int32_t CRYPT_SLH_DSA_SignInternal(CryptSlhDsaCtx *ctx, const uint8_t *msg, uint32_t msgLen, uint8_t *sig, uint32_t *sigLen)
+int32_t SlhDsaSignInternal(CryptSlhDsaCtx *ctx, const uint8_t *msg, uint32_t msgLen, uint8_t *sig, uint32_t *sigLen)
 {
     uint32_t n = ctx->para.n;
     uint32_t a = ctx->para.a;
@@ -512,7 +512,7 @@ int32_t CRYPT_SLH_DSA_SignInternal(CryptSlhDsaCtx *ctx, const uint8_t *msg, uint
     return CRYPT_SUCCESS;
 }
 
-int32_t CRYPT_SLH_DSA_VerifyInternal(const CryptSlhDsaCtx *ctx, const uint8_t *msg, uint32_t msgLen, const uint8_t *sig, uint32_t sigLen)
+int32_t SlhDsaVerifyInternal(const CryptSlhDsaCtx *ctx, const uint8_t *msg, uint32_t msgLen, const uint8_t *sig, uint32_t sigLen)
 {
     int32_t ret;
     uint32_t n = ctx->para.n;
@@ -662,7 +662,7 @@ int32_t CRYPT_SLH_DSA_Sign(CryptSlhDsaCtx *ctx, int32_t algId, const uint8_t *da
     if (ret != CRYPT_SUCCESS) {
         return ret;
     }
-    ret = CRYPT_SLH_DSA_SignInternal(ctx, mp, mpLen, sign, signLen);
+    ret = SlhDsaSignInternal(ctx, mp, mpLen, sign, signLen);
     if (ret != CRYPT_SUCCESS) {
         BSL_SAL_Free(mp);
         BSL_ERR_PUSH_ERROR(ret);
@@ -696,7 +696,7 @@ int32_t CRYPT_SLH_DSA_Verify(const CryptSlhDsaCtx *ctx, int32_t algId, const uin
     if (ret != CRYPT_SUCCESS) {
         return ret;
     }
-    ret = CRYPT_SLH_DSA_VerifyInternal(ctx, mp, mpLen, sign, signLen);
+    ret = SlhDsaVerifyInternal(ctx, mp, mpLen, sign, signLen);
     BSL_SAL_Free(mp);
     return ret;
 }
