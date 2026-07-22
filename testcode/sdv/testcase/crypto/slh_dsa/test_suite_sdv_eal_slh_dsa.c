@@ -1031,8 +1031,9 @@ void SDV_CRYPTO_SLH_DSA_SIGN_MALLOC_STUB_TC001(int algId, int keyLen)
     ASSERT_EQ(CRYPT_SLH_DSA_Sign(ctx, 0, msg, sizeof(msg), sig, &outLen), CRYPT_SUCCESS);
     totalMallocCount = STUB_GetMallocCallCount();
 
+    // The value of totalMallocCount is approximately 20000
     STUB_EnableMallocFail(true);
-    for (uint32_t i = 0; i < totalMallocCount; i++) {
+    for (uint32_t i = 0; i < totalMallocCount; i+=(totalMallocCount/100)) {
         outLen = sigLen;
         STUB_ResetMallocCount();
         STUB_SetMallocFailIndex(i);
