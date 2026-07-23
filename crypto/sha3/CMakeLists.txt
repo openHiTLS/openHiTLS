@@ -18,7 +18,7 @@ set(_sha3_sources
 if(HITLS_CRYPTO_SHA3_ARMV8)
     list(APPEND _sha3_sources ${CMAKE_CURRENT_SOURCE_DIR}/src/asm/sha3_armv8.S ${CMAKE_CURRENT_SOURCE_DIR}/src/asm_sha3.c)
 else()
-    list(APPEND _sha3_sources ${CMAKE_CURRENT_SOURCE_DIR}/src/noasm_sha3.c)
+    list(APPEND _sha3_sources ${CMAKE_CURRENT_SOURCE_DIR}/src/noasm_sha3.c ${CMAKE_CURRENT_SOURCE_DIR}/src/public_sha3.c)
 endif()
 
 add_library(_hitls_crypto_sha3 OBJECT ${_sha3_sources})
