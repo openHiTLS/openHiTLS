@@ -94,7 +94,6 @@
 #ifdef HITLS_CRYPTO_MLKEM
 
 #include "crypt_arm.h"
-#include "ml_kem_macros_armv8.S"
 
 CRYPT_AARCH64_ARCH_BASE
 

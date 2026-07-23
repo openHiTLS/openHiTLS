@@ -139,4 +139,189 @@ extern uint32_t g_cryptArmCpuInfo;
 #  endif /* __APPLE__ */
 #endif /* __aarch64__ */
 
+/*
+ * Big-endian safe AArch64 NEON load/store helpers.
+ *
+ * A plain ldr/str q uses the architectural byte ordering. On big-endian
+ * targets, rev64 plus ext restores the element ordering expected by NEON
+ * arithmetic. Store helpers clobber the source vector register.
+ */
+#if defined(__ASSEMBLER__) && defined(__aarch64__)
+#  ifdef HITLS_BIG_ENDIAN
+.macro VLDQ_8H vd, base, offset=#0
+    ldr     q\vd, [\base, \offset]
+    rev64   v\vd\().8h, v\vd\().8h
+    ext     v\vd\().16b, v\vd\().16b, v\vd\().16b, #8
+.endm
+
+.macro VSTQ_8H vd, base, offset=#0
+    ext     v\vd\().16b, v\vd\().16b, v\vd\().16b, #8
+    rev64   v\vd\().8h, v\vd\().8h
+    str     q\vd, [\base, \offset]
+.endm
+
+.macro VLDQ_16B vd, base, offset=#0
+    ldr     q\vd, [\base, \offset]
+    rev64   v\vd\().16b, v\vd\().16b
+    ext     v\vd\().16b, v\vd\().16b, v\vd\().16b, #8
+.endm
+
+.macro VSTQ_16B vd, base, offset=#0
+    ext     v\vd\().16b, v\vd\().16b, v\vd\().16b, #8
+    rev64   v\vd\().16b, v\vd\().16b
+    str     q\vd, [\base, \offset]
+.endm
+
+.macro VLDQ_4S vd, base, offset=#0
+    ldr     q\vd, [\base, \offset]
+    rev64   v\vd\().4s, v\vd\().4s
+    ext     v\vd\().16b, v\vd\().16b, v\vd\().16b, #8
+.endm
+
+.macro VSTQ_4S vd, base, offset=#0
+    ext     v\vd\().16b, v\vd\().16b, v\vd\().16b, #8
+    rev64   v\vd\().4s, v\vd\().4s
+    str     q\vd, [\base, \offset]
+.endm
+
+.macro VLDQ_LDUR_8H vd, base, offset=#0
+    ldur    q\vd, [\base, \offset]
+    rev64   v\vd\().8h, v\vd\().8h
+    ext     v\vd\().16b, v\vd\().16b, v\vd\().16b, #8
+.endm
+
+.macro VSTQ_STUR_8H vd, base, offset=#0
+    ext     v\vd\().16b, v\vd\().16b, v\vd\().16b, #8
+    rev64   v\vd\().8h, v\vd\().8h
+    stur    q\vd, [\base, \offset]
+.endm
+
+.macro VLDQ_8H_POST vd, base, inc=#16
+    ldr     q\vd, [\base], \inc
+    rev64   v\vd\().8h, v\vd\().8h
+    ext     v\vd\().16b, v\vd\().16b, v\vd\().16b, #8
+.endm
+
+.macro VSTQ_8H_POST vd, base, inc=#16
+    ext     v\vd\().16b, v\vd\().16b, v\vd\().16b, #8
+    rev64   v\vd\().8h, v\vd\().8h
+    str     q\vd, [\base], \inc
+.endm
+
+.macro VLDQ_16B_POST vd, base, inc=#16
+    ldr     q\vd, [\base], \inc
+    rev64   v\vd\().16b, v\vd\().16b
+    ext     v\vd\().16b, v\vd\().16b, v\vd\().16b, #8
+.endm
+
+.macro VSTQ_16B_POST vd, base, inc=#16
+    ext     v\vd\().16b, v\vd\().16b, v\vd\().16b, #8
+    rev64   v\vd\().16b, v\vd\().16b
+    str     q\vd, [\base], \inc
+.endm
+
+.macro VLDQ_4S_POST vd, base, inc=#16
+    ldr     q\vd, [\base], \inc
+    rev64   v\vd\().4s, v\vd\().4s
+    ext     v\vd\().16b, v\vd\().16b, v\vd\().16b, #8
+.endm
+
+.macro VSTQ_4S_POST vd, base, inc=#16
+    ext     v\vd\().16b, v\vd\().16b, v\vd\().16b, #8
+    rev64   v\vd\().4s, v\vd\().4s
+    str     q\vd, [\base], \inc
+.endm
+
+.macro VLDQ_16B_INDEX vd, base, index
+    ldr     q\vd, [\base, \index, lsl #4]
+    rev64   v\vd\().16b, v\vd\().16b
+    ext     v\vd\().16b, v\vd\().16b, v\vd\().16b, #8
+.endm
+
+.macro VFIX_8H reg
+    rev64   v\reg\().8h, v\reg\().8h
+    ext     v\reg\().16b, v\reg\().16b, v\reg\().16b, #8
+.endm
+
+.macro VFIX_16B reg
+    rev64   v\reg\().16b, v\reg\().16b
+    ext     v\reg\().16b, v\reg\().16b, v\reg\().16b, #8
+.endm
+
+.macro VFIX_4S reg
+    rev64   v\reg\().4s, v\reg\().4s
+    ext     v\reg\().16b, v\reg\().16b, v\reg\().16b, #8
+.endm
+#  else
+.macro VLDQ_8H vd, base, offset=#0
+    ldr     q\vd, [\base, \offset]
+.endm
+
+.macro VSTQ_8H vd, base, offset=#0
+    str     q\vd, [\base, \offset]
+.endm
+
+.macro VLDQ_16B vd, base, offset=#0
+    ldr     q\vd, [\base, \offset]
+.endm
+
+.macro VSTQ_16B vd, base, offset=#0
+    str     q\vd, [\base, \offset]
+.endm
+
+.macro VLDQ_4S vd, base, offset=#0
+    ldr     q\vd, [\base, \offset]
+.endm
+
+.macro VSTQ_4S vd, base, offset=#0
+    str     q\vd, [\base, \offset]
+.endm
+
+.macro VLDQ_LDUR_8H vd, base, offset=#0
+    ldur    q\vd, [\base, \offset]
+.endm
+
+.macro VSTQ_STUR_8H vd, base, offset=#0
+    stur    q\vd, [\base, \offset]
+.endm
+
+.macro VLDQ_8H_POST vd, base, inc=#16
+    ldr     q\vd, [\base], \inc
+.endm
+
+.macro VSTQ_8H_POST vd, base, inc=#16
+    str     q\vd, [\base], \inc
+.endm
+
+.macro VLDQ_16B_POST vd, base, inc=#16
+    ldr     q\vd, [\base], \inc
+.endm
+
+.macro VSTQ_16B_POST vd, base, inc=#16
+    str     q\vd, [\base], \inc
+.endm
+
+.macro VLDQ_4S_POST vd, base, inc=#16
+    ldr     q\vd, [\base], \inc
+.endm
+
+.macro VSTQ_4S_POST vd, base, inc=#16
+    str     q\vd, [\base], \inc
+.endm
+
+.macro VLDQ_16B_INDEX vd, base, index
+    ldr     q\vd, [\base, \index, lsl #4]
+.endm
+
+.macro VFIX_8H reg
+.endm
+
+.macro VFIX_16B reg
+.endm
+
+.macro VFIX_4S reg
+.endm
+#  endif /* HITLS_BIG_ENDIAN */
+#endif /* __ASSEMBLER__ && __aarch64__ */
+
 #endif

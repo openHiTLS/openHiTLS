@@ -18,8 +18,6 @@ set(_mlkem_sources ${CMAKE_CURRENT_SOURCE_DIR}/src/ml_kem.c
 if(HITLS_CRYPTO_MLKEM_ARMV8)
     file(GLOB _mlkem_armv8_cglues ${CMAKE_CURRENT_SOURCE_DIR}/src/asm_*.c)
     file(GLOB _mlkem_armv8 ${CMAKE_CURRENT_SOURCE_DIR}/src/asm/*.S)
-    # ml_kem_macros_armv8.S is a header-only include file
-    list(FILTER _mlkem_armv8 EXCLUDE REGEX ".*ml_kem_macros_armv8\\.S$")
     list(APPEND _mlkem_sources ${_mlkem_armv8} ${_mlkem_armv8_cglues})
 else()
     list(APPEND _mlkem_sources ${CMAKE_CURRENT_SOURCE_DIR}/src/ml_kem_poly.c ${CMAKE_CURRENT_SOURCE_DIR}/src/ml_kem_ntt.c)

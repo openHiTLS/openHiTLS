@@ -134,10 +134,10 @@ BatchDecompose32:
 
     mov count, #(256 / 4 / 4)
 
-    ldr q9, [x0]
-    ldr q22, [x0, #16]
-    ldr q25, [x0, #32]
-    ldr q16, [x0, #48]
+    VLDQ_4S 9, x0
+    VLDQ_4S 22, x0, #16
+    VLDQ_4S 25, x0, #32
+    VLDQ_4S 16, x0, #48
     cmlt v7.4s, v9.4s, #0
     cmlt v15.4s, v22.4s, #0
     cmlt v6.4s, v25.4s, #0
@@ -153,13 +153,13 @@ BatchDecompose32:
     sqdmulh v5.4s, v10.4s, v28.4s
     sub x4, x4, #1
     .Ldecompose_loop_32:
-    ldr q7, [x0, #64]
+    VLDQ_4S 7, x0, #64
     cmgt v4.4s, v22.4s, v29.4s
     sqdmulh v11.4s, v22.4s, v28.4s
-    ldr q15, [x0, #80]
-    ldr q6, [x0, #96]
+    VLDQ_4S 15, x0, #80
+    VLDQ_4S 6, x0, #96
     add v25.4s, v16.4s, v25.4s
-    ldr q16, [x0, #112]
+    VLDQ_4S 16, x0, #112
     sqdmulh v12.4s, v9.4s, v28.4s
     cmgt v20.4s, v9.4s, v29.4s
     srshr v8.4s, v5.4s, #18
@@ -179,27 +179,27 @@ BatchDecompose32:
     mls v25.4s, v27.4s, v30.4s
     add v19.4s, v22.4s, v4.4s
     bic v2.16b, v24.16b, v4.16b
-    str q1, [x0], #64
+    VSTQ_4S_POST 1, x0, #64
     cmlt v12.4s, v15.4s, #0
     add v1.4s, v9.4s, v20.4s
     cmlt v0.4s, v16.4s, #0
-    str q19, [x0, #-32]
+    VSTQ_4S 19, x0, #-32
     bic v7.16b, v11.16b, v20.16b
     and v18.16b, v31.16b, v18.16b
     add v19.4s, v25.4s, v5.4s
-    str q2, [x1, #32]
+    VSTQ_4S 2, x1, #32
     bic v8.16b, v8.16b, v14.16b
-    str q1, [x0, #-48]
+    VSTQ_4S 1, x0, #-48
     bic v9.16b, v27.16b, v5.16b
     and v2.16b, v31.16b, v12.16b
     cmgt v14.4s, v10.4s, v29.4s
     add v22.4s, v6.4s, v18.4s
-    str q7, [x1, #16]
-    str q19, [x0, #-16]
+    VSTQ_4S 7, x1, #16
+    VSTQ_4S 19, x0, #-16
     sqdmulh v5.4s, v10.4s, v28.4s
     and v25.16b, v31.16b, v0.16b
-    str q8, [x1], #64
-    str q9, [x1, #-16]
+    VSTQ_4S_POST 8, x1, #64
+    VSTQ_4S 9, x1, #-16
     add v9.4s, v15.4s, v2.4s
     subs x4, x4, 1
     cbnz x4, .Ldecompose_loop_32
@@ -218,22 +218,22 @@ BatchDecompose32:
     mls v22.4s, v7.4s, v30.4s
     bic v7.16b, v7.16b, v16.16b
     srshr v28.4s, v28.4s, #18
-    str q15, [x1], #64
+    VSTQ_4S_POST 15, x1, #64
     mls v9.4s, v6.4s, v30.4s
     bic v15.16b, v6.16b, v2.16b
     add v6.4s, v10.4s, v14.4s
-    str q7, [x1, #-32]
+    VSTQ_4S 7, x1, #-32
     mls v25.4s, v28.4s, v30.4s
     bic v30.16b, v28.16b, v29.16b
     add v22.4s, v22.4s, v16.4s
-    str q15, [x1, #-48]
-    str q6, [x0], #64
+    VSTQ_4S 15, x1, #-48
+    VSTQ_4S_POST 6, x0, #64
     add v9.4s, v9.4s, v2.4s
-    str q30, [x1, #-16]
-    str q22, [x0, #-32]
+    VSTQ_4S 30, x1, #-16
+    VSTQ_4S 22, x0, #-32
     add v29.4s, v25.4s, v29.4s
-    str q9, [x0, #-48]
-    str q29, [x0, #-16]
+    VSTQ_4S 9, x0, #-48
+    VSTQ_4S 29, x0, #-16
     ldp d8, d9, [sp, #16*0]
     ldp d10, d11, [sp, #16*1]
     ldp d12, d13, [sp, #16*2]
@@ -272,10 +272,10 @@ AARCH64_PACIASP
 
     mov count, #(256 / 4 / 4)
 
-    ldr q5, [x0, #16]
-    ldr q13, [x0, #48]
-    ldr q27, [x0, #32]
-    ldr q18, [x0]
+    VLDQ_4S 5, x0, #16
+    VLDQ_4S 13, x0, #48
+    VLDQ_4S 27, x0, #32
+    VLDQ_4S 18, x0
     cmlt v14.4s, v5.4s, #0
     cmlt v1.4s, v13.4s, #0
     cmlt v19.4s, v27.4s, #0
@@ -298,16 +298,16 @@ AARCH64_PACIASP
     srshr v25.4s, v18.4s, #17
     sub x4, x4, #1
     .Ldecompose_loop_88:
-    ldr q18, [x0, #80]
+    VLDQ_4S 18, x0, #80
     cmgt v20.4s, v5.4s, v29.4s
     mls v5.4s, v24.4s, v30.4s
     srshr v0.4s, v17.4s, #17
-    ldr q19, [x0, #112]
-    ldr q1, [x0, #96]
+    VLDQ_4S 19, x0, #112
+    VLDQ_4S 1, x0, #96
     cmgt v12.4s, v13.4s, v29.4s
     mls v13.4s, v25.4s, v30.4s
     srshr v17.4s, v15.4s, #17
-    ldr q27, [x0, #64]
+    VLDQ_4S 27, x0, #64
     mls v9.4s, v0.4s, v30.4s
     cmlt v15.4s, v18.4s, #0
     cmlt v23.4s, v19.4s, #0
@@ -322,30 +322,30 @@ AARCH64_PACIASP
     add v5.4s, v18.4s, v21.4s
     add v14.4s, v14.4s, v4.4s
     and v9.16b, v31.16b, v15.16b
-    str q11, [x0], #64
+    VSTQ_4S_POST 11, x0, #64
     add v18.4s, v13.4s, v12.4s
     add v13.4s, v1.4s, v16.4s
     bic v1.16b, v25.16b, v12.16b
     sqdmulh v15.4s, v5.4s, v28.4s
-    str q3, [x0, #-48]
+    VSTQ_4S 3, x0, #-48
     add v9.4s, v27.4s, v9.4s
-    str q14, [x0, #-16]
+    VSTQ_4S 14, x0, #-16
     bic v21.16b, v24.16b, v20.16b
-    str q18, [x0, #-32]
+    VSTQ_4S 18, x0, #-32
     sqdmulh v18.4s, v13.4s, v28.4s
     add v14.4s, v19.4s, v23.4s
     bic v27.16b, v17.16b, v4.16b
     sqdmulh v17.4s, v9.4s, v28.4s
     bic v19.16b, v0.16b, v22.16b
-    str q21, [x1, #16]
+    VSTQ_4S 21, x1, #16
     srshr v24.4s, v15.4s, #17
     sqdmulh v15.4s, v14.4s, v28.4s
     srshr v25.4s, v18.4s, #17
-    str q27, [x1, #48]
-    str q1, [x1, #32]
+    VSTQ_4S 27, x1, #48
+    VSTQ_4S 1, x1, #32
     cmgt v22.4s, v9.4s, v29.4s
     cmgt v4.4s, v14.4s, v29.4s
-    str q19, [x1], #64
+    VSTQ_4S_POST 19, x1, #64
     subs x4, x4, 1
     cbnz x4, .Ldecompose_loop_88
     cmgt v27.4s, v13.4s, v29.4s
@@ -359,19 +359,19 @@ AARCH64_PACIASP
     bic v29.16b, v25.16b, v27.16b
     bic v28.16b, v24.16b, v26.16b
     mls v14.4s, v18.4s, v30.4s
-    str q0, [x1], #64
+    VSTQ_4S_POST 0, x1, #64
     add v30.4s, v13.4s, v27.4s
-    str q29, [x1, #-32]
+    VSTQ_4S 29, x1, #-32
     bic v29.16b, v18.16b, v4.16b
-    str q28, [x1, #-48]
+    VSTQ_4S 28, x1, #-48
     add v5.4s, v5.4s, v26.4s
     add v18.4s, v9.4s, v22.4s
-    str q30, [x0, #32]
-    str q29, [x1, #-16]
+    VSTQ_4S 30, x0, #32
+    VSTQ_4S 29, x1, #-16
     add v28.4s, v14.4s, v4.4s
-    str q5, [x0, #16]
-    str q18, [x0], #64
-    str q28, [x0, #-16]
+    VSTQ_4S 5, x0, #16
+    VSTQ_4S_POST 18, x0, #64
+    VSTQ_4S 28, x0, #-16
     ldp d8, d9, [sp, #16*0]
     ldp d10, d11, [sp, #16*1]
     ldp d12, d13, [sp, #16*2]
@@ -455,10 +455,10 @@ MLDSA_Batch_Decompose:
 .endm
 
 .macro load_idxs
-    ldr q_idx0, [arr_idxs]
-    ldr q_idx1, [arr_idxs, #1*16]
-    ldr q_idx2, [arr_idxs, #2*16]
-    ldr q_idx3, [arr_idxs, #3*16]
+    VLDQ_16B 24, arr_idxs
+    VLDQ_16B 25, arr_idxs, #1*16
+    VLDQ_16B 26, arr_idxs, #2*16
+    VLDQ_16B 27, arr_idxs, #3*16
 .endm
 
     /* Parameters */
@@ -521,9 +521,13 @@ AARCH64_PACIASP
     mov count, #(64/4)
 
 .polyz_unpack_17_loop:
-    ldr q_buf1, [buf, #16]
-    ldr s_buf2, [buf, #32]
-    ldr q_buf0, [buf], #36
+    VLDQ_16B 1, buf, #16
+    add xtmp, buf, #32
+    ld1 {buf2.b}[0], [xtmp], #1
+    ld1 {buf2.b}[1], [xtmp], #1
+    ld1 {buf2.b}[2], [xtmp], #1
+    ld1 {buf2.b}[3], [xtmp]
+    VLDQ_16B_POST 0, buf, #36
 
     tbl tmp0.16b, {buf0.16b}, idx0.16b
     tbl tmp1.16b, {buf0.16b - buf1.16b}, idx1.16b
@@ -535,10 +539,10 @@ AARCH64_PACIASP
     trim_map_17 tmp2
     trim_map_17 tmp3
 
-    str q_tmp1, [output, #1*16]
-    str q_tmp2, [output, #2*16]
-    str q_tmp3, [output, #3*16]
-    str q_tmp0, [output], #4*16
+    VSTQ_4S 5, output, #1*16
+    VSTQ_4S 6, output, #2*16
+    VSTQ_4S 7, output, #3*16
+    VSTQ_4S_POST 4, output, #4*16
 
     subs count, count, #1
     bne .polyz_unpack_17_loop
@@ -565,9 +569,10 @@ PolyzUnpack19Asm:
     mov count, #(64/4)
 
 .polyz_unpack_19_loop:
-    ldr q_buf1, [buf, #16]
-    ldr d_buf2, [buf, #32]
-    ldr q_buf0, [buf], #40
+    VLDQ_16B 1, buf, #16
+    add xtmp, buf, #32
+    ld1 {buf2.8b}, [xtmp]
+    VLDQ_16B_POST 0, buf, #40
 
     tbl tmp0.16b, {buf0.16b}, idx0.16b
     tbl tmp1.16b, {buf0.16b - buf1.16b}, idx1.16b
@@ -579,10 +584,10 @@ PolyzUnpack19Asm:
     trim_map_19 tmp2
     trim_map_19 tmp3
 
-    str q_tmp1, [output, #1*16]
-    str q_tmp2, [output, #2*16]
-    str q_tmp3, [output, #3*16]
-    str q_tmp0, [output], #4*16
+    VSTQ_4S 5, output, #1*16
+    VSTQ_4S 6, output, #2*16
+    VSTQ_4S 7, output, #3*16
+    VSTQ_4S_POST 4, output, #4*16
 
     subs count, count, #1
     bne .polyz_unpack_19_loop
@@ -761,10 +766,10 @@ AARCH64_PACIASP
 
     mov count, #(256 / 8 / 4)
 
-    ldr q27, [x1, #64]
-    ldr q9, [x1, #112]
-    ldr q11, [x1, #96]
-    ldr q23, [x1, #80]
+    VLDQ_4S 27, x1, #64
+    VLDQ_4S 9, x1, #112
+    VLDQ_4S 11, x1, #96
+    VLDQ_4S 23, x1, #80
     add v6.4s, v27.4s, v31.4s
     add v24.4s, v9.4s, v31.4s
     add v18.4s, v23.4s, v31.4s
@@ -776,125 +781,125 @@ AARCH64_PACIASP
     orr v24.16b, v24.16b, v24.16b
     sshr v6.4s, v6.4s, #13
     shl v7.4s, v13.4s, #13
-    str q24, [x1, #112]
+    VSTQ_4S 24, x1, #112
     sub v2.4s, v9.4s, v18.4s
     shl v0.4s, v19.4s, #13
     orr v3.16b, v6.16b, v6.16b
     shl v10.4s, v6.4s, #13
-    ldr q24, [x1, #32]
+    VLDQ_4S 24, x1, #32
     sub x4, x4, #1
 
 .Lpower2round_loop:
-    ldr q28, [x1]
+    VLDQ_4S 28, x1
     sub v25.4s, v27.4s, v0.4s
-    ldr q18, [x1, #48]
-    ldr q27, [x1, #192]
+    VLDQ_4S 18, x1, #48
+    VLDQ_4S 27, x1, #192
     add v26.4s, v24.4s, v31.4s
-    ldr q6, [x1, #16]
+    VLDQ_4S 6, x1, #16
     sub v20.4s, v23.4s, v7.4s
-    ldr q23, [x1, #208]
-    ldr q9, [x1, #240]
-    str q3, [x1, #96]
+    VLDQ_4S 23, x1, #208
+    VLDQ_4S 9, x1, #240
+    VSTQ_4S 3, x1, #96
     orr v13.16b, v13.16b, v13.16b
     orr v3.16b, v19.16b, v19.16b
     add v15.4s, v28.4s, v31.4s
     add v30.4s, v18.4s, v31.4s
-    str q2, [x0, #112]
-    str q20, [x0, #80]
+    VSTQ_4S 2, x0, #112
+    VSTQ_4S 20, x0, #80
     add v7.4s, v6.4s, v31.4s
     sshr v0.4s, v26.4s, #13
     add v14.4s, v23.4s, v31.4s
-    str q13, [x1, #80]
+    VSTQ_4S 13, x1, #80
     add v13.4s, v9.4s, v31.4s
     add v19.4s, v27.4s, v31.4s
     sshr v16.4s, v30.4s, #13
     sshr v26.4s, v7.4s, #13
-    str q3, [x1, #64]
+    VSTQ_4S 3, x1, #64
     orr v22.16b, v0.16b, v0.16b
     sub v29.4s, v11.4s, v10.4s
     sshr v5.4s, v13.4s, #13
-    ldr q11, [x1, #224]
+    VLDQ_4S 11, x1, #224
     sshr v20.4s, v15.4s, #13
     orr v15.16b, v16.16b, v16.16b
     shl v7.4s, v26.4s, #13
-    str q22, [x1, #32]
+    VSTQ_4S 22, x1, #32
     orr v2.16b, v26.16b, v26.16b
     shl v3.4s, v5.4s, #13
-    str q25, [x0, #64]
+    VSTQ_4S 25, x0, #64
     orr v12.16b, v5.16b, v5.16b
-    str q15, [x1, #48]
+    VSTQ_4S 15, x1, #48
     add v13.4s, v11.4s, v31.4s
     shl v15.4s, v20.4s, #13
     shl v26.4s, v16.4s, #13
     sub v5.4s, v6.4s, v7.4s
-    str q2, [x1, #16]
-    str q12, [x1, #240]
+    VSTQ_4S 2, x1, #16
+    VSTQ_4S 12, x1, #240
     orr v20.16b, v20.16b, v20.16b
     shl v6.4s, v0.4s, #13
     sub v2.4s, v28.4s, v15.4s
-    str q29, [x0, #96]
+    VSTQ_4S 29, x0, #96
     sshr v19.4s, v19.4s, #13
     sshr v15.4s, v13.4s, #13
     sub v29.4s, v18.4s, v26.4s
-    str q5, [x0, #16]
+    VSTQ_4S 5, x0, #16
     sub v26.4s, v24.4s, v6.4s
     sshr v13.4s, v14.4s, #13
-    ldr q24, [x1, #160]
-    str q2, [x0], #128
+    VLDQ_4S 24, x1, #160
+    VSTQ_4S_POST 2, x0, #128
     sub v2.4s, v9.4s, v3.4s
     shl v0.4s, v19.4s, #13
     shl v10.4s, v15.4s, #13
-    str q20, [x1], #128
+    VSTQ_4S_POST 20, x1, #128
     orr v3.16b, v15.16b, v15.16b
-    str q26, [x0, #-96]
-    str q29, [x0, #-80]
+    VSTQ_4S 26, x0, #-96
+    VSTQ_4S 29, x0, #-80
     shl v7.4s, v13.4s, #13
     subs x4, x4, 1
     cbnz x4, .Lpower2round_loop
 
     add v9.4s, v24.4s, v31.4s
-    ldr q18, [x1, #48]
+    VLDQ_4S 18, x1, #48
     sub v6.4s, v11.4s, v10.4s
-    ldr q28, [x1]
+    VLDQ_4S 28, x1
     sub v0.4s, v27.4s, v0.4s
-    ldr q10, [x1, #16]
+    VLDQ_4S 10, x1, #16
     orr v13.16b, v13.16b, v13.16b
-    str q2, [x0, #112]
+    VSTQ_4S 2, x0, #112
     orr v27.16b, v19.16b, v19.16b
-    str q6, [x0, #96]
-    str q3, [x1, #96]
+    VSTQ_4S 6, x0, #96
+    VSTQ_4S 3, x1, #96
     sshr v6.4s, v9.4s, #13
-    str q0, [x0, #64]
+    VSTQ_4S 0, x0, #64
     sub v20.4s, v23.4s, v7.4s
     add v23.4s, v18.4s, v31.4s
-    str q27, [x1, #64]
+    VSTQ_4S 27, x1, #64
     add v9.4s, v10.4s, v31.4s
     add v11.4s, v28.4s, v31.4s
     orr v27.16b, v6.16b, v6.16b
-    str q13, [x1, #80]
+    VSTQ_4S 13, x1, #80
     shl v6.4s, v6.4s, #13
-    str q20, [x0, #80]
+    VSTQ_4S 20, x0, #80
     sshr v23.4s, v23.4s, #13
     sshr v11.4s, v11.4s, #13
     sub v6.4s, v24.4s, v6.4s
-    str q27, [x1, #32]
+    VSTQ_4S 27, x1, #32
     sshr v9.4s, v9.4s, #13
     shl v27.4s, v23.4s, #13
     orr v2.16b, v23.16b, v23.16b
     shl v23.4s, v11.4s, #13
     orr v24.16b, v11.16b, v11.16b
-    str q6, [x0, #32]
+    VSTQ_4S 6, x0, #32
     orr v11.16b, v9.16b, v9.16b
     shl v9.4s, v9.4s, #13
     sub v6.4s, v18.4s, v27.4s
-    str q2, [x1, #48]
-    str q24, [x1], #128
+    VSTQ_4S 2, x1, #48
+    VSTQ_4S_POST 24, x1, #128
     sub v24.4s, v28.4s, v23.4s
-    str q11, [x1, #-112]
+    VSTQ_4S 11, x1, #-112
     sub v18.4s, v10.4s, v9.4s
-    str q6, [x0, #48]
-    str q24, [x0], #128
-    str q18, [x0, #-112]
+    VSTQ_4S 6, x0, #48
+    VSTQ_4S_POST 24, x0, #128
+    VSTQ_4S 18, x0, #-112
 
     ldp d14, d15, [sp, #48]
     ldp d12, d13, [sp, #32]
@@ -1162,10 +1167,10 @@ MldRejUniformAsm:
         fmov rec_idx_2, t2
         fmov rec_idx_3, t3
 
-        ldr table0q, [table_idx, rec_idx_0, lsl #4]
-        ldr table1q, [table_idx, rec_idx_1, lsl #4]
-        ldr table2q, [table_idx, rec_idx_2, lsl #4]
-        ldr table3q, [table_idx, rec_idx_3, lsl #4]
+        VLDQ_16B_INDEX 24, table_idx, rec_idx_0
+        VLDQ_16B_INDEX 25, table_idx, rec_idx_1
+        VLDQ_16B_INDEX 26, table_idx, rec_idx_2
+        VLDQ_16B_INDEX 27, table_idx, rec_idx_3
 
         // Compute number of valid coefficients
         cnt tmp0.16b, tmp0.16b
@@ -1190,16 +1195,16 @@ MldRejUniformAsm:
         tbl val2.16b, {val2.16b}, table2.16b
         tbl val3.16b, {val3.16b}, table3.16b
 
-        str val0q, [output_tmp]
+        VSTQ_4S 16, output_tmp
         add output_tmp, output_tmp, ctr0, lsl #2
 
-        str val1q, [output_tmp]
+        VSTQ_4S 17, output_tmp
         add output_tmp, output_tmp, ctr1, lsl #2
 
-        str val2q, [output_tmp]
+        VSTQ_4S 18, output_tmp
         add output_tmp, output_tmp, ctr2, lsl #2
 
-        str val3q, [output_tmp]
+        VSTQ_4S 19, output_tmp
         add output_tmp, output_tmp, ctr3, lsl #2
 
         add ctr01, ctr0, ctr1
@@ -1244,8 +1249,8 @@ MldRejUniformAsm:
         fmov    rec_idx_0, t0
         fmov    rec_idx_1, t1
 
-        ldr     table0q, [table_idx, rec_idx_0, lsl #4]
-        ldr     table1q, [table_idx, rec_idx_1, lsl #4]
+        VLDQ_16B_INDEX 24, table_idx, rec_idx_0
+        VLDQ_16B_INDEX 25, table_idx, rec_idx_1
 
         cnt     tmp0.16b, tmp0.16b
         cnt     tmp1.16b, tmp1.16b
@@ -1259,10 +1264,10 @@ MldRejUniformAsm:
         tbl     val0.16b, {val0.16b}, table0.16b
         tbl     val1.16b, {val1.16b}, table1.16b
 
-        str     val0q, [output_tmp]
+        VSTQ_4S 16, output_tmp
         add     output_tmp, output_tmp, ctr0, lsl #2
 
-        str     val1q, [output_tmp]
+        VSTQ_4S 17, output_tmp
         add     output_tmp, output_tmp, ctr1, lsl #2
 
         add     count, count, ctr0
@@ -1277,14 +1282,14 @@ MldRejUniformAsm:
     mov output_tmp, output_tmp_base
 
 .rej_uniform_final_copy:
-        ldr val0q, [output_tmp], #64
-        ldr val1q, [output_tmp, #-48]
-        ldr val2q, [output_tmp, #-32]
-        ldr val3q, [output_tmp, #-16]
-        str val0q, [output], #64
-        str val1q, [output, #-48]
-        str val2q, [output, #-32]
-        str val3q, [output, #-16]
+        VLDQ_4S_POST 16, output_tmp, #64
+        VLDQ_4S 17, output_tmp, #-48
+        VLDQ_4S 18, output_tmp, #-32
+        VLDQ_4S 19, output_tmp, #-16
+        VSTQ_4S_POST 16, output, #64
+        VSTQ_4S 17, output, #-48
+        VSTQ_4S 18, output, #-32
+        VSTQ_4S 19, output, #-16
         add final_copy_count, final_copy_count, #16
         cmp final_copy_count, #MLDSA_N
         b.lt .rej_uniform_final_copy
@@ -1532,8 +1537,8 @@ MldRejUniformEta2Asm:
         fmov rec_idx_0_w, t0
         fmov rec_idx_1_w, t1
 
-        ldr table0q, [table_idx, rec_idx_0, lsl #4]
-        ldr table1q, [table_idx, rec_idx_1, lsl #4]
+        VLDQ_16B_INDEX 24, table_idx, rec_idx_0
+        VLDQ_16B_INDEX 25, table_idx, rec_idx_1
 
         // Compute number of valid coefficients
         cnt sign0.16b, sign0.16b
@@ -1552,10 +1557,10 @@ MldRejUniformEta2Asm:
 
 
         // Store 16-bit coefficients, expanded to 32-bit on copy out
-        str val0q, [output_tmp]
+        VSTQ_8H 16, output_tmp
         add output_tmp, output_tmp, ctr0, lsl #1
 
-        str val1q, [output_tmp]
+        VSTQ_8H 17, output_tmp
         add output_tmp, output_tmp, ctr1, lsl #1
 
         add ctr01, ctr0, ctr1
@@ -1580,8 +1585,8 @@ MldRejUniformEta2Asm:
     mov output_tmp, output_tmp_base
 
 .rej_uniform_eta2_final_copy:
-        ldr val0q, [output_tmp], #32
-        ldr val2q, [output_tmp, #-16]
+        VLDQ_8H_POST 16, output_tmp, #32
+        VLDQ_8H 18, output_tmp, #-16
 
         // Reference:
         // Barrett reduction: t0 = t0 - (205 * t0 >> 10) * 5;
@@ -1604,10 +1609,10 @@ MldRejUniformEta2Asm:
         sxtl2 val3.4s, val2.8h
         sxtl  val2.4s, val2.4h
 
-        str val0q, [output], #64
-        str val1q, [output, #-48]
-        str val2q, [output, #-32]
-        str val3q, [output, #-16]
+        VSTQ_4S_POST 16, output, #64
+        VSTQ_4S 17, output, #-48
+        VSTQ_4S 18, output, #-32
+        VSTQ_4S 19, output, #-16
         add final_copy_count, final_copy_count, #16
         cmp final_copy_count, #MLDSA_N
         b.lt .rej_uniform_eta2_final_copy
@@ -1847,8 +1852,8 @@ MldRejUniformEta4Asm:
         fmov    rec_idx_0_w, t0
         fmov    rec_idx_1_w, t1
 
-        ldr     table0q, [table_idx, rec_idx_0, lsl #4]
-        ldr     table1q, [table_idx, rec_idx_1, lsl #4]
+        VLDQ_16B_INDEX 24, table_idx, rec_idx_0
+        VLDQ_16B_INDEX 25, table_idx, rec_idx_1
 
         // Compute number of valid coefficients. Recall that at this
         // point, lane i has value 2^i (hence popcount 1) if its coefficient
@@ -1892,8 +1897,8 @@ MldRejUniformEta4Asm:
     mov output_tmp, output_tmp_base
 
 .rej_uniform_eta4_final_copy:
-        ldr val0q, [output_tmp], #32
-        ldr val2q, [output_tmp, #-16]
+        VLDQ_8H_POST 16, output_tmp, #32
+        VLDQ_8H 18, output_tmp, #-16
 
         // Apply eta4 transformation: 4 - nibble
         sub val0.8h, const4.8h, val0.8h
@@ -1906,10 +1911,10 @@ MldRejUniformEta4Asm:
         sxtl2 val3.4s, val2.8h
         sxtl  val2.4s, val2.4h
 
-        str val0q, [output], #64
-        str val1q, [output, #-48]
-        str val2q, [output, #-32]
-        str val3q, [output, #-16]
+        VSTQ_4S_POST 16, output, #64
+        VSTQ_4S 17, output, #-48
+        VSTQ_4S 18, output, #-32
+        VSTQ_4S 19, output, #-16
         add final_copy_count, final_copy_count, #16
         cmp final_copy_count, #MLDSA_N
         b.lt .rej_uniform_eta4_final_copy
@@ -2611,14 +2616,14 @@ MLDSA_ValidityChecks:
 
     .p2align 2
 
-    ldr q0, [x0, #128]
-    ldr q2, [x0], #16
-    ldr q1, [x0, #752]
-    ldr q29, [x0, #368]
-    ldr q15, [x0, #496]
-    ldr q23, [x0, #880]
+    VLDQ_4S 0, x0, #128
+    VLDQ_4S_POST 2, x0, #16
+    VLDQ_4S 1, x0, #752
+    VLDQ_4S 29, x0, #368
+    VLDQ_4S 15, x0, #496
+    VLDQ_4S 23, x0, #880
     sshr v11.4s, v0.4s, #31
-    ldr q3, [x0, #240]
+    VLDQ_4S 3, x0, #240
     sshr v13.4s, v2.4s, #31
     sshr v20.4s, v15.4s, #31
     eor v0.16b, v0.16b, v11.16b
@@ -2633,7 +2638,7 @@ MLDSA_ValidityChecks:
     sub v2.4s, v2.4s, v13.4s
     sub v3.4s, v15.4s, v20.4s
     eor v15.16b, v29.16b, v9.16b
-    ldr q27, [x0, #624]
+    VLDQ_4S 27, x0, #624
     cmge v0.4s, v0.4s, v26.4s
     sshr v29.4s, v1.4s, #31
     cmge v20.4s, v2.4s, v26.4s
@@ -2647,26 +2652,26 @@ MLDSA_ValidityChecks:
 .Lvalidity_check_loop:
     eor v20.16b, v27.16b, v11.16b
     sub v27.4s, v2.4s, v29.4s
-    ldr q0, [x0, #384]
+    VLDQ_4S 0, x0, #384
     orr v28.16b, v1.16b, v4.16b
-    ldr q2, [x0], #16
+    VLDQ_4S_POST 2, x0, #16
     cmge v4.4s, v15.4s, v26.4s
     cmge v24.4s, v3.4s, v26.4s
     sub v23.4s, v23.4s, v16.4s
-    ldr q7, [x0, #112]
+    VLDQ_4S 7, x0, #112
     cmge v13.4s, v27.4s, v26.4s
-    ldr q15, [x0, #240]
+    VLDQ_4S 15, x0, #240
     sub v27.4s, v20.4s, v11.4s
     sshr v25.4s, v0.4s, #31
-    ldr q20, [x0, #880]
+    VLDQ_4S 20, x0, #880
     orr v29.16b, v28.16b, v4.16b
     cmge v4.4s, v23.4s, v26.4s
-    ldr q16, [x0, #752]
+    VLDQ_4S 16, x0, #752
     sshr v11.4s, v2.4s, #31
     sshr v1.4s, v7.4s, #31
-    ldr q23, [x0, #496]
+    VLDQ_4S 23, x0, #496
     cmge v3.4s, v27.4s, v26.4s
-    ldr q27, [x0, #624]
+    VLDQ_4S 27, x0, #624
     sshr v6.4s, v15.4s, #31
     orr v9.16b, v29.16b, v24.16b
     eor v24.16b, v0.16b, v25.16b
@@ -2879,106 +2884,106 @@ MLDSA_VectorsAdd:
 
     mov count, #(256 / 8 / 4)
 
-    ldr q14, [x1, #48]
-    ldr q17, [x2, #48]
-    ldr q29, [x1], #4*16
-    ldr q18, [x2], #4*16
-    ldr q9, [x1, #32]
-    ldr q6, [x2, #32]
-    ldr q24, [x1, #48]
+    VLDQ_4S 14, x1, #48
+    VLDQ_4S 17, x2, #48
+    VLDQ_4S_POST 29, x1, #4*16
+    VLDQ_4S_POST 18, x2, #4*16
+    VLDQ_4S 9, x1, #32
+    VLDQ_4S 6, x2, #32
+    VLDQ_4S 24, x1, #48
     add v28.4s, v14.4s, v17.4s
-    ldr q13, [x1], #4*16
-    ldr q11, [x2], #4*16
-    ldr q27, [x2, #-16]
+    VLDQ_4S_POST 13, x1, #4*16
+    VLDQ_4S_POST 11, x2, #4*16
+    VLDQ_4S 27, x2, #-16
     add v25.4s, v29.4s, v18.4s
     srshr v5.4s, v28.4s, #23
     add v2.4s, v9.4s, v6.4s
     add v11.4s, v13.4s, v11.4s
     srshr v23.4s, v25.4s, #23
-    ldr q19, [x1, #-96]
+    VLDQ_4S 19, x1, #-96
     add v14.4s, v24.4s, v27.4s
     mls v28.4s, v5.4s, v31.4s
-    ldr q13, [x2, #-48]
-    ldr q12, [x2, #-112]
+    VLDQ_4S 13, x2, #-48
+    VLDQ_4S 12, x2, #-112
     srshr v6.4s, v2.4s, #23
-    ldr q17, [x2, #-96]
-    ldr q24, [x1, #-48]
+    VLDQ_4S 17, x2, #-96
+    VLDQ_4S 24, x1, #-48
     mls v25.4s, v23.4s, v31.4s
     srshr v29.4s, v11.4s, #23
     sub x4, x4, #1
     .Lvec_opts_x8_loop_add:
-    ldr q8, [x1, #-112]
+    VLDQ_4S 8, x1, #-112
     mls v2.4s, v6.4s, v31.4s
     add v6.4s, v19.4s, v17.4s
-    ldr q19, [x1, #32]
-    ldr q27, [x1], #4*16
+    VLDQ_4S 19, x1, #32
+    VLDQ_4S_POST 27, x1, #4*16
     srshr v21.4s, v14.4s, #23
     mls v11.4s, v29.4s, v31.4s
-    ldr q16, [x2], #4*16
+    VLDQ_4S_POST 16, x2, #4*16
     add v13.4s, v24.4s, v13.4s
-    ldr q10, [x2, #-16]
-    ldr q24, [x1, #-16]
+    VLDQ_4S 10, x2, #-16
+    VLDQ_4S 24, x1, #-16
     srshr v9.4s, v6.4s, #23
-    ldr q17, [x1, #32]
+    VLDQ_4S 17, x1, #32
     add v1.4s, v8.4s, v12.4s
     mls v14.4s, v21.4s, v31.4s
-    str q28, [x0, #48]
-    str q25, [x0], #4*16
+    VSTQ_4S 28, x0, #48
+    VSTQ_4S_POST 25, x0, #4*16
     srshr v8.4s, v13.4s, #23
     mls v6.4s, v9.4s, v31.4s
     add v25.4s, v27.4s, v16.4s
-    ldr q16, [x2, #32]
-    str q11, [x0], #4*16
-    ldr q11, [x1], #4*16
+    VLDQ_4S 16, x2, #32
+    VSTQ_4S_POST 11, x0, #4*16
+    VLDQ_4S_POST 11, x1, #4*16
     srshr v29.4s, v1.4s, #23
     add v28.4s, v24.4s, v10.4s
-    ldr q26, [x2], #4*16
+    VLDQ_4S_POST 26, x2, #4*16
     mls v13.4s, v8.4s, v31.4s
-    ldr q27, [x2, #-16]
+    VLDQ_4S 27, x2, #-16
     srshr v3.4s, v25.4s, #23
-    str q2, [x0, #-32]
+    VSTQ_4S 2, x0, #-32
     add v2.4s, v17.4s, v16.4s
-    ldr q9, [x1, #-16]
+    VLDQ_4S 9, x1, #-16
     mls v1.4s, v29.4s, v31.4s
-    str q6, [x0, #-96]
-    ldr q17, [x2, #-96]
+    VSTQ_4S 6, x0, #-96
+    VLDQ_4S 17, x2, #-96
     srshr v8.4s, v28.4s, #23
     mls v25.4s, v3.4s, v31.4s
-    ldr q24, [x1, #-48]
+    VLDQ_4S 24, x1, #-48
     add v11.4s, v11.4s, v26.4s
-    str q13, [x0, #-48]
-    str q14, [x0, #-16]
+    VSTQ_4S 13, x0, #-48
+    VSTQ_4S 14, x0, #-16
     srshr v6.4s, v2.4s, #23
     add v14.4s, v9.4s, v27.4s
     mls v28.4s, v8.4s, v31.4s
-    ldr q13, [x2, #-48]
+    VLDQ_4S 13, x2, #-48
     srshr v29.4s, v11.4s, #23
-    ldr q12, [x2, #-112]
-    str q1, [x0, #-112]
+    VLDQ_4S 12, x2, #-112
+    VSTQ_4S 1, x0, #-112
     subs x4, x4, 1
     cbnz x4, .Lvec_opts_x8_loop_add
     mls v2.4s, v6.4s, v31.4s
     add v13.4s, v24.4s, v13.4s
-    ldr q24, [x1, #-112]
-    str q28, [x0, #48]
+    VLDQ_4S 24, x1, #-112
+    VSTQ_4S 28, x0, #48
     srshr v6.4s, v14.4s, #23
     add v8.4s, v19.4s, v17.4s
     mls v11.4s, v29.4s, v31.4s
-    str q25, [x0], #4*16
+    VSTQ_4S_POST 25, x0, #4*16
     srshr v1.4s, v13.4s, #23
     mls v14.4s, v6.4s, v31.4s
     add v6.4s, v24.4s, v12.4s
-    str q2, [x0, #32]
+    VSTQ_4S 2, x0, #32
     srshr v28.4s, v8.4s, #23
     mls v13.4s, v1.4s, v31.4s
-    str q11, [x0], #4*16
+    VSTQ_4S_POST 11, x0, #4*16
     srshr v1.4s, v6.4s, #23
     mls v8.4s, v28.4s, v31.4s
-    str q14, [x0, #-16]
+    VSTQ_4S 14, x0, #-16
     mls v6.4s, v1.4s, v31.4s
-    str q13, [x0, #-48]
-    str q8, [x0, #-96]
-    str q6, [x0, #-112]
+    VSTQ_4S 13, x0, #-48
+    VSTQ_4S 8, x0, #-96
+    VSTQ_4S 6, x0, #-112
     ldp d8, d9, [sp, #0*16]
     ldp d10, d11, [sp, #1*16]
     ldp d12, d13, [sp, #2*16]
@@ -3003,106 +3008,106 @@ MLDSA_VectorsSub:
 
     mov count, #(256 / 8 / 4)
 
-    ldr q11, [x2, #32]
-    ldr q8, [x1, #32]
-    ldr q2, [x2, #48]
-    ldr q14, [x1, #48]
-    ldr q28, [x1, #80]
-    ldr q19, [x2, #80]
-    ldr q24, [x2, #112]
+    VLDQ_4S 11, x2, #32
+    VLDQ_4S 8, x1, #32
+    VLDQ_4S 2, x2, #48
+    VLDQ_4S 14, x1, #48
+    VLDQ_4S 28, x1, #80
+    VLDQ_4S 19, x2, #80
+    VLDQ_4S 24, x2, #112
     sub v9.4s, v8.4s, v11.4s
-    ldr q26, [x1, #112]
+    VLDQ_4S 26, x1, #112
     sub v20.4s, v14.4s, v2.4s
     srshr v23.4s, v9.4s, #23
     sub v8.4s, v28.4s, v19.4s
     sub v26.4s, v26.4s, v24.4s
-    ldr q29, [x1, #96]
-    ldr q7, [x2, #96]
+    VLDQ_4S 29, x1, #96
+    VLDQ_4S 7, x2, #96
     srshr v6.4s, v20.4s, #23
-    ldr q28, [x2, #16]
+    VLDQ_4S 28, x2, #16
     srshr v24.4s, v8.4s, #23
-    ldr q17, [x2], #4*16
+    VLDQ_4S_POST 17, x2, #4*16
     mls v9.4s, v23.4s, v31.4s
     srshr v16.4s, v26.4s, #23
-    ldr q2, [x1], #4*16
-    ldr q25, [x1], #4*16
+    VLDQ_4S_POST 2, x1, #4*16
+    VLDQ_4S_POST 25, x1, #4*16
     mls v20.4s, v6.4s, v31.4s
     sub v15.4s, v29.4s, v7.4s
-    ldr q11, [x2], #4*16
+    VLDQ_4S_POST 11, x2, #4*16
     sub x4, x4, #1
     .Lvec_opts_x8_loop_sub:
-    ldr q19, [x1, #-112]
+    VLDQ_4S 19, x1, #-112
     sub v1.4s, v2.4s, v17.4s
     mls v26.4s, v16.4s, v31.4s
-    ldr q7, [x1, #32]
+    VLDQ_4S 7, x1, #32
     srshr v13.4s, v15.4s, #23
-    ldr q29, [x2, #48]
+    VLDQ_4S 29, x2, #48
     sub v14.4s, v25.4s, v11.4s
     mls v8.4s, v24.4s, v31.4s
-    ldr q2, [x1, #48]
-    ldr q17, [x2], #4*16
+    VLDQ_4S 2, x1, #48
+    VLDQ_4S_POST 17, x2, #4*16
     srshr v10.4s, v1.4s, #23
-    str q20, [x0, #48]
-    ldr q6, [x2, #-32]
+    VSTQ_4S 20, x0, #48
+    VLDQ_4S 6, x2, #-32
     sub v27.4s, v19.4s, v28.4s
     mls v15.4s, v13.4s, v31.4s
-    ldr q11, [x1, #112]
-    ldr q18, [x2, #16]
+    VLDQ_4S 11, x1, #112
+    VLDQ_4S 18, x2, #16
     srshr v30.4s, v14.4s, #23
     sub v20.4s, v2.4s, v29.4s
-    ldr q25, [x2, #48]
+    VLDQ_4S 25, x2, #48
     mls v1.4s, v10.4s, v31.4s
-    ldr q19, [x1, #80]
+    VLDQ_4S 19, x1, #80
     srshr v5.4s, v27.4s, #23
-    str q9, [x0, #32]
+    VSTQ_4S 9, x0, #32
     sub v9.4s, v7.4s, v6.4s
-    ldr q29, [x1, #96]
+    VLDQ_4S 29, x1, #96
     mls v14.4s, v30.4s, v31.4s
-    ldr q10, [x2, #32]
+    VLDQ_4S 10, x2, #32
     srshr v7.4s, v20.4s, #23
-    str q26, [x0, #112]
-    ldr q2, [x1], #4*16
+    VSTQ_4S 26, x0, #112
+    VLDQ_4S_POST 2, x1, #4*16
     sub v26.4s, v11.4s, v25.4s
     mls v27.4s, v5.4s, v31.4s
-    str q1, [x0], #4*16
-    str q8, [x0, #16]
+    VSTQ_4S_POST 1, x0, #4*16
+    VSTQ_4S 8, x0, #16
     srshr v28.4s, v9.4s, #23
     mls v20.4s, v7.4s, v31.4s
-    ldr q25, [x1], #4*16
+    VLDQ_4S_POST 25, x1, #4*16
     sub v8.4s, v19.4s, v18.4s
-    str q15, [x0, #32]
+    VSTQ_4S 15, x0, #32
     srshr v16.4s, v26.4s, #23
-    ldr q11, [x2], #4*16
+    VLDQ_4S_POST 11, x2, #4*16
     mls v9.4s, v28.4s, v31.4s
-    ldr q28, [x2, #-112]
+    VLDQ_4S 28, x2, #-112
     sub v15.4s, v29.4s, v10.4s
-    str q14, [x0], #4*16
+    VSTQ_4S_POST 14, x0, #4*16
     srshr v24.4s, v8.4s, #23
-    str q27, [x0, #-112]
+    VSTQ_4S 27, x0, #-112
     subs x4, x4, 1
     cbnz x4, .Lvec_opts_x8_loop_sub
     mls v26.4s, v16.4s, v31.4s
     sub v14.4s, v25.4s, v11.4s
-    ldr q7, [x1, #-112]
-    str q9, [x0, #32]
+    VLDQ_4S 7, x1, #-112
+    VSTQ_4S 9, x0, #32
     srshr v9.4s, v15.4s, #23
     sub v19.4s, v2.4s, v17.4s
     mls v8.4s, v24.4s, v31.4s
-    str q20, [x0, #48]
+    VSTQ_4S 20, x0, #48
     srshr v27.4s, v14.4s, #23
     mls v15.4s, v9.4s, v31.4s
     sub v9.4s, v7.4s, v28.4s
-    str q26, [x0, #112]
+    VSTQ_4S 26, x0, #112
     srshr v20.4s, v19.4s, #23
     mls v14.4s, v27.4s, v31.4s
-    str q8, [x0, #80]
+    VSTQ_4S 8, x0, #80
     srshr v27.4s, v9.4s, #23
     mls v19.4s, v20.4s, v31.4s
-    str q15, [x0, #96]
+    VSTQ_4S 15, x0, #96
     mls v9.4s, v27.4s, v31.4s
-    str q19, [x0], #4*16
-    str q14, [x0], #4*16
-    str q9, [x0, #-112]
+    VSTQ_4S_POST 19, x0, #4*16
+    VSTQ_4S_POST 14, x0, #4*16
+    VSTQ_4S 9, x0, #-112
     ldp d8, d9, [sp, #0*16]
     ldp d10, d11, [sp, #1*16]
     ldp d12, d13, [sp, #2*16]
@@ -3127,106 +3132,106 @@ MLDSA_VectorsAddQ:
 
     mov count, #(256 / 8 / 4)
 
-    ldr q16, [x1, #32]
-    ldr q11, [x2, #32]
-    ldr q14, [x2], #4*16
-    ldr q26, [x2], #4*16
-    ldr q15, [x1], #4*16
-    ldr q8, [x1], #4*16
+    VLDQ_4S 16, x1, #32
+    VLDQ_4S 11, x2, #32
+    VLDQ_4S_POST 14, x2, #4*16
+    VLDQ_4S_POST 26, x2, #4*16
+    VLDQ_4S_POST 15, x1, #4*16
+    VLDQ_4S_POST 8, x1, #4*16
     add v5.4s, v16.4s, v11.4s
-    ldr q6, [x1, #-48]
-    ldr q2, [x2, #-48]
+    VLDQ_4S 6, x1, #-48
+    VLDQ_4S 2, x2, #-48
     add v1.4s, v8.4s, v26.4s
-    ldr q16, [x2, #-16]
+    VLDQ_4S 16, x2, #-16
     ushr v26.4s, v5.4s, #31
-    ldr q10, [x1, #-16]
+    VLDQ_4S 10, x1, #-16
     add v8.4s, v15.4s, v14.4s
-    ldr q14, [x1, #-32]
+    VLDQ_4S 14, x1, #-32
     ushr v25.4s, v1.4s, #31
     add v12.4s, v6.4s, v2.4s
     mla v5.4s, v26.4s, v31.4s
-    ldr q6, [x2, #-32]
+    VLDQ_4S 6, x2, #-32
     ushr v26.4s, v8.4s, #31
     add v29.4s, v10.4s, v16.4s
-    ldr q4, [x1, #-80]
-    ldr q9, [x2, #-80]
+    VLDQ_4S 4, x1, #-80
+    VLDQ_4S 9, x2, #-80
     mla v1.4s, v25.4s, v31.4s
     ushr v3.4s, v12.4s, #31
-    ldr q15, [x2, #-112]
+    VLDQ_4S 15, x2, #-112
     sub x4, x4, #1
     .Lvec_opts_x8_loop_addq:
-    ldr q11, [x1, #-112]
+    VLDQ_4S 11, x1, #-112
     add v22.4s, v14.4s, v6.4s
     mla v8.4s, v26.4s, v31.4s
-    ldr q2, [x1, #32]
-    ldr q0, [x2], #4*16
+    VLDQ_4S 2, x1, #32
+    VLDQ_4S_POST 0, x2, #4*16
     ushr v28.4s, v29.4s, #31
     mla v12.4s, v3.4s, v31.4s
-    ldr q17, [x2, #-32]
+    VLDQ_4S 17, x2, #-32
     add v10.4s, v4.4s, v9.4s
-    ldr q9, [x2], #4*16
-    ldr q3, [x1], #4*16
+    VLDQ_4S_POST 9, x2, #4*16
+    VLDQ_4S_POST 3, x1, #4*16
     ushr v20.4s, v22.4s, #31
-    ldr q24, [x1], #4*16
+    VLDQ_4S_POST 24, x1, #4*16
     add v11.4s, v11.4s, v15.4s
     mla v29.4s, v28.4s, v31.4s
-    str q5, [x0, #32]
+    VSTQ_4S 5, x0, #32
     ushr v14.4s, v10.4s, #31
-    ldr q18, [x1, #-48]
+    VLDQ_4S 18, x1, #-48
     add v5.4s, v2.4s, v17.4s
-    ldr q26, [x2, #-48]
+    VLDQ_4S 26, x2, #-48
     mla v22.4s, v20.4s, v31.4s
-    str q8, [x0], #4*16
-    str q1, [x0], #4*16
+    VSTQ_4S_POST 8, x0, #4*16
+    VSTQ_4S_POST 1, x0, #4*16
     ushr v27.4s, v11.4s, #31
     add v1.4s, v24.4s, v9.4s
     mla v10.4s, v14.4s, v31.4s
-    ldr q2, [x2, #-16]
-    ldr q24, [x1, #-16]
+    VLDQ_4S 2, x2, #-16
+    VLDQ_4S 24, x1, #-16
     ushr v20.4s, v5.4s, #31
-    ldr q14, [x1, #-32]
-    ldr q6, [x2, #-32]
+    VLDQ_4S 14, x1, #-32
+    VLDQ_4S 6, x2, #-32
     mla v11.4s, v27.4s, v31.4s
     add v8.4s, v3.4s, v0.4s
-    str q29, [x0, #-16]
-    ldr q4, [x1, #-80]
+    VSTQ_4S 29, x0, #-16
+    VLDQ_4S 4, x1, #-80
     ushr v25.4s, v1.4s, #31
-    str q12, [x0, #-48]
+    VSTQ_4S 12, x0, #-48
     mla v5.4s, v20.4s, v31.4s
     add v12.4s, v18.4s, v26.4s
     ushr v26.4s, v8.4s, #31
-    str q22, [x0, #-32]
-    str q10, [x0, #-80]
-    ldr q9, [x2, #-80]
+    VSTQ_4S 22, x0, #-32
+    VSTQ_4S 10, x0, #-80
+    VLDQ_4S 9, x2, #-80
     mla v1.4s, v25.4s, v31.4s
     add v29.4s, v24.4s, v2.4s
     ushr v3.4s, v12.4s, #31
-    ldr q15, [x2, #-112]
-    str q11, [x0, #-112]
+    VLDQ_4S 15, x2, #-112
+    VSTQ_4S 11, x0, #-112
     subs x4, x4, 1
     cbnz x4, .Lvec_opts_x8_loop_addq
     add v16.4s, v14.4s, v6.4s
     mla v8.4s, v26.4s, v31.4s
-    ldr q30, [x1, #-112]
-    str q5, [x0, #32]
+    VLDQ_4S 30, x1, #-112
+    VSTQ_4S 5, x0, #32
     ushr v13.4s, v29.4s, #31
     mla v12.4s, v3.4s, v31.4s
     add v7.4s, v4.4s, v9.4s
     ushr v22.4s, v16.4s, #31
     mla v29.4s, v13.4s, v31.4s
     add v13.4s, v30.4s, v15.4s
-    str q8, [x0], #4*16
+    VSTQ_4S_POST 8, x0, #4*16
     ushr v8.4s, v7.4s, #31
-    str q1, [x0], #4*16
+    VSTQ_4S_POST 1, x0, #4*16
     mla v16.4s, v22.4s, v31.4s
-    str q12, [x0, #-48]
+    VSTQ_4S 12, x0, #-48
     ushr v23.4s, v13.4s, #31
     mla v7.4s, v8.4s, v31.4s
-    str q29, [x0, #-16]
+    VSTQ_4S 29, x0, #-16
     mla v13.4s, v23.4s, v31.4s
-    str q16, [x0, #-32]
-    str q7, [x0, #-80]
-    str q13, [x0, #-112]
+    VSTQ_4S 16, x0, #-32
+    VSTQ_4S 7, x0, #-80
+    VSTQ_4S 13, x0, #-112
     ldp d8, d9, [sp, #0*16]
     ldp d10, d11, [sp, #1*16]
     ldp d12, d13, [sp, #2*16]
