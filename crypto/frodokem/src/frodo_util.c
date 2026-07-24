@@ -22,7 +22,6 @@
 
 #include "crypt_errno.h"
 #include "eal_md_local.h"
-#include "bsl_errno.h"
 #include "frodo_local.h"
 #include "bsl_sal.h"
 #include "bsl_err_internal.h"

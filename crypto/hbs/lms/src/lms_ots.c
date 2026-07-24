@@ -16,7 +16,6 @@
 #include "hitls_build.h"
 #ifdef HITLS_CRYPTO_HSS_LMS
 
-#include <string.h>
 #include "bsl_sal.h"
 #include "bsl_err_internal.h"
 #include "crypt_errno.h"

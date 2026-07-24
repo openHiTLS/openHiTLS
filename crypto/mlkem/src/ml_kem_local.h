@@ -145,7 +145,7 @@ int32_t MLKEM_PKEEnc(uint32_t k, MLKEM_MatrixSt *mat, uint8_t du, uint8_t dv, ui
 // For K-PKE.Decrypt: Compress(v' - INTT(s*NTT(V)))
 int32_t MLKEM_PKEDec(uint32_t k, MLKEM_MatrixSt *mat, int16_t *m, int16_t *c1[], int16_t *c2, uint8_t *result);
 
-void ByteEncode(uint8_t *out, int16_t *in, uint8_t bits);
+void ByteEncode(uint8_t *r, int16_t *polyF, uint8_t bit);
 
 int32_t GenMatrix(const CRYPT_ML_KEM_Ctx *ctx, const uint8_t *seed,
     int16_t *polyMatrix[MLKEM_K_MAX][MLKEM_K_MAX], bool isEnc);

@@ -19,7 +19,6 @@
 #include <string.h>
 #include "frodo_local.h"
 #include "bsl_sal.h"
-#include "bsl_errno.h"
 #include "crypt_errno.h"
 #include "bsl_err_internal.h"
 

@@ -249,7 +249,7 @@ static int32_t XmssPkCompress(const void *vctx, const void *vadrs, const uint8_t
             }
         }
         /* Handle unbalanced L-tree */
-        if (len & 1) {
+        if ((len & 1) != 0) {
             memcpy(node + (len / 2 * n), node + (len - 1) * n, n);
             len = len / 2 + 1;
         } else {

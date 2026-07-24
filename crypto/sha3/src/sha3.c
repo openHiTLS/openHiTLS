@@ -359,7 +359,7 @@ static uint32_t KeccakIncSqueeze(uint8_t *out, size_t outlen, uint64_t s[25], ui
 {
     uint32_t i;
 
-    while (outlen) {
+    while (outlen != 0) {
         if (pos == r) {
             SHA3_Keccak((uint8_t *)s);
             pos = 0;
@@ -402,7 +402,7 @@ void KeccakSqueeze(uint8_t *out, size_t nblocks, uint64_t s[25], uint32_t r)
     uint32_t i;
     uint32_t laneCnt = r >> 3;
 
-    while (nblocks) {
+    while (nblocks != 0) {
         SHA3_Keccak((uint8_t *)s);
         for (i = 0; i < laneCnt; i++) {
             store64(out + 8 * i, s[i]);

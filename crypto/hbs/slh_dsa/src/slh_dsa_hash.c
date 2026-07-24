@@ -38,6 +38,10 @@
 static int32_t CalcHashByCtx(void *mdCtxIn, const EAL_MdMethod *hashMethod, const CRYPT_ConstData *hashData,
                              uint32_t size, uint8_t *out, uint32_t *outlen)
 {
+    if (hashMethod == NULL || mdCtxIn == NULL || hashData == NULL || out == NULL || outlen == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
+        return CRYPT_INVALID_ARG;
+    }
     void *mdCtx = hashMethod->dupCtx(mdCtxIn);
     if (mdCtx == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
@@ -77,6 +81,10 @@ static int32_t CalcMultiMsgHashByCtx(CRYPT_MD_AlgId mdId, void *mdCtxIn, const C
 static int32_t CreateMdCtxAndUpdata(void **out, const EAL_MdMethod *hashMethod, const CRYPT_ConstData *hashData,
                                     uint32_t size)
 {
+    if (hashMethod == NULL || hashData == NULL || out == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
+        return CRYPT_INVALID_ARG;
+    }
     void *mdCtx = hashMethod->newCtx(NULL, hashMethod->id);
     if (mdCtx == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
@@ -112,13 +120,13 @@ int32_t InitMdCtx(CryptSlhDsaCtx *ctx)
     uint8_t padding[SHA512_PADDING_LEN] = {0};
     const CRYPT_ConstData hashData256[] = {{ctx->prvKey.pub.seed, n}, {padding, SHA256_PADDING_LEN - n}};
     const EAL_MdMethod *hashMethod256 = EAL_MdFindDefaultMethod(CRYPT_MD_SHA256);
+    const EAL_MdMethod *hashMethod512 = EAL_MdFindDefaultMethod(CRYPT_MD_SHA512);
     int ret = CreateMdCtxAndUpdata(&ctx->sha256MdCtx, hashMethod256, hashData256,
                                    sizeof(hashData256) / sizeof(hashData256[0]));
     if (ret != CRYPT_SUCCESS) {
         return ret;
     }
     const CRYPT_ConstData hashData512[] = {{ctx->prvKey.pub.seed, n}, {padding, SHA512_PADDING_LEN - n}};
-    const EAL_MdMethod *hashMethod512 = EAL_MdFindDefaultMethod(CRYPT_MD_SHA512);
     ret = CreateMdCtxAndUpdata(&ctx->sha512MdCtx, hashMethod512, hashData512,
                                sizeof(hashData512) / sizeof(hashData512[0]));
     if (ret != CRYPT_SUCCESS) {
@@ -132,6 +140,9 @@ void DupMdCtx(CryptSlhDsaCtx *dest, CryptSlhDsaCtx *src)
 {
     const EAL_MdMethod *hashMethod256 = EAL_MdFindDefaultMethod(CRYPT_MD_SHA256);
     const EAL_MdMethod *hashMethod512 = EAL_MdFindDefaultMethod(CRYPT_MD_SHA512);
+    if (src->sha256MdCtx == NULL || src->sha512MdCtx == NULL) {
+        return;
+    }
     dest->sha512MdCtx = NULL;
     dest->sha256MdCtx = hashMethod256->dupCtx(src->sha256MdCtx);
     if (dest->sha256MdCtx == NULL) {
@@ -149,6 +160,10 @@ void FreeMdCtx(CryptSlhDsaCtx *ctx)
     if (ctx->para.isCompressed) {
         const EAL_MdMethod *hashMethod256 = EAL_MdFindDefaultMethod(CRYPT_MD_SHA256);
         const EAL_MdMethod *hashMethod512 = EAL_MdFindDefaultMethod(CRYPT_MD_SHA512);
+        // directly return will not cause memory leak, because if hashMethod256 or hashMethod512 is NULL, then the corresponding mdCtx must be NULL too.
+        if (hashMethod256 == NULL || hashMethod512 == NULL) {
+            return;
+        }
         if (ctx->sha256MdCtx != NULL) {
             hashMethod256->freeCtx(ctx->sha256MdCtx);
             ctx->sha256MdCtx = NULL;

@@ -160,7 +160,7 @@ static inline int32_t VectoWeight(const uint8_t *vec, uint32_t lenBytes)
 int32_t ControlBitsFromBenesNetwork(uint8_t *out, const uint16_t *pi, uint32_t w, uint32_t n);
 
 // Derive support L[0..N-1] from control bits
-int32_t SupportSetFromControlbits(uint16_t *L, const uint8_t *cbits, uint32_t w, int32_t lenN);
+int32_t SupportSetFromControlbits(uint16_t *gfL, const uint8_t *cbits, uint32_t w, int32_t len);
 
 // =================================================================================
 // Goppa Encode and Decode Functions
@@ -171,7 +171,7 @@ int32_t DecodeGoppa(const uint8_t *received, const GFPolynomial *g, const uint16
 
 // Generate a random vector with fixed Hamming weight t
 // Used in the encapsulation phase to generate the error vector e
-int32_t FixedWeightVector(CRYPT_MCELIECE_Ctx *ctx, uint8_t *output);
+int32_t FixedWeightVector(CRYPT_MCELIECE_Ctx *ctx, uint8_t *e);
 
 // Encode an error vector using the public key matrix T
 // Computes C = H * e where H = [I_mt | T]
@@ -240,7 +240,7 @@ GFMatrix *MatrixCreate(uint32_t rows, uint32_t cols);
 void MatrixFree(GFMatrix *mat);
 
 // High-level SHAKE256 function
-int32_t McElieceShake256(uint8_t *output, const uint32_t outlen, const uint8_t *input, uint32_t inlen);
+int32_t McElieceShake256(uint8_t *output, const uint32_t outlen, const uint8_t *input, uint32_t inLen);
 
 int32_t ComputeSyndrome(const uint8_t *received, const GFPolynomial *g, const uint16_t *alpha,
     const McelieceParams *params, uint16_t *syndrome);

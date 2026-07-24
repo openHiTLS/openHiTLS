@@ -21,6 +21,7 @@
 
 #include "hbs_wots.h"
 #include "xmss_local.h"
+#include "crypt_types.h"
 #ifdef __cplusplus
 extern "C" {
 #endif

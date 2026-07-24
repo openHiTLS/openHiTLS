@@ -2083,17 +2083,16 @@ static int32_t HITLS_X509_CheckCertCrlLite(HITLS_X509_StoreCtx *storeCtx, HITLS_
         if (HITLS_X509_CmpNameNode(crl->tbs.issuerName, parent->tbs.subjectName) != 0) {
             continue;
         }
-        if (parent->tbs.version == HITLS_X509_VERSION_3 && crl->tbs.version == 1) {
-            if (HITLS_X509_CheckAki(&parent->tbs.ext, &crl->tbs.crlExt, parent->tbs.issuerName,
-                                    &parent->tbs.serialNum) != HITLS_PKI_SUCCESS) {
+        if (parent->tbs.version == HITLS_X509_VERSION_3 && crl->tbs.version == 1 &&
+            (HITLS_X509_CheckAki(&parent->tbs.ext, &crl->tbs.crlExt, parent->tbs.issuerName, &parent->tbs.serialNum) !=
+             HITLS_PKI_SUCCESS)) {
 #ifdef HITLS_PKI_X509_VFY_CB
-                if (VerifyCertCbk(storeCtx, cert, depth, HITLS_X509_ERR_VFY_AKI_SKI_NOT_MATCH) != HITLS_PKI_SUCCESS) {
-                    continue;
-                }
-#else
+            if (VerifyCertCbk(storeCtx, cert, depth, HITLS_X509_ERR_VFY_AKI_SKI_NOT_MATCH) != HITLS_PKI_SUCCESS) {
                 continue;
-#endif
             }
+#else
+            continue;
+#endif
         }
         if (HITLS_X509_CheckCrlTime(storeCtx, crl, depth, time) != HITLS_PKI_SUCCESS) {
             continue;

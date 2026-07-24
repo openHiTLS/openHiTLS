@@ -94,17 +94,17 @@ void FrodoCommonDecodeLe16(uint16_t *out, const uint8_t *in, uint32_t len);
 // Function Prototypes from core_*.c (Matrix Arithmetic)
 // =================================================================================
 
-int32_t FrodoCommonMulAddAsPlusEPortable(uint16_t *out, const uint16_t *s, const uint8_t *seedA,
+int32_t FrodoCommonMulAddAsPlusEPortable(uint16_t *out, const uint16_t *matrixST, const uint8_t *seedA,
                                          const FrodoKemParams *params, void *libCtx);
 
-int32_t FrodoCommonMulAddSaPlusEPortable(uint16_t *b, const uint16_t *s, const uint16_t *e, const uint8_t *seedA,
+int32_t FrodoCommonMulAddSaPlusEPortable(uint16_t *out, const uint16_t *s, const uint16_t *e, const uint8_t *seedA,
                                          const FrodoKemParams *params, void *libCtx);
 
 void FrodoCommonMulAddSbPlusEPortable(uint16_t *V0, const uint16_t *STp, const uint16_t *B, const uint16_t *Epp,
                                       const FrodoKemParams *params);
 
 void FrodoCommonMulBs(uint16_t *out, const uint16_t *b, const uint16_t *s, const FrodoKemParams *params);
-void FrodoCommonMulBsUsingSt(uint16_t *out, const uint16_t *b, const uint16_t *s, const FrodoKemParams *params);
+void FrodoCommonMulBsUsingSt(uint16_t *out, const uint16_t *b, const uint16_t *sT, const FrodoKemParams *params);
 
 // =================================================================================
 // Function Prototypes from core_*.c (Small Matrix and Key Arithmetic)
@@ -120,9 +120,9 @@ void FrodoCommonKeyDecode(uint8_t *mu, const uint16_t *in, const FrodoKemParams 
 // =================================================================================
 
 int32_t FrodoPkeKeygen(const FrodoKemParams *params, uint8_t *pk, uint8_t *pke_sk);
-int32_t FrodoPkeEncrypt(const FrodoKemParams *params, const uint8_t *pk, const uint8_t *mu, const uint8_t *seedSE,
+int32_t FrodoPkeEncrypt(const FrodoKemParams *params, const uint8_t *pk, const uint8_t *mu, const uint8_t *seedSEp,
                         uint8_t *ct, void *libCtx);
-int32_t FrodoPkeDecrypt(const FrodoKemParams *params, const uint8_t *pke_sk, const uint8_t *ct, uint8_t *mu);
+int32_t FrodoPkeDecrypt(const FrodoKemParams *params, const uint8_t *pkeSk, const uint8_t *ct, uint8_t *mu);
 
 #ifdef __cplusplus
 }

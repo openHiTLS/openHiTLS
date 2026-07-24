@@ -18,7 +18,6 @@
 #include <string.h>
 #include "hitls_build.h"
 #include "bsl_log_internal.h"
-#include "bsl_util_internal.h"
 #include "bsl_errno.h"
 #include "bsl_sal.h"
 #include "bsl_binlog_id.h"

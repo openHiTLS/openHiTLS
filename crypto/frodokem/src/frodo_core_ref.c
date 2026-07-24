@@ -74,9 +74,8 @@ static int32_t AESCtrEncrypt(CRYPT_EAL_CipherCtx *ctx, const int32_t n, uint16_t
 }
 
 static int32_t FrodoCommonMulAddAES(uint16_t *out, const uint16_t *matrixSTranspose, const uint8_t *seedA,
-                                    const int32_t n, const int32_t nBar, uint16_t rows[FRODO_MATRIX_FOUR_ROWS_SIZE],
-                                    uint8_t plaintext[FRODO_PRG_AES_PLAINTEXT_SIZE], FrodoMulAddFunc multFunction,
-                                    void *libCtx)
+                                    const int32_t n, const int32_t nBar, uint16_t *rows, uint8_t *plaintext,
+                                    FrodoMulAddFunc multFunction, void *libCtx)
 {
     CRYPT_EAL_CipherCtx *ctx = CRYPT_EAL_ProviderCipherNewCtx(libCtx, CRYPT_CIPHER_AES128_ECB, NULL);
     if (ctx == NULL) {
@@ -109,9 +108,8 @@ EXIT:
 }
 
 static int32_t FrodoCommonMulAddShake(uint16_t *out, const uint16_t *matrixS, const uint8_t *seedA,
-                                      const FrodoKemParams *params, int32_t n, int32_t nBar,
-                                      uint16_t rows[FRODO_MATRIX_FOUR_ROWS_SIZE], FrodoMulAddFunc multFunction,
-                                      void *libCtx)
+                                      const FrodoKemParams *params, int32_t n, int32_t nBar, uint16_t *rows,
+                                      FrodoMulAddFunc multFunction, void *libCtx)
 {
     int32_t ret;
     const uint32_t inLen = 2 + (uint32_t)params->lenSeedA; // lenSeedA is FRODO_MAX_SEED_A
@@ -161,7 +159,11 @@ int32_t FrodoCommonMulAddAsPlusEPortable(uint16_t *out, const uint16_t *matrixST
 {
     const int32_t N = params->n;
     const int32_t nBar = params->nBar;
-    uint16_t rows[4 * FRODO_MAX_N];
+    uint16_t *rows = BSL_SAL_Malloc(4 * FRODO_MAX_N * sizeof(uint16_t));
+    if (rows == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
+        return CRYPT_MEM_ALLOC_FAIL;
+    }
     int32_t ret;
 #if defined(HITLS_CRYPTO_FRODOKEM_ARMV8)
     /* Transpose S^T (nBar x N) to S (N x nBar) once upfront.
@@ -178,14 +180,22 @@ int32_t FrodoCommonMulAddAsPlusEPortable(uint16_t *out, const uint16_t *matrixST
     const uint16_t *matS = matrixST;
 #endif
     if (params->prg == FRODO_PRG_AES) {
-        uint8_t plaintext[FRODO_PRG_AES_PLAINTEXT_SIZE];
+        uint8_t *plaintext = BSL_SAL_Malloc(FRODO_PRG_AES_PLAINTEXT_SIZE);
+        if (plaintext == NULL) {
+            BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
+            ret = CRYPT_MEM_ALLOC_FAIL;
+            goto EXIT;
+        }
         ret = FrodoCommonMulAddAES(out, matS, seedA, N, nBar, rows, plaintext, FrodoMulAddAsPlusE, libCtx);
+        BSL_SAL_FREE(plaintext);
     } else {
         ret = FrodoCommonMulAddShake(out, matS, seedA, params, N, nBar, rows, FrodoMulAddAsPlusE, libCtx);
     }
+EXIT:
 #if defined(HITLS_CRYPTO_FRODOKEM_ARMV8)
     BSL_SAL_CleanseData(sMatrix, sizeof(sMatrix));
 #endif
+    BSL_SAL_FREE(rows);
     return ret;
 }
 

@@ -33,7 +33,7 @@ int32_t CRYPT_FRODOKEM_SetPrvKeyEx(CRYPT_FRODOKEM_Ctx *ctx, BSL_Param *param);
 int32_t CRYPT_FRODOKEM_SetPubKeyEx(CRYPT_FRODOKEM_Ctx *ctx, BSL_Param *param);
 int32_t CRYPT_FRODOKEM_GetPrvKeyEx(CRYPT_FRODOKEM_Ctx *ctx, BSL_Param *param);
 int32_t CRYPT_FRODOKEM_GetPubKeyEx(CRYPT_FRODOKEM_Ctx *ctx, BSL_Param *param);
-CRYPT_FRODOKEM_Ctx *CRYPT_FRODOKEM_DupCtx(CRYPT_FRODOKEM_Ctx *srcCtx);
+CRYPT_FRODOKEM_Ctx *CRYPT_FRODOKEM_DupCtx(CRYPT_FRODOKEM_Ctx *src);
 int32_t CRYPT_FRODOKEM_Cmp(CRYPT_FRODOKEM_Ctx *ctx1, CRYPT_FRODOKEM_Ctx *ctx2);
 int32_t CRYPT_FRODOKEM_Ctrl(CRYPT_FRODOKEM_Ctx *ctx, int32_t cmd, void *val, uint32_t valLen);
 void CRYPT_FRODOKEM_FreeCtx(CRYPT_FRODOKEM_Ctx *ctx);
