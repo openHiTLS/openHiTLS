@@ -62,9 +62,9 @@ static inline int16_t BarrettReduction(int32_t a)
     return (int16_t)(a - t);
 }
 
-static inline int16_t PlantardReduction(int32_t a)
+static inline int16_t PlantardReduction(uint32_t a)
 {
-    int32_t tmp = a;
+    int32_t tmp = (int32_t)a;
     tmp >>= MLKEM_PLANTARD_L;
     tmp = (tmp + (1 << MLKEM_PLANTARD_ALPHA)) * MLKEM_Q;
     tmp >>= MLKEM_PLANTARD_L;
@@ -113,17 +113,6 @@ int32_t MLKEM_DecodeEk(CRYPT_ML_KEM_Ctx *ctx, const uint8_t *ek, uint32_t ekLen)
 void MLKEM_ComputNTT(int16_t *a, const int32_t *psi);
 void MLKEM_ComputINTT(int16_t *a, const int32_t *psi);
 void MLKEM_SamplePolyCBD(int16_t *polyF, uint8_t *buf, uint8_t eta);
-void MLKEM_TransposeMatrixMulAdd(uint8_t k, int16_t **matrix, int16_t **polyVec, int16_t **polyVecOut,
-                                 const int16_t mulCache[MLKEM_K_MAX][MLKEM_N_HALF]);
-void MLKEM_MatrixMulAdd(uint8_t k, int16_t **matrix, int16_t **polyVec, int16_t **polyVecOut,
-                        const int16_t mulCache[MLKEM_K_MAX][MLKEM_N_HALF]);
-void MLKEM_VectorInnerProductAdd(uint8_t k, int16_t **polyVec1, int16_t **polyVec2, int16_t *polyOut,
-                                 const int32_t *factor);
-void MLKEM_VectorInnerProductAddUseCache(uint8_t k, int16_t **polyVec1, int16_t **polyVec2, int16_t *polyOut,
-                                         const int16_t mulCache[MLKEM_K_MAX][MLKEM_N_HALF]);
-
-void MLKEM_ComputeMulCache(uint8_t k, int16_t **input, int16_t output[MLKEM_K_MAX][MLKEM_N_HALF],
-                           const int32_t *factor);
 
 int32_t MLKEM_KeyGenInternal(CRYPT_ML_KEM_Ctx *ctx, uint8_t *d, uint8_t *z);
 

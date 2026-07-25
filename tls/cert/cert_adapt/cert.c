@@ -108,7 +108,7 @@ bool SAL_CERT_IsSignAlgorithmAllowed(const TLS_Ctx *ctx, uint16_t signScheme,
         /* Check if the negotiated TLS version is supported by this signature scheme. */
         uint32_t negotiatedVersionBit = MapVersion2VersionBit(
             IS_SUPPORT_DATAGRAM(ctx->config.tlsConfig.originVersionMask), ctx->negotiatedInfo.version);
-        if (!(negotiatedVersionBit & info->certVersionBits)) {
+        if ((negotiatedVersionBit & info->certVersionBits) == 0) {
             return false;
         }
     }

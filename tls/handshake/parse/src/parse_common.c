@@ -223,7 +223,7 @@ int32_t CheckPeerSignScheme(HITLS_Ctx *ctx, CERT_Pair *peerCert, uint16_t signSc
     /* Check if the negotiated TLS version is supported by this signature scheme. */
     uint32_t negotiatedVersionBit = MapVersion2VersionBit(
         IS_SUPPORT_DATAGRAM(ctx->config.tlsConfig.originVersionMask), ctx->negotiatedInfo.version);
-    if (!(negotiatedVersionBit & info->certVersionBits)) {
+    if ((negotiatedVersionBit & info->certVersionBits) == 0) {
         SAL_CERT_KeyFree(config->certMgrCtx, pubkey);
         return RETURN_ERROR_NUMBER_PROCESS(HITLS_PARSE_UNSUPPORT_SIGN_ALG, BINLOG_ID16195, "signScheme err");
     }

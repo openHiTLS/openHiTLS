@@ -23,7 +23,7 @@
 #include "bsl_err_internal.h"
 
 int32_t FrodoPkeKeygenSeeded(const FrodoKemParams *params, uint8_t *pk, uint16_t *matrixSTranspose,
-                             const uint8_t *seedA, const uint8_t *seedSE, void *libCtx)
+    const uint8_t *seedA, const uint8_t *seedSE, void *libCtx)
 {
     const uint16_t n = params->n;
     const uint16_t nBar = params->nBar;
@@ -74,7 +74,7 @@ int32_t FrodoPkeKeygenSeeded(const FrodoKemParams *params, uint8_t *pk, uint16_t
 }
 
 int32_t FrodoPkeEncrypt(const FrodoKemParams *params, const uint8_t *pk, const uint8_t *mu, const uint8_t *seedSEp,
-                        uint8_t *ct, void *libCtx)
+    uint8_t *ct, void *libCtx)
 {
     const uint16_t n = params->n;
     const uint16_t nBar = params->nBar;
@@ -144,7 +144,7 @@ int32_t FrodoPkeEncrypt(const FrodoKemParams *params, const uint8_t *pk, const u
 
     FrodoCommonKeyEncode(M, mu, params);
     for (uint32_t t = 0; t < cntNBarNBar; t++) {
-        V[t] = (uint16_t)((V[t] + M[t]) & qMask);
+        V[t] = ((V[t] + M[t]) & qMask);
     }
 
     FrodoCommonPack(ctC1, lenC1, U, (uint32_t)nBar * n, params->logq);

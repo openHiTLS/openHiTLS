@@ -2424,7 +2424,7 @@ static int32_t CheckHostnames(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_List *ch
     for (BslListNode *hostNode = BSL_LIST_FirstNode(storeCtx->verifyParam.hostnames); hostNode != NULL;
         hostNode = BSL_LIST_GetNextNode(storeCtx->verifyParam.hostnames, hostNode)) {
         char *hostname = (char *)BSL_LIST_GetData(hostNode);
-        ret = HITLS_X509_VerifyHostname(certee, storeCtx->verifyParam.hostflags, hostname, strlen(hostname));
+        ret = HITLS_X509_VerifyHostname(certee, storeCtx->verifyParam.hostflags, hostname, (uint32_t)strlen(hostname));
         if (ret == HITLS_PKI_SUCCESS) {
             storeCtx->verifyParam.peername = DupString(hostname);
             if (storeCtx->verifyParam.peername == NULL) {

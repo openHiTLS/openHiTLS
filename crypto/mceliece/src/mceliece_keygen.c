@@ -51,7 +51,7 @@ static void ExtractSubmatrix(uint64_t buf[MCELIECE_MU], const uint8_t *mat, uint
                              uint32_t blockIdx, uint32_t tail)
 {
     uint8_t tmp[9];
-    for (int32_t i = 0; i < MCELIECE_MU; i++) {
+    for (uint32_t i = 0; i < MCELIECE_MU; i++) {
         const uint8_t *src = &mat[(row + i) * colsBytes + blockIdx];
         LOAD_SHIFT_9TO8(tmp, src, tail);
         buf[i] = GET_UINT64_LE(tmp, 0);
@@ -370,9 +370,9 @@ static void ParityCheckMatRow(uint16_t *goppaRow, uint32_t power, const Mceliece
             // Reference mapping: MSB=col j+7 ... LSB=col j (for partial block, highest index first)
             for (int32_t tbit = (int32_t)blockLen - 1; tbit >= 0; tbit--) {
                 b <<= 1;
-                b |= (uint8_t)((goppaRow[j + tbit] >> k) & 1);
+                b |= (uint8_t)((goppaRow[j + (uint32_t)tbit] >> k) & 1);
             }
-            int32_t row = (int32_t)(power * m + k);
+            uint32_t row = power * m + k;
             matH->data[row * matH->colsBytes + j / 8] = b;
         }
     }
@@ -399,7 +399,7 @@ static int32_t BuildParityCheckMatrix(GFMatrix *matH, const GFPolynomial *g, con
         uint16_t val = 1;
         for (int32_t d = (int32_t)t - 1; d >= 0; d--) {
             val = GFMultiplication(val, a);
-            val ^= GFPolyGetCoeff(g, d);
+            val ^= GFPolyGetCoeff(g, (uint32_t)d);
         }
         if (val == 0) {
             BSL_SAL_FREE(inv);

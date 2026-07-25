@@ -18,7 +18,7 @@
 #include "frodo_local.h"
 
 void FrodoCommonSampleNFromR(uint16_t *samples, const uint32_t n, const uint16_t *cdfTable, const uint32_t cdfLen,
-                             const uint8_t *rBytes)
+    const uint8_t *rBytes)
 {
     for (uint32_t i = 0; i < n; i++) {
         uint16_t r = (uint16_t)rBytes[2 * i] | ((uint16_t)rBytes[2 * i + 1] << 8);
@@ -34,21 +34,21 @@ void FrodoCommonSampleNFromR(uint16_t *samples, const uint32_t n, const uint16_t
     }
 }
 
-void FrodoMulAddAsPlusE(uint16_t *out, const uint16_t *matrixS, int32_t n, int32_t nBar, uint16_t *rows,
-                        int32_t rowNumber)
+void FrodoMulAddAsPlusE(uint16_t *out, const uint16_t *matrixS, uint32_t n, uint32_t nBar, uint16_t *rows,
+    uint32_t rowNumber)
 {
     const uint16_t *row0 = &rows[0 * n];
     const uint16_t *row1 = &rows[1 * n];
     const uint16_t *row2 = &rows[2 * n];
     const uint16_t *row3 = &rows[3 * n];
 
-    for (int32_t j = 0; j < nBar; j++) {
+    for (uint32_t j = 0; j < nBar; j++) {
         const uint16_t *rowS = &matrixS[j * n];
         uint16_t sum0 = 0;
         uint16_t sum1 = 0;
         uint16_t sum2 = 0;
         uint16_t sum3 = 0;
-        for (int32_t k = 0; k < n; k++) {
+        for (uint32_t k = 0; k < n; k++) {
             uint16_t sv = rowS[k];
             sum0 += (uint16_t)((uint32_t)row0[k] * sv);
             sum1 += (uint16_t)((uint32_t)row1[k] * sv);
@@ -62,22 +62,22 @@ void FrodoMulAddAsPlusE(uint16_t *out, const uint16_t *matrixS, int32_t n, int32
     }
 }
 
-void FrodoMulAddSaPlusE(uint16_t *out, const uint16_t *matrixS, int32_t n, int32_t nBar, uint16_t *rows,
-                        int32_t rowNumber)
+void FrodoMulAddSaPlusE(uint16_t *out, const uint16_t *matrixS, uint32_t n, uint32_t nBar, uint16_t *rows,
+    uint32_t rowNumber)
 {
     const uint16_t *row0 = &rows[0 * n];
     const uint16_t *row1 = &rows[1 * n];
     const uint16_t *row2 = &rows[2 * n];
     const uint16_t *row3 = &rows[3 * n];
 
-    for (int32_t k = 0; k < nBar; k++) {
+    for (uint32_t k = 0; k < nBar; k++) {
         const uint16_t s0 = matrixS[k * n + (rowNumber + 0)];
         const uint16_t s1 = matrixS[k * n + (rowNumber + 1)];
         const uint16_t s2 = matrixS[k * n + (rowNumber + 2)];
         const uint16_t s3 = matrixS[k * n + (rowNumber + 3)];
 
         uint16_t *outRow = &out[k * n];
-        for (int32_t j = 0; j < n; j++) {
+        for (uint32_t j = 0; j < n; j++) {
             uint16_t acc = outRow[j];
             acc = (uint16_t)(acc + (uint16_t)((uint32_t)row0[j] * s0));
             acc = (uint16_t)(acc + (uint16_t)((uint32_t)row1[j] * s1));
@@ -89,7 +89,7 @@ void FrodoMulAddSaPlusE(uint16_t *out, const uint16_t *matrixS, int32_t n, int32
 }
 
 void FrodoCommonMulAddSbPlusEPortable(uint16_t *V0, const uint16_t *STp, const uint16_t *B, const uint16_t *Epp,
-                                      const FrodoKemParams *params)
+    const FrodoKemParams *params)
 {
     const uint32_t n = params->n;
     const uint32_t nBar = params->nBar;

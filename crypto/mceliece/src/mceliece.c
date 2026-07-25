@@ -930,10 +930,10 @@ int32_t McElieceDecapsInternal(const uint8_t *ciphertext, const CMPrivateKey *sk
     // Recompute syndrome from e
     GOTO_ERR_IF(ComputeSyndrome(e, sk->g, sk->alpha, params, verifySyndrome), ret);
     // Verify decodeSyndrome == verifySyndrome
-    uint32_t mask = ConstTimeMemcmp((uint8_t *)decodeSyndrome, (uint8_t *)verifySyndrome,
+    uint8_t mask = (uint8_t)ConstTimeMemcmp((uint8_t *)decodeSyndrome, (uint8_t *)verifySyndrome,
         2U * params->t * (uint32_t)sizeof(uint16_t));
     // Verify error weight == t
-    mask &= Uint32ConstTimeEqual(VectoWeight(e, params->nBytes), params->t);
+    mask &= (uint8_t)Uint32ConstTimeEqual(VectoWeight(e, params->nBytes), params->t);
     if (isPc) {
         // PC only: verify C1
         uint8_t hashIn[1 + MCELIECE_NBYTES_MAX];
@@ -941,7 +941,7 @@ int32_t McElieceDecapsInternal(const uint8_t *ciphertext, const CMPrivateKey *sk
         memcpy(hashIn + 1, e, params->nBytes);
         uint8_t c1Prime[MCELIECE_L_BYTES];
         GOTO_ERR_IF(McElieceShake256(c1Prime, MCELIECE_L_BYTES, hashIn, 1 + params->nBytes), ret);
-        mask &= ConstTimeMemcmp(c1Prime, c1, MCELIECE_L_BYTES); // If C' != C1, set b <- 0
+        mask &= (uint8_t)ConstTimeMemcmp(c1Prime, c1, MCELIECE_L_BYTES); // If C' != C1, set b <- 0
     }
     // b = 1 if errorWeight == t, 0 otherwise
     uint8_t b = (1 & mask) | (0 & (~mask));

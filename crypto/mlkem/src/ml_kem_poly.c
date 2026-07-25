@@ -74,7 +74,7 @@ const int32_t CONST_ZETA_POWER_2[MLKEM_N_HALF] = {
 static void DivMlKemQBit4(int16_t *x)
 {
     for (int32_t i = 0; i < MLKEM_N; ++i) {
-        uint64_t tmp = x[i] + ((x[i] >> 15) & MLKEM_Q);
+        uint64_t tmp = (uint64_t)(x[i] + ((x[i] >> 15) & MLKEM_Q));
         tmp = tmp * 41285360; // 2^4 * round(2^33 / q) = 41285360
         x[i] = (int16_t)(((tmp + (1ULL << 32)) >> 33) & 0xF);
     }
@@ -83,7 +83,7 @@ static void DivMlKemQBit4(int16_t *x)
 static void DivMlKemQBit5(int16_t *x)
 {
     for (int32_t i = 0; i < MLKEM_N; ++i) {
-        uint64_t tmp = x[i] + ((x[i] >> 15) & MLKEM_Q);
+        uint64_t tmp = (uint64_t)(x[i] + ((x[i] >> 15) & MLKEM_Q));
         tmp = tmp * 82570720; // 2^5 * round(2^33 / q) = 82570720
         x[i] = (int16_t)(((tmp + (1ULL << 32)) >> 33) & 0x1F);
     }
@@ -92,7 +92,7 @@ static void DivMlKemQBit5(int16_t *x)
 static void DivMlKemQBit10(int16_t *x)
 {
     for (int32_t i = 0; i < MLKEM_N; ++i) {
-        uint64_t tmp = x[i] + ((x[i] >> 15) & MLKEM_Q);
+        uint64_t tmp = (uint64_t)(x[i] + ((x[i] >> 15) & MLKEM_Q));
         tmp = tmp * 2642263040; // 2^10 * round(2^33 / q) = 2642263040
         x[i] = (int16_t)(((tmp + (1ULL << 32)) >> 33) & 0x3FF);
     }
@@ -101,7 +101,7 @@ static void DivMlKemQBit10(int16_t *x)
 static void DivMlKemQBit11(int16_t *x)
 {
     for (int32_t i = 0; i < MLKEM_N; ++i) {
-        uint64_t tmp = x[i] + ((x[i] >> 15) & MLKEM_Q);
+        uint64_t tmp = (uint64_t)(x[i] + ((x[i] >> 15) & MLKEM_Q));
         tmp = tmp * 5284526080; // 2^11 * round(2^33 / q) = 5284526080
         x[i] = (int16_t)(((tmp + (1ULL << 32)) >> 33) & 0x7FF);
     }
@@ -110,7 +110,7 @@ static void DivMlKemQBit11(int16_t *x)
 static void DivMlKemQBit1(int16_t *x)
 {
     for (int32_t i = 0; i < MLKEM_N; ++i) {
-        uint32_t tmp = x[i] + ((x[i] >> 15) & MLKEM_Q);
+        uint32_t tmp = (uint32_t)(x[i] + ((x[i] >> 15) & MLKEM_Q));
         tmp = tmp * 1290168; // 2^1 * round(2^31 / q) = 1290168
         x[i] = (int16_t)(((tmp + (1U << 30)) >> 31) & 0x1);
     }
@@ -142,21 +142,21 @@ static void MlkemSubPoly(const int16_t *a, int16_t *b)
 
 // basecase multiplication: add to polyH but not override it
 static void BaseMulAdd(int32_t polyH[2], const int16_t f0, const int16_t f1, const int16_t g0, const int16_t g1,
-                       const int32_t factor)
+    const int32_t factor)
 {
     polyH[0] += f0 * g0 + f1 * PlantardReduction((uint32_t)g1 * (uint32_t)factor);
     polyH[1] += f0 * g1 + f1 * g0;
 }
 
 static void BaseMulAddCache(int32_t polyH[2], const int16_t f0, const int16_t f1, const int16_t g0, const int16_t g1,
-                       const int16_t cache)
+    const int16_t cache)
 {
     polyH[0] += f0 * g0 + f1 * cache;
     polyH[1] += f0 * g1 + f1 * g0;
 }
 
 static void CircMulAdd(int32_t dest[MLKEM_N], const int16_t src1[MLKEM_N], const int16_t src2[MLKEM_N],
-                       const int32_t *factor)
+    const int32_t *factor)
 {
     for (uint32_t i = 0; i < MLKEM_N / 4; i++) {
         // 4-byte data is calculated in each round.
@@ -167,7 +167,7 @@ static void CircMulAdd(int32_t dest[MLKEM_N], const int16_t src1[MLKEM_N], const
 }
 
 static void CircMulAddUseCache(int32_t dest[MLKEM_N], const int16_t src1[MLKEM_N], const int16_t src2[MLKEM_N],
-                       const int16_t *mulCache)
+    const int16_t *mulCache)
 {
     for (uint32_t i = 0; i < MLKEM_N / 4; i++) {
         // 4-byte data is calculated in each round.
@@ -184,28 +184,29 @@ static void PolyReduce(int16_t *poly, int32_t *src)
     }
 }
 
-void MLKEM_ComputeMulCache(uint8_t k, int16_t **input, int16_t output[MLKEM_K_MAX][MLKEM_N_HALF], const int32_t *factor)
+static void MLKEM_ComputeMulCache(uint32_t k, int16_t **input, int16_t output[MLKEM_K_MAX][MLKEM_N_HALF],
+    const int32_t *factor)
 {
-    for (int32_t i = 0; i < k; ++i) {
-        for (int32_t j = 0; j < MLKEM_N_HALF; ++j) {
+    for (uint32_t i = 0; i < k; ++i) {
+        for (uint32_t j = 0; j < MLKEM_N_HALF; ++j) {
             output[i][j] = PlantardReduction((uint32_t)input[i][2 * j + 1] * (uint32_t)factor[j]);
         }
     }
 }
 
 // polyVecOut += (matrix * polyVec): add to polyVecOut but not override it
-void MLKEM_MatrixMulAdd(uint8_t k, int16_t **matrix, int16_t **polyVec, int16_t **polyVecOut,
-                        const int16_t mulCache[MLKEM_K_MAX][MLKEM_N_HALF])
+static void MLKEM_MatrixMulAdd(uint32_t k, int16_t **matrix, int16_t **polyVec, int16_t **polyVecOut,
+    const int16_t mulCache[MLKEM_K_MAX][MLKEM_N_HALF])
 {
     int16_t **currOutPoly = polyVecOut;
     int32_t tmps[MLKEM_N];
-    for (int32_t i = 0; i < k; ++i) {
+    for (uint32_t i = 0; i < k; ++i) {
         int16_t **currMatrixPoly = matrix + i * MLKEM_K_MAX;
         int16_t **currVecPoly = polyVec;
         for (int32_t j= 0; j < MLKEM_N; ++j) {
             tmps[j] = (*currOutPoly)[j];
         }
-        for (int32_t j = 0; j < k; ++j) {
+        for (uint32_t j = 0; j < k; ++j) {
             CircMulAddUseCache(tmps, *currMatrixPoly, *currVecPoly, mulCache[j]);
             ++currMatrixPoly;
             ++currVecPoly;
@@ -216,15 +217,15 @@ void MLKEM_MatrixMulAdd(uint8_t k, int16_t **matrix, int16_t **polyVec, int16_t 
 }
 
 // polyVecOut += (matrix^T * polyVec): add to polyVecOut but not override it
-void MLKEM_TransposeMatrixMulAdd(uint8_t k, int16_t **matrix, int16_t **polyVec, int16_t **polyVecOut,
-                                 const int16_t mulCache[MLKEM_K_MAX][MLKEM_N_HALF])
+static void MLKEM_TransposeMatrixMulAdd(uint32_t k, int16_t **matrix, int16_t **polyVec, int16_t **polyVecOut,
+    const int16_t mulCache[MLKEM_K_MAX][MLKEM_N_HALF])
 {
     int16_t **currOutPoly = polyVecOut;
-    for (int32_t i = 0; i < k; ++i) {
+    for (uint32_t i = 0; i < k; ++i) {
         int16_t **currMatrixPoly = matrix + i;
         int16_t **currVecPoly = polyVec;
         int32_t tmps[MLKEM_N] = {0};
-        for (int32_t j = 0; j < k; ++j) {
+        for (uint32_t j = 0; j < k; ++j) {
             CircMulAddUseCache(tmps, *currMatrixPoly, *currVecPoly, mulCache[j]);
             currMatrixPoly += MLKEM_K_MAX;
             ++currVecPoly;
@@ -234,26 +235,15 @@ void MLKEM_TransposeMatrixMulAdd(uint8_t k, int16_t **matrix, int16_t **polyVec,
     }
 }
 
-void MLKEM_VectorInnerProductAddUseCache(uint8_t k, int16_t **polyVec1, int16_t **polyVec2, int16_t *polyOut,
-                                 const int16_t mulCache[MLKEM_K_MAX][MLKEM_N_HALF])
+static void MLKEM_VectorInnerProductAdd(uint32_t k, int16_t **polyVec1, int16_t **polyVec2, int16_t *polyOut,
+    const int32_t *factor)
 {
     int32_t tmps[MLKEM_N] = {0};
-    for (int32_t i = 0; i < k; ++i) {
-        CircMulAddUseCache(tmps, polyVec1[i], polyVec2[i], mulCache[i]);
-    }
-    PolyReduce(polyOut, tmps);
-}
-
-void MLKEM_VectorInnerProductAdd(uint8_t k, int16_t **polyVec1, int16_t **polyVec2, int16_t *polyOut,
-                                 const int32_t *factor)
-{
-    int32_t tmps[MLKEM_N] = {0};
-    for (int32_t i = 0; i < k; ++i) {
+    for (uint32_t i = 0; i < k; ++i) {
         CircMulAdd(tmps, polyVec1[i], polyVec2[i], factor);
     }
     PolyReduce(polyOut, tmps);
 }
-
 
 int32_t SampleEta1(const CRYPT_ML_KEM_Ctx *ctx, uint8_t *seed, int16_t *s[], int16_t *e[])
 {
@@ -307,13 +297,13 @@ static int32_t Parse(uint16_t *polyNtt, uint8_t *arrayB, uint32_t *curLen)
         uint16_t d1 = ((uint16_t)arrayB[i]) + (((uint16_t)arrayB[i + 1] & 0x0f) << 8);  // 4 bits.
         uint16_t d2 = (((uint16_t)arrayB[i + 1]) >> 4) + (((uint16_t)arrayB[i + 2]) << 4);
 
-        int32_t mask = (MLKEM_Q - 1 - d1) >> 31;
-        polyNtt[*curLen] = (int16_t)(d1 & ~mask);
+        uint32_t mask = (MLKEM_Q - 1 - d1) >> 31;
+        polyNtt[*curLen] = (uint16_t)(d1 & ~mask);
         *curLen += 1 + mask;
 
         if (*curLen < MLKEM_N) {
             mask = (MLKEM_Q - 1 - d2) >> 31;
-            polyNtt[*curLen] = (int16_t)(d2 & ~mask);
+            polyNtt[*curLen] = (uint16_t)(d2 & ~mask);
             *curLen += 1 + mask;
         }
         i += 3;  // 3 bytes are processed in each round.
@@ -369,14 +359,14 @@ ERR:
 int32_t MLKEM_PKEGen(CRYPT_ML_KEM_Ctx *ctx, uint8_t *digest, uint8_t *pk, uint8_t *dk)
 {
     int32_t ret = CRYPT_SUCCESS;
-    uint8_t k = ctx->info->k;
+    uint32_t k = (uint32_t)ctx->info->k;
     // expand 32+1 bytes to two pseudorandom 32-byte seeds
     uint8_t *p = digest;
     uint8_t *q = digest + CRYPT_SHA3_512_DIGESTSIZE / 2;
     GOTO_ERR_IF(GenMatrix(ctx, p, ctx->keyData.matrix, false), ret);  // Step 3 - 7
     GOTO_ERR_IF(SampleEta1(ctx, q, ctx->keyData.vectorS, ctx->keyData.vectorT), ret);  // Step 8 - 15
-    for (int32_t i = 0; i < k; ++i) {
-        for (int32_t j = 0; j < MLKEM_N; ++j) {
+    for (uint32_t i = 0; i < k; ++i) {
+        for (uint32_t j = 0; j < MLKEM_N; ++j) {
             ctx->keyData.vectorS[i][j] = BarrettReduction(ctx->keyData.vectorS[i][j]);
         }
     }
@@ -384,7 +374,7 @@ int32_t MLKEM_PKEGen(CRYPT_ML_KEM_Ctx *ctx, uint8_t *digest, uint8_t *pk, uint8_
     MLKEM_ComputeMulCache(k, ctx->keyData.vectorS, mulCache, CONST_ZETA_POWER_2);
     MLKEM_MatrixMulAdd(k, (int16_t **)ctx->keyData.matrix, ctx->keyData.vectorS, ctx->keyData.vectorT, mulCache);
     // output: pk, dk,  ekPKE ← ByteEncode12(𝐭)‖p.
-    for (uint8_t i = 0; i < k; i++) {
+    for (uint32_t i = 0; i < k; i++) {
         // Step 19
         ByteEncode(pk + MLKEM_SEED_LEN * MLKEM_BITS_OF_Q * i, ctx->keyData.vectorT[i], MLKEM_BITS_OF_Q);
         // Step 20

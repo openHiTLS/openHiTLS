@@ -226,12 +226,13 @@ static int32_t XmssPkCompress(const void *vctx, const void *vadrs, const uint8_t
     const XmssCtxCommon *ctx = (const XmssCtxCommon *)vctx;
     uint32_t n = ctx->n;
     uint32_t len = 2 * n + 3;
+    size_t nodeSize = (size_t)len * n;
 
     /* Allocate node buffer: uint8_t node[len][n] */
-    if (n == 0 || len > SIZE_MAX / n) {
+    if (n == 0 || nodeSize > UINT32_MAX) {
         return CRYPT_MEM_ALLOC_FAIL;
     }
-    uint8_t *node = (uint8_t *)BSL_SAL_Malloc((size_t)len * n);
+    uint8_t *node = (uint8_t *)BSL_SAL_Malloc(nodeSize);
     if (node == NULL) {
         return BSL_MALLOC_FAIL;
     }

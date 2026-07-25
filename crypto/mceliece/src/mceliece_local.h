@@ -140,13 +140,13 @@ static inline uint32_t VectorGetBit(const uint8_t *vec, const uint32_t bitIdx)
     return (uint32_t)((vec[byteIdx] >> bitPos) & 1u); // lsb
 }
 
-static inline int32_t VectoWeight(const uint8_t *vec, uint32_t lenBytes)
+static inline uint32_t VectoWeight(const uint8_t *vec, uint32_t lenBytes)
 {
-    int32_t weight = 0;
+    uint32_t weight = 0;
     for (uint32_t i = 0; i < lenBytes; i++) {
-        uint32_t byte = vec[i];
+        uint8_t byte = vec[i];
         for (uint32_t bit = 0; bit < 8; bit++) {
-            weight += (int32_t)((byte >> bit) & 1u);
+            weight += (uint32_t)((byte >> bit) & 1u);
         }
     }
     return weight;

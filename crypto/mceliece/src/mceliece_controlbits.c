@@ -26,7 +26,7 @@
 // Sort values in ascending SIGNED order using radix with sign bias
 static void RadixSortI32(uint32_t *ua, uint32_t *tmp, uint32_t n)
 {
-    const int32_t rad = 256; // Number of buckets per radix pass (8-bit digit --> 2^8 = 256)
+    const uint32_t rad = 256; // Number of buckets per radix pass (8-bit digit --> 2^8 = 256)
     uint32_t cnt[256];
     uint32_t pref[256];
     for (uint32_t pass = 0; pass < 4; pass++) { // Number of radix passes for full 32-bit key (32 / 8 = 4)
@@ -40,7 +40,7 @@ static void RadixSortI32(uint32_t *ua, uint32_t *tmp, uint32_t n)
             cnt[b]++;
         }
         pref[0] = 0;
-        for (int32_t r = 1; r < rad; r++) {
+        for (uint32_t r = 1; r < rad; r++) {
             pref[r] = pref[r - 1] + cnt[r - 1];
         }
         for (uint32_t i = 0; i < n; i++) {
@@ -228,7 +228,7 @@ static int32_t EmitFirstHalf(uint32_t *posOut, uint8_t *out, uint32_t pos, uint3
         uint32_t tmpFx = x + fj;
         uint32_t tmpFx1 = tmpFx ^ 1U; // Toggle mask to flip least-significant bit (select sibling)
 
-        Write1BitLE(out, tmpPos, fj);
+        Write1BitLE(out, tmpPos, (uint8_t)fj);
         tmpPos += step;
 
         areaB[x] = (areaA[x] << 16) | tmpFx;
@@ -254,7 +254,7 @@ static int32_t EmitSecondHalf(uint32_t *posOut, uint8_t *out, uint32_t pos, uint
         uint32_t tmpLy = y + lk;
         uint32_t tmpLy1 = tmpLy ^ 1U;
 
-        Write1BitLE(out, tmpPos, lk);
+        Write1BitLE(out, tmpPos, (uint8_t)lk);
         tmpPos += step;
 
         areaA[y] = (tmpLy << 16) | (areaB[y] & 0xFFFFU);
@@ -299,7 +299,7 @@ static int32_t BenesNetControlbitsCore(uint8_t *out, uint32_t pos, uint32_t step
     uint16_t *q = (uint16_t *)(temp + n + n / 4); // perm buffer
 
     if (w == 1) { // Base-case sentinel – when only 1 control layer remains, emit single bit and stop
-        Write1BitLE(out, tmpPos, pi[0] & 1U);
+        Write1BitLE(out, tmpPos, (uint8_t)(pi[0] & 1U));
         return CRYPT_SUCCESS;
     }
     int32_t ret;

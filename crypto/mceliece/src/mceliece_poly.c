@@ -88,7 +88,7 @@ void GFPolyMul(GFPolynomial *out, const GFPolynomial *in0, const GFPolynomial *i
 
     // reduce high terms using fixed pentanomial
     if (t == 128) {
-        for (int32_t i = (int32_t)((t - 1) * 2); i >= (int32_t)t; i--) { // 7, 2, 1, 0: the exponent of prod[x]
+        for (uint32_t i = (t - 1) * 2; i >= t; i--) { // 7, 2, 1, 0: the exponent of prod[x]
             uint16_t v = prod[i];
             prod[i - t + 7] ^= v;
             prod[i - t + 2] ^= v;
@@ -96,7 +96,7 @@ void GFPolyMul(GFPolynomial *out, const GFPolynomial *in0, const GFPolynomial *i
             prod[i - t + 0] ^= v;
         }
     } else if (t == 119) {
-        for (int32_t i = (int32_t)((t - 1) * 2); i >= (int32_t)t; i--) { // 8, 0: the exponent of prod[x]
+        for (uint32_t i = (t - 1) * 2; i >= t; i--) { // 8, 0: the exponent of prod[x]
             uint16_t v = prod[i];
             prod[i - t + 8] ^= v;
             prod[i - t + 0] ^= v;

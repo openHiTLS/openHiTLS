@@ -38,7 +38,7 @@
 // Output: pk = seedA || B, sk = s || pk || S^T || H(pk), where B = A*S + E, seedA = H(z),
 // S and E are sampled from seedSE
 static int32_t FrodoKemKeypairInternal(const uint8_t *rnd, const FrodoKemParams *params, uint8_t *pk, uint8_t *sk,
-                                       void *libCtx)
+    void *libCtx)
 {
     // n is the number of rows of matrix S
     const uint16_t n = params->n;
@@ -94,7 +94,7 @@ EXIT:
 }
 
 static int32_t FrodoKemEncapsInternal(const uint8_t *mu, const FrodoKemParams *params, uint8_t *ct, uint8_t *ss,
-                                      const uint8_t *pk, void *libCtx)
+    const uint8_t *pk, void *libCtx)
 {
     uint8_t pkh[FRODO_HASH_PK_MAX_LEN];
     if (params->lenPkHash > sizeof(pkh)) {
@@ -225,7 +225,7 @@ static int32_t FrodoKemEncaps(const FrodoKemParams *params, uint8_t *ct, uint8_t
 }
 
 static int32_t FrodoKemDecaps(const FrodoKemParams *params, uint8_t *ss, const uint8_t *ct, const uint8_t *sk,
-                              void *libCtx)
+    void *libCtx)
 {
     const uint8_t *skSec = sk;
     const uint8_t *skPk = sk + params->ss;
@@ -274,9 +274,9 @@ static int32_t FrodoKemDecaps(const FrodoKemParams *params, uint8_t *ss, const u
         goto EXIT;
     }
     // if ct == ctVerify, kPrime = kPrime, else kPrime = skSec
-    uint32_t selector = ConstTimeMemcmp(ct, ctVerify, params->ctxSize - params->lenSalt);
+    uint8_t selector = (uint8_t)ConstTimeMemcmp(ct, ctVerify, params->ctxSize - params->lenSalt);
     for (int32_t i = 0; i < params->ss; i++) {
-        kPrime[i] = (uint8_t)(selector & kPrime[i]) | (~selector & skSec[i]);
+        kPrime[i] = (selector & kPrime[i]) | (~selector & skSec[i]);
     }
     uint32_t ctKLen = params->ctxSize + params->ss; // the length of ct || k
     uint8_t *ctKBuf = (uint8_t *)BSL_SAL_Malloc(ctKLen);
@@ -639,7 +639,7 @@ int32_t CRYPT_FRODOKEM_DecapsInit(CRYPT_FRODOKEM_Ctx *ctx, const BSL_Param *para
 }
 
 int32_t CRYPT_FRODOKEM_Encaps(CRYPT_FRODOKEM_Ctx *ctx, uint8_t *ciphertext, uint32_t *ctLen, uint8_t *sharedSecret,
-                              uint32_t *ssLen)
+    uint32_t *ssLen)
 {
     if (ctx == NULL || ciphertext == NULL || sharedSecret == NULL || ctLen == NULL || ssLen == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
@@ -666,7 +666,7 @@ int32_t CRYPT_FRODOKEM_Encaps(CRYPT_FRODOKEM_Ctx *ctx, uint8_t *ciphertext, uint
 }
 
 int32_t CRYPT_FRODOKEM_Decaps(CRYPT_FRODOKEM_Ctx *ctx, const uint8_t *ciphertext, uint32_t ctLen, uint8_t *sharedSecret,
-                              uint32_t *ssLen)
+    uint32_t *ssLen)
 {
     if (ctx == NULL || ciphertext == NULL || sharedSecret == NULL || ssLen == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);

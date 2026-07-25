@@ -332,10 +332,8 @@ static void store64(uint8_t x[8], uint64_t u)
 #if defined(__aarch64__) && !defined(HITLS_BIG_ENDIAN)
     *(uint64_t *)(uintptr_t)x = u;
 #else
-    uint32_t i;
-
-    for (i = 0; i < 8; i++) {
-        x[i] = u >> 8 * i;
+    for (uint32_t i = 0; i < 8; i++) {
+        x[i] = (uint8_t)(u >> 8 * i);
     }
 #endif
 }
@@ -365,7 +363,7 @@ static uint32_t KeccakIncSqueeze(uint8_t *out, size_t outlen, uint64_t s[25], ui
             pos = 0;
         }
         for (i = pos; i < r && i < pos + outlen; i++) {
-            *out++ = s[i / 8] >> 8 * (i % 8);
+            *out++ = (uint8_t)(s[i / 8] >> 8 * (i % 8));
         }
         outlen -= i - pos;
         pos = i;

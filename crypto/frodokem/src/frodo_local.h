@@ -63,28 +63,28 @@ typedef struct Frodokem_Ctx {
 FrodoKemParams *FrodoGetParamsById(int32_t algId);
 
 int32_t FrodoExpandShakeDs(uint8_t *out, uint32_t outlen, uint8_t ds, const uint8_t *seed, uint32_t seedlen,
-                           const FrodoKemParams *params, void *libCtx);
+    const FrodoKemParams *params, void *libCtx);
 
 int32_t FrodoPkeKeygenSeeded(const FrodoKemParams *params, uint8_t *pk, uint16_t *matrixSTranspose,
-                             const uint8_t *seedA, const uint8_t *seedSE, void *libCtx);
+    const uint8_t *seedA, const uint8_t *seedSE, void *libCtx);
 
 void FrodoCommonSampleNFromR(uint16_t *samples, const uint32_t n, const uint16_t *cdfTable, const uint32_t cdfLen,
-                             const uint8_t *rBytes);
+    const uint8_t *rBytes);
 
-void FrodoMulAddAsPlusE(uint16_t *out, const uint16_t *matrixS, int32_t n, int32_t nBar, uint16_t *rows,
-                        int32_t rowNumber);
-void FrodoMulAddSaPlusE(uint16_t *out, const uint16_t *matrixS, int32_t n, int32_t nBar, uint16_t *rows,
-                        int32_t rowNumber);
+void FrodoMulAddAsPlusE(uint16_t *out, const uint16_t *matrixS, uint32_t n, uint32_t nBar, uint16_t *rows,
+    uint32_t rowNumber);
+void FrodoMulAddSaPlusE(uint16_t *out, const uint16_t *matrixS, uint32_t n, uint32_t nBar, uint16_t *rows,
+    uint32_t rowNumber);
 
 // =================================================================================
 // Function Prototypes from util.c
 // =================================================================================
 
 void FrodoCommonPack(uint8_t *out, const uint32_t outLen, const uint16_t *in, const uint32_t inLen,
-                     const uint8_t lsb);
+    const uint8_t lsb);
 
 void FrodoCommonUnpack(uint16_t *out, const uint32_t outLen, const uint8_t *in, const uint32_t inLen,
-                       const uint8_t lsb);
+    const uint8_t lsb);
 
 void FrodoCommonEncodeLe16(uint8_t *out, const uint16_t *in, uint32_t len);
 
@@ -95,13 +95,13 @@ void FrodoCommonDecodeLe16(uint16_t *out, const uint8_t *in, uint32_t len);
 // =================================================================================
 
 int32_t FrodoCommonMulAddAsPlusEPortable(uint16_t *out, const uint16_t *matrixST, const uint8_t *seedA,
-                                         const FrodoKemParams *params, void *libCtx);
+    const FrodoKemParams *params, void *libCtx);
 
 int32_t FrodoCommonMulAddSaPlusEPortable(uint16_t *out, const uint16_t *s, const uint16_t *e, const uint8_t *seedA,
-                                         const FrodoKemParams *params, void *libCtx);
+    const FrodoKemParams *params, void *libCtx);
 
 void FrodoCommonMulAddSbPlusEPortable(uint16_t *V0, const uint16_t *STp, const uint16_t *B, const uint16_t *Epp,
-                                      const FrodoKemParams *params);
+    const FrodoKemParams *params);
 
 void FrodoCommonMulBs(uint16_t *out, const uint16_t *b, const uint16_t *s, const FrodoKemParams *params);
 void FrodoCommonMulBsUsingSt(uint16_t *out, const uint16_t *b, const uint16_t *sT, const FrodoKemParams *params);

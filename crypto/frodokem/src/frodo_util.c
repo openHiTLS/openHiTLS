@@ -34,8 +34,8 @@ void FrodoCommonPack(uint8_t *out, const uint32_t outLen, const uint16_t *in, co
     (void)outLen;
     if (lsb == 16) {
         for (uint32_t i = 0; i < inLen; i++) {
-            out[i * 2 + 0] = in[i] >> 8;
-            out[i * 2 + 1] = in[i] & 0xFF;
+            out[i * 2 + 0] = (uint8_t)(in[i] >> 8);
+            out[i * 2 + 1] = (uint8_t)(in[i] & 0xFF);
         }
         return;
     }
@@ -59,21 +59,21 @@ void FrodoCommonPack(uint8_t *out, const uint32_t outLen, const uint16_t *in, co
         a5 = (a5 << 6) | (a6 >> 9);
         a6 = (a6 << 7) | (a7 >> 8);
 
-        out[0] = a0 >> 8;
-        out[1] = a0 & 0xFF;
-        out[2] = a1 >> 8;
-        out[3] = a1 & 0xFF;
-        out[4] = a2 >> 8;
-        out[5] = a2 & 0xFF;
-        out[6] = a3 >> 8;
-        out[7] = a3 & 0xFF;
-        out[8] = a4 >> 8;
-        out[9] = a4 & 0xFF;
-        out[10] = a5 >> 8;
-        out[11] = a5 & 0xFF;
-        out[12] = a6 >> 8;
-        out[13] = a6 & 0xFF;
-        out[14] = a7;
+        out[0] = (uint8_t)(a0 >> 8);
+        out[1] = (uint8_t)(a0 & 0xFF);
+        out[2] = (uint8_t)(a1 >> 8);
+        out[3] = (uint8_t)(a1 & 0xFF);
+        out[4] = (uint8_t)(a2 >> 8);
+        out[5] = (uint8_t)(a2 & 0xFF);
+        out[6] = (uint8_t)(a3 >> 8);
+        out[7] = (uint8_t)(a3 & 0xFF);
+        out[8] = (uint8_t)(a4 >> 8);
+        out[9] = (uint8_t)(a4 & 0xFF);
+        out[10] = (uint8_t)(a5 >> 8);
+        out[11] = (uint8_t)(a5 & 0xFF);
+        out[12] = (uint8_t)(a6 >> 8);
+        out[13] = (uint8_t)(a6 & 0xFF);
+        out[14] = (uint8_t)a7;
 
         in += 8;
         out += 15;
@@ -81,7 +81,7 @@ void FrodoCommonPack(uint8_t *out, const uint32_t outLen, const uint16_t *in, co
 }
 
 void FrodoCommonUnpack(uint16_t *out, const uint32_t outLen, const uint8_t *in, const uint32_t inLen,
-                       const uint8_t lsb)
+    const uint8_t lsb)
 {
     if (lsb == 16) {
         for (uint32_t i = 0; i < outLen; i++) {
@@ -122,7 +122,7 @@ void FrodoCommonDecodeLe16(uint16_t *out, const uint8_t *in, uint32_t len)
 }
 
 int32_t FrodoExpandShakeDs(uint8_t *out, uint32_t outlen, uint8_t ds, const uint8_t *seed, uint32_t seedlen,
-                           const FrodoKemParams *params, void *libCtx)
+    const FrodoKemParams *params, void *libCtx)
 {
     uint8_t in[FRODO_PREFIX_LEN + FRODO_MAX_SEED_LEN] = {0};
     in[0] = ds;
