@@ -165,7 +165,7 @@ int32_t XmssBds_TreeRound(XmssBdsState *state, uint32_t leafIdx, uint32_t layer,
  * Spend treehash update work on one initialized BDS state.
  */
 int32_t XmssBds_TreehashUpdates(XmssBdsState *state, uint32_t updates, uint32_t layer, uint64_t treeAddr,
-                                const HbsTreeCtx *treeCtx, uint32_t *remaining);
+                                const HbsTreeCtx *treeCtx, uint32_t *unusedUpdates);
 
 /**
  * Spend one construction step on a future XMSSMT tree state.

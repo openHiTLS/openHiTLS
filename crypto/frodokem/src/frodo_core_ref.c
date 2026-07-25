@@ -157,7 +157,7 @@ static int32_t FrodoCommonMulAddShake(uint16_t *out, const uint16_t *matrixS, co
 int32_t FrodoCommonMulAddAsPlusEPortable(uint16_t *out, const uint16_t *matrixST, const uint8_t *seedA,
                                          const FrodoKemParams *params, void *libCtx)
 {
-    const int32_t N = params->n;
+    const int32_t n = params->n;
     const int32_t nBar = params->nBar;
     uint16_t *rows = BSL_SAL_Malloc(4 * FRODO_MAX_N * sizeof(uint16_t));
     if (rows == NULL) {
@@ -166,13 +166,13 @@ int32_t FrodoCommonMulAddAsPlusEPortable(uint16_t *out, const uint16_t *matrixST
     }
     int32_t ret;
 #if defined(HITLS_CRYPTO_FRODOKEM_ARMV8)
-    /* Transpose S^T (nBar x N) to S (N x nBar) once upfront.
+    /* Transpose S^T (nBar x n) to S (n x nBar) once upfront.
      * Assembly uses outer-product MLA which requires S[k][0..7] contiguous;
      * addv-based dot-product is replaced, removing the 4-cycle throughput bottleneck. */
     uint16_t sMatrix[8 * FRODO_MAX_N]; /* nBar is always 8; max = 8*1344*2 = 21 KB */
     for (int32_t j = 0; j < nBar; j++) {
-        for (int32_t k = 0; k < N; k++) {
-            sMatrix[k * nBar + j] = matrixST[j * N + k];
+        for (int32_t k = 0; k < n; k++) {
+            sMatrix[k * nBar + j] = matrixST[j * n + k];
         }
     }
     const uint16_t *matS = sMatrix;
@@ -186,10 +186,10 @@ int32_t FrodoCommonMulAddAsPlusEPortable(uint16_t *out, const uint16_t *matrixST
             ret = CRYPT_MEM_ALLOC_FAIL;
             goto EXIT;
         }
-        ret = FrodoCommonMulAddAES(out, matS, seedA, N, nBar, rows, plaintext, FrodoMulAddAsPlusE, libCtx);
+        ret = FrodoCommonMulAddAES(out, matS, seedA, n, nBar, rows, plaintext, FrodoMulAddAsPlusE, libCtx);
         BSL_SAL_FREE(plaintext);
     } else {
-        ret = FrodoCommonMulAddShake(out, matS, seedA, params, N, nBar, rows, FrodoMulAddAsPlusE, libCtx);
+        ret = FrodoCommonMulAddShake(out, matS, seedA, params, n, nBar, rows, FrodoMulAddAsPlusE, libCtx);
     }
 EXIT:
 #if defined(HITLS_CRYPTO_FRODOKEM_ARMV8)
@@ -204,15 +204,28 @@ int32_t FrodoCommonMulAddSaPlusEPortable(uint16_t *out, const uint16_t *s, const
 {
     const int32_t n = params->n;
     const int32_t nBar = params->nBar;
-
+    int32_t ret;
     memcpy(out, e, (uint32_t)nBar * n * sizeof(uint16_t));
-    uint16_t rows[4 * FRODO_MAX_N];
-    if (params->prg == FRODO_PRG_AES) {
-        uint8_t plaintext[FRODO_PRG_AES_PLAINTEXT_SIZE];
-        return FrodoCommonMulAddAES(out, s, seedA, n, nBar, rows, plaintext, FrodoMulAddSaPlusE, libCtx);
-    } else {
-        return FrodoCommonMulAddShake(out, s, seedA, params, n, nBar, rows, FrodoMulAddSaPlusE, libCtx);
+    uint16_t *rows = BSL_SAL_Malloc(4 * FRODO_MAX_N * sizeof(uint16_t));
+    if (rows == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
+        return CRYPT_MEM_ALLOC_FAIL;
     }
+    if (params->prg == FRODO_PRG_AES) {
+        uint8_t *plaintext = BSL_SAL_Malloc(FRODO_PRG_AES_PLAINTEXT_SIZE);
+        if (plaintext == NULL) {
+            BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
+            ret = CRYPT_MEM_ALLOC_FAIL;
+            goto EXIT;
+        }
+        ret = FrodoCommonMulAddAES(out, s, seedA, n, nBar, rows, plaintext, FrodoMulAddSaPlusE, libCtx);
+        BSL_SAL_FREE(plaintext);
+    } else {
+        ret = FrodoCommonMulAddShake(out, s, seedA, params, n, nBar, rows, FrodoMulAddSaPlusE, libCtx);
+    }
+EXIT:
+    BSL_SAL_FREE(rows);
+    return ret;
 }
 
 void FrodoCommonMulBs(uint16_t *out, const uint16_t *b, const uint16_t *s, const FrodoKemParams *params)
