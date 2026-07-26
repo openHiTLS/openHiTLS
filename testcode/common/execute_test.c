@@ -101,8 +101,9 @@ int *GetJmpAddress(void)
     return &isSubProc;
 }
 
-void handleSignal()
+void handleSignal(int sig)
 {
+    (void)sig;
     siglongjmp(env, 1);
 }
 

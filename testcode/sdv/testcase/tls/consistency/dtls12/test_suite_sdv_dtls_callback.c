@@ -294,8 +294,10 @@ EXIT:
 }
 /* END_CASE */
 
-static void Serverstartflag()
+static void Serverstartflag(void *msg, void *userData)
 {
+    (void)msg;
+    (void)userData;
     ASSERT_EQ(g_serverstart, 1);
 EXIT:
     return;
