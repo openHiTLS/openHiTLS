@@ -216,12 +216,14 @@ int32_t CRYPT_EAL_ParsePemPubKey(CRYPT_EAL_LibCtx *libctx, const char *attrName,
     CRYPT_EAL_PkeyCtx **ealPubKey)
 {
     BSL_PEM_Symbol symbol = {0};
+    uint8_t *buff = encode->data;
+    uint32_t buffLen = encode->dataLen;
     int32_t ret = EAL_GetPemPubKeySymbol(type, &symbol);
     if (ret != CRYPT_SUCCESS) {
         return ret;
     }
     BSL_Buffer asn1 = {0};
-    ret = BSL_PEM_DecodePemToAsn1((char **)&(encode->data), &(encode->dataLen), &symbol, &(asn1.data), &(asn1.dataLen));
+    ret = BSL_PEM_DecodePemToAsn1((char **)&buff, &buffLen, &symbol, &(asn1.data), &(asn1.dataLen));
     if (ret != BSL_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;

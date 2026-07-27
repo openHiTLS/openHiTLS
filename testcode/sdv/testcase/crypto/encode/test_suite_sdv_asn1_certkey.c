@@ -625,6 +625,214 @@ EXIT:
 /* END_CASE */
 
 /**
+ * @test SDV_CRYPT_EAL_DECODE_PEM_PUBKEY_INPUT_IMMUTABLE_TC001
+ * @title PEM public-key decoding does not modify the input buffer descriptor
+ *
+ */
+/* BEGIN_CASE */
+void SDV_CRYPT_EAL_DECODE_PEM_PUBKEY_INPUT_IMMUTABLE_TC001(char *path, int fileType)
+{
+    uint8_t *fileData = NULL;
+    uint32_t fileLen = 0;
+    BSL_Buffer encode = {0};
+    CRYPT_EAL_PkeyCtx *pkeyCtx = NULL;
+
+    ASSERT_EQ(BSL_SAL_ReadFile(path, &fileData, &fileLen), BSL_SUCCESS);
+    ASSERT_TRUE(fileData != NULL && fileLen > 0);
+
+    encode.data = fileData;
+    encode.dataLen = fileLen;
+    ASSERT_EQ(CRYPT_EAL_DecodeBuffKey(BSL_FORMAT_PEM, fileType, &encode, NULL, 0, &pkeyCtx), CRYPT_SUCCESS);
+    ASSERT_TRUE(pkeyCtx != NULL);
+    /*
+     * encode is an input-only parameter. Its descriptor must still identify the allocation returned by
+     * BSL_SAL_ReadFile so the caller can release that allocation safely after decoding.
+     */
+    ASSERT_TRUE(encode.data == fileData);
+    ASSERT_EQ(encode.dataLen, fileLen);
+
+EXIT:
+    CRYPT_EAL_PkeyFreeCtx(pkeyCtx);
+    BSL_SAL_Free(fileData);
+}
+/* END_CASE */
+
+/**
+ * @test SDV_CRYPT_EAL_DECODE_BUFF_INPUT_IMMUTABLE_TC001
+ * @title Key decoding does not modify input buffer descriptors on successful parse paths
+ *
+ */
+/* BEGIN_CASE */
+void SDV_CRYPT_EAL_DECODE_BUFF_INPUT_IMMUTABLE_TC001(int isProvider, char *path, int format, char *formatStr,
+    int fileType, char *fileTypeStr)
+{
+#ifndef HITLS_CRYPTO_PROVIDER
+    if (isProvider != 0) {
+        (void)path;
+        (void)format;
+        (void)formatStr;
+        (void)fileType;
+        (void)fileTypeStr;
+        SKIP_TEST();
+    }
+#endif
+    uint8_t *fileData = NULL;
+    uint32_t fileLen = 0;
+    BSL_Buffer encode = {0};
+    CRYPT_EAL_PkeyCtx *pkeyCtx = NULL;
+
+    ASSERT_EQ(BSL_SAL_ReadFile(path, &fileData, &fileLen), BSL_SUCCESS);
+    ASSERT_TRUE(fileData != NULL && fileLen > 0);
+
+    encode.data = fileData;
+    encode.dataLen = fileLen;
+    ASSERT_EQ(DecodeKeyBuff(isProvider, &encode, format, formatStr, fileType, fileTypeStr, NULL, 0, &pkeyCtx),
+        CRYPT_SUCCESS);
+    ASSERT_TRUE(pkeyCtx != NULL);
+    ASSERT_TRUE(encode.data == fileData);
+    ASSERT_EQ(encode.dataLen, fileLen);
+
+EXIT:
+    CRYPT_EAL_PkeyFreeCtx(pkeyCtx);
+    BSL_SAL_Free(fileData);
+}
+/* END_CASE */
+
+/**
+ * @test SDV_CRYPT_EAL_DECODE_PEM_PRIKEY_INPUT_IMMUTABLE_TC001
+ * @title Each PEM private-key decoding branch leaves the input buffer descriptor unchanged
+ *
+ */
+/* BEGIN_CASE */
+void SDV_CRYPT_EAL_DECODE_PEM_PRIKEY_INPUT_IMMUTABLE_TC001(int isProvider, char *path, int fileType,
+    char *fileTypeStr, Hex *password)
+{
+#ifndef HITLS_CRYPTO_PROVIDER
+    if (isProvider != 0) {
+        (void)path;
+        (void)fileType;
+        (void)fileTypeStr;
+        (void)password;
+        SKIP_TEST();
+    }
+#endif
+#ifndef HITLS_CRYPTO_RSA
+    if (fileType == CRYPT_PRIKEY_RSA) {
+        (void)path;
+        (void)fileTypeStr;
+        (void)password;
+        SKIP_TEST();
+    }
+#endif
+#ifndef HITLS_CRYPTO_ECDSA
+    if (fileType == CRYPT_PRIKEY_ECC) {
+        (void)path;
+        (void)fileTypeStr;
+        (void)password;
+        SKIP_TEST();
+    }
+#endif
+#ifndef HITLS_CRYPTO_KEY_EPKI
+    if (fileType == CRYPT_PRIKEY_PKCS8_ENCRYPT) {
+        (void)path;
+        (void)fileTypeStr;
+        (void)password;
+        SKIP_TEST();
+    }
+#endif
+    uint8_t *fileData = NULL;
+    uint32_t fileLen = 0;
+    BSL_Buffer encode = {0};
+    CRYPT_EAL_PkeyCtx *pkeyCtx = NULL;
+
+    ASSERT_EQ(BSL_SAL_ReadFile(path, &fileData, &fileLen), BSL_SUCCESS);
+    ASSERT_TRUE(fileData != NULL && fileLen > 0);
+
+    encode.data = fileData;
+    encode.dataLen = fileLen;
+    ASSERT_EQ(DecodeKeyBuff(isProvider, &encode, BSL_FORMAT_PEM, "PEM", fileType, fileTypeStr, password->x,
+        password->len, &pkeyCtx), CRYPT_SUCCESS);
+    ASSERT_TRUE(pkeyCtx != NULL);
+    ASSERT_TRUE(encode.data == fileData);
+    ASSERT_EQ(encode.dataLen, fileLen);
+
+EXIT:
+    CRYPT_EAL_PkeyFreeCtx(pkeyCtx);
+    BSL_SAL_Free(fileData);
+}
+/* END_CASE */
+
+/**
+ * @test SDV_CRYPT_EAL_DECODE_PEM_INPUT_IMMUTABLE_ON_ERROR_TC001
+ * @title PEM key decoding does not modify input buffer descriptors when ASN.1 parsing fails
+ *
+ */
+/* BEGIN_CASE */
+void SDV_CRYPT_EAL_DECODE_PEM_INPUT_IMMUTABLE_ON_ERROR_TC001(int isProvider, int fileType, char *fileTypeStr)
+{
+#ifndef HITLS_CRYPTO_PROVIDER
+    if (isProvider != 0) {
+        (void)fileType;
+        (void)fileTypeStr;
+        SKIP_TEST();
+    }
+#endif
+    static const uint8_t invalidPubPem[] = "-----BEGIN PUBLIC KEY-----\nAAAA\n-----END PUBLIC KEY-----\n";
+    static const uint8_t invalidRsaPriPem[] =
+        "-----BEGIN RSA PRIVATE KEY-----\nAAAA\n-----END RSA PRIVATE KEY-----\n";
+    static const uint8_t invalidEcPriPem[] =
+        "-----BEGIN EC PRIVATE KEY-----\nAAAA\n-----END EC PRIVATE KEY-----\n";
+    static const uint8_t invalidPkcs8PriPem[] =
+        "-----BEGIN PRIVATE KEY-----\nAAAA\n-----END PRIVATE KEY-----\n";
+    static const uint8_t invalidEncPkcs8PriPem[] =
+        "-----BEGIN ENCRYPTED PRIVATE KEY-----\nAAAA\n-----END ENCRYPTED PRIVATE KEY-----\n";
+    const uint8_t *invalidPem = invalidPubPem;
+    uint32_t inputLen = sizeof(invalidPubPem) - 1;
+    uint8_t password[] = {0x31, 0x32, 0x33, 0x34};
+    uint8_t *pwd = NULL;
+    uint32_t pwdLen = 0;
+
+    switch (fileType) {
+        case CRYPT_PRIKEY_RSA:
+            invalidPem = invalidRsaPriPem;
+            inputLen = sizeof(invalidRsaPriPem) - 1;
+            break;
+        case CRYPT_PRIKEY_ECC:
+            invalidPem = invalidEcPriPem;
+            inputLen = sizeof(invalidEcPriPem) - 1;
+            break;
+        case CRYPT_PRIKEY_PKCS8_UNENCRYPT:
+            invalidPem = invalidPkcs8PriPem;
+            inputLen = sizeof(invalidPkcs8PriPem) - 1;
+            break;
+        case CRYPT_PRIKEY_PKCS8_ENCRYPT:
+            invalidPem = invalidEncPkcs8PriPem;
+            inputLen = sizeof(invalidEncPkcs8PriPem) - 1;
+            pwd = password;
+            pwdLen = sizeof(password);
+            break;
+        default:
+            break;
+    }
+
+    uint8_t *input = BSL_SAL_Dump(invalidPem, inputLen);
+    BSL_Buffer encode = {input, inputLen};
+    CRYPT_EAL_PkeyCtx *pkeyCtx = NULL;
+
+    ASSERT_TRUE(input != NULL);
+    ASSERT_NE(DecodeKeyBuff(isProvider, &encode, BSL_FORMAT_PEM, "PEM", fileType, fileTypeStr, pwd, pwdLen, &pkeyCtx),
+        CRYPT_SUCCESS);
+    ASSERT_TRUE(pkeyCtx == NULL);
+    ASSERT_TRUE(encode.data == input);
+    ASSERT_EQ(encode.dataLen, inputLen);
+
+EXIT:
+    CRYPT_EAL_PkeyFreeCtx(pkeyCtx);
+    BSL_SAL_Free(input);
+}
+/* END_CASE */
+
+/**
  * @test SDV_BSL_ASN1_PARSE_PRIKEY_NO_NUL_TERMINATOR_TC001
  * title 1. Test decoding a PEM private-key buffer whose byte after encode.dataLen is nonzero.
  *       2. Verify DecodeBuffKey uses encode.dataLen as the boundary and does not require a trailing '\0'.
