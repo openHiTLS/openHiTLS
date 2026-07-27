@@ -109,6 +109,7 @@ set(TEST_INTF_INCLUDE_DIRS
     ${openHiTLS_SRC}/crypto/sha2/src
     ${openHiTLS_SRC}/crypto/sha1/include
     ${openHiTLS_SRC}/crypto/md5/include
+    ${openHiTLS_SRC}/crypto/blake2/include
     ${openHiTLS_SRC}/crypto/pbkdf2/include
     ${openHiTLS_SRC}/crypto/provider/include
     ${openHiTLS_SRC}/crypto/provider/src/mgr

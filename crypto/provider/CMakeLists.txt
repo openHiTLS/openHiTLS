@@ -91,6 +91,7 @@ target_include_directories(_hitls_crypto_provider
         ${PROJECT_SOURCE_DIR}/crypto/sha1/include
         ${PROJECT_SOURCE_DIR}/crypto/sha2/include
         ${PROJECT_SOURCE_DIR}/crypto/sha3/include
+        ${PROJECT_SOURCE_DIR}/crypto/blake2/include
         ${PROJECT_SOURCE_DIR}/crypto/sm3/include
         ${PROJECT_SOURCE_DIR}/crypto/hmac/include
         ${PROJECT_SOURCE_DIR}/crypto/cmac/include

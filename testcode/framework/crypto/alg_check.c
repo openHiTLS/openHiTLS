@@ -41,6 +41,7 @@ static MdAlgMap g_mdAlgMap[] = {
     { CRYPT_MD_SHAKE128, 10 },
     { CRYPT_MD_SHAKE256, 11 },
     { CRYPT_MD_SM3, 12 },
+    { CRYPT_MD_BLAKE2S256, 13 },
 };
 
 #define MD_ALG_MAP_CNT ((int)(sizeof(g_mdAlgMap) / sizeof(MdAlgMap)))
@@ -85,6 +86,9 @@ static void InitMdTable(void)
 #endif
 #ifndef HITLS_CRYPTO_SM3
     g_mdDisableTable[12] = 1;
+#endif
+#ifndef HITLS_CRYPTO_BLAKE2S256
+    g_mdDisableTable[13] = 1;
 #endif
     g_isInitMd = true;
 }

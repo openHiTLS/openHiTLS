@@ -306,6 +306,7 @@ static const CRYPT_MD_DigestSizeMap g_mdDigestSizeMap[] = {
     {CRYPT_MD_SHAKE256, 0},
     {CRYPT_MD_SM3, 32},
     {CRYPT_MD_MD5, 16},
+    {CRYPT_MD_BLAKE2S256, 32},
 };
 
 uint32_t CRYPT_EAL_MdGetDigestSize(CRYPT_MD_AlgId id)

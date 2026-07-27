@@ -16,13 +16,15 @@
 #include "hitls_build.h"
 #if (defined(HITLS_CRYPTO_MD5) || defined(HITLS_CRYPTO_SHA1) || defined(HITLS_CRYPTO_SHA224) || \
     defined(HITLS_CRYPTO_SHA256) || defined(HITLS_CRYPTO_SHA384) || defined(HITLS_CRYPTO_SHA512) || \
-    defined(HITLS_CRYPTO_SHA3) || defined(HITLS_CRYPTO_SM3)) && defined(HITLS_CRYPTO_PROVIDER)
+    defined(HITLS_CRYPTO_SHA3) || defined(HITLS_CRYPTO_BLAKE2S256) || defined(HITLS_CRYPTO_SM3)) && \
+    defined(HITLS_CRYPTO_PROVIDER)
 
 #include "crypt_eal_implprovider.h"
 #include "crypt_md5.h"
 #include "crypt_sha1.h"
 #include "crypt_sha2.h"
 #include "crypt_sha3.h"
+#include "crypt_blake2.h"
 #include "crypt_sm3.h"
 #include "bsl_sal.h"
 #include "crypt_errno.h"
@@ -74,6 +76,10 @@ static void *CRYPT_EAL_DefMdNewCtx(CRYPT_EAL_DefProvCtx *provCtx, int32_t algId)
         case CRYPT_MD_SHAKE128:
         case CRYPT_MD_SHAKE256:
             return CRYPT_SHAKE256_NewCtxEx(libCtx, algId);
+#endif
+#ifdef HITLS_CRYPTO_BLAKE2S256
+        case CRYPT_MD_BLAKE2S256:
+            return CRYPT_BLAKE2S256_NewCtxEx(libCtx, algId);
 #endif
 #ifdef HITLS_CRYPTO_SM3
         case CRYPT_MD_SM3:
@@ -256,6 +262,21 @@ const CRYPT_EAL_Func g_defEalMdShake256[] = {
     CRYPT_EAL_FUNC_END,
 };
 #endif // HITLS_CRYPTO_SHA3
+
+#ifdef HITLS_CRYPTO_BLAKE2S256
+const CRYPT_EAL_Func g_defEalMdBlake2s256[] = {
+    {CRYPT_EAL_IMPLMD_NEWCTX, (CRYPT_EAL_ImplMdNewCtx)CRYPT_EAL_DefMdNewCtx},
+    {CRYPT_EAL_IMPLMD_INITCTX, (CRYPT_EAL_ImplMdInitCtx)CRYPT_BLAKE2S256_InitEx},
+    {CRYPT_EAL_IMPLMD_UPDATE, (CRYPT_EAL_ImplMdUpdate)CRYPT_BLAKE2S256_Update},
+    {CRYPT_EAL_IMPLMD_FINAL, (CRYPT_EAL_ImplMdFinal)CRYPT_BLAKE2S256_Final},
+    {CRYPT_EAL_IMPLMD_DEINITCTX, (CRYPT_EAL_ImplMdDeInitCtx)CRYPT_BLAKE2S256_Deinit},
+    {CRYPT_EAL_IMPLMD_DUPCTX, (CRYPT_EAL_ImplMdDupCtx)CRYPT_BLAKE2S256_DupCtx},
+    {CRYPT_EAL_IMPLMD_FREECTX, (CRYPT_EAL_ImplMdFreeCtx)CRYPT_BLAKE2S256_FreeCtx},
+    {CRYPT_EAL_IMPLMD_COPYCTX, (CRYPT_EAL_ImplMdCopyCtx)CRYPT_BLAKE2S256_CopyCtx},
+    {CRYPT_EAL_IMPLMD_GETPARAM, (CRYPT_EAL_ImplMdGetParam)CRYPT_BLAKE2S256_GetParam},
+    CRYPT_EAL_FUNC_END,
+};
+#endif // HITLS_CRYPTO_BLAKE2S256
 
 #ifdef HITLS_CRYPTO_SM3
 const CRYPT_EAL_Func g_defEalMdSm3[] = {

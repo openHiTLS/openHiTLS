@@ -107,6 +107,10 @@ if(HITLS_CRYPTO_SHA3)
     add_subdirectory(sha3)
 endif()
 
+if(HITLS_CRYPTO_BLAKE2)
+    add_subdirectory(blake2)
+endif()
+
 if(HITLS_CRYPTO_SM3)
     add_subdirectory(sm3)
 endif()

@@ -138,6 +138,8 @@
 #cmakedefine HITLS_CRYPTO_SHA512
 #cmakedefine HITLS_CRYPTO_SHA512_SMALL_MEM
 #cmakedefine HITLS_CRYPTO_SHA3
+#cmakedefine HITLS_CRYPTO_BLAKE2
+#cmakedefine HITLS_CRYPTO_BLAKE2S256
 #cmakedefine HITLS_CRYPTO_SM3
 #cmakedefine HITLS_CRYPTO_SM3_SMALL_MEM
 // Md_mb

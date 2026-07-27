@@ -68,6 +68,9 @@ extern const CRYPT_EAL_Func g_defEalMdShake512[];
 extern const CRYPT_EAL_Func g_defEalMdShake128[];
 extern const CRYPT_EAL_Func g_defEalMdShake256[];
 #endif // HITLS_CRYPTO_SHA3
+#ifdef HITLS_CRYPTO_BLAKE2S256
+extern const CRYPT_EAL_Func g_defEalMdBlake2s256[];
+#endif // HITLS_CRYPTO_BLAKE2S256
 #ifdef HITLS_CRYPTO_SM3
 extern const CRYPT_EAL_Func g_defEalMdSm3[];
 #endif // HITLS_CRYPTO_SM3
