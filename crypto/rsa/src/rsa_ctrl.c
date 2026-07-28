@@ -20,8 +20,21 @@
 #include "crypt_utils.h"
 #include "rsa_local.h"
 #include "crypt_errno.h"
+#include "crypt_eal_pkey.h"
 #include "crypt_util_ctrl.h"
 #include "eal_md_local.h"
+
+#ifdef HITLS_CRYPTO_BN_CB
+static int32_t RsaSetBnCb(CRYPT_RSA_Ctx *ctx, const void *val, uint32_t len)
+{
+    if (len != sizeof(void *)) {
+        BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
+        return CRYPT_INVALID_ARG;
+    }
+    ctx->bnGenCb = *(const CRYPT_EAL_PKEY_CB *)val;
+    return CRYPT_SUCCESS;
+}
+#endif
 
 #ifdef HITLS_CRYPTO_RSA_EMSA_PKCSV15
 static int32_t SetEmsaPkcsV15(CRYPT_RSA_Ctx *ctx, void *val, uint32_t len)
@@ -629,6 +642,10 @@ int32_t CRYPT_RSA_Ctrl(CRYPT_RSA_Ctx *ctx, int32_t opt, void *val, uint32_t len)
 #ifdef HITLS_CRYPTO_RSA_BSSA
         case CRYPT_CTRL_SET_RSA_BSSA_FACTOR_R:
             return RsaSetBssa(ctx, val, len);
+#endif
+#ifdef HITLS_CRYPTO_BN_CB
+        case CRYPT_CTRL_SET_BN_GEN_CB:
+            return RsaSetBnCb(ctx, val, len);
 #endif
         default:
             return RsaCommonCtrl(ctx, opt, val, len);

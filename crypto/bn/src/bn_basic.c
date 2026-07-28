@@ -119,12 +119,12 @@ void *BN_CbCtxGetArg(BN_CbCtx *callBack)
     return callBack->arg;
 }
 
-int32_t BN_CbCtxCall(BN_CbCtx *callBack, int32_t process, int32_t target)
+int32_t BN_CbCtxCall(BN_CbCtx *callBack, BSL_Param *param)
 {
     if (callBack == NULL || callBack->cb == NULL) {
         return CRYPT_SUCCESS;
     }
-    int32_t ret = callBack->cb(callBack, process, target);
+    int32_t ret = callBack->cb(callBack->arg, param);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
     }

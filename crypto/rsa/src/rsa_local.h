@@ -149,6 +149,9 @@ struct RSA_Ctx {
 #endif
     void *libCtx;
     char *mdAttr;
+#ifdef HITLS_CRYPTO_BN_CB
+    void *bnGenCb;
+#endif
 };
 
 #define LIBCTX_FROM_RSA_CTX(ctx) ((ctx) == NULL ? NULL : (ctx)->libCtx)

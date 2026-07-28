@@ -175,6 +175,9 @@ CRYPT_RSA_Ctx *CRYPT_RSA_DupCtx(CRYPT_RSA_Ctx *keyCtx)
     newKeyCtx->pad = keyCtx->pad;
     newKeyCtx->pad.salt.data = NULL;
     newKeyCtx->pad.salt.len = 0;
+#ifdef HITLS_CRYPTO_BN_CB
+    newKeyCtx->bnGenCb = keyCtx->bnGenCb;
+#endif
 
     GOTO_ERR_IF_SRC_NOT_NULL(newKeyCtx->prvKey, keyCtx->prvKey, RSAPriKeyDupCtx(keyCtx->prvKey), CRYPT_MEM_ALLOC_FAIL);
     GOTO_ERR_IF_SRC_NOT_NULL(newKeyCtx->pubKey, keyCtx->pubKey, RSAPubKeyDupCtx(keyCtx->pubKey), CRYPT_MEM_ALLOC_FAIL);
@@ -632,10 +635,10 @@ ERR:
     return ret;
 }
 
-static int32_t RSAPGen(const CRYPT_RSA_Para *para, CRYPT_RSA_PrvKey *priKey, BN_Optimizer *opt)
+static int32_t RSAPGen(const CRYPT_RSA_Para *para, CRYPT_RSA_PrvKey *priKey, BN_Optimizer *opt, BN_CbCtx *cb)
 {
     uint32_t pBits = (para->bits + 1) >> 1;
-    int32_t ret = BN_GenPrime(priKey->p, para->e, pBits, true, opt, NULL);
+    int32_t ret = BN_GenPrime(priKey->p, para->e, pBits, true, opt, cb);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
@@ -650,11 +653,11 @@ static int32_t RSAPGen(const CRYPT_RSA_Para *para, CRYPT_RSA_PrvKey *priKey, BN_
     return RSA_Filter(priKey->p, para->bits, para->e, opt);
 }
 
-static int32_t RSAQGen(const CRYPT_RSA_Para *para, CRYPT_RSA_PrvKey *priKey, BN_Optimizer *opt)
+static int32_t RSAQGen(const CRYPT_RSA_Para *para, CRYPT_RSA_PrvKey *priKey, BN_Optimizer *opt, BN_CbCtx *cb)
 {
     uint32_t pBits = (para->bits + 1) >> 1;
     uint32_t qBits = para->bits - pBits;
-    int32_t ret = BN_GenPrime(priKey->q, para->e, qBits, true, opt, NULL);
+    int32_t ret = BN_GenPrime(priKey->q, para->e, qBits, true, opt, cb);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
@@ -662,7 +665,8 @@ static int32_t RSAQGen(const CRYPT_RSA_Para *para, CRYPT_RSA_PrvKey *priKey, BN_
     return RSA_Filter(priKey->q, para->bits, para->e, opt);
 }
 
-static int32_t GenPQBasedOnRandomPrimes(const CRYPT_RSA_Para *para, CRYPT_RSA_PrvKey *priKey, BN_Optimizer *opt)
+static int32_t GenPQBasedOnRandomPrimes(const CRYPT_RSA_Para *para, CRYPT_RSA_PrvKey *priKey, BN_Optimizer *opt,
+    BN_CbCtx *cb)
 {
     int32_t ret = CRYPT_BN_RAND_GEN_FAIL;
     uint32_t i;
@@ -679,7 +683,7 @@ static int32_t GenPQBasedOnRandomPrimes(const CRYPT_RSA_Para *para, CRYPT_RSA_Pr
     (void)BN_SetBit(val, halfBits - 100);
     /* FIPS 186-5 B.3.3 Step 4.7: retry up to 5*nlen times to generate p */
     for (i = 0; i < 5 * para->bits; i++) {
-        ret = RSAPGen(para, priKey, opt);
+        ret = RSAPGen(para, priKey, opt, cb);
         if (ret == CRYPT_SUCCESS) {
             break;
         }
@@ -689,7 +693,7 @@ static int32_t GenPQBasedOnRandomPrimes(const CRYPT_RSA_Para *para, CRYPT_RSA_Pr
     }
     /* FIPS 186-5 B.3.3 Step 5.8: retry up to 10*nlen times to generate q */
     for (i = 0; i < 10 * para->bits; i++) {
-        ret = RSAQGen(para, priKey, opt);
+        ret = RSAQGen(para, priKey, opt, cb);
         if (ret != CRYPT_SUCCESS) {
             continue;
         }
@@ -807,7 +811,7 @@ static uint32_t GetProbPrimeMillerCheckTimes(uint32_t proBits)
     return 4;
 }
 
-static int32_t GenAuxPrime(BN_BigNum *Xp, uint32_t auxBits, BN_Optimizer *opt, bool isSeed)
+static int32_t GenAuxPrime(BN_BigNum *Xp, uint32_t auxBits, BN_Optimizer *opt, bool isSeed, BN_CbCtx *cb)
 {
     int32_t ret = CRYPT_SUCCESS;
     if (!isSeed) {
@@ -819,7 +823,7 @@ static int32_t GenAuxPrime(BN_BigNum *Xp, uint32_t auxBits, BN_Optimizer *opt, b
     }
     uint32_t auxPrimeCheck = GetAuxPrimeMillerCheckTimes(auxBits);
     do {
-        ret = BN_PrimeCheck(Xp, auxPrimeCheck, opt, NULL);
+        ret = BN_PrimeCheck(Xp, auxPrimeCheck, opt, cb);
         if (ret == CRYPT_SUCCESS) {
             return ret;
         }
@@ -843,7 +847,8 @@ static int32_t GenAuxPrime(BN_BigNum *Xp, uint32_t auxBits, BN_Optimizer *opt, b
  * Hence, it's a only performance consideration for us to use this standard for 1024-bit rsa key-Gen.
  */
 static int32_t GenPrimeWithAuxiliaryPrime(uint32_t auxBits, uint32_t proBits, BN_BigNum *Xp, BN_BigNum *Xp0,
-    BN_BigNum *Xp1, BN_BigNum *Xp2, BN_BigNum *p, const CRYPT_RSA_Para *para, bool isP, BN_Optimizer *opt)
+    BN_BigNum *Xp1, BN_BigNum *Xp2, BN_BigNum *p, const CRYPT_RSA_Para *para, bool isP, BN_Optimizer *opt,
+    BN_CbCtx *cb)
 {
     BN_BigNum *r1;
     BN_BigNum *r2;
@@ -873,12 +878,12 @@ static int32_t GenPrimeWithAuxiliaryPrime(uint32_t auxBits, uint32_t proBits, BN
     r2 = (Xp2 != NULL) ? Xp2 : bns[6]; // 6th bn
 
     // Choose auxiliary prime r1, either from seed or generate randomly
-    ret = GenAuxPrime(r1, auxBits, opt, (Xp1 != NULL));
+    ret = GenAuxPrime(r1, auxBits, opt, (Xp1 != NULL), cb);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         goto ERR;
     }
-    GOTO_ERR_IF(GenAuxPrime(r2, auxBits, opt, (Xp2 != NULL)), ret);
+    GOTO_ERR_IF(GenAuxPrime(r2, auxBits, opt, (Xp2 != NULL), cb), ret);
     GOTO_ERR_IF(BN_Lshift(r1Double, r1, 1), ret);
     // Step 1: check 2r1, r2 are coprime.
     GOTO_ERR_IF(BN_Gcd(primeCheck, r1Double, r2, opt), ret);
@@ -916,7 +921,7 @@ static int32_t GenPrimeWithAuxiliaryPrime(uint32_t auxBits, uint32_t proBits, BN
             GOTO_ERR_IF(BN_Gcd(pMinusOne, pMinusOne, para->e, opt), ret);
             if (BN_IsOne(pMinusOne)) {
                 // Step 7.1: Check the primality of p.
-                ret = BN_PrimeCheck(p, probPrimeCheck, opt, NULL);
+                ret = BN_PrimeCheck(p, probPrimeCheck, opt, cb);
                 if (ret == CRYPT_SUCCESS) { // We find a primes successfully.
                     goto ERR;
                 }
@@ -947,7 +952,8 @@ ERR:
 }
 
 // ref: FIPS 186-5, A.1.6 & B.9
-static int32_t GenPQBasedOnAuxPrimes(const CRYPT_RSA_Para *para, CRYPT_RSA_PrvKey *priKey, BN_Optimizer *opt)
+static int32_t GenPQBasedOnAuxPrimes(const CRYPT_RSA_Para *para, CRYPT_RSA_PrvKey *priKey, BN_Optimizer *opt,
+    BN_CbCtx *cb)
 {
     BN_BigNum *Xp = NULL, *Xq = NULL, *Xp0 = NULL, *Xp1 = NULL, *Xp2 = NULL, *Xq0 = NULL, *Xq1 = NULL, *Xq2 = NULL;
     uint32_t proBits = GetProbableNoLimitedBitLen(para->bits);
@@ -979,7 +985,7 @@ static int32_t GenPQBasedOnAuxPrimes(const CRYPT_RSA_Para *para, CRYPT_RSA_PrvKe
     }
 
     // Step 4: get p
-    ret = GenPrimeWithAuxiliaryPrime(auxBits, proBits, Xp, Xp0, Xp1, Xp2, priKey->p, para, true, opt);
+    ret = GenPrimeWithAuxiliaryPrime(auxBits, proBits, Xp, Xp0, Xp1, Xp2, priKey->p, para, true, opt, cb);
     if (ret != CRYPT_SUCCESS) {
         BN_Zeroize(Xp);
         BSL_ERR_PUSH_ERROR(ret);
@@ -994,7 +1000,7 @@ static int32_t GenPQBasedOnAuxPrimes(const CRYPT_RSA_Para *para, CRYPT_RSA_PrvKe
      */
     do {
         // Step 5: get q
-        ret = GenPrimeWithAuxiliaryPrime(auxBits, proBits, Xq, Xq0, Xq1, Xq2, priKey->q, para, false, opt);
+        ret = GenPrimeWithAuxiliaryPrime(auxBits, proBits, Xq, Xq0, Xq1, Xq2, priKey->q, para, false, opt, cb);
         if (ret != CRYPT_SUCCESS) {
             BSL_ERR_PUSH_ERROR(ret);
             goto ERR;
@@ -1176,6 +1182,7 @@ int32_t CRYPT_RSA_Gen(CRYPT_RSA_Ctx *ctx)
     }
     int32_t ret = CRYPT_MEM_ALLOC_FAIL;
     BN_Optimizer *optimizer = NULL;
+    BN_CbCtx *bnCb = NULL;
     CRYPT_RSA_Ctx *newCtx = CRYPT_RSA_NewCtx();
     if (newCtx == NULL) {
         BSL_ERR_PUSH_ERROR(ret);
@@ -1195,10 +1202,19 @@ int32_t CRYPT_RSA_Gen(CRYPT_RSA_Ctx *ctx)
      * Meanwhile, the check of e is not added to ensure compatibility.
      */
     BN_OptimizerSetLibCtx(ctx->libCtx, optimizer);
+#ifdef HITLS_CRYPTO_BN_CB
+    if (ctx->bnGenCb != NULL) {
+        bnCb = BN_CbCtxCreate();
+        if (bnCb == NULL) {
+            goto ERR;
+        }
+        BN_CbCtxSet(bnCb, ctx->bnGenCb, ctx);
+    }
+#endif
     if (ctx->para->bits < 1024) {
-        ret = GenPQBasedOnRandomPrimes(ctx->para, newCtx->prvKey, optimizer);
+        ret = GenPQBasedOnRandomPrimes(ctx->para, newCtx->prvKey, optimizer, bnCb);
     } else {
-        ret = GenPQBasedOnAuxPrimes(ctx->para, newCtx->prvKey, optimizer);
+        ret = GenPQBasedOnAuxPrimes(ctx->para, newCtx->prvKey, optimizer, bnCb);
     }
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
@@ -1224,11 +1240,17 @@ int32_t CRYPT_RSA_Gen(CRYPT_RSA_Ctx *ctx)
     if (ret != CRYPT_SUCCESS) {
         goto ERR; // dont't push the stack repeatedly.
     }
+#ifdef HITLS_CRYPTO_BN_CB
+    BN_CbCtxDestroy(bnCb);
+#endif
     BN_OptimizerDestroy(optimizer);
     ShallowCopyCtx(ctx, newCtx);
     BSL_SAL_Free(newCtx);
     return ret;
 ERR:
+#ifdef HITLS_CRYPTO_BN_CB
+    BN_CbCtxDestroy(bnCb);
+#endif
     BN_OptimizerDestroy(optimizer);
     CRYPT_RSA_FreeCtx(newCtx);
     return ret;

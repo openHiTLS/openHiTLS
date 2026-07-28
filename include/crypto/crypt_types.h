@@ -664,6 +664,8 @@ typedef enum {
     CRYPT_CTRL_SET_SIGN_MD,
     CRYPT_CTRL_GET_ECC_POINT_FORMAT,     /**< ECC PKEY get the point format. */
     CRYPT_CTRL_CLEAN_PUB_KEY,            /**< Clean the pubkey. */
+    CRYPT_CTRL_SET_BN_GEN_CB,            /**< Set BN generation callback, data type is CRYPT_EAL_PKEY_CB. */
+
     // dh
     CRYPT_CTRL_SET_DH_FLAG = 150,          /**< Set the dh flag.*/
 

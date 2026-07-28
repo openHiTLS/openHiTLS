@@ -18,8 +18,10 @@
 #include <stdlib.h>
 #include <string.h>
 #include "bsl_sal.h"
+#include "bsl_errno.h"
 #include "crypt_errno.h"
 #include "crypt_bn.h"
+#include "crypt_params_key.h"
 #include "bn_basic.h"
 #include "crypt_eal_rand.h"
 #include "crypt_util_rand.h"
@@ -1065,17 +1067,23 @@ EXIT:
 }
 /* END_CASE */
 
-static int32_t PrimeGenCb(BN_CbCtx *callBack, int32_t process, int32_t target)
+static int32_t PrimeGenCb(void *arg, BSL_Param *param)
 {
-    if (callBack == NULL)
-        return CRYPT_SUCCESS;
-
-    int32_t *limit = BN_CbCtxGetArg(callBack);
-    if (process < *limit) {
+    if (arg == NULL || param == NULL) {
         return CRYPT_SUCCESS;
     }
-    (void)target;
-    printf("now try tims is %d, gen failed\n", process);
+
+    uint32_t process = 0;
+    uint32_t len = sizeof(process);
+    int32_t ret = BSL_PARAM_GetValue(param, CRYPT_PARAM_BN_CB_ITER, BSL_PARAM_TYPE_UINT32, &process, &len);
+    if (ret != BSL_SUCCESS) {
+        return ret;
+    }
+    int32_t *limit = arg;
+    if (process < (uint32_t)*limit) {
+        return CRYPT_SUCCESS;
+    }
+    printf("now try times is %u, gen not success\n", process);
     return -1;
 }
 

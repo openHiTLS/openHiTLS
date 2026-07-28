@@ -22,6 +22,9 @@
 #include "crypt_errno.h"
 #include "bn_bincal.h"
 #include "bn_optimizer.h"
+#ifdef HITLS_CRYPTO_BN_CB
+#include "crypt_params_key.h"
+#endif
 
 /*
  * Differential table of adjacent prime numbers, size = 1024
@@ -103,6 +106,17 @@ static const uint8_t PRIME_DIFF_TABLE[1024] = {
     14, 6,  4,  2,  4,  18, 6,  12, 8,  6,  4,  12, 2,  12, 30, 16,
     2,  6,  22, 14, 6,  10, 12, 6,  2,  4,  8,  10, 6,  6,  24, 14
 };
+
+#ifdef HITLS_CRYPTO_BN_CB
+static int32_t BnCallBack(BN_CbCtx *cb, uint32_t iteration)
+{
+    BSL_Param param[2] = {
+        {CRYPT_PARAM_BN_CB_ITER, BSL_PARAM_TYPE_UINT32, &iteration, sizeof(iteration), 0},
+        BSL_PARAM_END
+    };
+    return BN_CbCtxCall(cb, param);
+}
+#endif
 
 /* Times of trial division. */
 static uint32_t DivisorsCnt(uint32_t bits)
@@ -339,7 +353,7 @@ int32_t MillerRabinCheckCore(const BN_BigNum *bn, BN_Mont *mont, BN_BigNum *rnd,
             return ret;
         }
 #ifdef HITLS_CRYPTO_BN_CB
-        ret = BN_CbCtxCall(cb, 0, 0);
+        ret = BnCallBack(cb, i);
         if (ret != CRYPT_SUCCESS) {
             BSL_ERR_PUSH_ERROR(ret);
             return ret;
@@ -445,7 +459,7 @@ int32_t BN_PrimeCheck(const BN_BigNum *bn, uint32_t checkTimes, BN_Optimizer *op
         return ret;
     }
 #ifdef HITLS_CRYPTO_BN_CB
-    ret = BN_CbCtxCall(cb, 0, 0);
+    ret = BnCallBack(cb, 0);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
@@ -517,7 +531,7 @@ int32_t BN_GenPrime(BN_BigNum *r, BN_BigNum *e, uint32_t bits, bool half, BN_Opt
 #ifndef HITLS_CRYPTO_BN_CB
     (void)cb;
 #else
-    int32_t time = 0;
+    uint32_t time = 0;
 #endif
     int32_t ret = GenCheck(r, bits, opt);
     if (ret != CRYPT_SUCCESS) {
@@ -541,7 +555,7 @@ int32_t BN_GenPrime(BN_BigNum *r, BN_BigNum *e, uint32_t bits, bool half, BN_Opt
     }
     do {
 #ifdef HITLS_CRYPTO_BN_CB
-        if (BN_CbCtxCall(cb, time, 0) != CRYPT_SUCCESS) {
+        if (BnCallBack(cb, time) != CRYPT_SUCCESS) {
             OptimizerEnd(opt);
             BSL_ERR_PUSH_ERROR(CRYPT_BN_NOR_GEN_PRIME);
             return CRYPT_BN_NOR_GEN_PRIME;

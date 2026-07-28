@@ -22,6 +22,9 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <stdbool.h>
+#ifdef HITLS_CRYPTO_BN_CB
+#include "bsl_params.h"
+#endif
 
 #ifdef __cplusplus
 extern "C" {
@@ -68,8 +71,10 @@ typedef struct BnMont BN_Mont;
 typedef struct BnOptimizer BN_Optimizer;
 
 typedef struct BnCbCtx BN_CbCtx;
- 
-typedef int32_t (*BN_CallBack)(BN_CbCtx *, int32_t, int32_t);
+
+#ifdef HITLS_CRYPTO_BN_CB
+typedef int32_t (*BN_CallBack)(void *, BSL_Param *);
+#endif
 
 /* If a == 0, return 0xFFFFFFFF...; otherwise return 0. */
 static inline BN_UINT BN_IsZeroUintConsttime(BN_UINT a)
@@ -150,13 +155,12 @@ void BN_CbCtxSet(BN_CbCtx *gencb, BN_CallBack callBack, void *arg);
  * @brief   Invoke the callback.
  *
  * @param   callBack [out] Callback
- * @param   process [in] Parameter
- * @param   target [in] Parameter
+ * @param   param [in] Callback parameters
 
  * @retval CRYPT_SUCCESS    succeeded
  * @retval other            determined by the callback function
  */
-int32_t BN_CbCtxCall(BN_CbCtx *callBack, int32_t process, int32_t target);
+int32_t BN_CbCtxCall(BN_CbCtx *callBack, BSL_Param *param);
 
 /**
  * @ingroup bn

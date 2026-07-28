@@ -167,6 +167,9 @@ extern "C" {
 #define CRYPT_PARAM_MD_BLOCK_SIZE                           (CRYPT_PARAM_MD_BASE + 2)
 #define CRYPT_PARAM_MD_ATTR                                 (CRYPT_PARAM_MD_BASE + 3)
 
+#define CRYPT_PARAM_BN_BASE                                 1900
+#define CRYPT_PARAM_BN_CB_ITER                              (CRYPT_PARAM_BN_BASE + 1) /**< Zero-based iteration. */
+
 #define CRYPT_PARAM_XMSS_BASE                               1950
 #define CRYPT_PARAM_XMSS_PRV_INDEX                          (CRYPT_PARAM_XMSS_BASE + 1)
 #define CRYPT_PARAM_XMSS_PRV_SEED                           (CRYPT_PARAM_XMSS_BASE + 2)

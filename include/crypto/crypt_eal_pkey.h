@@ -33,6 +33,16 @@ extern "C" {
 #endif // __cplusplus
 
 /**
+ * @ingroup crypt_types
+ * @brief Callback invoked while pkey operation is in progress.
+ * @param ctx [IN] pkey algorithm context.
+ * @param param [IN] Callback parameters. For RSA key generation, the
+ * CRYPT_PARAM_BN_CB_ITER parameter contains the current BN iteration count.
+ * @retval CRYPT_SUCCESS on success; otherwise, an error code.
+ */
+typedef int32_t (*CRYPT_EAL_PKEY_CB)(void *ctx, BSL_Param *param);
+
+/**
  * @ingroup crypt_eal_pkey
  *
  * EAL public key structure

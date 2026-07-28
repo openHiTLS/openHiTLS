@@ -35,10 +35,12 @@ struct BnMont {
     BN_UINT *t;         /* *< tmpt(1) ^ 2 */
 };
 
+#ifdef HITLS_CRYPTO_BN_CB
 struct BnCbCtx {
     void *arg; // callback parameter
     BN_CallBack cb; // callback function, which is defined by the user
 };
+#endif
 
 /* Find a pointer address aligned by 'alignment' bytes in the [ptr, ptr + alignment - 1] range.
    The input parameter alignment cannot be 0. */

@@ -2549,3 +2549,63 @@ EXIT:
 #endif
 }
 /* END_CASE */
+
+#ifdef HITLS_CRYPTO_BN_CB
+static uint32_t g_rsaBnCbCallCount = 0;
+static bool g_rsaBnCbParamValid = true;
+
+static int32_t RsaBnGenCb(void *ctx, BSL_Param *param)
+{
+    uint32_t iteration = 0;
+    uint32_t len = sizeof(iteration);
+    if (ctx == NULL || param == NULL ||
+        BSL_PARAM_GetValue(param, CRYPT_PARAM_BN_CB_ITER, BSL_PARAM_TYPE_UINT32,
+            &iteration, &len) != BSL_SUCCESS) {
+        g_rsaBnCbParamValid = false;
+        return CRYPT_INVALID_ARG;
+    }
+    g_rsaBnCbCallCount++;
+    return CRYPT_SUCCESS;
+}
+#endif
+
+/**
+ * @test   SDV_CRYPTO_RSA_BN_GEN_CB_FUNC_TC001
+ * @title  RSA key generation forwards the configured callback to BN.
+ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_RSA_BN_GEN_CB_FUNC_TC001(int bits, int isProvider)
+{
+#if !defined(HITLS_CRYPTO_BN_CB) || !defined(HITLS_CRYPTO_RSA_GEN)
+    (void)bits;
+    (void)isProvider;
+    SKIP_TEST();
+#else
+    uint8_t e[] = {1, 0, 1};
+    CRYPT_EAL_PkeyPara para = {0};
+    CRYPT_EAL_PKEY_CB callback = RsaBnGenCb;
+    CRYPT_EAL_PkeyCtx *pkey = NULL;
+
+    SetRsaPara(&para, e, sizeof(e), bits);
+    TestMemInit();
+    ASSERT_EQ(TestRandInit(), CRYPT_SUCCESS);
+
+    pkey = TestPkeyNewCtx(NULL, CRYPT_PKEY_RSA, CRYPT_EAL_PKEY_UNKNOWN_OPERATE,
+        "provider=default", isProvider);
+    ASSERT_TRUE(pkey != NULL);
+    ASSERT_EQ(CRYPT_EAL_PkeySetPara(pkey, &para), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_SET_BN_GEN_CB, &callback, 0), CRYPT_INVALID_ARG);
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_SET_BN_GEN_CB, &callback, sizeof(callback)), CRYPT_SUCCESS);
+
+    g_rsaBnCbCallCount = 0;
+    g_rsaBnCbParamValid = true;
+    ASSERT_EQ(CRYPT_EAL_PkeyGen(pkey), CRYPT_SUCCESS);
+    ASSERT_TRUE(g_rsaBnCbCallCount > 0);
+    ASSERT_TRUE(g_rsaBnCbParamValid);
+
+EXIT:
+    TestRandDeInit();
+    CRYPT_EAL_PkeyFreeCtx(pkey);
+#endif
+}
+/* END_CASE */
