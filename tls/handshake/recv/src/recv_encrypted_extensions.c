@@ -13,7 +13,7 @@
  * See the Mulan PSL v2 for more details.
  */
 #include "hitls_build.h"
-#ifdef HITLS_TLS_PROTO_TLS13
+#if defined(HITLS_TLS_PROTO_TLS13_FAMILY)
 #ifdef HITLS_TLS_HOST_CLIENT
 #include <stdint.h>
 #include "tls_binlog_id.h"
@@ -84,7 +84,7 @@ static int32_t Tls13ClientCheckRecordSizeLimit(TLS_Ctx *ctx, const EncryptedExte
 
     if (eEMsg->haveRecordSizeLimit) {
         uint16_t upperBound =
-            (ctx->negotiatedInfo.version == HITLS_VERSION_TLS13 ? REC_MAX_PLAIN_LENGTH + 1 : REC_MAX_PLAIN_LENGTH);
+            (IS_TLS13_FAMILY_VERSION(ctx->negotiatedInfo.version) ? REC_MAX_PLAIN_LENGTH + 1 : REC_MAX_PLAIN_LENGTH);
         if (eEMsg->recordSizeLimit < 64u ||
             (eEMsg->recordSizeLimit > upperBound)) {
             BSL_ERR_PUSH_ERROR(HITLS_MSG_HANDLE_INVALID_RECORD_SIZE_LIMIT);
@@ -171,4 +171,4 @@ int32_t Tls13ClientRecvEncryptedExtensionsProcess(TLS_Ctx *ctx, const HS_Msg *ms
     return HS_ChangeState(ctx, TRY_RECV_CERTIFICATE_REQUEST);
 }
 #endif /* HITLS_TLS_HOST_CLIENT */
-#endif /* HITLS_TLS_PROTO_TLS13 */
+#endif /* HITLS_TLS_PROTO_TLS13_FAMILY */

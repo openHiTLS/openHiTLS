@@ -172,7 +172,7 @@ int32_t PackCertificateRequest(const TLS_Ctx *ctx, PackPacket *pkt)
 #endif /* HITLS_TLS_FEATURE_CERTIFICATE_AUTHORITIES */
 }
 #endif /* HITLS_TLS_PROTO_TLS_BASIC || HITLS_TLS_PROTO_DTLS12 */
-#ifdef HITLS_TLS_PROTO_TLS13
+#if defined(HITLS_TLS_PROTO_TLS13_FAMILY)
 static int32_t PackSignAlgorithmsExtension(const TLS_Ctx *ctx, PackPacket *pkt)
 {
     const TLS_Config *config = &(ctx->config.tlsConfig);
@@ -302,5 +302,5 @@ int32_t Tls13PackCertificateRequest(const TLS_Ctx *ctx, PackPacket *pkt)
 
     return HITLS_SUCCESS;
 }
-#endif /* HITLS_TLS_PROTO_TLS13 */
+#endif /* HITLS_TLS_PROTO_TLS13_FAMILY */
 #endif /* HITLS_TLS_HOST_SERVER && HITLS_TLS_FEATURE_CERT_MODE_CLIENT_VERIFY */

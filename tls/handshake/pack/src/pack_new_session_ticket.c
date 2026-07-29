@@ -55,7 +55,7 @@ int32_t PackNewSessionTicket(const TLS_Ctx *ctx, PackPacket *pkt)
     return HITLS_SUCCESS;
 }
 #endif /* HITLS_TLS_PROTO_TLS_BASIC || HITLS_TLS_PROTO_DTLS12 */
-#if defined(HITLS_TLS_PROTO_TLS13) || defined(HITLS_TLS_PROTO_DTLS13)
+#if defined(HITLS_TLS_PROTO_TLS13_FAMILY)
 int32_t Tls13PackNewSessionTicket(const TLS_Ctx *ctx, PackPacket *pkt)
 {
     HS_Ctx *hsCtx = ctx->hsCtx;
@@ -107,5 +107,5 @@ int32_t Tls13PackNewSessionTicket(const TLS_Ctx *ctx, PackPacket *pkt)
 
     return HITLS_SUCCESS;
 }
-#endif /* HITLS_TLS_PROTO_TLS13 || HITLS_TLS_PROTO_DTLS13 */
+#endif /* HITLS_TLS_PROTO_TLS13_FAMILY */
 #endif /* HITLS_TLS_HOST_SERVER && HITLS_TLS_FEATURE_SESSION_TICKET */

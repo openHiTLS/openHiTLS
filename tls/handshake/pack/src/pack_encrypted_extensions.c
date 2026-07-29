@@ -13,7 +13,7 @@
  * See the Mulan PSL v2 for more details.
  */
 #include "hitls_build.h"
-#if defined(HITLS_TLS_PROTO_TLS13) && defined(HITLS_TLS_HOST_SERVER)
+#if defined(HITLS_TLS_PROTO_TLS13_FAMILY) && defined(HITLS_TLS_HOST_SERVER)
 #include <stdint.h>
 #include "tls_binlog_id.h"
 #include "bsl_log_internal.h"
@@ -158,4 +158,4 @@ int32_t PackEncryptedExtensions(const TLS_Ctx *ctx, PackPacket *pkt)
 
     return HITLS_SUCCESS;
 }
-#endif /* HITLS_TLS_PROTO_TLS13 && HITLS_TLS_HOST_SERVER */
+#endif /* HITLS_TLS_PROTO_TLS13_FAMILY && HITLS_TLS_HOST_SERVER */

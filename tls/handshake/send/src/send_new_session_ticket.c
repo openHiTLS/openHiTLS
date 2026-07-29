@@ -31,9 +31,9 @@
 #include "pack.h"
 #include "send_process.h"
 
-#if defined(HITLS_TLS_PROTO_TLS13) || defined(HITLS_TLS_PROTO_DTLS13)
+#if defined(HITLS_TLS_PROTO_TLS13_FAMILY)
 #define HITLS_ONE_WEEK_SECONDS (604800)
-#endif /* HITLS_TLS_PROTO_TLS13 || HITLS_TLS_PROTO_DTLS13 */
+#endif /* HITLS_TLS_PROTO_TLS13_FAMILY */
 #ifdef HITLS_TLS_PROTO_TLS_BASIC
 int32_t SendNewSessionTicketProcess(TLS_Ctx *ctx)
 {
@@ -74,7 +74,7 @@ int32_t SendNewSessionTicketProcess(TLS_Ctx *ctx)
     return HS_ChangeState(ctx, TRY_SEND_CHANGE_CIPHER_SPEC);
 }
 #endif /* HITLS_TLS_PROTO_TLS_BASIC */
-#if defined(HITLS_TLS_PROTO_TLS13) || defined(HITLS_TLS_PROTO_DTLS13)
+#if defined(HITLS_TLS_PROTO_TLS13_FAMILY)
 static int32_t Tls13TicketGenerateConfigSession(TLS_Ctx *ctx, HITLS_Session **sessionPtr,
     uint8_t *resumePsk, uint32_t hashLen)
 {
@@ -207,5 +207,5 @@ int32_t Tls13SendNewSessionTicketProcess(TLS_Ctx *ctx)
     }
     return HS_ChangeState(ctx, TRY_SEND_NEW_SESSION_TICKET);
 }
-#endif /* HITLS_TLS_PROTO_TLS13 || HITLS_TLS_PROTO_DTLS13 */
+#endif /* HITLS_TLS_PROTO_TLS13_FAMILY */
 #endif /* HITLS_TLS_FEATURE_SESSION_TICKET && HITLS_TLS_HOST_SERVER */

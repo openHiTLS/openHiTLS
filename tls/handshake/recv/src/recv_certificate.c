@@ -102,7 +102,7 @@ int32_t ClientCheckPeerCert(TLS_Ctx *ctx, HITLS_CERT_X509 *cert)
     expectCertInfo.certType = CFG_GetCertTypeByCipherSuite(ctx->negotiatedInfo.cipherSuiteInfo.cipherSuite);
     expectCertInfo.signSchemeList = ctx->config.tlsConfig.signAlgorithms;
     expectCertInfo.signSchemeNum = ctx->config.tlsConfig.signAlgorithmsSize;
-    if (ctx->negotiatedInfo.version != HITLS_VERSION_TLS13 && ctx->negotiatedInfo.version != HITLS_VERSION_DTLS13) {
+    if (!IS_TLS13_FAMILY_CTX(ctx)) {
         expectCertInfo.ellipticCurveList = ctx->config.tlsConfig.groups;
         expectCertInfo.ellipticCurveNum = ctx->config.tlsConfig.groupsSize;
     }
@@ -205,7 +205,7 @@ static int32_t ServerCheckCert(TLS_Ctx *ctx, CERT_Pair *peerCert)
 static bool CheckCertKeyUsage(TLS_Ctx *ctx, CERT_Pair *peerCert)
 {
     HITLS_CERT_X509 *cert = SAL_CERT_PAIR_GET_X509(peerCert);
-    if (ctx->negotiatedInfo.version == HITLS_VERSION_TLS13) {
+    if (IS_TLS13_FAMILY_CTX(ctx)) {
         return SAL_CERT_CheckCertKeyUsage(ctx, cert, CERT_KEY_CTRL_IS_DIGITAL_SIGN_USAGE);
     }
 
@@ -375,7 +375,7 @@ int32_t RecvCertificateProcess(TLS_Ctx *ctx, const HS_Msg *msg)
     return HS_ChangeState(ctx, TRY_RECV_CLIENT_KEY_EXCHANGE);
 }
 #endif /* HITLS_TLS_PROTO_TLS_BASIC || HITLS_TLS_PROTO_DTLS12 */
-#if defined(HITLS_TLS_PROTO_TLS13) || defined(HITLS_TLS_PROTO_DTLS13)
+#if defined(HITLS_TLS_PROTO_TLS13_FAMILY)
 static int32_t CertificateReqCtxCheck(TLS_Ctx *ctx, const CertificateMsg *certs)
 {
 #ifdef HITLS_TLS_FEATURE_PHA
@@ -428,21 +428,6 @@ static int32_t ProcessEmptyCert(TLS_Ctx *ctx)
         "peer certificate is needed!", ALERT_CERTIFICATE_REQUIRED);
 }
 
-#ifdef HITLS_TLS_PROTO_DTLS13
-static void Dtls13RemovePhaCertRequestRetransmit(TLS_Ctx *ctx)
-{
-    if (ctx->isClient || ctx->negotiatedInfo.version != HITLS_VERSION_DTLS13 ||
-        ctx->state != CM_STATE_HANDSHAKING || ctx->preState != CM_STATE_TRANSPORTING ||
-        ctx->phaState != PHA_REQUESTED) {
-        return;
-    }
-    REC_RetransmitListRemove(ctx->recCtx, CERTIFICATE_REQUEST);
-    if (REC_RetransmitIsEmpty(ctx->recCtx)) {
-        HS_StopTimer(ctx);
-    }
-}
-#endif
-
 int32_t Tls13RecvCertificateProcess(TLS_Ctx *ctx, const HS_Msg *msg)
 {
     const CertificateMsg *certs = &msg->body.certificate;
@@ -461,7 +446,14 @@ int32_t Tls13RecvCertificateProcess(TLS_Ctx *ctx, const HS_Msg *msg)
         return ret;
     }
 #ifdef HITLS_TLS_PROTO_DTLS13
-    Dtls13RemovePhaCertRequestRetransmit(ctx);
+    if (!ctx->isClient && ctx->negotiatedInfo.version == HITLS_VERSION_DTLS13 &&
+        ctx->state == CM_STATE_HANDSHAKING && ctx->preState == CM_STATE_TRANSPORTING &&
+        ctx->phaState == PHA_REQUESTED) {
+        REC_RetransmitListRemove(ctx->recCtx, CERTIFICATE_REQUEST);
+        if (REC_RetransmitIsEmpty(ctx->recCtx)) {
+            HS_StopTimer(ctx);
+        }
+    }
 #endif
 
     /**
@@ -497,4 +489,4 @@ int32_t Tls13RecvCertificateProcess(TLS_Ctx *ctx, const HS_Msg *msg)
 
     return HS_ChangeState(ctx, TRY_RECV_CERTIFICATE_VERIFY);
 }
-#endif /* HITLS_TLS_PROTO_TLS13 || HITLS_TLS_PROTO_DTLS13 */
+#endif /* HITLS_TLS_PROTO_TLS13_FAMILY */

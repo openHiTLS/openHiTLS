@@ -64,6 +64,10 @@ int RpcTlsNewSsl(CmdData*);
 */
 int RpcTlsSetSsl(CmdData*);
 
+int RpcTlsSetDtlsCid(CmdData *cmdData);
+
+int RpcTlsRequestConnectionId(CmdData *cmdData);
+
 /**
 * @brief The RPC invokes the TLS connection to be listened on.
 */

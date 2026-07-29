@@ -134,6 +134,7 @@ typedef enum {
     DTLS_ALL,
     DTLS1_0,
     DTLS1_2,
+    DTLS1_3,
     TLS_ALL,
     SSL3_0,
     TLS1_0,
@@ -272,6 +273,7 @@ typedef struct {
     bool isMiddleBoxCompat;     // Indicates whether to enable the middle box compatibility mode.
     bool isSupportDtlsCookieExchange;
     uint16_t recordSizeLimit;
+    bool isSupportConnectionId;        // Indicates whether to support DTLS 1.3 Connection ID. Default false.
 } HLT_Ctx_Config;
 
 typedef struct {

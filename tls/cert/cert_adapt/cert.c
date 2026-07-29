@@ -23,6 +23,7 @@
 #include "hitls_cert_reg.h"
 #include "hitls_security.h"
 #include "tls.h"
+#include "hs_common.h"
 #ifdef HITLS_TLS_FEATURE_SECURITY
 #include "security.h"
 #endif
@@ -174,9 +175,8 @@ int32_t EncodeCertificate(HITLS_Ctx *ctx, HITLS_CERT_X509 *cert, PackPacket *pkt
         return ret;
     }
 
-#ifdef HITLS_TLS_PROTO_TLS13
-    if (ctx->negotiatedInfo.version == HITLS_VERSION_TLS13 ||
-        ctx->negotiatedInfo.version == HITLS_VERSION_DTLS13) {
+#if defined(HITLS_TLS_PROTO_TLS13_FAMILY)
+    if (IS_TLS13_FAMILY_CTX(ctx)) {
         /* If an extension applies to the entire chain, it SHOULD be included in the first CertificateEntry. */
         /* Start length field for extensions */
         uint32_t exLenPos = 0;
@@ -404,7 +404,7 @@ int32_t SAL_CERT_EncodeCertChain(HITLS_Ctx *ctx, PackPacket *pkt)
     return EncodeCertStore(ctx, pkt, cert);
 }
 
-#ifdef HITLS_TLS_PROTO_TLS13
+#if defined(HITLS_TLS_PROTO_TLS13_FAMILY)
 // rfc8446 4.4.2.4. Receiving a Certificate Message
 // Any endpoint receiving any certificate which it would need to validate using any signature algorithm using an MD5
 // hash MUST abort the handshake with a "bad_certificate" alert.
@@ -412,7 +412,7 @@ int32_t SAL_CERT_EncodeCertChain(HITLS_Ctx *ctx, PackPacket *pkt)
 int32_t CheckCertSignature(HITLS_Ctx *ctx, HITLS_CERT_X509 *cert)
 {
     HITLS_Config *config = &ctx->config.tlsConfig;
-    if (ctx->negotiatedInfo.version == HITLS_VERSION_TLS13) {
+    if (IS_TLS13_FAMILY_VERSION(ctx->negotiatedInfo.version)) {
         HITLS_SignHashAlgo signAlg = CERT_SIG_SCHEME_UNKNOWN;
         const uint32_t md5Mask = 0x0100;
         (void)SAL_CERT_X509Ctrl(config, cert, CERT_CTRL_GET_SIGN_ALGO, NULL, (void *)&signAlg);
@@ -480,7 +480,7 @@ int32_t ParseChain(HITLS_Ctx *ctx, CERT_Item *item, HITLS_CERT_Chain **chain, HI
             DestoryParseChain(encCertLocal, NULL, newChain);
             return RETURN_ERROR_NUMBER_PROCESS(HITLS_CERT_ERR_PARSE_MSG, BINLOG_ID15050, "parse cert chain err");
         }
-#ifdef HITLS_TLS_PROTO_TLS13
+#if defined(HITLS_TLS_PROTO_TLS13_FAMILY)
         if (CheckCertSignature(ctx, cert) != HITLS_SUCCESS) {
             DestoryParseChain(encCertLocal, cert, newChain);
             return HITLS_CERT_CTRL_ERR_GET_SIGN_ALGO;
@@ -527,7 +527,7 @@ int32_t SAL_CERT_ParseCertChain(HITLS_Ctx *ctx, CERT_Item *item, CERT_Pair **cer
     if (cert == NULL) {
         return RETURN_ERROR_NUMBER_PROCESS(HITLS_CERT_ERR_PARSE_MSG, BINLOG_ID15052, "X509Parse fail");
     }
-#ifdef HITLS_TLS_PROTO_TLS13
+#if defined(HITLS_TLS_PROTO_TLS13_FAMILY)
     if (CheckCertSignature(ctx, cert) != HITLS_SUCCESS) {
         SAL_CERT_X509Free(cert);
         return RETURN_ERROR_NUMBER_PROCESS(HITLS_CERT_CTRL_ERR_GET_SIGN_ALGO, BINLOG_ID16329, "check signature fail");

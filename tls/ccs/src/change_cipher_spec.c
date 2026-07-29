@@ -82,7 +82,7 @@ int32_t CCS_Send(TLS_Ctx *ctx)
 #if defined(HITLS_TLS_PROTO_DTLS12) && defined(HITLS_BSL_UIO_UDP)
     if (IS_SUPPORT_DATAGRAM(ctx->config.tlsConfig.originVersionMask) &&
         BSL_UIO_GetUioChainTransportType(ctx->uio, BSL_UIO_UDP)) {
-        ret = REC_RetransmitListAppend(ctx->recCtx, REC_TYPE_CHANGE_CIPHER_SPEC, buf, len);
+        ret = RecRetransmitListAppendNode(ctx->recCtx, REC_TYPE_CHANGE_CIPHER_SPEC, buf, len, NULL);
         if (ret != HITLS_SUCCESS) {
             return ret;
         }
@@ -169,7 +169,7 @@ void CCS_DeInit(TLS_Ctx *ctx)
 int32_t ProcessPlainCCS(TLS_Ctx *ctx, const uint8_t *data, uint32_t dataLen)
 {
     if (ctx->ccsCtx->isReady == false) {
-#if defined(HITLS_TLS_PROTO_DTLS12) && defined(HITLS_BSL_UIO_UDP)
+#if defined(HITLS_TLS_PROTO_DATAGRAM) && defined(HITLS_BSL_UIO_UDP)
         if (IS_SUPPORT_DATAGRAM(ctx->config.tlsConfig.originVersionMask) &&
             BSL_UIO_GetUioChainTransportType(ctx->uio, BSL_UIO_UDP)) {
             ctx->rwstate = HITLS_READING;
@@ -221,8 +221,8 @@ int32_t ProcessPlainCCS(TLS_Ctx *ctx, const uint8_t *data, uint32_t dataLen)
 
 int32_t ProcessDecryptedCCS(TLS_Ctx *ctx, const uint8_t *data, uint32_t dataLen)
 {
-#ifdef HITLS_TLS_PROTO_TLS13
-    if (GET_VERSION_FROM_CTX(ctx) == HITLS_VERSION_TLS13) {
+#ifdef HITLS_TLS_PROTO_TLS13_FAMILY
+    if (IS_TLS13_FAMILY_VERSION(GET_VERSION_FROM_CTX(ctx))) {
         return RETURN_ALERT_PROCESS(ctx, HITLS_REC_NORMAL_RECV_UNEXPECT_MSG, BINLOG_ID15612,
             "recv encrypted ccs msg", ALERT_UNEXPECTED_MESSAGE);
     }

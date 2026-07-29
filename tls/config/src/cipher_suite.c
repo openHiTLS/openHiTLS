@@ -129,7 +129,7 @@ static const CipherSuiteInfo g_cipherSuiteList[] = {
         .hashAlg = HITLS_HASH_SHA_256,
         .signScheme = CERT_SIG_SCHEME_UNKNOWN,
         KEY_BLOCK_PARTITON_LENGTH(12u, 16u, 0u, 0u, 0u, 8u),
-        VERSION_SCOPE(HITLS_VERSION_TLS13, HITLS_VERSION_TLS13, 0, 0),
+        VERSION_SCOPE(HITLS_VERSION_TLS13, HITLS_VERSION_TLS13, HITLS_VERSION_DTLS13, HITLS_VERSION_DTLS13),
         .cipherType = HITLS_AEAD_CIPHER,
         .strengthBits = 64},
 #endif

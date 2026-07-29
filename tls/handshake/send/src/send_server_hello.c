@@ -120,7 +120,7 @@ static int32_t ServerChangeStateAfterSendHello(TLS_Ctx *ctx)
     }
     return HS_ChangeState(ctx, TRY_SEND_CERTIFICATE);
 }
-#if (defined(HITLS_TLS_PROTO_TLS13) || defined(HITLS_TLS_PROTO_DTLS13)) && defined(HITLS_TLS_PROTO_TLS_BASIC)
+#if defined(HITLS_TLS_PROTO_TLS13_FAMILY) && defined(HITLS_TLS_PROTO_TLS_BASIC)
 static int32_t DowngradeServerRandom(TLS_Ctx *ctx)
 {
     /* Obtain server information */
@@ -142,7 +142,7 @@ static int32_t DowngradeServerRandom(TLS_Ctx *ctx)
     }
     return ret;
 }
-#endif /* (HITLS_TLS_PROTO_TLS13 || HITLS_TLS_PROTO_DTLS13) && HITLS_TLS_PROTO_TLS_BASIC */
+#endif /* HITLS_TLS_PROTO_TLS13_FAMILY && HITLS_TLS_PROTO_TLS_BASIC */
 int32_t ServerSendServerHelloProcess(TLS_Ctx *ctx)
 {
     int32_t ret = HITLS_SUCCESS;
@@ -163,7 +163,7 @@ int32_t ServerSendServerHelloProcess(TLS_Ctx *ctx)
                 "get server random error.", 0, 0, 0, 0);
             return ret;
         }
-#if (defined(HITLS_TLS_PROTO_TLS13) || defined(HITLS_TLS_PROTO_DTLS13)) && defined(HITLS_TLS_PROTO_TLS_BASIC)
+#if defined(HITLS_TLS_PROTO_TLS13_FAMILY) && defined(HITLS_TLS_PROTO_TLS_BASIC)
         TLS_Config *tlsConfig = &ctx->config.tlsConfig;
         /* If TLS 1.3 is supported but an earlier version is negotiated, the last eight bits of the random number need
          * to be rewritten */
@@ -176,10 +176,10 @@ int32_t ServerSendServerHelloProcess(TLS_Ctx *ctx)
                 return HITLS_MEMCPY_FAIL;
             }
         }
-#endif /* (HITLS_TLS_PROTO_TLS13 || HITLS_TLS_PROTO_DTLS13) && HITLS_TLS_PROTO_TLS_BASIC */
+#endif /* HITLS_TLS_PROTO_TLS13_FAMILY && HITLS_TLS_PROTO_TLS_BASIC */
         /* Set the verify information. */
-        ret = VERIFY_SetHash(LIBCTX_FROM_CTX(ctx), ATTRIBUTE_FROM_CTX(ctx),
-            hsCtx->verifyCtx, ctx->negotiatedInfo.cipherSuiteInfo.hashAlg);
+        ret = VERIFY_SetHashWithVersion(LIBCTX_FROM_CTX(ctx), ATTRIBUTE_FROM_CTX(ctx),
+            hsCtx->verifyCtx, ctx->negotiatedInfo.cipherSuiteInfo.hashAlg, GET_VERSION_FROM_CTX(ctx));
         if (ret != HITLS_SUCCESS) {
             BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15549, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN, "set verify info fail.",
                 0, 0, 0, 0);
@@ -205,7 +205,7 @@ int32_t ServerSendServerHelloProcess(TLS_Ctx *ctx)
     return ServerChangeStateAfterSendHello(ctx);
 }
 #endif /* HITLS_TLS_PROTO_TLS_BASIC || HITLS_TLS_PROTO_DTLS12 */
-#if defined(HITLS_TLS_PROTO_TLS13) || defined(HITLS_TLS_PROTO_DTLS13)
+#if defined(HITLS_TLS_PROTO_TLS13_FAMILY)
 static int32_t Tls13ServerPrepareKeyShare(TLS_Ctx *ctx)
 {
     KeyShareParam *keyShare = &ctx->hsCtx->kxCtx->keyExchParam.share;
@@ -260,8 +260,8 @@ int32_t Tls13ServerSendServerHelloProcess(TLS_Ctx *ctx)
         }
 
         /* Set the verify information */
-        ret = VERIFY_SetHash(LIBCTX_FROM_CTX(ctx), ATTRIBUTE_FROM_CTX(ctx),
-            hsCtx->verifyCtx, ctx->negotiatedInfo.cipherSuiteInfo.hashAlg);
+        ret = VERIFY_SetHashWithVersion(LIBCTX_FROM_CTX(ctx), ATTRIBUTE_FROM_CTX(ctx),
+            hsCtx->verifyCtx, ctx->negotiatedInfo.cipherSuiteInfo.hashAlg, GET_VERSION_FROM_CTX(ctx));
         if (ret != HITLS_SUCCESS) {
             return RETURN_ERROR_NUMBER_PROCESS(ret, BINLOG_ID15554, "set verify info fail");
         }
@@ -361,5 +361,5 @@ int32_t Tls13ServerSendHelloRetryRequestProcess(TLS_Ctx *ctx)
     ctx->hsCtx->ccsNextState = TRY_RECV_CLIENT_HELLO;
     return HS_ChangeState(ctx, TRY_SEND_CHANGE_CIPHER_SPEC);
 }
-#endif /* HITLS_TLS_PROTO_TLS13 || HITLS_TLS_PROTO_DTLS13 */
+#endif /* HITLS_TLS_PROTO_TLS13_FAMILY */
 #endif /* HITLS_TLS_HOST_SERVER */

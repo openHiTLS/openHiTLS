@@ -86,7 +86,7 @@ static int32_t TlsSendHandShakeMsg(TLS_Ctx *ctx)
     return HITLS_SUCCESS;
 }
 #endif /* HITLS_TLS_PROTO_TLS */
-#ifdef HITLS_TLS_PROTO_DTLS12
+#if defined(HITLS_TLS_PROTO_DATAGRAM)
 int32_t HS_DtlsSendFragmentHsMsg(TLS_Ctx *ctx, uint32_t maxRecPayloadLen, const uint8_t *msgData)
 {
     int32_t ret = HITLS_SUCCESS;
@@ -138,6 +138,7 @@ int32_t HS_DtlsSendFragmentHsMsg(TLS_Ctx *ctx, uint32_t maxRecPayloadLen, const 
     return ret;
 }
 
+#ifdef HITLS_TLS_PROTO_DTLS12
 static int32_t SendHsMsgWithPayload(TLS_Ctx *ctx, uint32_t maxRecPayloadLen, HS_Ctx *hsCtx)
 {
     int32_t ret = HITLS_SUCCESS;
@@ -192,7 +193,7 @@ static int32_t DtlsSendHandShakeMsg(TLS_Ctx *ctx)
 #ifdef HITLS_BSL_UIO_UDP
     /* Adding to the retransmission queue */
     if (BSL_UIO_GetUioChainTransportType(ctx->uio, BSL_UIO_UDP)) {
-        ret = REC_RetransmitListAppend(ctx->recCtx, REC_TYPE_HANDSHAKE, hsCtx->msgBuf, hsCtx->msgLen);
+        ret = RecRetransmitListAppendNode(ctx->recCtx, REC_TYPE_HANDSHAKE, hsCtx->msgBuf, hsCtx->msgLen, NULL);
         if (ret != HITLS_SUCCESS) {
             return ret;
         }
@@ -200,7 +201,7 @@ static int32_t DtlsSendHandShakeMsg(TLS_Ctx *ctx)
 #endif /* HITLS_BSL_UIO_UDP */
 
     /* Add hash data */
-    ret = VERIFY_Append(hsCtx->verifyCtx, hsCtx->msgBuf, hsCtx->msgLen);
+    ret = VERIFY_AppendDtlsRaw(hsCtx->verifyCtx, hsCtx->msgBuf, hsCtx->msgLen, VERIFY_TRANSCRIPT_RAW);
     if (ret != HITLS_SUCCESS) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15798, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "verify append fail when send handshake msg.", 0, 0, 0, 0);
@@ -220,6 +221,7 @@ static int32_t DtlsSendHandShakeMsg(TLS_Ctx *ctx)
     return HITLS_SUCCESS;
 }
 #endif /* HITLS_TLS_PROTO_DTLS12 */
+#endif /* HITLS_TLS_PROTO_DATAGRAM */
 
 #ifdef HITLS_TLS_PROTO_DTLS13
 #ifdef HITLS_TLS_FEATURE_KEY_UPDATE
@@ -284,7 +286,10 @@ static int32_t Dtls13SendHandShakeMsg(TLS_Ctx *ctx)
         return ret;
     }
 
-    ret = VERIFY_Dtls13Append(hsCtx->verifyCtx, hsCtx->msgBuf, hsCtx->msgLen);
+    if (hsCtx->verifyCtx == NULL) {
+        return HITLS_INTERNAL_EXCEPTION;
+    }
+    ret = VERIFY_AppendDtlsRaw(hsCtx->verifyCtx, hsCtx->msgBuf, hsCtx->msgLen, VERIFY_TRANSCRIPT_DTLS13);
     if (ret != HITLS_SUCCESS) {
         return ret;
     }

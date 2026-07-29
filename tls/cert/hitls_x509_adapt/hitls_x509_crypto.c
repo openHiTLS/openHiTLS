@@ -52,6 +52,8 @@ static int32_t SetPkeySignParam(HITLS_Ctx *hitlsCtx, CRYPT_EAL_PkeyCtx *ctx, HIT
 {
     (void)attrName;
     (void)hitlsCtx;
+    (void)signAlgo;
+    (void)mdAlgId;
 #ifdef HITLS_TLS_FEATURE_PROVIDER
     int32_t ret = SetMdAttr(ctx, attrName);
     if (ret != CRYPT_SUCCESS) {

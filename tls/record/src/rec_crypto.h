@@ -23,11 +23,11 @@ typedef struct {
     REC_Type recordType; /* Protocol type */
     uint32_t plainLen;   /* message length */
     uint8_t *plainData;  /* message data */
-#ifdef HITLS_TLS_PROTO_TLS13
-    /* Length of the tls1.3 padding content. Currently, the value is 0. The value can be used as required */
+#if defined(HITLS_TLS_PROTO_TLS13_FAMILY)
+    /* Length of the TLS1.3-family padding content. Currently, the value is 0. */
     uint64_t recPaddingLength;
 #endif
-    bool isTlsInnerPlaintext; /* Whether it is a TLSInnerPlaintext message for tls1.3 */
+    bool isTlsInnerPlaintext; /* Whether it is a TLSInnerPlaintext message for TLS1.3 family */
 } RecordPlaintext;            /* Record protocol data before encryption */
 
 typedef uint32_t (*CalCiphertextLenFunc)(const TLS_Ctx *ctx, RecConnSuitInfo *suitInfo,
@@ -55,8 +55,8 @@ typedef struct {
 const RecCryptoFunc *RecGetCryptoFuncs(const RecConnSuitInfo *suiteInfo);
 
 #ifdef HITLS_TLS_PROTO_DTLS13
-int32_t Dtls13CryptSequenceNumber(TLS_Ctx *ctx, HITLS_CipherAlgo cipherAlgo, const uint8_t *snKey, const uint8_t *ciphertext,
-    uint32_t cipherLen, const uint8_t *plaintextSeq, uint8_t *encryptedSn, uint8_t snLen);
+int32_t Dtls13CryptSequenceNumber(TLS_Ctx *ctx, RecConnSuitInfo *suiteInfo,
+    const uint8_t *ciphertext, uint32_t cipherLen, uint8_t *seq, uint8_t seqLen);
 #endif
 
 #endif

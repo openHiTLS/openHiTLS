@@ -193,6 +193,9 @@ static const CRYPT_EAL_AlgInfo g_defEalCiphers[] = {
 #if defined(HITLS_CRYPTO_CHACHA20) && defined(HITLS_CRYPTO_CHACHA20POLY1305)
     {CRYPT_CIPHER_CHACHA20_POLY1305, g_defEalChaCha, CRYPT_EAL_DEFAULT_ATTR},
 #endif
+#ifdef HITLS_CRYPTO_CHACHA20
+    {CRYPT_CIPHER_CHACHA20, g_defEalChaCha20, CRYPT_EAL_DEFAULT_ATTR},
+#endif
 #ifdef HITLS_CRYPTO_SM4
 #ifdef HITLS_CRYPTO_XTS
     {CRYPT_CIPHER_SM4_XTS, g_defEalXts, CRYPT_EAL_DEFAULT_ATTR},
@@ -702,7 +705,7 @@ static const TLS_GroupInfo g_tlsGroupInfo[] = {
         192,                                    // secBits
         HITLS_HYBRID_X25519_MLKEM768,          // groupId
         1184 + 32, 32 + 32, 1088 + 32,         // pubkeyLen=1216, sharedkeyLen=64, ciphertextLen=1120
-        TLS13_VERSION_BIT,                     // versionBits
+        TLS13_VERSION_BIT | DTLS13_VERSION_BIT,                     // versionBits
         true,
     },
     {
@@ -712,7 +715,7 @@ static const TLS_GroupInfo g_tlsGroupInfo[] = {
         192,                                    // secBits
         HITLS_HYBRID_ECDH_NISTP256_MLKEM768,   // groupId
         1184 + 65, 32 + 32, 1088 + 65,         // pubkeyLen=1249, sharedkeyLen=64, ciphertextLen=1153
-        TLS13_VERSION_BIT,                     // versionBits
+        TLS13_VERSION_BIT | DTLS13_VERSION_BIT,                     // versionBits
         true,
     },
     {
@@ -722,7 +725,7 @@ static const TLS_GroupInfo g_tlsGroupInfo[] = {
         256,                                    // secBits
         HITLS_HYBRID_ECDH_NISTP384_MLKEM1024,  // groupId
         1568 + 97, 32 + 48, 1568 + 97,         // pubkeyLen=1665, sharedkeyLen=80, ciphertextLen=1665
-        TLS13_VERSION_BIT,                     // versionBits
+        TLS13_VERSION_BIT | DTLS13_VERSION_BIT,                     // versionBits
         true,
     },
 #endif /* HITLS_TLS_FEATURE_KEM */
@@ -770,7 +773,7 @@ static const TLS_GroupInfo g_tlsGroupInfo[] = {
         128, // secBits
         HITLS_EC_GROUP_BRAINPOOLP256R1, // groupId
         65, 32, 0, // pubkeyLen=65, sharedkeyLen=32 (256 bits)
-        TLS10_VERSION_BIT | TLS11_VERSION_BIT | TLS12_VERSION_BIT | DTLS_VERSION_MASK, // versionBits
+        TLS10_VERSION_BIT | TLS11_VERSION_BIT | TLS12_VERSION_BIT | DTLS12_VERSION_BIT, // versionBits
         false,
     },
 #endif /* HITLS_CRYPTO_CURVE_BP256R1 */
@@ -782,7 +785,7 @@ static const TLS_GroupInfo g_tlsGroupInfo[] = {
         192, // secBits
         HITLS_EC_GROUP_BRAINPOOLP384R1, // groupId
         97, 48, 0, // pubkeyLen=97, sharedkeyLen=48 (384 bits)
-        TLS10_VERSION_BIT | TLS11_VERSION_BIT | TLS12_VERSION_BIT | DTLS_VERSION_MASK, // versionBits
+        TLS10_VERSION_BIT | TLS11_VERSION_BIT | TLS12_VERSION_BIT | DTLS12_VERSION_BIT, // versionBits
         false,
     },
 #endif /* HITLS_CRYPTO_CURVE_BP384R1 */
@@ -794,7 +797,7 @@ static const TLS_GroupInfo g_tlsGroupInfo[] = {
         256, // secBits
         HITLS_EC_GROUP_BRAINPOOLP512R1, // groupId
         129, 64, 0, // pubkeyLen=129, sharedkeyLen=64 (512 bits)
-        TLS10_VERSION_BIT | TLS11_VERSION_BIT | TLS12_VERSION_BIT | DTLS_VERSION_MASK, // versionBits
+        TLS10_VERSION_BIT | TLS11_VERSION_BIT | TLS12_VERSION_BIT | DTLS12_VERSION_BIT, // versionBits
         false,
     },
 #endif /* HITLS_CRYPTO_CURVE_BP512R1 */
@@ -985,8 +988,8 @@ static const TLS_SigSchemeInfo g_signSchemeInfo[] = {
         HITLS_SIGN_ML_DSA,
         BSL_CID_UNKNOWN,
         128,
-        TLS13_VERSION_BIT,
-        TLS13_VERSION_BIT,
+        TLS13_VERSION_BIT | DTLS13_VERSION_BIT,
+        TLS13_VERSION_BIT | DTLS13_VERSION_BIT,
     },
     {
         CONST_CAST("mldsa65"),
@@ -997,8 +1000,8 @@ static const TLS_SigSchemeInfo g_signSchemeInfo[] = {
         HITLS_SIGN_ML_DSA,
         BSL_CID_UNKNOWN,
         192,
-        TLS13_VERSION_BIT,
-        TLS13_VERSION_BIT,
+        TLS13_VERSION_BIT | DTLS13_VERSION_BIT,
+        TLS13_VERSION_BIT | DTLS13_VERSION_BIT,
     },
     {
         CONST_CAST("mldsa87"),
@@ -1009,8 +1012,8 @@ static const TLS_SigSchemeInfo g_signSchemeInfo[] = {
         HITLS_SIGN_ML_DSA,
         BSL_CID_UNKNOWN,
         256,
-        TLS13_VERSION_BIT,
-        TLS13_VERSION_BIT,
+        TLS13_VERSION_BIT | DTLS13_VERSION_BIT,
+        TLS13_VERSION_BIT | DTLS13_VERSION_BIT,
     },
 #endif /* HITLS_CRYPTO_MLDSA */
 #ifdef HITLS_CRYPTO_CURVE_NISTP256

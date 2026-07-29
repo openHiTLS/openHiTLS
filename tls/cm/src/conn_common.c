@@ -75,14 +75,14 @@ void ConnCleanSensitiveData(TLS_Ctx *ctx)
 {
     if (ctx->hsCtx != NULL) {
         BSL_SAL_CleanseData(ctx->hsCtx->masterKey, sizeof(ctx->hsCtx->masterKey));
-#if defined(HITLS_TLS_PROTO_TLS13) || defined(HITLS_TLS_PROTO_DTLS13)
+#if defined(HITLS_TLS_PROTO_TLS13_FAMILY)
         BSL_SAL_CleanseData(ctx->hsCtx->earlySecret, MAX_DIGEST_SIZE);
         BSL_SAL_CleanseData(ctx->hsCtx->handshakeSecret, MAX_DIGEST_SIZE);
         BSL_SAL_CleanseData(ctx->hsCtx->serverHsTrafficSecret, MAX_DIGEST_SIZE);
         BSL_SAL_CleanseData(ctx->hsCtx->clientHsTrafficSecret, MAX_DIGEST_SIZE);
 #endif
     }
-#if defined(HITLS_TLS_PROTO_TLS13) || defined(HITLS_TLS_PROTO_DTLS13)
+#if defined(HITLS_TLS_PROTO_TLS13_FAMILY)
     BSL_SAL_CleanseData(ctx->clientAppTrafficSecret, MAX_DIGEST_SIZE);
     BSL_SAL_CleanseData(ctx->serverAppTrafficSecret, MAX_DIGEST_SIZE);
     BSL_SAL_CleanseData(ctx->resumptionMasterSecret, MAX_DIGEST_SIZE);
@@ -354,7 +354,7 @@ HITLS_Config *HITLS_GetGlobalConfig(const HITLS_Ctx *ctx)
     return ctx->globalConfig;
 }
 
-#if defined(HITLS_TLS_PROTO_TLS13) || defined(HITLS_TLS_PROTO_DTLS13)
+#if defined(HITLS_TLS_PROTO_TLS13_FAMILY)
 int32_t HITLS_ClearTLS13CipherSuites(HITLS_Ctx *ctx)
 {
     if (ctx == NULL) {
@@ -362,7 +362,7 @@ int32_t HITLS_ClearTLS13CipherSuites(HITLS_Ctx *ctx)
     }
     return HITLS_CFG_ClearTLS13CipherSuites(&(ctx->config.tlsConfig));
 }
-#endif /* HITLS_TLS_PROTO_TLS13 || HITLS_TLS_PROTO_DTLS13 */
+#endif /* HITLS_TLS_PROTO_TLS13_FAMILY */
 int32_t HITLS_SetCipherSuites(HITLS_Ctx *ctx, const uint16_t *cipherSuites, uint32_t cipherSuitesSize)
 {
     if (ctx == NULL) {
@@ -508,8 +508,8 @@ HITLS_CIPHER_List *HITLS_GetSupportedCiphers(const HITLS_Ctx *ctx)
         BSL_LIST_FREE(cipherList, BSL_SAL_Free);
         return NULL;
     }
-#if defined(HITLS_TLS_PROTO_TLS13) || defined(HITLS_TLS_PROTO_DTLS13)
-    if ((ctx->config.tlsConfig.maxVersion == HITLS_VERSION_TLS13 || ctx->config.tlsConfig.maxVersion == HITLS_VERSION_DTLS13) && GetAvailableCipherList(ctx, cipherList,
+#if defined(HITLS_TLS_PROTO_TLS13_FAMILY)
+    if (IS_TLS13_FAMILY_VERSION(ctx->config.tlsConfig.maxVersion) && GetAvailableCipherList(ctx, cipherList,
         config->tls13CipherSuites, config->tls13cipherSuitesSize) != HITLS_SUCCESS) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17149, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "GetAvailableCipherList fail", 0, 0, 0, 0);
@@ -835,7 +835,7 @@ int32_t CommonEventInRenegotiationState(HITLS_Ctx *ctx)
 }
 #endif /* HITLS_TLS_FEATURE_RENEGOTIATION */
 
-#if defined(HITLS_TLS_FEATURE_PSK) && (defined(HITLS_TLS_PROTO_TLS13) || defined(HITLS_TLS_PROTO_DTLS13))
+#if defined(HITLS_TLS_FEATURE_PSK) && defined(HITLS_TLS_PROTO_TLS13_FAMILY)
 int32_t HITLS_SetPskFindSessionCallback(HITLS_Ctx *ctx, HITLS_PskFindSessionCb cb)
 {
     if (ctx == NULL) {

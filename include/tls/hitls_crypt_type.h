@@ -68,7 +68,8 @@ typedef struct BslList HITLS_CIPHER_List;
 typedef enum {
     HITLS_AEAD_CIPHER,
     HITLS_CBC_CIPHER,
-    HITLS_ECB_CIPHER,
+    HITLS_ECB_CIPHER, // HITLS_ECB_CIPHER only used DTLS 1.3 sequence number encryption (RFC 9147 §4.2.3)
+    HITLS_STREAM_CIPHER, // Raw stream cipher for DTLS 1.3 sequence number encryption (RFC 9147 §4.2.3)
     HITLS_CIPHER_TYPE_BUTT = 255
 } HITLS_CipherType;
 
@@ -86,6 +87,7 @@ typedef enum {
     HITLS_CIPHER_AES_256_CCM = BSL_CID_AES256_CCM,
     HITLS_CIPHER_AES_128_CCM8 = BSL_CID_AES128_CCM8,
     HITLS_CIPHER_AES_256_CCM8 = BSL_CID_AES256_CCM8,
+    HITLS_CIPHER_CHACHA20 = BSL_CID_CHACHA20,
     HITLS_CIPHER_CHACHA20_POLY1305 = BSL_CID_CHACHA20_POLY1305,
     HITLS_CIPHER_SM4_CBC = BSL_CID_SM4_CBC,
     HITLS_CIPHER_SM4_GCM = BSL_CID_SM4_GCM,
@@ -237,7 +239,7 @@ typedef struct {
  * @brief Key parameters
  */
 typedef struct {
-    HITLS_CipherType type;              /**< Encryption algorithm type. Currently, only aead is supported. */
+    HITLS_CipherType type;              /**< Encryption algorithm type. */
     HITLS_CipherAlgo algo;              /**< Symmetric encryption algorithm. */
     const uint8_t *key;                 /**< Symmetry key. */
     uint32_t keyLen;                    /**< Symmetry key length. */
@@ -248,9 +250,9 @@ typedef struct {
     uint32_t aadLen;                    /**< Aad length. */
     const uint8_t *hmacKey;             /**< Hmac key. */
     uint32_t hmacKeyLen;                /**< Hmac key length. */
+    HITLS_Cipher_Ctx **ctx;             /**< HITLS_Cipher_Ctx handle */
     uint8_t *counter;                   /**< Counter for chacha20. */
     uint32_t counterLen;                /**< Counter length. */
-    HITLS_Cipher_Ctx **ctx;             /**< HITLS_Cipher_Ctx handle */
 } HITLS_CipherParameters;
 
 /**

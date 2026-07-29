@@ -34,13 +34,13 @@ HITLS_CRYPT_EcdhMethod g_cryptEcdhMethod = {0};
 HITLS_CRYPT_DhMethod g_cryptDhMethod = {0};
 #endif
 
-#if defined(HITLS_TLS_PROTO_TLS13) || defined(HITLS_TLS_PROTO_DTLS13)
+#if defined(HITLS_TLS_PROTO_TLS13_FAMILY)
 #ifndef HITLS_TLS_FEATURE_PROVIDER
 HITLS_CRYPT_KdfMethod g_cryptKdfMethod = {0};
 #endif /* HITLS_TLS_FEATURE_PROVIDER */
 #endif
 
-#if defined(HITLS_TLS_PROTO_TLS13) || defined(HITLS_TLS_PROTO_DTLS13)
+#if defined(HITLS_TLS_PROTO_TLS13_FAMILY)
 #define TLS13_MAX_LABEL_LEN 255
 #define TLS13_MAX_CTX_LEN 255
 
@@ -208,7 +208,7 @@ int32_t HITLS_CRYPT_RegisterDhMethod(const HITLS_CRYPT_DhMethod *userCryptCallBa
     return HITLS_SUCCESS;
 }
 
-#if defined(HITLS_TLS_PROTO_TLS13) || defined(HITLS_TLS_PROTO_DTLS13)
+#if defined(HITLS_TLS_PROTO_TLS13_FAMILY)
 int32_t HITLS_CRYPT_RegisterHkdfMethod(HITLS_CRYPT_KdfMethod *userCryptCallBack)
 {
     if (userCryptCallBack == NULL) {
@@ -221,7 +221,7 @@ int32_t HITLS_CRYPT_RegisterHkdfMethod(HITLS_CRYPT_KdfMethod *userCryptCallBack)
     g_cryptKdfMethod.hkdfExpand = userCryptCallBack->hkdfExpand;
     return HITLS_SUCCESS;
 }
-#endif /* HITLS_TLS_PROTO_TLS13 */
+#endif /* HITLS_TLS_PROTO_TLS13_FAMILY */
 #endif /* HITLS_TLS_FEATURE_PROVIDER */
 
 int32_t CheckCallBackRetVal(int32_t cmd, int32_t callBackRet, uint32_t bingLogId, uint32_t hitlsRet)
@@ -536,7 +536,7 @@ int32_t SAL_CRYPT_DigestFinal(HITLS_HASH_Ctx *ctx, uint8_t *out, uint32_t *len)
         HITLS_CRYPT_ERR_DIGEST);
 }
 
-#if defined(HITLS_TLS_PROTO_TLS13) || defined(HITLS_TLS_PROTO_DTLS13)
+#if defined(HITLS_TLS_PROTO_TLS13_FAMILY)
 uint32_t SAL_CRYPT_DigestSize(HITLS_HashAlgo hashAlgo)
 {
 #ifdef HITLS_TLS_FEATURE_PROVIDER
@@ -796,7 +796,7 @@ int32_t SAL_CRYPT_CalcDhSharedSecret(HITLS_Lib_Ctx *libCtx, const char *attrName
         HITLS_CRYPT_CALLBACK_CALC_DH_SHARED_SECRET, ret, BINLOG_ID15112, HITLS_CRYPT_ERR_CALC_SHARED_KEY);
 }
 
-#if defined(HITLS_TLS_PROTO_TLS13) || defined(HITLS_TLS_PROTO_DTLS13)
+#if defined(HITLS_TLS_PROTO_TLS13_FAMILY)
 int32_t SAL_CRYPT_HkdfExpand(HITLS_Lib_Ctx *libCtx,
     const char *attrName, HITLS_CRYPT_HkdfExpandInput *input, uint8_t *okm, uint32_t okmLen)
 {
@@ -815,7 +815,7 @@ int32_t SAL_CRYPT_HkdfExpand(HITLS_Lib_Ctx *libCtx,
 }
 #endif
 
-#if defined(HITLS_TLS_PROTO_TLS13) || defined(HITLS_TLS_PROTO_DTLS13)
+#if defined(HITLS_TLS_PROTO_TLS13_FAMILY)
 int32_t SAL_CRYPT_HkdfExtract(HITLS_Lib_Ctx *libCtx,
     const char *attrName, HITLS_CRYPT_HkdfExtractInput *input, uint8_t *prk, uint32_t *prkLen)
 {
@@ -923,7 +923,7 @@ int32_t SAL_CRYPT_HkdfExpandLabel(CRYPT_KeyDeriveParameters *deriveInfo, uint8_t
     ret = SAL_CRYPT_HkdfExpand(deriveInfo->libCtx, deriveInfo->attrName, &expandInput, outSecret, outLen);
     return ret;
 }
-#endif /* HITLS_TLS_PROTO_TLS13 || HITLS_TLS_PROTO_DTLS13 */
+#endif /* HITLS_TLS_PROTO_TLS13_FAMILY */
 #ifdef HITLS_TLS_FEATURE_KEM
 int32_t SAL_CRYPT_KemEncapsulate(TLS_Ctx *ctx, HITLS_KemEncapsulateParams *params)
 {

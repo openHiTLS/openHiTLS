@@ -32,7 +32,7 @@
 #include "parse_common.h"
 #include "custom_extensions.h"
 
-#if defined(HITLS_TLS_PROTO_TLS12) || defined(HITLS_TLS_PROTO_DTLS12) || defined(HITLS_TLS_PROTO_TLS13)
+#if defined(HITLS_TLS_PROTO_TLS12) || defined(HITLS_TLS_PROTO_DTLS12) || defined(HITLS_TLS_PROTO_TLS13_FAMILY)
 
 #define SINGLE_SIG_HASH_ALG_SIZE 2u
 // Parse the signature algorithm field in the certificate request message.
@@ -83,7 +83,7 @@ static int32_t ParseSignatureAndHashAlgo(ParsePacket *pkt, CertificateRequestMsg
     msg->haveSignatureAndHashAlgo = true;
     return HITLS_SUCCESS;
 }
-#endif /* HITLS_TLS_PROTO_TLS12 || HITLS_TLS_PROTO_DTLS12 || HITLS_TLS_PROTO_TLS13 */
+#endif /* HITLS_TLS_PROTO_TLS12 || HITLS_TLS_PROTO_DTLS12 || HITLS_TLS_PROTO_TLS13_FAMILY */
 
 #ifdef HITLS_TLS_FEATURE_CERTIFICATE_AUTHORITIES
 static void CaListNodeInnerDestroy(void *data)
@@ -283,7 +283,7 @@ int32_t ParseCertificateRequest(TLS_Ctx *ctx, const uint8_t *buf, uint32_t bufLe
 }
 #endif /* HITLS_TLS_PROTO_TLS_BASIC || HITLS_TLS_PROTO_DTLS12 */
 
-#ifdef HITLS_TLS_PROTO_TLS13
+#if defined(HITLS_TLS_PROTO_TLS13_FAMILY)
 
 
 static int32_t ParseCertificateRequestExBody(TLS_Ctx *ctx, uint16_t extMsgType, const uint8_t *buf, uint32_t extMsgLen,
@@ -406,7 +406,7 @@ int32_t Tls13ParseCertificateRequest(TLS_Ctx *ctx, const uint8_t *buf, uint32_t 
     }
     return ret;
 }
-#endif /* HITLS_TLS_PROTO_TLS13 */
+#endif /* HITLS_TLS_PROTO_TLS13_FAMILY */
 void CleanCertificateRequest(CertificateRequestMsg *msg)
 {
     if (msg == NULL) {
@@ -415,9 +415,9 @@ void CleanCertificateRequest(CertificateRequestMsg *msg)
 
     BSL_SAL_FREE(msg->certTypes);
     BSL_SAL_FREE(msg->signatureAlgorithms);
-#ifdef HITLS_TLS_PROTO_TLS13
+#if defined(HITLS_TLS_PROTO_TLS13_FAMILY)
     BSL_SAL_FREE(msg->certificateReqCtx);
     BSL_SAL_FREE(msg->signatureAlgorithmsCert);
-#endif /* HITLS_TLS_PROTO_TLS13 */
+#endif /* HITLS_TLS_PROTO_TLS13_FAMILY */
 }
 #endif /* HITLS_TLS_HOST_CLIENT */

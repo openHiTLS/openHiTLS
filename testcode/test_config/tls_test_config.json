@@ -6,7 +6,8 @@
         "mtu": ["test_suite_sdv_frame_mtu"],
         "max_send_fragment": ["test_suite_sdv_frame_max_send_fragment"],
         "ca_list": ["test_suite_sdv_frame_ca_list"],
-        "no_dfx": ["test_suite_sdv_frame_no_dfx"]
+        "no_dfx": ["test_suite_sdv_frame_no_dfx"],
+        "dtls13_family": ["test_suite_sdv_frame_dtls13_family_mini"]
     },
     "testSuiteCases": {
         "test_suite_sdv_hlt_tlcp_ciphersuite": [],
@@ -14,6 +15,13 @@
         "test_suite_sdv_frame_mtu": [],
         "test_suite_sdv_frame_max_send_fragment": [],
         "test_suite_sdv_frame_ca_list": [],
-        "test_suite_sdv_frame_no_dfx": []
+        "test_suite_sdv_frame_no_dfx": [],
+        "test_suite_sdv_frame_dtls13_family_mini": [
+            "SDV_HITLS_DTLS13_ONLY_BASE_CONNECT_TC001",
+            "SDV_HITLS_DTLS13_ONLY_RECORD_SIZE_LIMIT_TC001",
+            "SDV_HITLS_DTLS13_ONLY_SESSION_RESUME_TC001",
+            "SDV_HITLS_DTLS13_ONLY_KEY_UPDATE_TC001",
+            "SDV_HITLS_DTLS13_ONLY_RENEGOTIATION_REJECT_TC001"
+        ]
     }
 }

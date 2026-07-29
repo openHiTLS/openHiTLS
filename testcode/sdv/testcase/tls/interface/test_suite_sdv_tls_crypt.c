@@ -110,9 +110,58 @@ EXIT:
 /* END_CASE */
 
 /* BEGIN_CASE */
+void SDV_TLS_CRYPT_CHACHA20_ENCRYPT_TC001(Hex *key, Hex *iv, Hex *counter, Hex *plaintext, Hex *expect)
+{
+#if !defined(HITLS_CRYPTO_CIPHER) || !defined(HITLS_CRYPTO_CHACHA20) || \
+    (!defined(HITLS_TLS_FEATURE_PROVIDER) && !defined(HITLS_TLS_CALLBACK_CRYPT))
+    (void)key;
+    (void)iv;
+    (void)counter;
+    (void)plaintext;
+    (void)expect;
+    SKIP_TEST();
+#else
+    HITLS_Cipher_Ctx *cipherCtx = NULL;
+    HITLS_CipherParameters cipher = {
+        .type = HITLS_STREAM_CIPHER,
+        .algo = HITLS_CIPHER_CHACHA20,
+        .key = key->x,
+        .keyLen = key->len,
+        .iv = iv->x,
+        .ivLen = iv->len,
+        .ctx = &cipherCtx,
+        .counter = counter->x,
+        .counterLen = counter->len,
+    };
+    uint8_t out[128] = {0};
+    uint32_t outLen = sizeof(out);
+
+    ASSERT_TRUE(expect->len <= sizeof(out));
+    ASSERT_EQ(HITLS_CRYPT_Encrypt(NULL, NULL, &cipher, plaintext->x, plaintext->len, out, &outLen), HITLS_SUCCESS);
+    ASSERT_EQ(outLen, expect->len);
+    ASSERT_COMPARE("chacha20 ciphertext", out, outLen, expect->x, expect->len);
+
+    memset(out, 0, sizeof(out));
+    outLen = sizeof(out);
+    ASSERT_EQ(HITLS_CRYPT_Encrypt(NULL, NULL, &cipher, plaintext->x, plaintext->len, out, &outLen), HITLS_SUCCESS);
+    ASSERT_EQ(outLen, expect->len);
+    ASSERT_COMPARE("cached ctx chacha20 ciphertext", out, outLen, expect->x, expect->len);
+
+EXIT:
+    SAL_CRYPT_CipherFree(cipherCtx);
+    return;
+#endif
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
 void SDV_DTLS13_CRYPT_SEQUENCE_NUMBER_TC001(int seqLen)
 {
+#ifndef HITLS_TLS_PROTO_DTLS13
+    SKIP_TEST();
+#else
     FRAME_Init();
+    RecConnSuitInfo suiteInfo = {0};
     HITLS_Config *tlsConfig = HITLS_CFG_NewDTLSConfig();
     ASSERT_TRUE(tlsConfig != NULL);
     FRAME_LinkObj *server = FRAME_CreateLink(tlsConfig, BSL_UIO_TCP);
@@ -123,77 +172,112 @@ void SDV_DTLS13_CRYPT_SEQUENCE_NUMBER_TC001(int seqLen)
                          0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f, 0x10,
                          0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
                          0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f, 0x10};
-    uint8_t ciphertext[32] = {0x12, 0x34, 0x56, 0x78,  // counter (RFC 9147 §4.2.3: 密文前4字节为counter)
+    uint8_t ciphertext[32] = {0x12, 0x34, 0x56, 0x78,  // RFC 9147 4.2.3: ciphertext[0..3] is counter.
                               0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,  // nonce[0..7]
-                              0x09, 0x0a, 0x0b, 0x0c,  // nonce[8..11] (共12字节nonce)
-                              0x00, 0x00, 0x00, 0x00}; // 填充至16字节
-    uint8_t encryptedSn[2] = {0};
+                              0x09, 0x0a, 0x0b, 0x0c,  // nonce[8..11]
+                              0x00, 0x00, 0x00, 0x00}; // padding to 16 bytes
     uint8_t plaintextSeq[2] = {0x12, 0x34};
+    uint8_t seq[2] = {0};
+    memcpy(suiteInfo.snKey, snKey, sizeof(snKey));
     int32_t ret;
 
-    // 测试密文长度小于16字节 (RFC 9147 4.2.3要求至少16字节)
-    ret = Dtls13CryptSequenceNumber(ctx, HITLS_CIPHER_AES_128_GCM, snKey, ciphertext, 15, plaintextSeq, encryptedSn,
-                                    seqLen);
+    // RFC 9147 4.2.3 requires at least 16 bytes of ciphertext.
+    suiteInfo.cipherAlg = HITLS_CIPHER_AES_128_GCM;
+    memcpy(seq, plaintextSeq, sizeof(seq));
+    ret = Dtls13CryptSequenceNumber(ctx, &suiteInfo, ciphertext, 15, seq, seqLen);
     ASSERT_TRUE(ret == HITLS_INVALID_INPUT);
 
-    ret = Dtls13CryptSequenceNumber(ctx, HITLS_CIPHER_AES_128_GCM, snKey, ciphertext, 16, plaintextSeq, encryptedSn,
-                                    seqLen);
+    memcpy(seq, plaintextSeq, sizeof(seq));
+    ret = Dtls13CryptSequenceNumber(ctx, &suiteInfo, ciphertext, 16, seq, seqLen);
     ASSERT_TRUE(ret == HITLS_SUCCESS);
-
-    uint8_t encryptedSn1[2] = {0};
-    ret = Dtls13CryptSequenceNumber(ctx, HITLS_CIPHER_AES_128_GCM, snKey, ciphertext, 16, encryptedSn, encryptedSn1,
-                                    seqLen);
+    ret = Dtls13CryptSequenceNumber(ctx, &suiteInfo, ciphertext, 16, seq, seqLen);
     ASSERT_TRUE(ret == HITLS_SUCCESS);
-    ASSERT_EQ(encryptedSn1[0], plaintextSeq[0]);
+    ASSERT_EQ(seq[0], plaintextSeq[0]);
     if (seqLen == 2) {
-        ASSERT_EQ(encryptedSn1[1], plaintextSeq[1]);
-    }
-    
-
-    ret = Dtls13CryptSequenceNumber(ctx, HITLS_CIPHER_AES_128_GCM, snKey, ciphertext, 17, plaintextSeq, encryptedSn,
-                                    seqLen);
-    ASSERT_TRUE(ret == HITLS_SUCCESS);
-
-    memset(encryptedSn1, 0, 2);
-    ret = Dtls13CryptSequenceNumber(ctx, HITLS_CIPHER_AES_128_GCM, snKey, ciphertext, 17, encryptedSn, encryptedSn1,
-                                    seqLen);
-    ASSERT_TRUE(ret == HITLS_SUCCESS);
-    ASSERT_EQ(encryptedSn1[0], plaintextSeq[0]);
-    if (seqLen == 2) {
-        ASSERT_EQ(encryptedSn1[1], plaintextSeq[1]);
+        ASSERT_EQ(seq[1], plaintextSeq[1]);
     }
 
-    ret = Dtls13CryptSequenceNumber(ctx, HITLS_CIPHER_AES_256_GCM, snKey, ciphertext, 17, plaintextSeq, encryptedSn,
-                                    seqLen);
+    memcpy(seq, plaintextSeq, sizeof(seq));
+    ret = Dtls13CryptSequenceNumber(ctx, &suiteInfo, ciphertext, 17, seq, seqLen);
     ASSERT_TRUE(ret == HITLS_SUCCESS);
-
-    memset(encryptedSn1, 0, 2);
-    ret = Dtls13CryptSequenceNumber(ctx, HITLS_CIPHER_AES_256_GCM, snKey, ciphertext, 17, encryptedSn, encryptedSn1,
-                                    seqLen);
+    ret = Dtls13CryptSequenceNumber(ctx, &suiteInfo, ciphertext, 17, seq, seqLen);
     ASSERT_TRUE(ret == HITLS_SUCCESS);
-    ASSERT_EQ(encryptedSn1[0], plaintextSeq[0]);
+    ASSERT_EQ(seq[0], plaintextSeq[0]);
     if (seqLen == 2) {
-        ASSERT_EQ(encryptedSn1[1], plaintextSeq[1]);
+        ASSERT_EQ(seq[1], plaintextSeq[1]);
     }
 
-    ret = Dtls13CryptSequenceNumber(ctx, HITLS_CIPHER_CHACHA20_POLY1305, snKey, ciphertext, 17, plaintextSeq,
-                                    encryptedSn, seqLen);
+    SAL_CRYPT_CipherFree(suiteInfo.snCtx);
+    suiteInfo.snCtx = NULL;
+    suiteInfo.cipherAlg = HITLS_CIPHER_AES_256_GCM;
+    memcpy(seq, plaintextSeq, sizeof(seq));
+    ret = Dtls13CryptSequenceNumber(ctx, &suiteInfo, ciphertext, 17, seq, seqLen);
     ASSERT_TRUE(ret == HITLS_SUCCESS);
-
-    memset(encryptedSn1, 0, 2);
-    ret = Dtls13CryptSequenceNumber(ctx, HITLS_CIPHER_CHACHA20_POLY1305, snKey, ciphertext, 17, encryptedSn,
-                                    encryptedSn1, seqLen);
+    ret = Dtls13CryptSequenceNumber(ctx, &suiteInfo, ciphertext, 17, seq, seqLen);
     ASSERT_TRUE(ret == HITLS_SUCCESS);
-    ASSERT_EQ(encryptedSn1[0], plaintextSeq[0]);
+    ASSERT_EQ(seq[0], plaintextSeq[0]);
     if (seqLen == 2) {
-        ASSERT_EQ(encryptedSn1[1], plaintextSeq[1]);
+        ASSERT_EQ(seq[1], plaintextSeq[1]);
+    }
+
+    SAL_CRYPT_CipherFree(suiteInfo.snCtx);
+    suiteInfo.snCtx = NULL;
+    suiteInfo.cipherAlg = HITLS_CIPHER_CHACHA20_POLY1305;
+    memcpy(seq, plaintextSeq, sizeof(seq));
+    ret = Dtls13CryptSequenceNumber(ctx, &suiteInfo, ciphertext, 17, seq, seqLen);
+    ASSERT_TRUE(ret == HITLS_SUCCESS);
+    ret = Dtls13CryptSequenceNumber(ctx, &suiteInfo, ciphertext, 17, seq, seqLen);
+    ASSERT_TRUE(ret == HITLS_SUCCESS);
+    ASSERT_EQ(seq[0], plaintextSeq[0]);
+    if (seqLen == 2) {
+        ASSERT_EQ(seq[1], plaintextSeq[1]);
     }
 EXIT:
+    SAL_CRYPT_CipherFree(suiteInfo.snCtx);
     HITLS_CFG_FreeConfig(tlsConfig);
     FRAME_FreeLink(server);
     return;
+#endif
 }
 /* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_DTLS13_CRYPT_SEQUENCE_NUMBER_CHACHA_ZERO_COUNTER_TC001(void)
+{
+#if !defined(HITLS_TLS_PROTO_DTLS13) || !defined(HITLS_CRYPTO_CHACHA20)
+    SKIP_TEST();
+#else
+    FRAME_Init();
+    RecConnSuitInfo suiteInfo = {0};
+    HITLS_Config *tlsConfig = HITLS_CFG_NewDTLS13Config();
+    ASSERT_TRUE(tlsConfig != NULL);
+    FRAME_LinkObj *server = FRAME_CreateLink(tlsConfig, BSL_UIO_UDP);
+    ASSERT_TRUE(server != NULL);
+    HITLS_Ctx *ctx = FRAME_GetTlsCtx(server);
+    ASSERT_TRUE(ctx != NULL);
+
+    suiteInfo.cipherAlg = HITLS_CIPHER_CHACHA20_POLY1305;
+    uint8_t ciphertext[16] = {0};
+    uint8_t plaintextSeq[2] = {0x12, 0x34};
+    uint8_t seq[2] = {0x12, 0x34};
+    uint8_t expectedSn[2] = {0x64, 0x8c};
+
+    ASSERT_EQ(Dtls13CryptSequenceNumber(ctx, &suiteInfo, ciphertext, sizeof(ciphertext), seq, sizeof(seq)),
+        HITLS_SUCCESS);
+    ASSERT_COMPARE("sequence number mask", seq, sizeof(seq), expectedSn, sizeof(expectedSn));
+    ASSERT_EQ(Dtls13CryptSequenceNumber(ctx, &suiteInfo, ciphertext, sizeof(ciphertext), seq, sizeof(seq)),
+        HITLS_SUCCESS);
+    ASSERT_COMPARE("sequence number", seq, sizeof(seq), plaintextSeq, sizeof(plaintextSeq));
+
+EXIT:
+    SAL_CRYPT_CipherFree(suiteInfo.snCtx);
+    HITLS_CFG_FreeConfig(tlsConfig);
+    FRAME_FreeLink(server);
+    return;
+#endif
+}
+/* END_CASE */
+
 int32_t STUB_RecConnEncrypt(
     TLS_Ctx *ctx, RecConnState *state, const REC_TextInput *plainMsg, uint8_t *cipherText, uint32_t cipherTextLen)
 {
@@ -236,18 +320,15 @@ void SDV_DTLS13_RECORD_WRITE_TC001()
     BSL_Uint16ToByte(dataLen, len);
     uint8_t *outBuf = recordCtx->outBuf->buf;
     ASSERT_EQ(outBuf[0], 0b00101110);
-    uint8_t snKey[32] = {0};
     uint8_t ciphertext[32] = {0};
     ciphertext[0] = 1;
-    uint8_t encryptedSn[2] = {0};
-    uint8_t plaintextSeq[2] = {0x12, 0x34};
-    ret = Dtls13CryptSequenceNumber(ctx, HITLS_CIPHER_CHACHA20_POLY1305, snKey, ciphertext, 16, plaintextSeq,
-                                    encryptedSn, 2);
+    uint8_t expectedSeq[2] = {0x12, 0x34};
+    ret = Dtls13CryptSequenceNumber(ctx, state->suiteInfo, ciphertext, 16, expectedSeq, sizeof(expectedSeq));
     ASSERT_TRUE(ret == HITLS_SUCCESS);
-    ASSERT_EQ(outBuf[1], encryptedSn[0]);
-    ASSERT_EQ(outBuf[2], encryptedSn[1]);
+    ASSERT_EQ(outBuf[1], expectedSeq[0]);
+    ASSERT_EQ(outBuf[2], expectedSeq[1]);
     ASSERT_EQ(outBuf[3], len[0]);
-    ASSERT_EQ(outBuf[4], len[1] + 1);   
+    ASSERT_EQ(outBuf[4], len[1] + 1);
 EXIT:
     HITLS_CFG_FreeConfig(tlsConfig);
     FRAME_FreeLink(server);
@@ -310,7 +391,7 @@ void SDV_DTLS13_RECONSTRUCT_EPOCH_TC001(void)
     ASSERT_EQ(reconstructedEpoch, 3);
 
     // Case 5: Application data phase (currentEpoch = 5, epochBits = 2)
-    // epochBits = 2 
+    // epochBits = 2
     RecConnSetEpoch(readState, 5);
     ret = Dtls13ReconstructEpoch(ctx, 2, &reconstructedEpoch);
     ASSERT_EQ(ret, HITLS_SUCCESS);

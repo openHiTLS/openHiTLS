@@ -13,7 +13,7 @@
  * See the Mulan PSL v2 for more details.
  */
 #include "hitls_build.h"
-#ifdef HITLS_TLS_PROTO_TLS13
+#if defined(HITLS_TLS_PROTO_TLS13_FAMILY)
 #include <string.h>
 #include "tls.h"
 #include "bsl_err_internal.h"
@@ -23,6 +23,7 @@
 #include "hitls_psk.h"
 #endif
 
+#ifdef HITLS_TLS_PROTO_TLS13
 HITLS_Config *HITLS_CFG_NewTLS13Config(void)
 {
     return HITLS_CFG_ProviderNewTLS13Config(NULL, NULL);
@@ -46,6 +47,7 @@ HITLS_Config *HITLS_CFG_ProviderNewTLS13Config(HITLS_Lib_Ctx *libCtx, const char
     newConfig->originVersionMask = newConfig->version;
     return newConfig;
 }
+#endif /* HITLS_TLS_PROTO_TLS13 */
 
 int32_t HITLS_CFG_ClearTLS13CipherSuites(HITLS_Config *config)
 {
@@ -277,4 +279,4 @@ int32_t HITLS_CFG_GetMiddleBoxCompat(HITLS_Config *config, bool *isMiddleBox)
     *isMiddleBox = config->isMiddleBoxCompat;
     return HITLS_SUCCESS;
 }
-#endif /* HITLS_TLS_PROTO_TLS13 */
+#endif /* HITLS_TLS_PROTO_TLS13_FAMILY */

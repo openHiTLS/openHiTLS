@@ -25,12 +25,12 @@
 #include "tls.h"
 #include "rec.h"
 #include "rec_header.h"
+#include "record.h"
 #include "hs.h"
 #include "hs_msg.h"
 #include "hs_ctx.h"
 #include "hs_common.h"
 #include "hs_verify.h"
-#include "hs_cookie.h"
 #include "hs_dtls_timer.h"
 #include "transcript_hash.h"
 #include "hs_reass.h"
@@ -39,7 +39,7 @@
 #include "crypt.h"
 #include "bsl_uio.h"
 #include "hs_kx.h"
-#ifdef HITLS_TLS_FEATURE_DTLS_CID
+#if defined(HITLS_TLS_PROTO_DTLS13) && defined(HITLS_TLS_FEATURE_DTLS_CID)
 #include "dtls_cid.h"
 #endif
 #ifdef HITLS_TLS_FEATURE_INDICATOR
@@ -69,6 +69,17 @@ static int32_t CheckHsMsg(TLS_Ctx *ctx, HS_Msg *hsMsg, int32_t ret)
 }
 
 #ifdef HITLS_TLS_FEATURE_KEY_UPDATE
+#ifdef HITLS_TLS_PROTO_DTLS13
+static bool Dtls13CanReplyKeyUpdate(const TLS_Ctx *ctx)
+{
+    if (!IS_DTLS13_CTX(ctx)) {
+        return true;
+    }
+    return ctx->recCtx != NULL && ctx->recCtx->writeEpoch < REC_EPOCH_MAX_VALUE &&
+        ctx->dtls13NextSendSeq < DTLS_HS_MSG_SEQ_MAX;
+}
+#endif
+
 static int32_t Tls13RecvKeyUpdateProcess(TLS_Ctx *ctx, const HS_Msg *hsMsg)
 {
     HITLS_KeyUpdateRequest requestUpdateType = hsMsg->body.keyUpdate.requestUpdate;
@@ -95,7 +106,13 @@ static int32_t Tls13RecvKeyUpdateProcess(TLS_Ctx *ctx, const HS_Msg *hsMsg)
 
     if (hsMsg->body.keyUpdate.requestUpdate == HITLS_UPDATE_REQUESTED) {
 #ifdef HITLS_TLS_PROTO_DTLS13
-        if (IS_DTLS13_CTX(ctx) && !REC_RetransmitIsEmpty(ctx->recCtx)) {
+        /*
+         * Local DTLS1.3 policy: do not enqueue a response KeyUpdate while any
+         * post-handshake flight is still awaiting ACK. This is stricter than
+         * RFC 9147's same-message-type rule, but keeps this endpoint from
+         * having multiple outbound key generations simultaneously usable.
+         */
+        if (IS_DTLS13_CTX(ctx) && (!REC_RetransmitIsEmpty(ctx->recCtx) || !Dtls13CanReplyKeyUpdate(ctx))) {
             return HS_ChangeState(ctx, TLS_CONNECTED);
         }
 #endif /* HITLS_TLS_PROTO_DTLS13 */
@@ -107,7 +124,7 @@ static int32_t Tls13RecvKeyUpdateProcess(TLS_Ctx *ctx, const HS_Msg *hsMsg)
 }
 #endif /* HITLS_TLS_FEATURE_KEY_UPDATE */
 
-#ifdef HITLS_TLS_FEATURE_DTLS_CID
+#if defined(HITLS_TLS_PROTO_DTLS13) && defined(HITLS_TLS_FEATURE_DTLS_CID)
 /*
  * Apply peer-advertised CIDs after ParseNewConnectionId has validated the wire
  * structure. RFC 9147 Section 5.2 treats RequestConnectionId and
@@ -185,7 +202,7 @@ static int32_t Dtls13RecvRequestConnectionIdProcess(TLS_Ctx *ctx, const HS_Msg *
     }
     return HS_ChangeState(ctx, TLS_CONNECTED);
 }
-#endif /* HITLS_TLS_FEATURE_DTLS_CID */
+#endif /* HITLS_TLS_PROTO_DTLS13 && HITLS_TLS_FEATURE_DTLS_CID */
 
 #if defined(HITLS_TLS_PROTO_TLS_BASIC) || defined(HITLS_TLS_PROTO_DTLS)
 static bool IsUnexpectedHandshaking(const TLS_Ctx *ctx)
@@ -290,7 +307,7 @@ static int32_t ProcessReceivedHandshakeMsg(TLS_Ctx *ctx, HS_Msg *hsMsg)
     return ProcessHandshakeMsg(ctx, hsMsg);
 }
 #endif /* HITLS_TLS_PROTO_TLS_BASIC || HITLS_TLS_PROTO_DTLS12 */
-#if defined(HITLS_TLS_PROTO_TLS13) || defined(HITLS_TLS_PROTO_DTLS13)
+#if defined(HITLS_TLS_PROTO_TLS13_FAMILY)
 static int32_t Tls13ProcessReceivedHandshakeMsg(TLS_Ctx *ctx, HS_Msg *hsMsg)
 {
     if ((hsMsg->type == HELLO_REQUEST) && (ctx->isClient)) {
@@ -330,7 +347,7 @@ static int32_t Tls13ProcessReceivedHandshakeMsg(TLS_Ctx *ctx, HS_Msg *hsMsg)
 #endif
         case TRY_RECV_NEW_SESSION_TICKET:
             return Tls13ClientRecvNewSessionTicketProcess(ctx, hsMsg);
-#ifdef HITLS_TLS_FEATURE_DTLS_CID
+#if defined(HITLS_TLS_PROTO_DTLS13) && defined(HITLS_TLS_FEATURE_DTLS_CID)
         case TRY_RECV_NEW_CONNECTION_ID:
             return Dtls13RecvNewConnectionIdProcess(ctx, hsMsg);
         case TRY_RECV_REQUEST_CONNECTION_ID:
@@ -345,7 +362,7 @@ static int32_t Tls13ProcessReceivedHandshakeMsg(TLS_Ctx *ctx, HS_Msg *hsMsg)
     ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_INTERNAL_ERROR);
     return HITLS_MSG_HANDLE_STATE_ILLEGAL;
 }
-#endif /* HITLS_TLS_PROTO_TLS13 || HITLS_TLS_PROTO_DTLS13 */
+#endif /* HITLS_TLS_PROTO_TLS13_FAMILY */
 
 int32_t ReadHsMessage(TLS_Ctx *ctx, uint32_t length)
 {
@@ -462,89 +479,7 @@ static int32_t Tls13TryRecvHandShakeMsg(TLS_Ctx *ctx)
 }
 #endif /* HITLS_TLS_PROTO_TLS13 */
 #endif /* HITLS_TLS_PROTO_TLS */
-#if defined(HITLS_TLS_PROTO_DTLS12) || defined(HITLS_TLS_PROTO_DTLS13)
-#ifdef HITLS_TLS_PROTO_DTLS13
-static bool ClientHelloSupportsDtls13(const TLS_Ctx *ctx, const ClientHelloMsg *clientHello)
-{
-    if (ctx == NULL || clientHello == NULL || !IS_SUPPORT_DTLS13(ctx->config.tlsConfig.version)) {
-        return false;
-    }
-
-    const ExtensionContent *extension = &clientHello->extension.content;
-    for (uint8_t i = 0; i < extension->supportedVersionsCount; i++) {
-        if (extension->supportedVersions[i] == HITLS_VERSION_DTLS13) {
-            return true;
-        }
-    }
-    return false;
-}
-
-static bool Dtls13ShouldUseTranscript(const TLS_Ctx *ctx, const HS_MsgInfo *hsMsgInfo, const HS_Msg *hsMsg)
-{
-    if (ctx == NULL || hsMsgInfo == NULL || hsMsg == NULL || GET_VERSION_FROM_CTX(ctx) != HITLS_VERSION_DTLS13) {
-        return false;
-    }
-    if (ctx->negotiatedInfo.version == HITLS_VERSION_DTLS13) {
-        return true;
-    }
-    if (ctx->negotiatedInfo.version != 0) {
-        return false;
-    }
-
-    if (hsMsgInfo->type == CLIENT_HELLO) {
-        return ClientHelloSupportsDtls13(ctx, &hsMsg->body.clientHello);
-    }
-    if (hsMsgInfo->type == SERVER_HELLO) {
-        const ServerHelloMsg *serverHello = &hsMsg->body.serverHello;
-        return serverHello->haveSupportedVersion && serverHello->supportedVersion == HITLS_VERSION_DTLS13;
-    }
-    return false;
-}
-#endif /* HITLS_TLS_PROTO_DTLS13 */
-
-#if defined(HITLS_TLS_PROTO_DTLS13) && defined(HITLS_BSL_UIO_UDP)
-static bool Dtls13NeedProcessCookieBeforeAppend(const TLS_Ctx *ctx, const HS_MsgInfo *hsMsgInfo, const HS_Msg *hsMsg)
-{
-    return ctx != NULL && !ctx->isClient && hsMsgInfo != NULL && hsMsg != NULL &&
-        Dtls13ShouldUseTranscript(ctx, hsMsgInfo, hsMsg) && hsMsgInfo->type == CLIENT_HELLO &&
-        hsMsg->body.clientHello.extension.flag.haveCookie;
-}
-
-static int32_t Dtls13ProcessCookieBeforeAppend(TLS_Ctx *ctx, const HS_MsgInfo *hsMsgInfo, const HS_Msg *hsMsg,
-    const uint8_t *buf, uint32_t dataLen, bool *isAppended)
-{
-    *isAppended = false;
-    if (!Dtls13NeedProcessCookieBeforeAppend(ctx, hsMsgInfo, hsMsg)) {
-        return HITLS_SUCCESS;
-    }
-
-    uint8_t *rawMsg = BSL_SAL_Dump(buf, dataLen);
-    if (rawMsg == NULL) {
-        BSL_ERR_PUSH_ERROR(HITLS_MEMALLOC_FAIL);
-        return HITLS_MEMALLOC_FAIL;
-    }
-
-    bool isCookieValid = false;
-    int32_t ret = HS_Dtls13ProcessCookie(ctx, &hsMsg->body.clientHello, &isCookieValid);
-    if (ret != HITLS_SUCCESS) {
-        BSL_SAL_FREE(rawMsg);
-        return ret;
-    }
-    if (!isCookieValid) {
-        BSL_SAL_FREE(rawMsg);
-        return HITLS_MSG_HANDLE_COOKIE_ERR;
-    }
-
-    ret = VERIFY_Dtls13Append(ctx->hsCtx->verifyCtx, rawMsg, dataLen);
-    BSL_SAL_FREE(rawMsg);
-    if (ret != HITLS_SUCCESS) {
-        return ret;
-    }
-    *isAppended = true;
-    return HITLS_SUCCESS;
-}
-#endif /* HITLS_TLS_PROTO_DTLS13 && HITLS_BSL_UIO_UDP */
-
+#if defined(HITLS_TLS_PROTO_DATAGRAM)
 static int32_t DtlsCheckTimeoutAndProcess(TLS_Ctx *ctx, int32_t retValue)
 {
     (void)ctx;
@@ -732,7 +667,7 @@ static int32_t DtlsReadAndParseHandshakeMsg(TLS_Ctx *ctx, HS_Msg *hsMsg)
                 ctx->hsCtx->expectRecvSeq = 0;
                 ctx->hsCtx->nextSendSeq = 0;
             }
-            
+
             /* SCTP messages are not out of order. Therefore, an alert message must be sent for the out-of-order messages */
             if (!IsUnexpectedHandshaking(ctx)) {
                 return DtlsDisorderMsgProcess(ctx, &hsMsgInfo);
@@ -761,18 +696,11 @@ static int32_t DtlsReadAndParseHandshakeMsg(TLS_Ctx *ctx, HS_Msg *hsMsg)
 #endif
     ) {
 #ifdef HITLS_TLS_PROTO_DTLS13
-        /* Session hash is needed to compute ems, the VERIFY_Append must be dealt with beforehand */
-        if (Dtls13ShouldUseTranscript(ctx, &hsMsgInfo, hsMsg)) {
-            bool isAppended = false;
-            ret = Dtls13ProcessCookieBeforeAppend(ctx, &hsMsgInfo, hsMsg, buf, dataLen, &isAppended);
-            if (ret == HITLS_SUCCESS && !isAppended) {
-                ret = VERIFY_Dtls13Append(ctx->hsCtx->verifyCtx, buf, dataLen);
-            }
-        } else {
-            ret = VERIFY_Append(ctx->hsCtx->verifyCtx, buf, dataLen);
-        }
+        VERIFY_TranscriptStyle style = (ctx->negotiatedInfo.version == HITLS_VERSION_DTLS13) ?
+            VERIFY_TRANSCRIPT_DTLS13 : VERIFY_TRANSCRIPT_RAW;
+        ret = VERIFY_AppendDtlsRaw(ctx->hsCtx->verifyCtx, buf, dataLen, style);
 #else
-        ret = VERIFY_Append(ctx->hsCtx->verifyCtx, buf, dataLen);
+        ret = VERIFY_AppendDtlsRaw(ctx->hsCtx->verifyCtx, buf, dataLen, VERIFY_TRANSCRIPT_RAW);
 #endif
         if (ret != HITLS_SUCCESS) {
             HS_CleanMsg(hsMsg);
@@ -809,14 +737,6 @@ static int32_t DtlsTryRecvHandShakeMsg(TLS_Ctx *ctx)
 #endif /* HITLS_TLS_PROTO_DTLS12 */
 
 #ifdef HITLS_TLS_PROTO_DTLS13
-static bool Dtls13TryRecvAnyMsgDone(TLS_Ctx *ctx, int32_t ret)
-{
-    if (ret == HITLS_REC_NORMAL_RECV_BUF_EMPTY) {
-        return true;
-    }
-    return ret == HITLS_REC_NORMAL_RECV_UNEXPECT_MSG && REC_GetUnexpectedMsgType(ctx) != REC_TYPE_ALERT;
-}
-
 static int32_t Dtls13TryRecvHandShakeMsg(TLS_Ctx *ctx)
 {
     int32_t ret = HITLS_SUCCESS;
@@ -826,7 +746,8 @@ static int32_t Dtls13TryRecvHandShakeMsg(TLS_Ctx *ctx)
         bool isTryRecvAnyMsg = ctx->hsCtx->state == TRY_RECV_MSG;
         ret = DtlsReadAndParseHandshakeMsg(ctx, &hsMsg);
         if (ret != HITLS_SUCCESS) {
-            if (isTryRecvAnyMsg && Dtls13TryRecvAnyMsgDone(ctx, ret)) {
+            if (isTryRecvAnyMsg && (ret == HITLS_REC_NORMAL_RECV_BUF_EMPTY ||
+                (ret == HITLS_REC_NORMAL_RECV_UNEXPECT_MSG && REC_GetUnexpectedMsgType(ctx) != REC_TYPE_ALERT))) {
                 return HS_ChangeState(ctx, TLS_CONNECTED);
             }
             return ret;
@@ -846,13 +767,13 @@ static int32_t Dtls13TryRecvHandShakeMsg(TLS_Ctx *ctx)
 #else
         ret = HITLS_MSG_HANDLE_UNEXPECTED_MESSAGE;
 #endif
-    } else { 
+    } else {
         ret = Tls13ProcessReceivedHandshakeMsg(ctx, ctx->hsCtx->hsMsg);
     }
     return CheckHsMsg(ctx, &hsMsg, ret);
 }
 #endif /* HITLS_TLS_PROTO_DTLS13 */
-#endif /* HITLS_TLS_PROTO_DTLS12 || HITLS_TLS_PROTO_DTLS13 */
+#endif /* HITLS_TLS_PROTO_DATAGRAM */
 
 int32_t HandleResult(TLS_Ctx *ctx, int32_t ret)
 {

@@ -47,7 +47,7 @@ int32_t DtlsServerSendHelloVerifyRequestProcess(TLS_Ctx *ctx)
     if (ret != HITLS_SUCCESS) {
         return ret;
     }
-#if defined(HITLS_TLS_PROTO_TLS13) || defined(HITLS_TLS_PROTO_DTLS13)
+#if defined(HITLS_TLS_PROTO_TLS13_FAMILY)
     hsCtx->haveHvr = true;
 #endif
 

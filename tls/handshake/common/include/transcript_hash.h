@@ -24,19 +24,22 @@
 extern "C" {
 #endif
 
-/**
- * @brief   Set the hash algorithm
- * 
- * @param   libCtx [IN] library context for provider
- * @param   attrName [IN] attribute name of the provider, maybe NULL
- * @param   ctx [IN] verify context
- * @param   hashAlgo [IN] hash algorithm
- *
- * @retval  HITLS_SUCCESS
- * @retval  HITLS_CRYPT_ERR_DIGEST hash operation failed
- * @retval  HITLS_UNREGISTERED_CALLBACK The callback function is not registered.
- */
-int32_t VERIFY_SetHash(HITLS_Lib_Ctx *libCtx, const char *attrName, VerifyCtx *ctx, HITLS_HashAlgo hashAlgo);
+int32_t VERIFY_SetHashWithVersion(HITLS_Lib_Ctx *libCtx, const char *attrName, VerifyCtx *ctx,
+    HITLS_HashAlgo hashAlgo, uint16_t version);
+
+typedef enum {
+    /* Hash the bytes exactly as supplied. */
+    VERIFY_TRANSCRIPT_RAW,
+    /* Hash a raw DTLS handshake message using the DTLS1.3 transcript form:
+     * msg_type || length || message body. */
+    VERIFY_TRANSCRIPT_DTLS13,
+} VERIFY_TranscriptStyle;
+
+int32_t VERIFY_UpdateTranscriptHash(HITLS_HASH_Ctx *hashCtx, const uint8_t *msg, uint32_t msgLen,
+    VERIFY_TranscriptStyle style);
+
+int32_t VERIFY_UpdateCachedTranscriptHash(HITLS_HASH_Ctx *hashCtx, const HsMsgCache *cache, uint16_t version,
+    uint32_t skipLastCount);
 
 /**
  * @brief   Add handshake message data
@@ -53,12 +56,7 @@ int32_t VERIFY_SetHash(HITLS_Lib_Ctx *libCtx, const char *attrName, VerifyCtx *c
  */
 int32_t VERIFY_Append(VerifyCtx *ctx, const uint8_t *data, uint32_t len);
 
-#ifdef HITLS_TLS_PROTO_DTLS13
-int32_t VERIFY_Dtls13Append(VerifyCtx *ctx, const uint8_t *data, uint32_t len);
-
-int32_t VERIFY_Dtls13BuildTranscriptMsg(const uint8_t *msg, uint32_t msgLen, uint8_t **transcript,
-    uint32_t *transcriptLen);
-#endif /* HITLS_TLS_PROTO_DTLS13 */
+int32_t VERIFY_AppendDtlsRaw(VerifyCtx *ctx, const uint8_t *data, uint32_t len, VERIFY_TranscriptStyle liveStyle);
 
 /**
  * @brief   Calculate the SessionHash

@@ -20,11 +20,13 @@
 #include "hitls_error.h"
 #include "hitls.h"
 #include "rec.h"
+#include "record.h"
 #include "tls.h"
 #include "hs.h"
 #include "hs_ctx.h"
 #include "hs_common.h"
 #include "hs_dtls_timer.h"
+#include "hs_msg.h"
 #include "parse.h"
 #include "hs_state_recv.h"
 #include "hs_state_send.h"
@@ -201,9 +203,20 @@ int32_t HS_DoHandshake(TLS_Ctx *ctx)
 }
 
 #ifdef HITLS_TLS_FEATURE_KEY_UPDATE
+#ifdef HITLS_TLS_PROTO_DTLS13
+static bool Dtls13CanSendKeyUpdate(const TLS_Ctx *ctx)
+{
+    if (!IS_DTLS13_CTX(ctx)) {
+        return true;
+    }
+    return ctx->recCtx != NULL && ctx->recCtx->writeEpoch < REC_EPOCH_MAX_VALUE &&
+        ctx->dtls13NextSendSeq < DTLS_HS_MSG_SEQ_MAX;
+}
+#endif
+
 int32_t HS_CheckKeyUpdateState(TLS_Ctx *ctx, uint32_t updateType)
 {
-    if (ctx->negotiatedInfo.version != HITLS_VERSION_TLS13 && ctx->negotiatedInfo.version != HITLS_VERSION_DTLS13) {
+    if (!IS_TLS13_FAMILY_CTX(ctx)) {
         return HITLS_MSG_HANDLE_UNSUPPORT_VERSION;
     }
 
@@ -213,6 +226,9 @@ int32_t HS_CheckKeyUpdateState(TLS_Ctx *ctx, uint32_t updateType)
 
 #ifdef HITLS_TLS_PROTO_DTLS13
     if (ctx->negotiatedInfo.version == HITLS_VERSION_DTLS13 && !REC_RetransmitIsEmpty(ctx->recCtx)) {
+        return HITLS_MSG_HANDLE_STATE_ILLEGAL;
+    }
+    if (!Dtls13CanSendKeyUpdate(ctx)) {
         return HITLS_MSG_HANDLE_STATE_ILLEGAL;
     }
 #endif
@@ -226,7 +242,7 @@ int32_t HS_CheckKeyUpdateState(TLS_Ctx *ctx, uint32_t updateType)
 
 #endif /* HITLS_TLS_FEATURE_KEY_UPDATE */
 
-#if (defined(HITLS_TLS_PROTO_DTLS12) || defined(HITLS_TLS_PROTO_DTLS13)) && defined(HITLS_BSL_UIO_UDP)
+#if defined(HITLS_TLS_PROTO_DATAGRAM) && defined(HITLS_BSL_UIO_UDP)
 int32_t HS_CheckAndProcess2MslTimeout(TLS_Ctx *ctx)
 {
     /* In non-UDP scenarios, the 2MSL timer timeout does not need to be checked */
@@ -257,7 +273,7 @@ int32_t HS_CheckAndProcess2MslTimeout(TLS_Ctx *ctx)
     }
     return HITLS_SUCCESS;
 }
-#endif /* #if (defined(HITLS_TLS_PROTO_DTLS12) || defined(HITLS_TLS_PROTO_DTLS13)) && defined(HITLS_BSL_UIO_UDP) */
+#endif /* #if defined(HITLS_TLS_PROTO_DATAGRAM) && defined(HITLS_BSL_UIO_UDP) */
 
 #ifdef HITLS_TLS_FEATURE_PHA
 int32_t HS_CheckPostHandshakeAuth(TLS_Ctx *ctx)

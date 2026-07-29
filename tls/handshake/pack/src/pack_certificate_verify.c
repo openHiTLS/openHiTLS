@@ -13,7 +13,7 @@
  * See the Mulan PSL v2 for more details.
  */
 #include "hitls_build.h"
-#if defined(HITLS_TLS_HOST_CLIENT) || defined(HITLS_TLS_PROTO_TLS13)
+#if defined(HITLS_TLS_HOST_CLIENT) || defined(HITLS_TLS_PROTO_TLS13_FAMILY)
 #include <stdint.h>
 #include "tls_binlog_id.h"
 #include "bsl_log_internal.h"
@@ -35,7 +35,7 @@ int32_t PackCertificateVerify(const TLS_Ctx *ctx, PackPacket *pkt)
         return HITLS_INTERNAL_EXCEPTION;
     }
 
-#if defined(HITLS_TLS_PROTO_TLS12) || defined(HITLS_TLS_PROTO_DTLS12) || defined(HITLS_TLS_PROTO_TLS13)
+#if defined(HITLS_TLS_PROTO_TLS12) || defined(HITLS_TLS_PROTO_DTLS12) || defined(HITLS_TLS_PROTO_TLS13_FAMILY)
     if (ctx->negotiatedInfo.version != HITLS_VERSION_TLCP_DTLCP11) {
         ret = PackAppendUint16ToBuf(pkt, (uint16_t)ctx->negotiatedInfo.signScheme);
         if (ret != HITLS_SUCCESS) {
@@ -51,4 +51,4 @@ int32_t PackCertificateVerify(const TLS_Ctx *ctx, PackPacket *pkt)
 
     return PackAppendDataToBuf(pkt, hsCtx->verifyCtx->verifyData, hsCtx->verifyCtx->verifyDataSize);
 }
-#endif /* HITLS_TLS_HOST_CLIENT || HITLS_TLS_PROTO_TLS13 */
+#endif /* HITLS_TLS_HOST_CLIENT || HITLS_TLS_PROTO_TLS13_FAMILY */

@@ -238,7 +238,7 @@ int32_t STUB_REC_Write(TLS_Ctx *ctx, REC_Type recordType, const uint8_t *data, u
         return HITLS_NULL_INPUT;
     }
     int32_t ret = HITLS_REC_NORMAL_IO_BUSY;
-#if defined(HITLS_TLS_PROTO_DTLS12) && defined(HITLS_BSL_UIO_UDP)
+#if defined(HITLS_TLS_PROTO_DATAGRAM) && defined(HITLS_BSL_UIO_UDP)
     if (ret != HITLS_SUCCESS) {
         if (!BSL_UIO_GetUioChainTransportType(ctx->uio, BSL_UIO_UDP)) {
             return ret;
@@ -251,7 +251,7 @@ int32_t STUB_REC_Write(TLS_Ctx *ctx, REC_Type recordType, const uint8_t *data, u
             ctx->needQueryMtu = true;
         }
     }
-#endif /* HITLS_TLS_PROTO_DTLS12 && HITLS_BSL_UIO_UDP */
+#endif /* HITLS_TLS_PROTO_DATAGRAM && HITLS_BSL_UIO_UDP */
     return ret;
 }
 

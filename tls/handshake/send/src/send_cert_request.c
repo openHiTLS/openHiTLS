@@ -65,7 +65,7 @@ int32_t ServerSendCertRequestProcess(TLS_Ctx *ctx)
     return HS_ChangeState(ctx, TRY_SEND_SERVER_HELLO_DONE);
 }
 #endif /* HITLS_TLS_PROTO_TLS_BASIC || HITLS_TLS_PROTO_DTLS12 */
-#if defined(HITLS_TLS_PROTO_TLS13) || defined(HITLS_TLS_PROTO_DTLS13)
+#if defined(HITLS_TLS_PROTO_TLS13_FAMILY)
 int32_t Tls13ServerSendCertRequestProcess(TLS_Ctx *ctx)
 {
     int32_t ret;
@@ -110,5 +110,5 @@ int32_t Tls13ServerSendCertRequestProcess(TLS_Ctx *ctx)
 #endif /* HITLS_TLS_FEATURE_PHA */
     return HS_ChangeState(ctx, TRY_SEND_CERTIFICATE);
 }
-#endif /* HITLS_TLS_PROTO_TLS13 || HITLS_TLS_PROTO_DTLS13 */
+#endif /* HITLS_TLS_PROTO_TLS13_FAMILY */
 #endif /* HITLS_TLS_HOST_SERVER && HITLS_TLS_FEATURE_CERT_MODE_CLIENT_VERIFY */

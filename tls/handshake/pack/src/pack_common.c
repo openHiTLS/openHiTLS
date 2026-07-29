@@ -54,7 +54,7 @@ void PackDtlsMsgHeader(HS_MsgType type, uint16_t sequence, uint32_t length, uint
 }
 #endif /* HITLS_TLS_PROTO_DTLS */
 
-#if defined(HITLS_TLS_FEATURE_SESSION_ID) || defined(HITLS_TLS_PROTO_TLS13)
+#if defined(HITLS_TLS_FEATURE_SESSION_ID) || defined(HITLS_TLS_PROTO_TLS13_FAMILY)
 /**
  * @brief Pack the message session ID.
  *
@@ -89,7 +89,7 @@ int32_t PackSessionId(PackPacket *pkt, const uint8_t *id, uint32_t idSize)
     }
     return PackAppendDataToBuf(pkt, id, idSize);
 }
-#endif /* #if HITLS_TLS_FEATURE_SESSION_ID || HITLS_TLS_PROTO_TLS13 */
+#endif /* HITLS_TLS_FEATURE_SESSION_ID || HITLS_TLS_PROTO_TLS13_FAMILY */
 
 #ifdef HITLS_TLS_FEATURE_CERTIFICATE_AUTHORITIES
 int32_t PackTrustedCAList(HITLS_TrustedCAList *caList, PackPacket *pkt)
@@ -117,7 +117,7 @@ int32_t PackTrustedCAList(HITLS_TrustedCAList *caList, PackPacket *pkt)
 }
 #endif /* HITLS_TLS_FEATURE_CERTIFICATE_AUTHORITIES */
 
-#ifdef HITLS_TLS_PROTO_TLS13
+#if defined(HITLS_TLS_PROTO_TLS13_FAMILY)
 int32_t PackCertificateReqCtx(const TLS_Ctx *ctx, PackPacket *pkt)
 {
     /* Pack the length of certificate_request_context */
@@ -135,10 +135,11 @@ int32_t PackCertificateReqCtx(const TLS_Ctx *ctx, PackPacket *pkt)
     }
     return HITLS_SUCCESS;
 }
-#endif /* HITLS_TLS_PROTO_TLS13 */
+#endif /* HITLS_TLS_PROTO_TLS13_FAMILY */
 
 int32_t PackHelloCommonFieldWithRandom(const TLS_Ctx *ctx, PackPacket *pkt, uint16_t version, const uint8_t *random)
 {
+    (void)ctx;
     int32_t ret = HITLS_SUCCESS;
 #ifdef HITLS_TLS_FEATURE_SECURITY
     ret = SECURITY_CfgCheck(&ctx->config.tlsConfig, HITLS_SECURITY_SECOP_VERSION, 0, version, NULL);
@@ -160,7 +161,7 @@ int32_t PackHelloCommonFieldWithRandom(const TLS_Ctx *ctx, PackPacket *pkt, uint
         return ret;
     }
 
-#if defined(HITLS_TLS_FEATURE_SESSION_ID) || defined(HITLS_TLS_PROTO_TLS13)
+#if defined(HITLS_TLS_FEATURE_SESSION_ID) || defined(HITLS_TLS_PROTO_TLS13_FAMILY)
     HS_Ctx *hsCtx = (HS_Ctx *)ctx->hsCtx;
     ret = PackSessionId(pkt, hsCtx->sessionId, hsCtx->sessionIdSize);
     if (ret != HITLS_SUCCESS) {
@@ -175,12 +176,6 @@ int32_t PackHelloCommonFieldWithRandom(const TLS_Ctx *ctx, PackPacket *pkt, uint
     }
 #endif
     return HITLS_SUCCESS;
-}
-
-int32_t PackHelloCommonField(const TLS_Ctx *ctx, PackPacket *pkt, uint16_t version, bool isClient)
-{
-    const uint8_t *random = isClient ? ctx->hsCtx->clientRandom : ctx->hsCtx->serverRandom;
-    return PackHelloCommonFieldWithRandom(ctx, pkt, version, random);
 }
 
 static int32_t PackMsBufferGrow(PackPacket *pkt, uint32_t newSize)

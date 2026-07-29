@@ -38,7 +38,7 @@ int32_t HS_Init(TLS_Ctx *ctx);
  */
 void HS_DeInit(TLS_Ctx *ctx);
 
-#if defined(HITLS_TLS_PROTO_DTLS12) || defined(HITLS_TLS_PROTO_DTLS13)
+#if defined(HITLS_TLS_PROTO_DATAGRAM)
 /**
  * @brief Initialize the DTLS handshake reassembly queue in the connection context.
  *
@@ -52,6 +52,13 @@ int32_t HS_ReassQueueInit(TLS_Ctx *ctx);
  * @param ctx [IN] TLS object
  */
 void HS_ReassQueueFree(TLS_Ctx *ctx);
+
+/**
+ * @brief Clear DTLS handshake reassembly messages from the connection context.
+ *
+ * @param ctx [IN] TLS object
+ */
+void HS_ReassQueueClear(TLS_Ctx *ctx);
 
 /**
  * @brief Check whether the DTLS handshake reassembly queue in the connection context is empty.
@@ -139,11 +146,11 @@ const char *HS_GetServerName(const TLS_Ctx *ctx);
  *
  * @return string of server_name in the TLS context during the handshake
  */
-#if defined(HITLS_TLS_PROTO_DTLS12) || defined(HITLS_TLS_PROTO_DTLS13)
+#if defined(HITLS_TLS_PROTO_DATAGRAM)
 int32_t HS_CheckAndProcess2MslTimeout(TLS_Ctx *ctx);
-#endif /* HITLS_TLS_PROTO_DTLS12 || HITLS_TLS_PROTO_DTLS13 */
+#endif /* HITLS_TLS_PROTO_DATAGRAM */
 
-#ifdef HITLS_TLS_PROTO_DTLS12
+#if defined(HITLS_TLS_PROTO_DATAGRAM)
 /**
  * @brief  Send dtls fragment handshake message according to maxRecPayloadLen
  *

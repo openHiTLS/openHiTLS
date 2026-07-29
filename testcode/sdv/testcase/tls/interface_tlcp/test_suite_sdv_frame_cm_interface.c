@@ -1556,46 +1556,55 @@ EXIT:
 /* BEGIN_CASE */
 void UT_TLS_CM_GET_STATE_STRING_FUNC_TC001()
 {
-    const char goalStr[34][32] = {
-        "idle",
-        "connected",
-        "send hello request",
-        "send client hello",
-        "send hello verify request",
-        "send hello retry request",
-        "send server hello",
-        "send encrypted extensions",
-        "send certificate",
-        "send server key exchange",
-        "send certificate request",
-        "send server hello done",
-        "send client key exchange",
-        "send certificate verify",
-        "send new session ticket",
-        "send change cipher spec",
-        "send end of early data",
-        "send finished",
-        "send keyupdate",
-        "recv client hello",
-        "recv hello verify request",
-        "recv server hello",
-        "recv encrypted extensions",
-        "recv certificate",
-        "recv server key exchange",
-        "recv certificate request",
-        "recv server hello done",
-        "recv client key exchange",
-        "recv certificate verify",
-        "recv new session ticket",
-        "recv end of early data",
-        "recv finished",
-        "recv keyupdate",
-        "recv hello request",
+    const char *goalStr[HS_STATE_BUTT] = {
+        [TLS_IDLE] = "idle",
+        [TLS_CONNECTED] = "connected",
+        [TRY_SEND_HELLO_REQUEST] = "send hello request",
+        [TRY_SEND_CLIENT_HELLO] = "send client hello",
+        [TRY_SEND_HELLO_VERIFY_REQUEST] = "send hello verify request",
+        [TRY_SEND_HELLO_RETRY_REQUEST] = "send hello retry request",
+        [TRY_SEND_SERVER_HELLO] = "send server hello",
+        [TRY_SEND_ENCRYPTED_EXTENSIONS] = "send encrypted extensions",
+        [TRY_SEND_CERTIFICATE] = "send certificate",
+        [TRY_SEND_SERVER_KEY_EXCHANGE] = "send server key exchange",
+        [TRY_SEND_CERTIFICATE_REQUEST] = "send certificate request",
+        [TRY_SEND_SERVER_HELLO_DONE] = "send server hello done",
+        [TRY_SEND_CLIENT_KEY_EXCHANGE] = "send client key exchange",
+        [TRY_SEND_CERTIFICATE_VERIFY] = "send certificate verify",
+        [TRY_SEND_NEW_SESSION_TICKET] = "send new session ticket",
+        [TRY_SEND_CHANGE_CIPHER_SPEC] = "send change cipher spec",
+        [TRY_SEND_END_OF_EARLY_DATA] = "send end of early data",
+        [TRY_SEND_FINISH] = "send finished",
+        [TRY_SEND_KEY_UPDATE] = "send keyupdate",
+        [TRY_SEND_ACK] = "send ack",
+        [TRY_RECV_CLIENT_HELLO] = "recv client hello",
+        [TRY_RECV_HELLO_VERIFY_REQUEST] = "recv hello verify request",
+        [TRY_RECV_SERVER_HELLO] = "recv server hello",
+        [TRY_RECV_ENCRYPTED_EXTENSIONS] = "recv encrypted extensions",
+        [TRY_RECV_CERTIFICATE] = "recv certificate",
+        [TRY_RECV_SERVER_KEY_EXCHANGE] = "recv server key exchange",
+        [TRY_RECV_CERTIFICATE_REQUEST] = "recv certificate request",
+        [TRY_RECV_SERVER_HELLO_DONE] = "recv server hello done",
+        [TRY_RECV_CLIENT_KEY_EXCHANGE] = "recv client key exchange",
+        [TRY_RECV_CERTIFICATE_VERIFY] = "recv certificate verify",
+        [TRY_RECV_NEW_SESSION_TICKET] = "recv new session ticket",
+        [TRY_RECV_END_OF_EARLY_DATA] = "recv end of early data",
+        [TRY_RECV_FINISH] = "recv finished",
+        [TRY_RECV_KEY_UPDATE] = "recv keyupdate",
+        [TRY_RECV_HELLO_REQUEST] = "recv hello request",
+#ifdef HITLS_TLS_FEATURE_DTLS_CID
+        [TRY_SEND_NEW_CONNECTION_ID] = "send new connection id",
+        [TRY_SEND_REQUEST_CONNECTION_ID] = "send request connection id",
+        [TRY_RECV_NEW_CONNECTION_ID] = "recv new connection id",
+        [TRY_RECV_REQUEST_CONNECTION_ID] = "recv request connection id",
+#endif
+#ifdef HITLS_TLS_PROTO_DTLS13
+        [TRY_RECV_MSG] = "recv dtls msg",
+#endif
     };
-    int32_t ret;
-    for (uint32_t i = 0; i <= 30; i++) {
-        ret = strcmp(HITLS_GetStateString(i), goalStr[i]);
-        ASSERT_TRUE(strcmp(HITLS_GetStateString(i), goalStr[i]) == 0);
+    for (uint32_t i = 0; i < HS_STATE_BUTT; i++) {
+        const char *expected = (goalStr[i] == NULL) ? "unknown" : goalStr[i];
+        ASSERT_TRUE(strcmp(HITLS_GetStateString(i), expected) == 0);
     }
     ASSERT_TRUE(strcmp(HITLS_GetStateString(255), "unknown") == 0);
 EXIT:

@@ -14,6 +14,7 @@
  */
 
 /* BEGIN_HEADER */
+#include "alert.h"
 /* INCLUDE_BASE test_suite_sdv_frame_dtlcp_consistency */
 /* END_HEADER */
 
@@ -560,7 +561,26 @@ EXIT:
 }
 /* END_CASE */
 
-/* when receive alert between finish and ccs, dtlcp should cache it*/
+/* @
+* @test UT_DTLCP_RFC6347_RECV_ALERT_AFTER_CCS_TC001
+* @spec RFC 6347 Sections 4, 4.2.4, and 4.2.7; RFC 5246 Section 7.2
+* @title The client immediately terminates the handshake upon receiving a protected fatal Alert after CCS.
+* @precon nan
+* @brief
+* 1. Create a DTLCP client and server and park the client before it receives the server CCS. Expected result 1.
+* 2. Let the client receive the CCS and activate the new read epoch while it is waiting for Finished. Expected result 2.
+* 3. Send a protected fatal unexpected_message Alert from the server in the new epoch. Expected result 3.
+* 4. Let the client process the Alert and inspect the connection state and received Alert information. Expected result 4.
+* @expect
+* 1. The client and server are initialized and parked successfully.
+* 2. The client remains in CM_STATE_HANDSHAKING and waits for Finished.
+* 3. The protected Alert is transferred to the client successfully.
+* 4. RFC 6347 Section 4.2.4 defers only application data received before Finished, and Section 4.2.7
+*    changes Alert retransmission rather than fatal-Alert processing. Therefore, RFC 5246 Section 7.2 applies:
+*    the client processes the fatal Alert immediately, enters CM_STATE_ALERTED, and does not complete the handshake.
+* @prior Level 1
+* @auto TRUE
+@ */
 /* BEGIN_CASE */
 void UT_DTLCP_RFC6347_RECV_ALERT_AFTER_CCS_TC001()
 {
@@ -569,38 +589,47 @@ void UT_DTLCP_RFC6347_RECV_ALERT_AFTER_CCS_TC001()
     ASSERT_TRUE(tlsConfig != NULL);
     FRAME_LinkObj *client = FRAME_CreateTLCPLink(tlsConfig, BSL_UIO_UDP, true);
     FRAME_LinkObj *server = FRAME_CreateTLCPLink(tlsConfig, BSL_UIO_UDP, false);
-    client->needStopBeforeRecvCCS = true;
-    server->needStopBeforeRecvCCS = true;
     ASSERT_TRUE(client != NULL);
     ASSERT_TRUE(server != NULL);
+    client->needStopBeforeRecvCCS = true;
+    server->needStopBeforeRecvCCS = true;
 
     HITLS_SetMtu(client->ssl, 16384);
     HITLS_SetMtu(server->ssl, 16384);
 
     HITLS_Ctx *clientTlsCtx = FRAME_GetTlsCtx(client);
     HITLS_Ctx *serverTlsCtx = FRAME_GetTlsCtx(server);
+
+    /* Step 1: Park the client in TRY_RECV_FINISH before it consumes the server CCS. */
     ASSERT_TRUE(FRAME_CreateConnection(client, server, true, TRY_RECV_FINISH) == HITLS_SUCCESS);
 
-    // client receive ccs, wait to receive finish
+    /*
+     * Step 2: Consume CCS. The new read epoch is now active, but the client is
+     * still handshaking because the authenticated Finished has not arrived.
+     */
     ASSERT_EQ(HITLS_Connect(clientTlsCtx), HITLS_REC_NORMAL_RECV_BUF_EMPTY);
+    ASSERT_EQ(clientTlsCtx->state, CM_STATE_HANDSHAKING);
+
+    /*
+     * Step 3: Send fatal unexpected_message under the server's active write
+     * epoch. REC_Write protects this Alert with the keys activated by CCS.
+     */
     uint8_t alertdata[2] = {0x02, 0x0a};
     ASSERT_EQ(REC_Write(serverTlsCtx, REC_TYPE_ALERT, alertdata, sizeof(alertdata)), HITLS_SUCCESS);
-    ASSERT_TRUE(FRAME_TrasferMsgBetweenLink(server, client) == HITLS_SUCCESS);
+    ASSERT_EQ(FRAME_TrasferMsgBetweenLink(server, client), HITLS_SUCCESS);
 
-    // client cache the alert, wait to receive finish
-    ASSERT_EQ(HITLS_Connect(clientTlsCtx), HITLS_REC_NORMAL_RECV_BUF_EMPTY);
-    ASSERT_TRUE(clientTlsCtx->state == CM_STATE_HANDSHAKING);
-    // server send finish, handshake success
-    ASSERT_EQ(HITLS_Accept(serverTlsCtx), HITLS_SUCCESS);
-    ASSERT_TRUE(FRAME_TrasferMsgBetweenLink(server, client) == HITLS_SUCCESS);
-    // client receive finish, handshake success
-    ASSERT_EQ(HITLS_Connect(clientTlsCtx), HITLS_SUCCESS);
-    ASSERT_TRUE(clientTlsCtx->state == CM_STATE_TRANSPORTING);
-    // client read cached alert
-    uint8_t readBuf[READ_BUF_SIZE] = {0};
-    uint32_t readLen = 0;
-    ASSERT_EQ(HITLS_Read(clientTlsCtx, readBuf, READ_BUF_SIZE, &readLen), HITLS_REC_NORMAL_RECV_UNEXPECT_MSG);
-    ASSERT_TRUE(clientTlsCtx->state == CM_STATE_ALERTED);
+    /*
+     * Step 4: RFC 6347 only permits buffering/discarding early application
+     * data. It does not override RFC 5246's immediate fatal-Alert semantics.
+     * The client must terminate now instead of waiting for Finished.
+     */
+    ASSERT_NE(HITLS_Connect(clientTlsCtx), HITLS_SUCCESS);
+    ASSERT_EQ(clientTlsCtx->state, CM_STATE_ALERTED);
+    ALERT_Info alertInfo = {0};
+    ALERT_GetInfo(clientTlsCtx, &alertInfo);
+    ASSERT_EQ(alertInfo.flag, ALERT_FLAG_RECV);
+    ASSERT_EQ(alertInfo.level, ALERT_LEVEL_FATAL);
+    ASSERT_EQ(alertInfo.description, ALERT_UNEXPECTED_MESSAGE);
 EXIT:
     HITLS_CFG_FreeConfig(tlsConfig);
     FRAME_FreeLink(client);

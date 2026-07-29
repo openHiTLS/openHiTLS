@@ -51,6 +51,9 @@
 #include "crypt_modes_chacha20poly1305.h"
 #endif
 #ifdef HITLS_CRYPTO_CHACHA20
+#include "crypt_modes_chacha20.h"
+#endif
+#ifdef HITLS_CRYPTO_CHACHA20
 #include "crypt_chacha20.h"
 #endif
 #ifdef HITLS_CRYPTO_SM4
@@ -78,6 +81,19 @@ static const EAL_CipherMethod CHACHA20_POLY1305_METHOD = {
     (CipherCtrl)MODES_CHACHA20POLY1305_Ctrl,
     (CipherFreeCtx)MODES_CHACHA20POLY1305_FreeCtx,
     (CipherDupCtx)MODES_CHACHA20POLY1305_DupCtx
+};
+#endif
+
+#ifdef HITLS_CRYPTO_CHACHA20
+static const EAL_CipherMethod CHACHA20_CIPHER_METHOD = {
+    (CipherNewCtx)MODES_CHACHA20_NewCtxEx,
+    (CipherInitCtx)MODES_CHACHA20_InitCtx,
+    (CipherDeInitCtx)MODES_CHACHA20_DeInitCtx,
+    (CipherUpdate)MODES_CHACHA20_Update,
+    (CipherFinal)MODES_CHACHA20_Final,
+    (CipherCtrl)MODES_CHACHA20_Ctrl,
+    (CipherFreeCtx)MODES_CHACHA20_FreeCtx,
+    (CipherDupCtx)MODES_CHACHA20_DupCtx
 };
 #endif
 
@@ -254,6 +270,10 @@ const EAL_CipherMethod *EAL_FindModeMethod(CRYPT_MODE_AlgId id)
         case HCRYPT_MODE_CHACHA20_POLY1305:
             return &CHACHA20_POLY1305_METHOD;
 #endif
+#ifdef HITLS_CRYPTO_CHACHA20
+        case HCRYPT_MODE_CHACHA20:
+            return &CHACHA20_CIPHER_METHOD;
+#endif
 #ifdef HITLS_CRYPTO_CFB
         case HCRYPT_MODE_CFB:
             return &CFB_METHOD;
@@ -328,6 +348,9 @@ static const EAL_SymAlgMap SYM_ID_MAP[] = {
 #endif
 #endif // aes
 #ifdef HITLS_CRYPTO_CHACHA20
+    {.id = CRYPT_CIPHER_CHACHA20, .modeId = HCRYPT_MODE_CHACHA20},
+#endif
+#if defined(HITLS_CRYPTO_CHACHA20) && defined(HITLS_CRYPTO_CHACHA20POLY1305)
     {.id = CRYPT_CIPHER_CHACHA20_POLY1305, .modeId = HCRYPT_MODE_CHACHA20_POLY1305},
 #endif
 #ifdef HITLS_CRYPTO_SM4
@@ -479,6 +502,7 @@ const EAL_SymMethod *EAL_GetSymMethod(int32_t algId)
             return &SM4_METHOD;
 #endif
 #ifdef HITLS_CRYPTO_CHACHA20
+        case CRYPT_CIPHER_CHACHA20:
         case CRYPT_CIPHER_CHACHA20_POLY1305:
             return &CHACHA20_METHOD;
 #endif
@@ -538,6 +562,9 @@ static CRYPT_CipherInfo g_cipherInfo[] = {
 #endif
 #endif
 #ifdef HITLS_CRYPTO_CHACHA20
+    {.id = CRYPT_CIPHER_CHACHA20, .blockSize = 1, .keyLen = 32, .ivLen = 12},
+#endif
+#if defined(HITLS_CRYPTO_CHACHA20) && defined(HITLS_CRYPTO_CHACHA20POLY1305)
     {.id = CRYPT_CIPHER_CHACHA20_POLY1305, .blockSize = 1, .keyLen = 32, .ivLen = 12},
 #endif
 #ifdef HITLS_CRYPTO_SM4

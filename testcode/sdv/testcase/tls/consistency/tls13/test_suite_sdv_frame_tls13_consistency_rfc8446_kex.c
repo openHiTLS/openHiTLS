@@ -4449,16 +4449,21 @@ EXIT:
 /* BEGIN_CASE */
 void UT_TLS_TLS13_RFC8446_CONSISTENCY_HRR_FORMAT_FUNC_TC007()
 {
+    HITLS_Config *tlsConfig = NULL;
+    FRAME_LinkObj *client = NULL;
+    FRAME_LinkObj *server = NULL;
+    FRAME_Msg frameMsg = {0};
+    FRAME_Type frameType = {0};
     FRAME_Init();
 
-    HITLS_Config *tlsConfig = HITLS_CFG_NewTLSConfig();
+    tlsConfig = HITLS_CFG_NewTLSConfig();
     ASSERT_TRUE(tlsConfig != NULL);
     tlsConfig->isSupportClientVerify = true;
     HITLS_CFG_SetKeyExchMode(tlsConfig, TLS13_KE_MODE_PSK_WITH_DHE);
     HITLS_CFG_SetVersionSupport(tlsConfig, 0x00000030U);
 
-    FRAME_LinkObj *client = FRAME_CreateLink(tlsConfig, BSL_UIO_TCP);
-    FRAME_LinkObj *server = FRAME_CreateLink(tlsConfig, BSL_UIO_TCP);
+    client = FRAME_CreateLink(tlsConfig, BSL_UIO_TCP);
+    server = FRAME_CreateLink(tlsConfig, BSL_UIO_TCP);
     ASSERT_TRUE(client != NULL);
     ASSERT_TRUE(server != NULL);
 
@@ -4506,8 +4511,6 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_HRR_FORMAT_FUNC_TC007()
     uint32_t recvLen = ioUserData->recMsg.len;
     ASSERT_TRUE(recvLen != 0);
 
-    FRAME_Msg frameMsg = {0};
-    FRAME_Type frameType = {0};
     uint32_t parseLen = 0;
     SetFrameType(&frameType, HITLS_VERSION_TLS13, REC_TYPE_HANDSHAKE, SERVER_HELLO, HITLS_KEY_EXCH_ECDHE);
     ASSERT_EQ(FRAME_ParseMsg(&frameType, recvBuf, recvLen, &frameMsg, &parseLen), HITLS_SUCCESS);

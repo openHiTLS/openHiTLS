@@ -44,7 +44,7 @@ int32_t ParserRecordHeader(FRAME_Msg *frameMsg, const uint8_t *buffer, uint32_t 
     frameMsg->version = BSL_ByteToUint16(&buffer[bufOffset]);
     bufOffset += sizeof(uint16_t);
 
-#ifdef HITLS_TLS_PROTO_DTLS12
+#ifdef HITLS_TLS_PROTO_DATAGRAM
     if (IS_TRANSTYPE_DATAGRAM(frameMsg->transportType)) {
         frameMsg->epochSeq = BSL_ByteToUint64(&buffer[bufOffset]);
         bufOffset += sizeof(uint64_t);

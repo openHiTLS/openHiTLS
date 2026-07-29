@@ -21,16 +21,16 @@ set(_handshake_sources_common
     ${source_dir}/common/src/hs_verify.c
     ${source_dir}/common/src/transcript_hash.c
 )
-if(HITLS_TLS_PROTO_TLS13)
+if(HITLS_TLS_PROTO_TLS13_FAMILY)
     list(APPEND _handshake_sources_common ${source_dir}/common/src/tls13key.c)
 endif()
-if(HITLS_TLS_PROTO_DTLS12 AND HITLS_BSL_UIO_UDP)
+if(HITLS_TLS_PROTO_DATAGRAM AND HITLS_BSL_UIO_UDP)
     list(APPEND _handshake_sources_common ${source_dir}/common/src/hs_dtls_timer.c)
 endif()
 
 # cookie
 set(_handshake_sources_cookie)
-if((HITLS_TLS_PROTO_DTLS12 OR HITLS_TLS_PROTO_DTLS13) AND HITLS_BSL_UIO_UDP)
+if(HITLS_TLS_PROTO_DATAGRAM AND HITLS_BSL_UIO_UDP)
     list(APPEND _handshake_sources_cookie ${source_dir}/cookie/src/hs_cookie.c)
 endif()
 
@@ -42,7 +42,7 @@ set(_handshake_sources_pack
     ${source_dir}/pack/src/pack_extensions.c
     ${source_dir}/pack/src/pack_finished.c
 )
-if(HITLS_TLS_PROTO_TLS13 AND HITLS_TLS_HOST_SERVER)
+if(HITLS_TLS_PROTO_TLS13_FAMILY AND HITLS_TLS_HOST_SERVER)
     list(APPEND _handshake_sources_pack ${source_dir}/pack/src/pack_encrypted_extensions.c)
 endif()
 if(HITLS_TLS_HOST_CLIENT)
@@ -57,7 +57,7 @@ if(HITLS_TLS_HOST_SERVER)
         ${source_dir}/pack/src/pack_server_key_exchange.c
     )
 endif()
-if(HITLS_TLS_HOST_CLIENT OR HITLS_TLS_PROTO_TLS13)
+if(HITLS_TLS_HOST_CLIENT OR HITLS_TLS_PROTO_TLS13_FAMILY)
     list(APPEND _handshake_sources_pack ${source_dir}/pack/src/pack_certificate_verify.c)
 endif()
 if(HITLS_TLS_HOST_SERVER AND HITLS_TLS_FEATURE_CERT_MODE_CLIENT_VERIFY)
@@ -84,7 +84,7 @@ set(_handshake_sources_parse
     ${source_dir}/parse/src/parse_extensions.c
     ${source_dir}/parse/src/parse_finished.c
 )
-if(HITLS_TLS_PROTO_TLS13 AND HITLS_TLS_HOST_CLIENT)
+if(HITLS_TLS_PROTO_TLS13_FAMILY AND HITLS_TLS_HOST_CLIENT)
     list(APPEND _handshake_sources_parse ${source_dir}/parse/src/parse_encrypted_extensions.c)
 endif()
 if(HITLS_TLS_HOST_CLIENT)
@@ -102,7 +102,8 @@ if(HITLS_TLS_HOST_SERVER)
         ${source_dir}/parse/src/parse_extensions_server.c
     )
 endif()
-if((HITLS_TLS_HOST_SERVER AND HITLS_TLS_FEATURE_CERT_MODE_CLIENT_VERIFY) OR HITLS_TLS_PROTO_TLS13)
+if((HITLS_TLS_HOST_SERVER AND HITLS_TLS_FEATURE_CERT_MODE_CLIENT_VERIFY) OR
+    HITLS_TLS_PROTO_TLS13_FAMILY)
     list(APPEND _handshake_sources_parse ${source_dir}/parse/src/parse_certificate_verify.c)
 endif()
 if(HITLS_TLS_FEATURE_KEY_UPDATE)
@@ -120,7 +121,7 @@ endif()
 
 # reass
 set(_handshake_sources_reass)
-if(HITLS_TLS_PROTO_DTLS12 OR HITLS_TLS_PROTO_DTLS13)
+if(HITLS_TLS_PROTO_DATAGRAM)
     list(APPEND _handshake_sources_reass ${source_dir}/reass/src/hs_reass.c)
 endif()
 
@@ -130,7 +131,7 @@ set(_handshake_sources_recv
     ${source_dir}/recv/src/recv_certificate.c
     ${source_dir}/recv/src/recv_finished.c
 )
-if(HITLS_TLS_PROTO_TLS13)
+if(HITLS_TLS_PROTO_TLS13_FAMILY)
     list(APPEND _handshake_sources_recv ${source_dir}/recv/src/recv_encrypted_extensions.c)
 endif()
 if(HITLS_TLS_HOST_CLIENT)
@@ -147,7 +148,8 @@ if(HITLS_TLS_HOST_SERVER)
         ${source_dir}/recv/src/recv_client_key_exchange.c
     )
 endif()
-if((HITLS_TLS_HOST_SERVER AND HITLS_TLS_FEATURE_CERT_MODE_CLIENT_VERIFY) OR HITLS_TLS_PROTO_TLS13)
+if((HITLS_TLS_HOST_SERVER AND HITLS_TLS_FEATURE_CERT_MODE_CLIENT_VERIFY) OR
+    HITLS_TLS_PROTO_TLS13_FAMILY)
     list(APPEND _handshake_sources_recv ${source_dir}/recv/src/recv_cert_verify.c)
 endif()
 if(HITLS_TLS_FEATURE_SESSION_TICKET)
@@ -165,7 +167,7 @@ set(_handshake_sources_send
     ${source_dir}/send/src/send_common.c
     ${source_dir}/send/src/send_finished.c
 )
-if(HITLS_TLS_PROTO_TLS13 AND HITLS_TLS_HOST_SERVER)
+if(HITLS_TLS_PROTO_TLS13_FAMILY AND HITLS_TLS_HOST_SERVER)
     list(APPEND _handshake_sources_send ${source_dir}/send/src/send_encrypted_extensions.c)
 endif()
 if(HITLS_TLS_HOST_CLIENT)
@@ -181,7 +183,7 @@ if(HITLS_TLS_HOST_SERVER)
         ${source_dir}/send/src/send_server_key_exchange.c
     )
 endif()
-if(HITLS_TLS_HOST_CLIENT OR HITLS_TLS_PROTO_TLS13)
+if(HITLS_TLS_HOST_CLIENT OR HITLS_TLS_PROTO_TLS13_FAMILY)
     list(APPEND _handshake_sources_send ${source_dir}/send/src/send_cert_verify.c)
 endif()
 if(HITLS_TLS_HOST_SERVER AND HITLS_TLS_FEATURE_CERT_MODE_CLIENT_VERIFY)

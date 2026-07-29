@@ -149,19 +149,6 @@ int32_t ALERT_Flush(TLS_Ctx *ctx)
     return HITLS_SUCCESS;
 }
 
-#ifdef HITLS_TLS_PROTO_TLS13
-static uint32_t ALERT_GetVersion(const TLS_Ctx *ctx)
-{
-    if (ctx->negotiatedInfo.version > 0) {
-        /* the version has been negotiated */
-        return ctx->negotiatedInfo.version;
-    } else {
-        /* if the version is not negotiated, the latest version supported by the local end is returned */
-        return ctx->config.tlsConfig.maxVersion;
-    }
-}
-#endif /* HITLS_TLS_PROTO_TLS13 */
-
 int32_t ALERT_Init(TLS_Ctx *ctx)
 {
     if (ctx == NULL) {
@@ -214,11 +201,14 @@ int32_t ProcessDecryptedAlert(TLS_Ctx *ctx, const uint8_t *data, uint32_t dataLe
         alertCtx->flag = ALERT_FLAG_RECV;
         alertCtx->level = data[0];
         alertCtx->description = data[1];
-#ifdef HITLS_TLS_PROTO_TLS13
-        if (ALERT_GetVersion(ctx) == HITLS_VERSION_TLS13 && alertCtx->description != ALERT_CLOSE_NOTIFY) {
+#if defined(HITLS_TLS_PROTO_TLS13_FAMILY)
+        uint32_t version = GET_VERSION_FROM_CTX(ctx);
+        if (IS_TLS13_FAMILY_VERSION(version) &&
+            alertCtx->description != ALERT_CLOSE_NOTIFY &&
+            alertCtx->description != ALERT_USER_CANCELED) {
             alertCtx->level = ALERT_LEVEL_FATAL;
         }
-#endif
+#endif /* HITLS_TLS_PROTO_TLS13_FAMILY */
         if (alertCtx->level == ALERT_LEVEL_FATAL) {
             BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16269, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
                 "alert fatal", 0, 0, 0, 0);

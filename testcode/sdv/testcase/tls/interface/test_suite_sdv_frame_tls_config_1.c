@@ -43,7 +43,9 @@
 #include "frame_tls.h"
 #include "cert_callback.h"
 #include "hitls_config.h"
+#include "hitls_cookie.h"
 #include "hitls_error.h"
+#include "hitls_psk.h"
 #include "bsl_errno.h"
 #include "bsl_uio.h"
 #include "frame_io.h"
@@ -153,6 +155,47 @@ int32_t Stub_Ctrl(BSL_UIO *uio, BSL_UIO_CtrlParameter cmd, void *param)
     (void)param;
     return HITLS_SUCCESS;
 }
+
+#if defined(HITLS_TLS_PROTO_DTLS13) && defined(HITLS_BSL_UIO_UDP)
+static uint32_t TestDtls13ConfigTimerCb(HITLS_Ctx *ctx, uint32_t us)
+{
+    (void)ctx;
+    return us + 1u;
+}
+
+#ifdef HITLS_TLS_FEATURE_PSK
+static int32_t TestDtls13ConfigPskFindCb(HITLS_Ctx *ctx, const uint8_t *identity, uint32_t identityLen,
+    HITLS_Session **session)
+{
+    (void)ctx;
+    (void)identity;
+    (void)identityLen;
+    (void)session;
+    return HITLS_PSK_FIND_SESSION_CB_FAIL;
+}
+
+static int32_t TestDtls13ConfigPskUseCb(HITLS_Ctx *ctx, uint32_t hashAlgo, const uint8_t **id,
+    uint32_t *idLen, HITLS_Session **session)
+{
+    (void)ctx;
+    (void)hashAlgo;
+    (void)id;
+    (void)idLen;
+    (void)session;
+    return HITLS_PSK_USE_SESSION_CB_FAIL;
+}
+#endif
+
+static bool TestMemIsZero(const uint8_t *data, uint32_t len)
+{
+    for (uint32_t i = 0; i < len; i++) {
+        if (data[i] != 0) {
+            return false;
+        }
+    }
+    return true;
+}
+#endif
 /* END_HEADER */
 
 /** @
@@ -567,6 +610,146 @@ void UT_TLS_CFG_SET_GET_KEYEXCHMODE_FUNC_TC001()
     ASSERT_EQ(HITLS_CFG_GetKeyExchMode(testInfo.config), TLS13_KE_MODE_PSK_WITH_DHE);
 EXIT:
     HITLS_CFG_FreeConfig(testInfo.config);
+}
+/* END_CASE */
+
+/** @
+* @test  UT_TLS_CFG_DTLS13_TLS13_FAMILY_CONFIG_TC001
+* @title DTLS1.3 config keeps TLS1.3-family fields through set/get and ctx creation.
+* @precon nan
+* @brief
+* 1. Create a DTLS1.3 config and set a TLS1.3-family cipher suite. Expected result 1.
+* 2. Query cipher suites and check the DTLS1.3 suite is returned. Expected result 2.
+* 3. Set key exchange mode, DTLS timer, post-handshake timeout and cookie exchange support. Expected result 3.
+* 4. Create a DTLS1.3 link and inspect the copied ctx config. Expected result 4.
+* @expect
+* 1. HITLS_CFG_SetCipherSuites returns HITLS_SUCCESS.
+* 2. HITLS_CFG_GetCipherSuites returns the configured DTLS1.3 cipher suite.
+* 3. All setters return HITLS_SUCCESS.
+* 4. The ctx copy retains TLS1.3-family and DTLS fields.
+@ */
+/* BEGIN_CASE */
+void UT_TLS_CFG_DTLS13_TLS13_FAMILY_CONFIG_TC001(void)
+{
+#if defined(HITLS_TLS_PROTO_DTLS13) && defined(HITLS_BSL_UIO_UDP)
+    FRAME_Init();
+
+    HITLS_Config *config = NULL;
+    FRAME_LinkObj *link = NULL;
+    uint16_t cipherSuite = HITLS_AES_128_GCM_SHA256;
+    uint16_t suites[HITLS_CFG_MAX_SIZE] = {0};
+    uint32_t suiteSize = 0;
+    bool isCookieSupport = false;
+#ifdef HITLS_TLS_FEATURE_KEM
+    uint16_t hybridGroup = HITLS_HYBRID_X25519_MLKEM768;
+#endif
+
+    config = HITLS_CFG_NewDTLS13Config();
+    ASSERT_TRUE(config != NULL);
+    ASSERT_EQ(HITLS_CFG_SetCipherSuites(config, &cipherSuite, 1), HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_CFG_GetCipherSuites(config, suites, sizeof(suites) / sizeof(suites[0]), &suiteSize),
+        HITLS_SUCCESS);
+    ASSERT_TRUE(suiteSize >= 1);
+    ASSERT_EQ(suites[0], HITLS_AES_128_GCM_SHA256);
+
+    ASSERT_EQ(HITLS_CFG_SetKeyExchMode(config, TLS13_KE_MODE_PSK_ONLY), HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_CFG_GetKeyExchMode(config), TLS13_KE_MODE_PSK_ONLY);
+#ifdef HITLS_TLS_FEATURE_PSK
+    ASSERT_EQ(HITLS_CFG_SetPskFindSessionCallback(config, TestDtls13ConfigPskFindCb), HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_CFG_SetPskUseSessionCallback(config, TestDtls13ConfigPskUseCb), HITLS_SUCCESS);
+#endif
+#ifdef HITLS_TLS_FEATURE_KEM
+    ASSERT_EQ(HITLS_CFG_SetGroups(config, &hybridGroup, 1), HITLS_SUCCESS);
+#endif
+    ASSERT_EQ(HITLS_CFG_SetDtlsTimerCb(config, TestDtls13ConfigTimerCb), HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_CFG_SetDtlsPostHsTimeoutVal(config, 12345), HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_CFG_SetDtlsCookieExchangeSupport(config, true), HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_CFG_GetDtlsCookieExchangeSupport(config, &isCookieSupport), HITLS_SUCCESS);
+    ASSERT_TRUE(isCookieSupport);
+
+    link = FRAME_CreateLink(config, BSL_UIO_UDP);
+    ASSERT_TRUE(link != NULL);
+    ASSERT_TRUE(link->ssl != NULL);
+    ASSERT_EQ(link->ssl->config.tlsConfig.tls13cipherSuitesSize, 1);
+    ASSERT_TRUE(link->ssl->config.tlsConfig.tls13CipherSuites != NULL);
+    ASSERT_EQ(link->ssl->config.tlsConfig.tls13CipherSuites[0], HITLS_AES_128_GCM_SHA256);
+    ASSERT_EQ(link->ssl->config.tlsConfig.keyExchMode, TLS13_KE_MODE_PSK_ONLY);
+#ifdef HITLS_TLS_FEATURE_PSK
+    ASSERT_TRUE(link->ssl->config.tlsConfig.pskFindSessionCb == TestDtls13ConfigPskFindCb);
+    ASSERT_TRUE(link->ssl->config.tlsConfig.pskUseSessionCb == TestDtls13ConfigPskUseCb);
+#endif
+#ifdef HITLS_TLS_FEATURE_KEM
+    ASSERT_EQ(link->ssl->config.tlsConfig.groupsSize, 1);
+    ASSERT_TRUE(link->ssl->config.tlsConfig.groups != NULL);
+    ASSERT_EQ(link->ssl->config.tlsConfig.groups[0], HITLS_HYBRID_X25519_MLKEM768);
+#endif
+    ASSERT_TRUE(link->ssl->config.tlsConfig.dtlsTimerCb == TestDtls13ConfigTimerCb);
+    ASSERT_EQ(link->ssl->config.tlsConfig.dtlsPostHsTimeoutVal, 12345);
+    ASSERT_TRUE(link->ssl->config.tlsConfig.isSupportDtlsCookieExchange);
+
+EXIT:
+    HITLS_CFG_FreeConfig(config);
+    FRAME_FreeLink(link);
+#else
+    SKIP_TEST();
+EXIT:
+    return;
+#endif
+}
+/* END_CASE */
+
+/** @
+* @test  UT_TLS_CFG_DTLS13_CLEAR_SECRET_TC001
+* @title HITLS_Clear clears DTLS1.3 TLS1.3-family traffic secrets.
+* @precon nan
+* @brief
+* 1. Create a DTLS1.3 link and fill TLS1.3-family secret buffers. Expected result 1.
+* 2. Call HITLS_Clear on the ctx. Expected result 2.
+* 3. Check all TLS1.3-family secret buffers. Expected result 3.
+* @expect
+* 1. The DTLS1.3 link is created successfully.
+* 2. HITLS_Clear returns HITLS_SUCCESS.
+* 3. Client/server app traffic, resumption and exporter secrets are all cleared.
+@ */
+/* BEGIN_CASE */
+void UT_TLS_CFG_DTLS13_CLEAR_SECRET_TC001(void)
+{
+#if defined(HITLS_TLS_PROTO_DTLS13) && defined(HITLS_BSL_UIO_UDP)
+    HITLS_Config *config = NULL;
+    FRAME_LinkObj *link = NULL;
+
+    FRAME_Init();
+
+    config = HITLS_CFG_NewDTLS13Config();
+    ASSERT_TRUE(config != NULL);
+
+    link = FRAME_CreateLink(config, BSL_UIO_UDP);
+    ASSERT_TRUE(link != NULL);
+    ASSERT_TRUE(link->ssl != NULL);
+
+    (void)memset(link->ssl->clientAppTrafficSecret, 0xa5, MAX_DIGEST_SIZE);
+    (void)memset(link->ssl->serverAppTrafficSecret, 0xa5, MAX_DIGEST_SIZE);
+    (void)memset(link->ssl->resumptionMasterSecret, 0xa5, MAX_DIGEST_SIZE);
+#ifdef HITLS_TLS_FEATURE_EXPORT_KEY_MATERIAL
+    (void)memset(link->ssl->exporterMasterSecret, 0xa5, MAX_DIGEST_SIZE);
+#endif
+
+    ASSERT_EQ(HITLS_Clear(link->ssl), HITLS_SUCCESS);
+    ASSERT_TRUE(TestMemIsZero(link->ssl->clientAppTrafficSecret, MAX_DIGEST_SIZE));
+    ASSERT_TRUE(TestMemIsZero(link->ssl->serverAppTrafficSecret, MAX_DIGEST_SIZE));
+    ASSERT_TRUE(TestMemIsZero(link->ssl->resumptionMasterSecret, MAX_DIGEST_SIZE));
+#ifdef HITLS_TLS_FEATURE_EXPORT_KEY_MATERIAL
+    ASSERT_TRUE(TestMemIsZero(link->ssl->exporterMasterSecret, MAX_DIGEST_SIZE));
+#endif
+
+EXIT:
+    HITLS_CFG_FreeConfig(config);
+    FRAME_FreeLink(link);
+#else
+    SKIP_TEST();
+EXIT:
+    return;
+#endif
 }
 /* END_CASE */
 

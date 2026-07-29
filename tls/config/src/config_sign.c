@@ -145,8 +145,8 @@ static const TLS_SigSchemeInfo SIGNATURE_SCHEME_INFO[] = {
         HITLS_SIGN_ML_DSA,
         BSL_CID_UNKNOWN,
         128,
-        TLS13_VERSION_BIT,
-        TLS13_VERSION_BIT,
+        TLS13_VERSION_BIT | DTLS13_VERSION_BIT,
+        TLS13_VERSION_BIT | DTLS13_VERSION_BIT,
     },
     {
         CONST_CAST("mldsa65"),
@@ -157,8 +157,8 @@ static const TLS_SigSchemeInfo SIGNATURE_SCHEME_INFO[] = {
         HITLS_SIGN_ML_DSA,
         BSL_CID_UNKNOWN,
         192,
-        TLS13_VERSION_BIT,
-        TLS13_VERSION_BIT,
+        TLS13_VERSION_BIT | DTLS13_VERSION_BIT,
+        TLS13_VERSION_BIT | DTLS13_VERSION_BIT,
     },
     {
         CONST_CAST("mldsa87"),
@@ -169,8 +169,8 @@ static const TLS_SigSchemeInfo SIGNATURE_SCHEME_INFO[] = {
         HITLS_SIGN_ML_DSA,
         BSL_CID_UNKNOWN,
         256,
-        TLS13_VERSION_BIT,
-        TLS13_VERSION_BIT,
+        TLS13_VERSION_BIT | DTLS13_VERSION_BIT,
+        TLS13_VERSION_BIT | DTLS13_VERSION_BIT,
     },
 #endif /* HITLS_CRYPTO_MLDSA */
 #ifdef HITLS_CRYPTO_CURVE_NISTP256

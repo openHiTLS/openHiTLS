@@ -38,9 +38,9 @@ int32_t HS_PackMsg(TLS_Ctx *ctx, HS_MsgType type);
 void PackDtlsMsgHeader(HS_MsgType type, uint16_t sequence, uint32_t length, uint8_t *buf);
 #endif /* HITLS_TLS_PROTO_DTLS */
 
-#if defined(HITLS_TLS_PROTO_TLS13) || defined(HITLS_TLS_PROTO_DTLS13)
+#if defined(HITLS_TLS_PROTO_TLS13_FAMILY)
 int32_t PackTls13HelloRetryRequest(const TLS_Ctx *ctx, PackPacket *pkt);
-#endif /* HITLS_TLS_PROTO_TLS13 || HITLS_TLS_PROTO_DTLS13 */
+#endif /* HITLS_TLS_PROTO_TLS13_FAMILY */
 
 /**
  * @brief   Pack uint8_t to buffer

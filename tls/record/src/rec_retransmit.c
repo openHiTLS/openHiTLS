@@ -28,7 +28,7 @@
 #include "hs_msg.h"
 #include "hs_dtls_timer.h"
 
-#if (defined(HITLS_TLS_PROTO_DTLS12) || defined(HITLS_TLS_PROTO_DTLS13)) && defined(HITLS_BSL_UIO_UDP)
+#if defined(HITLS_TLS_PROTO_DATAGRAM) && defined(HITLS_BSL_UIO_UDP)
 #ifdef HITLS_TLS_PROTO_DTLS13
 static void Dtls13AckStateInitList(Dtls13AckState *state)
 {
@@ -139,8 +139,19 @@ static int32_t AckStateUpdateRange(Dtls13AckState *state, uint32_t offset, uint3
 
 static int32_t Dtls13FragmentListAppend(Dtls13FragmentList *list, uint32_t offset, uint32_t len)
 {
-    REC_DYN_ARRAY_GROW(list->frags, list->count, list->cap, Dtls13FragmentRange,
-        REC_DYN_ARRAY_MAX_COUNT(Dtls13FragmentRange));
+    if (list->count == list->cap) {
+        uint32_t newCap = (list->cap == 0) ? 4u : (list->cap * 2u);
+        Dtls13FragmentRange *newFrags = (Dtls13FragmentRange *)BSL_SAL_Calloc(newCap, sizeof(Dtls13FragmentRange));
+        if (newFrags == NULL) {
+            return HITLS_MEMALLOC_FAIL;
+        }
+        if (list->frags != NULL) {
+            (void)memcpy(newFrags, list->frags, list->count * sizeof(Dtls13FragmentRange));
+            BSL_SAL_FREE(list->frags);
+        }
+        list->frags = newFrags;
+        list->cap = newCap;
+    }
     list->frags[list->count].offset = offset;
     list->frags[list->count].len = len;
     list->count++;
@@ -181,11 +192,6 @@ int32_t AckStateGetFragment(const Dtls13AckState *state, uint32_t maxFragmentLen
     return HITLS_SUCCESS;
 }
 
-bool AckStateIsEmpty(const Dtls13AckState *state)
-{
-    return (state == NULL) ? true : (state->unackedBytes == 0);
-}
-
 int32_t AckStateInsertSeqMap(Dtls13AckState *state, const RecordNumber *recordNum, uint32_t offset, uint32_t len)
 {
     if (state == NULL || recordNum == NULL) {
@@ -197,8 +203,19 @@ int32_t AckStateInsertSeqMap(Dtls13AckState *state, const RecordNumber *recordNu
             return HITLS_SUCCESS;
         }
     }
-    REC_DYN_ARRAY_GROW(state->seqMap, state->seqMapSize, state->seqMapCap, Dtls13SeqMapEntry,
-        REC_DYN_ARRAY_MAX_COUNT(Dtls13SeqMapEntry));
+    if (state->seqMapSize == state->seqMapCap) {
+        uint32_t newCap = (state->seqMapCap == 0) ? 4u : (state->seqMapCap * 2u);
+        Dtls13SeqMapEntry *newMap = (Dtls13SeqMapEntry *)BSL_SAL_Calloc(newCap, sizeof(Dtls13SeqMapEntry));
+        if (newMap == NULL) {
+            return HITLS_MEMALLOC_FAIL;
+        }
+        if (state->seqMap != NULL) {
+            (void)memcpy(newMap, state->seqMap, state->seqMapSize * sizeof(Dtls13SeqMapEntry));
+            BSL_SAL_FREE(state->seqMap);
+        }
+        state->seqMap = newMap;
+        state->seqMapCap = newCap;
+    }
     state->seqMap[state->seqMapSize].recordNumber = *recordNum;
     state->seqMap[state->seqMapSize].frag.offset = offset;
     state->seqMap[state->seqMapSize].frag.len = len;
@@ -252,13 +269,13 @@ int32_t REC_RetransmitListProcessAck(TLS_Ctx *ctx, const uint8_t *data, uint32_t
             if (ret != HITLS_SUCCESS) {
                 return ret;
             }
-            if (AckStateIsEmpty(&node->ackState)) {
+            if (node->ackState.unackedBytes == 0) {
                 REC_Dtls13RetransmitAckCb ackCb = node->ackCb;
                 BSL_LIST_REMOVE(&node->head);
                 AckStateDeinit(&node->ackState);
                 BSL_SAL_FREE(node->msg);
                 BSL_SAL_FREE(node);
-                if (REC_RetransmitIsEmpty(ctx->recCtx)) {
+                if (REC_RetransmitIsEmpty(ctx->recCtx) && ctx->recCtx->readEpoch > 2) {
                     HS_StopTimer(ctx);
                 }
                 if (ackCb != NULL) {
@@ -303,7 +320,6 @@ int32_t RecRetransmitListAppendNode(RecCtx *recCtx, REC_Type type, const uint8_t
         if (recCtx->writeStates.currentState != NULL) {
             retransmitNode->nextRecordSeq = RecConnGetSeqNum(recCtx->writeStates.currentState);
         }
-        retransmitNode->hsSeq = BSL_ByteToUint16(&msg[DTLS_HS_MSGSEQ_ADDR]);
         retransmitNode->bodyLen = BSL_ByteToUint24(&msg[DTLS_HS_MSGLEN_ADDR]);
         int32_t ret = AckStateInit(&retransmitNode->ackState, retransmitNode->bodyLen);
         if (ret != HITLS_SUCCESS) {
@@ -326,11 +342,6 @@ int32_t RecRetransmitListAppendNode(RecCtx *recCtx, REC_Type type, const uint8_t
         *retransmitNodePtr = retransmitNode;
     }
     return HITLS_SUCCESS;
-}
-
-int32_t REC_RetransmitListAppend(REC_Ctx *recCtx, REC_Type type, const uint8_t *msg, uint32_t len)
-{
-    return RecRetransmitListAppendNode(recCtx, type, msg, len, NULL);
 }
 
 void REC_RetransmitListClean(REC_Ctx *recCtx)
@@ -388,6 +399,10 @@ static int32_t WriteSingleDtls13RetransmitNode(TLS_Ctx *ctx, RecRetransmitList *
     ret = REC_GetMaxWriteSize(ctx, &maxRecPayloadLen);
     if (ret != HITLS_SUCCESS) {
         return ret;
+    }
+    if (maxRecPayloadLen <= DTLS_HS_MSG_HEADER_SIZE) {
+        BSL_ERR_PUSH_ERROR(HITLS_REC_PMTU_TOO_SMALL);
+        return HITLS_REC_PMTU_TOO_SMALL;
     }
     Dtls13FragmentList list = {0};
     ret = AckStateGetFragment(&retransmitNode->ackState, maxRecPayloadLen - DTLS_HS_MSG_HEADER_SIZE, &list);
@@ -609,4 +624,4 @@ int32_t REC_RetransmitListFlush(TLS_Ctx *ctx)
     }
     return HITLS_SUCCESS;
 }
-#endif /* (HITLS_TLS_PROTO_DTLS12 || HITLS_TLS_PROTO_DTLS13) && HITLS_BSL_UIO_UDP */
+#endif /* HITLS_TLS_PROTO_DATAGRAM && HITLS_BSL_UIO_UDP */

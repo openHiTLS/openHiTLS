@@ -50,7 +50,7 @@ int32_t PackCertificate(TLS_Ctx *ctx, PackPacket *pkt)
     return HITLS_SUCCESS;
 }
 #endif /* HITLS_TLS_PROTO_TLS_BASIC || HITLS_TLS_PROTO_DTLS12 */
-#ifdef HITLS_TLS_PROTO_TLS13
+#if defined(HITLS_TLS_PROTO_TLS13_FAMILY)
 int32_t Tls13PackCertificate(TLS_Ctx *ctx, PackPacket *pkt)
 {
     int32_t ret = PackCertificateReqCtx(ctx, pkt);

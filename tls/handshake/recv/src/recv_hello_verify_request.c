@@ -31,7 +31,7 @@ int32_t DtlsClientRecvHelloVerifyRequestProcess(TLS_Ctx *ctx, HS_Msg *msg)
     TLS_NegotiatedInfo *negotiatedInfo = &ctx->negotiatedInfo;
     HelloVerifyRequestMsg *helloVerifyReq = &msg->body.helloVerifyReq;
 
-#if defined(HITLS_TLS_PROTO_TLS13) || defined(HITLS_TLS_PROTO_DTLS13)
+#if defined(HITLS_TLS_PROTO_TLS13_FAMILY)
     ctx->hsCtx->haveHvr = true;
 #endif
 

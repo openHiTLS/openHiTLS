@@ -1785,6 +1785,17 @@ int32_t HITLS_CFG_EnableTls13SM(HITLS_Config *config, bool isOnlySupportSM);
  * @brief   Set whether DTLS 1.3 Connection ID support is enabled. Takes effect at the next handshake.
  * @param   config   [IN] Config handle
  * @param   support  [IN] true: enable CID; false: disable CID.
+ * @attention Connection ID is governed by version-sensing gating:
+ *            - As a client, connection_id is offered in ClientHello only when the config's active
+ *              version mask is pure DTLS 1.3. Obtain a pure-1.3 config via HITLS_CFG_NewDTLS13Config(),
+ *              or via HITLS_CFG_NewDTLSConfig() followed by
+ *              HITLS_CFG_SetVersionForbid(config, DTLS12_VERSION_BIT). On a config that still
+ *              supports DTLS 1.2, the client will not offer connection_id even if this flag is true,
+ *              because the handshake could otherwise downgrade to DTLS 1.2 where CID cannot be served.
+ *            - As a server, connection_id is honored based on the negotiated version: the extension
+ *              is echoed when DTLS 1.3 is negotiated and ignored when DTLS 1.2 is negotiated. A
+ *              dual-version server may therefore enable CID; it takes effect on connections that
+ *              negotiate DTLS 1.3.
  * @retval  HITLS_SUCCESS, if successful.
  * @retval  HITLS_NULL_INPUT, config is NULL.
  */

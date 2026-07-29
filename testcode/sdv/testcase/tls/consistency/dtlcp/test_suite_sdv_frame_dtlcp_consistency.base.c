@@ -89,7 +89,7 @@ int32_t StatusPark(HandshakeTestInfo *testInfo, int uioType)
         return HITLS_INTERNAL_EXCEPTION;
     }
 
-#if defined(HITLS_TLS_PROTO_DTLS12) && defined(HITLS_BSL_UIO_UDP)
+#if defined(HITLS_TLS_PROTO_DATAGRAM) && defined(HITLS_BSL_UIO_UDP)
     if (uioType == BSL_UIO_UDP) {
         HITLS_SetMtu(testInfo->client->ssl, 16384);
         HITLS_SetMtu(testInfo->server->ssl, 16384);

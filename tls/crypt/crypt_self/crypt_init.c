@@ -70,11 +70,11 @@ void HITLS_CryptMethodInit(void)
     HITLS_CRYPT_RegisterDhMethod(&dhMethod);
 #endif /* HITLS_TLS_SUITE_KX_DHE */
 
-#ifdef HITLS_TLS_PROTO_TLS13
+#if defined(HITLS_TLS_PROTO_TLS13_FAMILY)
     HITLS_CRYPT_KdfMethod hkdfMethod = {0};
     hkdfMethod.hkdfExtract = (CRYPT_HkdfExtractCallback)CRYPT_DEFAULT_HkdfExtract;
     hkdfMethod.hkdfExpand = (CRYPT_HkdfExpandCallback)CRYPT_DEFAULT_HkdfExpand;
     HITLS_CRYPT_RegisterHkdfMethod(&hkdfMethod);
-#endif
+#endif /* HITLS_TLS_PROTO_TLS13_FAMILY */
 #endif /* HITLS_TLS_CALLBACK_CRYPT */
 }

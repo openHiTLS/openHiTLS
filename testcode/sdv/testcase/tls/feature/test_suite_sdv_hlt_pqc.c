@@ -185,6 +185,46 @@ EXIT:
 }
 #endif
 
+#if defined(HITLS_TLS_PROTO_DTLS13) && defined(HITLS_BSL_UIO_UDP) && defined(HITLS_CRYPTO_MLDSA)
+static void RunDtls13PqCertChainTest(const PqCertChain *cert)
+{
+    HLT_Tls_Res *serverRes = NULL;
+    HLT_Tls_Res *clientRes = NULL;
+    HLT_Process *localProcess = NULL;
+    HLT_Process *remoteProcess = NULL;
+
+    localProcess = HLT_InitLocalProcess(HITLS);
+    ASSERT_TRUE(localProcess != NULL);
+    /* DTLS 1.3 runs over UDP; unlike the TLS 1.3 TCP stream, the large ML-DSA certificate
+     * is delivered as datagrams and therefore exercises DTLS handshake message fragmentation. */
+    remoteProcess = HLT_LinkRemoteProcess(HITLS, UDP, g_uiPort, true);
+    ASSERT_TRUE(remoteProcess != NULL);
+
+    HLT_Ctx_Config *serverCtxConfig = HLT_NewCtxConfig(NULL, "SERVER");
+    ASSERT_TRUE(serverCtxConfig != NULL);
+    HLT_SetCertPath(serverCtxConfig, cert->caPath, cert->chainPath, cert->eePath, cert->keyPath,
+        PQ_CERT_NULL, PQ_CERT_NULL);
+    ASSERT_TRUE(HLT_SetSignature(serverCtxConfig, cert->signature) == 0);
+    ASSERT_TRUE(HLT_SetDtlsCookieExchangeSupport(serverCtxConfig, true) == 0);
+    serverRes = HLT_ProcessTlsAccept(localProcess, DTLS1_3, serverCtxConfig, NULL);
+    ASSERT_TRUE(serverRes != NULL);
+
+    HLT_Ctx_Config *clientCtxConfig = HLT_NewCtxConfig(NULL, "CLIENT");
+    ASSERT_TRUE(clientCtxConfig != NULL);
+    HLT_SetCertPath(clientCtxConfig, cert->caPath, PQ_CERT_NULL, PQ_CERT_NULL, PQ_CERT_NULL,
+        PQ_CERT_NULL, PQ_CERT_NULL);
+    ASSERT_TRUE(HLT_SetSignature(clientCtxConfig, cert->signature) == 0);
+
+    clientRes = HLT_ProcessTlsConnect(remoteProcess, DTLS1_3, clientCtxConfig, NULL);
+    ASSERT_TRUE(clientRes != NULL);
+    ASSERT_EQ(HLT_GetTlsAcceptResult(serverRes), HITLS_SUCCESS);
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
+EXIT:
+    HLT_FreeAllProcess();
+}
+#endif
+
 /**
  * @test SDV_TLS13_HLT_PQC_CERT_TC001
  * @title  TLS 1.3 ML-DSA-44 certificate chain handshake
@@ -256,6 +296,88 @@ void SDV_TLS13_HLT_PQC_CERT_TC003(void)
         "CERT_SIG_SCHEME_MLDSA87",
     };
     RunTls13PqCertChainTest(&cert);
+#endif
+}
+/* END_CASE */
+
+/**
+ * @test SDV_DTLS13_HLT_PQC_CERT_TC001
+ * @title  DTLS 1.3 ML-DSA-44 certificate chain handshake
+ * @precon  nan
+ * @brief   Use an ML-DSA-44 end-entity certificate and chain to establish a DTLS 1.3 connection over UDP.
+ *          This is the DTLS 1.3 counterpart of SDV_TLS13_HLT_PQC_CERT_TC001: the same PQ certificate chain
+ *          is carried over a datagram transport, which exercises DTLS handshake message fragmentation for
+ *          the large ML-DSA certificate (no such fragmentation exists over the TLS 1.3 TCP stream).
+ * @expect  1. The link establishment is successful.
+ */
+/* BEGIN_CASE */
+void SDV_DTLS13_HLT_PQC_CERT_TC001(void)
+{
+#if !(defined(HITLS_TLS_PROTO_DTLS13) && defined(HITLS_BSL_UIO_UDP) && defined(HITLS_CRYPTO_MLDSA))
+    SKIP_TEST();
+#else
+    const PqCertChain cert = {
+        MLDSA44_CA_PATH,
+        MLDSA44_CHAIN_PATH,
+        MLDSA44_EE_PATH,
+        MLDSA44_KEY_PATH,
+        "CERT_SIG_SCHEME_MLDSA44",
+    };
+    RunDtls13PqCertChainTest(&cert);
+#endif
+}
+/* END_CASE */
+
+/**
+ * @test SDV_DTLS13_HLT_PQC_CERT_TC002
+ * @title  DTLS 1.3 ML-DSA-65 certificate chain handshake
+ * @precon  nan
+ * @brief   Use an ML-DSA-65 end-entity certificate and chain to establish a DTLS 1.3 connection over UDP.
+ *          Counterpart of SDV_TLS13_HLT_PQC_CERT_TC002. The larger ML-DSA-65 certificate stresses DTLS
+ *          record/handshake fragmentation more than ML-DSA-44.
+ * @expect  1. The link establishment is successful.
+ */
+/* BEGIN_CASE */
+void SDV_DTLS13_HLT_PQC_CERT_TC002(void)
+{
+#if !(defined(HITLS_TLS_PROTO_DTLS13) && defined(HITLS_BSL_UIO_UDP) && defined(HITLS_CRYPTO_MLDSA))
+    SKIP_TEST();
+#else
+    const PqCertChain cert = {
+        MLDSA65_CA_PATH,
+        MLDSA65_CHAIN_PATH,
+        MLDSA65_EE_PATH,
+        MLDSA65_KEY_PATH,
+        "CERT_SIG_SCHEME_MLDSA65",
+    };
+    RunDtls13PqCertChainTest(&cert);
+#endif
+}
+/* END_CASE */
+
+/**
+ * @test SDV_DTLS13_HLT_PQC_CERT_TC003
+ * @title  DTLS 1.3 ML-DSA-87 certificate chain handshake
+ * @precon  nan
+ * @brief   Use an ML-DSA-87 end-entity certificate and chain to establish a DTLS 1.3 connection over UDP.
+ *          Counterpart of SDV_TLS13_HLT_PQC_CERT_TC003. ML-DSA-87 yields the largest certificate, so this
+ *          case most strongly exercises DTLS 1.3 handshake fragmentation over UDP.
+ * @expect  1. The link establishment is successful.
+ */
+/* BEGIN_CASE */
+void SDV_DTLS13_HLT_PQC_CERT_TC003(void)
+{
+#if !(defined(HITLS_TLS_PROTO_DTLS13) && defined(HITLS_BSL_UIO_UDP) && defined(HITLS_CRYPTO_MLDSA))
+    SKIP_TEST();
+#else
+    const PqCertChain cert = {
+        MLDSA87_CA_PATH,
+        MLDSA87_CHAIN_PATH,
+        MLDSA87_EE_PATH,
+        MLDSA87_KEY_PATH,
+        "CERT_SIG_SCHEME_MLDSA87",
+    };
+    RunDtls13PqCertChainTest(&cert);
 #endif
 }
 /* END_CASE */

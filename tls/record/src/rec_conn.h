@@ -20,9 +20,9 @@
 #include <stddef.h>
 #include "rec.h"
 #include "rec_header.h"
-#if (defined(HITLS_TLS_PROTO_DTLS12) || defined(HITLS_TLS_PROTO_DTLS13)) && defined(HITLS_BSL_UIO_UDP)
+#if defined(HITLS_TLS_PROTO_DATAGRAM) && defined(HITLS_BSL_UIO_UDP)
 #include "rec_anti_replay.h"
-#endif /* (HITLS_TLS_PROTO_DTLS12 || HITLS_TLS_PROTO_DTLS13) && HITLS_BSL_UIO_UDP */
+#endif /* HITLS_TLS_PROTO_DATAGRAM && HITLS_BSL_UIO_UDP */
 
 #ifdef __cplusplus
 extern "C" {
@@ -38,18 +38,6 @@ extern "C" {
 
 #define REC_CONN_SEQ_SIZE 8u            /* Sequence number size */
 
-/* DTLS 1.3 Epoch历史管理 */
-#define MAX_EPOCH_HISTORY 4
-
-/* Epoch状态跟踪结构 */
-typedef struct {
-    uint64_t epochValue;              /* 完整epoch值 */
-    uint64_t highestDeprotectedSeq;   /* 该epoch最高成功解保护的序列号 */
-    bool isValid;                     /* 状态是否有效 */
-    bool hasKeys;                     /* 是否有该epoch的密钥材料 */
-    uint64_t lastUsedTime;            /* 最后使用时间 */
-} EpochState;
-
 /*
  * Cipher suite information, which is required for local encryption and decryption
  * For details, see RFC5246 6.1
@@ -64,7 +52,10 @@ typedef struct {
     uint8_t macKey[REC_MAX_MAC_KEY_LEN];
     uint8_t key[REC_MAX_KEY_LENGTH];
     uint8_t iv[REC_MAX_IV_LENGTH];
+#ifdef HITLS_TLS_PROTO_DTLS13
+    HITLS_Cipher_Ctx *snCtx;            /* cipher context handle for DTLS 1.3 sequence number protection */
     uint8_t snKey[REC_MAX_KEY_LENGTH];
+#endif
     bool isExportIV;                /* Used by the TTO feature. The IV does not need to be randomly
                                     generated during CBC encryption If it is set by user */
     /* key length */
@@ -85,7 +76,7 @@ typedef struct {
     bool isWrapped;                         /* tls: Check whether the sequence number is wrapped */
 
     uint16_t epoch;                         /* dtls: 2 byte epoch */
-#if (defined(HITLS_TLS_PROTO_DTLS12) || defined(HITLS_TLS_PROTO_DTLS13)) && defined(HITLS_BSL_UIO_UDP)
+#if defined(HITLS_TLS_PROTO_DATAGRAM) && defined(HITLS_BSL_UIO_UDP)
     uint16_t reserve;                       /* Four-byte alignment is reserved */
     RecSlidWindow window;                   /* dtls record sliding window (for anti-replay) */
 #endif
@@ -143,7 +134,7 @@ uint64_t RecConnGetSeqNum(const RecConnState *state);
  */
 void RecConnSetSeqNum(RecConnState *state, uint64_t seq);
 
-#if defined(HITLS_TLS_PROTO_DTLS12) || defined(HITLS_TLS_PROTO_DTLS13)
+#if defined(HITLS_TLS_PROTO_DATAGRAM)
 /**
  * @brief   Obtain the epoch
  *

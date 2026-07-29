@@ -14,7 +14,7 @@
  */
 
 #include "hitls_build.h"
-#if (defined(HITLS_TLS_PROTO_DTLS12) || defined(HITLS_TLS_PROTO_DTLS13)) && defined(HITLS_BSL_UIO_UDP)
+#if defined(HITLS_TLS_PROTO_DATAGRAM) && defined(HITLS_BSL_UIO_UDP)
 #include "tls_binlog_id.h"
 #include "bsl_log_internal.h"
 #include "bsl_log.h"
@@ -208,4 +208,4 @@ int32_t HS_TimeoutProcess(TLS_Ctx *ctx)
     }
     return HITLS_SUCCESS;
 }
-#endif /* (HITLS_TLS_PROTO_DTLS12 || HITLS_TLS_PROTO_DTLS13) && HITLS_BSL_UIO_UDP */
+#endif /* HITLS_TLS_PROTO_DATAGRAM && HITLS_BSL_UIO_UDP */

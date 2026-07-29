@@ -28,7 +28,7 @@ extern "C" {
 #define REC_TLS_RECORD_LENGTH_OFFSET 3
 #define REC_TLS_SN_MAX_VALUE (~((uint64_t)0))       /* TLS sequence number wrap Threshold */
 
-#if defined(HITLS_TLS_PROTO_DTLS12) || defined(HITLS_TLS_PROTO_DTLS13)
+#if defined(HITLS_TLS_PROTO_DATAGRAM)
 
 #define REC_IP_UDP_HEAD_SIZE 28                     /* IP protocol header 20 + UDP header 8 */
 #define REC_DTLS_RECORD_HEADER_LEN 13
@@ -68,7 +68,7 @@ typedef struct {
     uint16_t bodyLen; /* body length */
     uint16_t headerLen;
 
-#if defined(HITLS_TLS_PROTO_DTLS12) || defined(HITLS_TLS_PROTO_DTLS13)
+#if defined(HITLS_TLS_PROTO_DATAGRAM)
     uint64_t
         epochSeq; /* For DTLS 1.3 unified header, epochSeq is reconstructed from the epoch bits in the first byte and the sequence number field. */
 #endif

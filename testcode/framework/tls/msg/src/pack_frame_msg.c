@@ -53,7 +53,7 @@ int32_t GenClientHelloMandatoryCtx(TLS_Ctx *tlsCtx, FRAME_Msg *msg)
     memcpy(tlsCtx->hsCtx->clientRandom, clientHello->randomValue, HS_RANDOM_SIZE);
 
     if (clientHello->sessionIdSize > 0) {
-#if defined(HITLS_TLS_FEATURE_SESSION) || defined(HITLS_TLS_PROTO_TLS13)
+#if defined(HITLS_TLS_FEATURE_SESSION) || defined(HITLS_TLS_PROTO_TLS13_FAMILY)
         tlsCtx->hsCtx->sessionId = (uint8_t *)BSL_SAL_Dump(clientHello->sessionId, clientHello->sessionIdSize);
         if (tlsCtx->hsCtx->sessionId == NULL) {
             return HITLS_MEMALLOC_FAIL;
@@ -62,7 +62,7 @@ int32_t GenClientHelloMandatoryCtx(TLS_Ctx *tlsCtx, FRAME_Msg *msg)
 #endif
     }
 
-#ifdef HITLS_TLS_PROTO_DTLS12
+#ifdef HITLS_TLS_PROTO_DATAGRAM
     if (IS_SUPPORT_DATAGRAM(tlsConfig->originVersionMask) && clientHello->cookieLen > 0) {
         tlsCtx->negotiatedInfo.cookieSize = clientHello->cookieLen;
         tlsCtx->negotiatedInfo.cookie = (uint8_t *)BSL_SAL_Dump(clientHello->cookie, clientHello->cookieLen);
@@ -161,7 +161,7 @@ int32_t PackServerHelloMsg(FRAME_Msg *msg)
     memcpy(tlsCtx->hsCtx->serverRandom, serverHello->randomValue, HS_RANDOM_SIZE);
 
     if (serverHello->sessionIdSize > 0) {    // SessionId
-#if defined(HITLS_TLS_FEATURE_SESSION) || defined(HITLS_TLS_PROTO_TLS13)
+#if defined(HITLS_TLS_FEATURE_SESSION) || defined(HITLS_TLS_PROTO_TLS13_FAMILY)
         tlsCtx->hsCtx->sessionId = (uint8_t *)BSL_SAL_Dump(serverHello->sessionId, serverHello->sessionIdSize);
         if (tlsCtx->hsCtx->sessionId == NULL) {
             HITLS_Free(tlsCtx);
@@ -427,7 +427,7 @@ int32_t PackRecordHeader(FRAME_Msg *msg)
     BSL_Uint16ToByte(msg->version, &msg->buffer[offset]);
     offset += sizeof(uint16_t);
 
-#ifdef HITLS_TLS_PROTO_DTLS12
+#ifdef HITLS_TLS_PROTO_DATAGRAM
     if (IS_TRANSTYPE_DATAGRAM(msg->transportType)) {
         BSL_Uint64ToByte(msg->epochSeq, &msg->buffer[offset]);
         offset += sizeof(uint64_t);

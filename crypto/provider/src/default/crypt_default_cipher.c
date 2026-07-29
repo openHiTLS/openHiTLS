@@ -22,6 +22,7 @@
 #include "crypt_eal_implprovider.h"
 #include "crypt_modes_cbc.h"
 #include "crypt_modes_ccm.h"
+#include "crypt_modes_chacha20.h"
 #include "crypt_modes_chacha20poly1305.h"
 #include "crypt_modes_ctr.h"
 #include "crypt_modes_ecb.h"
@@ -124,6 +125,10 @@ static void *GetNewCtxFunc(int32_t algId)
 #endif
             return MODES_XTS_NewCtxEx;
 #endif
+#ifdef HITLS_CRYPTO_CHACHA20
+        case CRYPT_CIPHER_CHACHA20:
+            return MODES_CHACHA20_NewCtxEx;
+#endif
 #if defined(HITLS_CRYPTO_CHACHA20) && defined(HITLS_CRYPTO_CHACHA20POLY1305)
         case CRYPT_CIPHER_CHACHA20_POLY1305:
             return MODES_CHACHA20POLY1305_NewCtxEx;
@@ -216,6 +221,20 @@ const CRYPT_EAL_Func g_defEalChaCha[] = {
     {CRYPT_EAL_IMPLCIPHER_CTRL, (CRYPT_EAL_ImplCipherCtrl)MODES_CHACHA20POLY1305_Ctrl},
     {CRYPT_EAL_IMPLCIPHER_FREECTX, (CRYPT_EAL_ImplCipherFreeCtx)MODES_CHACHA20POLY1305_FreeCtx},
     {CRYPT_EAL_IMPLCIPHER_DUPCTX, (CRYPT_EAL_ImplCipherDupCtx)MODES_CHACHA20POLY1305_DupCtx},
+    CRYPT_EAL_FUNC_END,
+};
+#endif
+
+#ifdef HITLS_CRYPTO_CHACHA20
+const CRYPT_EAL_Func g_defEalChaCha20[] = {
+    {CRYPT_EAL_IMPLCIPHER_NEWCTX, (CRYPT_EAL_ImplCipherNewCtx)CRYPT_EAL_DefCipherNewCtx},
+    {CRYPT_EAL_IMPLCIPHER_INITCTX, (CRYPT_EAL_ImplCipherInitCtx)MODES_CHACHA20_InitCtx},
+    {CRYPT_EAL_IMPLCIPHER_UPDATE, (CRYPT_EAL_ImplCipherUpdate)MODES_CHACHA20_Update},
+    {CRYPT_EAL_IMPLCIPHER_FINAL, (CRYPT_EAL_ImplCipherFinal)MODES_CHACHA20_Final},
+    {CRYPT_EAL_IMPLCIPHER_DEINITCTX, (CRYPT_EAL_ImplCipherDeinitCtx)MODES_CHACHA20_DeInitCtx},
+    {CRYPT_EAL_IMPLCIPHER_CTRL, (CRYPT_EAL_ImplCipherCtrl)MODES_CHACHA20_Ctrl},
+    {CRYPT_EAL_IMPLCIPHER_FREECTX, (CRYPT_EAL_ImplCipherFreeCtx)MODES_CHACHA20_FreeCtx},
+    {CRYPT_EAL_IMPLCIPHER_DUPCTX, (CRYPT_EAL_ImplCipherDupCtx)MODES_CHACHA20_DupCtx},
     CRYPT_EAL_FUNC_END,
 };
 #endif

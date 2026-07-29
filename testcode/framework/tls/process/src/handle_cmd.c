@@ -437,6 +437,8 @@ int ParseCtxConfigFromString(char (*string)[CONTROL_CHANNEL_MAX_MSG_LEN], HLT_Ct
     ctxConfig->recordSizeLimit = (int)strtol(string[index++], NULL, 10);
     LOG_DEBUG("Remote Process Set Ctx recordSizeLimit is %u", ctxConfig->recordSizeLimit);
 
+    ctxConfig->isSupportConnectionId = (((int)strtol(string[index++], NULL, 10)) > 0) ? true : false;
+
     // Setting the info cb
     ctxConfig->infoCb = NULL; // The pointer cannot be transferred. Set this parameter to null.
 

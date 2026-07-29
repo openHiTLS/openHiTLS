@@ -36,7 +36,7 @@
 #include "dtls_cid.h"
 
 #define HS_MESSAGE_LEN_FIELD 3u
-#if (defined(HITLS_TLS_PROTO_DTLS12) || defined(HITLS_TLS_PROTO_DTLS13)) && defined(HITLS_BSL_UIO_UDP)
+#if defined(HITLS_TLS_PROTO_DATAGRAM) && defined(HITLS_BSL_UIO_UDP)
 // The HITLS protocol specifies the specification for the maximum timeout period, 3600 seconds.
 #define DTLS_SPECIFY_MAX_TIMEOUT_VALUE  3600
 #endif
@@ -320,7 +320,7 @@ static int32_t ReadEventInTransportingState(HITLS_Ctx *ctx, uint8_t *data, uint3
     int32_t unexpectMsgRet = 0;
 
     do {
-#if (defined(HITLS_TLS_PROTO_DTLS12) || defined(HITLS_TLS_PROTO_DTLS13)) && defined(HITLS_BSL_UIO_UDP)
+#if defined(HITLS_TLS_PROTO_DATAGRAM) && defined(HITLS_BSL_UIO_UDP)
         /* In UDP scenarios, the 2MSL timer expires */
         ret = HS_CheckAndProcess2MslTimeout(ctx);
         if (ret != HITLS_SUCCESS) {

@@ -95,7 +95,7 @@ static int32_t Tls13ClientStoreCertReqCtx(TLS_Ctx *ctx, const CertificateRequest
 }
 #endif /* HITLS_TLS_FEATURE_PHA */
 
-#ifdef HITLS_TLS_PROTO_TLS13
+#if defined(HITLS_TLS_PROTO_TLS13_FAMILY)
 static int32_t Tls13ClientPreProcessCertRequest(TLS_Ctx *ctx, const CertificateRequestMsg *certReq)
 {
     int32_t ret = HS_CheckReceivedExtension(
@@ -160,5 +160,5 @@ int32_t Tls13ClientRecvCertRequestProcess(TLS_Ctx *ctx, const HS_Msg *msg)
 #endif /* HITLS_TLS_FEATURE_PHA */
     return HS_ChangeState(ctx, TRY_RECV_CERTIFICATE);
 }
-#endif /* HITLS_TLS_PROTO_TLS13 */
+#endif /* HITLS_TLS_PROTO_TLS13_FAMILY */
 #endif /* HITLS_TLS_HOST_CLIENT */

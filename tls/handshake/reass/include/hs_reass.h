@@ -24,7 +24,7 @@
 extern "C" {
 #endif
 
-#if defined(HITLS_TLS_PROTO_DTLS12) || defined(HITLS_TLS_PROTO_DTLS13)
+#if defined(HITLS_TLS_PROTO_DATAGRAM)
 
 /**
  * @brief Reassemble a fragmented handshake message.
@@ -51,7 +51,7 @@ int32_t HS_ReassAppend(TLS_Ctx *ctx, HS_MsgInfo *msgInfo);
  */
 int32_t HS_GetReassMsg(TLS_Ctx *ctx, HS_MsgInfo *msgInfo, uint32_t *len);
 
-#endif /* HITLS_TLS_PROTO_DTLS12 || HITLS_TLS_PROTO_DTLS13 */
+#endif /* HITLS_TLS_PROTO_DATAGRAM */
 
 #ifdef __cplusplus
 }

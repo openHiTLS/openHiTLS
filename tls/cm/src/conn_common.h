@@ -41,6 +41,18 @@ static inline CM_State GetConnState(const HITLS_Ctx *ctx)
 #ifdef HITLS_TLS_FEATURE_PHA
 int32_t CommonCheckPostHandshakeAuth(TLS_Ctx *ctx);
 #endif
+#ifdef HITLS_TLS_FEATURE_DTLS_CID
+/**
+ * @brief   Lazily dispatch a pending DTLS 1.3 CID post-handshake send
+ *          (NewConnectionId / RequestConnectionId). Mirrors PHA: the public
+ *          APIs only arm the CID sub-state machine; the TRY_SEND_* handshake
+ *          transition is performed here, only when the connection is
+ *          TRANSPORTING, so an in-flight hsCtx->state is never clobbered.
+ *          Invoked from the preprocess path of HITLS_Write / HITLS_Connect /
+ *          HITLS_Accept.
+ */
+int32_t CommonCheckPostHandshakeCid(TLS_Ctx *ctx);
+#endif
 /**
  * @ingroup hitls
  * @brief   General processing of all events in alerting state
@@ -64,6 +76,10 @@ int32_t AlertEventProcess(HITLS_Ctx *ctx);
 void ChangeConnState(HITLS_Ctx *ctx, CM_State state);
 
 void ConnCleanSensitiveData(TLS_Ctx *ctx);
+
+#ifdef HITLS_TLS_PROTO_DTLS13
+int32_t CommonCheckDtls13BufferedHandshake(HITLS_Ctx *ctx);
+#endif
 
 #ifdef HITLS_TLS_FEATURE_RENEGOTIATION
 /**

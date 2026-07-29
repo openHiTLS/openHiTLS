@@ -24,7 +24,7 @@
 extern "C" {
 #endif
 
-#if defined(HITLS_TLS_PROTO_DTLS12) || defined(HITLS_TLS_PROTO_DTLS13)
+#if defined(HITLS_TLS_PROTO_DATAGRAM)
 
 /*  rfc6083 4.7 Handshake
     User messages that arrive between ChangeCipherSpec and Finished
@@ -32,12 +32,23 @@ extern "C" {
     message and MUST be buffered by DTLS until the Finished message is
     read.
 */
+/**
+ * @brief A cached DTLS record waiting for a matching epoch and record type.
+ *
+ * This structure is used as both the list head and a record node.
+ * The list head uses head and count.
+ * A record node uses head, hdr, and recordBody.
+ */
 typedef struct {
-    ListHead head;
-    uint32_t count; /* Number of cached record messages */
-    RecHdr hdr; /* record header */
-    uint8_t *recordBody; /* record body */
-} UnprocessedMsg; /* Unprocessed App messages: App messages that are out of order with finished */
+    ListHead head;  /* List head or links of a cached record node. */
+    uint32_t count; /* Number of record nodes. Valid only in the list head. */
+    RecHdr hdr;     /* Parsed record header. Valid only in a record node. */
+    /* Wire-format body copied before record decryption.
+     * Plaintext if unprotected; ciphertext plus protection fields if protected.
+     * Protection fields can include an IV, explicit nonce, or authentication tag.
+     */
+    uint8_t *recordBody;
+} UnprocessedMsg;
 
 UnprocessedMsg *UnprocessedMsgNew(void);
 
@@ -49,9 +60,9 @@ void UnprocessedMsgListDeinit(UnprocessedMsg *appMsgList);
 
 int32_t UnprocessedMsgListAppend(UnprocessedMsg *appMsgList, const RecHdr *hdr, const uint8_t *recordBody);
 
-UnprocessedMsg *UnprocessedMsgGet(UnprocessedMsg *appMsgList, uint16_t curEpoch);
+UnprocessedMsg *UnprocessedMsgGet(UnprocessedMsg *appMsgList, uint16_t curEpoch, uint8_t recordType);
 
-#endif /* HITLS_TLS_PROTO_DTLS12 || HITLS_TLS_PROTO_DTLS13 */
+#endif /* HITLS_TLS_PROTO_DATAGRAM */
 
 #ifdef __cplusplus
 }

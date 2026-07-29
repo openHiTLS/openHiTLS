@@ -13,7 +13,7 @@
  * See the Mulan PSL v2 for more details.
  */
 #include "hitls_build.h"
-#if defined(HITLS_TLS_HOST_CLIENT) || defined(HITLS_TLS_PROTO_TLS13)
+#if defined(HITLS_TLS_HOST_CLIENT) || defined(HITLS_TLS_PROTO_TLS13_FAMILY)
 #include "tls_binlog_id.h"
 #include "bsl_log_internal.h"
 #include "bsl_log.h"
@@ -21,6 +21,7 @@
 #include "hitls_error.h"
 #include "tls.h"
 #include "hs_ctx.h"
+#include "hs.h"
 #include "hs_msg.h"
 #include "hs_verify.h"
 #include "hs_common.h"
@@ -69,7 +70,7 @@ int32_t ClientSendCertVerifyProcess(TLS_Ctx *ctx)
     return HS_ChangeState(ctx, TRY_SEND_CHANGE_CIPHER_SPEC);
 }
 #endif /* HITLS_TLS_PROTO_TLS_BASIC || HITLS_TLS_PROTO_DTLS12 */
-#ifdef HITLS_TLS_PROTO_TLS13
+#if defined(HITLS_TLS_PROTO_TLS13_FAMILY)
 int32_t Tls13SendCertVerifyProcess(TLS_Ctx *ctx)
 {
     int32_t ret = PackAndSendCertVerify(ctx);
@@ -78,9 +79,10 @@ int32_t Tls13SendCertVerifyProcess(TLS_Ctx *ctx)
     }
 
     BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15835, BSL_LOG_LEVEL_INFO, BSL_LOG_BINLOG_TYPE_RUN,
-        "send tls1.3 certificate verify msg success.", 0, 0, 0, 0);
+        "send (d)tls1.3 certificate verify msg success. signScheme = %u.",
+        (uint32_t)ctx->negotiatedInfo.signScheme, 0, 0, 0);
 
     return HS_ChangeState(ctx, TRY_SEND_FINISH);
 }
-#endif /* HITLS_TLS_PROTO_TLS13 */
-#endif /* HITLS_TLS_HOST_CLIENT || HITLS_TLS_PROTO_TLS13 */
+#endif /* HITLS_TLS_PROTO_TLS13_FAMILY */
+#endif /* HITLS_TLS_HOST_CLIENT || HITLS_TLS_PROTO_TLS13_FAMILY */

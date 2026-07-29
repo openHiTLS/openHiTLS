@@ -91,9 +91,7 @@ typedef struct TlsSessCtx HITLS_Session;
 #define HITLS_DTLS_CID_LIST_MAX 16u
 #define HITLS_DTLS_CID_NO_IDX 0xFFu
 
-#ifndef HITLS_DTLS_CID_LEN_MAX
 #define HITLS_DTLS_CID_LEN_MAX HITLS_DTLS_CID_PEER_MAX_LEN
-#endif
 
 /* ConnectionIdUsage values in RFC 9147 Section 9 NewConnectionId. */
 typedef enum {

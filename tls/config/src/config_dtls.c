@@ -33,7 +33,7 @@
 #include "config_default.h"
 #include "rec.h"
 #include "cert_method.h"
-#if defined(HITLS_TLS_PROTO_DTLS12) && defined(HITLS_BSL_UIO_UDP)
+#if defined(HITLS_TLS_PROTO_DATAGRAM) && defined(HITLS_BSL_UIO_UDP)
 #include "hitls_cookie.h"
 #endif
 
@@ -59,6 +59,29 @@ HITLS_Config *HITLS_CFG_ProviderNewDTLS12Config(HITLS_Lib_Ctx *libCtx, const cha
 }
 #endif
 
+#ifdef HITLS_TLS_PROTO_DTLS13
+HITLS_Config *HITLS_CFG_NewDTLS13Config(void)
+{
+    return HITLS_CFG_ProviderNewDTLS13Config(NULL, NULL);
+}
+
+HITLS_Config *HITLS_CFG_ProviderNewDTLS13Config(HITLS_Lib_Ctx *libCtx, const char *attrName)
+{
+    HITLS_Config *newConfig = CreateConfig();
+    if (newConfig == NULL) {
+        return NULL;
+    }
+    newConfig->version |= DTLS13_VERSION_BIT;
+    if (DefaultConfig(libCtx, attrName, HITLS_VERSION_DTLS13, newConfig) != HITLS_SUCCESS) {
+        BSL_SAL_FREE(newConfig);
+        return NULL;
+    }
+    newConfig->keyExchMode = TLS13_KE_MODE_PSK_WITH_DHE;
+    newConfig->originVersionMask = newConfig->version;
+    return newConfig;
+}
+#endif
+
 HITLS_Config *HITLS_CFG_NewDTLSConfig(void)
 {
     return HITLS_CFG_ProviderNewDTLSConfig(NULL, NULL);
@@ -72,6 +95,9 @@ HITLS_Config *HITLS_CFG_ProviderNewDTLSConfig(HITLS_Lib_Ctx *libCtx, const char 
     }
 #ifdef HITLS_TLS_PROTO_DTLS12
     newConfig->version |= DTLS12_VERSION_BIT;
+#endif
+#ifdef HITLS_TLS_PROTO_DTLS13
+    newConfig->version |= DTLS13_VERSION_BIT;
 #endif
 #ifdef HITLS_TLS_PROTO_DTLCP11
     newConfig->version |= DTLCP11_VERSION_BIT;
@@ -94,7 +120,7 @@ int32_t HITLS_CFG_IsDtls(const HITLS_Config *config, bool *isDtls)
         return HITLS_NULL_INPUT;
     }
 
-    *isDtls = ((config->originVersionMask & DTLS12_VERSION_BIT) != 0);
+    *isDtls = ((config->originVersionMask & DTLS_VERSION_MASK) != 0);
     return HITLS_SUCCESS;
 }
 
@@ -105,7 +131,7 @@ HITLS_Config *HITLS_CFG_NewDTLCPConfig(void)
 }
 #endif
 
-#if defined(HITLS_TLS_PROTO_DTLS12) && defined(HITLS_BSL_UIO_UDP)
+#if defined(HITLS_TLS_PROTO_DATAGRAM) && defined(HITLS_BSL_UIO_UDP)
 int32_t HITLS_CFG_SetCookieGenCb(HITLS_Config *config, HITLS_AppGenCookieCb callback)
 {
     if (config == NULL) {
@@ -165,5 +191,25 @@ int32_t HITLS_CFG_GetDtlsCookieExchangeSupport(const HITLS_Config *config, bool 
     *isSupport = config->isSupportDtlsCookieExchange;
     return HITLS_SUCCESS;
 }
-#endif /* HITLS_TLS_PROTO_DTLS12 && HITLS_BSL_UIO_UDP */
+#endif /* HITLS_TLS_PROTO_DATAGRAM && HITLS_BSL_UIO_UDP */
+
+#ifdef HITLS_TLS_FEATURE_DTLS_CID
+int32_t HITLS_CFG_SetDtlsCidSupport(HITLS_Config *config, bool support)
+{
+    if (config == NULL) {
+        return HITLS_NULL_INPUT;
+    }
+    config->isSupportConnectionId = support;
+    return HITLS_SUCCESS;
+}
+
+int32_t HITLS_CFG_GetDtlsCidSupport(const HITLS_Config *config, bool *isSupport)
+{
+    if (config == NULL || isSupport == NULL) {
+        return HITLS_NULL_INPUT;
+    }
+    *isSupport = config->isSupportConnectionId;
+    return HITLS_SUCCESS;
+}
+#endif /* HITLS_TLS_FEATURE_DTLS_CID */
 #endif /* HITLS_TLS_PROTO_DTLS */

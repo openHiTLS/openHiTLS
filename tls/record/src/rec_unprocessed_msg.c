@@ -14,7 +14,7 @@
  */
 
 #include "hitls_build.h"
-#if defined(HITLS_TLS_PROTO_DTLS12) || defined(HITLS_TLS_PROTO_DTLS13)
+#if defined(HITLS_TLS_PROTO_DATAGRAM)
 #include <string.h>
 #include "bsl_module_list.h"
 #include "tls_binlog_id.h"
@@ -103,7 +103,27 @@ int32_t UnprocessedMsgListAppend(UnprocessedMsg *appMsgList, const RecHdr *hdr, 
     return HITLS_SUCCESS;
 }
 
-UnprocessedMsg *UnprocessedMsgGet(UnprocessedMsg *appMsgList, uint16_t curEpoch)
+/*
+ * Check whether a cached record can be consumed by the current read path.
+ *
+ * A DTLS 1.3 unified-header record is cached as REC_TYPE_UNKNOWN because its
+ * real content type is carried in the encrypted DTLSInnerPlaintext and is not
+ * available until decryption.
+ *
+ * When the handshake path expects a HANDSHAKE record, only APP records are
+ * deferred until Finished; all other records, including DTLS 1.3 UNKNOWN
+ * records and ALERT records, must be returned for decryption and dispatch.
+ * When the application path expects an APP record, every cached record can be
+ * returned so that ALERT, post-handshake HANDSHAKE, and APP records are
+ * dispatched by the common record processing path.
+ */
+static bool CanReadUnprocessedMsg(uint8_t expectedType, uint8_t actualType)
+{
+    return expectedType == REC_TYPE_UNKNOWN || actualType != REC_TYPE_APP || expectedType != REC_TYPE_HANDSHAKE;
+}
+
+/* Remove the first cached record matching the current epoch and read path. */
+UnprocessedMsg *UnprocessedMsgGet(UnprocessedMsg *appMsgList, uint16_t curEpoch, uint8_t recordType)
 {
     ListHead *next = appMsgList->head.next;
     if (next == &appMsgList->head) {
@@ -116,7 +136,7 @@ UnprocessedMsg *UnprocessedMsgGet(UnprocessedMsg *appMsgList, uint16_t curEpoch)
     LIST_FOR_EACH_ITEM_SAFE(node, tmpNode, &(appMsgList->head)) {
         cur = BSL_LIST_ENTRY(node, UnprocessedMsg, head);
         uint16_t epoch = REC_EPOCH_GET(cur->hdr.epochSeq);
-        if (curEpoch == epoch) {
+        if (curEpoch == epoch && CanReadUnprocessedMsg(recordType, cur->hdr.type)) {
             /* remove a node and release it by the outside */
             BSL_LIST_REMOVE(node);
             appMsgList->count--;
@@ -126,4 +146,4 @@ UnprocessedMsg *UnprocessedMsgGet(UnprocessedMsg *appMsgList, uint16_t curEpoch)
     return NULL;
 }
 
-#endif /* HITLS_TLS_PROTO_DTLS12 || HITLS_TLS_PROTO_DTLS13 */
+#endif /* HITLS_TLS_PROTO_DATAGRAM */

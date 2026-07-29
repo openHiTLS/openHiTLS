@@ -111,13 +111,7 @@ static int32_t PackExtensionEnd(PackPacket *pkt, uint32_t extensionLenPosition)
     return HITLS_SUCCESS;
 }
 
-#if defined(HITLS_TLS_PROTO_TLS13) || defined(HITLS_TLS_PROTO_DTLS13)
-static bool IsTls13StyleVersionCtx(const TLS_Ctx *ctx)
-{
-    uint32_t version = GET_VERSION_FROM_CTX(ctx);
-    return version == HITLS_VERSION_TLS13 || version == HITLS_VERSION_DTLS13;
-}
-
+#if defined(HITLS_TLS_PROTO_TLS13_FAMILY)
 bool Tls13NeedPack(const TLS_Ctx *ctx, uint32_t version)
 {
     bool tls13NeedPack = false;
@@ -131,7 +125,7 @@ bool Tls13NeedPack(const TLS_Ctx *ctx, uint32_t version)
 
 static bool IsHelloVerifyRequestCookie(const TLS_Ctx *ctx)
 {
-#if defined(HITLS_TLS_PROTO_TLS13) || defined(HITLS_TLS_PROTO_DTLS13)
+#if defined(HITLS_TLS_PROTO_TLS13_FAMILY)
     return ctx->hsCtx->haveHvr;
 #else
     (void)ctx;
@@ -166,7 +160,7 @@ static int32_t PackCookie(const TLS_Ctx *ctx, PackPacket *pkt)
 
     return HITLS_SUCCESS;
 }
-#endif /* HITLS_TLS_PROTO_TLS13 || HITLS_TLS_PROTO_DTLS13 */
+#endif /* HITLS_TLS_PROTO_TLS13_FAMILY */
 
 static int32_t PackPointFormats(const TLS_Ctx *ctx, PackPacket *pkt)
 {
@@ -223,8 +217,8 @@ int32_t PackEmptyExtension(uint16_t exMsgType, bool needPack, PackPacket *pkt)
 int32_t PackRecordSizeLimit(const TLS_Ctx *ctx, PackPacket *pkt)
 {
     int32_t ret = HITLS_SUCCESS;
-    uint16_t upperBound = (GET_VERSION_FROM_CTX(ctx) == HITLS_VERSION_TLS13 ? REC_MAX_PLAIN_LENGTH + 1
-                                                                        : REC_MAX_PLAIN_LENGTH);
+    uint16_t upperBound =
+        (IS_TLS13_FAMILY_VERSION(GET_VERSION_FROM_CTX(ctx)) ? REC_MAX_PLAIN_LENGTH + 1 : REC_MAX_PLAIN_LENGTH);
     uint16_t recordSizeLimit = ctx->isClient ?
         ctx->config.tlsConfig.recordSizeLimit : ctx->negotiatedInfo.recordSizeLimit;
 
@@ -319,7 +313,7 @@ static bool IsNeedClientPackServerName(const TLS_Ctx *ctx)
 
     /* The session is being resumed */
     if (ctx->session != NULL) {
-        if (IsTls13StyleVersionCtx(ctx) && config->serverName == NULL) {
+        if (IS_TLS13_FAMILY_VERSION(GET_VERSION_FROM_CTX(ctx)) && config->serverName == NULL) {
             return false;
         }
     }
@@ -501,7 +495,7 @@ static int32_t PackClientTicket(const TLS_Ctx *ctx, PackPacket *pkt)
     }
 
     /* Whether the ticket belongs to tls1.3 needs to be determined */
-    if (sessVersion != HITLS_VERSION_TLS13 && sessVersion != HITLS_VERSION_DTLS13 ) {
+    if (!IS_TLS13_FAMILY_VERSION(sessVersion)) {
         SESS_GetTicket(ctx->session, &ticket, &ticketSize);
     }
 #ifdef HITLS_TLS_FEATURE_SESSION_CUSTOM_TICKET
@@ -556,14 +550,14 @@ static int32_t PackClientSecRenegoInfo(const TLS_Ctx *ctx, PackPacket *pkt)
 static bool IsNeedPackEcExtension(const TLS_Ctx *ctx)
 {
     const TLS_Config *config = &(ctx->config.tlsConfig);
-#if defined(HITLS_TLS_PROTO_TLS13) || defined(HITLS_TLS_PROTO_DTLS13)
-    if (IsTls13StyleVersionCtx(ctx)) {
+#if defined(HITLS_TLS_PROTO_TLS13_FAMILY)
+    if (IS_TLS13_FAMILY_VERSION(GET_VERSION_FROM_CTX(ctx))) {
         uint32_t needKeyShareMode = TLS13_KE_MODE_PSK_WITH_DHE | TLS13_CERT_AUTH_WITH_DHE;
         if ((ctx->negotiatedInfo.tls13BasicKeyExMode & needKeyShareMode) != 0) {
             return true;
         }
     }
-#endif /* HITLS_TLS_PROTO_TLS13 || HITLS_TLS_PROTO_DTLS13 */
+#endif /* HITLS_TLS_PROTO_TLS13_FAMILY */
     for (uint32_t index = 0; index < config->cipherSuitesSize; index++) {
         CipherSuiteInfo cipherInfo = {0};
         /* The returned value does not need to be checked. The validity of the cipher suite is checked when the cipher
@@ -581,7 +575,7 @@ static bool IsNeedPackEcExtension(const TLS_Ctx *ctx)
 
     return false;
 }
-#if (defined(HITLS_TLS_PROTO_TLS13) || defined(HITLS_TLS_PROTO_DTLS13)) && defined(HITLS_TLS_FEATURE_DTLS_CID)
+#if defined(HITLS_TLS_PROTO_TLS13_FAMILY) && defined(HITLS_TLS_FEATURE_DTLS_CID)
 /*
  * Pack the connection_id extension for DTLS 1.3 ClientHello/ServerHello. The
  * value is this endpoint's local receive CID, so the peer can use it as its
@@ -606,9 +600,9 @@ static int32_t PackDtlsConnectionId(const TLS_Ctx *ctx, PackPacket *pkt)
     ctx->hsCtx->extFlag.haveConnectionId = true;
     return HITLS_SUCCESS;
 }
-#endif /* (HITLS_TLS_PROTO_TLS13 || HITLS_TLS_PROTO_DTLS13) && HITLS_TLS_FEATURE_DTLS_CID */
+#endif /* HITLS_TLS_PROTO_TLS13_FAMILY && HITLS_TLS_FEATURE_DTLS_CID */
 
-#if defined(HITLS_TLS_PROTO_TLS13) || defined(HITLS_TLS_PROTO_DTLS13)
+#if defined(HITLS_TLS_PROTO_TLS13_FAMILY)
 static int32_t PackClientSupportedVersions(const TLS_Ctx *ctx, PackPacket *pkt)
 {
     int32_t ret = HITLS_SUCCESS;
@@ -886,13 +880,13 @@ int32_t PackClientCAList(const TLS_Ctx *ctx, PackPacket *pkt)
 static bool IsNeedPackPha(const TLS_Ctx *ctx)
 {
     const TLS_Config *tlsConfig = &ctx->config.tlsConfig;
-    if (!IsTls13StyleVersionCtx(ctx)) {
+    if (!IS_TLS13_FAMILY_VERSION(GET_VERSION_FROM_CTX(ctx))) {
         return false;
     }
     return tlsConfig->isSupportPostHandshakeAuth;
 }
 #endif /* HITLS_TLS_FEATURE_PHA */
-#endif /* HITLS_TLS_PROTO_TLS13 || HITLS_TLS_PROTO_DTLS13 */
+#endif /* HITLS_TLS_PROTO_TLS13_FAMILY */
 
 // Pack the non-null extension of client hello.
 static int32_t PackClientExtensions(const TLS_Ctx *ctx, PackPacket *pkt)
@@ -903,9 +897,9 @@ static int32_t PackClientExtensions(const TLS_Ctx *ctx, PackPacket *pkt)
 #ifdef HITLS_TLS_FEATURE_RENEGOTIATION
     const TLS_NegotiatedInfo *negoInfo = &ctx->negotiatedInfo;
 #endif /* HITLS_TLS_FEATURE_RENEGOTIATION */
-#if defined(HITLS_TLS_PROTO_TLS13) || defined(HITLS_TLS_PROTO_DTLS13)
-    bool isTls13 = IsTls13StyleVersionCtx(ctx);
-#endif /* HITLS_TLS_PROTO_TLS13 || HITLS_TLS_PROTO_DTLS13 */
+#if defined(HITLS_TLS_PROTO_TLS13_FAMILY)
+    bool isTls13 = IS_TLS13_FAMILY_VERSION(GET_VERSION_FROM_CTX(ctx));
+#endif /* HITLS_TLS_PROTO_TLS13_FAMILY */
     /* Check whether EC extensions need to be filled */
     bool isEcNeed = IsNeedPackEcExtension(ctx);
 
@@ -928,19 +922,19 @@ static int32_t PackClientExtensions(const TLS_Ctx *ctx, PackPacket *pkt)
         { EXTENSION_MSG(HS_EX_TYPE_SIGNATURE_ALGORITHMS, isSignAlgNeed, PackClientSignatureAlgorithms) },
         { EXTENSION_MSG(HS_EX_TYPE_SUPPORTED_GROUPS, isEcNeed, PackClientSupportedGroups) },
         { EXTENSION_MSG(HS_EX_TYPE_POINT_FORMATS, isEcNeed, PackPointFormats) },
-#if defined(HITLS_TLS_PROTO_TLS13) || defined(HITLS_TLS_PROTO_DTLS13)
+#if defined(HITLS_TLS_PROTO_TLS13_FAMILY)
         { EXTENSION_MSG(HS_EX_TYPE_SUPPORTED_VERSIONS, isTls13, PackClientSupportedVersions) },
 #ifdef HITLS_TLS_FEATURE_DTLS_CID
         { EXTENSION_MSG(HS_EX_TYPE_CONNECTION_ID, DTLS_CID_NeedCidExtForClientHello(ctx), PackDtlsConnectionId) },
 #endif /* HITLS_TLS_FEATURE_DTLS_CID */
-#endif /* HITLS_TLS_PROTO_TLS13 || HITLS_TLS_PROTO_DTLS13 */
+#endif /* HITLS_TLS_PROTO_TLS13_FAMILY */
         { EXTENSION_MSG(HS_EX_TYPE_EARLY_DATA, false, NULL) },
-#if defined(HITLS_TLS_PROTO_TLS13) || defined(HITLS_TLS_PROTO_DTLS13)
+#if defined(HITLS_TLS_PROTO_TLS13_FAMILY)
         { EXTENSION_MSG(HS_EX_TYPE_COOKIE, isTls13, PackCookie) },
 #ifdef HITLS_TLS_FEATURE_PHA
         { EXTENSION_MSG(HS_EX_TYPE_POST_HS_AUTH, isNeedPha, NULL) },
 #endif /* HITLS_TLS_FEATURE_PHA */
-#endif /* HITLS_TLS_PROTO_TLS13 || HITLS_TLS_PROTO_DTLS13 */
+#endif /* HITLS_TLS_PROTO_TLS13_FAMILY */
 #ifdef HITLS_TLS_FEATURE_EXTENDED_MASTER_SECRET
         { EXTENSION_MSG(HS_EX_TYPE_EXTENDED_MASTER_SECRET,
             (tlsConfig->emsMode != HITLS_EMS_MODE_FORBID), NULL) },
@@ -949,13 +943,13 @@ static int32_t PackClientExtensions(const TLS_Ctx *ctx, PackPacket *pkt)
         { EXTENSION_MSG(HS_EX_TYPE_APP_LAYER_PROTOCOLS, (tlsConfig->alpnList != NULL &&
             ctx->state == CM_STATE_HANDSHAKING), PackClientAlpnList) },
 #endif /* HITLS_TLS_FEATURE_ALPN */
-#if defined(HITLS_TLS_PROTO_TLS13) || defined(HITLS_TLS_PROTO_DTLS13)
+#if defined(HITLS_TLS_PROTO_TLS13_FAMILY)
         { EXTENSION_MSG(HS_EX_TYPE_PSK_KEY_EXCHANGE_MODES, isTls13, PackClientPskKeyExModes) },
         { EXTENSION_MSG(HS_EX_TYPE_KEY_SHARE, isTls13, PackClientKeyShare) },
 #ifdef HITLS_TLS_FEATURE_CERTIFICATE_AUTHORITIES
         { EXTENSION_MSG(HS_EX_TYPE_CERTIFICATE_AUTHORITIES, isTls13 && tlsConfig->caList != NULL, PackClientCAList) },
 #endif /* HITLS_TLS_FEATURE_CERTIFICATE_AUTHORITIES */
-#endif /* HITLS_TLS_PROTO_TLS13 || HITLS_TLS_PROTO_DTLS13 */
+#endif /* HITLS_TLS_PROTO_TLS13_FAMILY */
 #ifdef HITLS_TLS_FEATURE_RENEGOTIATION
         { EXTENSION_MSG(HS_EX_TYPE_RENEGOTIATION_INFO, negoInfo->isSecureRenegotiation, PackClientSecRenegoInfo) },
 #endif /* HITLS_TLS_FEATURE_RENEGOTIATION */
@@ -965,9 +959,9 @@ static int32_t PackClientExtensions(const TLS_Ctx *ctx, PackPacket *pkt)
 #ifdef HITLS_TLS_FEATURE_ETM
         { EXTENSION_MSG(HS_EX_TYPE_ENCRYPT_THEN_MAC, tlsConfig->isEncryptThenMac, NULL) },
 #endif /* HITLS_TLS_FEATURE_ETM */
-#if defined(HITLS_TLS_PROTO_TLS13) || defined(HITLS_TLS_PROTO_DTLS13)
+#if defined(HITLS_TLS_PROTO_TLS13_FAMILY)
         { EXTENSION_MSG(HS_EX_TYPE_PRE_SHARED_KEY, isTls13, PackClientPreSharedKey) },
-#endif /* HITLS_TLS_PROTO_TLS13 || HITLS_TLS_PROTO_DTLS13 */
+#endif /* HITLS_TLS_PROTO_TLS13_FAMILY */
     };
 
 #ifdef HITLS_TLS_FEATURE_CUSTOM_EXTENSION
@@ -1061,7 +1055,7 @@ int32_t PackServerSelectAlpnProto(const TLS_Ctx *ctx, PackPacket *pkt)
     return HITLS_SUCCESS;
 }
 #endif /* HITLS_TLS_FEATURE_ALPN */
-#if defined(HITLS_TLS_PROTO_TLS13) || defined(HITLS_TLS_PROTO_DTLS13)
+#if defined(HITLS_TLS_PROTO_TLS13_FAMILY)
 static int32_t PackHrrKeyShare(const TLS_Ctx *ctx, PackPacket *pkt)
 {
     int32_t ret = HITLS_SUCCESS;
@@ -1220,7 +1214,7 @@ int32_t PackTls13HelloRetryRequestExtension(const TLS_Ctx *ctx, PackPacket *pkt)
 
     return PackExtensionEnd(pkt, extensionLenPosition);
 }
-#endif /* HITLS_TLS_PROTO_TLS13 || HITLS_TLS_PROTO_DTLS13 */
+#endif /* HITLS_TLS_PROTO_TLS13_FAMILY */
 #if defined(HITLS_TLS_PROTO_TLS_BASIC) || defined(HITLS_TLS_PROTO_DTLS12)
 static int32_t PackServerSecRenegoInfo(const TLS_Ctx *ctx, PackPacket *pkt)
 {
@@ -1292,16 +1286,16 @@ static bool IsNeedServerPackEncryptThenMac(const TLS_Ctx *ctx)
 // Pack the empty extension of Server Hello
 static int32_t PackServerExtensions(const TLS_Ctx *ctx, PackPacket *pkt)
 {
-#if defined(HITLS_TLS_PROTO_TLS13) || defined(HITLS_TLS_PROTO_DTLS13)
+#if defined(HITLS_TLS_PROTO_TLS13_FAMILY)
     uint32_t version = GET_VERSION_FROM_CTX(ctx);
     bool isTls13 = Tls13NeedPack(ctx, version);
-#endif /* HITLS_TLS_PROTO_TLS13 || HITLS_TLS_PROTO_DTLS13 */
+#endif /* HITLS_TLS_PROTO_TLS13_FAMILY */
     const TLS_NegotiatedInfo *negoInfo = &ctx->negotiatedInfo;
     (void)negoInfo;
     PackExtInfo extMsgList[] = {
 #ifdef HITLS_TLS_FEATURE_RECORD_SIZE_LIMIT
         { EXTENSION_MSG(HS_EX_TYPE_RECORD_SIZE_LIMIT,
-            (ctx->negotiatedInfo.version != HITLS_VERSION_TLS13), PackRecordSizeLimit) },
+            !IS_TLS13_FAMILY_VERSION(ctx->negotiatedInfo.version), PackRecordSizeLimit) },
 #endif /* HITLS_TLS_FEATURE_RECORD_SIZE_LIMIT */
 #ifdef HITLS_TLS_FEATURE_SNI
         { EXTENSION_MSG(HS_EX_TYPE_SERVER_NAME, IsNeedServerPackServerName(ctx), NULL) },
@@ -1310,45 +1304,45 @@ static int32_t PackServerExtensions(const TLS_Ctx *ctx, PackPacket *pkt)
         { EXTENSION_MSG(HS_EX_TYPE_SESSION_TICKET, negoInfo->isTicket, NULL) },
 #endif /* HITLS_TLS_FEATURE_SESSION_TICKET */
         { EXTENSION_MSG(HS_EX_TYPE_POINT_FORMATS, IsServerNeedPackEcExtension(ctx), PackPointFormats) },
-#if defined(HITLS_TLS_PROTO_TLS13) || defined(HITLS_TLS_PROTO_DTLS13)
+#if defined(HITLS_TLS_PROTO_TLS13_FAMILY)
         { EXTENSION_MSG(HS_EX_TYPE_SUPPORTED_VERSIONS, isTls13, PackServerSupportedVersion) },
 #ifdef HITLS_TLS_FEATURE_DTLS_CID
         { EXTENSION_MSG(HS_EX_TYPE_CONNECTION_ID, negoInfo->isCidNegotiated, PackDtlsConnectionId) },
 #endif /* HITLS_TLS_FEATURE_DTLS_CID */
-#endif /* HITLS_TLS_PROTO_TLS13 || HITLS_TLS_PROTO_DTLS13 */
+#endif /* HITLS_TLS_PROTO_TLS13_FAMILY */
 #ifdef HITLS_TLS_FEATURE_EXTENDED_MASTER_SECRET
         { EXTENSION_MSG(HS_EX_TYPE_EXTENDED_MASTER_SECRET, negoInfo->isExtendedMasterSecret, NULL) },
 #endif
 #ifdef HITLS_TLS_FEATURE_ALPN
         { .exMsgType = HS_EX_TYPE_APP_LAYER_PROTOCOLS,
           .needPack = (negoInfo->alpnSelected != NULL
-#if defined(HITLS_TLS_PROTO_TLS13) || defined(HITLS_TLS_PROTO_DTLS13)
+#if defined(HITLS_TLS_PROTO_TLS13_FAMILY)
             && !isTls13
 #endif
             ),
           .packFunc = PackServerSelectAlpnProto },
 #endif /* HITLS_TLS_FEATURE_ALPN */
-#if defined(HITLS_TLS_PROTO_TLS13) || defined(HITLS_TLS_PROTO_DTLS13)
+#if defined(HITLS_TLS_PROTO_TLS13_FAMILY)
         { EXTENSION_MSG(HS_EX_TYPE_KEY_SHARE, isTls13, PackServerKeyShare) },
-#endif /* HITLS_TLS_PROTO_TLS13 || HITLS_TLS_PROTO_DTLS13 */
+#endif /* HITLS_TLS_PROTO_TLS13_FAMILY */
 #if defined(HITLS_TLS_PROTO_TLS_BASIC) || defined(HITLS_TLS_PROTO_DTLS12)
         { EXTENSION_MSG(HS_EX_TYPE_RENEGOTIATION_INFO, negoInfo->isSecureRenegotiation, PackServerSecRenegoInfo) },
 #endif /* defined(HITLS_TLS_PROTO_TLS_BASIC) || defined(HITLS_TLS_PROTO_DTLS12) */
 #ifdef HITLS_TLS_FEATURE_ETM
         { EXTENSION_MSG(HS_EX_TYPE_ENCRYPT_THEN_MAC, IsNeedServerPackEncryptThenMac(ctx), NULL) },
 #endif /* HITLS_TLS_FEATURE_ETM */
-#if defined(HITLS_TLS_PROTO_TLS13) || defined(HITLS_TLS_PROTO_DTLS13)
+#if defined(HITLS_TLS_PROTO_TLS13_FAMILY)
         /* The preshare key must be the last extension */
         { EXTENSION_MSG(HS_EX_TYPE_PRE_SHARED_KEY, isTls13, PackServerPreSharedKey) },
-#endif /* HITLS_TLS_PROTO_TLS13 || HITLS_TLS_PROTO_DTLS13 */
+#endif /* HITLS_TLS_PROTO_TLS13_FAMILY */
     };
 #ifdef HITLS_TLS_FEATURE_CUSTOM_EXTENSION
     uint32_t context = 0;
-#if defined(HITLS_TLS_PROTO_TLS13) || defined(HITLS_TLS_PROTO_DTLS13)
+#if defined(HITLS_TLS_PROTO_TLS13_FAMILY)
     if (isTls13) {
         context = HITLS_EX_TYPE_TLS1_3_SERVER_HELLO;
     } else
-#endif /* HITLS_TLS_PROTO_TLS13 || HITLS_TLS_PROTO_DTLS13 */
+#endif /* HITLS_TLS_PROTO_TLS13_FAMILY */
     {
         context = HITLS_EX_TYPE_TLS1_2_SERVER_HELLO;
     }

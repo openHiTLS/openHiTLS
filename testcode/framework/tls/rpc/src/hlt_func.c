@@ -683,6 +683,7 @@ HLT_Ctx_Config* HLT_NewCtxConfig(char *setFile, const char *key)
     ctxConfig->isSupportNoClientCert = false;
     ctxConfig->isSupportVerifyNone = false;
     ctxConfig->isSupportPostHandshakeAuth = false;
+    ctxConfig->isSupportConnectionId = false;
     ctxConfig->emsMode = HITLS_EMS_MODE_FORCE;
     ctxConfig->isSupportSessionTicket = false;
     ctxConfig->isSupportDhAuto = true;
@@ -1204,6 +1205,12 @@ int HLT_SetPostHandshakeAuth(HLT_Ctx_Config *ctxConfig, bool support)
 int HLT_SetPostHandshakeAuthSupport(HLT_Ctx_Config *ctxConfig, bool support)
 {
     ctxConfig->isSupportPostHandshakeAuth = support;
+    return SUCCESS;
+}
+
+int HLT_SetDtlsCidSupport(HLT_Ctx_Config *ctxConfig, bool support)
+{
+    ctxConfig->isSupportConnectionId = support;
     return SUCCESS;
 }
 

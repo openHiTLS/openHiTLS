@@ -388,7 +388,8 @@ typedef int32_t (*CRYPT_DigestCallback)(HITLS_HashAlgo hashAlgo, const uint8_t *
 /**
  * @ingroup hitls_crypt_reg
  * @brief   TLS encryption
- * @details Provides the encryption capability for records, including the AEAD and CBC algorithms.
+ * @details Provides the encryption capability for records, including AEAD/CBC record ciphers and the
+ * DTLS 1.3 sequence number protection ciphers.
  * Encrypts the input factor (key parameter) and plaintext based on the record protocol
  * to obtain the ciphertext.
  *

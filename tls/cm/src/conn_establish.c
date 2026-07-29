@@ -36,7 +36,7 @@
 #include "hs_common.h"
 #include "sal_net.h"
 
-#if defined(HITLS_TLS_PROTO_DTLS12) && defined(HITLS_BSL_UIO_UDP)
+#if defined(HITLS_TLS_PROTO_DATAGRAM) && defined(HITLS_BSL_UIO_UDP)
 #define DTLS_MAX_MTU_OVERHEAD 48    /* Max overhead, ipv6 40 + udp 8 */
 #endif
 #define DATA_MAX_LENGTH 1024
@@ -692,7 +692,7 @@ int32_t HITLS_IsBeforeHandShake(const HITLS_Ctx *ctx, bool *isBefore)
 }
 #endif /* HITLS_TLS_CONFIG_STATE */
 
-#if defined(HITLS_TLS_PROTO_DTLS12) && defined(HITLS_BSL_UIO_UDP)
+#if defined(HITLS_TLS_PROTO_DATAGRAM) && defined(HITLS_BSL_UIO_UDP)
 int32_t HITLS_SetLinkMtu(HITLS_Ctx *ctx, uint16_t linkMtu)
 {
     if (ctx == NULL) {
@@ -743,7 +743,7 @@ int32_t HITLS_GetNeedQueryMtu(HITLS_Ctx *ctx, bool *needQueryMtu)
     return HITLS_SUCCESS;
 }
 #endif /* HITLS_TLS_FEATURE_MTU_QUERY */
-#endif /* HITLS_TLS_PROTO_DTLS12 && HITLS_BSL_UIO_UDP */
+#endif /* HITLS_TLS_PROTO_DATAGRAM && HITLS_BSL_UIO_UDP */
 
 #ifdef HITLS_TLS_CONNECTION_INFO_NEGOTIATION
 int32_t HITLS_GetClientVersion(const HITLS_Ctx *ctx, uint16_t *clientVersion)
@@ -839,8 +839,8 @@ static int32_t CheckRenegotiateValid(HITLS_Ctx *ctx)
         return HITLS_CM_LINK_UNSUPPORT_SECURE_RENEGOTIATION;
     }
 
-    /* If the version is TLS1.3 or the current link does not support security renegotiation, the system returns. */
-    if ((ctx->negotiatedInfo.version == HITLS_VERSION_TLS13) || (!ctx->negotiatedInfo.isSecureRenegotiation)) {
+    /* If the version is (D)TLS1.3 or the current link does not support security renegotiation, the system returns. */
+    if (IS_TLS13_FAMILY_CTX(ctx) || (!ctx->negotiatedInfo.isSecureRenegotiation)) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15953, BSL_LOG_LEVEL_INFO, BSL_LOG_BINLOG_TYPE_RUN,
             "unsupported renegotiate.", 0, 0, 0, 0);
         return HITLS_CM_LINK_UNSUPPORT_SECURE_RENEGOTIATION;

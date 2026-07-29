@@ -41,6 +41,7 @@ extern "C" {
 #define DTLS_HS_MSGLEN_ADDR 1u /* DTLS message length address, which is used when parsing the DTLS message header. */
 /* DTLS message sequence number address, which is used for parsing the DTLS message header. */
 #define DTLS_HS_MSGSEQ_ADDR 4u
+#define DTLS_HS_MSG_SEQ_MAX 0xFFFFu
 /* DTLS message fragment offset address, which is used when the DTLS message header is parsed. */
 #define DTLS_HS_FRAGMENT_OFFSET_ADDR 6u
 /* DTLS message fragment length address, which is used when parsing the DTLS message header. */
@@ -56,6 +57,8 @@ typedef enum {
     END_OF_EARLY_DATA = 5,
     HELLO_RETRY_REQUEST = 6,
     ENCRYPTED_EXTENSIONS = 8,
+    REQUEST_CONNECTION_ID = 9,
+    NEW_CONNECTION_ID = 10,
     CERTIFICATE = 11,
     SERVER_KEY_EXCHANGE = 12,
     CERTIFICATE_REQUEST = 13,
@@ -80,6 +83,18 @@ typedef enum {
 typedef struct {
     HITLS_KeyUpdateRequest requestUpdate;
 } KeyUpdateMsg;
+
+#ifdef HITLS_TLS_FEATURE_DTLS_CID
+typedef struct {
+    const uint8_t *cids;    /* serialized CID list (borrowed from wire buffer): each entry = 1-byte len + CID value */
+    uint32_t cidsLen;       /* total byte length of serialized cids field */
+    uint8_t usage;          /* ConnectionIdUsage: 0 = cid_immediate, 1 = cid_spare */
+} NewConnectionIdMsg;
+
+typedef struct {
+    uint8_t numCids;
+} RequestConnectionIdMsg;
+#endif
 
 typedef struct {
     ListHead head;
@@ -108,6 +123,7 @@ typedef struct {
     uint8_t *serverName;    /* serverName after parsing */
     uint8_t *secRenegoInfo; /* renegotiation extension information */
     uint8_t *ticket;        /* ticket information */
+    uint8_t *connectionId;  /* DTLS connection_id extension value */
 
     uint32_t ticketSize;
     uint16_t supportedGroupsSize;
@@ -119,7 +135,7 @@ typedef struct {
     uint8_t pointFormatsSize;
     uint8_t serverNameType;    /* Type of the parsed serverName. */
     uint8_t secRenegoInfoSize; /* Length of the security renegotiation information */
-    uint8_t reserved[1];       /* Four-byte alignment */
+    uint8_t connectionIdLen;   /* Length of the DTLS connection_id extension value */
 
     /* TLS1.3 */
     uint16_t *supportedVersions;
@@ -155,6 +171,7 @@ typedef struct {
     bool haveTicket;         /* Indicates whether a ticket is available. */
     bool haveEncryptThenMac; /* Indicates whether EncryptThenMac is supported. */
     bool haveRecordSizeLimit;
+    bool haveConnectionId;   /* Whether the DTLS connection_id extension exists. */
 } ExtensionFlag;
 
 typedef struct {
@@ -197,6 +214,7 @@ typedef struct {
     uint8_t *alpnSelected; /* selected alpn protocol */
     uint8_t *cookie;
     uint8_t *secRenegoInfo;
+    uint8_t *connectionId;
     KeyShare keyShare;
     uint16_t alpnSelectedSize; /* selected alpn protocol length */
     uint16_t supportedVersion;
@@ -206,6 +224,7 @@ typedef struct {
     uint8_t sessionIdSize;
     uint8_t pointFormatsSize;
     uint8_t secRenegoInfoSize; /* Length of the security renegotiation information */
+    uint8_t connectionIdLen;   /* Length of the DTLS connection_id extension value */
     uint64_t extensionTypeMask;
     bool havePointFormats;
     bool haveExtendedMasterSecret;
@@ -219,7 +238,8 @@ typedef struct {
     bool haveTicket;
     bool haveEncryptThenMac;
     bool haveRecordSizeLimit;
-    bool reserved[2]; /* Four-byte alignment */
+    bool haveConnectionId;
+    bool reserved[1]; /* Four-byte alignment */
 } ServerHelloMsg;
 
 /* It is used to transmit hello verify request message */
@@ -285,7 +305,7 @@ typedef struct {
     uint8_t reserved;               /* Four-byte alignment */
     uint8_t certTypesSize;
     uint16_t signatureAlgorithmsSize;
-#ifdef HITLS_TLS_PROTO_TLS13
+#if defined(HITLS_TLS_PROTO_TLS13_FAMILY)
     uint16_t *signatureAlgorithmsCert;
     uint16_t signatureAlgorithmsCertSize;
     uint8_t *certificateReqCtx;     /* Used by the TLS 1.3 */
@@ -293,7 +313,7 @@ typedef struct {
                                        authentication after the handshake */
     uint64_t extensionTypeMask;
     bool haveSignatureAndHashAlgoCert;
-#endif /* HITLS_TLS_PROTO_TLS13 */
+#endif
     bool haveSignatureAndHashAlgo;
     bool haveDistinguishedName;
 } CertificateRequestMsg;
@@ -387,12 +407,16 @@ typedef struct {
         NewSessionTicketMsg newSessionTicket;
         FinishedMsg finished;
         KeyUpdateMsg keyUpdate;
+#ifdef HITLS_TLS_FEATURE_DTLS_CID
+        NewConnectionIdMsg newConnectionId;
+        RequestConnectionIdMsg requestConnectionId;
+#endif
     } body;
 } HS_Msg;
 
-#ifdef HITLS_TLS_PROTO_DTLS12
+#if defined(HITLS_TLS_PROTO_DATAGRAM)
 /* Reassembles fragmented messages */
-typedef struct {
+typedef struct HsReassQueue {
     ListHead head;
     HS_MsgType type;
     uint16_t sequence;    /* DTLS Indicates the number of the handshake message. Each time a new handshake message is

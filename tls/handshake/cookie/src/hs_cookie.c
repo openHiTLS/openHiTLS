@@ -14,7 +14,7 @@
  */
  
 #include "hitls_build.h"
-#if (defined(HITLS_TLS_PROTO_DTLS12) || defined(HITLS_TLS_PROTO_DTLS13)) && defined(HITLS_BSL_UIO_UDP)
+#if defined(HITLS_TLS_PROTO_DATAGRAM) && defined(HITLS_BSL_UIO_UDP)
 #include <string.h>
 #include "tls_binlog_id.h"
 #include "bsl_log_internal.h"
@@ -35,9 +35,55 @@
 #include "hs.h"
 #include "hs_common.h"
 #include "hs_cookie.h"
-#include "hs_verify.h"
 #include "transcript_hash.h"
-#include "pack.h"
+
+static int32_t GenerateAppCookie(TLS_Ctx *ctx, uint8_t **cookieOut, uint32_t *cookieLenOut)
+{
+    if (ctx == NULL || ctx->globalConfig == NULL || ctx->globalConfig->appGenCookieCb == NULL ||
+        cookieOut == NULL || cookieLenOut == NULL) {
+        return HITLS_NULL_INPUT;
+    }
+
+    uint8_t cookie[TLS_HS_MAX_COOKIE_SIZE] = {0};
+    uint32_t cookieLen = sizeof(cookie);
+    int32_t returnVal = ctx->globalConfig->appGenCookieCb(ctx, cookie, &cookieLen);
+    if (returnVal == HITLS_COOKIE_GENERATE_ERROR) {
+        BSL_ERR_PUSH_ERROR(HITLS_MSG_HANDLE_COOKIE_ERR);
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15697, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+            "appGenCookieCb return error 0x%x.", returnVal, 0, 0, 0);
+        return HITLS_MSG_HANDLE_COOKIE_ERR;
+    }
+    if (cookieLen > TLS_HS_MAX_COOKIE_SIZE) {
+        BSL_ERR_PUSH_ERROR(HITLS_MSG_HANDLE_COOKIE_ERR);
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17353, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+            "cookie len is too long.", 0, 0, 0, 0);
+        return HITLS_MSG_HANDLE_COOKIE_ERR;
+    }
+
+    uint8_t *appCookie = BSL_SAL_Dump(cookie, cookieLen);
+    if (appCookie == NULL) {
+        BSL_ERR_PUSH_ERROR(HITLS_MEMALLOC_FAIL);
+        return HITLS_MEMALLOC_FAIL;
+    }
+    *cookieOut = appCookie;
+    *cookieLenOut = cookieLen;
+    return HITLS_SUCCESS;
+}
+
+static int32_t VerifyAppCookie(TLS_Ctx *ctx, const uint8_t *cookie, uint32_t cookieLen, bool *isValid)
+{
+    if (ctx == NULL || ctx->globalConfig == NULL || ctx->globalConfig->appVerifyCookieCb == NULL ||
+        cookie == NULL || isValid == NULL) {
+        return HITLS_NULL_INPUT;
+    }
+
+    *isValid = false;
+    int32_t ret = ctx->globalConfig->appVerifyCookieCb(ctx, cookie, cookieLen);
+    if (ret != HITLS_COOKIE_VERIFY_ERROR) {
+        *isValid = true;
+    }
+    return HITLS_SUCCESS;
+}
 
 #ifdef HITLS_TLS_FEATURE_DEFAULT_COOKIE
 #define MAX_IP_ADDR_SIZE 256u
@@ -77,17 +123,23 @@ static int32_t GenerateCookiePeerAddrMaterial(const TLS_Ctx *ctx, uint8_t *mater
 
     int32_t peerAddrLen = (int32_t)SAL_SockAddrSize(peerAddr);
     ret = BSL_UIO_Ctrl(ctx->uio, BSL_UIO_GET_PEER_IP_ADDR, peerAddrLen, peerAddr);
-    if (ret == BSL_SUCCESS) {
-        if ((size_t)peerAddrLen > MAX_IP_ADDR_SIZE || (uint32_t)peerAddrLen > materialSize) {
-            BSL_ERR_PUSH_ERROR(HITLS_MEMCPY_FAIL);
-            BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15692, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-                "copy ipAddr fail when calc cookie.", 0, 0, 0, 0);
-            SAL_SockAddrFree(peerAddr);
-            return HITLS_MEMCPY_FAIL;
-        }
-        memcpy(material, peerAddr, (size_t)peerAddrLen);
-        *usedLen = (uint32_t)peerAddrLen;
+    if (ret != BSL_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(HITLS_MSG_HANDLE_COOKIE_ERR);
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15692, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+            "get peer addr fail when calc cookie.", 0, 0, 0, 0);
+        SAL_SockAddrFree(peerAddr);
+        return HITLS_MSG_HANDLE_COOKIE_ERR;
     }
+
+    if ((size_t)peerAddrLen > MAX_IP_ADDR_SIZE || (uint32_t)peerAddrLen > materialSize) {
+        BSL_ERR_PUSH_ERROR(HITLS_MEMCPY_FAIL);
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15692, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+            "copy ipAddr fail when calc cookie.", 0, 0, 0, 0);
+        SAL_SockAddrFree(peerAddr);
+        return HITLS_MEMCPY_FAIL;
+    }
+    memcpy(material, peerAddr, (size_t)peerAddrLen);
+    *usedLen = (uint32_t)peerAddrLen;
 
     SAL_SockAddrFree(peerAddr);
     return HITLS_SUCCESS;
@@ -149,6 +201,83 @@ static int32_t GenerateCookieCalcMaterial(const TLS_Ctx *ctx, const ClientHelloM
     return HITLS_SUCCESS;
 }
 
+static int32_t BuildCookieCalcMaterial(const TLS_Ctx *ctx, const ClientHelloMsg *clientHello,
+    uint8_t **materialOut, uint32_t *materialSizeOut, uint32_t *usedLenOut)
+{
+    uint32_t materialSize = MAX_IP_ADDR_SIZE + sizeof(uint16_t) + HS_RANDOM_SIZE + clientHello->sessionIdSize +
+                            clientHello->cipherSuitesSize * sizeof(uint16_t);
+    uint8_t *material = BSL_SAL_Calloc(1u, materialSize);
+    if (material == NULL) {
+        BSL_ERR_PUSH_ERROR(HITLS_MEMALLOC_FAIL);
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15695, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+            "material malloc fail when calc cookie.", 0, 0, 0, 0);
+        return HITLS_MEMALLOC_FAIL;
+    }
+
+    uint32_t usedLen = 0;
+    int32_t ret = GenerateCookieCalcMaterial(ctx, clientHello, material, materialSize, &usedLen);
+    if (ret != HITLS_SUCCESS) {
+        BSL_SAL_ClearFree(material, materialSize);
+        return ret;
+    }
+
+    *materialOut = material;
+    *materialSizeOut = materialSize;
+    *usedLenOut = usedLen;
+    return HITLS_SUCCESS;
+}
+
+static int32_t VerifyCookieMacWithKey(TLS_Ctx *ctx, const uint8_t *macData, uint32_t macDataLen,
+    const uint8_t *expectedMac, uint32_t expectedMacLen, const uint8_t *key, uint32_t keyLen, bool *isValid)
+{
+    uint8_t mac[MAC_KEY_LEN] = {0};
+    uint32_t macLen = sizeof(mac);
+    int32_t ret = SAL_CRYPT_Hmac(LIBCTX_FROM_CTX(ctx), ATTRIBUTE_FROM_CTX(ctx), HITLS_HASH_SHA_256,
+        key, keyLen, macData, macDataLen, mac, &macLen);
+    if (ret != HITLS_SUCCESS) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15696, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+            "SAL_CRYPT_Hmac fail when calc cookie.", 0, 0, 0, 0);
+        BSL_SAL_CleanseData(mac, sizeof(mac));
+        return ret;
+    }
+    if (macLen == expectedMacLen && ConstTimeMemcmp(mac, expectedMac, expectedMacLen) != 0) {
+        *isValid = true;
+    }
+    BSL_SAL_CleanseData(mac, sizeof(mac));
+    return HITLS_SUCCESS;
+}
+
+static int32_t VerifyCookieWithMacKeyRotation(TLS_Ctx *ctx, CookieInfo *cookieInfo, const uint8_t *macData,
+    uint32_t macDataLen, const uint8_t *expectedMac, uint32_t expectedMacLen, bool *isValid)
+{
+    if (ctx == NULL || cookieInfo == NULL || macData == NULL || expectedMac == NULL || isValid == NULL) {
+        return HITLS_NULL_INPUT;
+    }
+
+    int32_t ret = HITLS_SUCCESS;
+    if (cookieInfo->algRemainTime == 0) {
+        ret = UpdateMacKey(ctx, cookieInfo);
+        if (ret != HITLS_SUCCESS) {
+            return ret;
+        }
+    }
+
+    *isValid = false;
+    ret = VerifyCookieMacWithKey(ctx, macData, macDataLen, expectedMac, expectedMacLen,
+        cookieInfo->macKey, MAC_KEY_LEN, isValid);
+    if (ret != HITLS_SUCCESS || *isValid) {
+        return ret;
+    }
+
+    uint8_t emptyKey[MAC_KEY_LEN] = {0};
+    if (ConstTimeMemcmp(cookieInfo->preMacKey, emptyKey, sizeof(emptyKey)) != 0) {
+        return HITLS_SUCCESS;
+    }
+
+    return VerifyCookieMacWithKey(ctx, macData, macDataLen, expectedMac, expectedMacLen,
+        cookieInfo->preMacKey, MAC_KEY_LEN, isValid);
+}
+
 /**
  * @brief Add cookie calculation materials to the HMAC.
  *
@@ -164,23 +293,11 @@ static int32_t GenerateCookieCalcMaterial(const TLS_Ctx *ctx, const ClientHelloM
 static int32_t AddCookieCalcMaterial(
     const TLS_Ctx *ctx, const ClientHelloMsg *clientHello, CookieInfo *cookieInfo, uint8_t *cookie, uint32_t *cookieLen)
 {
-    /* Add the cookie calculation material, that is, the peer IP address + version + random + sessionID + cipherSuites
-     */
-    uint32_t materialSize = MAX_IP_ADDR_SIZE + sizeof(uint16_t) + HS_RANDOM_SIZE + clientHello->sessionIdSize +
-                            clientHello->cipherSuitesSize * sizeof(uint16_t);
-    uint8_t *material = BSL_SAL_Calloc(1u, materialSize);
-    if (material == NULL) {
-        BSL_ERR_PUSH_ERROR(HITLS_MEMALLOC_FAIL);
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15695, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "material malloc fail when calc cookie.", 0, 0, 0, 0);
-        return HITLS_MEMALLOC_FAIL;
-    }
-
-    int32_t ret;
+    uint8_t *material = NULL;
+    uint32_t materialSize = 0;
     uint32_t usedLen = 0;
-    ret = GenerateCookieCalcMaterial(ctx, clientHello, material, materialSize, &usedLen);
+    int32_t ret = BuildCookieCalcMaterial(ctx, clientHello, &material, &materialSize, &usedLen);
     if (ret != HITLS_SUCCESS) {
-        BSL_SAL_ClearFree(material, materialSize);
         return ret;
     }
 
@@ -195,25 +312,33 @@ static int32_t AddCookieCalcMaterial(
 }
 #endif /* HITLS_TLS_FEATURE_DEFAULT_COOKIE */
 
-#if defined(HITLS_TLS_PROTO_DTLS13) && defined(HITLS_TLS_FEATURE_DEFAULT_COOKIE)
+#if defined(HITLS_TLS_PROTO_DTLS13) && defined(HITLS_TLS_FEATURE_DEFAULT_COOKIE) && defined(HITLS_TLS_HOST_SERVER)
 #define DTLS13_COOKIE_VERSION 1u
 #define DTLS13_COOKIE_FLAG_KEY_SHARE_HRR 0x01u
 #define DTLS13_COOKIE_HEADER_LEN 11u
 #define DTLS13_COOKIE_MAC_LEN MAC_KEY_LEN
 #define DTLS13_COOKIE_MAX_LEN (DTLS13_COOKIE_HEADER_LEN + MAX_DIGEST_SIZE + DTLS13_COOKIE_MAC_LEN)
 
+/*
+ * Default DTLS1.3 cookie payload wire format.
+ *
+ * The current server implementation is stateful: the stack keeps the HRR and transcript state locally after sending
+ * HelloRetryRequest, so these fields are intentionally not used to restore transcript state when validating Cookie2.
+ * Keep the parsed fields as documentation and format validation. If stateless DTLS1.3 server support is added later,
+ * these fields can become the restore inputs again.
+ */
 typedef struct {
-    uint8_t flags;
-    uint16_t cipherSuite;
-    uint16_t selectedGroup;
-    uint8_t hashLen;
-    uint8_t clientHelloHash[MAX_DIGEST_SIZE];
+    uint8_t flags; /* DTLS13_COOKIE_FLAG_*, kept for the default-cookie wire format. */
+    uint16_t cipherSuite; /* Cipher suite selected when generating the HRR cookie. */
+    uint16_t selectedGroup; /* Selected key_share group for key-share HRR, or 0 when not used. */
+    uint8_t hashLen; /* Length of clientHelloHash. */
+    uint8_t clientHelloHash[MAX_DIGEST_SIZE]; /* Hash(ClientHello1), kept for the original stateless design. */
 } Dtls13CookiePayload;
 
 static const uint8_t g_dtls13CookieMagic[] = {'D', '1', '3', 'C'};
 
-static int32_t CalcDtls13CookieMac(const TLS_Ctx *ctx, const uint8_t *macKey, const uint8_t *payload,
-    uint32_t payloadLen, uint8_t *mac, uint32_t *macLen)
+static int32_t BuildDtls13CookieMacMaterial(const TLS_Ctx *ctx, const uint8_t *payload, uint32_t payloadLen,
+    uint8_t **materialOut, uint32_t *materialSizeOut, uint32_t *usedLenOut)
 {
     uint32_t materialSize = MAX_IP_ADDR_SIZE + payloadLen;
     uint8_t *material = BSL_SAL_Calloc(1u, materialSize);
@@ -235,6 +360,23 @@ static int32_t CalcDtls13CookieMac(const TLS_Ctx *ctx, const uint8_t *macKey, co
     memcpy(&material[usedLen], payload, payloadLen);
     usedLen += payloadLen;
 
+    *materialOut = material;
+    *materialSizeOut = materialSize;
+    *usedLenOut = usedLen;
+    return HITLS_SUCCESS;
+}
+
+static int32_t CalcDtls13CookieMac(const TLS_Ctx *ctx, const uint8_t *macKey, const uint8_t *payload,
+    uint32_t payloadLen, uint8_t *mac, uint32_t *macLen)
+{
+    uint8_t *material = NULL;
+    uint32_t materialSize = 0;
+    uint32_t usedLen = 0;
+    int32_t ret = BuildDtls13CookieMacMaterial(ctx, payload, payloadLen, &material, &materialSize, &usedLen);
+    if (ret != HITLS_SUCCESS) {
+        return ret;
+    }
+
     ret = SAL_CRYPT_Hmac(LIBCTX_FROM_CTX(ctx), ATTRIBUTE_FROM_CTX(ctx), HITLS_HASH_SHA_256,
         macKey, MAC_KEY_LEN, material, usedLen, mac, macLen);
     BSL_SAL_ClearFree(material, materialSize);
@@ -244,15 +386,22 @@ static int32_t CalcDtls13CookieMac(const TLS_Ctx *ctx, const uint8_t *macKey, co
 static int32_t BuildDtls13CookiePayload(TLS_Ctx *ctx, uint8_t *payload, uint32_t *payloadLen)
 {
     bool isKeyShareHrr = ctx->hsCtx->isHrrKeyShare;
-    int32_t ret = VERIFY_SetHash(LIBCTX_FROM_CTX(ctx), ATTRIBUTE_FROM_CTX(ctx),
-        ctx->hsCtx->verifyCtx, ctx->negotiatedInfo.cipherSuiteInfo.hashAlg);
-    if (ret != HITLS_SUCCESS) {
-        return ret;
+    HITLS_HashAlgo hashAlgo = ctx->negotiatedInfo.cipherSuiteInfo.hashAlg;
+    hashAlgo = (hashAlgo == HITLS_HASH_SHA1) ? HITLS_HASH_SHA_256 : hashAlgo;
+    HITLS_HASH_Ctx *hashCtx = SAL_CRYPT_DigestInit(LIBCTX_FROM_CTX(ctx), ATTRIBUTE_FROM_CTX(ctx), hashAlgo);
+    if (hashCtx == NULL) {
+        BSL_ERR_PUSH_ERROR(HITLS_CRYPT_ERR_DIGEST);
+        return HITLS_CRYPT_ERR_DIGEST;
     }
 
     uint8_t digest[MAX_DIGEST_SIZE] = {0};
     uint32_t digestLen = sizeof(digest);
-    ret = VERIFY_CalcSessionHash(ctx->hsCtx->verifyCtx, digest, &digestLen);
+    int32_t ret = VERIFY_UpdateCachedTranscriptHash(hashCtx, ctx->hsCtx->verifyCtx->dataBuf,
+        GET_VERSION_FROM_CTX(ctx), 0);
+    if (ret == HITLS_SUCCESS) {
+        ret = SAL_CRYPT_DigestFinal(hashCtx, digest, &digestLen);
+    }
+    SAL_CRYPT_DigestFree(hashCtx);
     if (ret != HITLS_SUCCESS) {
         return ret;
     }
@@ -279,28 +428,15 @@ static int32_t BuildDtls13CookiePayload(TLS_Ctx *ctx, uint8_t *payload, uint32_t
 
 static int32_t GenerateDtls13AppCookie(TLS_Ctx *ctx)
 {
-    uint8_t cookie[TLS_HS_MAX_COOKIE_SIZE] = {0};
-    uint32_t cookieLen = sizeof(cookie);
-    int32_t returnVal = ctx->globalConfig->appGenCookieCb(ctx, cookie, &cookieLen);
-    if (returnVal == HITLS_COOKIE_GENERATE_ERROR) {
-        BSL_ERR_PUSH_ERROR(HITLS_MSG_HANDLE_COOKIE_ERR);
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15697, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "appGenCookieCb return error 0x%x.", returnVal, 0, 0, 0);
-        return HITLS_MSG_HANDLE_COOKIE_ERR;
-    }
-    if (cookieLen > TLS_HS_MAX_COOKIE_SIZE) {
-        BSL_ERR_PUSH_ERROR(HITLS_MSG_HANDLE_COOKIE_ERR);
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17353, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "cookie len is too long.", 0, 0, 0, 0);
-        return HITLS_MSG_HANDLE_COOKIE_ERR;
+    uint8_t *cookie = NULL;
+    uint32_t cookieLen = 0;
+    int32_t ret = GenerateAppCookie(ctx, &cookie, &cookieLen);
+    if (ret != HITLS_SUCCESS) {
+        return ret;
     }
 
     BSL_SAL_FREE(ctx->negotiatedInfo.cookie);
-    ctx->negotiatedInfo.cookie = BSL_SAL_Dump(cookie, cookieLen);
-    if (ctx->negotiatedInfo.cookie == NULL) {
-        BSL_ERR_PUSH_ERROR(HITLS_MEMALLOC_FAIL);
-        return HITLS_MEMALLOC_FAIL;
-    }
+    ctx->negotiatedInfo.cookie = cookie;
     ctx->negotiatedInfo.cookieSize = cookieLen;
     return HITLS_SUCCESS;
 }
@@ -356,7 +492,7 @@ int32_t HS_Dtls13GenerateCookie(TLS_Ctx *ctx)
 
 static bool ParseDtls13CookiePayload(const uint8_t *cookie, uint32_t cookieLen, Dtls13CookiePayload *payload)
 {
-    if (cookieLen < DTLS13_COOKIE_HEADER_LEN + DTLS13_COOKIE_MAC_LEN ||
+    if (payload == NULL || cookieLen < DTLS13_COOKIE_HEADER_LEN + DTLS13_COOKIE_MAC_LEN ||
         memcmp(cookie, g_dtls13CookieMagic, sizeof(g_dtls13CookieMagic)) != 0) {
         return false;
     }
@@ -366,6 +502,11 @@ static bool ParseDtls13CookiePayload(const uint8_t *cookie, uint32_t cookieLen, 
     if (cookie[offset++] != DTLS13_COOKIE_VERSION) {
         return false;
     }
+
+    /*
+     * Parse all payload fields to validate the default-cookie wire format. The current server flow does not
+     * consume these values after MAC verification; see Dtls13CookiePayload for the design note.
+     */
     payload->flags = cookie[offset++];
     payload->cipherSuite = BSL_ByteToUint16(&cookie[offset]);
     offset += sizeof(uint16_t);
@@ -379,103 +520,21 @@ static bool ParseDtls13CookiePayload(const uint8_t *cookie, uint32_t cookieLen, 
     return true;
 }
 
-static int32_t CheckDtls13CookieMacWithKey(TLS_Ctx *ctx, const uint8_t *macKey, const uint8_t *cookie,
-    uint32_t cookieLen, bool *isCookieValid)
-{
-    uint32_t payloadLen = cookieLen - DTLS13_COOKIE_MAC_LEN;
-    uint8_t mac[DTLS13_COOKIE_MAC_LEN] = {0};
-    uint32_t macLen = sizeof(mac);
-    int32_t ret = CalcDtls13CookieMac(ctx, macKey, cookie, payloadLen, mac, &macLen);
-    if (ret != HITLS_SUCCESS) {
-        return ret;
-    }
-    if (macLen == DTLS13_COOKIE_MAC_LEN &&
-        ConstTimeMemcmp(mac, &cookie[payloadLen], DTLS13_COOKIE_MAC_LEN) != 0) {
-        *isCookieValid = true;
-    }
-    BSL_SAL_CleanseData(mac, sizeof(mac));
-    return HITLS_SUCCESS;
-}
-
 static int32_t CheckDtls13CookieMac(TLS_Ctx *ctx, const uint8_t *cookie, uint32_t cookieLen, bool *isCookieValid)
 {
     CookieInfo *cookieInfo = &ctx->negotiatedInfo.cookieInfo;
-    *isCookieValid = false;
-
-    int32_t ret = CheckDtls13CookieMacWithKey(ctx, cookieInfo->macKey, cookie, cookieLen, isCookieValid);
-    if (ret != HITLS_SUCCESS || *isCookieValid) {
+    uint32_t payloadLen = cookieLen - DTLS13_COOKIE_MAC_LEN;
+    uint8_t *material = NULL;
+    uint32_t materialSize = 0;
+    uint32_t usedLen = 0;
+    int32_t ret = BuildDtls13CookieMacMaterial(ctx, cookie, payloadLen, &material, &materialSize, &usedLen);
+    if (ret != HITLS_SUCCESS) {
         return ret;
     }
-
-    uint8_t emptyKey[MAC_KEY_LEN] = {0};
-    if (ConstTimeMemcmp(cookieInfo->preMacKey, emptyKey, sizeof(emptyKey)) == 0) {
-        return HITLS_SUCCESS;
-    }
-    return CheckDtls13CookieMacWithKey(ctx, cookieInfo->preMacKey, cookie, cookieLen, isCookieValid);
-}
-
-static int32_t PackDtls13HrrTranscript(TLS_Ctx *ctx, const Dtls13CookiePayload *payload,
-    const uint8_t *cookie, uint32_t cookieLen, uint8_t **hrrTranscript, uint32_t *hrrTranscriptLen)
-{
-    ExtensionFlag oldExtFlag = ctx->hsCtx->extFlag;
-
-    BSL_SAL_FREE(ctx->negotiatedInfo.cookie);
-    ctx->negotiatedInfo.cookie = BSL_SAL_Dump(cookie, cookieLen);
-    if (ctx->negotiatedInfo.cookie == NULL) {
-        return HITLS_MEMALLOC_FAIL;
-    }
-    ctx->negotiatedInfo.cookieSize = cookieLen;
-    ctx->negotiatedInfo.version = HITLS_VERSION_DTLS13;
-    ctx->negotiatedInfo.negotiatedGroup = payload->selectedGroup;
-    ctx->hsCtx->isHrrKeyShare = (payload->flags & DTLS13_COOKIE_FLAG_KEY_SHARE_HRR) != 0;
-    ctx->hsCtx->haveHrr = true;
-    ctx->hsCtx->kxCtx->keyExchParam.share.count = 0;
-    if (ctx->hsCtx->isHrrKeyShare) {
-        ctx->hsCtx->kxCtx->keyExchParam.share.groups[0] = payload->selectedGroup;
-        ctx->hsCtx->kxCtx->keyExchParam.share.count = 1;
-    }
-
-    uint8_t *hrrMsg = NULL;
-    uint32_t hrrMsgLen = 0;
-    uint32_t hrrMsgBufLen = 0;
-    PackPacket pkt = {.buf = &hrrMsg, .bufLen = &hrrMsgBufLen, .bufOffset = &hrrMsgLen};
-    uint32_t headerPosition = 0;
-    int32_t ret = PackStartLengthField(&pkt, DTLS_HS_MSG_HEADER_SIZE, &headerPosition);
-    if (ret != HITLS_SUCCESS) {
-        goto EXIT;
-    }
-
-    memset(&ctx->hsCtx->extFlag, 0, sizeof(ctx->hsCtx->extFlag));
-    ret = PackTls13HelloRetryRequest(ctx, &pkt);
-    if (ret != HITLS_SUCCESS) {
-        goto EXIT;
-    }
-
-    uint8_t *dtlsHeaderBuf = NULL;
-    uint32_t totalLen = 0;
-    ret = PackGetSubBuffer(&pkt, headerPosition, &totalLen, &dtlsHeaderBuf);
-    if (ret != HITLS_SUCCESS) {
-        goto EXIT;
-    }
-    PackDtlsMsgHeader(SERVER_HELLO, ctx->hsCtx->nextSendSeq, totalLen - DTLS_HS_MSG_HEADER_SIZE, dtlsHeaderBuf);
-
-    ret = VERIFY_Dtls13BuildTranscriptMsg(hrrMsg, hrrMsgLen, hrrTranscript, hrrTranscriptLen);
-
-EXIT:
-    ctx->hsCtx->extFlag = oldExtFlag;
-    BSL_SAL_FREE(hrrMsg);
+    ret = VerifyCookieWithMacKeyRotation(ctx, cookieInfo, material, usedLen, &cookie[payloadLen],
+        DTLS13_COOKIE_MAC_LEN, isCookieValid);
+    BSL_SAL_ClearFree(material, materialSize);
     return ret;
-}
-
-static int32_t ProcessDtls13AppCookie(TLS_Ctx *ctx, const uint8_t *cookie, uint32_t cookieLen, bool *isCookieValid)
-{
-    int32_t isValid = ctx->globalConfig->appVerifyCookieCb(ctx, cookie, cookieLen);
-    if (isValid == HITLS_COOKIE_VERIFY_ERROR) {
-        return HITLS_SUCCESS;
-    }
-
-    *isCookieValid = true;
-    return HITLS_SUCCESS;
 }
 
 static int32_t Dtls13CookieVerifyFail(TLS_Ctx *ctx)
@@ -483,6 +542,12 @@ static int32_t Dtls13CookieVerifyFail(TLS_Ctx *ctx)
     BSL_ERR_PUSH_ERROR(HITLS_MSG_HANDLE_COOKIE_ERR);
     ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_ILLEGAL_PARAMETER);
     return HITLS_MSG_HANDLE_COOKIE_ERR;
+}
+
+static bool Dtls13CookieMatchesCurrentHrr(const TLS_Ctx *ctx, const uint8_t *cookie, uint32_t cookieLen)
+{
+    return ctx->negotiatedInfo.cookie != NULL && ctx->negotiatedInfo.cookieSize == cookieLen &&
+        ConstTimeMemcmp(ctx->negotiatedInfo.cookie, cookie, cookieLen) != 0;
 }
 
 int32_t HS_Dtls13ProcessCookie(TLS_Ctx *ctx, const ClientHelloMsg *clientHello, bool *isCookieValid)
@@ -497,8 +562,12 @@ int32_t HS_Dtls13ProcessCookie(TLS_Ctx *ctx, const ClientHelloMsg *clientHello, 
 
     const uint8_t *cookie = clientHello->extension.content.cookie;
     uint32_t cookieLen = clientHello->extension.content.cookieLen;
+    if (!Dtls13CookieMatchesCurrentHrr(ctx, cookie, cookieLen)) {
+        return Dtls13CookieVerifyFail(ctx);
+    }
+
     if (ctx->globalConfig != NULL && ctx->globalConfig->appVerifyCookieCb != NULL) {
-        int32_t ret = ProcessDtls13AppCookie(ctx, cookie, cookieLen, isCookieValid);
+        int32_t ret = VerifyAppCookie(ctx, cookie, cookieLen, isCookieValid);
         if (ret != HITLS_SUCCESS) {
             return ret;
         }
@@ -506,6 +575,11 @@ int32_t HS_Dtls13ProcessCookie(TLS_Ctx *ctx, const ClientHelloMsg *clientHello, 
     }
 
     Dtls13CookiePayload payload = {0};
+    /*
+     * The default DTLS1.3 cookie carries fields that were reserved for stateless restore. This stateful server does
+     * not consume them now, but still parses them here to reject malformed or non-default cookie payloads before the
+     * MAC check.
+     */
     if (!ParseDtls13CookiePayload(cookie, cookieLen, &payload)) {
         return Dtls13CookieVerifyFail(ctx);
     }
@@ -517,48 +591,31 @@ int32_t HS_Dtls13ProcessCookie(TLS_Ctx *ctx, const ClientHelloMsg *clientHello, 
     if (!*isCookieValid) {
         return Dtls13CookieVerifyFail(ctx);
     }
-
-    ret = CFG_GetCipherSuiteInfo(payload.cipherSuite, &ctx->negotiatedInfo.cipherSuiteInfo);
-    if (ret != HITLS_SUCCESS) {
-        *isCookieValid = false;
-        return Dtls13CookieVerifyFail(ctx);
-    }
-
-    uint8_t *hrrTranscript = NULL;
-    uint32_t hrrTranscriptLen = 0;
-    ret = PackDtls13HrrTranscript(ctx, &payload, cookie, cookieLen, &hrrTranscript, &hrrTranscriptLen);
-    if (ret != HITLS_SUCCESS) {
-        BSL_SAL_FREE(hrrTranscript);
-        return ret;
-    }
-    ret = VERIFY_RestoreHelloRetryRequestTranscript(ctx, payload.clientHelloHash, payload.hashLen,
-        hrrTranscript, hrrTranscriptLen);
-    BSL_SAL_FREE(hrrTranscript);
-    return ret;
+    return HITLS_SUCCESS;
 }
-#endif /* HITLS_TLS_PROTO_DTLS13 && HITLS_TLS_FEATURE_DEFAULT_COOKIE */
+#endif /* HITLS_TLS_PROTO_DTLS13 && HITLS_TLS_FEATURE_DEFAULT_COOKIE && HITLS_TLS_HOST_SERVER */
 
-int32_t HS_CalcCookie(TLS_Ctx *ctx, const ClientHelloMsg *clientHello, uint8_t *cookie, uint32_t *cookieLen,
-    bool isCheck)
+int32_t HS_CalcCookie(TLS_Ctx *ctx, const ClientHelloMsg *clientHello, uint8_t *cookie, uint32_t *cookieLen)
 {
     (void)clientHello;
     /* If the user's cookie calculation callback is registered, use the user's callback interface */
     if (ctx->globalConfig != NULL && ctx->globalConfig->appGenCookieCb != NULL) {
-        int32_t returnVal = ctx->globalConfig->appGenCookieCb(ctx, cookie, cookieLen);
-        /* A return value of zero indicates that the cookie generation failed, and a return value of other values is a
-         * success, so the judgment here is a failure rather than a non-success */
-        if (returnVal == HITLS_COOKIE_GENERATE_ERROR) {
-            BSL_ERR_PUSH_ERROR(HITLS_MSG_HANDLE_COOKIE_ERR);
-            BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15697, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-                "appGenCookieCb return error 0x%x.", returnVal, 0, 0, 0);
-            return HITLS_MSG_HANDLE_COOKIE_ERR;
+        uint8_t *appCookie = NULL;
+        uint32_t appCookieLen = 0;
+        int32_t ret = GenerateAppCookie(ctx, &appCookie, &appCookieLen);
+        if (ret != HITLS_SUCCESS) {
+            return ret;
         }
-        if (*cookieLen > TLS_HS_MAX_COOKIE_SIZE) {
+        if (appCookieLen > *cookieLen) {
+            BSL_SAL_FREE(appCookie);
             BSL_ERR_PUSH_ERROR(HITLS_MSG_HANDLE_COOKIE_ERR);
             BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17353, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
                 "cookie len is too long.", 0, 0, 0, 0);
             return HITLS_MSG_HANDLE_COOKIE_ERR;
         }
+        (void)memcpy(cookie, appCookie, appCookieLen);
+        *cookieLen = appCookieLen;
+        BSL_SAL_FREE(appCookie);
         return HITLS_SUCCESS;
     }
 #ifdef HITLS_TLS_FEATURE_DEFAULT_COOKIE
@@ -581,9 +638,7 @@ int32_t HS_CalcCookie(TLS_Ctx *ctx, const ClientHelloMsg *clientHello, uint8_t *
     }
 
     /* Updated the current HMAC algorithm usage times */
-    if (!isCheck) {
-        cookieInfo->algRemainTime--;
-    }
+    cookieInfo->algRemainTime--;
 
     return HITLS_SUCCESS;
 #else
@@ -594,53 +649,21 @@ int32_t HS_CalcCookie(TLS_Ctx *ctx, const ClientHelloMsg *clientHello, uint8_t *
 #ifdef HITLS_TLS_FEATURE_DEFAULT_COOKIE
 static int32_t CheckCookie(TLS_Ctx *ctx, const ClientHelloMsg *clientHello, bool *isCookieValid)
 {
-    uint8_t cookie[TLS_HS_MAX_COOKIE_SIZE] = {0};
-    uint32_t cookieLen = sizeof(cookie);
-
-    *isCookieValid = false;
-
-    int32_t ret = HS_CalcCookie(ctx, clientHello, cookie, &cookieLen, true);
+    uint8_t *material = NULL;
+    uint32_t materialSize = 0;
+    uint32_t usedLen = 0;
+    int32_t ret = BuildCookieCalcMaterial(ctx, clientHello, &material, &materialSize, &usedLen);
     if (ret != HITLS_SUCCESS) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16917, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "CalcCookie fail", 0, 0, 0, 0);
         return ret;
     }
 
-    if ((cookieLen == clientHello->cookieLen) &&
-        (ConstTimeMemcmp(cookie, clientHello->cookie, cookieLen) != 0)) {
-        *isCookieValid = true;
-    }
-    BSL_SAL_CleanseData(cookie, TLS_HS_MAX_COOKIE_SIZE);
-    return HITLS_SUCCESS;
-}
-
-static int32_t CheckCookieWithPreMacKey(TLS_Ctx *ctx, const ClientHelloMsg *clientHello, bool *isCookieValid)
-{
-    uint8_t macKeyStore[MAC_KEY_LEN] = {0};
     CookieInfo *cookieInfo = &ctx->negotiatedInfo.cookieInfo;
-
-    /* If the previous key does not exist, the system will not verify */
-    if (memcmp(cookieInfo->preMacKey, macKeyStore, MAC_KEY_LEN) == 0) {
-        return HITLS_SUCCESS;
-    }
-
-    /* Save the current mackey */
-    memcpy(macKeyStore, cookieInfo->macKey, MAC_KEY_LEN);
-    /* Use the previous mackey */
-    memcpy(cookieInfo->macKey, cookieInfo->preMacKey, MAC_KEY_LEN);
-
-    int32_t ret = CheckCookie(ctx, clientHello, isCookieValid);
-    if (ret != HITLS_SUCCESS) {
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16918, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "CheckCookie fail", 0, 0, 0, 0);
-        BSL_SAL_CleanseData(macKeyStore, MAC_KEY_LEN);
-        return ret;
-    }
-
-    /* Restore the current mackey */
-    memcpy(cookieInfo->macKey, macKeyStore, MAC_KEY_LEN);
-    BSL_SAL_CleanseData(macKeyStore, MAC_KEY_LEN);
-    return HITLS_SUCCESS;
+    ret = VerifyCookieWithMacKeyRotation(ctx, cookieInfo, material, usedLen, clientHello->cookie,
+        clientHello->cookieLen, isCookieValid);
+    BSL_SAL_ClearFree(material, materialSize);
+    return ret;
 }
 #endif /* HITLS_TLS_FEATURE_DEFAULT_COOKIE */
 
@@ -682,15 +705,8 @@ int32_t HS_CheckCookie(TLS_Ctx *ctx, const ClientHelloMsg *clientHello, bool *is
 #endif
 
     /* If the user's cookie validation callback is registered, use the user's callback interface */
-    HITLS_AppVerifyCookieCb cookieCb = ctx->globalConfig->appVerifyCookieCb;
-    if (cookieCb != NULL) {
-        int32_t isValid = cookieCb(ctx, clientHello->cookie, clientHello->cookieLen);
-        /* If the return value is not zero, the cookie is valid, so the judgment here does not equal failure rather than
-         * success */
-        if (isValid != HITLS_COOKIE_VERIFY_ERROR) {
-            *isCookieValid = true;
-        }
-        return HITLS_SUCCESS;
+    if (ctx->globalConfig != NULL && ctx->globalConfig->appVerifyCookieCb != NULL) {
+        return VerifyAppCookie(ctx, clientHello->cookie, clientHello->cookieLen, isCookieValid);
     }
 #ifdef HITLS_TLS_FEATURE_DEFAULT_COOKIE
     /* If the cookie validation callback function of the user is not registered, use the default validation function */
@@ -700,16 +716,9 @@ int32_t HS_CheckCookie(TLS_Ctx *ctx, const ClientHelloMsg *clientHello, bool *is
             "CheckCookie fail", 0, 0, 0, 0);
         return ret;
     }
-
-    /* If the cookie is successfully verified for the first time, it is returned. Otherwise, the previous MacKey is used
-     * to verify the cookie again */
-    if (*isCookieValid) {
-        return HITLS_SUCCESS;
-    }
-
-    return CheckCookieWithPreMacKey(ctx, clientHello, isCookieValid);
+    return HITLS_SUCCESS;
 #else
     return HITLS_MSG_HANDLE_COOKIE_ERR;
 #endif /* HITLS_TLS_FEATURE_DEFAULT_COOKIE */
 }
-#endif /* (HITLS_TLS_PROTO_DTLS12 || HITLS_TLS_PROTO_DTLS13) && HITLS_BSL_UIO_UDP */
+#endif /* HITLS_TLS_PROTO_DATAGRAM && HITLS_BSL_UIO_UDP */

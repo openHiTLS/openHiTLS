@@ -53,6 +53,9 @@ void RecConnStateFree(RecConnState *state)
         SAL_CRYPT_HmacFree(state->suiteInfo->macCtx);
 #endif
         SAL_CRYPT_CipherFree(state->suiteInfo->ctx);
+#ifdef HITLS_TLS_PROTO_DTLS13
+        SAL_CRYPT_CipherFree(state->suiteInfo->snCtx);
+#endif
     }
     /* Clear sensitive information */
     BSL_SAL_ClearFree(state->suiteInfo, sizeof(RecConnSuitInfo));
@@ -69,7 +72,7 @@ void RecConnSetSeqNum(RecConnState *state, uint64_t seq)
     state->seq = seq;
 }
 
-#if defined(HITLS_TLS_PROTO_DTLS12) || defined(HITLS_TLS_PROTO_DTLS13)
+#if defined(HITLS_TLS_PROTO_DATAGRAM)
 uint16_t RecConnGetEpoch(const RecConnState *state)
 {
     return state->epoch;
@@ -86,6 +89,10 @@ int32_t RecConnStateSetCipherInfo(RecConnState *state, RecConnSuitInfo *suitInfo
     if (state->suiteInfo != NULL) {
         SAL_CRYPT_CipherFree(state->suiteInfo->ctx);
         state->suiteInfo->ctx = NULL;
+#ifdef HITLS_TLS_PROTO_DTLS13
+        SAL_CRYPT_CipherFree(state->suiteInfo->snCtx);
+        state->suiteInfo->snCtx = NULL;
+#endif
 #ifdef HITLS_TLS_CALLBACK_CRYPT_HMAC_PRIMITIVES
         SAL_CRYPT_HmacFree(state->suiteInfo->macCtx);
         state->suiteInfo->macCtx = NULL;
@@ -363,7 +370,7 @@ int32_t RecConnKeyBlockGen(HITLS_Lib_Ctx *libCtx, const char *attrName,
     return HITLS_SUCCESS;
 }
 
-#if defined(HITLS_TLS_PROTO_TLS13) || defined(HITLS_TLS_PROTO_DTLS13)
+#if defined(HITLS_TLS_PROTO_TLS13_FAMILY)
 static const uint8_t DEVICE_INFO_KEY[] = "key";
 static const uint8_t DEVICE_INFO_IV[] = "iv";
 #ifdef HITLS_TLS_PROTO_DTLS13
@@ -416,7 +423,7 @@ int32_t RecTLS13ConnKeyBlockGen(const TLS_Ctx *ctx, const REC_SecParameters *par
     deriveInfo.libCtx = LIBCTX_FROM_CTX(ctx);
     deriveInfo.attrName = ATTRIBUTE_FROM_CTX(ctx);
 #ifdef HITLS_TLS_PROTO_DTLS13
-    if (ctx != NULL && ctx->negotiatedInfo.version == HITLS_VERSION_DTLS13) {
+    if (ctx->negotiatedInfo.version == HITLS_VERSION_DTLS13) {
         deriveInfo.labelPrefix = (const uint8_t *)CRYPT_DTLS13_HKDF_LABEL_PREFIX;
         deriveInfo.labelPrefixLen = CRYPT_DTLS13_HKDF_LABEL_PREFIX_LEN;
     }
@@ -449,4 +456,4 @@ int32_t RecTLS13ConnKeyBlockGen(const TLS_Ctx *ctx, const REC_SecParameters *par
     PackSuitInfo(suitInfo, param);
     return HITLS_SUCCESS;
 }
-#endif /* HITLS_TLS_PROTO_TLS13 */
+#endif /* HITLS_TLS_PROTO_TLS13_FAMILY */

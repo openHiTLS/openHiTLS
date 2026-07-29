@@ -301,6 +301,11 @@ void CleanNewSessionTicket(NewSessionTicketMsg *msg);
  */
 void CleanFinished(FinishedMsg *msg);
 
+#ifdef HITLS_TLS_FEATURE_DTLS_CID
+int32_t ParseNewConnectionId(TLS_Ctx *ctx, const uint8_t *buf, uint32_t bufLen, HS_Msg *hsMsg);
+int32_t ParseRequestConnectionId(TLS_Ctx *ctx, const uint8_t *buf, uint32_t bufLen, HS_Msg *hsMsg);
+#endif
+
 #ifdef __cplusplus
 }
 #endif /* end __cplusplus */

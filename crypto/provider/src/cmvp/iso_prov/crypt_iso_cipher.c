@@ -19,6 +19,7 @@
 #include "crypt_eal_implprovider.h"
 #include "crypt_modes_cbc.h"
 #include "crypt_modes_ccm.h"
+#include "crypt_modes_chacha20.h"
 #include "crypt_modes_chacha20poly1305.h"
 #include "crypt_modes_ctr.h"
 #include "crypt_modes_ecb.h"
@@ -180,6 +181,9 @@ CIPHER_NewCtx_FUNC(CHACHA20POLY1305)
 CIPHER_INIT_FUNC(MODES_CHACHA20POLY1305_InitCtx, MODES_CHACHA20POLY1305_Update, MODES_CHACHA20POLY1305_Final,
     MODES_CHACHA20POLY1305_DeInitCtx)
 
+CIPHER_NewCtx_FUNC(CHACHA20)
+CIPHER_INIT_FUNC(MODES_CHACHA20_InitCtx, MODES_CHACHA20_Update, MODES_CHACHA20_Final, MODES_CHACHA20_DeInitCtx)
+
 const CRYPT_EAL_Func g_isoCbc[] = {
 #ifdef HITLS_CRYPTO_CBC
     {CRYPT_EAL_IMPLCIPHER_NEWCTX, (CRYPT_EAL_ImplCipherNewCtx)MODES_CBC_NewCtxWrapper},
@@ -228,6 +232,19 @@ const CRYPT_EAL_Func g_isoChaCha[] = {
     {CRYPT_EAL_IMPLCIPHER_DEINITCTX, (CRYPT_EAL_ImplCipherDeinitCtx)MODES_CHACHA20POLY1305_DeInitCtxWrapper},
     {CRYPT_EAL_IMPLCIPHER_CTRL, (CRYPT_EAL_ImplCipherCtrl)MODES_CHACHA20POLY1305_CtrlWrapper},
     {CRYPT_EAL_IMPLCIPHER_FREECTX, (CRYPT_EAL_ImplCipherFreeCtx)MODES_CHACHA20POLY1305_FreeCtxWrapper},
+#endif
+    CRYPT_EAL_FUNC_END,
+};
+
+const CRYPT_EAL_Func g_isoChaCha20[] = {
+#ifdef HITLS_CRYPTO_CHACHA20
+    {CRYPT_EAL_IMPLCIPHER_NEWCTX, (CRYPT_EAL_ImplCipherNewCtx)MODES_CHACHA20_NewCtxWrapper},
+    {CRYPT_EAL_IMPLCIPHER_INITCTX, (CRYPT_EAL_ImplCipherInitCtx)MODES_CHACHA20_InitCtxWrapper},
+    {CRYPT_EAL_IMPLCIPHER_UPDATE, (CRYPT_EAL_ImplCipherUpdate)MODES_CHACHA20_UpdateWrapper},
+    {CRYPT_EAL_IMPLCIPHER_FINAL, (CRYPT_EAL_ImplCipherFinal)MODES_CHACHA20_FinalWrapper},
+    {CRYPT_EAL_IMPLCIPHER_DEINITCTX, (CRYPT_EAL_ImplCipherDeinitCtx)MODES_CHACHA20_DeInitCtxWrapper},
+    {CRYPT_EAL_IMPLCIPHER_CTRL, (CRYPT_EAL_ImplCipherCtrl)MODES_CHACHA20_CtrlWrapper},
+    {CRYPT_EAL_IMPLCIPHER_FREECTX, (CRYPT_EAL_ImplCipherFreeCtx)MODES_CHACHA20_FreeCtxWrapper},
 #endif
     CRYPT_EAL_FUNC_END,
 };

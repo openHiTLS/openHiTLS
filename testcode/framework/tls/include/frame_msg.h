@@ -178,6 +178,7 @@ typedef struct {
     FRAME_HsExtArray16 supportedVersion;     /* tls1.3 support version */
     FRAME_HsExtOfferedPsks psks;            /* tls1.3 psk */
     FRAME_HsExtCaList caList;
+    FRAME_HsExtArray8 connectionId;         /* connection_id (RFC 9146 / RFC 9147) */
 } FRAME_ClientHelloMsg;
 
 typedef struct {
@@ -207,6 +208,7 @@ typedef struct {
     FRAME_HsExtUint16 pskSelectedIdentity;  /* tls1.3 psk extension */
     FRAME_HsExtArray8 tls13Cookie;          /* tls1.3 cookie */
     FRAME_HsExtArray8 encryptThenMac;
+    FRAME_HsExtArray8 connectionId;         /* connection_id (RFC 9146 / RFC 9147) */
 } FRAME_ServerHelloMsg;
 
 typedef struct {

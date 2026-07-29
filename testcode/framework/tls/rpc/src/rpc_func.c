@@ -27,6 +27,7 @@
 #include "tls.h"
 #include "alert.h"
 #include "hitls.h"
+#include "hitls_dtls_cid.h"
 #include "common_func.h"
 #include "sctp_channel.h"
 #include "rpc_func.h"
@@ -52,6 +53,8 @@ RpcFunList g_rpcFuncList[] = {
     {"HLT_RpcTlsSetCtx", RpcTlsSetCtx},
     {"HLT_RpcTlsNewSsl", RpcTlsNewSsl},
     {"HLT_RpcTlsSetSsl", RpcTlsSetSsl},
+    {"HLT_RpcTlsSetDtlsCid", RpcTlsSetDtlsCid},
+    {"HLT_RpcTlsRequestConnectionId", RpcTlsRequestConnectionId},
     {"HLT_RpcTlsListen", RpcTlsListen},
     {"HLT_RpcTlsAccept", RpcTlsAccept},
     {"HLT_RpcTlsConnect", RpcTlsConnect},
@@ -315,6 +318,102 @@ int RpcTlsSetSsl(CmdData *cmdData)
     ret = HLT_TlsSetSsl(ssl, &sslConfig);
 EXIT:
     // Return the result.
+    ret = snprintf(cmdData->result, sizeof(cmdData->result), "%s|%s|%d", cmdData->id, cmdData->funcId, ret);
+    ASSERT_RETURN(ret >= 0 && (size_t)ret < sizeof(cmdData->result));
+    return SUCCESS;
+}
+
+static int HexCharToValue(char c)
+{
+    if (c >= '0' && c <= '9') {
+        return c - '0';
+    }
+    if (c >= 'a' && c <= 'f') {
+        return c - 'a' + 10;
+    }
+    if (c >= 'A' && c <= 'F') {
+        return c - 'A' + 10;
+    }
+    return ERROR;
+}
+
+static int HexStringToBytes(const char *hex, uint8_t *buf, uint8_t bufLen)
+{
+    if (hex == NULL || buf == NULL || strlen(hex) != (size_t)bufLen * 2u) {
+        return ERROR;
+    }
+    for (uint8_t i = 0; i < bufLen; i++) {
+        int high = HexCharToValue(hex[i * 2u]);
+        int low = HexCharToValue(hex[i * 2u + 1u]);
+        if (high < 0 || low < 0) {
+            return ERROR;
+        }
+        buf[i] = (uint8_t)((uint32_t)high << 4u | (uint32_t)low);
+    }
+    return SUCCESS;
+}
+
+int RpcTlsSetDtlsCid(CmdData *cmdData)
+{
+    int ret;
+    uint8_t cid[HITLS_DTLS_CID_LOCAL_MAX_LEN] = {0};
+
+    memset(cmdData->result, 0, sizeof(cmdData->result));
+
+    ResList *sslList = GetSslList();
+    int sslId = atoi(cmdData->paras[0]);
+    void *ssl = GetTlsResFromId(sslList, sslId);
+    if (ssl == NULL) {
+        LOG_ERROR("Not Find Ssl");
+        ret = ERROR;
+        goto EXIT;
+    }
+
+#ifdef HITLS_TLS_FEATURE_DTLS_CID
+    uint8_t cidLen = (uint8_t)atoi(cmdData->paras[1]);
+    if (cidLen > HITLS_DTLS_CID_LOCAL_MAX_LEN || HexStringToBytes(cmdData->paras[2], cid, cidLen) != SUCCESS) {
+        ret = ERROR;
+        goto EXIT;
+    }
+    if (cidLen == 0) {
+        ret = HITLS_SetDtlsRecvCid(ssl, NULL, 0);
+    } else {
+        ret = HITLS_SetDtlsRecvCid(ssl, cid, cidLen);
+    }
+#else
+    (void)cid;
+    ret = HITLS_CONFIG_UNSUPPORT;
+#endif
+
+EXIT:
+    ret = snprintf(cmdData->result, sizeof(cmdData->result), "%s|%s|%d", cmdData->id, cmdData->funcId, ret);
+    ASSERT_RETURN(ret >= 0 && (size_t)ret < sizeof(cmdData->result));
+    return SUCCESS;
+}
+
+int RpcTlsRequestConnectionId(CmdData *cmdData)
+{
+    int ret;
+
+    memset(cmdData->result, 0, sizeof(cmdData->result));
+
+    ResList *sslList = GetSslList();
+    int sslId = atoi(cmdData->paras[0]);
+    void *ssl = GetTlsResFromId(sslList, sslId);
+    if (ssl == NULL) {
+        LOG_ERROR("Not Find Ssl");
+        ret = ERROR;
+        goto EXIT;
+    }
+
+#ifdef HITLS_TLS_FEATURE_DTLS_CID
+    uint8_t numCids = (uint8_t)atoi(cmdData->paras[1]);
+    ret = HITLS_RequestConnectionId(ssl, numCids);
+#else
+    ret = HITLS_CONFIG_UNSUPPORT;
+#endif
+
+EXIT:
     ret = snprintf(cmdData->result, sizeof(cmdData->result), "%s|%s|%d", cmdData->id, cmdData->funcId, ret);
     ASSERT_RETURN(ret >= 0 && (size_t)ret < sizeof(cmdData->result));
     return SUCCESS;

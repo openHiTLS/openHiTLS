@@ -62,7 +62,7 @@ void HS_KeyExchCtxFree(KeyExchCtx *keyExchCtx)
         BSL_SAL_Free(keyExchCtx->pskInfo);
     }
 #endif /* HITLS_TLS_FEATURE_PSK */
-#if defined(HITLS_TLS_PROTO_TLS13) || defined(HITLS_TLS_PROTO_DTLS13)
+#if defined(HITLS_TLS_PROTO_TLS13_FAMILY)
     BSL_SAL_ClearFree(keyExchCtx->pskInfo13.psk, keyExchCtx->pskInfo13.pskLen);
     HITLS_SESS_Free(keyExchCtx->pskInfo13.resumeSession);
     keyExchCtx->pskInfo13.resumeSession = NULL;
@@ -656,9 +656,7 @@ int32_t HS_SetInitPendingStateParam(const TLS_Ctx *ctx, bool isClient, REC_SecPa
     keyPara->blockLength = cipherSuiteInfo->blockLength;
     keyPara->recordIvLength = cipherSuiteInfo->recordIvLength; /** The explicit IV needs to be sent to the peer. */
     keyPara->macLen = cipherSuiteInfo->macLen;
-    bool isTls13FamilyVersion = ctx->negotiatedInfo.version == HITLS_VERSION_TLS13 ||
-        ctx->negotiatedInfo.version == HITLS_VERSION_DTLS13;
-    if (!isTls13FamilyVersion) {
+    if (!IS_TLS13_FAMILY_CTX(ctx)) {
         uint32_t clientRandomSize = HS_RANDOM_SIZE;
         if (HS_RANDOM_SIZE > clientRandomSize) {
             BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16114, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,

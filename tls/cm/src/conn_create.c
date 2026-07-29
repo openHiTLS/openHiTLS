@@ -39,7 +39,12 @@
 #include "conn_init.h"
 #include "crypt.h"
 #include "cipher_suite.h"
+#include "hs.h"
 #include "hs_ctx.h"
+#include "hs_dtls_timer.h"
+#ifdef HITLS_TLS_FEATURE_DTLS_CID
+#include "dtls_cid.h"
+#endif
 
 #ifdef HITLS_TLS_FEATURE_CERTIFICATE_AUTHORITIES
 static int32_t PeerInfoInit(HITLS_Ctx *ctx)
@@ -53,6 +58,7 @@ static int32_t PeerInfoInit(HITLS_Ctx *ctx)
     return HITLS_SUCCESS;
 }
 #endif /* HITLS_TLS_FEATURE_CERTIFICATE_AUTHORITIES */
+
 /**
  * @ingroup    hitls
  * @brief      Create a TLS object and deep Copy the HITLS_Config to the HITLS_Ctx.
@@ -91,6 +97,15 @@ HITLS_Ctx *HITLS_New(HITLS_Config *config)
     }
     (void)HITLS_CFG_UpRef(config);
     newCtx->globalConfig = config;
+#if defined(HITLS_TLS_PROTO_DATAGRAM)
+    ret = HS_ReassQueueInit(newCtx);
+    if (ret != HITLS_SUCCESS) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17181, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+            "ReassNew fail", 0, 0, 0, 0);
+        HITLS_Free(newCtx);
+        return NULL;
+    }
+#endif
 #ifdef HITLS_TLS_FEATURE_CERTIFICATE_AUTHORITIES
     ret = PeerInfoInit(newCtx);
     if (ret != HITLS_SUCCESS) {
@@ -123,7 +138,8 @@ static void CleanPeerInfo(PeerInfo *peerInfo)
     BSL_SAL_FREE(peerInfo->signatureAlgorithms);
 }
 
-#if defined(HITLS_TLS_EXTENSION_COOKIE) || defined(HITLS_TLS_FEATURE_ALPN) || defined(HITLS_TLS_FEATURE_SNI)
+#if defined(HITLS_TLS_EXTENSION_COOKIE) || defined(HITLS_TLS_FEATURE_ALPN) || defined(HITLS_TLS_FEATURE_SNI) || \
+    defined(HITLS_TLS_FEATURE_DTLS_CID)
 static void CleanNegotiatedInfo(TLS_NegotiatedInfo *negotiatedInfo)
 {
 #ifdef HITLS_TLS_EXTENSION_COOKIE
@@ -134,6 +150,9 @@ static void CleanNegotiatedInfo(TLS_NegotiatedInfo *negotiatedInfo)
 #endif
 #ifdef HITLS_TLS_FEATURE_SNI
     BSL_SAL_FREE(negotiatedInfo->serverName);
+#endif
+#ifdef HITLS_TLS_FEATURE_DTLS_CID
+    BSL_SAL_FREE(negotiatedInfo->cidCtx);
 #endif
 }
 #endif
@@ -153,6 +172,9 @@ void HITLS_Free(HITLS_Ctx *ctx)
     ctx->rwstate = HITLS_NOTHING;
 #endif
     CONN_Deinit(ctx);
+#if defined(HITLS_TLS_PROTO_DATAGRAM)
+    HS_ReassQueueFree(ctx);
+#endif
     BSL_UIO_FreeChain(ctx->uio);
 #ifdef HITLS_TLS_FEATURE_FLIGHT
     BSL_UIO_FreeChain(ctx->rUio);
@@ -164,7 +186,8 @@ void HITLS_Free(HITLS_Ctx *ctx)
     CFG_CleanConfig(&ctx->config.tlsConfig);
     HITLS_CFG_FreeConfig(ctx->globalConfig);
     CleanPeerInfo(&(ctx->peerInfo));
-#if defined(HITLS_TLS_EXTENSION_COOKIE) || defined(HITLS_TLS_FEATURE_ALPN) || defined(HITLS_TLS_FEATURE_SNI)
+#if defined(HITLS_TLS_EXTENSION_COOKIE) || defined(HITLS_TLS_FEATURE_ALPN) || defined(HITLS_TLS_FEATURE_SNI) || \
+    defined(HITLS_TLS_FEATURE_DTLS_CID)
     CleanNegotiatedInfo(&ctx->negotiatedInfo);
 #endif
 #ifdef HITLS_TLS_FEATURE_PHA
@@ -187,7 +210,7 @@ static int32_t HITLS_ClearBadSession(HITLS_Ctx *ctx)
     return HITLS_SUCCESS;
 }
 #endif
-#ifdef HITLS_TLS_PROTO_TLS13
+#if defined(HITLS_TLS_PROTO_TLS13_FAMILY)
 static void CleanSecret(HITLS_Ctx *ctx)
 {
     BSL_SAL_CleanseData(ctx->clientAppTrafficSecret, MAX_DIGEST_SIZE);
@@ -211,16 +234,25 @@ int32_t HITLS_Clear(HITLS_Ctx *ctx)
     }
 #endif
     CONN_Deinit(ctx);
+#if defined(HITLS_TLS_PROTO_DATAGRAM)
+    HS_ReassQueueClear(ctx);
+#endif
+#if defined(HITLS_TLS_PROTO_DATAGRAM) && defined(HITLS_BSL_UIO_UDP)
+    HS_StopTimer(ctx);
+    HS_Stop2MslTimer(ctx);
+    ctx->dtls2MslDeadline = (BSL_TIME){0};
+#endif
     ctx->hsCtx = NULL;
     ctx->ccsCtx = NULL;
     ctx->alertCtx = NULL;
     ctx->recCtx = NULL;
     CleanPeerInfo(&(ctx->peerInfo));
-#if defined(HITLS_TLS_EXTENSION_COOKIE) || defined(HITLS_TLS_FEATURE_ALPN) || defined(HITLS_TLS_FEATURE_SNI)
+#if defined(HITLS_TLS_EXTENSION_COOKIE) || defined(HITLS_TLS_FEATURE_ALPN) || defined(HITLS_TLS_FEATURE_SNI) || \
+    defined(HITLS_TLS_FEATURE_DTLS_CID)
     CleanNegotiatedInfo(&ctx->negotiatedInfo);
 #endif
     memset(&ctx->negotiatedInfo, 0, sizeof(TLS_NegotiatedInfo));
-#ifdef HITLS_TLS_PROTO_TLS13
+#if defined(HITLS_TLS_PROTO_TLS13_FAMILY)
     CleanSecret(ctx);
 #endif
     ctx->userShutDown = false;
@@ -229,6 +261,15 @@ int32_t HITLS_Clear(HITLS_Ctx *ctx)
     ctx->state = CM_STATE_IDLE;
     ctx->shutdownState = 0;
     ctx->haveClientPointFormats = false;
+#ifdef HITLS_TLS_PROTO_DTLS13
+    ctx->dtls13NextSendSeq = 0;
+    ctx->dtls13ExpectRecvSeq = 0;
+#endif
+#ifdef HITLS_TLS_FEATURE_DTLS_CID
+    ctx->newCidState = DTLS_CID_MSG_STATE_IDLE;
+    ctx->reqCidState = DTLS_CID_MSG_STATE_IDLE;
+    ctx->reqCidNum = 0;
+#endif
     return HITLS_SUCCESS;
 }
 
@@ -262,7 +303,7 @@ static void ConfigPmtu(HITLS_Ctx *ctx, BSL_UIO *uio)
 {
     (void)ctx;
     (void)uio;
-#ifdef HITLS_TLS_PROTO_DTLS12
+#ifdef HITLS_TLS_PROTO_DATAGRAM
     /* The PMTU needs to be set for DTLS. If the PMTU is not set, use the default value */
     if ((ctx->config.pmtu == 0) && IS_SUPPORT_DATAGRAM(ctx->config.tlsConfig.originVersionMask)) {
         if (BSL_UIO_GetUioChainTransportType(uio, BSL_UIO_SCTP)) {

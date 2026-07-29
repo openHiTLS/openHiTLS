@@ -336,6 +336,12 @@ HITLS_Config *HitlsProviderNewCtx(char *providerPath, char (*providerNames)[MAX_
             LOG_DEBUG("HiTLS New DTLS1_2 Ctx");
             hitlsConfig = HITLS_CFG_ProviderNewDTLS12Config(libCtx, tmpAttrName);
             break;
+#ifdef HITLS_TLS_PROTO_DTLS13
+        case DTLS1_3:
+            LOG_DEBUG("HiTLS New DTLS1_3 Ctx");
+            hitlsConfig = HITLS_CFG_ProviderNewDTLS13Config(libCtx, tmpAttrName);
+            break;
+#endif
         case TLS1_2:
             LOG_DEBUG("HiTLS New TLS1_2 Ctx");
             hitlsConfig = HITLS_CFG_ProviderNewTLS12Config(libCtx, tmpAttrName);
@@ -384,6 +390,12 @@ HITLS_Config *HitlsNewCtx(TLS_VERSION tlsVersion)
         case DTLS1_2:
             LOG_DEBUG("HiTLS New DTLS1_2 Ctx");
             hitlsConfig = HITLS_CFG_NewDTLS12Config();
+            break;
+#endif
+#ifdef HITLS_TLS_PROTO_DTLS13
+        case DTLS1_3:
+            LOG_DEBUG("HiTLS New DTLS1_3 Ctx");
+            hitlsConfig = HITLS_CFG_NewDTLS13Config();
             break;
 #endif
 #ifdef HITLS_TLS_PROTO_TLS12
@@ -562,6 +574,11 @@ int HitlsSetCtx(HITLS_Config *outCfg, HLT_Ctx_Config *inCtxCfg)
     LOG_DEBUG("HiTLS Set Support pha is %d", inCtxCfg->isSupportPostHandshakeAuth);
     ret = HITLS_CFG_SetPostHandshakeAuthSupport(outCfg, inCtxCfg->isSupportPostHandshakeAuth);
     ASSERT_RETURN(ret == SUCCESS, "HITLS_CFG_SetPostHandshakeAuth ERROR");
+#endif
+#ifdef HITLS_TLS_FEATURE_DTLS_CID
+    LOG_DEBUG("HiTLS Set Support dtls cid is %d", inCtxCfg->isSupportConnectionId);
+    ret = HITLS_CFG_SetDtlsCidSupport(outCfg, inCtxCfg->isSupportConnectionId);
+    ASSERT_RETURN(ret == SUCCESS, "HITLS_CFG_SetDtlsCidSupport ERROR");
 #endif
     // Indicates whether extended master keys are supported.
     LOG_DEBUG("HiTLS Set Support Extend Master Secret is %d", inCtxCfg->emsMode);
@@ -773,7 +790,7 @@ int HitlsSetCtx(HITLS_Config *outCfg, HLT_Ctx_Config *inCtxCfg)
     ret = HITLS_CFG_SetMiddleBoxCompat(outCfg, (uint32_t)inCtxCfg->isMiddleBoxCompat);
     ASSERT_RETURN(ret == SUCCESS, "HITLS_CFG_SetMiddleBoxCompat ERROR");
 #endif
-#if defined(HITLS_TLS_PROTO_DTLS12) && defined(HITLS_BSL_UIO_UDP)
+#if defined(HITLS_TLS_PROTO_DATAGRAM) && defined(HITLS_BSL_UIO_UDP)
     LOG_DEBUG("HiTLS Set Dtls Cookie Support is %d", inCtxCfg->isSupportDtlsCookieExchange);
     ret = HITLS_CFG_SetDtlsCookieExchangeSupport(outCfg, (uint32_t)inCtxCfg->isSupportDtlsCookieExchange);
     ASSERT_RETURN(ret == SUCCESS, "HITLS_CFG_SetDtlsCookieExchangeSupport ERROR");
@@ -999,7 +1016,7 @@ int HitlsRenegotiate(void *ssl)
 
 int HitlsSetMtu(void *ssl, uint16_t mtu)
 {
-#ifdef HITLS_TLS_PROTO_DTLS12
+#if defined(HITLS_TLS_PROTO_DATAGRAM) && defined(HITLS_BSL_UIO_UDP)
     return HITLS_SetMtu(ssl, mtu);
 #else
     (void)ssl;

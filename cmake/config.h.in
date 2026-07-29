@@ -448,7 +448,12 @@
 #cmakedefine HITLS_TLS_PROTO_TLS13
 #cmakedefine HITLS_TLS_PROTO_TLCP11
 #cmakedefine HITLS_TLS_PROTO_DTLS12
+#cmakedefine HITLS_TLS_PROTO_DTLS13
 #cmakedefine HITLS_TLS_PROTO_DTLCP11
+
+// TLS Proto Derived Helper Macros
+#cmakedefine HITLS_TLS_PROTO_TLS13_FAMILY
+#cmakedefine HITLS_TLS_PROTO_DATAGRAM
 
 // TLS Host
 #cmakedefine HITLS_TLS_HOST
@@ -505,6 +510,7 @@
 #cmakedefine HITLS_TLS_FEATURE_DEFAULT_COOKIE
 #cmakedefine HITLS_TLS_FEATURE_ETM
 #cmakedefine HITLS_TLS_FEATURE_CUSTOM_REC_TYPE
+#cmakedefine HITLS_TLS_FEATURE_DTLS_CID
 
 // TLS Proto Module
 #cmakedefine HITLS_TLS_PROTO

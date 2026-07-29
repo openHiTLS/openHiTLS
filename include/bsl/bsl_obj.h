@@ -735,6 +735,7 @@ typedef enum {
     BSL_CID_X509CRL = 5305,
     BSL_CID_SMIMECAP = 5306,
     BSL_CID_ON_DNSSRV = 5307, /* identifies id-on-dnsSRV */
+    BSL_CID_CHACHA20 = 5308,  /* identifies ChaCha20 algorithm */
 
     BSL_CID_MAX,
     BSL_CID_EXTEND = 0x60000000,

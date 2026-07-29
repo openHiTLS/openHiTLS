@@ -40,6 +40,7 @@ extern "C" {
 #define DTLS_SCTP_PMTU 18445uL
 
 #define IS_DTLS_VERSION(version) (((version) & 0x8u) == 0x8u)
+#define IS_TLS13_FAMILY_VERSION(version) ((version) == HITLS_VERSION_TLS13 || (version) == HITLS_VERSION_DTLS13)
 
 #define IS_SUPPORT_STREAM(versionBits) (((versionBits) & STREAM_VERSION_BITS) != 0x0u)
 #define IS_SUPPORT_DATAGRAM(versionBits) (((versionBits) & DATAGRAM_VERSION_BITS) != 0x0u)
@@ -48,6 +49,7 @@ extern "C" {
 #define IS_SUPPORT_DTLS(versionBits) (((versionBits) & DTLS_VERSION_MASK) != 0x0u)
 #define IS_SUPPORT_DTLS12(versionBits) (((versionBits) & DTLS12_VERSION_BIT) != 0x0u)
 #define IS_SUPPORT_DTLS13(versionBits) (((versionBits) & DTLS13_VERSION_BIT) != 0x0u)
+#define IS_TLS13_FAMILY_CTX(ctx) ((ctx) != NULL && IS_TLS13_FAMILY_VERSION((ctx)->negotiatedInfo.version))
 #define IS_DTLS13_CTX(ctx) \
     ((ctx) != NULL && ((ctx)->negotiatedInfo.version == HITLS_VERSION_DTLS13 || \
         ((ctx)->negotiatedInfo.version == 0 && (ctx)->config.tlsConfig.maxVersion == HITLS_VERSION_DTLS13)))
@@ -391,7 +393,7 @@ struct TlsCtx {
     HITLS_RecvRequestConnectionIdCb onRecvRequestCidCb; /* app callback for peer request */
     void *onRecvRequestCidUserData;         /* app callback user data */
 #endif
-#if defined(HITLS_TLS_PROTO_DTLS12) || defined(HITLS_TLS_PROTO_DTLS13)
+#if defined(HITLS_TLS_PROTO_DATAGRAM)
     HS_ReassQueue *reassMsg;                /* DTLS handshake reassembly message queue */
 #endif
     bool haveClientPointFormats;            /* whether the EC point format extension in the client hello is processed */
@@ -415,7 +417,7 @@ struct TlsCtx {
     BSL_TIME deadline;     /* End time */
     HITLS_REC_ReadCb recReadCb;             /* callback for reading user-defined record type messages */
     void *recReadCbArg;                     /* user data pointer passed to the callback context */
-#if (defined(HITLS_TLS_PROTO_DTLS12) || defined(HITLS_TLS_PROTO_DTLS13)) && defined(HITLS_BSL_UIO_UDP)
+#if defined(HITLS_TLS_PROTO_DATAGRAM) && defined(HITLS_BSL_UIO_UDP)
     uint32_t timeoutValue;                    /* DTLS retransmission timeout interval, in us */
     uint32_t timeoutNum;                      /* DTLS retransmission timeout count */
     BSL_TIME dtls2MslDeadline;              /* DTLS 2MSL end time */

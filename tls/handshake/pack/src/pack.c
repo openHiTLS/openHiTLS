@@ -89,7 +89,7 @@ static int32_t PackHsMsgBody(TLS_Ctx *ctx, HS_MsgType type, PackPacket *pkt)
     return ret;
 }
 #endif /* HITLS_TLS_PROTO_TLS_BASIC || HITLS_TLS_PROTO_DTLS12 */
-#if defined(HITLS_TLS_PROTO_TLS13) || defined(HITLS_TLS_PROTO_DTLS13)
+#if defined(HITLS_TLS_PROTO_TLS13_FAMILY)
 static int32_t PackTls13HsMsgBody(TLS_Ctx *ctx, HS_MsgType type, PackPacket *pkt)
 {
     int32_t ret = HITLS_SUCCESS;
@@ -148,7 +148,7 @@ static int32_t PackTls13HsMsgBody(TLS_Ctx *ctx, HS_MsgType type, PackPacket *pkt
     }
     return ret;
 }
-#endif /* HITLS_TLS_PROTO_TLS13 || HITLS_TLS_PROTO_DTLS13 */
+#endif /* HITLS_TLS_PROTO_TLS13_FAMILY */
 #ifdef HITLS_TLS_PROTO_DTLS12
 int32_t Dtls12PackMsg(TLS_Ctx *ctx, HS_MsgType type)
 {
@@ -164,14 +164,7 @@ int32_t Dtls12PackMsg(TLS_Ctx *ctx, HS_MsgType type)
         return ret;
     }
 
-#ifdef HITLS_TLS_PROTO_TLS13
-    if (ctx->negotiatedInfo.version == HITLS_VERSION_TLS13) {
-        ret = PackTls13HsMsgBody(ctx, type, &pkt);
-    } else
-#endif
-    {
-        ret = PackHsMsgBody(ctx, type, &pkt);
-    }
+    ret = PackHsMsgBody(ctx, type, &pkt);
     if (ret != HITLS_SUCCESS) {
         return ret;
     }
@@ -322,12 +315,6 @@ int32_t HS_PackMsg(TLS_Ctx *ctx, HS_MsgType type)
 #endif /* HITLS_TLS_PROTO_TLS_BASIC */
 #ifdef HITLS_TLS_PROTO_TLS13
         case HITLS_VERSION_TLS13:
-#if defined(HITLS_TLS_PROTO_DTLS12)
-            if (IS_SUPPORT_DATAGRAM(ctx->config.tlsConfig.originVersionMask)) {
-                ret = Dtls12PackMsg(ctx, type);
-                break;
-            }
-#endif
             ret = Tls13PackMsg(ctx, type);
             break;
 #endif /* HITLS_TLS_PROTO_TLS13 */

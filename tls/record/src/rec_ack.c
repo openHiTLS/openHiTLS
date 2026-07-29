@@ -41,7 +41,22 @@ static int32_t CompareRecordNumber(const RecordNumber *lhs, const RecordNumber *
 
 static int32_t Dtls13AckListEnsureCap(Dtls13AckList *list)
 {
-    REC_DYN_ARRAY_GROW(list->records, list->count, list->cap, RecordNumber, REC_DTLS13_ACK_LIST_MAX_COUNT);
+    if (list->count == list->cap) {
+        uint32_t newCap = (list->cap == 0) ? 4u : (list->cap * 2u);
+        if (newCap > REC_DTLS13_ACK_LIST_MAX_COUNT) {
+            newCap = REC_DTLS13_ACK_LIST_MAX_COUNT;
+        }
+        RecordNumber *newRecords = (RecordNumber *)BSL_SAL_Calloc(newCap, sizeof(RecordNumber));
+        if (newRecords == NULL) {
+            return HITLS_MEMALLOC_FAIL;
+        }
+        if (list->records != NULL) {
+            (void)memcpy(newRecords, list->records, list->count * sizeof(RecordNumber));
+            BSL_SAL_FREE(list->records);
+        }
+        list->records = newRecords;
+        list->cap = newCap;
+    }
     return HITLS_SUCCESS;
 }
 
@@ -105,12 +120,13 @@ bool REC_Dtls13AckListIsEmpty(const TLS_Ctx *ctx, REC_Dtls13AckListType type)
     return list->count == 0;
 }
 
-static void Dtls13EncodeAckItems(const Dtls13AckList *list, uint8_t *buf, uint32_t baseOffset)
+static void Dtls13EncodeAckItems(const Dtls13AckList *list, uint32_t start, uint32_t count, uint8_t *buf,
+    uint32_t baseOffset)
 {
-    for (uint32_t i = 0; i < list->count; i++) {
+    for (uint32_t i = 0; i < count; i++) {
         uint32_t offset = baseOffset + i * REC_DTLS13_ACK_ITEM_LEN;
-        BSL_Uint64ToByte(list->records[i].epoch, &buf[offset]);
-        BSL_Uint64ToByte(list->records[i].sequenceNumber, &buf[offset + sizeof(uint64_t)]);
+        BSL_Uint64ToByte(list->records[start + i].epoch, &buf[offset]);
+        BSL_Uint64ToByte(list->records[start + i].sequenceNumber, &buf[offset + sizeof(uint64_t)]);
     }
 }
 
@@ -126,6 +142,51 @@ static int32_t Dtls13FlushAckRecord(TLS_Ctx *ctx)
     return HITLS_SUCCESS;
 }
 
+static int32_t Dtls13GetMaxAckItems(TLS_Ctx *ctx, uint32_t *maxItems)
+{
+    int32_t ret = REC_QueryMtu(ctx);
+    if (ret != HITLS_SUCCESS) {
+        return ret;
+    }
+    uint32_t maxWriteSize = 0;
+    ret = REC_GetMaxWriteSize(ctx, &maxWriteSize);
+    if (ret != HITLS_SUCCESS) {
+        return ret;
+    }
+    if (maxWriteSize <= sizeof(uint16_t)) {
+        BSL_ERR_PUSH_ERROR(HITLS_REC_PMTU_TOO_SMALL);
+        return HITLS_REC_PMTU_TOO_SMALL;
+    }
+    *maxItems = (maxWriteSize - sizeof(uint16_t)) / REC_DTLS13_ACK_ITEM_LEN;
+    if (*maxItems == 0) {
+        BSL_ERR_PUSH_ERROR(HITLS_REC_PMTU_TOO_SMALL);
+        return HITLS_REC_PMTU_TOO_SMALL;
+    }
+    return HITLS_SUCCESS;
+}
+
+static int32_t Dtls13SendAckBatch(TLS_Ctx *ctx, const Dtls13AckList *list, uint32_t start, uint32_t count)
+{
+    uint32_t ackDataLen = count * REC_DTLS13_ACK_ITEM_LEN;
+    uint32_t dataLen = sizeof(uint16_t) + ackDataLen;
+    uint8_t *buf = (uint8_t *)BSL_SAL_Calloc(1u, dataLen);
+    if (buf == NULL) {
+        return HITLS_MEMALLOC_FAIL;
+    }
+    BSL_Uint16ToByte((uint16_t)ackDataLen, buf);
+    Dtls13EncodeAckItems(list, start, count, buf, sizeof(uint16_t));
+    int32_t ret = REC_Write(ctx, REC_TYPE_ACK, buf, dataLen);
+    BSL_SAL_FREE(buf);
+    if (ret == HITLS_SUCCESS) {
+        ret = Dtls13FlushAckRecord(ctx);
+    }
+    if (ret == HITLS_SUCCESS) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17387, BSL_LOG_LEVEL_INFO, BSL_LOG_BINLOG_TYPE_RUN,
+            "dtls1.3 send ack success", 0, 0, 0, 0);
+    }
+    return ret;
+}
+
 int32_t REC_Dtls13SendAck(TLS_Ctx *ctx, REC_Dtls13AckListType type)
 {
     REC_Ctx *recCtx = ctx->recCtx;
@@ -139,24 +200,22 @@ int32_t REC_Dtls13SendAck(TLS_Ctx *ctx, REC_Dtls13AckListType type)
     if (list->count == 0) {
         return HITLS_SUCCESS;
     }
-    uint32_t ackDataLen = list->count * REC_DTLS13_ACK_ITEM_LEN;
-    uint32_t dataLen = sizeof(uint16_t) + ackDataLen;
-    uint8_t *buf = (uint8_t *)BSL_SAL_Calloc(1u, dataLen);
-    if (buf == NULL) {
-        return HITLS_MEMALLOC_FAIL;
+    uint32_t maxItems = 0;
+    int32_t ret = Dtls13GetMaxAckItems(ctx, &maxItems);
+    if (ret != HITLS_SUCCESS) {
+        return ret;
     }
-    BSL_Uint16ToByte((uint16_t)ackDataLen, buf);
-    Dtls13EncodeAckItems(list, buf, sizeof(uint16_t));
-    int32_t ret = REC_Write(ctx, REC_TYPE_ACK, buf, dataLen);
-    BSL_SAL_FREE(buf);
-    if (ret == HITLS_SUCCESS) {
-        ret = Dtls13FlushAckRecord(ctx);
+    for (uint32_t start = 0; start < list->count; start += maxItems) {
+        uint32_t count = list->count - start;
+        if (count > maxItems) {
+            count = maxItems;
+        }
+        ret = Dtls13SendAckBatch(ctx, list, start, count);
+        if (ret != HITLS_SUCCESS) {
+            return ret;
+        }
     }
-    if (ret == HITLS_SUCCESS) {
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17387, BSL_LOG_LEVEL_INFO, BSL_LOG_BINLOG_TYPE_RUN,
-            "dtls1.3 send ack success", 0, 0, 0, 0);
-    }
-    return ret;
+    return HITLS_SUCCESS;
 }
 
 void REC_Dtls13SetNeedSendRetransAck(TLS_Ctx *ctx)

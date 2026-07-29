@@ -73,6 +73,182 @@ static uint32_t BuildDtls13UnifiedHeader(uint8_t *msg, uint32_t msgSize, uint8_t
     msg[REC_DTLS13_UNI_HEADER_LENGTH] = contentType;
     return headerLen + 1;
 }
+
+int32_t Dtls13ReconstructEpoch(TLS_Ctx *ctx, uint8_t epochBits, uint64_t *reconstructedEpoch);
+
+static void Dtls13ClearFrameIo(FRAME_LinkObj *link)
+{
+    if (link == NULL || link->io == NULL) {
+        return;
+    }
+    FrameUioUserData *ioData = BSL_UIO_GetUserData(link->io);
+    if (ioData == NULL) {
+        return;
+    }
+    ioData->sndMsg.len = 0;
+    ioData->recMsg.len = 0;
+}
+
+static void Dtls13SetWriteEpoch(TLS_Ctx *ctx, uint16_t epoch)
+{
+    ctx->recCtx->writeEpoch = epoch;
+    RecConnSetEpoch(ctx->recCtx->writeStates.currentState, epoch);
+}
+
+static void Dtls13SetReadEpoch(TLS_Ctx *ctx, uint16_t epoch)
+{
+    ctx->recCtx->readEpoch = epoch;
+    RecConnSetEpoch(ctx->recCtx->readStates.currentState, epoch);
+#ifdef HITLS_TLS_FEATURE_ANTI_REPLAY
+    RecAntiReplayReset(&ctx->recCtx->readStates.currentState->window);
+#endif
+}
+
+static void Dtls13AlignWriteReadEpoch(FRAME_LinkObj *sender, FRAME_LinkObj *receiver, uint16_t epoch)
+{
+    uint64_t nextWriteSeq = RecConnGetSeqNum(sender->ssl->recCtx->writeStates.currentState);
+
+    Dtls13SetWriteEpoch(sender->ssl, epoch);
+    Dtls13SetReadEpoch(receiver->ssl, epoch);
+    RecConnSetSeqNum(receiver->ssl->recCtx->readStates.currentState,
+        (nextWriteSeq == 0) ? 0 : (nextWriteSeq - 1));
+}
+
+static void Dtls13AlignHsMsgSeq(FRAME_LinkObj *sender, FRAME_LinkObj *receiver, uint16_t msgSeq)
+{
+    sender->ssl->dtls13NextSendSeq = msgSeq;
+    receiver->ssl->dtls13ExpectRecvSeq = msgSeq;
+    if (sender->ssl->hsCtx != NULL) {
+        sender->ssl->hsCtx->nextSendSeq = msgSeq;
+    }
+    if (receiver->ssl->hsCtx != NULL) {
+        receiver->ssl->hsCtx->expectRecvSeq = msgSeq;
+    }
+}
+
+static int32_t Dtls13ReadPostHandshake(FRAME_LinkObj *link)
+{
+    uint8_t readBuf[APP_READ_BUF_SIZE] = {0};
+    uint32_t readLen = 0;
+    return HITLS_Read(link->ssl, readBuf, sizeof(readBuf), &readLen);
+}
+
+static bool Dtls13ReadRetIsDone(int32_t ret)
+{
+    return ret == HITLS_SUCCESS || ret == HITLS_REC_NORMAL_RECV_BUF_EMPTY;
+}
+
+static bool Dtls13HandshakeRetIsPending(int32_t ret)
+{
+    return ret == HITLS_SUCCESS || ret == HITLS_REC_NORMAL_RECV_BUF_EMPTY || ret == HITLS_REC_NORMAL_IO_BUSY ||
+        ret == HITLS_REC_NORMAL_RECV_UNEXPECT_MSG;
+}
+
+static uint32_t BuildDtls13UnifiedCiphertextRecord(uint8_t *msg, uint32_t msgSize, uint8_t epoch, uint16_t seqNum,
+    uint16_t cipherTextLen)
+{
+    uint32_t msgLen = (uint32_t)REC_DTLS13_UNI_HEADER_LENGTH + cipherTextLen;
+    if (msgSize < msgLen) {
+        return 0;
+    }
+    msg[0] = REC_DTLS13_UNI_HEADER_FIX_BITS | REC_DTLS13_UNI_HEADER_SEQ_BIT |
+        REC_DTLS13_UNI_HEADER_LEN_BIT | epoch;
+    BSL_Uint16ToByte(seqNum, &msg[1]);
+    BSL_Uint16ToByte(cipherTextLen, &msg[3]);
+    for (uint16_t i = 0; i < cipherTextLen; i++) {
+        msg[REC_DTLS13_UNI_HEADER_LENGTH + i] = (uint8_t)(0xA0u + i);
+    }
+    return msgLen;
+}
+
+static int32_t Dtls13ProcessKeyUpdateAck(FRAME_LinkObj *ackHolder, FRAME_LinkObj *consumer)
+{
+    int32_t ret = FRAME_TrasferMsgBetweenLink(ackHolder, consumer);
+    if (ret != HITLS_SUCCESS) {
+        return ret;
+    }
+    ret = Dtls13ReadPostHandshake(consumer);
+    return Dtls13ReadRetIsDone(ret) ? HITLS_SUCCESS : ret;
+}
+
+static int32_t Dtls13RunKeyUpdateSend(FRAME_LinkObj *sender, uint32_t updateType)
+{
+    int32_t ret = HITLS_KeyUpdate(sender->ssl, updateType);
+    if (ret != HITLS_SUCCESS) {
+        return ret;
+    }
+    return sender->ssl->isClient ? HITLS_Connect(sender->ssl) : HITLS_Accept(sender->ssl);
+}
+
+static int32_t Dtls13SendKeyUpdateAndProcess(FRAME_LinkObj *sender, FRAME_LinkObj *receiver, uint32_t updateType)
+{
+    int32_t ret = Dtls13RunKeyUpdateSend(sender, updateType);
+    if (ret != HITLS_SUCCESS) {
+        return ret;
+    }
+    ret = FRAME_TrasferMsgBetweenLink(sender, receiver);
+    if (ret != HITLS_SUCCESS) {
+        return ret;
+    }
+    ret = Dtls13ReadPostHandshake(receiver);
+    return Dtls13ReadRetIsDone(ret) ? HITLS_SUCCESS : ret;
+}
+
+static int32_t Dtls13FlushPendingOutput(FRAME_LinkObj *sender, FRAME_LinkObj *receiver)
+{
+    FrameUioUserData *ioData = BSL_UIO_GetUserData(sender->io);
+    if (ioData == NULL) {
+        return HITLS_INTERNAL_EXCEPTION;
+    }
+    if (ioData->sndMsg.len == 0) {
+        return HITLS_SUCCESS;
+    }
+
+    int32_t ret = FRAME_TrasferMsgBetweenLink(sender, receiver);
+    if (ret != HITLS_SUCCESS) {
+        return ret;
+    }
+    ret = Dtls13ReadPostHandshake(receiver);
+    return Dtls13ReadRetIsDone(ret) ? HITLS_SUCCESS : ret;
+}
+
+static int32_t Dtls13SendAppAndCheck(FRAME_LinkObj *sender, FRAME_LinkObj *receiver, const char *msg,
+    uint16_t expectedEpoch)
+{
+    uint8_t readBuf[APP_READ_BUF_SIZE] = {0};
+    uint32_t writeLen = 0;
+    uint32_t readLen = 0;
+    RecordNumber recordNum = {0};
+
+    int32_t ret = HITLS_Write(sender->ssl, (uint8_t *)msg, strlen(msg), &writeLen);
+    if (ret == HITLS_REC_NORMAL_IO_BUSY) {
+        ret = Dtls13FlushPendingOutput(sender, receiver);
+        if (ret != HITLS_SUCCESS) {
+            return ret;
+        }
+        writeLen = 0;
+        ret = HITLS_Write(sender->ssl, (uint8_t *)msg, strlen(msg), &writeLen);
+    }
+    if (ret != HITLS_SUCCESS || writeLen != strlen(msg)) {
+        return (ret != HITLS_SUCCESS) ? ret : HITLS_INTERNAL_EXCEPTION;
+    }
+    ret = REC_GetLastWriteRecordNum(sender->ssl, &recordNum);
+    if (ret != HITLS_SUCCESS) {
+        return ret;
+    }
+    if (recordNum.epoch != expectedEpoch) {
+        return HITLS_INTERNAL_EXCEPTION;
+    }
+    ret = FRAME_TrasferMsgBetweenLink(sender, receiver);
+    if (ret != HITLS_SUCCESS) {
+        return ret;
+    }
+    ret = HITLS_Read(receiver->ssl, readBuf, sizeof(readBuf), &readLen);
+    if (ret != HITLS_SUCCESS || readLen != strlen(msg) || memcmp(readBuf, msg, readLen) != 0) {
+        return (ret != HITLS_SUCCESS) ? ret : HITLS_INTERNAL_EXCEPTION;
+    }
+    return HITLS_SUCCESS;
+}
 /* END_HEADER */
 
 /** @
@@ -363,8 +539,8 @@ void SDV_TLS_DTLS13_ANTI_REPLAY_DUPLICATE_TC015(void)
     readLen = 0;
     memset(readBuf, 0, sizeof(readBuf));
     int32_t ret = HITLS_Read(server->ssl, readBuf, APP_READ_BUF_SIZE, &readLen);
-    // 应该返回缓冲区为空，因为重复的记录被抗重放机制拒绝
-    ASSERT_TRUE(ret == HITLS_REC_NORMAL_RECV_BUF_EMPTY || readLen == 0);
+    ASSERT_EQ(ret, HITLS_REC_NORMAL_RECV_BUF_EMPTY);
+    ASSERT_EQ(readLen, 0);
 
 EXIT:
     FRAME_CleanMsg(&frameType, &frameMsg);
@@ -1008,7 +1184,7 @@ EXIT:
 /* END_CASE */
 
 /** @
-* @test SDV_TLS_DTLS13_ANTI_REPLAY_OUT_OF_ORDER_TC006
+* @test SDV_TLS_DTLS13_MULTIPLE_APP_DATA_TC006
 * @spec -
  * @title DTLS1.3 multiple app data record send/recv test.
  * @precon nan
@@ -1022,7 +1198,7 @@ EXIT:
  *    3. Each sent message is correctly received with matching content.
 @ */
 /* BEGIN_CASE */
-void SDV_TLS_DTLS13_ANTI_REPLAY_OUT_OF_ORDER_TC006(void)
+void SDV_TLS_DTLS13_MULTIPLE_APP_DATA_TC006(void)
 {
     HITLS_Config *config = NULL;
     FRAME_LinkObj *client = NULL;
@@ -1614,10 +1790,6 @@ void SDV_TLS_DTLS13_EPOCH_KEY_UPDATE_TC022(void)
     ASSERT_EQ(REC_GetLastWriteRecordNum(client->ssl, &recordNum), HITLS_SUCCESS);
     ASSERT_EQ(recordNum.epoch, 3);
 
-    // Verify server last read epoch is also 3
-    ASSERT_EQ(REC_GetLastReadRecordNum(server->ssl, &recordNum), HITLS_SUCCESS);
-    ASSERT_EQ(recordNum.epoch, 3);
-
     // Perform KeyUpdate on client
     // DTLS 1.3 defers write epoch update until ACK; server processes immediately
     ASSERT_EQ(HITLS_KeyUpdate(client->ssl, HITLS_UPDATE_NOT_REQUESTED), HITLS_SUCCESS);
@@ -1655,6 +1827,276 @@ EXIT:
 /* END_CASE */
 
 /** @
+* @test SDV_TLS_DTLS13_KEY_UPDATE_EPOCH_BOUNDARY_TC032
+* @spec -
+* @title DTLS1.3 client KeyUpdate from epoch 2^16-2 advances to 2^16-1 after ACK.
+* @precon nan
+* @brief
+*    1. Establish a DTLS1.3 connection.
+*    2. Set the client write epoch and server read epoch to 2^16-2.
+*    3. Set the client outgoing/server incoming handshake message sequence to 2^16-2.
+*    4. Let the client send KeyUpdate and process the server ACK.
+* @expect
+*    1. The client sends KeyUpdate successfully.
+*    2. The server processes the KeyUpdate successfully.
+*    3. The ACK callback advances the client write epoch to 2^16-1.
+*    4. Client application data is sent and received with epoch 2^16-1.
+@ */
+/* BEGIN_CASE */
+void SDV_TLS_DTLS13_KEY_UPDATE_EPOCH_BOUNDARY_TC032(void)
+{
+    HITLS_Config *config = NULL;
+    FRAME_LinkObj *client = NULL;
+    FRAME_LinkObj *server = NULL;
+    uint16_t nearMaxEpoch = (uint16_t)(REC_EPOCH_MAX_VALUE - 1u);
+
+    FRAME_Init();
+
+    config = HITLS_CFG_NewDTLS13Config();
+    ASSERT_TRUE(config != NULL);
+    ASSERT_EQ(HITLS_CFG_SetTicketNums(config, 0), HITLS_SUCCESS);
+    client = FRAME_CreateLink(config, BSL_UIO_UDP);
+    ASSERT_TRUE(client != NULL);
+    server = FRAME_CreateLink(config, BSL_UIO_UDP);
+    ASSERT_TRUE(server != NULL);
+    ASSERT_EQ(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_SUCCESS);
+
+    Dtls13ClearFrameIo(client);
+    Dtls13ClearFrameIo(server);
+    Dtls13AlignWriteReadEpoch(client, server, nearMaxEpoch);
+    Dtls13AlignHsMsgSeq(client, server, nearMaxEpoch);
+
+    ASSERT_EQ(Dtls13SendKeyUpdateAndProcess(client, server, HITLS_UPDATE_NOT_REQUESTED), HITLS_SUCCESS);
+    ASSERT_EQ(server->ssl->recCtx->readEpoch, REC_EPOCH_MAX_VALUE);
+    ASSERT_EQ(Dtls13ProcessKeyUpdateAck(server, client), HITLS_SUCCESS);
+    ASSERT_EQ(client->ssl->recCtx->writeEpoch, REC_EPOCH_MAX_VALUE);
+    ASSERT_EQ(Dtls13SendAppAndCheck(client, server, "client app after boundary keyupdate", REC_EPOCH_MAX_VALUE),
+        HITLS_SUCCESS);
+
+EXIT:
+    HITLS_CFG_FreeConfig(config);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+}
+/* END_CASE */
+
+/** @
+* @test SDV_TLS_DTLS13_KEY_UPDATE_EPOCH_BOUNDARY_TC033
+* @spec -
+* @title DTLS1.3 client KeyUpdate send fails at epoch 2^16-1.
+* @precon nan
+* @brief
+*    1. Establish a DTLS1.3 connection.
+*    2. Set the client write epoch to 2^16-1.
+*    3. Start client KeyUpdate.
+* @expect
+*    1. The KeyUpdate request is rejected because there is no next DTLS1.3 write epoch.
+*    2. No post-handshake context is created.
+*    3. The client write epoch remains 2^16-1.
+@ */
+/* BEGIN_CASE */
+void SDV_TLS_DTLS13_KEY_UPDATE_EPOCH_BOUNDARY_TC033(void)
+{
+    HITLS_Config *config = NULL;
+    FRAME_LinkObj *client = NULL;
+    FRAME_LinkObj *server = NULL;
+
+    FRAME_Init();
+
+    config = HITLS_CFG_NewDTLS13Config();
+    ASSERT_TRUE(config != NULL);
+    ASSERT_EQ(HITLS_CFG_SetTicketNums(config, 0), HITLS_SUCCESS);
+    client = FRAME_CreateLink(config, BSL_UIO_UDP);
+    ASSERT_TRUE(client != NULL);
+    server = FRAME_CreateLink(config, BSL_UIO_UDP);
+    ASSERT_TRUE(server != NULL);
+    ASSERT_EQ(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_SUCCESS);
+
+    Dtls13ClearFrameIo(client);
+    Dtls13ClearFrameIo(server);
+    Dtls13SetWriteEpoch(client->ssl, REC_EPOCH_MAX_VALUE);
+
+    ASSERT_EQ(HITLS_KeyUpdate(client->ssl, HITLS_UPDATE_NOT_REQUESTED), HITLS_MSG_HANDLE_STATE_ILLEGAL);
+    ASSERT_TRUE(client->ssl->hsCtx == NULL);
+    ASSERT_EQ(client->ssl->recCtx->writeEpoch, REC_EPOCH_MAX_VALUE);
+
+EXIT:
+    HITLS_CFG_FreeConfig(config);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+}
+/* END_CASE */
+
+/** @
+* @test SDV_TLS_DTLS13_KEY_UPDATE_EPOCH_BOUNDARY_TC034
+* @spec -
+* @title DTLS1.3 client accepts reconstructable peer epoch bits for 2^16+1.
+* @precon nan
+* @brief
+*    1. Establish a DTLS1.3 connection.
+*    2. Set the client local write/read epoch below 2^16-1.
+*    3. Reconstruct peer epoch bits that correspond to 2^16+1 on the wire.
+* @expect
+*    1. Epoch reconstruction succeeds. The DTLS1.3 unified header carries only low epoch bits.
+@ */
+/* BEGIN_CASE */
+void SDV_TLS_DTLS13_KEY_UPDATE_EPOCH_BOUNDARY_TC034(void)
+{
+    HITLS_Config *config = NULL;
+    FRAME_LinkObj *client = NULL;
+    FRAME_LinkObj *server = NULL;
+    uint16_t nearMaxEpoch = (uint16_t)(REC_EPOCH_MAX_VALUE - 1u);
+    uint64_t reconstructedEpoch = 0;
+    uint8_t epochBits = (uint8_t)(((uint64_t)REC_EPOCH_MAX_VALUE + 2u) &
+        REC_DTLS13_UNI_HEADER_EPOCH_BITS_MASK);
+
+    FRAME_Init();
+
+    config = HITLS_CFG_NewDTLS13Config();
+    ASSERT_TRUE(config != NULL);
+    ASSERT_EQ(HITLS_CFG_SetTicketNums(config, 0), HITLS_SUCCESS);
+    client = FRAME_CreateLink(config, BSL_UIO_UDP);
+    ASSERT_TRUE(client != NULL);
+    server = FRAME_CreateLink(config, BSL_UIO_UDP);
+    ASSERT_TRUE(server != NULL);
+    ASSERT_EQ(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_SUCCESS);
+
+    Dtls13SetWriteEpoch(client->ssl, nearMaxEpoch);
+    Dtls13SetReadEpoch(client->ssl, nearMaxEpoch);
+    ASSERT_EQ(Dtls13ReconstructEpoch(client->ssl, epochBits, &reconstructedEpoch), HITLS_SUCCESS);
+
+EXIT:
+    HITLS_CFG_FreeConfig(config);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+}
+/* END_CASE */
+
+/** @
+* @test SDV_TLS_DTLS13_KEY_UPDATE_EPOCH_BOUNDARY_TC035
+* @spec -
+* @title DTLS1.3 client at epoch 2^16-2 ACKs and replies to requested KeyUpdate.
+* @precon nan
+* @brief
+*    1. Establish a DTLS1.3 connection.
+*    2. Set client write epoch and server read epoch to 2^16-2.
+*    3. Let the server send update_requested KeyUpdate.
+*    4. The client ACKs the server KeyUpdate, sends a reply KeyUpdate, and receives the server ACK.
+* @expect
+*    1. Client write epoch advances to 2^16-1 after the reply KeyUpdate is ACKed.
+*    2. Client application data is sent and received with epoch 2^16-1.
+@ */
+/* BEGIN_CASE */
+void SDV_TLS_DTLS13_KEY_UPDATE_EPOCH_BOUNDARY_TC035(void)
+{
+    HITLS_Config *config = NULL;
+    FRAME_LinkObj *client = NULL;
+    FRAME_LinkObj *server = NULL;
+    int32_t ret;
+    uint16_t nearMaxEpoch = (uint16_t)(REC_EPOCH_MAX_VALUE - 1u);
+
+    FRAME_Init();
+
+    config = HITLS_CFG_NewDTLS13Config();
+    ASSERT_TRUE(config != NULL);
+    ASSERT_EQ(HITLS_CFG_SetTicketNums(config, 0), HITLS_SUCCESS);
+    client = FRAME_CreateLink(config, BSL_UIO_UDP);
+    ASSERT_TRUE(client != NULL);
+    server = FRAME_CreateLink(config, BSL_UIO_UDP);
+    ASSERT_TRUE(server != NULL);
+    ASSERT_EQ(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_SUCCESS);
+
+    Dtls13ClearFrameIo(client);
+    Dtls13ClearFrameIo(server);
+    Dtls13AlignWriteReadEpoch(client, server, nearMaxEpoch);
+    Dtls13AlignHsMsgSeq(client, server, nearMaxEpoch);
+    Dtls13AlignHsMsgSeq(server, client, nearMaxEpoch);
+
+    ASSERT_EQ(Dtls13RunKeyUpdateSend(server, HITLS_UPDATE_REQUESTED), HITLS_SUCCESS);
+    ASSERT_EQ(FRAME_TrasferMsgBetweenLink(server, client), HITLS_SUCCESS);
+    ret = Dtls13ReadPostHandshake(client);
+    if (ret == HITLS_REC_NORMAL_IO_BUSY) {
+        ASSERT_EQ(Dtls13ProcessKeyUpdateAck(client, server), HITLS_SUCCESS);
+        ASSERT_EQ(HITLS_Connect(client->ssl), HITLS_SUCCESS);
+    } else {
+        ASSERT_TRUE(Dtls13ReadRetIsDone(ret));
+    }
+    ASSERT_EQ(FRAME_TrasferMsgBetweenLink(client, server), HITLS_SUCCESS);
+    ret = Dtls13ReadPostHandshake(server);
+    ASSERT_TRUE(Dtls13ReadRetIsDone(ret));
+    ASSERT_EQ(server->ssl->recCtx->readEpoch, REC_EPOCH_MAX_VALUE);
+    ASSERT_EQ(Dtls13ProcessKeyUpdateAck(server, client), HITLS_SUCCESS);
+    ASSERT_EQ(client->ssl->recCtx->writeEpoch, REC_EPOCH_MAX_VALUE);
+    ASSERT_EQ(Dtls13SendAppAndCheck(client, server, "client reply keyupdate boundary app", REC_EPOCH_MAX_VALUE),
+        HITLS_SUCCESS);
+
+EXIT:
+    HITLS_CFG_FreeConfig(config);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+}
+/* END_CASE */
+
+/** @
+* @test SDV_TLS_DTLS13_KEY_UPDATE_EPOCH_BOUNDARY_TC036
+* @spec -
+* @title DTLS1.3 client at epoch 2^16-1 ACKs but does not reply to requested KeyUpdate.
+* @precon nan
+* @brief
+*    1. Establish a DTLS1.3 connection.
+*    2. Set client write epoch and server read epoch to 2^16-1.
+*    3. Set client outgoing handshake message sequence to 0xffff.
+*    4. Let the server send update_requested KeyUpdate.
+* @expect
+*    1. The client processes the server KeyUpdate and sends the record-layer ACK.
+*    2. The client does not send a reply KeyUpdate.
+*    3. Client write epoch remains 2^16-1 and application data still round-trips.
+@ */
+/* BEGIN_CASE */
+void SDV_TLS_DTLS13_KEY_UPDATE_EPOCH_BOUNDARY_TC036(void)
+{
+    HITLS_Config *config = NULL;
+    FRAME_LinkObj *client = NULL;
+    FRAME_LinkObj *server = NULL;
+    int32_t ret;
+
+    FRAME_Init();
+
+    config = HITLS_CFG_NewDTLS13Config();
+    ASSERT_TRUE(config != NULL);
+    ASSERT_EQ(HITLS_CFG_SetTicketNums(config, 0), HITLS_SUCCESS);
+    client = FRAME_CreateLink(config, BSL_UIO_UDP);
+    ASSERT_TRUE(client != NULL);
+    server = FRAME_CreateLink(config, BSL_UIO_UDP);
+    ASSERT_TRUE(server != NULL);
+    ASSERT_EQ(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_SUCCESS);
+
+    Dtls13ClearFrameIo(client);
+    Dtls13ClearFrameIo(server);
+    Dtls13AlignWriteReadEpoch(client, server, REC_EPOCH_MAX_VALUE);
+    Dtls13AlignHsMsgSeq(client, server, DTLS_HS_MSG_SEQ_MAX);
+    Dtls13AlignHsMsgSeq(server, client, (uint16_t)(DTLS_HS_MSG_SEQ_MAX - 1u));
+
+    ASSERT_EQ(Dtls13RunKeyUpdateSend(server, HITLS_UPDATE_REQUESTED), HITLS_SUCCESS);
+    ASSERT_EQ(FRAME_TrasferMsgBetweenLink(server, client), HITLS_SUCCESS);
+    ret = Dtls13ReadPostHandshake(client);
+    ASSERT_TRUE(Dtls13ReadRetIsDone(ret));
+    ASSERT_TRUE(client->ssl->isKeyUpdateRequest == false);
+    ASSERT_TRUE(client->ssl->hsCtx == NULL);
+    ASSERT_EQ(client->ssl->dtls13NextSendSeq, DTLS_HS_MSG_SEQ_MAX);
+    ASSERT_EQ(client->ssl->recCtx->writeEpoch, REC_EPOCH_MAX_VALUE);
+    ASSERT_EQ(Dtls13ProcessKeyUpdateAck(client, server), HITLS_SUCCESS);
+    ASSERT_EQ(Dtls13SendAppAndCheck(client, server, "client max epoch app after requested keyupdate",
+        REC_EPOCH_MAX_VALUE), HITLS_SUCCESS);
+
+EXIT:
+    HITLS_CFG_FreeConfig(config);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+}
+/* END_CASE */
+
+/** @
  * @test SDV_TLS_DTLS13_SEQ_RECORD_NUM_TC023
  * @spec -
  * @title DTLS1.3 sequence number tracking via REC_GetLastWriteRecordNum test.
@@ -1663,13 +2105,13 @@ EXIT:
  *    1. Create DTLS1.3 client and server links over UDP.
  *    2. Establish a DTLS1.3 connection.
  *    3. Send multiple records and verify sequence number increments.
- *    4. Verify REC_GetLastReadRecordNum matches expected values.
+ *    4. Verify the peer can read each transferred record.
  * @expect
  *    1. Link creation succeeds.
  *    2. Handshake succeeds.
  *    3. App data epoch is 3 (DTLS 1.3 handshake ends at epoch 3).
  *    4. Sequence numbers increment correctly for each record.
- *    5. Read-side sequence numbers match write-side.
+ *    5. Each transferred record is received with the expected plaintext.
 @ */
 /* BEGIN_CASE */
 void SDV_TLS_DTLS13_SEQ_RECORD_NUM_TC023(void)
@@ -1681,7 +2123,6 @@ void SDV_TLS_DTLS13_SEQ_RECORD_NUM_TC023(void)
     uint32_t writeLen = 0;
     uint32_t readLen = 0;
     RecordNumber writeRecordNum;
-    RecordNumber readRecordNum;
 
     FRAME_Init();
 
@@ -1698,7 +2139,6 @@ void SDV_TLS_DTLS13_SEQ_RECORD_NUM_TC023(void)
     // Send 5 app data records and verify sequence number progression
     // DTLS 1.3 handshake ends with epoch 3 (application data epoch)
     uint64_t prevWriteSeq = 0;
-    uint64_t prevReadSeq = 0;
     for (uint64_t i = 0; i < 5; i++) {
         char msg[50];
         snprintf(msg, sizeof(msg), "Seq record %llu", (unsigned long long)i);
@@ -1722,13 +2162,6 @@ void SDV_TLS_DTLS13_SEQ_RECORD_NUM_TC023(void)
         ASSERT_EQ(readLen, strlen(msg));
         ASSERT_EQ(memcmp(readBuf, msg, readLen), 0);
 
-        // Verify read seq matches
-        ASSERT_EQ(REC_GetLastReadRecordNum(server->ssl, &readRecordNum), HITLS_SUCCESS);
-        ASSERT_EQ(readRecordNum.epoch, 3);
-        if (i > 0) {
-            ASSERT_TRUE(readRecordNum.sequenceNumber > prevReadSeq);
-        }
-        prevReadSeq = readRecordNum.sequenceNumber;
     }
 
 EXIT:
@@ -1933,7 +2366,11 @@ void SDV_TLS_DTLS13_PMTU_WRITE_SIZE_TC026(void)
     uint32_t writeLen = 0;
     uint32_t readLen = 0;
     uint32_t maxWriteSize = 0;
+    uint32_t maxWriteSizeSmall = 0;
     uint8_t *largeData = NULL;
+    HITLS_Config *configSmall = NULL;
+    FRAME_LinkObj *clientSmall = NULL;
+    FRAME_LinkObj *serverSmall = NULL;
     int32_t ret;
 
     FRAME_Init();
@@ -1978,12 +2415,12 @@ void SDV_TLS_DTLS13_PMTU_WRITE_SIZE_TC026(void)
 
     // Now test with smaller MTU and verify max write size decreases
     // Create new config for different MTU
-    HITLS_Config *configSmall = HITLS_CFG_NewDTLS13Config();
+    configSmall = HITLS_CFG_NewDTLS13Config();
     ASSERT_TRUE(configSmall != NULL);
 
-    FRAME_LinkObj *clientSmall = FRAME_CreateLink(configSmall, BSL_UIO_UDP);
+    clientSmall = FRAME_CreateLink(configSmall, BSL_UIO_UDP);
     ASSERT_TRUE(clientSmall != NULL);
-    FRAME_LinkObj *serverSmall = FRAME_CreateLink(configSmall, BSL_UIO_UDP);
+    serverSmall = FRAME_CreateLink(configSmall, BSL_UIO_UDP);
     ASSERT_TRUE(serverSmall != NULL);
 
     ASSERT_EQ(FRAME_CreateConnection(clientSmall, serverSmall, true, HS_STATE_BUTT), HITLS_SUCCESS);
@@ -1993,7 +2430,6 @@ void SDV_TLS_DTLS13_PMTU_WRITE_SIZE_TC026(void)
     ret = HITLS_SetMtu(serverSmall->ssl, 500);
     ASSERT_EQ(ret, HITLS_SUCCESS);
 
-    uint32_t maxWriteSizeSmall = 0;
     ret = REC_GetMaxWriteSize(clientSmall->ssl, &maxWriteSizeSmall);
     ASSERT_EQ(ret, HITLS_SUCCESS);
     // With MTU=500, max write size should be smaller than with MTU=1400
@@ -2172,6 +2608,70 @@ EXIT:
 /* END_CASE */
 
 /** @
+* @test SDV_TLS_DTLS13_CCM8_SHORT_RECORD_PADDING_TC031
+* @spec -
+* @title DTLS1.3 AES-CCM-8 short application records are padded for sequence number protection.
+* @precon nan
+* @brief
+*    1. Configure both endpoints to use HITLS_AES_128_CCM_8_SHA256.
+*    2. Establish a DTLS1.3 connection.
+*    3. Send one byte of application data.
+*    4. Verify the generated encrypted record length is at least 16 bytes before sequence number protection.
+*    5. Transfer and read the record to verify decrypt still succeeds.
+* @expect
+*    1. The DTLS1.3 CCM8 suite is negotiable.
+*    2. Short application data is padded to satisfy RFC 9147 sequence number encryption input length.
+*    3. The peer decrypts and reads the original one byte.
+@ */
+/* BEGIN_CASE */
+void SDV_TLS_DTLS13_CCM8_SHORT_RECORD_PADDING_TC031(void)
+{
+    HITLS_Config *config = NULL;
+    FRAME_LinkObj *client = NULL;
+    FRAME_LinkObj *server = NULL;
+    FrameUioUserData *clientIo = NULL;
+    uint8_t writeData[] = {0x5A};
+    uint8_t readBuf[APP_READ_BUF_SIZE] = {0};
+    uint32_t writeLen = 0;
+    uint32_t readLen = 0;
+    uint16_t ccm8Suite = HITLS_AES_128_CCM_8_SHA256;
+
+    FRAME_Init();
+
+    config = HITLS_CFG_NewDTLS13Config();
+    ASSERT_TRUE(config != NULL);
+    ASSERT_EQ(HITLS_CFG_SetCipherSuites(config, &ccm8Suite, 1), HITLS_SUCCESS);
+
+    client = FRAME_CreateLink(config, BSL_UIO_UDP);
+    ASSERT_TRUE(client != NULL);
+    server = FRAME_CreateLink(config, BSL_UIO_UDP);
+    ASSERT_TRUE(server != NULL);
+
+    ASSERT_EQ(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_SUCCESS);
+    ASSERT_EQ(client->ssl->negotiatedInfo.cipherSuiteInfo.cipherSuite, HITLS_AES_128_CCM_8_SHA256);
+
+    ASSERT_EQ(HITLS_Write(client->ssl, writeData, sizeof(writeData), &writeLen), HITLS_SUCCESS);
+    ASSERT_EQ(writeLen, sizeof(writeData));
+    clientIo = BSL_UIO_GetUserData(client->io);
+    ASSERT_TRUE(clientIo != NULL);
+    ASSERT_TRUE(clientIo->sndMsg.len >= REC_DTLS13_UNI_HEADER_LENGTH + 16u);
+    ASSERT_EQ(BSL_ByteToUint16(&clientIo->sndMsg.msg[REC_DTLS13_UNI_HEADER_LENGTH - sizeof(uint16_t)]),
+        clientIo->sndMsg.len - REC_DTLS13_UNI_HEADER_LENGTH);
+    ASSERT_TRUE(BSL_ByteToUint16(&clientIo->sndMsg.msg[REC_DTLS13_UNI_HEADER_LENGTH - sizeof(uint16_t)]) >= 16u);
+
+    ASSERT_EQ(FRAME_TrasferMsgBetweenLink(client, server), HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_Read(server->ssl, readBuf, APP_READ_BUF_SIZE, &readLen), HITLS_SUCCESS);
+    ASSERT_EQ(readLen, sizeof(writeData));
+    ASSERT_EQ(memcmp(readBuf, writeData, readLen), 0);
+
+EXIT:
+    HITLS_CFG_FreeConfig(config);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+}
+/* END_CASE */
+
+/** @
 * @test SDV_TLS_DTLS13_EPOCH2_RECV_EPOCH0_TC029
 * @spec -
 * @title DTLS1.3 server receives epoch 0 app data record while in epoch 2 test.
@@ -2334,6 +2834,157 @@ void SDV_TLS_DTLS13_EPOCH2_BUFFER_EPOCH3_TC030(void)
     ASSERT_EQ(recCtx->UnprocessedMsgList.count, 1);
     ASSERT_EQ(REC_EPOCH_GET(BSL_LIST_ENTRY(recCtx->UnprocessedMsgList.head.next, UnprocessedMsg, head)->hdr.epochSeq),
         3);
+
+EXIT:
+    HITLS_CFG_FreeConfig(config);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+}
+/* END_CASE */
+
+/** @
+* @test SDV_TLS_DTLS13_EPOCH2_BEFORE_SERVER_HELLO_TC037
+* @spec -
+* @title DTLS1.3 client buffers epoch 2 EncryptedExtensions received before ServerHello.
+* @precon nan
+* @brief
+*    1. Stop after the first ClientHello reaches the server.
+*    2. Let the server generate ServerHello, save it, then generate the next epoch 2 encrypted handshake record.
+*    3. Deliver the epoch 2 encrypted record to the client before ServerHello.
+*    4. Deliver ServerHello and continue the handshake.
+* @expect
+*    1. The client buffers the epoch 2 record while its read epoch is 0.
+*    2. After ServerHello advances the read epoch, the cached record is consumed.
+*    3. The DTLS1.3 handshake can still complete.
+@ */
+/* BEGIN_CASE */
+void SDV_TLS_DTLS13_EPOCH2_BEFORE_SERVER_HELLO_TC037(void)
+{
+    HITLS_Config *config = NULL;
+    FRAME_LinkObj *client = NULL;
+    FRAME_LinkObj *server = NULL;
+    FrameUioUserData *serverIo = NULL;
+    uint8_t serverHello[MAX_RECORD_LENTH] = {0};
+    uint32_t serverHelloLen = 0;
+    uint8_t epoch2Record[MAX_RECORD_LENTH] = {0};
+    uint32_t epoch2RecordLen = 0;
+    int32_t ret;
+
+    FRAME_Init();
+
+    config = HITLS_CFG_NewDTLS13Config();
+    ASSERT_TRUE(config != NULL);
+    ASSERT_EQ(HITLS_CFG_SetTicketNums(config, 0), HITLS_SUCCESS);
+
+    client = FRAME_CreateLink(config, BSL_UIO_UDP);
+    ASSERT_TRUE(client != NULL);
+    server = FRAME_CreateLink(config, BSL_UIO_UDP);
+    ASSERT_TRUE(server != NULL);
+
+    ret = HITLS_Connect(client->ssl);
+    ASSERT_TRUE(Dtls13HandshakeRetIsPending(ret));
+    ASSERT_EQ(FRAME_TrasferMsgBetweenLink(client, server), HITLS_SUCCESS);
+    serverIo = BSL_UIO_GetUserData(server->io);
+    ASSERT_TRUE(serverIo != NULL);
+    ASSERT_TRUE(serverIo->recMsg.len != 0);
+
+    ret = HITLS_Accept(server->ssl);
+    ASSERT_TRUE(Dtls13HandshakeRetIsPending(ret));
+    ASSERT_TRUE(serverIo->sndMsg.len > REC_DTLS_RECORD_HEADER_LEN + DTLS_HS_MSG_HEADER_SIZE);
+    ASSERT_EQ(serverIo->sndMsg.msg[0], REC_TYPE_HANDSHAKE);
+    ASSERT_EQ(serverIo->sndMsg.msg[REC_DTLS_RECORD_HEADER_LEN], SERVER_HELLO);
+    serverHelloLen = serverIo->sndMsg.len;
+    memcpy(serverHello, serverIo->sndMsg.msg, serverHelloLen);
+    serverIo->sndMsg.len = 0;
+
+    ret = HITLS_Accept(server->ssl);
+    ASSERT_TRUE(Dtls13HandshakeRetIsPending(ret));
+    ASSERT_TRUE(serverIo->sndMsg.len > REC_DTLS13_UNI_HEADER_LENGTH);
+    ASSERT_TRUE(REC_DTLS13_UNI_HEADER_FIX_BITS_TYPE(serverIo->sndMsg.msg[0]));
+    ASSERT_EQ(serverIo->sndMsg.msg[0] & REC_DTLS13_UNI_HEADER_EPOCH_BITS_MASK, 2);
+    epoch2RecordLen = serverIo->sndMsg.len;
+    memcpy(epoch2Record, serverIo->sndMsg.msg, epoch2RecordLen);
+    serverIo->sndMsg.len = 0;
+
+    ASSERT_EQ(FRAME_TransportRecMsg(client->io, epoch2Record, epoch2RecordLen), HITLS_SUCCESS);
+    ret = HITLS_Connect(client->ssl);
+    ASSERT_TRUE(Dtls13HandshakeRetIsPending(ret));
+    ASSERT_TRUE(client->ssl->hsCtx != NULL);
+    ASSERT_EQ(client->ssl->hsCtx->state, TRY_RECV_SERVER_HELLO);
+    ASSERT_EQ(client->ssl->recCtx->UnprocessedMsgList.count, 1);
+
+    ASSERT_EQ(FRAME_TransportRecMsg(client->io, serverHello, serverHelloLen), HITLS_SUCCESS);
+    ret = HITLS_Connect(client->ssl);
+    ASSERT_TRUE(Dtls13HandshakeRetIsPending(ret));
+    if (client->ssl->recCtx->UnprocessedMsgList.count != 0) {
+        ret = HITLS_Connect(client->ssl);
+        ASSERT_TRUE(Dtls13HandshakeRetIsPending(ret));
+    }
+    ASSERT_EQ(client->ssl->recCtx->UnprocessedMsgList.count, 0);
+    ASSERT_TRUE(client->ssl->hsCtx == NULL || client->ssl->hsCtx->state != TRY_RECV_SERVER_HELLO);
+
+    ASSERT_EQ(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_SUCCESS);
+    ASSERT_EQ(client->ssl->state, CM_STATE_TRANSPORTING);
+    ASSERT_EQ(server->ssl->state, CM_STATE_TRANSPORTING);
+
+EXIT:
+    HITLS_CFG_FreeConfig(config);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+}
+/* END_CASE */
+
+/** @
+* @test SDV_TLS_DTLS13_SHORT_CIPHERTEXT_DISCARD_TC038
+* @spec -
+* @title DTLS1.3 silently discards protected records shorter than the sequence-number mask input.
+* @precon nan
+* @brief
+*    1. Establish a DTLS1.3 connection.
+*    2. Inject a DTLS1.3 unified-header application epoch record with ciphertext length 15.
+*    3. Read application data on the receiver.
+* @expect
+*    1. The invalid record is discarded as an invalid DTLS record.
+*    2. HITLS_Read returns HITLS_REC_NORMAL_RECV_BUF_EMPTY and no alert is sent.
+@ */
+/* BEGIN_CASE */
+void SDV_TLS_DTLS13_SHORT_CIPHERTEXT_DISCARD_TC038(void)
+{
+    HITLS_Config *config = NULL;
+    FRAME_LinkObj *client = NULL;
+    FRAME_LinkObj *server = NULL;
+    FrameUioUserData *serverIo = NULL;
+    uint8_t record[REC_DTLS13_UNI_HEADER_LENGTH + 15] = {0};
+    uint32_t recordLen = 0;
+    uint8_t readBuf[APP_READ_BUF_SIZE] = {0};
+    uint32_t readLen = 0;
+    ALERT_Info alert = {0};
+
+    FRAME_Init();
+
+    config = HITLS_CFG_NewDTLS13Config();
+    ASSERT_TRUE(config != NULL);
+    ASSERT_EQ(HITLS_CFG_SetTicketNums(config, 0), HITLS_SUCCESS);
+
+    client = FRAME_CreateLink(config, BSL_UIO_UDP);
+    ASSERT_TRUE(client != NULL);
+    server = FRAME_CreateLink(config, BSL_UIO_UDP);
+    ASSERT_TRUE(server != NULL);
+
+    ASSERT_EQ(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_SUCCESS);
+    serverIo = BSL_UIO_GetUserData(server->io);
+    ASSERT_TRUE(serverIo != NULL);
+    serverIo->recMsg.len = 0;
+    serverIo->sndMsg.len = 0;
+
+    recordLen = BuildDtls13UnifiedCiphertextRecord(record, sizeof(record), 3, 0, 15);
+    ASSERT_TRUE(recordLen != 0);
+    ASSERT_EQ(FRAME_TransportRecMsg(server->io, record, recordLen), HITLS_SUCCESS);
+
+    ASSERT_EQ(HITLS_Read(server->ssl, readBuf, sizeof(readBuf), &readLen), HITLS_REC_NORMAL_RECV_BUF_EMPTY);
+    ASSERT_EQ(readLen, 0);
+    ALERT_GetInfo(server->ssl, &alert);
+    ASSERT_TRUE(alert.flag != ALERT_FLAG_SEND);
 
 EXIT:
     HITLS_CFG_FreeConfig(config);

@@ -89,7 +89,7 @@ typedef struct {
     uint32_t pskLen;
 } PskInfo;
 #endif /* HITLS_TLS_FEATURE_PSK */
-#if defined(HITLS_TLS_PROTO_TLS13) || defined(HITLS_TLS_PROTO_DTLS13)
+#if defined(HITLS_TLS_PROTO_TLS13_FAMILY)
 typedef struct {
     uint8_t *identity;
     uint32_t identityLen;
@@ -104,7 +104,7 @@ typedef struct {
     uint8_t *psk;                 /* selected psk */
     uint32_t pskLen;
 } PskInfo13;
-#endif /* HITLS_TLS_PROTO_TLS13 || HITLS_TLS_PROTO_DTLS13 */
+#endif /* HITLS_TLS_PROTO_TLS13_FAMILY */
 
 /* Used to transfer the key exchange context */
 typedef struct {
@@ -123,17 +123,23 @@ typedef struct {
 #ifdef HITLS_TLS_FEATURE_PSK
     PskInfo *pskInfo;     /* PSK data tls 1.2 */
 #endif /* HITLS_TLS_FEATURE_PSK */
-#if defined(HITLS_TLS_PROTO_TLS13) || defined(HITLS_TLS_PROTO_DTLS13)
+#if defined(HITLS_TLS_PROTO_TLS13_FAMILY)
     PskInfo13 pskInfo13; /* tls 1.3 psk */
     uint8_t *ciphertext; /* local ciphertext */
     uint32_t ciphertextLen; /* ciphertext length */
-#endif /* HITLS_TLS_PROTO_TLS13 || HITLS_TLS_PROTO_DTLS13 */
+#endif /* HITLS_TLS_PROTO_TLS13_FAMILY */
 } KeyExchCtx;
+
+typedef enum {
+    HS_MSG_CACHE_CANONICAL,
+    HS_MSG_CACHE_DTLS_RAW,
+} HsMsgCacheType;
 
 /* Buffer for transmitting handshake data. */
 typedef struct HsMsgCache {
     uint8_t *data;
     uint32_t dataSize;
+    HsMsgCacheType type;
     struct HsMsgCache *next;
 } HsMsgCache;
 
@@ -153,20 +159,20 @@ struct HsCtx {
     HitlsProcessState readSubState;
     HS_Msg *hsMsg;
     ExtensionFlag extFlag;
-#if defined(HITLS_TLS_PROTO_TLS13) || defined(HITLS_TLS_PROTO_DTLS13)
+#if defined(HITLS_TLS_PROTO_TLS13_FAMILY)
     HITLS_HandshakeState ccsNextState;
     bool haveHrr; /* Whether the hello retry request has been processed */
     bool isHrrKeyShare; /* Whether the hello retry request requests a new key_share. */
     bool haveHvr; /* Whether the hello verify request has been processed or sent. */
 #endif
     bool isNeedClientCert;
-#if defined(HITLS_TLS_FEATURE_SESSION) || defined(HITLS_TLS_PROTO_TLS13) || defined(HITLS_TLS_PROTO_DTLS13)
+#if defined(HITLS_TLS_FEATURE_SESSION) || defined(HITLS_TLS_PROTO_TLS13_FAMILY)
     uint32_t sessionIdSize;
     uint8_t *sessionId;
 #endif
     uint8_t *clientRandom;
     uint8_t *serverRandom;
-#if defined(HITLS_TLS_PROTO_TLS13) || defined(HITLS_TLS_PROTO_DTLS13)
+#if defined(HITLS_TLS_PROTO_TLS13_FAMILY)
     uint8_t earlySecret[MAX_DIGEST_SIZE];
     uint8_t handshakeSecret[MAX_DIGEST_SIZE];
 #endif
@@ -180,12 +186,12 @@ struct HsCtx {
     uint32_t ticketSize;
     uint8_t *ticket;
     uint32_t ticketLifetimeHint; /* ticket timeout interval, in seconds */
-#if defined(HITLS_TLS_PROTO_TLS13) || defined(HITLS_TLS_PROTO_DTLS13)
+#if defined(HITLS_TLS_PROTO_TLS13_FAMILY)
     uint32_t ticketAgeAdd; /* Used to obfuscate ticket age */
 
     uint64_t nextTicketNonce; /* TLS1.3 connection, starting from 0 and increasing in ascending order */
     uint32_t sentTickets;     /* TLS1.3 Number of tickets sent */
-#endif /* HITLS_TLS_PROTO_TLS13 || HITLS_TLS_PROTO_DTLS13 */
+#endif /* HITLS_TLS_PROTO_TLS13_FAMILY */
 #endif /* HITLS_TLS_FEATURE_SESSION_TICKET */
     KeyExchCtx *kxCtx;    /* Key Exchange Context */
     VerifyCtx *verifyCtx; /* Verify the context of handshake data. */
@@ -193,17 +199,17 @@ struct HsCtx {
     uint32_t msgOffset;   /* messages offset */
     uint32_t bufferLen;   /* messages buffer size */
     uint32_t msgLen;      /* Total length of buffered messages */
-#if defined(HITLS_TLS_PROTO_TLS13) || defined(HITLS_TLS_PROTO_DTLS13)
+#if defined(HITLS_TLS_PROTO_TLS13_FAMILY)
     uint8_t clientHsTrafficSecret[MAX_DIGEST_SIZE]; /* Handshake secret used to encrypt the message sent by the TLS1.3
                                                        client */
     uint8_t serverHsTrafficSecret[MAX_DIGEST_SIZE]; /* Handshake secret used to encrypt the message sent by the TLS1.3
                                                        server */
     ClientHelloMsg *firstClientHello;               /* TLS1.3 server records the first received ClientHello message */
-#endif /* HITLS_TLS_PROTO_TLS13 || HITLS_TLS_PROTO_DTLS13 */
-#if defined(HITLS_TLS_PROTO_DTLS12) || defined(HITLS_TLS_PROTO_DTLS13)
+#endif /* HITLS_TLS_PROTO_TLS13_FAMILY */
+#if defined(HITLS_TLS_PROTO_DATAGRAM)
     uint16_t nextSendSeq;    /* message sending sequence number */
     uint16_t expectRecvSeq;  /* message receiving sequence number */
-#endif /* HITLS_TLS_PROTO_DTLS12 || HITLS_TLS_PROTO_DTLS13 */
+#endif /* HITLS_TLS_PROTO_DATAGRAM */
 };
 
 #ifdef __cplusplus

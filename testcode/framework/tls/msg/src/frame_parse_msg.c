@@ -426,6 +426,9 @@ static int32_t ParseClientHelloMsg(FRAME_Type *frameType, const uint8_t *buffer,
             case HS_EX_TYPE_ENCRYPT_THEN_MAC:
                 ParseHsExtArray8(&buffer[offset], bufLen - offset, &clientHello->encryptThenMac, &offset);
                 break;
+            case HS_EX_TYPE_CONNECTION_ID:
+                ParseHsExtArray8(&buffer[offset], bufLen - offset, &clientHello->connectionId, &offset);
+                break;
             default: /* Unrecognized extension. Skip parsing the extension. */
                 ParseFieldInteger16(&buffer[tmpOffset], bufLen - tmpOffset, &tmpField, &tmpOffset);
                 tmpOffset += tmpField.data;
@@ -471,6 +474,7 @@ static void CleanClientHelloMsg(FRAME_ClientHelloMsg *clientHello)
     BSL_SAL_FREE(clientHello->tls13Cookie.exData.data);
     BSL_SAL_FREE(clientHello->pskModes.exData.data);
     BSL_SAL_FREE(clientHello->caList.list.data);
+    BSL_SAL_FREE(clientHello->connectionId.exData.data);
     return;
 }
 
@@ -544,10 +548,13 @@ static int32_t ParseServerHelloMsg(const uint8_t *buffer, uint32_t bufLen, FRAME
                 ParseHsExtUint16(&buffer[offset], bufLen - offset, &serverHello->pskSelectedIdentity, &offset);
                 break;
             case HS_EX_TYPE_COOKIE:
-                ParseHsExtArray8(&buffer[offset], bufLen - offset, &serverHello->tls13Cookie, &offset);
+                ParseHsExtArrayForList(&buffer[offset], bufLen - offset, &serverHello->tls13Cookie, &offset);
                 break;
             case HS_EX_TYPE_ENCRYPT_THEN_MAC:
                 ParseHsExtArray8(&buffer[offset], bufLen - offset, &serverHello->encryptThenMac, &offset);
+                break;
+            case HS_EX_TYPE_CONNECTION_ID:
+                ParseHsExtArray8(&buffer[offset], bufLen - offset, &serverHello->connectionId, &offset);
                 break;
             default: /* Unrecognized extension, return error */
                 *parseLen += offset;
@@ -570,6 +577,7 @@ static void CleanServerHelloMsg(FRAME_ServerHelloMsg *serverHello)
     BSL_SAL_FREE(serverHello->alpn.exData.data);
     BSL_SAL_FREE(serverHello->keyShare.data.keyExchange.data);
     BSL_SAL_FREE(serverHello->tls13Cookie.exData.data);
+    BSL_SAL_FREE(serverHello->connectionId.exData.data);
     return;
 }
 

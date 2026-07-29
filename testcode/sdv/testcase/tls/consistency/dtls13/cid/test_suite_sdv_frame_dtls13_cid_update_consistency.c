@@ -241,6 +241,43 @@ static int32_t DrainCidRecvCbExchange(FRAME_LinkObj *receiver, FRAME_LinkObj *se
     return HITLS_Accept(receiver->ssl);
 }
 
+/*
+ * Complete the record-layer ACK round-trip over the FRAME loopback UIO. After a
+ * peer (ackHolder) processes a post-handshake message via HITLS_Read, the DTLS
+ * 1.3 record layer auto-generates an ACK into ackHolder's outbound buffer.
+ * Moving that ACK to the original sender (consumer) and reading it lets the
+ * production retransmit layer walk its list and fire the per-message acked
+ * callback (e.g. DTLS_CID_OnNewConnectionIdAcked / DTLS_CID_OnRequestConnectionIdAcked)
+ * for real, instead of the test invoking that callback manually.
+ */
+static int32_t CompleteAckRoundTrip(FRAME_LinkObj *ackHolder, FRAME_LinkObj *consumer)
+{
+    int32_t ret = FRAME_TrasferMsgBetweenLink(ackHolder, consumer);
+    if (ret != HITLS_SUCCESS) {
+        return ret;
+    }
+    ret = ReadPostHandshake(consumer);
+    if (ret != HITLS_REC_NORMAL_RECV_BUF_EMPTY) {
+        return (ret == HITLS_SUCCESS) ? HITLS_INTERNAL_EXCEPTION : ret;
+    }
+    return HITLS_SUCCESS;
+}
+
+/*
+ * Flush an ACK that could not be emitted while ackHolder's FRAME outbox was
+ * occupied by a post-handshake response, then deliver it to the original
+ * sender. The empty read gives HITLS_Read a new I/O cycle in which
+ * REC_Dtls13FlushAck can write the pending ACK.
+ */
+static int32_t FlushPendingAckRoundTrip(FRAME_LinkObj *ackHolder, FRAME_LinkObj *consumer)
+{
+    int32_t ret = ReadPostHandshake(ackHolder);
+    if (ret != HITLS_REC_NORMAL_RECV_BUF_EMPTY) {
+        return (ret == HITLS_SUCCESS) ? HITLS_INTERNAL_EXCEPTION : ret;
+    }
+    return CompleteAckRoundTrip(ackHolder, consumer);
+}
+
 /* BEGIN_CASE */
 void SDV_TLS_DTLS13_CID_UPDATE_FUNC_TC001(void)
 {
@@ -270,11 +307,11 @@ void SDV_TLS_DTLS13_CID_UPDATE_FUNC_TC001(void)
     ASSERT_EQ(FRAME_TrasferMsgBetweenLink(server, client), HITLS_SUCCESS);
     ASSERT_EQ(ReadPostHandshake(client), HITLS_REC_NORMAL_RECV_BUF_EMPTY);
 
-    /* RFC 9147 §5.2: reqCidState fulfillment is driven by record-layer ACK,
-     * not by the peer's NewConnectionId. The DrainCidRecvCbExchange helper
-     * delivered the auto ACK to the client already, which fulfills the
-     * RequestConnectionId via the retransmit-list callback. */
-    DTLS_CID_OnRequestConnectionIdAcked(client->ssl);
+    /* RFC 9147 §5.2: receiving NewConnectionId does not fulfill the request.
+     * Flush and deliver the pending record-layer ACK so the retransmit-list
+     * callback performs the SENT -> IDLE transition. */
+    ASSERT_EQ(client->ssl->reqCidState, DTLS_CID_MSG_STATE_SENT);
+    ASSERT_EQ(FlushPendingAckRoundTrip(server, client), HITLS_SUCCESS);
     ASSERT_EQ(client->ssl->reqCidState, DTLS_CID_MSG_STATE_IDLE);
     ASSERT_EQ(client->ssl->state, CM_STATE_TRANSPORTING);
     ASSERT_EQ(server->ssl->state, CM_STATE_TRANSPORTING);
@@ -315,9 +352,11 @@ void SDV_TLS_DTLS13_CID_UPDATE_FUNC_TC002(void)
     ASSERT_EQ(FRAME_TrasferMsgBetweenLink(client, server), HITLS_SUCCESS);
     ASSERT_EQ(ReadPostHandshake(server), HITLS_REC_NORMAL_RECV_BUF_EMPTY);
 
-    /* RFC 9147 §5.2: the auto ACK delivered by DrainCidRecvCbExchange already
-     * acknowledged the server's RequestConnectionId. */
-    DTLS_CID_OnRequestConnectionIdAcked(server->ssl);
+    /* RFC 9147 §5.2: receiving NewConnectionId does not fulfill the request.
+     * Flush and deliver the pending record-layer ACK so the retransmit-list
+     * callback performs the SENT -> IDLE transition. */
+    ASSERT_EQ(server->ssl->reqCidState, DTLS_CID_MSG_STATE_SENT);
+    ASSERT_EQ(FlushPendingAckRoundTrip(client, server), HITLS_SUCCESS);
     ASSERT_EQ(server->ssl->reqCidState, DTLS_CID_MSG_STATE_IDLE);
     ASSERT_EQ(client->ssl->state, CM_STATE_TRANSPORTING);
     ASSERT_EQ(server->ssl->state, CM_STATE_TRANSPORTING);
@@ -363,7 +402,9 @@ void SDV_TLS_DTLS13_CID_UPDATE_FUNC_TC003(void)
     ASSERT_TRUE(sendCidEntry->cidLen > 0);
     ASSERT_EQ(sendCidEntry->cidLen, TEST_NEW_CID_LEN);
     ASSERT_EQ(memcmp(sendCidEntry->cidVal, g_testNewCid, TEST_NEW_CID_LEN), 0);
-    DTLS_CID_OnNewConnectionIdAcked(client->ssl);
+    /* Deliver the server's auto-ACK for our NewConnectionId so the retransmit
+     * layer fires DTLS_CID_OnNewConnectionIdAcked for real. */
+    ASSERT_EQ(CompleteAckRoundTrip(server, client), HITLS_SUCCESS);
     ASSERT_EQ(client->ssl->newCidState, DTLS_CID_MSG_STATE_IDLE);
     ASSERT_EQ(client->ssl->state, CM_STATE_TRANSPORTING);
     ASSERT_EQ(server->ssl->state, CM_STATE_TRANSPORTING);
@@ -409,7 +450,9 @@ void SDV_TLS_DTLS13_CID_UPDATE_FUNC_TC004(void)
     ASSERT_TRUE(sendCidEntry->cidLen > 0);
     ASSERT_EQ(sendCidEntry->cidLen, TEST_NEW_CID_LEN);
     ASSERT_EQ(memcmp(sendCidEntry->cidVal, g_testNewCid, TEST_NEW_CID_LEN), 0);
-    DTLS_CID_OnNewConnectionIdAcked(server->ssl);
+    /* Deliver the client's auto-ACK for our NewConnectionId so the retransmit
+     * layer fires DTLS_CID_OnNewConnectionIdAcked for real. */
+    ASSERT_EQ(CompleteAckRoundTrip(client, server), HITLS_SUCCESS);
     ASSERT_EQ(server->ssl->newCidState, DTLS_CID_MSG_STATE_IDLE);
     ASSERT_EQ(client->ssl->state, CM_STATE_TRANSPORTING);
     ASSERT_EQ(server->ssl->state, CM_STATE_TRANSPORTING);

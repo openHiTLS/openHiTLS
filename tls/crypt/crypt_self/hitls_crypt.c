@@ -372,8 +372,9 @@ static int32_t SpecialModeEncryptPreSolve(CRYPT_EAL_CipherCtx *ctx, const HITLS_
     if (ret != CRYPT_SUCCESS) {
         return ret;
     }
-    if (cipher->algo == HITLS_CIPHER_CHACHA20_POLY1305 && cipher->counter != NULL && cipher->counterLen == sizeof(uint32_t)) {
-        ret = CRYPT_EAL_CipherCtrl(ctx, CRYPT_CTRL_SET_COUNT, cipher->counter, cipher->counterLen); 
+    if (cipher->algo == HITLS_CIPHER_CHACHA20 &&
+        cipher->counter != NULL && cipher->counterLen == sizeof(uint32_t)) {
+        ret = CRYPT_EAL_CipherCtrl(ctx, CRYPT_CTRL_SET_COUNT, cipher->counter, cipher->counterLen);
         if (ret != CRYPT_SUCCESS) {
             return ret;
         }

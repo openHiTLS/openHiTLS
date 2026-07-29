@@ -177,22 +177,7 @@ int32_t DtlsClientSendFinishedProcess(TLS_Ctx *ctx)
 }
 #endif /* HITLS_TLS_PROTO_DTLS12 */
 
-#if defined(HITLS_TLS_PROTO_TLS13) || defined(HITLS_TLS_PROTO_DTLS13)
-static bool Tls13ClientNeedActivateHsWriteKey(const TLS_Ctx *ctx)
-{
-#ifdef HITLS_TLS_PROTO_DTLS13
-    if (ctx->negotiatedInfo.version == HITLS_VERSION_DTLS13) {
-        return false;
-    }
-#endif
-#ifdef HITLS_TLS_FEATURE_PHA
-    if (ctx->phaState == PHA_REQUESTED) {
-        return false;
-    }
-#endif
-    return true;
-}
-
+#if defined(HITLS_TLS_PROTO_TLS13_FAMILY)
 static int32_t Tls13ClientSendFinishPostProcess(TLS_Ctx *ctx)
 {
     int32_t ret = HITLS_SUCCESS;
@@ -262,7 +247,8 @@ int32_t Tls13ClientSendFinishedProcess(TLS_Ctx *ctx)
 
         /* If the certificate of the client is sent, the key has been activated when the certificate is sent. You do not
          * need to activate the key again */
-        if (!ctx->hsCtx->isNeedClientCert && Tls13ClientNeedActivateHsWriteKey(ctx)) {
+        if (!ctx->hsCtx->isNeedClientCert && ctx->negotiatedInfo.version != HITLS_VERSION_DTLS13 &&
+            ctx->phaState != PHA_REQUESTED) {
             /* The CCS message cannot be encrypted. Therefore, the sending key of the client must be activated
              * after the CCS message is sent */
             uint32_t hashLen = SAL_CRYPT_DigestSize(ctx->negotiatedInfo.cipherSuiteInfo.hashAlg);
@@ -305,7 +291,7 @@ int32_t Tls13ClientSendFinishedProcess(TLS_Ctx *ctx)
 
     return Tls13ClientSendFinishPostProcess(ctx);
 }
-#endif /* HITLS_TLS_PROTO_TLS13 || HITLS_TLS_PROTO_DTLS13 */
+#endif /* HITLS_TLS_PROTO_TLS13_FAMILY */
 
 #endif /* HITLS_TLS_HOST_CLIENT */
 #ifdef HITLS_TLS_HOST_SERVER
@@ -460,7 +446,7 @@ int32_t DtlsServerSendFinishedProcess(TLS_Ctx *ctx)
 }
 #endif /* HITLS_TLS_PROTO_DTLS12 */
 
-#if defined(HITLS_TLS_PROTO_TLS13) || defined(HITLS_TLS_PROTO_DTLS13)
+#if defined(HITLS_TLS_PROTO_TLS13_FAMILY)
 static int32_t PrepareServerSendFinishedMsg(TLS_Ctx *ctx)
 {
     int32_t ret = VERIFY_Tls13CalcVerifyData(ctx, false);
@@ -543,5 +529,5 @@ int32_t Tls13ServerSendFinishedProcess(TLS_Ctx *ctx)
 #endif
     return HS_ChangeState(ctx, nextState);
 }
-#endif /* HITLS_TLS_PROTO_TLS13 || HITLS_TLS_PROTO_DTLS13 */
+#endif /* HITLS_TLS_PROTO_TLS13_FAMILY */
 #endif /* HITLS_TLS_HOST_SERVER */

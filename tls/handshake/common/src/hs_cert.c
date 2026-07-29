@@ -25,7 +25,7 @@
 #include "cert_method.h"
 #include "cert.h"
 #include "security.h"
-
+#include "hs_common.h"
 #include "hs_cert.h"
 
 CERT_Type CertKeyType2CertType(HITLS_CERT_KeyType keyType)
@@ -78,20 +78,20 @@ static int32_t CheckSelectSignAlgorithms(TLS_Ctx *ctx, const SelectSignAlgorithm
     const uint16_t *selectSignAlgorithms = select->selectSignAlgorithms;
     const TLS_SigSchemeInfo *info = NULL;
     (void)pubkey;
-#ifdef HITLS_TLS_PROTO_TLS13
+#if defined(HITLS_TLS_PROTO_TLS13_FAMILY)
     int32_t paraId = 0;
     (void)SAL_CERT_KeyCtrl(&ctx->config.tlsConfig, pubkey, CERT_KEY_CTRL_GET_PARAM_ID, NULL, (void *)&paraId);
-#endif
+#endif /* HITLS_TLS_PROTO_TLS13_FAMILY */
     for (uint32_t i = 0; i < baseSignAlgorithmsSize; i++) {
         info = ConfigGetSignatureSchemeInfo(&ctx->config.tlsConfig, baseSignAlgorithms[i]);
         if (info == NULL || info->keyType != (int32_t)checkedKeyType) {
             continue;
         }
-#ifdef HITLS_TLS_PROTO_TLS13
-        if (ctx->negotiatedInfo.version == HITLS_VERSION_TLS13 && info->paraId != 0 && info->paraId != paraId) {
+#if defined(HITLS_TLS_PROTO_TLS13_FAMILY)
+        if (IS_TLS13_FAMILY_VERSION(ctx->negotiatedInfo.version) && info->paraId != 0 && info->paraId != paraId) {
             continue;
         }
-#endif
+#endif /* HITLS_TLS_PROTO_TLS13_FAMILY */
         // Check algorithm in allow list, protocol version and security policy restrictions
         if (!SAL_CERT_IsSignAlgorithmAllowed(ctx, baseSignAlgorithms[i],
             selectSignAlgorithms, selectSignAlgorithmsSize)) {
@@ -230,7 +230,7 @@ static int32_t CheckCertTypeAndSignScheme(HITLS_Ctx *ctx, const CERT_ExpectInfo 
     /* ECDSA certificate. The curve ID and point format must be checked.
         TLS_CERT_KEY_TYPE_SM2 does not check the curve ID and point format.
         TLCP curves is sm2 and is not compressed. */
-    if (keyType == TLS_CERT_KEY_TYPE_ECDSA && ctx->negotiatedInfo.version != HITLS_VERSION_TLS13) {
+    if (keyType == TLS_CERT_KEY_TYPE_ECDSA && !IS_TLS13_FAMILY_VERSION(ctx->negotiatedInfo.version)) {
         ret = IsEcParamCompatible(config, expectCertInfo, pubkey);
     }
 

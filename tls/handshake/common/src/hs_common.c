@@ -48,7 +48,7 @@
 #define LABEL_SIZE 5
 #define MAX_LABEL_SIZE 23 /* the max size of label: "extended master secret" */
 #endif
-#if defined(HITLS_TLS_PROTO_TLS13) || defined(HITLS_TLS_PROTO_DTLS13)
+#if defined(HITLS_TLS_PROTO_TLS13_FAMILY)
 /* Fixed random value of the hello retry request packet */
 const uint8_t g_hrrRandom[HS_RANDOM_SIZE] = {
     0xcf, 0x21, 0xad, 0x74, 0xe5, 0x9a, 0x61, 0x11, 0xbe, 0x1d, 0x8c, 0x02, 0x1e, 0x65, 0xb8, 0x91,
@@ -71,7 +71,7 @@ const uint8_t *HS_GetTls12DowngradeRandom(uint32_t *len)
     return g_tls12Downgrade;
 }
 #endif /* HITLS_TLS_PROTO_TLS_BASIC */
-#endif /* HITLS_TLS_PROTO_TLS13 || HITLS_TLS_PROTO_DTLS13 */
+#endif /* HITLS_TLS_PROTO_TLS13_FAMILY */
 
 #ifdef HITLS_BSL_LOG
 static const char *g_stateMachineStr[] = {
@@ -101,7 +101,7 @@ static const char *g_stateMachineStr[] = {
     [TRY_SEND_SERVER_HELLO_DONE] = "send server hello done",
     [TRY_SEND_NEW_SESSION_TICKET] = "send new session ticket",
 #endif
-#if defined(HITLS_TLS_PROTO_TLS13) || defined(HITLS_TLS_PROTO_DTLS13)
+#if defined(HITLS_TLS_PROTO_TLS13_FAMILY)
     [TRY_RECV_KEY_UPDATE] = "recv keyupdate",
     [TRY_SEND_KEY_UPDATE] = "send keyupdate",
 #ifdef HITLS_TLS_PROTO_DTLS13
@@ -122,7 +122,7 @@ static const char *g_stateMachineStr[] = {
     [TRY_SEND_HELLO_RETRY_REQUEST] = "send hello retry request",
     [TRY_RECV_END_OF_EARLY_DATA] = "recv end of early data",
 #endif /* HITLS_TLS_HOST_SERVER */
-#endif /* HITLS_TLS_PROTO_TLS13 || HITLS_TLS_PROTO_DTLS13 */
+#endif /* HITLS_TLS_PROTO_TLS13_FAMILY */
     [TRY_SEND_CERTIFICATE] = "send certificate",
     [TRY_SEND_CERTIFICATE_REQUEST] = "send certificate request",
     [TRY_SEND_CERTIFICATE_VERIFY] = "send certificate verify",
@@ -152,7 +152,7 @@ const char *HS_GetMsgTypeStr(HS_MsgType type)
             return "client hello";
         case SERVER_HELLO:
             return "server hello";
-#if defined(HITLS_TLS_PROTO_TLS13) || defined(HITLS_TLS_PROTO_DTLS13)
+#if defined(HITLS_TLS_PROTO_TLS13_FAMILY)
         case ENCRYPTED_EXTENSIONS:
             return "encrypted extensions";
 #endif
@@ -626,7 +626,7 @@ uint32_t HS_MaxMessageSize(TLS_Ctx *ctx, HS_MsgType type)
 #endif
         case SERVER_HELLO:
             return HITLS_SERVER_HELLO_MAX_SIZE;
-#if defined(HITLS_TLS_PROTO_TLS13) || defined(HITLS_TLS_PROTO_DTLS13)
+#if defined(HITLS_TLS_PROTO_TLS13_FAMILY)
         case ENCRYPTED_EXTENSIONS:
             return HITLS_ENCRYPTED_EXTENSIONS_MAX_SIZE;
 #endif
@@ -643,19 +643,19 @@ uint32_t HS_MaxMessageSize(TLS_Ctx *ctx, HS_MsgType type)
         case CERTIFICATE_VERIFY:
             return MAX_CERT_VERIFY_SIZE;
         case NEW_SESSION_TICKET:
-#if defined(HITLS_TLS_PROTO_TLS13) || defined(HITLS_TLS_PROTO_DTLS13)
-            if (GET_VERSION_FROM_CTX(ctx) == HITLS_VERSION_TLS13 || GET_VERSION_FROM_CTX(ctx) == HITLS_VERSION_DTLS13) {
+#if defined(HITLS_TLS_PROTO_TLS13_FAMILY)
+            if (IS_TLS13_FAMILY_VERSION(GET_VERSION_FROM_CTX(ctx))) {
                 return HITLS_SESSION_TICKET_MAX_SIZE_TLS13;
             }
 #endif
             return HITLS_SESSION_TICKET_MAX_SIZE_TLS12;
-#if defined(HITLS_TLS_PROTO_TLS13) || defined(HITLS_TLS_PROTO_DTLS13)
+#if defined(HITLS_TLS_PROTO_TLS13_FAMILY)
         case END_OF_EARLY_DATA:
             return HITLS_END_OF_EARLY_DATA_MAX_SIZE;
 #endif
         case FINISHED:
             return HITLS_FINISHED_MAX_SIZE;
-#if defined(HITLS_TLS_PROTO_TLS13) || defined(HITLS_TLS_PROTO_DTLS13)
+#if defined(HITLS_TLS_PROTO_TLS13_FAMILY)
         case KEY_UPDATE:
             return HITLS_KEY_UPDATE_MAX_SIZE;
 #endif
@@ -670,7 +670,7 @@ uint32_t HS_MaxMessageSize(TLS_Ctx *ctx, HS_MsgType type)
     }
 }
 
-#if defined(HITLS_TLS_PROTO_TLS13) || defined(HITLS_TLS_PROTO_DTLS13)
+#if defined(HITLS_TLS_PROTO_TLS13_FAMILY)
 uint32_t HS_GetBinderLen(HITLS_Session *session, HITLS_HashAlgo *hashAlg)
 {
     if (*hashAlg != HITLS_HASH_BUTT) {
@@ -698,7 +698,7 @@ uint32_t HS_GetBinderLen(HITLS_Session *session, HITLS_HashAlgo *hashAlg)
     *hashAlg = cipherInfo.hashAlg;
     return SAL_CRYPT_HmacSize(*hashAlg);
 }
-#endif /* HITLS_TLS_PROTO_TLS13 || HITLS_TLS_PROTO_DTLS13 */
+#endif /* HITLS_TLS_PROTO_TLS13_FAMILY */
 
 #ifdef HITLS_TLS_FEATURE_EXPORT_KEY_MATERIAL
 /* rfc8446 7.5 Exporters
@@ -706,7 +706,7 @@ uint32_t HS_GetBinderLen(HITLS_Session *session, HITLS_HashAlgo *hashAlg)
     TLS-Exporter(label, context_value, key_length) =
         HKDF-Expand-Label(Derive-Secret(Secret, label, ""),
                         "exporter", Hash(context_value), key_length) */
-#if defined(HITLS_TLS_PROTO_TLS13) || defined(HITLS_TLS_PROTO_DTLS13)
+#if defined(HITLS_TLS_PROTO_TLS13_FAMILY)
 static int32_t Tls13ExportKeyingMaterial(HITLS_Ctx *ctx, uint8_t *out, size_t outLen,
     const char *label, size_t labelLen, const uint8_t *context, size_t contextLen, int32_t useContext)
 {
@@ -755,7 +755,7 @@ static int32_t Tls13ExportKeyingMaterial(HITLS_Ctx *ctx, uint8_t *out, size_t ou
     BSL_SAL_CleanseData(tmpSecret, MAX_DIGEST_SIZE);
     return ret;
 }
-#endif /* HITLS_TLS_PROTO_TLS13 || HITLS_TLS_PROTO_DTLS13 */
+#endif /* HITLS_TLS_PROTO_TLS13_FAMILY */
 static bool IsSpecialLabel(const char *label, size_t labelLen)
 {
     const char labelArray[LABEL_SIZE][MAX_LABEL_SIZE] = {
@@ -866,11 +866,11 @@ int32_t HITLS_ExportKeyingMaterial(HITLS_Ctx *ctx, uint8_t *out, size_t outLen, 
         return HITLS_MSG_HANDLE_STATE_ILLEGAL;
     }
     int32_t ret = 0;
-#if defined(HITLS_TLS_PROTO_TLS13) || defined(HITLS_TLS_PROTO_DTLS13)
-    if (ctx->negotiatedInfo.version == HITLS_VERSION_TLS13 || ctx->negotiatedInfo.version == HITLS_VERSION_DTLS13) {
+#if defined(HITLS_TLS_PROTO_TLS13_FAMILY)
+    if (IS_TLS13_FAMILY_CTX(ctx)) {
         ret = Tls13ExportKeyingMaterial(ctx, out, outLen, label, labelLen, context, contextLen, useContext);
     } else
-#endif /* HITLS_TLS_PROTO_TLS13 || HITLS_TLS_PROTO_DTLS13 */
+#endif /* HITLS_TLS_PROTO_TLS13_FAMILY */
     {
         ret = Tls12ExportKeyingMaterial(ctx, out, outLen, label, labelLen, context, contextLen, useContext);
     }
@@ -905,12 +905,12 @@ uint16_t *CheckSupportSignAlgorithms(const TLS_Ctx *ctx, const uint16_t *signAlg
         return NULL;
     }
     for (uint32_t i = 0; i < signAlgorithmsSize; i++) {
-#if defined(HITLS_TLS_PROTO_TLS13) || defined(HITLS_TLS_PROTO_DTLS13)
+#if defined(HITLS_TLS_PROTO_TLS13_FAMILY)
         const uint32_t dsaMask = 0x02;
         const uint32_t sha1Mask = 0x0200;
         const uint32_t sha224Mask = 0x0300;
-        if ((ctx->config.tlsConfig.maxVersion == HITLS_VERSION_TLS13 || ctx->config.tlsConfig.maxVersion == HITLS_VERSION_DTLS13) &&
-            (ctx->config.tlsConfig.minVersion == HITLS_VERSION_TLS13 || ctx->config.tlsConfig.minVersion == HITLS_VERSION_DTLS13)) {
+        if (IS_TLS13_FAMILY_VERSION(ctx->config.tlsConfig.maxVersion) &&
+            IS_TLS13_FAMILY_VERSION(ctx->config.tlsConfig.minVersion)) {
             if (ctx->isClient &&
                 (((signAlgorithms[i] & 0xff00) == sha1Mask) ||
                 ((signAlgorithms[i] & 0xff00) == sha224Mask))) {
@@ -922,10 +922,9 @@ uint16_t *CheckSupportSignAlgorithms(const TLS_Ctx *ctx, const uint16_t *signAlg
                 continue;
             }
         }
-#endif /* HITLS_TLS_PROTO_TLS13 || HITLS_TLS_PROTO_DTLS13 */
+#endif /* HITLS_TLS_PROTO_TLS13_FAMILY */
         if (ctx->config.tlsConfig.maxVersion != HITLS_VERSION_TLCP_DTLCP11 &&
-			ctx->config.tlsConfig.maxVersion != HITLS_VERSION_TLS13 &&
-            ctx->config.tlsConfig.maxVersion != HITLS_VERSION_DTLS13 &&
+            !IS_TLS13_FAMILY_VERSION(ctx->config.tlsConfig.maxVersion) &&
             signAlgorithms[i] == CERT_SIG_SCHEME_SM2_SM3) {
             continue;
         }

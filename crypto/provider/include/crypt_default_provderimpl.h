@@ -122,6 +122,9 @@ extern const CRYPT_EAL_Func g_defEalCfb[];
 #if defined(HITLS_CRYPTO_CHACHA20) && defined(HITLS_CRYPTO_CHACHA20POLY1305)
 extern const CRYPT_EAL_Func g_defEalChaCha[];
 #endif
+#ifdef HITLS_CRYPTO_CHACHA20
+extern const CRYPT_EAL_Func g_defEalChaCha20[];
+#endif
 #ifdef HITLS_CRYPTO_CTR
 extern const CRYPT_EAL_Func g_defEalCtr[];
 #endif

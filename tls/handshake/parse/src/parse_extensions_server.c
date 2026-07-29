@@ -310,7 +310,29 @@ static int32_t ParseClientAlpnProposeList(ParsePacket *pkt, ClientHelloMsg *msg)
     return HITLS_SUCCESS;
 }
 #endif /* HITLS_TLS_FEATURE_ALPN */
-#ifdef HITLS_TLS_PROTO_TLS13
+#if defined(HITLS_TLS_PROTO_TLS13_FAMILY)
+#ifdef HITLS_TLS_FEATURE_DTLS_CID
+static int32_t ParseClientConnectionId(ParsePacket *pkt, ClientHelloMsg *msg)
+{
+    uint8_t cidLen = 0;
+    int32_t ret = ParseOneByteLengthField(pkt, &cidLen, &msg->extension.content.connectionId);
+    if (ret == HITLS_PARSE_INVALID_MSG_LEN) {
+        return ParseErrorExtLengthProcess(pkt->ctx, BINLOG_ID15121, BINGLOG_STR("connection_id"));
+    } else if (ret == HITLS_MEMALLOC_FAIL) {
+        return ParseErrorProcess(pkt->ctx, HITLS_MEMALLOC_FAIL, BINLOG_ID15135,
+            BINGLOG_STR("connection_id malloc fail."), ALERT_INTERNAL_ERROR);
+    }
+
+    if (pkt->bufLen != *pkt->bufOffset) {
+        return ParseErrorExtLengthProcess(pkt->ctx, BINLOG_ID15121, BINGLOG_STR("connection_id"));
+    }
+
+    msg->extension.content.connectionIdLen = cidLen;
+    msg->extension.flag.haveConnectionId = true;
+    return HITLS_SUCCESS;
+}
+#endif /* HITLS_TLS_FEATURE_DTLS_CID */
+
 int32_t ParseIdentities(TLS_Ctx *ctx, PreSharedKey *preSharedKey, const uint8_t *buf, uint32_t bufLen)
 {
     uint32_t bufOffset = 0u;
@@ -725,6 +747,9 @@ static int32_t ParseClientCookie(ParsePacket *pkt, ClientHelloMsg *msg)
     int32_t ret = ParseExCookie(pkt->buf, pkt->bufLen, &msg->extension.content.cookie,
         &msg->extension.content.cookieLen);
     if (ret != HITLS_SUCCESS) {
+        if (ret == HITLS_PARSE_INVALID_MSG_LEN) {
+            return ParseErrorExtLengthProcess(pkt->ctx, BINLOG_ID15179, BINGLOG_STR("cookie"));
+        }
         return ret;
     }
     msg->extension.flag.haveCookie = true;
@@ -747,7 +772,7 @@ static int32_t ParseClientPostHsAuth(ParsePacket *pkt, ClientHelloMsg *msg)
 
     return HITLS_SUCCESS;
 }
-#endif /* HITLS_TLS_PROTO_TLS13 */
+#endif /* HITLS_TLS_PROTO_TLS13_FAMILY */
 #if defined(HITLS_TLS_PROTO_TLS_BASIC) || defined(HITLS_TLS_PROTO_DTLS12)
 static int32_t ParseClientSecRenegoInfo(ParsePacket *pkt, ClientHelloMsg *msg)
 {
@@ -860,8 +885,11 @@ static int32_t ParseClientExBody(TLS_Ctx *ctx, uint16_t extMsgType, const uint8_
 #ifdef HITLS_TLS_FEATURE_ALPN
         { .exMsgType = HS_EX_TYPE_APP_LAYER_PROTOCOLS, .parseFunc = ParseClientAlpnProposeList},
 #endif
-#ifdef HITLS_TLS_PROTO_TLS13
+#if defined(HITLS_TLS_PROTO_TLS13_FAMILY)
         { .exMsgType = HS_EX_TYPE_SUPPORTED_VERSIONS, .parseFunc = ParseClientSupportedVersions},
+#ifdef HITLS_TLS_FEATURE_DTLS_CID
+        { .exMsgType = HS_EX_TYPE_CONNECTION_ID, .parseFunc = ParseClientConnectionId},
+#endif /* HITLS_TLS_FEATURE_DTLS_CID */
         { .exMsgType = HS_EX_TYPE_PRE_SHARED_KEY, .parseFunc = ParseClientPreSharedKey},
         { .exMsgType = HS_EX_TYPE_PSK_KEY_EXCHANGE_MODES, .parseFunc = ParseClientPskKeyExModes},
         { .exMsgType = HS_EX_TYPE_COOKIE, .parseFunc = ParseClientCookie},
@@ -870,7 +898,7 @@ static int32_t ParseClientExBody(TLS_Ctx *ctx, uint16_t extMsgType, const uint8_
 #endif /* HITLS_TLS_FEATURE_CERTIFICATE_AUTHORITIES */
         { .exMsgType = HS_EX_TYPE_POST_HS_AUTH, .parseFunc = ParseClientPostHsAuth},
         { .exMsgType = HS_EX_TYPE_KEY_SHARE, .parseFunc = ParseClientKeyShare},
-#endif /* HITLS_TLS_PROTO_TLS13 */
+#endif /* HITLS_TLS_PROTO_TLS13_FAMILY */
 #if defined(HITLS_TLS_PROTO_TLS_BASIC) || defined(HITLS_TLS_PROTO_DTLS12)
         { .exMsgType = HS_EX_TYPE_RENEGOTIATION_INFO, .parseFunc = ParseClientSecRenegoInfo},
 #endif /* defined(HITLS_TLS_PROTO_TLS_BASIC) || defined(HITLS_TLS_PROTO_DTLS12) */
@@ -974,7 +1002,7 @@ int32_t ParseClientExtension(TLS_Ctx *ctx, const uint8_t *buf, uint32_t bufLen, 
     return HITLS_SUCCESS;
 }
 
-#ifdef HITLS_TLS_PROTO_TLS13
+#if defined(HITLS_TLS_PROTO_TLS13_FAMILY)
 void CleanPreShareKey(PreSharedKey *preSharedKey)
 {
     ListHead *node = NULL;
@@ -993,7 +1021,7 @@ void CleanPreShareKey(PreSharedKey *preSharedKey)
         BSL_SAL_FREE(preSharedKey);
     }
 }
-#endif /* HITLS_TLS_PROTO_TLS13 */
+#endif /* HITLS_TLS_PROTO_TLS13_FAMILY */
 void CleanClientHelloExtension(ClientHelloMsg *msg)
 {
     if (msg == NULL) {
@@ -1016,11 +1044,12 @@ void CleanClientHelloExtension(ClientHelloMsg *msg)
 #ifdef HITLS_TLS_FEATURE_SESSION_TICKET
     BSL_SAL_FREE(msg->extension.content.ticket);
 #endif /* HITLS_TLS_FEATURE_SESSION_TICKET */
-#ifdef HITLS_TLS_PROTO_TLS13
+#if defined(HITLS_TLS_PROTO_TLS13_FAMILY)
     BSL_SAL_FREE(msg->extension.content.signatureAlgorithmsCert);
     BSL_SAL_FREE(msg->extension.content.supportedVersions);
     BSL_SAL_FREE(msg->extension.content.keModes);
     BSL_SAL_FREE(msg->extension.content.cookie);
+    BSL_SAL_FREE(msg->extension.content.connectionId);
     CleanKeyShare(msg->extension.content.keyShare);
     msg->extension.content.keyShare = NULL;
     CleanPreShareKey(msg->extension.content.preSharedKey);
@@ -1029,6 +1058,6 @@ void CleanClientHelloExtension(ClientHelloMsg *msg)
     FreeDNList(msg->extension.content.caList);
 #endif /* HITLS_TLS_FEATURE_CERTIFICATE_AUTHORITIES */
     msg->extension.content.caList = NULL;
-#endif /* HITLS_TLS_PROTO_TLS13 */
+#endif /* HITLS_TLS_PROTO_TLS13_FAMILY */
 }
 #endif /* HITLS_TLS_HOST_SERVER */

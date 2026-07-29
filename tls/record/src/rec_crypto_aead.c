@@ -22,6 +22,7 @@
 #include "crypt.h"
 #include "hitls_error.h"
 #include "record.h"
+#include "hs_common.h"
 #include "rec_alert.h"
 #include "rec_conn.h"
 #include "rec_header.h"
@@ -221,8 +222,7 @@ static int32_t AeadDecrypt(TLS_Ctx *ctx, RecConnState *state, const REC_TextInpu
     diff: length
     */
     uint32_t plainDataLen = cryptMsg->textLen;
-    if (cryptMsg->negotiatedVersion != HITLS_VERSION_TLS13 &&
-        cryptMsg->negotiatedVersion != HITLS_VERSION_DTLS13) {
+    if (!IS_TLS13_FAMILY_VERSION(cryptMsg->negotiatedVersion)) {
         plainDataLen = cryptMsg->textLen - suiteInfo->recordIvLength - suiteInfo->macLen;
     }
     AeadGetAad(aad, &aadLen, cryptMsg, plainDataLen);
@@ -307,10 +307,9 @@ static int32_t AeadEncrypt(TLS_Ctx *ctx, RecConnState *state, const REC_TextInpu
     uint8_t aad[AEAD_AAD_MAX_SIZE];
     uint32_t aadLen = AEAD_AAD_MAX_SIZE;
     uint32_t textLen =
-#if defined(HITLS_TLS_PROTO_TLS13) || defined(HITLS_TLS_PROTO_DTLS13)
-        (plainMsg->negotiatedVersion == HITLS_VERSION_TLS13 ||
-         plainMsg->negotiatedVersion == HITLS_VERSION_DTLS13) ? cipherTextLen :
-#endif /* HITLS_TLS_PROTO_TLS13 */
+#if defined(HITLS_TLS_PROTO_TLS13_FAMILY)
+        IS_TLS13_FAMILY_VERSION(plainMsg->negotiatedVersion) ? cipherTextLen :
+#endif /* HITLS_TLS_PROTO_TLS13_FAMILY */
         plainMsg->textLen;
     AeadGetAad(aad, &aadLen, plainMsg, textLen);
     cipherParam.aad = aad;

@@ -27,7 +27,7 @@
 #ifdef HITLS_TLS_FEATURE_PSK
 #include "hitls_psk.h"
 #endif
-#ifdef HITLS_TLS_PROTO_DTLS12
+#if defined(HITLS_TLS_PROTO_DATAGRAM)
 #include "hitls_cookie.h"
 #endif
 #ifdef HITLS_TLS_FEATURE_ALPN
@@ -59,7 +59,7 @@
 void CFG_CleanConfig(HITLS_Config *config)
 {
     BSL_SAL_FREE(config->cipherSuites);
-#ifdef HITLS_TLS_PROTO_TLS13
+#if defined(HITLS_TLS_PROTO_TLS13_FAMILY)
     BSL_SAL_FREE(config->tls13CipherSuites);
 #endif
     BSL_SAL_FREE(config->pointFormats);
@@ -201,7 +201,7 @@ static void ShallowCopy(HITLS_Ctx *ctx, const HITLS_Config *srcConfig)
     destConfig->pskClientCb = srcConfig->pskClientCb;
     destConfig->pskServerCb = srcConfig->pskServerCb;
 #endif
-#ifdef HITLS_TLS_PROTO_TLS13
+#if defined(HITLS_TLS_PROTO_TLS13_FAMILY)
     destConfig->keyExchMode = srcConfig->keyExchMode;
 #endif
 #ifdef HITLS_TLS_FEATURE_INDICATOR
@@ -209,7 +209,7 @@ static void ShallowCopy(HITLS_Ctx *ctx, const HITLS_Config *srcConfig)
     destConfig->msgCb = srcConfig->msgCb;
     destConfig->msgArg = srcConfig->msgArg;
 #endif
-#if defined(HITLS_TLS_PROTO_DTLS12) && defined(HITLS_BSL_UIO_UDP)
+#if defined(HITLS_TLS_PROTO_DATAGRAM) && defined(HITLS_BSL_UIO_UDP)
     destConfig->dtlsTimerCb = srcConfig->dtlsTimerCb;
     destConfig->dtlsPostHsTimeoutVal = srcConfig->dtlsPostHsTimeoutVal;
     destConfig->isSupportDtlsCookieExchange = srcConfig->isSupportDtlsCookieExchange;
@@ -222,7 +222,7 @@ static void ShallowCopy(HITLS_Ctx *ctx, const HITLS_Config *srcConfig)
 #ifdef HITLS_TLS_SUITE_CIPHER_CBC
     destConfig->isEncryptThenMac = srcConfig->isEncryptThenMac;
 #endif
-#if defined(HITLS_TLS_PROTO_TLS13) && defined(HITLS_TLS_FEATURE_PSK)
+#if defined(HITLS_TLS_PROTO_TLS13_FAMILY) && defined(HITLS_TLS_FEATURE_PSK)
     destConfig->pskFindSessionCb = srcConfig->pskFindSessionCb;
     destConfig->pskUseSessionCb = srcConfig->pskUseSessionCb;
 #endif
@@ -234,6 +234,9 @@ static void ShallowCopy(HITLS_Ctx *ctx, const HITLS_Config *srcConfig)
 #endif
 #ifdef HITLS_TLS_FEATURE_RECORD_SIZE_LIMIT
     destConfig->recordSizeLimit = srcConfig->recordSizeLimit;
+#endif
+#ifdef HITLS_TLS_FEATURE_DTLS_CID
+    destConfig->isSupportConnectionId = srcConfig->isSupportConnectionId;
 #endif
 }
 
@@ -414,7 +417,7 @@ static int32_t CipherSuiteDeepCopy(HITLS_Config *destConfig, const HITLS_Config 
         }
         destConfig->cipherSuitesSize = srcConfig->cipherSuitesSize;
     }
-#ifdef HITLS_TLS_PROTO_TLS13
+#if defined(HITLS_TLS_PROTO_TLS13_FAMILY)
     if (srcConfig->tls13CipherSuites != NULL) {
         int32_t ret = DeepCopy((void **)&destConfig->tls13CipherSuites, srcConfig->tls13CipherSuites, BINLOG_ID16591,
             srcConfig->tls13cipherSuitesSize * sizeof(uint16_t));
@@ -662,6 +665,9 @@ uint32_t MapVersion2VersionBit(bool isDatagram, uint16_t version)
         case HITLS_VERSION_TLS13:
             ret = TLS13_VERSION_BIT;
             break;
+        case HITLS_VERSION_DTLS13:
+            ret = DTLS13_VERSION_BIT;
+            break;
         case HITLS_VERSION_TLCP_DTLCP11:
             if (isDatagram) {
                 ret = DTLCP11_VERSION_BIT;
@@ -703,10 +709,11 @@ void ChangeMinMaxVersion(uint32_t versionMask, uint32_t originVersionMask, uint1
     if ((IS_SUPPORT_TLS(versionMaskBit) || IS_SUPPORT_DTLS(versionMaskBit)) && IS_SUPPORT_TLCP(versionMaskBit)) {
         versionMaskBit &= ~TLCP_VERSION_BITS;
     }
-    uint32_t versionBits[] = {TLS12_VERSION_BIT, TLS13_VERSION_BIT, DTLS12_VERSION_BIT, TLCP11_VERSION_BIT,
+    uint32_t versionBits[] = {TLS12_VERSION_BIT, TLS13_VERSION_BIT, DTLS12_VERSION_BIT, DTLS13_VERSION_BIT,
+                              TLCP11_VERSION_BIT,
                               DTLCP11_VERSION_BIT};
-    uint16_t versions[] = {HITLS_VERSION_TLS12, HITLS_VERSION_TLS13, HITLS_VERSION_DTLS12, HITLS_VERSION_TLCP_DTLCP11,
-                           HITLS_VERSION_TLCP_DTLCP11};
+    uint16_t versions[] = {HITLS_VERSION_TLS12, HITLS_VERSION_TLS13, HITLS_VERSION_DTLS12, HITLS_VERSION_DTLS13,
+                           HITLS_VERSION_TLCP_DTLCP11, HITLS_VERSION_TLCP_DTLCP11};
     uint32_t versionBitsSize = sizeof(versionBits) / sizeof(uint32_t);
     uint32_t minIdx = 0;
     uint32_t maxIdx = 0;
@@ -776,18 +783,10 @@ static void ChangeTmpVersion(HITLS_Config *config, uint16_t *tmpMinVersion, uint
     uint16_t maxVersion = 0;
     ChangeMinMaxVersion(config->originVersionMask, config->originVersionMask, &minVersion, &maxVersion);
     if (*tmpMinVersion == 0) {
-        if (config->originVersionMask == DTLS_VERSION_MASK) {
-            *tmpMinVersion = HITLS_VERSION_DTLS12;
-        } else {
-            *tmpMinVersion = minVersion;
-        }
+        *tmpMinVersion = minVersion;
     }
     if (*tmpMaxVersion == 0) {
-        if (config->originVersionMask == DTLS_VERSION_MASK) {
-            *tmpMaxVersion = HITLS_VERSION_DTLS12;
-        } else {
-            *tmpMaxVersion = maxVersion;
-        }
+        *tmpMaxVersion = maxVersion;
     }
 }
 
@@ -847,7 +846,7 @@ static void GetCipherSuitesCnt(const uint16_t *cipherSuites, uint32_t cipherSuit
     uint32_t tmpCipherSize = *tlsCipherSize;
     uint32_t tmpTls13CipherSize = *tls13CipherSize;
     for (uint32_t i = 0; i < cipherSuitesSize; i++) {
-#ifdef HITLS_TLS_PROTO_TLS13
+#if defined(HITLS_TLS_PROTO_TLS13_FAMILY)
         if ((cipherSuites[i] >= HITLS_AES_128_GCM_SHA256 && cipherSuites[i] <= HITLS_AES_128_CCM_8_SHA256) ||
             (cipherSuites[i] == HITLS_SM4_GCM_SM3 || cipherSuites[i] == HITLS_SM4_CCM_SM3)) {
             tmpTls13CipherSize++;
@@ -873,7 +872,7 @@ int32_t HITLS_CFG_SetCipherSuites(HITLS_Config *config, const uint16_t *cipherSu
     uint32_t tlsCipherSize = 0;
     uint32_t validTlsCipher = 0;
     uint32_t tls13CipherSize = 0;
-#ifdef HITLS_TLS_PROTO_TLS13
+#if defined(HITLS_TLS_PROTO_TLS13_FAMILY)
     uint32_t validTls13Cipher = 0;
 #endif
     GetCipherSuitesCnt(cipherSuites, cipherSuitesSize, &tls13CipherSize, &tlsCipherSize);
@@ -883,7 +882,7 @@ int32_t HITLS_CFG_SetCipherSuites(HITLS_Config *config, const uint16_t *cipherSu
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16600, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN, "Calloc fail", 0, 0, 0, 0);
         return HITLS_MEMALLOC_FAIL;
     }
-#ifdef HITLS_TLS_PROTO_TLS13
+#if defined(HITLS_TLS_PROTO_TLS13_FAMILY)
     uint16_t *tls13CipherSuite = BSL_SAL_Calloc(1u, (tls13CipherSize + 1) * sizeof(uint16_t));
 
     if (tls13CipherSuite == NULL) {
@@ -898,7 +897,7 @@ int32_t HITLS_CFG_SetCipherSuites(HITLS_Config *config, const uint16_t *cipherSu
         }
         if ((cipherSuites[i] >= HITLS_AES_128_GCM_SHA256 && cipherSuites[i] <= HITLS_AES_128_CCM_8_SHA256) ||
             (cipherSuites[i] == HITLS_SM4_GCM_SM3 || cipherSuites[i] == HITLS_SM4_CCM_SM3)) {
-#ifdef HITLS_TLS_PROTO_TLS13
+#if defined(HITLS_TLS_PROTO_TLS13_FAMILY)
             tls13CipherSuite[validTls13Cipher] = cipherSuites[i];
             validTls13Cipher++;
 #endif
@@ -907,7 +906,7 @@ int32_t HITLS_CFG_SetCipherSuites(HITLS_Config *config, const uint16_t *cipherSu
         cipherSuite[validTlsCipher] = cipherSuites[i];
         validTlsCipher++;
     }
-#ifdef HITLS_TLS_PROTO_TLS13
+#if defined(HITLS_TLS_PROTO_TLS13_FAMILY)
     if (validTls13Cipher == 0) {
         BSL_SAL_FREE(tls13CipherSuite);
     } else {
@@ -925,7 +924,7 @@ int32_t HITLS_CFG_SetCipherSuites(HITLS_Config *config, const uint16_t *cipherSu
     }
 
     if (validTlsCipher == 0
-#ifdef HITLS_TLS_PROTO_TLS13
+#if defined(HITLS_TLS_PROTO_TLS13_FAMILY)
         && validTls13Cipher == 0
 #endif
     ) {
@@ -946,7 +945,7 @@ int32_t HITLS_CFG_GetCipherSuites(HITLS_Config *config, uint16_t *data, uint32_t
         return HITLS_CONFIG_INVALID_LENGTH;
     }
 
-    if (config->maxVersion == HITLS_VERSION_TLS13) {
+    if (IS_TLS13_FAMILY_VERSION(config->maxVersion)) {
         for (uint32_t i = 0; i < config->tls13cipherSuitesSize; i++) {
             data[num] = config->tls13CipherSuites[i];
             num += 1;

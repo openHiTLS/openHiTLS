@@ -21,10 +21,70 @@
 #include "bsl_err_internal.h"
 #include "bsl_sal.h"
 #include "hitls_error.h"
+#include "tls.h"
 #include "hs_msg.h"
 #include "transcript_hash.h"
 
-int32_t VERIFY_SetHash(HITLS_Lib_Ctx *libCtx, const char *attrName, VerifyCtx *ctx, HITLS_HashAlgo hashAlgo)
+static VERIFY_TranscriptStyle GetCacheTranscriptStyle(const HsMsgCache *cache, uint16_t version)
+{
+    if (cache->type == HS_MSG_CACHE_DTLS_RAW && version == HITLS_VERSION_DTLS13) {
+        return VERIFY_TRANSCRIPT_DTLS13;
+    }
+    return VERIFY_TRANSCRIPT_RAW;
+}
+
+int32_t VERIFY_UpdateTranscriptHash(HITLS_HASH_Ctx *hashCtx, const uint8_t *msg, uint32_t msgLen,
+    VERIFY_TranscriptStyle style)
+{
+    if (hashCtx == NULL || msg == NULL) {
+        return HITLS_NULL_INPUT;
+    }
+    if (style == VERIFY_TRANSCRIPT_RAW) {
+        return SAL_CRYPT_DigestUpdate(hashCtx, msg, msgLen);
+    }
+    if (msgLen < DTLS_HS_MSG_HEADER_SIZE) {
+        return HITLS_INTERNAL_EXCEPTION;
+    }
+
+    int32_t ret = SAL_CRYPT_DigestUpdate(hashCtx, msg, HS_MSG_HEADER_SIZE);
+    if (ret != HITLS_SUCCESS) {
+        return ret;
+    }
+    return SAL_CRYPT_DigestUpdate(hashCtx, &msg[DTLS_HS_MSG_HEADER_SIZE], msgLen - DTLS_HS_MSG_HEADER_SIZE);
+}
+
+static uint32_t GetCacheBlockCount(const HsMsgCache *cache)
+{
+    uint32_t count = 0;
+    while (cache != NULL && cache->dataSize > 0u) {
+        count++;
+        cache = cache->next;
+    }
+    return count;
+}
+
+int32_t VERIFY_UpdateCachedTranscriptHash(HITLS_HASH_Ctx *hashCtx, const HsMsgCache *cache, uint16_t version,
+    uint32_t skipLastCount)
+{
+    uint32_t count = GetCacheBlockCount(cache);
+    if (skipLastCount > count) {
+        return HITLS_INTERNAL_EXCEPTION;
+    }
+    count -= skipLastCount;
+
+    for (uint32_t i = 0; i < count; i++) {
+        int32_t ret = VERIFY_UpdateTranscriptHash(hashCtx, cache->data, cache->dataSize,
+            GetCacheTranscriptStyle(cache, version));
+        if (ret != HITLS_SUCCESS) {
+            return ret;
+        }
+        cache = cache->next;
+    }
+    return HITLS_SUCCESS;
+}
+
+int32_t VERIFY_SetHashWithVersion(HITLS_Lib_Ctx *libCtx, const char *attrName, VerifyCtx *ctx,
+    HITLS_HashAlgo hashAlgo, uint16_t version)
 {
     int32_t ret;
     /* the value must be the same as the PRF function, use the digest algorithm with SHA-256 or higher strength */
@@ -39,17 +99,13 @@ int32_t VERIFY_SetHash(HITLS_Lib_Ctx *libCtx, const char *attrName, VerifyCtx *c
         return HITLS_CRYPT_ERR_DIGEST;
     }
 
-    HsMsgCache *dataBuf = ctx->dataBuf;
-    while ((dataBuf != NULL) && (dataBuf->dataSize > 0u)) {
-        ret = SAL_CRYPT_DigestUpdate(ctx->hashCtx, dataBuf->data, dataBuf->dataSize);
-        if (ret != HITLS_SUCCESS) {
-            BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15717, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-                "Verify set hash error: digest update fail.", 0, 0, 0, 0);
-            SAL_CRYPT_DigestFree(ctx->hashCtx);
-            ctx->hashCtx = NULL;
-            return ret;
-        }
-        dataBuf = dataBuf->next;
+    ret = VERIFY_UpdateCachedTranscriptHash(ctx->hashCtx, ctx->dataBuf, version, 0);
+    if (ret != HITLS_SUCCESS) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15717, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+            "Verify set hash error: digest update fail.", 0, 0, 0, 0);
+        SAL_CRYPT_DigestFree(ctx->hashCtx);
+        ctx->hashCtx = NULL;
+        return ret;
     }
     ctx->hashAlgo = prfAlgo;
     return HITLS_SUCCESS;
@@ -64,7 +120,7 @@ static HsMsgCache *GetLastCache(HsMsgCache *dataBuf)
     return cacheBuf;
 }
 
-static int32_t CacheMsgData(HsMsgCache *dataBuf, const uint8_t *data, uint32_t len)
+static int32_t CacheMsgData(HsMsgCache *dataBuf, const uint8_t *data, uint32_t len, HsMsgCacheType type)
 {
     HsMsgCache *lastCache = GetLastCache(dataBuf);
 
@@ -86,15 +142,17 @@ static int32_t CacheMsgData(HsMsgCache *dataBuf, const uint8_t *data, uint32_t l
         return HITLS_MEMALLOC_FAIL;
     }
     lastCache->dataSize = len;
+    lastCache->type = type;
 
     return HITLS_SUCCESS;
 }
 
-int32_t VERIFY_Append(VerifyCtx *ctx, const uint8_t *data, uint32_t len)
+static int32_t VerifyAppend(VerifyCtx *ctx, const uint8_t *data, uint32_t len, HsMsgCacheType type,
+    VERIFY_TranscriptStyle liveStyle)
 {
     int32_t ret;
     if (ctx->hashCtx != NULL) {
-        ret = SAL_CRYPT_DigestUpdate(ctx->hashCtx, data, len);
+        ret = VERIFY_UpdateTranscriptHash(ctx->hashCtx, data, len, liveStyle);
         if (ret != HITLS_SUCCESS) {
             BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15720, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
                 "Verify append error: digest update fail.", 0, 0, 0, 0);
@@ -103,50 +161,20 @@ int32_t VERIFY_Append(VerifyCtx *ctx, const uint8_t *data, uint32_t len)
     }
 
     if (ctx->dataBuf != NULL) {
-        return CacheMsgData(ctx->dataBuf, data, len);
+        return CacheMsgData(ctx->dataBuf, data, len, type);
     }
     return HITLS_SUCCESS;
 }
 
-#ifdef HITLS_TLS_PROTO_DTLS13
-int32_t VERIFY_Dtls13BuildTranscriptMsg(const uint8_t *msg, uint32_t msgLen, uint8_t **transcript,
-    uint32_t *transcriptLen)
+int32_t VERIFY_Append(VerifyCtx *ctx, const uint8_t *data, uint32_t len)
 {
-    if (msg == NULL || transcript == NULL || transcriptLen == NULL || msgLen < DTLS_HS_MSG_HEADER_SIZE) {
-        return HITLS_INTERNAL_EXCEPTION;
-    }
-
-    uint32_t len = HS_MSG_HEADER_SIZE + msgLen - DTLS_HS_MSG_HEADER_SIZE;
-    uint8_t *data = BSL_SAL_Calloc(1u, len);
-    if (data == NULL) {
-        BSL_ERR_PUSH_ERROR(HITLS_MEMALLOC_FAIL);
-        return HITLS_MEMALLOC_FAIL;
-    }
-    memcpy(data, msg, HS_MSG_HEADER_SIZE);
-    memcpy(&data[HS_MSG_HEADER_SIZE], &msg[DTLS_HS_MSG_HEADER_SIZE], msgLen - DTLS_HS_MSG_HEADER_SIZE);
-    *transcript = data;
-    *transcriptLen = len;
-    return HITLS_SUCCESS;
+    return VerifyAppend(ctx, data, len, HS_MSG_CACHE_CANONICAL, VERIFY_TRANSCRIPT_RAW);
 }
 
-int32_t VERIFY_Dtls13Append(VerifyCtx *ctx, const uint8_t *data, uint32_t len)
+int32_t VERIFY_AppendDtlsRaw(VerifyCtx *ctx, const uint8_t *data, uint32_t len, VERIFY_TranscriptStyle liveStyle)
 {
-    if (ctx == NULL) {
-        return HITLS_INTERNAL_EXCEPTION;
-    }
-
-    uint8_t *transcript = NULL;
-    uint32_t transcriptLen = 0;
-    int32_t ret = VERIFY_Dtls13BuildTranscriptMsg(data, len, &transcript, &transcriptLen);
-    if (ret != HITLS_SUCCESS) {
-        return ret;
-    }
-
-    ret = VERIFY_Append(ctx, transcript, transcriptLen);
-    BSL_SAL_FREE(transcript);
-    return ret;
+    return VerifyAppend(ctx, data, len, HS_MSG_CACHE_DTLS_RAW, liveStyle);
 }
-#endif /* HITLS_TLS_PROTO_DTLS13 */
 
 int32_t VERIFY_CalcSessionHash(VerifyCtx *ctx, uint8_t *digest, uint32_t *digestLen)
 {

@@ -280,6 +280,7 @@ typedef struct TlsConfig {
     bool isMiddleBoxCompat;             /* whether to support middlebox compatibility */
 
     HITLS_CustomExts *customExts;
+    bool isSupportConnectionId;         /* DTLS 1.3 Connection ID support. for server and client */
 } TLS_Config;
 
 #define LIBCTX_FROM_CONFIG(config) (((config) == NULL) ? NULL : (config)->libCtx)

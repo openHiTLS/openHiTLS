@@ -80,8 +80,7 @@ static int32_t ParseCertExtension(ParsePacket *pkt, CertificateMsg *msg, CERT_It
 {
     (void)item;
     (void)certIndex;
-    if (pkt->ctx->negotiatedInfo.version != HITLS_VERSION_TLS13 &&
-        pkt->ctx->negotiatedInfo.version != HITLS_VERSION_DTLS13) {
+    if (!IS_TLS13_FAMILY_CTX(pkt->ctx)) {
         return HITLS_SUCCESS;
     }
 
@@ -232,7 +231,7 @@ int32_t ParseCertificate(TLS_Ctx *ctx, const uint8_t *buf, uint32_t bufLen, HS_M
     return HITLS_SUCCESS;
 }
 #endif /* HITLS_TLS_PROTO_TLS_BASIC || HITLS_TLS_PROTO_DTLS12 */
-#ifdef HITLS_TLS_PROTO_TLS13
+#if defined(HITLS_TLS_PROTO_TLS13_FAMILY)
 int32_t Tls13ParseCertificateReqCtx(ParsePacket *pkt, HS_Msg *hsMsg)
 {
     CertificateMsg *certMsg = &hsMsg->body.certificate;
@@ -312,14 +311,14 @@ int32_t Tls13ParseCertificate(TLS_Ctx *ctx, const uint8_t *buf, uint32_t bufLen,
 
     return HITLS_SUCCESS;
 }
-#endif /* HITLS_TLS_PROTO_TLS13 */
+#endif /* HITLS_TLS_PROTO_TLS13_FAMILY */
 //  Clear the memory applied for in the certificate message structure.
 void CleanCertificate(CertificateMsg *msg)
 {
     if (msg == NULL) {
         return;
     }
-#ifdef HITLS_TLS_PROTO_TLS13
+#if defined(HITLS_TLS_PROTO_TLS13_FAMILY)
     BSL_SAL_FREE(msg->certificateReqCtx);
 #endif
     CERT_Item *next = msg->cert;

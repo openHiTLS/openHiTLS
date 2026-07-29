@@ -24,8 +24,11 @@
 #include <stddef.h>
 #include <unistd.h>
 #include "bsl_bytes.h"
+#include "bsl_errno.h"
 #include "bsl_sal.h"
 #include "sal_time.h"
+#include "uio_abstraction.h"
+#include "uio_base.h"
 #include "hitls.h"
 #include "hitls_config.h"
 #include "hitls_cookie.h"
@@ -44,12 +47,16 @@
 #include "hs.h"
 #include "hs_common.h"
 #include "hs_dtls_timer.h"
+#include "hs_extensions.h"
 #include "hs_msg.h"
 #include "hs_verify.h"
+#include "transcript_hash.h"
 #include "parse.h"
 #include "cipher_suite.h"
+#include "crypt.h"
 
 #define APP_READ_BUF_SIZE (18 * 1024)
+#define TEST_SHA256_DIGEST_LEN 32u
 
 static const uint8_t g_dtls13AppCookie[] = {0x64, 0x74, 0x6c, 0x73, 0x31, 0x33, 0x63, 0x62};
 static uint32_t g_dtls13AppCookieGenCnt = 0;
@@ -63,15 +70,20 @@ typedef struct HS_ChangeState_Stub {
 #endif
 } HS_ChangeState_Stub;
 extern HS_ChangeState_Stub HS_ChangeState_stub;
-typedef int32_t (*Dtls13RestoreHrrTranscriptFunc)(TLS_Ctx *, const uint8_t *, uint32_t, const uint8_t *, uint32_t);
-STUB_DEFINE_RET5(int32_t, VERIFY_RestoreHelloRetryRequestTranscript, TLS_Ctx *, const uint8_t *, uint32_t,
-    const uint8_t *, uint32_t)
 
 static TLS_Ctx *g_dtls13PostHsFinishedServer = NULL;
 static uint32_t g_dtls13PostHsFinishedTrySendAckCnt = 0;
 static TLS_Ctx *g_dtls13KeyUpdateServer = NULL;
 static uint32_t g_dtls13TrySendKeyUpdateCnt = 0;
-static uint32_t g_dtls13RestoreHrrTranscriptCnt = 0;
+static BslUioCtrlCb g_dtls13OrigUioCtrl = NULL;
+
+static int32_t Dtls13PeerAddrFailCtrl(BSL_UIO *uio, int32_t cmd, int32_t larg, void *param)
+{
+    if (cmd == BSL_UIO_GET_PEER_IP_ADDR) {
+        return BSL_UIO_FAIL;
+    }
+    return g_dtls13OrigUioCtrl == NULL ? BSL_SUCCESS : g_dtls13OrigUioCtrl(uio, cmd, larg, param);
+}
 
 static int32_t Dtls13ObserveChangeStateStub(TLS_Ctx *ctx, uint32_t nextState)
 {
@@ -86,18 +98,6 @@ static int32_t Dtls13ObserveChangeStateStub(TLS_Ctx *ctx, uint32_t nextState)
     HS_ChangeState_stub.stub_impl = NULL;
     int32_t ret = HS_ChangeState(ctx, nextState);
     HS_ChangeState_stub.stub_impl = stubImpl;
-    return ret;
-}
-
-static int32_t Dtls13ObserveRestoreHrrTranscriptStub(TLS_Ctx *ctx, const uint8_t *clientHelloHash,
-    uint32_t clientHelloHashLen, const uint8_t *helloRetryRequest, uint32_t helloRetryRequestLen)
-{
-    g_dtls13RestoreHrrTranscriptCnt++;
-    Dtls13RestoreHrrTranscriptFunc stubImpl = VERIFY_RestoreHelloRetryRequestTranscript_stub.stub_impl;
-    VERIFY_RestoreHelloRetryRequestTranscript_stub.stub_impl = NULL;
-    int32_t ret = VERIFY_RestoreHelloRetryRequestTranscript(ctx, clientHelloHash, clientHelloHashLen,
-        helloRetryRequest, helloRetryRequestLen);
-    VERIFY_RestoreHelloRetryRequestTranscript_stub.stub_impl = stubImpl;
     return ret;
 }
 
@@ -165,6 +165,47 @@ static void BuildDtls13FinishedRetransmitMsg(uint8_t *msg, uint32_t bodyLen)
     for (uint32_t i = 0; i < bodyLen; i++) {
         msg[DTLS_HS_MSG_HEADER_SIZE + i] = (uint8_t)(i + 1u);
     }
+}
+
+static void BuildDtlsHsMsg(uint8_t *msg, HS_MsgType type, uint16_t seq, const uint8_t *body, uint32_t bodyLen)
+{
+    msg[0] = (uint8_t)type;
+    BSL_Uint24ToByte(bodyLen, &msg[DTLS_HS_MSGLEN_ADDR]);
+    BSL_Uint16ToByte(seq, &msg[DTLS_HS_MSGSEQ_ADDR]);
+    BSL_Uint24ToByte(0, &msg[DTLS_HS_FRAGMENT_OFFSET_ADDR]);
+    BSL_Uint24ToByte(bodyLen, &msg[DTLS_HS_FRAGMENT_LEN_ADDR]);
+    (void)memcpy(&msg[DTLS_HS_MSG_HEADER_SIZE], body, bodyLen);
+}
+
+static uint32_t BuildDtls13TranscriptMsg(uint8_t *out, const uint8_t *dtlsMsg, uint32_t dtlsMsgLen)
+{
+    (void)memcpy(out, dtlsMsg, HS_MSG_HEADER_SIZE);
+    (void)memcpy(&out[HS_MSG_HEADER_SIZE], &dtlsMsg[DTLS_HS_MSG_HEADER_SIZE],
+        dtlsMsgLen - DTLS_HS_MSG_HEADER_SIZE);
+    return HS_MSG_HEADER_SIZE + dtlsMsgLen - DTLS_HS_MSG_HEADER_SIZE;
+}
+
+static int32_t CalcSha256(const uint8_t *data, uint32_t dataLen, uint8_t *digest, uint32_t *digestLen)
+{
+    return SAL_CRYPT_Digest(NULL, NULL, HITLS_HASH_SHA_256, data, dataLen, digest, digestLen);
+}
+
+static int32_t CalcSha256TwoBlocks(const uint8_t *data1, uint32_t dataLen1, const uint8_t *data2,
+    uint32_t dataLen2, uint8_t *digest, uint32_t *digestLen)
+{
+    HITLS_HASH_Ctx *hashCtx = SAL_CRYPT_DigestInit(NULL, NULL, HITLS_HASH_SHA_256);
+    if (hashCtx == NULL) {
+        return HITLS_CRYPT_ERR_DIGEST;
+    }
+    int32_t ret = SAL_CRYPT_DigestUpdate(hashCtx, data1, dataLen1);
+    if (ret == HITLS_SUCCESS) {
+        ret = SAL_CRYPT_DigestUpdate(hashCtx, data2, dataLen2);
+    }
+    if (ret == HITLS_SUCCESS) {
+        ret = SAL_CRYPT_DigestFinal(hashCtx, digest, digestLen);
+    }
+    SAL_CRYPT_DigestFree(hashCtx);
+    return ret;
 }
 
 static uint32_t BuildDtls13Epoch2Record(uint8_t *msg, uint32_t msgSize)
@@ -366,6 +407,16 @@ static int32_t Dtls13ClientProcessHrr(FRAME_LinkObj *client, FRAME_LinkObj *serv
     return FRAME_TrasferMsgBetweenLink(client, server);
 }
 
+static void Dtls13MoveCurrentCookieMacKeyToPre(TLS_Ctx *ctx)
+{
+    CookieInfo *cookieInfo = &ctx->negotiatedInfo.cookieInfo;
+    memcpy(cookieInfo->preMacKey, cookieInfo->macKey, MAC_KEY_LEN);
+    memset(cookieInfo->macKey, 0xA5, MAC_KEY_LEN);
+    if (memcmp(cookieInfo->preMacKey, cookieInfo->macKey, MAC_KEY_LEN) == 0) {
+        cookieInfo->macKey[0] ^= 0xFF;
+    }
+}
+
 static int32_t ParseDtls13BufferedHsMsg(FRAME_LinkObj *link, bool isRecvMsg, HS_MsgType handshakeType,
     FRAME_Msg *frameMsg)
 {
@@ -395,6 +446,51 @@ static void Dtls13ClearServerFirstClientHello(TLS_Ctx *ctx)
     HS_CleanMsg(&hsMsg);
     BSL_SAL_FREE(ctx->hsCtx->firstClientHello);
     ctx->hsCtx->firstClientHello = NULL;
+}
+
+static int32_t Dtls13SetClientHelloCookieExt(FRAME_ClientHelloMsg *clientHello, const uint8_t *cookie,
+    uint32_t cookieLen)
+{
+    if (clientHello == NULL || cookie == NULL || cookieLen == 0) {
+        return HITLS_INVALID_INPUT;
+    }
+    uint8_t *cookieData = BSL_SAL_Dump(cookie, cookieLen);
+    if (cookieData == NULL) {
+        return HITLS_MEMALLOC_FAIL;
+    }
+
+    BSL_SAL_FREE(clientHello->tls13Cookie.exData.data);
+    clientHello->tls13Cookie.exState = INITIAL_FIELD;
+    clientHello->tls13Cookie.exType.state = INITIAL_FIELD;
+    clientHello->tls13Cookie.exType.data = HS_EX_TYPE_COOKIE;
+    clientHello->tls13Cookie.exLen.state = INITIAL_FIELD;
+    clientHello->tls13Cookie.exLen.data = sizeof(uint16_t) + cookieLen;
+    clientHello->tls13Cookie.exDataLen.state = INITIAL_FIELD;
+    clientHello->tls13Cookie.exDataLen.data = cookieLen;
+    clientHello->tls13Cookie.exData.state = INITIAL_FIELD;
+    clientHello->tls13Cookie.exData.size = cookieLen;
+    clientHello->tls13Cookie.exData.data = cookieData;
+    return HITLS_SUCCESS;
+}
+
+static int32_t Dtls13SetClientHelloEmptyCookieExt(FRAME_ClientHelloMsg *clientHello)
+{
+    if (clientHello == NULL) {
+        return HITLS_INVALID_INPUT;
+    }
+
+    BSL_SAL_FREE(clientHello->tls13Cookie.exData.data);
+    clientHello->tls13Cookie.exState = INITIAL_FIELD;
+    clientHello->tls13Cookie.exType.state = INITIAL_FIELD;
+    clientHello->tls13Cookie.exType.data = HS_EX_TYPE_COOKIE;
+    clientHello->tls13Cookie.exLen.state = INITIAL_FIELD;
+    clientHello->tls13Cookie.exLen.data = sizeof(uint16_t);
+    clientHello->tls13Cookie.exDataLen.state = INITIAL_FIELD;
+    clientHello->tls13Cookie.exDataLen.data = 0;
+    clientHello->tls13Cookie.exData.state = MISSING_FIELD;
+    clientHello->tls13Cookie.exData.size = 0;
+    clientHello->tls13Cookie.exData.data = NULL;
+    return HITLS_SUCCESS;
 }
 /* END_HEADER */
 
@@ -1392,18 +1488,154 @@ EXIT:
 /* END_CASE */
 
 /** @
+* @test SDV_TLS_DTLS13_HANDSHAKE_CONSISTENCY_FUNC_TC038
+* @spec -
+* @title DTLS1.3 server rejects an initial ClientHello with a fake cookie extension.
+* @precon nan
+* @brief
+*    1. Enable DTLS1.3 cookie exchange.
+*    2. Modify the first ClientHello to carry a TLS1.3 cookie extension before any HRR is sent.
+*    3. Send the modified ClientHello to the server.
+* @expect
+*    1. The server rejects the unsolicited cookie in ClientHello processing.
+*    2. The server rejects the ClientHello and sends a fatal illegal_parameter alert.
+@ */
+/* BEGIN_CASE */
+void SDV_TLS_DTLS13_HANDSHAKE_CONSISTENCY_FUNC_TC038(void)
+{
+    HITLS_Config *config = NULL;
+    FRAME_LinkObj *client = NULL;
+    FRAME_LinkObj *server = NULL;
+    FRAME_Msg clientHelloMsg = {0};
+    FRAME_Type clientHelloType = {0};
+    uint8_t sendBuf[MAX_RECORD_LENTH] = {0};
+    uint32_t sendLen = sizeof(sendBuf);
+    uint8_t fakeCookie[] = {0x44, 0x31, 0x33, 0x66, 0x61, 0x6b, 0x65};
+
+    FRAME_Init();
+    SetDtls13FrameType(&clientHelloType, REC_TYPE_HANDSHAKE, CLIENT_HELLO);
+
+    config = HITLS_CFG_NewDTLS13Config();
+    ASSERT_TRUE(config != NULL);
+    ASSERT_EQ(HITLS_CFG_SetDtlsCookieExchangeSupport(config, true), HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_CFG_SetTicketNums(config, 0), HITLS_SUCCESS);
+
+    client = FRAME_CreateLink(config, BSL_UIO_UDP);
+    ASSERT_TRUE(client != NULL);
+    server = FRAME_CreateLink(config, BSL_UIO_UDP);
+    ASSERT_TRUE(server != NULL);
+
+    ASSERT_EQ(FRAME_CreateConnection(client, server, false, TRY_RECV_CLIENT_HELLO), HITLS_SUCCESS);
+    ASSERT_EQ(ParseDtls13BufferedHsMsg(server, true, CLIENT_HELLO, &clientHelloMsg), HITLS_SUCCESS);
+    FRAME_ClientHelloMsg *clientHello = &clientHelloMsg.body.hsMsg.body.clientHello;
+    ASSERT_EQ(clientHello->tls13Cookie.exState, MISSING_FIELD);
+    ASSERT_EQ(Dtls13SetClientHelloCookieExt(clientHello, fakeCookie, sizeof(fakeCookie)), HITLS_SUCCESS);
+    ASSERT_EQ(FRAME_PackMsg(&clientHelloType, &clientHelloMsg, sendBuf, sizeof(sendBuf), &sendLen), HITLS_SUCCESS);
+
+    FrameUioUserData *serverIoUserData = BSL_UIO_GetUserData(server->io);
+    ASSERT_TRUE(serverIoUserData != NULL);
+    serverIoUserData->recMsg.len = 0;
+    ASSERT_EQ(FRAME_TransportRecMsg(server->io, sendBuf, sendLen), HITLS_SUCCESS);
+    CONN_Deinit(server->ssl);
+    ASSERT_EQ(HITLS_Accept(server->ssl), HITLS_MSG_HANDLE_COOKIE_ERR);
+
+    ALERT_Info alert = {0};
+    ALERT_GetInfo(server->ssl, &alert);
+    ASSERT_EQ(alert.flag, ALERT_FLAG_SEND);
+    ASSERT_EQ(alert.level, ALERT_LEVEL_FATAL);
+    ASSERT_EQ(alert.description, ALERT_ILLEGAL_PARAMETER);
+
+EXIT:
+    FRAME_CleanMsg(&clientHelloType, &clientHelloMsg);
+    HITLS_CFG_FreeConfig(config);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+}
+/* END_CASE */
+
+/** @
+* @test SDV_TLS_DTLS13_HANDSHAKE_CONSISTENCY_FUNC_TC039
+* @spec -
+* @title DTLS1.3 app-cookie server rejects an initial ClientHello cookie without invoking app verify.
+* @precon nan
+* @brief
+*    1. Enable DTLS1.3 cookie exchange with application cookie callbacks.
+*    2. Modify the first ClientHello to carry the application cookie before any HRR is sent.
+*    3. Send the modified ClientHello to the server.
+* @expect
+*    1. The server rejects the ClientHello as an unsolicited first-flight cookie.
+*    2. The application verify callback is not invoked.
+*    3. The server sends a fatal illegal_parameter alert.
+@ */
+/* BEGIN_CASE */
+void SDV_TLS_DTLS13_HANDSHAKE_CONSISTENCY_FUNC_TC039(void)
+{
+    HITLS_Config *config = NULL;
+    FRAME_LinkObj *client = NULL;
+    FRAME_LinkObj *server = NULL;
+    FRAME_Msg clientHelloMsg = {0};
+    FRAME_Type clientHelloType = {0};
+    uint8_t sendBuf[MAX_RECORD_LENTH] = {0};
+    uint32_t sendLen = sizeof(sendBuf);
+
+    FRAME_Init();
+    ResetDtls13AppCookieCnt();
+    SetDtls13FrameType(&clientHelloType, REC_TYPE_HANDSHAKE, CLIENT_HELLO);
+
+    config = HITLS_CFG_NewDTLS13Config();
+    ASSERT_TRUE(config != NULL);
+    ASSERT_EQ(HITLS_CFG_SetDtlsCookieExchangeSupport(config, true), HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_CFG_SetTicketNums(config, 0), HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_CFG_SetCookieGenCb(config, Dtls13AppCookieGenCb), HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_CFG_SetCookieVerifyCb(config, Dtls13AppCookieVerifyCb), HITLS_SUCCESS);
+
+    client = FRAME_CreateLink(config, BSL_UIO_UDP);
+    ASSERT_TRUE(client != NULL);
+    server = FRAME_CreateLink(config, BSL_UIO_UDP);
+    ASSERT_TRUE(server != NULL);
+
+    ASSERT_EQ(FRAME_CreateConnection(client, server, false, TRY_RECV_CLIENT_HELLO), HITLS_SUCCESS);
+    ASSERT_EQ(ParseDtls13BufferedHsMsg(server, true, CLIENT_HELLO, &clientHelloMsg), HITLS_SUCCESS);
+    FRAME_ClientHelloMsg *clientHello = &clientHelloMsg.body.hsMsg.body.clientHello;
+    ASSERT_EQ(clientHello->tls13Cookie.exState, MISSING_FIELD);
+    ASSERT_EQ(Dtls13SetClientHelloCookieExt(clientHello, g_dtls13AppCookie, sizeof(g_dtls13AppCookie)), HITLS_SUCCESS);
+    ASSERT_EQ(FRAME_PackMsg(&clientHelloType, &clientHelloMsg, sendBuf, sizeof(sendBuf), &sendLen), HITLS_SUCCESS);
+
+    FrameUioUserData *serverIoUserData = BSL_UIO_GetUserData(server->io);
+    ASSERT_TRUE(serverIoUserData != NULL);
+    serverIoUserData->recMsg.len = 0;
+    ASSERT_EQ(FRAME_TransportRecMsg(server->io, sendBuf, sendLen), HITLS_SUCCESS);
+    CONN_Deinit(server->ssl);
+    ASSERT_EQ(HITLS_Accept(server->ssl), HITLS_MSG_HANDLE_COOKIE_ERR);
+    ASSERT_EQ(g_dtls13AppCookieGenCnt, 0);
+    ASSERT_EQ(g_dtls13AppCookieVerifyCnt, 0);
+
+    ALERT_Info alert = {0};
+    ALERT_GetInfo(server->ssl, &alert);
+    ASSERT_EQ(alert.flag, ALERT_FLAG_SEND);
+    ASSERT_EQ(alert.level, ALERT_LEVEL_FATAL);
+    ASSERT_EQ(alert.description, ALERT_ILLEGAL_PARAMETER);
+
+EXIT:
+    FRAME_CleanMsg(&clientHelloType, &clientHelloMsg);
+    ResetDtls13AppCookieCnt();
+    HITLS_CFG_FreeConfig(config);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+}
+/* END_CASE */
+
+/** @
 * @test SDV_TLS_DTLS13_HANDSHAKE_CONSISTENCY_FUNC_TC016
 * @spec -
-* @title DTLS1.3 server restores the HRR transcript from a cookie.
+* @title DTLS1.3 default cookie requires the server to keep the HRR transcript.
 * @precon nan
 * @brief
 *    1. Enable DTLS1.3 cookie exchange and let the server send a cookie HRR.
 *    2. Clear the server-side verify transcript before the second ClientHello arrives.
-*    3. Let the server validate the cookie, restore the HRR transcript, and complete the handshake.
-*    4. Exchange application data.
+*    3. Let the client send the second ClientHello carrying the cookie.
 * @expect
-*    1. The server does not depend on the old ClientHello/HRR verify transcript.
-*    2. The handshake and application data exchange succeed.
+*    1. The server verifies the cookie, but cannot complete the handshake without the preserved HRR transcript.
 @ */
 /* BEGIN_CASE */
 void SDV_TLS_DTLS13_HANDSHAKE_CONSISTENCY_FUNC_TC016(void)
@@ -1413,10 +1645,6 @@ void SDV_TLS_DTLS13_HANDSHAKE_CONSISTENCY_FUNC_TC016(void)
     FRAME_LinkObj *server = NULL;
     uint8_t hrrBuf[MAX_RECORD_LENTH] = {0};
     uint32_t hrrLen = sizeof(hrrBuf);
-    uint8_t appData[] = "DTLS13 stateless cookie transcript";
-    uint8_t readBuf[APP_READ_BUF_SIZE] = {0};
-    uint32_t writeLen = 0;
-    uint32_t readLen = 0;
 
     FRAME_Init();
 
@@ -1438,14 +1666,7 @@ void SDV_TLS_DTLS13_HANDSHAKE_CONSISTENCY_FUNC_TC016(void)
     ASSERT_EQ(VERIFY_Init(server->ssl->hsCtx), HITLS_SUCCESS);
 
     ASSERT_EQ(Dtls13ClientProcessHrr(client, server), HITLS_SUCCESS);
-    ASSERT_EQ(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_SUCCESS);
-
-    ASSERT_EQ(HITLS_Write(client->ssl, appData, sizeof(appData), &writeLen), HITLS_SUCCESS);
-    ASSERT_EQ(writeLen, sizeof(appData));
-    ASSERT_EQ(FRAME_TrasferMsgBetweenLink(client, server), HITLS_SUCCESS);
-    ASSERT_EQ(HITLS_Read(server->ssl, readBuf, sizeof(readBuf), &readLen), HITLS_SUCCESS);
-    ASSERT_EQ(readLen, sizeof(appData));
-    ASSERT_EQ(memcmp(readBuf, appData, sizeof(appData)), 0);
+    ASSERT_TRUE(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT) != HITLS_SUCCESS);
 
 EXIT:
     HITLS_CFG_FreeConfig(config);
@@ -2472,12 +2693,10 @@ EXIT:
 *    1. Configure DTLS1.3 cookie exchange with appGenCookieCb and appVerifyCookieCb.
 *    2. Let the server send HelloRetryRequest with the application cookie.
 *    3. Keep the server handshake transcript state and continue the second ClientHello.
-*    4. Trace that VERIFY_RestoreHelloRetryRequestTranscript is not used.
-*    5. Complete the handshake and exchange application data.
+*    4. Complete the handshake and exchange application data.
 * @expect
 *    1. The generation and verification callbacks are both used.
-*    2. The server does not restore the HRR transcript from the cookie.
-*    3. The handshake and application data exchange succeed.
+*    2. The handshake and application data exchange succeed.
 @ */
 /* BEGIN_CASE */
 void SDV_TLS_DTLS13_HANDSHAKE_CONSISTENCY_FUNC_TC033(void)
@@ -2493,11 +2712,9 @@ void SDV_TLS_DTLS13_HANDSHAKE_CONSISTENCY_FUNC_TC033(void)
     uint8_t readBuf[APP_READ_BUF_SIZE] = {0};
     uint32_t writeLen = 0;
     uint32_t readLen = 0;
-    bool stubReplaced = false;
 
     FRAME_Init();
     ResetDtls13AppCookieCnt();
-    g_dtls13RestoreHrrTranscriptCnt = 0;
     SetDtls13FrameType(&serverHelloType, REC_TYPE_HANDSHAKE, SERVER_HELLO);
 
     config = HITLS_CFG_NewDTLS13Config();
@@ -2524,12 +2741,9 @@ void SDV_TLS_DTLS13_HANDSHAKE_CONSISTENCY_FUNC_TC033(void)
     ASSERT_EQ(hrr->tls13Cookie.exDataLen.data, sizeof(g_dtls13AppCookie));
     ASSERT_EQ(memcmp(hrr->tls13Cookie.exData.data, g_dtls13AppCookie, sizeof(g_dtls13AppCookie)), 0);
 
-    STUB_REPLACE(VERIFY_RestoreHelloRetryRequestTranscript, Dtls13ObserveRestoreHrrTranscriptStub);
-    stubReplaced = true;
     ASSERT_EQ(Dtls13ClientProcessHrr(client, server), HITLS_SUCCESS);
     ASSERT_EQ(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_SUCCESS);
     ASSERT_EQ(g_dtls13AppCookieVerifyCnt, 1);
-    ASSERT_EQ(g_dtls13RestoreHrrTranscriptCnt, 0);
 
     ASSERT_EQ(HITLS_Write(client->ssl, appData, sizeof(appData), &writeLen), HITLS_SUCCESS);
     ASSERT_EQ(writeLen, sizeof(appData));
@@ -2539,10 +2753,6 @@ void SDV_TLS_DTLS13_HANDSHAKE_CONSISTENCY_FUNC_TC033(void)
     ASSERT_EQ(memcmp(readBuf, appData, sizeof(appData)), 0);
 
 EXIT:
-    if (stubReplaced) {
-        STUB_RESTORE(VERIFY_RestoreHelloRetryRequestTranscript);
-    }
-    g_dtls13RestoreHrrTranscriptCnt = 0;
     FRAME_CleanMsg(&serverHelloType, &hrrMsg);
     HITLS_CFG_FreeConfig(config);
     FRAME_FreeLink(client);
@@ -3074,6 +3284,677 @@ void SDV_TLS_DTLS13_HANDSHAKE_CONSISTENCY_FUNC_TC042(void)
     ASSERT_EQ(server->ssl->state, CM_STATE_TRANSPORTING);
 
 EXIT:
+    HITLS_CFG_FreeConfig(config);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+}
+/* END_CASE */
+
+/** @
+* @test SDV_TLS_DTLS13_HANDSHAKE_CONSISTENCY_FUNC_TC043
+* @spec -
+* @title DTLS1.3 default cookie verification accepts cookie generated by previous MAC key.
+* @precon nan
+* @brief
+*    1. Configure DTLS1.3 cookie exchange and generate a cookie HRR.
+*    2. Let the client send the second ClientHello carrying the cookie.
+*    3. Simulate server cookie MAC key rotation before processing the second ClientHello.
+*    4. Complete the handshake.
+* @expect
+*    1. The HRR cookie is generated by the default cookie path.
+*    2. The server verifies the cookie through preMacKey.
+*    3. The DTLS1.3 handshake succeeds.
+@ */
+/* BEGIN_CASE */
+void SDV_TLS_DTLS13_HANDSHAKE_CONSISTENCY_FUNC_TC043(void)
+{
+    HITLS_Config *config = NULL;
+    FRAME_LinkObj *client = NULL;
+    FRAME_LinkObj *server = NULL;
+    uint8_t hrrBuf[MAX_RECORD_LENTH] = {0};
+    uint32_t hrrLen = sizeof(hrrBuf);
+    uint8_t zeroMacKey[MAC_KEY_LEN] = {0};
+
+    FRAME_Init();
+
+    config = HITLS_CFG_NewDTLS13Config();
+    ASSERT_TRUE(config != NULL);
+    ASSERT_EQ(HITLS_CFG_SetDtlsCookieExchangeSupport(config, true), HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_CFG_SetTicketNums(config, 0), HITLS_SUCCESS);
+    ASSERT_EQ(Dtls13UseSingleKeyShareGroup(config), HITLS_SUCCESS);
+
+    client = FRAME_CreateLink(config, BSL_UIO_UDP);
+    ASSERT_TRUE(client != NULL);
+    server = FRAME_CreateLink(config, BSL_UIO_UDP);
+    ASSERT_TRUE(server != NULL);
+
+    ASSERT_EQ(Dtls13PrepareCookieHrr(client, server, hrrBuf, &hrrLen), HITLS_SUCCESS);
+    ASSERT_TRUE(server->ssl->negotiatedInfo.cookie != NULL);
+    ASSERT_TRUE(server->ssl->negotiatedInfo.cookieSize != 0);
+    ASSERT_TRUE(memcmp(server->ssl->negotiatedInfo.cookieInfo.macKey, zeroMacKey, MAC_KEY_LEN) != 0);
+
+    ASSERT_EQ(Dtls13ClientProcessHrr(client, server), HITLS_SUCCESS);
+    Dtls13MoveCurrentCookieMacKeyToPre(server->ssl);
+
+    ASSERT_EQ(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_SUCCESS);
+    ASSERT_EQ(client->ssl->negotiatedInfo.version, HITLS_VERSION_DTLS13);
+    ASSERT_EQ(server->ssl->negotiatedInfo.version, HITLS_VERSION_DTLS13);
+
+EXIT:
+    HITLS_CFG_FreeConfig(config);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+}
+/* END_CASE */
+
+/** @
+* @test SDV_TLS_DTLS13_HANDSHAKE_CONSISTENCY_FUNC_TC044
+* @spec -
+* @title DTLS raw transcript cache replays as DTLS1.2 raw or DTLS1.3 TLS-style data by negotiated version.
+* @precon nan
+* @brief
+*    1. Append a complete DTLS handshake message as raw cache data before a hash algorithm is selected.
+*    2. Rebuild the transcript hash as DTLS1.2 and compare with SHA256 over the full DTLS message.
+*    3. Rebuild the transcript hash as DTLS1.3 and compare with SHA256 over the TLS-style transcript message.
+* @expect
+*    1. The same raw cache entry can produce both version-specific transcript hashes.
+@ */
+/* BEGIN_CASE */
+void SDV_TLS_DTLS13_HANDSHAKE_CONSISTENCY_FUNC_TC044(void)
+{
+    HS_Ctx hsCtx = {0};
+    uint8_t body[] = {0x11, 0x22, 0x33, 0x44};
+    uint8_t dtlsMsg[DTLS_HS_MSG_HEADER_SIZE + sizeof(body)] = {0};
+    uint8_t dtls13Msg[HS_MSG_HEADER_SIZE + sizeof(body)] = {0};
+    uint32_t dtls13MsgLen = 0;
+    uint8_t expected[MAX_DIGEST_SIZE] = {0};
+    uint8_t actual[MAX_DIGEST_SIZE] = {0};
+    uint32_t expectedLen = sizeof(expected);
+    uint32_t actualLen = sizeof(actual);
+
+    BuildDtlsHsMsg(dtlsMsg, CLIENT_HELLO, 3, body, sizeof(body));
+    dtls13MsgLen = BuildDtls13TranscriptMsg(dtls13Msg, dtlsMsg, sizeof(dtlsMsg));
+
+    ASSERT_EQ(VERIFY_Init(&hsCtx), HITLS_SUCCESS);
+    ASSERT_EQ(VERIFY_AppendDtlsRaw(hsCtx.verifyCtx, dtlsMsg, sizeof(dtlsMsg), VERIFY_TRANSCRIPT_RAW), HITLS_SUCCESS);
+
+    ASSERT_EQ(VERIFY_SetHashWithVersion(NULL, NULL, hsCtx.verifyCtx, HITLS_HASH_SHA_256, HITLS_VERSION_DTLS12),
+        HITLS_SUCCESS);
+    ASSERT_EQ(CalcSha256(dtlsMsg, sizeof(dtlsMsg), expected, &expectedLen), HITLS_SUCCESS);
+    ASSERT_EQ(VERIFY_CalcSessionHash(hsCtx.verifyCtx, actual, &actualLen), HITLS_SUCCESS);
+    ASSERT_EQ(actualLen, expectedLen);
+    ASSERT_EQ(memcmp(actual, expected, expectedLen), 0);
+
+    expectedLen = sizeof(expected);
+    actualLen = sizeof(actual);
+    ASSERT_EQ(VERIFY_SetHashWithVersion(NULL, NULL, hsCtx.verifyCtx, HITLS_HASH_SHA_256, HITLS_VERSION_DTLS13),
+        HITLS_SUCCESS);
+    ASSERT_EQ(CalcSha256(dtls13Msg, dtls13MsgLen, expected, &expectedLen), HITLS_SUCCESS);
+    ASSERT_EQ(VERIFY_CalcSessionHash(hsCtx.verifyCtx, actual, &actualLen), HITLS_SUCCESS);
+    ASSERT_EQ(actualLen, expectedLen);
+    ASSERT_EQ(memcmp(actual, expected, expectedLen), 0);
+
+EXIT:
+    VERIFY_Deinit(&hsCtx);
+}
+/* END_CASE */
+
+/** @
+* @test SDV_TLS_DTLS13_HANDSHAKE_CONSISTENCY_FUNC_TC045
+* @spec -
+* @title Mixed HRR transcript cache keeps message_hash canonical and converts raw HRR for DTLS1.3 replay.
+* @precon nan
+* @brief
+*    1. Append a TLS1.3 synthetic message_hash as canonical transcript data.
+*    2. Append a raw DTLS HelloRetryRequest message.
+*    3. Rebuild as DTLS1.3 and compare with SHA256 over message_hash plus TLS-style HRR.
+* @expect
+*    1. The synthetic message_hash is not treated as a DTLS raw message.
+*    2. The raw HRR is converted to TLS-style transcript data.
+@ */
+/* BEGIN_CASE */
+void SDV_TLS_DTLS13_HANDSHAKE_CONSISTENCY_FUNC_TC045(void)
+{
+    HS_Ctx hsCtx = {0};
+    uint8_t msgHash[HS_MSG_HEADER_SIZE + TEST_SHA256_DIGEST_LEN] = {0};
+    uint8_t hrrBody[] = {0xaa, 0xbb, 0xcc};
+    uint8_t hrr[DTLS_HS_MSG_HEADER_SIZE + sizeof(hrrBody)] = {0};
+    uint8_t hrrTranscript[HS_MSG_HEADER_SIZE + sizeof(hrrBody)] = {0};
+    uint32_t hrrTranscriptLen = 0;
+    uint8_t expected[MAX_DIGEST_SIZE] = {0};
+    uint8_t actual[MAX_DIGEST_SIZE] = {0};
+    uint32_t expectedLen = sizeof(expected);
+    uint32_t actualLen = sizeof(actual);
+
+    msgHash[0] = MESSAGE_HASH;
+    BSL_Uint24ToByte(TEST_SHA256_DIGEST_LEN, &msgHash[DTLS_HS_MSGLEN_ADDR]);
+    for (uint32_t i = 0; i < TEST_SHA256_DIGEST_LEN; i++) {
+        msgHash[HS_MSG_HEADER_SIZE + i] = (uint8_t)(i + 1u);
+    }
+    BuildDtlsHsMsg(hrr, SERVER_HELLO, 1, hrrBody, sizeof(hrrBody));
+    hrrTranscriptLen = BuildDtls13TranscriptMsg(hrrTranscript, hrr, sizeof(hrr));
+
+    ASSERT_EQ(VERIFY_Init(&hsCtx), HITLS_SUCCESS);
+    ASSERT_EQ(VERIFY_Append(hsCtx.verifyCtx, msgHash, sizeof(msgHash)), HITLS_SUCCESS);
+    ASSERT_EQ(VERIFY_AppendDtlsRaw(hsCtx.verifyCtx, hrr, sizeof(hrr), VERIFY_TRANSCRIPT_RAW), HITLS_SUCCESS);
+    ASSERT_EQ(VERIFY_SetHashWithVersion(NULL, NULL, hsCtx.verifyCtx, HITLS_HASH_SHA_256, HITLS_VERSION_DTLS13),
+        HITLS_SUCCESS);
+
+    ASSERT_EQ(CalcSha256TwoBlocks(msgHash, sizeof(msgHash), hrrTranscript, hrrTranscriptLen, expected, &expectedLen),
+        HITLS_SUCCESS);
+    ASSERT_EQ(VERIFY_CalcSessionHash(hsCtx.verifyCtx, actual, &actualLen), HITLS_SUCCESS);
+    ASSERT_EQ(actualLen, expectedLen);
+    ASSERT_EQ(memcmp(actual, expected, expectedLen), 0);
+
+EXIT:
+    VERIFY_Deinit(&hsCtx);
+}
+/* END_CASE */
+
+/** @
+* @test SDV_TLS_DTLS13_HANDSHAKE_CONSISTENCY_FUNC_TC046
+* @spec -
+* @title DTLS1.3 binder prior transcript skips the current ClientHello cache block and converts earlier raw blocks.
+* @precon nan
+* @brief
+*    1. Cache raw DTLS ClientHello1, raw DTLS HRR and raw DTLS ClientHello2.
+*    2. Feed cached transcript to a SHA256 context as DTLS1.3 while skipping the last cache block.
+*    3. Compare with SHA256 over TLS-style ClientHello1 and TLS-style HRR.
+* @expect
+*    1. The current ClientHello2 is excluded from the prior transcript.
+*    2. Earlier DTLS raw messages are converted to TLS-style transcript data.
+@ */
+/* BEGIN_CASE */
+void SDV_TLS_DTLS13_HANDSHAKE_CONSISTENCY_FUNC_TC046(void)
+{
+    HS_Ctx hsCtx = {0};
+    HITLS_HASH_Ctx *hashCtx = NULL;
+    uint8_t ch1Body[] = {0x01, 0x02};
+    uint8_t hrrBody[] = {0x03, 0x04, 0x05};
+    uint8_t ch2Body[] = {0x06, 0x07, 0x08};
+    uint8_t ch1[DTLS_HS_MSG_HEADER_SIZE + sizeof(ch1Body)] = {0};
+    uint8_t hrr[DTLS_HS_MSG_HEADER_SIZE + sizeof(hrrBody)] = {0};
+    uint8_t ch2[DTLS_HS_MSG_HEADER_SIZE + sizeof(ch2Body)] = {0};
+    uint8_t ch1Transcript[HS_MSG_HEADER_SIZE + sizeof(ch1Body)] = {0};
+    uint8_t hrrTranscript[HS_MSG_HEADER_SIZE + sizeof(hrrBody)] = {0};
+    uint32_t ch1TranscriptLen = 0;
+    uint32_t hrrTranscriptLen = 0;
+    uint8_t expected[MAX_DIGEST_SIZE] = {0};
+    uint8_t actual[MAX_DIGEST_SIZE] = {0};
+    uint32_t expectedLen = sizeof(expected);
+    uint32_t actualLen = sizeof(actual);
+
+    BuildDtlsHsMsg(ch1, CLIENT_HELLO, 0, ch1Body, sizeof(ch1Body));
+    BuildDtlsHsMsg(hrr, SERVER_HELLO, 1, hrrBody, sizeof(hrrBody));
+    BuildDtlsHsMsg(ch2, CLIENT_HELLO, 2, ch2Body, sizeof(ch2Body));
+    ch1TranscriptLen = BuildDtls13TranscriptMsg(ch1Transcript, ch1, sizeof(ch1));
+    hrrTranscriptLen = BuildDtls13TranscriptMsg(hrrTranscript, hrr, sizeof(hrr));
+
+    ASSERT_EQ(VERIFY_Init(&hsCtx), HITLS_SUCCESS);
+    ASSERT_EQ(VERIFY_AppendDtlsRaw(hsCtx.verifyCtx, ch1, sizeof(ch1), VERIFY_TRANSCRIPT_RAW), HITLS_SUCCESS);
+    ASSERT_EQ(VERIFY_AppendDtlsRaw(hsCtx.verifyCtx, hrr, sizeof(hrr), VERIFY_TRANSCRIPT_RAW), HITLS_SUCCESS);
+    ASSERT_EQ(VERIFY_AppendDtlsRaw(hsCtx.verifyCtx, ch2, sizeof(ch2), VERIFY_TRANSCRIPT_RAW), HITLS_SUCCESS);
+
+    hashCtx = SAL_CRYPT_DigestInit(NULL, NULL, HITLS_HASH_SHA_256);
+    ASSERT_TRUE(hashCtx != NULL);
+    ASSERT_EQ(VERIFY_UpdateCachedTranscriptHash(hashCtx, hsCtx.verifyCtx->dataBuf, HITLS_VERSION_DTLS13, 1),
+        HITLS_SUCCESS);
+    ASSERT_EQ(SAL_CRYPT_DigestFinal(hashCtx, actual, &actualLen), HITLS_SUCCESS);
+    SAL_CRYPT_DigestFree(hashCtx);
+    hashCtx = NULL;
+
+    ASSERT_EQ(CalcSha256TwoBlocks(ch1Transcript, ch1TranscriptLen, hrrTranscript, hrrTranscriptLen,
+        expected, &expectedLen), HITLS_SUCCESS);
+    ASSERT_EQ(actualLen, expectedLen);
+    ASSERT_EQ(memcmp(actual, expected, expectedLen), 0);
+
+EXIT:
+    SAL_CRYPT_DigestFree(hashCtx);
+    VERIFY_Deinit(&hsCtx);
+}
+/* END_CASE */
+
+/** @
+* @test SDV_TLS_DTLS13_HANDSHAKE_CONSISTENCY_FUNC_TC047
+* @spec -
+* @title DTLS1.3-capable client can negotiate DTLS1.2 with EMS without corrupting transcript hash.
+* @precon nan
+* @brief
+*    1. Create a HITLS_CFG_NewDTLSConfig client and a DTLS1.2-only server.
+*    2. Force EMS on both endpoints and disable session tickets.
+*    3. Complete the handshake without DTLS cookie exchange and exchange application data.
+* @expect
+*    1. The handshake succeeds and negotiates DTLS1.2.
+*    2. EMS is negotiated.
+*    3. Finished verification and application data exchange succeed.
+@ */
+/* BEGIN_CASE */
+void SDV_TLS_DTLS13_HANDSHAKE_CONSISTENCY_FUNC_TC047(void)
+{
+    HITLS_Config *clientConfig = NULL;
+    HITLS_Config *serverConfig = NULL;
+    FRAME_LinkObj *client = NULL;
+    FRAME_LinkObj *server = NULL;
+    uint8_t appData[] = "DTLS12 EMS fallback transcript";
+    uint8_t readBuf[APP_READ_BUF_SIZE] = {0};
+    uint32_t writeLen = 0;
+    uint32_t readLen = 0;
+
+    FRAME_Init();
+
+    clientConfig = HITLS_CFG_NewDTLSConfig();
+    ASSERT_TRUE(NewDtlsConfigSupportsDtls12AndDtls13(clientConfig));
+    ASSERT_EQ(HITLS_CFG_SetExtendedMasterSecretMode(clientConfig, HITLS_EMS_MODE_FORCE), HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_CFG_SetSessionTicketSupport(clientConfig, false), HITLS_SUCCESS);
+    serverConfig = HITLS_CFG_NewDTLS12Config();
+    ASSERT_TRUE(serverConfig != NULL);
+    ASSERT_EQ(HITLS_CFG_SetExtendedMasterSecretMode(serverConfig, HITLS_EMS_MODE_FORCE), HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_CFG_SetSessionTicketSupport(serverConfig, false), HITLS_SUCCESS);
+
+    client = FRAME_CreateLink(clientConfig, BSL_UIO_UDP);
+    ASSERT_TRUE(client != NULL);
+    server = FRAME_CreateLink(serverConfig, BSL_UIO_UDP);
+    ASSERT_TRUE(server != NULL);
+
+    ASSERT_EQ(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_SUCCESS);
+    ASSERT_EQ(client->ssl->negotiatedInfo.version, HITLS_VERSION_DTLS12);
+    ASSERT_EQ(server->ssl->negotiatedInfo.version, HITLS_VERSION_DTLS12);
+    ASSERT_TRUE(client->ssl->negotiatedInfo.isExtendedMasterSecret);
+    ASSERT_TRUE(server->ssl->negotiatedInfo.isExtendedMasterSecret);
+
+    ASSERT_EQ(HITLS_Write(client->ssl, appData, sizeof(appData), &writeLen), HITLS_SUCCESS);
+    ASSERT_EQ(writeLen, sizeof(appData));
+    ASSERT_EQ(FRAME_TrasferMsgBetweenLink(client, server), HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_Read(server->ssl, readBuf, sizeof(readBuf), &readLen), HITLS_SUCCESS);
+    ASSERT_EQ(readLen, sizeof(appData));
+    ASSERT_EQ(memcmp(readBuf, appData, sizeof(appData)), 0);
+
+EXIT:
+    HITLS_CFG_FreeConfig(clientConfig);
+    HITLS_CFG_FreeConfig(serverConfig);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+}
+/* END_CASE */
+
+/** @
+* @test SDV_TLS_DTLS13_HANDSHAKE_CONSISTENCY_FUNC_TC048
+* @spec -
+* @title DTLS1.3 server-only application cookie callbacks can complete a handshake.
+* @precon nan
+* @brief
+*    1. Create a DTLS1.3 client without application cookie callbacks.
+*    2. Create a DTLS1.3 server with appGenCookieCb and appVerifyCookieCb.
+*    3. Enable DTLS cookie exchange on the server.
+*    4. Complete the handshake and exchange application data.
+* @expect
+*    1. The client does not install application cookie callbacks.
+*    2. The server generation and verification callbacks are both used once.
+*    3. The handshake and application data exchange succeed.
+@ */
+/* BEGIN_CASE */
+void SDV_TLS_DTLS13_HANDSHAKE_CONSISTENCY_FUNC_TC048(void)
+{
+    HITLS_Config *clientConfig = NULL;
+    HITLS_Config *serverConfig = NULL;
+    FRAME_LinkObj *client = NULL;
+    FRAME_LinkObj *server = NULL;
+    uint8_t appData[] = "DTLS13 server app cookie";
+    uint8_t readBuf[APP_READ_BUF_SIZE] = {0};
+    uint32_t writeLen = 0;
+    uint32_t readLen = 0;
+
+    FRAME_Init();
+    ResetDtls13AppCookieCnt();
+
+    clientConfig = HITLS_CFG_NewDTLS13Config();
+    ASSERT_TRUE(clientConfig != NULL);
+    ASSERT_EQ(HITLS_CFG_SetTicketNums(clientConfig, 0), HITLS_SUCCESS);
+
+    serverConfig = HITLS_CFG_NewDTLS13Config();
+    ASSERT_TRUE(serverConfig != NULL);
+    ASSERT_EQ(HITLS_CFG_SetDtlsCookieExchangeSupport(serverConfig, true), HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_CFG_SetTicketNums(serverConfig, 0), HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_CFG_SetCookieGenCb(serverConfig, Dtls13AppCookieGenCb), HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_CFG_SetCookieVerifyCb(serverConfig, Dtls13AppCookieVerifyCb), HITLS_SUCCESS);
+
+    client = FRAME_CreateLink(clientConfig, BSL_UIO_UDP);
+    ASSERT_TRUE(client != NULL);
+    server = FRAME_CreateLink(serverConfig, BSL_UIO_UDP);
+    ASSERT_TRUE(server != NULL);
+    ASSERT_TRUE(client->ssl->globalConfig->appGenCookieCb == NULL);
+    ASSERT_TRUE(client->ssl->globalConfig->appVerifyCookieCb == NULL);
+    ASSERT_TRUE(server->ssl->globalConfig->appGenCookieCb == Dtls13AppCookieGenCb);
+    ASSERT_TRUE(server->ssl->globalConfig->appVerifyCookieCb == Dtls13AppCookieVerifyCb);
+
+    ASSERT_EQ(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_SUCCESS);
+    ASSERT_EQ(client->ssl->negotiatedInfo.version, HITLS_VERSION_DTLS13);
+    ASSERT_EQ(server->ssl->negotiatedInfo.version, HITLS_VERSION_DTLS13);
+    ASSERT_EQ(g_dtls13AppCookieGenCnt, 1);
+    ASSERT_EQ(g_dtls13AppCookieVerifyCnt, 1);
+
+    ASSERT_EQ(HITLS_Write(client->ssl, appData, sizeof(appData), &writeLen), HITLS_SUCCESS);
+    ASSERT_EQ(writeLen, sizeof(appData));
+    ASSERT_EQ(FRAME_TrasferMsgBetweenLink(client, server), HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_Read(server->ssl, readBuf, sizeof(readBuf), &readLen), HITLS_SUCCESS);
+    ASSERT_EQ(readLen, sizeof(appData));
+    ASSERT_EQ(memcmp(readBuf, appData, sizeof(appData)), 0);
+
+EXIT:
+    HITLS_CFG_FreeConfig(clientConfig);
+    HITLS_CFG_FreeConfig(serverConfig);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+}
+/* END_CASE */
+
+/** @
+* @test SDV_TLS_DTLS13_HANDSHAKE_CONSISTENCY_FUNC_TC049
+* @spec -
+* @title DTLS1.3 client sends an ACK on timeout after receiving part of the server EE flight.
+* @precon nan
+* @brief
+*    1. Create DTLS1.3 client and server links over UDP.
+*    2. Stop the server after sending EncryptedExtensions and before sending Certificate.
+*    3. Let the client process the partial server flight and wait for CertificateRequest.
+*    4. Force the client's DTLS handshake timer to expire and process timeout.
+* @expect
+*    1. The client keeps pending ACK state after receiving the partial server flight.
+*    2. The client handshake timer is still active before timeout processing.
+*    3. Timeout processing sends an ACK and clears the normal ACK list.
+@ */
+/* BEGIN_CASE */
+void SDV_TLS_DTLS13_HANDSHAKE_CONSISTENCY_FUNC_TC049(void)
+{
+    HITLS_Config *config = NULL;
+    FRAME_LinkObj *client = NULL;
+    FRAME_LinkObj *server = NULL;
+    uint8_t ackBuf[MAX_RECORD_LENTH] = {0};
+    uint32_t ackLen = 0;
+
+    FRAME_Init();
+
+    config = HITLS_CFG_NewDTLS13Config();
+    ASSERT_TRUE(config != NULL);
+    ASSERT_EQ(HITLS_CFG_SetTicketNums(config, 0), HITLS_SUCCESS);
+
+    client = FRAME_CreateLink(config, BSL_UIO_UDP);
+    ASSERT_TRUE(client != NULL);
+    server = FRAME_CreateLink(config, BSL_UIO_UDP);
+    ASSERT_TRUE(server != NULL);
+
+    ASSERT_EQ(FRAME_CreateConnection(client, server, false, TRY_SEND_CERTIFICATE), HITLS_SUCCESS);
+    ASSERT_EQ(client->ssl->negotiatedInfo.version, HITLS_VERSION_DTLS13);
+    ASSERT_TRUE(client->ssl->hsCtx != NULL);
+    ASSERT_EQ(client->ssl->hsCtx->state, TRY_RECV_CERTIFICATE_REQUEST);
+    ASSERT_TRUE(REC_Dtls13AckListIsEmpty(client->ssl, REC_DTLS13_ACK_NORMAL) == false);
+    ASSERT_TRUE(REC_Dtls13AckListIsEmpty(client->ssl, REC_DTLS13_ACK_RETRANS) == false);
+    ASSERT_TRUE(client->ssl->timeoutValue != 0);
+
+    ForceDtlsTimerExpired(client->ssl);
+    ASSERT_EQ(HITLS_DtlsProcessTimeout(client->ssl), HITLS_SUCCESS);
+
+    ASSERT_EQ(FRAME_TransportSendMsg(client->io, ackBuf, sizeof(ackBuf), &ackLen), HITLS_SUCCESS);
+    ASSERT_TRUE(ackLen != 0);
+    ASSERT_TRUE(REC_Dtls13AckListIsEmpty(client->ssl, REC_DTLS13_ACK_NORMAL) == true);
+
+EXIT:
+    HITLS_CFG_FreeConfig(config);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+}
+/* END_CASE */
+
+/** @
+* @test SDV_TLS_DTLS13_HANDSHAKE_CONSISTENCY_FUNC_TC050
+* @spec -
+* @title DTLS1.3 default-cookie server rejects a MAC-valid cookie that differs from current HRR cookie.
+* @precon nan
+* @brief
+*    1. Enable DTLS1.3 cookie exchange and let the server send HRR with Cookie1.
+*    2. Let the client send ClientHello2 with Cookie1.
+*    3. Modify the server-side saved current HRR cookie before processing ClientHello2.
+* @expect
+*    1. Cookie1 is HMAC-valid under the same server cookie key.
+*    2. The server rejects Cookie1 because it does not match ctx->negotiatedInfo.cookie.
+*    3. The server sends a fatal illegal_parameter alert.
+@ */
+/* BEGIN_CASE */
+void SDV_TLS_DTLS13_HANDSHAKE_CONSISTENCY_FUNC_TC050(void)
+{
+    HITLS_Config *config = NULL;
+    FRAME_LinkObj *client = NULL;
+    FRAME_LinkObj *server = NULL;
+    uint8_t hrrBuf[MAX_RECORD_LENTH] = {0};
+    uint32_t hrrLen = sizeof(hrrBuf);
+
+    FRAME_Init();
+
+    config = HITLS_CFG_NewDTLS13Config();
+    ASSERT_TRUE(config != NULL);
+    ASSERT_EQ(HITLS_CFG_SetDtlsCookieExchangeSupport(config, true), HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_CFG_SetTicketNums(config, 0), HITLS_SUCCESS);
+    ASSERT_EQ(Dtls13UseSingleKeyShareGroup(config), HITLS_SUCCESS);
+
+    client = FRAME_CreateLink(config, BSL_UIO_UDP);
+    ASSERT_TRUE(client != NULL);
+    server = FRAME_CreateLink(config, BSL_UIO_UDP);
+    ASSERT_TRUE(server != NULL);
+
+    ASSERT_EQ(Dtls13PrepareCookieHrr(client, server, hrrBuf, &hrrLen), HITLS_SUCCESS);
+    ASSERT_TRUE(server->ssl->negotiatedInfo.cookie != NULL);
+    ASSERT_TRUE(server->ssl->negotiatedInfo.cookieSize != 0);
+
+    ASSERT_EQ(Dtls13ClientProcessHrr(client, server), HITLS_SUCCESS);
+    server->ssl->negotiatedInfo.cookie[0] ^= 0x01;
+    ASSERT_EQ(HITLS_Accept(server->ssl), HITLS_MSG_HANDLE_COOKIE_ERR);
+
+    ALERT_Info alert = {0};
+    ALERT_GetInfo(server->ssl, &alert);
+    ASSERT_EQ(alert.flag, ALERT_FLAG_SEND);
+    ASSERT_EQ(alert.level, ALERT_LEVEL_FATAL);
+    ASSERT_EQ(alert.description, ALERT_ILLEGAL_PARAMETER);
+
+EXIT:
+    HITLS_CFG_FreeConfig(config);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+}
+/* END_CASE */
+
+/** @
+* @test SDV_TLS_DTLS13_HANDSHAKE_CONSISTENCY_FUNC_TC051
+* @spec -
+* @title DTLS1.3 default-cookie server fails the handshake when peer address cannot be obtained.
+* @precon nan
+* @brief
+*    1. Enable DTLS1.3 cookie exchange.
+*    2. Make the server UIO fail BSL_UIO_GET_PEER_IP_ADDR.
+*    3. Let the server process ClientHello1 and try to generate HRR cookie.
+* @expect
+*    1. Cookie generation fails instead of falling back to an addressless cookie.
+*    2. The server sends a fatal internal_error alert.
+@ */
+/* BEGIN_CASE */
+void SDV_TLS_DTLS13_HANDSHAKE_CONSISTENCY_FUNC_TC051(void)
+{
+    HITLS_Config *config = NULL;
+    FRAME_LinkObj *client = NULL;
+    FRAME_LinkObj *server = NULL;
+    uint8_t hrrBuf[MAX_RECORD_LENTH] = {0};
+    uint32_t hrrLen = sizeof(hrrBuf);
+    BSL_UIO *serverUio = NULL;
+
+    FRAME_Init();
+
+    config = HITLS_CFG_NewDTLS13Config();
+    ASSERT_TRUE(config != NULL);
+    ASSERT_EQ(HITLS_CFG_SetDtlsCookieExchangeSupport(config, true), HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_CFG_SetTicketNums(config, 0), HITLS_SUCCESS);
+    ASSERT_EQ(Dtls13UseSingleKeyShareGroup(config), HITLS_SUCCESS);
+
+    client = FRAME_CreateLink(config, BSL_UIO_UDP);
+    ASSERT_TRUE(client != NULL);
+    server = FRAME_CreateLink(config, BSL_UIO_UDP);
+    ASSERT_TRUE(server != NULL);
+    serverUio = server->ssl->uio;
+    ASSERT_TRUE(serverUio != NULL);
+
+    g_dtls13OrigUioCtrl = serverUio->method.uioCtrl;
+    serverUio->method.uioCtrl = Dtls13PeerAddrFailCtrl;
+
+    ASSERT_EQ(Dtls13PrepareCookieHrr(client, server, hrrBuf, &hrrLen), HITLS_MSG_HANDLE_COOKIE_ERR);
+
+    ALERT_Info alert = {0};
+    ALERT_GetInfo(server->ssl, &alert);
+    ASSERT_EQ(alert.flag, ALERT_FLAG_SEND);
+    ASSERT_EQ(alert.level, ALERT_LEVEL_FATAL);
+    ASSERT_EQ(alert.description, ALERT_INTERNAL_ERROR);
+
+EXIT:
+    if (serverUio != NULL && g_dtls13OrigUioCtrl != NULL) {
+        serverUio->method.uioCtrl = g_dtls13OrigUioCtrl;
+    }
+    g_dtls13OrigUioCtrl = NULL;
+    HITLS_CFG_FreeConfig(config);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+}
+/* END_CASE */
+
+/** @
+* @test SDV_TLS_DTLS13_HANDSHAKE_CONSISTENCY_FUNC_TC052
+* @spec -
+* @title DTLS1.3 server rejects an initial ClientHello with an empty cookie extension and sends decode_error.
+* @precon nan
+* @brief
+*    1. Enable DTLS1.3 cookie exchange.
+*    2. Modify the first ClientHello to carry a cookie extension whose cookie vector length is zero.
+*    3. Send the modified ClientHello to the server.
+* @expect
+*    1. The server rejects the malformed cookie extension during ClientHello parsing.
+*    2. HITLS_Accept returns HITLS_PARSE_INVALID_MSG_LEN.
+*    3. The server sends a fatal decode_error alert.
+@ */
+/* BEGIN_CASE */
+void SDV_TLS_DTLS13_HANDSHAKE_CONSISTENCY_FUNC_TC052(void)
+{
+    HITLS_Config *config = NULL;
+    FRAME_LinkObj *client = NULL;
+    FRAME_LinkObj *server = NULL;
+    FRAME_Msg clientHelloMsg = {0};
+    FRAME_Type clientHelloType = {0};
+    uint8_t sendBuf[MAX_RECORD_LENTH] = {0};
+    uint32_t sendLen = sizeof(sendBuf);
+    int32_t ret;
+
+    FRAME_Init();
+    SetDtls13FrameType(&clientHelloType, REC_TYPE_HANDSHAKE, CLIENT_HELLO);
+
+    config = HITLS_CFG_NewDTLS13Config();
+    ASSERT_TRUE(config != NULL);
+    ASSERT_EQ(HITLS_CFG_SetDtlsCookieExchangeSupport(config, true), HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_CFG_SetTicketNums(config, 0), HITLS_SUCCESS);
+
+    client = FRAME_CreateLink(config, BSL_UIO_UDP);
+    ASSERT_TRUE(client != NULL);
+    server = FRAME_CreateLink(config, BSL_UIO_UDP);
+    ASSERT_TRUE(server != NULL);
+
+    ret = HITLS_Connect(client->ssl);
+    ASSERT_TRUE(IsFrameIoPendingRet(ret));
+    ASSERT_EQ(FRAME_TrasferMsgBetweenLink(client, server), HITLS_SUCCESS);
+    ASSERT_EQ(ParseDtls13BufferedHsMsg(server, true, CLIENT_HELLO, &clientHelloMsg), HITLS_SUCCESS);
+    FRAME_ClientHelloMsg *clientHello = &clientHelloMsg.body.hsMsg.body.clientHello;
+    ASSERT_EQ(clientHello->tls13Cookie.exState, MISSING_FIELD);
+    ASSERT_EQ(Dtls13SetClientHelloEmptyCookieExt(clientHello), HITLS_SUCCESS);
+    ASSERT_EQ(FRAME_PackMsg(&clientHelloType, &clientHelloMsg, sendBuf, sizeof(sendBuf), &sendLen), HITLS_SUCCESS);
+
+    FrameUioUserData *serverIoUserData = BSL_UIO_GetUserData(server->io);
+    ASSERT_TRUE(serverIoUserData != NULL);
+    serverIoUserData->recMsg.len = 0;
+    ASSERT_EQ(FRAME_TransportRecMsg(server->io, sendBuf, sendLen), HITLS_SUCCESS);
+    CONN_Deinit(server->ssl);
+    ASSERT_EQ(HITLS_Accept(server->ssl), HITLS_PARSE_INVALID_MSG_LEN);
+
+    ALERT_Info alert = {0};
+    ALERT_GetInfo(server->ssl, &alert);
+    ASSERT_EQ(alert.flag, ALERT_FLAG_SEND);
+    ASSERT_EQ(alert.level, ALERT_LEVEL_FATAL);
+    ASSERT_EQ(alert.description, ALERT_DECODE_ERROR);
+
+EXIT:
+    FRAME_CleanMsg(&clientHelloType, &clientHelloMsg);
+    HITLS_CFG_FreeConfig(config);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+}
+/* END_CASE */
+
+/** @
+* @test SDV_TLS_DTLS13_HANDSHAKE_CONSISTENCY_FUNC_TC053
+* @spec -
+* @title DTLS1.3 server rejects the first ClientHello carrying a non-empty cookie extension.
+* @precon nan
+* @brief
+*    1. Create DTLS1.3 client and server links.
+*    2. Stop when the server is about to receive the first ClientHello.
+*    3. Add a non-empty TLS1.3 cookie extension to that first ClientHello.
+*    4. Send the modified ClientHello to the server.
+* @expect
+*    1. The server rejects the first ClientHello.
+*    2. The server sends a fatal illegal_parameter alert instead of ServerHello.
+@ */
+/* BEGIN_CASE */
+void SDV_TLS_DTLS13_HANDSHAKE_CONSISTENCY_FUNC_TC053(void)
+{
+    HITLS_Config *config = NULL;
+    FRAME_LinkObj *client = NULL;
+    FRAME_LinkObj *server = NULL;
+    FRAME_Msg clientHelloMsg = {0};
+    FRAME_Type clientHelloType = {0};
+    uint8_t sendBuf[MAX_RECORD_LENTH] = {0};
+    uint32_t sendLen = sizeof(sendBuf);
+    const uint8_t cookie[] = {0x64, 0x74, 0x6c, 0x73, 0x31, 0x33};
+
+    FRAME_Init();
+    SetDtls13FrameType(&clientHelloType, REC_TYPE_HANDSHAKE, CLIENT_HELLO);
+
+    config = HITLS_CFG_NewDTLS13Config();
+    ASSERT_TRUE(config != NULL);
+
+    client = FRAME_CreateLink(config, BSL_UIO_UDP);
+    ASSERT_TRUE(client != NULL);
+    server = FRAME_CreateLink(config, BSL_UIO_UDP);
+    ASSERT_TRUE(server != NULL);
+
+    ASSERT_EQ(FRAME_CreateConnection(client, server, false, TRY_RECV_CLIENT_HELLO), HITLS_SUCCESS);
+    ASSERT_EQ(ParseDtls13BufferedHsMsg(server, true, CLIENT_HELLO, &clientHelloMsg), HITLS_SUCCESS);
+
+    FRAME_ClientHelloMsg *clientHello = &clientHelloMsg.body.hsMsg.body.clientHello;
+    ASSERT_EQ(clientHello->tls13Cookie.exState, MISSING_FIELD);
+    ASSERT_EQ(Dtls13SetClientHelloCookieExt(clientHello, cookie, sizeof(cookie)), HITLS_SUCCESS);
+    ASSERT_EQ(FRAME_PackMsg(&clientHelloType, &clientHelloMsg, sendBuf, sizeof(sendBuf), &sendLen), HITLS_SUCCESS);
+
+    FrameUioUserData *serverIoUserData = BSL_UIO_GetUserData(server->io);
+    ASSERT_TRUE(serverIoUserData != NULL);
+    serverIoUserData->recMsg.len = 0;
+    serverIoUserData->sndMsg.len = 0;
+    ASSERT_EQ(FRAME_TransportRecMsg(server->io, sendBuf, sendLen), HITLS_SUCCESS);
+    CONN_Deinit(server->ssl);
+    ASSERT_EQ(HITLS_Accept(server->ssl), HITLS_MSG_HANDLE_COOKIE_ERR);
+    ASSERT_EQ(server->ssl->hsCtx->state, TRY_RECV_CLIENT_HELLO);
+
+    ALERT_Info alert = {0};
+    ALERT_GetInfo(server->ssl, &alert);
+    ASSERT_EQ(alert.flag, ALERT_FLAG_SEND);
+    ASSERT_EQ(alert.level, ALERT_LEVEL_FATAL);
+    ASSERT_EQ(alert.description, ALERT_ILLEGAL_PARAMETER);
+    ASSERT_TRUE(serverIoUserData->sndMsg.len != 0);
+    ASSERT_TRUE(serverIoUserData->sndMsg.msg[0] != REC_TYPE_HANDSHAKE);
+
+EXIT:
+    FRAME_CleanMsg(&clientHelloType, &clientHelloMsg);
     HITLS_CFG_FreeConfig(config);
     FRAME_FreeLink(client);
     FRAME_FreeLink(server);

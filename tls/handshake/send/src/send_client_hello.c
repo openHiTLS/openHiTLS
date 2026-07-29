@@ -168,7 +168,7 @@ int32_t ClientSendClientHelloProcess(TLS_Ctx *ctx)
 }
 #endif /* HITLS_TLS_PROTO_TLS_BASIC || HITLS_TLS_PROTO_DTLS12 */
 
-#if defined(HITLS_TLS_PROTO_TLS13) || defined(HITLS_TLS_PROTO_DTLS13)
+#if defined(HITLS_TLS_PROTO_TLS13_FAMILY)
 static int32_t Tls13ClientGenKeyPair(TLS_Ctx *ctx)
 {
     KeyExchCtx *kxCtx = ctx->hsCtx->kxCtx;
@@ -289,7 +289,7 @@ static int32_t Tls13ClientPrepareKeyShare(TLS_Ctx *ctx, uint32_t tls13BasicKeyEx
 static int32_t Tls13ClientPrepareSession(TLS_Ctx *ctx)
 {
     if (!ctx->config.tlsConfig.isMiddleBoxCompat
-#if defined(HITLS_TLS_PROTO_DTLS12)
+#if defined(HITLS_TLS_PROTO_DTLS13)
         || IS_SUPPORT_DATAGRAM(ctx->config.tlsConfig.originVersionMask)
 #endif
     ) {
@@ -674,5 +674,5 @@ int32_t Tls13ClientSendClientHelloProcess(TLS_Ctx *ctx)
 #endif
     return HS_ChangeState(ctx, TRY_RECV_SERVER_HELLO);
 }
-#endif /* HITLS_TLS_PROTO_TLS13 || HITLS_TLS_PROTO_DTLS13 */
+#endif /* HITLS_TLS_PROTO_TLS13_FAMILY */
 #endif /* HITLS_TLS_HOST_CLIENT */

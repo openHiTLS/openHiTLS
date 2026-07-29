@@ -16,6 +16,8 @@
 #include "hitls_build.h"
 #include "bsl_log_internal.h"
 #include "bsl_err_internal.h"
+#include "bsl_bytes.h"
+#include "crypt.h"
 #ifdef HITLS_TLS_SUITE_CIPHER_AEAD
 #include "rec_crypto_aead.h"
 #endif
@@ -27,11 +29,11 @@
 #include "rec_alert.h"
 #include "indicator.h"
 #include "hs.h"
+#include "hs_common.h"
 #include "hitls_error.h"
-#include "crypt.h"
-#include "bsl_bytes.h"
+#include "rec_crypto.h"
 
-#if defined(HITLS_TLS_PROTO_TLS13) || defined(HITLS_TLS_PROTO_DTLS13)
+#if defined(HITLS_TLS_PROTO_TLS13_FAMILY)
 /* 16384 + 1: RFC8446 5.4. Record Padding the full encoded TLSInnerPlaintext MUST NOT exceed 2^14 + 1 octets. */
 #define MAX_PADDING_LEN 16385
 
@@ -76,7 +78,7 @@ int32_t RecParseInnerPlaintext(TLS_Ctx *ctx, const uint8_t *text, uint32_t *text
         "Recved  UNEXPECTED_MESSAGE.", 0, 0, 0, 0);
     return RecordSendAlertMsg(ctx, ALERT_LEVEL_FATAL, ALERT_UNEXPECTED_MESSAGE);
 }
-#endif /* HITLS_TLS_PROTO_TLS13 || HITLS_TLS_PROTO_DTLS13 */
+#endif /* HITLS_TLS_PROTO_TLS13_FAMILY */
 
 static int32_t DefaultDecryptPostProcess(TLS_Ctx *ctx, RecConnSuitInfo *suiteInfo, REC_TextInput *encryptedMsg,
     uint8_t *data, uint32_t *dataLen)
@@ -86,9 +88,9 @@ static int32_t DefaultDecryptPostProcess(TLS_Ctx *ctx, RecConnSuitInfo *suiteInf
     (void)encryptedMsg;
     (void)data;
     (void)dataLen;
-#if defined(HITLS_TLS_PROTO_TLS13) || defined(HITLS_TLS_PROTO_DTLS13)
+#if defined(HITLS_TLS_PROTO_TLS13_FAMILY)
     /* If the version is tls1.3 and encryption is required, you need to create a TLSInnerPlaintext message */
-    if ((ctx->negotiatedInfo.version == HITLS_VERSION_TLS13 || ctx->negotiatedInfo.version == HITLS_VERSION_DTLS13) && suiteInfo != NULL) {
+    if (IS_TLS13_FAMILY_CTX(ctx) && suiteInfo != NULL) {
         return RecParseInnerPlaintext(ctx, data, dataLen, &encryptedMsg->type);
     }
 #endif
@@ -97,14 +99,13 @@ static int32_t DefaultDecryptPostProcess(TLS_Ctx *ctx, RecConnSuitInfo *suiteInf
 static int32_t DefaultEncryptPreProcess(TLS_Ctx *ctx, uint8_t recordType, const uint8_t *data, uint32_t plainLen,
     RecordPlaintext *recPlaintext)
 {
-#ifdef HITLS_TLS_PROTO_TLS // todo
+#if defined(HITLS_TLS_PROTO_TLS) || defined(HITLS_TLS_PROTO_DTLS13)
     (void)ctx, (void)data;
     recPlaintext->recordType = recordType;
     recPlaintext->plainLen = plainLen;
     recPlaintext->plainData = NULL;
-#if defined(HITLS_TLS_PROTO_TLS13) || defined(HITLS_TLS_PROTO_DTLS13)
-    if ((ctx->negotiatedInfo.version != HITLS_VERSION_TLS13 &&
-         ctx->negotiatedInfo.version != HITLS_VERSION_DTLS13) ||
+#if defined(HITLS_TLS_PROTO_TLS13_FAMILY)
+    if (!IS_TLS13_FAMILY_CTX(ctx) ||
         ctx->recCtx->writeStates.currentState->suiteInfo == NULL) {
         return HITLS_SUCCESS;
     }
@@ -115,6 +116,26 @@ static int32_t DefaultEncryptPreProcess(TLS_Ctx *ctx, uint8_t recordType, const 
         recPaddingLength =
             (uint16_t)ctx->config.tlsConfig.recordPaddingCb(ctx, recordType, plainLen,
             ctx->config.tlsConfig.recordPaddingArg);
+    }
+    uint32_t minPaddingLength = 0;
+#ifdef HITLS_TLS_PROTO_DTLS13
+    if (ctx->negotiatedInfo.version == HITLS_VERSION_DTLS13) {
+        uint32_t minPlainLen = 16u;
+        if (ctx->recCtx->writeStates.currentState->suiteInfo != NULL) {
+            uint8_t macLen = ctx->recCtx->writeStates.currentState->suiteInfo->macLen;
+            if (macLen < minPlainLen) {
+                minPlainLen -= macLen;
+            } else {
+                minPlainLen = 0;
+            }
+        }
+        if (plainLen + sizeof(uint8_t) < minPlainLen) {
+            minPaddingLength = minPlainLen - plainLen - sizeof(uint8_t);
+        }
+    }
+#endif
+    if (recPaddingLength < minPaddingLength) {
+        recPaddingLength = (uint16_t)minPaddingLength;
     }
 #ifdef HITLS_TLS_FEATURE_INDICATOR
     INDICATOR_MessageIndicate(
@@ -147,7 +168,7 @@ static int32_t DefaultEncryptPreProcess(TLS_Ctx *ctx, uint8_t recordType, const 
     recPlaintext->plainData = tlsInnerPlaintext;
     /* tls1.3 Hide the actual record type during encryption */
     recPlaintext->recordType = (uint8_t)REC_TYPE_APP;
-#endif /* HITLS_TLS_PROTO_TLS13 */
+#endif /* HITLS_TLS_PROTO_TLS13_FAMILY */
     return HITLS_SUCCESS;
 #else
     (void)ctx, (void)recordType, (void)data, (void)plainLen, (void)recPlaintext;
@@ -265,16 +286,19 @@ const RecCryptoFunc *RecGetCryptoFuncs(const RecConnSuitInfo *suiteInfo)
 }
 
 #ifdef HITLS_TLS_PROTO_DTLS13
-int32_t Dtls13CryptSequenceNumber(TLS_Ctx *ctx, HITLS_CipherAlgo cipherAlgo, const uint8_t *snKey, const uint8_t *ciphertext,
-    uint32_t cipherLen, const uint8_t *plaintextSeq, uint8_t *encryptedSn, uint8_t snLen)
+int32_t Dtls13CryptSequenceNumber(TLS_Ctx *ctx, RecConnSuitInfo *suiteInfo,
+    const uint8_t *ciphertext, uint32_t cipherLen, uint8_t *seq, uint8_t seqLen)
 {
     if (cipherLen < 16) { // rfc 9147 4.2.3 This procedure requires the ciphertext length to be at least 16 bytes
         return HITLS_INVALID_INPUT;
     }
-    uint8_t mask[16];
+    if (suiteInfo == NULL || ciphertext == NULL || seq == NULL || seqLen == 0 || seqLen > 2) {
+        return HITLS_INVALID_INPUT;
+    }
     uint8_t output[32] = {0};
-    uint32_t outLen = 16;
+    uint32_t outLen = sizeof(output);
     uint32_t snKeyLen = 0;
+    HITLS_CipherAlgo cipherAlgo = suiteInfo->cipherAlg;
     HITLS_CipherAlgo algId;
     HITLS_CipherType type;
     uint8_t zeros[16] = {0};
@@ -282,7 +306,7 @@ int32_t Dtls13CryptSequenceNumber(TLS_Ctx *ctx, HITLS_CipherAlgo cipherAlgo, con
     uint8_t *iv = NULL;
     uint32_t ivLen = 0;
     uint8_t nonce[12] = {0};
-    uint8_t conter[4] = {0};
+    uint8_t counter[4] = {0};
     HITLS_CipherParameters cipherParam = {0};
     if (cipherAlgo == HITLS_CIPHER_AES_128_GCM ||
         cipherAlgo == HITLS_CIPHER_AES_128_CCM ||
@@ -297,27 +321,28 @@ int32_t Dtls13CryptSequenceNumber(TLS_Ctx *ctx, HITLS_CipherAlgo cipherAlgo, con
         type = HITLS_ECB_CIPHER;
         snKeyLen = 32;
     } else if (cipherAlgo == HITLS_CIPHER_CHACHA20_POLY1305) {
-        // RFC 9147 §4.2.3: counter = ciphertext[0..3], nonce = ciphertext[4..15]
-        algId = HITLS_CIPHER_CHACHA20_POLY1305;
-        type = HITLS_AEAD_CIPHER;
+        /* RFC 9147 4.2.3: ChaCha20 mask uses raw ChaCha20 with counter = ciphertext[0..3]
+         * and nonce = ciphertext[4..15]. This is not the ChaCha20-Poly1305 AEAD record cipher. */
+        algId = HITLS_CIPHER_CHACHA20;
+        type = HITLS_STREAM_CIPHER;
         snKeyLen = 32;
         in = zeros;
 
-        memcpy(conter, ciphertext, 4);
+        memcpy(counter, ciphertext, 4);
         memcpy(nonce, &ciphertext[4], 12);
         iv = nonce;
         ivLen = 12;
-        cipherParam.counter = conter;
+        cipherParam.counter = counter;
         cipherParam.counterLen = 4;
     } else {
         BSL_ERR_PUSH_ERROR(HITLS_REC_ERR_NOT_SUPPORT_CIPHER);
         return HITLS_REC_ERR_NOT_SUPPORT_CIPHER;
     }
-    
-    cipherParam.ctx = NULL;
+
+    cipherParam.ctx = &suiteInfo->snCtx;
     cipherParam.type = type;
     cipherParam.algo = algId;
-    cipherParam.key = snKey;
+    cipherParam.key = suiteInfo->snKey;
     cipherParam.keyLen = snKeyLen;
     cipherParam.iv = iv;
     cipherParam.ivLen = ivLen;
@@ -325,10 +350,8 @@ int32_t Dtls13CryptSequenceNumber(TLS_Ctx *ctx, HITLS_CipherAlgo cipherAlgo, con
     if (ret != HITLS_SUCCESS) {
         return ret;
     }
-    (void)memcpy(mask, output, 16);
-    // XOR加密序列号 (加密和解密使用相同的操作)
-    for (size_t i = 0; i < snLen; i++) {
-        encryptedSn[i] = plaintextSeq[i] ^ mask[i];
+    for (size_t i = 0; i < seqLen; i++) {
+        seq[i] ^= output[i];
     }
     return HITLS_SUCCESS;
 }

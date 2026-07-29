@@ -24,7 +24,7 @@
 extern "C" {
 #endif
 
-#if defined(HITLS_TLS_PROTO_DTLS12) || defined(HITLS_TLS_PROTO_DTLS13)
+#if defined(HITLS_TLS_PROTO_DATAGRAM)
 
 /**
  * @brief Start the 2MSL timer.
@@ -93,7 +93,7 @@ void HS_Stop2MslTimer(TLS_Ctx *ctx);
  */
 int32_t HS_TimeoutProcess(TLS_Ctx *ctx);
 
-#endif /* HITLS_TLS_PROTO_DTLS12 || HITLS_TLS_PROTO_DTLS13 */
+#endif /* HITLS_TLS_PROTO_DATAGRAM */
 
 #ifdef __cplusplus
 }

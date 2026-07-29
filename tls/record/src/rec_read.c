@@ -14,8 +14,6 @@
  */
 #include "hitls_build.h"
 #include <string.h>
-#include <stdio.h>
-#include <stdlib.h>
 #include "bsl_sal.h"
 #include "tls_binlog_id.h"
 #include "bsl_log_internal.h"
@@ -33,6 +31,7 @@
 #include "indicator.h"
 #endif
 #include "hs.h"
+#include "hs_common.h"
 #include "rec_crypto.h"
 #include "rec_crypto_aead.h"
 #include "bsl_list.h"
@@ -61,13 +60,6 @@ RecConnState *GetReadPendingState(const TLS_Ctx *ctx)
     RecCtx *recordCtx = (RecCtx *)ctx->recCtx;
     return recordCtx->readStates.pendingState;
 }
-
-#if defined(HITLS_TLS_PROTO_TLS13) || defined(HITLS_TLS_PROTO_DTLS13)
-static bool IsTls13FamilyVersion(uint16_t version)
-{
-    return version == HITLS_VERSION_TLS13 || version == HITLS_VERSION_DTLS13;
-}
-#endif
 
 #ifdef HITLS_TLS_PROTO_DTLS13
 static int32_t Dtls13HandleHandshakeAck(TLS_Ctx *ctx, const RecHdr *hdr)
@@ -98,7 +90,7 @@ static int32_t Dtls13TrySendRetransAckOnEpoch2(TLS_Ctx *ctx, uint64_t epoch)
 }
 #endif
 
-#if defined(HITLS_TLS_PROTO_DTLS12) || defined(HITLS_TLS_PROTO_DTLS13)
+#if defined(HITLS_TLS_PROTO_DATAGRAM)
 static uint32_t RecGetReadHeaderLen(uint8_t firstByte, uint32_t cidLen)
 {
 #ifndef HITLS_TLS_PROTO_DTLS13
@@ -171,16 +163,28 @@ static int32_t CheckDecryptionLimits(TLS_Ctx *ctx, RecConnState *state)
     return HITLS_SUCCESS;
 }
 
-static bool IsNeedtoRead(const TLS_Ctx *ctx, const RecBuf *inBuf)
+static bool IsNeedtoRead(const TLS_Ctx *ctx, const RecBuf *inBuf, RecHdr *hdr)
 {
+    (void)ctx;
+    (void)hdr;
     uint32_t headLen = REC_TLS_RECORD_HEADER_LEN;
-#if defined(HITLS_TLS_PROTO_DTLS12) || defined(HITLS_TLS_PROTO_DTLS13) // dtls13 ?
+    uint32_t remain = inBuf->end - inBuf->start;
+#if defined(HITLS_TLS_PROTO_DATAGRAM)
     if (IS_SUPPORT_DATAGRAM(ctx->config.tlsConfig.originVersionMask)) {
-        headLen = REC_DTLS_RECORD_HEADER_LEN;
+        if (remain == 0) {
+            return true;
+        }
+        uint8_t *msg = &inBuf->buf[inBuf->start];
+        headLen = RecGetReadHeaderLen(msg[0],
+#ifdef HITLS_TLS_PROTO_DTLS13
+        hdr->cidLen
+#else
+        0
+#endif
+        );
     }
 #endif
     uint32_t lengthOffset = headLen - sizeof(uint16_t);
-    uint32_t remain = inBuf->end - inBuf->start;
     if (remain < headLen) {
         return true;
     }
@@ -203,6 +207,7 @@ bool REC_HaveReadSuiteInfo(const TLS_Ctx *ctx)
 static REC_Type RecCastUintToRecType(TLS_Ctx *ctx, uint8_t value, uint16_t epoch)
 {
     (void)ctx;
+    (void)epoch;
     REC_Type type;
     /* Convert to the record type */
     switch (value) {
@@ -225,20 +230,20 @@ static REC_Type RecCastUintToRecType(TLS_Ctx *ctx, uint8_t value, uint16_t epoch
             type = REC_TYPE_UNKNOWN;
             break;
     }
-#if defined(HITLS_TLS_PROTO_TLS13) || defined(HITLS_TLS_PROTO_DTLS13)
+#if defined(HITLS_TLS_PROTO_TLS13_FAMILY)
     RecConnState *state = GetReadConnState(ctx);
     if (epoch == 0 && RecConnGetEpoch(state) == 2 && IS_SUPPORT_DATAGRAM(ctx->config.tlsConfig.originVersionMask)) {
         return type;
     }
 
-    if (IsTls13FamilyVersion(GET_VERSION_FROM_CTX(ctx)) && state->suiteInfo != NULL) {
+    if (IS_TLS13_FAMILY_VERSION(GET_VERSION_FROM_CTX(ctx)) && state->suiteInfo != NULL) {
         if (type != REC_TYPE_APP && type != REC_TYPE_ALERT &&
             (!IS_SUPPORT_DATAGRAM(ctx->config.tlsConfig.originVersionMask) || type != REC_TYPE_ACK) &&
             (type != REC_TYPE_CHANGE_CIPHER_SPEC || ctx->hsCtx == NULL)) {
             type = REC_TYPE_UNKNOWN;
         }
     }
-#endif /* HITLS_TLS_PROTO_TLS13 || HITLS_TLS_PROTO_DTLS13 */
+#endif /* HITLS_TLS_PROTO_TLS13_FAMILY */
     return type;
 }
 #ifdef HITLS_TLS_FEATURE_RECORD_SIZE_LIMIT
@@ -247,7 +252,7 @@ uint32_t REC_GetMaxReadSize(TLS_Ctx *ctx)
     uint32_t readSize = REC_MAX_PLAIN_LENGTH;
     if (ctx != NULL && ctx->negotiatedInfo.recordSizeLimit != 0) {
         readSize = ctx->negotiatedInfo.recordSizeLimit;
-        if (GET_VERSION_FROM_CTX(ctx) == HITLS_VERSION_TLS13) {
+        if (IS_TLS13_FAMILY_VERSION(GET_VERSION_FROM_CTX(ctx))) {
             readSize--;
         }
     }
@@ -272,7 +277,7 @@ static int32_t ProcessDecryptedRecord(TLS_Ctx *ctx, uint32_t dataLen,
             "get a record with invalid length", 0, 0, 0, 0);
         return RecordSendAlertMsg(ctx, ALERT_LEVEL_FATAL, ALERT_UNEXPECTED_MESSAGE);
     }
-    // TODO
+
     if (!IS_SUPPORT_DATAGRAM(ctx->config.tlsConfig.originVersionMask) &&
         ctx->negotiatedInfo.version != HITLS_VERSION_TLS13 &&
         ctx->method.isRecvCCS(ctx) &&
@@ -391,11 +396,11 @@ static int32_t RecordDecrypt(TLS_Ctx *ctx, RecBuf *decryptBuf, REC_TextInput *en
 #endif
             uint32_t seqOffset = 1 + cidLen;
             uint8_t decryptedSn[2];
-            int32_t snRet = Dtls13CryptSequenceNumber(ctx, state->suiteInfo->cipherAlg,
-                state->suiteInfo->snKey, encryptedMsg->text, encryptedMsg->textLen,
-                &encryptedMsg->dtls13Aad[seqOffset], decryptedSn, seqLen);
+            memcpy(decryptedSn, &encryptedMsg->dtls13Aad[seqOffset], seqLen);
+            int32_t snRet = Dtls13CryptSequenceNumber(ctx, state->suiteInfo, encryptedMsg->text,
+                encryptedMsg->textLen, decryptedSn, seqLen);
             if (snRet != HITLS_SUCCESS) {
-                return snRet;
+                return RecordSendAlertMsg(ctx, ALERT_LEVEL_FATAL, ALERT_BAD_RECORD_MAC);
             }
             uint16_t incompleteSeq = (seqLen == 2) ? BSL_ByteToUint16(decryptedSn) : decryptedSn[0];
             uint64_t reconstructedSeq = 0;
@@ -479,8 +484,15 @@ static int32_t RecordDecrypt(TLS_Ctx *ctx, RecBuf *decryptBuf, REC_TextInput *en
         goto ERR;
     }
 #endif
-    bool isDtls13Record = (ctx->negotiatedInfo.version == HITLS_VERSION_DTLS13);
-    if (!IS_SUPPORT_DATAGRAM(ctx->config.tlsConfig.originVersionMask) || (isDtls13Record && REC_EPOCH_GET(BSL_ByteToUint64(encryptedMsg->seq)) > 0)) {
+    bool isDtls13Record = false;
+    bool needDecryptPostProcess = !IS_SUPPORT_DATAGRAM(ctx->config.tlsConfig.originVersionMask);
+#ifdef HITLS_TLS_PROTO_DTLS13
+    isDtls13Record = (ctx->negotiatedInfo.version == HITLS_VERSION_DTLS13);
+    if (isDtls13Record && REC_EPOCH_GET(BSL_ByteToUint64(encryptedMsg->seq)) > 0) {
+        needDecryptPostProcess = true;
+    }
+#endif
+    if (needDecryptPostProcess) {
         ret = funcs->decryptPostProcess(ctx, state->suiteInfo, encryptedMsg, decryptBuf->buf, &decryptBuf->end);
         if (ret != HITLS_SUCCESS) {
             goto ERR;
@@ -548,7 +560,7 @@ static int32_t RecordUnexpectedMsg(TLS_Ctx *ctx, RecBuf *decryptBuf, REC_Type re
     return HITLS_REC_NORMAL_RECV_UNEXPECT_MSG;
 }
 
-#if defined(HITLS_TLS_PROTO_DTLS12) || defined(HITLS_TLS_PROTO_DTLS13)
+#if defined(HITLS_TLS_PROTO_DATAGRAM)
 int32_t DtlsCheckVersionField(const TLS_Ctx *ctx, uint16_t version, uint8_t type)
 {
     if (ctx->negotiatedInfo.version == HITLS_VERSION_DTLS13) {
@@ -565,6 +577,12 @@ int32_t DtlsCheckVersionField(const TLS_Ctx *ctx, uint16_t version, uint8_t type
             "get a record with illegal version(0x%x).", version, 0, 0, 0);
         return HITLS_REC_INVALID_PROTOCOL_VERSION;
     }
+
+#ifdef HITLS_TLS_PROTO_DTLS13
+    if (ctx->negotiatedInfo.version == 0u && IS_DTLS13_CTX(ctx) && version == HITLS_VERSION_DTLS13) {
+        return HITLS_SUCCESS;
+    }
+#endif
 
     /* Tolerate alerts with non-negotiated version. For example, after the server sends server hello, the client
      * replies with an earlier version alert */
@@ -754,16 +772,14 @@ static int32_t Dtls13ProcessCidBit(TLS_Ctx *ctx, const uint8_t *msg,
         memcpy(hdr->cid, &msg[*offset], expectedCidLen);
         hdr->cidLen = expectedCidLen;
         *offset += hdr->cidLen;
-    }
-#ifdef HITLS_TLS_FEATURE_DTLS_CID
-    /* RFC 9147 §4: "If a Connection ID is negotiated, then it MUST be contained in
-     * all datagrams." The C bit is clear despite a non-empty CID being negotiated:
-     * an invalid record (the caller silently discards it; the peer's retransmission
-     * recovers). */
-    else if (expectedCidLen > 0) {
+    } else if (expectedCidLen > 0) {
+        /* RFC 9147 §4: "If a Connection ID is negotiated, then it MUST be contained in
+         * all datagrams." The C bit is clear despite a non-empty CID being negotiated:
+         * an invalid record (the caller silently discards it; the peer's retransmission
+         * recovers). */
         return HITLS_REC_DECODE_ERROR;
     }
-#endif
+
     return HITLS_SUCCESS;
 }
 
@@ -845,8 +861,9 @@ static int32_t DtlsGetRecordHeader(TLS_Ctx *ctx, const uint8_t *msg, uint32_t le
     }
     hdr->headerLen = headerLen;
 #ifdef HITLS_TLS_PROTO_DTLS13
-    if (ctx->negotiatedInfo.version == HITLS_VERSION_DTLS13 &&
-        msg[0] != REC_TYPE_ALERT && msg[0] != REC_TYPE_HANDSHAKE && msg[0] != REC_TYPE_ACK) {
+    if (IS_DTLS13_CTX(ctx) &&
+        msg[0] != REC_TYPE_ALERT && msg[0] != REC_TYPE_HANDSHAKE &&
+        msg[0] != REC_TYPE_ACK && msg[0] != REC_TYPE_CHANGE_CIPHER_SPEC) {
         if (!REC_DTLS13_UNI_HEADER_FIX_BITS_TYPE(msg[0])) {
             return HITLS_REC_DECODE_ERROR;
         }
@@ -884,7 +901,14 @@ static int32_t TryReadOneDtlsRecord(TLS_Ctx *ctx, uint8_t **recordBody, RecHdr *
     int32_t ret;
     /** Obtain the record structure information */
     RecCtx *recordCtx = (RecCtx *)ctx->recCtx;
-    if (IsNeedtoRead(ctx, recordCtx->inBuf)) {
+#ifdef HITLS_TLS_PROTO_DTLS13
+#ifdef HITLS_TLS_FEATURE_DTLS_CID
+    hdr->cidLen = ctx->negotiatedInfo.isCidNegotiated ? ctx->negotiatedInfo.localCidEntry.cidLen : 0;
+#else
+    hdr->cidLen = 0;
+#endif
+#endif
+    if (IsNeedtoRead(ctx, recordCtx->inBuf, hdr)) {
         ret = RecDerefBufList(ctx);
         if (ret != HITLS_SUCCESS) {
             return ret;
@@ -897,13 +921,6 @@ static int32_t TryReadOneDtlsRecord(TLS_Ctx *ctx, uint8_t **recordBody, RecHdr *
     }
     uint8_t *msg = &recordCtx->inBuf->buf[recordCtx->inBuf->start];
     uint32_t len = recordCtx->inBuf->end - recordCtx->inBuf->start;
-#ifdef HITLS_TLS_PROTO_DTLS13
-#ifdef HITLS_TLS_FEATURE_DTLS_CID
-    hdr->cidLen = ctx->negotiatedInfo.isCidNegotiated ? ctx->negotiatedInfo.localCidEntry.cidLen : 0;
-#else
-    hdr->cidLen = 0;
-#endif
-#endif
     ret = DtlsGetRecordHeader(ctx, msg, len, hdr);
     if (ret != HITLS_SUCCESS) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17262, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
@@ -957,7 +974,7 @@ static inline void GenerateCryptMsg(const TLS_Ctx *ctx,
 #endif
 }
 
-#if (defined(HITLS_TLS_PROTO_DTLS12) || defined(HITLS_TLS_PROTO_DTLS13)) && defined(HITLS_BSL_UIO_UDP)
+#if defined(HITLS_TLS_PROTO_DATAGRAM) && defined(HITLS_BSL_UIO_UDP)
 static bool IsExistUnprocessedMsg(RecCtx *recCtx)
 {
     UnprocessedMsg *UnprocessedMsgList = &recCtx->UnprocessedMsgList;
@@ -991,7 +1008,7 @@ int32_t RecordBufferUnprocessedMsg(RecCtx *recordCtx, RecHdr *hdr, uint8_t *reco
         "recv normal disorder message", 0, 0, 0, 0);
     return HITLS_REC_NORMAL_RECV_DISORDER_MSG;
 }
-#endif /* (HITLS_TLS_PROTO_DTLS12 || HITLS_TLS_PROTO_DTLS13) && HITLS_BSL_UIO_UDP */
+#endif /* HITLS_TLS_PROTO_DATAGRAM && HITLS_BSL_UIO_UDP */
 
 static int32_t DtlsRecordHeaderProcess(TLS_Ctx *ctx, uint8_t *recordBody, RecHdr *hdr)
 {
@@ -1005,8 +1022,8 @@ static int32_t DtlsRecordHeaderProcess(TLS_Ctx *ctx, uint8_t *recordBody, RecHdr
     }
     uint16_t epoch = REC_EPOCH_GET(hdr->epochSeq);
     if (epoch != recordCtx->readEpoch) {
-#if defined(HITLS_TLS_PROTO_TLS13) || defined(HITLS_TLS_PROTO_DTLS13)
-        if (IsTls13FamilyVersion(ctx->negotiatedInfo.version) &&
+#if defined(HITLS_TLS_PROTO_TLS13_FAMILY)
+        if (IS_TLS13_FAMILY_CTX(ctx) &&
             hdr->type == REC_TYPE_CHANGE_CIPHER_SPEC && epoch == 0) {
             return HITLS_SUCCESS;
         }
@@ -1018,7 +1035,7 @@ static int32_t DtlsRecordHeaderProcess(TLS_Ctx *ctx, uint8_t *recordBody, RecHdr
         }
 #endif /* HITLS_BSL_UIO_SCTP */
 #if defined(HITLS_TLS_PROTO_DTLS13) && defined(HITLS_BSL_UIO_UDP)
-        if (ctx->negotiatedInfo.version == HITLS_VERSION_DTLS13) {
+        if (IS_DTLS13_CTX(ctx)) {
             if (recordCtx->readEpoch == 0 && epoch == 2 && ctx->isClient) {
                 return RecordBufferUnprocessedMsg(recordCtx, hdr, recordBody);
             }
@@ -1059,10 +1076,10 @@ static uint8_t *GetUnprocessedMsg(RecCtx *recordCtx, REC_Type recordType, RecHdr
     (void)recordType;
     (void)hdr;
     uint8_t *recordBody = NULL;
-#if (defined(HITLS_TLS_PROTO_DTLS12) || defined(HITLS_TLS_PROTO_DTLS13)) && defined(HITLS_BSL_UIO_UDP)
+#if defined(HITLS_TLS_PROTO_DATAGRAM) && defined(HITLS_BSL_UIO_UDP)
     uint16_t curEpoch = recordCtx->readEpoch;
     if (IsExistUnprocessedMsg(recordCtx)) {
-        UnprocessedMsg *appMsg = UnprocessedMsgGet(&recordCtx->UnprocessedMsgList, curEpoch);
+        UnprocessedMsg *appMsg = UnprocessedMsgGet(&recordCtx->UnprocessedMsgList, curEpoch, recordType);
         if (appMsg == NULL) {
             return NULL;
         }
@@ -1075,7 +1092,7 @@ static uint8_t *GetUnprocessedMsg(RecCtx *recordCtx, REC_Type recordType, RecHdr
     return recordBody;
 }
 
-#if (defined(HITLS_TLS_PROTO_DTLS12) || defined(HITLS_TLS_PROTO_DTLS13)) && defined(HITLS_BSL_UIO_UDP) && \
+#if defined(HITLS_TLS_PROTO_DATAGRAM) && defined(HITLS_BSL_UIO_UDP) && \
     defined(HITLS_TLS_FEATURE_ANTI_REPLAY)
 static int32_t AntiReplay(TLS_Ctx *ctx, RecHdr *hdr)
 {
@@ -1203,8 +1220,8 @@ int32_t DtlsRecordRead(TLS_Ctx *ctx, REC_Type recordType, uint8_t *data, uint32_
     if (ret != HITLS_SUCCESS) {
         return ret;
     }
-#if defined(HITLS_TLS_PROTO_TLS13) || defined(HITLS_TLS_PROTO_DTLS13)
-    if (IsTls13FamilyVersion(ctx->negotiatedInfo.version) &&
+#if defined(HITLS_TLS_PROTO_TLS13_FAMILY)
+    if (IS_TLS13_FAMILY_CTX(ctx) &&
         hdr.type == REC_TYPE_CHANGE_CIPHER_SPEC) {
         BSL_SAL_FREE(cachRecord);
         return HITLS_REC_NORMAL_RECV_BUF_EMPTY;
@@ -1233,24 +1250,26 @@ int32_t DtlsRecordRead(TLS_Ctx *ctx, REC_Type recordType, uint8_t *data, uint32_
         /* RFC 9147 The window MUST NOT be updated due to a received record until that record has been deprotected successfully. */
         ret = AntiReplay(ctx, &hdr);
         if (ret != HITLS_SUCCESS) {
+            if (decryptBuf.isHoldBuffer) {
+                BSL_SAL_FREE(decryptBuf.buf);
+            }
             return ret;
         }
     }
 #endif
-    if (cryptMsg.type != REC_TYPE_ACK) {
-        ctx->recCtx->lastReadEpochSeq = hdr.epochSeq;
-        ctx->recCtx->hasLastReadEpochSeq = true;
-    }
 #ifdef HITLS_TLS_PROTO_DTLS13
     if (IS_DTLS13_CTX(ctx) && IS_SUPPORT_DATAGRAM(ctx->config.tlsConfig.originVersionMask) &&
         cryptMsg.type == REC_TYPE_HANDSHAKE) {
         ret = Dtls13HandleHandshakeAck(ctx, &hdr);
         if (ret != HITLS_SUCCESS) {
+            if (decryptBuf.isHoldBuffer) {
+                BSL_SAL_FREE(decryptBuf.buf);
+            }
             return ret;
         }
     }
 #endif
-#if (defined(HITLS_TLS_PROTO_DTLS12) || defined(HITLS_TLS_PROTO_DTLS13)) && defined(HITLS_BSL_UIO_UDP) && \
+#if defined(HITLS_TLS_PROTO_DATAGRAM) && defined(HITLS_BSL_UIO_UDP) && \
     defined(HITLS_TLS_FEATURE_ANTI_REPLAY)
     /* In UDP scenarios, update the sliding window flag */
     if (BSL_UIO_GetUioChainTransportType(ctx->uio, BSL_UIO_UDP) && REC_EPOCH_GET(hdr.epochSeq) != 0) {
@@ -1264,6 +1283,9 @@ int32_t DtlsRecordRead(TLS_Ctx *ctx, REC_Type recordType, uint8_t *data, uint32_
                 if (outdated != NULL) {
                     state = outdated;
                 } else {
+                    if (decryptBuf.isHoldBuffer) {
+                        BSL_SAL_FREE(decryptBuf.buf);
+                    }
                     return HITLS_REC_DECODE_ERROR;
                 }
             }
@@ -1296,7 +1318,6 @@ int32_t DtlsRecordRead(TLS_Ctx *ctx, REC_Type recordType, uint8_t *data, uint32_
     }
 #endif
     /* An unexpected packet is received */
-    // decryptBuf.isHoldBuffer == false
     if (recordType != cryptMsg.type) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16513, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
                               "REC_Type: expect %d, receive  %d", recordType, cryptMsg.type, 0, 0);
@@ -1314,33 +1335,7 @@ int32_t DtlsRecordRead(TLS_Ctx *ctx, REC_Type recordType, uint8_t *data, uint32_
     return RecBufListGetBuffer(bufList, data, bufSize, len, (ctx->peekFlag != 0 && (recordType == REC_TYPE_APP)));
 }
 
-#endif /* HITLS_TLS_PROTO_DTLS12 || HITLS_TLS_PROTO_DTLS13 */
-
-int32_t REC_GetLastReadRecordNum(const TLS_Ctx *ctx, RecordNumber *recordNum)
-{
-#if defined(HITLS_TLS_PROTO_DTLS12) || defined(HITLS_TLS_PROTO_DTLS13)
-    if (ctx == NULL || ctx->recCtx == NULL || recordNum == NULL) {
-        BSL_ERR_PUSH_ERROR(HITLS_NULL_INPUT);
-        return HITLS_NULL_INPUT;
-    }
-    if (!IS_SUPPORT_DATAGRAM(ctx->config.tlsConfig.originVersionMask)) {
-        BSL_ERR_PUSH_ERROR(HITLS_INTERNAL_EXCEPTION);
-        return HITLS_INTERNAL_EXCEPTION;
-    }
-    if (!ctx->recCtx->hasLastReadEpochSeq) {
-        BSL_ERR_PUSH_ERROR(HITLS_INTERNAL_EXCEPTION);
-        return HITLS_INTERNAL_EXCEPTION;
-    }
-    recordNum->epoch = REC_EPOCH_GET(ctx->recCtx->lastReadEpochSeq);
-    recordNum->sequenceNumber = REC_SEQ_GET(ctx->recCtx->lastReadEpochSeq);
-    return HITLS_SUCCESS;
-#else
-    (void)ctx;
-    (void)recordNum;
-    BSL_ERR_PUSH_ERROR(HITLS_MSG_HANDLE_UNSUPPORT_VERSION);
-    return HITLS_MSG_HANDLE_UNSUPPORT_VERSION;
-#endif
-}
+#endif /* HITLS_TLS_PROTO_DATAGRAM */
 
 #ifdef HITLS_TLS_PROTO_TLS
 static int32_t VersionProcess(TLS_Ctx *ctx, uint16_t version, uint8_t type)
@@ -1411,8 +1406,8 @@ int32_t TlsCheckRecordHeader(TLS_Ctx *ctx, const RecHdr *recordHdr)
             return ret;
         }
     }
-#if defined(HITLS_TLS_PROTO_TLS13) || defined(HITLS_TLS_PROTO_DTLS13)
-    if ((ctx->negotiatedInfo.version == HITLS_VERSION_TLS13 || ctx->negotiatedInfo.version == HITLS_VERSION_DTLS13) && recordHdr->bodyLen > REC_MAX_TLS13_ENCRYPTED_LEN) {
+#if defined(HITLS_TLS_PROTO_TLS13_FAMILY)
+    if (IS_TLS13_FAMILY_CTX(ctx) && recordHdr->bodyLen > REC_MAX_TLS13_ENCRYPTED_LEN) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16125, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "get a record with invalid length", 0, 0, 0, 0);
         return RecordSendAlertMsg(ctx, ALERT_LEVEL_FATAL, ALERT_RECORD_OVERFLOW);
@@ -1507,7 +1502,7 @@ int32_t TryReadOneTlsRecord(TLS_Ctx *ctx, uint8_t **recordBody, RecHdr *recHeade
 {
     /* Buffer for reading data */
     RecBuf *inBuf = ctx->recCtx->inBuf;
-    if (IsNeedtoRead(ctx, inBuf)) {
+    if (IsNeedtoRead(ctx, inBuf, recHeader)) {
         RecDerefBufList(ctx);
     }
     // read record header

@@ -40,7 +40,7 @@ static int32_t UIO_Init(TLS_Ctx *ctx)
         return HITLS_MEMALLOC_FAIL;
     }
 
-#if (defined(HITLS_TLS_PROTO_DTLS12) || defined(HITLS_TLS_PROTO_DTLS13)) && defined(HITLS_BSL_UIO_UDP)
+#if defined(HITLS_TLS_PROTO_DATAGRAM) && defined(HITLS_BSL_UIO_UDP)
     uint32_t bufferLen = (uint32_t)ctx->config.pmtu;
     if (IS_SUPPORT_DATAGRAM(ctx->config.tlsConfig.originVersionMask) &&
         BSL_UIO_GetUioChainTransportType(ctx->uio, BSL_UIO_UDP)) {
@@ -138,7 +138,7 @@ int32_t NewHsCtxConfig(TLS_Ctx *ctx, HS_Ctx *hsCtx)
     if (hsCtx->kxCtx == NULL) {
         return RETURN_ERROR_NUMBER_PROCESS(HITLS_MEMALLOC_FAIL, BINLOG_ID17180, "KeyExchCtxNew fail");
     }
-#if defined(HITLS_TLS_PROTO_TLS13) || defined(HITLS_TLS_PROTO_DTLS13)
+#if defined(HITLS_TLS_PROTO_TLS13_FAMILY)
     hsCtx->firstClientHello = NULL;
 #endif
 #ifdef HITLS_TLS_FEATURE_INDICATOR
@@ -197,13 +197,13 @@ void HS_DeInit(TLS_Ctx *ctx)
     HS_CleanMsg(ctx->hsCtx->hsMsg);
     BSL_SAL_FREE(ctx->hsCtx->hsMsg);
     BSL_SAL_FREE(hsCtx->msgBuf);
-#if defined(HITLS_TLS_FEATURE_SESSION) || defined(HITLS_TLS_PROTO_TLS13)
+#if defined(HITLS_TLS_FEATURE_SESSION) || defined(HITLS_TLS_PROTO_TLS13_FAMILY)
     BSL_SAL_FREE(hsCtx->sessionId);
-#endif /* HITLS_TLS_FEATURE_SESSION || HITLS_TLS_PROTO_TLS13 */
+#endif /* HITLS_TLS_FEATURE_SESSION || HITLS_TLS_PROTO_TLS13_FAMILY */
 #ifdef HITLS_TLS_FEATURE_SESSION_TICKET
     BSL_SAL_FREE(hsCtx->ticket);
 #endif /* HITLS_TLS_FEATURE_SESSION_TICKET */
-#if defined(HITLS_TLS_PROTO_TLS13) || defined(HITLS_TLS_PROTO_DTLS13)
+#if defined(HITLS_TLS_PROTO_TLS13_FAMILY)
     if (ctx->hsCtx->firstClientHello != NULL) {
         HS_Msg hsMsg = {0};
         hsMsg.type = CLIENT_HELLO;
@@ -214,7 +214,7 @@ void HS_DeInit(TLS_Ctx *ctx)
 #endif
 	/* clear sensitive information */
     BSL_SAL_CleanseData(hsCtx->masterKey, MAX_DIGEST_SIZE);
-#if defined(HITLS_TLS_PROTO_TLS13) || defined(HITLS_TLS_PROTO_DTLS13)
+#if defined(HITLS_TLS_PROTO_TLS13_FAMILY)
     BSL_SAL_CleanseData(ctx->hsCtx->earlySecret, MAX_DIGEST_SIZE);
     BSL_SAL_CleanseData(ctx->hsCtx->handshakeSecret, MAX_DIGEST_SIZE);
     BSL_SAL_CleanseData(ctx->hsCtx->serverHsTrafficSecret, MAX_DIGEST_SIZE);
@@ -231,6 +231,11 @@ void HS_DeInit(TLS_Ctx *ctx)
         UIO_Deinit(ctx);
     }
 #endif /* HITLS_TLS_FEATURE_FLIGHT */
+#ifdef HITLS_TLS_PROTO_DTLS12
+    if (GET_VERSION_FROM_CTX(ctx) == HITLS_VERSION_DTLS12) {
+        HS_ReassQueueClear(ctx);
+    }
+#endif /* HITLS_TLS_PROTO_DTLS12 */
     HS_KeyExchCtxFree(hsCtx->kxCtx);
     BSL_SAL_FREE(ctx->hsCtx);
     return;

@@ -13,7 +13,7 @@
  * See the Mulan PSL v2 for more details.
  */
 #include "hitls_build.h"
-#ifdef HITLS_TLS_PROTO_TLS13
+#if defined(HITLS_TLS_PROTO_TLS13_FAMILY)
 #include <stdbool.h>
 #include <string.h>
 #include "bsl_err_internal.h"
@@ -689,4 +689,4 @@ int32_t HS_TLS13UpdateTrafficSecret(TLS_Ctx *ctx, bool isOut)
     return HS_SwitchTrafficKey(ctx, baseKey, baseKeyLen, isOut);
 }
 #endif /* HITLS_TLS_FEATURE_KEY_UPDATE */
-#endif /* HITLS_TLS_PROTO_TLS13 */
+#endif /* HITLS_TLS_PROTO_TLS13_FAMILY */

@@ -156,7 +156,7 @@ static int32_t ProcessSendHandshakeMsg(TLS_Ctx *ctx)
 int32_t Tls13SendChangeCipherSpecProcess(TLS_Ctx *ctx)
 {
     int32_t ret;
-#if defined(HITLS_TLS_PROTO_DTLS12)
+#if defined(HITLS_TLS_PROTO_DATAGRAM)
     if (IS_SUPPORT_DATAGRAM(ctx->config.tlsConfig.originVersionMask)) {
         return HS_ChangeState(ctx, ctx->hsCtx->ccsNextState);
     }
@@ -168,8 +168,9 @@ int32_t Tls13SendChangeCipherSpecProcess(TLS_Ctx *ctx)
     }
     return HS_ChangeState(ctx, ctx->hsCtx->ccsNextState);
 }
+#endif /* HITLS_TLS_PROTO_TLS13 */
 
-#ifdef HITLS_TLS_FEATURE_DTLS_CID
+#if defined(HITLS_TLS_PROTO_DTLS13) && defined(HITLS_TLS_FEATURE_DTLS_CID)
 /*
  * Pack once, then rely on the normal handshake send buffer for retransmission.
  * HITLS_NewConnectionId has already pinned the candidate CIDs in recv slots and
@@ -222,8 +223,7 @@ static int32_t Dtls13SendRequestConnectionIdProcess(TLS_Ctx *ctx)
     ctx->reqCidState = DTLS_CID_MSG_STATE_SENT;
     return HS_ChangeState(ctx, TLS_CONNECTED);
 }
-#endif /* HITLS_TLS_FEATURE_DTLS_CID */
-#endif /* HITLS_TLS_PROTO_TLS13 */
+#endif /* HITLS_TLS_PROTO_DTLS13 && HITLS_TLS_FEATURE_DTLS_CID */
 
 #ifdef HITLS_TLS_PROTO_DTLS13
 static int32_t Dtls13SendAckProcess(TLS_Ctx *ctx)
@@ -233,6 +233,7 @@ static int32_t Dtls13SendAckProcess(TLS_Ctx *ctx)
         return ret;
     }
 
+    HS_StopTimer(ctx);
     ret = HS_Start2MslTimer(ctx);
     if (ret != HITLS_SUCCESS) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17388, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
@@ -253,7 +254,7 @@ static int32_t Dtls13SendAckProcess(TLS_Ctx *ctx)
 }
 #endif /* HITLS_TLS_PROTO_DTLS13 */
 
-#if defined(HITLS_TLS_PROTO_TLS13) || defined(HITLS_TLS_PROTO_DTLS13)
+#if defined(HITLS_TLS_PROTO_TLS13_FAMILY)
 static int32_t Tls13ProcessSendHandshakeMsg(TLS_Ctx *ctx)
 {
     switch (ctx->hsCtx->state) {
@@ -307,7 +308,7 @@ static int32_t Tls13ProcessSendHandshakeMsg(TLS_Ctx *ctx)
         case TRY_SEND_ACK:
             return Dtls13SendAckProcess(ctx);
 #endif /* HITLS_TLS_PROTO_DTLS13 */
-#ifdef HITLS_TLS_FEATURE_DTLS_CID
+#if defined(HITLS_TLS_PROTO_DTLS13) && defined(HITLS_TLS_FEATURE_DTLS_CID)
         case TRY_SEND_NEW_CONNECTION_ID:
             return Dtls13SendNewConnectionIdProcess(ctx);
         case TRY_SEND_REQUEST_CONNECTION_ID:
@@ -317,7 +318,7 @@ static int32_t Tls13ProcessSendHandshakeMsg(TLS_Ctx *ctx)
             return RETURN_ERROR_NUMBER_PROCESS(HITLS_MSG_HANDLE_STATE_ILLEGAL, BINLOG_ID17101, "Handshake state error");
     }
 }
-#endif /* HITLS_TLS_PROTO_TLS13 || HITLS_TLS_PROTO_DTLS13 */
+#endif /* HITLS_TLS_PROTO_TLS13_FAMILY */
 int32_t HS_SendMsgProcess(TLS_Ctx *ctx)
 {
     uint32_t version = GET_VERSION_FROM_CTX(ctx);
@@ -336,11 +337,11 @@ int32_t HS_SendMsgProcess(TLS_Ctx *ctx)
 #endif
             return ProcessSendHandshakeMsg(ctx);
 #endif /* HITLS_TLS_PROTO_TLS_BASIC */
-#if defined(HITLS_TLS_PROTO_TLS13) || defined(HITLS_TLS_PROTO_DTLS13)
+#if defined(HITLS_TLS_PROTO_TLS13_FAMILY)
         case HITLS_VERSION_TLS13:
         case HITLS_VERSION_DTLS13:
             return Tls13ProcessSendHandshakeMsg(ctx);
-#endif /* HITLS_TLS_PROTO_TLS13 || HITLS_TLS_PROTO_DTLS13 */
+#endif /* HITLS_TLS_PROTO_TLS13_FAMILY */
 #ifdef HITLS_TLS_PROTO_DTLS12
         case HITLS_VERSION_DTLS12:
             return ProcessSendHandshakeMsg(ctx);

@@ -272,14 +272,14 @@ int32_t FRAME_CreateConnection(FRAME_LinkObj *client, FRAME_LinkObj *server, boo
             ret = HITLS_Read(client->ssl, readBuf, READ_BUF_SIZE, &readLen);
             // No application data. return HITLS_REC_NORMAL_RECV_BUF_EMPTY
             if (ret != HITLS_REC_NORMAL_RECV_BUF_EMPTY) {
-                return ret;
+                break;
             }
         }
 
         if (clientRet == HITLS_SUCCESS && client->ssl->config.tlsConfig.maxVersion == HITLS_VERSION_DTLS13) {
             ret = FrameDrainDtls13PostHandshake(client, server);
             if (ret != HITLS_SUCCESS) {
-                return ret;
+                break;
             }
         }
 

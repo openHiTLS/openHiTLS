@@ -470,6 +470,7 @@ option(HITLS_TLS_PROTO_VERSION                                 "TLS Protocol Ver
   option(HITLS_TLS_PROTO_TLS13                                   "TLS Protocol TLS 1.3" OFF)
   option(HITLS_TLS_PROTO_TLCP11                                  "TLS Protocol TLCP 1.1" OFF)
   option(HITLS_TLS_PROTO_DTLS12                                  "TLS Protocol DTLS 1.2" OFF)
+  option(HITLS_TLS_PROTO_DTLS13                                  "TLS Protocol DTLS 1.3" OFF)
   option(HITLS_TLS_PROTO_DTLCP11                                 "TLS Protocol DTLCP 1.1" OFF)
 
 ## TLS Host
@@ -527,6 +528,7 @@ option(HITLS_TLS_FEATURE                                       "TLS Feature" OFF
   option(HITLS_TLS_FEATURE_DEFAULT_COOKIE                        "TLS Feature Default Cookie" OFF)
   option(HITLS_TLS_FEATURE_ETM                                   "TLS Feature Encrypt-Then-MAC" OFF)
   option(HITLS_TLS_FEATURE_CUSTOM_REC_TYPE                       "TLS Feature Custom Record Type" OFF)
+  option(HITLS_TLS_FEATURE_DTLS_CID                            "TLS Feature DTLS Connection ID (RFC 9146/9147)" OFF)
 
 ## TLS Proto Module
 option(HITLS_TLS_PROTO                                         "TLS Proto Module" OFF)

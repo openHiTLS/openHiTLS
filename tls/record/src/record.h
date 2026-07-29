@@ -16,11 +16,7 @@
 #ifndef RECORD_H
 #define RECORD_H
 
-#include <stdint.h>
-#include <string.h>
 #include "tls.h"
-#include "bsl_sal.h"
-#include "hitls_error.h"
 #include "rec.h"
 #include "rec_header.h"
 #include "rec_unprocessed_msg.h"
@@ -56,39 +52,6 @@ extern "C" {
 
 #define REC_DTLS13_ACK_ITEM_LEN (sizeof(uint64_t) * 2u)
 #define REC_DTLS13_ACK_LIST_MAX_COUNT 128u
-#define REC_DYN_ARRAY_INIT_CAP 4u
-#define REC_DYN_ARRAY_MAX_COUNT(elemType) (UINT32_MAX / (uint32_t)sizeof(elemType))
-
-#define REC_DYN_ARRAY_GROW(arr, count, cap, elemType, maxCap) do {                        \
-    if ((count) == (cap)) {                                                               \
-        uint32_t maxCap_ = (maxCap);                                                      \
-        uint32_t typeMaxCap_ = REC_DYN_ARRAY_MAX_COUNT(elemType);                         \
-        if (maxCap_ > typeMaxCap_) {                                                      \
-            maxCap_ = typeMaxCap_;                                                        \
-        }                                                                                 \
-        uint32_t newCap_ = REC_DYN_ARRAY_INIT_CAP;                                        \
-        if ((cap) != 0) {                                                                 \
-            newCap_ = ((cap) > maxCap_ / 2u) ? maxCap_ : ((cap) * 2u);                     \
-        }                                                                                 \
-        if (newCap_ > maxCap_) {                                                          \
-            newCap_ = maxCap_;                                                            \
-        }                                                                                 \
-        if (newCap_ == 0 || newCap_ <= (cap)) {                                           \
-            return HITLS_MEMALLOC_FAIL;                                                   \
-        }                                                                                 \
-        elemType *newArr_ = (elemType *)BSL_SAL_Malloc(                                   \
-            newCap_ * (uint32_t)sizeof(elemType));                                        \
-        if (newArr_ == NULL) {                                                            \
-            return HITLS_MEMALLOC_FAIL;                                                   \
-        }                                                                                 \
-        if ((arr) != NULL) {                                                              \
-            (void)memcpy(newArr_, (arr), (count) * sizeof(elemType));                      \
-            BSL_SAL_FREE(arr);                                                            \
-        }                                                                                 \
-        (arr) = newArr_;                                                                  \
-        (cap) = newCap_;                                                                  \
-    }                                                                                     \
-} while (0)
 
 typedef struct {
     RecConnState *outdatedState;
@@ -120,7 +83,7 @@ typedef struct {
     uint32_t seqMapCap;
 } Dtls13AckState;
 
-typedef struct {
+struct RecRetransmitList {
     ListHead head; /* Linked list header */
     bool isExistCcsMsg; /* Check whether CCS messages exist in the retransmission message queue */
     REC_Type type; /* message type */
@@ -130,12 +93,11 @@ typedef struct {
     uint8_t hsType;         /* DTLS1.3 handshake message type */
     uint16_t epoch; /* DTLS1.3 message epoch */
     uint64_t nextRecordSeq; /* DTLS1.3 next record sequence used when the original write state is gone */
-    uint16_t hsSeq; /* DTLS1.3 handshake message sequence */
     uint32_t bodyLen; /* DTLS1.3 handshake body length */
     Dtls13AckState ackState;
     REC_Dtls13RetransmitAckCb ackCb; /* DTLS1.3 callback after this node is fully ACKed */
 #endif
-} RecRetransmitList;
+};
 
 typedef struct RecCtx {
     RecBuf *inBuf; /* Buffer for reading data */
@@ -145,24 +107,22 @@ typedef struct RecCtx {
     RecBufList *hsRecList; /* hs plaintext data cache */
     RecBufList *appRecList; /* app plaintext data cache */
     uint32_t emptyRecordCnt; /* Count of empty records */
-#if defined(HITLS_TLS_PROTO_DTLS12) || defined(HITLS_TLS_PROTO_DTLS13)
+#if defined(HITLS_TLS_PROTO_DATAGRAM)
     uint16_t writeEpoch;
     uint16_t readEpoch;
     uint64_t lastWriteEpochSeq;
     bool hasLastWriteEpochSeq;
-    uint64_t lastReadEpochSeq;
-    bool hasLastReadEpochSeq;
 #endif
 #ifdef HITLS_TLS_PROTO_DTLS13
     Dtls13AckList ackList;
     Dtls13AckList retransAckList;
     bool needSendRetransAck;
 #endif
-#if defined(HITLS_TLS_PROTO_DTLS12) || defined(HITLS_TLS_PROTO_DTLS13)
+#if defined(HITLS_TLS_PROTO_DATAGRAM)
     RecRetransmitList retransmitList; /* Cache the messages that may be retransmitted during the handshake */
 #endif
 
-#if defined(HITLS_TLS_PROTO_DTLS12) || defined(HITLS_TLS_PROTO_DTLS13)
+#if defined(HITLS_TLS_PROTO_DATAGRAM)
     /* unprocessed app message: app messages received in the CCS and finished receiving phases */
     UnprocessedMsg UnprocessedMsgList;
 #endif
@@ -207,8 +167,6 @@ void RecTryFreeRecBuf(TLS_Ctx *ctx, bool isOut);
  * @retval  HITLS_MEMALLOC_FAIL malloc fail
  */
 int32_t RecIoBufInit(TLS_Ctx *ctx, RecCtx *recordCtx, bool isRead);
-int32_t RecRetransmitListAppendNode(RecCtx *recCtx, REC_Type type, const uint8_t *msg, uint32_t len,
-                                    RecRetransmitList **retransmitNode);
 #ifdef __cplusplus
 }
 #endif

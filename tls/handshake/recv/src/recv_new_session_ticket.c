@@ -33,11 +33,6 @@
 #include "session_mgr.h"
 #endif /* HITLS_TLS_FEATURE_SESSION */
 
-static bool IsTls13FamilyVersion(uint16_t version)
-{
-    return version == HITLS_VERSION_TLS13 || version == HITLS_VERSION_DTLS13;
-}
-
 static int32_t UpdateTicket(TLS_Ctx *ctx, NewSessionTicketMsg *msg, uint8_t *psk, uint32_t pskSize)
 {
     HITLS_Session *newSession = SESS_Copy(ctx->session);
@@ -51,7 +46,7 @@ static int32_t UpdateTicket(TLS_Ctx *ctx, NewSessionTicketMsg *msg, uint8_t *psk
     SESS_SetStartTime(newSession, (uint64_t)BSL_SAL_CurrentSysTimeGet());
     HITLS_SESS_SetTimeout(newSession, msg->ticketLifetimeHint);
 
-    if (IsTls13FamilyVersion(ctx->negotiatedInfo.version)) {
+    if (IS_TLS13_FAMILY_CTX(ctx)) {
         SESS_SetTicketAgeAdd(newSession, msg->ticketAgeAdd);
         HITLS_SESS_SetMasterKey(newSession, psk, pskSize);
     }
@@ -67,8 +62,8 @@ static int32_t UpdateTicket(TLS_Ctx *ctx, NewSessionTicketMsg *msg, uint8_t *psk
     HITLS_SESS_Free(ctx->session);
     ctx->session = newSession;
 
-#if defined(HITLS_TLS_FEATURE_SESSION) && (defined(HITLS_TLS_PROTO_TLS13) || defined(HITLS_TLS_PROTO_DTLS13))
-    if (!IsTls13FamilyVersion(ctx->negotiatedInfo.version)) {
+#if defined(HITLS_TLS_FEATURE_SESSION) && defined(HITLS_TLS_PROTO_TLS13_FAMILY)
+    if (!IS_TLS13_FAMILY_CTX(ctx)) {
         return HITLS_SUCCESS;
     }
     HITLS_SESS_CACHE_MODE mode = SESSMGR_GetCacheMode(ctx->globalConfig->sessMgr);
@@ -89,7 +84,7 @@ static int32_t UpdateTicket(TLS_Ctx *ctx, NewSessionTicketMsg *msg, uint8_t *psk
             HITLS_SESS_Free(newSession);
         }
     }
-#endif /* HITLS_TLS_FEATURE_SESSION && (HITLS_TLS_PROTO_TLS13 || HITLS_TLS_PROTO_DTLS13) */
+#endif /* HITLS_TLS_FEATURE_SESSION && HITLS_TLS_PROTO_TLS13_FAMILY */
     return HITLS_SUCCESS;
 }
 #ifdef HITLS_TLS_PROTO_TLS_BASIC
@@ -134,7 +129,7 @@ int32_t Tls12ClientRecvNewSeesionTicketProcess(TLS_Ctx *ctx, HS_Msg *hsMsg)
     return HS_ChangeState(ctx, TRY_RECV_FINISH);
 }
 #endif /* HITLS_TLS_PROTO_TLS_BASIC */
-#if defined(HITLS_TLS_PROTO_TLS13) || defined(HITLS_TLS_PROTO_DTLS13)
+#if defined(HITLS_TLS_PROTO_TLS13_FAMILY)
 int32_t Tls13ClientRecvNewSessionTicketProcess(TLS_Ctx *ctx, HS_Msg *hsMsg)
 {
     if (!ctx->isClient) {
@@ -177,5 +172,5 @@ int32_t Tls13ClientRecvNewSessionTicketProcess(TLS_Ctx *ctx, HS_Msg *hsMsg)
 
     return HS_ChangeState(ctx, TLS_CONNECTED);
 }
-#endif /* HITLS_TLS_PROTO_TLS13 || HITLS_TLS_PROTO_DTLS13 */
+#endif /* HITLS_TLS_PROTO_TLS13_FAMILY */
 #endif /* HITLS_TLS_FEATURE_SESSION_TICKET */

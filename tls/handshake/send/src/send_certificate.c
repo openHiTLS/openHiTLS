@@ -78,22 +78,7 @@ int32_t SendCertificateProcess(TLS_Ctx *ctx)
     return HS_ChangeState(ctx, TRY_SEND_SERVER_HELLO_DONE);
 }
 #endif /* HITLS_TLS_PROTO_TLS_BASIC || HITLS_TLS_PROTO_DTLS12 */
-#if defined(HITLS_TLS_PROTO_TLS13) || defined(HITLS_TLS_PROTO_DTLS13)
-static bool Tls13ClientNeedActivateHsWriteKey(const TLS_Ctx *ctx)
-{
-#ifdef HITLS_TLS_PROTO_DTLS13
-    if (ctx->negotiatedInfo.version == HITLS_VERSION_DTLS13) {
-        return false;
-    }
-#endif
-#ifdef HITLS_TLS_FEATURE_PHA
-    if (ctx->phaState == PHA_REQUESTED) {
-        return false;
-    }
-#endif
-    return true;
-}
-
+#if defined(HITLS_TLS_PROTO_TLS13_FAMILY)
 int32_t Tls13ClientSendCertificateProcess(TLS_Ctx *ctx)
 {
     int32_t ret = HITLS_SUCCESS;
@@ -114,7 +99,7 @@ int32_t Tls13ClientSendCertificateProcess(TLS_Ctx *ctx)
                 return ret;
             }
         }
-        if (Tls13ClientNeedActivateHsWriteKey(ctx)) {
+        if (ctx->negotiatedInfo.version != HITLS_VERSION_DTLS13 && ctx->phaState != PHA_REQUESTED) {
             /* CCS messages cannot be encrypted. Therefore, you need to activate the
                 sending key of the client after sending CCS messages. */
             uint32_t hashLen = SAL_CRYPT_DigestSize(ctx->negotiatedInfo.cipherSuiteInfo.hashAlg);
@@ -187,4 +172,4 @@ int32_t Tls13ServerSendCertificateProcess(TLS_Ctx *ctx)
 
     return HS_ChangeState(ctx, TRY_SEND_CERTIFICATE_VERIFY);
 }
-#endif /* HITLS_TLS_PROTO_TLS13 || HITLS_TLS_PROTO_DTLS13 */
+#endif /* HITLS_TLS_PROTO_TLS13_FAMILY */

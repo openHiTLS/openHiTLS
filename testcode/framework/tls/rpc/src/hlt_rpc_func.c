@@ -22,6 +22,7 @@
 #include "process.h"
 #include "hlt_type.h"
 #include "hlt.h"
+#include "hitls_dtls_cid.h"
 #include "control_channel.h"
 #include "channel_res.h"
 #include "handle_cmd.h"
@@ -275,7 +276,7 @@ int HLT_RpcTlsSetCtx(HLT_Process *peerProcess, int ctxId, HLT_Ctx_Config *config
     "%d|%d|%d|"
     "%d|%u|%d|%d|"
     "%u|%d|%d|%s|"
-    "%d",
+    "%d|%d",
     g_cmdIndex, __FUNCTION__, ctxId,
     config->minVersion, config->maxVersion, config->cipherSuites, config->tls13CipherSuites,
     config->pointFormats, config->groups, config->signAlgorithms, config->isSupportRenegotiation,
@@ -289,7 +290,7 @@ int HLT_RpcTlsSetCtx(HLT_Process *peerProcess, int ctxId, HLT_Ctx_Config *config
     config->readAhead, config->needCheckKeyUsage, config->isSupportVerifyNone,
     config->allowClientRenegotiate, config->emptyRecordsNum, config->allowLegacyRenegotiate, config->isEncryptThenMac,
     config->modeSupport, config->isMiddleBoxCompat, config->isSupportDtlsCookieExchange, config->attrName,
-    config->recordSizeLimit);
+    config->recordSizeLimit, config->isSupportConnectionId);
     dataBuf->dataLen = strlen(dataBuf->data);
     cmdIndex = g_cmdIndex;
     g_cmdIndex++;
@@ -521,6 +522,131 @@ cleanup:
     if (dataBuf != NULL) {
         free(dataBuf);
     }
+    return result;
+}
+
+static int BytesToHexString(const uint8_t *buf, uint8_t bufLen, char *hex, uint32_t hexLen)
+{
+    static const char hexTable[] = "0123456789abcdef";
+    if ((bufLen > 0 && buf == NULL) || hex == NULL || hexLen < (uint32_t)bufLen * 2u + 1u) {
+        return ERROR;
+    }
+    for (uint8_t i = 0; i < bufLen; i++) {
+        hex[i * 2u] = hexTable[buf[i] >> 4u];
+        hex[i * 2u + 1u] = hexTable[buf[i] & 0x0fu];
+    }
+    hex[(uint32_t)bufLen * 2u] = '\0';
+    return SUCCESS;
+}
+
+int HLT_RpcTlsSetDtlsCid(HLT_Process *peerProcess, int sslId, const uint8_t *cid, uint8_t cidLen)
+{
+    int ret;
+    uint64_t cmdIndex;
+    Process *srcProcess = NULL;
+    CmdData expectCmdData = {0};
+    char cidHex[HITLS_DTLS_CID_LOCAL_MAX_LEN * 2u + 1u] = {0};
+    ControlChannelBuf *dataBuf = (ControlChannelBuf *)malloc(sizeof(ControlChannelBuf));
+    if (dataBuf == NULL) {
+        LOG_ERROR("Failed to allocate ControlChannelBuf");
+        return ERROR;
+    }
+
+    int result = ERROR;
+
+    if (!(peerProcess->remoteFlag == 1)) {
+        LOG_ERROR("Only Remote Process Support Call HLT_RpcTlsSetDtlsCid");
+        goto cleanup;
+    }
+    if (cidLen > HITLS_DTLS_CID_LOCAL_MAX_LEN || BytesToHexString(cid, cidLen, cidHex, sizeof(cidHex)) != SUCCESS) {
+        LOG_ERROR("Invalid DTLS CID config");
+        goto cleanup;
+    }
+
+    srcProcess = GetProcess();
+    pthread_mutex_lock(&g_cmdMutex);
+    ret = snprintf(dataBuf->data, sizeof(dataBuf->data), "%" PRIu64 "|%s|%d|%u|%s",
+        g_cmdIndex, __FUNCTION__, sslId, cidLen, cidHex);
+    dataBuf->dataLen = strlen(dataBuf->data);
+    cmdIndex = g_cmdIndex;
+    g_cmdIndex++;
+    pthread_mutex_unlock(&g_cmdMutex);
+
+    if (ret < 0 || ret >= (int)sizeof(dataBuf->data)) {
+        LOG_ERROR("snprintf Error");
+        goto cleanup;
+    }
+
+    ret = ControlChannelWrite(srcProcess->controlChannelFd, peerProcess->srcDomainPath, dataBuf);
+    if (!(ret == SUCCESS)) {
+        LOG_ERROR("ControlChannelWrite Error");
+        goto cleanup;
+    }
+
+    ret = WaitResult(&expectCmdData, cmdIndex, __FUNCTION__);
+    if (!(ret == SUCCESS)) {
+        LOG_ERROR("WaitResult Error");
+        goto cleanup;
+    }
+
+    result = atoi(expectCmdData.paras[0]);
+
+cleanup:
+    if (dataBuf != NULL) {
+        free(dataBuf);
+    }
+    return result;
+}
+
+int HLT_RpcTlsRequestConnectionId(HLT_Process *peerProcess, int sslId, uint8_t numCids)
+{
+    int ret;
+    uint64_t cmdIndex;
+    Process *srcProcess = NULL;
+    CmdData expectCmdData = {0};
+    ControlChannelBuf *dataBuf = (ControlChannelBuf *)malloc(sizeof(ControlChannelBuf));
+    if (dataBuf == NULL) {
+        LOG_ERROR("Failed to allocate ControlChannelBuf");
+        return ERROR;
+    }
+
+    int result = ERROR;
+
+    if (!(peerProcess->remoteFlag == 1)) {
+        LOG_ERROR("Only Remote Process Support Call HLT_RpcTlsRequestConnectionId");
+        goto cleanup;
+    }
+
+    srcProcess = GetProcess();
+    pthread_mutex_lock(&g_cmdMutex);
+    ret = snprintf(dataBuf->data, sizeof(dataBuf->data), "%" PRIu64 "|%s|%d|%u",
+        g_cmdIndex, __FUNCTION__, sslId, numCids);
+    dataBuf->dataLen = strlen(dataBuf->data);
+    cmdIndex = g_cmdIndex;
+    g_cmdIndex++;
+    pthread_mutex_unlock(&g_cmdMutex);
+
+    if (ret < 0 || ret >= (int)sizeof(dataBuf->data)) {
+        LOG_ERROR("snprintf Error");
+        goto cleanup;
+    }
+
+    ret = ControlChannelWrite(srcProcess->controlChannelFd, peerProcess->srcDomainPath, dataBuf);
+    if (!(ret == SUCCESS)) {
+        LOG_ERROR("ControlChannelWrite Error");
+        goto cleanup;
+    }
+
+    ret = WaitResult(&expectCmdData, cmdIndex, __FUNCTION__);
+    if (!(ret == SUCCESS)) {
+        LOG_ERROR("WaitResult Error");
+        goto cleanup;
+    }
+
+    result = atoi(expectCmdData.paras[0]);
+
+cleanup:
+    free(dataBuf);
     return result;
 }
 

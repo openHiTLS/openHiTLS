@@ -248,6 +248,17 @@ static const CMVP_CIPHER_VECTOR CIPHER_VECTOR[] = {
         .tag = NULL,
         .mode = HCRYPT_MODE_CHACHA20_POLY1305
     },
+    // CRYPT_CIPHER_CHACHA20, RFC 8439 Appendix A.2 Test Vector #1
+    {
+        .id = CRYPT_CIPHER_CHACHA20,
+        .key = "0000000000000000000000000000000000000000000000000000000000000000",
+        .aad = NULL,
+        .iv = "000000000000000000000000",
+        .plaintext = "00000000000000000000000000000000",
+        .ciphertext = "76b8e0ada0f13d90405d6ae55386bd28",
+        .tag = NULL,
+        .mode = HCRYPT_MODE_CHACHA20
+    },
     // CRYPT_CIPHER_SM4_CBC
     // http://c.gb688.cn/bzgk/gb/showGb?type=online&hcno=4F89D833626340B1F71068D25EAC737D
     // GB/T 17964-2021

@@ -21,6 +21,7 @@
 #include "hitls_crypt_type.h"
 #include "hitls_config.h"
 #include "hitls_error.h"
+#include "tls.h"
 #include "tls_config.h"
 #include "config.h"
 #include "cipher_suite.h"
@@ -267,7 +268,7 @@ int32_t SetDefaultCipherSuite(HITLS_Config *config, const uint16_t *cipherSuites
     return HITLS_SUCCESS;
 }
 
-#ifdef HITLS_TLS_PROTO_TLS13
+#if defined(HITLS_TLS_PROTO_TLS13_FAMILY)
 static int32_t SetTLS13DefaultCipherSuites(HITLS_Config *config)
 {
     const uint16_t ciphersuites13[] = {
@@ -351,7 +352,7 @@ static void InitConfig(HITLS_Config *config)
 #ifdef HITLS_TLS_FEATURE_FLIGHT
     config->isFlightTransmitEnable = true;
 #endif
-#if defined(HITLS_TLS_PROTO_DTLS12) && defined(HITLS_BSL_UIO_UDP)
+#if defined(HITLS_TLS_PROTO_DATAGRAM) && defined(HITLS_BSL_UIO_UDP)
     config->isSupportDtlsCookieExchange = false;
 #endif
 #ifdef HITLS_TLS_FEATURE_CERT_MODE_VERIFY_PEER
@@ -377,6 +378,9 @@ static void InitConfig(HITLS_Config *config)
 #ifdef HITLS_TLS_FEATURE_SECURITY
     // Default security settings
     SECURITY_SetDefault(config);
+#endif
+#ifdef HITLS_TLS_FEATURE_DTLS_CID
+    config->isSupportConnectionId = false;
 #endif
 }
 
@@ -407,12 +411,15 @@ int32_t DefaultConfig(HITLS_Lib_Ctx *libCtx, const char *attrName, uint16_t vers
 
     InitConfig(config);
 
-    int32_t ret = DefaultCipherSuitesByVersion(version, config);
-    if (ret != HITLS_SUCCESS) {
-        CFG_CleanConfig(config);
-        return HITLS_MEMALLOC_FAIL;
+    int32_t ret = HITLS_SUCCESS;
+    if (!IS_TLS13_FAMILY_VERSION(version)) {
+        ret = DefaultCipherSuitesByVersion(version, config);
+        if (ret != HITLS_SUCCESS) {
+            CFG_CleanConfig(config);
+            return HITLS_MEMALLOC_FAIL;
+        }
     }
-#ifdef HITLS_TLS_PROTO_TLS13
+#if defined(HITLS_TLS_PROTO_TLS13_FAMILY)
     /* Configure the TLS1.3 cipher suite for all TLS versions */
     ret = SetTLS13DefaultCipherSuites(config);
     if (ret != HITLS_SUCCESS) {
@@ -495,7 +502,7 @@ int32_t DefaultTLS13Config(HITLS_Config *config)
 #endif
     return HITLS_SUCCESS;
 }
-#endif
+#endif /* HITLS_TLS_PROTO_TLS13 */
 #ifdef HITLS_TLS_CONFIG_VERSION
 static int32_t SetDefaultTlsAllCipherSuites(HITLS_Config *config)
 {
@@ -573,6 +580,13 @@ int32_t DefaultTlsAllConfig(HITLS_Config *config)
 #ifdef HITLS_TLS_PROTO_DTLS
 static int32_t SetDefaultDtlsAllCipherSuites(HITLS_Config *config)
 {
+    int32_t ret = HITLS_SUCCESS;
+#ifdef HITLS_TLS_PROTO_DTLS13
+    ret = SetTLS13DefaultCipherSuites(config);
+    if (ret != HITLS_SUCCESS) {
+        return ret;
+    }
+#endif
     const uint16_t dtls12CipherSuites[] = {
         /* DTLS1.2 */
         HITLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384, HITLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
@@ -594,7 +608,7 @@ static int32_t SetDefaultDtlsAllCipherSuites(HITLS_Config *config)
     }
     (void)memcpy(dtlsCipherSuites, g_tlcpCipherSuites, sizeof(g_tlcpCipherSuites));
     (void)memcpy(dtlsCipherSuites + dtlcpCipherSuitesLen, dtls12CipherSuites, sizeof(dtls12CipherSuites));
-    int ret = SetDefaultCipherSuite(config, dtlsCipherSuites, dtlsCipherSuitesLen * sizeof(uint16_t));
+    ret = SetDefaultCipherSuite(config, dtlsCipherSuites, dtlsCipherSuitesLen * sizeof(uint16_t));
     BSL_SAL_FREE(dtlsCipherSuites);
     return ret;
 #else
@@ -618,6 +632,10 @@ int32_t DefaultDtlsAllConfig(HITLS_Config *config)
         CFG_CleanConfig(config);
         return HITLS_MEMALLOC_FAIL;
     }
+
+#ifdef HITLS_TLS_PROTO_DTLS13
+    config->keyExchMode = TLS13_KE_MODE_PSK_WITH_DHE;
+#endif
 
     if (SAL_CERT_MgrIsEnable()) {
         config->certMgrCtx = SAL_CERT_MgrCtxProviderNew(LIBCTX_FROM_CONFIG(config), ATTRIBUTE_FROM_CONFIG(config));

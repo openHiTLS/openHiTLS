@@ -16,9 +16,9 @@
 #ifndef HS_COMMON_H
 #define HS_COMMON_H
 
+#include <stdbool.h>
 #include <stdint.h>
 #include "tls.h"
-#include "hs_ctx.h"
 #include "hs_msg.h"
 
 #ifdef __cplusplus
@@ -39,6 +39,10 @@ extern "C" {
 #define HITLS_SERVER_KEY_EXCH_MAX_SIZE      102400
 #define HITLS_SERVER_HELLO_DONE_MAX_SIZE    0
 #define HITLS_KEY_UPDATE_MAX_SIZE           1
+#ifdef HITLS_TLS_FEATURE_DTLS_CID
+#define HITLS_REQUEST_CONNECTION_ID_MAX_SIZE 1
+#define HITLS_NEW_CONNECTION_ID_MAX_SIZE    (2 + (HITLS_DTLS_CID_LIST_MAX * (1 + HITLS_DTLS_CID_PEER_MAX_LEN)) + 1)
+#endif
 #define HITLS_CLIENT_KEY_EXCH_MAX_SIZE      2048
 #define HITLS_NEXT_PROTO_MAX_SIZE           514
 #define HITLS_FINISHED_MAX_SIZE             64

@@ -46,7 +46,6 @@ void AckStateDeinit(Dtls13AckState *state);
 int32_t AckStateInsertSeqMap(Dtls13AckState *state, const RecordNumber *recordNum, uint32_t offset, uint32_t len);
 int32_t AckStateGetFragment(const Dtls13AckState *state, uint32_t maxFragmentLen, Dtls13FragmentList *list);
 int32_t AckStateProcessAck(Dtls13AckState *state, const RecordNumber *recordNum);
-bool AckStateIsEmpty(const Dtls13AckState *state);
 
 STUB_DEFINE_RET4(int32_t, REC_Write, TLS_Ctx *, REC_Type, const uint8_t *, uint32_t);
 STUB_DEFINE_RET1(int32_t, REC_RetransmitListFlush, TLS_Ctx *);
@@ -64,6 +63,7 @@ static uint32_t g_stubAckCbCnt = 0;
 static uint32_t g_stubAlertCnt = 0;
 static ALERT_Level g_stubAlertLevel = 0;
 static ALERT_Description g_stubAlertDescription = 0;
+static uint32_t g_stubMaxWriteSize = 16384;
 static uint16_t g_stubWriteStateEpoch = 0;
 static uint64_t g_stubWriteStateSeq = 0;
 static bool g_stubWriteStateIsPlain = false;
@@ -78,6 +78,7 @@ static void ResetAckStub(void)
     g_stubRecordLen = 0;
     (void)memset(g_stubAckBuf, 0, sizeof(g_stubAckBuf));
     g_stubWriteCnt = 0;
+    g_stubMaxWriteSize = 16384;
 }
 
 static RecordNumber MakeRecordNumber(uint64_t epoch, uint64_t sequenceNumber)
@@ -171,7 +172,7 @@ static int32_t STUB_REC_RecOutBufReSet_Selective(TLS_Ctx *ctx)
 static int32_t STUB_REC_GetMaxWriteSize_Selective(const TLS_Ctx *ctx, uint32_t *len)
 {
     (void)ctx;
-    *len = 16384;
+    *len = g_stubMaxWriteSize;
     return HITLS_SUCCESS;
 }
 
@@ -236,7 +237,7 @@ void UT_TLS_DTLS13_ACK_STATE_FUNC_TC001(void)
     ASSERT_EQ(AckStateProcessAck(&state, &recordNum), HITLS_SUCCESS);
     recordNum = MakeRecordNumber(1, 2);
     ASSERT_EQ(AckStateProcessAck(&state, &recordNum), HITLS_SUCCESS);
-    ASSERT_TRUE(AckStateIsEmpty(&state) == false);
+    ASSERT_TRUE(state.unackedBytes != 0);
 
     ASSERT_EQ(AckStateGetFragment(&state, 128, &list), HITLS_SUCCESS);
     ASSERT_EQ(list.count, 7);
@@ -263,7 +264,7 @@ void UT_TLS_DTLS13_ACK_STATE_FUNC_TC001(void)
     ASSERT_EQ(AckStateProcessAck(&state, &recordNum), HITLS_SUCCESS);
     recordNum = MakeRecordNumber(1, 4);
     ASSERT_EQ(AckStateProcessAck(&state, &recordNum), HITLS_SUCCESS);
-    ASSERT_TRUE(AckStateIsEmpty(&state) == true);
+    ASSERT_TRUE(state.unackedBytes == 0);
 EXIT:
     BSL_SAL_FREE(list.frags);
     AckStateDeinit(&state);
@@ -289,10 +290,10 @@ void UT_TLS_DTLS13_SEQMAP_FUNC_TC001(void)
     ASSERT_EQ(AckStateInsertSeqMap(&state, &recordNum, 40, 50), HITLS_SUCCESS);
     recordNum = MakeRecordNumber(1, 2);
     ASSERT_EQ(AckStateProcessAck(&state, &recordNum), HITLS_SUCCESS);
-    ASSERT_TRUE(AckStateIsEmpty(&state) == false);
+    ASSERT_TRUE(state.unackedBytes != 0);
     recordNum = MakeRecordNumber(3, 4);
     ASSERT_EQ(AckStateProcessAck(&state, &recordNum), HITLS_SUCCESS);
-    ASSERT_TRUE(AckStateIsEmpty(&state) == false);
+    ASSERT_TRUE(state.unackedBytes != 0);
 EXIT:
     AckStateDeinit(&state);
     return;
@@ -394,6 +395,7 @@ void UT_TLS_DTLS13_ACKLIST_FUNC_TC001(void)
     ASSERT_TRUE(REC_Dtls13AckListIsEmpty(&ctx, REC_DTLS13_ACK_NORMAL) == true);
 EXIT:
     BSL_SAL_FREE(recCtx.ackList.records);
+    BSL_SAL_FREE(recCtx.retransAckList.records);
     return;
 }
 /* END_CASE */
@@ -470,6 +472,8 @@ void UT_TLS_DTLS13_SEND_ACK_FUNC_TC001(void)
     ASSERT_EQ(REC_Dtls13AckListAppend(&ctx, &recordNum), HITLS_SUCCESS);
 
     STUB_REPLACE(REC_Write, STUB_REC_Write_Dtls13Ack);
+    STUB_REPLACE(REC_QueryMtu, STUB_REC_QueryMtu_Selective);
+    STUB_REPLACE(REC_GetMaxWriteSize, STUB_REC_GetMaxWriteSize_Selective);
     ASSERT_EQ(REC_Dtls13SendAck(&ctx, REC_DTLS13_ACK_NORMAL), HITLS_SUCCESS);
     ASSERT_EQ(g_stubRecordType, REC_TYPE_ACK);
     ASSERT_EQ(g_stubRecordLen, sizeof(uint16_t) + 2 * REC_DTLS13_ACK_ITEM_LEN);
@@ -480,6 +484,48 @@ void UT_TLS_DTLS13_SEND_ACK_FUNC_TC001(void)
     ASSERT_EQ(BSL_ByteToUint64(&g_stubAckBuf[sizeof(uint16_t) + REC_DTLS13_ACK_ITEM_LEN + sizeof(uint64_t)]), 3);
     ASSERT_TRUE(REC_Dtls13AckListIsEmpty(&ctx, REC_DTLS13_ACK_NORMAL) == false);
 EXIT:
+    STUB_RESTORE(REC_GetMaxWriteSize);
+    STUB_RESTORE(REC_QueryMtu);
+    STUB_RESTORE(REC_Write);
+    BSL_SAL_FREE(recCtx.ackList.records);
+    return;
+}
+/* END_CASE */
+
+/**
+ * @test     UT_TLS_DTLS13_SEND_ACK_FUNC_TC002
+ * @title    DTLS1.3 ACK send splits large ACK lists by writable MTU.
+ * @brief    Stub max writable plaintext to two ACK items and verify five items are sent in three records.
+ * @expect   REC_Write is called three times and the last batch contains one ACK item.
+ */
+/* BEGIN_CASE */
+void UT_TLS_DTLS13_SEND_ACK_FUNC_TC002(void)
+{
+    TLS_Ctx ctx = {0};
+    RecCtx recCtx = {0};
+    ctx.recCtx = &recCtx;
+    ResetAckStub();
+    g_stubMaxWriteSize = sizeof(uint16_t) + 2 * REC_DTLS13_ACK_ITEM_LEN;
+
+    for (uint32_t i = 0; i < 5; i++) {
+        RecordNumber recordNum = MakeRecordNumber(1, i + 1);
+        ASSERT_EQ(REC_Dtls13AckListAppend(&ctx, &recordNum), HITLS_SUCCESS);
+    }
+
+    STUB_REPLACE(REC_Write, STUB_REC_Write_Dtls13Ack);
+    STUB_REPLACE(REC_QueryMtu, STUB_REC_QueryMtu_Selective);
+    STUB_REPLACE(REC_GetMaxWriteSize, STUB_REC_GetMaxWriteSize_Selective);
+    ASSERT_EQ(REC_Dtls13SendAck(&ctx, REC_DTLS13_ACK_NORMAL), HITLS_SUCCESS);
+    ASSERT_EQ(g_stubWriteCnt, 3);
+    ASSERT_EQ(g_stubRecordType, REC_TYPE_ACK);
+    ASSERT_EQ(g_stubRecordLen, sizeof(uint16_t) + REC_DTLS13_ACK_ITEM_LEN);
+    ASSERT_EQ(BSL_ByteToUint16(g_stubAckBuf), (uint16_t)REC_DTLS13_ACK_ITEM_LEN);
+    ASSERT_EQ(BSL_ByteToUint64(&g_stubAckBuf[sizeof(uint16_t)]), 1);
+    ASSERT_EQ(BSL_ByteToUint64(&g_stubAckBuf[sizeof(uint16_t) + sizeof(uint64_t)]), 5);
+
+EXIT:
+    STUB_RESTORE(REC_GetMaxWriteSize);
+    STUB_RESTORE(REC_QueryMtu);
     STUB_RESTORE(REC_Write);
     BSL_SAL_FREE(recCtx.ackList.records);
     return;
@@ -499,7 +545,7 @@ void UT_TLS_DTLS13_RETRANS_EMPTY_FUNC_TC001(void)
     uint8_t msg[DTLS_HS_MSG_HEADER_SIZE + 1] = {0x01, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0xAA};
     BSL_LIST_INIT(&recCtx.retransmitList.head);
     ASSERT_TRUE(REC_RetransmitIsEmpty(&recCtx) == true);
-    ASSERT_EQ(REC_RetransmitListAppend(&recCtx, REC_TYPE_HANDSHAKE, msg, sizeof(msg)), HITLS_SUCCESS);
+    ASSERT_EQ(RecRetransmitListAppendNode(&recCtx, REC_TYPE_HANDSHAKE, msg, sizeof(msg), NULL), HITLS_SUCCESS);
     ASSERT_TRUE(REC_RetransmitIsEmpty(&recCtx) == false);
 EXIT:
     REC_RetransmitListClean(&recCtx);
@@ -523,6 +569,7 @@ void UT_TLS_DTLS13_RETRANS_NODE_FUNC_TC001(void)
     RecordNumber recordNum = {0};
     BSL_LIST_INIT(&recCtx.retransmitList.head);
     recCtx.writeEpoch = 1;
+    recCtx.readEpoch = 3;
     ctx.recCtx = &recCtx;
     ctx.timeoutValue = 1000;
     ctx.timeoutNum = 3;
@@ -533,7 +580,7 @@ void UT_TLS_DTLS13_RETRANS_NODE_FUNC_TC001(void)
     msg[13] = 2;
     msg[14] = 3;
     msg[15] = 4;
-    ASSERT_EQ(REC_RetransmitListAppend(&recCtx, REC_TYPE_HANDSHAKE, msg, sizeof(msg)), HITLS_SUCCESS);
+    ASSERT_EQ(RecRetransmitListAppendNode(&recCtx, REC_TYPE_HANDSHAKE, msg, sizeof(msg), NULL), HITLS_SUCCESS);
     ASSERT_TRUE(REC_RetransmitIsEmpty(&recCtx) == false);
     RecRetransmitList *node = BSL_LIST_ENTRY(recCtx.retransmitList.head.next, RecRetransmitList, head);
     recordNum = MakeRecordNumber(1, 10);
@@ -545,6 +592,48 @@ void UT_TLS_DTLS13_RETRANS_NODE_FUNC_TC001(void)
     ASSERT_TRUE(REC_RetransmitIsEmpty(&recCtx) == true);
     ASSERT_EQ(ctx.timeoutValue, 0);
     ASSERT_EQ(ctx.timeoutNum, 0);
+EXIT:
+    REC_RetransmitListClean(&recCtx);
+    return;
+}
+/* END_CASE */
+
+/**
+ * @test     UT_TLS_DTLS13_RETRANS_ACK_TIMER_FUNC_TC001
+ * @title    DTLS1.3 ACK processing does not stop the timer before read epoch advances past 2.
+ * @brief    Append one retransmit node, keep readEpoch at 2, process a full ACK, and verify timer state.
+ * @expect   Retransmit node is removed, but the retransmit timer is not stopped.
+ */
+/* BEGIN_CASE */
+void UT_TLS_DTLS13_RETRANS_ACK_TIMER_FUNC_TC001(void)
+{
+    uint8_t msg[DTLS_HS_MSG_HEADER_SIZE + 4] = {0};
+    TLS_Ctx ctx = {0};
+    RecCtx recCtx = {0};
+    uint8_t ackBuf[sizeof(uint16_t) + REC_DTLS13_ACK_ITEM_LEN] = {0};
+    RecordNumber recordNum = {0};
+    BSL_LIST_INIT(&recCtx.retransmitList.head);
+    recCtx.writeEpoch = 1;
+    recCtx.readEpoch = 2;
+    ctx.recCtx = &recCtx;
+    ctx.timeoutValue = 1000;
+    ctx.timeoutNum = 3;
+    BuildDtls13HsMsg(msg, FINISHED, 1, 4);
+
+    ASSERT_EQ(RecRetransmitListAppendNode(&recCtx, REC_TYPE_HANDSHAKE, msg, sizeof(msg), NULL), HITLS_SUCCESS);
+    ASSERT_TRUE(REC_RetransmitIsEmpty(&recCtx) == false);
+    RecRetransmitList *node = BSL_LIST_ENTRY(recCtx.retransmitList.head.next, RecRetransmitList, head);
+    recordNum = MakeRecordNumber(1, 10);
+    ASSERT_EQ(AckStateInsertSeqMap(&node->ackState, &recordNum, 0, 4), HITLS_SUCCESS);
+
+    BSL_Uint16ToByte(REC_DTLS13_ACK_ITEM_LEN, ackBuf);
+    BSL_Uint64ToByte(1, &ackBuf[sizeof(uint16_t)]);
+    BSL_Uint64ToByte(10, &ackBuf[sizeof(uint16_t) + sizeof(uint64_t)]);
+    ASSERT_EQ(REC_RetransmitListProcessAck(&ctx, ackBuf, sizeof(ackBuf)), HITLS_SUCCESS);
+    ASSERT_TRUE(REC_RetransmitIsEmpty(&recCtx) == true);
+    ASSERT_EQ(ctx.timeoutValue, 1000);
+    ASSERT_EQ(ctx.timeoutNum, 3);
+
 EXIT:
     REC_RetransmitListClean(&recCtx);
     return;
@@ -585,16 +674,15 @@ void UT_TLS_DTLS13_RETRANS_REMOVE_FUNC_TC001(void)
     BSL_Uint24ToByte(1, &certReq2[DTLS_HS_FRAGMENT_LEN_ADDR]);
     certReq2[DTLS_HS_MSG_HEADER_SIZE] = 0xCC;
 
-    ASSERT_EQ(REC_RetransmitListAppend(&recCtx, REC_TYPE_HANDSHAKE, certReq, sizeof(certReq)), HITLS_SUCCESS);
-    ASSERT_EQ(REC_RetransmitListAppend(&recCtx, REC_TYPE_HANDSHAKE, finished, sizeof(finished)), HITLS_SUCCESS);
-    ASSERT_EQ(REC_RetransmitListAppend(&recCtx, REC_TYPE_HANDSHAKE, certReq2, sizeof(certReq2)), HITLS_SUCCESS);
+    ASSERT_EQ(RecRetransmitListAppendNode(&recCtx, REC_TYPE_HANDSHAKE, certReq, sizeof(certReq), NULL), HITLS_SUCCESS);
+    ASSERT_EQ(RecRetransmitListAppendNode(&recCtx, REC_TYPE_HANDSHAKE, finished, sizeof(finished), NULL), HITLS_SUCCESS);
+    ASSERT_EQ(RecRetransmitListAppendNode(&recCtx, REC_TYPE_HANDSHAKE, certReq2, sizeof(certReq2), NULL), HITLS_SUCCESS);
 
     REC_RetransmitListRemove(&recCtx, CERTIFICATE_REQUEST);
     ASSERT_TRUE(REC_RetransmitIsEmpty(&recCtx) == false);
     ASSERT_EQ(recCtx.retransmitList.head.next->next, &recCtx.retransmitList.head);
     RecRetransmitList *remaining = BSL_LIST_ENTRY(recCtx.retransmitList.head.next, RecRetransmitList, head);
     ASSERT_EQ(remaining->hsType, FINISHED);
-    ASSERT_EQ(remaining->hsSeq, 2);
 
     REC_RetransmitListRemove(&recCtx, FINISHED);
     ASSERT_TRUE(REC_RetransmitIsEmpty(&recCtx) == true);
@@ -619,6 +707,7 @@ void UT_TLS_DTLS13_RETRANS_ACK_CB_FUNC_TC001(void)
     uint8_t ackBuf[sizeof(uint16_t) + sizeof(uint64_t) * 2] = {0};
     BSL_LIST_INIT(&recCtx.retransmitList.head);
     recCtx.writeEpoch = 1;
+    recCtx.readEpoch = 3;
     recCtx.hasLastWriteEpochSeq = true;
     recCtx.lastWriteEpochSeq = REC_EPOCHSEQ_CAL(1, 10);
     ctx.recCtx = &recCtx;
@@ -677,6 +766,7 @@ void UT_TLS_DTLS13_RETRANS_ACK_CB_FUNC_TC002(void)
     uint8_t ackBuf[sizeof(uint16_t) + sizeof(uint64_t) * 2] = {0};
     BSL_LIST_INIT(&recCtx.retransmitList.head);
     recCtx.writeEpoch = 1;
+    recCtx.readEpoch = 3;
     recCtx.hasLastWriteEpochSeq = true;
     recCtx.lastWriteEpochSeq = REC_EPOCHSEQ_CAL(1, 10);
     ctx.recCtx = &recCtx;
@@ -830,7 +920,7 @@ void UT_TLS_DTLS13_KEYUPDATE_PENDING_PHA_API_FUNC_TC001(void)
     ctx.isClient = false;
     BuildDtls13HsMsg(keyUpdate, KEY_UPDATE, 1, 1);
 
-    ASSERT_EQ(REC_RetransmitListAppend(&recCtx, REC_TYPE_HANDSHAKE, keyUpdate, sizeof(keyUpdate)), HITLS_SUCCESS);
+    ASSERT_EQ(RecRetransmitListAppendNode(&recCtx, REC_TYPE_HANDSHAKE, keyUpdate, sizeof(keyUpdate), NULL), HITLS_SUCCESS);
     ASSERT_TRUE(REC_Dtls13RetransmitListHasKeyUpdate(&recCtx) == true);
     ASSERT_EQ(HITLS_VerifyClientPostHandshake(&ctx), HITLS_SUCCESS);
     ASSERT_EQ(ctx.phaState, PHA_PENDING);
@@ -861,7 +951,7 @@ void UT_TLS_DTLS13_KEYUPDATE_PENDING_CID_API_FUNC_TC001(void)
     ctx.state = CM_STATE_TRANSPORTING;
     BuildDtls13HsMsg(keyUpdate, KEY_UPDATE, 1, 1);
 
-    ASSERT_EQ(REC_RetransmitListAppend(&recCtx, REC_TYPE_HANDSHAKE, keyUpdate, sizeof(keyUpdate)), HITLS_SUCCESS);
+    ASSERT_EQ(RecRetransmitListAppendNode(&recCtx, REC_TYPE_HANDSHAKE, keyUpdate, sizeof(keyUpdate), NULL), HITLS_SUCCESS);
     ASSERT_TRUE(REC_Dtls13RetransmitListHasKeyUpdate(&recCtx) == true);
     ASSERT_EQ(HITLS_RequestConnectionId(&ctx, 2), HITLS_SUCCESS);
     ASSERT_EQ(ctx.reqCidState, DTLS_CID_MSG_STATE_PENDING);
@@ -1076,11 +1166,11 @@ void UT_TLS_DTLS13_RETRANS_SELECTIVE_FUNC_TC001(void)
     BSL_Uint24ToByte(4, &finished[9]);
     memcpy(&finished[DTLS_HS_MSG_HEADER_SIZE], body4, 4);
 
-    ASSERT_EQ(REC_RetransmitListAppend(&recCtx, REC_TYPE_HANDSHAKE, serverHello, sizeof(serverHello)), HITLS_SUCCESS);
-    ASSERT_EQ(REC_RetransmitListAppend(&recCtx, REC_TYPE_HANDSHAKE, encryptedExtensions, sizeof(encryptedExtensions)), HITLS_SUCCESS);
-    ASSERT_EQ(REC_RetransmitListAppend(&recCtx, REC_TYPE_HANDSHAKE, certificate, sizeof(certificate)), HITLS_SUCCESS);
-    ASSERT_EQ(REC_RetransmitListAppend(&recCtx, REC_TYPE_HANDSHAKE, certificateVerify, sizeof(certificateVerify)), HITLS_SUCCESS);
-    ASSERT_EQ(REC_RetransmitListAppend(&recCtx, REC_TYPE_HANDSHAKE, finished, sizeof(finished)), HITLS_SUCCESS);
+    ASSERT_EQ(RecRetransmitListAppendNode(&recCtx, REC_TYPE_HANDSHAKE, serverHello, sizeof(serverHello), NULL), HITLS_SUCCESS);
+    ASSERT_EQ(RecRetransmitListAppendNode(&recCtx, REC_TYPE_HANDSHAKE, encryptedExtensions, sizeof(encryptedExtensions), NULL), HITLS_SUCCESS);
+    ASSERT_EQ(RecRetransmitListAppendNode(&recCtx, REC_TYPE_HANDSHAKE, certificate, sizeof(certificate), NULL), HITLS_SUCCESS);
+    ASSERT_EQ(RecRetransmitListAppendNode(&recCtx, REC_TYPE_HANDSHAKE, certificateVerify, sizeof(certificateVerify), NULL), HITLS_SUCCESS);
+    ASSERT_EQ(RecRetransmitListAppendNode(&recCtx, REC_TYPE_HANDSHAKE, finished, sizeof(finished), NULL), HITLS_SUCCESS);
     ASSERT_TRUE(REC_RetransmitIsEmpty(&recCtx) == false);
 
     ListHead *head = recCtx.retransmitList.head.next;
@@ -1129,10 +1219,9 @@ void UT_TLS_DTLS13_RETRANS_SELECTIVE_FUNC_TC001(void)
     LIST_FOR_EACH_ITEM_SAFE(pos, posTmp, &recCtx.retransmitList.head) { nodeCount++; }
     ASSERT_EQ(nodeCount, 1);
     RecRetransmitList *remaining = BSL_LIST_ENTRY(recCtx.retransmitList.head.next, RecRetransmitList, head);
-    ASSERT_EQ(remaining->hsSeq, 2);
     ASSERT_EQ(remaining->bodyLen, 20);
     ASSERT_EQ(remaining->ackState.unackedBytes, remaining->ackState.totalLen);
-    ASSERT_TRUE(AckStateIsEmpty(&remaining->ackState) == false);
+    ASSERT_TRUE(remaining->ackState.unackedBytes != 0);
 
     ResetAckStub();
     recCtx.hasLastWriteEpochSeq = true;

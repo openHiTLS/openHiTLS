@@ -788,6 +788,7 @@ static int32_t PackClientHelloMsg(const FRAME_ClientHelloMsg *clientHello, uint8
         PackHsExtArray8(&clientHello->secRenego, &buf[offset], bufLen - offset, &offset);
         PackHsExtArrayForTicket(&clientHello->sessionTicket, &buf[offset], bufLen - offset, &offset);
         PackHsExtArray8(&clientHello->encryptThenMac, &buf[offset], bufLen - offset, &offset);
+        PackHsExtArray8(&clientHello->connectionId, &buf[offset], bufLen - offset, &offset);
         PackHsExtOfferedPsks(&clientHello->psks, &buf[offset], bufLen - offset, &offset);
         PackHsExtCaList(&clientHello->caList, &buf[offset], bufLen - offset, &offset);
         if (clientHello->extensionLen.state == INITIAL_FIELD) {
@@ -872,6 +873,7 @@ static int32_t PackServerHelloMsg(const FRAME_ServerHelloMsg *serverHello, uint8
     PackHsExtUint16(&serverHello->pskSelectedIdentity, &buf[offset], bufLen - offset, &offset);
     // encrypt then mac
     PackHsExtArray8(&serverHello->encryptThenMac, &buf[offset], bufLen - offset, &offset);
+    PackHsExtArray8(&serverHello->connectionId, &buf[offset], bufLen - offset, &offset);
 
 	if (serverHello->extensionLen.state == INITIAL_FIELD) {
         uint32_t extensionLen = offset - sizeof(uint16_t) - bufOffset;

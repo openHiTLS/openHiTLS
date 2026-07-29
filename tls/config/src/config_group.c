@@ -30,6 +30,19 @@
 #endif
 
 #ifdef HITLS_TLS_CONFIG_CIPHER_SUITE
+/*
+ * Group list string format (parser: ParseGroupNameToId in config.c):
+ *   '/'  separates priority tuples (first tuple = preferred groups, later tuples = fallback).
+ *   ':'  separates individual groups within a tuple.
+ *   '?'  prefix: optional group — silently skipped if not compiled in (no error),
+ *        so the same default string works across build configs.
+ *   '*'  prefix: send this group's key_share in the INITIAL ClientHello.
+ *        Without '*', the group is only advertised in supported_groups and its
+ *        key_share is NOT sent until the server requests it via HelloRetryRequest
+ *        (lazy key share — defers expensive keygen, e.g. post-quantum KEM, to CH2).
+ * Tokens may combine, e.g. "?*x25519" = optional + initial key_share;
+ * "?X25519MLKEM768" = optional but NO initial key_share (lazy PQ).
+ */
 static const char DEFAULT_GROUP_ID[] =
     "?*X25519MLKEM768/?*x25519:?secp256r1:?secp384r1:?secp521r1"
 #if defined(HITLS_TLS_PROTO_TLCP11) || defined(HITLS_TLS_FEATURE_SM_TLS13)
@@ -73,7 +86,7 @@ static const TLS_GroupInfo GROUP_INFO[] = {
         false,
     },
 #ifdef HITLS_TLS_FEATURE_KEM
-#ifdef HITLS_TLS_PROTO_TLS13
+#if defined(HITLS_TLS_PROTO_TLS13_FAMILY)
     {
         CONST_CAST("X25519MLKEM768"),
         CRYPT_HYBRID_X25519_MLKEM768,
@@ -81,7 +94,7 @@ static const TLS_GroupInfo GROUP_INFO[] = {
         192,                                    // secBits
         HITLS_HYBRID_X25519_MLKEM768,          // groupId
         1184 + 32, 32 + 32, 1088 + 32,         // pubkeyLen=1216, sharedkeyLen=64, ciphertextLen=1120
-        TLS13_VERSION_BIT,                     // versionBits
+        TLS13_VERSION_BIT | DTLS13_VERSION_BIT,                     // versionBits
         true,
     },
     {
@@ -91,7 +104,7 @@ static const TLS_GroupInfo GROUP_INFO[] = {
         192,                                    // secBits
         HITLS_HYBRID_ECDH_NISTP256_MLKEM768,   // groupId
         1184 + 65, 32 + 32, 1088 + 65,         // pubkeyLen=1249, sharedkeyLen=64, ciphertextLen=1153
-        TLS13_VERSION_BIT,                     // versionBits
+        TLS13_VERSION_BIT | DTLS13_VERSION_BIT,                     // versionBits
         true,
     },
     {
@@ -101,10 +114,10 @@ static const TLS_GroupInfo GROUP_INFO[] = {
         256,                                    // secBits
         HITLS_HYBRID_ECDH_NISTP384_MLKEM1024,  // groupId
         1568 + 97, 32 + 48, 1568 + 97,         // pubkeyLen=1665, sharedkeyLen=80, ciphertextLen=1665
-        TLS13_VERSION_BIT,                     // versionBits
+        TLS13_VERSION_BIT | DTLS13_VERSION_BIT,                     // versionBits
         true,
     },
-#endif /* HITLS_TLS_PROTO_TLS13 */
+#endif /* HITLS_TLS_PROTO_TLS13_FAMILY */
 #endif /* HITLS_TLS_FEATURE_KEM */
 #ifdef HITLS_CRYPTO_CURVE_NISTP256
     {
@@ -150,7 +163,7 @@ static const TLS_GroupInfo GROUP_INFO[] = {
         128, // secBits
         HITLS_EC_GROUP_BRAINPOOLP256R1, // groupId
         65, 32, 0, // pubkeyLen=65, sharedkeyLen=32 (256 bits)
-        TLS10_VERSION_BIT | TLS11_VERSION_BIT | TLS12_VERSION_BIT | DTLS_VERSION_MASK, // versionBits
+        TLS10_VERSION_BIT | TLS11_VERSION_BIT | TLS12_VERSION_BIT | DTLS12_VERSION_BIT, // versionBits
         false,
     },
 #endif /* HITLS_CRYPTO_CURVE_BP256R1 */
@@ -162,7 +175,7 @@ static const TLS_GroupInfo GROUP_INFO[] = {
         192, // secBits
         HITLS_EC_GROUP_BRAINPOOLP384R1, // groupId
         97, 48, 0, // pubkeyLen=97, sharedkeyLen=48 (384 bits)
-        TLS10_VERSION_BIT | TLS11_VERSION_BIT | TLS12_VERSION_BIT | DTLS_VERSION_MASK, // versionBits
+        TLS10_VERSION_BIT | TLS11_VERSION_BIT | TLS12_VERSION_BIT | DTLS12_VERSION_BIT, // versionBits
         false,
     },
 #endif /* HITLS_CRYPTO_CURVE_BP384R1 */
@@ -174,7 +187,7 @@ static const TLS_GroupInfo GROUP_INFO[] = {
         256, // secBits
         HITLS_EC_GROUP_BRAINPOOLP512R1, // groupId
         129, 64, 0, // pubkeyLen=129, sharedkeyLen=64 (512 bits)
-        TLS10_VERSION_BIT | TLS11_VERSION_BIT | TLS12_VERSION_BIT | DTLS_VERSION_MASK, // versionBits
+        TLS10_VERSION_BIT | TLS11_VERSION_BIT | TLS12_VERSION_BIT | DTLS12_VERSION_BIT, // versionBits
         false,
     },
 #endif /* HITLS_CRYPTO_CURVE_BP512R1 */

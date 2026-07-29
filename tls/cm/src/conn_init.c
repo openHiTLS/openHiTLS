@@ -52,6 +52,13 @@ int32_t ConnUnexpectedMsg(HITLS_Ctx *ctx, uint32_t msgType, const uint8_t *data,
             return ProcessDecryptedCCS(ctx, data, dataLen);
         case REC_TYPE_ALERT:
             return ProcessDecryptedAlert(ctx, data, dataLen);
+        case REC_TYPE_ACK:
+#ifdef HITLS_TLS_PROTO_DTLS13
+            if (IS_DTLS13_CTX(ctx)) {
+                return REC_RetransmitListProcessAck(ctx, data, dataLen);
+            }
+#endif
+            break;
         default:
             break;
     }

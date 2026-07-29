@@ -32,6 +32,9 @@
 
 HITLS_Ctx *FRAME_CreateDefaultDtlsObj(void)
 {
+#ifndef HITLS_TLS_PROTO_DTLS12
+    return NULL;
+#else
     HITLS_Config *config = HITLS_CFG_NewDTLS12Config();
     if (config == NULL) {
         return NULL;
@@ -77,6 +80,7 @@ HITLS_Ctx *FRAME_CreateDefaultDtlsObj(void)
 
     HITLS_CFG_FreeConfig(config);
     return ctx;
+#endif
 }
 
 FRAME_LinkObj *CreateLink(HITLS_Config *config, BSL_UIO_TransportType type)

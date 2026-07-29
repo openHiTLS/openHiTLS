@@ -13,7 +13,7 @@
  * See the Mulan PSL v2 for more details.
  */
 #include "hitls_build.h"
-#if defined(HITLS_TLS_PROTO_DTLS12) || defined(HITLS_TLS_PROTO_DTLS13)
+#if defined(HITLS_TLS_PROTO_DATAGRAM)
 #include <string.h>
 #include "tls_binlog_id.h"
 #include "bsl_log_internal.h"
@@ -95,7 +95,7 @@ int32_t HS_ReassQueueInit(TLS_Ctx *ctx)
     return HITLS_SUCCESS;
 }
 
-void HS_ReassQueueFree(TLS_Ctx *ctx)
+void HS_ReassQueueClear(TLS_Ctx *ctx)
 {
     if (ctx == NULL || ctx->reassMsg == NULL) {
         return;
@@ -110,6 +110,14 @@ void HS_ReassQueueFree(TLS_Ctx *ctx)
         BSL_SAL_FREE(cur->msg);         /* Release node content. */
         BSL_SAL_FREE(cur);              /* Release the node. */
     }
+}
+
+void HS_ReassQueueFree(TLS_Ctx *ctx)
+{
+    if (ctx == NULL || ctx->reassMsg == NULL) {
+        return;
+    }
+    HS_ReassQueueClear(ctx);
     BSL_SAL_Free(ctx->reassMsg);
     ctx->reassMsg = NULL;
 }
@@ -308,4 +316,4 @@ int32_t HS_GetReassMsg(TLS_Ctx *ctx, HS_MsgInfo *msgInfo, uint32_t *len)
     return HITLS_SUCCESS;
 }
 
-#endif /* HITLS_TLS_PROTO_DTLS12 || HITLS_TLS_PROTO_DTLS13 */
+#endif /* HITLS_TLS_PROTO_DATAGRAM */

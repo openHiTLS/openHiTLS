@@ -362,6 +362,9 @@ test_tls()
     bash mini_build_test.sh $COMMON_PARAM $NO_LIB feature-config=max_send_fragment_feature test=max_send_fragment linux
     bash mini_build_test.sh $COMMON_PARAM $NO_LIB feature-config=ca_list_feature test=ca_list linux
     bash mini_build_test.sh $COMMON_PARAM $NO_LIB feature-config=no_dfx_feature test=no_dfx add-options="-fno-short-enums" linux
+    bash mini_build_test.sh $COMMON_PARAM $NO_LIB feature-config=dtls13_only_feature test=dtls13_family linux \
+        add-feature-options="-DHITLS_SEED_DRBG_INIT_RAND_ALG=CRYPT_RAND_SHA256" \
+        add-feature-options="-DHITLS_CRYPTO_ENTROPY_DEVRANDOM=ON"
     TLS_PARSE_MSG_BUILD_OPTS="add-feature-options=-DHITLS_PRESET_LOADED=ON \
         add-feature-options=-DHITLS_BUILD_SHARED=ON \
         add-feature-options=-DHITLS_BSL_LOG=ON \

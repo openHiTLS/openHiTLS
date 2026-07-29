@@ -35,6 +35,7 @@ static bool CFG_IsValidVersion(uint16_t version)
         case HITLS_VERSION_TLS12:
         case HITLS_VERSION_TLS13:
         case HITLS_VERSION_DTLS12:
+        case HITLS_VERSION_DTLS13:
         case HITLS_VERSION_TLCP_DTLCP11:
             return true;
         default:
@@ -129,9 +130,8 @@ static int32_t CheckSign(const TLS_Config *config)
         The authentication algorithm is not specified in the TLS 1.3 cipher suite and therefore does not need to be
        checked.
     */
-    if (config->cipherSuitesSize == 0 || ((config->minVersion == HITLS_VERSION_TLS13) &&
-        (config->maxVersion == HITLS_VERSION_TLS13)) || ((config->minVersion == HITLS_VERSION_DTLS13) &&
-        (config->maxVersion == HITLS_VERSION_DTLS13))) {
+    if (config->cipherSuitesSize == 0 ||
+        (config->minVersion == config->maxVersion && IS_TLS13_FAMILY_VERSION(config->minVersion))) {
         return HITLS_SUCCESS;
     }
 
@@ -236,7 +236,7 @@ int32_t CheckVersion(uint16_t minVersion, uint16_t maxVersion)
 #endif /* HITLS_TLS_CONFIG_VERSION */
 
 #ifdef HITLS_TLS_PROTO_DFX_CHECK
-#if (defined(HITLS_TLS_PROTO_DTLS12) || defined(HITLS_TLS_PROTO_DTLS13)) && defined(HITLS_BSL_UIO_UDP)
+#if defined(HITLS_TLS_PROTO_DATAGRAM) && defined(HITLS_BSL_UIO_UDP)
 static int32_t CheckCallbackFunc(const TLS_Config *config)
 {
     /* Check the cookie callback. The user must register the cookie callback at the same time or
@@ -261,7 +261,7 @@ int32_t CheckConfig(const TLS_Config *config)
     /** The check of the cipher suite is checked during setting. The algorithm suite needs to be sorted and the memory
      * overhead increases. Therefore, the algorithm suite is still placed in the Set interface */
     if (config->cipherSuitesSize == 0
-#ifdef HITLS_TLS_PROTO_TLS13
+#if defined(HITLS_TLS_PROTO_TLS13_FAMILY)
     && config->tls13cipherSuitesSize == 0
 #endif
     ) {
@@ -292,7 +292,7 @@ int32_t CheckConfig(const TLS_Config *config)
     if (ret != HITLS_SUCCESS) {
         return ret;
     }
-#if (defined(HITLS_TLS_PROTO_DTLS12) || defined(HITLS_TLS_PROTO_DTLS13)) && defined(HITLS_BSL_UIO_UDP)
+#if defined(HITLS_TLS_PROTO_DATAGRAM) && defined(HITLS_BSL_UIO_UDP)
     ret = CheckCallbackFunc(config);
 #endif
     return ret;

@@ -66,6 +66,7 @@ int HLT_SetClientVerifySupport(HLT_Ctx_Config* ctxConfig, bool support);
 int HLT_SetNoClientCertSupport(HLT_Ctx_Config* ctxConfig, bool support);
 int HLT_SetPostHandshakeAuth(HLT_Ctx_Config *ctxConfig, bool support);
 int HLT_SetPostHandshakeAuthSupport(HLT_Ctx_Config *ctxConfig, bool support);
+int HLT_SetDtlsCidSupport(HLT_Ctx_Config *ctxConfig, bool support);
 int HLT_SetExtendedMasterSecretSupport(HLT_Ctx_Config* ctxConfig, bool support);
 int HLT_SetEncryptThenMac(HLT_Ctx_Config *ctxConfig, int support);
 int HLT_SetMiddleBoxCompat(HLT_Ctx_Config *ctxConfig, int support);
@@ -150,6 +151,8 @@ int HLT_RpcProviderTlsNewCtx(HLT_Process *peerProcess, TLS_VERSION tlsVersion, b
 int HLT_RpcTlsSetCtx(HLT_Process* peerProcess, int ctxId, HLT_Ctx_Config* config);
 int HLT_RpcTlsNewSsl(HLT_Process* peerProcess, int ctxId);
 int HLT_RpcTlsSetSsl(HLT_Process* peerProcess, int sslId, HLT_Ssl_Config* config);
+int HLT_RpcTlsSetDtlsCid(HLT_Process *peerProcess, int sslId, const uint8_t *cid, uint8_t cidLen);
+int HLT_RpcTlsRequestConnectionId(HLT_Process *peerProcess, int sslId, uint8_t numCids);
 int HLT_RpcTlsListen(HLT_Process* peerProcess, int sslId);
 int HLT_RpcTlsAccept(HLT_Process* peerProcess, int sslId);
 int HLT_RpcGetTlsListenResult(int acceptId);

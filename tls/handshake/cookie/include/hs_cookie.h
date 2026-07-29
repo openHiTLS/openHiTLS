@@ -33,13 +33,11 @@ extern "C" {
  * @param clientHello [IN] Parsed clientHello structure
  * @param cookie [OUT] Calculated cookie
  * @param cookieLen [OUT] Calculated cookie length.
- * @param isCheck [IN] Indicates whether the calculation is used for cookie verification.
  *
  * @retval HITLS_SUCCESS succeeded.
  * @retval For other error codes, see hitls_error.h.
  */
-int32_t HS_CalcCookie(TLS_Ctx *ctx, const ClientHelloMsg *clientHello, uint8_t *cookie, uint32_t *cookieLen,
-    bool isCheck);
+int32_t HS_CalcCookie(TLS_Ctx *ctx, const ClientHelloMsg *clientHello, uint8_t *cookie, uint32_t *cookieLen);
 
 /**
  * @brief Verify the cookie.
@@ -54,9 +52,11 @@ int32_t HS_CalcCookie(TLS_Ctx *ctx, const ClientHelloMsg *clientHello, uint8_t *
  */
 int32_t HS_CheckCookie(TLS_Ctx *ctx, const ClientHelloMsg *clientHello, bool *isCookieValid);
 
+#if defined(HITLS_TLS_PROTO_DTLS13) && defined(HITLS_TLS_FEATURE_DEFAULT_COOKIE) && defined(HITLS_TLS_HOST_SERVER)
 int32_t HS_Dtls13GenerateCookie(TLS_Ctx *ctx);
 
 int32_t HS_Dtls13ProcessCookie(TLS_Ctx *ctx, const ClientHelloMsg *clientHello, bool *isCookieValid);
+#endif
 
 #ifdef __cplusplus
 }

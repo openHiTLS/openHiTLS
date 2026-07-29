@@ -14,7 +14,7 @@
  */
 #include "hitls_build.h"
 #if (defined(HITLS_TLS_HOST_SERVER) && defined(HITLS_TLS_FEATURE_CERT_MODE_CLIENT_VERIFY)) || \
-    defined(HITLS_TLS_PROTO_TLS13)
+    defined(HITLS_TLS_PROTO_TLS13_FAMILY)
 #include <stdint.h>
 #include "tls_binlog_id.h"
 #include "bsl_log_internal.h"
@@ -45,7 +45,7 @@ int32_t ServerRecvClientCertVerifyProcess(TLS_Ctx *ctx)
     return HS_ChangeState(ctx, TRY_RECV_FINISH);
 }
 #endif /* HITLS_TLS_PROTO_TLS_BASIC || HITLS_TLS_PROTO_DTLS12 */
-#ifdef HITLS_TLS_PROTO_TLS13
+#if defined(HITLS_TLS_PROTO_TLS13_FAMILY)
 int32_t Tls13RecvCertVerifyProcess(TLS_Ctx *ctx)
 {
     int32_t ret;
@@ -80,5 +80,5 @@ int32_t Tls13RecvCertVerifyProcess(TLS_Ctx *ctx)
     }
     return HS_ChangeState(ctx, TRY_RECV_FINISH);
 }
-#endif /* HITLS_TLS_PROTO_TLS13 */
-#endif /* (HITLS_TLS_HOST_SERVER && HITLS_TLS_FEATURE_CERT_MODE_CLIENT_VERIFY) || HITLS_TLS_PROTO_TLS13 */
+#endif /* HITLS_TLS_PROTO_TLS13_FAMILY */
+#endif /* (HITLS_TLS_HOST_SERVER && HITLS_TLS_FEATURE_CERT_MODE_CLIENT_VERIFY) || HITLS_TLS_PROTO_TLS13_FAMILY */

@@ -164,7 +164,7 @@ int32_t HITLS_GetVerifyResult(const HITLS_Ctx *ctx, HITLS_ERROR *verifyResult)
     return HITLS_SUCCESS;
 }
 
-#if defined(HITLS_TLS_PROTO_DTLS12) && defined(HITLS_BSL_UIO_UDP)
+#if defined(HITLS_TLS_PROTO_DATAGRAM) && defined(HITLS_BSL_UIO_UDP)
 int32_t HITLS_SetDtlsTimerCb(HITLS_Ctx *ctx, HITLS_DtlsTimerCb cb)
 {
     if (ctx == NULL) {
@@ -587,7 +587,7 @@ int32_t HITLS_GetFlightTransmitSwitch(const HITLS_Ctx *ctx, bool *isEnable)
 }
 #endif
 
-#if defined(HITLS_TLS_PROTO_DTLS12) && defined(HITLS_BSL_UIO_UDP)
+#if defined(HITLS_TLS_PROTO_DATAGRAM) && defined(HITLS_BSL_UIO_UDP)
 int32_t HITLS_SetDtlsCookieExangeSupport(HITLS_Ctx *ctx, bool isSupport)
 {
     if (ctx == NULL) {

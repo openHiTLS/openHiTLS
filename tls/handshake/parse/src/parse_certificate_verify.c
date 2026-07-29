@@ -14,7 +14,7 @@
  */
 #include "hitls_build.h"
 #if (defined(HITLS_TLS_HOST_SERVER) && defined(HITLS_TLS_FEATURE_CERT_MODE_CLIENT_VERIFY)) || \
-    defined(HITLS_TLS_PROTO_TLS13)
+    defined(HITLS_TLS_PROTO_TLS13_FAMILY)
 #include "tls_binlog_id.h"
 #include "bsl_log.h"
 #include "bsl_log_internal.h"
@@ -97,10 +97,10 @@ static int32_t KeyMatchSignAlg(TLS_Ctx *ctx, HITLS_SignHashAlgo signScheme, HITL
     }
 
     /* check curve matches signature algorithm, only check ec key for tls1.3 */
-    if (ctx->negotiatedInfo.version != HITLS_VERSION_TLS13) {
+    if (!IS_TLS13_FAMILY_VERSION(ctx->negotiatedInfo.version)) {
         return HITLS_SUCCESS;
     }
-#ifdef HITLS_TLS_PROTO_TLS13
+#if defined(HITLS_TLS_PROTO_TLS13_FAMILY)
     HITLS_Config *config = &ctx->config.tlsConfig;
     const TLS_SigSchemeInfo *schemeInfo = ConfigGetSignatureSchemeInfo(config, signScheme);
     if (schemeInfo == NULL) {
@@ -115,7 +115,7 @@ static int32_t KeyMatchSignAlg(TLS_Ctx *ctx, HITLS_SignHashAlgo signScheme, HITL
         return ParseErrorProcess(ctx, HITLS_PARSE_INVALID_MSG_LEN, BINLOG_ID16198,
             BINGLOG_STR("paramId mismatch sigScheme"), ALERT_INTERNAL_ERROR);
     }
-#endif /* HITLS_TLS_PROTO_TLS13 */
+#endif /* HITLS_TLS_PROTO_TLS13_FAMILY */
     return HITLS_SUCCESS;
 }
 
@@ -216,4 +216,4 @@ void CleanCertificateVerify(CertificateVerifyMsg *msg)
 
     BSL_SAL_FREE(msg->sign);
 }
-#endif /* (HITLS_TLS_HOST_SERVER && HITLS_TLS_FEATURE_CERT_MODE_CLIENT_VERIFY) || HITLS_TLS_PROTO_TLS13 */
+#endif /* (HITLS_TLS_HOST_SERVER && HITLS_TLS_FEATURE_CERT_MODE_CLIENT_VERIFY) || HITLS_TLS_PROTO_TLS13_FAMILY */

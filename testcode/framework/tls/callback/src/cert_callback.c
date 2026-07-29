@@ -214,7 +214,12 @@ int32_t HITLS_X509_LoadEECertList(HITLS_Config *tlsCfg, const char *eeFileList, 
             return ERROR;
         }
         if (isEnc == true) {
+#ifdef HITLS_TLS_PROTO_TLCP11
             ret = HITLS_CFG_SetTlcpCertificate(tlsCfg, cert, 0, isEnc);
+#else
+            HITLS_X509_Adapt_CertFree(cert);
+            return ERROR;
+#endif
         } else {
             ret = HITLS_CFG_SetCertificate(tlsCfg, cert, 0);
         }
@@ -264,7 +269,12 @@ int32_t HITLS_X509_LoadPrivateKeyList(HITLS_Config *tlsCfg, const char *keyFileL
             return ERROR;
         }
         if (isEnc == true) {
+#ifdef HITLS_TLS_PROTO_TLCP11
             ret = HITLS_CFG_SetTlcpPrivateKey(tlsCfg, key, 0, isEnc);
+#else
+            CRYPT_EAL_PkeyFreeCtx(key);
+            return ERROR;
+#endif
         } else {
             ret = HITLS_CFG_SetPrivateKey(tlsCfg, key, 0);
         }

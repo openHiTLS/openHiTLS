@@ -75,6 +75,7 @@ typedef struct {
     uint32_t cap;
 } Dtls13AckList;
 #endif
+typedef struct RecRetransmitList RecRetransmitList;
 
 /*
  * SecurityParameters, used to generate keys and initialize the connect state
@@ -292,11 +293,13 @@ int32_t REC_TLS13InitPendingState(const TLS_Ctx *ctx, const REC_SecParameters *p
  * @param   type [IN] Message type
  * @param   msg [IN] Message content
  * @param   len [IN] Message length
+ * @param   retransmitNode [OUT] New retransmission node, optional and can be NULL
  *
  * @retval  HITLS_SUCCESS
  * @retval  HITLS_MEMALLOC_FAIL Memory allocation failed
  */
-int32_t REC_RetransmitListAppend(REC_Ctx *recCtx, REC_Type type, const uint8_t *msg, uint32_t len);
+int32_t RecRetransmitListAppendNode(REC_Ctx *recCtx, REC_Type type, const uint8_t *msg, uint32_t len,
+    RecRetransmitList **retransmitNode);
 
 /**
  * @brief   Clear the retransmission queue
@@ -320,7 +323,6 @@ void REC_RetransmitListRemove(REC_Ctx *recCtx, uint8_t hsType);
 int32_t REC_RetransmitListFlush(TLS_Ctx *ctx);
 
 int32_t REC_GetLastWriteRecordNum(const TLS_Ctx *ctx, RecordNumber *recordNum);
-int32_t REC_GetLastReadRecordNum(const TLS_Ctx *ctx, RecordNumber *recordNum);
 
 bool REC_RetransmitIsEmpty(const REC_Ctx *recCtx);
 typedef enum {
