@@ -1060,6 +1060,17 @@ class CompileConfigParser:
             for key in ['PUBLIC', 'SHARED', 'EXE']:
                 if key in link_cfg:
                     result[key] = list(link_cfg[key])
+            # Handle legacy format: LINK_FLAG_ADD/LINK_FLAG_DEL
+            # LINK_FLAG_ADD flags are added to all categories
+            for flag in link_cfg.get('LINK_FLAG_ADD', []):
+                for category in ['PUBLIC', 'SHARED', 'EXE']:
+                    if flag not in result[category]:
+                        result[category].append(flag)
+            # LINK_FLAG_DEL flags are removed from all categories
+            for flag in link_cfg.get('LINK_FLAG_DEL', []):
+                for category in ['PUBLIC', 'SHARED', 'EXE']:
+                    if flag in result[category]:
+                        result[category].remove(flag)
             return result
 
         common_flags = link_cfg.get('common', {})
