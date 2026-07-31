@@ -12,7 +12,7 @@ openHiTLS架构高度模块化，可通过模块和特性配置。RAM/ROM尺寸�
 ### 功能特性
 
 - 协议：
-   - TLS: 支持TLS1.3，TLS1.3-Hybrid-Key-Exchange，TLS-Provider，TLS-Multi-KeyShare，TLS-Custom-Extension，TLCP，DTLCP，TLS1.2，DTLS1.2；
+   - TLS: 支持TLS1.3，DTLS1.3，TLS1.3-Hybrid-Key-Exchange，TLS-Provider，TLS-Multi-KeyShare，TLS-Custom-Extension，TLCP，DTLCP，TLS1.2，DTLS1.2；
    - 认证：支持 Privacy Pass token，HOTP，TOTP，SPAKE2+ 等认证协议；
 - 算法：
    - 后量子算法：ML-DSA，ML-KEM，SLH-DSA，XMSS，Classic McEliece，FrodoKEM；
@@ -40,7 +40,7 @@ openHiTLS架构高度模块化，可通过模块和特性配置。RAM/ROM尺寸�
 目前，openHiTLS有5个组件，其中BSL组件需和其他组件一起使用。
 - BSL是Base Support Layer的缩写，提供基础C类标准的增强功能和OS适配器，需与其他模块一起使用；
 - Crypto提供了完整的密码功能，且性能较优。该组件既可以被TLS使用，也可与BSL一起使用；
-- TLS是Transport Layer Security的缩写，涵盖了TLS1.3及之前的TLS版本，会与Crypto、BSL以及其他三方密码组件或PKI库一起使用；
+- TLS是Transport Layer Security的缩写，涵盖了TLS1.3、DTLS1.3、TLS1.2和DTLS1.2，会与Crypto、BSL以及其他三方密码组件或PKI库一起使用；
 - PKI组件提供证书、CRL解析，证书、CRL验证以及证书请求、生成等功能；
 - Auth认证组件提供了认证功能，当前提供Privacy Pass token认证功能，TOTP/HOTP，SPAKE2+等协议；
 

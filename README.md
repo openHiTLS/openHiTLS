@@ -12,7 +12,7 @@ The architecture of openHiTLS is highly modular, and openHiTLS can be configured
 ### Functional Features
 
 - Protocols:
-   - TLS: Support TLS1.3, TLS1.3-Hybrid-Key-Exchange, TLS-Provider, TLS-Multi-KeyShare, TLS-Custom-Extension, TLCP, DTLCP, TLS1.2, DTLS1.2.
+   - TLS: Support TLS1.3, DTLS1.3, TLS1.3-Hybrid-Key-Exchange, TLS-Provider, TLS-Multi-KeyShare, TLS-Custom-Extension, TLCP, DTLCP, TLS1.2, DTLS1.2.
    - Authentication: Support Privacy Pass token, HOTP, TOTP, SPAKE2+.
 - Algorithms:
    - Post-quantum algorithms: ML-DSA, ML-KEM, SLH-DSA, XMSS, Classic McEliece, FrodoKEM.
@@ -40,7 +40,7 @@ The architecture of openHiTLS is highly modular, and openHiTLS can be configured
 Currently, openHiTLS has 5 components. The BSL component will be used with other components.
 - BSL is short for Base Support Layer, which provides the base C standard enhanced functions and OS adapter. It will be used with other modules.
 - Crypto provides the full cryptographic functions with high performance. It will be used by tls, and can also be used with bsl.
-- TLS is short for Transport Layer Security, which covers TLS1.3 and previous TLS versions. It will be used with crypto, bsl and other third-party cryptographic components or PKI libraries.
+- TLS is short for Transport Layer Security, which covers TLS1.3, DTLS1.3, TLS1.2, and DTLS1.2. It will be used with crypto, bsl and other third-party cryptographic components or PKI libraries.
 - PKI component provides functions such as certificate and CRL parsing, certificate and CRL validation, as well as certificate request and generation.
 - Auth authentication component provides authentication functions. Currently, it provides Privacy Pass token, TOTP/HOTP, SPAKE2+.
 
