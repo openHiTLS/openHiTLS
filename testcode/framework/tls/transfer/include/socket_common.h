@@ -44,6 +44,16 @@ int32_t SetFrameHandle(HLT_FrameHandle *frameHandle);
 void CleanFrameHandle(void);
 
 /**
+ * @brief  Clear cached TCP record stream data used by frame handling
+ */
+void CleanFrameStreamState(void);
+
+/**
+ * @brief  Clear cached TCP record stream data for one socket
+ */
+void CleanFrameStreamStateByFd(int32_t fd);
+
+/**
  * @brief  Obtain message injection parameters
  */
 HLT_FrameHandle *GetFrameHandle(void);
@@ -52,6 +62,17 @@ HLT_FrameHandle *GetFrameHandle(void);
  * @brief  Obtain the newbuf by parsing the buf. Constraint: The input parameter of packLen cannot be empty
  */
 uint8_t *GetNewBuf(const void *buf, uint32_t len, uint32_t *packLen);
+
+/**
+ * @brief  Read buffered complete TLS records after TCP stream reassembly
+ */
+int32_t PopFrameStreamOutput(int32_t fd, HLT_PointType pointType, void *buf, uint32_t len, uint32_t *readLen);
+
+/**
+ * @brief  Append TCP bytes and output only complete TLS records
+ */
+int32_t PushFrameStreamInput(int32_t fd, HLT_PointType pointType, const void *in, uint32_t inLen,
+    void *out, uint32_t outSize, uint32_t *outLen);
 
 /**
  * @brief  Release the newbuf applied by GetNewBuf

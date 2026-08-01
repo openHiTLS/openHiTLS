@@ -197,6 +197,7 @@ int TcpAccept(char *ip, int listenFd, bool isBlock, bool needClose)
 /* Disable the specified socket */
 void TcpClose(int sd)
 {
+    CleanFrameStreamStateByFd(sd);
     close(sd);
 }
 
@@ -229,29 +230,34 @@ int32_t TcpFrameWrite(BSL_UIO *uio, const void *buf, uint32_t len, uint32_t *wri
 int32_t TcpFrameRead(BSL_UIO *uio, void *buf, uint32_t len, uint32_t *readLen)
 {
     int ret;
+    HLT_FrameHandle *frameHandle = GetFrameHandle();
+    int32_t fd = BSL_UIO_GetFd(uio);
+    if (frameHandle->frameCallBack != NULL && frameHandle->pointType == POINT_RECV) {
+        ret = PopFrameStreamOutput(fd, POINT_RECV, buf, len, readLen);
+        if (ret != HITLS_SUCCESS) {
+            return BSL_UIO_IO_EXCEPTION;
+        }
+        if (*readLen != 0) {
+            return BSL_SUCCESS;
+        }
+    }
+
     ret = BSL_UIO_TcpMethod()->uioRead(uio, buf, len, readLen);
     if (ret != BSL_SUCCESS) {
         return ret;
     }
 
-    uint8_t *newBuf = NULL;
     uint32_t packLen = *readLen;
-    HLT_FrameHandle *frameHandle = GetFrameHandle();
     if (frameHandle->frameCallBack != NULL && frameHandle->pointType == POINT_RECV) {
-        newBuf = GetNewBuf(buf, len, &packLen);
-        if (packLen == 0) { // packLen changes and becomes 0, the value is IO_BUSY
+        ret = PushFrameStreamInput(fd, POINT_RECV, buf, *readLen, buf, len, &packLen);
+        if (ret != HITLS_SUCCESS) {
+            return BSL_UIO_IO_EXCEPTION;
+        }
+        if (packLen == 0) { // No complete record is available yet or the value is IO_BUSY.
             *readLen = 0;
             return BSL_SUCCESS;
         }
-        if (newBuf != NULL) {
-            if (packLen > len) {
-                FreeNewBuf(newBuf);
-                return BSL_UIO_IO_EXCEPTION;
-            }
-            memcpy(buf, (uint8_t *)newBuf, packLen);
-            *readLen = packLen;
-        }
-        FreeNewBuf(newBuf);
+        *readLen = packLen;
     }
     return BSL_SUCCESS;
 }
