@@ -193,7 +193,6 @@ static bool CRYPT_CMVP_SelftestDsaInternal(void *libCtx, const char *attrName)
     CRYPT_EAL_PkeyPrv prv = { 0 };
     CRYPT_EAL_RandFunc func = CRYPT_RandRegistGet();
     CRYPT_EAL_RandFuncEx funcEx = CRYPT_RandRegistExGet();
-    CRYPT_RandRegistEx(NULL);
 
     msg = CMVP_StringsToBins(DSA_VECTOR.msg, &msgLen);
     GOTO_ERR_IF_TRUE(msg == NULL, CRYPT_CMVP_COMMON_ERR);
@@ -206,6 +205,7 @@ static bool CRYPT_CMVP_SelftestDsaInternal(void *libCtx, const char *attrName)
     GOTO_ERR_IF_TRUE(signVec == NULL, CRYPT_MEM_ALLOC_FAIL);
 
     // regist rand function
+    CRYPT_RandRegistEx(NULL);
     CRYPT_RandRegist(TestVectorRandom);
     // sign
     GOTO_ERR_IF_TRUE(CRYPT_EAL_PkeySign(pkeyPrv, DSA_VECTOR.mdId, msg, msgLen, sign, &signLen) != CRYPT_SUCCESS,

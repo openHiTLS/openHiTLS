@@ -1042,8 +1042,10 @@ void SDV_X509_CERT_VERSIONCHECK_TC004(char *path)
 #else
     TestMemInit();
     HITLS_X509_Cert *cert = NULL;
+    ASSERT_EQ(TestRandInit(), CRYPT_SUCCESS);
     ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_ASN1, path, &cert), HITLS_PKI_SUCCESS);
 EXIT:
+    TestRandDeInit();
     HITLS_X509_CertFree(cert);
 #endif
 }

@@ -18,6 +18,7 @@
 
 #include "crypt_types.h"
 #include "crypt_errno.h"
+#include "crypt_eal_rand.h"
 #include "crypt_iso_provider.h"
 #include "bsl_params.h"
 #include "bsl_err_internal.h"
@@ -192,8 +193,15 @@ int32_t CRYPT_Iso_Selftest(BSL_Param *param)
         return ret;
     }
 
+    ret = CRYPT_EAL_ProviderRandInitCtx(libCtx, CRYPT_RAND_SHA256, CRYPT_EAL_ISO_ATTR, NULL, 0, NULL);
+    if (ret != CRYPT_SUCCESS) {
+        CRYPT_EAL_LibCtxFree(libCtx);
+        return ret;
+    }
+
     runLog(CRYPT_EVENT_KAT_TEST, 0, 0, CRYPT_SUCCESS);
     ret = CMVP_Iso19790Kat(libCtx, CRYPT_EAL_ISO_ATTR);
+    CRYPT_EAL_RandDeinitEx(libCtx);
     CRYPT_EAL_LibCtxFree(libCtx);
     if (ret != CRYPT_SUCCESS) {
         runLog(CRYPT_EVENT_KAT_TEST, 0, 0, ret);

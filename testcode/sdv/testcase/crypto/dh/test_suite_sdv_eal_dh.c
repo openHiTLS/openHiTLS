@@ -374,6 +374,17 @@ void SDV_CRYPTO_DH_FUNC_TC005(Hex *p, Hex *g, Hex *q, Hex *prv1, int isProvider)
     ASSERT_TRUE(CRYPT_EAL_PkeySetPub(pkey2, &pub) == CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_PkeyComputeShareKey(pkey1, pkey2, shareLocal, &shareLen), CRYPT_DH_KEYINFO_ERROR);
 
+    uint16_t borrow = 0;  // pubKey = p - g; for odd q, (p - g)^q mod p = p - 1.
+    for (uint32_t i = 0; i < p->len; i++) {
+        uint32_t pIndex = p->len - i - 1;
+        uint16_t gValue = i < g->len ? g->x[g->len - i - 1] : 0;
+        uint16_t sub = gValue + borrow;
+        tmpPub[pIndex] = (uint8_t)(p->x[pIndex] - sub);
+        borrow = p->x[pIndex] < sub;
+    }
+    ASSERT_TRUE(CRYPT_EAL_PkeySetPub(pkey2, &pub) == CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyComputeShareKey(pkey1, pkey2, shareLocal, &shareLen), CRYPT_DH_KEYINFO_ERROR);
+
     memset(tmpPub, 0, p->len);  // pubKey = 0;
     ASSERT_TRUE(CRYPT_EAL_PkeySetPub(pkey2, &pub) == CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_PkeyComputeShareKey(pkey1, pkey2, shareLocal, &shareLen), CRYPT_DH_KEYINFO_ERROR);
@@ -450,6 +461,7 @@ void SDV_CRYPTO_DH_FUNC_TC006(
     cmpRet2 = memcmp(shareLocal, share->x, share->len);
 
     ASSERT_TRUE(ret1 != CRYPT_SUCCESS || cmpRet1 != 0 || ret2 != CRYPT_SUCCESS || cmpRet2 != 0);
+    TestErrClear();
     ASSERT_TRUE(TestIsErrStackEmpty());
 EXIT:
     CRYPT_EAL_PkeyFreeCtx(pkey1);

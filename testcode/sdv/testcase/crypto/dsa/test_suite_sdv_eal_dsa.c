@@ -25,6 +25,7 @@
 #include "crypt_dsa.h"
 #include "dsa_local.h"
 #include "crypt_eal_pkey.h"
+#include "crypt_eal_provider.h"
 #include "crypt_eal_rand.h"
 #include "crypt_bn.h"
 #include "eal_pkey_local.h"
@@ -233,6 +234,63 @@ EXIT:
 /* END_CASE */
 
 /**
+ * @test   SDV_CRYPTO_DSA_PARA_VALIDATE_FUNC_TC001
+ * @title  DSA domain parameter validation test.
+ * @precon Registering memory-related functions.
+ *         DSA domain parameter vectors.
+ * @brief
+ *    Set supplied DSA domain parameters using the requested implementation and library context.
+ * @expect
+ *    Valid prime parameters are accepted; composite p or q and a generator outside the q-order subgroup are rejected.
+ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_DSA_PARA_VALIDATE_FUNC_TC001(Hex *p, Hex *q, Hex *g, int expected,
+    int isProvider, int useCustomLibCtx)
+{
+    CRYPT_EAL_LibCtx *libCtx = NULL;
+    CRYPT_EAL_PkeyCtx *pkey = NULL;
+    CRYPT_EAL_PkeyPara para = {0};
+    para.id = CRYPT_PKEY_DSA;
+    para.para.dsaPara.p = p->x;
+    para.para.dsaPara.pLen = p->len;
+    para.para.dsaPara.q = q->x;
+    para.para.dsaPara.qLen = q->len;
+    para.para.dsaPara.g = g->x;
+    para.para.dsaPara.gLen = g->len;
+
+    TestMemInit();
+    if (useCustomLibCtx) {
+#ifdef HITLS_CRYPTO_PROVIDER
+        libCtx = CRYPT_EAL_LibCtxNew();
+        ASSERT_TRUE(libCtx != NULL);
+        ASSERT_EQ(CRYPT_EAL_ProviderRegister(libCtx, "default", NULL, NULL, NULL), CRYPT_SUCCESS);
+        ASSERT_EQ(TestRandInitEx(libCtx), CRYPT_SUCCESS);
+#else
+        SKIP_TEST();
+#endif
+    } else {
+        ASSERT_EQ(TestRandInit(), CRYPT_SUCCESS);
+    }
+    pkey = TestPkeyNewCtx(libCtx, CRYPT_PKEY_DSA, CRYPT_EAL_PKEY_UNKNOWN_OPERATE,
+        "provider=default", isProvider);
+    ASSERT_TRUE(pkey != NULL);
+    ASSERT_EQ(CRYPT_EAL_PkeySetPara(pkey, &para), expected);
+
+EXIT:
+    CRYPT_EAL_PkeyFreeCtx(pkey);
+#ifdef HITLS_CRYPTO_PROVIDER
+    if (libCtx != NULL) {
+        CRYPT_EAL_RandDeinitEx(libCtx);
+        CRYPT_EAL_LibCtxFree(libCtx);
+    } else
+#endif
+    {
+        TestRandDeInit();
+    }
+}
+/* END_CASE */
+
+/**
  * @test   SDV_CRYPTO_DSA_CMP_API_TC001
  * @title  DSA: CRYPT_EAL_PkeyCmp test.
  * @precon Registering memory-related functions.
@@ -424,6 +482,7 @@ void SDV_CRYPTO_DSA_SIGN_VERIFY_FUNC_TC001(
     BN_BigNum *bnS = NULL;
     CRYPT_EAL_PkeyCtx *pkey = NULL;
     CRYPT_EAL_PkeyCtx *cpyCtx = NULL;
+    bool randInitialized = false;
 
     CRYPT_EAL_PkeyPara para = {0};
     CRYPT_EAL_PkeyPrv prv = {0};
@@ -435,15 +494,20 @@ void SDV_CRYPTO_DSA_SIGN_VERIFY_FUNC_TC001(
     g_kRandBufLen = K->len;
 
     TestMemInit();
+    ASSERT_EQ(TestRandInit(), CRYPT_SUCCESS);
+    randInitialized = true;
+    pkey = TestPkeyNewCtx(NULL, CRYPT_PKEY_DSA, CRYPT_EAL_PKEY_SIGN_OPERATE,
+        "provider=default", isProvider);
+    ASSERT_TRUE(pkey != NULL);
+    ASSERT_EQ(CRYPT_EAL_PkeySetPara(pkey, &para), CRYPT_SUCCESS);
+    TestRandDeInit();
+    randInitialized = false;
+
     // Register custom random function to return fixed K value from test vector
     CRYPT_RandRegist(STUB_RandForSignature);
 #ifdef HITLS_CRYPTO_PROVIDER
     CRYPT_RandRegistEx(STUB_RandForSignatureEx);
 #endif
-    pkey = TestPkeyNewCtx(NULL, CRYPT_PKEY_DSA, CRYPT_EAL_PKEY_SIGN_OPERATE,
-        "provider=default", isProvider);
-    ASSERT_TRUE(pkey != NULL);
-    ASSERT_EQ(CRYPT_EAL_PkeySetPara(pkey, &para), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_PkeySetPrv(pkey, &prv), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_PkeySetPub(pkey, &pub), CRYPT_SUCCESS);
 
@@ -477,8 +541,12 @@ void SDV_CRYPTO_DSA_SIGN_VERIFY_FUNC_TC001(
     ASSERT_EQ(CRYPT_EAL_PkeyVerify(cpyCtx, hashId, Msg->x, Msg->len, hitlsSign, hitlsSignOutLen), CRYPT_SUCCESS);
     ASSERT_TRUE(TestIsErrStackEmpty());
 EXIT:
-    CRYPT_RandRegist(NULL);
-    CRYPT_RandRegistEx(NULL);
+    if (randInitialized) {
+        TestRandDeInit();
+    } else {
+        CRYPT_RandRegist(NULL);
+        CRYPT_RandRegistEx(NULL);
+    }
     free(vectorSign);
     free(hitlsSign);
     BN_Destroy(bnR);
@@ -529,6 +597,7 @@ void SDV_CRYPTO_DSA_SIGN_VERIFY_DATA_FUNC_TC001(
     BN_BigNum *q = NULL;
     uint8_t *sigAddQ = NULL;
     uint32_t sigAddQLen = 0;
+    bool randInitialized = false;
 
     ASSERT_TRUE((K->len) <= sizeof(g_kRandBuf));
     memcpy(g_kRandBuf, K->x, K->len);
@@ -540,16 +609,20 @@ void SDV_CRYPTO_DSA_SIGN_VERIFY_DATA_FUNC_TC001(
     Set_DSA_Para(&para, &prv, &pub, P, Q, G, X, Y);
 
     TestMemInit();
+    ASSERT_EQ(TestRandInit(), CRYPT_SUCCESS);
+    randInitialized = true;
+    pkey = TestPkeyNewCtx(NULL, CRYPT_PKEY_DSA, CRYPT_EAL_PKEY_SIGN_OPERATE,
+        "provider=default", isProvider);
+    ASSERT_TRUE(pkey != NULL);
+    ASSERT_EQ(CRYPT_EAL_PkeySetPara(pkey, &para), CRYPT_SUCCESS);
+    TestRandDeInit();
+    randInitialized = false;
+
     // Register custom random function to return fixed K value from test vector
     CRYPT_RandRegist(STUB_RandForSignature);
 #ifdef HITLS_CRYPTO_PROVIDER
     CRYPT_RandRegistEx(STUB_RandForSignatureEx);
 #endif
-
-    pkey = TestPkeyNewCtx(NULL, CRYPT_PKEY_DSA, CRYPT_EAL_PKEY_SIGN_OPERATE,
-        "provider=default", isProvider);
-    ASSERT_TRUE(pkey != NULL);
-    ASSERT_EQ(CRYPT_EAL_PkeySetPara(pkey, &para), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_PkeySetPrv(pkey, &prv), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_PkeySetPub(pkey, &pub), CRYPT_SUCCESS);
 
@@ -585,8 +658,12 @@ void SDV_CRYPTO_DSA_SIGN_VERIFY_DATA_FUNC_TC001(
     ASSERT_EQ(CRYPT_EAL_EncodeSign(bnR, bnS, sigAddQ, &sigAddQLen), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_PkeyVerifyData(pkey, mdOut.x, mdOut.len, sigAddQ, sigAddQLen), CRYPT_DSA_VERIFY_FAIL);
 EXIT:
-    CRYPT_RandRegist(NULL);
-    CRYPT_RandRegistEx(NULL);
+    if (randInitialized) {
+        TestRandDeInit();
+    } else {
+        CRYPT_RandRegist(NULL);
+        CRYPT_RandRegistEx(NULL);
+    }
     if (mdOut.x != NULL) {
         free(mdOut.x);
     }
@@ -831,7 +908,11 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_CRYPTO_DSA_GET_KEY_BITS_FUNC_TC001(int id, int keyBits, Hex *P, Hex *Q, Hex *G, int isProvider)
 {
-    CRYPT_EAL_PkeyCtx *pkey = TestPkeyNewCtx(NULL, id, CRYPT_EAL_PKEY_UNKNOWN_OPERATE, "provider=default", isProvider);
+    CRYPT_EAL_PkeyCtx *pkey = NULL;
+    bool randInitialized = false;
+    ASSERT_EQ(TestRandInit(), CRYPT_SUCCESS);
+    randInitialized = true;
+    pkey = TestPkeyNewCtx(NULL, id, CRYPT_EAL_PKEY_UNKNOWN_OPERATE, "provider=default", isProvider);
     ASSERT_TRUE(pkey != NULL);
     CRYPT_EAL_PkeyPara para;
     para.id = CRYPT_PKEY_DSA;
@@ -847,6 +928,9 @@ void SDV_CRYPTO_DSA_GET_KEY_BITS_FUNC_TC001(int id, int keyBits, Hex *P, Hex *Q,
     ASSERT_TRUE(TestIsErrStackEmpty());
 EXIT:
     CRYPT_EAL_PkeyFreeCtx(pkey);
+    if (randInitialized) {
+        TestRandDeInit();
+    }
 }
 /* END_CASE */
 
@@ -866,7 +950,11 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_CRYPTO_DSA_GET_SEC_BITS_FUNC_TC001(int id, int secBits, Hex *P, Hex *Q, Hex *G)
 {
-    CRYPT_EAL_PkeyCtx *pkey = CRYPT_EAL_PkeyNewCtx(id);
+    CRYPT_EAL_PkeyCtx *pkey = NULL;
+    bool randInitialized = false;
+    ASSERT_EQ(TestRandInit(), CRYPT_SUCCESS);
+    randInitialized = true;
+    pkey = CRYPT_EAL_PkeyNewCtx(id);
     ASSERT_TRUE(pkey != NULL);
     CRYPT_EAL_PkeyPara para;
     para.id = CRYPT_PKEY_DSA;
@@ -881,6 +969,9 @@ void SDV_CRYPTO_DSA_GET_SEC_BITS_FUNC_TC001(int id, int secBits, Hex *P, Hex *Q,
     ASSERT_EQ(CRYPT_EAL_PkeyGetSecurityBits(pkey), secBits);
 EXIT:
     CRYPT_EAL_PkeyFreeCtx(pkey);
+    if (randInitialized) {
+        TestRandDeInit();
+    }
 }
 /* END_CASE */
 
