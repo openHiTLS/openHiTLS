@@ -129,6 +129,9 @@ bool HS_ReassQueueIsEmpty(const TLS_Ctx *ctx)
 
 static HS_ReassQueue *GetReassNode(HS_ReassQueue *reassQueue, uint16_t sequence)
 {
+    if (reassQueue == NULL) {
+        return NULL;
+    }
     ListHead *node = NULL;
     ListHead *tmpNode = NULL;
     HS_ReassQueue *cur = NULL;

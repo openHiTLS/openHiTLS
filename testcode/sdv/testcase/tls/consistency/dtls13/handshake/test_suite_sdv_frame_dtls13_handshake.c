@@ -435,6 +435,163 @@ static int32_t ParseDtls13BufferedHsMsg(FRAME_LinkObj *link, bool isRecvMsg, HS_
     return FRAME_ParseMsg(&frameType, msg->msg, msg->len, frameMsg, &parseLen);
 }
 
+static void SetDtlsHandshakeFrameType(FRAME_Type *frameType, uint16_t version, HS_MsgType handshakeType)
+{
+    frameType->versionType = version;
+    frameType->recordType = REC_TYPE_HANDSHAKE;
+    frameType->handshakeType = handshakeType;
+    frameType->keyExType = HITLS_KEY_EXCH_ECDHE;
+    frameType->transportType = BSL_UIO_UDP;
+}
+
+static int32_t ParseDtlsBufferedHsMsg(FRAME_LinkObj *link, bool isRecvMsg, uint16_t version,
+    HS_MsgType handshakeType, FRAME_Msg *frameMsg)
+{
+    FrameUioUserData *ioUserData = BSL_UIO_GetUserData(link->io);
+    if (ioUserData == NULL) {
+        return HITLS_NULL_INPUT;
+    }
+
+    FrameMsg *msg = isRecvMsg ? &ioUserData->recMsg : &ioUserData->sndMsg;
+    if (msg->len == 0) {
+        return HITLS_INTERNAL_EXCEPTION;
+    }
+
+    FRAME_Type frameType = {0};
+    uint32_t parseLen = 0;
+    SetDtlsHandshakeFrameType(&frameType, version, handshakeType);
+    return FRAME_ParseMsg(&frameType, msg->msg, msg->len, frameMsg, &parseLen);
+}
+
+static int32_t ConfigDtlsStatefulSessionResume(HITLS_Config *config)
+{
+    int32_t ret = HITLS_CFG_SetSessionCacheMode(config, HITLS_SESS_CACHE_BOTH);
+    if (ret != HITLS_SUCCESS) {
+        return ret;
+    }
+    ret = HITLS_CFG_SetSessionTicketSupport(config, false);
+    if (ret != HITLS_SUCCESS) {
+        return ret;
+    }
+    return HITLS_CFG_SetTicketNums(config, 0);
+}
+
+static HITLS_Config *NewDtls12AndDtls13Config(void)
+{
+    HITLS_Config *config = HITLS_CFG_NewDTLSConfig();
+    if (config == NULL) {
+        return NULL;
+    }
+    if (!NewDtlsConfigSupportsDtls12AndDtls13(config) ||
+        ConfigDtlsStatefulSessionResume(config) != HITLS_SUCCESS ||
+        Dtls13UseSingleKeyShareGroup(config) != HITLS_SUCCESS) {
+        HITLS_CFG_FreeConfig(config);
+        return NULL;
+    }
+    return config;
+}
+
+static int32_t PrepareDtls12Session(HITLS_Config *clientConfig, HITLS_Config *serverConfig,
+    HITLS_Session **session, uint8_t *sessionId, uint32_t *sessionIdSize)
+{
+    FRAME_LinkObj *client = NULL;
+    FRAME_LinkObj *server = NULL;
+    int32_t ret = ConfigDtlsStatefulSessionResume(clientConfig);
+    if (ret != HITLS_SUCCESS) {
+        return ret;
+    }
+    ret = ConfigDtlsStatefulSessionResume(serverConfig);
+    if (ret != HITLS_SUCCESS) {
+        return ret;
+    }
+    client = FRAME_CreateLink(clientConfig, BSL_UIO_UDP);
+    if (client == NULL) {
+        return HITLS_INTERNAL_EXCEPTION;
+    }
+    server = FRAME_CreateLink(serverConfig, BSL_UIO_UDP);
+    if (server == NULL) {
+        FRAME_FreeLink(client);
+        return HITLS_INTERNAL_EXCEPTION;
+    }
+
+    ret = FRAME_CreateConnection(client, server, true, HS_STATE_BUTT);
+    if (ret == HITLS_SUCCESS) {
+        *session = HITLS_GetDupSession(client->ssl);
+        if (*session == NULL) {
+            ret = HITLS_INTERNAL_EXCEPTION;
+        }
+    }
+    if (ret == HITLS_SUCCESS) {
+        *sessionIdSize = HITLS_SESSION_ID_MAX_SIZE;
+        ret = HITLS_SESS_GetSessionId(*session, sessionId, sessionIdSize);
+    }
+
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+    return ret;
+}
+
+static bool DtlsClientHelloHasSupportedVersion(const FRAME_ClientHelloMsg *clientHello, uint16_t version)
+{
+    if (clientHello->supportedVersion.exState == MISSING_FIELD ||
+        clientHello->supportedVersion.exData.data == NULL) {
+        return false;
+    }
+    for (uint32_t i = 0; i < clientHello->supportedVersion.exData.size; i++) {
+        if (clientHello->supportedVersion.exData.data[i] == version) {
+            return true;
+        }
+    }
+    return false;
+}
+
+static bool DtlsFrameSessionIdEquals(const FRAME_Integer *size, const FRAME_Array8 *sessionId,
+    const uint8_t *expected, uint32_t expectedSize)
+{
+    return size->data == expectedSize && sessionId->data != NULL && sessionId->size == expectedSize &&
+        memcmp(sessionId->data, expected, expectedSize) == 0;
+}
+
+static int32_t DtlsCheckNegotiatedVersionAndResume(FRAME_LinkObj *client, uint16_t expectedVersion,
+    bool expectedResume)
+{
+    uint16_t version = 0;
+    bool isReused = false;
+    int32_t ret = HITLS_GetNegotiatedVersion(client->ssl, &version);
+    if (ret != HITLS_SUCCESS) {
+        return ret;
+    }
+    if (version != expectedVersion) {
+        return HITLS_INTERNAL_EXCEPTION;
+    }
+    ret = HITLS_IsSessionReused(client->ssl, &isReused);
+    if (ret != HITLS_SUCCESS) {
+        return ret;
+    }
+    return isReused == expectedResume ? HITLS_SUCCESS : HITLS_INTERNAL_EXCEPTION;
+}
+
+static HITLS_Session *g_dtlsLowVersionResumeSession = NULL;
+
+static HITLS_Session *DtlsLowVersionResumeSessionGetCb(HITLS_Ctx *ctx, const uint8_t *data, int32_t len,
+    int32_t *copy)
+{
+    (void)ctx;
+    if (g_dtlsLowVersionResumeSession == NULL || data == NULL || len <= 0 || copy == NULL) {
+        return NULL;
+    }
+
+    uint8_t sessionId[HITLS_SESSION_ID_MAX_SIZE] = {0};
+    uint32_t sessionIdSize = sizeof(sessionId);
+    if (HITLS_SESS_GetSessionId(g_dtlsLowVersionResumeSession, sessionId, &sessionIdSize) != HITLS_SUCCESS ||
+        sessionIdSize != (uint32_t)len || memcmp(sessionId, data, sessionIdSize) != 0) {
+        return NULL;
+    }
+
+    *copy = 1;
+    return g_dtlsLowVersionResumeSession;
+}
+
 static void Dtls13ClearServerFirstClientHello(TLS_Ctx *ctx)
 {
     if (ctx == NULL || ctx->hsCtx == NULL || ctx->hsCtx->firstClientHello == NULL) {
@@ -3958,5 +4115,566 @@ EXIT:
     HITLS_CFG_FreeConfig(config);
     FRAME_FreeLink(client);
     FRAME_FreeLink(server);
+}
+/* END_CASE */
+
+/** @
+* @test SDV_TLS_DTLS13_HANDSHAKE_CONSISTENCY_FUNC_TC054
+* @spec -
+* @title DTLS1.3 clears the current retransmit flight before caching a future-sequence handshake message.
+* @precon nan
+* @brief
+*    1. Create DTLS1.3 client and server links over UDP.
+*    2. Stop after the client sends ClientHello and enters TRY_RECV_SERVER_HELLO.
+*    3. Let the server produce ServerHello, then change ServerHello message_seq to one greater than the client's
+*       expected receive sequence.
+*    4. Deliver the modified ServerHello to the client.
+* @expect
+*    1. The client initially has a ClientHello retransmit node.
+*    2. The future-sequence ServerHello is cached in the reassembly queue.
+*    3. The client retransmit queue is cleared before the out-of-order path returns.
+@ */
+/* BEGIN_CASE */
+void SDV_TLS_DTLS13_HANDSHAKE_CONSISTENCY_FUNC_TC054(void)
+{
+    HITLS_Config *config = NULL;
+    FRAME_LinkObj *client = NULL;
+    FRAME_LinkObj *server = NULL;
+    FRAME_Msg serverHelloMsg = {0};
+    FRAME_Type serverHelloType = {0};
+    uint8_t sendBuf[MAX_RECORD_LENTH] = {0};
+    uint32_t sendLen = sizeof(sendBuf);
+    uint16_t expectRecvSeq = 0;
+    int32_t ret;
+
+    FRAME_Init();
+    SetDtls13FrameType(&serverHelloType, REC_TYPE_HANDSHAKE, SERVER_HELLO);
+
+    config = HITLS_CFG_NewDTLS13Config();
+    ASSERT_TRUE(config != NULL);
+    ASSERT_EQ(HITLS_CFG_SetTicketNums(config, 0), HITLS_SUCCESS);
+
+    client = FRAME_CreateLink(config, BSL_UIO_UDP);
+    ASSERT_TRUE(client != NULL);
+    server = FRAME_CreateLink(config, BSL_UIO_UDP);
+    ASSERT_TRUE(server != NULL);
+
+    ASSERT_EQ(FRAME_CreateConnection(client, server, true, TRY_RECV_SERVER_HELLO), HITLS_SUCCESS);
+    ASSERT_TRUE(client->ssl->hsCtx != NULL);
+    ASSERT_EQ(client->ssl->hsCtx->state, TRY_RECV_SERVER_HELLO);
+    ASSERT_TRUE(REC_RetransmitIsEmpty(client->ssl->recCtx) == false);
+    ASSERT_TRUE(HS_ReassQueueIsEmpty(client->ssl) == true);
+
+    ASSERT_EQ(ParseDtls13BufferedHsMsg(client, true, SERVER_HELLO, &serverHelloMsg), HITLS_SUCCESS);
+
+    expectRecvSeq = client->ssl->hsCtx->expectRecvSeq;
+    FRAME_ModifyMsgInteger((uint32_t)(expectRecvSeq + 1u), &serverHelloMsg.body.hsMsg.sequence);
+    ASSERT_EQ(FRAME_PackMsg(&serverHelloType, &serverHelloMsg, sendBuf, sizeof(sendBuf), &sendLen), HITLS_SUCCESS);
+
+    FrameUioUserData *clientIoUserData = BSL_UIO_GetUserData(client->io);
+    ASSERT_TRUE(clientIoUserData != NULL);
+    clientIoUserData->recMsg.len = 0;
+    ASSERT_EQ(FRAME_TransportRecMsg(client->io, sendBuf, sendLen), HITLS_SUCCESS);
+
+    ret = HITLS_Connect(client->ssl);
+    ASSERT_TRUE(IsFrameIoPendingRet(ret));
+    ASSERT_EQ(client->ssl->hsCtx->expectRecvSeq, expectRecvSeq);
+    ASSERT_TRUE(HS_ReassQueueIsEmpty(client->ssl) == false);
+    ASSERT_TRUE(REC_RetransmitIsEmpty(client->ssl->recCtx) == true);
+
+EXIT:
+    FRAME_CleanMsg(&serverHelloType, &serverHelloMsg);
+    HITLS_CFG_FreeConfig(config);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+}
+/* END_CASE */
+
+/** @
+* @test SDV_TLS_DTLS13_HANDSHAKE_CONSISTENCY_FUNC_TC055
+* @spec -
+* @title DTLS1.3 server does not echo a non-empty ClientHello legacy_session_id.
+* @precon nan
+* @brief
+*    1. Create DTLS1.3 client and server links over UDP.
+*    2. Stop after the client sends ClientHello to the server.
+*    3. Modify ClientHello to carry a non-empty legacy_session_id.
+*    4. Let the server process the modified ClientHello and send ServerHello.
+*    5. Parse ServerHello and check legacy_session_id_echo.
+* @expect
+*    1. The modified ClientHello can be packed and delivered.
+*    2. The server negotiates DTLS1.3.
+*    3. The ServerHello legacy_session_id_echo length is 0.
+@ */
+/* BEGIN_CASE */
+void SDV_TLS_DTLS13_HANDSHAKE_CONSISTENCY_FUNC_TC055(void)
+{
+    HITLS_Config *config = NULL;
+    FRAME_LinkObj *client = NULL;
+    FRAME_LinkObj *server = NULL;
+    FRAME_Msg clientHelloMsg = {0};
+    FRAME_Msg serverHelloMsg = {0};
+    FRAME_Type clientHelloType = {0};
+    FRAME_Type serverHelloType = {0};
+    uint8_t sessionId[HITLS_SESSION_ID_MAX_SIZE] = {0};
+    uint8_t sendBuf[MAX_RECORD_LENTH] = {0};
+    uint32_t sendLen = sizeof(sendBuf);
+    int32_t ret;
+
+    FRAME_Init();
+    SetDtls13FrameType(&clientHelloType, REC_TYPE_HANDSHAKE, CLIENT_HELLO);
+    SetDtls13FrameType(&serverHelloType, REC_TYPE_HANDSHAKE, SERVER_HELLO);
+
+    config = HITLS_CFG_NewDTLS13Config();
+    ASSERT_TRUE(config != NULL);
+    ASSERT_EQ(HITLS_CFG_SetTicketNums(config, 0), HITLS_SUCCESS);
+    ASSERT_EQ(Dtls13UseSingleKeyShareGroup(config), HITLS_SUCCESS);
+
+    client = FRAME_CreateLink(config, BSL_UIO_UDP);
+    ASSERT_TRUE(client != NULL);
+    server = FRAME_CreateLink(config, BSL_UIO_UDP);
+    ASSERT_TRUE(server != NULL);
+
+    ASSERT_EQ(FRAME_CreateConnection(client, server, false, TRY_RECV_CLIENT_HELLO), HITLS_SUCCESS);
+    ASSERT_EQ(ParseDtls13BufferedHsMsg(server, true, CLIENT_HELLO, &clientHelloMsg), HITLS_SUCCESS);
+
+    for (uint32_t i = 0; i < sizeof(sessionId); i++) {
+        sessionId[i] = (uint8_t)(i + 1u);
+    }
+
+    FRAME_ClientHelloMsg *clientHello = &clientHelloMsg.body.hsMsg.body.clientHello;
+    ASSERT_EQ(FRAME_ModifyMsgArray8(sessionId, sizeof(sessionId), &clientHello->sessionId,
+        &clientHello->sessionIdSize), HITLS_SUCCESS);
+    ASSERT_EQ(FRAME_PackMsg(&clientHelloType, &clientHelloMsg, sendBuf, sizeof(sendBuf), &sendLen), HITLS_SUCCESS);
+
+    FrameUioUserData *serverIoUserData = BSL_UIO_GetUserData(server->io);
+    ASSERT_TRUE(serverIoUserData != NULL);
+    serverIoUserData->recMsg.len = 0;
+    ASSERT_EQ(FRAME_TransportRecMsg(server->io, sendBuf, sendLen), HITLS_SUCCESS);
+
+    ret = HITLS_Accept(server->ssl);
+    ASSERT_TRUE(IsFrameIoPendingRet(ret));
+    ASSERT_EQ(server->ssl->negotiatedInfo.version, HITLS_VERSION_DTLS13);
+
+    ASSERT_EQ(ParseDtls13BufferedHsMsg(server, false, SERVER_HELLO, &serverHelloMsg), HITLS_SUCCESS);
+    ASSERT_EQ(serverHelloMsg.body.hsMsg.body.serverHello.sessionIdSize.data, 0);
+
+EXIT:
+    FRAME_CleanMsg(&clientHelloType, &clientHelloMsg);
+    FRAME_CleanMsg(&serverHelloType, &serverHelloMsg);
+    HITLS_CFG_FreeConfig(config);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+}
+/* END_CASE */
+
+/** @
+* @test SDV_TLS_DTLS13_HANDSHAKE_CONSISTENCY_FUNC_TC056
+* @spec -
+* @title DTLS1.3 client tolerates a non-empty ServerHello legacy_session_id_echo.
+* @precon nan
+* @brief
+*    1. Create DTLS1.3 client and server links over UDP.
+*    2. Stop after the client receives ServerHello.
+*    3. Modify ServerHello to carry a non-empty legacy_session_id_echo.
+*    4. Deliver the modified ServerHello to the client.
+* @expect
+*    1. The modified ServerHello can be packed and delivered.
+*    2. The client does not reject the message because of the legacy_session_id_echo.
+*    3. The client continues to receive EncryptedExtensions.
+@ */
+/* BEGIN_CASE */
+void SDV_TLS_DTLS13_HANDSHAKE_CONSISTENCY_FUNC_TC056(void)
+{
+    HITLS_Config *config = NULL;
+    FRAME_LinkObj *client = NULL;
+    FRAME_LinkObj *server = NULL;
+    FRAME_Msg serverHelloMsg = {0};
+    FRAME_Type serverHelloType = {0};
+    uint8_t sessionId[HITLS_SESSION_ID_MAX_SIZE] = {0};
+    uint8_t sendBuf[MAX_RECORD_LENTH] = {0};
+    uint32_t sendLen = sizeof(sendBuf);
+
+    FRAME_Init();
+    SetDtls13FrameType(&serverHelloType, REC_TYPE_HANDSHAKE, SERVER_HELLO);
+
+    config = HITLS_CFG_NewDTLS13Config();
+    ASSERT_TRUE(config != NULL);
+    ASSERT_EQ(HITLS_CFG_SetTicketNums(config, 0), HITLS_SUCCESS);
+    ASSERT_EQ(Dtls13UseSingleKeyShareGroup(config), HITLS_SUCCESS);
+
+    client = FRAME_CreateLink(config, BSL_UIO_UDP);
+    ASSERT_TRUE(client != NULL);
+    server = FRAME_CreateLink(config, BSL_UIO_UDP);
+    ASSERT_TRUE(server != NULL);
+
+    ASSERT_EQ(FRAME_CreateConnection(client, server, true, TRY_RECV_SERVER_HELLO), HITLS_SUCCESS);
+    ASSERT_EQ(ParseDtls13BufferedHsMsg(client, true, SERVER_HELLO, &serverHelloMsg), HITLS_SUCCESS);
+
+    for (uint32_t i = 0; i < sizeof(sessionId); i++) {
+        sessionId[i] = (uint8_t)(i + 1u);
+    }
+
+    FRAME_ServerHelloMsg *serverHello = &serverHelloMsg.body.hsMsg.body.serverHello;
+    ASSERT_EQ(FRAME_ModifyMsgArray8(sessionId, sizeof(sessionId), &serverHello->sessionId,
+        &serverHello->sessionIdSize), HITLS_SUCCESS);
+    ASSERT_EQ(FRAME_PackMsg(&serverHelloType, &serverHelloMsg, sendBuf, sizeof(sendBuf), &sendLen), HITLS_SUCCESS);
+
+    FrameUioUserData *clientIoUserData = BSL_UIO_GetUserData(client->io);
+    ASSERT_TRUE(clientIoUserData != NULL);
+    clientIoUserData->recMsg.len = 0;
+    ASSERT_EQ(FRAME_TransportRecMsg(client->io, sendBuf, sendLen), HITLS_SUCCESS);
+    ASSERT_TRUE(IsFrameIoPendingRet(HITLS_Connect(client->ssl)));
+    ASSERT_EQ(client->ssl->hsCtx->state, TRY_RECV_ENCRYPTED_EXTENSIONS);
+
+EXIT:
+    FRAME_CleanMsg(&serverHelloType, &serverHelloMsg);
+    HITLS_CFG_FreeConfig(config);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+}
+/* END_CASE */
+
+/** @
+* @test SDV_TLS_DTLS13_HANDSHAKE_CONSISTENCY_FUNC_TC057
+* @spec -
+* @title DTLS1.3/DTLS1.2 client sends DTLS1.2 session id without PSK extension.
+* @precon nan
+* @brief
+*    1. Establish a DTLS1.2-only stateful session.
+*    2. Create a DTLS1.3/DTLS1.2 client and set the DTLS1.2 session.
+*    3. Stop after the second ClientHello reaches the server.
+*    4. Parse ClientHello.
+* @expect
+*    1. ClientHello carries the previous DTLS1.2 session id.
+*    2. ClientHello does not carry the pre_shared_key extension.
+*    3. ClientHello supported_versions contains DTLS1.2 and DTLS1.3.
+@ */
+/* BEGIN_CASE */
+void SDV_TLS_DTLS13_HANDSHAKE_CONSISTENCY_FUNC_TC057(void)
+{
+    FRAME_Init();
+    HITLS_Config *dtls12ClientConfig = HITLS_CFG_NewDTLS12Config();
+    HITLS_Config *dtls12ServerConfig = HITLS_CFG_NewDTLS12Config();
+    HITLS_Config *resumeClientConfig = NULL;
+    FRAME_LinkObj *client = NULL;
+    FRAME_LinkObj *server = NULL;
+    HITLS_Session *session = NULL;
+    FRAME_Msg clientHelloMsg = {0};
+    FRAME_Type clientHelloType = {0};
+    uint8_t sessionId[HITLS_SESSION_ID_MAX_SIZE] = {0};
+    uint32_t sessionIdSize = sizeof(sessionId);
+
+    ASSERT_TRUE(dtls12ClientConfig != NULL && dtls12ServerConfig != NULL);
+    SetDtlsHandshakeFrameType(&clientHelloType, HITLS_VERSION_DTLS13, CLIENT_HELLO);
+
+    ASSERT_EQ(PrepareDtls12Session(dtls12ClientConfig, dtls12ServerConfig, &session, sessionId, &sessionIdSize),
+        HITLS_SUCCESS);
+    ASSERT_TRUE(sessionIdSize > 0);
+
+    resumeClientConfig = NewDtls12AndDtls13Config();
+    ASSERT_TRUE(resumeClientConfig != NULL);
+    client = FRAME_CreateLink(resumeClientConfig, BSL_UIO_UDP);
+    ASSERT_TRUE(client != NULL);
+    server = FRAME_CreateLink(dtls12ServerConfig, BSL_UIO_UDP);
+    ASSERT_TRUE(server != NULL);
+    ASSERT_EQ(HITLS_SetSession(client->ssl, session), HITLS_SUCCESS);
+
+    ASSERT_EQ(FRAME_CreateConnection(client, server, false, TRY_RECV_CLIENT_HELLO), HITLS_SUCCESS);
+    ASSERT_EQ(ParseDtlsBufferedHsMsg(server, true, HITLS_VERSION_DTLS13, CLIENT_HELLO, &clientHelloMsg),
+        HITLS_SUCCESS);
+
+    FRAME_ClientHelloMsg *clientHello = &clientHelloMsg.body.hsMsg.body.clientHello;
+    ASSERT_TRUE(DtlsFrameSessionIdEquals(&clientHello->sessionIdSize, &clientHello->sessionId, sessionId,
+        sessionIdSize));
+    ASSERT_EQ(clientHello->psks.exState, MISSING_FIELD);
+    ASSERT_TRUE(DtlsClientHelloHasSupportedVersion(clientHello, HITLS_VERSION_DTLS12));
+    ASSERT_TRUE(DtlsClientHelloHasSupportedVersion(clientHello, HITLS_VERSION_DTLS13));
+
+EXIT:
+    FRAME_CleanMsg(&clientHelloType, &clientHelloMsg);
+    HITLS_CFG_FreeConfig(dtls12ClientConfig);
+    HITLS_CFG_FreeConfig(dtls12ServerConfig);
+    HITLS_CFG_FreeConfig(resumeClientConfig);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+    HITLS_SESS_Free(session);
+}
+/* END_CASE */
+
+/** @
+* @test SDV_TLS_DTLS13_HANDSHAKE_CONSISTENCY_FUNC_TC058
+* @spec -
+* @title DTLS1.3 ServerHello without DTLS1.2 session id continues as a full DTLS1.3 handshake.
+* @precon nan
+* @brief
+*    1. Establish a DTLS1.2-only stateful session.
+*    2. Create a DTLS1.3/DTLS1.2 client and server.
+*    3. Set the DTLS1.2 session on the client and stop after ServerHello.
+*    4. Parse ServerHello, then continue the handshake.
+* @expect
+*    1. ServerHello selects DTLS1.3 and does not echo the ClientHello session id.
+*    2. The handshake completes as DTLS1.3.
+*    3. The DTLS1.2 session is not marked as resumed.
+@ */
+/* BEGIN_CASE */
+void SDV_TLS_DTLS13_HANDSHAKE_CONSISTENCY_FUNC_TC058(void)
+{
+    FRAME_Init();
+    HITLS_Config *dtls12ClientConfig = HITLS_CFG_NewDTLS12Config();
+    HITLS_Config *dtls12ServerConfig = HITLS_CFG_NewDTLS12Config();
+    HITLS_Config *resumeClientConfig = NULL;
+    HITLS_Config *resumeServerConfig = NULL;
+    FRAME_LinkObj *client = NULL;
+    FRAME_LinkObj *server = NULL;
+    HITLS_Session *session = NULL;
+    FRAME_Msg serverHelloMsg = {0};
+    FRAME_Type serverHelloType = {0};
+    uint8_t sessionId[HITLS_SESSION_ID_MAX_SIZE] = {0};
+    uint32_t sessionIdSize = sizeof(sessionId);
+
+    ASSERT_TRUE(dtls12ClientConfig != NULL && dtls12ServerConfig != NULL);
+    SetDtlsHandshakeFrameType(&serverHelloType, HITLS_VERSION_DTLS13, SERVER_HELLO);
+
+    ASSERT_EQ(PrepareDtls12Session(dtls12ClientConfig, dtls12ServerConfig, &session, sessionId, &sessionIdSize),
+        HITLS_SUCCESS);
+    resumeClientConfig = NewDtls12AndDtls13Config();
+    resumeServerConfig = NewDtls12AndDtls13Config();
+    ASSERT_TRUE(resumeClientConfig != NULL && resumeServerConfig != NULL);
+
+    client = FRAME_CreateLink(resumeClientConfig, BSL_UIO_UDP);
+    ASSERT_TRUE(client != NULL);
+    server = FRAME_CreateLink(resumeServerConfig, BSL_UIO_UDP);
+    ASSERT_TRUE(server != NULL);
+    ASSERT_EQ(HITLS_SetSession(client->ssl, session), HITLS_SUCCESS);
+
+    ASSERT_EQ(FRAME_CreateConnection(client, server, true, TRY_RECV_SERVER_HELLO), HITLS_SUCCESS);
+    ASSERT_EQ(ParseDtlsBufferedHsMsg(client, true, HITLS_VERSION_DTLS13, SERVER_HELLO, &serverHelloMsg),
+        HITLS_SUCCESS);
+    FRAME_ServerHelloMsg *serverHello = &serverHelloMsg.body.hsMsg.body.serverHello;
+    ASSERT_EQ(serverHello->supportedVersion.data.data, HITLS_VERSION_DTLS13);
+    ASSERT_EQ(serverHello->sessionIdSize.data, 0);
+    ASSERT_EQ(serverHello->sessionId.size, 0);
+
+    ASSERT_EQ(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_SUCCESS);
+    ASSERT_EQ(DtlsCheckNegotiatedVersionAndResume(client, HITLS_VERSION_DTLS13, false), HITLS_SUCCESS);
+
+EXIT:
+    FRAME_CleanMsg(&serverHelloType, &serverHelloMsg);
+    HITLS_CFG_FreeConfig(dtls12ClientConfig);
+    HITLS_CFG_FreeConfig(dtls12ServerConfig);
+    HITLS_CFG_FreeConfig(resumeClientConfig);
+    HITLS_CFG_FreeConfig(resumeServerConfig);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+    HITLS_SESS_Free(session);
+}
+/* END_CASE */
+
+/** @
+* @test SDV_TLS_DTLS13_HANDSHAKE_CONSISTENCY_FUNC_TC059
+* @spec -
+* @title DTLS1.2 ServerHello echoing a DTLS1.2 session id resumes the DTLS1.2 session.
+* @precon nan
+* @brief
+*    1. Establish a DTLS1.2-only stateful session.
+*    2. Create a DTLS1.3/DTLS1.2 client and a DTLS1.2-only server with the previous cache.
+*    3. Set the DTLS1.2 session on the client and stop after ServerHello.
+*    4. Parse ServerHello, then continue the handshake.
+* @expect
+*    1. ServerHello selects DTLS1.2 and echoes the ClientHello session id.
+*    2. The handshake completes as DTLS1.2 session resumption.
+@ */
+/* BEGIN_CASE */
+void SDV_TLS_DTLS13_HANDSHAKE_CONSISTENCY_FUNC_TC059(void)
+{
+    FRAME_Init();
+    HITLS_Config *dtls12ClientConfig = HITLS_CFG_NewDTLS12Config();
+    HITLS_Config *dtls12ServerConfig = HITLS_CFG_NewDTLS12Config();
+    HITLS_Config *resumeClientConfig = NULL;
+    FRAME_LinkObj *client = NULL;
+    FRAME_LinkObj *server = NULL;
+    HITLS_Session *session = NULL;
+    FRAME_Msg serverHelloMsg = {0};
+    FRAME_Type serverHelloType = {0};
+    uint8_t sessionId[HITLS_SESSION_ID_MAX_SIZE] = {0};
+    uint32_t sessionIdSize = sizeof(sessionId);
+
+    ASSERT_TRUE(dtls12ClientConfig != NULL && dtls12ServerConfig != NULL);
+    SetDtlsHandshakeFrameType(&serverHelloType, HITLS_VERSION_DTLS12, SERVER_HELLO);
+
+    ASSERT_EQ(PrepareDtls12Session(dtls12ClientConfig, dtls12ServerConfig, &session, sessionId, &sessionIdSize),
+        HITLS_SUCCESS);
+    resumeClientConfig = NewDtls12AndDtls13Config();
+    ASSERT_TRUE(resumeClientConfig != NULL);
+
+    client = FRAME_CreateLink(resumeClientConfig, BSL_UIO_UDP);
+    ASSERT_TRUE(client != NULL);
+    server = FRAME_CreateLink(dtls12ServerConfig, BSL_UIO_UDP);
+    ASSERT_TRUE(server != NULL);
+    ASSERT_EQ(HITLS_SetSession(client->ssl, session), HITLS_SUCCESS);
+
+    ASSERT_EQ(FRAME_CreateConnection(client, server, true, TRY_RECV_SERVER_HELLO), HITLS_SUCCESS);
+    ASSERT_EQ(ParseDtlsBufferedHsMsg(client, true, HITLS_VERSION_DTLS12, SERVER_HELLO, &serverHelloMsg),
+        HITLS_SUCCESS);
+    FRAME_ServerHelloMsg *serverHello = &serverHelloMsg.body.hsMsg.body.serverHello;
+    ASSERT_EQ(serverHello->version.data, HITLS_VERSION_DTLS12);
+    ASSERT_TRUE(DtlsFrameSessionIdEquals(&serverHello->sessionIdSize, &serverHello->sessionId, sessionId,
+        sessionIdSize));
+
+    ASSERT_EQ(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_SUCCESS);
+    ASSERT_EQ(DtlsCheckNegotiatedVersionAndResume(client, HITLS_VERSION_DTLS12, true), HITLS_SUCCESS);
+
+EXIT:
+    FRAME_CleanMsg(&serverHelloType, &serverHelloMsg);
+    HITLS_CFG_FreeConfig(dtls12ClientConfig);
+    HITLS_CFG_FreeConfig(dtls12ServerConfig);
+    HITLS_CFG_FreeConfig(resumeClientConfig);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+    HITLS_SESS_Free(session);
+}
+/* END_CASE */
+
+/** @
+* @test SDV_TLS_DTLS13_HANDSHAKE_CONSISTENCY_FUNC_TC060
+* @spec -
+* @title DTLS1.3/DTLS1.2 server selects DTLS1.3 full handshake for a DTLS1.2 session-id ClientHello.
+* @precon nan
+* @brief
+*    1. Establish a DTLS1.2-only stateful session.
+*    2. Create a new DTLS1.3/DTLS1.2 client and server.
+*    3. Set the DTLS1.2 session on the client and stop after ServerHello.
+*    4. Parse ServerHello, then continue the handshake.
+* @expect
+*    1. The server selects DTLS1.3 and does not echo the ClientHello session id.
+*    2. The handshake completes as a full DTLS1.3 handshake.
+@ */
+/* BEGIN_CASE */
+void SDV_TLS_DTLS13_HANDSHAKE_CONSISTENCY_FUNC_TC060(void)
+{
+    FRAME_Init();
+    HITLS_Config *dtls12ClientConfig = HITLS_CFG_NewDTLS12Config();
+    HITLS_Config *dtls12ServerConfig = HITLS_CFG_NewDTLS12Config();
+    HITLS_Config *resumeClientConfig = NULL;
+    HITLS_Config *resumeServerConfig = NULL;
+    FRAME_LinkObj *client = NULL;
+    FRAME_LinkObj *server = NULL;
+    HITLS_Session *session = NULL;
+    FRAME_Msg serverHelloMsg = {0};
+    FRAME_Type serverHelloType = {0};
+    uint8_t sessionId[HITLS_SESSION_ID_MAX_SIZE] = {0};
+    uint32_t sessionIdSize = sizeof(sessionId);
+
+    ASSERT_TRUE(dtls12ClientConfig != NULL && dtls12ServerConfig != NULL);
+    SetDtlsHandshakeFrameType(&serverHelloType, HITLS_VERSION_DTLS13, SERVER_HELLO);
+
+    ASSERT_EQ(PrepareDtls12Session(dtls12ClientConfig, dtls12ServerConfig, &session, sessionId, &sessionIdSize),
+        HITLS_SUCCESS);
+    resumeClientConfig = NewDtls12AndDtls13Config();
+    resumeServerConfig = NewDtls12AndDtls13Config();
+    ASSERT_TRUE(resumeClientConfig != NULL && resumeServerConfig != NULL);
+
+    client = FRAME_CreateLink(resumeClientConfig, BSL_UIO_UDP);
+    ASSERT_TRUE(client != NULL);
+    server = FRAME_CreateLink(resumeServerConfig, BSL_UIO_UDP);
+    ASSERT_TRUE(server != NULL);
+    ASSERT_EQ(HITLS_SetSession(client->ssl, session), HITLS_SUCCESS);
+
+    ASSERT_EQ(FRAME_CreateConnection(client, server, true, TRY_RECV_SERVER_HELLO), HITLS_SUCCESS);
+    ASSERT_EQ(ParseDtlsBufferedHsMsg(client, true, HITLS_VERSION_DTLS13, SERVER_HELLO, &serverHelloMsg),
+        HITLS_SUCCESS);
+    FRAME_ServerHelloMsg *serverHello = &serverHelloMsg.body.hsMsg.body.serverHello;
+    ASSERT_EQ(serverHello->supportedVersion.data.data, HITLS_VERSION_DTLS13);
+    ASSERT_EQ(serverHello->sessionIdSize.data, 0);
+    ASSERT_EQ(serverHello->sessionId.size, 0);
+
+    ASSERT_EQ(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_SUCCESS);
+    ASSERT_EQ(DtlsCheckNegotiatedVersionAndResume(client, HITLS_VERSION_DTLS13, false), HITLS_SUCCESS);
+
+EXIT:
+    FRAME_CleanMsg(&serverHelloType, &serverHelloMsg);
+    HITLS_CFG_FreeConfig(dtls12ClientConfig);
+    HITLS_CFG_FreeConfig(dtls12ServerConfig);
+    HITLS_CFG_FreeConfig(resumeClientConfig);
+    HITLS_CFG_FreeConfig(resumeServerConfig);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+    HITLS_SESS_Free(session);
+}
+/* END_CASE */
+
+/** @
+* @test SDV_TLS_DTLS13_HANDSHAKE_CONSISTENCY_FUNC_TC061
+* @spec -
+* @title DTLS1.3/DTLS1.2 client resumes DTLS1.2 when the new server disables DTLS1.3.
+* @precon nan
+* @brief
+*    1. Establish a DTLS1.2-only stateful session.
+*    2. Create a DTLS1.3/DTLS1.2 client and a new DTLS1.2-only server.
+*    3. Provide the previous session through the server session-get callback.
+*    4. Set the DTLS1.2 session on the client.
+*    5. Parse ServerHello and continue the handshake.
+* @expect
+*    1. ServerHello selects DTLS1.2 and echoes the ClientHello session id.
+*    2. The previous DTLS1.2 session is resumed.
+@ */
+/* BEGIN_CASE */
+void SDV_TLS_DTLS13_HANDSHAKE_CONSISTENCY_FUNC_TC061(void)
+{
+    FRAME_Init();
+    HITLS_Config *dtls12ClientConfig = HITLS_CFG_NewDTLS12Config();
+    HITLS_Config *dtls12ServerConfig = HITLS_CFG_NewDTLS12Config();
+    HITLS_Config *resumeClientConfig = NULL;
+    HITLS_Config *resumeServerConfig = NULL;
+    FRAME_LinkObj *client = NULL;
+    FRAME_LinkObj *server = NULL;
+    HITLS_Session *session = NULL;
+    FRAME_Msg serverHelloMsg = {0};
+    FRAME_Type serverHelloType = {0};
+    uint8_t sessionId[HITLS_SESSION_ID_MAX_SIZE] = {0};
+    uint32_t sessionIdSize = sizeof(sessionId);
+
+    ASSERT_TRUE(dtls12ClientConfig != NULL && dtls12ServerConfig != NULL);
+    SetDtlsHandshakeFrameType(&serverHelloType, HITLS_VERSION_DTLS12, SERVER_HELLO);
+
+    ASSERT_EQ(PrepareDtls12Session(dtls12ClientConfig, dtls12ServerConfig, &session, sessionId, &sessionIdSize),
+        HITLS_SUCCESS);
+    resumeClientConfig = NewDtls12AndDtls13Config();
+    resumeServerConfig = NewDtls12AndDtls13Config();
+    ASSERT_TRUE(resumeClientConfig != NULL && resumeServerConfig != NULL);
+    ASSERT_EQ(HITLS_CFG_SetVersionForbid(resumeServerConfig, DTLS13_VERSION_BIT), HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_CFG_SetSessionCacheMode(resumeServerConfig,
+        HITLS_SESS_CACHE_SERVER | HITLS_SESS_DISABLE_INTERNAL_LOOKUP), HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_CFG_SetSessionGetCb(resumeServerConfig, DtlsLowVersionResumeSessionGetCb), HITLS_SUCCESS);
+    g_dtlsLowVersionResumeSession = session;
+
+    client = FRAME_CreateLink(resumeClientConfig, BSL_UIO_UDP);
+    ASSERT_TRUE(client != NULL);
+    server = FRAME_CreateLink(resumeServerConfig, BSL_UIO_UDP);
+    ASSERT_TRUE(server != NULL);
+    ASSERT_EQ(HITLS_SetSession(client->ssl, session), HITLS_SUCCESS);
+
+    ASSERT_EQ(FRAME_CreateConnection(client, server, true, TRY_RECV_SERVER_HELLO), HITLS_SUCCESS);
+    ASSERT_EQ(ParseDtlsBufferedHsMsg(client, true, HITLS_VERSION_DTLS12, SERVER_HELLO, &serverHelloMsg),
+        HITLS_SUCCESS);
+    FRAME_ServerHelloMsg *serverHello = &serverHelloMsg.body.hsMsg.body.serverHello;
+    ASSERT_EQ(serverHello->version.data, HITLS_VERSION_DTLS12);
+    ASSERT_TRUE(DtlsFrameSessionIdEquals(&serverHello->sessionIdSize, &serverHello->sessionId, sessionId,
+        sessionIdSize));
+
+    ASSERT_EQ(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_SUCCESS);
+    ASSERT_EQ(DtlsCheckNegotiatedVersionAndResume(client, HITLS_VERSION_DTLS12, true), HITLS_SUCCESS);
+
+EXIT:
+    g_dtlsLowVersionResumeSession = NULL;
+    FRAME_CleanMsg(&serverHelloType, &serverHelloMsg);
+    HITLS_CFG_FreeConfig(dtls12ClientConfig);
+    HITLS_CFG_FreeConfig(dtls12ServerConfig);
+    HITLS_CFG_FreeConfig(resumeClientConfig);
+    HITLS_CFG_FreeConfig(resumeServerConfig);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+    HITLS_SESS_Free(session);
 }
 /* END_CASE */

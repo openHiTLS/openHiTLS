@@ -165,9 +165,9 @@ int32_t ServerSendServerHelloProcess(TLS_Ctx *ctx)
         }
 #if defined(HITLS_TLS_PROTO_TLS13_FAMILY) && defined(HITLS_TLS_PROTO_TLS_BASIC)
         TLS_Config *tlsConfig = &ctx->config.tlsConfig;
-        /* If TLS 1.3 is supported but an earlier version is negotiated, the last eight bits of the random number need
+        /* If TLS 1.3 is enabled but an earlier version is negotiated, the last eight bits of the random number need
          * to be rewritten */
-        if ((tlsConfig->originVersionMask & (TLS13_VERSION_BIT | DTLS13_VERSION_BIT)) != 0) {
+        if ((tlsConfig->version & (TLS13_VERSION_BIT | DTLS13_VERSION_BIT)) != 0) {
             ret = DowngradeServerRandom(ctx);
             if (ret != HITLS_SUCCESS) {
                 BSL_ERR_PUSH_ERROR(HITLS_MEMCPY_FAIL);

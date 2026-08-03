@@ -827,6 +827,10 @@ static int32_t Tls13ClientCheckHelloRetryRequest(TLS_Ctx *ctx, const ServerHello
 
 static int32_t Tls13ClientCheckSessionId(TLS_Ctx *ctx, const ServerHelloMsg *serverHello)
 {
+    if (ctx->negotiatedInfo.version == HITLS_VERSION_DTLS13) {
+        return HITLS_SUCCESS;
+    }
+
     /* The legacy_session_id_echo field must be the same as the sent field */
     if (ctx->hsCtx->sessionIdSize != serverHello->sessionIdSize) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17090, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,

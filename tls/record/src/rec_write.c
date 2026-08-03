@@ -365,7 +365,7 @@ int32_t DtlsRecordWrite(TLS_Ctx *ctx, REC_Type recordType, const uint8_t *data, 
     }
 
     /** Obtain the cache address */
-    uint8_t *outBuf = &recordCtx->outBuf->buf[0];   
+    uint8_t *outBuf = &recordCtx->outBuf->buf[0];
 
 #ifdef HITLS_TLS_PROTO_DTLS13
     if (ctx->negotiatedInfo.version == HITLS_VERSION_DTLS13 && RecConnGetEpoch(state) > 0) {

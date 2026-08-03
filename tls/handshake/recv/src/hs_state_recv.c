@@ -655,6 +655,11 @@ static int32_t DtlsReadAndParseHandshakeMsg(TLS_Ctx *ctx, HS_Msg *hsMsg)
         buf = ctx->hsCtx->msgBuf;
         dataLen = ctx->hsCtx->msgLen;
         ctx->hsCtx->msgLen = 0;
+        if (ctx->negotiatedInfo.version == HITLS_VERSION_DTLS13 &&
+            hsMsgInfo.sequence >= ctx->hsCtx->expectRecvSeq &&
+            !IsUnexpectedHandshaking(ctx)) {
+            REC_RetransmitListClean(ctx->recCtx);
+        }
         if (hsMsgInfo.sequence != ctx->hsCtx->expectRecvSeq) {
             if (GET_VERSION_FROM_CTX(ctx) == HITLS_VERSION_DTLS13) {
                 return DtlsDisorderMsgProcess(ctx, &hsMsgInfo);
@@ -669,13 +674,9 @@ static int32_t DtlsReadAndParseHandshakeMsg(TLS_Ctx *ctx, HS_Msg *hsMsg)
             }
 
             /* SCTP messages are not out of order. Therefore, an alert message must be sent for the out-of-order messages */
-            if (!IsUnexpectedHandshaking(ctx)) {
+            if (hsMsgInfo.sequence != ctx->hsCtx->expectRecvSeq && !IsUnexpectedHandshaking(ctx)) {
                 return DtlsDisorderMsgProcess(ctx, &hsMsgInfo);
             }
-        }
-
-        if (GET_VERSION_FROM_CTX(ctx) == HITLS_VERSION_DTLS13 && hsMsgInfo.sequence >= ctx->hsCtx->expectRecvSeq && !IsUnexpectedHandshaking(ctx)) {
-            REC_RetransmitListClean(ctx->recCtx);
         }
 
         /* If the message is fragmented, the message needs to be reassembled. */

@@ -16,8 +16,13 @@
 /* BEGIN_HEADER */
 
 #include "frame_tls.h"
+#include "frame_io.h"
 #include "frame_link.h"
+#include "simulate_io.h"
 #include "session.h"
+#include "tls.h"
+#include "hitls.h"
+#include "hitls_error.h"
 #include "hitls_config.h"
 #include "hitls_crypt_init.h"
 #include "session_type.h"
@@ -32,6 +37,162 @@ static int32_t ServernameCbErrOK(HITLS_Ctx *ctx, int *alert, void *arg)
 
     return HITLS_ACCEPT_SNI_ERR_OK;
 }
+
+static void SetSessionTicketTlsFrameType(FRAME_Type *frameType, uint16_t version, HS_MsgType handshakeType)
+{
+    frameType->versionType = version;
+    frameType->recordType = REC_TYPE_HANDSHAKE;
+    frameType->handshakeType = handshakeType;
+    frameType->keyExType = HITLS_KEY_EXCH_ECDHE;
+    frameType->transportType = BSL_UIO_TCP;
+}
+
+static int32_t ConfigStatefulSessionResume(HITLS_Config *config)
+{
+    int32_t ret = HITLS_CFG_SetSessionCacheMode(config, HITLS_SESS_CACHE_BOTH);
+    if (ret != HITLS_SUCCESS) {
+        return ret;
+    }
+    ret = HITLS_CFG_SetSessionTicketSupport(config, false);
+    if (ret != HITLS_SUCCESS) {
+        return ret;
+    }
+    return HITLS_CFG_SetTicketNums(config, 0);
+}
+
+static HITLS_Config *NewTls12AndTls13Config(void)
+{
+    HITLS_Config *config = HITLS_CFG_NewTLSConfig();
+    if (config == NULL) {
+        return NULL;
+    }
+    if (HITLS_CFG_SetVersion(config, HITLS_VERSION_TLS12, HITLS_VERSION_TLS13) != HITLS_SUCCESS ||
+        ConfigStatefulSessionResume(config) != HITLS_SUCCESS) {
+        HITLS_CFG_FreeConfig(config);
+        return NULL;
+    }
+    return config;
+}
+
+static int32_t PrepareTls12Session(HITLS_Config *clientConfig, HITLS_Config *serverConfig,
+    HITLS_Session **session, uint8_t *sessionId, uint32_t *sessionIdSize)
+{
+    FRAME_LinkObj *client = NULL;
+    FRAME_LinkObj *server = NULL;
+    int32_t ret = ConfigStatefulSessionResume(clientConfig);
+    if (ret != HITLS_SUCCESS) {
+        return ret;
+    }
+    ret = ConfigStatefulSessionResume(serverConfig);
+    if (ret != HITLS_SUCCESS) {
+        return ret;
+    }
+
+    client = FRAME_CreateLink(clientConfig, BSL_UIO_TCP);
+    if (client == NULL) {
+        return HITLS_INTERNAL_EXCEPTION;
+    }
+    server = FRAME_CreateLink(serverConfig, BSL_UIO_TCP);
+    if (server == NULL) {
+        FRAME_FreeLink(client);
+        return HITLS_INTERNAL_EXCEPTION;
+    }
+
+    ret = FRAME_CreateConnection(client, server, false, HS_STATE_BUTT);
+    if (ret == HITLS_SUCCESS) {
+        *session = HITLS_GetDupSession(client->ssl);
+        if (*session == NULL) {
+            ret = HITLS_INTERNAL_EXCEPTION;
+        }
+    }
+    if (ret == HITLS_SUCCESS) {
+        *sessionIdSize = HITLS_SESSION_ID_MAX_SIZE;
+        ret = HITLS_SESS_GetSessionId(*session, sessionId, sessionIdSize);
+    }
+
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+    return ret;
+}
+
+static int32_t ParseBufferedHandshakeMsg(FRAME_LinkObj *link, bool isRecvMsg, uint16_t version,
+    HS_MsgType handshakeType, FRAME_Msg *frameMsg)
+{
+    FrameUioUserData *ioUserData = BSL_UIO_GetUserData(link->io);
+    if (ioUserData == NULL) {
+        return HITLS_NULL_INPUT;
+    }
+
+    FrameMsg *msg = isRecvMsg ? &ioUserData->recMsg : &ioUserData->sndMsg;
+    if (msg->len == 0) {
+        return HITLS_INTERNAL_EXCEPTION;
+    }
+
+    FRAME_Type frameType = {0};
+    uint32_t parseLen = 0;
+    SetSessionTicketTlsFrameType(&frameType, version, handshakeType);
+    return FRAME_ParseMsg(&frameType, msg->msg, msg->len, frameMsg, &parseLen);
+}
+
+static bool ClientHelloHasSupportedVersion(const FRAME_ClientHelloMsg *clientHello, uint16_t version)
+{
+    if (clientHello->supportedVersion.exState == MISSING_FIELD ||
+        clientHello->supportedVersion.exData.data == NULL) {
+        return false;
+    }
+    for (uint32_t i = 0; i < clientHello->supportedVersion.exData.size; i++) {
+        if (clientHello->supportedVersion.exData.data[i] == version) {
+            return true;
+        }
+    }
+    return false;
+}
+
+static bool FrameSessionIdEquals(const FRAME_Integer *size, const FRAME_Array8 *sessionId,
+    const uint8_t *expected, uint32_t expectedSize)
+{
+    return size->data == expectedSize && sessionId->data != NULL && sessionId->size == expectedSize &&
+        memcmp(sessionId->data, expected, expectedSize) == 0;
+}
+
+static int32_t CheckNegotiatedVersionAndResume(FRAME_LinkObj *client, uint16_t expectedVersion, bool expectedResume)
+{
+    uint16_t version = 0;
+    bool isReused = false;
+    int32_t ret = HITLS_GetNegotiatedVersion(client->ssl, &version);
+    if (ret != HITLS_SUCCESS) {
+        return ret;
+    }
+    if (version != expectedVersion) {
+        return HITLS_INTERNAL_EXCEPTION;
+    }
+    ret = HITLS_IsSessionReused(client->ssl, &isReused);
+    if (ret != HITLS_SUCCESS) {
+        return ret;
+    }
+    return isReused == expectedResume ? HITLS_SUCCESS : HITLS_INTERNAL_EXCEPTION;
+}
+
+static HITLS_Session *g_lowVersionResumeSession = NULL;
+
+static HITLS_Session *LowVersionResumeSessionGetCb(HITLS_Ctx *ctx, const uint8_t *data, int32_t len, int32_t *copy)
+{
+    (void)ctx;
+    if (g_lowVersionResumeSession == NULL || data == NULL || len <= 0 || copy == NULL) {
+        return NULL;
+    }
+
+    uint8_t sessionId[HITLS_SESSION_ID_MAX_SIZE] = {0};
+    uint32_t sessionIdSize = sizeof(sessionId);
+    if (HITLS_SESS_GetSessionId(g_lowVersionResumeSession, sessionId, &sessionIdSize) != HITLS_SUCCESS ||
+        sessionIdSize != (uint32_t)len || memcmp(sessionId, data, sessionIdSize) != 0) {
+        return NULL;
+    }
+
+    *copy = 1;
+    return g_lowVersionResumeSession;
+}
+
 /** @
 * @test     UT_TLS12_RESUME_FUNC_TC001
 * @title    Test the session resume of tls12.
@@ -86,6 +247,308 @@ EXIT:
     FRAME_FreeLink(client);
     FRAME_FreeLink(server);
     HITLS_SESS_Free(clientSession);
+}
+/* END_CASE */
+
+/** @
+* @test     SDV_TLS_SESSION_RESUME_TLS13_TLS12_DOWNGRADE_FUNC_TC001
+* @title    TLS1.3/TLS1.2 client sends TLS1.2 session id without PSK extension.
+* @brief    1. Establish a TLS1.2-only stateful session.
+*           2. Create a TLS1.3/TLS1.2 client and set the TLS1.2 session.
+*           3. Stop after the second ClientHello reaches the server.
+*           4. Parse ClientHello.
+* @expect   1. ClientHello carries the previous TLS1.2 session id.
+*           2. ClientHello does not carry the pre_shared_key extension.
+*           3. ClientHello supported_versions contains TLS1.2 and TLS1.3.
+@ */
+/* BEGIN_CASE */
+void SDV_TLS_SESSION_RESUME_TLS13_TLS12_DOWNGRADE_FUNC_TC001(void)
+{
+    FRAME_Init();
+    HITLS_Config *tls12ClientConfig = HITLS_CFG_NewTLS12Config();
+    HITLS_Config *tls12ServerConfig = HITLS_CFG_NewTLS12Config();
+    HITLS_Config *resumeClientConfig = NULL;
+    FRAME_LinkObj *client = NULL;
+    FRAME_LinkObj *server = NULL;
+    HITLS_Session *session = NULL;
+    FRAME_Msg clientHelloMsg = {0};
+    FRAME_Type clientHelloType = {0};
+    uint8_t sessionId[HITLS_SESSION_ID_MAX_SIZE] = {0};
+    uint32_t sessionIdSize = sizeof(sessionId);
+    ASSERT_TRUE(tls12ClientConfig != NULL && tls12ServerConfig != NULL);
+    SetSessionTicketTlsFrameType(&clientHelloType, HITLS_VERSION_TLS13, CLIENT_HELLO);
+
+    ASSERT_EQ(PrepareTls12Session(tls12ClientConfig, tls12ServerConfig, &session, sessionId, &sessionIdSize),
+        HITLS_SUCCESS);
+    ASSERT_TRUE(sessionIdSize > 0);
+
+    resumeClientConfig = NewTls12AndTls13Config();
+    ASSERT_TRUE(resumeClientConfig != NULL);
+    client = FRAME_CreateLink(resumeClientConfig, BSL_UIO_TCP);
+    ASSERT_TRUE(client != NULL);
+    server = FRAME_CreateLink(tls12ServerConfig, BSL_UIO_TCP);
+    ASSERT_TRUE(server != NULL);
+    ASSERT_EQ(HITLS_SetSession(client->ssl, session), HITLS_SUCCESS);
+
+    ASSERT_EQ(FRAME_CreateConnection(client, server, false, TRY_RECV_CLIENT_HELLO), HITLS_SUCCESS);
+    ASSERT_EQ(ParseBufferedHandshakeMsg(server, true, HITLS_VERSION_TLS13, CLIENT_HELLO, &clientHelloMsg),
+        HITLS_SUCCESS);
+
+    FRAME_ClientHelloMsg *clientHello = &clientHelloMsg.body.hsMsg.body.clientHello;
+    ASSERT_TRUE(FrameSessionIdEquals(&clientHello->sessionIdSize, &clientHello->sessionId, sessionId, sessionIdSize));
+    ASSERT_EQ(clientHello->psks.exState, MISSING_FIELD);
+    ASSERT_TRUE(ClientHelloHasSupportedVersion(clientHello, HITLS_VERSION_TLS12));
+    ASSERT_TRUE(ClientHelloHasSupportedVersion(clientHello, HITLS_VERSION_TLS13));
+
+EXIT:
+    FRAME_CleanMsg(&clientHelloType, &clientHelloMsg);
+    HITLS_CFG_FreeConfig(tls12ClientConfig);
+    HITLS_CFG_FreeConfig(tls12ServerConfig);
+    HITLS_CFG_FreeConfig(resumeClientConfig);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+    HITLS_SESS_Free(session);
+}
+/* END_CASE */
+
+/** @
+* @test     SDV_TLS_SESSION_RESUME_TLS13_TLS12_DOWNGRADE_FUNC_TC002
+* @title    TLS1.3 ServerHello echoing a TLS1.2 session id continues as a full TLS1.3 handshake.
+* @brief    1. Establish a TLS1.2-only stateful session.
+*           2. Create a TLS1.3/TLS1.2 client and server.
+*           3. Set the TLS1.2 session on the client and stop after ServerHello.
+*           4. Parse ServerHello, then continue the handshake.
+* @expect   1. ServerHello selects TLS1.3 and echoes the ClientHello session id.
+*           2. The handshake completes as TLS1.3.
+*           3. The TLS1.2 session is not marked as resumed.
+@ */
+/* BEGIN_CASE */
+void SDV_TLS_SESSION_RESUME_TLS13_TLS12_DOWNGRADE_FUNC_TC002(void)
+{
+    FRAME_Init();
+    HITLS_Config *tls12ClientConfig = HITLS_CFG_NewTLS12Config();
+    HITLS_Config *tls12ServerConfig = HITLS_CFG_NewTLS12Config();
+    HITLS_Config *resumeClientConfig = NULL;
+    HITLS_Config *resumeServerConfig = NULL;
+    FRAME_LinkObj *client = NULL;
+    FRAME_LinkObj *server = NULL;
+    HITLS_Session *session = NULL;
+    FRAME_Msg serverHelloMsg = {0};
+    FRAME_Type serverHelloType = {0};
+    uint8_t sessionId[HITLS_SESSION_ID_MAX_SIZE] = {0};
+    uint32_t sessionIdSize = sizeof(sessionId);
+    ASSERT_TRUE(tls12ClientConfig != NULL && tls12ServerConfig != NULL);
+    SetSessionTicketTlsFrameType(&serverHelloType, HITLS_VERSION_TLS13, SERVER_HELLO);
+
+    ASSERT_EQ(PrepareTls12Session(tls12ClientConfig, tls12ServerConfig, &session, sessionId, &sessionIdSize),
+        HITLS_SUCCESS);
+    resumeClientConfig = NewTls12AndTls13Config();
+    resumeServerConfig = NewTls12AndTls13Config();
+    ASSERT_TRUE(resumeClientConfig != NULL && resumeServerConfig != NULL);
+
+    client = FRAME_CreateLink(resumeClientConfig, BSL_UIO_TCP);
+    ASSERT_TRUE(client != NULL);
+    server = FRAME_CreateLink(resumeServerConfig, BSL_UIO_TCP);
+    ASSERT_TRUE(server != NULL);
+    ASSERT_EQ(HITLS_SetSession(client->ssl, session), HITLS_SUCCESS);
+
+    ASSERT_EQ(FRAME_CreateConnection(client, server, true, TRY_RECV_SERVER_HELLO), HITLS_SUCCESS);
+    ASSERT_EQ(ParseBufferedHandshakeMsg(client, true, HITLS_VERSION_TLS13, SERVER_HELLO, &serverHelloMsg),
+        HITLS_SUCCESS);
+    FRAME_ServerHelloMsg *serverHello = &serverHelloMsg.body.hsMsg.body.serverHello;
+    ASSERT_EQ(serverHello->supportedVersion.data.data, HITLS_VERSION_TLS13);
+    ASSERT_TRUE(FrameSessionIdEquals(&serverHello->sessionIdSize, &serverHello->sessionId, sessionId, sessionIdSize));
+
+    ASSERT_EQ(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_SUCCESS);
+    ASSERT_EQ(CheckNegotiatedVersionAndResume(client, HITLS_VERSION_TLS13, false), HITLS_SUCCESS);
+
+EXIT:
+    FRAME_CleanMsg(&serverHelloType, &serverHelloMsg);
+    HITLS_CFG_FreeConfig(tls12ClientConfig);
+    HITLS_CFG_FreeConfig(tls12ServerConfig);
+    HITLS_CFG_FreeConfig(resumeClientConfig);
+    HITLS_CFG_FreeConfig(resumeServerConfig);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+    HITLS_SESS_Free(session);
+}
+/* END_CASE */
+
+/** @
+* @test     SDV_TLS_SESSION_RESUME_TLS13_TLS12_DOWNGRADE_FUNC_TC003
+* @title    TLS1.2 ServerHello echoing a TLS1.2 session id resumes the TLS1.2 session.
+* @brief    1. Establish a TLS1.2-only stateful session.
+*           2. Create a TLS1.3/TLS1.2 client and a TLS1.2-only server with the previous cache.
+*           3. Set the TLS1.2 session on the client and stop after ServerHello.
+*           4. Parse ServerHello, then continue the handshake.
+* @expect   1. ServerHello selects TLS1.2 and echoes the ClientHello session id.
+*           2. The handshake completes as TLS1.2 session resumption.
+@ */
+/* BEGIN_CASE */
+void SDV_TLS_SESSION_RESUME_TLS13_TLS12_DOWNGRADE_FUNC_TC003(void)
+{
+    FRAME_Init();
+    HITLS_Config *tls12ClientConfig = HITLS_CFG_NewTLS12Config();
+    HITLS_Config *tls12ServerConfig = HITLS_CFG_NewTLS12Config();
+    HITLS_Config *resumeClientConfig = NULL;
+    FRAME_LinkObj *client = NULL;
+    FRAME_LinkObj *server = NULL;
+    HITLS_Session *session = NULL;
+    FRAME_Msg serverHelloMsg = {0};
+    FRAME_Type serverHelloType = {0};
+    uint8_t sessionId[HITLS_SESSION_ID_MAX_SIZE] = {0};
+    uint32_t sessionIdSize = sizeof(sessionId);
+    ASSERT_TRUE(tls12ClientConfig != NULL && tls12ServerConfig != NULL);
+    SetSessionTicketTlsFrameType(&serverHelloType, HITLS_VERSION_TLS12, SERVER_HELLO);
+
+    ASSERT_EQ(PrepareTls12Session(tls12ClientConfig, tls12ServerConfig, &session, sessionId, &sessionIdSize),
+        HITLS_SUCCESS);
+    resumeClientConfig = NewTls12AndTls13Config();
+    ASSERT_TRUE(resumeClientConfig != NULL);
+
+    client = FRAME_CreateLink(resumeClientConfig, BSL_UIO_TCP);
+    ASSERT_TRUE(client != NULL);
+    server = FRAME_CreateLink(tls12ServerConfig, BSL_UIO_TCP);
+    ASSERT_TRUE(server != NULL);
+    ASSERT_EQ(HITLS_SetSession(client->ssl, session), HITLS_SUCCESS);
+
+    ASSERT_EQ(FRAME_CreateConnection(client, server, true, TRY_RECV_SERVER_HELLO), HITLS_SUCCESS);
+    ASSERT_EQ(ParseBufferedHandshakeMsg(client, true, HITLS_VERSION_TLS12, SERVER_HELLO, &serverHelloMsg),
+        HITLS_SUCCESS);
+    FRAME_ServerHelloMsg *serverHello = &serverHelloMsg.body.hsMsg.body.serverHello;
+    ASSERT_EQ(serverHello->version.data, HITLS_VERSION_TLS12);
+    ASSERT_TRUE(FrameSessionIdEquals(&serverHello->sessionIdSize, &serverHello->sessionId, sessionId, sessionIdSize));
+
+    ASSERT_EQ(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_SUCCESS);
+    ASSERT_EQ(CheckNegotiatedVersionAndResume(client, HITLS_VERSION_TLS12, true), HITLS_SUCCESS);
+
+EXIT:
+    FRAME_CleanMsg(&serverHelloType, &serverHelloMsg);
+    HITLS_CFG_FreeConfig(tls12ClientConfig);
+    HITLS_CFG_FreeConfig(tls12ServerConfig);
+    HITLS_CFG_FreeConfig(resumeClientConfig);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+    HITLS_SESS_Free(session);
+}
+/* END_CASE */
+
+/** @
+* @test     SDV_TLS_SESSION_RESUME_TLS13_TLS12_DOWNGRADE_FUNC_TC004
+* @title    TLS1.3/TLS1.2 server selects TLS1.3 full handshake for a TLS1.2 session-id ClientHello.
+* @brief    1. Establish a TLS1.2-only stateful session.
+*           2. Create a new TLS1.3/TLS1.2 client and server.
+*           3. Set the TLS1.2 session on the client and stop after ServerHello.
+*           4. Parse ServerHello, then continue the handshake.
+* @expect   1. The server selects TLS1.3 and echoes the ClientHello session id.
+*           2. The handshake completes as a full TLS1.3 handshake.
+@ */
+/* BEGIN_CASE */
+void SDV_TLS_SESSION_RESUME_TLS13_TLS12_DOWNGRADE_FUNC_TC004(void)
+{
+    FRAME_Init();
+    HITLS_Config *tls12ClientConfig = HITLS_CFG_NewTLS12Config();
+    HITLS_Config *tls12ServerConfig = HITLS_CFG_NewTLS12Config();
+    HITLS_Config *resumeClientConfig = NULL;
+    HITLS_Config *resumeServerConfig = NULL;
+    FRAME_LinkObj *client = NULL;
+    FRAME_LinkObj *server = NULL;
+    HITLS_Session *session = NULL;
+    FRAME_Msg serverHelloMsg = {0};
+    FRAME_Type serverHelloType = {0};
+    uint8_t sessionId[HITLS_SESSION_ID_MAX_SIZE] = {0};
+    uint32_t sessionIdSize = sizeof(sessionId);
+    ASSERT_TRUE(tls12ClientConfig != NULL && tls12ServerConfig != NULL);
+    SetSessionTicketTlsFrameType(&serverHelloType, HITLS_VERSION_TLS13, SERVER_HELLO);
+
+    ASSERT_EQ(PrepareTls12Session(tls12ClientConfig, tls12ServerConfig, &session, sessionId, &sessionIdSize),
+        HITLS_SUCCESS);
+    resumeClientConfig = NewTls12AndTls13Config();
+    resumeServerConfig = NewTls12AndTls13Config();
+    ASSERT_TRUE(resumeClientConfig != NULL && resumeServerConfig != NULL);
+
+    client = FRAME_CreateLink(resumeClientConfig, BSL_UIO_TCP);
+    ASSERT_TRUE(client != NULL);
+    server = FRAME_CreateLink(resumeServerConfig, BSL_UIO_TCP);
+    ASSERT_TRUE(server != NULL);
+    ASSERT_EQ(HITLS_SetSession(client->ssl, session), HITLS_SUCCESS);
+
+    ASSERT_EQ(FRAME_CreateConnection(client, server, true, TRY_RECV_SERVER_HELLO), HITLS_SUCCESS);
+    ASSERT_EQ(ParseBufferedHandshakeMsg(client, true, HITLS_VERSION_TLS13, SERVER_HELLO, &serverHelloMsg),
+        HITLS_SUCCESS);
+    FRAME_ServerHelloMsg *serverHello = &serverHelloMsg.body.hsMsg.body.serverHello;
+    ASSERT_EQ(serverHello->supportedVersion.data.data, HITLS_VERSION_TLS13);
+    ASSERT_TRUE(FrameSessionIdEquals(&serverHello->sessionIdSize, &serverHello->sessionId, sessionId, sessionIdSize));
+
+    ASSERT_EQ(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_SUCCESS);
+    ASSERT_EQ(CheckNegotiatedVersionAndResume(client, HITLS_VERSION_TLS13, false), HITLS_SUCCESS);
+
+EXIT:
+    FRAME_CleanMsg(&serverHelloType, &serverHelloMsg);
+    HITLS_CFG_FreeConfig(tls12ClientConfig);
+    HITLS_CFG_FreeConfig(tls12ServerConfig);
+    HITLS_CFG_FreeConfig(resumeClientConfig);
+    HITLS_CFG_FreeConfig(resumeServerConfig);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+    HITLS_SESS_Free(session);
+}
+/* END_CASE */
+
+/** @
+* @test     SDV_TLS_SESSION_RESUME_TLS13_TLS12_DOWNGRADE_FUNC_TC005
+* @title    TLS1.3/TLS1.2 client resumes TLS1.2 when the new server disables TLS1.3.
+* @brief    1. Establish a TLS1.2-only stateful session.
+*           2. Create a TLS1.3/TLS1.2 client and a new TLS1.2-only server.
+*           3. Provide the previous session through the server session-get callback.
+*           4. Set the TLS1.2 session on the client and complete the second handshake.
+* @expect   1. The handshake completes as TLS1.2.
+*           2. The previous TLS1.2 session is resumed.
+@ */
+/* BEGIN_CASE */
+void SDV_TLS_SESSION_RESUME_TLS13_TLS12_DOWNGRADE_FUNC_TC005(void)
+{
+    FRAME_Init();
+    HITLS_Config *tls12ClientConfig = HITLS_CFG_NewTLS12Config();
+    HITLS_Config *tls12ServerConfig = HITLS_CFG_NewTLS12Config();
+    HITLS_Config *resumeClientConfig = NULL;
+    HITLS_Config *resumeServerConfig = NULL;
+    FRAME_LinkObj *client = NULL;
+    FRAME_LinkObj *server = NULL;
+    HITLS_Session *session = NULL;
+    uint8_t sessionId[HITLS_SESSION_ID_MAX_SIZE] = {0};
+    uint32_t sessionIdSize = sizeof(sessionId);
+    ASSERT_TRUE(tls12ClientConfig != NULL && tls12ServerConfig != NULL);
+
+    ASSERT_EQ(PrepareTls12Session(tls12ClientConfig, tls12ServerConfig, &session, sessionId, &sessionIdSize),
+        HITLS_SUCCESS);
+    resumeClientConfig = NewTls12AndTls13Config();
+    resumeServerConfig = NewTls12AndTls13Config();
+    ASSERT_TRUE(resumeClientConfig != NULL && resumeServerConfig != NULL);
+    ASSERT_EQ(HITLS_CFG_SetVersionForbid(resumeServerConfig, TLS13_VERSION_BIT), HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_CFG_SetSessionCacheMode(resumeServerConfig,
+        HITLS_SESS_CACHE_SERVER | HITLS_SESS_DISABLE_INTERNAL_LOOKUP), HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_CFG_SetSessionGetCb(resumeServerConfig, LowVersionResumeSessionGetCb), HITLS_SUCCESS);
+    g_lowVersionResumeSession = session;
+
+    client = FRAME_CreateLink(resumeClientConfig, BSL_UIO_TCP);
+    ASSERT_TRUE(client != NULL);
+    server = FRAME_CreateLink(resumeServerConfig, BSL_UIO_TCP);
+    ASSERT_TRUE(server != NULL);
+    ASSERT_EQ(HITLS_SetSession(client->ssl, session), HITLS_SUCCESS);
+
+    ASSERT_EQ(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_SUCCESS);
+    ASSERT_EQ(CheckNegotiatedVersionAndResume(client, HITLS_VERSION_TLS12, true), HITLS_SUCCESS);
+
+EXIT:
+    g_lowVersionResumeSession = NULL;
+    HITLS_CFG_FreeConfig(tls12ClientConfig);
+    HITLS_CFG_FreeConfig(tls12ServerConfig);
+    HITLS_CFG_FreeConfig(resumeClientConfig);
+    HITLS_CFG_FreeConfig(resumeServerConfig);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+    HITLS_SESS_Free(session);
 }
 /* END_CASE */
 

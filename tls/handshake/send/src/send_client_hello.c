@@ -288,6 +288,31 @@ static int32_t Tls13ClientPrepareKeyShare(TLS_Ctx *ctx, uint32_t tls13BasicKeyEx
 
 static int32_t Tls13ClientPrepareSession(TLS_Ctx *ctx)
 {
+    HS_Ctx *hsCtx = (HS_Ctx *)ctx->hsCtx;
+
+#if defined(HITLS_TLS_FEATURE_SESSION) && (defined(HITLS_TLS_PROTO_TLS_BASIC) || defined(HITLS_TLS_PROTO_DTLS12))
+    bool isDatagram = IS_SUPPORT_DATAGRAM(ctx->config.tlsConfig.originVersionMask);
+    if (ctx->session != NULL) {
+        uint16_t sessionVersion = 0;
+        int32_t ret = HITLS_SESS_GetProtocolVersion(ctx->session, &sessionVersion);
+        if (ret != HITLS_SUCCESS) {
+            return ret;
+        }
+
+        if (!IS_TLS13_FAMILY_VERSION(sessionVersion) && (IS_DTLS_VERSION(sessionVersion) == isDatagram)) {
+            BSL_SAL_FREE(hsCtx->sessionId);
+            hsCtx->sessionIdSize = 0;
+            ret = ClientPrepareSession(ctx);
+            if (ret != HITLS_SUCCESS) {
+                return ret;
+            }
+            if (ctx->session != NULL) {
+                return HITLS_SUCCESS;
+            }
+        }
+    }
+#endif /* HITLS_TLS_FEATURE_SESSION && (HITLS_TLS_PROTO_TLS_BASIC || HITLS_TLS_PROTO_DTLS12) */
+
     if (!ctx->config.tlsConfig.isMiddleBoxCompat
 #if defined(HITLS_TLS_PROTO_DTLS13)
         || IS_SUPPORT_DATAGRAM(ctx->config.tlsConfig.originVersionMask)
@@ -298,7 +323,6 @@ static int32_t Tls13ClientPrepareSession(TLS_Ctx *ctx)
     }
 
     int32_t ret = HITLS_SUCCESS;
-    HS_Ctx *hsCtx = (HS_Ctx *)ctx->hsCtx;
 
     hsCtx->sessionId = (uint8_t *)BSL_SAL_Calloc(1u, HITLS_SESSION_ID_MAX_SIZE);
     if (hsCtx->sessionId == NULL) {

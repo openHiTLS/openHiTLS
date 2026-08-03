@@ -2038,8 +2038,9 @@ static int32_t ServerSelectPskAndCheckBinder(TLS_Ctx *ctx, const ClientHelloMsg 
 #endif
 static int32_t Tls13ServerSetSessionId(TLS_Ctx *ctx, const uint8_t *sessionId, uint32_t sessionIdSize)
 {
-    if (sessionIdSize == 0) {
-        ctx->hsCtx->sessionIdSize = sessionIdSize;
+    if (ctx->negotiatedInfo.version == HITLS_VERSION_DTLS13 || sessionIdSize == 0) {
+        BSL_SAL_FREE(ctx->hsCtx->sessionId);
+        ctx->hsCtx->sessionIdSize = 0;
         return HITLS_SUCCESS;
     }
 
