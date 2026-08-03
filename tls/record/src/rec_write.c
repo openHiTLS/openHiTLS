@@ -149,9 +149,8 @@ void DtlsPlainMsgGenerate(REC_TextInput *plainMsg, const TLS_Ctx *ctx,
     plainMsg->textLen = plainLen;
     plainMsg->negotiatedVersion = ctx->negotiatedInfo.version;
 #ifdef HITLS_TLS_FEATURE_ETM
-    plainMsg->isEncryptThenMac = ctx->negotiatedInfo.isEncryptThenMac;
+    plainMsg->isEncryptThenMac = ctx->recCtx->writeStates.currentState->isEncryptThenMac;
 #endif
-
     if (ctx->negotiatedInfo.version == 0) {
         plainMsg->version = HITLS_VERSION_DTLS10;
         if (IS_SUPPORT_TLCP(ctx->config.tlsConfig.originVersionMask)) {
@@ -480,7 +479,7 @@ static void TlsPlainMsgGenerate(REC_TextInput *plainMsg, const TLS_Ctx *ctx,
     plainMsg->textLen = plainLen;
     plainMsg->negotiatedVersion = ctx->negotiatedInfo.version;
 #ifdef HITLS_TLS_FEATURE_ETM
-    plainMsg->isEncryptThenMac = ctx->negotiatedInfo.isEncryptThenMacWrite;
+    plainMsg->isEncryptThenMac = GetWriteConnState(ctx)->isEncryptThenMac;
 #endif
     if (ctx->negotiatedInfo.version != 0) {
         plainMsg->version =

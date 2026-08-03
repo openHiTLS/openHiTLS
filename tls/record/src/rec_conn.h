@@ -72,6 +72,7 @@ typedef struct {
 /* connection state */
 typedef struct {
     RecConnSuitInfo *suiteInfo;             /* Cipher suite information */
+    bool isEncryptThenMac;                  /* Whether this record state uses Encrypt-then-MAC */
     uint64_t seq;                           /* tls: 8 byte sequence number or dtls: 6 byte seq */
     bool isWrapped;                         /* tls: Check whether the sequence number is wrapped */
 

@@ -43,11 +43,10 @@ uint8_t RecConnGetCbcPaddingLen(uint8_t blockLen, uint32_t plaintextLen)
 
 static uint32_t CbcCalCiphertextLen(const TLS_Ctx *ctx, RecConnSuitInfo *suiteInfo, uint32_t plantextLen, bool isRead)
 {
+    const RecConnState *state = isRead ? ctx->recCtx->readStates.currentState : ctx->recCtx->writeStates.currentState;
     uint32_t ciphertextLen = plantextLen;
     ciphertextLen += suiteInfo->recordIvLength;
-    bool isEncryptThenMac = isRead ?
-        ctx->negotiatedInfo.isEncryptThenMacRead : ctx->negotiatedInfo.isEncryptThenMacWrite;
-    if (isEncryptThenMac) {
+    if (state->isEncryptThenMac) {
         ciphertextLen += RecConnGetCbcPaddingLen(suiteInfo->blockLength, ciphertextLen) + CBC_PADDING_LEN_TAG_SIZE;
         ciphertextLen += suiteInfo->macLen;
     } else {
@@ -60,10 +59,11 @@ static uint32_t CbcCalCiphertextLen(const TLS_Ctx *ctx, RecConnSuitInfo *suiteIn
 static int32_t CbcCalPlantextBufLen(TLS_Ctx *ctx, RecConnSuitInfo *suiteInfo,
     uint32_t ciphertextLen, uint32_t *offset, uint32_t *plainLen)
 {
+    const RecConnState *state = ctx->recCtx->readStates.currentState;
     uint32_t plantextLen = ciphertextLen;
     *offset = suiteInfo->recordIvLength;
     plantextLen -= *offset;
-    if (ctx->negotiatedInfo.isEncryptThenMacRead) {
+    if (state->isEncryptThenMac) {
         plantextLen -= suiteInfo->macLen;
     }
     if (plantextLen > ciphertextLen) {
@@ -109,11 +109,12 @@ static int32_t RecConnCbcDecCheckPaddingEtM(TLS_Ctx *ctx, const REC_TextInput *c
 #ifdef HITLS_BSL_LOG
     const RecConnState *state = ctx->recCtx->readStates.currentState;
 #else
+    (void)cryptMsg;
     (void)offset;
 #endif
     uint8_t padLen = plain[plainLen - 1];
 
-    if (cryptMsg->isEncryptThenMac && (plainLen < padLen + CBC_PADDING_LEN_TAG_SIZE)) {
+    if (plainLen < padLen + CBC_PADDING_LEN_TAG_SIZE) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15399, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "record cbc mode decrypt error: ciphertext len = %u, plaintext len = %u, mac len = %u, padding len = %u.",
             cryptMsg->textLen - offset - state->suiteInfo->macLen, plainLen, state->suiteInfo->macLen, padLen);
@@ -395,7 +396,7 @@ static int32_t CbcDecrypt(TLS_Ctx *ctx, RecConnState *state, const REC_TextInput
     uint32_t decryptDataLen = *dataLen;
 
     int32_t ret;
-    if (ctx->negotiatedInfo.isEncryptThenMacRead) {
+    if (state->isEncryptThenMac) {
         ret = RecConnCbcDecryptByEncryptThenMac(ctx, state, cryptMsg, decryptData, &decryptDataLen);
     } else {
         ret = RecConnCbcDecryptByMacThenEncrypt(ctx, state, cryptMsg, decryptData, &decryptDataLen);
@@ -614,7 +615,7 @@ int32_t RecConnCbcMacThenEncrypt(
 static int32_t CbcEncrypt(TLS_Ctx *ctx, RecConnState *state, const REC_TextInput *plainMsg, uint8_t *cipherText,
     uint32_t cipherTextLen)
 {
-    if (plainMsg->isEncryptThenMac) {
+    if (state->isEncryptThenMac) {
         return RecConnCbcEncryptThenMac(ctx, state, plainMsg, cipherText, cipherTextLen);
     }
     return RecConnCbcMacThenEncrypt(ctx, state, plainMsg, cipherText, cipherTextLen);

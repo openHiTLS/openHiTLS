@@ -311,8 +311,6 @@ typedef struct {
     bool isSecureRenegotiation;                    /* whether security renegotiation */
     bool isExtendedMasterSecret;                   /* whether to calculate the extended master sercret */
     bool isEncryptThenMac;                         /* Whether to enable EncryptThenMac */
-    bool isEncryptThenMacRead;                     /* Whether to enable EncryptThenMacRead */
-    bool isEncryptThenMacWrite;                    /* Whether to enable EncryptThenMacWrite */
     bool isTicket;                                 /* whether to negotiate tickets, only below tls1.3 */
     bool isSniStateOK;                             /* Whether server successfully processes the server_name callback */
 #ifdef HITLS_TLS_FEATURE_SNI

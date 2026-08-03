@@ -213,9 +213,6 @@ int32_t ProcessPlainCCS(TLS_Ctx *ctx, const uint8_t *data, uint32_t dataLen)
 #endif
     BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15615, BSL_LOG_LEVEL_INFO, BSL_LOG_BINLOG_TYPE_RUN,
         "got a change cipher spec message.", 0, 0, 0, 0);
-#ifdef HITLS_TLS_SUITE_CIPHER_CBC
-    ctx->negotiatedInfo.isEncryptThenMacRead = ctx->negotiatedInfo.isEncryptThenMac;
-#endif
     return HITLS_REC_NORMAL_RECV_UNEXPECT_MSG;
 }
 
