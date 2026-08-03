@@ -746,9 +746,13 @@ static int32_t ServerDealRecordSizeLimit(TLS_Ctx *ctx, const ClientHelloMsg *cli
 static int32_t ServerCheckEncryptThenMac(TLS_Ctx *ctx, const ClientHelloMsg *clientHello)
 {
     bool haveEncryptThenMac = clientHello->extension.flag.haveEncryptThenMac;
+    bool newEncryptThenMac = ctx->config.tlsConfig.isEncryptThenMac &&
+        GET_VERSION_FROM_CTX(ctx) != HITLS_VERSION_TLS13 && haveEncryptThenMac;
 #ifdef HITLS_TLS_FEATURE_RENEGOTIATION
+    bool oldEncryptThenMac = ctx->negotiatedInfo.isEncryptThenMac;
     /* Renegotiation cannot be downgraded from EncryptThenMac to MacThenEncrypt */
-    if (ctx->negotiatedInfo.isRenegotiation && ctx->negotiatedInfo.isEncryptThenMac && !haveEncryptThenMac) {
+    if (ctx->negotiatedInfo.isRenegotiation && oldEncryptThenMac && !newEncryptThenMac &&
+        ctx->negotiatedInfo.cipherSuiteInfo.cipherType == HITLS_CBC_CIPHER) {
         BSL_ERR_PUSH_ERROR(HITLS_MSG_HANDLE_ENCRYPT_THEN_MAC_ERR);
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15919, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "regotiation should not change encrypt then mac to mac then encrypt.", 0, 0, 0, 0);
@@ -756,21 +760,9 @@ static int32_t ServerCheckEncryptThenMac(TLS_Ctx *ctx, const ClientHelloMsg *cli
         return HITLS_MSG_HANDLE_ENCRYPT_THEN_MAC_ERR;
     }
 #endif
-    /* If EncryptThenMac is not configured, a success message is returned. */
-    if (!ctx->config.tlsConfig.isEncryptThenMac) {
-        return HITLS_SUCCESS;
-    }
-
-    /* TLS 1.3 does not need to negotiate this expansion. */
-    if (ctx->negotiatedInfo.version == HITLS_VERSION_TLS13) {
-        return HITLS_SUCCESS;
-    }
-
-    /* Only the CBC cipher suite has the EncryptThenMac setting. */
-    if (haveEncryptThenMac && ctx->negotiatedInfo.cipherSuiteInfo.cipherType == HITLS_CBC_CIPHER) {
+    /* Keep the negotiated ETM capability across renegotiation to a non-CBC suite. */
+    if (newEncryptThenMac && ctx->negotiatedInfo.cipherSuiteInfo.cipherType == HITLS_CBC_CIPHER) {
         ctx->negotiatedInfo.isEncryptThenMac = true;
-    } else {
-        ctx->negotiatedInfo.isEncryptThenMac = false;
     }
 
     return HITLS_SUCCESS;

@@ -448,7 +448,7 @@ static inline void GenerateCryptMsg(const TLS_Ctx *ctx,
 {
     cryptMsg->negotiatedVersion = ctx->negotiatedInfo.version;
 #ifdef HITLS_TLS_FEATURE_ETM
-    cryptMsg->isEncryptThenMac = ctx->negotiatedInfo.isEncryptThenMac;
+    cryptMsg->isEncryptThenMac = ctx->recCtx->readStates.currentState->isEncryptThenMac;
 #endif
     cryptMsg->type = hdr->type;
     cryptMsg->version = hdr->version;
@@ -999,7 +999,7 @@ int32_t RecordDecryptPrepare(TLS_Ctx *ctx, uint16_t version, REC_Type recordType
 
     cryptMsg->negotiatedVersion = ctx->negotiatedInfo.version;
 #ifdef HITLS_TLS_FEATURE_ETM
-    cryptMsg->isEncryptThenMac = ctx->negotiatedInfo.isEncryptThenMac;
+    cryptMsg->isEncryptThenMac = state->isEncryptThenMac;
 #endif
     cryptMsg->type = recordHeader.type;
     cryptMsg->version = recordHeader.version;

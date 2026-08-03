@@ -482,6 +482,9 @@ int32_t REC_InitPendingState(const TLS_Ctx *ctx, const REC_SecParameters *param)
         (void)RETURN_ERROR_NUMBER_PROCESS(ret, BINLOG_ID17304, "SetCipherInfo fail");
         goto err;
     }
+    bool isCbcCipher = ctx->negotiatedInfo.cipherSuiteInfo.cipherType == HITLS_CBC_CIPHER;
+    readState->isEncryptThenMac = ctx->negotiatedInfo.isEncryptThenMac && isCbcCipher;
+    writeState->isEncryptThenMac = ctx->negotiatedInfo.isEncryptThenMac && isCbcCipher;
 
     /* Clear sensitive information */
     FreeDataAndState(&clientSuitInfo, &serverSuitInfo,

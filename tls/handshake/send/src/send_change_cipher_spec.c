@@ -43,7 +43,6 @@ int32_t SendChangeCipherSpecProcess(TLS_Ctx *ctx)
     }
     BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15874, BSL_LOG_LEVEL_INFO, BSL_LOG_BINLOG_TYPE_RUN,
         "send ccs msg success.", 0, 0, 0, 0);
-    ctx->negotiatedInfo.isEncryptThenMacWrite = ctx->negotiatedInfo.isEncryptThenMac;
 #ifdef HITLS_TLS_FEATURE_INDICATOR
     INDICATOR_StatusIndicate(ctx, ctx->isClient ? INDICATE_EVENT_STATE_CONNECT_LOOP : INDICATE_EVENT_STATE_ACCEPT_LOOP,
         INDICATE_VALUE_SUCCESS);
