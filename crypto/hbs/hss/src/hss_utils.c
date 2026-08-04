@@ -42,8 +42,6 @@ int32_t HssParaInit(HSS_Para *para, uint32_t levels, const uint32_t *lmsTypes, c
     // Clear parameter structure (this may zero the input arrays if they point to para!)
     memset(para, 0, sizeof(HSS_Para));
 
-    para->levels = levels;
-
     // Initialize LMS parameters for each level
     for (uint32_t i = 0; i < levels; i++) {
         para->lmsType[i] = lmsTypesCopy[i];
@@ -62,6 +60,7 @@ int32_t HssParaInit(HSS_Para *para, uint32_t levels, const uint32_t *lmsTypes, c
     // Total = 4 + 24 + n = 28 + n
     para->pubKeyLen = HSS_PUBKEY_ROOT_OFFSET + para->levelPara[0].n;
     para->prvKeyLen = HSS_PRVKEY_LEN;
+    para->levels = levels;
     para->sigLen = HssGetSignatureLen(para);
     para->maxSignatures = HssGetMaxSignatures(para);
 
