@@ -471,7 +471,7 @@ static int32_t PreparePlainText(const RecConnState *state, const REC_TextInput *
     }
     int32_t ret = GenerateCbcPlainTextBeforeMac(state, plainMsg, cipherTextLen, *plainText, plainTextLen);
     if (ret != HITLS_SUCCESS) {
-        BSL_SAL_FREE(*plainText);
+        BSL_SAL_ClearFree(*plainText, cipherTextLen);
     }
     return ret;
 }
@@ -579,13 +579,13 @@ int32_t RecConnCbcMacThenEncrypt(
     int32_t ret = GenerateCbcPlainTextAfterMac(LIBCTX_FROM_CTX(ctx), ATTRIBUTE_FROM_CTX(ctx),
         state, plainMsg, cipherTextLen, plainText, &plainTextLen);
     if (ret != HITLS_SUCCESS) {
-        BSL_SAL_FREE(plainText);
+        BSL_SAL_ClearFree(plainText, cipherTextLen);
         return ret;
     }
     uint32_t offset = 0;
     ret = RecConnCopyIV(ctx, state, cipherText, cipherTextLen);
     if (ret != HITLS_SUCCESS) {
-        BSL_SAL_FREE(plainText);
+        BSL_SAL_ClearFree(plainText, cipherTextLen);
         return ret;
     }
     offset += state->suiteInfo->fixedIvLength;
@@ -595,7 +595,7 @@ int32_t RecConnCbcMacThenEncrypt(
     RecConnInitCipherParam(&cipherParam, state);
     ret = SAL_CRYPT_Encrypt(LIBCTX_FROM_CTX(ctx), ATTRIBUTE_FROM_CTX(ctx),
         &cipherParam, plainText, plainTextLen, &cipherText[offset], &encLen);
-    BSL_SAL_FREE(plainText);
+    BSL_SAL_ClearFree(plainText, cipherTextLen);
     if (ret != HITLS_SUCCESS) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15391, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "CBC encrypt record error.", 0, 0, 0, 0);

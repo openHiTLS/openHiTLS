@@ -358,7 +358,7 @@ static int32_t GetSessDecryptInfo(const TLS_SessionMgr *sessMgr, Ticket *ticket,
     }
 #endif
     /* The user does not register the callback. Use the default ticket key. */
-    if (memcmp(ticket->keyName, sessMgr->ticketKeyName, HITLS_TICKET_KEY_NAME_SIZE) != 0) {
+    if (ConstTimeMemcmp(ticket->keyName, sessMgr->ticketKeyName, HITLS_TICKET_KEY_NAME_SIZE) == 0) {
         /* Failed to match the key name. */
         return HITLS_TICKET_KEY_RET_FAIL;
     }
@@ -413,7 +413,7 @@ static int32_t GenerateSessFromTicket(HITLS_Lib_Ctx *libCtx, const char *attrNam
     int32_t ret = SAL_CRYPT_Decrypt(libCtx, attrName,
         cipher, ticket->encryptedState, ticket->encryptedStateSize, plaintext, &plaintextLen);
     if (ret != HITLS_SUCCESS) {
-        BSL_SAL_ClearFree(plaintext, plaintextLen);
+        BSL_SAL_ClearFree(plaintext, ticketBufSize);
 
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16038, BSL_LOG_LEVEL_INFO, BSL_LOG_BINLOG_TYPE_RUN,
             "SAL_CRYPT_Decrypt fail when decrypt session ticket.", 0, 0, 0, 0);
@@ -436,7 +436,7 @@ static int32_t GenerateSessFromTicket(HITLS_Lib_Ctx *libCtx, const char *attrNam
         }
 
         if (good == 0) {
-            BSL_SAL_ClearFree(plaintext, plaintextLen);
+            BSL_SAL_ClearFree(plaintext, ticketBufSize);
 
             return HITLS_SUCCESS;
         }
@@ -447,13 +447,13 @@ static int32_t GenerateSessFromTicket(HITLS_Lib_Ctx *libCtx, const char *attrNam
     /* Parse the ticket content to the SESS. */
     HITLS_Session *session = HITLS_SESS_New();
     if (session == NULL) {
-        BSL_SAL_ClearFree(plaintext, plaintextLen);
+        BSL_SAL_ClearFree(plaintext, ticketBufSize);
 
         BSL_ERR_PUSH_ERROR(HITLS_MEMALLOC_FAIL);
         return RETURN_ERROR_NUMBER_PROCESS(HITLS_MEMALLOC_FAIL, BINLOG_ID16039, "HITLS_SESS_New fail");
     }
     ret = SESS_Decode(session, plaintext, plaintextLen);
-    BSL_SAL_ClearFree(plaintext, plaintextLen);
+    BSL_SAL_ClearFree(plaintext, ticketBufSize);
     if (ret != HITLS_SUCCESS) {
         HITLS_SESS_Free(session);
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16040, BSL_LOG_LEVEL_INFO, BSL_LOG_BINLOG_TYPE_RUN,

@@ -356,6 +356,9 @@ static int32_t CcmPrepare(CRYPT_EAL_CipherCtx *ctx, const HITLS_CipherParameters
                  (cipher->algo == HITLS_CIPHER_AES_256_CCM) || (cipher->algo == HITLS_CIPHER_AES_256_CCM8) ||
                  (cipher->algo == HITLS_CIPHER_SM4_CCM);
     if (isCCM == true) {
+        if (!isEnc && inLen < tagLen) {
+            return RETURN_ERROR_NUMBER_PROCESS(HITLS_INVALID_INPUT, BINLOG_ID16638, "The length of input is invalid");
+        }
         uint64_t msgLen = isEnc ? inLen : (inLen - tagLen);
         ret = CRYPT_EAL_CipherCtrl(ctx, CRYPT_CTRL_SET_MSGLEN, &msgLen, sizeof(msgLen));
         if (ret != CRYPT_SUCCESS) {
@@ -471,6 +474,9 @@ static int32_t AeadDecrypt(CRYPT_EAL_CipherCtx *ctx, const HITLS_CipherParameter
     int32_t ret;
     uint32_t tagLen = IsCipherCCM8(cipher->algo) ?
         CCM8_TLS_TAG_LEN : CCM_TLS_TAG_LEN;
+    if (inLen < tagLen) {
+        return RETURN_ERROR_NUMBER_PROCESS(HITLS_INVALID_INPUT, BINLOG_ID16643, "The length of input is invalid");
+    }
     uint32_t cipherLen = inLen - tagLen;
     uint32_t plainLen = *outLen;
 

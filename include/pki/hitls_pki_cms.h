@@ -114,6 +114,7 @@ int32_t HITLS_CMS_DataSign(HITLS_CMS *cms, CRYPT_EAL_PkeyCtx *prvKey, HITLS_X509
  * @par Description: Verify all signatures in the CMS SignedData structure.
  *
  * @attention The message data must be provided for detached SignedData; it is optional for non-detached.
+ *            This interface dose not impose an upper limit on the number of certificates.
  * @param cms             [IN] CMS structure containing signatures to verify
  * @param msg             [IN] Message data to verify (required for detached, optional for non-detached)
  * @param inputParam      [IN] Optional parameters (can be NULL). it may contains untrusted cert-list, ca-cert list,

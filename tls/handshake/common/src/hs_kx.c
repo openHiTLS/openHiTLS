@@ -332,6 +332,7 @@ int32_t HS_ProcessClientKxMsgRsa(TLS_Ctx *ctx, const ClientKeyExchangeMsg *clien
     }
     BSL_SAL_CleanseData(premasterSecret, secretLen);
     BSL_SAL_FREE(premasterSecret);
+    BSL_SAL_CleanseData(premaster, MASTER_SECRET_LEN);
     return HITLS_SUCCESS;
 }
 #endif /* HITLS_TLS_SUITE_KX_RSA */

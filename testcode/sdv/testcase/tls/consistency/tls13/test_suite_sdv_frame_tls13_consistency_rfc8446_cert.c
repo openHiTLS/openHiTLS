@@ -40,7 +40,135 @@
 #include "hs_msg.h"
 #include "alert.h"
 #include "hitls_crypt_init.h"
+#include "hitls_crypt.h"
+#include "hitls_func.h"
 #include "common_func.h"
+#include "bsl_bytes.h"
+#include "hitls_session.h"
+#include "stub_utils.h"
+
+static uint8_t g_ccmTicketKeyName[HITLS_TICKET_KEY_NAME_SIZE] = {
+    0x2A, 0x2A, 0x2A, 0x2A, 0x2A, 0x2A, 0x2A, 0x2A,
+    0x2A, 0x2A, 0x2A, 0x2A, 0x2A, 0x2A, 0x2A, 0x2A
+};
+
+static uint8_t g_ccmTicketKey[16] = {
+    0x2A, 0x2A, 0x2A, 0x2A, 0x2A, 0x2A, 0x2A, 0x2A,
+    0x2A, 0x2A, 0x2A, 0x2A, 0x2A, 0x2A, 0x2A, 0x2A
+};
+
+static uint8_t g_ccmTicketIv[HITLS_TICKET_IV_SIZE] = {
+    0x2A, 0x2A, 0x2A, 0x2A, 0x2A, 0x2A, 0x2A, 0x2A,
+    0x2A, 0x2A, 0x2A, 0x2A, 0x2A, 0x2A, 0x2A, 0x2A
+};
+
+static uint32_t g_smallEncStateSize = 4;
+
+static int32_t CcmTicketKeyCb(uint8_t *keyName, uint32_t keyNameSize,
+    HITLS_CipherParameters *cipher, uint8_t isEncrypt)
+{
+    if (isEncrypt) {
+        if (HITLS_TICKET_KEY_NAME_SIZE > keyNameSize) {
+            return HITLS_TICKET_KEY_RET_FAIL;
+        }
+        memcpy(keyName, g_ccmTicketKeyName, HITLS_TICKET_KEY_NAME_SIZE);
+    } else {
+        if (memcmp(keyName, g_ccmTicketKeyName, HITLS_TICKET_KEY_NAME_SIZE) != 0) {
+            return HITLS_TICKET_KEY_RET_FAIL;
+        }
+    }
+    cipher->type = HITLS_AEAD_CIPHER;
+    cipher->algo = HITLS_CIPHER_AES_128_CCM;
+    cipher->key = g_ccmTicketKey;
+    cipher->keyLen = sizeof(g_ccmTicketKey);
+    cipher->iv = g_ccmTicketIv;
+    cipher->ivLen = 12;
+    cipher->aad = g_ccmTicketIv;
+    cipher->aadLen = 12;
+    return HITLS_TICKET_KEY_RET_SUCCESS;
+}
+
+static int32_t Ccm8TicketKeyCb(uint8_t *keyName, uint32_t keyNameSize,
+    HITLS_CipherParameters *cipher, uint8_t isEncrypt)
+{
+    if (isEncrypt) {
+        if (HITLS_TICKET_KEY_NAME_SIZE > keyNameSize) {
+            return HITLS_TICKET_KEY_RET_FAIL;
+        }
+        memcpy(keyName, g_ccmTicketKeyName, HITLS_TICKET_KEY_NAME_SIZE);
+    } else {
+        if (memcmp(keyName, g_ccmTicketKeyName, HITLS_TICKET_KEY_NAME_SIZE) != 0) {
+            return HITLS_TICKET_KEY_RET_FAIL;
+        }
+    }
+    cipher->type = HITLS_AEAD_CIPHER;
+    cipher->algo = HITLS_CIPHER_AES_128_CCM8;
+    cipher->key = g_ccmTicketKey;
+    cipher->keyLen = sizeof(g_ccmTicketKey);
+    cipher->iv = g_ccmTicketIv;
+    cipher->ivLen = 12;
+    cipher->aad = g_ccmTicketIv;
+    cipher->aadLen = 12;
+    return HITLS_TICKET_KEY_RET_SUCCESS;
+}
+
+static void Test_Client_PskSmallEncState(HITLS_Ctx *ctx, uint8_t *data, uint32_t *len,
+    uint32_t bufSize, void *user)
+{
+    (void)ctx;
+    (void)bufSize;
+    (void)user;
+    uint32_t smallEncStateSize = g_smallEncStateSize;
+    FRAME_Type frameType = {0};
+    frameType.versionType = HITLS_VERSION_TLS13;
+    FRAME_Msg frameMsg = {0};
+    frameMsg.recType.data = REC_TYPE_HANDSHAKE;
+    frameMsg.length.data = *len;
+    frameMsg.recVersion.data = HITLS_VERSION_TLS13;
+    uint32_t parseLen = 0;
+    FRAME_ParseMsgBody(&frameType, data, *len, &frameMsg, &parseLen);
+    ASSERT_EQ(parseLen, *len);
+    ASSERT_EQ(frameMsg.body.hsMsg.type.data, CLIENT_HELLO);
+
+    FRAME_HsPskIdentity *identity =
+        &frameMsg.body.hsMsg.body.clientHello.psks.identities.data[0];
+
+    uint32_t malformedTicketLen = HITLS_TICKET_KEY_NAME_SIZE + HITLS_TICKET_IV_SIZE +
+        sizeof(uint32_t) + smallEncStateSize;
+    uint8_t *malformedTicket = BSL_SAL_Calloc(1, malformedTicketLen);
+    ASSERT_TRUE(malformedTicket != NULL);
+    // Malformed session ticket: keyName (16B) | IV (16B) | encryptedStateSize (4B, value is 4) | encryptedState (4B, value is 0xAA)
+    uint32_t offset = 0;
+    memcpy(malformedTicket + offset, g_ccmTicketKeyName, HITLS_TICKET_KEY_NAME_SIZE);
+    offset += HITLS_TICKET_KEY_NAME_SIZE;
+    memcpy(malformedTicket + offset, g_ccmTicketIv, HITLS_TICKET_IV_SIZE);
+    offset += HITLS_TICKET_IV_SIZE;
+    BSL_Uint32ToByte(smallEncStateSize, malformedTicket + offset);
+    offset += sizeof(uint32_t);
+    memset(malformedTicket + offset, 0xAA, smallEncStateSize);
+
+    BSL_SAL_Free(identity->identity.data);
+    identity->identity.state = ASSIGNED_FIELD;
+    identity->identity.data = malformedTicket;
+    identity->identity.size = malformedTicketLen;
+    identity->identityLen.state = ASSIGNED_FIELD;
+    identity->identityLen.data = malformedTicketLen;
+
+    FRAME_HsExtOfferedPsks *psks = &frameMsg.body.hsMsg.body.clientHello.psks;
+    psks->identitySize.state = ASSIGNED_FIELD;
+    psks->identitySize.data = 2 + malformedTicketLen + 4;
+    psks->exLen.state = INITIAL_FIELD;
+    frameMsg.body.hsMsg.body.clientHello.extensionState = INITIAL_FIELD;
+    frameMsg.body.hsMsg.body.clientHello.extensionLen.state = INITIAL_FIELD;
+    frameMsg.body.hsMsg.length.state = INITIAL_FIELD;
+    frameMsg.length.state = INITIAL_FIELD;
+
+    memset(data, 0, bufSize);
+    FRAME_PackRecordBody(&frameType, &frameMsg, data, bufSize, len);
+EXIT:
+    FRAME_CleanMsg(&frameType, &frameMsg);
+    return;
+}
 /* END_HEADER */
 
 #define g_uiPort 2987
@@ -2556,5 +2684,257 @@ EXIT:
     HITLS_CFG_FreeConfig(config);
     FRAME_FreeLink(client);
     FRAME_FreeLink(server);
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void UT_CRYPT_DECRYPT_INLEN_TAGLEN_TC001(void)
+{
+    HitlsInit();
+
+    int32_t ret;
+    HITLS_CipherParameters cipher = {0};
+    uint8_t key[16] = {0};
+    uint8_t iv[13] = {0};
+    uint8_t aad[32] = {0};
+    uint8_t in[64] = {0};
+    uint8_t out[64] = {0};
+    uint32_t outLen = sizeof(out);
+
+    cipher.type = HITLS_AEAD_CIPHER;
+    cipher.key = key;
+    cipher.keyLen = 16;
+    cipher.iv = iv;
+    cipher.ivLen = 13;
+    cipher.aad = aad;
+    cipher.aadLen = 32;
+
+    cipher.algo = HITLS_CIPHER_AES_128_CCM;
+    outLen = sizeof(out);
+    ret = HITLS_CRYPT_Decrypt(NULL, NULL, &cipher, in, 15, out, &outLen);
+    ASSERT_EQ(ret, HITLS_INVALID_INPUT);
+
+    cipher.algo = HITLS_CIPHER_AES_128_CCM8;
+    outLen = sizeof(out);
+    ret = HITLS_CRYPT_Decrypt(NULL, NULL, &cipher, in, 7, out, &outLen);
+    ASSERT_EQ(ret, HITLS_INVALID_INPUT);
+
+    cipher.algo = HITLS_CIPHER_AES_128_GCM;
+    cipher.ivLen = 12;
+    outLen = sizeof(out);
+    ret = HITLS_CRYPT_Decrypt(NULL, NULL, &cipher, in, 15, out, &outLen);
+    ASSERT_EQ(ret, HITLS_INVALID_INPUT);
+EXIT:
+    return;
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void UT_CRYPT_DECRYPT_INLEN_TAGLEN_TC002(void)
+{
+    HitlsInit();
+
+    FRAME_LinkObj *client = NULL;
+    FRAME_LinkObj *server = NULL;
+    HITLS_Config *config = NULL;
+    uint16_t cipherSuites[] = {HITLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256};
+
+    config = HITLS_CFG_NewTLS12Config();
+    ASSERT_TRUE(config != NULL);
+    HITLS_CFG_SetCheckKeyUsage(config, false);
+    HITLS_CFG_SetCipherSuites(config, cipherSuites, sizeof(cipherSuites) / sizeof(uint16_t));
+
+    client = FRAME_CreateLink(config, BSL_UIO_TCP);
+    ASSERT_TRUE(client != NULL);
+    server = FRAME_CreateLink(config, BSL_UIO_TCP);
+    ASSERT_TRUE(server != NULL);
+
+    ASSERT_TRUE(FRAME_CreateConnection(client, server, false, HS_STATE_BUTT) == HITLS_SUCCESS);
+
+    uint8_t data[1] = {0};
+    ASSERT_EQ(REC_Write(client->ssl, REC_TYPE_APP, data, 0), HITLS_SUCCESS);
+
+    FrameUioUserData *clientIoUserData = BSL_UIO_GetUserData(client->io);
+    FrameUioUserData *serverIoUserData = BSL_UIO_GetUserData(server->io);
+    serverIoUserData->recMsg.len = 0;
+    ASSERT_TRUE(FRAME_TransportRecMsg(server->io, clientIoUserData->sndMsg.msg, clientIoUserData->sndMsg.len) == HITLS_SUCCESS);
+
+    uint8_t readBuf[256];
+    uint32_t readLen = 0;
+    int32_t ret = HITLS_Read(server->ssl, readBuf, sizeof(readBuf), &readLen);
+    // The length of the written message is 0, and when reading, if the length is 0,
+    // it will continue reading, causing an "io empty" return. If decryption fails, it will return "bad recode mac."
+    ASSERT_EQ(ret, HITLS_REC_NORMAL_RECV_BUF_EMPTY);
+    ASSERT_EQ(readLen, 0);
+EXIT:
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+    HITLS_CFG_FreeConfig(config);
+}
+/* END_CASE */
+
+/** @
+* @test UT_TLS_TLS13_RFC8446_CONSISTENCY_CCM_TICKET_INLEN_UNDERFLOW_TC001
+* @spec -
+* @title When a session ticket with encryptedStateSize < CCM tagLen(16) is received
+*        by the server for PSK resumption, the CcmPrepare inLen-tagLen subtraction
+*        should not cause unsigned integer underflow.
+* @precon nan
+* @brief    1. Configure client and server with TLS 1.3 CCM cipher suite and
+*           CCM ticket key callback. Expected result 1 is obtained.
+*           2. Establish a full TLS 1.3 connection, client receives NewSessionTicket.
+*           Expected result 2 is obtained.
+*           3. Start a PSK resumption handshake, intercept outgoing ClientHello,
+*           replace the PSK identity (ticket) with a malformed ticket where
+*           encryptedStateSize(4) < CCM tagLen(16). Expected result 3: the server
+*           should detect the error and return failure, not cause uint32 underflow.
+* @expect   1. Initialization is successful.
+*           2. Full handshake succeeds, session ticket obtained.
+*           3. The server decrypts the malformed ticket, triggering the inLen-tagLen
+*           underflow in CcmPrepare. The decrypt fails, but GenerateSessFromTicket
+*           returns HITLS_SUCCESS (by design), so the server falls back to a full
+*           handshake. PSK resumption should NOT succeed (isReused == false).
+* @expect   1. Initialization is successful.
+*           2. Full handshake succeeds, session ticket obtained.
+*           3. PSK resumption fails (isReused == false), handshake succeeds via fallback.
+@ */
+/* BEGIN_CASE */
+void UT_TLS_TLS13_RFC8446_CONSISTENCY_CCM_TICKET_INLEN_UNDERFLOW_TC001(void)
+{
+    FRAME_Init();
+
+    HITLS_Config *sConfig = HITLS_CFG_NewTLS13Config();
+    ASSERT_TRUE(sConfig != NULL);
+    HITLS_CFG_SetKeyExchMode(sConfig, TLS13_KE_MODE_PSK_ONLY | TLS13_KE_MODE_PSK_WITH_DHE);
+    HITLS_CFG_SetCheckKeyUsage(sConfig, false);
+    uint16_t ccmCipherSuite = HITLS_AES_128_CCM_SHA256;
+    HITLS_CFG_SetCipherSuites(sConfig, &ccmCipherSuite, 1);
+    ASSERT_EQ(HITLS_CFG_SetTicketKeyCallback(sConfig, CcmTicketKeyCb), HITLS_SUCCESS);
+
+    HITLS_Config *cConfig = HITLS_CFG_NewTLS13Config();
+    ASSERT_TRUE(cConfig != NULL);
+    HITLS_CFG_SetKeyExchMode(cConfig, TLS13_KE_MODE_PSK_ONLY | TLS13_KE_MODE_PSK_WITH_DHE);
+    HITLS_CFG_SetCheckKeyUsage(cConfig, false);
+    HITLS_CFG_SetCipherSuites(cConfig, &ccmCipherSuite, 1);
+
+    FRAME_LinkObj *client = FRAME_CreateLink(cConfig, BSL_UIO_TCP);
+    ASSERT_TRUE(client != NULL);
+    FRAME_LinkObj *server = FRAME_CreateLink(sConfig, BSL_UIO_TCP);
+    ASSERT_TRUE(server != NULL);
+    ASSERT_EQ(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_SUCCESS);
+
+    HITLS_Session *session = HITLS_GetDupSession(client->ssl);
+    ASSERT_TRUE(session != NULL);
+    ASSERT_TRUE(HITLS_SESS_HasTicket(session) == true);
+
+    FRAME_FreeLink(client);
+    client = NULL;
+    FRAME_FreeLink(server);
+    server = NULL;
+
+    g_smallEncStateSize = 4;
+    RecWrapper wrapper = {TRY_SEND_CLIENT_HELLO, REC_TYPE_HANDSHAKE, false,
+        NULL, Test_Client_PskSmallEncState};
+    RegisterWrapper(wrapper);
+
+    client = FRAME_CreateLink(cConfig, BSL_UIO_TCP);
+    ASSERT_TRUE(client != NULL);
+    server = FRAME_CreateLink(sConfig, BSL_UIO_TCP);
+    ASSERT_TRUE(server != NULL);
+    ASSERT_EQ(HITLS_SetSession(client->ssl, session), HITLS_SUCCESS);
+
+    ASSERT_EQ(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_SUCCESS);
+    bool isReused = false;
+    ASSERT_EQ(HITLS_IsSessionReused(client->ssl, &isReused), HITLS_SUCCESS);
+    ASSERT_TRUE(isReused == false);
+
+EXIT:
+    ClearWrapper();
+    HITLS_CFG_FreeConfig(sConfig);
+    HITLS_CFG_FreeConfig(cConfig);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+    HITLS_SESS_Free(session);
+}
+/* END_CASE */
+
+/** @
+* @test UT_TLS_TLS13_RFC8446_CONSISTENCY_CCM8_TICKET_INLEN_UNDERFLOW_TC001
+* @spec -
+* @title When a session ticket with encryptedStateSize < CCM8 tagLen(8) is received
+*        by the server for PSK resumption, the CcmPrepare inLen-tagLen subtraction
+*        should not cause unsigned integer underflow.
+* @precon nan
+* @brief    1. Configure client and server with TLS 1.3 CCM8 cipher suite and
+*           CCM8 ticket key callback. Expected result 1 is obtained.
+*           2. Establish a full TLS 1.3 connection, client receives NewSessionTicket.
+*           Expected result 2 is obtained.
+*           3. Start a PSK resumption handshake, intercept outgoing ClientHello,
+*           replace the PSK identity (ticket) with a malformed ticket where
+*           3. The server decrypts the malformed ticket, triggering the inLen-tagLen
+*           underflow in CcmPrepare. The decrypt fails, but GenerateSessFromTicket
+*           returns HITLS_SUCCESS (by design), so the server falls back to a full
+*           handshake. PSK resumption should NOT succeed (isReused == false).
+* @expect   1. Initialization is successful.
+*           2. Full handshake succeeds, session ticket obtained.
+*           3. PSK resumption fails (isReused == false), handshake succeeds via fallback.
+@ */
+/* BEGIN_CASE */
+void UT_TLS_TLS13_RFC8446_CONSISTENCY_CCM8_TICKET_INLEN_UNDERFLOW_TC001(void)
+{
+    FRAME_Init();
+
+    HITLS_Config *sConfig = HITLS_CFG_NewTLS13Config();
+    ASSERT_TRUE(sConfig != NULL);
+    HITLS_CFG_SetKeyExchMode(sConfig, TLS13_KE_MODE_PSK_ONLY | TLS13_KE_MODE_PSK_WITH_DHE);
+    HITLS_CFG_SetCheckKeyUsage(sConfig, false);
+    uint16_t ccm8CipherSuite = HITLS_AES_128_CCM_8_SHA256;
+    HITLS_CFG_SetCipherSuites(sConfig, &ccm8CipherSuite, 1);
+    ASSERT_EQ(HITLS_CFG_SetTicketKeyCallback(sConfig, Ccm8TicketKeyCb), HITLS_SUCCESS);
+
+    HITLS_Config *cConfig = HITLS_CFG_NewTLS13Config();
+    ASSERT_TRUE(cConfig != NULL);
+    HITLS_CFG_SetKeyExchMode(cConfig, TLS13_KE_MODE_PSK_ONLY | TLS13_KE_MODE_PSK_WITH_DHE);
+    HITLS_CFG_SetCheckKeyUsage(cConfig, false);
+    HITLS_CFG_SetCipherSuites(cConfig, &ccm8CipherSuite, 1);
+
+    FRAME_LinkObj *client = FRAME_CreateLink(cConfig, BSL_UIO_TCP);
+    ASSERT_TRUE(client != NULL);
+    FRAME_LinkObj *server = FRAME_CreateLink(sConfig, BSL_UIO_TCP);
+    ASSERT_TRUE(server != NULL);
+    ASSERT_EQ(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_SUCCESS);
+
+    HITLS_Session *session = HITLS_GetDupSession(client->ssl);
+    ASSERT_TRUE(session != NULL);
+    ASSERT_TRUE(HITLS_SESS_HasTicket(session) == true);
+
+    FRAME_FreeLink(client);
+    client = NULL;
+    FRAME_FreeLink(server);
+    server = NULL;
+
+    g_smallEncStateSize = 4;
+    RecWrapper wrapper = {TRY_SEND_CLIENT_HELLO, REC_TYPE_HANDSHAKE, false,
+        NULL, Test_Client_PskSmallEncState};
+    RegisterWrapper(wrapper);
+
+    client = FRAME_CreateLink(cConfig, BSL_UIO_TCP);
+    ASSERT_TRUE(client != NULL);
+    server = FRAME_CreateLink(sConfig, BSL_UIO_TCP);
+    ASSERT_TRUE(server != NULL);
+    ASSERT_EQ(HITLS_SetSession(client->ssl, session), HITLS_SUCCESS);
+
+    ASSERT_EQ(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_SUCCESS);
+    bool isReused = false;
+    ASSERT_EQ(HITLS_IsSessionReused(client->ssl, &isReused), HITLS_SUCCESS);
+    ASSERT_TRUE(isReused == false);
+
+EXIT:
+    ClearWrapper();
+    HITLS_CFG_FreeConfig(sConfig);
+    HITLS_CFG_FreeConfig(cConfig);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+    HITLS_SESS_Free(session);
 }
 /* END_CASE */

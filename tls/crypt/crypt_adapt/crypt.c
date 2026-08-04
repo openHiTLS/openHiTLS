@@ -52,8 +52,8 @@ HITLS_CRYPT_KdfMethod g_cryptKdfMethod = {0};
 
 typedef struct {
     uint16_t length;        /* Length of the derived key */
-    uint8_t labelLen;       /* Label length */
-    uint8_t ctxLen;         /* Length of the context information */
+    uint32_t labelLen;       /* Label length */
+    uint32_t ctxLen;         /* Length of the context information */
     const uint8_t *label;   /* Label */
     const uint8_t *ctx;     /* Context information */
     const uint8_t *labelPrefix;
@@ -901,8 +901,8 @@ int32_t SAL_CRYPT_HkdfExpandLabel(CRYPT_KeyDeriveParameters *deriveInfo, uint8_t
 
     HkdfLabel info = {0};
     info.length = (uint16_t)outLen;
-    info.labelLen = (uint8_t)deriveInfo->labelLen;
-    info.ctxLen = (uint8_t)deriveInfo->seedLen;
+    info.labelLen = deriveInfo->labelLen;
+    info.ctxLen = deriveInfo->seedLen;
     info.label = deriveInfo->label;
     info.ctx = deriveInfo->seed;
     info.labelPrefix = deriveInfo->labelPrefix;
