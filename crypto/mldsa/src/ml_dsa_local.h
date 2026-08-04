@@ -101,7 +101,6 @@ void MLDSA_VectorsMul(int32_t *t, const int32_t *matrix, const int32_t *s);
 void MLDSA_MatrixMul(const CRYPT_ML_DSA_Ctx *ctx, int32_t *t, 
     int32_t *const matrix[MLDSA_L_MAX], int32_t *const s[MLDSA_L_MAX]);
 void MLDSA_UseHint(const CRYPT_ML_DSA_Ctx *ctx, int32_t *const h[MLDSA_K_MAX], int32_t *w[MLDSA_K_MAX]);
-void MLDSA_Decompose(const CRYPT_ML_DSA_Ctx *ctx, int32_t r, int32_t *r1, int32_t *r0);
 void MLDSA_Batch_Decompose(const CRYPT_ML_DSA_Ctx *ctx, int32_t a[MLDSA_N], int32_t r1[MLDSA_N]);
 int32_t MLDSA_RejNTTPoly(int32_t a[MLDSA_N], const uint8_t seed[MLDSA_SEED_EXTEND_BYTES_LEN]);
 int32_t MLDSA_RejBoundedPolyEta2(int32_t *a, const uint8_t *s);

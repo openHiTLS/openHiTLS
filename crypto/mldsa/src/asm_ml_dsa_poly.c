@@ -320,23 +320,6 @@ const uint8_t MLD_REJ_UNIFORM_ETA_TABLE[] = {
     0,   1,   2,   3,   4,   5,   6,   7,   8,   9,   10,  11,  12,  13,  14,  15 /* 128 */,
 };
 
-void MLDSA_Decompose(const CRYPT_ML_DSA_Ctx *ctx, int32_t r, int32_t *r1, int32_t *r0)
-{
-    int32_t t = (int32_t)(((uint32_t)r + 0x7f) >> 7u);
-    if (ctx->info->k == K_VALUE_OF_MLDSA_44) { // If is MLDSA44
-        // This is Barrett Modular Multiplication, mod is 22.
-        t = (t * 11275u + (1 << 23u)) >> 24u;
-        t ^= ((43 - t) >> 31u) & t; // t > 43 ? 0 : t;
-    } else {
-        t = (t * 1025u + (1 << 21u)) >> 22u;
-        t &= 0x0f;
-    }
-
-    *r0 = r - t * 2 * ctx->info->gamma2; // r1  (r+  r0)/(22)
-    *r0 -= (((MLDSA_Q - 1) / 2 - *r0) >> 31u) & MLDSA_Q;
-    *r1 = t; // high bits.
-}
-
 int32_t MLDSA_RejNTTPoly(int32_t a[MLDSA_N], const uint8_t seed[MLDSA_SEED_EXTEND_BYTES_LEN])
 {
     int32_t ret = CRYPT_SUCCESS;

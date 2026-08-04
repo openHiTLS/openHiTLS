@@ -726,7 +726,7 @@ static bool ValidityChecksL(const CRYPT_ML_DSA_Ctx *ctx, int32_t *const z[MLDSA_
 {
     bool valid = true;
     for (uint8_t i = 0; i < ctx->info->l; i++) {
-        valid &= MLDSA_ValidityChecks(z[i], t);
+        valid = valid && MLDSA_ValidityChecks(z[i], t);
     }
     return valid;
 }
@@ -735,7 +735,7 @@ static bool ValidityChecksK(const CRYPT_ML_DSA_Ctx *ctx, int32_t *const z[MLDSA_
 {
     bool valid = true;
     for (uint8_t i = 0; i < ctx->info->k; i++) {
-        valid &= MLDSA_ValidityChecks(z[i], t);
+        valid = valid && MLDSA_ValidityChecks(z[i], t);
     }
     return valid;
 }

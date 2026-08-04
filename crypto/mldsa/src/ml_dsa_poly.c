@@ -44,6 +44,23 @@ void MLDSA_MatrixMul(const CRYPT_ML_DSA_Ctx *ctx, int32_t *t, int32_t *const mat
     }
 }
 
+static void MLDSA_Decompose(const CRYPT_ML_DSA_Ctx *ctx, int32_t r, int32_t *r1, int32_t *r0)
+{
+    int32_t t = (int32_t)(((uint32_t)r + 0x7f) >> 7u);
+    if (ctx->info->k == K_VALUE_OF_MLDSA_44) { // If is MLDSA44
+        // This is Barrett Modular Multiplication, mod is 2𝛾2.
+        t = (t * 11275u + (1 << 23u)) >> 24u;
+        t ^= ((43 - t) >> 31u) & t;
+    } else {
+        t = (t * 1025u + (1 << 21u)) >> 22u;
+        t &= 0x0f;
+    }
+
+    *r0 = r - t * 2 * ctx->info->gamma2; // r1 ← (r+ − r0)/(2𝛾2)
+    *r0 -= (((MLDSA_Q - 1) / 2 - *r0) >> 31u) & MLDSA_Q;
+    *r1 = t; // high bits.
+}
+
 /**
  * MLDSA_UseHint - Apply hint bits to correct rounding in signature verification
  * 
@@ -96,23 +113,6 @@ void MLDSA_UseHint(const CRYPT_ML_DSA_Ctx *ctx, int32_t *const h[MLDSA_K_MAX], i
     }
 }
 
-void MLDSA_Decompose(const CRYPT_ML_DSA_Ctx *ctx, int32_t r, int32_t *r1, int32_t *r0)
-{
-    int32_t t = (int32_t)(((uint32_t)r + 0x7f) >> 7u);
-    if (ctx->info->k == K_VALUE_OF_MLDSA_44) { // If is MLDSA44
-        // This is Barrett Modular Multiplication, mod is 2𝛾2.
-        t = (t * 11275u + (1 << 23u)) >> 24u;
-        t ^= ((43 - t) >> 31u) & t;
-    } else {
-        t = (t * 1025u + (1 << 21u)) >> 22u;
-        t &= 0x0f;
-    }
-
-    *r0 = r - t * 2 * ctx->info->gamma2; // r1 ← (r+ − r0)/(2𝛾2)
-    *r0 -= (((MLDSA_Q - 1) / 2 - *r0) >> 31u) & MLDSA_Q;
-    *r1 = t; // high bits.
-}
-
 void MLDSA_Batch_Decompose(const CRYPT_ML_DSA_Ctx *ctx, int32_t a[MLDSA_N], int32_t r1[MLDSA_N])
 {
     for (uint32_t i = 0; i < MLDSA_N; i++) {
@@ -144,20 +144,15 @@ int32_t MLDSA_RejNTTPoly(int32_t a[MLDSA_N], const uint8_t seed[MLDSA_SEED_EXTEN
     GOTO_ERR_IF(hashMethod->update(mdCtx, seed, MLDSA_SEED_EXTEND_BYTES_LEN), ret);
     GOTO_ERR_IF(hashMethod->squeeze(mdCtx, (uint8_t *)buf, outlen), ret);
     uint32_t j = 0;
-    for (uint32_t i = 0; i < MLDSA_N;) {
+    for (int32_t i = 0; i < MLDSA_N;) {
         const uint32_t w0 = CRYPT_HTOLE32(buf[j]);
         const uint32_t w1 = CRYPT_HTOLE32(buf[j + 1]);
         const uint32_t w2 = CRYPT_HTOLE32(buf[j + 2]);
 
-        int32_t t0 = w0;
-        int32_t t1 = (w0 >> 24) | (w1 << 8);
-        int32_t t2 = (w1 >> 16) | (w2 << 16);
-        int32_t t3 = (w2 >> 8);
-
-        t0 &= 0x7FFFFFU;
-        t1 &= 0x7FFFFFU;
-        t2 &= 0x7FFFFFU;
-        t3 &= 0x7FFFFFU;
+        int32_t t0 = (int32_t)(w0 & 0x7FFFFFU);
+        int32_t t1 = (int32_t)(((w0 >> 24) | (w1 << 8)) & 0x7FFFFFU);
+        int32_t t2 = (int32_t)(((w1 >> 16) | (w2 << 16))& 0x7FFFFFU);
+        int32_t t3 = (int32_t)((w2 >> 8) & 0x7FFFFFU);
 
         const int32_t m0 = (MLDSA_Q - 1 - t0) >> 31;
         const int32_t m1 = (MLDSA_Q - 1 - t1) >> 31;
@@ -210,7 +205,7 @@ int32_t MLDSA_RejBoundedPolyEta2(int32_t *a, const uint8_t *s)
     GOTO_ERR_IF(hashMethod->init(mdCtx, NULL), ret);
     GOTO_ERR_IF(hashMethod->update(mdCtx, s, MLDSA_PRIVATE_SEED_LEN + 2), ret); // k and l used 2 bytes.
     GOTO_ERR_IF(hashMethod->squeeze(mdCtx, buf, bufLen), ret);
-    for (uint32_t i = 0, j = 0; i < MLDSA_N; j++) {
+    for (int32_t i = 0, j = 0; i < MLDSA_N; j++) {
         if (j == CRYPT_SHAKE256_BLOCKSIZE) {
             GOTO_ERR_IF(hashMethod->squeeze(mdCtx, buf, CRYPT_SHAKE256_BLOCKSIZE), ret);
             j = 0;
@@ -257,7 +252,7 @@ int32_t MLDSA_RejBoundedPolyEta4(int32_t *a, const uint8_t *s)
     GOTO_ERR_IF(hashMethod->init(mdCtx, NULL), ret);
     GOTO_ERR_IF(hashMethod->update(mdCtx, s, MLDSA_PRIVATE_SEED_LEN + 2), ret); // k and l used 2 bytes.
     GOTO_ERR_IF(hashMethod->squeeze(mdCtx, buf, bufLen), ret);
-    for (uint32_t i = 0, j = 0; i < MLDSA_N; j++) {
+    for (int32_t i = 0, j = 0; i < MLDSA_N; j++) {
         if (j == CRYPT_SHAKE256_BLOCKSIZE) {
             GOTO_ERR_IF(hashMethod->squeeze(mdCtx, buf, CRYPT_SHAKE256_BLOCKSIZE), ret);
             j = 0;
