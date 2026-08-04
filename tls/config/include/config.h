@@ -77,6 +77,9 @@ extern "C" {
             "tls config: not found string param %s", #paramName, 0, 0, 0); \
             goto ERR; \
         } \
+        if ((tmpParam)->valueLen == UINT32_MAX) { \
+            goto ERR; \
+        } \
         (paramObj)->destField = BSL_SAL_Calloc((tmpParam)->valueLen + 1, sizeof(char)); \
         if ((paramObj)->destField == NULL) { \
             goto ERR; \

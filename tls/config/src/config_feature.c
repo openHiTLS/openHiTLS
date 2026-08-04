@@ -43,6 +43,9 @@
 #define MAX_INBUFFER_SIZE 18432u
 #define MIN_INBUFFER_SIZE 512u
 #endif
+#ifdef HITLS_TLS_FEATURE_ALPN
+#define MAX_ALPN_LIST_LEN 65535  /* Maximum length of the ALPN list in bytes. */
+#endif
 
 #ifdef HITLS_TLS_FEATURE_SNI
 int32_t HITLS_CFG_SetServerName(HITLS_Config *config, uint8_t *serverName, uint32_t serverNameStrlen)
@@ -131,6 +134,13 @@ int32_t HITLS_CFG_GetServerNameArg(HITLS_Config *config, void **arg)
 #ifdef HITLS_TLS_FEATURE_ALPN
 static int32_t AlpnListValidationCheck(const uint8_t *alpnList, uint32_t alpnProtosLen)
 {
+    if (alpnProtosLen > MAX_ALPN_LIST_LEN) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16611, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+            "alpnProtosLen too long", 0, 0, 0, 0);
+        BSL_ERR_PUSH_ERROR(HITLS_CONFIG_INVALID_LENGTH);
+        return HITLS_CONFIG_INVALID_LENGTH;
+    }
+
     uint32_t index = 0u;
 
     while (index < alpnProtosLen) {

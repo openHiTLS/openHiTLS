@@ -3672,10 +3672,14 @@ EXIT:
 void UT_TLS_CM_SetAlpnProtos_API_TC001()
 {
     HitlsInit();
+    HITLS_Config *config = HITLS_CFG_NewDTLS12Config();
+    ASSERT_TRUE(config != NULL);
     uint8_t * alpnProtosname = (uint8_t *)"vpn|http";
     uint32_t alpnProtosnameLen = sizeof(alpnProtosname);
     ASSERT_TRUE(HITLS_SetAlpnProtos(NULL, alpnProtosname, alpnProtosnameLen) == HITLS_NULL_INPUT);
+    ASSERT_TRUE(HITLS_CFG_SetAlpnProtos(config, alpnProtosname, 65536) == HITLS_CONFIG_INVALID_LENGTH);
 EXIT:
+    HITLS_CFG_FreeConfig(config);
     return;
 }
 /* END_CASE */

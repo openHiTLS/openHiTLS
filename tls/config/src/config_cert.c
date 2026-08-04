@@ -871,7 +871,7 @@ static int32_t CreateAndAddTrustedCANode(HITLS_Config *config, HITLS_CERT_X509 *
     int32_t ret;
     BSL_Buffer nodeBuffer = {0};
 #ifdef HITLS_TLS_FEATURE_SECURITY
-    ret = CheckCertSecuritylevel(config, cert, false);
+    ret = CheckCertSecuritylevel(config, cert, true);
     if (ret != HITLS_SUCCESS) {
         return ret;
     }

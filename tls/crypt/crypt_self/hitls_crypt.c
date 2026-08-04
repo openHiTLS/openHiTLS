@@ -480,6 +480,9 @@ static int32_t AeadDecrypt(CRYPT_EAL_CipherCtx *ctx, const HITLS_CipherParameter
     int32_t ret;
     uint32_t tagLen = IsCipherCCM8(cipher->algo) ?
         CCM8_TLS_TAG_LEN : CCM_TLS_TAG_LEN;
+    if (inLen < tagLen) {
+        return RETURN_ERROR_NUMBER_PROCESS(HITLS_INVALID_INPUT, BINLOG_ID16643, "The length of input is invalid");
+    }
     uint32_t cipherLen = inLen - tagLen;
     uint32_t plainLen = *outLen;
 
@@ -561,7 +564,6 @@ static int32_t DEFAULT_DecryptPrepare(CRYPT_EAL_CipherCtx *ctx, const HITLS_Ciph
            Therefore, need to set this parameter again. */
         ret = CRYPT_EAL_CipherCtrl(ctx, CRYPT_CTRL_SET_TAGLEN, &tagLen, sizeof(tagLen));
         if (ret != CRYPT_SUCCESS) {
-            CRYPT_EAL_CipherFreeCtx(ctx);
             return RETURN_ERROR_NUMBER_PROCESS(ret, BINLOG_ID16652, "CipherUpdate fail");
         }
     }
@@ -570,10 +572,12 @@ static int32_t DEFAULT_DecryptPrepare(CRYPT_EAL_CipherCtx *ctx, const HITLS_Ciph
 				 (cipher->algo == HITLS_CIPHER_SM4_CCM);
     if (isCCM == true) {
         // The length of the decrypted ciphertext consists of msgLen and tagLen, so tagLen needs to be subtracted.
+        if (inLen < tagLen) {
+            return RETURN_ERROR_NUMBER_PROCESS(HITLS_INVALID_INPUT, BINLOG_ID16638, "The length of input is valid");
+        }
         uint64_t msgLen = inLen - tagLen;
         ret = CRYPT_EAL_CipherCtrl(ctx, CRYPT_CTRL_SET_MSGLEN, &msgLen, sizeof(msgLen));
         if (ret != CRYPT_SUCCESS) {
-            CRYPT_EAL_CipherFreeCtx(ctx);
             return RETURN_ERROR_NUMBER_PROCESS(ret, BINLOG_ID16653, "CipherUpdate fail");
         }
     }
