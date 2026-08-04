@@ -106,7 +106,7 @@ static const COMPOSITE_ALG_INFO g_composite_info[] = {
 #endif
 };
 
-const COMPOSITE_ALG_INFO *CRYPT_COMPOSITE_GetInfo(int32_t paramId)
+static const COMPOSITE_ALG_INFO *CRYPT_COMPOSITE_GetInfo(int32_t paramId)
 {
     const COMPOSITE_ALG_INFO *info = NULL;
     for (size_t i = 0; i < sizeof(g_composite_info) / sizeof(g_composite_info[0]); i++) {
@@ -222,7 +222,7 @@ static int32_t CRYPT_CompositeSetRsaPara(CRYPT_CompositeCtx *ctx)
 {
     uint32_t bits = ctx->info->bits;
     BSL_Param param[] = {{CRYPT_PARAM_RSA_E, BSL_PARAM_TYPE_OCTETS,
-                           (void *)(uintptr_t)COMPOSITE_RSA_F4, sizeof(COMPOSITE_RSA_F4), 0},
+                          (void *)(uintptr_t)COMPOSITE_RSA_F4, sizeof(COMPOSITE_RSA_F4), 0},
                          {CRYPT_PARAM_RSA_BITS, BSL_PARAM_TYPE_UINT32, &bits, sizeof(bits), 0},
                          BSL_PARAM_END};
     return CRYPT_EAL_PkeySetParaEx(ctx->tradCtx, param);

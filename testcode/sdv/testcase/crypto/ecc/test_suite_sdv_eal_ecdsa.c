@@ -559,18 +559,18 @@ EXIT:
 
 /**
  * @test   SDV_CRYPTO_ECDSA_GET_PRV_API_TC002
- * @title  ECDSA CRYPT_EAL_PkeyGetPrv: Test abnormal internal ECC parameter states.
+ * @title  ECDSA CRYPT_EAL_PkeyGetPrv: Test insufficient private-key output buffer.
  * @precon private key
  * @brief
  *    1. Create the context of the ecdsa algorithm without setting para, expected result 1
  *    2. Call the CRYPT_EAL_PkeyGetPrv method, expected result 2
  *    3. Set the para and private key, expected result 3
- *    4. Set ctx->para->p to null and call the CRYPT_EAL_PkeyGetPrv method, expected result 4
+ *    4. Reduce the output buffer length and call the CRYPT_EAL_PkeyGetPrv method, expected result 4
  * @expect
  *    1. Success, and the context is not NULL.
  *    2. CRYPT_NULL_INPUT
  *    3. CRYPT_SUCCESS
- *    4. CRYPT_INVALID_ARG
+ *    4. CRYPT_BN_BUFF_LEN_NOT_ENOUGH
  */
 /* BEGIN_CASE */
 void SDV_CRYPTO_ECDSA_GET_PRV_API_TC002(Hex *prvKey)

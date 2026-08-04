@@ -186,10 +186,6 @@ int32_t ECC_PkeyGetPrvKey(const ECC_Pkey *ctx, CRYPT_EccPrv *prv)
     }
 
     uint32_t keyLen = BN_Bytes(ctx->para->p);
-    if (keyLen == 0) {
-        BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
-        return CRYPT_INVALID_ARG;
-    }
     if (prv->len < keyLen) {
         BSL_ERR_PUSH_ERROR(CRYPT_BN_BUFF_LEN_NOT_ENOUGH);
         return CRYPT_BN_BUFF_LEN_NOT_ENOUGH;

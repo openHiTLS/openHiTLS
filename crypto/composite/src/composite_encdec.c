@@ -166,6 +166,7 @@ static int32_t CRYPT_CompositeCheckRsaBits(const CRYPT_CompositeCtx *ctx, const 
 
     if (n->len != 0) {
         highByte = n->buff[0];
+        /* Each complete byte contributes 8 bits; the highest byte is counted below bit by bit. */
         bits = (n->len - 1) * 8;
         while (highByte != 0) {
             bits++;
@@ -198,22 +199,22 @@ static int32_t CRYPT_CompositeGetRsaPrvKey(const CRYPT_CompositeCtx *ctx, BSL_Bu
     asn1[CRYPT_RSA_PRV_VERSION_IDX].buff = (uint8_t *)&version;
     asn1[CRYPT_RSA_PRV_VERSION_IDX].len = sizeof(version);
     asn1[CRYPT_RSA_PRV_VERSION_IDX].tag = BSL_ASN1_TAG_INTEGER;
-    asn1[CRYPT_RSA_PRV_N_IDX].buff = param[CRYPT_RSA_PRV_N_IDX-CRYPT_RSA_PRV_N_IDX].value;
-    asn1[CRYPT_RSA_PRV_N_IDX].len = param[CRYPT_RSA_PRV_N_IDX-CRYPT_RSA_PRV_N_IDX].useLen;
-    asn1[CRYPT_RSA_PRV_E_IDX].buff = param[CRYPT_RSA_PRV_E_IDX-CRYPT_RSA_PRV_N_IDX].value;
-    asn1[CRYPT_RSA_PRV_E_IDX].len = param[CRYPT_RSA_PRV_E_IDX-CRYPT_RSA_PRV_N_IDX].useLen;
-    asn1[CRYPT_RSA_PRV_D_IDX].buff = param[CRYPT_RSA_PRV_D_IDX-CRYPT_RSA_PRV_N_IDX].value;
-    asn1[CRYPT_RSA_PRV_D_IDX].len = param[CRYPT_RSA_PRV_D_IDX-CRYPT_RSA_PRV_N_IDX].useLen;
-    asn1[CRYPT_RSA_PRV_P_IDX].buff = param[CRYPT_RSA_PRV_P_IDX-CRYPT_RSA_PRV_N_IDX].value;
-    asn1[CRYPT_RSA_PRV_P_IDX].len = param[CRYPT_RSA_PRV_P_IDX-CRYPT_RSA_PRV_N_IDX].useLen;
-    asn1[CRYPT_RSA_PRV_Q_IDX].buff = param[CRYPT_RSA_PRV_Q_IDX-CRYPT_RSA_PRV_N_IDX].value;
-    asn1[CRYPT_RSA_PRV_Q_IDX].len = param[CRYPT_RSA_PRV_Q_IDX-CRYPT_RSA_PRV_N_IDX].useLen;
-    asn1[CRYPT_RSA_PRV_DP_IDX].buff = param[CRYPT_RSA_PRV_DP_IDX-CRYPT_RSA_PRV_N_IDX].value;
-    asn1[CRYPT_RSA_PRV_DP_IDX].len = param[CRYPT_RSA_PRV_DP_IDX-CRYPT_RSA_PRV_N_IDX].useLen;
-    asn1[CRYPT_RSA_PRV_DQ_IDX].buff = param[CRYPT_RSA_PRV_DQ_IDX-CRYPT_RSA_PRV_N_IDX].value;
-    asn1[CRYPT_RSA_PRV_DQ_IDX].len = param[CRYPT_RSA_PRV_DQ_IDX-CRYPT_RSA_PRV_N_IDX].useLen;
-    asn1[CRYPT_RSA_PRV_QINV_IDX].buff = param[CRYPT_RSA_PRV_QINV_IDX-CRYPT_RSA_PRV_N_IDX].value;
-    asn1[CRYPT_RSA_PRV_QINV_IDX].len = param[CRYPT_RSA_PRV_QINV_IDX-CRYPT_RSA_PRV_N_IDX].useLen;
+    asn1[CRYPT_RSA_PRV_N_IDX].buff = param[CRYPT_RSA_PRV_N_IDX - CRYPT_RSA_PRV_N_IDX].value;
+    asn1[CRYPT_RSA_PRV_N_IDX].len = param[CRYPT_RSA_PRV_N_IDX - CRYPT_RSA_PRV_N_IDX].useLen;
+    asn1[CRYPT_RSA_PRV_E_IDX].buff = param[CRYPT_RSA_PRV_E_IDX - CRYPT_RSA_PRV_N_IDX].value;
+    asn1[CRYPT_RSA_PRV_E_IDX].len = param[CRYPT_RSA_PRV_E_IDX - CRYPT_RSA_PRV_N_IDX].useLen;
+    asn1[CRYPT_RSA_PRV_D_IDX].buff = param[CRYPT_RSA_PRV_D_IDX - CRYPT_RSA_PRV_N_IDX].value;
+    asn1[CRYPT_RSA_PRV_D_IDX].len = param[CRYPT_RSA_PRV_D_IDX - CRYPT_RSA_PRV_N_IDX].useLen;
+    asn1[CRYPT_RSA_PRV_P_IDX].buff = param[CRYPT_RSA_PRV_P_IDX - CRYPT_RSA_PRV_N_IDX].value;
+    asn1[CRYPT_RSA_PRV_P_IDX].len = param[CRYPT_RSA_PRV_P_IDX - CRYPT_RSA_PRV_N_IDX].useLen;
+    asn1[CRYPT_RSA_PRV_Q_IDX].buff = param[CRYPT_RSA_PRV_Q_IDX - CRYPT_RSA_PRV_N_IDX].value;
+    asn1[CRYPT_RSA_PRV_Q_IDX].len = param[CRYPT_RSA_PRV_Q_IDX - CRYPT_RSA_PRV_N_IDX].useLen;
+    asn1[CRYPT_RSA_PRV_DP_IDX].buff = param[CRYPT_RSA_PRV_DP_IDX - CRYPT_RSA_PRV_N_IDX].value;
+    asn1[CRYPT_RSA_PRV_DP_IDX].len = param[CRYPT_RSA_PRV_DP_IDX - CRYPT_RSA_PRV_N_IDX].useLen;
+    asn1[CRYPT_RSA_PRV_DQ_IDX].buff = param[CRYPT_RSA_PRV_DQ_IDX - CRYPT_RSA_PRV_N_IDX].value;
+    asn1[CRYPT_RSA_PRV_DQ_IDX].len = param[CRYPT_RSA_PRV_DQ_IDX - CRYPT_RSA_PRV_N_IDX].useLen;
+    asn1[CRYPT_RSA_PRV_QINV_IDX].buff = param[CRYPT_RSA_PRV_QINV_IDX - CRYPT_RSA_PRV_N_IDX].value;
+    asn1[CRYPT_RSA_PRV_QINV_IDX].len = param[CRYPT_RSA_PRV_QINV_IDX - CRYPT_RSA_PRV_N_IDX].useLen;
     asn1[CRYPT_RSA_PRV_D_IDX].tag = BSL_ASN1_TAG_INTEGER;
     asn1[CRYPT_RSA_PRV_N_IDX].tag = BSL_ASN1_TAG_INTEGER;
     asn1[CRYPT_RSA_PRV_E_IDX].tag = BSL_ASN1_TAG_INTEGER;

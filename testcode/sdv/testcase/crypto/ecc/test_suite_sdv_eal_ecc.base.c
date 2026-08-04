@@ -491,8 +491,6 @@ int EAL_PkeyGetPrv_Api_TC002(int algId, Hex *prvKey)
     CRYPT_EAL_PkeyPrv prv1 = {0};
     CRYPT_EAL_PkeyPrv prv2 = {0};
     KeyData prvKeyBuffer = {{0}, KEY_MAX_LEN};
-    ECC_Pkey *ecc = NULL;
-    BN_BigNum *curveP = NULL;
 
     TestMemInit();
 
@@ -507,18 +505,11 @@ int EAL_PkeyGetPrv_Api_TC002(int algId, Hex *prvKey)
     Ecc_SetPrvKey(&prv1, algId, prvKey->x, prvKey->len);
     ASSERT_EQ(CRYPT_EAL_PkeySetPrv(ctx, &prv1), CRYPT_SUCCESS);
 
-    ecc = (ECC_Pkey *)ctx->key;
-    ASSERT_TRUE(ecc != NULL);
-    ASSERT_TRUE(ecc->para != NULL);
-    curveP = ecc->para->p;
-    ecc->para->p = NULL;
-    ASSERT_EQ(CRYPT_EAL_PkeyGetPrv(ctx, &prv2), CRYPT_INVALID_ARG);
+    prv2.key.eccPrv.len = GetPrvKeyLen(CRYPT_ECC_NISTP224) - 1;
+    ASSERT_EQ(CRYPT_EAL_PkeyGetPrv(ctx, &prv2), CRYPT_BN_BUFF_LEN_NOT_ENOUGH);
 
     ret = SUCCESS;
 EXIT:
-    if ((ecc != NULL) && (ecc->para != NULL) && (ecc->para->p == NULL)) {
-        ecc->para->p = curveP;
-    }
     CRYPT_EAL_PkeyFreeCtx(ctx);
     return ret;
 }

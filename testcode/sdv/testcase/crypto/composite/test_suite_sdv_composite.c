@@ -220,6 +220,8 @@ static int32_t CloneCompositePubKey(const CRYPT_EAL_PkeyPub *srcPub, CRYPT_EAL_P
     return CRYPT_SUCCESS;
 }
 
+#if defined(HITLS_CRYPTO_CODECSKEY) && defined(HITLS_BSL_SAL_FILE) && \
+    defined(HITLS_CRYPTO_KEY_DECODE) && defined(HITLS_CRYPTO_KEY_ENCODE)
 static uint32_t DecodeCompositeDerLen(const uint8_t *data, uint32_t *offset)
 {
     uint8_t first;
@@ -250,6 +252,7 @@ static uint8_t GetCompositeDerTradPointTag(const BSL_Buffer *der, uint32_t pqcPu
     offset++;
     return der->data[offset + pqcPubkeyLen];
 }
+#endif
 
 static int32_t CloneCompositePrvKey(const CRYPT_EAL_PkeyPrv *srcPrv, CRYPT_EAL_PkeyPrv *dstPrv)
 {
@@ -263,6 +266,7 @@ static int32_t CloneCompositePrvKey(const CRYPT_EAL_PkeyPrv *srcPrv, CRYPT_EAL_P
     return CRYPT_SUCCESS;
 }
 
+#ifdef HITLS_BSL_PARAMS
 static int32_t InitCompositeOctetsParam(BSL_Param *params, int32_t key, uint8_t *data, uint32_t dataLen)
 {
     int32_t ret = BSL_PARAM_InitValue(&params[0], key, BSL_PARAM_TYPE_OCTETS, data, dataLen);
@@ -272,7 +276,22 @@ static int32_t InitCompositeOctetsParam(BSL_Param *params, int32_t key, uint8_t 
     params[1] = (BSL_Param)BSL_PARAM_END;
     return CRYPT_SUCCESS;
 }
+#endif
 
+#if (defined(HITLS_CRYPTO_CODECSKEY) && defined(HITLS_BSL_SAL_FILE) && defined(HITLS_CRYPTO_KEY_DECODE)) || \
+    (defined(HITLS_BSL_PEM) && defined(HITLS_BSL_SAL_FILE) && defined(HITLS_PKI_X509))
+static int32_t CheckCompositeDecodedKey(CRYPT_EAL_PkeyCtx *key, int32_t expectParaId)
+{
+    ASSERT_EQ(CRYPT_EAL_PkeyGetId(key), CRYPT_PKEY_COMPOSITE);
+    ASSERT_EQ(CRYPT_EAL_PkeyGetParaId(key), expectParaId);
+    return CRYPT_SUCCESS;
+EXIT:
+    return -1;
+}
+#endif
+
+#if (defined(HITLS_CRYPTO_CODECSKEY) && defined(HITLS_BSL_SAL_FILE) && defined(HITLS_CRYPTO_KEY_DECODE)) || \
+    (defined(HITLS_BSL_PEM) && defined(HITLS_BSL_SAL_FILE) && defined(HITLS_PKI_X509))
 static int32_t JoinCompositeSamplePath(char *path, uint32_t pathLen, const char *sampleDir, const char *fileName)
 {
     int ret;
@@ -292,16 +311,10 @@ static int32_t ReadCompositeSampleFile(const char *sampleDir, const char *fileNa
     }
     return BSL_SAL_ReadFile(path, &data->data, &data->dataLen);
 }
+#endif
 
-static int32_t CheckCompositeDecodedKey(CRYPT_EAL_PkeyCtx *key, int32_t expectParaId)
-{
-    ASSERT_EQ(CRYPT_EAL_PkeyGetId(key), CRYPT_PKEY_COMPOSITE);
-    ASSERT_EQ(CRYPT_EAL_PkeyGetParaId(key), expectParaId);
-    return CRYPT_SUCCESS;
-EXIT:
-    return -1;
-}
-
+#if defined(HITLS_CRYPTO_CODECSKEY) && defined(HITLS_BSL_SAL_FILE) && \
+    defined(HITLS_CRYPTO_KEY_DECODE) && defined(HITLS_CRYPTO_KEY_ENCODE)
 static int32_t CheckSha256Hex(const char *log, const uint8_t *data, uint32_t dataLen, Hex *expectDigest)
 {
     uint8_t digest[COMPOSITE_SHA256_LEN] = {0};
@@ -343,7 +356,9 @@ EXIT:
     BSL_SAL_ClearFree(prv.key.compositePrv.data, prv.key.compositePrv.len);
     return -1;
 }
+#endif
 
+#if defined(HITLS_BSL_PEM) && defined(HITLS_BSL_SAL_FILE) && defined(HITLS_PKI_X509)
 static int32_t CheckCompositeCertFields(HITLS_X509_Cert *cert, int32_t expectParaId, int32_t expectKeyUsage)
 {
     CRYPT_EAL_PkeyCtx *pubKey = NULL;
@@ -391,6 +406,7 @@ static int32_t CheckCompositeCrlFields(HITLS_X509_Crl *crl, int32_t expectParaId
 EXIT:
     return -1;
 }
+#endif
 
 #if defined(HITLS_PKI_X509_CRL_GEN)
 int32_t HITLS_X509_EncodeCrlTbsRaw(HITLS_X509_CrlTbs *crlTbs, BSL_ASN1_Buffer *asn);
@@ -742,6 +758,60 @@ EXIT:
 }
 #endif
 
+static bool PkiSkipCompositeParaTest(int32_t paraId)
+{
+#ifndef HITLS_CRYPTO_COMPOSITE
+    (void)paraId;
+    return true;
+#else
+    switch (paraId) {
+#if defined(HITLS_CRYPTO_RSA) && defined(HITLS_CRYPTO_RSA_EMSA_PSS)
+        case CRYPT_COMPOSITE_MLDSA44_RSA2048_PSS_SHA256:
+        case CRYPT_COMPOSITE_MLDSA65_RSA3072_PSS_SHA512:
+        case CRYPT_COMPOSITE_MLDSA65_RSA4096_PSS_SHA512:
+        case CRYPT_COMPOSITE_MLDSA87_RSA3072_PSS_SHA512:
+        case CRYPT_COMPOSITE_MLDSA87_RSA4096_PSS_SHA512:
+            return false;
+#endif
+#if defined(HITLS_CRYPTO_RSA) && defined(HITLS_CRYPTO_RSA_EMSA_PKCSV15)
+        case CRYPT_COMPOSITE_MLDSA44_RSA2048_PKCS15_SHA256:
+        case CRYPT_COMPOSITE_MLDSA65_RSA3072_PKCS15_SHA512:
+        case CRYPT_COMPOSITE_MLDSA65_RSA4096_PKCS15_SHA512:
+            return false;
+#endif
+#if defined(HITLS_CRYPTO_ECDSA) && defined(HITLS_CRYPTO_CURVE_NISTP256)
+        case CRYPT_COMPOSITE_MLDSA44_ECDSA_P256_SHA256:
+        case CRYPT_COMPOSITE_MLDSA65_ECDSA_P256_SHA512:
+            return false;
+#endif
+#if defined(HITLS_CRYPTO_ECDSA) && defined(HITLS_CRYPTO_CURVE_NISTP384)
+        case CRYPT_COMPOSITE_MLDSA65_ECDSA_P384_SHA512:
+        case CRYPT_COMPOSITE_MLDSA87_ECDSA_P384_SHA512:
+            return false;
+#endif
+#if defined(HITLS_CRYPTO_ECDSA) && defined(HITLS_CRYPTO_CURVE_NISTP521)
+        case CRYPT_COMPOSITE_MLDSA87_ECDSA_P521_SHA512:
+            return false;
+#endif
+#if defined(HITLS_CRYPTO_ECDSA) && defined(HITLS_CRYPTO_CURVE_BP256R1)
+        case CRYPT_COMPOSITE_MLDSA65_ECDSA_BRAINPOOLP256R1_SHA512:
+            return false;
+#endif
+#if defined(HITLS_CRYPTO_ECDSA) && defined(HITLS_CRYPTO_CURVE_BP384R1)
+        case CRYPT_COMPOSITE_MLDSA87_ECDSA_BRAINPOOLP384R1_SHA512:
+            return false;
+#endif
+#if defined(HITLS_CRYPTO_ED25519)
+        case CRYPT_COMPOSITE_MLDSA44_ED25519_SHA512:
+        case CRYPT_COMPOSITE_MLDSA65_ED25519_SHA512:
+            return false;
+#endif
+        default:
+            return true;
+    }
+#endif
+}
+
 /* @
  * @test SDV_CRYPTO_COMPOSITE_API_TC001
  * @spec -
@@ -762,6 +832,9 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_CRYPTO_COMPOSITE_API_TC001(int type)
 {
+    if (PkiSkipCompositeParaTest(type)) {
+        SKIP_TEST();
+    }
     TestMemInit();
     TestRandInit();
     CRYPT_EAL_PkeyCtx *ctxA = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_COMPOSITE);
@@ -817,21 +890,24 @@ EXIT:
 /* @
  * @test SDV_CRYPTO_COMPOSITE_GENKEY_ATOMIC_TC001
  * @spec -
- * @title Test Composite GenKey cleanup under deterministic malloc injection.
+ * @title Test Composite GenKey failure under deterministic malloc injection.
  * @precon nan
  * @brief
  * 1.Register a deterministic random stream, then create sign and verify contexts and set parameters.
  * 2.Run one successful GenKey to collect the total malloc count for one generation attempt.
  * 3.Create a fresh Composite context for each malloc-failure injection and call GenKey once.
- * 4.Discard the context directly regardless of whether GenKey succeeds or fails.
+ * 4.Discard the failed context directly instead of reusing it.
  * @expect
- * 1.Every injected malloc path is released without memory leaks or crashes.
+ * 1.Every injected malloc failure makes the current GenKey attempt fail.
  * @prior nan
  * @auto FALSE
  @ */
 /* BEGIN_CASE */
 void SDV_CRYPTO_COMPOSITE_GENKEY_ATOMIC_TC001(int type)
 {
+    if (PkiSkipCompositeParaTest(type)) {
+        SKIP_TEST();
+    }
     TestMemInit();
     TestRandInit();
     CRYPT_RandRegist(CompositeDetRand);
@@ -862,7 +938,7 @@ void SDV_CRYPTO_COMPOSITE_GENKEY_ATOMIC_TC001(int type)
         STUB_ResetMallocCount();
         STUB_SetMallocFailIndex(i);
         STUB_EnableMallocFail(true);
-        (void)CRYPT_EAL_PkeyGen(ctx);
+        ASSERT_NE(CRYPT_EAL_PkeyGen(ctx), CRYPT_SUCCESS);
         STUB_EnableMallocFail(false);
         CRYPT_EAL_PkeyFreeCtx(ctx);
         ctx = NULL;
@@ -898,6 +974,9 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_CRYPTO_COMPOSITE_SIGN_ATOMIC_TC001(int type)
 {
+    if (PkiSkipCompositeParaTest(type)) {
+        SKIP_TEST();
+    }
     TestMemInit();
     TestRandInit();
     CRYPT_RandRegist(CompositeDetRand);
@@ -1000,6 +1079,9 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_CRYPTO_COMPOSITE_SET_CTX_INFO_ATOMIC_TC001(int type)
 {
+    if (PkiSkipCompositeParaTest(type)) {
+        SKIP_TEST();
+    }
     static const uint8_t oldCtxInfo[] = "ctx-old";
     static const uint8_t newCtxInfo[] = "ctx-new";
     static const uint8_t msg[] = "composite ctx info atomicity";
@@ -1086,6 +1168,9 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_CRYPTO_COMPOSITE_SIGN_TC001(int type, Hex *ctxText, Hex *testPrvKey, Hex *testPubKey, Hex *msg)
 {
+    if (PkiSkipCompositeParaTest(type)) {
+        SKIP_TEST();
+    }
     TestMemInit();
     TestRandInit();
     CRYPT_EAL_PkeyCtx *ctx = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_COMPOSITE);
@@ -1179,6 +1264,9 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_CRYPTO_COMPOSITE_VERIFY_TC001(int type, Hex *ctxText, Hex *testPubKey, Hex *msg, Hex *sign, Hex *signWithCtx)
 {
+    if (PkiSkipCompositeParaTest(type)) {
+        SKIP_TEST();
+    }
     TestMemInit();
     CRYPT_EAL_PkeyCtx *ctx = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_COMPOSITE);
     CRYPT_MD_AlgId mdId = GetCompositeHashAlgId(type);
@@ -1445,21 +1533,23 @@ EXIT:
 /* @
  * @test SDV_CRYPTO_COMPOSITE_CHECK_KEYPAIR_TC001
  * @spec -
- * @title Test Composite ML-DSA keypair check API.
- * @precon ML-DSA Keypair check is enabled (HITLS_CRYPTO_COMPOSITE_CHECK defined).
+ * @title Test Composite ML-DSA keypair/private-key check APIs.
+ * @precon Composite keypair/private-key check is enabled (HITLS_CRYPTO_COMPOSITE_CHECK defined).
  * @brief
- * 1. Create contexts (ctx, pubCtx, prvCtx) and set parameters.
- * 2. Test keypair check before key generation (expect failure).
- * 3. Generate a keypair in ctx.
- * 4. Test keypair check on the generated keypair (expect success).
+ * 1. Create contexts (ctx, pubCtx, prvCtx).
+ * 2. Test keypair/private-key check before parameters are set (expect failure).
+ * 3. Set parameters on all contexts and test private-key check before any private key is present (expect failure).
+ * 4. Generate a keypair in ctx and verify both keypair/private-key checks succeed there.
  * 5. Extract public key (pk) and private key (sk) from ctx.
  * 6. Set private key in prvCtx and public key in pubCtx.
- * 7. Test keypair check with mismatched public/private contexts (expect failure).
- * 8. Test keypair check with a public key context as the private key context (expect failure, no private key).
- * 9. Test keypair check with public key context as the public key context and private key context as the private
- *    key context (expect success).
+ * 7. Test private-key check on prvCtx (expect success) and on pubCtx (expect failure, no private key).
+ * 8. Test keypair check with mismatched public/private contexts (expect failure).
+ * 9. Test keypair check with a public key context as the private key context (expect failure, no private key).
+ * 10. Test keypair check with public key context as the public key context and private key context as the private
+ *     key context (expect success).
  * @expect
  * 1. Keypair check succeeds only when both public and private keys are present and match.
+ * 2. Private-key check succeeds only when a valid private key is present.
  * @prior nan
  * @auto FALSE
  @ */
@@ -1491,13 +1581,16 @@ void SDV_CRYPTO_COMPOSITE_CHECK_KEYPAIR_TC001(int type)
     ASSERT_TRUE(pubCtx != NULL);
     ASSERT_TRUE(prvCtx != NULL);
     ASSERT_EQ(CRYPT_EAL_PkeyPairCheck(ctx, ctx), CRYPT_COMPOSITE_KEYINFO_NOT_SET);
+    ASSERT_EQ(CRYPT_EAL_PkeyPrvCheck(ctx), CRYPT_COMPOSITE_KEYINFO_NOT_SET);
 
     ASSERT_EQ(CRYPT_EAL_PkeySetParaById(ctx, type), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_PkeySetParaById(pubCtx, type), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_PkeySetParaById(prvCtx, type), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyPrvCheck(prvCtx), CRYPT_MLDSA_INVALID_PRVKEY);
 
     ASSERT_EQ(CRYPT_EAL_PkeyGen(ctx), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_PkeyPairCheck(ctx, ctx), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyPrvCheck(ctx), CRYPT_SUCCESS);
 
     uint32_t pubKeyLen = 0;
     uint32_t prvKeyLen = 0;
@@ -1522,6 +1615,8 @@ void SDV_CRYPTO_COMPOSITE_CHECK_KEYPAIR_TC001(int type)
     ASSERT_EQ(CRYPT_EAL_PkeyGetPub(ctx, &pk), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_PkeySetPrv(prvCtx, &sk), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_PkeySetPub(pubCtx, &pk), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyPrvCheck(prvCtx), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyPrvCheck(pubCtx), CRYPT_MLDSA_INVALID_PRVKEY);
 
     ASSERT_EQ(CRYPT_EAL_PkeyPairCheck(prvCtx, pubCtx), CRYPT_MLDSA_INVALID_PRVKEY); // pub prv mismatch
     ASSERT_EQ(CRYPT_EAL_PkeyPairCheck(pubCtx, pubCtx), CRYPT_MLDSA_INVALID_PRVKEY); // no prv
@@ -1619,6 +1714,9 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_CRYPTO_COMPOSITE_KEY_STATE_TC001(int type)
 {
+    if (PkiSkipCompositeParaTest(type)) {
+        SKIP_TEST();
+    }
     static const uint8_t msg[] = "composite key state";
     CRYPT_EAL_PkeyCtx *emptyCtx = NULL;
     CRYPT_EAL_PkeyCtx *srcCtx = NULL;
@@ -1735,6 +1833,10 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_CRYPTO_COMPOSITE_EXPORT_BOUNDARY_TC001(int type)
 {
+#ifndef HITLS_BSL_PARAMS
+    (void)type;
+    SKIP_TEST();
+#else
     CRYPT_EAL_PkeyCtx *ctx = NULL;
     CRYPT_EAL_PkeyPub basePub = {0};
     CRYPT_EAL_PkeyPrv basePrv = {0};
@@ -1798,6 +1900,7 @@ EXIT:
     BSL_SAL_FREE(basePub.key.compositePub.data);
     CRYPT_EAL_PkeyFreeCtx(ctx);
     TestRandDeInit();
+#endif
 }
 /* END_CASE */
 
@@ -1824,6 +1927,9 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_CRYPTO_COMPOSITE_VERIFY_NEGATIVE_TC001(int type, int altType, int expectAltSetPubFail)
 {
+    if (PkiSkipCompositeParaTest(type) || PkiSkipCompositeParaTest(altType)) {
+        SKIP_TEST();
+    }
     static const uint8_t ctxInfoA[] = "ctx-A";
     static const uint8_t ctxInfoB[] = "ctx-B";
     static const uint8_t msg[] = "composite verify negative";
@@ -1930,6 +2036,9 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_CRYPTO_COMPOSITE_SIGNATURE_FORMAT_TC001(int type)
 {
+    if (PkiSkipCompositeParaTest(type)) {
+        SKIP_TEST();
+    }
     static const uint8_t msg[] = "composite signature format";
     CRYPT_EAL_PkeyCtx *signCtx = NULL;
     CRYPT_EAL_PkeyCtx *verifyCtx = NULL;
@@ -2030,6 +2139,9 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_CRYPTO_COMPOSITE_SIGNDATA_BOUNDARY_TC001(int type)
 {
+    if (PkiSkipCompositeParaTest(type)) {
+        SKIP_TEST();
+    }
     CRYPT_EAL_PkeyCtx *ctx = NULL;
     CRYPT_MD_AlgId mdId = CRYPT_MD_MAX;
     uint8_t digest[65] = {0};
@@ -2102,6 +2214,9 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_CRYPTO_COMPOSITE_IMPORT_RAW_NEGATIVE_TC001(int type)
 {
+    if (PkiSkipCompositeParaTest(type)) {
+        SKIP_TEST();
+    }
     CRYPT_EAL_PkeyCtx *srcCtx = NULL;
     CRYPT_EAL_PkeyCtx *truncPubCtx = NULL;
     CRYPT_EAL_PkeyCtx *extraPubCtx = NULL;
@@ -2351,6 +2466,9 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_CRYPTO_COMPOSITE_DUPCTX_TC001(int type)
 {
+    if (PkiSkipCompositeParaTest(type)) {
+        SKIP_TEST();
+    }
     static const uint8_t ctxInfoA[] = "dup-ctx-A";
     static const uint8_t ctxInfoB[] = "dup-ctx-B";
     static const uint8_t msg[] = "composite dupctx";
@@ -2597,6 +2715,105 @@ EXIT:
 /* END_CASE */
 
 /* @
+ * @test SDV_CRYPT_EAL_COMPOSITE_SIGN_COMPARE_BC_DETRAND_TC001
+ * @spec -
+ * @title Test Composite deterministic signatures match BC bytes with and without ctxInfo.
+ * @precon BC Composite key files, message, ctxInfo, and signature samples are available.
+ * @brief
+ * 1.Decode BC Composite public/private key files.
+ * 2.Register deterministic random callbacks for Composite signing.
+ * 3.Verify the BC no-context signature with the BC public key in openHiTLS.
+ * 4.Reset deterministic randomness, sign the same message without ctxInfo, and compare bytes with the BC signature.
+ * 5.Set the same ctxInfo on both verify/sign contexts.
+ * 6.Verify the BC with-context signature, reset deterministic randomness, sign again, and compare bytes with the BC signature.
+ * @expect
+ * 1.Both BC signatures verify successfully.
+ * 2.openHiTLS deterministic no-context and with-context signatures match the BC bytes exactly.
+ * 3.Generated signatures verify successfully.
+ * @prior nan
+ * @auto FALSE
+ @ */
+/* BEGIN_CASE */
+void SDV_CRYPT_EAL_COMPOSITE_SIGN_COMPARE_BC_DETRAND_TC001(char *sampleDir, int expectParaId, Hex *ctxText,
+    Hex *msg, Hex *expectSignature, Hex *expectSignatureWithCtx)
+{
+#if !defined(HITLS_CRYPTO_CODECSKEY) || !defined(HITLS_BSL_SAL_FILE) || !defined(HITLS_CRYPTO_KEY_DECODE)
+    (void)sampleDir;
+    (void)expectParaId;
+    (void)ctxText;
+    (void)msg;
+    (void)expectSignature;
+    (void)expectSignatureWithCtx;
+    SKIP_TEST();
+#else
+    char pubPath[COMPOSITE_SAMPLE_PATH_MAX] = {0};
+    char prvPath[COMPOSITE_SAMPLE_PATH_MAX] = {0};
+    CRYPT_EAL_PkeyCtx *pubCtx = NULL;
+    CRYPT_EAL_PkeyCtx *prvCtx = NULL;
+    uint8_t *generatedSignature = NULL;
+    uint32_t generatedSignatureBufLen = 0;
+    uint32_t generatedSignatureLen = 0;
+    CRYPT_MD_AlgId mdId = GetCompositeHashAlgId(expectParaId);
+
+    TestMemInit();
+    TestRandInit();
+    CRYPT_RandRegist(CompositeDetRand);
+    CRYPT_RandRegistEx(CompositeDetRandEx);
+    ASSERT_TRUE(mdId != CRYPT_MD_MAX);
+
+    ASSERT_EQ(JoinCompositeSamplePath(pubPath, sizeof(pubPath), sampleDir, "publickey.der"), CRYPT_SUCCESS);
+    ASSERT_EQ(JoinCompositeSamplePath(prvPath, sizeof(prvPath), sampleDir, "privatekey.der"), CRYPT_SUCCESS);
+
+    ASSERT_EQ(CRYPT_EAL_DecodeFileKey(BSL_FORMAT_ASN1, CRYPT_PUBKEY_SUBKEY, pubPath, NULL, 0, &pubCtx),
+        CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_DecodeFileKey(BSL_FORMAT_ASN1, CRYPT_PRIKEY_PKCS8_UNENCRYPT, prvPath, NULL, 0, &prvCtx),
+        CRYPT_SUCCESS);
+    ASSERT_EQ(CheckCompositeDecodedKey(pubCtx, expectParaId), CRYPT_SUCCESS);
+    ASSERT_EQ(CheckCompositeDecodedKey(prvCtx, expectParaId), CRYPT_SUCCESS);
+
+    ASSERT_EQ(CRYPT_EAL_PkeyVerify(pubCtx, mdId, msg->x, msg->len, expectSignature->x, expectSignature->len),
+        CRYPT_SUCCESS);
+
+    generatedSignatureBufLen = CRYPT_EAL_PkeyGetSignLen(prvCtx);
+    ASSERT_TRUE(generatedSignatureBufLen > 0);
+    generatedSignature = BSL_SAL_Malloc(generatedSignatureBufLen);
+    ASSERT_TRUE(generatedSignature != NULL);
+
+    CompositeDetRandReset();
+    generatedSignatureLen = generatedSignatureBufLen;
+    ASSERT_EQ(CRYPT_EAL_PkeySign(prvCtx, mdId, msg->x, msg->len, generatedSignature, &generatedSignatureLen),
+        CRYPT_SUCCESS);
+    ASSERT_EQ(generatedSignatureLen, expectSignature->len);
+    ASSERT_COMPARE("composite detrand sign without ctx", generatedSignature, generatedSignatureLen,
+        expectSignature->x, expectSignature->len);
+    ASSERT_EQ(CRYPT_EAL_PkeyVerify(pubCtx, mdId, msg->x, msg->len, generatedSignature, generatedSignatureLen),
+        CRYPT_SUCCESS);
+
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(pubCtx, CRYPT_CTRL_SET_CTX_INFO, ctxText->x, ctxText->len), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(prvCtx, CRYPT_CTRL_SET_CTX_INFO, ctxText->x, ctxText->len), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyVerify(pubCtx, mdId, msg->x, msg->len,
+        expectSignatureWithCtx->x, expectSignatureWithCtx->len), CRYPT_SUCCESS);
+
+    CompositeDetRandReset();
+    generatedSignatureLen = generatedSignatureBufLen;
+    ASSERT_EQ(CRYPT_EAL_PkeySign(prvCtx, mdId, msg->x, msg->len, generatedSignature, &generatedSignatureLen),
+        CRYPT_SUCCESS);
+    ASSERT_EQ(generatedSignatureLen, expectSignatureWithCtx->len);
+    ASSERT_COMPARE("composite detrand sign with ctx", generatedSignature, generatedSignatureLen,
+        expectSignatureWithCtx->x, expectSignatureWithCtx->len);
+    ASSERT_EQ(CRYPT_EAL_PkeyVerify(pubCtx, mdId, msg->x, msg->len, generatedSignature, generatedSignatureLen),
+        CRYPT_SUCCESS);
+
+EXIT:
+    BSL_SAL_Free(generatedSignature);
+    CRYPT_EAL_PkeyFreeCtx(prvCtx);
+    CRYPT_EAL_PkeyFreeCtx(pubCtx);
+    TestRandDeInit();
+#endif
+}
+/* END_CASE */
+
+/* @
  * @test SDV_CRYPT_EAL_COMPOSITE_CERT_ROUNDTRIP_TC001
  * @spec -
  * @title Test Composite BC certificate samples support parse/encode/parse roundtrip.
@@ -2618,8 +2835,7 @@ EXIT:
 void SDV_CRYPT_EAL_COMPOSITE_CERT_ROUNDTRIP_TC001(char *sampleDir, int expectParaId,
     int expectRootKeyUsage, int expectLeafKeyUsage)
 {
-#if !defined(HITLS_BSL_PEM) || !defined(HITLS_BSL_SAL_FILE) || !defined(HITLS_PKI_X509) || \
-    !defined(HITLS_PKI_X509_CRT_PARSE) || !defined(HITLS_PKI_X509_CRT_GEN)
+#if !defined(HITLS_BSL_PEM) || !defined(HITLS_BSL_SAL_FILE) || !defined(HITLS_PKI_X509)
     (void)sampleDir;
     (void)expectParaId;
     (void)expectRootKeyUsage;
@@ -2699,10 +2915,7 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_CRYPT_EAL_COMPOSITE_CSR_CRL_ROUNDTRIP_TC001(char *sampleDir, int expectParaId)
 {
-#if !defined(HITLS_BSL_PEM) || !defined(HITLS_BSL_SAL_FILE) || !defined(HITLS_PKI_X509) || \
-    !defined(HITLS_PKI_X509_CRT_PARSE) || !defined(HITLS_PKI_X509_CSR_PARSE) || \
-    !defined(HITLS_PKI_X509_CSR_GEN) || !defined(HITLS_PKI_X509_CRL_PARSE) || \
-    !defined(HITLS_PKI_X509_CRL_GEN)
+#if !defined(HITLS_BSL_PEM) || !defined(HITLS_BSL_SAL_FILE) || !defined(HITLS_PKI_X509)
     (void)sampleDir;
     (void)expectParaId;
     SKIP_TEST();
