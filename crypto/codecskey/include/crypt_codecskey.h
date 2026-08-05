@@ -36,7 +36,8 @@ typedef struct {
     BSL_ASN1_Buffer keyParam;
     uint8_t *pkeyRawKey;
     uint32_t pkeyRawKeyLen;
-    void *attrs; // HITLS_X509_Attrs *
+    BSL_ASN1_Buffer attributes;
+    BSL_ASN1_BitString publicKey;
 } CRYPT_ENCODE_DECODE_Pk8PrikeyInfo;
 
 #ifdef HITLS_CRYPTO_KEY_DECODE
@@ -63,8 +64,8 @@ int32_t CRYPT_EAL_ParseRsaPssAlgParam(BSL_ASN1_Buffer *param, CRYPT_RSA_PssPara 
 
 int32_t CRYPT_ENCODE_Pkcs8Info(CRYPT_ENCODE_DECODE_Pk8PrikeyInfo *pk8PrikeyInfo, BSL_Buffer *asn1);
 
-int32_t CRYPT_EAL_EncodePubKeyBuffInternal(CRYPT_EAL_PkeyCtx *ealPubKey,
-    BSL_ParseFormat format, int32_t type, bool isComplete, BSL_Buffer *encode);
+int32_t CRYPT_EAL_EncodePubKeyBuffInternal(CRYPT_EAL_PkeyCtx *ealPubKey, BSL_ParseFormat format, int32_t type,
+    bool isComplete, BSL_Buffer *encode);
 
 #ifdef HITLS_CRYPTO_RSA
 int32_t CRYPT_EAL_EncodeRsaPssAlgParam(const CRYPT_RSA_PssPara *rsaPssParam, uint8_t **buf, uint32_t *bufLen);

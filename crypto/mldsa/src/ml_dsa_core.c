@@ -55,8 +55,8 @@ static int32_t MLDSAInitHashCtx(int32_t mdId, const EAL_MdMethod **hashMethod, v
     return CRYPT_SUCCESS;
 }
 
-static int32_t HashFuncH(const uint8_t *inPutA, uint32_t lenA, const uint8_t *inPutB, uint32_t lenB,
-    uint8_t *out, uint32_t outLen)
+static int32_t HashFuncH(const uint8_t *inPutA, uint32_t lenA, const uint8_t *inPutB, uint32_t lenB, uint8_t *out,
+    uint32_t outLen)
 {
     uint32_t len = outLen;
     int32_t ret = 0;
@@ -102,7 +102,7 @@ static int32_t MLDSAKeyGenCreateMatrix(uint8_t k, uint8_t l, MLDSA_KeyGenMatrixS
     if (buf == NULL) {
         return BSL_MALLOC_FAIL;
     }
-    st->bufAddr = buf;  // Used to free memory.
+    st->bufAddr = buf; // Used to free memory.
     for (uint8_t i = 0; i < k; i++) {
         MLDSA_SET_VECTOR_MEM(st->t0[i], buf);
         MLDSA_SET_VECTOR_MEM(st->t1[i], buf);
@@ -142,7 +142,7 @@ static int32_t MLDSASignCreateMatrix(uint8_t k, uint8_t l, MLDSA_SignMatrixSt *s
     if (buf == NULL) {
         return BSL_MALLOC_FAIL;
     }
-    st->bufAddr = buf;  // Used to free memory.
+    st->bufAddr = buf; // Used to free memory.
     MLDSASetMatrixMem(k, l, st->matrix, buf);
     buf += k * l * MLDSA_N;
     for (uint8_t i = 0; i < k; i++) {
@@ -182,7 +182,7 @@ static int32_t MLDSAVerifyCreateMatrix(uint8_t k, uint8_t l, MLDSA_VerifyMatrixS
     if (buf == NULL) {
         return BSL_MALLOC_FAIL;
     }
-    st->bufAddr = buf;  // Used to free memory.
+    st->bufAddr = buf; // Used to free memory.
     for (uint8_t i = 0; i < k; i++) {
         MLDSA_SET_VECTOR_MEM(st->t1[i], buf);
         MLDSA_SET_VECTOR_MEM(st->h[i], buf);
@@ -213,7 +213,7 @@ static int32_t ExpandA(const CRYPT_ML_DSA_Ctx *ctx, const uint8_t *pubSeed, int3
         memcpy(seed1, pubSeed, MLDSA_PUBLIC_SEED_LEN);
         seed1[MLDSA_PUBLIC_SEED_LEN + 1] = i;
         for (; j + 1 < l; j += 2) {
-            seed[MLDSA_PUBLIC_SEED_LEN]  = j;
+            seed[MLDSA_PUBLIC_SEED_LEN] = j;
             seed[MLDSA_PUBLIC_SEED_LEN + 1] = i;
             seed1[MLDSA_PUBLIC_SEED_LEN] = j + 1;
             int32_t ret = MLDSA_RejNTTPolyPair(matrix[i][j], matrix[i][j + 1], seed, seed1);
@@ -232,8 +232,8 @@ static int32_t ExpandA(const CRYPT_ML_DSA_Ctx *ctx, const uint8_t *pubSeed, int3
 }
 
 // Algorithm 33 ExpandS(ρ)
-static int32_t ExpandS(const CRYPT_ML_DSA_Ctx *ctx, const uint8_t *prvSeed,
-    int32_t *s1[MLDSA_L_MAX], int32_t *s2[MLDSA_K_MAX])
+static int32_t ExpandS(const CRYPT_ML_DSA_Ctx *ctx, const uint8_t *prvSeed, int32_t *s1[MLDSA_L_MAX],
+    int32_t *s2[MLDSA_K_MAX])
 {
     int32_t ret;
     uint8_t k = ctx->info->k;
@@ -249,8 +249,7 @@ static int32_t ExpandS(const CRYPT_ML_DSA_Ctx *ctx, const uint8_t *prvSeed,
     }
 #ifdef HITLS_CRYPTO_MLDSA_X2
     int32_t (*rejBoundedPolyPair)(int32_t *, int32_t *, const uint8_t *, const uint8_t *);
-    rejBoundedPolyPair = (ctx->info->eta == 2) ?
-        MLDSA_RejBoundedPolyEta2Pair : MLDSA_RejBoundedPolyEta4Pair;
+    rejBoundedPolyPair = (ctx->info->eta == 2) ? MLDSA_RejBoundedPolyEta2Pair : MLDSA_RejBoundedPolyEta4Pair;
     /* Second seed shares the ρ' prefix; only the nonce byte differs. */
     uint8_t seed1[MLDSA_PRIVATE_SEED_LEN + 2];
     memcpy(seed1, prvSeed, MLDSA_PRIVATE_SEED_LEN);
@@ -258,7 +257,7 @@ static int32_t ExpandS(const CRYPT_ML_DSA_Ctx *ctx, const uint8_t *prvSeed,
     /* s1 – nonces 0 … l-1 */
     uint8_t i = 0;
     for (; i + 1 < l; i += 2) {
-        seed[MLDSA_PRIVATE_SEED_LEN]  = i;
+        seed[MLDSA_PRIVATE_SEED_LEN] = i;
         seed1[MLDSA_PRIVATE_SEED_LEN] = i + 1;
         ret = rejBoundedPolyPair(s1[i], s1[i + 1], seed, seed1);
         RETURN_RET_IF(ret != CRYPT_SUCCESS, ret);
@@ -271,7 +270,7 @@ static int32_t ExpandS(const CRYPT_ML_DSA_Ctx *ctx, const uint8_t *prvSeed,
     /* s2 – nonces l … l+k-1 */
     uint8_t j = 0;
     for (; j + 1 < k; j += 2) {
-        seed[MLDSA_PRIVATE_SEED_LEN]  = l + j;
+        seed[MLDSA_PRIVATE_SEED_LEN] = l + j;
         seed1[MLDSA_PRIVATE_SEED_LEN] = l + j + 1;
         ret = rejBoundedPolyPair(s2[j], s2[j + 1], seed, seed1);
         RETURN_RET_IF(ret != CRYPT_SUCCESS, ret);
@@ -304,7 +303,7 @@ static void ComputesNTT(const CRYPT_ML_DSA_Ctx *ctx, int32_t *const s[MLDSA_L_MA
     }
 }
 
-static int32_t ComputesT(const CRYPT_ML_DSA_Ctx *ctx, int32_t *t[MLDSA_K_MAX], MLDSA_KeyGenMatrixSt *st, uint8_t*pub)
+static int32_t ComputesT(const CRYPT_ML_DSA_Ctx *ctx, int32_t *t[MLDSA_K_MAX], MLDSA_KeyGenMatrixSt *st, uint8_t *pub)
 {
     uint8_t seed[MLDSA_SEED_EXTEND_BYTES_LEN];
     (void)memcpy(seed, pub, MLDSA_PUBLIC_SEED_LEN);
@@ -317,7 +316,7 @@ static int32_t ComputesT(const CRYPT_ML_DSA_Ctx *ctx, int32_t *t[MLDSA_K_MAX], M
         memcpy(seed1, pub, MLDSA_PUBLIC_SEED_LEN);
         seed1[MLDSA_PUBLIC_SEED_LEN + 1] = i;
         for (; j + 1 < ctx->info->l; j += 2) {
-            seed[MLDSA_PUBLIC_SEED_LEN]  = j;
+            seed[MLDSA_PUBLIC_SEED_LEN] = j;
             seed[MLDSA_PUBLIC_SEED_LEN + 1] = i;
             seed1[MLDSA_PUBLIC_SEED_LEN] = j + 1;
             int32_t ret = MLDSA_RejNTTPolyPair(st->matrix[j], st->matrix[j + 1], seed, seed1);
@@ -457,17 +456,13 @@ static void BitUnPake(const uint8_t *v, uint32_t w[MLDSA_N], uint32_t bits, uint
         for (i = 0; i < MLDSA_N / 8; i++) {
             n = bits * i;
             t[0] = (v[n + 0] | ((uint32_t)v[n + 1] << 8u)) & 0x1fff;
-            t[1] = (v[n + 1] >> 5u | ((uint32_t)v[n + 2u] << 3u) |
-                ((uint32_t)v[n + 3u] << 11u)) & 0x1fff;
+            t[1] = (v[n + 1] >> 5u | ((uint32_t)v[n + 2u] << 3u) | ((uint32_t)v[n + 3u] << 11u)) & 0x1fff;
             t[2] = (v[n + 3u] >> 2u | ((uint32_t)v[n + 4u] << 6u)) & 0x1fff;
-            t[3] = (v[n + 4u] >> 7u | ((uint32_t)v[n + 5u] << 1u) |
-                ((uint32_t)v[n + 6u] << 9u)) & 0x1fff;
+            t[3] = (v[n + 4u] >> 7u | ((uint32_t)v[n + 5u] << 1u) | ((uint32_t)v[n + 6u] << 9u)) & 0x1fff;
 
-            t[4] = (v[n + 6u] >> 4u | ((uint32_t)v[n + 7u] << 4u) |
-                ((uint32_t)v[n + 8u] << 12u)) & 0x1fff;
+            t[4] = (v[n + 6u] >> 4u | ((uint32_t)v[n + 7u] << 4u) | ((uint32_t)v[n + 8u] << 12u)) & 0x1fff;
             t[5] = (v[n + 8u] >> 1u | ((uint32_t)v[n + 9u] << 7u)) & 0x1fff;
-            t[6] = (v[n + 9u] >> 6u | ((uint32_t)v[n + 10u] << 2u) |
-                ((uint32_t)v[n + 11u] << 10u)) & 0x1fff;
+            t[6] = (v[n + 9u] >> 6u | ((uint32_t)v[n + 10u] << 2u) | ((uint32_t)v[n + 11u] << 10u)) & 0x1fff;
             t[7] = (v[n + 11u] >> 3u | ((uint32_t)v[n + 12u] << 5u)) & 0x1fff;
 
             for (uint32_t j = 0; j < 8; j++) {
@@ -537,7 +532,7 @@ static void SkEncode(const CRYPT_ML_DSA_Ctx *ctx, const uint8_t *pubSeed, const 
     const MLDSA_KeyGenMatrixSt *st)
 {
     uint32_t i;
-    uint32_t bitLen = ctx->info->eta == 2 ? 3 : 4;  // 3 and 4 is bitlen(2𝜂)
+    uint32_t bitLen = ctx->info->eta == 2 ? 3 : 4; // 3 and 4 is bitlen(2𝜂)
     uint32_t index = MLDSA_PUBLIC_SEED_LEN;
     memcpy(ctx->prvKey, pubSeed, MLDSA_PUBLIC_SEED_LEN);
     memcpy(ctx->prvKey + index, signSeed, MLDSA_SIGNING_SEED_LEN);
@@ -553,7 +548,7 @@ static void SkEncode(const CRYPT_ML_DSA_Ctx *ctx, const uint8_t *pubSeed, const 
         index += MLDSA_N_BYTE * bitLen;
     }
     for (i = 0; i < ctx->info->k; i++) {
-        BitPack(ctx->prvKey + index, (uint32_t *)st->t0[i], MLDSA_D, 4096);  // 2^(𝑑−1) == 4096
+        BitPack(ctx->prvKey + index, (uint32_t *)st->t0[i], MLDSA_D, 4096); // 2^(𝑑−1) == 4096
         index += MLDSA_N_BYTE * MLDSA_D;
     }
 }
@@ -563,7 +558,7 @@ static void SkDecode(const CRYPT_ML_DSA_Ctx *ctx, uint8_t *pubSeed, uint8_t *sig
     MLDSA_SignMatrixSt *st)
 {
     uint32_t i;
-    uint32_t bitLen = ctx->info->eta == 2 ? 3 : 4;  // 3 and 4 is bitlen(2𝜂)
+    uint32_t bitLen = ctx->info->eta == 2 ? 3 : 4; // 3 and 4 is bitlen(2𝜂)
     uint32_t index = MLDSA_PUBLIC_SEED_LEN;
     memcpy(pubSeed, ctx->prvKey, MLDSA_PUBLIC_SEED_LEN);
     memcpy(signSeed, ctx->prvKey + index, MLDSA_SIGNING_SEED_LEN);
@@ -581,7 +576,7 @@ static void SkDecode(const CRYPT_ML_DSA_Ctx *ctx, uint8_t *pubSeed, uint8_t *sig
         index += MLDSA_N_BYTE * bitLen;
     }
     for (i = 0; i < ctx->info->k; i++) {
-        BitUnPake(ctx->prvKey + index, (uint32_t *)st->t0[i], MLDSA_D, 4096);  // 2^(𝑑−1) == 4096
+        BitUnPake(ctx->prvKey + index, (uint32_t *)st->t0[i], MLDSA_D, 4096); // 2^(𝑑−1) == 4096
         index += MLDSA_N_BYTE * MLDSA_D;
     }
 }
@@ -608,7 +603,7 @@ static int32_t ExpandMask(const CRYPT_ML_DSA_Ctx *ctx, int32_t *y[MLDSA_L_MAX], 
     uint16_t i = 0;
 
 #ifdef HITLS_CRYPTO_MLDSA_X2
-    uint32_t outLen = 32u * bits;   /* 576 B (MLDSA-44) or 640 B (MLDSA-65/87) */
+    uint32_t outLen = 32u * bits; /* 576 B (MLDSA-44) or 640 B (MLDSA-65/87) */
     /* p1 shares the 64-byte ρ'' prefix; only the trailing counter differs. */
     uint8_t p1[MLDSA_PRIVATE_SEED_LEN + 2];
     memcpy(p1, p, MLDSA_PRIVATE_SEED_LEN);
@@ -617,20 +612,20 @@ static int32_t ExpandMask(const CRYPT_ML_DSA_Ctx *ctx, int32_t *y[MLDSA_L_MAX], 
     for (; i + 1 < ctx->info->l; i += 2) {
         uint16_t n0 = u + i;
         uint16_t n1 = u + (uint16_t)(i + 1);
-        p[MLDSA_PRIVATE_SEED_LEN]      = (uint8_t)n0;
-        p[MLDSA_PRIVATE_SEED_LEN + 1]  = (uint8_t)(n0 >> BITS_OF_BYTE);
-        p1[MLDSA_PRIVATE_SEED_LEN]     = (uint8_t)n1;
+        p[MLDSA_PRIVATE_SEED_LEN] = (uint8_t)n0;
+        p[MLDSA_PRIVATE_SEED_LEN + 1] = (uint8_t)(n0 >> BITS_OF_BYTE);
+        p1[MLDSA_PRIVATE_SEED_LEN] = (uint8_t)n1;
         p1[MLDSA_PRIVATE_SEED_LEN + 1] = (uint8_t)(n1 >> BITS_OF_BYTE);
         /* One Shake256x2 call produces both mask streams simultaneously. */
         Shake256x2(v0, v1, outLen, p, p1, MLDSA_PRIVATE_SEED_LEN + 2);
-        MLDSA_SignBitUnPack(v0, (uint32_t *)y[i],     bits, ctx->info->gamma1);
+        MLDSA_SignBitUnPack(v0, (uint32_t *)y[i], bits, ctx->info->gamma1);
         MLDSA_SignBitUnPack(v1, (uint32_t *)y[i + 1], bits, ctx->info->gamma1);
     }
     /* Scalar fallback for any remaining odd polynomial. */
     uint8_t v[640];
     for (; i < ctx->info->l; i++) {
         n = u + i;
-        p[MLDSA_PRIVATE_SEED_LEN]     = (uint8_t)n;
+        p[MLDSA_PRIVATE_SEED_LEN] = (uint8_t)n;
         p[MLDSA_PRIVATE_SEED_LEN + 1] = (uint8_t)(n >> BITS_OF_BYTE);
         int32_t ret = HashFuncH(p, MLDSA_PRIVATE_SEED_LEN + 2, NULL, 0, v, outLen);
         if (ret != CRYPT_SUCCESS) {
@@ -639,7 +634,7 @@ static int32_t ExpandMask(const CRYPT_ML_DSA_Ctx *ctx, int32_t *y[MLDSA_L_MAX], 
         MLDSA_SignBitUnPack(v, (uint32_t *)y[i], bits, ctx->info->gamma1);
     }
 #else
-    uint8_t v[640];  // The maximum length is 20 * 32 == 640 byte.
+    uint8_t v[640]; // The maximum length is 20 * 32 == 640 byte.
     for (; i < ctx->info->l; i++) {
         n = u + i;
         p[MLDSA_PRIVATE_SEED_LEN] = (uint8_t)n;
@@ -668,8 +663,8 @@ static void ComputesW(const CRYPT_ML_DSA_Ctx *ctx, int32_t *w[MLDSA_L_MAX], int3
 // NIST.FIPS.204 Algorithm 28 w1Encode(w1)
 static void W1Encode(const CRYPT_ML_DSA_Ctx *ctx, uint8_t *buf, int32_t *const w[MLDSA_K_MAX])
 {
-    uint32_t bitLen = ctx->info->k == K_VALUE_OF_MLDSA_44 ? 6 : 4;  // Only the bitLen value of MLDSA44 is 6.
-    uint32_t blockSize = ctx->info->k == K_VALUE_OF_MLDSA_44 ? 192 : 128;  // MLDSA44 blockSize is 192, other is 128.
+    uint32_t bitLen = ctx->info->k == K_VALUE_OF_MLDSA_44 ? 6 : 4; // Only the bitLen value of MLDSA44 is 6.
+    uint32_t blockSize = ctx->info->k == K_VALUE_OF_MLDSA_44 ? 192 : 128; // MLDSA44 blockSize is 192, other is 128.
     for (uint32_t i = 0; i < ctx->info->k; i++) {
         ByteEncode(buf + i * blockSize, (const uint32_t *)w[i], bitLen);
     }
@@ -689,7 +684,7 @@ static int32_t SampleInBall(const CRYPT_ML_DSA_Ctx *ctx, const uint8_t *p, uint3
     RETURN_RET_IF_ERR_EX(MLDSAInitHashCtx(CRYPT_MD_SHAKE256, &hashMethod, &mdCtx), ret);
     GOTO_ERR_IF(hashMethod->update(mdCtx, p, pLen), ret);
     GOTO_ERR_IF(hashMethod->squeeze(mdCtx, s, sLen), ret);
-    for (index = 0; index < 8; index++) {    //  𝑠 ← H.Squeeze(ctx, 8)
+    for (index = 0; index < 8; index++) { //  𝑠 ← H.Squeeze(ctx, 8)
         h = h | ((uint64_t)s[index] << (8 * index));
     }
     for (uint32_t i = MLDSA_N - ctx->info->tau; i < MLDSA_N; i++) {
@@ -749,8 +744,8 @@ static void ComputesR(const CRYPT_ML_DSA_Ctx *ctx, const int32_t *c, MLDSA_SignM
     }
 }
 
-static void ComputesCT(const CRYPT_ML_DSA_Ctx *ctx, const int32_t *c,
-    int32_t *const t[MLDSA_K_MAX], int32_t *ct[MLDSA_K_MAX])
+static void ComputesCT(const CRYPT_ML_DSA_Ctx *ctx, const int32_t *c, int32_t *const t[MLDSA_K_MAX],
+    int32_t *ct[MLDSA_K_MAX])
 {
     for (uint8_t i = 0; i < ctx->info->k; i++) {
         MLDSA_VectorsMul(ct[i], c, t[i]);
@@ -766,22 +761,22 @@ static uint32_t MakeHint(const CRYPT_ML_DSA_Ctx *ctx, MLDSA_SignMatrixSt *st)
         for (uint32_t j = 0; j < MLDSA_N; j++) {
             // In signing, st->w is actually w0 (LowBits of w), not the full w.
             // FIPS-204 MakeHint requires checking if HighBits(w - cs2 + ct0) != HighBits(w - cs2).
-            // Since we previously enforced ||w0 - cs2|| < gamma2 - beta, we are guaranteed 
+            // Since we previously enforced ||w0 - cs2|| < gamma2 - beta, we are guaranteed
             // that HighBits(w - cs2) == w1.
-            // Therefore, we only need to check if the accumulated low bits (v = w0 - cs2 + ct0) 
+            // Therefore, we only need to check if the accumulated low bits (v = w0 - cs2 + ct0)
             // crosses the bucket boundary [-gamma2, gamma2].
             // To reduce memory, cs2 and ct0 reuse the memory of r0 and y.
             int32_t v = st->w[i][j] + st->r0[i][j] - st->y[i][j];
             MLDSA_MOD_Q(v);
 
-            uint32_t x = (uint32_t)(v + g);  // x = v + gamma2
+            uint32_t x = (uint32_t)(v + g); // x = v + gamma2
             // check if v > gamma2
             uint32_t c1 = ((uint32_t)(g - v) >> 31) & 1;
             // check if v < -gamma2
             uint32_t c2 = (x >> 31) & 1;
             // check if v == -gamma2 (i.e. x == 0)
             uint32_t isZero = ((x | (0 - x)) >> 31) ^ 1;
-            
+
             // For special negative boundary case (-gamma2), it overflows only if w1 != 0
             uint32_t y = (uint32_t)st->w1[i][j];
             uint32_t isNonZero = ((y | (0 - y)) >> 31) & 1;
@@ -873,7 +868,7 @@ static int32_t ComputesApproxW(const CRYPT_ML_DSA_Ctx *ctx, MLDSA_VerifyMatrixSt
         memcpy(seed1, pubSeed, MLDSA_PUBLIC_SEED_LEN);
         seed1[MLDSA_PUBLIC_SEED_LEN + 1] = i;
         for (; j + 1 < ctx->info->l; j += 2) {
-            seed[MLDSA_PUBLIC_SEED_LEN]  = j;
+            seed[MLDSA_PUBLIC_SEED_LEN] = j;
             seed[MLDSA_PUBLIC_SEED_LEN + 1] = i;
             seed1[MLDSA_PUBLIC_SEED_LEN] = j + 1;
             int32_t ret = MLDSA_RejNTTPolyPair(st->matrix[j], st->matrix[j + 1], seed, seed1);
@@ -909,10 +904,10 @@ int32_t MLDSA_KeyGenInternal(CRYPT_ML_DSA_Ctx *ctx, const uint8_t *d)
 {
     uint8_t k = ctx->info->k;
     uint8_t l = ctx->info->l;
-    uint8_t seed[MLDSA_SEED_EXTEND_BYTES_LEN] = { 0 };
-    uint8_t digest[MLDSA_EXPANDED_SEED_BYTES_LEN] = { 0 };
-    uint8_t tr[MLDSA_TR_MSG_LEN] = { 0 };
-    MLDSA_KeyGenMatrixSt st = { 0 };
+    uint8_t seed[MLDSA_SEED_EXTEND_BYTES_LEN] = {0};
+    uint8_t digest[MLDSA_EXPANDED_SEED_BYTES_LEN] = {0};
+    uint8_t tr[MLDSA_TR_MSG_LEN] = {0};
+    MLDSA_KeyGenMatrixSt st = {0};
     int32_t ret;
 
     GOTO_ERR_IF(MLDSAKeyGenCreateMatrix(k, l, &st), ret);
@@ -931,7 +926,7 @@ int32_t MLDSA_KeyGenInternal(CRYPT_ML_DSA_Ctx *ctx, const uint8_t *d)
 
     // t ← NTT^−1(A ∘ NTT(𝐬1)) + 𝐬2
     ComputesNTT(ctx, st.s1, st.s1Ntt);
-    GOTO_ERR_IF(ComputesT(ctx, st.t1, &st, pubSeed), ret);  // t = As1 + s2
+    GOTO_ERR_IF(ComputesT(ctx, st.t1, &st, pubSeed), ret); // t = As1 + s2
 
     // (t1, t0) ← Power2Round(t)
     MLDSA_ComputesPower2Round(ctx, st.t0, st.t1);
@@ -939,11 +934,11 @@ int32_t MLDSA_KeyGenInternal(CRYPT_ML_DSA_Ctx *ctx, const uint8_t *d)
     PkEncode(ctx, pubSeed, st.t1);
 
     // tr ← H(pk, 64)
-    GOTO_ERR_IF(HashFuncH(ctx->pubKey, ctx->pubLen, NULL, 0, tr, MLDSA_TR_MSG_LEN), ret);  // Step 9
+    GOTO_ERR_IF(HashFuncH(ctx->pubKey, ctx->pubLen, NULL, 0, tr, MLDSA_TR_MSG_LEN), ret); // Step 9
 
     // sk ← skEncode(ρ, K, tr, 𝐬1, 𝐬2, t0)
     SkEncode(ctx, pubSeed, signSeed, tr, &st); // Step 10
-    
+
     ctx->hasSeed = true;
     memcpy(ctx->seed, d, MLDSA_SEED_BYTES_LEN);
 ERR:
@@ -969,7 +964,7 @@ int32_t MLDSA_SignInternal(const CRYPT_ML_DSA_Ctx *ctx, const CRYPT_Data *msg, u
     uint8_t *w1Buf = BSL_SAL_Malloc(w1Len);
     RETURN_RET_IF(w1Buf == NULL, CRYPT_MEM_ALLOC_FAIL);
 
-    MLDSA_SignMatrixSt st = { 0 };
+    MLDSA_SignMatrixSt st = {0};
     GOTO_ERR_IF(MLDSASignCreateMatrix(ctx->info->k, ctx->info->l, &st), ret);
 
     // (ρ, K, tr, 𝐬1, 𝐬2, t0) ← skDecode(sk)
@@ -979,6 +974,7 @@ int32_t MLDSA_SignInternal(const CRYPT_ML_DSA_Ctx *ctx, const CRYPT_Data *msg, u
     // A ← ExpandA(ρ)
     GOTO_ERR_IF(ExpandA(ctx, pubSeed, st.matrix), ret);
     if (ctx->isMuMsg) {
+        // ExternalMu is calculated by the caller and is consumed directly.
         memcpy(uBuf, msg->data, msg->len);
     } else {
         // μ ← H(BytesToBits(tr)||𝑀′, 64)
@@ -1057,8 +1053,8 @@ int32_t MLDSA_VerifyInternal(const CRYPT_ML_DSA_Ctx *ctx, const CRYPT_Data *msg,
     uint8_t cBuf[MLDSA_XOF_MSG_LEN];
     uint8_t tr[MLDSA_TR_MSG_LEN];
     uint32_t cBufLen = ctx->info->secBits / 4;
-    MLDSA_VerifyMatrixSt st = { 0 };
-    int32_t c[MLDSA_N] = { 0 };
+    MLDSA_VerifyMatrixSt st = {0};
+    int32_t c[MLDSA_N] = {0};
     int32_t ret;
 
     // The w1Len length of MLDSA44 and MLDSA65 is 768, and the w1Len length of MLDSA87 is 1024.
@@ -1112,7 +1108,7 @@ ERR:
 
 static void DecodePrvKey(const CRYPT_ML_DSA_Ctx *ctx, uint8_t *pubSeed, MLDSA_KeyGenMatrixSt *st)
 {
-    uint32_t bitLen = ctx->info->eta == 2 ? 3 : 4;  // 3 and 4 is bitlen(2𝜂)
+    uint32_t bitLen = ctx->info->eta == 2 ? 3 : 4; // 3 and 4 is bitlen(2𝜂)
     uint32_t index = MLDSA_PUBLIC_SEED_LEN + MLDSA_SIGNING_SEED_LEN + MLDSA_PRIVATE_SEED_LEN;
     (void)memcpy(pubSeed, ctx->prvKey, MLDSA_PUBLIC_SEED_LEN);
 
@@ -1126,7 +1122,7 @@ static void DecodePrvKey(const CRYPT_ML_DSA_Ctx *ctx, uint8_t *pubSeed, MLDSA_Ke
         index += MLDSA_N_BYTE * bitLen;
     }
     for (i = 0; i < ctx->info->k; i++) {
-        BitUnPake(ctx->prvKey + index, (uint32_t *)st->t0[i], MLDSA_D, 4096);  // 2^(𝑑−1) == 4096
+        BitUnPake(ctx->prvKey + index, (uint32_t *)st->t0[i], MLDSA_D, 4096); // 2^(𝑑−1) == 4096
         index += MLDSA_N_BYTE * MLDSA_D;
     }
 }
@@ -1135,7 +1131,7 @@ static void DecodePrvKey(const CRYPT_ML_DSA_Ctx *ctx, uint8_t *pubSeed, MLDSA_Ke
 int32_t MLDSA_CalPub(const CRYPT_ML_DSA_Ctx *ctx, uint8_t *pub, uint32_t pubLen)
 {
     int32_t ret;
-    MLDSA_KeyGenMatrixSt st = { 0 };
+    MLDSA_KeyGenMatrixSt st = {0};
     uint8_t pubSeed[MLDSA_PUBLIC_SEED_LEN];
 
     GOTO_ERR_IF(MLDSAKeyGenCreateMatrix(ctx->info->k, ctx->info->l, &st), ret);
@@ -1143,7 +1139,7 @@ int32_t MLDSA_CalPub(const CRYPT_ML_DSA_Ctx *ctx, uint8_t *pub, uint32_t pubLen)
 
     // t <- NTT^−1(A ∘ NTT(s1)) + s2
     ComputesNTT(ctx, st.s1, st.s1Ntt);
-    GOTO_ERR_IF(ComputesT(ctx, st.t1, &st, pubSeed), ret);  // t = As1 + s2
+    GOTO_ERR_IF(ComputesT(ctx, st.t1, &st, pubSeed), ret); // t = As1 + s2
     // (t1, t0) <- Power2Round(t)
     MLDSA_ComputesPower2Round(ctx, st.s2, st.t1);
     for (int32_t i = 0; i < ctx->info->k; i++) {

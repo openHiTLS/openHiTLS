@@ -224,7 +224,6 @@ static int32_t RandFuncEx(void *libCtx, uint8_t *randNum, uint32_t randLen)
     return 0;
 }
 
-
 /* BEGIN_CASE */
 void SDV_BSL_ASN1_PARSE_RSA_PRV_TC001(char *path, Hex *version, Hex *n, Hex *e, Hex *d, Hex *p, Hex *q, Hex *dp,
                                       Hex *dq, Hex *qinv, int mdId, Hex *msg, Hex *sign)
@@ -1029,7 +1028,6 @@ void SDV_BSL_ASN1_PARSE_PRIKEY_FILE_TC001(int isProvider, char *path, int fileTy
     ASSERT_EQ(DecodeKeyFile(isProvider, path, BSL_FORMAT_ASN1, "ASN1", fileType, fileTypeStr, NULL, 0, &pkeyCtx), 0);
 
     ASSERT_EQ(PrikeySign(pkeyCtx, mdId, fileType, fileTypeStr, msg, sign), CRYPT_SUCCESS);
-
 
     ASSERT_EQ(CRYPT_EAL_EncodeBuffKey(pkeyCtx, NULL, BSL_FORMAT_ASN1, fileType, &reEnc), CRYPT_SUCCESS);
     ASSERT_EQ(DecodeKeyBuff(isProvider, &reEnc, BSL_FORMAT_ASN1, "ASN1",
@@ -2886,6 +2884,144 @@ EXIT:
 }
 /* END_CASE */
 
+static int32_t AddNullAlgorithmParameter(const BSL_Buffer *input, BslCid cid, BSL_Buffer *output)
+{
+    BslOidString *oid = BSL_OBJ_GetOID(cid);
+    if (input == NULL || input->data == NULL || output == NULL || oid == NULL || oid->octetLen > UINT8_MAX) {
+        return BSL_INVALID_ARG;
+    }
+
+    uint32_t oidPos = 0;
+    bool found = false;
+    for (uint32_t i = 4; i + 2 + oid->octetLen <= input->dataLen; i++) {
+        if (input->data[i] == BSL_ASN1_TAG_OBJECT_ID && input->data[i + 1] == oid->octetLen &&
+            memcmp(input->data + i + 2, oid->octs, oid->octetLen) == 0) {
+            oidPos = i;
+            found = true;
+            break;
+        }
+    }
+    if (!found || oidPos < 2 || input->data[oidPos - 2] != (BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE) ||
+        input->data[oidPos - 1] != oid->octetLen + 2) {
+        return BSL_INVALID_ARG;
+    }
+
+    uint32_t insertPos = oidPos + 2 + oid->octetLen;
+    output->data = BSL_SAL_Malloc(input->dataLen + 2);
+    if (output->data == NULL) {
+        return BSL_MALLOC_FAIL;
+    }
+    output->dataLen = input->dataLen + 2;
+    (void)memcpy(output->data, input->data, insertPos);
+    output->data[insertPos] = BSL_ASN1_TAG_NULL;
+    output->data[insertPos + 1] = 0;
+    (void)memcpy(output->data + insertPos + 2, input->data + insertPos, input->dataLen - insertPos);
+
+    output->data[oidPos - 1] += 2;
+    if (output->data[1] < 0x80) {
+        output->data[1] += 2;
+        return BSL_SUCCESS;
+    }
+
+    uint32_t lengthBytes = output->data[1] & 0x7f;
+    if (lengthBytes == 0 || lengthBytes > sizeof(uint32_t) || 2 + lengthBytes > input->dataLen) {
+        BSL_SAL_FREE(output->data);
+        output->dataLen = 0;
+        return BSL_INVALID_ARG;
+    }
+    uint32_t contentLen = 0;
+    for (uint32_t i = 0; i < lengthBytes; i++) {
+        contentLen = (contentLen << 8) | output->data[2 + i];
+    }
+    contentLen += 2;
+    for (uint32_t i = 0; i < lengthBytes; i++) {
+        output->data[1 + lengthBytes - i] = (uint8_t)(contentLen & 0xff);
+        contentLen >>= 8;
+    }
+    if (contentLen != 0) {
+        BSL_SAL_FREE(output->data);
+        output->dataLen = 0;
+        return BSL_INVALID_ARG;
+    }
+    return BSL_SUCCESS;
+}
+
+static int32_t SetSpkiUnusedBits(const BSL_Buffer *input, BSL_Buffer *output)
+{
+    if (input == NULL || input->data == NULL || output == NULL) {
+        return BSL_INVALID_ARG;
+    }
+    output->data = BSL_SAL_Malloc(input->dataLen);
+    if (output->data == NULL) {
+        return BSL_MALLOC_FAIL;
+    }
+    output->dataLen = input->dataLen;
+    (void)memcpy(output->data, input->data, input->dataLen);
+
+    BSL_ASN1_Buffer pubAsn1[CRYPT_SUBKEYINFO_BITSTRING_IDX + 1] = {0};
+    int32_t ret = CRYPT_DECODE_ParseSubKeyInfo(output->data, output->dataLen, pubAsn1, true);
+    BSL_ASN1_Buffer *bitString = &pubAsn1[CRYPT_SUBKEYINFO_BITSTRING_IDX];
+    if (ret != BSL_SUCCESS || bitString->tag != BSL_ASN1_TAG_BITSTRING || bitString->len == 0) {
+        BSL_SAL_FREE(output->data);
+        output->dataLen = 0;
+        return BSL_INVALID_ARG;
+    }
+    bitString->buff[0] = 1;
+    return BSL_SUCCESS;
+}
+
+/**
+ * @test   SDV_CRYPT_PQC_KEY_ALG_PARAM_ABSENT_TC001
+ * @title  Reject ML-DSA and SLH-DSA SPKI/PKCS#8 AlgorithmIdentifier parameters.
+ * @brief  Generate a conforming key, inject a DER NULL parameter into its
+ *         AlgorithmIdentifier, and decode the modified object through both
+ *         the local codec and provider decoder.
+ * @expect Both decoders fail because RFC 9881 and RFC 9909 require parameters
+ *         to be absent, not NULL.
+ */
+/* BEGIN_CASE */
+void SDV_CRYPT_PQC_KEY_ALG_PARAM_ABSENT_TC001(int algId, int paraId, int keyCid, int keyType)
+{
+#if !defined(HITLS_CRYPTO_KEY_ENCODE) || !defined(HITLS_CRYPTO_KEY_DECODE)
+    (void)algId;
+    (void)paraId;
+    (void)keyCid;
+    (void)keyType;
+    SKIP_TEST();
+#else
+    CRYPT_EAL_PkeyCtx *key = NULL;
+    CRYPT_EAL_PkeyCtx *decodedKey = NULL;
+    BSL_Buffer encoded = {0};
+    BSL_Buffer nonConforming = {0};
+
+    ASSERT_EQ(TestRandInit(), CRYPT_SUCCESS);
+    key = CRYPT_EAL_PkeyNewCtx(algId);
+    ASSERT_NE(key, NULL);
+    ASSERT_EQ(CRYPT_EAL_PkeySetParaById(key, paraId), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyGen(key), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_EncodeBuffKey(key, NULL, BSL_FORMAT_ASN1, keyType, &encoded), CRYPT_SUCCESS);
+    ASSERT_EQ(AddNullAlgorithmParameter(&encoded, keyCid, &nonConforming), BSL_SUCCESS);
+
+    ASSERT_NE(CRYPT_EAL_DecodeBuffKey(BSL_FORMAT_ASN1, keyType, &nonConforming, NULL, 0, &decodedKey), CRYPT_SUCCESS);
+    ASSERT_TRUE(decodedKey == NULL);
+#ifdef HITLS_CRYPTO_PROVIDER
+    const char *keyTypeStr = keyType == CRYPT_PUBKEY_SUBKEY ? "PUBKEY_SUBKEY" : "PRIKEY_PKCS8_UNENCRYPT";
+    ASSERT_NE(CRYPT_EAL_ProviderDecodeBuffKey(NULL, NULL, BSL_CID_UNKNOWN, "ASN1", keyTypeStr, &nonConforming, NULL,
+        &decodedKey),
+        CRYPT_SUCCESS);
+    ASSERT_TRUE(decodedKey == NULL);
+#endif
+
+EXIT:
+    TestRandDeInit();
+    CRYPT_EAL_PkeyFreeCtx(key);
+    CRYPT_EAL_PkeyFreeCtx(decodedKey);
+    BSL_SAL_FREE(encoded.data);
+    BSL_SAL_FREE(nonConforming.data);
+#endif
+}
+/* END_CASE */
+
 /**
  * @test SDV_CRYPT_EAL_PROVIDER_COMPOSITE_SIGN_VERIFY_TC001
  * @title Test composite Sign/Verify and SignData/VerifyData after provider decoder-chain decode
@@ -2961,6 +3097,415 @@ EXIT:
     BSL_SAL_FREE(pubData);
     BSL_SAL_FREE(prvData);
     CRYPT_EAL_Cleanup(CRYPT_EAL_INIT_CPU | CRYPT_EAL_INIT_PROVIDER | CRYPT_EAL_INIT_PROVIDER_RAND);
+#endif
+}
+/* END_CASE */
+
+/**
+ * @test   SDV_CRYPT_PQC_SPKI_UNUSED_BITS_TC001
+ * @title  Reject non-zero unused bits in ML-DSA and SLH-DSA SPKI.
+ * @brief  Generate a conforming SPKI, change the BIT STRING unused-bits count
+ *         from zero to one, and decode it through both decoder paths.
+ * @expect Both the local codec and provider decoder reject the modified SPKI.
+ */
+/* BEGIN_CASE */
+void SDV_CRYPT_PQC_SPKI_UNUSED_BITS_TC001(int algId, int paraId)
+{
+#if !defined(HITLS_CRYPTO_KEY_ENCODE) || !defined(HITLS_CRYPTO_KEY_DECODE)
+    (void)algId;
+    (void)paraId;
+    SKIP_TEST();
+#else
+    CRYPT_EAL_PkeyCtx *key = NULL;
+    CRYPT_EAL_PkeyCtx *decodedKey = NULL;
+    BSL_Buffer encoded = {0};
+    BSL_Buffer nonConforming = {0};
+
+    ASSERT_EQ(TestRandInit(), CRYPT_SUCCESS);
+    key = CRYPT_EAL_PkeyNewCtx(algId);
+    ASSERT_NE(key, NULL);
+    ASSERT_EQ(CRYPT_EAL_PkeySetParaById(key, paraId), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyGen(key), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_EncodeBuffKey(key, NULL, BSL_FORMAT_ASN1, CRYPT_PUBKEY_SUBKEY, &encoded), CRYPT_SUCCESS);
+    ASSERT_EQ(SetSpkiUnusedBits(&encoded, &nonConforming), BSL_SUCCESS);
+
+    ASSERT_NE(CRYPT_EAL_DecodeBuffKey(BSL_FORMAT_ASN1, CRYPT_PUBKEY_SUBKEY, &nonConforming, NULL, 0, &decodedKey),
+        CRYPT_SUCCESS);
+    ASSERT_TRUE(decodedKey == NULL);
+#ifdef HITLS_CRYPTO_PROVIDER
+    ASSERT_NE(CRYPT_EAL_ProviderDecodeBuffKey(NULL, NULL, BSL_CID_UNKNOWN, "ASN1", "PUBKEY_SUBKEY", &nonConforming,
+        NULL, &decodedKey),
+        CRYPT_SUCCESS);
+    ASSERT_TRUE(decodedKey == NULL);
+#endif
+
+EXIT:
+    TestRandDeInit();
+    CRYPT_EAL_PkeyFreeCtx(key);
+    CRYPT_EAL_PkeyFreeCtx(decodedKey);
+    BSL_SAL_FREE(encoded.data);
+    BSL_SAL_FREE(nonConforming.data);
+#endif
+}
+/* END_CASE */
+
+/**
+ * @test   SDV_CRYPT_SLH_DSA_24_PROFILE_CODEC_TC001
+ * @title  Round-trip all PureSLH-DSA and HashSLH-DSA SPKI and PKCS#8 profile identities.
+ * @expect Both local and provider decoder paths preserve the exact one of 24 OIDs.
+ */
+/* BEGIN_CASE */
+void SDV_CRYPT_SLH_DSA_24_PROFILE_CODEC_TC001(int isProvider)
+{
+#if !defined(HITLS_CRYPTO_SLH_DSA) || !defined(HITLS_CRYPTO_KEY_ENCODE) || !defined(HITLS_CRYPTO_KEY_DECODE)
+    (void)isProvider;
+    SKIP_TEST();
+#else
+    static const int32_t profiles[] = {
+        CRYPT_SLH_DSA_SHA2_128S,
+        CRYPT_SLH_DSA_SHAKE_128S,
+        CRYPT_SLH_DSA_SHA2_128F,
+        CRYPT_SLH_DSA_SHAKE_128F,
+        CRYPT_SLH_DSA_SHA2_192S,
+        CRYPT_SLH_DSA_SHAKE_192S,
+        CRYPT_SLH_DSA_SHA2_192F,
+        CRYPT_SLH_DSA_SHAKE_192F,
+        CRYPT_SLH_DSA_SHA2_256S,
+        CRYPT_SLH_DSA_SHAKE_256S,
+        CRYPT_SLH_DSA_SHA2_256F,
+        CRYPT_SLH_DSA_SHAKE_256F,
+        CRYPT_HASH_SLH_DSA_SHA2_128S_WITH_SHA256,
+        CRYPT_HASH_SLH_DSA_SHA2_128F_WITH_SHA256,
+        CRYPT_HASH_SLH_DSA_SHA2_192S_WITH_SHA512,
+        CRYPT_HASH_SLH_DSA_SHA2_192F_WITH_SHA512,
+        CRYPT_HASH_SLH_DSA_SHA2_256S_WITH_SHA512,
+        CRYPT_HASH_SLH_DSA_SHA2_256F_WITH_SHA512,
+        CRYPT_HASH_SLH_DSA_SHAKE_128S_WITH_SHAKE128,
+        CRYPT_HASH_SLH_DSA_SHAKE_128F_WITH_SHAKE128,
+        CRYPT_HASH_SLH_DSA_SHAKE_192S_WITH_SHAKE256,
+        CRYPT_HASH_SLH_DSA_SHAKE_192F_WITH_SHAKE256,
+        CRYPT_HASH_SLH_DSA_SHAKE_256S_WITH_SHAKE256,
+        CRYPT_HASH_SLH_DSA_SHAKE_256F_WITH_SHAKE256,
+    };
+    CRYPT_EAL_PkeyCtx *key = NULL;
+    CRYPT_EAL_PkeyCtx *decodedKey = NULL;
+    BSL_Buffer spki = {0};
+    BSL_Buffer pkcs8 = {0};
+    uint8_t rawKey[4 * 32] = {0};
+
+    TestMemInit();
+    for (uint32_t i = 0; i < sizeof(profiles) / sizeof(profiles[0]); i++) {
+#ifdef HITLS_CRYPTO_PROVIDER
+        if (isProvider != 0) {
+            key = CRYPT_EAL_ProviderPkeyNewCtx(NULL, CRYPT_PKEY_SLH_DSA, CRYPT_EAL_PKEY_SIGN_OPERATE,
+                "provider=default");
+        } else
+#endif
+        {
+            (void)isProvider;
+            key = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_SLH_DSA);
+        }
+        ASSERT_NE(key, NULL);
+        ASSERT_EQ(CRYPT_EAL_PkeySetParaById(key, profiles[i]), CRYPT_SUCCESS);
+        uint32_t n = 0;
+        ASSERT_EQ(CRYPT_EAL_PkeyCtrl(key, CRYPT_CTRL_GET_SLH_DSA_KEY_LEN, &n, sizeof(n)), CRYPT_SUCCESS);
+        (void)memset(rawKey, (int)(i + 1), sizeof(rawKey));
+        CRYPT_EAL_PkeyPrv prv = {
+            .id = CRYPT_PKEY_SLH_DSA,
+            .key.slhDsaPrv = {
+                .seed = rawKey,
+                .prf = rawKey + n,
+                .pub = {.seed = rawKey + 2 * n, .root = rawKey + 3 * n, .len = n},
+            },
+        };
+        CRYPT_EAL_PkeyPub pub = {
+            .id = CRYPT_PKEY_SLH_DSA,
+            .key.slhDsaPub = {.seed = rawKey + 2 * n, .root = rawKey + 3 * n, .len = n},
+        };
+        ASSERT_EQ(CRYPT_EAL_PkeySetPrv(key, &prv), CRYPT_SUCCESS);
+        ASSERT_EQ(CRYPT_EAL_PkeySetPub(key, &pub), CRYPT_SUCCESS);
+        ASSERT_EQ(CRYPT_EAL_EncodeBuffKey(key, NULL, BSL_FORMAT_ASN1, CRYPT_PUBKEY_SUBKEY, &spki), CRYPT_SUCCESS);
+        ASSERT_EQ(CRYPT_EAL_EncodeBuffKey(key, NULL, BSL_FORMAT_ASN1, CRYPT_PRIKEY_PKCS8_UNENCRYPT, &pkcs8),
+            CRYPT_SUCCESS);
+
+#ifdef HITLS_CRYPTO_PROVIDER
+        if (isProvider != 0) {
+            ASSERT_EQ(CRYPT_EAL_ProviderDecodeBuffKey(NULL, NULL, BSL_CID_UNKNOWN, "ASN1", "PUBKEY_SUBKEY", &spki, NULL,
+                &decodedKey),
+                CRYPT_SUCCESS);
+        } else
+#endif
+        {
+            ASSERT_EQ(CRYPT_EAL_DecodeBuffKey(BSL_FORMAT_ASN1, CRYPT_PUBKEY_SUBKEY, &spki, NULL, 0, &decodedKey),
+                CRYPT_SUCCESS);
+        }
+        int32_t paraId = BSL_CID_UNKNOWN;
+        ASSERT_EQ(CRYPT_EAL_PkeyCtrl(decodedKey, CRYPT_CTRL_GET_PARAID, &paraId, sizeof(paraId)), CRYPT_SUCCESS);
+        ASSERT_EQ(paraId, profiles[i]);
+        CRYPT_EAL_PkeyFreeCtx(decodedKey);
+        decodedKey = NULL;
+
+#ifdef HITLS_CRYPTO_PROVIDER
+        if (isProvider != 0) {
+            ASSERT_EQ(CRYPT_EAL_ProviderDecodeBuffKey(NULL, NULL, BSL_CID_UNKNOWN, "ASN1", "PRIKEY_PKCS8_UNENCRYPT",
+                &pkcs8, NULL, &decodedKey),
+                CRYPT_SUCCESS);
+        } else
+#endif
+        {
+            ASSERT_EQ(CRYPT_EAL_DecodeBuffKey(BSL_FORMAT_ASN1, CRYPT_PRIKEY_PKCS8_UNENCRYPT, &pkcs8, NULL, 0,
+                &decodedKey),
+                CRYPT_SUCCESS);
+        }
+        paraId = BSL_CID_UNKNOWN;
+        ASSERT_EQ(CRYPT_EAL_PkeyCtrl(decodedKey, CRYPT_CTRL_GET_PARAID, &paraId, sizeof(paraId)), CRYPT_SUCCESS);
+        ASSERT_EQ(paraId, profiles[i]);
+
+        CRYPT_EAL_PkeyFreeCtx(decodedKey);
+        decodedKey = NULL;
+        CRYPT_EAL_PkeyFreeCtx(key);
+        key = NULL;
+        BSL_SAL_FREE(spki.data);
+        spki.dataLen = 0;
+        BSL_SAL_FREE(pkcs8.data);
+        pkcs8.dataLen = 0;
+    }
+EXIT:
+    CRYPT_EAL_PkeyFreeCtx(decodedKey);
+    CRYPT_EAL_PkeyFreeCtx(key);
+    BSL_SAL_FREE(spki.data);
+    BSL_SAL_FREE(pkcs8.data);
+#endif
+}
+/* END_CASE */
+
+/**
+ * @test   SDV_CRYPT_ONE_ASYMMETRIC_KEY_ENCODE_TC001
+ * @title  Encode and decode an SLH-DSA RFC 5958 OneAsymmetricKey.
+ * @expect The presence marker produces version 1 with the publicKey exported
+ *         from the key context, and PKCS#8 encryption preserves the version 1 payload.
+ */
+/* BEGIN_CASE */
+void SDV_CRYPT_ONE_ASYMMETRIC_KEY_ENCODE_TC001(char *path)
+{
+#if !defined(HITLS_CRYPTO_SLH_DSA) || !defined(HITLS_CRYPTO_KEY_ENCODE) || !defined(HITLS_CRYPTO_KEY_DECODE)
+    (void)path;
+    SKIP_TEST();
+#else
+    CRYPT_EAL_PkeyCtx *key = NULL;
+    CRYPT_EAL_PkeyCtx *decodedKey = NULL;
+    BSL_Buffer oneKey = {0};
+    BSL_Buffer pkcs8 = {0};
+#ifdef HITLS_CRYPTO_KEY_EPKI
+    BSL_Buffer encrypted = {0};
+    BSL_Buffer decrypted = {0};
+    uint8_t pwd[] = {0x31, 0x32, 0x33, 0x34};
+    BSL_Buffer pwdBuffer = {pwd, sizeof(pwd)};
+    uint32_t deriveMode = CRYPT_DERIVE_PBKDF2;
+    uint32_t pbesId = BSL_CID_PBES2;
+    uint32_t pbkdfId = BSL_CID_PBKDF2;
+    uint32_t hmacId = CRYPT_MAC_HMAC_SHA256;
+    uint32_t symId = CRYPT_CIPHER_AES256_CBC;
+    uint32_t saltLen = 16;
+    uint32_t iteration = 2048;
+#endif
+    uint8_t rawKey[4 * 16] = {0};
+    BSL_Param oneKeyParam[] = {
+        {CRYPT_PARAM_ENCODE_ONE_ASYMMETRIC_KEY, BSL_PARAM_TYPE_BOOL, rawKey, sizeof(rawKey), sizeof(rawKey)},
+#ifdef HITLS_CRYPTO_KEY_EPKI
+        {CRYPT_PARAM_ENCODE_DERIVE_MODE, BSL_PARAM_TYPE_UINT32, &deriveMode, sizeof(deriveMode), 0},
+        {CRYPT_PARAM_ENCODE_PBES_ID, BSL_PARAM_TYPE_UINT32, &pbesId, sizeof(pbesId), 0},
+        {CRYPT_PARAM_ENCODE_PBKDF_ID, BSL_PARAM_TYPE_UINT32, &pbkdfId, sizeof(pbkdfId), 0},
+        {CRYPT_PARAM_ENCODE_HMAC_ID, BSL_PARAM_TYPE_UINT32, &hmacId, sizeof(hmacId), 0},
+        {CRYPT_PARAM_ENCODE_SYM_ID, BSL_PARAM_TYPE_UINT32, &symId, sizeof(symId), 0},
+        {CRYPT_PARAM_ENCODE_SALT_LEN, BSL_PARAM_TYPE_UINT32, &saltLen, sizeof(saltLen), 0},
+        {CRYPT_PARAM_ENCODE_PASSWORD, BSL_PARAM_TYPE_OCTETS, pwd, sizeof(pwd), 0},
+        {CRYPT_PARAM_ENCODE_ITERATION, BSL_PARAM_TYPE_UINT32, &iteration, sizeof(iteration), 0},
+#endif
+        BSL_PARAM_END,
+    };
+
+    TestMemInit();
+    ASSERT_EQ(TestRandInit(), CRYPT_SUCCESS);
+    key = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_SLH_DSA);
+    ASSERT_NE(key, NULL);
+    ASSERT_EQ(CRYPT_EAL_PkeySetParaById(key, CRYPT_SLH_DSA_SHA2_128S), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyGen(key), CRYPT_SUCCESS);
+    CRYPT_EAL_PkeyPrv prv = {0};
+    prv.id = CRYPT_PKEY_SLH_DSA;
+    prv.key.slhDsaPrv.seed = rawKey;
+    prv.key.slhDsaPrv.prf = rawKey + 16;
+    prv.key.slhDsaPrv.pub.seed = rawKey + 32;
+    prv.key.slhDsaPrv.pub.root = rawKey + 48;
+    prv.key.slhDsaPrv.pub.len = 16;
+    ASSERT_EQ(CRYPT_EAL_PkeyGetPrv(key, &prv), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_EncodeBuffKeyEx(key, oneKeyParam, BSL_FORMAT_ASN1,
+        CRYPT_PRIKEY_PKCS8_UNENCRYPT, &oneKey), CRYPT_SUCCESS);
+
+    CRYPT_ENCODE_DECODE_Pk8PrikeyInfo info = {0};
+    ASSERT_EQ(CRYPT_DECODE_Pkcs8Info(oneKey.data, oneKey.dataLen, NULL, &info), CRYPT_SUCCESS);
+    ASSERT_EQ(info.version, 1);
+    ASSERT_EQ(info.attributes.tag, 0);
+    ASSERT_NE(info.publicKey.buff, NULL);
+    ASSERT_EQ(info.publicKey.len, 32);
+    ASSERT_COMPARE("public key", info.publicKey.buff, info.publicKey.len, rawKey + 32, 32);
+
+    ASSERT_EQ(CRYPT_EAL_DecodeBuffKey(BSL_FORMAT_ASN1, CRYPT_PRIKEY_PKCS8_UNENCRYPT, &oneKey, NULL, 0, &decodedKey),
+        CRYPT_SUCCESS);
+    CRYPT_EAL_PkeyFreeCtx(decodedKey);
+    decodedKey = NULL;
+#ifdef HITLS_CRYPTO_PROVIDER
+    ASSERT_EQ(CRYPT_EAL_ProviderDecodeBuffKey(NULL, NULL, BSL_CID_UNKNOWN, "ASN1", "PRIKEY_PKCS8_UNENCRYPT", &oneKey,
+        NULL, &decodedKey),
+        CRYPT_SUCCESS);
+    CRYPT_EAL_PkeyFreeCtx(decodedKey);
+    decodedKey = NULL;
+#endif
+
+    info.publicKey.buff[0] ^= 1;
+    ASSERT_EQ(CRYPT_EAL_DecodeBuffKey(BSL_FORMAT_ASN1, CRYPT_PRIKEY_PKCS8_UNENCRYPT, &oneKey, NULL, 0, &decodedKey),
+        CRYPT_SLHDSA_PAIRWISE_CHECK_FAIL);
+    ASSERT_TRUE(decodedKey == NULL);
+#ifdef HITLS_CRYPTO_PROVIDER
+    ASSERT_NE(CRYPT_EAL_ProviderDecodeBuffKey(NULL, NULL, BSL_CID_UNKNOWN, "ASN1", "PRIKEY_PKCS8_UNENCRYPT", &oneKey,
+        NULL, &decodedKey),
+        CRYPT_SUCCESS);
+    ASSERT_TRUE(decodedKey == NULL);
+#endif
+    info.publicKey.buff[0] ^= 1;
+
+#ifdef HITLS_CRYPTO_SLH_DSA_CHECK
+    info.pkeyRawKey[48] ^= 1;
+    info.publicKey.buff[16] ^= 1;
+    ASSERT_EQ(CRYPT_EAL_DecodeBuffKey(BSL_FORMAT_ASN1, CRYPT_PRIKEY_PKCS8_UNENCRYPT, &oneKey, NULL, 0, &decodedKey),
+        CRYPT_SLHDSA_ERR_ROOT_MISMATCH);
+    ASSERT_TRUE(decodedKey == NULL);
+#ifdef HITLS_CRYPTO_PROVIDER
+    ASSERT_NE(CRYPT_EAL_ProviderDecodeBuffKey(NULL, NULL, BSL_CID_UNKNOWN, "ASN1", "PRIKEY_PKCS8_UNENCRYPT", &oneKey,
+        NULL, &decodedKey),
+        CRYPT_SUCCESS);
+    ASSERT_TRUE(decodedKey == NULL);
+#endif
+    info.pkeyRawKey[48] ^= 1;
+    info.publicKey.buff[16] ^= 1;
+#endif
+
+#ifdef HITLS_CRYPTO_KEY_EPKI
+    ASSERT_EQ(CRYPT_EAL_EncodeBuffKeyEx(key, oneKeyParam, BSL_FORMAT_ASN1,
+        CRYPT_PRIKEY_PKCS8_ENCRYPT, &encrypted), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_DECODE_Pkcs8PrvDecrypt(NULL, NULL, &encrypted, &pwdBuffer, NULL, &decrypted), CRYPT_SUCCESS);
+    ASSERT_COMPARE("encrypted OneAsymmetricKey", decrypted.data, decrypted.dataLen, oneKey.data, oneKey.dataLen);
+    BSL_SAL_ClearFree(decrypted.data, decrypted.dataLen);
+    decrypted = (BSL_Buffer){0};
+    BSL_SAL_FREE(encrypted.data);
+    encrypted.dataLen = 0;
+
+    ASSERT_EQ(CRYPT_EAL_ProviderEncodeBuffKeyEx(NULL, NULL, key, oneKeyParam, "ASN1",
+        "PRIKEY_PKCS8_ENCRYPT", &encrypted), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_DECODE_Pkcs8PrvDecrypt(NULL, NULL, &encrypted, &pwdBuffer, NULL, &decrypted), CRYPT_SUCCESS);
+    ASSERT_COMPARE("provider encrypted OneAsymmetricKey", decrypted.data, decrypted.dataLen, oneKey.data,
+        oneKey.dataLen);
+    BSL_SAL_ClearFree(decrypted.data, decrypted.dataLen);
+    decrypted = (BSL_Buffer){0};
+    BSL_SAL_FREE(encrypted.data);
+    encrypted.dataLen = 0;
+
+#ifdef HITLS_BSL_SAL_FILE
+    ASSERT_EQ(CRYPT_EAL_EncodeFileKeyEx(key, oneKeyParam, BSL_FORMAT_ASN1,
+        CRYPT_PRIKEY_PKCS8_ENCRYPT, path), CRYPT_SUCCESS);
+    ASSERT_EQ(BSL_SAL_ReadFile(path, &encrypted.data, &encrypted.dataLen), BSL_SUCCESS);
+    ASSERT_EQ(CRYPT_DECODE_Pkcs8PrvDecrypt(NULL, NULL, &encrypted, &pwdBuffer, NULL, &decrypted), CRYPT_SUCCESS);
+    ASSERT_COMPARE("file encrypted OneAsymmetricKey", decrypted.data, decrypted.dataLen, oneKey.data, oneKey.dataLen);
+    BSL_SAL_ClearFree(decrypted.data, decrypted.dataLen);
+    decrypted = (BSL_Buffer){0};
+    BSL_SAL_FREE(encrypted.data);
+    encrypted.dataLen = 0;
+
+    ASSERT_EQ(CRYPT_EAL_ProviderEncodeFileKeyEx(NULL, NULL, key, oneKeyParam, "ASN1",
+        "PRIKEY_PKCS8_ENCRYPT", path), CRYPT_SUCCESS);
+    ASSERT_EQ(BSL_SAL_ReadFile(path, &encrypted.data, &encrypted.dataLen), BSL_SUCCESS);
+    ASSERT_EQ(CRYPT_DECODE_Pkcs8PrvDecrypt(NULL, NULL, &encrypted, &pwdBuffer, NULL, &decrypted), CRYPT_SUCCESS);
+    ASSERT_COMPARE("provider file encrypted OneAsymmetricKey", decrypted.data, decrypted.dataLen, oneKey.data,
+        oneKey.dataLen);
+#else
+    (void)path;
+#endif
+#else
+    (void)path;
+#endif
+
+    ASSERT_EQ(CRYPT_EAL_EncodeBuffKey(key, NULL, BSL_FORMAT_ASN1, CRYPT_PRIKEY_PKCS8_UNENCRYPT, &pkcs8), CRYPT_SUCCESS);
+    info = (CRYPT_ENCODE_DECODE_Pk8PrikeyInfo){0};
+    ASSERT_EQ(CRYPT_DECODE_Pkcs8Info(pkcs8.data, pkcs8.dataLen, NULL, &info), CRYPT_SUCCESS);
+    ASSERT_EQ(info.version, 0);
+    ASSERT_EQ(info.attributes.tag, 0);
+    ASSERT_EQ(info.publicKey.buff, NULL);
+
+EXIT:
+    TestRandDeInit();
+    CRYPT_EAL_PkeyFreeCtx(decodedKey);
+    CRYPT_EAL_PkeyFreeCtx(key);
+    BSL_SAL_FREE(oneKey.data);
+    BSL_SAL_FREE(pkcs8.data);
+#ifdef HITLS_CRYPTO_KEY_EPKI
+    BSL_SAL_ClearFree(decrypted.data, decrypted.dataLen);
+    BSL_SAL_FREE(encrypted.data);
+#endif
+#ifdef HITLS_BSL_SAL_FILE
+    remove(path);
+#endif
+#endif
+}
+/* END_CASE */
+
+/**
+ * @test   SDV_CRYPT_MLDSA_ONE_ASYMMETRIC_KEY_ENCODE_TC001
+ * @title  Encode and decode an ML-DSA RFC 5958 OneAsymmetricKey.
+ * @expect The presence marker produces version 1 with a publicKey accepted by
+ *         the local and provider decoder paths.
+ */
+/* BEGIN_CASE */
+void SDV_CRYPT_MLDSA_ONE_ASYMMETRIC_KEY_ENCODE_TC001(void)
+{
+#if !defined(HITLS_CRYPTO_MLDSA) || !defined(HITLS_CRYPTO_KEY_ENCODE) || !defined(HITLS_CRYPTO_KEY_DECODE)
+    SKIP_TEST();
+#else
+    CRYPT_EAL_PkeyCtx *key = NULL;
+    CRYPT_EAL_PkeyCtx *decodedKey = NULL;
+    BSL_Buffer oneKey = {0};
+    BSL_Param oneKeyParam[] = {
+        {CRYPT_PARAM_ENCODE_ONE_ASYMMETRIC_KEY, BSL_PARAM_TYPE_OCTETS, NULL, 0, 0},
+        BSL_PARAM_END,
+    };
+
+    ASSERT_EQ(TestRandInit(), CRYPT_SUCCESS);
+    key = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_ML_DSA);
+    ASSERT_NE(key, NULL);
+    ASSERT_EQ(CRYPT_EAL_PkeySetParaById(key, CRYPT_MLDSA_TYPE_MLDSA_44), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyGen(key), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_EncodeBuffKeyEx(key, oneKeyParam, BSL_FORMAT_ASN1,
+        CRYPT_PRIKEY_PKCS8_UNENCRYPT, &oneKey), CRYPT_SUCCESS);
+
+    CRYPT_ENCODE_DECODE_Pk8PrikeyInfo info = {0};
+    ASSERT_EQ(CRYPT_DECODE_Pkcs8Info(oneKey.data, oneKey.dataLen, NULL, &info), CRYPT_SUCCESS);
+    ASSERT_EQ(info.version, 1);
+    ASSERT_NE(info.publicKey.buff, NULL);
+    ASSERT_TRUE(info.publicKey.len != 0);
+    ASSERT_EQ(CRYPT_EAL_DecodeBuffKey(BSL_FORMAT_ASN1, CRYPT_PRIKEY_PKCS8_UNENCRYPT, &oneKey, NULL, 0, &decodedKey),
+        CRYPT_SUCCESS);
+    CRYPT_EAL_PkeyFreeCtx(decodedKey);
+    decodedKey = NULL;
+#ifdef HITLS_CRYPTO_PROVIDER
+    ASSERT_EQ(CRYPT_EAL_ProviderDecodeBuffKey(NULL, NULL, BSL_CID_UNKNOWN, "ASN1", "PRIKEY_PKCS8_UNENCRYPT", &oneKey,
+        NULL, &decodedKey),
+        CRYPT_SUCCESS);
+#endif
+
+EXIT:
+    TestRandDeInit();
+    CRYPT_EAL_PkeyFreeCtx(decodedKey);
+    CRYPT_EAL_PkeyFreeCtx(key);
+    BSL_SAL_FREE(oneKey.data);
 #endif
 }
 /* END_CASE */

@@ -375,3 +375,58 @@ EXIT:
     return;
 }
 /* END_CASE */
+
+/**
+ * @test SDV_BSL_OBJ_HASH_SLH_DSA_PROFILE_TC001
+ * @title Verify the RFC 9909 HashSLH-DSA CID, OID, name, family and fixed digest mappings
+ * @expect success
+ */
+/* BEGIN_CASE */
+void SDV_BSL_OBJ_HASH_SLH_DSA_PROFILE_TC001()
+{
+    static const BslCid profiles[] = {
+        BSL_CID_HASH_SLH_DSA_SHA2_128S_WITH_SHA256,    BSL_CID_HASH_SLH_DSA_SHA2_128F_WITH_SHA256,
+        BSL_CID_HASH_SLH_DSA_SHA2_192S_WITH_SHA512,    BSL_CID_HASH_SLH_DSA_SHA2_192F_WITH_SHA512,
+        BSL_CID_HASH_SLH_DSA_SHA2_256S_WITH_SHA512,    BSL_CID_HASH_SLH_DSA_SHA2_256F_WITH_SHA512,
+        BSL_CID_HASH_SLH_DSA_SHAKE_128S_WITH_SHAKE128, BSL_CID_HASH_SLH_DSA_SHAKE_128F_WITH_SHAKE128,
+        BSL_CID_HASH_SLH_DSA_SHAKE_192S_WITH_SHAKE256, BSL_CID_HASH_SLH_DSA_SHAKE_192F_WITH_SHAKE256,
+        BSL_CID_HASH_SLH_DSA_SHAKE_256S_WITH_SHAKE256, BSL_CID_HASH_SLH_DSA_SHAKE_256F_WITH_SHAKE256,
+    };
+    static const BslCid hashes[] = {
+        BSL_CID_SHA256,   BSL_CID_SHA256,   BSL_CID_SHA512,   BSL_CID_SHA512,   BSL_CID_SHA512,   BSL_CID_SHA512,
+        BSL_CID_SHAKE128, BSL_CID_SHAKE128, BSL_CID_SHAKE256, BSL_CID_SHAKE256, BSL_CID_SHAKE256, BSL_CID_SHAKE256,
+    };
+    static const char *names[] = {
+        "HASH-SLH-DSA-SHA2-128S-WITH-SHA256",    "HASH-SLH-DSA-SHA2-128F-WITH-SHA256",
+        "HASH-SLH-DSA-SHA2-192S-WITH-SHA512",    "HASH-SLH-DSA-SHA2-192F-WITH-SHA512",
+        "HASH-SLH-DSA-SHA2-256S-WITH-SHA512",    "HASH-SLH-DSA-SHA2-256F-WITH-SHA512",
+        "HASH-SLH-DSA-SHAKE-128S-WITH-SHAKE128", "HASH-SLH-DSA-SHAKE-128F-WITH-SHAKE128",
+        "HASH-SLH-DSA-SHAKE-192S-WITH-SHAKE256", "HASH-SLH-DSA-SHAKE-192F-WITH-SHAKE256",
+        "HASH-SLH-DSA-SHAKE-256S-WITH-SHAKE256", "HASH-SLH-DSA-SHAKE-256F-WITH-SHAKE256",
+    };
+    static const uint8_t oidPrefix[] = {0x60, 0x86, 0x48, 0x01, 0x65, 0x03, 0x04, 0x03};
+
+    ASSERT_EQ(BSL_CID_HASH_SLH_DSA_SHA2_128S_WITH_SHA256, 2514);
+    ASSERT_EQ(BSL_CID_HASH_SLH_DSA_SHAKE_256F_WITH_SHAKE256, 2525);
+    for (uint32_t i = 0; i < sizeof(profiles) / sizeof(profiles[0]); i++) {
+        BslOidString *oid = BSL_OBJ_GetOID(profiles[i]);
+        ASSERT_TRUE(oid != NULL);
+        ASSERT_EQ(oid->octetLen, sizeof(oidPrefix) + 1);
+        ASSERT_EQ(memcmp(oid->octs, oidPrefix, sizeof(oidPrefix)), 0);
+        ASSERT_EQ((uint8_t)oid->octs[sizeof(oidPrefix)], 0x23 + i);
+        ASSERT_EQ(BSL_OBJ_GetCID(oid), profiles[i]);
+        ASSERT_EQ(BSL_OBJ_GetCidFromOidBuff((const uint8_t *)oid->octs, oid->octetLen), profiles[i]);
+        ASSERT_EQ(strcmp(BSL_OBJ_GetOidNameFromCID(profiles[i]), names[i]), 0);
+        ASSERT_EQ(BSL_OBJ_GetAsymAlgIdFromSignId(profiles[i]), BSL_CID_SLH_DSA);
+        int32_t hashId = BSL_CID_UNKNOWN;
+        ASSERT_EQ(OBJ_GetHashIdFromSignId(profiles[i], &hashId), BSL_SUCCESS);
+        ASSERT_EQ(hashId, hashes[i]);
+    }
+    ASSERT_EQ(BSL_OBJ_GetSignIdFromHashAndAsymId(BSL_CID_SLH_DSA, BSL_CID_SHA256), BSL_CID_UNKNOWN);
+    ASSERT_EQ(BSL_OBJ_GetSignIdFromHashAndAsymId(BSL_CID_SLH_DSA, BSL_CID_SHA512), BSL_CID_UNKNOWN);
+    ASSERT_EQ(BSL_OBJ_GetSignIdFromHashAndAsymId(BSL_CID_SLH_DSA, BSL_CID_SHAKE128), BSL_CID_UNKNOWN);
+    ASSERT_EQ(BSL_OBJ_GetSignIdFromHashAndAsymId(BSL_CID_SLH_DSA, BSL_CID_SHAKE256), BSL_CID_UNKNOWN);
+EXIT:
+    return;
+}
+/* END_CASE */

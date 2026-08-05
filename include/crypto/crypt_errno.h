@@ -594,6 +594,8 @@ enum CRYPT_ERROR {
     CRYPT_SLHDSA_ERR_NO_PUBKEY,                          /**< No public key. */
     CRYPT_SLHDSA_ERR_NO_PRVKEY,                          /**< No private key. */
     CRYPT_SLHDSA_CTRL_INIT_REPEATED,                     /**< The CTX cannot be initialized repeatedly. */
+    CRYPT_SLHDSA_ERR_KEY_EXISTS,                         /**< A private key already exists in the context. */
+    CRYPT_SLHDSA_ERR_ROOT_MISMATCH,                      /**< The imported private key root is inconsistent. */
 
     CRYPT_PAILLIER_BUFF_LEN_NOT_ENOUGH = 0x01390001, /**< The buffer length is insufficient. */
     CRYPT_PAILLIER_NO_KEY_INFO,              /**< Lacks valid key information. */

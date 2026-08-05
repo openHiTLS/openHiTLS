@@ -101,7 +101,7 @@ typedef enum {
 } CRYPT_ML_DSA_PRV_TEMPL_IDX;
 
 typedef enum {
-    CRYPT_SLH_DSA_PRVKEY_RAW_IDX = 0,  // Raw private key containing SK.seed || SK.prf || PK.seed || PK.root
+    CRYPT_SLH_DSA_PRVKEY_RAW_IDX = 0, // Raw private key containing SK.seed || SK.prf || PK.seed || PK.root
 } CRYPT_SLH_DSA_PRV_TEMPL_IDX;
 
 typedef enum {
@@ -181,7 +181,7 @@ typedef enum {
 #define CRYPT_ASN1_CTX_SPECIFIC_TAG_RSAPSS_TRAILED 3
 
 #define PATH_MAX_LEN 4096
-#define PWD_MAX_LEN 4096
+#define PWD_MAX_LEN  4096
 
 #ifdef HITLS_CRYPTO_KEY_DECODE
 
@@ -239,13 +239,11 @@ int32_t CRYPT_ENCODE_DsaKeyParamAsn1Buff(BSL_ASN1_Buffer *asn1, uint32_t asn1Num
 #endif
 
 #ifdef HITLS_CRYPTO_MLDSA
-int32_t CRYPT_MLDSA_ParseSubPubkeyAsn1Buff(void *libCtx, uint8_t *buff, uint32_t buffLen,
-    CRYPT_ML_DSA_Ctx **pubKey, bool isComplete);
+int32_t CRYPT_MLDSA_ParseSubPubkeyAsn1Buff(void *libCtx, uint8_t *buff, uint32_t buffLen, CRYPT_ML_DSA_Ctx **pubKey,
+    bool isComplete);
 int32_t CRYPT_DECODE_MldsaPrikeyAsn1Buff(uint8_t *buffer, uint32_t bufferLen, BSL_ASN1_Buffer *asn1, uint32_t arrNum);
-int32_t CRYPT_MLDSA_ParsePkcs8key(void *libCtx, uint8_t *buffer, uint32_t bufferLen,
-    CRYPT_ML_DSA_Ctx **mldsaPriKey);
+int32_t CRYPT_MLDSA_ParsePkcs8key(void *libCtx, uint8_t *buffer, uint32_t bufferLen, CRYPT_ML_DSA_Ctx **mldsaPriKey);
 #endif
-
 
 #ifdef HITLS_CRYPTO_COMPOSITE
 int32_t CRYPT_COMPOSITE_ParseSubPubkeyAsn1Buff(void *libCtx, uint8_t *buff, uint32_t buffLen,
@@ -255,19 +253,17 @@ int32_t CRYPT_COMPOSITE_ParsePkcs8key(void *libCtx, uint8_t *buffer, uint32_t bu
 #endif
 
 #ifdef HITLS_CRYPTO_SLH_DSA
-int32_t CRYPT_SLHDSA_ParseSubPubkeyAsn1Buff(void *libCtx, uint8_t *buff, uint32_t buffLen,
-    CryptSlhDsaCtx **pubKey, bool isComplete);
+int32_t CRYPT_SLHDSA_ParseSubPubkeyAsn1Buff(void *libCtx, uint8_t *buff, uint32_t buffLen, CryptSlhDsaCtx **pubKey,
+    bool isComplete);
 int32_t CRYPT_DECODE_SlhDsaPrikeyAsn1Buff(uint8_t *buffer, uint32_t bufferLen, BSL_ASN1_Buffer *asn1, uint32_t arrNum);
-int32_t CRYPT_SLHDSA_ParsePkcs8key(void *libCtx, uint8_t *buffer, uint32_t bufferLen,
-    CryptSlhDsaCtx **slhDsaPriKey);
+int32_t CRYPT_SLHDSA_ParsePkcs8key(void *libCtx, uint8_t *buffer, uint32_t bufferLen, CryptSlhDsaCtx **slhDsaPriKey);
 #endif
 
 #ifdef HITLS_CRYPTO_MLKEM
-int32_t CRYPT_MLKEM_ParseSubPubkeyAsn1Buff(void *libCtx, uint8_t *buff, uint32_t buffLen,
-    CRYPT_ML_KEM_Ctx **pubKey, bool isComplete);
+int32_t CRYPT_MLKEM_ParseSubPubkeyAsn1Buff(void *libCtx, uint8_t *buff, uint32_t buffLen, CRYPT_ML_KEM_Ctx **pubKey,
+    bool isComplete);
 int32_t CRYPT_DECODE_MlkemPrikeyAsn1Buff(uint8_t *buffer, uint32_t bufferLen, BSL_ASN1_Buffer *asn1, uint32_t arrNum);
-int32_t CRYPT_MLKEM_ParsePkcs8key(void *libCtx, uint8_t *buffer, uint32_t bufferLen,
-    CRYPT_ML_KEM_Ctx **mlkemPriKey);
+int32_t CRYPT_MLKEM_ParsePkcs8key(void *libCtx, uint8_t *buffer, uint32_t bufferLen, CRYPT_ML_KEM_Ctx **mlkemPriKey);
 #endif
 #ifdef HITLS_CRYPTO_X25519
 int32_t CRYPT_X25519_ParsePkcs8Key(void *libCtx, uint8_t *buffer, uint32_t bufferLen,
@@ -298,20 +294,18 @@ int32_t EncodeEccPrikeyAsn1Buff(CRYPT_EAL_PkeyCtx *ealPriKey, BSL_ASN1_Buffer *p
 int32_t CRYPT_ENCODE_EccPrikeyAsn1Buff(BSL_ASN1_Buffer *asn1, uint32_t asn1Num, BSL_Buffer *encode);
 #endif
 
-int32_t EncodePk8PriKeyBuff(CRYPT_EAL_PkeyCtx *ealPriKey, BSL_Buffer *asn1);
+int32_t EncodePk8PriKeyBuff(CRYPT_EAL_PkeyCtx *ealPriKey, const BSL_Param *param, BSL_Buffer *asn1);
 
-int32_t CRYPT_ENCODE_SubPubkeyByInfo(BSL_ASN1_Buffer *algo, BSL_Buffer *bitStr, BSL_Buffer *encodeH,
-    bool isComplete);
+int32_t CRYPT_ENCODE_SubPubkeyByInfo(BSL_ASN1_Buffer *algo, BSL_Buffer *bitStr, BSL_Buffer *encodeH, bool isComplete);
 
-int32_t CRYPT_ENCODE_AlgoIdAsn1Buff(BSL_ASN1_Buffer *algoId, uint32_t algoIdNum, uint8_t **buff,
-    uint32_t *buffLen);
+int32_t CRYPT_ENCODE_AlgoIdAsn1Buff(BSL_ASN1_Buffer *algoId, uint32_t algoIdNum, uint8_t **buff, uint32_t *buffLen);
 
 int32_t CRYPT_ENCODE_PkcsEncryptedBuff(CRYPT_EAL_LibCtx *libCtx, const char *attrName, CRYPT_Pbkdf2Param *pkcsParam,
     BSL_Buffer *unEncrypted, BSL_ASN1_Buffer *asn1);
 
 #ifdef HITLS_CRYPTO_KEY_EPKI
 int32_t EncodePk8EncPriKeyBuff(CRYPT_EAL_LibCtx *libCtx, const char *attrName, CRYPT_EAL_PkeyCtx *ealPriKey,
-    const CRYPT_EncodeParam *encodeParam, BSL_Buffer *encode);
+    const CRYPT_EncodeParam *encodeParam, const BSL_Param *param, BSL_Buffer *encode);
 #endif
 
 int32_t CRYPT_EAL_EncodeAsn1SubPubkey(CRYPT_EAL_PkeyCtx *ealPubKey, bool isComplete, BSL_Buffer *encodeH);
@@ -327,9 +321,8 @@ int32_t CRYPT_ENCODE_RsaPubkeyAsn1Buff(BSL_ASN1_Buffer *pubAsn1, BSL_Buffer *enc
 static inline bool IsEcdsaEcParaId(int32_t paraId)
 {
     return paraId == CRYPT_ECC_NISTP192 || paraId == CRYPT_ECC_NISTP224 || paraId == CRYPT_ECC_NISTP256 ||
-        paraId == CRYPT_ECC_NISTP384 || paraId == CRYPT_ECC_NISTP521 ||
-        paraId == CRYPT_ECC_BRAINPOOLP256R1 || paraId == CRYPT_ECC_BRAINPOOLP384R1 ||
-        paraId == CRYPT_ECC_BRAINPOOLP512R1;
+        paraId == CRYPT_ECC_NISTP384 || paraId == CRYPT_ECC_NISTP521 || paraId == CRYPT_ECC_BRAINPOOLP256R1 ||
+        paraId == CRYPT_ECC_BRAINPOOLP384R1 || paraId == CRYPT_ECC_BRAINPOOLP512R1;
 }
 #endif
 
@@ -337,8 +330,8 @@ static inline bool IsEcdsaEcParaId(int32_t paraId)
 int32_t GetRsaPubKey(const CRYPT_EAL_PkeyCtx *pkey, CRYPT_EAL_PkeyPub *pub);
 #endif
 
-#if defined(HITLS_CRYPTO_ECDSA) || defined(HITLS_CRYPTO_SM2) || \
-    defined(HITLS_CRYPTO_ED25519) || defined(HITLS_CRYPTO_X25519)
+#if defined(HITLS_CRYPTO_ECDSA) || defined(HITLS_CRYPTO_SM2) || defined(HITLS_CRYPTO_ED25519) || \
+    defined(HITLS_CRYPTO_X25519)
 int32_t GetCommonPubKey(const CRYPT_EAL_PkeyCtx *pkey, CRYPT_EAL_PkeyPub *pub);
 #endif
 

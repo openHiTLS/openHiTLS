@@ -175,34 +175,36 @@ static uint32_t CAdrsGetAdrsLen(void)
  * Used by SlhDsaSetAlgId in slh_dsa_core.c via SlhDsaGetAdrsOps()
  * ------------------------------------------------------------------------- */
 
-static XmssFamilyAdrsOps g_adrsOps[2] = {{
-                                             .setLayerAddr = UCAdrsSetLayerAddr,
-                                             .setTreeAddr = UCAdrsSetTreeAddr,
-                                             .setType = UCAdrsSetType,
-                                             .setKeyPairAddr = UCAdrsSetKeyPairAddr,
-                                             .setChainAddr = UCAdrsSetChainAddr,
-                                             .setTreeHeight = UCAdrsSetTreeHeight,
-                                             .setHashAddr = UCAdrsSetHashAddr,
-                                             .setTreeIndex = UCAdrsSetTreeIndex,
-                                             .getTreeIndex = UCAdrsGetTreeIndex,
-                                             .copyKeyPairAddr = UCAdrsCopyKeyPairAddr,
-                                             .getAdrsLen = UCAdrsGetAdrsLen,
-                                         },
-                                         {
-                                             .setLayerAddr = CAdrsSetLayerAddr,
-                                             .setTreeAddr = CAdrsSetTreeAddr,
-                                             .setType = CAdrsSetType,
-                                             .setKeyPairAddr = CAdrsSetKeyPairAddr,
-                                             .setChainAddr = CAdrsSetChainAddr,
-                                             .setTreeHeight = CAdrsSetTreeHeight,
-                                             .setHashAddr = CAdrsSetHashAddr,
-                                             .setTreeIndex = CAdrsSetTreeIndex,
-                                             .getTreeIndex = CAdrsGetTreeIndex,
-                                             .copyKeyPairAddr = CAdrsCopyKeyPairAddr,
-                                             .getAdrsLen = CAdrsGetAdrsLen,
-                                         }};
+static HbsAdrsOps g_adrsOps[2] = {
+    {
+        .setLayerAddr = UCAdrsSetLayerAddr,
+        .setTreeAddr = UCAdrsSetTreeAddr,
+        .setType = UCAdrsSetType,
+        .setKeyPairAddr = UCAdrsSetKeyPairAddr,
+        .setChainAddr = UCAdrsSetChainAddr,
+        .setTreeHeight = UCAdrsSetTreeHeight,
+        .setHashAddr = UCAdrsSetHashAddr,
+        .setTreeIndex = UCAdrsSetTreeIndex,
+        .getTreeIndex = UCAdrsGetTreeIndex,
+        .copyKeyPairAddr = UCAdrsCopyKeyPairAddr,
+        .getAdrsLen = UCAdrsGetAdrsLen,
+    },
+    {
+        .setLayerAddr = CAdrsSetLayerAddr,
+        .setTreeAddr = CAdrsSetTreeAddr,
+        .setType = CAdrsSetType,
+        .setKeyPairAddr = CAdrsSetKeyPairAddr,
+        .setChainAddr = CAdrsSetChainAddr,
+        .setTreeHeight = CAdrsSetTreeHeight,
+        .setHashAddr = CAdrsSetHashAddr,
+        .setTreeIndex = CAdrsSetTreeIndex,
+        .getTreeIndex = CAdrsGetTreeIndex,
+        .copyKeyPairAddr = CAdrsCopyKeyPairAddr,
+        .getAdrsLen = CAdrsGetAdrsLen,
+    }
+};
 
-const XmssFamilyAdrsOps *SlhDsaGetAdrsOps(bool isCompressed)
+const HbsAdrsOps *SlhDsaGetAdrsOps(bool isCompressed)
 {
     return isCompressed ? &g_adrsOps[1] : &g_adrsOps[0];
 }

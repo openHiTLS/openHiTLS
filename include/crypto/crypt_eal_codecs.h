@@ -134,8 +134,8 @@ typedef enum {
  *                  "PUBKEY_SUBKEY_WITHOUT_SEQ"
  * @return CRYPT_DECODER_PoolCtx* Decoder pool context on success, NULL on failure
  */
-CRYPT_DECODER_PoolCtx *CRYPT_DECODE_PoolNewCtx(CRYPT_EAL_LibCtx *libCtx, const char *attrName,
-    int32_t pkeyAlgId, const char *format, const char *type);
+CRYPT_DECODER_PoolCtx *CRYPT_DECODE_PoolNewCtx(CRYPT_EAL_LibCtx *libCtx, const char *attrName, int32_t pkeyAlgId,
+    const char *format, const char *type);
 
 /**
  * @brief Free a decoder pool context
@@ -181,8 +181,8 @@ int32_t CRYPT_DECODE_PoolCtrl(CRYPT_DECODER_PoolCtx *poolCtx, int32_t cmd, void 
  * @retval #CRYPT_SUCCESS, if success.
  *         Other error codes see the crypt_errno.h
  */
-int32_t CRYPT_EAL_DecodeBuffKey(int32_t format, int32_t type,
-    BSL_Buffer *encode, const uint8_t *pwd, uint32_t pwdlen, CRYPT_EAL_PkeyCtx **ealPKey);
+int32_t CRYPT_EAL_DecodeBuffKey(int32_t format, int32_t type, BSL_Buffer *encode, const uint8_t *pwd, uint32_t pwdlen,
+    CRYPT_EAL_PkeyCtx **ealPKey);
 
 /**
  * @ingroup crypt_eal_codecs
@@ -231,8 +231,8 @@ int32_t CRYPT_EAL_ProviderDecodeBuffKey(CRYPT_EAL_LibCtx *libCtx, const char *at
  * @retval #CRYPT_SUCCESS, if success.
  *         Other error codes see the crypt_errno.h
  */
-int32_t CRYPT_EAL_DecodeFileKey(int32_t format, int32_t type, const char *path,
-    uint8_t *pwd, uint32_t pwdlen, CRYPT_EAL_PkeyCtx **ealPKey);
+int32_t CRYPT_EAL_DecodeFileKey(int32_t format, int32_t type, const char *path, uint8_t *pwd, uint32_t pwdlen,
+    CRYPT_EAL_PkeyCtx **ealPKey);
 
 /**
  * @ingroup crypt_eal_codecs
@@ -270,7 +270,7 @@ int32_t CRYPT_EAL_ProviderDecodeFileKey(CRYPT_EAL_LibCtx *libCtx, const char *at
  * @brief   Encode formatted buffer of pkey
  *
  * @param   ealPKey [IN] CRYPT_EAL_PkeyCtx to encode.
- * @param   encodeParam [IN] pkcs8 encode params.
+ * @param   encodeParam [IN] pkcs8 encryption params. ML-DSA private keys use the default output format order.
  * @param   format [IN] the file format: BSL_FORMAT_UNKNOWN/BSL_FORMAT_PEM/BSL_FORMAT_DER
  * @param   type [IN] the type of pkey, see CRYPT_ENCDEC_TYPE
  * @param   encode [OUT] the encoded asn1 buffer.
@@ -278,8 +278,37 @@ int32_t CRYPT_EAL_ProviderDecodeFileKey(CRYPT_EAL_LibCtx *libCtx, const char *at
  * @retval #CRYPT_SUCCESS, if success.
  *         Other error codes see the crypt_errno.h
  */
-int32_t CRYPT_EAL_EncodeBuffKey(CRYPT_EAL_PkeyCtx *ealPKey, const CRYPT_EncodeParam *encodeParam,
-    int32_t format, int32_t type, BSL_Buffer *encode);
+int32_t CRYPT_EAL_EncodeBuffKey(CRYPT_EAL_PkeyCtx *ealPKey, const CRYPT_EncodeParam *encodeParam, int32_t format,
+    int32_t type, BSL_Buffer *encode);
+
+/**
+ * @ingroup crypt_eal_codecs
+ * @brief   Encode formatted buffer of pkey with extended parameters
+ *
+ * @param   ealPKey [IN] CRYPT_EAL_PkeyCtx to encode.
+ * @param   param [IN] extended encode parameters, may be NULL. For ML-DSA,
+ *                  CRYPT_PARAM_ENCODE_OUTPUT_FORMATS is a BSL_PARAM_TYPE_UINT32_PTR containing exactly one
+ *                  CRYPT_ALGO_MLDSA_PRIV_KEY_FORMAT_TYPE value. If it is absent, SEED_ONLY is used when the key
+ *                  contains a seed; otherwise, PRIV_ONLY is used. An empty or multiple-value parameter is invalid.
+ *                  For ML-DSA and SLH-DSA PKCS#8 output, the presence-only
+ *                  CRYPT_PARAM_ENCODE_ONE_ASYMMETRIC_KEY marker requests RFC 5958 version 1 output with a publicKey
+ *                  exported from ealPKey. Only the marker identifier is inspected; its type, value, valueLen and
+ *                  useLen fields are ignored. Encoding Attributes is not supported.
+ *                  For CRYPT_PRIKEY_PKCS8_ENCRYPT, the following parameters are required:
+ *                  CRYPT_PARAM_ENCODE_DERIVE_MODE, CRYPT_PARAM_ENCODE_PBES_ID,
+ *                  CRYPT_PARAM_ENCODE_PBKDF_ID, CRYPT_PARAM_ENCODE_HMAC_ID,
+ *                  CRYPT_PARAM_ENCODE_SYM_ID, CRYPT_PARAM_ENCODE_SALT_LEN and
+ *                  CRYPT_PARAM_ENCODE_ITERATION are BSL_PARAM_TYPE_UINT32;
+ *                  CRYPT_PARAM_ENCODE_PASSWORD is BSL_PARAM_TYPE_OCTETS. PBES2 with PBKDF2 is supported.
+ * @param   format [IN] the file format: BSL_FORMAT_UNKNOWN/BSL_FORMAT_PEM/BSL_FORMAT_DER
+ * @param   type [IN] the type of pkey, see CRYPT_ENCDEC_TYPE
+ * @param   encode [OUT] the encoded asn1 buffer.
+ *
+ * @retval #CRYPT_SUCCESS, if success.
+ *         Other error codes see the crypt_errno.h
+ */
+int32_t CRYPT_EAL_EncodeBuffKeyEx(CRYPT_EAL_PkeyCtx *ealPKey, const BSL_Param *param, int32_t format, int32_t type,
+    BSL_Buffer *encode);
 
 /**
  * @ingroup crypt_eal_codecs
@@ -288,7 +317,7 @@ int32_t CRYPT_EAL_EncodeBuffKey(CRYPT_EAL_PkeyCtx *ealPKey, const CRYPT_EncodePa
  * @param   libCtx [IN] the library context of provider.
  * @param   attrName [IN] provider attribute name, maybe NULL.
  * @param   ealPKey [IN] CRYPT_EAL_PkeyCtx to encode.
- * @param   encodeParam [IN] pkcs8 encode params.
+ * @param   encodeParam [IN] pkcs8 encryption params. ML-DSA private keys use the default output format order.
  * @param   format [IN] the buffer format:
  *                  "ASN1"
  *                  "PEM"
@@ -313,10 +342,29 @@ int32_t CRYPT_EAL_ProviderEncodeBuffKey(CRYPT_EAL_LibCtx *libCtx, const char *at
 
 /**
  * @ingroup crypt_eal_codecs
+ * @brief   Encode formatted buffer of pkey with provider and extended parameters
+ *
+ * @param   libCtx [IN] the library context of provider.
+ * @param   attrName [IN] provider attribute name, maybe NULL.
+ * @param   ealPKey [IN] CRYPT_EAL_PkeyCtx to encode.
+ * @param   param [IN] extended encode parameters, may be NULL. PKCS#8 encryption and OneAsymmetricKey parameters
+ *                  have the same semantics as CRYPT_EAL_EncodeBuffKeyEx.
+ * @param   format [IN] the buffer format string.
+ * @param   type [IN] the pkey type string.
+ * @param   encode [OUT] the encoded asn1 buffer.
+ *
+ * @retval #CRYPT_SUCCESS, if success.
+ *         Other error codes see the crypt_errno.h
+ */
+int32_t CRYPT_EAL_ProviderEncodeBuffKeyEx(CRYPT_EAL_LibCtx *libCtx, const char *attrName, CRYPT_EAL_PkeyCtx *ealPKey,
+    const BSL_Param *param, const char *format, const char *type, BSL_Buffer *encode);
+
+/**
+ * @ingroup crypt_eal_codecs
  * @brief   Encode formatted file of pkey
  *
  * @param   ealPKey [IN] CRYPT_EAL_PkeyCtx to encode.
- * @param   encodeParam [IN] pkcs8 encode params.
+ * @param   encodeParam [IN] pkcs8 encryption params. ML-DSA private keys use the default output format order.
  * @param   format [IN] the file format: BSL_FORMAT_UNKNOWN/BSL_FORMAT_PEM/BSL_FORMAT_DER
  * @param   type [IN] the type of pkey, see CRYPT_ENCDEC_TYPE
  * @param   path [IN] the encoded file path.
@@ -324,8 +372,25 @@ int32_t CRYPT_EAL_ProviderEncodeBuffKey(CRYPT_EAL_LibCtx *libCtx, const char *at
  * @retval #CRYPT_SUCCESS, if success.
  *         Other error codes see the crypt_errno.h
  */
-int32_t CRYPT_EAL_EncodeFileKey(CRYPT_EAL_PkeyCtx *ealPKey, const CRYPT_EncodeParam *encodeParam,
-    int32_t format, int32_t type, const char *path);
+int32_t CRYPT_EAL_EncodeFileKey(CRYPT_EAL_PkeyCtx *ealPKey, const CRYPT_EncodeParam *encodeParam, int32_t format,
+    int32_t type, const char *path);
+
+/**
+ * @ingroup crypt_eal_codecs
+ * @brief   Encode formatted file of pkey with extended parameters
+ *
+ * @param   ealPKey [IN] CRYPT_EAL_PkeyCtx to encode.
+ * @param   param [IN] extended encode parameters, may be NULL. PKCS#8 encryption and OneAsymmetricKey parameters
+ *                  have the same semantics as CRYPT_EAL_EncodeBuffKeyEx.
+ * @param   format [IN] the file format: BSL_FORMAT_UNKNOWN/BSL_FORMAT_PEM/BSL_FORMAT_DER
+ * @param   type [IN] the type of pkey, see CRYPT_ENCDEC_TYPE
+ * @param   path [IN] the encoded file path.
+ *
+ * @retval #CRYPT_SUCCESS, if success.
+ *         Other error codes see the crypt_errno.h
+ */
+int32_t CRYPT_EAL_EncodeFileKeyEx(CRYPT_EAL_PkeyCtx *ealPKey, const BSL_Param *param, int32_t format, int32_t type,
+    const char *path);
 
 /**
  * @ingroup crypt_eal_codecs
@@ -334,7 +399,7 @@ int32_t CRYPT_EAL_EncodeFileKey(CRYPT_EAL_PkeyCtx *ealPKey, const CRYPT_EncodePa
  * @param   libCtx [IN] the library context of provider.
  * @param   attrName [IN] provider attribute name, maybe NULL.
  * @param   ealPKey [IN] CRYPT_EAL_PkeyCtx to encode.
- * @param   encodeParam [IN] pkcs8 encode params.
+ * @param   encodeParam [IN] pkcs8 encryption params. ML-DSA private keys use the default output format order.
  * @param   format [IN] the file format:
  *                  "ASN1"
  *                  "PEM"
@@ -356,6 +421,25 @@ int32_t CRYPT_EAL_EncodeFileKey(CRYPT_EAL_PkeyCtx *ealPKey, const CRYPT_EncodePa
  */
 int32_t CRYPT_EAL_ProviderEncodeFileKey(CRYPT_EAL_LibCtx *libCtx, const char *attrName, CRYPT_EAL_PkeyCtx *ealPKey,
     const CRYPT_EncodeParam *encodeParam, const char *format, const char *type, const char *path);
+
+/**
+ * @ingroup crypt_eal_codecs
+ * @brief   Encode formatted file of pkey with provider and extended parameters
+ *
+ * @param   libCtx [IN] the library context of provider.
+ * @param   attrName [IN] provider attribute name, maybe NULL.
+ * @param   ealPKey [IN] CRYPT_EAL_PkeyCtx to encode.
+ * @param   param [IN] extended encode parameters, may be NULL. PKCS#8 encryption and OneAsymmetricKey parameters
+ *                  have the same semantics as CRYPT_EAL_EncodeBuffKeyEx.
+ * @param   format [IN] the file format string.
+ * @param   type [IN] the pkey type string.
+ * @param   path [IN] the encoded file path.
+ *
+ * @retval #CRYPT_SUCCESS, if success.
+ *         Other error codes see the crypt_errno.h
+ */
+int32_t CRYPT_EAL_ProviderEncodeFileKeyEx(CRYPT_EAL_LibCtx *libCtx, const char *attrName, CRYPT_EAL_PkeyCtx *ealPKey,
+    const BSL_Param *param, const char *format, const char *type, const char *path);
 
 #ifdef __cplusplus
 }

@@ -107,7 +107,7 @@ void HbsTreeCtx_InitForXmss(HbsTreeCtx *treeCtx, const CryptXmssCtx *ctx)
     treeCtx->skSeed = common->key.seed;
     treeCtx->root = common->key.root;
 
-    treeCtx->hashFuncs.xmss = common->hashFuncs;
+    treeCtx->hashFuncs = common->hashFuncs;
     treeCtx->adrsOps = &common->adrsOps;
     treeCtx->originalCtx = (const void *)common;
     treeCtx->algoType = HBS_ALGO_XMSS;

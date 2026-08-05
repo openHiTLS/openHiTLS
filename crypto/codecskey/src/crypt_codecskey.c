@@ -47,11 +47,8 @@ int32_t CRYPT_EAL_GetEncodeFormat(const char *format)
         const char *formatStr;
         int32_t formatInt;
     } FORMAT_MAP[] = {
-        {"ASN1", BSL_FORMAT_ASN1},
-        {"PEM", BSL_FORMAT_PEM},
-        {"PFX_COM", BSL_FORMAT_PFX_COM},
-        {"PKCS12", BSL_FORMAT_PKCS12},
-        {"OBJECT", BSL_FORMAT_OBJECT}
+        {"ASN1", BSL_FORMAT_ASN1}, {"PEM", BSL_FORMAT_PEM}, {"PFX_COM", BSL_FORMAT_PFX_COM},
+        {"PKCS12", BSL_FORMAT_PKCS12}, {"OBJECT", BSL_FORMAT_OBJECT}
     };
 
     for (size_t i = 0; i < sizeof(FORMAT_MAP) / sizeof(FORMAT_MAP[0]); i++) {
@@ -314,8 +311,8 @@ static int32_t GetObjectFromOutData(BSL_Param *outData, void **object)
     return CRYPT_SUCCESS;
 }
 
-int32_t ProviderDecodeBuffKeyEx(CRYPT_EAL_LibCtx *libCtx, const char *attrName, int32_t pkeyAlgId,
-    const char *format, const char *type, BSL_Buffer *encode, const BSL_Buffer *pwd, CRYPT_EAL_PkeyCtx **ealPKey)
+int32_t ProviderDecodeBuffKeyEx(CRYPT_EAL_LibCtx *libCtx, const char *attrName, int32_t pkeyAlgId, const char *format,
+    const char *type, BSL_Buffer *encode, const BSL_Buffer *pwd, CRYPT_EAL_PkeyCtx **ealPKey)
 {
     char *targetType = "HIGH_KEY";
     char *targetFormat = "OBJECT";
@@ -427,16 +424,16 @@ int32_t CRYPT_EAL_ProviderDecodeBuffKey(CRYPT_EAL_LibCtx *libCtx, const char *at
 #endif
 }
 
-int32_t CRYPT_EAL_DecodeBuffKey(int32_t format, int32_t type,
-    BSL_Buffer *encode, const uint8_t *pwd, uint32_t pwdlen, CRYPT_EAL_PkeyCtx **ealPKey)
+int32_t CRYPT_EAL_DecodeBuffKey(int32_t format, int32_t type, BSL_Buffer *encode, const uint8_t *pwd, uint32_t pwdlen,
+    CRYPT_EAL_PkeyCtx **ealPKey)
 {
     BSL_Buffer pwdBuffer = {(uint8_t *)(uintptr_t)pwd, pwdlen};
     return ProviderDecodeBuffKey(NULL, NULL, format, type, encode, &pwdBuffer, ealPKey);
 }
 
 #ifdef HITLS_BSL_SAL_FILE
-int32_t CRYPT_EAL_DecodeFileKey(int32_t format, int32_t type, const char *path,
-    uint8_t *pwd, uint32_t pwdlen, CRYPT_EAL_PkeyCtx **ealPKey)
+int32_t CRYPT_EAL_DecodeFileKey(int32_t format, int32_t type, const char *path, uint8_t *pwd, uint32_t pwdlen,
+    CRYPT_EAL_PkeyCtx **ealPKey)
 {
     if (path == NULL || strlen(path) > PATH_MAX_LEN) {
         BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
@@ -488,11 +485,8 @@ int32_t CRYPT_EAL_GetEncodeType(const char *type)
         int32_t typeInt;
     } TYPE_MAP[] = {
         {"PRIKEY_PKCS8_UNENCRYPT", CRYPT_PRIKEY_PKCS8_UNENCRYPT},
-        {"PRIKEY_PKCS8_ENCRYPT", CRYPT_PRIKEY_PKCS8_ENCRYPT},
-        {"PRIKEY_RSA", CRYPT_PRIKEY_RSA},
-        {"PRIKEY_ECC", CRYPT_PRIKEY_ECC},
-        {"PUBKEY_SUBKEY", CRYPT_PUBKEY_SUBKEY},
-        {"PUBKEY_RSA", CRYPT_PUBKEY_RSA},
+        {"PRIKEY_PKCS8_ENCRYPT", CRYPT_PRIKEY_PKCS8_ENCRYPT}, {"PRIKEY_RSA", CRYPT_PRIKEY_RSA},
+        {"PRIKEY_ECC", CRYPT_PRIKEY_ECC}, {"PUBKEY_SUBKEY", CRYPT_PUBKEY_SUBKEY}, {"PUBKEY_RSA", CRYPT_PUBKEY_RSA},
         {"PUBKEY_SUBKEY_WITHOUT_SEQ", CRYPT_PUBKEY_SUBKEY_WITHOUT_SEQ}
     };
 
@@ -508,7 +502,7 @@ int32_t CRYPT_EAL_GetEncodeType(const char *type)
 #ifdef HITLS_CRYPTO_KEY_ENCODE
 
 int32_t CRYPT_EAL_EncodeAsn1PriKey(CRYPT_EAL_LibCtx *libCtx, const char *attrName, CRYPT_EAL_PkeyCtx *ealPriKey,
-    const CRYPT_EncodeParam *encodeParam, int32_t type, BSL_Buffer *encode)
+    const CRYPT_EncodeParam *encodeParam, const BSL_Param *param, int32_t type, BSL_Buffer *encode)
 {
 #ifndef HITLS_CRYPTO_KEY_EPKI
     (void)libCtx;
@@ -525,10 +519,10 @@ int32_t CRYPT_EAL_EncodeAsn1PriKey(CRYPT_EAL_LibCtx *libCtx, const char *attrNam
             return EncodeRsaPrikeyAsn1Buff(ealPriKey, encode);
 #endif
         case CRYPT_PRIKEY_PKCS8_UNENCRYPT:
-            return EncodePk8PriKeyBuff(ealPriKey, encode);
+            return EncodePk8PriKeyBuff(ealPriKey, param, encode);
 #ifdef HITLS_CRYPTO_KEY_EPKI
         case CRYPT_PRIKEY_PKCS8_ENCRYPT:
-            return EncodePk8EncPriKeyBuff(libCtx, attrName, ealPriKey, encodeParam, encode);
+            return EncodePk8EncPriKeyBuff(libCtx, attrName, ealPriKey, encodeParam, param, encode);
 #endif
         default:
             BSL_ERR_PUSH_ERROR(CRYPT_ENCODE_NO_SUPPORT_FORMAT);
@@ -538,10 +532,10 @@ int32_t CRYPT_EAL_EncodeAsn1PriKey(CRYPT_EAL_LibCtx *libCtx, const char *attrNam
 
 #ifdef HITLS_BSL_PEM
 int32_t CRYPT_EAL_EncodePemPriKey(CRYPT_EAL_LibCtx *libCtx, const char *attrName, CRYPT_EAL_PkeyCtx *ealPriKey,
-    const CRYPT_EncodeParam *encodeParam, int32_t type, BSL_Buffer *encode)
+    const CRYPT_EncodeParam *encodeParam, const BSL_Param *param, int32_t type, BSL_Buffer *encode)
 {
     BSL_Buffer asn1 = {0};
-    int32_t ret = CRYPT_EAL_EncodeAsn1PriKey(libCtx, attrName, ealPriKey, encodeParam, type, &asn1);
+    int32_t ret = CRYPT_EAL_EncodeAsn1PriKey(libCtx, attrName, ealPriKey, encodeParam, param, type, &asn1);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
@@ -562,7 +556,8 @@ int32_t CRYPT_EAL_EncodePemPriKey(CRYPT_EAL_LibCtx *libCtx, const char *attrName
 #endif // HITLS_BSL_PEM
 
 int32_t CRYPT_EAL_PriKeyEncodeBuff(CRYPT_EAL_LibCtx *libCtx, const char *attrName, CRYPT_EAL_PkeyCtx *ealPriKey,
-    const CRYPT_EncodeParam *encodeParam, BSL_ParseFormat format, int32_t type, BSL_Buffer *encode)
+    const CRYPT_EncodeParam *encodeParam, const BSL_Param *param, BSL_ParseFormat format, int32_t type,
+    BSL_Buffer *encode)
 {
     if (ealPriKey == NULL || encode == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
@@ -571,10 +566,10 @@ int32_t CRYPT_EAL_PriKeyEncodeBuff(CRYPT_EAL_LibCtx *libCtx, const char *attrNam
 
     switch (format) {
         case BSL_FORMAT_ASN1:
-            return CRYPT_EAL_EncodeAsn1PriKey(libCtx, attrName, ealPriKey, encodeParam, type, encode);
+            return CRYPT_EAL_EncodeAsn1PriKey(libCtx, attrName, ealPriKey, encodeParam, param, type, encode);
 #ifdef HITLS_BSL_PEM
         case BSL_FORMAT_PEM:
-            return CRYPT_EAL_EncodePemPriKey(libCtx, attrName, ealPriKey, encodeParam, type, encode);
+            return CRYPT_EAL_EncodePemPriKey(libCtx, attrName, ealPriKey, encodeParam, param, type, encode);
 #endif // HITLS_BSL_PEM
         default:
             BSL_ERR_PUSH_ERROR(CRYPT_ENCODE_NO_SUPPORT_FORMAT);
@@ -582,14 +577,14 @@ int32_t CRYPT_EAL_PriKeyEncodeBuff(CRYPT_EAL_LibCtx *libCtx, const char *attrNam
     }
 }
 
-int32_t CRYPT_EAL_PubKeyEncodeBuff(CRYPT_EAL_PkeyCtx *ealPubKey,
-    BSL_ParseFormat format, int32_t type, BSL_Buffer *encode)
+int32_t CRYPT_EAL_PubKeyEncodeBuff(CRYPT_EAL_PkeyCtx *ealPubKey, BSL_ParseFormat format, int32_t type,
+    BSL_Buffer *encode)
 {
     return CRYPT_EAL_EncodePubKeyBuffInternal(ealPubKey, format, type, true, encode);
 }
 
 static int32_t ProviderEncodeBuffKey(CRYPT_EAL_LibCtx *libCtx, const char *attrName, CRYPT_EAL_PkeyCtx *ealPKey,
-    const CRYPT_EncodeParam *encodeParam, int32_t format, int32_t type, BSL_Buffer *encode)
+    const CRYPT_EncodeParam *encodeParam, const BSL_Param *param, int32_t format, int32_t type, BSL_Buffer *encode)
 {
     switch (type) {
         case CRYPT_PRIKEY_PKCS8_UNENCRYPT:
@@ -600,7 +595,7 @@ static int32_t ProviderEncodeBuffKey(CRYPT_EAL_LibCtx *libCtx, const char *attrN
 #ifdef HITLS_CRYPTO_ECDSA
         case CRYPT_PRIKEY_ECC:
 #endif
-            return CRYPT_EAL_PriKeyEncodeBuff(libCtx, attrName, ealPKey, encodeParam, format, type, encode);
+            return CRYPT_EAL_PriKeyEncodeBuff(libCtx, attrName, ealPKey, encodeParam, param, format, type, encode);
         case CRYPT_PUBKEY_SUBKEY:
 #ifdef HITLS_CRYPTO_RSA
         case CRYPT_PUBKEY_RSA:
@@ -612,22 +607,36 @@ static int32_t ProviderEncodeBuffKey(CRYPT_EAL_LibCtx *libCtx, const char *attrN
     }
 }
 
+int32_t CRYPT_EAL_ProviderEncodeBuffKeyEx(CRYPT_EAL_LibCtx *libCtx, const char *attrName, CRYPT_EAL_PkeyCtx *ealPKey,
+    const BSL_Param *param, const char *format, const char *type, BSL_Buffer *encode)
+{
+    int32_t encodeType = CRYPT_EAL_GetEncodeType(type);
+    int32_t encodeFormat = CRYPT_EAL_GetEncodeFormat(format);
+    return ProviderEncodeBuffKey(libCtx, attrName, ealPKey, NULL, param, encodeFormat, encodeType, encode);
+}
+
 int32_t CRYPT_EAL_ProviderEncodeBuffKey(CRYPT_EAL_LibCtx *libCtx, const char *attrName, CRYPT_EAL_PkeyCtx *ealPKey,
     const CRYPT_EncodeParam *encodeParam, const char *format, const char *type, BSL_Buffer *encode)
 {
     int32_t encodeType = CRYPT_EAL_GetEncodeType(type);
     int32_t encodeFormat = CRYPT_EAL_GetEncodeFormat(format);
-    return ProviderEncodeBuffKey(libCtx, attrName, ealPKey, encodeParam, encodeFormat, encodeType, encode);
+    return ProviderEncodeBuffKey(libCtx, attrName, ealPKey, encodeParam, NULL, encodeFormat, encodeType, encode);
 }
 
-int32_t CRYPT_EAL_EncodeBuffKey(CRYPT_EAL_PkeyCtx *ealPKey, const CRYPT_EncodeParam *encodeParam,
-    int32_t format, int32_t type, BSL_Buffer *encode)
+int32_t CRYPT_EAL_EncodeBuffKeyEx(CRYPT_EAL_PkeyCtx *ealPKey, const BSL_Param *param, int32_t format, int32_t type,
+    BSL_Buffer *encode)
 {
-    return ProviderEncodeBuffKey(NULL, NULL, ealPKey, encodeParam, format, type, encode);
+    return ProviderEncodeBuffKey(NULL, NULL, ealPKey, NULL, param, format, type, encode);
 }
 
-static int32_t CRYPT_EAL_EncodeAsn1PubKey(CRYPT_EAL_PkeyCtx *ealPubKey,
-    int32_t type, bool isComplete, BSL_Buffer *encode)
+int32_t CRYPT_EAL_EncodeBuffKey(CRYPT_EAL_PkeyCtx *ealPKey, const CRYPT_EncodeParam *encodeParam, int32_t format,
+    int32_t type, BSL_Buffer *encode)
+{
+    return ProviderEncodeBuffKey(NULL, NULL, ealPKey, encodeParam, NULL, format, type, encode);
+}
+
+static int32_t CRYPT_EAL_EncodeAsn1PubKey(CRYPT_EAL_PkeyCtx *ealPubKey, int32_t type, bool isComplete,
+    BSL_Buffer *encode)
 {
     switch (type) {
         case CRYPT_PUBKEY_SUBKEY:
@@ -643,8 +652,8 @@ static int32_t CRYPT_EAL_EncodeAsn1PubKey(CRYPT_EAL_PkeyCtx *ealPubKey,
 }
 
 #ifdef HITLS_BSL_PEM
-static int32_t CRYPT_EAL_EncodePemPubKey(CRYPT_EAL_PkeyCtx *ealPubKey,
-    int32_t type, bool isComplete, BSL_Buffer *encode)
+static int32_t CRYPT_EAL_EncodePemPubKey(CRYPT_EAL_PkeyCtx *ealPubKey, int32_t type, bool isComplete,
+    BSL_Buffer *encode)
 {
     BSL_Buffer asn1 = {0};
     int32_t ret = CRYPT_EAL_EncodeAsn1PubKey(ealPubKey, type, isComplete, &asn1);
@@ -667,8 +676,8 @@ static int32_t CRYPT_EAL_EncodePemPubKey(CRYPT_EAL_PkeyCtx *ealPubKey,
 }
 #endif // HITLS_BSL_PEM
 
-int32_t CRYPT_EAL_EncodePubKeyBuffInternal(CRYPT_EAL_PkeyCtx *ealPubKey,
-    BSL_ParseFormat format, int32_t type, bool isComplete, BSL_Buffer *encode)
+int32_t CRYPT_EAL_EncodePubKeyBuffInternal(CRYPT_EAL_PkeyCtx *ealPubKey, BSL_ParseFormat format, int32_t type,
+    bool isComplete, BSL_Buffer *encode)
 {
     if (ealPubKey == NULL || encode == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
@@ -690,7 +699,7 @@ int32_t CRYPT_EAL_EncodePubKeyBuffInternal(CRYPT_EAL_PkeyCtx *ealPubKey,
 
 #ifdef HITLS_BSL_SAL_FILE
 static int32_t ProviderEncodeFileKey(CRYPT_EAL_LibCtx *libCtx, const char *attrName, CRYPT_EAL_PkeyCtx *ealPKey,
-    const CRYPT_EncodeParam *encodeParam, int32_t format, int32_t type, const char *path)
+    const CRYPT_EncodeParam *encodeParam, const BSL_Param *param, int32_t format, int32_t type, const char *path)
 {
     if (path == NULL || strlen(path) > PATH_MAX_LEN) {
         BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
@@ -707,7 +716,7 @@ static int32_t ProviderEncodeFileKey(CRYPT_EAL_LibCtx *libCtx, const char *attrN
 #ifdef HITLS_CRYPTO_ECDSA
         case CRYPT_PRIKEY_ECC:
 #endif
-            ret = CRYPT_EAL_PriKeyEncodeBuff(libCtx, attrName, ealPKey, encodeParam, format, type, &encode);
+            ret = CRYPT_EAL_PriKeyEncodeBuff(libCtx, attrName, ealPKey, encodeParam, param, format, type, &encode);
             break;
         case CRYPT_PUBKEY_SUBKEY:
 #ifdef HITLS_CRYPTO_RSA
@@ -731,18 +740,32 @@ static int32_t ProviderEncodeFileKey(CRYPT_EAL_LibCtx *libCtx, const char *attrN
     return ret;
 }
 
+int32_t CRYPT_EAL_ProviderEncodeFileKeyEx(CRYPT_EAL_LibCtx *libCtx, const char *attrName, CRYPT_EAL_PkeyCtx *ealPKey,
+    const BSL_Param *param, const char *format, const char *type, const char *path)
+{
+    int32_t encodeType = CRYPT_EAL_GetEncodeType(type);
+    int32_t encodeFormat = CRYPT_EAL_GetEncodeFormat(format);
+    return ProviderEncodeFileKey(libCtx, attrName, ealPKey, NULL, param, encodeFormat, encodeType, path);
+}
+
 int32_t CRYPT_EAL_ProviderEncodeFileKey(CRYPT_EAL_LibCtx *libCtx, const char *attrName, CRYPT_EAL_PkeyCtx *ealPKey,
     const CRYPT_EncodeParam *encodeParam, const char *format, const char *type, const char *path)
 {
     int32_t encodeType = CRYPT_EAL_GetEncodeType(type);
     int32_t encodeFormat = CRYPT_EAL_GetEncodeFormat(format);
-    return ProviderEncodeFileKey(libCtx, attrName, ealPKey, encodeParam, encodeFormat, encodeType, path);
+    return ProviderEncodeFileKey(libCtx, attrName, ealPKey, encodeParam, NULL, encodeFormat, encodeType, path);
 }
 
-int32_t CRYPT_EAL_EncodeFileKey(CRYPT_EAL_PkeyCtx *ealPKey, const CRYPT_EncodeParam *encodeParam,
-    int32_t format, int32_t type, const char *path)
+int32_t CRYPT_EAL_EncodeFileKeyEx(CRYPT_EAL_PkeyCtx *ealPKey, const BSL_Param *param, int32_t format, int32_t type,
+    const char *path)
 {
-    return ProviderEncodeFileKey(NULL, NULL, ealPKey, encodeParam, format, type, path);
+    return ProviderEncodeFileKey(NULL, NULL, ealPKey, NULL, param, format, type, path);
+}
+
+int32_t CRYPT_EAL_EncodeFileKey(CRYPT_EAL_PkeyCtx *ealPKey, const CRYPT_EncodeParam *encodeParam, int32_t format,
+    int32_t type, const char *path)
+{
+    return ProviderEncodeFileKey(NULL, NULL, ealPKey, encodeParam, NULL, format, type, path);
 }
 #endif // HITLS_BSL_SAL_FILE
 

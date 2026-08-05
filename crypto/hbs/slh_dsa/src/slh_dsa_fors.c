@@ -47,9 +47,10 @@ int32_t ForsSign(const uint8_t *md, uint32_t mdLen, SlhDsaAdrs *adrs, const Cryp
                  uint32_t *sigLen)
 {
     int32_t ret = CRYPT_SLHDSA_ERR_INVALID_SIG_LEN;
-    uint32_t n = ctx->para.n;
-    uint32_t a = ctx->para.a;
-    uint32_t k = ctx->para.k;
+    const SlhDsaMathParams *math = ctx->profile->math;
+    uint32_t n = math->n;
+    uint32_t a = math->a;
+    uint32_t k = math->k;
 
     if (*sigLen < (a + 1) * n * k) {
         return CRYPT_SLHDSA_ERR_SIG_LEN_NOT_ENOUGH;
@@ -64,14 +65,14 @@ int32_t ForsSign(const uint8_t *md, uint32_t mdLen, SlhDsaAdrs *adrs, const Cryp
     uint32_t offset = 0;
     for (uint32_t i = 0; i < k; i++) {
         ret = ForsGenPrvKey(adrs, indices[i] + (i << a), ctx, sig + offset);
-        if (ret != 0) {
+        if (ret != CRYPT_SUCCESS) {
             goto ERR;
         }
         offset += n;
         for (uint32_t j = 0; j < a; j++) {
             uint32_t s = (indices[i] >> j) ^ 1;
             ret = ForsNode((i << (a - j)) + s, j, adrs, ctx, sig + offset);
-            if (ret != 0) {
+            if (ret != CRYPT_SUCCESS) {
                 goto ERR;
             }
             offset += n;
@@ -79,6 +80,9 @@ int32_t ForsSign(const uint8_t *md, uint32_t mdLen, SlhDsaAdrs *adrs, const Cryp
     }
     *sigLen = offset;
 ERR:
+    if (ret != CRYPT_SUCCESS) {
+        BSL_SAL_CleanseData(sig, (a + 1) * n * k);
+    }
     BSL_SAL_Free(indices);
     return ret;
 }
@@ -89,9 +93,12 @@ int32_t ForsPkFromSig(const uint8_t *sig, uint32_t sigLen, const uint8_t *md, ui
     int32_t ret;
     uint32_t *indices = NULL;
     uint8_t *root = NULL;
-    uint32_t n = ctx->para.n;
-    uint32_t a = ctx->para.a;
-    uint32_t k = ctx->para.k;
+    uint8_t node0[SLH_DSA_MAX_N] = {0};
+    uint8_t node1[SLH_DSA_MAX_N] = {0};
+    const SlhDsaMathParams *math = ctx->profile->math;
+    uint32_t n = math->n;
+    uint32_t a = math->a;
+    uint32_t k = math->k;
 
     if (sigLen < (a + 1) * n * k) {
         return CRYPT_SLHDSA_ERR_SIG_LEN_NOT_ENOUGH;
@@ -110,15 +117,12 @@ int32_t ForsPkFromSig(const uint8_t *sig, uint32_t sigLen, const uint8_t *md, ui
 
     BaseB(md, mdLen, a, indices, k);
 
-    uint8_t node0[SLH_DSA_MAX_N] = {0};
-    uint8_t node1[SLH_DSA_MAX_N] = {0};
-
     for (uint32_t i = 0; i < k; i++) {
         ctx->adrsOps.setTreeHeight(adrs, 0);
         ctx->adrsOps.setTreeIndex(adrs, (i << a) + indices[i]);
 
         ret = ctx->hashFuncs->chainHash(ctx, adrs, sig + (a + 1) * n * i, n, node0);
-        if (ret != 0) {
+        if (ret != CRYPT_SUCCESS) {
             goto ERR;
         }
         const uint8_t *auth = sig + (a + 1) * n * i + n;
@@ -136,7 +140,7 @@ int32_t ForsPkFromSig(const uint8_t *sig, uint32_t sigLen, const uint8_t *md, ui
             }
 
             ret = ctx->hashFuncs->nodeHash(ctx, adrs, tmp, 2 * n, node1);
-            if (ret != 0) {
+            if (ret != CRYPT_SUCCESS) {
                 goto ERR;
             }
             memcpy(node0, node1, n);
@@ -149,7 +153,7 @@ int32_t ForsPkFromSig(const uint8_t *sig, uint32_t sigLen, const uint8_t *md, ui
     ctx->adrsOps.copyKeyPairAddr(&forspkAdrs, adrs);
 
     ret = ctx->hashFuncs->pkCompress(ctx, &forspkAdrs, root, n * k, pk);
-    if (ret != 0) {
+    if (ret != CRYPT_SUCCESS) {
         goto ERR;
     }
 
@@ -174,12 +178,13 @@ int32_t ForsGenPrvKey(const SlhDsaAdrs *adrs, uint32_t idx, const CryptSlhDsaCtx
 int32_t ForsNode(uint32_t idx, uint32_t height, SlhDsaAdrs *adrs, const CryptSlhDsaCtx *ctx, uint8_t *node)
 {
     int32_t ret;
-    uint32_t n = ctx->para.n;
+    uint32_t n = ctx->profile->math->n;
 
     if (height == 0) {
         uint8_t sk[SLH_DSA_MAX_N] = {0};
         ret = ForsGenPrvKey(adrs, idx, ctx, sk);
-        if (ret != 0) {
+        if (ret != CRYPT_SUCCESS) {
+            BSL_SAL_CleanseData(sk, sizeof(sk));
             return ret;
         }
         ctx->adrsOps.setTreeHeight(adrs, height);
@@ -191,12 +196,12 @@ int32_t ForsNode(uint32_t idx, uint32_t height, SlhDsaAdrs *adrs, const CryptSlh
 
     uint8_t dnode[SLH_DSA_MAX_N * 2] = {0};
     ret = ForsNode(idx * 2, height - 1, adrs, ctx, dnode);
-    if (ret != 0) {
+    if (ret != CRYPT_SUCCESS) {
         BSL_SAL_CleanseData(dnode, sizeof(dnode));
         return ret;
     }
     ret = ForsNode(idx * 2 + 1, height - 1, adrs, ctx, dnode + n);
-    if (ret != 0) {
+    if (ret != CRYPT_SUCCESS) {
         BSL_SAL_CleanseData(dnode, sizeof(dnode));
         return ret;
     }

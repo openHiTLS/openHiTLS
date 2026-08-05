@@ -212,6 +212,18 @@ extern "C" {
 #define CRYPT_PARAM_DECODE_PROVIDER_CTX                     (CRYPT_PARAM_DECODE_BASE + 13)
 #define CRYPT_PARAM_DECODE_FLAG_FREE_OUTDATA                (CRYPT_PARAM_DECODE_BASE + 14)
 
+#define CRYPT_PARAM_ENCODE_BASE                             4500
+#define CRYPT_PARAM_ENCODE_OUTPUT_FORMATS                   (CRYPT_PARAM_ENCODE_BASE + 1)
+#define CRYPT_PARAM_ENCODE_ONE_ASYMMETRIC_KEY               (CRYPT_PARAM_ENCODE_BASE + 2)
+#define CRYPT_PARAM_ENCODE_DERIVE_MODE                      (CRYPT_PARAM_ENCODE_BASE + 3)
+#define CRYPT_PARAM_ENCODE_PBES_ID                          (CRYPT_PARAM_ENCODE_BASE + 4)
+#define CRYPT_PARAM_ENCODE_PBKDF_ID                         (CRYPT_PARAM_ENCODE_BASE + 5)
+#define CRYPT_PARAM_ENCODE_HMAC_ID                          (CRYPT_PARAM_ENCODE_BASE + 6)
+#define CRYPT_PARAM_ENCODE_SYM_ID                           (CRYPT_PARAM_ENCODE_BASE + 7)
+#define CRYPT_PARAM_ENCODE_SALT_LEN                         (CRYPT_PARAM_ENCODE_BASE + 8)
+#define CRYPT_PARAM_ENCODE_PASSWORD                         (CRYPT_PARAM_ENCODE_BASE + 9)
+#define CRYPT_PARAM_ENCODE_ITERATION                        (CRYPT_PARAM_ENCODE_BASE + 10)
+
 #define CRYPT_PARAM_CIPHER_BASE                             4600
 #define CRYPT_PARAM_CIPHER_AEAD_IV_LEN                      (CRYPT_PARAM_CIPHER_BASE + 1)
 

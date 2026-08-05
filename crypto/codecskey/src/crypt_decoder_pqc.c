@@ -14,9 +14,11 @@
  */
 
 #include "hitls_build.h"
-#if defined(HITLS_CRYPTO_KEY_DECODE_CHAIN) && \
+#if defined(HITLS_CRYPTO_KEY_DECODE_CHAIN) &&                                                       \
     (defined(HITLS_CRYPTO_MLDSA) || defined(HITLS_CRYPTO_MLKEM) || defined(HITLS_CRYPTO_SLH_DSA) || \
-    defined(HITLS_CRYPTO_XMSS) || defined(HITLS_CRYPTO_XMSSMT))
+        defined(HITLS_CRYPTO_XMSS) || defined(HITLS_CRYPTO_XMSSMT))
+
+#include <string.h>
 
 #ifdef HITLS_CRYPTO_MLDSA
 #include "crypt_mldsa.h"
@@ -42,13 +44,62 @@
 #include "bsl_params.h"
 #include "bsl_obj_internal.h"
 #include "bsl_err_internal.h"
+#include "bsl_sal.h"
 #include "crypt_errno.h"
 #include "crypt_codecskey_local.h"
 #include "crypt_codecskey.h"
 
+#if defined(HITLS_CRYPTO_MLDSA) || defined(HITLS_CRYPTO_SLH_DSA)
+static int32_t CheckPqcKeyEncoding(const BSL_ASN1_Buffer *keyParam, const BSL_ASN1_BitString *pubKey)
+{
+    if (keyParam->tag != 0 || keyParam->len != 0 || keyParam->buff != NULL ||
+        (pubKey != NULL && pubKey->unusedBits != 0)) {
+        BSL_ERR_PUSH_ERROR(CRYPT_DECODE_NO_SUPPORT_FORMAT);
+        return CRYPT_DECODE_NO_SUPPORT_FORMAT;
+    }
+    return CRYPT_SUCCESS;
+}
+#endif
+
 #ifdef HITLS_CRYPTO_MLDSA
-int32_t CRYPT_MLDSA_ParseSubPubkeyAsn1Buff(void *libCtx, uint8_t *buff, uint32_t buffLen,
-    CRYPT_ML_DSA_Ctx **pubKey, bool isComplete)
+static int32_t CheckMldsaPkcs8PublicKey(const CRYPT_ENCODE_DECODE_Pk8PrikeyInfo *info, CRYPT_ML_DSA_Ctx *pctx)
+{
+    if (info->publicKey.buff == NULL) {
+        return CRYPT_SUCCESS;
+    }
+    uint32_t publicKeyLen = 0;
+    int32_t ret = CRYPT_ML_DSA_Ctrl(pctx, CRYPT_CTRL_GET_PUBKEY_LEN, &publicKeyLen, sizeof(publicKeyLen));
+    if (ret != CRYPT_SUCCESS) {
+        return ret;
+    }
+    if (publicKeyLen != info->publicKey.len) {
+        BSL_ERR_PUSH_ERROR(CRYPT_MLDSA_PAIRWISE_CHECK_FAIL);
+        return CRYPT_MLDSA_PAIRWISE_CHECK_FAIL;
+    }
+    uint8_t *publicKey = BSL_SAL_Malloc(publicKeyLen);
+    if (publicKey == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
+        return CRYPT_MEM_ALLOC_FAIL;
+    }
+    BSL_Param publicKeyParam[2] = {
+        {CRYPT_PARAM_ML_DSA_PUBKEY, BSL_PARAM_TYPE_OCTETS, publicKey, publicKeyLen, 0},
+        BSL_PARAM_END,
+    };
+    ret = CRYPT_ML_DSA_GetPubKeyEx(pctx, publicKeyParam);
+    if (ret != CRYPT_SUCCESS) {
+        BSL_SAL_Free(publicKey);
+        return ret;
+    }
+    if (memcmp(publicKey, info->publicKey.buff, publicKeyLen) != 0) {
+        ret = CRYPT_MLDSA_PAIRWISE_CHECK_FAIL;
+        BSL_ERR_PUSH_ERROR(ret);
+    }
+    BSL_SAL_Free(publicKey);
+    return ret;
+}
+
+int32_t CRYPT_MLDSA_ParseSubPubkeyAsn1Buff(void *libCtx, uint8_t *buff, uint32_t buffLen, CRYPT_ML_DSA_Ctx **pubKey,
+    bool isComplete)
 {
     CRYPT_DECODE_SubPubkeyInfo subPubkeyInfo = {0};
     int32_t ret = CRYPT_DECODE_SubPubkey(buff, buffLen, NULL, &subPubkeyInfo, isComplete);
@@ -56,12 +107,15 @@ int32_t CRYPT_MLDSA_ParseSubPubkeyAsn1Buff(void *libCtx, uint8_t *buff, uint32_t
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
-    bool isMldsaPubkey =
-        (subPubkeyInfo.keyType == BSL_CID_ML_DSA_44 || subPubkeyInfo.keyType == BSL_CID_ML_DSA_65 ||
-         subPubkeyInfo.keyType == BSL_CID_ML_DSA_87);
+    bool isMldsaPubkey = (subPubkeyInfo.keyType == BSL_CID_ML_DSA_44 || subPubkeyInfo.keyType == BSL_CID_ML_DSA_65 ||
+        subPubkeyInfo.keyType == BSL_CID_ML_DSA_87);
     if (!isMldsaPubkey) {
         BSL_ERR_PUSH_ERROR(CRYPT_DECODE_ERR_KEY_TYPE_NOT_MATCH);
         return CRYPT_DECODE_ERR_KEY_TYPE_NOT_MATCH;
+    }
+    ret = CheckPqcKeyEncoding(&subPubkeyInfo.keyParam, &subPubkeyInfo.pubKey);
+    if (ret != CRYPT_SUCCESS) {
+        return ret;
     }
     CRYPT_ML_DSA_Ctx *pctx = CRYPT_ML_DSA_NewCtxEx(libCtx);
     if (pctx == NULL) {
@@ -88,8 +142,7 @@ int32_t CRYPT_MLDSA_ParseSubPubkeyAsn1Buff(void *libCtx, uint8_t *buff, uint32_t
     return ret;
 }
 
-int32_t CRYPT_MLDSA_ParsePkcs8key(void *libCtx, uint8_t *buffer, uint32_t bufferLen,
-    CRYPT_ML_DSA_Ctx **mldsaPriKey)
+int32_t CRYPT_MLDSA_ParsePkcs8key(void *libCtx, uint8_t *buffer, uint32_t bufferLen, CRYPT_ML_DSA_Ctx **mldsaPriKey)
 {
     CRYPT_ENCODE_DECODE_Pk8PrikeyInfo pk8PrikeyInfo = {0};
     int32_t ret = CRYPT_DECODE_Pkcs8Info(buffer, bufferLen, NULL, &pk8PrikeyInfo);
@@ -97,14 +150,17 @@ int32_t CRYPT_MLDSA_ParsePkcs8key(void *libCtx, uint8_t *buffer, uint32_t buffer
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
-    bool isMldsaKey =
-        (pk8PrikeyInfo.keyType == BSL_CID_ML_DSA_44 || pk8PrikeyInfo.keyType == BSL_CID_ML_DSA_65 ||
-         pk8PrikeyInfo.keyType == BSL_CID_ML_DSA_87);
+    bool isMldsaKey = (pk8PrikeyInfo.keyType == BSL_CID_ML_DSA_44 || pk8PrikeyInfo.keyType == BSL_CID_ML_DSA_65 ||
+        pk8PrikeyInfo.keyType == BSL_CID_ML_DSA_87);
     if (!isMldsaKey) {
         BSL_ERR_PUSH_ERROR(CRYPT_DECODE_ERR_KEY_TYPE_NOT_MATCH);
         return CRYPT_DECODE_ERR_KEY_TYPE_NOT_MATCH;
     }
-    uint8_t* tmpBuff = pk8PrikeyInfo.pkeyRawKey;
+    ret = CheckPqcKeyEncoding(&pk8PrikeyInfo.keyParam, NULL);
+    if (ret != CRYPT_SUCCESS) {
+        return ret;
+    }
+    uint8_t *tmpBuff = pk8PrikeyInfo.pkeyRawKey;
     uint32_t tmpBuffLen = pk8PrikeyInfo.pkeyRawKeyLen;
     BSL_ASN1_Buffer asn1[CRYPT_ML_DSA_PRVKEY_IDX + 1] = {0};
     ret = CRYPT_DECODE_MldsaPrikeyAsn1Buff(tmpBuff, tmpBuffLen, asn1, CRYPT_ML_DSA_PRVKEY_IDX + 1);
@@ -112,9 +168,9 @@ int32_t CRYPT_MLDSA_ParsePkcs8key(void *libCtx, uint8_t *buffer, uint32_t buffer
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
-    uint8_t* prvKeyBuff = asn1[CRYPT_ML_DSA_PRVKEY_IDX].buff;
+    uint8_t *prvKeyBuff = asn1[CRYPT_ML_DSA_PRVKEY_IDX].buff;
     uint32_t prvKeyBuffLen = asn1[CRYPT_ML_DSA_PRVKEY_IDX].len;
-    uint8_t* seedBuff = asn1[CRYPT_ML_DSA_PRVKEY_SEED_IDX].buff;
+    uint8_t *seedBuff = asn1[CRYPT_ML_DSA_PRVKEY_SEED_IDX].buff;
     uint32_t seedBuffLen = asn1[CRYPT_ML_DSA_PRVKEY_SEED_IDX].len;
     CRYPT_ML_DSA_Ctx *pctx = CRYPT_ML_DSA_NewCtxEx(libCtx);
     if (pctx == NULL) {
@@ -129,9 +185,14 @@ int32_t CRYPT_MLDSA_ParsePkcs8key(void *libCtx, uint8_t *buffer, uint32_t buffer
     BSL_Param priParam[3] = {
         {CRYPT_PARAM_ML_DSA_PRVKEY, BSL_PARAM_TYPE_OCTETS, prvKeyBuff, prvKeyBuffLen, 0},
         {CRYPT_PARAM_ML_DSA_PRVKEY_SEED, BSL_PARAM_TYPE_OCTETS, seedBuff, seedBuffLen, 0},
-        BSL_PARAM_END
+        BSL_PARAM_END,
     };
     ret = CRYPT_ML_DSA_SetPrvKeyEx(pctx, priParam);
+    if (ret != CRYPT_SUCCESS) {
+        CRYPT_ML_DSA_FreeCtx(pctx);
+        return ret;
+    }
+    ret = CheckMldsaPkcs8PublicKey(&pk8PrikeyInfo, pctx);
     if (ret != CRYPT_SUCCESS) {
         CRYPT_ML_DSA_FreeCtx(pctx);
         return ret;
@@ -145,11 +206,39 @@ int32_t CRYPT_MLDSA_ParsePkcs8key(void *libCtx, uint8_t *buffer, uint32_t buffer
 
 static inline bool IsSlhDsaKeyType(BslCid keyType)
 {
-    return (keyType >= BSL_CID_SLH_DSA_SHA2_128S && keyType <= BSL_CID_SLH_DSA_SHAKE_256F);
+    switch (keyType) {
+        case BSL_CID_SLH_DSA_SHA2_128S:
+        case BSL_CID_SLH_DSA_SHAKE_128S:
+        case BSL_CID_SLH_DSA_SHA2_128F:
+        case BSL_CID_SLH_DSA_SHAKE_128F:
+        case BSL_CID_SLH_DSA_SHA2_192S:
+        case BSL_CID_SLH_DSA_SHAKE_192S:
+        case BSL_CID_SLH_DSA_SHA2_192F:
+        case BSL_CID_SLH_DSA_SHAKE_192F:
+        case BSL_CID_SLH_DSA_SHA2_256S:
+        case BSL_CID_SLH_DSA_SHAKE_256S:
+        case BSL_CID_SLH_DSA_SHA2_256F:
+        case BSL_CID_SLH_DSA_SHAKE_256F:
+        case BSL_CID_HASH_SLH_DSA_SHA2_128S_WITH_SHA256:
+        case BSL_CID_HASH_SLH_DSA_SHA2_128F_WITH_SHA256:
+        case BSL_CID_HASH_SLH_DSA_SHA2_192S_WITH_SHA512:
+        case BSL_CID_HASH_SLH_DSA_SHA2_192F_WITH_SHA512:
+        case BSL_CID_HASH_SLH_DSA_SHA2_256S_WITH_SHA512:
+        case BSL_CID_HASH_SLH_DSA_SHA2_256F_WITH_SHA512:
+        case BSL_CID_HASH_SLH_DSA_SHAKE_128S_WITH_SHAKE128:
+        case BSL_CID_HASH_SLH_DSA_SHAKE_128F_WITH_SHAKE128:
+        case BSL_CID_HASH_SLH_DSA_SHAKE_192S_WITH_SHAKE256:
+        case BSL_CID_HASH_SLH_DSA_SHAKE_192F_WITH_SHAKE256:
+        case BSL_CID_HASH_SLH_DSA_SHAKE_256S_WITH_SHAKE256:
+        case BSL_CID_HASH_SLH_DSA_SHAKE_256F_WITH_SHAKE256:
+            return true;
+        default:
+            return false;
+    }
 }
 
-int32_t CRYPT_SLHDSA_ParseSubPubkeyAsn1Buff(void *libCtx, uint8_t *buff, uint32_t buffLen,
-    CryptSlhDsaCtx **pubKey, bool isComplete)
+int32_t CRYPT_SLHDSA_ParseSubPubkeyAsn1Buff(void *libCtx, uint8_t *buff, uint32_t buffLen, CryptSlhDsaCtx **pubKey,
+    bool isComplete)
 {
     CRYPT_DECODE_SubPubkeyInfo subPubkeyInfo = {0};
     int32_t ret = CRYPT_DECODE_SubPubkey(buff, buffLen, NULL, &subPubkeyInfo, isComplete);
@@ -160,6 +249,10 @@ int32_t CRYPT_SLHDSA_ParseSubPubkeyAsn1Buff(void *libCtx, uint8_t *buff, uint32_
     if (!IsSlhDsaKeyType(subPubkeyInfo.keyType)) {
         BSL_ERR_PUSH_ERROR(CRYPT_DECODE_ERR_KEY_TYPE_NOT_MATCH);
         return CRYPT_DECODE_ERR_KEY_TYPE_NOT_MATCH;
+    }
+    ret = CheckPqcKeyEncoding(&subPubkeyInfo.keyParam, &subPubkeyInfo.pubKey);
+    if (ret != CRYPT_SUCCESS) {
+        return ret;
     }
     CryptSlhDsaCtx *pctx = CRYPT_SLH_DSA_NewCtxEx(libCtx);
     if (pctx == NULL) {
@@ -188,8 +281,7 @@ int32_t CRYPT_SLHDSA_ParseSubPubkeyAsn1Buff(void *libCtx, uint8_t *buff, uint32_
     return ret;
 }
 
-int32_t CRYPT_SLHDSA_ParsePkcs8key(void *libCtx, uint8_t *buffer, uint32_t bufferLen,
-    CryptSlhDsaCtx **slhDsaPriKey)
+int32_t CRYPT_SLHDSA_ParsePkcs8key(void *libCtx, uint8_t *buffer, uint32_t bufferLen, CryptSlhDsaCtx **slhDsaPriKey)
 {
     CRYPT_ENCODE_DECODE_Pk8PrikeyInfo pk8PrikeyInfo = {0};
     int32_t ret = CRYPT_DECODE_Pkcs8Info(buffer, bufferLen, NULL, &pk8PrikeyInfo);
@@ -201,16 +293,13 @@ int32_t CRYPT_SLHDSA_ParsePkcs8key(void *libCtx, uint8_t *buffer, uint32_t buffe
         BSL_ERR_PUSH_ERROR(CRYPT_DECODE_ERR_KEY_TYPE_NOT_MATCH);
         return CRYPT_DECODE_ERR_KEY_TYPE_NOT_MATCH;
     }
-
-    uint8_t* rawKeyBuff = pk8PrikeyInfo.pkeyRawKey;
-    uint32_t rawKeyBuffLen = pk8PrikeyInfo.pkeyRawKeyLen;
-
-    // Validate length (should be 4*n where n is the security parameter)
-    if (rawKeyBuffLen % 4 != 0) {
-        BSL_ERR_PUSH_ERROR(CRYPT_SLHDSA_ERR_INVALID_KEYLEN);
-        return CRYPT_SLHDSA_ERR_INVALID_KEYLEN;
+    ret = CheckPqcKeyEncoding(&pk8PrikeyInfo.keyParam, NULL);
+    if (ret != CRYPT_SUCCESS) {
+        return ret;
     }
-    uint32_t n = rawKeyBuffLen / 4;
+
+    uint8_t *rawKeyBuff = pk8PrikeyInfo.pkeyRawKey;
+    uint32_t rawKeyBuffLen = pk8PrikeyInfo.pkeyRawKeyLen;
 
     CryptSlhDsaCtx *pctx = CRYPT_SLH_DSA_NewCtxEx(libCtx);
     if (pctx == NULL) {
@@ -222,18 +311,41 @@ int32_t CRYPT_SLHDSA_ParsePkcs8key(void *libCtx, uint8_t *buffer, uint32_t buffe
         CRYPT_SLH_DSA_FreeCtx(pctx);
         return ret;
     }
+    uint32_t n = 0;
+    ret = CRYPT_SLH_DSA_Ctrl(pctx, CRYPT_CTRL_GET_SLH_DSA_KEY_LEN, &n, sizeof(n));
+    if (ret != CRYPT_SUCCESS || rawKeyBuffLen != 4 * n) {
+        CRYPT_SLH_DSA_FreeCtx(pctx);
+        BSL_ERR_PUSH_ERROR(CRYPT_SLHDSA_ERR_INVALID_KEYLEN);
+        return CRYPT_SLHDSA_ERR_INVALID_KEYLEN;
+    }
+    if (pk8PrikeyInfo.publicKey.buff != NULL &&
+        (pk8PrikeyInfo.publicKey.len != 2 * n ||
+            memcmp(pk8PrikeyInfo.publicKey.buff, rawKeyBuff + 2 * n, 2 * n) != 0)) {
+        CRYPT_SLH_DSA_FreeCtx(pctx);
+        BSL_ERR_PUSH_ERROR(CRYPT_SLHDSA_PAIRWISE_CHECK_FAIL);
+        return CRYPT_SLHDSA_PAIRWISE_CHECK_FAIL;
+    }
     BSL_Param priParam[5] = {
         {CRYPT_PARAM_SLH_DSA_PRV_SEED, BSL_PARAM_TYPE_OCTETS, rawKeyBuff, n, 0},
         {CRYPT_PARAM_SLH_DSA_PRV_PRF, BSL_PARAM_TYPE_OCTETS, rawKeyBuff + n, n, 0},
         {CRYPT_PARAM_SLH_DSA_PUB_SEED, BSL_PARAM_TYPE_OCTETS, rawKeyBuff + n * 2, n, 0},
         {CRYPT_PARAM_SLH_DSA_PUB_ROOT, BSL_PARAM_TYPE_OCTETS, rawKeyBuff + n * 3, n, 0},
-        BSL_PARAM_END
+        BSL_PARAM_END,
     };
     ret = CRYPT_SLH_DSA_SetPrvKeyEx(pctx, priParam);
     if (ret != CRYPT_SUCCESS) {
         CRYPT_SLH_DSA_FreeCtx(pctx);
         return ret;
     }
+#ifdef HITLS_CRYPTO_SLH_DSA_CHECK
+    if (pk8PrikeyInfo.publicKey.buff != NULL) {
+        ret = CRYPT_SLH_DSA_Check(CRYPT_PKEY_CHECK_PRVKEY, pctx, NULL);
+        if (ret != CRYPT_SUCCESS) {
+            CRYPT_SLH_DSA_FreeCtx(pctx);
+            return ret;
+        }
+    }
+#endif
     *slhDsaPriKey = pctx;
     return CRYPT_SUCCESS;
 }
@@ -246,8 +358,8 @@ static inline bool IsMlKemKeyType(BslCid keyType)
     return keyType == BSL_CID_ML_KEM_512 || keyType == BSL_CID_ML_KEM_768 || keyType == BSL_CID_ML_KEM_1024;
 }
 
-int32_t CRYPT_MLKEM_ParseSubPubkeyAsn1Buff(void *libCtx, uint8_t *buff, uint32_t buffLen,
-    CRYPT_ML_KEM_Ctx **pubKey, bool isComplete)
+int32_t CRYPT_MLKEM_ParseSubPubkeyAsn1Buff(void *libCtx, uint8_t *buff, uint32_t buffLen, CRYPT_ML_KEM_Ctx **pubKey,
+    bool isComplete)
 {
     CRYPT_DECODE_SubPubkeyInfo subPubkeyInfo = {0};
     int32_t ret = CRYPT_DECODE_SubPubkey(buff, buffLen, NULL, &subPubkeyInfo, isComplete);
@@ -284,8 +396,7 @@ int32_t CRYPT_MLKEM_ParseSubPubkeyAsn1Buff(void *libCtx, uint8_t *buff, uint32_t
     return ret;
 }
 
-int32_t CRYPT_MLKEM_ParsePkcs8key(void *libCtx, uint8_t *buffer, uint32_t bufferLen,
-    CRYPT_ML_KEM_Ctx **mlkemPriKey)
+int32_t CRYPT_MLKEM_ParsePkcs8key(void *libCtx, uint8_t *buffer, uint32_t bufferLen, CRYPT_ML_KEM_Ctx **mlkemPriKey)
 {
     CRYPT_ENCODE_DECODE_Pk8PrikeyInfo pk8PrikeyInfo = {0};
     int32_t ret = CRYPT_DECODE_Pkcs8Info(buffer, bufferLen, NULL, &pk8PrikeyInfo);
@@ -297,7 +408,7 @@ int32_t CRYPT_MLKEM_ParsePkcs8key(void *libCtx, uint8_t *buffer, uint32_t buffer
         BSL_ERR_PUSH_ERROR(CRYPT_DECODE_ERR_KEY_TYPE_NOT_MATCH);
         return CRYPT_DECODE_ERR_KEY_TYPE_NOT_MATCH;
     }
-    uint8_t* tmpBuff = pk8PrikeyInfo.pkeyRawKey;
+    uint8_t *tmpBuff = pk8PrikeyInfo.pkeyRawKey;
     uint32_t tmpBuffLen = pk8PrikeyInfo.pkeyRawKeyLen;
     BSL_ASN1_Buffer asn1[CRYPT_ML_KEM_PRVKEY_IDX + 1] = {0};
     ret = CRYPT_DECODE_MlkemPrikeyAsn1Buff(tmpBuff, tmpBuffLen, asn1, CRYPT_ML_KEM_PRVKEY_IDX + 1);
@@ -305,9 +416,9 @@ int32_t CRYPT_MLKEM_ParsePkcs8key(void *libCtx, uint8_t *buffer, uint32_t buffer
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
-    uint8_t* decapsKeyBuff = asn1[CRYPT_ML_KEM_PRVKEY_IDX].buff;
+    uint8_t *decapsKeyBuff = asn1[CRYPT_ML_KEM_PRVKEY_IDX].buff;
     uint32_t decapsKeyBuffLen = asn1[CRYPT_ML_KEM_PRVKEY_IDX].len;
-    uint8_t* seedBuff = asn1[CRYPT_ML_KEM_PRVKEY_SEED_IDX].buff;
+    uint8_t *seedBuff = asn1[CRYPT_ML_KEM_PRVKEY_SEED_IDX].buff;
     uint32_t seedBuffLen = asn1[CRYPT_ML_KEM_PRVKEY_SEED_IDX].len;
 
     CRYPT_ML_KEM_Ctx *pctx = CRYPT_ML_KEM_NewCtxEx(libCtx);
@@ -322,8 +433,7 @@ int32_t CRYPT_MLKEM_ParsePkcs8key(void *libCtx, uint8_t *buffer, uint32_t buffer
     }
     BSL_Param priParam[3] = {
         {CRYPT_PARAM_ML_KEM_PRVKEY, BSL_PARAM_TYPE_OCTETS, decapsKeyBuff, decapsKeyBuffLen, 0},
-        {CRYPT_PARAM_ML_KEM_PRVKEY_SEED, BSL_PARAM_TYPE_OCTETS, seedBuff, seedBuffLen, 0},
-        BSL_PARAM_END
+        {CRYPT_PARAM_ML_KEM_PRVKEY_SEED, BSL_PARAM_TYPE_OCTETS, seedBuff, seedBuffLen, 0}, BSL_PARAM_END
     };
     ret = CRYPT_ML_KEM_SetDecapsKeyEx(pctx, priParam);
     if (ret != CRYPT_SUCCESS) {
@@ -379,7 +489,8 @@ static int32_t XmssSetCtxFromSubPubkey(void *libCtx, const CRYPT_DECODE_SubPubke
         {CRYPT_PARAM_XMSS_XDR_TYPE, BSL_PARAM_TYPE_OCTETS, subPubkeyInfo->pubKey.buff, 4, 0},
         {CRYPT_PARAM_XMSS_PUB_ROOT, BSL_PARAM_TYPE_OCTETS, subPubkeyInfo->pubKey.buff + 4, hashLen, 0},
         {CRYPT_PARAM_XMSS_PUB_SEED, BSL_PARAM_TYPE_OCTETS, subPubkeyInfo->pubKey.buff + 4 + hashLen, hashLen, 0},
-        BSL_PARAM_END};
+        BSL_PARAM_END
+    };
 
 #ifdef HITLS_CRYPTO_XMSS
     if (subPubkeyInfo->keyType == BSL_CID_XMSS) {
@@ -442,7 +553,7 @@ static int32_t XmssParseSubPubkeyAsn1BuffImpl(const XmssSubPubkeyParseInput *inp
 
     CRYPT_DECODE_SubPubkeyInfo subPubkeyInfo = {0};
     int32_t ret = XmssDecodeSubPubkeyInfo(input->buff, input->buffLen, input->isComplete, input->expectedType,
-                                          &subPubkeyInfo);
+        &subPubkeyInfo);
     if (ret != CRYPT_SUCCESS) {
         return ret;
     }
@@ -450,8 +561,8 @@ static int32_t XmssParseSubPubkeyAsn1BuffImpl(const XmssSubPubkeyParseInput *inp
 }
 
 #ifdef HITLS_CRYPTO_XMSS
-int32_t CRYPT_XMSS_ParseSubPubkeyAsn1Buff(void *libCtx, uint8_t *buff, uint32_t buffLen,
-    CryptXmssCtx **pubKey, bool isComplete)
+int32_t CRYPT_XMSS_ParseSubPubkeyAsn1Buff(void *libCtx, uint8_t *buff, uint32_t buffLen, CryptXmssCtx **pubKey,
+    bool isComplete)
 {
     if (pubKey == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
@@ -468,8 +579,8 @@ int32_t CRYPT_XMSS_ParseSubPubkeyAsn1Buff(void *libCtx, uint8_t *buff, uint32_t 
 #endif
 
 #ifdef HITLS_CRYPTO_XMSSMT
-int32_t CRYPT_XMSSMT_ParseSubPubkeyAsn1Buff(void *libCtx, uint8_t *buff, uint32_t buffLen,
-    CryptXmssmtCtx **pubKey, bool isComplete)
+int32_t CRYPT_XMSSMT_ParseSubPubkeyAsn1Buff(void *libCtx, uint8_t *buff, uint32_t buffLen, CryptXmssmtCtx **pubKey,
+    bool isComplete)
 {
     if (pubKey == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
@@ -486,5 +597,4 @@ int32_t CRYPT_XMSSMT_ParseSubPubkeyAsn1Buff(void *libCtx, uint8_t *buff, uint32_
 #endif
 #endif
 
-#endif // HITLS_CRYPTO_KEY_DECODE_CHAIN && (HITLS_CRYPTO_MLDSA || HITLS_CRYPTO_MLKEM ||
-       // HITLS_CRYPTO_SLH_DSA || HITLS_CRYPTO_XMSS)
+#endif /* HITLS_CRYPTO_KEY_DECODE_CHAIN && PQC key algorithms */

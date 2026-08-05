@@ -26,6 +26,7 @@
 #include "crypt_eal_rand.h"
 #include "crypt_eal_md.h"
 #include "crypt_util_rand.h"
+#include "crypt_params_key.h"
 #include "ml_dsa_local.h"
 /* END_HEADER */
 
@@ -112,31 +113,28 @@ EXIT:
 /* END_CASE */
 
 /* @
-* @test  SDV_CRYPTO_MLDSA_DUP_CTX_CTRL_TC001
+* @test  SDV_CRYPTO_MLDSA_DUP_CTX_SEED_TC001
 * @spec  -
-* @title  Verify that DupCtx preserves MLDSA ctrl state.
+* @title  Verify that DupCtx preserves the MLDSA seed.
 * @precon  nan
 * @brief
 * 1.Generate an MLDSA context.
-* 2.Set the private key format and query the generated seed.
-* 3.Duplicate the context.
-* 4.Verify the duplicated context keeps the same private key format and seed.
+* 2.Query the generated seed.
+* 3.Duplicate the context and query its seed.
+* 4.Verify the duplicated context keeps the same seed.
 * @expect
 * 1.success
-* 2.The duplicated context preserves the ctrl state.
+* 2.The duplicated context preserves the seed.
 * @prior  nan
 * @auto  FALSE
 @ */
 /* BEGIN_CASE */
-void SDV_CRYPTO_MLDSA_DUP_CTX_CTRL_TC001(int type, int keyFormat)
+void SDV_CRYPTO_MLDSA_DUP_CTX_SEED_TC001(int type)
 {
     TestMemInit();
     CRYPT_EAL_PkeyCtx *ctx = NULL;
     CRYPT_EAL_PkeyCtx *dupCtx = NULL;
     ASSERT_EQ(TestRandInit(), CRYPT_SUCCESS);
-    uint32_t srcFormat = 0;
-    uint32_t dupFormat = 0;
-    uint32_t keyFormatVal = (uint32_t)keyFormat;
     uint8_t srcSeed[32] = {0};
     uint8_t dupSeed[32] = {0};
 
@@ -145,19 +143,13 @@ void SDV_CRYPTO_MLDSA_DUP_CTX_CTRL_TC001(int type, int keyFormat)
     ASSERT_EQ(CRYPT_EAL_PkeySetParaById(ctx, (uint32_t)type), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_PkeyGen(ctx), CRYPT_SUCCESS);
 
-    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_SET_MLDSA_PRVKEY_FORMAT,
-        &keyFormatVal, sizeof(keyFormatVal)), CRYPT_SUCCESS);
-    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_GET_MLDSA_PRVKEY_FORMAT,
-        &srcFormat, sizeof(srcFormat)), CRYPT_SUCCESS);
-    ASSERT_EQ(srcFormat, keyFormatVal);
+
     ASSERT_EQ(CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_GET_MLDSA_SEED,
         srcSeed, sizeof(srcSeed)), CRYPT_SUCCESS);
 
     dupCtx = CRYPT_EAL_PkeyDupCtx(ctx);
     ASSERT_TRUE(dupCtx != NULL);
-    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(dupCtx, CRYPT_CTRL_GET_MLDSA_PRVKEY_FORMAT,
-        &dupFormat, sizeof(dupFormat)), CRYPT_SUCCESS);
-    ASSERT_EQ(dupFormat, keyFormatVal);
+
     ASSERT_EQ(CRYPT_EAL_PkeyCtrl(dupCtx, CRYPT_CTRL_GET_MLDSA_SEED,
         dupSeed, sizeof(dupSeed)), CRYPT_SUCCESS);
     ASSERT_COMPARE("compare seed", srcSeed, (uint32_t)sizeof(srcSeed), dupSeed, (uint32_t)sizeof(dupSeed));
@@ -165,6 +157,108 @@ void SDV_CRYPTO_MLDSA_DUP_CTX_CTRL_TC001(int type, int keyFormat)
 EXIT:
     CRYPT_EAL_PkeyFreeCtx(ctx);
     CRYPT_EAL_PkeyFreeCtx(dupCtx);
+    TestRandDeInit();
+    return;
+}
+/* END_CASE */
+
+/* @
+* @test  SDV_CRYPTO_MLDSA_GET_PRV_EX_TC001
+* @spec  -
+* @title  Verify ML-DSA private key outparams.
+* @precon  nan
+* @brief
+* 1.Generate an ML-DSA key and obtain the seed and expanded private key in one call.
+* 2.Import only the expanded private key into a new context.
+* 3.Verify that requesting both values fails atomically when the seed is unavailable.
+* 4.Verify that the expanded private key remains independently available.
+* @expect
+* 1.success
+* 2.success
+* 3.The missing seed is reported without modifying either output.
+* 4.success
+* @prior  nan
+* @auto  FALSE
+@ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_MLDSA_GET_PRV_EX_TC001(int type)
+{
+    TestMemInit();
+    ASSERT_EQ(TestRandInit(), CRYPT_SUCCESS);
+    CRYPT_EAL_PkeyCtx *ctx = NULL;
+    CRYPT_EAL_PkeyCtx *prvOnlyCtx = NULL;
+    uint8_t seed[MLDSA_SEED_BYTES_LEN] = {0};
+    uint8_t expectedSeed[MLDSA_SEED_BYTES_LEN] = {0};
+    uint8_t unchangedSeed[MLDSA_SEED_BYTES_LEN] = {0};
+    uint8_t *prv = NULL;
+    uint8_t *expectedPrv = NULL;
+    uint8_t *unchangedPrv = NULL;
+    uint32_t prvLen = 0;
+    CRYPT_EAL_PkeyPrv prvKey = {0};
+
+#ifdef HITLS_CRYPTO_PROVIDER
+    ctx = CRYPT_EAL_ProviderPkeyNewCtx(NULL, CRYPT_PKEY_ML_DSA, CRYPT_EAL_PKEY_SIGN_OPERATE, "provider=default");
+    prvOnlyCtx = CRYPT_EAL_ProviderPkeyNewCtx(NULL, CRYPT_PKEY_ML_DSA, CRYPT_EAL_PKEY_SIGN_OPERATE, "provider=default");
+#else
+    ctx = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_ML_DSA);
+    prvOnlyCtx = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_ML_DSA);
+#endif
+    ASSERT_TRUE(ctx != NULL);
+    ASSERT_TRUE(prvOnlyCtx != NULL);
+    ASSERT_EQ(CRYPT_EAL_PkeySetParaById(ctx, (uint32_t)type), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeySetParaById(prvOnlyCtx, (uint32_t)type), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyGen(ctx), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_GET_PRVKEY_LEN, &prvLen, sizeof(prvLen)), CRYPT_SUCCESS);
+
+    prv = BSL_SAL_Malloc(prvLen);
+    expectedPrv = BSL_SAL_Malloc(prvLen);
+    unchangedPrv = BSL_SAL_Malloc(prvLen);
+    ASSERT_TRUE(prv != NULL);
+    ASSERT_TRUE(expectedPrv != NULL);
+    ASSERT_TRUE(unchangedPrv != NULL);
+
+    prvKey.id = CRYPT_PKEY_ML_DSA;
+    prvKey.key.mldsaPrv.data = expectedPrv;
+    prvKey.key.mldsaPrv.len = prvLen;
+    ASSERT_EQ(CRYPT_EAL_PkeyGetPrv(ctx, &prvKey), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_GET_MLDSA_SEED, expectedSeed, sizeof(expectedSeed)), CRYPT_SUCCESS);
+
+    BSL_Param bothParams[] = {
+        {CRYPT_PARAM_ML_DSA_PRVKEY_SEED, BSL_PARAM_TYPE_OCTETS, seed, sizeof(seed), 0},
+        {CRYPT_PARAM_ML_DSA_PRVKEY, BSL_PARAM_TYPE_OCTETS, prv, prvLen, 0}, BSL_PARAM_END
+    };
+    ASSERT_EQ(CRYPT_EAL_PkeyGetPrvEx(ctx, bothParams), CRYPT_SUCCESS);
+    ASSERT_EQ(bothParams[0].useLen, MLDSA_SEED_BYTES_LEN);
+    ASSERT_EQ(bothParams[1].useLen, prvLen);
+    ASSERT_COMPARE("compare seed", seed, sizeof(seed), expectedSeed, sizeof(expectedSeed));
+    ASSERT_COMPARE("compare private key", prv, prvLen, expectedPrv, prvLen);
+
+    ASSERT_EQ(CRYPT_EAL_PkeySetPrv(prvOnlyCtx, &prvKey), CRYPT_SUCCESS);
+    (void)memset(seed, 0xA5, sizeof(seed));
+    (void)memset(prv, 0xA5, prvLen);
+    (void)memset(unchangedSeed, 0xA5, sizeof(unchangedSeed));
+    (void)memset(unchangedPrv, 0xA5, prvLen);
+    bothParams[0].useLen = 0;
+    bothParams[1].useLen = 0;
+    ASSERT_EQ(CRYPT_EAL_PkeyGetPrvEx(prvOnlyCtx, bothParams), CRYPT_MLDSA_SEED_NOT_SET);
+    ASSERT_EQ(bothParams[0].useLen, 0);
+    ASSERT_EQ(bothParams[1].useLen, 0);
+    ASSERT_COMPARE("unchanged seed", seed, sizeof(seed), unchangedSeed, sizeof(unchangedSeed));
+    ASSERT_COMPARE("unchanged private key", prv, prvLen, unchangedPrv, prvLen);
+    TestErrClear();
+
+    BSL_Param prvParam[] = {{CRYPT_PARAM_ML_DSA_PRVKEY, BSL_PARAM_TYPE_OCTETS, prv, prvLen, 0}, BSL_PARAM_END};
+    ASSERT_EQ(CRYPT_EAL_PkeyGetPrvEx(prvOnlyCtx, prvParam), CRYPT_SUCCESS);
+    ASSERT_EQ(prvParam[0].useLen, prvLen);
+    ASSERT_COMPARE("compare private key", prv, prvLen, expectedPrv, prvLen);
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
+EXIT:
+    CRYPT_EAL_PkeyFreeCtx(ctx);
+    CRYPT_EAL_PkeyFreeCtx(prvOnlyCtx);
+    BSL_SAL_Free(prv);
+    BSL_SAL_Free(expectedPrv);
+    BSL_SAL_Free(unchangedPrv);
     TestRandDeInit();
     return;
 }

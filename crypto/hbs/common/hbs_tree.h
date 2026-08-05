@@ -63,16 +63,6 @@ int32_t HbsHyperTree_Verify(const uint8_t *msg, uint32_t msgLen, const uint8_t *
 int32_t HbsHyperTree_Sign(const uint8_t *msg, uint32_t msgLen, uint64_t treeIdx, uint32_t leafIdx,
                           const HbsTreeCtx *ctx, uint8_t *sig, uint32_t *sigLen);
 
-/* -----------------------------------------------------------------------
- * Unified tree context initializers (canonical names per design §3.6)
- *
- * Each initializer is declared in its own module header alongside the
- * implementation, since they depend on algorithm-specific context types:
- *   HbsTreeCtx_InitForXmss    -> xmss/src/xmss_local.h
- *   HbsTreeCtx_InitForXmssmt  -> xmss/src/xmss_local.h
- *   HbsTreeCtx_InitFromSlhDsa -> slh_dsa/src/slh_dsa_local.h
- * ----------------------------------------------------------------------- */
-
 #ifdef __cplusplus
 }
 #endif

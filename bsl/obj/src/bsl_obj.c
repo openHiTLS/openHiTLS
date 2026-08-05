@@ -36,7 +36,7 @@ BSL_SAL_DECLARE_THREAD_ONCE(g_oidHashInitOnce);
 
 #define BSL_OBJ_ARCS_X_MAX 2
 #define BSL_OBJ_ARCS_Y_MAX 40
-#define BSL_OBJ_ARCS_MAX (BSL_OBJ_ARCS_X_MAX * BSL_OBJ_ARCS_Y_MAX + BSL_OBJ_ARCS_Y_MAX - 1)
+#define BSL_OBJ_ARCS_MAX   (BSL_OBJ_ARCS_X_MAX * BSL_OBJ_ARCS_Y_MAX + BSL_OBJ_ARCS_Y_MAX - 1)
 
 BslOidInfo g_oidTable[] = {
     {{9, "\140\206\110\1\145\3\4\1\1", BSL_OID_GLOBAL}, "aes-128-ecb", BSL_CID_AES128_ECB},
@@ -200,6 +200,30 @@ BslOidInfo g_oidTable[] = {
     {{9, "\140\206\110\1\145\3\4\3\36", BSL_OID_GLOBAL}, "SLH-DSA-SHAKE-256S", BSL_CID_SLH_DSA_SHAKE_256S},
     {{9, "\140\206\110\1\145\3\4\3\31", BSL_OID_GLOBAL}, "SLH-DSA-SHA2-256F", BSL_CID_SLH_DSA_SHA2_256F},
     {{9, "\140\206\110\1\145\3\4\3\37", BSL_OID_GLOBAL}, "SLH-DSA-SHAKE-256F", BSL_CID_SLH_DSA_SHAKE_256F},
+    {{9, "\140\206\110\1\145\3\4\3\43", BSL_OID_GLOBAL}, "HASH-SLH-DSA-SHA2-128S-WITH-SHA256",
+        BSL_CID_HASH_SLH_DSA_SHA2_128S_WITH_SHA256},
+    {{9, "\140\206\110\1\145\3\4\3\44", BSL_OID_GLOBAL}, "HASH-SLH-DSA-SHA2-128F-WITH-SHA256",
+        BSL_CID_HASH_SLH_DSA_SHA2_128F_WITH_SHA256},
+    {{9, "\140\206\110\1\145\3\4\3\45", BSL_OID_GLOBAL}, "HASH-SLH-DSA-SHA2-192S-WITH-SHA512",
+        BSL_CID_HASH_SLH_DSA_SHA2_192S_WITH_SHA512},
+    {{9, "\140\206\110\1\145\3\4\3\46", BSL_OID_GLOBAL}, "HASH-SLH-DSA-SHA2-192F-WITH-SHA512",
+        BSL_CID_HASH_SLH_DSA_SHA2_192F_WITH_SHA512},
+    {{9, "\140\206\110\1\145\3\4\3\47", BSL_OID_GLOBAL}, "HASH-SLH-DSA-SHA2-256S-WITH-SHA512",
+        BSL_CID_HASH_SLH_DSA_SHA2_256S_WITH_SHA512},
+    {{9, "\140\206\110\1\145\3\4\3\50", BSL_OID_GLOBAL}, "HASH-SLH-DSA-SHA2-256F-WITH-SHA512",
+        BSL_CID_HASH_SLH_DSA_SHA2_256F_WITH_SHA512},
+    {{9, "\140\206\110\1\145\3\4\3\51", BSL_OID_GLOBAL}, "HASH-SLH-DSA-SHAKE-128S-WITH-SHAKE128",
+        BSL_CID_HASH_SLH_DSA_SHAKE_128S_WITH_SHAKE128},
+    {{9, "\140\206\110\1\145\3\4\3\52", BSL_OID_GLOBAL}, "HASH-SLH-DSA-SHAKE-128F-WITH-SHAKE128",
+        BSL_CID_HASH_SLH_DSA_SHAKE_128F_WITH_SHAKE128},
+    {{9, "\140\206\110\1\145\3\4\3\53", BSL_OID_GLOBAL}, "HASH-SLH-DSA-SHAKE-192S-WITH-SHAKE256",
+        BSL_CID_HASH_SLH_DSA_SHAKE_192S_WITH_SHAKE256},
+    {{9, "\140\206\110\1\145\3\4\3\54", BSL_OID_GLOBAL}, "HASH-SLH-DSA-SHAKE-192F-WITH-SHAKE256",
+        BSL_CID_HASH_SLH_DSA_SHAKE_192F_WITH_SHAKE256},
+    {{9, "\140\206\110\1\145\3\4\3\55", BSL_OID_GLOBAL}, "HASH-SLH-DSA-SHAKE-256S-WITH-SHAKE256",
+        BSL_CID_HASH_SLH_DSA_SHAKE_256S_WITH_SHAKE256},
+    {{9, "\140\206\110\1\145\3\4\3\56", BSL_OID_GLOBAL}, "HASH-SLH-DSA-SHAKE-256F-WITH-SHAKE256",
+        BSL_CID_HASH_SLH_DSA_SHAKE_256F_WITH_SHAKE256},
     {{8, "\53\6\1\5\5\7\6\42", BSL_OID_GLOBAL}, "XMSS", BSL_CID_XMSS}, // XMSS
     {{8, "\53\6\1\5\5\7\6\45", BSL_OID_GLOBAL}, "MLDSA44-RSA2048-PSS-SHA256", BSL_CID_MLDSA44_RSA2048_PSS_SHA256},
     {{8, "\53\6\1\5\5\7\6\46", BSL_OID_GLOBAL}, "MLDSA44-RSA2048-PKCS15-SHA256", BSL_CID_MLDSA44_RSA2048_PKCS15_SHA256},
@@ -211,10 +235,12 @@ BslOidInfo g_oidTable[] = {
     {{8, "\53\6\1\5\5\7\6\54", BSL_OID_GLOBAL}, "MLDSA65-RSA4096-PKCS15-SHA512", BSL_CID_MLDSA65_RSA4096_PKCS15_SHA512},
     {{8, "\53\6\1\5\5\7\6\55", BSL_OID_GLOBAL}, "MLDSA65-ECDSA-P256-SHA512", BSL_CID_MLDSA65_ECDSA_P256_SHA512},
     {{8, "\53\6\1\5\5\7\6\56", BSL_OID_GLOBAL}, "MLDSA65-ECDSA-P384-SHA512", BSL_CID_MLDSA65_ECDSA_P384_SHA512},
-    {{8, "\53\6\1\5\5\7\6\57", BSL_OID_GLOBAL},"MLDSA65-ECDSA-brainpoolP256r1-SHA512",BSL_CID_MLDSA65_ECDSA_BRAINPOOLP256R1_SHA512},
+    {{8, "\53\6\1\5\5\7\6\57", BSL_OID_GLOBAL}, "MLDSA65-ECDSA-brainpoolP256r1-SHA512",
+        BSL_CID_MLDSA65_ECDSA_BRAINPOOLP256R1_SHA512},
     {{8, "\53\6\1\5\5\7\6\60", BSL_OID_GLOBAL}, "MLDSA65-Ed25519-SHA512", BSL_CID_MLDSA65_ED25519_SHA512},
     {{8, "\53\6\1\5\5\7\6\61", BSL_OID_GLOBAL}, "MLDSA87-ECDSA-P384-SHA512", BSL_CID_MLDSA87_ECDSA_P384_SHA512},
-    {{8, "\53\6\1\5\5\7\6\62", BSL_OID_GLOBAL},"MLDSA87-ECDSA-brainpoolP384r1-SHA512",BSL_CID_MLDSA87_ECDSA_BRAINPOOLP384R1_SHA512},
+    {{8, "\53\6\1\5\5\7\6\62", BSL_OID_GLOBAL}, "MLDSA87-ECDSA-brainpoolP384r1-SHA512",
+        BSL_CID_MLDSA87_ECDSA_BRAINPOOLP384R1_SHA512},
     {{8, "\53\6\1\5\5\7\6\63", BSL_OID_GLOBAL}, "MLDSA87-Ed448-SHAKE256", BSL_CID_MLDSA87_ED448_SHAKE256},
     {{8, "\53\6\1\5\5\7\6\64", BSL_OID_GLOBAL}, "MLDSA87-RSA3072-PSS-SHA512", BSL_CID_MLDSA87_RSA3072_PSS_SHA512},
     {{8, "\53\6\1\5\5\7\6\65", BSL_OID_GLOBAL}, "MLDSA87-RSA4096-PSS-SHA512", BSL_CID_MLDSA87_RSA4096_PSS_SHA512},
@@ -225,7 +251,7 @@ BslOidInfo g_oidTable[] = {
     {{8, "\53\6\1\5\5\7\10\7", BSL_OID_GLOBAL}, "id-on-dnsSRV", BSL_CID_ON_DNSSRV},
 };
 
-uint32_t g_tableSize = (uint32_t)sizeof(g_oidTable)/sizeof(g_oidTable[0]);
+uint32_t g_tableSize = (uint32_t)sizeof(g_oidTable) / sizeof(g_oidTable[0]);
 
 #ifdef HITLS_BSL_OBJ_CUSTOM
 static void FreeBslOidInfo(void *data)
@@ -307,11 +333,10 @@ BslCid BSL_OBJ_GetCidFromOidBuff(const uint8_t *oid, uint32_t len)
     /* Since g_oidHashTable is keyed by cid, we need to iterate through all entries */
     BSL_HASH_Iterator iter = BSL_HASH_IterBegin(g_oidHashTable);
     BSL_HASH_Iterator end = BSL_HASH_IterEnd(g_oidHashTable);
-    
+
     while (iter != end) {
         BslOidInfo *oidInfo = (BslOidInfo *)BSL_HASH_IterValue(g_oidHashTable, iter);
-        if (oidInfo != NULL && oidInfo->strOid.octetLen == len &&
-            memcmp(oidInfo->strOid.octs, oid, len) == 0) {
+        if (oidInfo != NULL && oidInfo->strOid.octetLen == len && memcmp(oidInfo->strOid.octs, oid, len) == 0) {
             cid = oidInfo->cid;
             break;
         }
@@ -408,8 +433,7 @@ const char *BSL_OBJ_GetOidNameFromOidBuff(const uint8_t *oid, uint32_t len)
 
     while (iter != end) {
         BslOidInfo *oidInfo = (BslOidInfo *)BSL_HASH_IterValue(g_oidHashTable, iter);
-        if (oidInfo != NULL && oidInfo->strOid.octetLen == len &&
-            memcmp(oidInfo->strOid.octs, oid, len) == 0) {
+        if (oidInfo != NULL && oidInfo->strOid.octetLen == len && memcmp(oidInfo->strOid.octs, oid, len) == 0) {
             oidName = oidInfo->oidName;
             break;
         }
@@ -497,7 +521,6 @@ const char *BSL_OBJ_GetOidNameFromCID(BslCid ulCID)
 }
 
 #endif // HITLS_PKI_X509 || HITLS_PKI_INFO || HITLS_CRYPTO_KEY_INFO
-
 
 #ifdef HITLS_BSL_OBJ_CUSTOM
 static int32_t BslOidStringCopy(const BslOidString *srcOidStr, BslOidString *oidString)
@@ -596,11 +619,7 @@ int32_t BSL_OBJ_Create(char *octs, uint32_t octetLen, const char *oidName, int32
     if (IsOidCidInStaticTable(cid)) {
         return BSL_SUCCESS;
     }
-    const BslOidString oid = {
-        .octs = octs,
-        .octetLen = octetLen,
-        .flags = 6
-    };
+    const BslOidString oid = {.octs = octs, .octetLen = octetLen, .flags = 6};
 
     int32_t ret = BSL_SAL_ThreadRunOnce(&g_oidHashInitOnce, InitOidHashTableOnce);
     if (ret != BSL_SUCCESS) {
@@ -671,8 +690,7 @@ char *BSL_OBJ_GetOidNumericString(const uint8_t *oid, uint32_t len)
     }
 
     char buffer[256] = {0};
-    (void)snprintf(buffer, sizeof(buffer), "%d.%d", oid[0] / BSL_OBJ_ARCS_Y_MAX,
-        oid[0] % BSL_OBJ_ARCS_Y_MAX);
+    (void)snprintf(buffer, sizeof(buffer), "%d.%d", oid[0] / BSL_OBJ_ARCS_Y_MAX, oid[0] % BSL_OBJ_ARCS_Y_MAX);
 
     uint64_t value = 0;
     uint32_t currentPos = strlen(buffer);
@@ -718,7 +736,7 @@ char *BSL_OBJ_GetOidNumericString(const uint8_t *oid, uint32_t len)
 static void BslEncodeOidPart(uint64_t num, uint8_t *output, uint32_t *offset)
 {
     if (num < 0x80) {
-        output[*offset] = num &0x7F;
+        output[*offset] = num & 0x7F;
         (*offset)++;
     } else {
         uint8_t temp[10]; // The data of uint64_t requires up to 10 bytes when encode in ASN1.

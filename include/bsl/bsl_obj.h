@@ -666,7 +666,7 @@ typedef enum {
 
     BSL_CID_HKDF_SHA256 = 2400,
     BSL_CID_HKDF_SHA512 = 2401,
-    
+
     BSL_CID_MCELIECE_6688128 = 2402,
     BSL_CID_MCELIECE_6688128_F = 2403,
     BSL_CID_MCELIECE_6688128_PC = 2404,
@@ -696,12 +696,24 @@ typedef enum {
     BSL_CID_HSS_SHA256_L2_H20_H20_W4 = 2427,
     BSL_CID_HSS_SHA256_L3_H10_H10_H10_W4 = 2428,
     /* At least 100 CIDs need to be reserved for HSS. */
+    BSL_CID_HASH_SLH_DSA_SHA2_128S_WITH_SHA256 = 2514,
+    BSL_CID_HASH_SLH_DSA_SHA2_128F_WITH_SHA256 = 2515,
+    BSL_CID_HASH_SLH_DSA_SHA2_192S_WITH_SHA512 = 2516,
+    BSL_CID_HASH_SLH_DSA_SHA2_192F_WITH_SHA512 = 2517,
+    BSL_CID_HASH_SLH_DSA_SHA2_256S_WITH_SHA512 = 2518,
+    BSL_CID_HASH_SLH_DSA_SHA2_256F_WITH_SHA512 = 2519,
+    BSL_CID_HASH_SLH_DSA_SHAKE_128S_WITH_SHAKE128 = 2520,
+    BSL_CID_HASH_SLH_DSA_SHAKE_128F_WITH_SHAKE128 = 2521,
+    BSL_CID_HASH_SLH_DSA_SHAKE_192S_WITH_SHAKE256 = 2522,
+    BSL_CID_HASH_SLH_DSA_SHAKE_192F_WITH_SHAKE256 = 2523,
+    BSL_CID_HASH_SLH_DSA_SHAKE_256S_WITH_SHAKE256 = 2524,
+    BSL_CID_HASH_SLH_DSA_SHAKE_256F_WITH_SHAKE256 = 2525,
 
     BSL_CID_SM9 = 5201,
     BSL_CID_ECC_SM9 = 5202,
     BSL_CID_PAILLIER = 5203,
     BSL_CID_ELGAMAL = 5204,
-    BSL_CID_SLH_DSA = 5205,         /**< Identifies SLH-DSA algorithm */
+    BSL_CID_SLH_DSA = 5205,          /**< Identifies SLH-DSA algorithm */
     BSL_CID_RSASSAPSAE = 5206,       /**< Identifies RSASSAPSAE algorithm */
     BSL_CID_XMSS = 5207,
     BSL_CID_COMPOSITE = 5208,
@@ -758,7 +770,6 @@ typedef struct {
  */
 int32_t BSL_OBJ_Create(char *octs, uint32_t octetLen, const char *oidName, int32_t cid);
 
-
 /**
  * @ingroup bsl_obj
  * @brief Create a signature algorithm ID mapping
@@ -784,7 +795,6 @@ BslCid BSL_OBJ_GetCID(const BslOidString *oidStr);
  * @return The object identifier string
  */
 BslOidString *BSL_OBJ_GetOID(BslCid ulCID);
-
 
 /**
  * @ingroup bsl_obj

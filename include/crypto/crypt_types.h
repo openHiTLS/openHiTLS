@@ -653,11 +653,10 @@ typedef enum {
     CRYPT_CTRL_GET_PUBKEY_LEN,           /**< Get the encapsulation key length */
     CRYPT_CTRL_GET_PRVKEY_LEN,           /**< Get the decapsulation key length */
     CRYPT_CTRL_GET_CIPHERTEXT_LEN,       /**< Get the ciphertext length */
-    CRYPT_CTRL_SET_DETERMINISTIC_FLAG,   /**< Whether to use deterministic signatures.
-                                              Only supports switching from non-deterministic to deterministic.
-                                              Switching back to non-deterministic is not supported. */
+    CRYPT_CTRL_SET_DETERMINISTIC_FLAG,   /**< Whether to use deterministic signatures. The mode can be switched
+                                              in both directions when supported by the algorithm. */
     CRYPT_CTRL_SET_CTX_INFO,             /**< Set the context string. */
-    CRYPT_CTRL_SET_PREHASH_MODE,         /**< Change the SLH-DSA or ML-DSA mode to prehash version or pure version. */
+    CRYPT_CTRL_SET_PREHASH_MODE,         /**< Change the ML-DSA mode to prehash version or pure version. */
     CRYPT_CTRL_GEN_PARA,                 /**< Asymmetric cipher generate para. For DSA, the maximum seed length is 256 bytes. */
     CRYPT_CTRL_SET_GEN_FLAG,             /**< Set SP800-56Ar3 generate private key flag. */
     CRYPT_CTRL_GET_PUB_KEY_BITS,         /**< Get the number of key bits. */
@@ -731,12 +730,9 @@ typedef enum {
 
     // slh-dsa
     CRYPT_CTRL_GET_SLH_DSA_KEY_LEN = 600,     /**< Get the SLH-DSA key length. */
-    CRYPT_CTRL_SET_SLH_DSA_ADDRAND, /**< Set the SLH-DSA additional random bytes. */
     // mldsa
     CRYPT_CTRL_SET_MLDSA_MUMSG_FLAG = 701,   /**< Whether to calculate message representative */
     CRYPT_CTRL_GET_MLDSA_SEED,               /**< Get MLDSA private key seed */
-    CRYPT_CTRL_SET_MLDSA_PRVKEY_FORMAT,      /**< Set MLDSA private key encode format */
-    CRYPT_CTRL_GET_MLDSA_PRVKEY_FORMAT,      /**< Get MLDSA private key encode format*/
 
     // mlkem
     CRYPT_CTRL_GET_MLKEM_SEED = 750,         /**< Get MLKEM private key seed (d||z) */
@@ -756,7 +752,6 @@ typedef enum {
     // sm9
     CRYPT_CTRL_SET_SM9_USER_ID = 900,   /**< SM9 set the user ID. */
 } CRYPT_PkeyCtrl;
-
 
 typedef enum {
     CRYPT_CTRL_SET_GM_LEVEL,    /**<  Set the authentication level of gm drbg */
@@ -882,11 +877,9 @@ typedef enum {
 } CRYPT_ALGO_TYPE;
 
 typedef enum {
-    CRYPT_ALGO_MLDSA_PRIV_FORMAT_NOT_SET = 0,
-    CRYPT_ALGO_MLDSA_PRIV_FORMAT_BOTH,
+    CRYPT_ALGO_MLDSA_PRIV_FORMAT_BOTH = 0,
     CRYPT_ALGO_MLDSA_PRIV_FORMAT_PRIV_ONLY,
     CRYPT_ALGO_MLDSA_PRIV_FORMAT_SEED_ONLY,
-    CRYPT_ALGO_MLDSA_PRIV_FORMAT_END,
 } CRYPT_ALGO_MLDSA_PRIV_KEY_FORMAT_TYPE;
 
 typedef enum {

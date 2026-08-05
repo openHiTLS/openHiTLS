@@ -19,7 +19,7 @@
 #include "hitls_build.h"
 #if defined(HITLS_CRYPTO_XMSS) || defined(HITLS_CRYPTO_XMSSMT)
 
-#include "hbs_wots.h"
+#include "hbs_hash_if.h"
 #include "xmss_local.h"
 #include "crypt_types.h"
 #ifdef __cplusplus
@@ -37,12 +37,6 @@ extern "C" {
  * @return CRYPT_SUCCESS on success, error code otherwise
  */
 int32_t XmssInitHashFuncs(XmssCtxCommon *ctx);
-
-/*
- * Multi-message hash utility (used internally by XMSS/SLH-DSA hash modules)
- */
-int32_t CalcMultiMsgHash(CRYPT_MD_AlgId mdId, const CRYPT_ConstData *hashData, uint32_t hashDataLen, uint8_t *out,
-                         uint32_t outLen);
 
 #ifdef __cplusplus
 }

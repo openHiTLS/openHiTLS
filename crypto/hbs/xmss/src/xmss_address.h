@@ -20,12 +20,11 @@
 #if defined(HITLS_CRYPTO_XMSS) || defined(HITLS_CRYPTO_XMSSMT)
 
 #include <stdint.h>
+#include "hbs_hash_if.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cplusplus */
-
-typedef struct XmssFamilyAdrsOps XmssFamilyAdrsOps;
 
 /*
  * XMSS Address Structure (32 bytes, RFC 8391 standard)
@@ -82,18 +81,18 @@ typedef union {
  * index: 0 for key, 1 for first bitmask, 2 for second bitmask
  *
  * This is the only direct function exposed because it's used internally
- * by xmss_hash.c which doesn't have access to XmssFamilyAdrsOps.
+ * by xmss_hash.c which doesn't have access to HbsAdrsOps.
  */
 void XmssAdrs_SetKeyAndMask(void *adrs, uint32_t index);
 
 /*
- * Initialize XmssFamilyAdrsOps with XMSS address operations
+ * Initialize HbsAdrsOps with XMSS address operations
  *
  * @param ops [out] Generic address operations table to initialize
  *
  * @return CRYPT_SUCCESS on success
  */
-int32_t XmssAdrsOps_Init(XmssFamilyAdrsOps *ops);
+int32_t XmssAdrsOps_Init(HbsAdrsOps *ops);
 
 #ifdef __cplusplus
 }

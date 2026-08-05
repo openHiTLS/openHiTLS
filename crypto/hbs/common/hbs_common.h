@@ -17,20 +17,15 @@
 #define HBS_COMMON_H
 
 #include "hitls_build.h"
-#if defined(HITLS_CRYPTO_XMSS) || defined(HITLS_CRYPTO_XMSSMT) || defined(HITLS_CRYPTO_SLH_DSA) || \
-    defined(HITLS_CRYPTO_HSS_LMS)
+#if defined(HITLS_CRYPTO_XMSS) || defined(HITLS_CRYPTO_XMSSMT) || defined(HITLS_CRYPTO_SLH_DSA)
 
 #include <stdint.h>
 #include <stddef.h>
+#include "hbs_hash_if.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-/* Forward declarations; full definitions in hbs_wots.h and lms_hash.h. */
-struct XmssFamilyHashFuncs;
-struct LmsFamilyHashFuncs;
-struct XmssFamilyAdrsOps;
 
 /**
  * @ingroup hbs
@@ -39,34 +34,26 @@ struct XmssFamilyAdrsOps;
 typedef enum {
     HBS_ALGO_XMSS = 0, /**< XMSS / XMSSMT */
     HBS_ALGO_SLH_DSA = 1, /**< SLH-DSA (Stateless Hash-Based DSA) */
-    HBS_ALGO_LMS = 2, /**< LMS (Leighton-Micali Signature) */
-    HBS_ALGO_HSS = 3, /**< HSS (Hierarchical Signature System) */
 } HbsAlgoType;
 
 /**
  * @ingroup hbs
- * @brief Unified HBS tree context shared by all four HBS algorithms
- *
- * XMSS/SLH-DSA use hashFuncs.xmss and adrsOps.
- * LMS/HSS use hashFuncs.lms; adrsOps is NULL (LMS uses originalCtx for address ops).
+ * @brief Tree context shared by XMSS, XMSSMT and SLH-DSA
  */
 typedef struct {
     uint32_t n; /**< Hash output length in bytes */
     uint32_t hp; /**< Tree height per layer */
     uint32_t d; /**< Number of layers */
-    uint32_t otsLen; /**< OTS chain length (WOTS+ len or LM-OTS p) */
+    uint32_t otsLen; /**< WOTS+ chain length */
 
-    const uint8_t *pubSeed; /**< Public seed (XMSS/SLH-DSA) or identifier I (LMS) */
+    const uint8_t *pubSeed; /**< Public seed */
     const uint8_t *skSeed; /**< Private seed */
     const uint8_t *root; /**< Tree root, used during verification */
 
-    union {
-        const struct XmssFamilyHashFuncs *xmss; /**< XMSS/SLH-DSA hash function table */
-        const struct LmsFamilyHashFuncs *lms; /**< LMS/HSS hash function table */
-    } hashFuncs; /**< Hash function table, select member according to algoType */
+    const HbsHashFuncs *hashFuncs; /**< XMSS/SLH-DSA hash function table */
 
-    const struct XmssFamilyAdrsOps *adrsOps; /**< Address operations (XMSS/SLH-DSA only, NULL for LMS) */
-    const void *originalCtx; /**< Original algorithm context (LMS/HSS use this for LmsFamilyAdrsOps) */
+    const HbsAdrsOps *adrsOps; /**< Address operations */
+    const void *originalCtx; /**< Original XMSS/SLH-DSA context */
     HbsAlgoType algoType; /**< Algorithm type, used to select correct paths */
 } HbsTreeCtx;
 
@@ -82,5 +69,5 @@ typedef struct {
 }
 #endif
 
-#endif /* HITLS_CRYPTO_XMSS || HITLS_CRYPTO_XMSSMT || HITLS_CRYPTO_SLH_DSA || HITLS_CRYPTO_HSS_LMS */
+#endif /* HITLS_CRYPTO_XMSS || HITLS_CRYPTO_XMSSMT || HITLS_CRYPTO_SLH_DSA */
 #endif /* HBS_COMMON_H */

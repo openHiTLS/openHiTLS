@@ -23,16 +23,17 @@
 
 void HbsTreeCtx_InitFromSlhDsa(HbsTreeCtx *treeCtx, const CryptSlhDsaCtx *ctx)
 {
-    treeCtx->n = ctx->para.n;
-    treeCtx->hp = ctx->para.hp;
-    treeCtx->d = ctx->para.d;
-    treeCtx->otsLen = 2 * ctx->para.n + 3;
+    const SlhDsaMathParams *math = ctx->profile->math;
+    treeCtx->n = math->n;
+    treeCtx->hp = math->hp;
+    treeCtx->d = math->d;
+    treeCtx->otsLen = 2 * math->n + 3;
 
     treeCtx->pubSeed = ctx->prvKey.pub.seed;
     treeCtx->skSeed = ctx->prvKey.seed;
     treeCtx->root = ctx->prvKey.pub.root;
 
-    treeCtx->hashFuncs.xmss = ctx->hashFuncs;
+    treeCtx->hashFuncs = ctx->hashFuncs;
     treeCtx->adrsOps = &ctx->adrsOps;
     treeCtx->originalCtx = (void *)(uintptr_t)ctx;
     treeCtx->algoType = HBS_ALGO_SLH_DSA;

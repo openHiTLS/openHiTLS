@@ -29,6 +29,7 @@
 #include "crypt_util_rand.h"
 #include "crypt_bn.h"
 #include "eal_pkey_local.h"
+#include "hbs_hash_if.h"
 #include "hbs_wots.h"
 #include "stub_utils.h"
 #include "test.h"
@@ -42,7 +43,98 @@ static int32_t MockSkDeriveFail(const void *ctx, const void *adrs, uint8_t *out)
     return CRYPT_INVALID_ARG;
 }
 
+static int32_t MockSkDeriveSuccess(const void *ctx, const void *adrs, uint8_t *out)
+{
+    (void)ctx;
+    (void)adrs;
+    (void)memset(out, 0x5A, 32);
+    return CRYPT_SUCCESS;
+}
+
+static int32_t MockHashCopy(const void *ctx, const void *adrs, const uint8_t *msg, uint32_t msgLen, uint8_t *out)
+{
+    (void)ctx;
+    (void)adrs;
+    (void)memcpy(out, msg, msgLen < 32 ? msgLen : 32);
+    return CRYPT_SUCCESS;
+}
+
+static int32_t MockMsgHash(const void *ctx, const uint8_t *r, const uint8_t *msg, uint32_t msgLen, const uint8_t *idx,
+    uint8_t *out)
+{
+    (void)ctx;
+    (void)r;
+    (void)idx;
+    (void)memcpy(out, msg, msgLen < 32 ? msgLen : 32);
+    return CRYPT_SUCCESS;
+}
+
+static int32_t MockSigRandGen(const void *ctx, const uint8_t *key, const uint8_t *msg, uint32_t msgLen, uint8_t *out)
+{
+    (void)ctx;
+    (void)key;
+    (void)memcpy(out, msg, msgLen < 32 ? msgLen : 32);
+    return CRYPT_SUCCESS;
+}
+
+static int32_t MockChain(const uint8_t *x, uint32_t xLen, uint32_t start, uint32_t steps, const uint8_t *pubSeed,
+    void *adrs, const void *ctx, uint8_t *output)
+{
+    (void)start;
+    (void)steps;
+    (void)pubSeed;
+    (void)adrs;
+    (void)ctx;
+    (void)memcpy(output, x, xLen);
+    return CRYPT_SUCCESS;
+}
+
 static void MockSetChainAddr(void *adrs, uint32_t val) { (void)adrs; (void)val; }
+static void MockSetLayerAddr(void *adrs, uint32_t val)
+{
+    (void)adrs;
+    (void)val;
+}
+static void MockSetTreeAddr(void *adrs, uint64_t val)
+{
+    (void)adrs;
+    (void)val;
+}
+static void MockSetType(void *adrs, uint32_t val)
+{
+    (void)adrs;
+    (void)val;
+}
+static void MockSetKeyPairAddr(void *adrs, uint32_t val)
+{
+    (void)adrs;
+    (void)val;
+}
+static void MockSetTreeHeight(void *adrs, uint32_t val)
+{
+    (void)adrs;
+    (void)val;
+}
+static void MockSetHashAddr(void *adrs, uint32_t val)
+{
+    (void)adrs;
+    (void)val;
+}
+static void MockSetTreeIndex(void *adrs, uint32_t val)
+{
+    (void)adrs;
+    (void)val;
+}
+static uint32_t MockGetTreeIndex(const void *adrs)
+{
+    (void)adrs;
+    return 0;
+}
+static void MockCopyKeyPairAddr(void *dest, const void *src)
+{
+    (void)dest;
+    (void)src;
+}
 static uint32_t MockGetAdrsLen(void) { return 32; }
 
 uint32_t g_stubRandCounter = 0;
@@ -785,6 +877,83 @@ EXIT:
 }
 /* END_CASE */
 
+/* BEGIN_CASE */
+void SDV_CRYPTO_HBS_HASH_IF_TC001(void)
+{
+    TestMemInit();
+
+    HbsHashFuncs hashFuncs = {
+        .skDerive = MockSkDeriveSuccess,
+        .chainHash = MockHashCopy,
+        .nodeHash = MockHashCopy,
+        .msgHash = MockMsgHash,
+        .pkCompress = MockHashCopy,
+        .sigRandGen = MockSigRandGen,
+        .chain = MockChain,
+    };
+    HbsAdrsOps adrsOps = {
+        .setLayerAddr = MockSetLayerAddr,
+        .setTreeAddr = MockSetTreeAddr,
+        .setType = MockSetType,
+        .setKeyPairAddr = MockSetKeyPairAddr,
+        .setChainAddr = MockSetChainAddr,
+        .setTreeHeight = MockSetTreeHeight,
+        .setHashAddr = MockSetHashAddr,
+        .setTreeIndex = MockSetTreeIndex,
+        .getTreeIndex = MockGetTreeIndex,
+        .copyKeyPairAddr = MockCopyKeyPairAddr,
+        .getAdrsLen = MockGetAdrsLen,
+    };
+    ASSERT_EQ(sizeof(hashFuncs), 7 * sizeof(void *));
+    ASSERT_EQ(sizeof(adrsOps), 11 * sizeof(void *));
+    ASSERT_TRUE(hashFuncs.skDerive != NULL && hashFuncs.chain != NULL);
+    ASSERT_TRUE(adrsOps.setLayerAddr != NULL && adrsOps.getAdrsLen != NULL);
+
+    const uint8_t msg[] = {'a', 'b', 'c'};
+    const CRYPT_ConstData hashData[] = {{msg, sizeof(msg)}};
+    const uint8_t expected[32] = {
+        0xBA,
+        0x78,
+        0x16,
+        0xBF,
+        0x8F,
+        0x01,
+        0xCF,
+        0xEA,
+        0x41,
+        0x41,
+        0x40,
+        0xDE,
+        0x5D,
+        0xAE,
+        0x22,
+        0x23,
+        0xB0,
+        0x03,
+        0x61,
+        0xA3,
+        0x96,
+        0x17,
+        0x7A,
+        0x9C,
+        0xB4,
+        0x10,
+        0xFF,
+        0x61,
+        0xF2,
+        0x00,
+        0x15,
+        0xAD,
+    };
+    uint8_t digest[sizeof(expected)] = {0};
+    ASSERT_EQ(CalcMultiMsgHash(CRYPT_MD_SHA256, hashData, 1, digest, sizeof(digest)), CRYPT_SUCCESS);
+    ASSERT_EQ(memcmp(digest, expected, sizeof(expected)), 0);
+
+EXIT:
+    return;
+}
+/* END_CASE */
+
 /* @
 * @test  SDV_CRYPTO_XMSS_WOTS_SIGN_ERR_CLEAN_TC001
 * @spec  -
@@ -802,11 +971,11 @@ void SDV_CRYPTO_XMSS_WOTS_SIGN_ERR_CLEAN_TC001(void)
 {
     TestMemInit();
 
-    const XmssFamilyAdrsOps mockAdrsOps = {
+    const HbsAdrsOps mockAdrsOps = {
         .setChainAddr = MockSetChainAddr,
         .getAdrsLen = MockGetAdrsLen,
     };
-    const XmssFamilyHashFuncs mockHashFuncs = {
+    const HbsHashFuncs mockHashFuncs = {
         .skDerive = MockSkDeriveFail,
     };
     uint8_t pubSeed[32] = {0};

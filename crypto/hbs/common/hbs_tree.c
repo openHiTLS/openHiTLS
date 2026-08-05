@@ -19,6 +19,7 @@
 #include <stdint.h>
 #include <stddef.h>
 #include <string.h>
+#include "bsl_bytes.h"
 #include "crypt_errno.h"
 #include "bsl_err_internal.h"
 #include "hbs_address.h"
@@ -33,7 +34,7 @@ static void BuildWotsCtxFromTreeCtx(HbsWotsCtx *wotsCtx, const HbsTreeCtx *treeC
     wotsCtx->coreCtx = treeCtx->originalCtx;
     wotsCtx->n = treeCtx->n;
     wotsCtx->otsLen = treeCtx->otsLen;
-    wotsCtx->hashFuncs = treeCtx->hashFuncs.xmss;
+    wotsCtx->hashFuncs = treeCtx->hashFuncs;
     wotsCtx->adrsOps = treeCtx->adrsOps;
     wotsCtx->pubSeed = treeCtx->pubSeed;
     wotsCtx->skSeed = treeCtx->skSeed;
@@ -73,7 +74,7 @@ static int32_t HashInternalNode(uint8_t *node, uint32_t idx, uint32_t height, vo
     memcpy(tmp, leftNode, n);
     memcpy(tmp + n, rightNode, n);
 
-    return ctx->hashFuncs.xmss->nodeHash(ctx->originalCtx, treeAdrs, tmp, 2 * n, node);
+    return ctx->hashFuncs->nodeHash(ctx->originalCtx, treeAdrs, tmp, 2 * n, node);
 }
 
 /* Store the node into the authentication path if it is the sibling on the path to leafIdx. */
@@ -131,7 +132,7 @@ static int32_t ComputeNodeRecursive(uint8_t *node, uint32_t idx, uint32_t height
 int32_t HbsTree_ComputeNode(uint8_t *node, uint32_t idx, uint32_t height, void *adrs, const HbsTreeCtx *ctx,
                             uint8_t *authPath, uint32_t leafIdx)
 {
-    if (ctx->hashFuncs.xmss == NULL || ctx->hashFuncs.xmss->nodeHash == NULL) {
+    if (ctx->hashFuncs == NULL || ctx->hashFuncs->nodeHash == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
@@ -237,7 +238,7 @@ int32_t HbsTree_Verify(const uint8_t *msg, uint32_t msgLen, const uint8_t *sig, 
         }
 
         uint8_t node1[HBS_MAX_MDSIZE] = {0};
-        ret = ctx->hashFuncs.xmss->nodeHash(ctx->originalCtx, adrs, tmp, 2 * n, node1);
+        ret = ctx->hashFuncs->nodeHash(ctx->originalCtx, adrs, tmp, 2 * n, node1);
         if (ret != CRYPT_SUCCESS) {
             BSL_ERR_PUSH_ERROR(ret);
             return ret;
@@ -295,11 +296,8 @@ int32_t HbsHyperTree_Verify(const uint8_t *msg, uint32_t msgLen, const uint8_t *
         sigPtr += layerSigLen;
     }
 
-    uint8_t diff = 0;
-    for (uint32_t i = 0; i < n; i++) {
-        diff |= node[i] ^ root[i];
-    }
-    if (diff != 0) {
+    uint32_t cmpResult = ConstTimeMemcmp(node, root, n);
+    if (cmpResult == 0) {
         int32_t err =
             HBS_IS_XMSS(ctx) ? CRYPT_XMSS_ERR_MERKLETREE_ROOT_MISMATCH : CRYPT_SLHDSA_ERR_HYPERTREE_VERIFY_FAIL;
         BSL_ERR_PUSH_ERROR(err);

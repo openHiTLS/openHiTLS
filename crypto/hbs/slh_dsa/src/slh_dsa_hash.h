@@ -23,21 +23,14 @@
 extern "C" {
 #endif /* __cplusplus */
 
-/*
- * Initialize SLH-DSA hash functions for a given algorithm
- *
- * This function sets up the hash function pointers in the SLH-DSA context
- * based on the algorithm parameters.
- *
- * @param ctx   SLH-DSA context (will be initialized with hash function pointer)
- */
-void SlhDsaInitHashFuncs(CryptSlhDsaCtx *ctx);
+int32_t SlhDsaResolveMathMethods(SlhDsaHashFamily hashFamily, const HbsHashFuncs **hashFuncs, HbsAdrsOps *adrsOps);
 
 /*
  * SLH-DSA-SHA2: PreHash pkseed and padding then save the mdctx
- * @param ctx   SLH-DSA context
+ * @param ctx       SLH-DSA context
+ * @param pubSeed   public seed used to initialize the md ctx
  */
-int32_t InitMdCtx(CryptSlhDsaCtx *ctx);
+int32_t InitMdCtx(CryptSlhDsaCtx *ctx, const uint8_t *pubSeed);
 
 /*
  * SLH-DSA-SHA2: dup the md ctx

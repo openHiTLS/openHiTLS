@@ -26,7 +26,7 @@
 #include "xmss_hash.h"
 #include "xmss_local.h"
 #include "xmss_address.h"
-#include "hbs_wots.h"
+#include "hbs_hash_if.h"
 
 /* Padding types for domain separation */
 #define PADDING_F          0
@@ -34,25 +34,6 @@
 #define PADDING_HASH       2
 #define PADDING_PRF        3
 #define PADDING_PRF_KEYGEN 4
-
-int32_t CalcMultiMsgHash(CRYPT_MD_AlgId mdId, const CRYPT_ConstData *hashData, uint32_t hashDataLen, uint8_t *out,
-                         uint32_t outLen)
-{
-    /* tmp is the hash output buffer; skDerive writes WOTS+ private key elements
-     * into tmp, sigRandGen writes signing randomness into tmp — cleanse to
-     * prevent secret residue on the stack before return. */
-    uint8_t tmp[XMSS_MAX_MDSIZE] = {0};
-    uint32_t tmpLen = sizeof(tmp);
-    int32_t ret = CRYPT_CalcHash(NULL, EAL_MdFindDefaultMethod(mdId), hashData, hashDataLen, tmp, &tmpLen);
-    if (ret != CRYPT_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
-        BSL_SAL_CleanseData(tmp, sizeof(tmp));
-        return ret;
-    }
-    memcpy(out, tmp, outLen);
-    BSL_SAL_CleanseData(tmp, sizeof(tmp));
-    return CRYPT_SUCCESS;
-}
 
 /*
  * Generic hash function implementations
@@ -62,7 +43,7 @@ int32_t CalcMultiMsgHash(CRYPT_MD_AlgId mdId, const CRYPT_ConstData *hashData, u
 
 /* skDerive - Pseudorandom Function for key generation (PRF_keygen)
  * Derives a single WOTS+ private key element from skSeed and address structure.
- * Corresponds to XmssFamilyHashFuncs.skDerive (formerly: prf / XPrfGeneric) */
+ * Corresponds to HbsHashFuncs.skDerive (formerly: prf / XPrfGeneric) */
 static int32_t XmssSkDerive(const void *vctx, const void *vadrs, uint8_t *out)
 {
     const XmssCtxCommon *ctx = (const XmssCtxCommon *)vctx;
@@ -80,7 +61,7 @@ static int32_t XmssSkDerive(const void *vctx, const void *vadrs, uint8_t *out)
 
 /* sigRandGen - PRF for message randomization (PRF_msg)
  * Generates the per-signature randomness r used in message hashing.
- * Corresponds to XmssFamilyHashFuncs.sigRandGen (formerly: prfmsg / PrfmsgGeneric) */
+ * Corresponds to HbsHashFuncs.sigRandGen (formerly: prfmsg / PrfmsgGeneric) */
 static int32_t XmssSignRandGen(const void *vctx, const uint8_t *idx, const uint8_t *msg, uint32_t msgLen, uint8_t *out)
 {
     (void)msg;
@@ -98,7 +79,7 @@ static int32_t XmssSignRandGen(const void *vctx, const uint8_t *idx, const uint8
 
 /* msgHash - Message hash with randomization (H_msg)
  * Randomized message hash binding message to r, tree root and index.
- * Corresponds to XmssFamilyHashFuncs.msgHash (formerly: hmsg / HmsgGeneric) */
+ * Corresponds to HbsHashFuncs.msgHash (formerly: hmsg / HmsgGeneric) */
 static int32_t XmssMsgHash(const void *vctx, const uint8_t *r, const uint8_t *msg, uint32_t msgLen, const uint8_t *idx,
                            uint8_t *out)
 {
@@ -116,7 +97,7 @@ static int32_t XmssMsgHash(const void *vctx, const uint8_t *r, const uint8_t *ms
 
 /* chainHash - WOTS+ chaining function (F)
  * Single step of WOTS+ chain iteration with bitmask XOR.
- * Corresponds to XmssFamilyHashFuncs.chainHash (formerly: f / XFGeneric) */
+ * Corresponds to HbsHashFuncs.chainHash (formerly: f / XFGeneric) */
 static int32_t XmssChainHash(const void *vctx, const void *vadrs, const uint8_t *msg, uint32_t msgLen, uint8_t *out)
 {
     (void)msgLen;
@@ -163,7 +144,7 @@ static int32_t XmssChainHash(const void *vctx, const void *vadrs, const uint8_t 
 
 /* nodeHash - Tree hash function (RAND_HASH / H)
  * Merges two child nodes into a parent node using bitmask XOR.
- * Corresponds to XmssFamilyHashFuncs.nodeHash (formerly: h / XHGeneric) */
+ * Corresponds to HbsHashFuncs.nodeHash (formerly: h / XHGeneric) */
 static int32_t XmssNodeHash(const void *vctx, const void *vadrs, const uint8_t *msg, uint32_t msgLen, uint8_t *out)
 {
     (void)msgLen;
@@ -219,7 +200,7 @@ static int32_t XmssNodeHash(const void *vctx, const void *vadrs, const uint8_t *
 
 /* pkCompress - L-tree compression (T_l)
  * Compresses a WOTS+ public key (multiple n-byte chain ends) to a single leaf node via L-tree.
- * Corresponds to XmssFamilyHashFuncs.pkCompress (formerly: tl / XTlGeneric) */
+ * Corresponds to HbsHashFuncs.pkCompress (formerly: tl / XTlGeneric) */
 static int32_t XmssPkCompress(const void *vctx, const void *vadrs, const uint8_t *msg, uint32_t msgLen, uint8_t *out)
 {
     XmssAdrs xadrs = *(const XmssAdrs *)vadrs;
@@ -267,7 +248,7 @@ ERR:
 
 /* Static hash function table - shared by all XMSS algorithms.
  * XMSS uses the generic HbsWots_Chain fallback (chain = NULL). */
-static const XmssFamilyHashFuncs g_xmssGenericHashFuncs = {
+static const HbsHashFuncs g_xmssGenericHashFuncs = {
     .skDerive = XmssSkDerive,
     .chainHash = XmssChainHash,
     .nodeHash = XmssNodeHash,

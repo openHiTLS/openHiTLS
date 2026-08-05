@@ -89,7 +89,7 @@ void XmssAdrs_SetKeyAndMask(void *adrs, uint32_t index)
     PUT_UINT32_BE(index, ((XmssAdrs *)adrs)->fields.keyAndMask, 0);
 }
 
-int32_t XmssAdrsOps_Init(XmssFamilyAdrsOps *ops)
+int32_t XmssAdrsOps_Init(HbsAdrsOps *ops)
 {
     if (ops == NULL) {
         return CRYPT_NULL_INPUT;

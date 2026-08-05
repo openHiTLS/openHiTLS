@@ -22,59 +22,11 @@
 #include <stdint.h>
 #include <stddef.h>
 #include "hbs_common.h"
+#include "hbs_hash_if.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-/*
- * XMSS/SLH-DSA Hash Functions Interface
- */
-typedef struct XmssFamilyHashFuncs {
-    /* Private key derivation: PRF(skSeed, adrs) */
-    int32_t (*skDerive)(const void *ctx, const void *adrs, uint8_t *out);
-
-    /* Chain iteration hash: F(pubSeed, adrs, msg) */
-    int32_t (*chainHash)(const void *ctx, const void *adrs, const uint8_t *msg, uint32_t msgLen, uint8_t *out);
-
-    /* Tree node merge hash: H(pubSeed, adrs, left||right) */
-    int32_t (*nodeHash)(const void *ctx, const void *adrs, const uint8_t *in, uint32_t inLen, uint8_t *out);
-
-    /* Message hash: H_msg(r, root, idx, msg) */
-    int32_t (*msgHash)(const void *ctx, const uint8_t *r, const uint8_t *msg, uint32_t msgLen, const uint8_t *idx,
-                       uint8_t *out);
-
-    /* L-tree public key compression: T_l(pubSeed, adrs, wotsPk) */
-    int32_t (*pkCompress)(const void *ctx, const void *adrs, const uint8_t *msg, uint32_t msgLen, uint8_t *out);
-
-    /* Signature randomness generation: PRF_msg(skPrf, optRand, msg) */
-    int32_t (*sigRandGen)(const void *ctx, const uint8_t *key, const uint8_t *msg, uint32_t msgLen, uint8_t *out);
-
-    /* Optional optimized multi-step chain iteration.
-     * When non-NULL, HbsWots_Chain delegates to this instead of the generic chainHash loop.
-     * Intended for algorithms (e.g. SLH-DSA) that can reuse pre-computed hash state
-     * across iterations for performance (ChainSha256 / ChainShake256).
-     * Set to NULL to use the generic fallback in HbsWots_Chain. */
-    int32_t (*chain)(const uint8_t *x, uint32_t xLen, uint32_t start, uint32_t steps, const uint8_t *pubSeed,
-                     void *adrs, const void *ctx, uint8_t *output);
-} XmssFamilyHashFuncs;
-
-/*
- * XMSS/SLH-DSA Address Operations Interface
- */
-typedef struct XmssFamilyAdrsOps {
-    void (*setLayerAddr)(void *adrs, uint32_t layer);
-    void (*setTreeAddr)(void *adrs, uint64_t tree);
-    void (*setType)(void *adrs, uint32_t type);
-    void (*setKeyPairAddr)(void *adrs, uint32_t keyPair);
-    void (*setChainAddr)(void *adrs, uint32_t chain);
-    void (*setTreeHeight)(void *adrs, uint32_t height);
-    void (*setHashAddr)(void *adrs, uint32_t hash);
-    void (*setTreeIndex)(void *adrs, uint32_t index);
-    uint32_t (*getTreeIndex)(const void *adrs);
-    void (*copyKeyPairAddr)(void *dest, const void *src);
-    uint32_t (*getAdrsLen)(void);
-} XmssFamilyAdrsOps;
 
 /*
  * HBS WOTS+ Context
@@ -83,8 +35,8 @@ typedef struct {
     const void *coreCtx;
     uint32_t n;
     uint32_t otsLen; /**< Number of WOTS+ chain elements */
-    const XmssFamilyHashFuncs *hashFuncs; /**< Hash function interface */
-    const XmssFamilyAdrsOps *adrsOps; /**< Address operation interface */
+    const HbsHashFuncs *hashFuncs; /**< Hash function interface */
+    const HbsAdrsOps *adrsOps; /**< Address operation interface */
     const uint8_t *pubSeed;
     const uint8_t *skSeed;
     HbsAlgoType algoType; /**< Algorithm type (XMSS or SLH-DSA) */

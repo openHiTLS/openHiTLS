@@ -21,6 +21,8 @@
 #include "crypt_errno.h"
 #include "crypt_algid.h"
 #include "crypt_eal_pkey.h"
+#include "crypt_eal_rand.h"
+#include "crypt_util_rand.h"
 #include "bsl_err_internal.h"
 #include "crypt_utils.h"
 #include "bsl_sal.h"
@@ -38,6 +40,19 @@ typedef struct {
     int32_t algId;
     int32_t type;
 } CMVP_SlhdsaSignVector;
+
+static const uint8_t *g_slhdsaKatRand = NULL;
+static uint32_t g_slhdsaKatRandLen = 0;
+
+static int32_t SlhdsaKatRandEx(void *libCtx, uint8_t *rand, uint32_t randLen)
+{
+    (void)libCtx;
+    if (rand == NULL || g_slhdsaKatRand == NULL || randLen != g_slhdsaKatRandLen) {
+        return CRYPT_INVALID_ARG;
+    }
+    (void)memcpy(rand, g_slhdsaKatRand, randLen);
+    return CRYPT_SUCCESS;
+}
 
 static const CMVP_SlhdsaSignVector SLHDSA_VECTOR[] = {
     {
@@ -58,8 +73,7 @@ static int32_t GetPkey(void *libCtx, const char *attrName, const CMVP_SlhdsaSign
     CRYPT_EAL_PkeyCtx **pkeyPrv, CRYPT_EAL_PkeyCtx **pkeyPub)
 {
     int32_t ret = CRYPT_CMVP_ERR_ALGO_SELFTEST;
-    CRYPT_EAL_PkeyPrv prvKey = { 0 };
-    uint8_t *rand = NULL;
+    CRYPT_EAL_PkeyPrv prvKey = {0};
     uint8_t *vectorKey = NULL;
     uint8_t *context = NULL;
     *pkeyPrv = CRYPT_EAL_ProviderPkeyNewCtx(libCtx, vector->algId, 0, attrName);
@@ -74,15 +88,6 @@ static int32_t GetPkey(void *libCtx, const char *attrName, const CMVP_SlhdsaSign
 
     uint32_t keyLen = 0;
     ret = CRYPT_EAL_PkeyCtrl(*pkeyPrv, CRYPT_CTRL_GET_SLH_DSA_KEY_LEN, (void *)&keyLen, sizeof(keyLen));
-
-    uint32_t deterministic = 1;
-    ret = CRYPT_EAL_PkeyCtrl(*pkeyPrv, CRYPT_CTRL_SET_DETERMINISTIC_FLAG, &deterministic, sizeof(deterministic));
-    GOTO_ERR_IF_TRUE(ret != CRYPT_SUCCESS, ret);
-
-    uint32_t randLen = 0;
-    rand = CMVP_StringsToBins(vector->rnd, &randLen);
-    ret = CRYPT_EAL_PkeyCtrl(*pkeyPrv, CRYPT_CTRL_SET_SLH_DSA_ADDRAND, (void *)rand, randLen);
-    GOTO_ERR_IF_TRUE(ret != CRYPT_SUCCESS, ret);
 
     uint32_t vectorKeyLen = 0;
     vectorKey = CMVP_StringsToBins(vector->sk, &vectorKeyLen);
@@ -99,13 +104,10 @@ static int32_t GetPkey(void *libCtx, const char *attrName, const CMVP_SlhdsaSign
     ret = CRYPT_EAL_PkeyCtrl(*pkeyPrv, CRYPT_CTRL_SET_CTX_INFO, context, contextLen);
     GOTO_ERR_IF_TRUE(ret != CRYPT_SUCCESS, ret);
 
-    ret = CRYPT_EAL_PkeyCtrl(*pkeyPub, CRYPT_CTRL_SET_SLH_DSA_ADDRAND, (void *)rand, randLen);
-    GOTO_ERR_IF_TRUE(ret != CRYPT_SUCCESS, ret);
     ret = CRYPT_EAL_PkeySetPrv(*pkeyPub, &prvKey); // The prvKey contains the public key, public key is used here.
     GOTO_ERR_IF_TRUE(ret != CRYPT_SUCCESS, ret);
     ret = CRYPT_EAL_PkeyCtrl(*pkeyPub, CRYPT_CTRL_SET_CTX_INFO, context, contextLen);
 ERR:
-    BSL_SAL_Free(rand);
     BSL_SAL_Free(vectorKey);
     BSL_SAL_Free(context);
     return ret;
@@ -120,11 +122,14 @@ static bool TestSlhdsaSignVerify(void *libCtx, const char *attrName, const CMVP_
     uint32_t signVecLen = 0;
     uint8_t *msg = NULL;
     uint32_t msgLen;
+    uint8_t *rand = NULL;
+    uint32_t randLen = 0;
     CRYPT_EAL_PkeyCtx *pkeyPrv = NULL;
     CRYPT_EAL_PkeyCtx *pkeyPub = NULL;
+    CRYPT_EAL_RandFuncEx oldRandFuncEx = CRYPT_RandRegistExGet();
 
-    GOTO_ERR_IF_TRUE(
-        GetPkey(libCtx, attrName, vector, &pkeyPrv, &pkeyPub) != CRYPT_SUCCESS, CRYPT_CMVP_ERR_ALGO_SELFTEST);
+    GOTO_ERR_IF_TRUE(GetPkey(libCtx, attrName, vector, &pkeyPrv, &pkeyPub) != CRYPT_SUCCESS,
+        CRYPT_CMVP_ERR_ALGO_SELFTEST);
     msg = CMVP_StringsToBins(vector->msg, &msgLen);
     GOTO_ERR_IF_TRUE(msg == NULL, CRYPT_CMVP_COMMON_ERR);
     signVec = CMVP_StringsToBins(vector->sig, &signVecLen);
@@ -132,6 +137,11 @@ static bool TestSlhdsaSignVerify(void *libCtx, const char *attrName, const CMVP_
     signLen = signVecLen;
     sign = BSL_SAL_Malloc(signLen);
     GOTO_ERR_IF_TRUE(sign == NULL, CRYPT_MEM_ALLOC_FAIL);
+    rand = CMVP_StringsToBins(vector->rnd, &randLen);
+    GOTO_ERR_IF_TRUE(rand == NULL, CRYPT_CMVP_COMMON_ERR);
+    g_slhdsaKatRand = rand;
+    g_slhdsaKatRandLen = randLen;
+    CRYPT_EAL_SetRandCallBackEx(SlhdsaKatRandEx);
     // sign
     GOTO_ERR_IF_TRUE(CRYPT_EAL_PkeySign(pkeyPrv, vector->preHashId, msg, msgLen, sign, &signLen) != CRYPT_SUCCESS,
         CRYPT_CMVP_ERR_ALGO_SELFTEST);
@@ -148,6 +158,10 @@ ERR:
     BSL_SAL_Free(sign);
     BSL_SAL_Free(signVec);
     BSL_SAL_Free(msg);
+    CRYPT_EAL_SetRandCallBackEx(oldRandFuncEx);
+    g_slhdsaKatRand = NULL;
+    g_slhdsaKatRandLen = 0;
+    BSL_SAL_Free(rand);
     CRYPT_EAL_PkeyFreeCtx(pkeyPrv);
     CRYPT_EAL_PkeyFreeCtx(pkeyPub);
     return ret;

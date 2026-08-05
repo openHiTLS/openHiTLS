@@ -24,6 +24,7 @@
 #include <stddef.h>
 #include "bsl_params.h"
 #include "crypt_algid.h"
+#include "hbs_hash_if.h"
 #include "hbs_wots.h"
 #include "hbs_tree.h"
 #include "xmss_params.h"
@@ -64,9 +65,9 @@ struct XmssCtxCommon {
 
     uint32_t paddingLen; // Domain-separation padding length for the selected digest.
 
-    const XmssFamilyHashFuncs *hashFuncs; // Hash function table (pointer to static table)
+    const HbsHashFuncs *hashFuncs; // Hash function table (pointer to static table)
 
-    XmssFamilyAdrsOps adrsOps; // Generic address operation function pointers
+    HbsAdrsOps adrsOps; // Generic address operation function pointers
 
     XmssKey key;
 

@@ -82,6 +82,11 @@ int32_t CRYPT_SLH_DSA_Gen(CryptSlhDsaCtx *ctx);
  *
  * @retval CRYPT_SUCCESS    Success
  * @retval Other            For details, see crypt_errno.h
+ * @attention Empty messages are supported. Pure/prehash mode and context must match during verification. In prehash
+ *            mode the hash ID must also match; in pure mode algId does not affect the encoded message.
+ *            A context is not thread-safe; duplicate it before concurrent operations. Production signing should use
+ *            the default randomized mode. Depending on the parameter set, signatures are 7,856 to 49,856 bytes;
+ *            callers must account for this resource cost.
  */
 int32_t CRYPT_SLH_DSA_Sign(CryptSlhDsaCtx *ctx, int32_t algId, const uint8_t *data, uint32_t dataLen, uint8_t *sign,
                            uint32_t *signLen);
@@ -99,6 +104,9 @@ int32_t CRYPT_SLH_DSA_Sign(CryptSlhDsaCtx *ctx, int32_t algId, const uint8_t *da
  *
  * @retval CRYPT_SUCCESS    Success
  * @retval Other            For details, see crypt_errno.h
+ * @attention Empty messages are supported. Pure/prehash mode and context must be identical to the signing operation.
+ *            In prehash mode the hash ID must also match; pure mode ignores algId. A context is not thread-safe;
+ *            duplicate it before concurrent operations.
  */
 int32_t CRYPT_SLH_DSA_Verify(const CryptSlhDsaCtx *ctx, int32_t algId, const uint8_t *data, uint32_t dataLen,
                              const uint8_t *sign, uint32_t signLen);
@@ -116,54 +124,6 @@ int32_t CRYPT_SLH_DSA_Verify(const CryptSlhDsaCtx *ctx, int32_t algId, const uin
  * @retval Other            For details, see crypt_errno.h
  */
 int32_t CRYPT_SLH_DSA_Ctrl(CryptSlhDsaCtx *ctx, int32_t opt, void *val, uint32_t len);
-
-/**
- * @ingroup slh_dsa
- * @brief Get the public key of SLH-DSA.
- *
- * @param ctx [IN] Pointer to the SLH-DSA context
- * @param pub [OUT] Pointer to the public key
- *
- * @retval CRYPT_SUCCESS    Success
- * @retval Other            For details, see crypt_errno.h
- */
-int32_t CRYPT_SLH_DSA_GetPubKey(const CryptSlhDsaCtx *ctx, CRYPT_SlhDsaPub *pub);
-
-/**
- * @ingroup slh_dsa
- * @brief Get the private key of SLH-DSA.
- *
- * @param ctx [IN] Pointer to the SLH-DSA context
- * @param prv [OUT] Pointer to the private key
- *
- * @retval CRYPT_SUCCESS    Success
- * @retval Other            For details, see crypt_errno.h
- */
-int32_t CRYPT_SLH_DSA_GetPrvKey(const CryptSlhDsaCtx *ctx, CRYPT_SlhDsaPrv *prv);
-
-/**
- * @ingroup slh_dsa
- * @brief Set the public key of SLH-DSA.
- *
- * @param ctx [IN/OUT] Pointer to the SLH-DSA context
- * @param pub [IN] Pointer to the public key
- *
- * @retval CRYPT_SUCCESS    Success
- * @retval Other            For details, see crypt_errno.h
- */
-int32_t CRYPT_SLH_DSA_SetPubKey(CryptSlhDsaCtx *ctx, const CRYPT_SlhDsaPub *pub);
-
-/**
- * @ingroup slh_dsa
- * @brief Set the private key of SLH-DSA.
- *
- * @param ctx [IN/OUT] Pointer to the SLH-DSA context
- * @param prv [IN] Pointer to the private key
- *
- * @retval CRYPT_SUCCESS    Success
- * @retval Other            For details, see crypt_errno.h
- */
-int32_t CRYPT_SLH_DSA_SetPrvKey(CryptSlhDsaCtx *ctx, const CRYPT_SlhDsaPrv *prv);
 
 /**
  * @ingroup slh_dsa
@@ -210,6 +170,8 @@ int32_t CRYPT_SLH_DSA_SetPubKeyEx(CryptSlhDsaCtx *ctx, const BSL_Param *para);
  *
  * @retval CRYPT_SUCCESS    Success
  * @retval Other            For details, see crypt_errno.h
+ * @attention The imported private key contains SK.seed, SK.prf, PK.seed, and PK.root. On success the context
+ *            therefore contains both private and public key material.
  */
 int32_t CRYPT_SLH_DSA_SetPrvKeyEx(CryptSlhDsaCtx *ctx, const BSL_Param *para);
 

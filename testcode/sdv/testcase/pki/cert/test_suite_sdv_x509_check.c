@@ -18,6 +18,7 @@
 #include <stdbool.h>
 #include "sal_file.h"
 #include "sal_time.h"
+#include "bsl_errno.h"
 #include "bsl_sal.h"
 #include "bsl_err.h"
 #include "bsl_list.h"
@@ -5051,5 +5052,62 @@ void SDV_X509_CERT_COMPOSITE_SIGNALG_CHECK_TC001(void)
 EXIT:
     CRYPT_EAL_PkeyFreeCtx(pubKey);
 #endif
+}
+/* END_CASE */
+
+/**
+ * @test   SDV_X509_CERT_PQC_SIGNALG_PROFILE_CHECK_TC001
+ * @title  Require an exact ML-DSA/SLH-DSA key-profile and signature-OID match.
+ * @brief  RFC 9881 and RFC 9909 bind each signature OID to the public key with
+ *         the same parameter set. A family-only ML-DSA or SLH-DSA match is not
+ *         sufficient.
+ * @expect The matching OID succeeds and another OID in the same algorithm
+ *         family fails with HITLS_X509_ERR_VFY_SIGNALG_NOT_MATCH.
+ */
+/* BEGIN_CASE */
+void SDV_X509_CERT_PQC_SIGNALG_PROFILE_CHECK_TC001(int algId, int paraId, int signAlgId, int wrongSignAlgId)
+{
+#if !defined(HITLS_CRYPTO_MLDSA) && !defined(HITLS_CRYPTO_SLH_DSA)
+    (void)algId;
+    (void)paraId;
+    (void)signAlgId;
+    (void)wrongSignAlgId;
+    SKIP_TEST();
+#else
+    HITLS_X509_Asn1AlgId alg = {0};
+    CRYPT_EAL_PkeyCtx *pubKey = CRYPT_EAL_PkeyNewCtx(algId);
+    ASSERT_NE(pubKey, NULL);
+
+    ASSERT_EQ(CRYPT_EAL_PkeySetParaById(pubKey, paraId), CRYPT_SUCCESS);
+
+    alg.algId = signAlgId;
+    ASSERT_EQ(HITLS_X509_CheckAlg(pubKey, &alg), HITLS_PKI_SUCCESS);
+
+    alg.algId = wrongSignAlgId;
+    ASSERT_EQ(HITLS_X509_CheckAlg(pubKey, &alg), HITLS_X509_ERR_VFY_SIGNALG_NOT_MATCH);
+
+EXIT:
+    CRYPT_EAL_PkeyFreeCtx(pubKey);
+#endif
+}
+/* END_CASE */
+
+/**
+ * @test   SDV_X509_SIGNATURE_UNUSED_BITS_CHECK_TC001
+ * @title  Reject a signatureValue BIT STRING with non-zero unused bits.
+ * @brief  Call the common signature verification entry with a malformed
+ *         signatureValue and no usable verification inputs.
+ * @expect Verification fails with BSL_ASN1_ERR_DECODE_BIT_STRING before any
+ *         algorithm or public-key processing.
+ */
+/* BEGIN_CASE */
+void SDV_X509_SIGNATURE_UNUSED_BITS_CHECK_TC001(int unusedBits)
+{
+    BSL_ASN1_BitString signature = {.unusedBits = (uint8_t)unusedBits};
+
+    ASSERT_EQ(HITLS_X509_CheckSignature(NULL, NULL, 0, NULL, &signature), BSL_ASN1_ERR_DECODE_BIT_STRING);
+
+EXIT:
+    return;
 }
 /* END_CASE */

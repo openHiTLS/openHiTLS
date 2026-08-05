@@ -292,8 +292,8 @@ static int32_t StoreInitialBdsNode(XmssBdsState *state, uint32_t nodeHeight, uin
 /* Validate common pointers and parameter bounds used by BDS tree operations. */
 static int32_t CheckTreeInput(const XmssBdsState *state, const HbsTreeCtx *treeCtx)
 {
-    if (state == NULL || treeCtx == NULL || treeCtx->hashFuncs.xmss == NULL ||
-        treeCtx->hashFuncs.xmss->nodeHash == NULL || treeCtx->adrsOps == NULL) {
+    if (state == NULL || treeCtx == NULL || treeCtx->hashFuncs == NULL || treeCtx->hashFuncs->nodeHash == NULL ||
+        treeCtx->adrsOps == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
@@ -322,7 +322,7 @@ static void BuildWotsCtxFromTreeCtx(HbsWotsCtx *wotsCtx, const HbsTreeCtx *treeC
     wotsCtx->coreCtx = treeCtx->originalCtx;
     wotsCtx->n = treeCtx->n;
     wotsCtx->otsLen = treeCtx->otsLen;
-    wotsCtx->hashFuncs = treeCtx->hashFuncs.xmss;
+    wotsCtx->hashFuncs = treeCtx->hashFuncs;
     wotsCtx->adrsOps = treeCtx->adrsOps;
     wotsCtx->pubSeed = treeCtx->pubSeed;
     wotsCtx->skSeed = treeCtx->skSeed;
@@ -362,7 +362,7 @@ static int32_t HashParent(uint8_t *node, const uint8_t *left, const uint8_t *rig
     treeCtx->adrsOps->setTreeIndex(adrs, index);
     memcpy(tmp, left, n);
     memcpy(tmp + n, right, n);
-    return treeCtx->hashFuncs.xmss->nodeHash(treeCtx->originalCtx, adrs, tmp, 2U * n, node);
+    return treeCtx->hashFuncs->nodeHash(treeCtx->originalCtx, adrs, tmp, 2U * n, node);
 }
 
 /*

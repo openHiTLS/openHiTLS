@@ -29,7 +29,6 @@ target_include_directories(_hitls_crypto_slh_dsa
         ${PROJECT_SOURCE_DIR}/crypto/eal/src
         ${PROJECT_SOURCE_DIR}/crypto/hbs/common
         ${PROJECT_SOURCE_DIR}/crypto/hbs/include
-        ${PROJECT_SOURCE_DIR}/crypto/hbs/xmss/src
         ${PROJECT_SOURCE_DIR}/crypto/sha2/src
         ${PROJECT_SOURCE_DIR}/crypto/sha3/src
         ${PROJECT_SOURCE_DIR}/crypto/sha2/include

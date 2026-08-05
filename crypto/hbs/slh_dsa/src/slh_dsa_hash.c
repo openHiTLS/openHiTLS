@@ -26,7 +26,7 @@
 #include "eal_md_local.h"
 #include "slh_dsa_local.h"
 #include "slh_dsa_hash.h"
-#include "xmss_hash.h"
+#include "hbs_hash_if.h"
 #include "crypt_sha2.h"
 #include "crypt_sha3.h"
 #include "sha2_core.h"
@@ -108,32 +108,35 @@ static int32_t CreateMdCtxAndUpdata(void **out, const EAL_MdMethod *hashMethod, 
     return ret;
 }
 
-int32_t InitMdCtx(CryptSlhDsaCtx *ctx)
+int32_t InitMdCtx(CryptSlhDsaCtx *ctx, const uint8_t *pubSeed)
 {
-    FreeMdCtx(ctx);
-
-    if (!ctx->para.isCompressed) {
+    if (ctx->profile->math->hashFamily == SLH_DSA_HASH_SHAKE) {
         return CRYPT_SUCCESS;
     }
 
-    uint32_t n = ctx->para.n;
+    uint32_t n = ctx->profile->math->n;
     uint8_t padding[SHA512_PADDING_LEN] = {0};
-    const CRYPT_ConstData hashData256[] = {{ctx->prvKey.pub.seed, n}, {padding, SHA256_PADDING_LEN - n}};
+    const CRYPT_ConstData hashData256[] = {{pubSeed, n}, {padding, SHA256_PADDING_LEN - n}};
     const EAL_MdMethod *hashMethod256 = EAL_MdFindDefaultMethod(CRYPT_MD_SHA256);
     const EAL_MdMethod *hashMethod512 = EAL_MdFindDefaultMethod(CRYPT_MD_SHA512);
-    int ret = CreateMdCtxAndUpdata(&ctx->sha256MdCtx, hashMethod256, hashData256,
-                                   sizeof(hashData256) / sizeof(hashData256[0]));
+    void *newSha256MdCtx = NULL;
+    void *newSha512MdCtx = NULL;
+    int ret = CreateMdCtxAndUpdata(&newSha256MdCtx, hashMethod256, hashData256,
+        sizeof(hashData256) / sizeof(hashData256[0]));
     if (ret != CRYPT_SUCCESS) {
         return ret;
     }
-    const CRYPT_ConstData hashData512[] = {{ctx->prvKey.pub.seed, n}, {padding, SHA512_PADDING_LEN - n}};
-    ret = CreateMdCtxAndUpdata(&ctx->sha512MdCtx, hashMethod512, hashData512,
-                               sizeof(hashData512) / sizeof(hashData512[0]));
+    const CRYPT_ConstData hashData512[] = {{pubSeed, n}, {padding, SHA512_PADDING_LEN - n}};
+    ret = CreateMdCtxAndUpdata(&newSha512MdCtx, hashMethod512, hashData512,
+        sizeof(hashData512) / sizeof(hashData512[0]));
     if (ret != CRYPT_SUCCESS) {
-        hashMethod256->freeCtx(ctx->sha256MdCtx);
-        ctx->sha256MdCtx = NULL;
+        hashMethod256->freeCtx(newSha256MdCtx);
+        return ret;
     }
-    return ret;
+    FreeMdCtx(ctx);
+    ctx->sha256MdCtx = newSha256MdCtx;
+    ctx->sha512MdCtx = newSha512MdCtx;
+    return CRYPT_SUCCESS;
 }
 
 void DupMdCtx(CryptSlhDsaCtx *dest, CryptSlhDsaCtx *src)
@@ -157,7 +160,7 @@ void DupMdCtx(CryptSlhDsaCtx *dest, CryptSlhDsaCtx *src)
 
 void FreeMdCtx(CryptSlhDsaCtx *ctx)
 {
-    if (ctx->para.isCompressed) {
+    if (ctx->sha256MdCtx != NULL || ctx->sha512MdCtx != NULL) {
         const EAL_MdMethod *hashMethod256 = EAL_MdFindDefaultMethod(CRYPT_MD_SHA256);
         const EAL_MdMethod *hashMethod512 = EAL_MdFindDefaultMethod(CRYPT_MD_SHA512);
         // directly return will not cause memory leak, because if hashMethod256 or hashMethod512 is NULL, then the corresponding mdCtx must be NULL too.
@@ -178,7 +181,7 @@ void FreeMdCtx(CryptSlhDsaCtx *ctx)
 static int32_t PrfmsgShake256(const void *vctx, const uint8_t *rand, const uint8_t *msg, uint32_t msgLen, uint8_t *out)
 {
     const CryptSlhDsaCtx *ctx = (const CryptSlhDsaCtx *)vctx;
-    uint32_t n = ctx->para.n;
+    uint32_t n = ctx->profile->math->n;
     const CRYPT_ConstData hashData[] = {{ctx->prvKey.prf, n}, {rand, n}, {msg, msgLen}};
     return CalcMultiMsgHash(CRYPT_MD_SHAKE256, hashData, sizeof(hashData) / sizeof(hashData[0]), out, n);
 }
@@ -188,8 +191,8 @@ static int32_t HmsgShake256(const void *vctx, const uint8_t *r, const uint8_t *m
 {
     (void)idx;
     const CryptSlhDsaCtx *ctx = (const CryptSlhDsaCtx *)vctx;
-    uint32_t n = ctx->para.n;
-    uint32_t m = ctx->para.m;
+    uint32_t n = ctx->profile->math->n;
+    uint32_t m = ctx->profile->math->m;
     const CRYPT_ConstData hashData[] = {{r, n}, {ctx->prvKey.pub.seed, n}, {ctx->prvKey.pub.root, n}, {msg, msgLen}};
     return CalcMultiMsgHash(CRYPT_MD_SHAKE256, hashData, sizeof(hashData) / sizeof(hashData[0]), out, m);
 }
@@ -198,7 +201,7 @@ static int32_t PrfShake256(const void *vctx, const void *vadrs, uint8_t *out)
 {
     const CryptSlhDsaCtx *ctx = (const CryptSlhDsaCtx *)vctx;
     const SlhDsaAdrs *adrs = (const SlhDsaAdrs *)vadrs;
-    uint32_t n = ctx->para.n;
+    uint32_t n = ctx->profile->math->n;
     const CRYPT_ConstData hashData[] = {
         {ctx->prvKey.pub.seed, n}, {adrs->bytes, ctx->adrsOps.getAdrsLen()}, {ctx->prvKey.seed, n}};
     return CalcMultiMsgHash(CRYPT_MD_SHAKE256, hashData, sizeof(hashData) / sizeof(hashData[0]), out, n);
@@ -208,7 +211,7 @@ static int32_t HShake256(const void *vctx, const void *vadrs, const uint8_t *msg
 {
     const CryptSlhDsaCtx *ctx = (const CryptSlhDsaCtx *)vctx;
     const SlhDsaAdrs *adrs = (const SlhDsaAdrs *)vadrs;
-    uint32_t n = ctx->para.n;
+    uint32_t n = ctx->profile->math->n;
     const CRYPT_ConstData hashData[] = {
         {ctx->prvKey.pub.seed, n}, {adrs->bytes, ctx->adrsOps.getAdrsLen()}, {msg, msgLen}};
     return CalcMultiMsgHash(CRYPT_MD_SHAKE256, hashData, sizeof(hashData) / sizeof(hashData[0]), out, n);
@@ -228,7 +231,7 @@ static int32_t Prfmsg(const CryptSlhDsaCtx *ctx, const uint8_t *rand, const uint
                       CRYPT_MAC_AlgId macId)
 {
     int32_t ret;
-    uint32_t n = ctx->para.n;
+    uint32_t n = ctx->profile->math->n;
     uint8_t tmp[HBS_MAX_MDSIZE] = {0};
     uint32_t tmpLen = sizeof(tmp);
     CRYPT_EAL_MacCtx *mdCtx = CRYPT_EAL_MacNewCtx(macId);
@@ -260,8 +263,8 @@ static int32_t HmsgSha(const CryptSlhDsaCtx *ctx, const uint8_t *r, const uint8_
                        const uint8_t *msg, uint32_t msgLen, uint8_t *out, CRYPT_MD_AlgId mdId)
 {
     int32_t ret;
-    uint32_t m = ctx->para.m;
-    uint32_t n = ctx->para.n;
+    uint32_t m = ctx->profile->math->m;
+    uint32_t n = ctx->profile->math->n;
     uint32_t tmpLen;
 
     uint8_t tmpSeed[2 * SLH_DSA_MAX_N + HBS_MAX_MDSIZE] = {0}; // 2 is for double
@@ -301,7 +304,7 @@ static int32_t PrfSha256(const void *vctx, const void *vadrs, uint8_t *out)
 {
     const CryptSlhDsaCtx *ctx = (const CryptSlhDsaCtx *)vctx;
     const SlhDsaAdrs *adrs = (const SlhDsaAdrs *)vadrs;
-    uint32_t n = ctx->para.n;
+    uint32_t n = ctx->profile->math->n;
     const CRYPT_ConstData hashData[] = {{adrs->bytes, ctx->adrsOps.getAdrsLen()}, {ctx->prvKey.seed, n}};
     return CalcMultiMsgHashByCtx(CRYPT_MD_SHA256, ctx->sha256MdCtx, hashData, sizeof(hashData) / sizeof(hashData[0]),
                                  out, n);
@@ -311,7 +314,7 @@ static int32_t HSha256(const void *vctx, const void *vadrs, const uint8_t *msg, 
 {
     const CryptSlhDsaCtx *ctx = (const CryptSlhDsaCtx *)vctx;
     const SlhDsaAdrs *adrs = (const SlhDsaAdrs *)vadrs;
-    uint32_t n = ctx->para.n;
+    uint32_t n = ctx->profile->math->n;
     const CRYPT_ConstData hashData[] = {{adrs->bytes, ctx->adrsOps.getAdrsLen()}, {msg, msgLen}};
     return CalcMultiMsgHashByCtx(CRYPT_MD_SHA256, ctx->sha256MdCtx, hashData, sizeof(hashData) / sizeof(hashData[0]),
                                  out, n);
@@ -331,7 +334,7 @@ static int32_t HSha512(const void *vctx, const void *vadrs, const uint8_t *msg, 
 {
     const CryptSlhDsaCtx *ctx = (const CryptSlhDsaCtx *)vctx;
     const SlhDsaAdrs *adrs = (const SlhDsaAdrs *)vadrs;
-    uint32_t n = ctx->para.n;
+    uint32_t n = ctx->profile->math->n;
     const CRYPT_ConstData hashData[] = {{adrs->bytes, ctx->adrsOps.getAdrsLen()}, {msg, msgLen}};
     return CalcMultiMsgHashByCtx(CRYPT_MD_SHA512, ctx->sha512MdCtx, hashData, sizeof(hashData) / sizeof(hashData[0]),
                                  out, n);
@@ -381,7 +384,7 @@ static int32_t ChainSha256(const uint8_t *x, uint32_t xLen, uint32_t start, uint
     uint32_t adrsLen = slhDsaCtx->adrsOps.getAdrsLen();
     SlhDsaAdrs *adrsCtx = (SlhDsaAdrs *)adrs;
     slhDsaCtx->adrsOps.setHashAddr(adrsCtx, start);
-    uint32_t n = slhDsaCtx->para.n;
+    uint32_t n = slhDsaCtx->profile->math->n;
     // do first hash
     ret = CRYPT_SHA2_256_Update(sha256Ctx, adrsCtx->bytes, adrsLen);
     if (ret != CRYPT_SUCCESS) {
@@ -436,7 +439,7 @@ static int32_t ChainShake256(const uint8_t *x, uint32_t xLen, uint32_t start, ui
     const HbsWotsCtx *wotsCtx = (const HbsWotsCtx *)ctx;
     const CryptSlhDsaCtx *slhDsaCtx = (const CryptSlhDsaCtx *)wotsCtx->coreCtx;
     SlhDsaAdrs *adrsCtx = (SlhDsaAdrs *)adrs;
-    uint32_t n = slhDsaCtx->para.n;
+    uint32_t n = slhDsaCtx->profile->math->n;
     uint32_t nQwords = n >> 3; // pkSeed u64 num
     uint32_t msgOffset = nQwords + 4; // 4 = ((adrsLen = 32) >> 3)
     uint32_t padOffset = msgOffset + nQwords;
@@ -444,8 +447,8 @@ static int32_t ChainShake256(const uint8_t *x, uint32_t xLen, uint32_t start, ui
     uint32_t j;
     // state: |---pkseed--|--adrs--|--msg--|0x1f|-----|
     // n + 32 + n <= 96 < CRYPT_SHAKE256_BLOCKSIZE = 136
-    uint8_t state[200] = {0}; // State array, 200bytes is 1600bits
-    uint64_t *pSt = (uint64_t *)(uintptr_t)state;
+    uint64_t stateWords[25] = {0}; // State array, 25 qwords is 1600 bits
+    uint64_t *pSt = stateWords;
     for (j = 0; j < nQwords; ++j) {
         pSt[msgOffset + j] = GET_UINT64_LE(x, j << 3);
     }
@@ -471,7 +474,7 @@ static int32_t ChainShake256(const uint8_t *x, uint32_t xLen, uint32_t start, ui
 
         pSt[padOffset] = 0x1f; // char for padding, sha3_* use 0x06 and shake_* use 0x1f
         pSt[CRYPT_SHAKE256_BLOCKSIZE / sizeof(uint64_t) - 1] = (uint64_t)1 << 63;
-        SHA3_Keccak(state);
+        SHA3_Keccak((uint8_t *)stateWords);
     }
     for (j = 0; j < nQwords; ++j) {
         PUT_UINT64_LE(pSt[j], output, j << 3);
@@ -480,7 +483,7 @@ static int32_t ChainShake256(const uint8_t *x, uint32_t xLen, uint32_t start, ui
 }
 
 /* Static hash function tables for SLH-DSA */
-static const XmssFamilyHashFuncs g_slhDsaSha256Funcs = {
+static const HbsHashFuncs g_slhDsaSha256Funcs = {
     .skDerive = PrfSha256,
     .chainHash = FSha256,
     .nodeHash = HSha256,
@@ -490,7 +493,7 @@ static const XmssFamilyHashFuncs g_slhDsaSha256Funcs = {
     .chain = ChainSha256,
 };
 
-static const XmssFamilyHashFuncs g_slhDsaSha512Funcs = {
+static const HbsHashFuncs g_slhDsaSha512Funcs = {
     .skDerive = PrfSha256,
     .chainHash = FSha256,
     .nodeHash = HSha512,
@@ -500,7 +503,7 @@ static const XmssFamilyHashFuncs g_slhDsaSha512Funcs = {
     .chain = ChainSha256,
 };
 
-static const XmssFamilyHashFuncs g_slhDsaShake256Funcs = {
+static const HbsHashFuncs g_slhDsaShake256Funcs = {
     .skDerive = PrfShake256,
     .chainHash = FShake256,
     .nodeHash = HShake256,
@@ -510,22 +513,28 @@ static const XmssFamilyHashFuncs g_slhDsaShake256Funcs = {
     .chain = ChainShake256,
 };
 
-void SlhDsaInitHashFuncs(CryptSlhDsaCtx *ctx)
+int32_t SlhDsaResolveMathMethods(SlhDsaHashFamily hashFamily, const HbsHashFuncs **hashFuncs, HbsAdrsOps *adrsOps)
 {
-    CRYPT_PKEY_ParaId algId = ctx->para.algId;
-
-    if (algId == CRYPT_SLH_DSA_SHA2_128S || algId == CRYPT_SLH_DSA_SHA2_128F || algId == CRYPT_SLH_DSA_SHA2_192S ||
-        algId == CRYPT_SLH_DSA_SHA2_192F || algId == CRYPT_SLH_DSA_SHA2_256S || algId == CRYPT_SLH_DSA_SHA2_256F) {
-        ctx->para.isCompressed = true;
-        if (ctx->para.secCategory == 1) {
-            ctx->hashFuncs = &g_slhDsaSha256Funcs;
-        } else {
-            ctx->hashFuncs = &g_slhDsaSha512Funcs;
-        }
-    } else {
-        ctx->para.isCompressed = false;
-        ctx->hashFuncs = &g_slhDsaShake256Funcs;
+    bool isCompressed;
+    switch (hashFamily) {
+        case SLH_DSA_HASH_SHA2_128:
+            *hashFuncs = &g_slhDsaSha256Funcs;
+            isCompressed = true;
+            break;
+        case SLH_DSA_HASH_SHA2_192_256:
+            *hashFuncs = &g_slhDsaSha512Funcs;
+            isCompressed = true;
+            break;
+        case SLH_DSA_HASH_SHAKE:
+            *hashFuncs = &g_slhDsaShake256Funcs;
+            isCompressed = false;
+            break;
+        default:
+            BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
+            return CRYPT_INVALID_ARG;
     }
+    *adrsOps = *SlhDsaGetAdrsOps(isCompressed);
+    return CRYPT_SUCCESS;
 }
 
 #endif /* HITLS_CRYPTO_SLH_DSA */

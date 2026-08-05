@@ -81,10 +81,7 @@ int32_t DECODER_LowKeyObject2PkeyObjectGetParam(void *ctx, BSL_Param *param)
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
-    DECODER_CommonCtx commonCtx = {
-        .outFormat = decoderCtx->outFormat,
-        .outType = decoderCtx->outType
-    };
+    DECODER_CommonCtx commonCtx = {.outFormat = decoderCtx->outFormat, .outType = decoderCtx->outType};
     return DECODER_CommonGetParam(&commonCtx, param);
 }
 typedef struct LowKeyObjectMethodInfo {
@@ -191,18 +188,20 @@ static int32_t TransLowKeyToTargetLowKey(CRYPT_EAL_PkeyMgmtInfo *pkeyAlgInfo, co
 {
     ImportTargetPkeyArgs importTargetPkeyArgs = {0};
     importTargetPkeyArgs.pkeyAlgInfo = pkeyAlgInfo;
-    
+
     if (method->export == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
     BSL_Param param[3] = {
         {CRYPT_PARAM_PKEY_PROCESS_FUNC, BSL_PARAM_TYPE_FUNC_PTR, ImportTargetPkey, 0, 0},
-        {CRYPT_PARAM_PKEY_PROCESS_ARGS, BSL_PARAM_TYPE_CTX_PTR, &importTargetPkeyArgs, 0, 0},
-        BSL_PARAM_END
+        {CRYPT_PARAM_PKEY_PROCESS_ARGS, BSL_PARAM_TYPE_CTX_PTR, &importTargetPkeyArgs, 0, 0}, BSL_PARAM_END
     };
     int32_t ret = method->export(lowObjectRef, param);
     if (ret != CRYPT_SUCCESS) {
+        if (importTargetPkeyArgs.targetKeyRef != NULL) {
+            pkeyAlgInfo->keyMgmtMethod.freeCtx(importTargetPkeyArgs.targetKeyRef);
+        }
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
@@ -234,8 +233,7 @@ static int32_t ConstructOutObjectParam(BSL_Param **outParam, void *object)
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         return CRYPT_MEM_ALLOC_FAIL;
     }
-    int32_t ret = BSL_PARAM_InitValue(&result[0], CRYPT_PARAM_DECODE_OBJECT_DATA, BSL_PARAM_TYPE_CTX_PTR,
-        object, 0);
+    int32_t ret = BSL_PARAM_InitValue(&result[0], CRYPT_PARAM_DECODE_OBJECT_DATA, BSL_PARAM_TYPE_CTX_PTR, object, 0);
     if (ret != CRYPT_SUCCESS) {
         BSL_SAL_Free(result);
         BSL_ERR_PUSH_ERROR(ret);
@@ -266,7 +264,8 @@ int32_t DECODER_LowKeyObject2PkeyObjectDecode(void *ctx, const BSL_Param *inPara
     }
     RETURN_RET_IF_ERR(GetProviderInfo(inParam, &lastDecoderProviderCtx), ret);
     RETURN_RET_IF_ERR(CRYPT_EAL_GetPkeyAlgInfo(decoderCtx->libCtx, lowObjectRefType, decoderCtx->targetAttrName,
-        &pkeyAlgInfo), ret);
+        &pkeyAlgInfo),
+        ret);
     if (pkeyAlgInfo.mgrCtx != lastDecoderProviderCtx) {
         ret = TransLowKeyToTargetLowKey(&pkeyAlgInfo, &method, lowObjectRef, &targetKeyRef);
     } else {
@@ -290,7 +289,7 @@ int32_t DECODER_LowKeyObject2PkeyObjectDecode(void *ctx, const BSL_Param *inPara
 
 EXIT:
     if (targetKeyRef != NULL) {
-        method.freeCtx(targetKeyRef);
+        pkeyAlgInfo.keyMgmtMethod.freeCtx(targetKeyRef);
     }
     return ret;
 }

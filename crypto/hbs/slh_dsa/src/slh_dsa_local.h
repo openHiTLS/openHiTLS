@@ -24,7 +24,7 @@
 #include "crypt_algid.h"
 #include "crypt_types.h"
 #include "crypt_utils.h"
-#include "hbs_wots.h"
+#include "hbs_hash_if.h"
 #include "hbs_tree.h"
 
 #ifdef __cplusplus
@@ -53,6 +53,12 @@ typedef enum {
     WOTS_PRF,
     FORS_PRF,
 } AdrsType;
+
+typedef enum {
+    SLH_DSA_HASH_SHA2_128,
+    SLH_DSA_HASH_SHA2_192_256,
+    SLH_DSA_HASH_SHAKE,
+} SlhDsaHashFamily;
 
 /**
  * @brief Address structure definition
@@ -93,8 +99,6 @@ union Adrs {
 void BaseB(const uint8_t *x, uint32_t xLen, uint32_t b, uint32_t *out, uint32_t outLen);
 
 typedef struct {
-    int32_t algId; // CRYPT_PKEY_ParaId (SLH_DSA_AlgId or XMSS_AlgId)
-    bool isCompressed;
     uint32_t n;
     uint32_t h;
     uint32_t d;
@@ -105,7 +109,15 @@ typedef struct {
     uint32_t secCategory;
     uint32_t pkBytes;
     uint32_t sigBytes;
-} SlhDsaPara;
+    SlhDsaHashFamily hashFamily;
+} SlhDsaMathParams;
+
+typedef struct {
+    int32_t profileId;
+    const SlhDsaMathParams *math;
+    bool isPrehash;
+    int32_t prehashId;
+} SlhDsaProfileInfo;
 
 typedef struct {
     uint8_t seed[HBS_MAX_MDSIZE]; // pubkey seed for generating keys
@@ -122,16 +134,13 @@ typedef struct {
 } SlhDsaPrvKey;
 
 struct SlhDsaCtx {
-    SlhDsaPara para;
+    const SlhDsaProfileInfo *profile;
     uint8_t *context; // user specific context
     uint32_t contextLen; // length of the user specific context
     bool isDeterministic;
-    uint8_t *addrand; // optional random bytes, can be set through CTRL interface, or comes from RNG
-    uint32_t addrandLen; // length of the optional random bytes
-    bool isPrehash;
     SlhDsaPrvKey prvKey;
-    const XmssFamilyHashFuncs *hashFuncs; // Generic hash function table pointer
-    XmssFamilyAdrsOps adrsOps; // Generic address operation function pointers
+    const HbsHashFuncs *hashFuncs; // Generic hash function table pointer
+    HbsAdrsOps adrsOps; // Generic address operation function pointers
     uint8_t keyType; /* specify the key type */
     void *sha256MdCtx;
     void *sha512MdCtx;
@@ -141,11 +150,13 @@ struct SlhDsaCtx {
 void HbsTreeCtx_InitFromSlhDsa(HbsTreeCtx *treeCtx, const CryptSlhDsaCtx *ctx);
 
 /* Returns the UC or C address operation table (defined in slh_dsa_address.c) */
-const XmssFamilyAdrsOps *SlhDsaGetAdrsOps(bool isCompressed);
+const HbsAdrsOps *SlhDsaGetAdrsOps(bool isCompressed);
 
-int32_t SlhDsaSignInternal(CryptSlhDsaCtx *ctx, const uint8_t *msg, uint32_t msgLen, uint8_t *sig, uint32_t *sigLen);
+int32_t SlhDsaSignInternal(const CryptSlhDsaCtx *ctx, const uint8_t *msg, uint32_t msgLen, const uint8_t *addrand,
+    uint8_t *sig, uint32_t *sigLen);
 
-int32_t SlhDsaVerifyInternal(const CryptSlhDsaCtx *ctx, const uint8_t *msg, uint32_t msgLen, const uint8_t *sig, uint32_t sigLen);
+int32_t SlhDsaVerifyInternal(const CryptSlhDsaCtx *ctx, const uint8_t *msg, uint32_t msgLen, const uint8_t *sig,
+    uint32_t sigLen);
 
 #ifdef __cplusplus
 }
