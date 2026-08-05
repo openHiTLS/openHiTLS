@@ -26,7 +26,7 @@
 #include "eal_md_local.h"
 #include "slh_dsa_local.h"
 #include "slh_dsa_hash.h"
-#include "hbs_hash_if.h"
+#include "hbs_hash.h"
 #include "crypt_sha2.h"
 #include "crypt_sha3.h"
 #include "sha2_core.h"

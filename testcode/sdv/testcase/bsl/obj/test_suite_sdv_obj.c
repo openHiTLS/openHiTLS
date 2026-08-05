@@ -416,7 +416,7 @@ void SDV_BSL_OBJ_HASH_SLH_DSA_PROFILE_TC001()
         ASSERT_EQ((uint8_t)oid->octs[sizeof(oidPrefix)], 0x23 + i);
         ASSERT_EQ(BSL_OBJ_GetCID(oid), profiles[i]);
         ASSERT_EQ(BSL_OBJ_GetCidFromOidBuff((const uint8_t *)oid->octs, oid->octetLen), profiles[i]);
-        ASSERT_EQ(strcmp(BSL_OBJ_GetOidNameFromCID(profiles[i]), names[i]), 0);
+        ASSERT_EQ(strcmp(BSL_OBJ_GetOidNameFromOid(oid), names[i]), 0);
         ASSERT_EQ(BSL_OBJ_GetAsymAlgIdFromSignId(profiles[i]), BSL_CID_SLH_DSA);
         int32_t hashId = BSL_CID_UNKNOWN;
         ASSERT_EQ(OBJ_GetHashIdFromSignId(profiles[i], &hashId), BSL_SUCCESS);

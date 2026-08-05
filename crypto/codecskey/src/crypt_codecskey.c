@@ -47,8 +47,11 @@ int32_t CRYPT_EAL_GetEncodeFormat(const char *format)
         const char *formatStr;
         int32_t formatInt;
     } FORMAT_MAP[] = {
-        {"ASN1", BSL_FORMAT_ASN1}, {"PEM", BSL_FORMAT_PEM}, {"PFX_COM", BSL_FORMAT_PFX_COM},
-        {"PKCS12", BSL_FORMAT_PKCS12}, {"OBJECT", BSL_FORMAT_OBJECT}
+        {"ASN1", BSL_FORMAT_ASN1},
+        {"PEM", BSL_FORMAT_PEM},
+        {"PFX_COM", BSL_FORMAT_PFX_COM},
+        {"PKCS12", BSL_FORMAT_PKCS12},
+        {"OBJECT", BSL_FORMAT_OBJECT}
     };
 
     for (size_t i = 0; i < sizeof(FORMAT_MAP) / sizeof(FORMAT_MAP[0]); i++) {

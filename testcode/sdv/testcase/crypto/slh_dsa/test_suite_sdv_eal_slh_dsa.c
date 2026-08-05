@@ -16,6 +16,7 @@
 /* BEGIN_HEADER */
 #include <stdlib.h>
 #include <stdio.h>
+#include <stdbool.h>
 #include <string.h>
 #include "bsl_err.h"
 #include "bsl_sal.h"
@@ -339,10 +340,11 @@ void SDV_CRYPTO_SLH_DSA_SIGN_KAT_TC001(int isProvider, int id, Hex *key, Hex *ad
     ASSERT_EQ(CRYPT_EAL_PkeySetParaById(pkey, algId), CRYPT_SUCCESS);
     uint32_t keyLen = 0;
     ASSERT_EQ(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_GET_SLH_DSA_KEY_LEN, (void *)&keyLen, sizeof(keyLen)), CRYPT_SUCCESS);
-    if (addrand->len == 0) {    int32_t isDeterministic = 1;
-    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_SET_DETERMINISTIC_FLAG, (void *)&isDeterministic,
-                                 sizeof(isDeterministic)),
-              CRYPT_SUCCESS);
+    if (addrand->len == 0) {
+        bool isDeterministic = true;
+        ASSERT_EQ(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_SET_DETERMINISTIC_FLAG, (void *)&isDeterministic,
+                                     sizeof(isDeterministic)),
+                  CRYPT_SUCCESS);
     }
 
     CRYPT_EAL_PkeyPrv prv;
@@ -393,7 +395,7 @@ void SDV_CRYPTO_SLH_DSA_SIGN_KAT_TC002(int id, Hex *key, Hex *addrand, Hex *msg,
     ASSERT_EQ(CRYPT_EAL_PkeySetParaById(pkey, algId), CRYPT_SUCCESS);
     uint32_t keyLen = 0;
     ASSERT_EQ(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_GET_SLH_DSA_KEY_LEN, (void *)&keyLen, sizeof(keyLen)), CRYPT_SUCCESS);
-    int32_t isDeterministic = 1;
+    bool isDeterministic = true;
     ASSERT_EQ(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_SET_DETERMINISTIC_FLAG, (void *)&isDeterministic,
                                  sizeof(isDeterministic)),
               CRYPT_SUCCESS);
@@ -691,7 +693,7 @@ void SDV_CRYPTO_SLH_DSA_SIGN_ADDRAND_TC002(int id)
 
     ASSERT_EQ(CRYPT_EAL_PkeySign(pkey, CRYPT_MD_SHA256, msg, sizeof(msg), sig1, &sigLen1), CRYPT_SUCCESS);
 
-    int32_t isDeterministic = 1;
+    bool isDeterministic = true;
     ASSERT_EQ(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_SET_DETERMINISTIC_FLAG, &isDeterministic, sizeof(isDeterministic)),
               CRYPT_SUCCESS);
 
@@ -795,6 +797,7 @@ void SDV_CRYPTO_SLH_DSA_CTRL_MATRIX_TC001(int algId, int keyLen, int expectedSec
     int32_t gotAlgId = 0;
     int32_t secBits = 0;
     int32_t flag = 1;
+    bool deterministic = true;
     int32_t invalidAlgId = 0;
     uint32_t value = 0;
     uint8_t context[256] = {0};
@@ -824,9 +827,11 @@ void SDV_CRYPTO_SLH_DSA_CTRL_MATRIX_TC001(int algId, int keyLen, int expectedSec
         CRYPT_SLHDSA_ERR_CONTEXT_LEN_OVERFLOW);
     ASSERT_EQ(CRYPT_SLH_DSA_Ctrl(ctx, CRYPT_CTRL_SET_CTX_INFO, context, sizeof(context) - 1U), CRYPT_SUCCESS);
 
-    ASSERT_EQ(CRYPT_SLH_DSA_Ctrl(ctx, CRYPT_CTRL_SET_DETERMINISTIC_FLAG, &flag, sizeof(flag) - 1U),
+    ASSERT_EQ(CRYPT_SLH_DSA_Ctrl(ctx, CRYPT_CTRL_SET_DETERMINISTIC_FLAG, &deterministic,
+        sizeof(deterministic) - 1U),
         CRYPT_INVALID_ARG);
-    ASSERT_EQ(CRYPT_SLH_DSA_Ctrl(ctx, CRYPT_CTRL_SET_DETERMINISTIC_FLAG, &flag, sizeof(flag)), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_SLH_DSA_Ctrl(ctx, CRYPT_CTRL_SET_DETERMINISTIC_FLAG, &deterministic,
+        sizeof(deterministic)), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_SLH_DSA_Ctrl(ctx, CRYPT_CTRL_SET_PREHASH_MODE, &flag, sizeof(flag) - 1U), CRYPT_NOT_SUPPORT);
     ASSERT_EQ(CRYPT_SLH_DSA_Ctrl(ctx, CRYPT_CTRL_SET_PREHASH_MODE, &flag, sizeof(flag)), CRYPT_NOT_SUPPORT);
     ASSERT_EQ(CRYPT_SLH_DSA_Ctrl(ctx, CRYPT_CTRL_CLEAN_PUB_KEY, &value, sizeof(value)), CRYPT_SUCCESS);
@@ -996,7 +1001,7 @@ static CryptSlhDsaCtx *SlhDsaNewSignCtx(int32_t algId, uint32_t keyLen)
     uint8_t pubSeed[32] = {0};
     uint8_t pubRoot[32] = {0};
     BSL_Param prvParams[5];
-    int32_t deterministic = 1;
+    bool deterministic = true;
     if (ctx == NULL) {
         return NULL;
     }

@@ -19,7 +19,7 @@
 #include "hitls_build.h"
 #if defined(HITLS_CRYPTO_XMSS) || defined(HITLS_CRYPTO_XMSSMT)
 
-#include "hbs_hash_if.h"
+#include "hbs_hash.h"
 #include "xmss_local.h"
 #include "crypt_types.h"
 #ifdef __cplusplus

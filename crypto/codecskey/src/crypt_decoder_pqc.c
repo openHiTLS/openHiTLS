@@ -49,24 +49,9 @@
 #include "crypt_codecskey_local.h"
 #include "crypt_codecskey.h"
 
-#if defined(HITLS_CRYPTO_MLDSA) || defined(HITLS_CRYPTO_SLH_DSA)
-static int32_t CheckPqcKeyEncoding(const BSL_ASN1_Buffer *keyParam, const BSL_ASN1_BitString *pubKey)
-{
-    if (keyParam->tag != 0 || keyParam->len != 0 || keyParam->buff != NULL ||
-        (pubKey != NULL && pubKey->unusedBits != 0)) {
-        BSL_ERR_PUSH_ERROR(CRYPT_DECODE_NO_SUPPORT_FORMAT);
-        return CRYPT_DECODE_NO_SUPPORT_FORMAT;
-    }
-    return CRYPT_SUCCESS;
-}
-#endif
-
 #ifdef HITLS_CRYPTO_MLDSA
-static int32_t CheckMldsaPkcs8PublicKey(const CRYPT_ENCODE_DECODE_Pk8PrikeyInfo *info, CRYPT_ML_DSA_Ctx *pctx)
+static int32_t MldsaCheckPkcs8PublicKey(const CRYPT_ENCODE_DECODE_Pk8PrikeyInfo *info, CRYPT_ML_DSA_Ctx *pctx)
 {
-    if (info->publicKey.buff == NULL) {
-        return CRYPT_SUCCESS;
-    }
     uint32_t publicKeyLen = 0;
     int32_t ret = CRYPT_ML_DSA_Ctrl(pctx, CRYPT_CTRL_GET_PUBKEY_LEN, &publicKeyLen, sizeof(publicKeyLen));
     if (ret != CRYPT_SUCCESS) {
@@ -113,9 +98,9 @@ int32_t CRYPT_MLDSA_ParseSubPubkeyAsn1Buff(void *libCtx, uint8_t *buff, uint32_t
         BSL_ERR_PUSH_ERROR(CRYPT_DECODE_ERR_KEY_TYPE_NOT_MATCH);
         return CRYPT_DECODE_ERR_KEY_TYPE_NOT_MATCH;
     }
-    ret = CheckPqcKeyEncoding(&subPubkeyInfo.keyParam, &subPubkeyInfo.pubKey);
-    if (ret != CRYPT_SUCCESS) {
-        return ret;
+    if (subPubkeyInfo.pubKey.unusedBits != 0) {
+        BSL_ERR_PUSH_ERROR(CRYPT_DECODE_NO_SUPPORT_FORMAT);
+        return CRYPT_DECODE_NO_SUPPORT_FORMAT;
     }
     CRYPT_ML_DSA_Ctx *pctx = CRYPT_ML_DSA_NewCtxEx(libCtx);
     if (pctx == NULL) {
@@ -156,10 +141,6 @@ int32_t CRYPT_MLDSA_ParsePkcs8key(void *libCtx, uint8_t *buffer, uint32_t buffer
         BSL_ERR_PUSH_ERROR(CRYPT_DECODE_ERR_KEY_TYPE_NOT_MATCH);
         return CRYPT_DECODE_ERR_KEY_TYPE_NOT_MATCH;
     }
-    ret = CheckPqcKeyEncoding(&pk8PrikeyInfo.keyParam, NULL);
-    if (ret != CRYPT_SUCCESS) {
-        return ret;
-    }
     uint8_t *tmpBuff = pk8PrikeyInfo.pkeyRawKey;
     uint32_t tmpBuffLen = pk8PrikeyInfo.pkeyRawKeyLen;
     BSL_ASN1_Buffer asn1[CRYPT_ML_DSA_PRVKEY_IDX + 1] = {0};
@@ -192,10 +173,12 @@ int32_t CRYPT_MLDSA_ParsePkcs8key(void *libCtx, uint8_t *buffer, uint32_t buffer
         CRYPT_ML_DSA_FreeCtx(pctx);
         return ret;
     }
-    ret = CheckMldsaPkcs8PublicKey(&pk8PrikeyInfo, pctx);
-    if (ret != CRYPT_SUCCESS) {
-        CRYPT_ML_DSA_FreeCtx(pctx);
-        return ret;
+    if (pk8PrikeyInfo.publicKey.buff != NULL) {
+        ret = MldsaCheckPkcs8PublicKey(&pk8PrikeyInfo, pctx);
+        if (ret != CRYPT_SUCCESS) {
+            CRYPT_ML_DSA_FreeCtx(pctx);
+            return ret;
+        }
     }
     *mldsaPriKey = pctx;
     return CRYPT_SUCCESS;
@@ -250,9 +233,9 @@ int32_t CRYPT_SLHDSA_ParseSubPubkeyAsn1Buff(void *libCtx, uint8_t *buff, uint32_
         BSL_ERR_PUSH_ERROR(CRYPT_DECODE_ERR_KEY_TYPE_NOT_MATCH);
         return CRYPT_DECODE_ERR_KEY_TYPE_NOT_MATCH;
     }
-    ret = CheckPqcKeyEncoding(&subPubkeyInfo.keyParam, &subPubkeyInfo.pubKey);
-    if (ret != CRYPT_SUCCESS) {
-        return ret;
+    if (subPubkeyInfo.pubKey.unusedBits != 0) {
+        BSL_ERR_PUSH_ERROR(CRYPT_DECODE_NO_SUPPORT_FORMAT);
+        return CRYPT_DECODE_NO_SUPPORT_FORMAT;
     }
     CryptSlhDsaCtx *pctx = CRYPT_SLH_DSA_NewCtxEx(libCtx);
     if (pctx == NULL) {
@@ -293,11 +276,6 @@ int32_t CRYPT_SLHDSA_ParsePkcs8key(void *libCtx, uint8_t *buffer, uint32_t buffe
         BSL_ERR_PUSH_ERROR(CRYPT_DECODE_ERR_KEY_TYPE_NOT_MATCH);
         return CRYPT_DECODE_ERR_KEY_TYPE_NOT_MATCH;
     }
-    ret = CheckPqcKeyEncoding(&pk8PrikeyInfo.keyParam, NULL);
-    if (ret != CRYPT_SUCCESS) {
-        return ret;
-    }
-
     uint8_t *rawKeyBuff = pk8PrikeyInfo.pkeyRawKey;
     uint32_t rawKeyBuffLen = pk8PrikeyInfo.pkeyRawKeyLen;
 

@@ -23,7 +23,7 @@
 #include "crypt_errno.h"
 #include "crypt_utils.h"
 #include "hbs_common.h"
-#include "hbs_hash_if.h"
+#include "hbs_hash.h"
 
 int32_t CalcMultiMsgHash(CRYPT_MD_AlgId mdId, const CRYPT_ConstData *hashData, uint32_t hashDataLen, uint8_t *out,
     uint32_t outLen)

@@ -24,7 +24,7 @@
 #include "crypt_algid.h"
 #include "crypt_types.h"
 #include "crypt_utils.h"
-#include "hbs_hash_if.h"
+#include "hbs_hash.h"
 #include "hbs_tree.h"
 
 #ifdef __cplusplus

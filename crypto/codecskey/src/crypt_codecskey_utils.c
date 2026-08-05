@@ -187,6 +187,7 @@ typedef enum {
     CRYPT_PK8_PRIKEY_MAX
 } CRYPT_PK8_PRIKEY_TEMPL_IDX;
 
+#ifdef HITLS_CRYPTO_KEY_DECODE
 static bool IsStrictOneAsymmetricKeyType(BslCid keyType)
 {
     return (keyType >= BSL_CID_ML_DSA_44 && keyType <= BSL_CID_ML_DSA_87) ||
@@ -194,6 +195,7 @@ static bool IsStrictOneAsymmetricKeyType(BslCid keyType)
         (keyType >= BSL_CID_HASH_SLH_DSA_SHA2_128S_WITH_SHA256 &&
             keyType <= BSL_CID_HASH_SLH_DSA_SHAKE_256F_WITH_SHAKE256);
 }
+#endif
 
 #ifdef HITLS_CRYPTO_KEY_EPKI
 #ifdef HITLS_CRYPTO_KEY_DECODE
@@ -495,9 +497,9 @@ static int32_t RsaPssTagGetOrCheck(int32_t type, uint32_t idx, void *data, void 
 
 int32_t CRYPT_EAL_ParseRsaPssAlgParam(BSL_ASN1_Buffer *param, CRYPT_RSA_PssPara *para)
 {
-    para->mdId = (CRYPT_MD_AlgId)BSL_CID_SHA1; // hashAlgorithm     [0] HashAlgorithm DEFAULT sha1Identifier,
+    para->mdId = (CRYPT_MD_AlgId)BSL_CID_SHA1;  // hashAlgorithm     [0] HashAlgorithm DEFAULT sha1Identifier,
     para->mgfId = (CRYPT_MD_AlgId)BSL_CID_SHA1; // maskGenAlgorithm  [1] MaskGenAlgorithm DEFAULT mgf1SHA1Identifier,
-    para->saltLen = 20; // saltLength        [2] INTEGER DEFAULT 20
+    para->saltLen = 20;                         // saltLength        [2] INTEGER DEFAULT 20
 
     uint8_t *temp = param->buff;
     uint32_t tempLen = param->len;
@@ -603,6 +605,8 @@ static int32_t DecSubKeyInfoCb(int32_t type, uint32_t idx, void *data, void *exp
                 (cid >= BSL_CID_ML_KEM_512 && cid <= BSL_CID_ML_KEM_1024) ||
                 cid == BSL_CID_XMSS || cid == BSL_CID_XMSSMT ||
                 (cid >= BSL_CID_SLH_DSA_SHA2_128S && cid <= BSL_CID_SLH_DSA_SHAKE_256F) ||
+                (cid >= BSL_CID_HASH_SLH_DSA_SHA2_128S_WITH_SHA256 &&
+                    cid <= BSL_CID_HASH_SLH_DSA_SHAKE_256F_WITH_SHAKE256) ||
                 (cid >= BSL_CID_MLDSA44_RSA2048_PSS_SHA256 && cid <= BSL_CID_MLDSA87_ECDSA_P521_SHA512)) {
                 /* These algorithms identify the key type directly by OID, so parameters must be absent. */
                 *(uint8_t *)expVal = BSL_ASN1_TAG_EMPTY; // is empty
@@ -757,7 +761,7 @@ int32_t CRYPT_DECODE_Pkcs8Info(uint8_t *buff, uint32_t buffLen, BSL_ASN1_DecTemp
     pk8PrikeyInfo->pkeyRawKeyLen = octPriKey.len;
     pk8PrikeyInfo->keyParam = keyParam;
     pk8PrikeyInfo->attributes = asn1[CRYPT_PK8_PRIKEY_ATTRIBUTES_IDX];
-    if (hasPublicKey && asn1[CRYPT_PK8_PRIKEY_PUBLICKEY_IDX].len != 0) {
+    if (hasPublicKey) {
         pk8PrikeyInfo->publicKey.buff = asn1[CRYPT_PK8_PRIKEY_PUBLICKEY_IDX].buff + 1;
         pk8PrikeyInfo->publicKey.len = asn1[CRYPT_PK8_PRIKEY_PUBLICKEY_IDX].len - 1;
         pk8PrikeyInfo->publicKey.unusedBits = asn1[CRYPT_PK8_PRIKEY_PUBLICKEY_IDX].buff[0];
@@ -1230,8 +1234,11 @@ static int32_t EncodePkcs8Body(const CRYPT_ENCODE_DECODE_Pk8PrikeyInfo *info, co
         [CRYPT_PK8_PRIKEY_ALGID_IDX] = {BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE, algo->len, algo->buff},
         [CRYPT_PK8_PRIKEY_PRIKEY_IDX] = {BSL_ASN1_TAG_OCTETSTRING, info->pkeyRawKeyLen, info->pkeyRawKey},
         [CRYPT_PK8_PRIKEY_ATTRIBUTES_IDX] = info->attributes,
-        [CRYPT_PK8_PRIKEY_PUBLICKEY_IDX] = {BSL_ASN1_CLASS_CTX_SPECIFIC | 1,
-            publicKey == NULL ? 0 : info->publicKey.len + 1, publicKey},
+        [CRYPT_PK8_PRIKEY_PUBLICKEY_IDX] = {
+            publicKey == NULL ? 0 : BSL_ASN1_CLASS_CTX_SPECIFIC | 1,
+            publicKey == NULL ? 0 : info->publicKey.len + 1,
+            publicKey
+        },
     };
     BSL_ASN1_Template templ = {g_pk8PriKeyTempl, sizeof(g_pk8PriKeyTempl) / sizeof(g_pk8PriKeyTempl[0])};
     int32_t ret = BSL_ASN1_EncodeTemplate(&templ, fields, CRYPT_PK8_PRIKEY_MAX, &asn1->data, &asn1->dataLen);

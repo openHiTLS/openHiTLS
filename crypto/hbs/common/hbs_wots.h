@@ -22,7 +22,7 @@
 #include <stdint.h>
 #include <stddef.h>
 #include "hbs_common.h"
-#include "hbs_hash_if.h"
+#include "hbs_hash.h"
 
 #ifdef __cplusplus
 extern "C" {

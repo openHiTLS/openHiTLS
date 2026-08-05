@@ -495,16 +495,13 @@ int32_t CRYPT_SLH_DSA_Sign(CryptSlhDsaCtx *ctx, int32_t algId, const uint8_t *da
     int32_t ret = MsgEncode(ctx, algId, data, dataLen, &mp, &mpLen);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        BSL_SAL_CleanseData(sign, sigBytes);
         return ret;
     }
     uint8_t addrand[SLH_DSA_MAX_N] = {0};
     ret = GetAddRand(ctx, addrand);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        BSL_SAL_CleanseData(addrand, sizeof(addrand));
         BSL_SAL_Free(mp);
-        BSL_SAL_CleanseData(sign, sigBytes);
         return ret;
     }
     ret = SlhDsaSignInternal(ctx, mp, mpLen, addrand, sign, signLen);
@@ -678,11 +675,11 @@ int32_t CRYPT_SLH_DSA_Ctrl(CryptSlhDsaCtx *ctx, int32_t opt, void *val, uint32_t
             return CRYPT_SUCCESS;
         /* Supports bidirectional switching between deterministic and non-deterministic modes. */
         case CRYPT_CTRL_SET_DETERMINISTIC_FLAG:
-            if (val == NULL || len != sizeof(int32_t)) {
+            if (val == NULL || len != sizeof(bool)) {
                 BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
                 return CRYPT_INVALID_ARG;
             }
-            ctx->isDeterministic = (*(int32_t *)val != 0);
+            ctx->isDeterministic = *(bool *)val;
             return CRYPT_SUCCESS;
         case CRYPT_CTRL_CLEAN_PUB_KEY:
             BSL_SAL_CleanseData(ctx->prvKey.pub.seed, sizeof(ctx->prvKey.pub.seed));

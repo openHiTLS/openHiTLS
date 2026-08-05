@@ -13,8 +13,8 @@
  * See the Mulan PSL v2 for more details.
  */
 
-#ifndef HBS_HASH_IF_H
-#define HBS_HASH_IF_H
+#ifndef HBS_HASH_H
+#define HBS_HASH_H
 
 #include "hitls_build.h"
 #if defined(HITLS_CRYPTO_XMSS) || defined(HITLS_CRYPTO_XMSSMT) || defined(HITLS_CRYPTO_SLH_DSA)
@@ -73,4 +73,4 @@ int32_t CalcMultiMsgHash(CRYPT_MD_AlgId mdId, const CRYPT_ConstData *hashData, u
 #endif
 
 #endif /* HITLS_CRYPTO_XMSS || HITLS_CRYPTO_XMSSMT || HITLS_CRYPTO_SLH_DSA */
-#endif /* HBS_HASH_IF_H */
+#endif /* HBS_HASH_H */

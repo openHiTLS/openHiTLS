@@ -26,7 +26,7 @@
 #include "xmss_hash.h"
 #include "xmss_local.h"
 #include "xmss_address.h"
-#include "hbs_hash_if.h"
+#include "hbs_hash.h"
 
 /* Padding types for domain separation */
 #define PADDING_F          0

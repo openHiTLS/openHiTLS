@@ -20,7 +20,7 @@
 #if defined(HITLS_CRYPTO_XMSS) || defined(HITLS_CRYPTO_XMSSMT)
 
 #include <stdint.h>
-#include "hbs_hash_if.h"
+#include "hbs_hash.h"
 
 #ifdef __cplusplus
 extern "C" {

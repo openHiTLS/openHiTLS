@@ -488,7 +488,7 @@ void SDV_CRYPTO_SLH_DSA_FAILURE_CLEANUP_TC001(void)
     ASSERT_EQ(CRYPT_EAL_PkeySign(pkey, CRYPT_MD_SHA256, msg, sizeof(msg), sig, &sigLen), CRYPT_INVALID_ARG);
     ASSERT_EQ(sigLen, sizeof(sig));
     for (uint32_t i = 0; i < sizeof(sig); i++) {
-        ASSERT_EQ(sig[i], 0);
+        ASSERT_EQ(sig[i], 0xa5);
     }
     TestErrClear();
 
@@ -651,5 +651,4 @@ EXIT:
     return;
 }
 /* END_CASE */
-
 

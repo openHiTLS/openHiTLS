@@ -29,7 +29,7 @@
 #include "crypt_util_rand.h"
 #include "crypt_bn.h"
 #include "eal_pkey_local.h"
-#include "hbs_hash_if.h"
+#include "hbs_hash.h"
 #include "hbs_wots.h"
 #include "stub_utils.h"
 #include "test.h"

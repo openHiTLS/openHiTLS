@@ -119,7 +119,9 @@ static bool X509_SignAlgParamsMustBeOmitted(BslCid cid)
     if (cid == BSL_CID_ML_DSA_44 || cid == BSL_CID_ML_DSA_65 || cid == BSL_CID_ML_DSA_87) {
         return true;
     }
-    if (BSL_OBJ_GetAsymAlgIdFromSignId(cid) == BSL_CID_SLH_DSA) {
+    if ((cid >= BSL_CID_SLH_DSA_SHA2_128S && cid <= BSL_CID_SLH_DSA_SHAKE_256F) ||
+        (cid >= BSL_CID_HASH_SLH_DSA_SHA2_128S_WITH_SHA256 &&
+            cid <= BSL_CID_HASH_SLH_DSA_SHAKE_256F_WITH_SHAKE256)) {
         return true;
     }
     if (cid >= BSL_CID_MLDSA44_RSA2048_PSS_SHA256 && cid <= BSL_CID_MLDSA87_ECDSA_P521_SHA512) {

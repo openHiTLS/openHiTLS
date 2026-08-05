@@ -212,7 +212,7 @@ extern "C" {
 #define CRYPT_PARAM_DECODE_PROVIDER_CTX                     (CRYPT_PARAM_DECODE_BASE + 13)
 #define CRYPT_PARAM_DECODE_FLAG_FREE_OUTDATA                (CRYPT_PARAM_DECODE_BASE + 14)
 
-#define CRYPT_PARAM_ENCODE_BASE                             4500
+#define CRYPT_PARAM_ENCODE_BASE                             4100
 #define CRYPT_PARAM_ENCODE_OUTPUT_FORMATS                   (CRYPT_PARAM_ENCODE_BASE + 1)
 #define CRYPT_PARAM_ENCODE_ONE_ASYMMETRIC_KEY               (CRYPT_PARAM_ENCODE_BASE + 2)
 #define CRYPT_PARAM_ENCODE_DERIVE_MODE                      (CRYPT_PARAM_ENCODE_BASE + 3)

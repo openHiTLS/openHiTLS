@@ -24,7 +24,7 @@
 #include <stddef.h>
 #include "bsl_params.h"
 #include "crypt_algid.h"
-#include "hbs_hash_if.h"
+#include "hbs_hash.h"
 #include "hbs_wots.h"
 #include "hbs_tree.h"
 #include "xmss_params.h"
