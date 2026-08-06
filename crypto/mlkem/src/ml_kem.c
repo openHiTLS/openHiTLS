@@ -75,7 +75,6 @@ CRYPT_ML_KEM_Ctx *CRYPT_ML_KEM_NewCtx(void)
         return NULL;
     }
     keyCtx->hasSeed = false;
-    keyCtx->dkFormat = CRYPT_ALGO_MLKEM_DK_FORMAT_NOT_SET;
     if (BSL_SAL_ReferencesInit(&(keyCtx->references)) != BSL_SUCCESS) {
         BSL_SAL_Free(keyCtx);
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
@@ -213,7 +212,6 @@ CRYPT_ML_KEM_Ctx *CRYPT_ML_KEM_DupCtx(CRYPT_ML_KEM_Ctx *ctx)
         }
     }
     newCtx->libCtx = ctx->libCtx;
-    newCtx->dkFormat = ctx->dkFormat;
     newCtx->hasSeed = ctx->hasSeed;
     if (ctx->hasSeed) {
         memcpy(newCtx->seed, ctx->seed, sizeof(ctx->seed));
@@ -278,30 +276,6 @@ static int32_t MlKemGetSeed(const CRYPT_ML_KEM_Ctx *ctx, void *val, uint32_t len
         return CRYPT_INVALID_ARG;
     }
     memcpy(val, ctx->seed, 64); // // 64 bytes (d || z)
-    return CRYPT_SUCCESS;
-}
-
-static int32_t MlKemSetDkFormat(CRYPT_ML_KEM_Ctx *ctx, void *val, uint32_t len)
-{
-    if (len != sizeof(uint32_t) || val == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
-        return CRYPT_INVALID_ARG;
-    }
-    ctx->dkFormat = *(uint32_t *)val;
-    return CRYPT_SUCCESS;
-}
-
-static int32_t MlKemGetDkFormat(const CRYPT_ML_KEM_Ctx *ctx, void *val, uint32_t len)
-{
-    if (val == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
-        return CRYPT_NULL_INPUT;
-    }
-    if (len != sizeof(uint32_t)) {
-        BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
-        return CRYPT_INVALID_ARG;
-    }
-    *(uint32_t *)val = ctx->dkFormat;
     return CRYPT_SUCCESS;
 }
 
@@ -535,17 +509,55 @@ int32_t CRYPT_ML_KEM_SetDecapsKeyEx(CRYPT_ML_KEM_Ctx *ctx, const BSL_Param *para
 
 int32_t CRYPT_ML_KEM_GetDecapsKeyEx(const CRYPT_ML_KEM_Ctx *ctx, BSL_Param *para)
 {
-    if (para == NULL) {
+    if (ctx == NULL || para == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
-    CRYPT_KemDecapsKey prv = {0};
-    BSL_Param *paramPrv = GetParamValue(para, CRYPT_PARAM_ML_KEM_PRVKEY, &prv.data, &(prv.len));
-    int32_t ret = CRYPT_ML_KEM_GetDecapsKey(ctx, &prv);
-    if (ret != CRYPT_SUCCESS) {
-        return ret;
+
+    BSL_Param *paramPrv = EAL_FindParam(para, CRYPT_PARAM_ML_KEM_PRVKEY);
+    BSL_Param *paramSeed = EAL_FindParam(para, CRYPT_PARAM_ML_KEM_PRVKEY_SEED);
+    if (paramPrv == NULL && paramSeed == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return CRYPT_NULL_INPUT;
     }
-    paramPrv->useLen = prv.len;
+    if (paramSeed != NULL) {
+        if (!ctx->hasSeed) {
+            BSL_ERR_PUSH_ERROR(CRYPT_MLKEM_SEED_NOT_SET);
+            return CRYPT_MLKEM_SEED_NOT_SET;
+        }
+        if (paramSeed->valueType != BSL_PARAM_TYPE_OCTETS) {
+            BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
+            return CRYPT_INVALID_ARG;
+        }
+        if (paramSeed->value == NULL || paramSeed->valueLen < sizeof(ctx->seed)) {
+            BSL_ERR_PUSH_ERROR(CRYPT_MLKEM_LEN_NOT_ENOUGH);
+            return CRYPT_MLKEM_LEN_NOT_ENOUGH;
+        }
+    }
+    if (paramPrv != NULL) {
+        if (ctx->dkLen == 0) {
+            BSL_ERR_PUSH_ERROR(CRYPT_MLKEM_KEY_NOT_SET);
+            return CRYPT_MLKEM_KEY_NOT_SET;
+        }
+        if (paramPrv->valueType != BSL_PARAM_TYPE_OCTETS) {
+            BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
+            return CRYPT_INVALID_ARG;
+        }
+        if (paramPrv->value == NULL || paramPrv->valueLen < ctx->dkLen) {
+            BSL_ERR_PUSH_ERROR(CRYPT_MLKEM_KEYLEN_ERROR);
+            return CRYPT_MLKEM_KEYLEN_ERROR;
+        }
+    }
+
+    if (paramSeed != NULL) {
+        memcpy(paramSeed->value, ctx->seed, sizeof(ctx->seed));
+        paramSeed->useLen = sizeof(ctx->seed);
+    }
+    if (paramPrv != NULL) {
+        memcpy(paramPrv->value, ctx->dk, ctx->dkLen);
+        paramPrv->useLen = ctx->dkLen;
+    }
+
     return CRYPT_SUCCESS;
 }
 
@@ -641,10 +653,6 @@ int32_t CRYPT_ML_KEM_Ctrl(CRYPT_ML_KEM_Ctx *ctx, int32_t opt, void *val, uint32_
             return MlKemGetSharedLen(ctx, val, len);
         case CRYPT_CTRL_GET_MLKEM_SEED:
             return MlKemGetSeed(ctx, val, len);
-        case CRYPT_CTRL_SET_MLKEM_DK_FORMAT:
-            return MlKemSetDkFormat(ctx, val, len);
-        case CRYPT_CTRL_GET_MLKEM_DK_FORMAT:
-            return MlKemGetDkFormat(ctx, val, len);
         case CRYPT_CTRL_GET_SECBITS:
             return MlkemGetSecBits(ctx, val, len);
         default:

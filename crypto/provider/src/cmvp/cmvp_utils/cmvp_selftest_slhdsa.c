@@ -41,16 +41,27 @@ typedef struct {
     int32_t type;
 } CMVP_SlhdsaSignVector;
 
-static const uint8_t *g_slhdsaKatRand = NULL;
-static uint32_t g_slhdsaKatRandLen = 0;
+static const char *SLHDSA_SEED_VECTOR = NULL;
 
-static int32_t SlhdsaKatRandEx(void *libCtx, uint8_t *rand, uint32_t randLen)
+static int32_t TestVectorRandomEx(void *libCtx, uint8_t *r, uint32_t rLen)
 {
+    uint8_t *rand = NULL;
+    uint32_t randLen;
+
     (void)libCtx;
-    if (rand == NULL || g_slhdsaKatRand == NULL || randLen != g_slhdsaKatRandLen) {
-        return CRYPT_INVALID_ARG;
+    rand = CMVP_StringsToBins(SLHDSA_SEED_VECTOR, &randLen);
+    if (rand == NULL) {
+        return CRYPT_MEM_ALLOC_FAIL;
     }
-    (void)memcpy(rand, g_slhdsaKatRand, randLen);
+    if (randLen < rLen) {
+        BSL_SAL_Free(rand);
+        return CRYPT_CMVP_ERR_ALGO_SELFTEST;
+    }
+
+    for (uint32_t i = 0; i < rLen; i++) {
+        r[i] = rand[i];
+    }
+    BSL_SAL_Free(rand);
     return CRYPT_SUCCESS;
 }
 
@@ -122,8 +133,6 @@ static bool TestSlhdsaSignVerify(void *libCtx, const char *attrName, const CMVP_
     uint32_t signVecLen = 0;
     uint8_t *msg = NULL;
     uint32_t msgLen;
-    uint8_t *rand = NULL;
-    uint32_t randLen = 0;
     CRYPT_EAL_PkeyCtx *pkeyPrv = NULL;
     CRYPT_EAL_PkeyCtx *pkeyPub = NULL;
     CRYPT_EAL_RandFuncEx oldRandFuncEx = CRYPT_RandRegistExGet();
@@ -137,11 +146,8 @@ static bool TestSlhdsaSignVerify(void *libCtx, const char *attrName, const CMVP_
     signLen = signVecLen;
     sign = BSL_SAL_Malloc(signLen);
     GOTO_ERR_IF_TRUE(sign == NULL, CRYPT_MEM_ALLOC_FAIL);
-    rand = CMVP_StringsToBins(vector->rnd, &randLen);
-    GOTO_ERR_IF_TRUE(rand == NULL, CRYPT_CMVP_COMMON_ERR);
-    g_slhdsaKatRand = rand;
-    g_slhdsaKatRandLen = randLen;
-    CRYPT_EAL_SetRandCallBackEx(SlhdsaKatRandEx);
+    SLHDSA_SEED_VECTOR = vector->rnd;
+    CRYPT_EAL_SetRandCallBackEx(TestVectorRandomEx);
     // sign
     GOTO_ERR_IF_TRUE(CRYPT_EAL_PkeySign(pkeyPrv, vector->preHashId, msg, msgLen, sign, &signLen) != CRYPT_SUCCESS,
         CRYPT_CMVP_ERR_ALGO_SELFTEST);
@@ -159,9 +165,6 @@ ERR:
     BSL_SAL_Free(signVec);
     BSL_SAL_Free(msg);
     CRYPT_EAL_SetRandCallBackEx(oldRandFuncEx);
-    g_slhdsaKatRand = NULL;
-    g_slhdsaKatRandLen = 0;
-    BSL_SAL_Free(rand);
     CRYPT_EAL_PkeyFreeCtx(pkeyPrv);
     CRYPT_EAL_PkeyFreeCtx(pkeyPub);
     return ret;

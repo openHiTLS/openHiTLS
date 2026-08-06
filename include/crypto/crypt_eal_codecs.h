@@ -286,10 +286,13 @@ int32_t CRYPT_EAL_EncodeBuffKey(CRYPT_EAL_PkeyCtx *ealPKey, const CRYPT_EncodePa
  * @brief   Encode formatted buffer of pkey with extended parameters
  *
  * @param   ealPKey [IN] CRYPT_EAL_PkeyCtx to encode.
- * @param   param [IN] extended encode parameters, may be NULL. For ML-DSA,
+ * @param   param [IN] extended encode parameters, may be NULL. For ML-DSA and ML-KEM,
  *                  CRYPT_PARAM_ENCODE_OUTPUT_FORMATS is a BSL_PARAM_TYPE_UINT32_PTR containing exactly one
- *                  CRYPT_ALGO_MLDSA_PRIV_KEY_FORMAT_TYPE value. If it is absent, SEED_ONLY is used when the key
- *                  contains a seed; otherwise, PRIV_ONLY is used. An empty or multiple-value parameter is invalid.
+ *                  algorithm-specific private-key format value. For ML-DSA, the value is a
+ *                  CRYPT_ALGO_MLDSA_PRIV_KEY_FORMAT_TYPE; if absent, SEED_ONLY is used when the key contains a
+ *                  seed, otherwise PRIV_ONLY is used. For ML-KEM, the value is a
+ *                  CRYPT_ALGO_MLKEM_DK_FORMAT_TYPE value; if absent, SEED_ONLY is used when the key contains a
+ *                  seed, otherwise DK_ONLY is used. An empty or multiple-value parameter is invalid.
  *                  For ML-DSA and SLH-DSA PKCS#8 output, the presence-only
  *                  CRYPT_PARAM_ENCODE_ONE_ASYMMETRIC_KEY marker requests RFC 5958 version 1 output with a publicKey
  *                  exported from ealPKey. Only the marker identifier is inspected; its type, value, valueLen and

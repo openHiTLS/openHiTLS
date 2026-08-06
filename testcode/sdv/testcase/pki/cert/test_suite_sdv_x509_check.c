@@ -5104,10 +5104,43 @@ EXIT:
 void SDV_X509_SIGNATURE_UNUSED_BITS_CHECK_TC001(int unusedBits)
 {
     BSL_ASN1_BitString signature = {.unusedBits = (uint8_t)unusedBits};
+#ifdef HITLS_CRYPTO_MLDSA
+    CRYPT_EAL_PkeyCtx *key = NULL;
+    uint8_t *signatureData = NULL;
+#endif
 
-    ASSERT_EQ(HITLS_X509_CheckSignature(NULL, NULL, 0, NULL, &signature), BSL_ASN1_ERR_DECODE_BIT_STRING);
+    if (unusedBits != 0) {
+        ASSERT_EQ(HITLS_X509_CheckSignature(NULL, NULL, 0, NULL, &signature), BSL_ASN1_ERR_DECODE_BIT_STRING);
+        goto EXIT;
+    }
+#ifdef HITLS_CRYPTO_MLDSA
+    uint8_t rawData[] = {0x50, 0x51, 0x43};
+    uint32_t signatureLen = 0;
+    HITLS_X509_Asn1AlgId alg = {.algId = BSL_CID_ML_DSA_44};
+
+    TestMemInit();
+    ASSERT_EQ(TestRandInit(), CRYPT_SUCCESS);
+    key = GenKey(CRYPT_PKEY_ML_DSA, CRYPT_MLDSA_TYPE_MLDSA_44);
+    ASSERT_NE(key, NULL);
+    signatureLen = CRYPT_EAL_PkeyGetSignLen(key);
+    signatureData = BSL_SAL_Malloc(signatureLen);
+    ASSERT_NE(signatureData, NULL);
+    ASSERT_EQ(CRYPT_EAL_PkeySign(key, CRYPT_MD_SHA256, rawData, sizeof(rawData), signatureData, &signatureLen),
+        CRYPT_SUCCESS);
+    signature.buff = signatureData;
+    signature.len = signatureLen;
+    ASSERT_EQ(HITLS_X509_CheckSignature(key, rawData, sizeof(rawData), &alg, &signature), CRYPT_SUCCESS);
+    ASSERT_TRUE(TestIsErrStackEmpty());
+#else
+    SKIP_TEST();
+#endif
 
 EXIT:
+#ifdef HITLS_CRYPTO_MLDSA
+    TestRandDeInit();
+    CRYPT_EAL_PkeyFreeCtx(key);
+    BSL_SAL_FREE(signatureData);
+#endif
     return;
 }
 /* END_CASE */

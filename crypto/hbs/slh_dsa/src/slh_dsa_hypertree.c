@@ -23,7 +23,7 @@
 
 void HbsTreeCtx_InitFromSlhDsa(HbsTreeCtx *treeCtx, const CryptSlhDsaCtx *ctx)
 {
-    const SlhDsaMathParams *math = ctx->profile->math;
+    const SlhDsaMathParams *math = ctx->profile->para;
     treeCtx->n = math->n;
     treeCtx->hp = math->hp;
     treeCtx->d = math->d;

@@ -150,6 +150,86 @@ EXIT:
 }
 /* END_CASE */
 
+/* @
+* @test  SDV_CRYPTO_MLKEM_GET_PRV_EX_TC001
+* @spec  -
+* @title  Verify ML-KEM private key outparams are atomic on failure.
+* @precon  nan
+* @brief
+* 1.Generate an ML-KEM key pair.
+* 2.Request the seed and decapsulation key with an undersized decapsulation key buffer.
+* 3.Request both values with valid output buffers.
+* @expect
+* 1.success
+* 2.The call fails without modifying either output buffer or useLen.
+* 3.success
+* @prior  nan
+* @auto  FALSE
+@ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_MLKEM_GET_PRV_EX_TC001(int bits)
+{
+    TestMemInit();
+    ASSERT_EQ(TestRandInit(), CRYPT_SUCCESS);
+    CRYPT_EAL_PkeyCtx *ctx = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_ML_KEM);
+    uint8_t seed[MLKEM_SEED_LEN * 2] = {0};
+    uint8_t expectedSeed[MLKEM_SEED_LEN * 2] = {0};
+    uint8_t unchangedSeed[MLKEM_SEED_LEN * 2] = {0};
+    uint8_t *prv = NULL;
+    uint8_t *expectedPrv = NULL;
+    uint8_t *unchangedPrv = NULL;
+    uint32_t prvLen = 0;
+    CRYPT_EAL_PkeyPrv prvKey = {0};
+
+    ASSERT_TRUE(ctx != NULL);
+    ASSERT_EQ(CRYPT_EAL_PkeySetParaById(ctx, (uint32_t)bits), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyGen(ctx), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_GET_PRVKEY_LEN, &prvLen, sizeof(prvLen)), CRYPT_SUCCESS);
+    prv = BSL_SAL_Malloc(prvLen);
+    expectedPrv = BSL_SAL_Malloc(prvLen);
+    unchangedPrv = BSL_SAL_Malloc(prvLen);
+    ASSERT_TRUE(prv != NULL && expectedPrv != NULL && unchangedPrv != NULL);
+
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_GET_MLKEM_SEED,
+        expectedSeed, sizeof(expectedSeed)), CRYPT_SUCCESS);
+    prvKey.id = CRYPT_PKEY_ML_KEM;
+    prvKey.key.kemDk.data = expectedPrv;
+    prvKey.key.kemDk.len = prvLen;
+    ASSERT_EQ(CRYPT_EAL_PkeyGetPrv(ctx, &prvKey), CRYPT_SUCCESS);
+
+    (void)memset(seed, 0xA5, sizeof(seed));
+    (void)memset(prv, 0xA5, prvLen);
+    (void)memset(unchangedSeed, 0xA5, sizeof(unchangedSeed));
+    (void)memset(unchangedPrv, 0xA5, prvLen);
+    BSL_Param bothParams[] = {
+        {CRYPT_PARAM_ML_KEM_PRVKEY_SEED, BSL_PARAM_TYPE_OCTETS, seed, sizeof(seed), 1},
+        {CRYPT_PARAM_ML_KEM_PRVKEY, BSL_PARAM_TYPE_OCTETS, prv, prvLen - 1, 2}, BSL_PARAM_END
+    };
+    ASSERT_EQ(CRYPT_EAL_PkeyGetPrvEx(ctx, bothParams), CRYPT_MLKEM_KEYLEN_ERROR);
+    ASSERT_EQ(bothParams[0].useLen, 1);
+    ASSERT_EQ(bothParams[1].useLen, 2);
+    ASSERT_COMPARE("unchanged seed", seed, sizeof(seed), unchangedSeed, sizeof(unchangedSeed));
+    ASSERT_COMPARE("unchanged private key", prv, prvLen, unchangedPrv, prvLen);
+    bothParams[1].valueLen = prvLen;
+    TestErrClear();
+
+    ASSERT_EQ(CRYPT_EAL_PkeyGetPrvEx(ctx, bothParams), CRYPT_SUCCESS);
+    ASSERT_EQ(bothParams[0].useLen, sizeof(seed));
+    ASSERT_EQ(bothParams[1].useLen, prvLen);
+    ASSERT_COMPARE("compare seed", seed, sizeof(seed), expectedSeed, sizeof(expectedSeed));
+    ASSERT_COMPARE("compare private key", prv, prvLen, expectedPrv, prvLen);
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
+EXIT:
+    CRYPT_EAL_PkeyFreeCtx(ctx);
+    BSL_SAL_Free(prv);
+    BSL_SAL_Free(expectedPrv);
+    BSL_SAL_Free(unchangedPrv);
+    TestRandDeInit();
+    return;
+}
+/* END_CASE */
+
 /* Use default random numbers for end-to-end testing */
 /* BEGIN_CASE */
 void SDV_CRYPTO_MLKEM_KEYGEN_API_TC002(int bits)

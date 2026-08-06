@@ -906,8 +906,13 @@ void SDV_CRYPTO_HBS_HASH_IF_TC001(void)
     };
     ASSERT_EQ(sizeof(hashFuncs), 7 * sizeof(void *));
     ASSERT_EQ(sizeof(adrsOps), 11 * sizeof(void *));
-    ASSERT_TRUE(hashFuncs.skDerive != NULL && hashFuncs.chain != NULL);
-    ASSERT_TRUE(adrsOps.setLayerAddr != NULL && adrsOps.getAdrsLen != NULL);
+    ASSERT_TRUE(hashFuncs.skDerive != NULL && hashFuncs.chainHash != NULL && hashFuncs.nodeHash != NULL &&
+        hashFuncs.msgHash != NULL && hashFuncs.pkCompress != NULL && hashFuncs.sigRandGen != NULL &&
+        hashFuncs.chain != NULL);
+    ASSERT_TRUE(adrsOps.setLayerAddr != NULL && adrsOps.setTreeAddr != NULL && adrsOps.setType != NULL &&
+        adrsOps.setKeyPairAddr != NULL && adrsOps.setChainAddr != NULL && adrsOps.setTreeHeight != NULL &&
+        adrsOps.setHashAddr != NULL && adrsOps.setTreeIndex != NULL && adrsOps.getTreeIndex != NULL &&
+        adrsOps.copyKeyPairAddr != NULL && adrsOps.getAdrsLen != NULL);
 
     const uint8_t msg[] = {'a', 'b', 'c'};
     const CRYPT_ConstData hashData[] = {{msg, sizeof(msg)}};
@@ -948,6 +953,21 @@ void SDV_CRYPTO_HBS_HASH_IF_TC001(void)
     uint8_t digest[sizeof(expected)] = {0};
     ASSERT_EQ(CalcMultiMsgHash(CRYPT_MD_SHA256, hashData, 1, digest, sizeof(digest)), CRYPT_SUCCESS);
     ASSERT_EQ(memcmp(digest, expected, sizeof(expected)), 0);
+
+#ifdef HITLS_CRYPTO_SHA3
+    const uint8_t shake128Expected[32] = {
+        0x58, 0x81, 0x09, 0x2d, 0xd8, 0x18, 0xbf, 0x5c, 0xf8, 0xa3, 0xdd, 0xb7, 0x93, 0xfb, 0xcb, 0xa7,
+        0x40, 0x97, 0xd5, 0xc5, 0x26, 0xa6, 0xd3, 0x5f, 0x97, 0xb8, 0x33, 0x51, 0x94, 0x0f, 0x2c, 0xc8,
+    };
+    const uint8_t shake256Expected[32] = {
+        0x48, 0x33, 0x66, 0x60, 0x13, 0x60, 0xa8, 0x77, 0x1c, 0x68, 0x63, 0x08, 0x0c, 0xc4, 0x11, 0x4d,
+        0x8d, 0xb4, 0x45, 0x30, 0xf8, 0xf1, 0xe1, 0xee, 0x4f, 0x94, 0xea, 0x37, 0xe7, 0x8b, 0x57, 0x39,
+    };
+    ASSERT_EQ(CalcMultiMsgHash(CRYPT_MD_SHAKE128, hashData, 1, digest, sizeof(digest)), CRYPT_SUCCESS);
+    ASSERT_EQ(memcmp(digest, shake128Expected, sizeof(shake128Expected)), 0);
+    ASSERT_EQ(CalcMultiMsgHash(CRYPT_MD_SHAKE256, hashData, 1, digest, sizeof(digest)), CRYPT_SUCCESS);
+    ASSERT_EQ(memcmp(digest, shake256Expected, sizeof(shake256Expected)), 0);
+#endif
 
 EXIT:
     return;

@@ -199,9 +199,6 @@ static int32_t TransLowKeyToTargetLowKey(CRYPT_EAL_PkeyMgmtInfo *pkeyAlgInfo, co
     };
     int32_t ret = method->export(lowObjectRef, param);
     if (ret != CRYPT_SUCCESS) {
-        if (importTargetPkeyArgs.targetKeyRef != NULL) {
-            pkeyAlgInfo->keyMgmtMethod.freeCtx(importTargetPkeyArgs.targetKeyRef);
-        }
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }

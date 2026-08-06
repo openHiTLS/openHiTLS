@@ -1008,7 +1008,7 @@ static int32_t ParseXmssPubKeyAsn1Buff(CRYPT_EAL_LibCtx *libCtx, const char *att
                                        CRYPT_EAL_PkeyCtx **ealPubKey, bool isXmss)
 {
     uint8_t *p = bitPubkey->buff;
-    if (bitPubkey->len <= 4 || bitPubkey->unusedBits != 0x00 || (bitPubkey->len - 4) % 2 != 0) {
+    if (bitPubkey->len <= 4 || (bitPubkey->len - 4) % 2 != 0) {
         BSL_ERR_PUSH_ERROR(CRYPT_XMSS_ERR_INVALID_KEY);
         return CRYPT_XMSS_ERR_INVALID_KEY;
     }
@@ -1778,6 +1778,21 @@ static void CleanSeedAndPrivKeyAsn1Buff(BSL_ASN1_Buffer *seedAsn1, BSL_ASN1_Buff
         prvKeyAsn1->buff = NULL;
     }
 }
+
+static bool ParseEncodeOutputFormat(const BSL_Param *formatParam, uint32_t maxFormat, uint32_t *outputFormat)
+{
+    if (formatParam->valueType != BSL_PARAM_TYPE_UINT32_PTR || formatParam->valueLen != sizeof(uint32_t) ||
+        formatParam->value == NULL) {
+        return false;
+    }
+    uint32_t format;
+    (void)memcpy(&format, formatParam->value, sizeof(format));
+    if (format > maxFormat) {
+        return false;
+    }
+    *outputFormat = format;
+    return true;
+}
 #endif
 
 #ifdef HITLS_CRYPTO_MLDSA
@@ -1865,30 +1880,22 @@ static int32_t GetMldsaDefaultOutputFormat(CRYPT_EAL_PkeyCtx *ealPriKey, uint32_
 
 static int32_t GetMldsaOutputFormat(CRYPT_EAL_PkeyCtx *ealPriKey, const BSL_Param *param, uint32_t *outputFormat)
 {
-    const BSL_Param *formatParam = (param == NULL) ? NULL :
-        BSL_PARAM_FindConstParam(param, CRYPT_PARAM_ENCODE_OUTPUT_FORMATS);
+    const BSL_Param *formatParam = BSL_PARAM_FindConstParam(param, CRYPT_PARAM_ENCODE_OUTPUT_FORMATS);
     if (formatParam == NULL) {
         return GetMldsaDefaultOutputFormat(ealPriKey, outputFormat);
     }
-    if (formatParam->valueLen != sizeof(uint32_t) || formatParam->value == NULL) {
+    if (!ParseEncodeOutputFormat(formatParam, (uint32_t)CRYPT_ALGO_MLDSA_PRIV_FORMAT_SEED_ONLY, outputFormat)) {
         BSL_ERR_PUSH_ERROR(CRYPT_MLDSA_PRVKEY_FORMAT_ERROR);
         return CRYPT_MLDSA_PRVKEY_FORMAT_ERROR;
     }
-    uint32_t format = *(const uint32_t *)formatParam->value;
-    if (format > (uint32_t)CRYPT_ALGO_MLDSA_PRIV_FORMAT_SEED_ONLY) {
-        BSL_ERR_PUSH_ERROR(CRYPT_MLDSA_PRVKEY_FORMAT_ERROR);
-        return CRYPT_MLDSA_PRVKEY_FORMAT_ERROR;
-    }
-    *outputFormat = format;
-
     return CRYPT_SUCCESS;
 }
 
 static int32_t GetMldsaSkInfo(CRYPT_EAL_PkeyCtx *ealPriKey, uint32_t format, BSL_ASN1_Buffer *seedAsn1,
     BSL_ASN1_Buffer *prvKeyAsn1)
 {
-    bool needSeed = format != (uint32_t)CRYPT_ALGO_MLDSA_PRIV_FORMAT_PRIV_ONLY;
-    bool needPrv = format != (uint32_t)CRYPT_ALGO_MLDSA_PRIV_FORMAT_SEED_ONLY;
+    bool needSeed = (format != (uint32_t)CRYPT_ALGO_MLDSA_PRIV_FORMAT_PRIV_ONLY);
+    bool needPrv = (format != (uint32_t)CRYPT_ALGO_MLDSA_PRIV_FORMAT_SEED_ONLY);
     BSL_Param getParams[3] = {0};
     uint32_t index = 0;
 
@@ -1912,11 +1919,7 @@ static int32_t GetMldsaSkInfo(CRYPT_EAL_PkeyCtx *ealPriKey, uint32_t format, BSL
         index++;
     }
 
-    int32_t ret = CRYPT_EAL_PkeyGetPrvEx(ealPriKey, getParams);
-    if (ret != CRYPT_SUCCESS) {
-        return ret;
-    }
-    return CRYPT_SUCCESS;
+    return CRYPT_EAL_PkeyGetPrvEx(ealPriKey, getParams);
 }
 
 static int32_t EncodeMldsaPrvkeyByFormat(uint32_t format, BSL_ASN1_Buffer *seedAsn1, BSL_ASN1_Buffer *prvKeyAsn1,
@@ -1957,6 +1960,48 @@ static int32_t ProcessMldsaPrvkeyFormat(CRYPT_EAL_PkeyCtx *ealPriKey, uint32_t f
     return ret;
 }
 
+static int32_t SetMldsaOneAsymmetricKeyPublicKey(CRYPT_EAL_PkeyCtx *ealPriKey,
+    CRYPT_ENCODE_DECODE_Pk8PrikeyInfo *pk8PrikeyInfo)
+{
+    BSL_Buffer publicKey = {0};
+    int32_t ret = EncodeMldsaPubkeyBuff(ealPriKey, &publicKey);
+    if (ret != CRYPT_SUCCESS) {
+        BSL_SAL_Free(publicKey.data);
+        return ret;
+    }
+    pk8PrikeyInfo->publicKey.buff = publicKey.data;
+    pk8PrikeyInfo->publicKey.len = publicKey.dataLen;
+    pk8PrikeyInfo->publicKey.unusedBits = 0;
+    return CRYPT_SUCCESS;
+}
+
+static int32_t EncodeMldsaPrikeyAsn1Buff(CRYPT_EAL_PkeyCtx *ealPriKey, const BSL_Param *param,
+    CRYPT_ENCODE_DECODE_Pk8PrikeyInfo *pk8PrikeyInfo)
+{
+    BslCid cid;
+    int32_t ret = CRYPT_EAL_PkeyCtrl(ealPriKey, CRYPT_CTRL_GET_PARAID, &cid, sizeof(cid));
+    if (ret != CRYPT_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        return ret;
+    }
+    uint32_t outputFormat = CRYPT_ALGO_MLDSA_PRIV_FORMAT_SEED_ONLY;
+    ret = GetMldsaOutputFormat(ealPriKey, param, &outputFormat);
+    if (ret != CRYPT_SUCCESS) {
+        return ret;
+    }
+    BSL_Buffer privateKey = {0};
+    ret = ProcessMldsaPrvkeyFormat(ealPriKey, outputFormat, &privateKey);
+    if (ret != CRYPT_SUCCESS) {
+        return ret;
+    }
+    pk8PrikeyInfo->pkeyRawKey = privateKey.data;
+    pk8PrikeyInfo->pkeyRawKeyLen = privateKey.dataLen;
+    pk8PrikeyInfo->keyType = cid;
+    if (BSL_PARAM_FindConstParam(param, CRYPT_PARAM_ENCODE_ONE_ASYMMETRIC_KEY) != NULL) {
+        return SetMldsaOneAsymmetricKeyPublicKey(ealPriKey, pk8PrikeyInfo);
+    }
+    return CRYPT_SUCCESS;
+}
 #endif // HITLS_CRYPTO_MLDSA
 
 #ifdef HITLS_CRYPTO_COMPOSITE
@@ -2098,6 +2143,70 @@ static int32_t EncodeSlhDsaPubkeyAsn1Buff(CRYPT_EAL_PkeyCtx *ealPubKey, BSL_Buff
     return CRYPT_SUCCESS;
 }
 
+static int32_t SlhDsaGetOneAsymPubKey(CRYPT_EAL_PkeyCtx *ealPriKey, uint32_t n,
+    CRYPT_ENCODE_DECODE_Pk8PrikeyInfo *pk8PrikeyInfo)
+{
+    uint32_t pubKeyLen = n * 2; // seed + root
+    uint8_t *pub = (uint8_t *)BSL_SAL_Malloc(pubKeyLen);
+    if (pub == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
+        return CRYPT_MEM_ALLOC_FAIL;
+    }
+    CRYPT_SlhDsaPub slhdsaPub = {.seed = pub, .root = pub + n, .len = n};
+    CRYPT_EAL_PkeyPub pubKey = {.id = CRYPT_PKEY_SLH_DSA, .key.slhDsaPub = slhdsaPub};
+    int32_t ret = CRYPT_EAL_PkeyGetPub(ealPriKey, &pubKey);
+    if (ret != CRYPT_SUCCESS) {
+        BSL_SAL_Free(pub);
+        BSL_ERR_PUSH_ERROR(ret);
+        return ret;
+    }
+    pk8PrikeyInfo->publicKey.buff = pub;
+    pk8PrikeyInfo->publicKey.len = pubKeyLen;
+    pk8PrikeyInfo->publicKey.unusedBits = 0;
+    return CRYPT_SUCCESS;
+}
+
+static int32_t EncodeSlhDsaPrikeyAsn1Buff(CRYPT_EAL_PkeyCtx *ealPriKey, const BSL_Param *param,
+    CRYPT_ENCODE_DECODE_Pk8PrikeyInfo *pk8PrikeyInfo)
+{
+    BslCid cid;
+    int32_t ret = CRYPT_EAL_PkeyCtrl(ealPriKey, CRYPT_CTRL_GET_PARAID, &cid, sizeof(cid));
+    if (ret != CRYPT_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        return ret;
+    }
+    uint32_t n = 0;
+    ret = CRYPT_EAL_PkeyCtrl(ealPriKey, CRYPT_CTRL_GET_SLH_DSA_KEY_LEN, &n, sizeof(n));
+    if (ret != CRYPT_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        return ret;
+    }
+    uint32_t privateKeyLen = n * 4;
+    uint8_t *privateKey = BSL_SAL_Malloc(privateKeyLen);
+    if (privateKey == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
+        return CRYPT_MEM_ALLOC_FAIL;
+    }
+    CRYPT_SlhDsaPrv slhDsaPrivateKey = {
+        .seed = privateKey,
+        .prf = privateKey + n,
+        .pub = {.seed = privateKey + n * 2, .root = privateKey + n * 3, .len = n},
+    };
+    CRYPT_EAL_PkeyPrv privateKeyInfo = {.id = CRYPT_PKEY_SLH_DSA, .key.slhDsaPrv = slhDsaPrivateKey};
+    ret = CRYPT_EAL_PkeyGetPrv(ealPriKey, &privateKeyInfo);
+    if (ret != CRYPT_SUCCESS) {
+        BSL_SAL_ClearFree(privateKey, privateKeyLen);
+        BSL_ERR_PUSH_ERROR(ret);
+        return ret;
+    }
+    pk8PrikeyInfo->pkeyRawKey = privateKey;
+    pk8PrikeyInfo->pkeyRawKeyLen = privateKeyLen;
+    pk8PrikeyInfo->keyType = cid;
+    if (param != NULL && BSL_PARAM_FindConstParam(param, CRYPT_PARAM_ENCODE_ONE_ASYMMETRIC_KEY) != NULL) {
+        return SlhDsaGetOneAsymPubKey(ealPriKey, n, pk8PrikeyInfo);
+    }
+    return CRYPT_SUCCESS;
+}
 #endif // HITLS_CRYPTO_SLH_DSA
 
 #ifdef HITLS_CRYPTO_MLKEM
@@ -2158,101 +2267,114 @@ static int32_t ProcessMlkemPrvkeyDkOnlyFormat(BSL_ASN1_Buffer *prvKeyAsn1, BSL_B
     return BSL_ASN1_EncodeTemplate(&templ, prvKeyAsn1, 1, &bitStr->data, &bitStr->dataLen);
 }
 
-static int32_t GetMlkemDkInfo(CRYPT_EAL_PkeyCtx *ealPriKey, uint32_t *format, bool *hasSeed, BSL_ASN1_Buffer *seedAsn1,
-                              BSL_ASN1_Buffer *dkAsn1)
+static int32_t GetMlkemDefaultOutputFormat(CRYPT_EAL_PkeyCtx *ealPriKey, uint32_t *outputFormat)
 {
-    int32_t ret = CRYPT_EAL_PkeyCtrl(ealPriKey, CRYPT_CTRL_GET_MLKEM_DK_FORMAT, format, sizeof(uint32_t));
-    if (ret != CRYPT_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
-        return ret;
-    }
-    if (*format >= (uint32_t)CRYPT_ALGO_MLKEM_DK_FORMAT_END) {
-        BSL_ERR_PUSH_ERROR(CRYPT_MLKEM_DK_FORMAT_ERROR);
-        return CRYPT_MLKEM_DK_FORMAT_ERROR;
-    }
+    uint8_t seed[MLKEM_SEED_BYTES_LEN] = {0};
     BSL_ERR_SET_MARK();
-    ret = CRYPT_EAL_PkeyCtrl(ealPriKey, CRYPT_CTRL_GET_MLKEM_SEED, seedAsn1->buff, MLKEM_SEED_BYTES_LEN);
-    if (ret == CRYPT_SUCCESS) {
-        *hasSeed = true;
-    }
+    int32_t ret = CRYPT_EAL_PkeyCtrl(ealPriKey, CRYPT_CTRL_GET_MLKEM_SEED, seed, MLKEM_SEED_BYTES_LEN);
     BSL_ERR_POP_TO_MARK();
-    if (*format == (uint32_t)CRYPT_ALGO_MLKEM_DK_FORMAT_SEED_ONLY ||
-        *format == (uint32_t)CRYPT_ALGO_MLKEM_DK_FORMAT_BOTH) {
-        if (!(*hasSeed)) {
-            BSL_ERR_PUSH_ERROR(CRYPT_MLKEM_DK_FORMAT_ERROR);
-            return CRYPT_MLKEM_DK_FORMAT_ERROR;
-        }
-    }
-    CRYPT_EAL_PkeyPrv dk = {0};
-    if (*format != CRYPT_ALGO_MLKEM_DK_FORMAT_SEED_ONLY) {
-        dk.id = CRYPT_PKEY_ML_KEM;
-        dk.key.kemDk.len = dkAsn1->len;
-        dk.key.kemDk.data = BSL_SAL_Malloc(dkAsn1->len);
-        if (dk.key.kemDk.data == NULL) {
-            BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
-            return CRYPT_MEM_ALLOC_FAIL;
-        }
-        ret = CRYPT_EAL_PkeyGetPrv(ealPriKey, &dk);
-        if (ret != CRYPT_SUCCESS) {
+    BSL_SAL_CleanseData(seed, MLKEM_SEED_BYTES_LEN);
+    if (ret != CRYPT_SUCCESS) {
+        if (ret != CRYPT_MLKEM_SEED_NOT_SET) {
             BSL_ERR_PUSH_ERROR(ret);
-            BSL_SAL_Free(dk.key.kemDk.data);
             return ret;
         }
-        dkAsn1->buff = dk.key.kemDk.data;
+        *outputFormat = CRYPT_ALGO_MLKEM_DK_FORMAT_DK_ONLY;
+        return CRYPT_SUCCESS;
+    }
+    *outputFormat = CRYPT_ALGO_MLKEM_DK_FORMAT_SEED_ONLY;
+    return CRYPT_SUCCESS;
+}
+
+static int32_t GetMlkemOutputFormat(CRYPT_EAL_PkeyCtx *ealPriKey, const BSL_Param *param, uint32_t *outputFormat)
+{
+    const BSL_Param *formatParam = BSL_PARAM_FindConstParam(param, CRYPT_PARAM_ENCODE_OUTPUT_FORMATS);
+    if (formatParam == NULL) {
+        return GetMlkemDefaultOutputFormat(ealPriKey, outputFormat);
+    }
+    if (!ParseEncodeOutputFormat(formatParam, (uint32_t)CRYPT_ALGO_MLKEM_DK_FORMAT_SEED_ONLY, outputFormat)) {
+        BSL_ERR_PUSH_ERROR(CRYPT_MLKEM_DK_FORMAT_ERROR);
+        return CRYPT_MLKEM_DK_FORMAT_ERROR;
     }
     return CRYPT_SUCCESS;
 }
 
-static int32_t ProcessMlkemPrvkeyFormat(CRYPT_EAL_PkeyCtx *ealPriKey, BSL_Buffer *bitStr, uint32_t dkLen)
+static int32_t GetMlkemDkInfo(CRYPT_EAL_PkeyCtx *ealPriKey, uint32_t format, BSL_ASN1_Buffer *seedAsn1,
+    BSL_ASN1_Buffer *dkAsn1)
 {
-    uint32_t format = 0;
-    bool hasSeed = false;
+    bool needSeed = (format != (uint32_t)CRYPT_ALGO_MLKEM_DK_FORMAT_DK_ONLY);
+    bool needDk = (format != (uint32_t)CRYPT_ALGO_MLKEM_DK_FORMAT_SEED_ONLY);
+    BSL_Param getParams[3] = {0};
+    uint32_t index = 0;
+
+    if (needSeed) {
+        getParams[index] = (BSL_Param){CRYPT_PARAM_ML_KEM_PRVKEY_SEED, BSL_PARAM_TYPE_OCTETS, seedAsn1->buff,
+            seedAsn1->len, 0};
+        index++;
+    }
+    if (needDk) {
+        int32_t ret = CRYPT_EAL_PkeyCtrl(ealPriKey, CRYPT_CTRL_GET_PRVKEY_LEN, &dkAsn1->len, sizeof(uint32_t));
+        if (ret != CRYPT_SUCCESS) {
+            return ret;
+        }
+        dkAsn1->buff = BSL_SAL_Malloc(dkAsn1->len);
+        if (dkAsn1->buff == NULL) {
+            BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
+            return CRYPT_MEM_ALLOC_FAIL;
+        }
+        getParams[index] = (BSL_Param){CRYPT_PARAM_ML_KEM_PRVKEY, BSL_PARAM_TYPE_OCTETS, dkAsn1->buff,
+            dkAsn1->len, 0};
+        index++;
+    }
+
+    return CRYPT_EAL_PkeyGetPrvEx(ealPriKey, getParams);
+}
+
+static int32_t ProcessMlkemPrvkeyFormat(CRYPT_EAL_PkeyCtx *ealPriKey, const BSL_Param *param, BSL_Buffer *bitStr)
+{
+    uint32_t format = CRYPT_ALGO_MLKEM_DK_FORMAT_SEED_ONLY;
     uint8_t seedBuf[MLKEM_SEED_BYTES_LEN] = {0};
     BSL_ASN1_Buffer seedAsn1 = {BSL_ASN1_CLASS_CTX_SPECIFIC, MLKEM_SEED_BYTES_LEN, seedBuf};
-    BSL_ASN1_Buffer dkAsn1 = {BSL_ASN1_TAG_OCTETSTRING, dkLen, NULL};
-    // exclude invalid cases
-    int32_t ret = GetMlkemDkInfo(ealPriKey, &format, &hasSeed, &seedAsn1, &dkAsn1);
+    BSL_ASN1_Buffer dkAsn1 = {BSL_ASN1_TAG_OCTETSTRING, 0, NULL};
+    int32_t ret = GetMlkemOutputFormat(ealPriKey, param, &format);
     if (ret != CRYPT_SUCCESS) {
+        return ret;
+    }
+
+    BSL_ERR_SET_MARK();
+    ret = GetMlkemDkInfo(ealPriKey, format, &seedAsn1, &dkAsn1);
+    BSL_ERR_POP_TO_MARK();
+    if (ret != CRYPT_SUCCESS) {
+        if (ret == CRYPT_MLKEM_SEED_NOT_SET) {
+            ret = CRYPT_MLKEM_DK_FORMAT_ERROR;
+        }
+        BSL_ERR_PUSH_ERROR(ret);
         CleanSeedAndPrivKeyAsn1Buff(&seedAsn1, &dkAsn1);
         return ret;
     }
-    if (hasSeed) {
-        if (format == (uint32_t)CRYPT_ALGO_MLKEM_DK_FORMAT_SEED_ONLY) {
-            // seed-only
-            ret = ProcessMlkemPrvkeySeedOnlyFormat(&seedAsn1, bitStr);
-            CleanSeedAndPrivKeyAsn1Buff(&seedAsn1, &dkAsn1);
-            return ret;
-        }
-        if (format == (uint32_t)CRYPT_ALGO_MLKEM_DK_FORMAT_BOTH ||
-            format == (uint32_t)CRYPT_ALGO_MLKEM_DK_FORMAT_NOT_SET) {
-            // both
-            ret = ProcessMlkemPrvkeyBothFormat(&seedAsn1, &dkAsn1, bitStr);
-            CleanSeedAndPrivKeyAsn1Buff(&seedAsn1, &dkAsn1);
-            return ret;
-        }
+
+    if (format == (uint32_t)CRYPT_ALGO_MLKEM_DK_FORMAT_SEED_ONLY) {
+        ret = ProcessMlkemPrvkeySeedOnlyFormat(&seedAsn1, bitStr);
+    } else if (format == (uint32_t)CRYPT_ALGO_MLKEM_DK_FORMAT_BOTH) {
+        ret = ProcessMlkemPrvkeyBothFormat(&seedAsn1, &dkAsn1, bitStr);
+    } else {
+        ret = ProcessMlkemPrvkeyDkOnlyFormat(&dkAsn1, bitStr);
     }
-    // dk-only
-    ret = ProcessMlkemPrvkeyDkOnlyFormat(&dkAsn1, bitStr);
     CleanSeedAndPrivKeyAsn1Buff(&seedAsn1, &dkAsn1);
     return ret;
 }
 
-static int32_t EncodeMlKemPrikeyAsn1Buff(CRYPT_EAL_PkeyCtx *ealPriKey, CRYPT_ENCODE_DECODE_Pk8PrikeyInfo *pk8PrikeyInfo)
+static int32_t EncodeMlKemPrikeyAsn1Buff(CRYPT_EAL_PkeyCtx *ealPriKey, const BSL_Param *param,
+    CRYPT_ENCODE_DECODE_Pk8PrikeyInfo *pk8PrikeyInfo)
 {
     BslCid cid;
-    uint32_t prvKeyLen = 0;
-    int32_t ret = CRYPT_EAL_PkeyCtrl(ealPriKey, CRYPT_CTRL_GET_PRVKEY_LEN, &prvKeyLen, sizeof(uint32_t));
-    if (ret != CRYPT_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
-        return ret;
-    }
-    ret = CRYPT_EAL_PkeyCtrl(ealPriKey, CRYPT_CTRL_GET_PARAID, &cid, sizeof(cid));
+    int32_t ret = CRYPT_EAL_PkeyCtrl(ealPriKey, CRYPT_CTRL_GET_PARAID, &cid, sizeof(cid));
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
     BSL_Buffer privateKey = {0};
-    ret = ProcessMlkemPrvkeyFormat(ealPriKey, &privateKey, prvKeyLen);
+    ret = ProcessMlkemPrvkeyFormat(ealPriKey, param, &privateKey);
     if (ret != CRYPT_SUCCESS) {
         return ret;
     }
@@ -2414,118 +2536,6 @@ static bool IsOneAsymmetricKeyAlg(const CRYPT_EAL_PkeyCtx *ealPriKey)
     return algId == CRYPT_PKEY_ML_DSA || algId == CRYPT_PKEY_SLH_DSA;
 }
 
-#ifdef HITLS_CRYPTO_MLDSA
-static int32_t SetMldsaOneAsymmetricKeyPublicKey(CRYPT_EAL_PkeyCtx *ealPriKey,
-    CRYPT_ENCODE_DECODE_Pk8PrikeyInfo *pk8PrikeyInfo)
-{
-    BSL_Buffer publicKey = {0};
-    int32_t ret = EncodeMldsaPubkeyBuff(ealPriKey, &publicKey);
-    if (ret != CRYPT_SUCCESS) {
-        BSL_SAL_Free(publicKey.data);
-        return ret;
-    }
-    pk8PrikeyInfo->publicKey.buff = publicKey.data;
-    pk8PrikeyInfo->publicKey.len = publicKey.dataLen;
-    pk8PrikeyInfo->publicKey.unusedBits = 0;
-    return CRYPT_SUCCESS;
-}
-
-static int32_t EncodeMldsaPrikeyAsn1Buff(CRYPT_EAL_PkeyCtx *ealPriKey, const BSL_Param *param,
-    CRYPT_ENCODE_DECODE_Pk8PrikeyInfo *pk8PrikeyInfo)
-{
-    BslCid cid;
-    int32_t ret = CRYPT_EAL_PkeyCtrl(ealPriKey, CRYPT_CTRL_GET_PARAID, &cid, sizeof(cid));
-    if (ret != CRYPT_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
-        return ret;
-    }
-    uint32_t outputFormat = CRYPT_ALGO_MLDSA_PRIV_FORMAT_SEED_ONLY;
-    ret = GetMldsaOutputFormat(ealPriKey, param, &outputFormat);
-    if (ret != CRYPT_SUCCESS) {
-        return ret;
-    }
-    BSL_Buffer privateKey = {0};
-    ret = ProcessMldsaPrvkeyFormat(ealPriKey, outputFormat, &privateKey);
-    if (ret != CRYPT_SUCCESS) {
-        return ret;
-    }
-    pk8PrikeyInfo->pkeyRawKey = privateKey.data;
-    pk8PrikeyInfo->pkeyRawKeyLen = privateKey.dataLen;
-    pk8PrikeyInfo->keyType = cid;
-    if (param != NULL && BSL_PARAM_FindConstParam(param, CRYPT_PARAM_ENCODE_ONE_ASYMMETRIC_KEY) != NULL) {
-        return SetMldsaOneAsymmetricKeyPublicKey(ealPriKey, pk8PrikeyInfo);
-    }
-    return CRYPT_SUCCESS;
-}
-#endif
-
-#ifdef HITLS_CRYPTO_SLH_DSA
-static int32_t SlhDsaGetOneAsymPubKey(CRYPT_EAL_PkeyCtx *ealPriKey, uint32_t n,
-    CRYPT_ENCODE_DECODE_Pk8PrikeyInfo *pk8PrikeyInfo)
-{
-    uint32_t pubKeyLen = n * 2; // seed + root
-    uint8_t *pub = (uint8_t *)BSL_SAL_Malloc(pubKeyLen);
-    if (pub == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
-        return CRYPT_MEM_ALLOC_FAIL;
-    }
-    CRYPT_SlhDsaPub slhdsaPub = {.seed = pub, .root = pub + n, .len = n};
-    CRYPT_EAL_PkeyPub pubKey = {.id = CRYPT_PKEY_SLH_DSA, .key.slhDsaPub = slhdsaPub};
-    int32_t ret = CRYPT_EAL_PkeyGetPub(ealPriKey, &pubKey);
-    if (ret != CRYPT_SUCCESS) {
-        BSL_SAL_Free(pub);
-        BSL_ERR_PUSH_ERROR(ret);
-        return ret;
-    }
-    pk8PrikeyInfo->publicKey.buff = pub;
-    pk8PrikeyInfo->publicKey.len = pubKeyLen;
-    pk8PrikeyInfo->publicKey.unusedBits = 0;
-    return CRYPT_SUCCESS;
-}
-
-static int32_t EncodeSlhDsaPrikeyAsn1Buff(CRYPT_EAL_PkeyCtx *ealPriKey, const BSL_Param *param,
-    CRYPT_ENCODE_DECODE_Pk8PrikeyInfo *pk8PrikeyInfo)
-{
-    BslCid cid;
-    int32_t ret = CRYPT_EAL_PkeyCtrl(ealPriKey, CRYPT_CTRL_GET_PARAID, &cid, sizeof(cid));
-    if (ret != CRYPT_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
-        return ret;
-    }
-    uint32_t n = 0;
-    ret = CRYPT_EAL_PkeyCtrl(ealPriKey, CRYPT_CTRL_GET_SLH_DSA_KEY_LEN, &n, sizeof(n));
-    if (ret != CRYPT_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
-        return ret;
-    }
-    uint32_t privateKeyLen = n * 4;
-    uint8_t *privateKey = BSL_SAL_Malloc(privateKeyLen);
-    if (privateKey == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
-        return CRYPT_MEM_ALLOC_FAIL;
-    }
-    CRYPT_SlhDsaPrv slhDsaPrivateKey = {
-        .seed = privateKey,
-        .prf = privateKey + n,
-        .pub = {.seed = privateKey + n * 2, .root = privateKey + n * 3, .len = n},
-    };
-    CRYPT_EAL_PkeyPrv privateKeyInfo = {.id = CRYPT_PKEY_SLH_DSA, .key.slhDsaPrv = slhDsaPrivateKey};
-    ret = CRYPT_EAL_PkeyGetPrv(ealPriKey, &privateKeyInfo);
-    if (ret != CRYPT_SUCCESS) {
-        BSL_SAL_ClearFree(privateKey, privateKeyLen);
-        BSL_ERR_PUSH_ERROR(ret);
-        return ret;
-    }
-    pk8PrikeyInfo->pkeyRawKey = privateKey;
-    pk8PrikeyInfo->pkeyRawKeyLen = privateKeyLen;
-    pk8PrikeyInfo->keyType = cid;
-    if (param != NULL && BSL_PARAM_FindConstParam(param, CRYPT_PARAM_ENCODE_ONE_ASYMMETRIC_KEY) != NULL) {
-        return SlhDsaGetOneAsymPubKey(ealPriKey, n, pk8PrikeyInfo);
-    }
-    return CRYPT_SUCCESS;
-}
-#endif
-
 static int32_t PreparePk8PrikeyInfo(CRYPT_EAL_PkeyCtx *ealPriKey, const BSL_Param *param,
     CRYPT_ENCODE_DECODE_Pk8PrikeyInfo *pk8PrikeyInfo)
 {
@@ -2534,68 +2544,52 @@ static int32_t PreparePk8PrikeyInfo(CRYPT_EAL_PkeyCtx *ealPriKey, const BSL_Para
         BSL_ERR_PUSH_ERROR(CRYPT_ENCODE_NO_SUPPORT_TYPE);
         return CRYPT_ENCODE_NO_SUPPORT_TYPE;
     }
-    int32_t ret;
     switch (CRYPT_EAL_PkeyGetId(ealPriKey)) {
 #ifdef HITLS_CRYPTO_RSA
         case CRYPT_PKEY_RSA:
-            ret = EncodeRsaPrvKey(ealPriKey, pk8PrikeyInfo);
-            break;
+            return EncodeRsaPrvKey(ealPriKey, pk8PrikeyInfo);
 #endif
 #ifdef HITLS_CRYPTO_DSA
         case CRYPT_PKEY_DSA:
-            ret = EncodeDsaPk8PrikeyAsn1Buff(ealPriKey, pk8PrikeyInfo);
-            break;
+            return EncodeDsaPk8PrikeyAsn1Buff(ealPriKey, pk8PrikeyInfo);
 #endif
 #ifdef HITLS_CRYPTO_DH
         case CRYPT_PKEY_DH:
-            ret = EncodeDhPk8PrikeyAsn1Buff(ealPriKey, pk8PrikeyInfo);
-            break;
+            return EncodeDhPk8PrikeyAsn1Buff(ealPriKey, pk8PrikeyInfo);
 #endif
 #if defined(HITLS_CRYPTO_ECDSA) || defined(HITLS_CRYPTO_SM2)
         case CRYPT_PKEY_ECDSA:
         case CRYPT_PKEY_SM2:
-            ret = EncodeEccPk8PrikeyAsn1Buff(ealPriKey, pk8PrikeyInfo);
-            break;
+            return EncodeEccPk8PrikeyAsn1Buff(ealPriKey, pk8PrikeyInfo);
 #endif
 #ifdef HITLS_CRYPTO_ED25519
         case CRYPT_PKEY_ED25519:
-            ret = EncodeCurve25519PrikeyAsn1Buff(ealPriKey, CRYPT_PKEY_ED25519, pk8PrikeyInfo);
-            break;
+            return EncodeCurve25519PrikeyAsn1Buff(ealPriKey, CRYPT_PKEY_ED25519, pk8PrikeyInfo);
 #endif
 #ifdef HITLS_CRYPTO_X25519
         case CRYPT_PKEY_X25519:
-            ret = EncodeCurve25519PrikeyAsn1Buff(ealPriKey, CRYPT_PKEY_X25519, pk8PrikeyInfo);
-            break;
+            return EncodeCurve25519PrikeyAsn1Buff(ealPriKey, CRYPT_PKEY_X25519, pk8PrikeyInfo);
 #endif
 #ifdef HITLS_CRYPTO_MLDSA
         case CRYPT_PKEY_ML_DSA:
-            ret = EncodeMldsaPrikeyAsn1Buff(ealPriKey, param, pk8PrikeyInfo);
-            break;
+            return EncodeMldsaPrikeyAsn1Buff(ealPriKey, param, pk8PrikeyInfo);
 #endif
 #ifdef HITLS_CRYPTO_COMPOSITE
         case CRYPT_PKEY_COMPOSITE:
-            ret = EncodeCompositePrvKeyAsn1Buff(ealPriKey, pk8PrikeyInfo);
-            break;
+            return EncodeCompositePrvKeyAsn1Buff(ealPriKey, pk8PrikeyInfo);
 #endif
 #ifdef HITLS_CRYPTO_SLH_DSA
         case CRYPT_PKEY_SLH_DSA:
-            ret = EncodeSlhDsaPrikeyAsn1Buff(ealPriKey, param, pk8PrikeyInfo);
-            break;
+            return EncodeSlhDsaPrikeyAsn1Buff(ealPriKey, param, pk8PrikeyInfo);
 #endif
 #ifdef HITLS_CRYPTO_MLKEM
         case CRYPT_PKEY_ML_KEM:
-            ret = EncodeMlKemPrikeyAsn1Buff(ealPriKey, pk8PrikeyInfo);
-            break;
+            return EncodeMlKemPrikeyAsn1Buff(ealPriKey, param, pk8PrikeyInfo);
 #endif
         default:
-            ret = CRYPT_DECODE_NO_SUPPORT_TYPE;
-            break;
+            BSL_ERR_PUSH_ERROR(CRYPT_ENCODE_NO_SUPPORT_TYPE);
+            return CRYPT_ENCODE_NO_SUPPORT_TYPE;
     }
-    if (ret != CRYPT_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
-        return ret;
-    }
-    return CRYPT_SUCCESS;
 }
 
 int32_t EncodePk8PriKeyBuff(CRYPT_EAL_PkeyCtx *ealPriKey, const BSL_Param *param, BSL_Buffer *asn1)

@@ -613,7 +613,7 @@ EXIT:
 * @brief
 * 1.Generate an ML-DSA key and enable external mu message mode.
 * 2.Sign and verify with a 64-byte mu message.
-* 3.Sign and verify with mu messages shorter or longer than 64 bytes.
+* 3.Sign and verify with empty, shorter, or longer mu messages.
 * @expect
 * 1.success
 * 2.success
@@ -657,6 +657,15 @@ void SDV_CRYPTO_MLDSA_FUNC_MUMSG_LEN_TC001(int type)
     ASSERT_TRUE(TestIsErrStackEmpty());
 
     outLen = signLen;
+    ret = CRYPT_EAL_PkeySign(ctx, CRYPT_MD_MAX, NULL, 0, sign, &outLen);
+    ASSERT_EQ(ret, CRYPT_INVALID_ARG);
+    (void)TestErrClear();
+
+    ret = CRYPT_EAL_PkeyVerify(ctx, CRYPT_MD_MAX, NULL, 0, sign, signLen);
+    ASSERT_EQ(ret, CRYPT_INVALID_ARG);
+    (void)TestErrClear();
+
+    outLen = signLen;
     ret = CRYPT_EAL_PkeySign(ctx, CRYPT_MD_MAX, shortMu, sizeof(shortMu), sign, &outLen);
     ASSERT_EQ(ret, CRYPT_INVALID_ARG);
     (void)TestErrClear();
@@ -677,6 +686,63 @@ void SDV_CRYPTO_MLDSA_FUNC_MUMSG_LEN_TC001(int type)
 EXIT:
     CRYPT_EAL_PkeyFreeCtx(ctx);
     BSL_SAL_FREE(sign);
+    TestRandDeInit();
+    return;
+}
+/* END_CASE */
+
+/* @
+* @test  SDV_CRYPTO_MLDSA_EMPTY_MESSAGE_TC001
+* @spec  -
+* @title  Verify ML-DSA signing and verification of empty messages in normal mode.
+* @precon  nan
+* @brief
+* 1. Generate an ML-DSA key with the specified parameter set.
+* 2. Represent an empty message with NULL/0 and non-NULL/0, then sign and verify across both representations.
+* 3. Sign and verify using NULL/1.
+* @expect
+* 1. Key generation succeeds.
+* 2. Signing and verification succeed.
+* 3. CRYPT_NULL_INPUT is returned.
+* @prior  nan
+* @auto  FALSE
+@ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_MLDSA_EMPTY_MESSAGE_TC001(int type)
+{
+    TestMemInit();
+    CRYPT_EAL_PkeyCtx *ctx = NULL;
+    uint8_t *sign = NULL;
+    ASSERT_EQ(TestRandInit(), CRYPT_SUCCESS);
+
+    ctx = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_ML_DSA);
+    ASSERT_TRUE(ctx != NULL);
+    ASSERT_EQ(CRYPT_EAL_PkeySetParaById(ctx, (uint32_t)type), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyGen(ctx), CRYPT_SUCCESS);
+
+    uint8_t empty = 0;
+    uint32_t signLen = CRYPT_EAL_PkeyGetSignLen(ctx);
+    uint32_t outLen = signLen;
+    sign = BSL_SAL_Malloc(signLen);
+    ASSERT_TRUE(sign != NULL);
+
+    ASSERT_EQ(CRYPT_EAL_PkeySign(ctx, CRYPT_MD_MAX, NULL, 0, sign, &outLen), CRYPT_SUCCESS);
+    ASSERT_EQ(outLen, signLen);
+    ASSERT_EQ(CRYPT_EAL_PkeyVerify(ctx, CRYPT_MD_MAX, &empty, 0, sign, outLen), CRYPT_SUCCESS);
+
+    outLen = signLen;
+    ASSERT_EQ(CRYPT_EAL_PkeySign(ctx, CRYPT_MD_MAX, &empty, 0, sign, &outLen), CRYPT_SUCCESS);
+    ASSERT_EQ(outLen, signLen);
+    ASSERT_EQ(CRYPT_EAL_PkeyVerify(ctx, CRYPT_MD_MAX, NULL, 0, sign, outLen), CRYPT_SUCCESS);
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
+    ASSERT_EQ(CRYPT_EAL_PkeySign(ctx, CRYPT_MD_MAX, NULL, 1, sign, &outLen), CRYPT_NULL_INPUT);
+    ASSERT_EQ(CRYPT_EAL_PkeyVerify(ctx, CRYPT_MD_MAX, NULL, 1, sign, outLen), CRYPT_NULL_INPUT);
+    (void)TestErrClear();
+
+EXIT:
+    BSL_SAL_FREE(sign);
+    CRYPT_EAL_PkeyFreeCtx(ctx);
     TestRandDeInit();
     return;
 }

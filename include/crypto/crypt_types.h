@@ -663,7 +663,7 @@ typedef enum {
     CRYPT_CTRL_SET_DETERMINISTIC_FLAG,   /**< Whether to use deterministic signatures. The mode can be switched
                                               in both directions when supported by the algorithm. */
     CRYPT_CTRL_SET_CTX_INFO,             /**< Set the context string. */
-    CRYPT_CTRL_SET_PREHASH_MODE,         /**< Change the ML-DSA mode to prehash version or pure version. */
+    CRYPT_CTRL_SET_PREHASH_MODE,         /**< Change the ML-DSA or SLH-DSA mode to prehash version or pure version. */
     CRYPT_CTRL_GEN_PARA,                 /**< Asymmetric cipher generate para. For DSA, the maximum seed length is 256 bytes. */
     CRYPT_CTRL_SET_GEN_FLAG,             /**< Set SP800-56Ar3 generate private key flag. */
     CRYPT_CTRL_GET_PUB_KEY_BITS,         /**< Get the number of key bits. */
@@ -743,8 +743,6 @@ typedef enum {
 
     // mlkem
     CRYPT_CTRL_GET_MLKEM_SEED = 750,         /**< Get MLKEM private key seed (d||z) */
-    CRYPT_CTRL_SET_MLKEM_DK_FORMAT,          /**< Set MLKEM decapsulation key encode format */
-    CRYPT_CTRL_GET_MLKEM_DK_FORMAT,          /**< Get MLKEM decapsulation key encode format */
 
     // xmss
     CRYPT_CTRL_GET_XMSS_XDR_ALG_TYPE = 800,     /**< Get the XMSS xdr algId. */
@@ -890,11 +888,9 @@ typedef enum {
 } CRYPT_ALGO_MLDSA_PRIV_KEY_FORMAT_TYPE;
 
 typedef enum {
-    CRYPT_ALGO_MLKEM_DK_FORMAT_NOT_SET = 0,
-    CRYPT_ALGO_MLKEM_DK_FORMAT_BOTH,
+    CRYPT_ALGO_MLKEM_DK_FORMAT_BOTH = 0,
     CRYPT_ALGO_MLKEM_DK_FORMAT_DK_ONLY,
     CRYPT_ALGO_MLKEM_DK_FORMAT_SEED_ONLY,
-    CRYPT_ALGO_MLKEM_DK_FORMAT_END,
 } CRYPT_ALGO_MLKEM_DK_FORMAT_TYPE;
 
 /**

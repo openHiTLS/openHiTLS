@@ -2135,6 +2135,22 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_X509_BUILD_MLDSA_CERT_CHAIN_FUNC_TC001(void)
 {
+    static const uint32_t validKeyUsage[] = {
+        HITLS_X509_EXT_KU_DIGITAL_SIGN,
+        HITLS_X509_EXT_KU_NON_REPUDIATION,
+        HITLS_X509_EXT_KU_KEY_CERT_SIGN,
+        HITLS_X509_EXT_KU_CRL_SIGN,
+        HITLS_X509_EXT_KU_DIGITAL_SIGN | HITLS_X509_EXT_KU_NON_REPUDIATION,
+    };
+    static const uint32_t invalidKeyUsage[] = {
+        0,
+        HITLS_X509_EXT_KU_KEY_ENCIPHERMENT,
+        HITLS_X509_EXT_KU_DATA_ENCIPHERMENT,
+        HITLS_X509_EXT_KU_KEY_AGREEMENT,
+        HITLS_X509_EXT_KU_ENCIPHER_ONLY,
+        HITLS_X509_EXT_KU_DECIPHER_ONLY,
+        HITLS_X509_EXT_KU_DIGITAL_SIGN | HITLS_X509_EXT_KU_KEY_ENCIPHERMENT,
+    };
     HITLS_X509_StoreCtx *store = HITLS_X509_StoreCtxNew();
     ASSERT_TRUE(store != NULL);
     HITLS_X509_Cert *ca = NULL;
@@ -2161,9 +2177,35 @@ void SDV_X509_BUILD_MLDSA_CERT_CHAIN_FUNC_TC001(void)
     ASSERT_EQ(HITLS_X509_CertVerify(store, chain), HITLS_PKI_SUCCESS);
     BSL_LIST_FREE(chain, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);
 
+    HITLS_X509_CertExt *entityExt = (HITLS_X509_CertExt *)entity->tbs.ext.extData;
+    ASSERT_NE(entityExt, NULL);
+    uint32_t savedExtFlags = entityExt->extFlags;
+    uint32_t savedKeyUsage = entityExt->keyUsage;
+    entityExt->extFlags |= HITLS_X509_EXT_FLAG_KUSAGE;
+    for (uint32_t i = 0; i < sizeof(validKeyUsage) / sizeof(validKeyUsage[0]); i++) {
+        entityExt->keyUsage = validKeyUsage[i];
+        ASSERT_EQ(HITLS_X509_CertChainBuild(store, false, entity, &chain), HITLS_PKI_SUCCESS);
+        ASSERT_EQ(HITLS_X509_CertVerify(store, chain), HITLS_PKI_SUCCESS);
+        BSL_LIST_FREE(chain, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);
+    }
+    for (uint32_t i = 0; i < sizeof(invalidKeyUsage) / sizeof(invalidKeyUsage[0]); i++) {
+        entityExt->keyUsage = invalidKeyUsage[i];
+        ASSERT_EQ(HITLS_X509_CertChainBuild(store, false, entity, &chain), HITLS_PKI_SUCCESS);
+        ASSERT_EQ(HITLS_X509_CertVerify(store, chain), HITLS_X509_ERR_EXT_KU);
+        TestErrClear();
+        BSL_LIST_FREE(chain, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);
+    }
+    entityExt->extFlags &= ~HITLS_X509_EXT_FLAG_KUSAGE;
+    ASSERT_EQ(HITLS_X509_CertChainBuild(store, false, entity, &chain), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CertVerify(store, chain), HITLS_PKI_SUCCESS);
+    BSL_LIST_FREE(chain, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);
+    entityExt->extFlags = savedExtFlags;
+    entityExt->keyUsage = savedKeyUsage;
+
     ASSERT_EQ(HITLS_X509_CertChainBuild(store, false, entityWithInvalidKu, &chain), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CertVerify(store, chain), HITLS_X509_ERR_EXT_KU);
+    TestErrClear();
     ASSERT_TRUE(TestIsErrStackEmpty());
-    ASSERT_TRUE(HITLS_X509_CertVerify(store, chain) != HITLS_PKI_SUCCESS);
 
 EXIT:
     HITLS_X509_StoreCtxFree(store);

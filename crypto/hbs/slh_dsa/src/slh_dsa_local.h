@@ -114,9 +114,10 @@ typedef struct {
 
 typedef struct {
     int32_t profileId;
-    const SlhDsaMathParams *math;
-    bool isPrehash;
-    int32_t prehashId;
+    const SlhDsaMathParams *para;
+    /* Profile constraints; the current operation mode is stored in the context. */
+    bool isFixedPrehash;
+    int32_t fixedPrehashId;
 } SlhDsaProfileInfo;
 
 typedef struct {
@@ -138,6 +139,7 @@ struct SlhDsaCtx {
     uint8_t *context; // user specific context
     uint32_t contextLen; // length of the user specific context
     bool isDeterministic;
+    bool isPrehash;
     SlhDsaPrvKey prvKey;
     const HbsHashFuncs *hashFuncs; // Generic hash function table pointer
     HbsAdrsOps adrsOps; // Generic address operation function pointers

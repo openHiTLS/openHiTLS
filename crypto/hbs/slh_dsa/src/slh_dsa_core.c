@@ -28,6 +28,7 @@
 
 #include <stddef.h>
 #include <string.h>
+#include "bsl_bytes.h"
 #include "bsl_err_internal.h"
 #include "bsl_sal.h"
 #include "bsl_asn1_internal.h"
@@ -77,7 +78,9 @@ static const SlhDsaMathParams g_slhDsaMathParams[NUM_OF_SLH_DSA_MATH_PARAMS] = {
     {32, 68, 17, 4, 9, 35, 49, 5, 64, 49856, SLH_DSA_HASH_SHAKE},
 };
 
-/* Reference: RFC 9909, Sections 2 and 3. */
+/* Reference: RFC 9909, Sections 2 and 3. The profile fields below describe
+ * fixed HashSLH-DSA constraints; they do not represent the current operation
+ * mode, which is kept in CryptSlhDsaCtx. */
 static const SlhDsaProfileInfo g_slhDsaProfiles[NUM_OF_SLH_DSA_PROFILES] = {
     {CRYPT_SLH_DSA_SHA2_128S, &g_slhDsaMathParams[0], false, CRYPT_MD_MAX},
     {CRYPT_SLH_DSA_SHAKE_128S, &g_slhDsaMathParams[1], false, CRYPT_MD_MAX},
@@ -207,7 +210,7 @@ int32_t CRYPT_SLH_DSA_Gen(CryptSlhDsaCtx *ctx)
         BSL_ERR_PUSH_ERROR(CRYPT_SLHDSA_ERR_INVALID_ALGID);
         return CRYPT_SLHDSA_ERR_INVALID_ALGID;
     }
-    const SlhDsaMathParams *math = ctx->profile->math;
+    const SlhDsaMathParams *math = ctx->profile->para;
     uint32_t n = math->n;
     uint32_t d = math->d;
     uint32_t hp = math->hp;
@@ -255,7 +258,7 @@ int32_t CRYPT_SLH_DSA_Gen(CryptSlhDsaCtx *ctx)
 
 static int32_t GetAddRand(const CryptSlhDsaCtx *ctx, uint8_t *addrand)
 {
-    uint32_t n = ctx->profile->math->n;
+    uint32_t n = ctx->profile->para->n;
     if (ctx->isDeterministic) {
         memcpy(addrand, ctx->prvKey.pub.seed, n);
         return CRYPT_SUCCESS;
@@ -265,7 +268,7 @@ static int32_t GetAddRand(const CryptSlhDsaCtx *ctx, uint8_t *addrand)
 
 static void GetTreeAndLeafIdx(const uint8_t *digest, const CryptSlhDsaCtx *ctx, uint64_t *treeIdx, uint32_t *leafIdx)
 {
-    const SlhDsaMathParams *math = ctx->profile->math;
+    const SlhDsaMathParams *math = ctx->profile->para;
     uint32_t a = math->a;
     uint32_t k = math->k;
     uint32_t h = math->h;
@@ -281,7 +284,7 @@ static void GetTreeAndLeafIdx(const uint8_t *digest, const CryptSlhDsaCtx *ctx, 
 int32_t SlhDsaSignInternal(const CryptSlhDsaCtx *ctx, const uint8_t *msg, uint32_t msgLen, const uint8_t *addrand,
     uint8_t *sig, uint32_t *sigLen)
 {
-    const SlhDsaMathParams *math = ctx->profile->math;
+    const SlhDsaMathParams *math = ctx->profile->para;
     uint32_t n = math->n;
     uint32_t a = math->a;
     uint32_t k = math->k;
@@ -338,7 +341,7 @@ int32_t SlhDsaSignInternal(const CryptSlhDsaCtx *ctx, const uint8_t *msg, uint32
 int32_t SlhDsaVerifyInternal(const CryptSlhDsaCtx *ctx, const uint8_t *msg, uint32_t msgLen, const uint8_t *sig,
     uint32_t sigLen)
 {
-    const SlhDsaMathParams *math = ctx->profile->math;
+    const SlhDsaMathParams *math = ctx->profile->para;
     uint32_t n = math->n;
     uint32_t a = math->a;
     uint32_t k = math->k;
@@ -414,8 +417,8 @@ static int32_t MsgEncode(const CryptSlhDsaCtx *ctx, int32_t algId, const uint8_t
     uint32_t prehashLen = sizeof(prehash);
     uint32_t mpLen = SLH_DSA_PREFIX_LEN;
     RETURN_RET_IF_ERR(SafeAddU32(mpLen, ctx->contextLen, &mpLen), ret);
-    if (ctx->profile->isPrehash) {
-        if (algId != ctx->profile->prehashId) {
+    if (ctx->isPrehash) {
+        if (ctx->profile->isFixedPrehash && algId != ctx->profile->fixedPrehashId) {
             BSL_ERR_PUSH_ERROR(CRYPT_SLHDSA_ERR_PREHASH_ID_NOT_SUPPORTED);
             return CRYPT_SLHDSA_ERR_PREHASH_ID_NOT_SUPPORTED;
         }
@@ -447,13 +450,13 @@ static int32_t MsgEncode(const CryptSlhDsaCtx *ctx, int32_t algId, const uint8_t
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         return CRYPT_MEM_ALLOC_FAIL;
     }
-    mp[0] = ctx->profile->isPrehash ? 1 : 0;
+    mp[0] = ctx->isPrehash ? 1 : 0;
     mp[1] = (uint8_t)ctx->contextLen;
     if (ctx->contextLen != 0) {
         memcpy(mp + SLH_DSA_PREFIX_LEN, ctx->context, ctx->contextLen);
     }
     offset += SLH_DSA_PREFIX_LEN + ctx->contextLen;
-    if (ctx->profile->isPrehash) {
+    if (ctx->isPrehash) {
         (mp + offset)[0] = BSL_ASN1_TAG_OBJECT_ID;
         (mp + offset)[1] = (uint8_t)oid->octetLen;
         offset += 2;
@@ -485,7 +488,7 @@ int32_t CRYPT_SLH_DSA_Sign(CryptSlhDsaCtx *ctx, int32_t algId, const uint8_t *da
         BSL_ERR_PUSH_ERROR(CRYPT_SLHDSA_ERR_NO_PRVKEY);
         return CRYPT_SLHDSA_ERR_NO_PRVKEY;
     }
-    uint32_t sigBytes = ctx->profile->math->sigBytes;
+    uint32_t sigBytes = ctx->profile->para->sigBytes;
     if (*signLen < sigBytes) {
         BSL_ERR_PUSH_ERROR(CRYPT_SLHDSA_ERR_INVALID_SIG_LEN);
         return CRYPT_SLHDSA_ERR_INVALID_SIG_LEN;
@@ -558,11 +561,16 @@ static int32_t SlhDsaSetAlgId(CryptSlhDsaCtx *ctx, void *val, uint32_t len)
     }
     const HbsHashFuncs *hashFuncs = NULL;
     HbsAdrsOps adrsOps;
-    int32_t ret = SlhDsaResolveMathMethods(profile->math->hashFamily, &hashFuncs, &adrsOps);
+    int32_t ret = SlhDsaResolveMathMethods(profile->para->hashFamily, &hashFuncs, &adrsOps);
     if (ret != CRYPT_SUCCESS) {
         return ret;
     }
     ctx->profile = profile;
+    /* Pure SLH-DSA profiles can be switched to pre-hash mode by the generic
+     * algorithm control. HashSLH-DSA profiles are fixed to pre-hash mode. */
+    if (profile->isFixedPrehash) {
+        ctx->isPrehash = true;
+    }
     ctx->hashFuncs = hashFuncs;
     ctx->adrsOps = adrsOps;
     return CRYPT_SUCCESS;
@@ -616,7 +624,7 @@ static int32_t GetSignLen(const CryptSlhDsaCtx *ctx, void *val, uint32_t len)
         BSL_ERR_PUSH_ERROR(CRYPT_SLHDSA_ERR_INVALID_ALGID);
         return CRYPT_SLHDSA_ERR_INVALID_ALGID;
     }
-    *(uint32_t *)val = ctx->profile->math->sigBytes;
+    *(uint32_t *)val = ctx->profile->para->sigBytes;
     return CRYPT_SUCCESS;
 }
 
@@ -631,7 +639,7 @@ static int32_t SlhDsaGetSecBits(const CryptSlhDsaCtx *ctx, void *val, uint32_t l
         BSL_ERR_PUSH_ERROR(CRYPT_SLHDSA_ERR_INVALID_ALGID);
         return CRYPT_SLHDSA_ERR_INVALID_ALGID;
     }
-    switch (ctx->profile->math->secCategory) {
+    switch (ctx->profile->para->secCategory) {
         case 1:
             *(int32_t *)val = 128;
             break;
@@ -660,6 +668,17 @@ int32_t CRYPT_SLH_DSA_Ctrl(CryptSlhDsaCtx *ctx, int32_t opt, void *val, uint32_t
             return SlhDsaGetParaId(ctx, val, len);
         case CRYPT_CTRL_GET_SIGNLEN:
             return GetSignLen(ctx, val, len);
+        case CRYPT_CTRL_SET_PREHASH_MODE:
+            if (val == NULL || len != sizeof(int32_t)) {
+                BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
+                return CRYPT_INVALID_ARG;
+            }
+            if (ctx->profile != NULL && ctx->profile->isFixedPrehash) {
+                BSL_ERR_PUSH_ERROR(CRYPT_NOT_SUPPORT);
+                return CRYPT_NOT_SUPPORT;
+            }
+            ctx->isPrehash = (*(int32_t *)val != 0);
+            return CRYPT_SUCCESS;
         case CRYPT_CTRL_SET_CTX_INFO:
             return SetContextInfo(ctx, val, len);
         case CRYPT_CTRL_GET_SLH_DSA_KEY_LEN:
@@ -671,15 +690,15 @@ int32_t CRYPT_SLH_DSA_Ctrl(CryptSlhDsaCtx *ctx, int32_t opt, void *val, uint32_t
                 BSL_ERR_PUSH_ERROR(CRYPT_SLHDSA_ERR_INVALID_ALGID);
                 return CRYPT_SLHDSA_ERR_INVALID_ALGID;
             }
-            *(uint32_t *)val = ctx->profile->math->n;
+            *(uint32_t *)val = ctx->profile->para->n;
             return CRYPT_SUCCESS;
         /* Supports bidirectional switching between deterministic and non-deterministic modes. */
         case CRYPT_CTRL_SET_DETERMINISTIC_FLAG:
-            if (val == NULL || len != sizeof(bool)) {
+            if (val == NULL || len != sizeof(int32_t)) {
                 BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
                 return CRYPT_INVALID_ARG;
             }
-            ctx->isDeterministic = *(bool *)val;
+            ctx->isDeterministic = (*(int32_t *)val != 0);
             return CRYPT_SUCCESS;
         case CRYPT_CTRL_CLEAN_PUB_KEY:
             BSL_SAL_CleanseData(ctx->prvKey.pub.seed, sizeof(ctx->prvKey.pub.seed));
@@ -709,7 +728,7 @@ static int32_t PubKeyParamCheck(const CryptSlhDsaCtx *ctx, BSL_Param *para, SlhD
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
-    if (pub->pubSeed->valueLen != ctx->profile->math->n || pub->pubRoot->valueLen != ctx->profile->math->n) {
+    if (pub->pubSeed->valueLen != ctx->profile->para->n || pub->pubRoot->valueLen != ctx->profile->para->n) {
         BSL_ERR_PUSH_ERROR(CRYPT_SLHDSA_ERR_INVALID_KEYLEN);
         return CRYPT_SLHDSA_ERR_INVALID_KEYLEN;
     }
@@ -735,7 +754,7 @@ static int32_t PrvKeyParamCheck(const CryptSlhDsaCtx *ctx, BSL_Param *para, SlhD
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
-    uint32_t n = ctx->profile->math->n;
+    uint32_t n = ctx->profile->para->n;
     if (prv->prvSeed->valueLen != n || prv->prvPrf->valueLen != n || prv->pubSeed->valueLen != n ||
         prv->pubRoot->valueLen != n) {
         BSL_ERR_PUSH_ERROR(CRYPT_SLHDSA_ERR_INVALID_KEYLEN);
@@ -755,7 +774,7 @@ int32_t CRYPT_SLH_DSA_GetPubKeyEx(const CryptSlhDsaCtx *ctx, BSL_Param *para)
         BSL_ERR_PUSH_ERROR(CRYPT_SLHDSA_ERR_NO_PUBKEY);
         return CRYPT_SLHDSA_ERR_NO_PUBKEY;
     }
-    uint32_t n = ctx->profile->math->n;
+    uint32_t n = ctx->profile->para->n;
     pub.pubSeed->useLen = pub.pubRoot->useLen = n;
     memcpy(pub.pubSeed->value, ctx->prvKey.pub.seed, n);
     memcpy(pub.pubRoot->value, ctx->prvKey.pub.root, n);
@@ -773,7 +792,7 @@ int32_t CRYPT_SLH_DSA_GetPrvKeyEx(const CryptSlhDsaCtx *ctx, BSL_Param *para)
         BSL_ERR_PUSH_ERROR(CRYPT_SLHDSA_ERR_NO_PRVKEY);
         return CRYPT_SLHDSA_ERR_NO_PRVKEY;
     }
-    uint32_t n = ctx->profile->math->n;
+    uint32_t n = ctx->profile->para->n;
     prv.prvSeed->useLen = prv.prvPrf->useLen = prv.pubSeed->useLen = prv.pubRoot->useLen = n;
     memcpy(prv.prvSeed->value, ctx->prvKey.seed, n);
     memcpy(prv.prvPrf->value, ctx->prvKey.prf, n);
@@ -789,8 +808,8 @@ int32_t CRYPT_SLH_DSA_SetPubKeyEx(CryptSlhDsaCtx *ctx, const BSL_Param *para)
     if (ret != CRYPT_SUCCESS) {
         return ret;
     }
-    uint32_t n = ctx->profile->math->n;
-    if ((ctx->keyType & SLH_DSA_PUBKEY) != 0) {
+    uint32_t n = ctx->profile->para->n;
+    if ((ctx->keyType & SLH_DSA_PRVKEY) != 0) {
         if (memcmp(ctx->prvKey.pub.seed, pub.pubSeed->value, n) != 0 ||
             memcmp(ctx->prvKey.pub.root, pub.pubRoot->value, n) != 0) {
             BSL_ERR_PUSH_ERROR(CRYPT_SLHDSA_ERR_KEY_EXISTS);
@@ -816,7 +835,7 @@ int32_t CRYPT_SLH_DSA_SetPrvKeyEx(CryptSlhDsaCtx *ctx, const BSL_Param *para)
     if (ret != CRYPT_SUCCESS) {
         return ret;
     }
-    uint32_t n = ctx->profile->math->n;
+    uint32_t n = ctx->profile->para->n;
     ret = InitMdCtx(ctx, prv.pubSeed->value);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
@@ -835,7 +854,7 @@ int32_t CRYPT_SLH_DSA_SetPrvKeyEx(CryptSlhDsaCtx *ctx, const BSL_Param *para)
 static int32_t SlhDsaComputeRoot(const CryptSlhDsaCtx *prvKey, uint8_t *root)
 {
     SlhDsaAdrs adrs = {0};
-    const SlhDsaMathParams *math = prvKey->profile->math;
+    const SlhDsaMathParams *math = prvKey->profile->para;
     prvKey->adrsOps.setLayerAddr(&adrs, math->d - 1);
     HbsTreeCtx treeCtx;
     HbsTreeCtx_InitFromSlhDsa(&treeCtx, prvKey);
@@ -864,7 +883,7 @@ static int32_t SlhDsaKeyPairCheck(const CryptSlhDsaCtx *pubKey, const CryptSlhDs
         BSL_ERR_PUSH_ERROR(CRYPT_SLHDSA_ERR_NO_PRVKEY);
         return CRYPT_SLHDSA_ERR_NO_PRVKEY;
     }
-    const SlhDsaMathParams *math = prvKey->profile->math;
+    const SlhDsaMathParams *math = prvKey->profile->para;
     if (memcmp(pubKey->prvKey.pub.seed, prvKey->prvKey.pub.seed, math->n) != 0 ||
         memcmp(pubKey->prvKey.pub.root, prvKey->prvKey.pub.root, math->n) != 0) {
         BSL_ERR_PUSH_ERROR(CRYPT_SLHDSA_PAIRWISE_CHECK_FAIL);
@@ -876,7 +895,7 @@ static int32_t SlhDsaKeyPairCheck(const CryptSlhDsaCtx *pubKey, const CryptSlhDs
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
-    if (memcmp(node, prvKey->prvKey.pub.root, math->n) != 0) {
+    if (ConstTimeMemcmp(node, prvKey->prvKey.pub.root, math->n) == 0) {
         BSL_ERR_PUSH_ERROR(CRYPT_SLHDSA_PAIRWISE_CHECK_FAIL);
         return CRYPT_SLHDSA_PAIRWISE_CHECK_FAIL;
     }
@@ -903,7 +922,7 @@ static int32_t SlhDsaPrvKeyCheck(const CryptSlhDsaCtx *prvKey)
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
-    if (memcmp(node, prvKey->prvKey.pub.root, prvKey->profile->math->n) != 0) {
+    if (memcmp(node, prvKey->prvKey.pub.root, prvKey->profile->para->n) != 0) {
         BSL_ERR_PUSH_ERROR(CRYPT_SLHDSA_ERR_ROOT_MISMATCH);
         return CRYPT_SLHDSA_ERR_ROOT_MISMATCH;
     }

@@ -195,6 +195,27 @@ static bool IsStrictOneAsymmetricKeyType(BslCid keyType)
         (keyType >= BSL_CID_HASH_SLH_DSA_SHA2_128S_WITH_SHA256 &&
             keyType <= BSL_CID_HASH_SLH_DSA_SHAKE_256F_WITH_SHAKE256);
 }
+
+static int32_t CheckOneAsymmetricKey(bool hasPublicKey, BslCid keyType, int32_t version, uint32_t remainLen,
+    const BSL_ASN1_Buffer *publicKey)
+{
+    if (hasPublicKey && (publicKey->len == 0 || publicKey->buff == NULL)) {
+        BSL_ERR_PUSH_ERROR(BSL_ASN1_ERR_DECODE_BIT_STRING);
+        return BSL_ASN1_ERR_DECODE_BIT_STRING;
+    }
+    if (!IsStrictOneAsymmetricKeyType(keyType)) {
+        return CRYPT_SUCCESS;
+    }
+    if (remainLen != 0 || version < 0 || version > 1 || hasPublicKey != (version == 1)) {
+        BSL_ERR_PUSH_ERROR(CRYPT_DECODE_ASN1_BUFF_FAILED);
+        return CRYPT_DECODE_ASN1_BUFF_FAILED;
+    }
+    if (hasPublicKey && publicKey->buff[0] != 0) {
+        BSL_ERR_PUSH_ERROR(BSL_ASN1_ERR_DECODE_BIT_STRING);
+        return BSL_ASN1_ERR_DECODE_BIT_STRING;
+    }
+    return CRYPT_SUCCESS;
+}
 #endif
 
 #ifdef HITLS_CRYPTO_KEY_EPKI
@@ -587,6 +608,18 @@ int32_t CRYPT_ENCODE_DsaKeyParamAsn1Buff(BSL_ASN1_Buffer *asn1, uint32_t asn1Num
 }
 #endif
 
+static bool ParamOmitAlg(BslCid cid)
+{
+    return cid == BSL_CID_ED25519 || cid == BSL_CID_X25519 ||
+           (cid >= BSL_CID_ML_DSA_44 && cid <= BSL_CID_ML_DSA_87) ||
+           (cid >= BSL_CID_ML_KEM_512 && cid <= BSL_CID_ML_KEM_1024) ||
+           cid == BSL_CID_XMSS || cid == BSL_CID_XMSSMT ||
+           (cid >= BSL_CID_SLH_DSA_SHA2_128S && cid <= BSL_CID_SLH_DSA_SHAKE_256F) ||
+           (cid >= BSL_CID_HASH_SLH_DSA_SHA2_128S_WITH_SHA256 &&
+               cid <= BSL_CID_HASH_SLH_DSA_SHAKE_256F_WITH_SHAKE256) ||
+           (cid >= BSL_CID_MLDSA44_RSA2048_PSS_SHA256 && cid <= BSL_CID_MLDSA87_ECDSA_P521_SHA512);
+}
+
 static int32_t DecSubKeyInfoCb(int32_t type, uint32_t idx, void *data, void *expVal)
 {
     (void)idx;
@@ -600,15 +633,7 @@ static int32_t DecSubKeyInfoCb(int32_t type, uint32_t idx, void *data, void *exp
                 *(uint8_t *)expVal = BSL_ASN1_TAG_OBJECT_ID;
             } else if (cid == BSL_CID_DSA || cid == BSL_CID_DH || cid == BSL_CID_RSASSAPSS) {
                 *(uint8_t *)expVal = BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE;
-            } else if (cid == BSL_CID_ED25519 || cid == BSL_CID_X25519 ||
-                (cid >= BSL_CID_ML_DSA_44 && cid <= BSL_CID_ML_DSA_87) ||
-                (cid >= BSL_CID_ML_KEM_512 && cid <= BSL_CID_ML_KEM_1024) ||
-                cid == BSL_CID_XMSS || cid == BSL_CID_XMSSMT ||
-                (cid >= BSL_CID_SLH_DSA_SHA2_128S && cid <= BSL_CID_SLH_DSA_SHAKE_256F) ||
-                (cid >= BSL_CID_HASH_SLH_DSA_SHA2_128S_WITH_SHA256 &&
-                    cid <= BSL_CID_HASH_SLH_DSA_SHAKE_256F_WITH_SHAKE256) ||
-                (cid >= BSL_CID_MLDSA44_RSA2048_PSS_SHA256 && cid <= BSL_CID_MLDSA87_ECDSA_P521_SHA512)) {
-                /* These algorithms identify the key type directly by OID, so parameters must be absent. */
+            } else if (ParamOmitAlg(cid)) {
                 *(uint8_t *)expVal = BSL_ASN1_TAG_EMPTY; // is empty
             } else {
                 *(uint8_t *)expVal = BSL_ASN1_TAG_NULL; // is null
@@ -747,17 +772,11 @@ int32_t CRYPT_DECODE_Pkcs8Info(uint8_t *buff, uint32_t buffLen, BSL_ASN1_DecTemp
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
+    BSL_ASN1_Buffer *publicKey = &asn1[CRYPT_PK8_PRIKEY_PUBLICKEY_IDX];
     bool hasPublicKey = asn1[CRYPT_PK8_PRIKEY_PUBLICKEY_IDX].tag != 0;
-    if (IsStrictOneAsymmetricKeyType(keyType)) {
-        if (tmpBuffLen != 0 || version < 0 || version > 1 || hasPublicKey != (version == 1)) {
-            BSL_ERR_PUSH_ERROR(CRYPT_DECODE_ASN1_BUFF_FAILED);
-            return CRYPT_DECODE_ASN1_BUFF_FAILED;
-        }
-        if (hasPublicKey &&
-            (asn1[CRYPT_PK8_PRIKEY_PUBLICKEY_IDX].len == 0 || asn1[CRYPT_PK8_PRIKEY_PUBLICKEY_IDX].buff[0] != 0)) {
-            BSL_ERR_PUSH_ERROR(BSL_ASN1_ERR_DECODE_BIT_STRING);
-            return BSL_ASN1_ERR_DECODE_BIT_STRING;
-        }
+    ret = CheckOneAsymmetricKey(hasPublicKey, keyType, version, tmpBuffLen, publicKey);
+    if (ret != CRYPT_SUCCESS) {
+        return ret;
     }
     pk8PrikeyInfo->version = version;
     pk8PrikeyInfo->keyType = keyType;
@@ -766,9 +785,9 @@ int32_t CRYPT_DECODE_Pkcs8Info(uint8_t *buff, uint32_t buffLen, BSL_ASN1_DecTemp
     pk8PrikeyInfo->keyParam = keyParam;
     pk8PrikeyInfo->attributes = asn1[CRYPT_PK8_PRIKEY_ATTRIBUTES_IDX];
     if (hasPublicKey) {
-        pk8PrikeyInfo->publicKey.buff = asn1[CRYPT_PK8_PRIKEY_PUBLICKEY_IDX].buff + 1;
-        pk8PrikeyInfo->publicKey.len = asn1[CRYPT_PK8_PRIKEY_PUBLICKEY_IDX].len - 1;
-        pk8PrikeyInfo->publicKey.unusedBits = asn1[CRYPT_PK8_PRIKEY_PUBLICKEY_IDX].buff[0];
+        pk8PrikeyInfo->publicKey.buff = publicKey->buff + 1;
+        pk8PrikeyInfo->publicKey.len = publicKey->len - 1;
+        pk8PrikeyInfo->publicKey.unusedBits = publicKey->buff[0];
     }
     return CRYPT_SUCCESS;
 }

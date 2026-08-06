@@ -110,11 +110,11 @@ static int32_t CreateMdCtxAndUpdata(void **out, const EAL_MdMethod *hashMethod, 
 
 int32_t InitMdCtx(CryptSlhDsaCtx *ctx, const uint8_t *pubSeed)
 {
-    if (ctx->profile->math->hashFamily == SLH_DSA_HASH_SHAKE) {
+    if (ctx->profile->para->hashFamily == SLH_DSA_HASH_SHAKE) {
         return CRYPT_SUCCESS;
     }
 
-    uint32_t n = ctx->profile->math->n;
+    uint32_t n = ctx->profile->para->n;
     uint8_t padding[SHA512_PADDING_LEN] = {0};
     const CRYPT_ConstData hashData256[] = {{pubSeed, n}, {padding, SHA256_PADDING_LEN - n}};
     const EAL_MdMethod *hashMethod256 = EAL_MdFindDefaultMethod(CRYPT_MD_SHA256);
@@ -181,7 +181,7 @@ void FreeMdCtx(CryptSlhDsaCtx *ctx)
 static int32_t PrfmsgShake256(const void *vctx, const uint8_t *rand, const uint8_t *msg, uint32_t msgLen, uint8_t *out)
 {
     const CryptSlhDsaCtx *ctx = (const CryptSlhDsaCtx *)vctx;
-    uint32_t n = ctx->profile->math->n;
+    uint32_t n = ctx->profile->para->n;
     const CRYPT_ConstData hashData[] = {{ctx->prvKey.prf, n}, {rand, n}, {msg, msgLen}};
     return CalcMultiMsgHash(CRYPT_MD_SHAKE256, hashData, sizeof(hashData) / sizeof(hashData[0]), out, n);
 }
@@ -191,8 +191,8 @@ static int32_t HmsgShake256(const void *vctx, const uint8_t *r, const uint8_t *m
 {
     (void)idx;
     const CryptSlhDsaCtx *ctx = (const CryptSlhDsaCtx *)vctx;
-    uint32_t n = ctx->profile->math->n;
-    uint32_t m = ctx->profile->math->m;
+    uint32_t n = ctx->profile->para->n;
+    uint32_t m = ctx->profile->para->m;
     const CRYPT_ConstData hashData[] = {{r, n}, {ctx->prvKey.pub.seed, n}, {ctx->prvKey.pub.root, n}, {msg, msgLen}};
     return CalcMultiMsgHash(CRYPT_MD_SHAKE256, hashData, sizeof(hashData) / sizeof(hashData[0]), out, m);
 }
@@ -201,7 +201,7 @@ static int32_t PrfShake256(const void *vctx, const void *vadrs, uint8_t *out)
 {
     const CryptSlhDsaCtx *ctx = (const CryptSlhDsaCtx *)vctx;
     const SlhDsaAdrs *adrs = (const SlhDsaAdrs *)vadrs;
-    uint32_t n = ctx->profile->math->n;
+    uint32_t n = ctx->profile->para->n;
     const CRYPT_ConstData hashData[] = {
         {ctx->prvKey.pub.seed, n}, {adrs->bytes, ctx->adrsOps.getAdrsLen()}, {ctx->prvKey.seed, n}};
     return CalcMultiMsgHash(CRYPT_MD_SHAKE256, hashData, sizeof(hashData) / sizeof(hashData[0]), out, n);
@@ -211,7 +211,7 @@ static int32_t HShake256(const void *vctx, const void *vadrs, const uint8_t *msg
 {
     const CryptSlhDsaCtx *ctx = (const CryptSlhDsaCtx *)vctx;
     const SlhDsaAdrs *adrs = (const SlhDsaAdrs *)vadrs;
-    uint32_t n = ctx->profile->math->n;
+    uint32_t n = ctx->profile->para->n;
     const CRYPT_ConstData hashData[] = {
         {ctx->prvKey.pub.seed, n}, {adrs->bytes, ctx->adrsOps.getAdrsLen()}, {msg, msgLen}};
     return CalcMultiMsgHash(CRYPT_MD_SHAKE256, hashData, sizeof(hashData) / sizeof(hashData[0]), out, n);
@@ -231,7 +231,7 @@ static int32_t Prfmsg(const CryptSlhDsaCtx *ctx, const uint8_t *rand, const uint
                       CRYPT_MAC_AlgId macId)
 {
     int32_t ret;
-    uint32_t n = ctx->profile->math->n;
+    uint32_t n = ctx->profile->para->n;
     uint8_t tmp[HBS_MAX_MDSIZE] = {0};
     uint32_t tmpLen = sizeof(tmp);
     CRYPT_EAL_MacCtx *mdCtx = CRYPT_EAL_MacNewCtx(macId);
@@ -263,8 +263,8 @@ static int32_t HmsgSha(const CryptSlhDsaCtx *ctx, const uint8_t *r, const uint8_
                        const uint8_t *msg, uint32_t msgLen, uint8_t *out, CRYPT_MD_AlgId mdId)
 {
     int32_t ret;
-    uint32_t m = ctx->profile->math->m;
-    uint32_t n = ctx->profile->math->n;
+    uint32_t m = ctx->profile->para->m;
+    uint32_t n = ctx->profile->para->n;
     uint32_t tmpLen;
 
     uint8_t tmpSeed[2 * SLH_DSA_MAX_N + HBS_MAX_MDSIZE] = {0}; // 2 is for double
@@ -304,7 +304,7 @@ static int32_t PrfSha256(const void *vctx, const void *vadrs, uint8_t *out)
 {
     const CryptSlhDsaCtx *ctx = (const CryptSlhDsaCtx *)vctx;
     const SlhDsaAdrs *adrs = (const SlhDsaAdrs *)vadrs;
-    uint32_t n = ctx->profile->math->n;
+    uint32_t n = ctx->profile->para->n;
     const CRYPT_ConstData hashData[] = {{adrs->bytes, ctx->adrsOps.getAdrsLen()}, {ctx->prvKey.seed, n}};
     return CalcMultiMsgHashByCtx(CRYPT_MD_SHA256, ctx->sha256MdCtx, hashData, sizeof(hashData) / sizeof(hashData[0]),
                                  out, n);
@@ -314,7 +314,7 @@ static int32_t HSha256(const void *vctx, const void *vadrs, const uint8_t *msg, 
 {
     const CryptSlhDsaCtx *ctx = (const CryptSlhDsaCtx *)vctx;
     const SlhDsaAdrs *adrs = (const SlhDsaAdrs *)vadrs;
-    uint32_t n = ctx->profile->math->n;
+    uint32_t n = ctx->profile->para->n;
     const CRYPT_ConstData hashData[] = {{adrs->bytes, ctx->adrsOps.getAdrsLen()}, {msg, msgLen}};
     return CalcMultiMsgHashByCtx(CRYPT_MD_SHA256, ctx->sha256MdCtx, hashData, sizeof(hashData) / sizeof(hashData[0]),
                                  out, n);
@@ -334,7 +334,7 @@ static int32_t HSha512(const void *vctx, const void *vadrs, const uint8_t *msg, 
 {
     const CryptSlhDsaCtx *ctx = (const CryptSlhDsaCtx *)vctx;
     const SlhDsaAdrs *adrs = (const SlhDsaAdrs *)vadrs;
-    uint32_t n = ctx->profile->math->n;
+    uint32_t n = ctx->profile->para->n;
     const CRYPT_ConstData hashData[] = {{adrs->bytes, ctx->adrsOps.getAdrsLen()}, {msg, msgLen}};
     return CalcMultiMsgHashByCtx(CRYPT_MD_SHA512, ctx->sha512MdCtx, hashData, sizeof(hashData) / sizeof(hashData[0]),
                                  out, n);
@@ -384,7 +384,7 @@ static int32_t ChainSha256(const uint8_t *x, uint32_t xLen, uint32_t start, uint
     uint32_t adrsLen = slhDsaCtx->adrsOps.getAdrsLen();
     SlhDsaAdrs *adrsCtx = (SlhDsaAdrs *)adrs;
     slhDsaCtx->adrsOps.setHashAddr(adrsCtx, start);
-    uint32_t n = slhDsaCtx->profile->math->n;
+    uint32_t n = slhDsaCtx->profile->para->n;
     // do first hash
     ret = CRYPT_SHA2_256_Update(sha256Ctx, adrsCtx->bytes, adrsLen);
     if (ret != CRYPT_SUCCESS) {
@@ -439,7 +439,7 @@ static int32_t ChainShake256(const uint8_t *x, uint32_t xLen, uint32_t start, ui
     const HbsWotsCtx *wotsCtx = (const HbsWotsCtx *)ctx;
     const CryptSlhDsaCtx *slhDsaCtx = (const CryptSlhDsaCtx *)wotsCtx->coreCtx;
     SlhDsaAdrs *adrsCtx = (SlhDsaAdrs *)adrs;
-    uint32_t n = slhDsaCtx->profile->math->n;
+    uint32_t n = slhDsaCtx->profile->para->n;
     uint32_t nQwords = n >> 3; // pkSeed u64 num
     uint32_t msgOffset = nQwords + 4; // 4 = ((adrsLen = 32) >> 3)
     uint32_t padOffset = msgOffset + nQwords;

@@ -24,14 +24,14 @@ extern "C" {
 #endif /* __cplusplus */
 
 /*
- * 根据 SLH-DSA 哈希族解析配套的哈希函数表和地址操作集。
- * SHA2 参数集使用压缩地址，SHAKE 参数集使用完整地址。
+ * Resolve the hash function table and address operations for an SLH-DSA hash family.
+ * SHA2 parameter sets use compressed addresses, while SHAKE parameter sets use full addresses.
  *
- * @param hashFamily [IN]  哈希族。
- * @param hashFuncs  [OUT] 哈希函数表，调用方必须保证指针非空。
- * @param adrsOps    [OUT] 地址操作集，调用方必须保证指针非空。
- * @retval CRYPT_SUCCESS 解析成功。
- * @retval CRYPT_INVALID_ARG 不支持的哈希族。
+ * @param hashFamily [IN]  Hash family.
+ * @param hashFuncs  [OUT] Hash function table. The caller must provide a non-null pointer.
+ * @param adrsOps    [OUT] Address operations. The caller must provide a non-null pointer.
+ * @retval CRYPT_SUCCESS The methods were resolved successfully.
+ * @retval CRYPT_INVALID_ARG The hash family is not supported.
  */
 int32_t SlhDsaResolveMathMethods(SlhDsaHashFamily hashFamily, const HbsHashFuncs **hashFuncs, HbsAdrsOps *adrsOps);
 

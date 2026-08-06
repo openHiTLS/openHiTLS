@@ -33,6 +33,34 @@
 #include "test.h"
 /* END_HEADER */
 STUB_DEFINE_RET2(void *, BSL_SAL_Calloc, uint32_t, uint32_t);
+STUB_DEFINE_RET6(int32_t, SlhDsaSignInternal, const CryptSlhDsaCtx *, const uint8_t *, uint32_t, const uint8_t *,
+    uint8_t *, uint32_t *);
+STUB_DEFINE_VOID2(BSL_SAL_CleanseData, void *, uint32_t);
+
+static const void *g_expectedCleansePtr = NULL;
+static bool g_expectedCleanseObserved = false;
+
+static void ObserveSlhDsaCleanse(void *ptr, uint32_t size)
+{
+    if (ptr == g_expectedCleansePtr && size == SLH_DSA_MAX_N) {
+        g_expectedCleanseObserved = true;
+    }
+    real_BSL_SAL_CleanseData_func_t realCleanse = get_real_BSL_SAL_CleanseData();
+    if (realCleanse != NULL) {
+        realCleanse(ptr, size);
+    }
+}
+
+static int32_t SlhDsaSignInternalFail(const CryptSlhDsaCtx *ctx, const uint8_t *msg, uint32_t msgLen,
+    const uint8_t *addrand, uint8_t *sig, uint32_t *sigLen)
+{
+    (void)ctx;
+    (void)msg;
+    (void)msgLen;
+    g_expectedCleansePtr = addrand;
+    (void)memset(sig, 0x3c, *sigLen);
+    return CRYPT_INVALID_ARG;
+}
 
 static void *SlhDsaMdCtxCallocFail(uint32_t count, uint32_t size)
 {
@@ -97,6 +125,7 @@ int32_t RandFailAfterFirstEx(void *libCtx, uint8_t *rand, uint32_t randLen)
     (void)libCtx;
     return RandFailAfterFirst(rand, randLen);
 }
+
 static void InitSlhDsaPubParams(BSL_Param *params, uint8_t *pubSeed, uint8_t *pubRoot, uint32_t keyLen)
 {
     BSL_PARAM_InitValue(&params[0], CRYPT_PARAM_SLH_DSA_PUB_SEED, BSL_PARAM_TYPE_OCTETS, pubSeed, keyLen);
@@ -244,20 +273,16 @@ void SDV_CRYPTO_SLH_DSA_24_PROFILE_TC001(int isProvider)
         29792,
         49856,
     };
+    static const uint32_t securityBits[] = {
+        128, 128, 128, 128, 192, 192, 192, 192, 256, 256, 256, 256,
+        128, 128, 192, 192, 256, 256, 128, 128, 192, 192, 256, 256,
+    };
 
     TestMemInit();
     CRYPT_EAL_PkeyCtx *pkey = NULL;
     for (uint32_t i = 0; i < sizeof(profiles) / sizeof(profiles[0]); i++) {
-#ifdef HITLS_CRYPTO_PROVIDER
-        if (isProvider != 0) {
-            pkey = CRYPT_EAL_ProviderPkeyNewCtx(NULL, CRYPT_PKEY_SLH_DSA, CRYPT_EAL_PKEY_SIGN_OPERATE,
-                "provider=default");
-        } else
-#endif
-        {
-            (void)isProvider;
-            pkey = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_SLH_DSA);
-        }
+        pkey = TestPkeyNewCtx(NULL, CRYPT_PKEY_SLH_DSA, CRYPT_EAL_PKEY_SIGN_OPERATE,
+            "provider=default", isProvider);
         ASSERT_TRUE(pkey != NULL);
         ASSERT_EQ(CRYPT_EAL_PkeySetParaById(pkey, profiles[i]), CRYPT_SUCCESS);
         int32_t paraId = CRYPT_PKEY_MAX;
@@ -267,6 +292,7 @@ void SDV_CRYPTO_SLH_DSA_24_PROFILE_TC001(int isProvider)
         ASSERT_EQ(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_GET_SLH_DSA_KEY_LEN, &keyLen, sizeof(keyLen)), CRYPT_SUCCESS);
         ASSERT_EQ(keyLen, keyLens[i]);
         ASSERT_EQ(CRYPT_EAL_PkeyGetSignLen(pkey), signLens[i]);
+        ASSERT_EQ(CRYPT_EAL_PkeyGetSecurityBits(pkey), securityBits[i]);
         CRYPT_EAL_PkeyFreeCtx(pkey);
         pkey = NULL;
     }
@@ -424,8 +450,7 @@ void SDV_CRYPTO_SLH_DSA_KEY_STATE_TC001(void)
     ASSERT_EQ(CRYPT_EAL_PkeySetPub(pubOnly, &pub), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_PkeySetPub(pubOnly, &pub), CRYPT_SUCCESS);
     exportedRoot[0] ^= 0x01;
-    ASSERT_EQ(CRYPT_EAL_PkeySetPub(pubOnly, &pub), CRYPT_SLHDSA_ERR_KEY_EXISTS);
-    TestErrClear();
+    ASSERT_EQ(CRYPT_EAL_PkeySetPub(pubOnly, &pub), CRYPT_SUCCESS);
     exportedRoot[0] ^= 0x01;
 
     ASSERT_EQ(CRYPT_EAL_PkeySetPub(imported, &pub), CRYPT_SUCCESS);
@@ -515,7 +540,27 @@ void SDV_CRYPTO_SLH_DSA_FAILURE_CLEANUP_TC001(void)
     prv.key.slhDsaPrv.pub.len = 16;
     ASSERT_EQ(CRYPT_EAL_PkeyGetPrv(failedGen, &prv), CRYPT_SLHDSA_ERR_NO_PRVKEY);
 
+    TestRandDeInit();
+    ASSERT_EQ(TestRandInit(), CRYPT_SUCCESS);
+    (void)memset(sig, 0xa5, sizeof(sig));
+    sigLen = sizeof(sig);
+    g_expectedCleansePtr = NULL;
+    g_expectedCleanseObserved = false;
+    STUB_REPLACE(SlhDsaSignInternal, SlhDsaSignInternalFail);
+    STUB_REPLACE(BSL_SAL_CleanseData, ObserveSlhDsaCleanse);
+    ASSERT_EQ(CRYPT_EAL_PkeySign(pkey, CRYPT_MD_SHA256, msg, sizeof(msg), sig, &sigLen), CRYPT_INVALID_ARG);
+    STUB_RESTORE(SlhDsaSignInternal);
+    STUB_RESTORE(BSL_SAL_CleanseData);
+    ASSERT_EQ(sigLen, sizeof(sig));
+    ASSERT_TRUE(g_expectedCleanseObserved);
+    for (uint32_t i = 0; i < sizeof(sig); i++) {
+        ASSERT_EQ(sig[i], 0);
+    }
+    TestErrClear();
+
 EXIT:
+    STUB_RESTORE(SlhDsaSignInternal);
+    STUB_RESTORE(BSL_SAL_CleanseData);
     CRYPT_EAL_PkeyFreeCtx(pkey);
     CRYPT_EAL_PkeyFreeCtx(failedGen);
     TestRandDeInit();
@@ -629,6 +674,21 @@ void SDV_CRYPTO_SLH_DSA_MODE_CONSISTENCY_TC001(void)
     ASSERT_EQ(CRYPT_EAL_PkeyVerify(pkey, CRYPT_MD_SHA256, msg, sizeof(msg), sig, sigLen), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_PkeyVerify(pkey, CRYPT_MD_SHA512, msg, sizeof(msg), sig, sigLen), CRYPT_SUCCESS);
 
+    int32_t prehash = 1;
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_SET_PREHASH_MODE, &prehash, sizeof(prehash) - 1U),
+        CRYPT_INVALID_ARG);
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_SET_PREHASH_MODE, &prehash, sizeof(prehash)), CRYPT_SUCCESS);
+    sigLen = sizeof(sig);
+    ASSERT_EQ(CRYPT_EAL_PkeySign(pkey, CRYPT_MD_SHA3_512, msg, sizeof(msg), sig, &sigLen), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyVerify(pkey, CRYPT_MD_SHA3_512, msg, sizeof(msg), sig, sigLen), CRYPT_SUCCESS);
+    ASSERT_TRUE(CRYPT_EAL_PkeyVerify(pkey, CRYPT_MD_SHAKE128, msg, sizeof(msg), sig, sigLen) != CRYPT_SUCCESS);
+    TestErrClear();
+    prehash = 0;
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_SET_PREHASH_MODE, &prehash, sizeof(prehash)), CRYPT_SUCCESS);
+    sigLen = sizeof(sig);
+    ASSERT_EQ(CRYPT_EAL_PkeySign(pkey, CRYPT_MD_SHA256, msg, sizeof(msg), sig, &sigLen), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyVerify(pkey, CRYPT_MD_SHA256, msg, sizeof(msg), sig, sigLen), CRYPT_SUCCESS);
+
     uint8_t context = 1;
     ASSERT_EQ(CRYPT_EAL_PkeyCtrl(wrongContext, CRYPT_CTRL_SET_CTX_INFO, &context, sizeof(context)), CRYPT_SUCCESS);
     ASSERT_TRUE(CRYPT_EAL_PkeyVerify(wrongContext, CRYPT_MD_SHA256, msg, sizeof(msg), sig, sigLen) != CRYPT_SUCCESS);
@@ -636,6 +696,11 @@ void SDV_CRYPTO_SLH_DSA_MODE_CONSISTENCY_TC001(void)
 
     ASSERT_TRUE(CRYPT_EAL_PkeyVerify(wrongMode, CRYPT_MD_SHA256, msg, sizeof(msg), sig, sigLen) != CRYPT_SUCCESS);
     TestErrClear();
+
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(wrongMode, CRYPT_CTRL_SET_PREHASH_MODE, &prehash, sizeof(prehash) - 1U),
+        CRYPT_INVALID_ARG);
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(wrongMode, CRYPT_CTRL_SET_PREHASH_MODE, &prehash, sizeof(prehash)),
+        CRYPT_NOT_SUPPORT);
 
     sigLen = sizeof(sig);
     ASSERT_EQ(CRYPT_EAL_PkeySign(wrongMode, CRYPT_MD_SHA256, msg, sizeof(msg), sig, &sigLen), CRYPT_SUCCESS);
@@ -652,3 +717,32 @@ EXIT:
 }
 /* END_CASE */
 
+/* BEGIN_CASE */
+void SDV_CRYPTO_SLH_DSA_RFC9909_FIXED_PREHASH_TC001(void)
+{
+    TestMemInit();
+    CRYPT_EAL_PkeyCtx *pkey = NULL;
+    ASSERT_EQ(TestRandInit(), CRYPT_SUCCESS);
+    pkey = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_SLH_DSA);
+    ASSERT_TRUE(pkey != NULL);
+    ASSERT_EQ(CRYPT_EAL_PkeySetParaById(pkey, CRYPT_HASH_SLH_DSA_SHA2_256F_WITH_SHA512), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyGen(pkey), CRYPT_SUCCESS);
+
+    int32_t prehash = 0;
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_SET_PREHASH_MODE, &prehash, sizeof(prehash)),
+        CRYPT_NOT_SUPPORT);
+
+    uint8_t msg[] = "RFC 9909 HashSLH-DSA";
+    uint8_t sig[50000] = {0};
+    uint32_t sigLen = sizeof(sig);
+    ASSERT_EQ(CRYPT_EAL_PkeySign(pkey, CRYPT_MD_SHA512, msg, sizeof(msg), sig, &sigLen), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyVerify(pkey, CRYPT_MD_SHA512, msg, sizeof(msg), sig, sigLen), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeySign(pkey, CRYPT_MD_SHA256, msg, sizeof(msg), sig, &sigLen),
+        CRYPT_SLHDSA_ERR_PREHASH_ID_NOT_SUPPORTED);
+
+EXIT:
+    CRYPT_EAL_PkeyFreeCtx(pkey);
+    TestRandDeInit();
+    return;
+}
+/* END_CASE */

@@ -47,7 +47,7 @@ int32_t ForsSign(const uint8_t *md, uint32_t mdLen, SlhDsaAdrs *adrs, const Cryp
                  uint32_t *sigLen)
 {
     int32_t ret = CRYPT_SLHDSA_ERR_INVALID_SIG_LEN;
-    const SlhDsaMathParams *math = ctx->profile->math;
+    const SlhDsaMathParams *math = ctx->profile->para;
     uint32_t n = math->n;
     uint32_t a = math->a;
     uint32_t k = math->k;
@@ -95,7 +95,7 @@ int32_t ForsPkFromSig(const uint8_t *sig, uint32_t sigLen, const uint8_t *md, ui
     uint8_t *root = NULL;
     uint8_t node0[SLH_DSA_MAX_N] = {0};
     uint8_t node1[SLH_DSA_MAX_N] = {0};
-    const SlhDsaMathParams *math = ctx->profile->math;
+    const SlhDsaMathParams *math = ctx->profile->para;
     uint32_t n = math->n;
     uint32_t a = math->a;
     uint32_t k = math->k;
@@ -178,7 +178,7 @@ int32_t ForsGenPrvKey(const SlhDsaAdrs *adrs, uint32_t idx, const CryptSlhDsaCtx
 int32_t ForsNode(uint32_t idx, uint32_t height, SlhDsaAdrs *adrs, const CryptSlhDsaCtx *ctx, uint8_t *node)
 {
     int32_t ret;
-    uint32_t n = ctx->profile->math->n;
+    uint32_t n = ctx->profile->para->n;
 
     if (height == 0) {
         uint8_t sk[SLH_DSA_MAX_N] = {0};

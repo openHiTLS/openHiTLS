@@ -15,7 +15,7 @@ SDV_CRYPTO_SLH_DSA_EMPTY_MESSAGE_TC001:
 SLH_DSA: imported private keys expose public material and reject inconsistent roots
 SDV_CRYPTO_SLH_DSA_KEY_STATE_TC001:
 
-SLH_DSA: signing failures preserve unused output and key-generation failures clear key state
+SLH_DSA: signing failures preserve or clear output by phase and cleanse addrand after signing
 SDV_CRYPTO_SLH_DSA_FAILURE_CLEANUP_TC001:
 
 SLH_DSA: key import MD initialization is atomic and leaves no partial state
@@ -24,3 +24,5 @@ SDV_CRYPTO_SLH_DSA_KEY_IMPORT_MD_ATOMICITY_TC001:
 SLH_DSA: context, fixed profile identity, and prehash hash ID are bound to the signature operation
 SDV_CRYPTO_SLH_DSA_MODE_CONSISTENCY_TC001:
 
+SLH_DSA: RFC 9909 HashSLH-DSA profiles use their fixed pre-hash identifier
+SDV_CRYPTO_SLH_DSA_RFC9909_FIXED_PREHASH_TC001:

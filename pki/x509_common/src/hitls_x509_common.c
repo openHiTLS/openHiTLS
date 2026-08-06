@@ -1001,6 +1001,48 @@ int32_t HITLS_X509_CtrlAlgInfo(CRYPT_EAL_PkeyCtx *pubKey, int32_t hashId, const 
 #endif
 
 #if defined(HITLS_CRYPTO_MLDSA) || defined(HITLS_CRYPTO_SLH_DSA)
+static int32_t X509_NormalizePqcOperationState(CRYPT_EAL_PkeyCtx *key, CRYPT_PKEY_AlgId keyAlgId,
+    BslCid signAlgId)
+{
+    int32_t fixedMdId = BSL_CID_UNKNOWN;
+#ifdef HITLS_CRYPTO_SLH_DSA
+    if (keyAlgId == CRYPT_PKEY_SLH_DSA) {
+        int32_t ret = OBJ_GetHashIdFromSignId(signAlgId, &fixedMdId);
+        if (ret != BSL_SUCCESS) {
+            BSL_ERR_PUSH_ERROR(ret);
+            return ret;
+        }
+    }
+#else
+    (void)signAlgId;
+#endif
+    int32_t ret;
+    if (fixedMdId == BSL_CID_UNKNOWN) {
+        int32_t disabled = 0;
+        ret = CRYPT_EAL_PkeyCtrl(key, CRYPT_CTRL_SET_PREHASH_MODE, &disabled, sizeof(disabled));
+        if (ret != CRYPT_SUCCESS) {
+            BSL_ERR_PUSH_ERROR(ret);
+            return ret;
+        }
+    }
+    ret = CRYPT_EAL_PkeyCtrl(key, CRYPT_CTRL_SET_CTX_INFO, NULL, 0);
+    if (ret != CRYPT_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        return ret;
+    }
+#ifdef HITLS_CRYPTO_MLDSA
+    if (keyAlgId == CRYPT_PKEY_ML_DSA) {
+        int32_t disabled = 0;
+        ret = CRYPT_EAL_PkeyCtrl(key, CRYPT_CTRL_SET_MLDSA_MUMSG_FLAG, &disabled, sizeof(disabled));
+        if (ret != CRYPT_SUCCESS) {
+            BSL_ERR_PUSH_ERROR(ret);
+            return ret;
+        }
+    }
+#endif
+    return HITLS_PKI_SUCCESS;
+}
+
 static int32_t X509_SetPqcVerifyParam(CRYPT_EAL_PkeyCtx *verifyKey, const HITLS_X509_Asn1AlgId *alg)
 {
     CRYPT_PKEY_AlgId keyAlgId = CRYPT_EAL_PkeyGetId(verifyKey);
@@ -1011,32 +1053,7 @@ static int32_t X509_SetPqcVerifyParam(CRYPT_EAL_PkeyCtx *verifyKey, const HITLS_
     if (ret != HITLS_PKI_SUCCESS) {
         return ret;
     }
-#ifdef HITLS_CRYPTO_MLDSA
-    if (keyAlgId == CRYPT_PKEY_ML_DSA) {
-        int32_t prehashMode = 0;
-        ret = CRYPT_EAL_PkeyCtrl(verifyKey, CRYPT_CTRL_SET_PREHASH_MODE, &prehashMode, sizeof(prehashMode));
-        if (ret != CRYPT_SUCCESS) {
-            BSL_ERR_PUSH_ERROR(ret);
-            return ret;
-        }
-    }
-#endif
-    ret = CRYPT_EAL_PkeyCtrl(verifyKey, CRYPT_CTRL_SET_CTX_INFO, NULL, 0);
-    if (ret != CRYPT_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
-        return ret;
-    }
-#ifdef HITLS_CRYPTO_MLDSA
-    if (keyAlgId == CRYPT_PKEY_ML_DSA) {
-        int32_t disabled = 0;
-        ret = CRYPT_EAL_PkeyCtrl(verifyKey, CRYPT_CTRL_SET_MLDSA_MUMSG_FLAG, &disabled, sizeof(disabled));
-        if (ret != CRYPT_SUCCESS) {
-            BSL_ERR_PUSH_ERROR(ret);
-            return ret;
-        }
-    }
-#endif
-    return HITLS_PKI_SUCCESS;
+    return X509_NormalizePqcOperationState(verifyKey, keyAlgId, alg->algId);
 }
 #endif
 
@@ -1323,7 +1340,8 @@ static int32_t X509_SetSm2SignParam(CRYPT_EAL_PkeyCtx *prvKey, int32_t mdId, con
 }
 #endif // HITLS_CRYPTO_SM2
 
-#if defined(HITLS_CRYPTO_RSA) || defined(HITLS_CRYPTO_SM2)
+#if defined(HITLS_CRYPTO_RSA) || defined(HITLS_CRYPTO_SM2) || defined(HITLS_CRYPTO_MLDSA) || \
+    defined(HITLS_CRYPTO_SLH_DSA)
 typedef int32_t (*X509_SetSignParamCb)(CRYPT_EAL_PkeyCtx *signKey, int32_t mdId,
     const HITLS_X509_SignAlgParam *algParam, HITLS_X509_Asn1AlgId *signAlgId);
 
@@ -1391,68 +1409,23 @@ static int32_t X509_CheckSignMdId(const CRYPT_EAL_PkeyCtx *prvKey, CRYPT_PKEY_Al
 }
 
 #if defined(HITLS_CRYPTO_MLDSA) || defined(HITLS_CRYPTO_SLH_DSA)
-static int32_t X509_SetPqcSignParam(CRYPT_EAL_PkeyCtx *signKey, CRYPT_PKEY_AlgId keyAlgId,
-    HITLS_X509_Asn1AlgId *signAlgId)
+static int32_t X509_SetPqcSignParam(CRYPT_EAL_PkeyCtx *signKey, int32_t mdId,
+    const HITLS_X509_SignAlgParam *algParam, HITLS_X509_Asn1AlgId *signAlgId)
 {
-    int32_t ret;
-#ifndef HITLS_CRYPTO_MLDSA
-    (void)keyAlgId;
-    (void)signAlgId;
-#endif
-
+    (void)mdId;
+    (void)algParam;
+    CRYPT_PKEY_AlgId keyAlgId = CRYPT_EAL_PkeyGetId(signKey);
 #ifdef HITLS_CRYPTO_MLDSA
     if (keyAlgId == CRYPT_PKEY_ML_DSA) {
-        ret = CRYPT_EAL_PkeyCtrl(signKey, CRYPT_CTRL_GET_PARAID, &signAlgId->algId, sizeof(signAlgId->algId));
-        if (ret != CRYPT_SUCCESS) {
-            BSL_ERR_PUSH_ERROR(ret);
-            return ret;
-        }
-        int32_t prehashMode = 0;
-        ret = CRYPT_EAL_PkeyCtrl(signKey, CRYPT_CTRL_SET_PREHASH_MODE, &prehashMode, sizeof(prehashMode));
+        int32_t ret = CRYPT_EAL_PkeyCtrl(signKey, CRYPT_CTRL_GET_PARAID, &signAlgId->algId,
+            sizeof(signAlgId->algId));
         if (ret != CRYPT_SUCCESS) {
             BSL_ERR_PUSH_ERROR(ret);
             return ret;
         }
     }
 #endif
-
-    ret = CRYPT_EAL_PkeyCtrl(signKey, CRYPT_CTRL_SET_CTX_INFO, NULL, 0);
-    if (ret != CRYPT_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
-        return ret;
-    }
-
-#ifdef HITLS_CRYPTO_MLDSA
-    if (keyAlgId == CRYPT_PKEY_ML_DSA) {
-        int32_t disabled = 0;
-        ret = CRYPT_EAL_PkeyCtrl(signKey, CRYPT_CTRL_SET_MLDSA_MUMSG_FLAG, &disabled, sizeof(disabled));
-        if (ret != CRYPT_SUCCESS) {
-            BSL_ERR_PUSH_ERROR(ret);
-            return ret;
-        }
-    }
-#endif
-
-    return HITLS_PKI_SUCCESS;
-}
-
-static int32_t X509_PreparePqcSignKey(const CRYPT_EAL_PkeyCtx *prvKey, CRYPT_PKEY_AlgId keyAlgId,
-    CRYPT_EAL_PkeyCtx **signKey, HITLS_X509_Asn1AlgId *signAlgId, bool *freeSignKey)
-{
-    CRYPT_EAL_PkeyCtx *key = CRYPT_EAL_PkeyDupCtx(prvKey);
-    if (key == NULL) {
-        BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_VFY_DUP_PUBKEY);
-        return HITLS_X509_ERR_VFY_DUP_PUBKEY;
-    }
-
-    int32_t ret = X509_SetPqcSignParam(key, keyAlgId, signAlgId);
-    if (ret != HITLS_PKI_SUCCESS) {
-        CRYPT_EAL_PkeyFreeCtx(key);
-        return ret;
-    }
-    *freeSignKey = true;
-    *signKey = key;
-    return HITLS_PKI_SUCCESS;
+    return X509_NormalizePqcOperationState(signKey, keyAlgId, signAlgId->algId);
 }
 #endif
 
@@ -1509,7 +1482,8 @@ int32_t HITLS_X509_Sign(int32_t mdId, const CRYPT_EAL_PkeyCtx *prvKey, const HIT
         case CRYPT_PKEY_SLH_DSA:
 #endif
 #if defined(HITLS_CRYPTO_MLDSA) || defined(HITLS_CRYPTO_SLH_DSA)
-            ret = X509_PreparePqcSignKey(prvKey, keyAlgId, &signKey, &signAlgId, &freeSignKey);
+            ret = X509_PrepareSignKey(prvKey, &signKey, mdId, algParam, &signAlgId, &freeSignKey,
+                X509_SetPqcSignParam);
             if (ret != HITLS_PKI_SUCCESS) {
                 return ret;
             }

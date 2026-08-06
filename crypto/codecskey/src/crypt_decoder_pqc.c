@@ -185,35 +185,12 @@ int32_t CRYPT_MLDSA_ParsePkcs8key(void *libCtx, uint8_t *buffer, uint32_t buffer
 
 static inline bool IsSlhDsaKeyType(BslCid keyType)
 {
-    switch (keyType) {
-        case BSL_CID_SLH_DSA_SHA2_128S:
-        case BSL_CID_SLH_DSA_SHAKE_128S:
-        case BSL_CID_SLH_DSA_SHA2_128F:
-        case BSL_CID_SLH_DSA_SHAKE_128F:
-        case BSL_CID_SLH_DSA_SHA2_192S:
-        case BSL_CID_SLH_DSA_SHAKE_192S:
-        case BSL_CID_SLH_DSA_SHA2_192F:
-        case BSL_CID_SLH_DSA_SHAKE_192F:
-        case BSL_CID_SLH_DSA_SHA2_256S:
-        case BSL_CID_SLH_DSA_SHAKE_256S:
-        case BSL_CID_SLH_DSA_SHA2_256F:
-        case BSL_CID_SLH_DSA_SHAKE_256F:
-        case BSL_CID_HASH_SLH_DSA_SHA2_128S_WITH_SHA256:
-        case BSL_CID_HASH_SLH_DSA_SHA2_128F_WITH_SHA256:
-        case BSL_CID_HASH_SLH_DSA_SHA2_192S_WITH_SHA512:
-        case BSL_CID_HASH_SLH_DSA_SHA2_192F_WITH_SHA512:
-        case BSL_CID_HASH_SLH_DSA_SHA2_256S_WITH_SHA512:
-        case BSL_CID_HASH_SLH_DSA_SHA2_256F_WITH_SHA512:
-        case BSL_CID_HASH_SLH_DSA_SHAKE_128S_WITH_SHAKE128:
-        case BSL_CID_HASH_SLH_DSA_SHAKE_128F_WITH_SHAKE128:
-        case BSL_CID_HASH_SLH_DSA_SHAKE_192S_WITH_SHAKE256:
-        case BSL_CID_HASH_SLH_DSA_SHAKE_192F_WITH_SHAKE256:
-        case BSL_CID_HASH_SLH_DSA_SHAKE_256S_WITH_SHAKE256:
-        case BSL_CID_HASH_SLH_DSA_SHAKE_256F_WITH_SHAKE256:
-            return true;
-        default:
-            return false;
+    if ((keyType >= BSL_CID_SLH_DSA_SHA2_128S && keyType <= BSL_CID_SLH_DSA_SHAKE_256F) ||
+        (keyType >= BSL_CID_HASH_SLH_DSA_SHA2_128S_WITH_SHA256 &&
+        keyType <= BSL_CID_HASH_SLH_DSA_SHAKE_256F_WITH_SHAKE256)) {
+        return true;
     }
+    return false;
 }
 
 int32_t CRYPT_SLHDSA_ParseSubPubkeyAsn1Buff(void *libCtx, uint8_t *buff, uint32_t buffLen, CryptSlhDsaCtx **pubKey,
@@ -234,18 +211,28 @@ int32_t CRYPT_SLHDSA_ParseSubPubkeyAsn1Buff(void *libCtx, uint8_t *buff, uint32_
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         return CRYPT_MEM_ALLOC_FAIL;
     }
-    uint32_t halfLen = subPubkeyInfo.pubKey.len / 2;
-    BSL_Param pubParam[3] = {
-        {CRYPT_PARAM_SLH_DSA_PUB_SEED, BSL_PARAM_TYPE_OCTETS, subPubkeyInfo.pubKey.buff, halfLen, 0},
-        {CRYPT_PARAM_SLH_DSA_PUB_ROOT, BSL_PARAM_TYPE_OCTETS, subPubkeyInfo.pubKey.buff + halfLen, halfLen, 0},
-        BSL_PARAM_END
-    };
     int32_t keyType = (int32_t)subPubkeyInfo.keyType;
     ret = CRYPT_SLH_DSA_Ctrl(pctx, CRYPT_CTRL_SET_PARA_BY_ID, (void *)&keyType, sizeof(keyType));
     if (ret != CRYPT_SUCCESS) {
         CRYPT_SLH_DSA_FreeCtx(pctx);
         return ret;
     }
+    uint32_t keyLen = 0;
+    ret = CRYPT_SLH_DSA_Ctrl(pctx, CRYPT_CTRL_GET_SLH_DSA_KEY_LEN, &keyLen, sizeof(keyLen));
+    if (ret != CRYPT_SUCCESS) {
+        CRYPT_SLH_DSA_FreeCtx(pctx);
+        return ret;
+    }
+    if (subPubkeyInfo.pubKey.len != 2 * keyLen) {
+        CRYPT_SLH_DSA_FreeCtx(pctx);
+        BSL_ERR_PUSH_ERROR(CRYPT_DECODE_ASN1_BUFF_FAILED);
+        return CRYPT_DECODE_ASN1_BUFF_FAILED;
+    }
+    BSL_Param pubParam[3] = {
+        {CRYPT_PARAM_SLH_DSA_PUB_SEED, BSL_PARAM_TYPE_OCTETS, subPubkeyInfo.pubKey.buff, keyLen, 0},
+        {CRYPT_PARAM_SLH_DSA_PUB_ROOT, BSL_PARAM_TYPE_OCTETS, subPubkeyInfo.pubKey.buff + keyLen, keyLen, 0},
+        BSL_PARAM_END
+    };
     ret = CRYPT_SLH_DSA_SetPubKeyEx(pctx, pubParam);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);

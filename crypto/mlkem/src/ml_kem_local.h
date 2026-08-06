@@ -102,7 +102,6 @@ struct CryptMlKemCtx {
     BSL_SAL_RefCount references;
     void *libCtx;
     MLKEM_MatrixSt keyData;
-    CRYPT_ALGO_MLKEM_DK_FORMAT_TYPE dkFormat;
     bool hasSeed;                      // Flag indicating if seed is stored
     uint8_t seed[MLKEM_SEED_LEN * 2]; // Store 64-byte seed (d || z)
     uint8_t ek[MLKEM_MAX_ENCAPS_KEY_LEN];
