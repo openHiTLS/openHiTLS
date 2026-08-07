@@ -70,7 +70,7 @@ void CMS_SignedDataFree(CMS_SignedData *sd)
     }
     BSL_LIST_FREE(sd->digestAlg, (BSL_LIST_PFUNC_FREE)CMS_AlgIdFree);
     if ((sd->flag & HITLS_CMS_FLAG_PARSE) == 0) {
-        BSL_SAL_FREE(sd->encapCont.content.data);
+        BSL_SAL_ClearFree(sd->encapCont.content.data, sd->encapCont.content.dataLen);
     }
     BSL_SAL_FREE(sd->initData);
     BSL_LIST_FREE(sd->certs, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);

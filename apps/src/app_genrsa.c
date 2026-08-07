@@ -222,6 +222,7 @@ static int32_t HandlePkey(GenrsaInOpt *opt, char *resBuf, uint32_t bufLen)
     char pwd[APP_MAX_PASS_LENGTH + 1] = {0};
     int32_t pwdLen = HITLS_APP_Passwd(pwd, APP_MAX_PASS_LENGTH + 1, 1);
     if (pwdLen == -1) {
+        BSL_SAL_CleanseData(pwd, APP_MAX_PASS_LENGTH);
         ret = HITLS_APP_PASSWD_FAIL;
         goto hpEnd;
     }

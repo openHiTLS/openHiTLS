@@ -826,6 +826,7 @@ static int32_t MlKemKeyPairCheck(CRYPT_ML_KEM_Ctx *pubKey, CRYPT_ML_KEM_Ctx *prv
     }
 ERR:
     BSL_SAL_CleanseData(sharedKey1, MLKEM_SHARED_KEY_LEN);
+    BSL_SAL_CleanseData(sharedKey2, MLKEM_SHARED_KEY_LEN);
     BSL_SAL_ClearFree(ciphertext, pubKey->info->cipherLen);
     return ret;
 }
