@@ -26,6 +26,7 @@
 #include "crypt_util_rand.h"
 #include "crypt_types.h"
 #include "eal_md_local.h"
+#include "bsl_bytes.h"
 #ifdef HITLS_BSL_PARAMS
 #include "bsl_params.h"
 #include "crypt_params_key.h"
@@ -826,7 +827,7 @@ static int32_t Curve25519PrvKeyCheck(const CRYPT_CURVE25519_Ctx *prvKey)
     }
     uint8_t tmp[CRYPT_CURVE25519_KEYLEN] = {0};
     // prv key is not all 0.
-    if (memcmp(tmp, prvKey->prvKey, CRYPT_CURVE25519_KEYLEN) == 0) {
+    if (ConstTimeMemcmp(tmp, prvKey->prvKey, CRYPT_CURVE25519_KEYLEN) != 0) {
         BSL_ERR_PUSH_ERROR(CRYPT_CURVE25519_INVALID_PRVKEY);
         return CRYPT_CURVE25519_INVALID_PRVKEY;
     }

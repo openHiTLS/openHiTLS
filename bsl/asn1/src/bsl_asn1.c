@@ -639,6 +639,9 @@ int32_t BSL_ASN1_SkipChildNodeAndFill(uint32_t *idx, BSL_ASN1_Template *templ,
                 return ret;
             }
         } else {
+            if (arrIdx >= arrNum) {
+                return BSL_ASN1_ERR_OVERFLOW;
+            }
             asnArr[arrIdx].tag = 0;
             asnArr[arrIdx].len = 0;
             asnArr[arrIdx].buff = 0;

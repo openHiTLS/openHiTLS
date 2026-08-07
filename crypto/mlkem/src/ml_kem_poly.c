@@ -323,7 +323,11 @@ int32_t GenMatrix(const CRYPT_ML_KEM_Ctx *ctx, const uint8_t *seed,
     if (EAL_MdFindMethodEx(CRYPT_MD_SHAKE128, ctx->libCtx, NULL, &method, &provCtx, ctx->libCtx != NULL) == NULL) {
         return CRYPT_EAL_ERR_ALGID;
     }
-
+    if (method.newCtx == NULL || method.init == NULL || method.update == NULL || method.squeeze == NULL ||
+        method.freeCtx == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NOT_SUPPORT);
+        return CRYPT_NOT_SUPPORT;
+    }
     void *hashCtx = method.newCtx(provCtx, CRYPT_MD_SHAKE128);
     if (hashCtx == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);

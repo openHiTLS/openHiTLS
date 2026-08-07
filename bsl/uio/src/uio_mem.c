@@ -111,6 +111,10 @@ static int32_t MemWrite(BSL_UIO *uio, const void *buf, uint32_t len, uint32_t *w
     }
 
     const size_t origLen = ubm->buf->length;
+    if (origLen > UINT32_MAX - len) {
+        BSL_ERR_PUSH_ERROR(BSL_UIO_MEM_GROW_FAIL);
+        return BSL_UIO_MEM_GROW_FAIL;
+    }
     if (BSL_BufMemGrowClean(ubm->buf, origLen + len) == 0) {
         BSL_ERR_PUSH_ERROR(BSL_UIO_MEM_GROW_FAIL);
         return BSL_UIO_MEM_GROW_FAIL;
