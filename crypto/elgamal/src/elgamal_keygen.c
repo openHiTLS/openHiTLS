@@ -27,15 +27,17 @@
 
 CRYPT_ELGAMAL_Ctx *CRYPT_ELGAMAL_NewCtx(void)
 {
-    CRYPT_ELGAMAL_Ctx *ctx = NULL;
-    ctx = (CRYPT_ELGAMAL_Ctx *)BSL_SAL_Malloc(sizeof(CRYPT_ELGAMAL_Ctx));
+    CRYPT_ELGAMAL_Ctx *ctx = (CRYPT_ELGAMAL_Ctx *)BSL_SAL_Calloc(1, sizeof(CRYPT_ELGAMAL_Ctx));
     if (ctx == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         return NULL;
     }
 
-    memset(ctx, 0, sizeof(CRYPT_ELGAMAL_Ctx));
-    BSL_SAL_ReferencesInit(&(ctx->references));
+    if (BSL_SAL_ReferencesInit(&(ctx->references)) != BSL_SUCCESS) {
+        BSL_SAL_Free(ctx);
+        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
+        return NULL;
+    }
 
     return ctx;
 }
@@ -117,13 +119,16 @@ CRYPT_ELGAMAL_Ctx *CRYPT_ELGAMAL_DupCtx(CRYPT_ELGAMAL_Ctx *keyCtx)
         return NULL;
     }
 
-    CRYPT_ELGAMAL_Ctx *newKeyCtx = BSL_SAL_Malloc(sizeof(CRYPT_ELGAMAL_Ctx));;
+    CRYPT_ELGAMAL_Ctx *newKeyCtx = BSL_SAL_Calloc(1, sizeof(CRYPT_ELGAMAL_Ctx));
     if (newKeyCtx == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         return NULL;
     }
-
-    memset(newKeyCtx, 0, sizeof(CRYPT_ELGAMAL_Ctx));
+    if (BSL_SAL_ReferencesInit(&(newKeyCtx->references)) != BSL_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
+        BSL_SAL_Free(newKeyCtx);
+        return NULL;
+    }
 
     GOTO_ERR_IF_SRC_NOT_NULL(newKeyCtx->prvKey, keyCtx->prvKey, ElGamalPrvKeyDupCtx(keyCtx->prvKey),
                              CRYPT_MEM_ALLOC_FAIL);
@@ -131,8 +136,6 @@ CRYPT_ELGAMAL_Ctx *CRYPT_ELGAMAL_DupCtx(CRYPT_ELGAMAL_Ctx *keyCtx)
                              CRYPT_MEM_ALLOC_FAIL);
     GOTO_ERR_IF_SRC_NOT_NULL(newKeyCtx->para, keyCtx->para, ElGamalParaDupCtx(keyCtx->para), CRYPT_MEM_ALLOC_FAIL);
     newKeyCtx->libCtx = keyCtx->libCtx;
-    BSL_SAL_ReferencesInit(&(newKeyCtx->references));
-
     return newKeyCtx;
 ERR:
     CRYPT_ELGAMAL_FreeCtx(newKeyCtx);

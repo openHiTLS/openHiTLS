@@ -230,19 +230,20 @@ HITLS_X509_Store *HITLS_X509_StoreNew(void)
 #endif
     /* The shared Store carries its own refcount and lock because multiple StoreCtx objects may point here. */
     if (BSL_SAL_ReferencesInit(&store->references) != BSL_SUCCESS) {
-        goto EXIT;
+        goto EXIT_NO_REF;
     }
     if (BSL_SAL_ThreadLockNew(&store->rwLock) != BSL_SUCCESS) {
         goto EXIT;
     }
     return store;
 EXIT:
+    BSL_SAL_ReferencesFree(&store->references);
+EXIT_NO_REF:
     BSL_SAL_FREE(store->certs);
     BSL_SAL_FREE(store->crls);
 #ifdef HITLS_PKI_X509_VFY_LOCATION
     BSL_SAL_FREE(store->caPaths);
 #endif
-    BSL_SAL_ReferencesFree(&store->references);
     BSL_SAL_Free(store);
     return NULL;
 }

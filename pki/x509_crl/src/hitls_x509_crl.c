@@ -160,12 +160,18 @@ HITLS_X509_Crl *HITLS_X509_CrlNew(void)
     if (ext == NULL) {
         goto ERR;
     }
-    BSL_SAL_ReferencesInit(&(crl->references));
+    if (BSL_SAL_ReferencesInit(&(crl->references)) != BSL_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
+        goto ERR;
+    }
     crl->tbs.issuerName = issuerName;
     crl->tbs.revokedCerts = entryList;
     crl->state = HITLS_X509_CRL_STATE_NEW;
     return crl;
 ERR:
+    if (ext != NULL) {
+        X509_ExtFree(&crl->tbs.crlExt, false);
+    }
     BSL_SAL_Free(crl);
     BSL_SAL_Free(issuerName);
     BSL_SAL_Free(entryList);

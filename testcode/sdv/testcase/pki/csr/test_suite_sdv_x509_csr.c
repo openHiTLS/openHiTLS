@@ -1478,6 +1478,7 @@ void SDV_X509_CSR_PARSE_STUB_TC001(int format, char *path)
             HITLS_X509_CsrFree(csr);
             csr = NULL;
         }
+        ASSERT_NE(ret, CRYPT_SUCCESS);
     }
 
 EXIT:

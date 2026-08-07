@@ -125,7 +125,11 @@ CRYPT_CompositeCtx *CRYPT_COMPOSITE_NewCtx(void)
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         return NULL;
     }
-    BSL_SAL_ReferencesInit(&(ctx->references));
+    if (BSL_SAL_ReferencesInit(&(ctx->references)) != BSL_SUCCESS) {
+        BSL_SAL_Free(ctx);
+        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
+        return NULL;
+    }
     return ctx;
 }
 

@@ -37,17 +37,19 @@
 #ifdef HITLS_CRYPTO_X25519
 CRYPT_CURVE25519_Ctx *CRYPT_X25519_NewCtx(void)
 {
-    CRYPT_CURVE25519_Ctx *ctx = NULL;
-    ctx = (CRYPT_CURVE25519_Ctx *)BSL_SAL_Malloc(sizeof(CRYPT_CURVE25519_Ctx));
+    CRYPT_CURVE25519_Ctx *ctx = (CRYPT_CURVE25519_Ctx *)BSL_SAL_Calloc(1, sizeof(CRYPT_CURVE25519_Ctx));
     if (ctx == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         return NULL;
     }
-    memset(ctx, 0, sizeof(CRYPT_CURVE25519_Ctx));
 
     ctx->keyType = CURVE25519_NOKEY;
     ctx->hashMethod = NULL;
-    BSL_SAL_ReferencesInit(&(ctx->references));
+    if (BSL_SAL_ReferencesInit(&(ctx->references)) != BSL_SUCCESS) {
+        BSL_SAL_Free(ctx);
+        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
+        return NULL;
+    }
     return ctx;
 }
 
@@ -65,13 +67,11 @@ CRYPT_CURVE25519_Ctx *CRYPT_X25519_NewCtxEx(void *libCtx)
 #ifdef HITLS_CRYPTO_ED25519
 CRYPT_CURVE25519_Ctx *CRYPT_ED25519_NewCtx(void)
 {
-    CRYPT_CURVE25519_Ctx *ctx = NULL;
-    ctx = (CRYPT_CURVE25519_Ctx *)BSL_SAL_Malloc(sizeof(CRYPT_CURVE25519_Ctx));
+    CRYPT_CURVE25519_Ctx *ctx = (CRYPT_CURVE25519_Ctx *)BSL_SAL_Calloc(1, sizeof(CRYPT_CURVE25519_Ctx));
     if (ctx == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         return NULL;
     }
-    memset(ctx, 0, sizeof(CRYPT_CURVE25519_Ctx));
 
     ctx->hashMethod = EAL_MdFindDefaultMethod(CRYPT_MD_SHA512);
     if (ctx->hashMethod == NULL) {
@@ -80,7 +80,11 @@ CRYPT_CURVE25519_Ctx *CRYPT_ED25519_NewCtx(void)
         return NULL;
     }
     ctx->keyType = CURVE25519_NOKEY;
-    BSL_SAL_ReferencesInit(&(ctx->references));
+    if (BSL_SAL_ReferencesInit(&(ctx->references)) != BSL_SUCCESS) {
+        BSL_SAL_Free(ctx);
+        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
+        return NULL;
+    }
     return ctx;
 }
 
@@ -110,7 +114,11 @@ CRYPT_CURVE25519_Ctx *CRYPT_CURVE25519_DupCtx(CRYPT_CURVE25519_Ctx *ctx)
 
     memcpy(newCtx, ctx, sizeof(CRYPT_CURVE25519_Ctx));
     memset(&(newCtx->references), 0, sizeof(BSL_SAL_RefCount));
-    BSL_SAL_ReferencesInit(&(newCtx->references));
+    if (BSL_SAL_ReferencesInit(&(newCtx->references)) != BSL_SUCCESS) {
+        BSL_SAL_Free(newCtx);
+        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
+        return NULL;
+    }
     return newCtx;
 }
 

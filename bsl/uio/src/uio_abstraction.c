@@ -114,9 +114,13 @@ BSL_UIO *BSL_UIO_New(const BSL_UIO_Method *method)
         return NULL;
     }
 
+    if (BSL_SAL_ReferencesInit(&(uio->references)) != BSL_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(BSL_UIO_MEM_ALLOC_FAIL);
+        BSL_SAL_FREE(uio);
+        return NULL;
+    }
     memcpy(&uio->method, method, sizeof(BSL_UIO_Method));
 
-    BSL_SAL_ReferencesInit(&(uio->references));
     BSL_UIO_SetIsUnderlyingClosedByUio(uio, false);
 
     if (uio->method.uioCreate != NULL) {
@@ -125,6 +129,7 @@ BSL_UIO *BSL_UIO_New(const BSL_UIO_Method *method)
             BSL_ERR_PUSH_ERROR(BSL_UIO_FAIL);
             BSL_LOG_BINLOG_FIXLEN(BINLOG_ID05027, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
                 "uio create data fail.", NULL, NULL, NULL, NULL);
+            BSL_SAL_ReferencesFree(&(uio->references));
             BSL_SAL_FREE(uio);
             return NULL;
         }

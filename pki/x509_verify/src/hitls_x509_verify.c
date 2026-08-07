@@ -207,16 +207,19 @@ int32_t HITLS_X509_CertCmp(HITLS_X509_Cert *certOri, HITLS_X509_Cert *cert)
 
 HITLS_X509_StoreCtx *HITLS_X509_StoreCtxNew(void)
 {
-    HITLS_X509_StoreCtx *ctx = (HITLS_X509_StoreCtx *)BSL_SAL_Malloc(sizeof(HITLS_X509_StoreCtx));
+    HITLS_X509_StoreCtx *ctx = (HITLS_X509_StoreCtx *)BSL_SAL_Calloc(1, sizeof(HITLS_X509_StoreCtx));
     if (ctx == NULL) {
         BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
         return NULL;
     }
-
-    (void)memset(ctx, 0, sizeof(HITLS_X509_StoreCtx));
+    if (BSL_SAL_ReferencesInit(&(ctx->references)) != BSL_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
+        BSL_SAL_Free(ctx);
+        return NULL;
+    }
     ctx->store = HITLS_X509_StoreNew();
     if (ctx->store == NULL) {
-        BSL_SAL_Free(ctx);
+        HITLS_X509_StoreCtxFree(ctx);
         BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
         return NULL;
     }
@@ -227,7 +230,6 @@ HITLS_X509_StoreCtx *HITLS_X509_StoreCtxNew(void)
 #ifdef HITLS_PKI_X509_VFY_CB
     ctx->verifyCb = VerifyCbDefault;
 #endif
-    BSL_SAL_ReferencesInit(&(ctx->references));
     return ctx;
 }
 

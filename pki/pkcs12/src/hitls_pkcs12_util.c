@@ -253,12 +253,16 @@ HITLS_PKCS12_Bag *HITLS_PKCS12_BagNew(uint32_t bagId, uint32_t bagType, void *ba
         BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
         return NULL;
     }
-    if (BagSetValue(bag, bagValue, bagId, bagType) != HITLS_PKI_SUCCESS) {
+    if (BSL_SAL_ReferencesInit(&(bag->references)) != BSL_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
         BSL_SAL_Free(bag);
         return NULL;
     }
+    if (BagSetValue(bag, bagValue, bagId, bagType) != HITLS_PKI_SUCCESS) {
+        HITLS_PKCS12_BagFree(bag);
+        return NULL;
+    }
     bag->id = bagId;
-    BSL_SAL_ReferencesInit(&(bag->references));
     return bag;
 }
 

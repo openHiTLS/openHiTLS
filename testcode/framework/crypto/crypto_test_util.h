@@ -26,6 +26,12 @@ extern "C" {
 
 void TestMemInit(void);
 
+int32_t TestThreadLockFailureStart(void);
+void TestThreadLockFailureSetIndex(int32_t failIndex);
+uint32_t TestThreadLockFailureGetWriteCalls(void);
+uint32_t TestThreadLockFailureGetFreeCalls(void);
+void TestThreadLockFailureStop(void);
+
 int TestRandInit(void);
 int TestRandInitEx(void *libCtx);
 

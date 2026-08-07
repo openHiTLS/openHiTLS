@@ -34,7 +34,11 @@ CRYPT_RSA_Ctx *CRYPT_RSA_NewCtx(void)
 #ifdef HITLS_CRYPTO_RSA_BLINDING
     keyCtx->flags = CRYPT_RSA_BLINDING;
 #endif
-    BSL_SAL_ReferencesInit(&(keyCtx->references));
+    if (BSL_SAL_ReferencesInit(&(keyCtx->references)) != BSL_SUCCESS) {
+        BSL_SAL_Free(keyCtx);
+        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
+        return NULL;
+    }
     return keyCtx;
 }
 
@@ -170,6 +174,11 @@ CRYPT_RSA_Ctx *CRYPT_RSA_DupCtx(CRYPT_RSA_Ctx *keyCtx)
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         return NULL;
     }
+    if (BSL_SAL_ReferencesInit(&(newKeyCtx->references)) != BSL_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
+        BSL_SAL_Free(newKeyCtx);
+        return NULL;
+    }
 
     newKeyCtx->flags = keyCtx->flags;
     newKeyCtx->pad = keyCtx->pad;
@@ -195,7 +204,6 @@ CRYPT_RSA_Ctx *CRYPT_RSA_DupCtx(CRYPT_RSA_Ctx *keyCtx)
     GOTO_ERR_IF_SRC_NOT_NULL(newKeyCtx->mdAttr, keyCtx->mdAttr, BSL_SAL_Dump(keyCtx->mdAttr,
         strlen(keyCtx->mdAttr) + 1), CRYPT_MEM_ALLOC_FAIL);
     newKeyCtx->libCtx = keyCtx->libCtx;
-    BSL_SAL_ReferencesInit(&(newKeyCtx->references));
     return newKeyCtx;
 
 ERR:

@@ -40,7 +40,11 @@ CRYPT_EAL_PkeyCtx *CRYPT_EAL_MakeKeyByPkeyAlgInfo(CRYPT_EAL_PkeyMgmtInfo *pkeyAl
     pkeyCtx->key = keyRef;
     pkeyCtx->extData = NULL;
     pkeyCtx->method = pkeyAlgInfo->keyMgmtMethod;
-    BSL_SAL_ReferencesInit(&(pkeyCtx->references));
+    if (BSL_SAL_ReferencesInit(&(pkeyCtx->references)) != BSL_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
+        BSL_SAL_Free(pkeyCtx);
+        return NULL;
+    }
     return pkeyCtx;
 }
 

@@ -40,6 +40,7 @@
 #include "bsl_asn1.h"
 #include "bsl_obj.h"
 #include "bsl_err_internal.h"
+#include "crypto_test_util.h"
 
 /* END_HEADER */
 
@@ -1093,6 +1094,84 @@ EXIT:
     BSL_LIST_FREE(chain, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);
 #else
     SKIP_TEST();
+#endif
+}
+/* END_CASE */
+
+/**
+ * @test   SDV_STORE_REF_INIT_FAIL_TC001
+ * @title  X.509 Store construction does not free a failed reference lock output.
+ * @precon Thread-lock based reference counting is enabled.
+ * @brief  Fail the inner Store reference initialization after StoreCtx reference initialization succeeds.
+ * @expect StoreCtx construction fails without freeing the poison lock.
+ */
+/* BEGIN_CASE */
+void SDV_STORE_REF_INIT_FAIL_TC001(void)
+{
+#ifndef HITLS_ATOMIC_THREAD_LOCK
+    SKIP_TEST();
+#else
+    HITLS_X509_StoreCtx *storeCtx = NULL;
+    bool newFailed = false;
+    uint32_t poisonFreeCalls = 0;
+
+    TestMemInit();
+    ASSERT_EQ(TestThreadLockFailureStart(), BSL_SUCCESS);
+    TestThreadLockFailureSetIndex(1);
+    storeCtx = HITLS_X509_StoreCtxNew();
+    newFailed = (storeCtx == NULL);
+
+    TestThreadLockFailureSetIndex(-1);
+    HITLS_X509_StoreCtxFree(storeCtx);
+    storeCtx = NULL;
+    poisonFreeCalls = TestThreadLockFailureGetFreeCalls();
+    TestThreadLockFailureStop();
+
+    ASSERT_TRUE(newFailed);
+    ASSERT_EQ(poisonFreeCalls, 0);
+EXIT:
+    TestThreadLockFailureSetIndex(-1);
+    HITLS_X509_StoreCtxFree(storeCtx);
+    TestThreadLockFailureStop();
+#endif
+}
+/* END_CASE */
+
+/**
+ * @test   SDV_STORE_RWLOCK_INIT_FAIL_TC001
+ * @title  X.509 Store construction releases an initialized reference lock when its rwLock fails.
+ * @precon Thread-lock based reference counting is enabled.
+ * @brief  Let StoreCtx and Store reference initialization succeed, then fail Store rwLock creation.
+ * @expect StoreCtx construction fails, initialized resources are released, and the poison lock is untouched.
+ */
+/* BEGIN_CASE */
+void SDV_STORE_RWLOCK_INIT_FAIL_TC001(void)
+{
+#ifndef HITLS_ATOMIC_THREAD_LOCK
+    SKIP_TEST();
+#else
+    HITLS_X509_StoreCtx *storeCtx = NULL;
+    bool newFailed = false;
+    uint32_t poisonFreeCalls = 0;
+
+    TestMemInit();
+    ASSERT_EQ(TestThreadLockFailureStart(), BSL_SUCCESS);
+    TestThreadLockFailureSetIndex(2);
+    storeCtx = HITLS_X509_StoreCtxNew();
+    newFailed = (storeCtx == NULL);
+
+    TestThreadLockFailureSetIndex(-1);
+    HITLS_X509_StoreCtxFree(storeCtx);
+    storeCtx = NULL;
+    poisonFreeCalls = TestThreadLockFailureGetFreeCalls();
+    TestThreadLockFailureStop();
+
+    ASSERT_TRUE(newFailed);
+    ASSERT_EQ(poisonFreeCalls, 0);
+EXIT:
+    TestThreadLockFailureSetIndex(-1);
+    HITLS_X509_StoreCtxFree(storeCtx);
+    TestThreadLockFailureStop();
 #endif
 }
 /* END_CASE */

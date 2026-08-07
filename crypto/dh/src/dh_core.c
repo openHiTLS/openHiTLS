@@ -32,13 +32,16 @@
 
 CRYPT_DH_Ctx *CRYPT_DH_NewCtx(void)
 {
-    CRYPT_DH_Ctx *ctx = BSL_SAL_Malloc(sizeof(CRYPT_DH_Ctx));
+    CRYPT_DH_Ctx *ctx = BSL_SAL_Calloc(1, sizeof(CRYPT_DH_Ctx));
     if (ctx == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         return NULL;
     }
-    memset(ctx, 0, sizeof(CRYPT_DH_Ctx));
-    BSL_SAL_ReferencesInit(&(ctx->references));
+    if (BSL_SAL_ReferencesInit(&(ctx->references)) != BSL_SUCCESS) {
+        BSL_SAL_Free(ctx);
+        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
+        return NULL;
+    }
     return ctx;
 }
 
@@ -287,12 +290,16 @@ CRYPT_DH_Ctx *CRYPT_DH_DupCtx(CRYPT_DH_Ctx *ctx)
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         return NULL;
     }
+    if (BSL_SAL_ReferencesInit(&(newKeyCtx->references)) != BSL_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
+        BSL_SAL_Free(newKeyCtx);
+        return NULL;
+    }
     // If x, y and para is not empty, copy the value.
     GOTO_ERR_IF_SRC_NOT_NULL(newKeyCtx->x, ctx->x, BN_Dup(ctx->x), CRYPT_MEM_ALLOC_FAIL);
     GOTO_ERR_IF_SRC_NOT_NULL(newKeyCtx->y, ctx->y, BN_Dup(ctx->y), CRYPT_MEM_ALLOC_FAIL);
     GOTO_ERR_IF_SRC_NOT_NULL(newKeyCtx->para, ctx->para, ParaDup(ctx->para), CRYPT_MEM_ALLOC_FAIL);
     newKeyCtx->libCtx = ctx->libCtx;
-    BSL_SAL_ReferencesInit(&(newKeyCtx->references));
     return newKeyCtx;
 
 ERR:

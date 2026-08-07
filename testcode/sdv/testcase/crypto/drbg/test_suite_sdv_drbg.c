@@ -592,6 +592,44 @@ EXIT:
 /* END_CASE */
 
 /**
+ * @test   SDV_CRYPT_EAL_RAND_LOCK_INIT_FAIL_TC001
+ * @title  RAND construction does not deinitialize a failed lock output.
+ * @precon A valid custom entropy method is available.
+ * @brief  Fail RAND's lock creation with a poison output before its algorithm context is initialized.
+ * @expect RAND initialization fails without writing or freeing the poison lock.
+ */
+/* BEGIN_CASE */
+void SDV_CRYPT_EAL_RAND_LOCK_INIT_FAIL_TC001(void)
+{
+    CRYPT_RandSeedMethod seedMeth = {0};
+    CallBackCtl_t seedCtx = {0};
+    int32_t ret = CRYPT_SUCCESS;
+    uint32_t poisonWriteCalls = 0;
+    uint32_t poisonFreeCalls = 0;
+
+    TestMemInit();
+    seedMeth.getEntropy = getEntropyError;
+    ASSERT_EQ(TestThreadLockFailureStart(), BSL_SUCCESS);
+    TestThreadLockFailureSetIndex(0);
+    ret = CRYPT_EAL_RandInit(CRYPT_RAND_SHA256, &seedMeth, &seedCtx, NULL, 0);
+
+    TestThreadLockFailureSetIndex(-1);
+    CRYPT_EAL_RandDeinit();
+    poisonWriteCalls = TestThreadLockFailureGetWriteCalls();
+    poisonFreeCalls = TestThreadLockFailureGetFreeCalls();
+    TestThreadLockFailureStop();
+
+    ASSERT_EQ(ret, CRYPT_EAL_ERR_DRBG_INIT_FAIL);
+    ASSERT_EQ(poisonWriteCalls, 0);
+    ASSERT_EQ(poisonFreeCalls, 0);
+EXIT:
+    TestThreadLockFailureSetIndex(-1);
+    CRYPT_EAL_RandDeinit();
+    TestThreadLockFailureStop();
+}
+/* END_CASE */
+
+/**
  * @test   SDV_CRYPT_DRBG_RAND_INIT_API_TC002
  * @title  DRBG initialization test,the value of data is 0 or 255.
  * @precon nan

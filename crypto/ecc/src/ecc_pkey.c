@@ -72,7 +72,11 @@ ECC_Pkey *ECC_DupCtx(ECC_Pkey *ctx)
 
     newCtx->useCofactorMode = ctx->useCofactorMode;
     newCtx->pointFormat = ctx->pointFormat;
-    BSL_SAL_ReferencesInit(&(newCtx->references));
+    if (BSL_SAL_ReferencesInit(&(newCtx->references)) != BSL_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
+        BSL_SAL_Free(newCtx);
+        return NULL;
+    }
     GOTO_ERR_IF_SRC_NOT_NULL(newCtx->prvkey, ctx->prvkey, BN_Dup(ctx->prvkey), CRYPT_MEM_ALLOC_FAIL);
 
     GOTO_ERR_IF_SRC_NOT_NULL(newCtx->pubkey, ctx->pubkey, ECC_DupPoint(ctx->pubkey), CRYPT_MEM_ALLOC_FAIL);
@@ -668,9 +672,14 @@ ECC_Pkey *ECC_PkeyNewCtx(CRYPT_PKEY_ParaId id)
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         return NULL;
     }
+    if (BSL_SAL_ReferencesInit(&(key->references)) != BSL_SUCCESS) {
+        ECC_FreePara(para);
+        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
+        BSL_SAL_Free(key);
+        return NULL;
+    }
     key->para = para;
     key->pointFormat = CRYPT_POINT_UNCOMPRESSED;
-    BSL_SAL_ReferencesInit(&(key->references));
     return key;
 }
 

@@ -363,10 +363,14 @@ int32_t EAL_SeedDrbgInit(EAL_SeedDrbg *seedDrbg)
     }
     rndCtx->working = true;
 
+    ret = BSL_SAL_ReferencesInit(&(seedDrbg->references));
+    if (ret != BSL_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        goto EXIT;
+    }
     seedDrbg->seed = rndCtx;
     seedDrbg->seedMeth = seedMethond;
     seedDrbg->seedCtx = seedPoolCtx;
-    BSL_SAL_ReferencesInit(&(seedDrbg->references));
     return CRYPT_SUCCESS;
 
 EXIT:
@@ -441,7 +445,11 @@ static CRYPT_EAL_RndCtx *EAL_RandNewDrbg(CRYPT_RAND_AlgId id, CRYPT_RandSeedMeth
     // Apply for lock resources.
     ret = BSL_SAL_ThreadLockNew(&(randCtx->lock));
     if (ret != CRYPT_SUCCESS) {
-        goto ERR;
+#ifdef HITLS_CRYPTO_ENTROPY
+        EAL_SeedDrbgDeinit(randCtx->isDefaultSeed);
+#endif
+        BSL_SAL_Free(randCtx);
+        return NULL;
     }
 
     randCtx->isProvider = false;

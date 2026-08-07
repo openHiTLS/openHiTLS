@@ -1294,3 +1294,109 @@ EXIT:
     TestRandDeInit();
 }
 /* END_CASE */
+
+/**
+ * @test   SDV_CRYPTO_ECDH_DUP_REF_INIT_FAIL_TC001
+ * @title  ECDH duplication must not consume a failed reference lock output.
+ * @precon Thread-lock based reference counting is enabled.
+ * @brief  Fail the ECC duplicate's reference-lock creation with a poison output, then release all contexts.
+ * @expect Duplication fails without writing or freeing the poison lock.
+ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_ECDH_DUP_REF_INIT_FAIL_TC001(void)
+{
+#ifndef HITLS_ATOMIC_THREAD_LOCK
+    SKIP_TEST();
+#else
+    CRYPT_EAL_PkeyCtx *src = NULL;
+    CRYPT_EAL_PkeyCtx *dup = NULL;
+    bool dupFailed = false;
+    uint32_t poisonWriteCalls = 0;
+    uint32_t poisonFreeCalls = 0;
+
+    TestMemInit();
+    ASSERT_EQ(TestThreadLockFailureStart(), BSL_SUCCESS);
+    src = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_ECDH);
+    ASSERT_TRUE(src != NULL);
+
+    TestThreadLockFailureSetIndex(0);
+    dup = CRYPT_EAL_PkeyDupCtx(src);
+    dupFailed = (dup == NULL);
+
+    TestThreadLockFailureSetIndex(-1);
+    CRYPT_EAL_PkeyFreeCtx(dup);
+    dup = NULL;
+    CRYPT_EAL_PkeyFreeCtx(src);
+    src = NULL;
+    poisonWriteCalls = TestThreadLockFailureGetWriteCalls();
+    poisonFreeCalls = TestThreadLockFailureGetFreeCalls();
+    TestThreadLockFailureStop();
+
+    ASSERT_TRUE(dupFailed);
+    ASSERT_EQ(poisonWriteCalls, 0);
+    ASSERT_EQ(poisonFreeCalls, 0);
+EXIT:
+    TestThreadLockFailureSetIndex(-1);
+    CRYPT_EAL_PkeyFreeCtx(dup);
+    CRYPT_EAL_PkeyFreeCtx(src);
+    TestThreadLockFailureStop();
+#endif
+}
+/* END_CASE */
+
+/**
+ * @test   SDV_CRYPTO_ECDH_COPY_REF_INIT_FAIL_TC001
+ * @title  PkeyCopyCtx remains transactional when reference-lock creation fails.
+ * @precon Thread-lock based reference counting is enabled.
+ * @brief  Fail the outer Pkey reference-lock creation after the ECC key has been duplicated.
+ * @expect Copy fails, the destination retains its original key and lock, and no poison lock is consumed.
+ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_ECDH_COPY_REF_INIT_FAIL_TC001(void)
+{
+#ifndef HITLS_ATOMIC_THREAD_LOCK
+    SKIP_TEST();
+#else
+    CRYPT_EAL_PkeyCtx *src = NULL;
+    CRYPT_EAL_PkeyCtx *dst = NULL;
+    void *oldKey = NULL;
+    BSL_SAL_ThreadLockHandle oldRefLock = NULL;
+    int32_t ret = CRYPT_SUCCESS;
+    bool dstPreserved = false;
+    uint32_t poisonWriteCalls = 0;
+    uint32_t poisonFreeCalls = 0;
+
+    TestMemInit();
+    ASSERT_EQ(TestThreadLockFailureStart(), BSL_SUCCESS);
+    src = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_ECDH);
+    dst = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_ECDH);
+    ASSERT_TRUE(src != NULL);
+    ASSERT_TRUE(dst != NULL);
+    oldKey = dst->key;
+    oldRefLock = dst->references.lock;
+
+    TestThreadLockFailureSetIndex(1);
+    ret = CRYPT_EAL_PkeyCopyCtx(dst, src);
+    dstPreserved = (dst->key == oldKey && dst->references.lock == oldRefLock);
+
+    TestThreadLockFailureSetIndex(-1);
+    CRYPT_EAL_PkeyFreeCtx(dst);
+    dst = NULL;
+    CRYPT_EAL_PkeyFreeCtx(src);
+    src = NULL;
+    poisonWriteCalls = TestThreadLockFailureGetWriteCalls();
+    poisonFreeCalls = TestThreadLockFailureGetFreeCalls();
+    TestThreadLockFailureStop();
+
+    ASSERT_EQ(ret, CRYPT_MEM_ALLOC_FAIL);
+    ASSERT_TRUE(dstPreserved);
+    ASSERT_EQ(poisonWriteCalls, 0);
+    ASSERT_EQ(poisonFreeCalls, 0);
+EXIT:
+    TestThreadLockFailureSetIndex(-1);
+    CRYPT_EAL_PkeyFreeCtx(dst);
+    CRYPT_EAL_PkeyFreeCtx(src);
+    TestThreadLockFailureStop();
+#endif
+}
+/* END_CASE */

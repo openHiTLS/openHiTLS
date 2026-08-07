@@ -197,12 +197,18 @@ HITLS_X509_Cert *HITLS_X509_CertNew(void)
     if (ext == NULL) {
         goto ERR;
     }
-    BSL_SAL_ReferencesInit(&(cert->references));
+    if (BSL_SAL_ReferencesInit(&(cert->references)) != BSL_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
+        goto ERR;
+    }
     cert->tbs.issuerName = issuerName;
     cert->tbs.subjectName = subjectName;
     cert->state = HITLS_X509_CERT_STATE_NEW;
     return cert;
 ERR:
+    if (ext != NULL) {
+        X509_ExtFree(&cert->tbs.ext, false);
+    }
     BSL_SAL_Free(cert);
     BSL_SAL_Free(issuerName);
     BSL_SAL_Free(subjectName);

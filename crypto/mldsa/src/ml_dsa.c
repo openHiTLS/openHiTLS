@@ -66,7 +66,11 @@ CRYPT_ML_DSA_Ctx *CRYPT_ML_DSA_NewCtx(void)
     keyCtx->deterministicSignFlag = false;
     keyCtx->needPreHash = false;
     keyCtx->hasSeed = false;
-    (void)BSL_SAL_ReferencesInit(&(keyCtx->references));
+    if (BSL_SAL_ReferencesInit(&(keyCtx->references)) != BSL_SUCCESS) {
+        BSL_SAL_Free(keyCtx);
+        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
+        return NULL;
+    }
     return keyCtx;
 }
 

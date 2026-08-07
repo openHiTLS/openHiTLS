@@ -94,11 +94,19 @@ HITLS_X509_Csr *HITLS_X509_CsrNew(void)
     }
     csr->reqInfo.attributes = attributes;
 #endif
-    BSL_SAL_ReferencesInit(&(csr->references));
+    if (BSL_SAL_ReferencesInit(&(csr->references)) != BSL_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
+        goto ERR;
+    }
     csr->reqInfo.subjectName = subjectName;
     csr->state = HITLS_X509_CSR_STATE_NEW;
     return csr;
 ERR:
+#ifdef HITLS_PKI_X509_CSR_ATTR
+    if (csr != NULL) {
+        HITLS_X509_AttrsFree(csr->reqInfo.attributes, NULL);
+    }
+#endif
     BSL_SAL_Free(subjectName);
     BSL_SAL_Free(csr);
     return NULL;

@@ -86,15 +86,19 @@ CRYPT_EAL_PkeyCtx *PkeyNewDefaultCtx(CRYPT_PKEY_AlgId id)
         EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_PKEY, id, CRYPT_MEM_ALLOC_FAIL);
         return NULL;
     }
-    EalPkeyCopyMethod(method, &pkey->method);
-    pkey->key = pkey->method.newCtx();
-    if (pkey->key == NULL) {
+    if (BSL_SAL_ReferencesInit(&(pkey->references)) != BSL_SUCCESS) {
         EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_PKEY, id, CRYPT_MEM_ALLOC_FAIL);
         BSL_SAL_Free(pkey);
         return NULL;
     }
+    EalPkeyCopyMethod(method, &pkey->method);
+    pkey->key = pkey->method.newCtx();
+    if (pkey->key == NULL) {
+        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_PKEY, id, CRYPT_MEM_ALLOC_FAIL);
+        CRYPT_EAL_PkeyFreeCtx(pkey);
+        return NULL;
+    }
     pkey->id = id;
-    BSL_SAL_ReferencesInit(&(pkey->references));
     return pkey;
 }
 
@@ -120,15 +124,21 @@ static int32_t PkeyCopyCtx(CRYPT_EAL_PkeyCtx *to, const CRYPT_EAL_PkeyCtx *from)
         EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_PKEY, from->id, CRYPT_EAL_PKEY_DUP_ERROR);
         return CRYPT_EAL_PKEY_DUP_ERROR;
     }
+    BSL_SAL_RefCount newReferences = {0};
+    if (BSL_SAL_ReferencesInit(&newReferences) != BSL_SUCCESS) {
+        from->method.freeCtx(newKey);
+        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_PKEY, from->id, CRYPT_MEM_ALLOC_FAIL);
+        return CRYPT_MEM_ALLOC_FAIL;
+    }
+
     BSL_SAL_ReferencesFree(&(to->references));
     if (to->key != NULL) {
         to->method.freeCtx(to->key);
     }
 
     memcpy(to, from, sizeof(CRYPT_EAL_PkeyCtx));
-    (void)memset(&(to->references), 0, sizeof(BSL_SAL_RefCount));
+    memcpy(&(to->references), &newReferences, sizeof(BSL_SAL_RefCount));
     to->key = newKey;
-    BSL_SAL_ReferencesInit(&(to->references));
     return CRYPT_SUCCESS;
 }
 
@@ -859,6 +869,11 @@ CRYPT_EAL_PkeyCtx *CRYPT_EAL_ProviderPkeyNewCtxInner(CRYPT_EAL_LibCtx *libCtx, i
         EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_PKEY, algId, CRYPT_MEM_ALLOC_FAIL);
         return NULL;
     }
+    if (BSL_SAL_ReferencesInit(&(ctx->references)) != BSL_SUCCESS) {
+        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_PKEY, algId, CRYPT_MEM_ALLOC_FAIL);
+        BSL_SAL_Free(ctx);
+        return NULL;
+    }
     GOTO_ERR_IF(CRYPT_EAL_SetPkeyMethod(&(ctx->method), &funcInfo), ret);
 
     if (ctx->method.provNewCtx == NULL) {
@@ -873,10 +888,9 @@ CRYPT_EAL_PkeyCtx *CRYPT_EAL_ProviderPkeyNewCtxInner(CRYPT_EAL_LibCtx *libCtx, i
     }
     ctx->isProvider = true;
     ctx->id = algId;
-    BSL_SAL_ReferencesInit(&(ctx->references));
     return ctx;
 ERR:
-    BSL_SAL_Free(ctx);
+    CRYPT_EAL_PkeyFreeCtx(ctx);
     return NULL;
 }
 #endif // HITLS_CRYPTO_PROVIDER

@@ -132,6 +132,11 @@ CRYPT_SM2_Ctx *CRYPT_SM2_NewCtx(void)
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return NULL;
     }
+    if (BSL_SAL_ReferencesInit(&(ctx->references)) != BSL_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
+        BSL_SAL_Free(ctx);
+        return NULL;
+    }
     ctx->pkey = ECC_PkeyNewCtx(CRYPT_ECC_SM2);
     if (ctx->pkey == NULL) {
         CRYPT_SM2_FreeCtx(ctx);
@@ -148,7 +153,6 @@ CRYPT_SM2_Ctx *CRYPT_SM2_NewCtx(void)
     ctx->hashMethod = (const EAL_MdMethod *)mdMethod;
     ctx->server = 1; // Indicates the initiator by default.
     ctx->isSumValid = 0; // checksum is invalid by default.
-    BSL_SAL_ReferencesInit(&(ctx->references));
     return ctx;
 }
 
@@ -175,6 +179,11 @@ CRYPT_SM2_Ctx *CRYPT_SM2_DupCtx(CRYPT_SM2_Ctx *ctx)
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         return NULL;
     }
+    if (BSL_SAL_ReferencesInit(&(newCtx->references)) != BSL_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
+        BSL_SAL_Free(newCtx);
+        return NULL;
+    }
 
     GOTO_ERR_IF_SRC_NOT_NULL(newCtx->pkey, ctx->pkey, ECC_DupCtx(ctx->pkey), CRYPT_MEM_ALLOC_FAIL);
     GOTO_ERR_IF_SRC_NOT_NULL(newCtx->pointR, ctx->pointR, ECC_DupPoint(ctx->pointR), CRYPT_MEM_ALLOC_FAIL);
@@ -187,7 +196,6 @@ CRYPT_SM2_Ctx *CRYPT_SM2_DupCtx(CRYPT_SM2_Ctx *ctx)
     newCtx->hashMethod = ctx->hashMethod;
     newCtx->server = ctx->server;
     newCtx->isSumValid = ctx->isSumValid;
-    BSL_SAL_ReferencesInit(&(newCtx->references));
     memcpy(newCtx->sumCheck, ctx->sumCheck, SM3_MD_SIZE);
     memcpy(newCtx->sumSend, ctx->sumSend, SM3_MD_SIZE);
 

@@ -267,7 +267,9 @@ int32_t CRYPT_EAL_AddNewProvMgrCtx(CRYPT_EAL_LibCtx *libCtx, const char *provide
     }
     int32_t ret = BSL_SAL_ReferencesInit(&mgrCtx->ref);
     if (ret != BSL_SUCCESS) {
-        CRYPT_EAL_ProviderMgrCtxFree(mgrCtx);
+        BSL_SAL_FREE(mgrCtx->providerName);
+        BSL_SAL_FREE(mgrCtx->providerPath);
+        BSL_SAL_Free(mgrCtx);
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }

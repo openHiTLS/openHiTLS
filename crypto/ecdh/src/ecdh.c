@@ -41,7 +41,11 @@ CRYPT_ECDH_Ctx *CRYPT_ECDH_NewCtx(void)
     }
     ctx->useCofactorMode = true;
     ctx->pointFormat = CRYPT_POINT_UNCOMPRESSED;    // the point format is uncompressed by default
-    BSL_SAL_ReferencesInit(&(ctx->references));
+    if (BSL_SAL_ReferencesInit(&(ctx->references)) != BSL_SUCCESS) {
+        BSL_SAL_Free(ctx);
+        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
+        return NULL;
+    }
     return ctx;
 }
 

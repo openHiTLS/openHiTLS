@@ -22,6 +22,8 @@
 #include "crypt_eal_provider.h"
 #include "crypt_eal_implprovider.h"
 #include "crypt_provider.h"
+#include "bsl_sal.h"
+#include "crypto_test_util.h"
 /* END_HEADER */
 
 #define PROVIDER_A_NAME "provider_a"
@@ -395,6 +397,47 @@ void SDV_CRYPTO_PROVIDER_REG_API_TC001(void)
 
 EXIT:
     CRYPT_EAL_LibCtxFree(libCtx);
+#endif
+}
+/* END_CASE */
+
+/**
+ * @test   SDV_CRYPTO_PROVIDER_REF_INIT_FAIL_TC001
+ * @title  Provider manager construction does not free a failed reference lock output.
+ * @precon Thread-lock based reference counting is enabled.
+ * @brief  Fail provider-manager reference initialization with a poison lock and release the library context.
+ * @expect Registration fails without freeing the poison lock.
+ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_PROVIDER_REF_INIT_FAIL_TC001(void)
+{
+#if !defined(HITLS_CRYPTO_PROVIDER) || !defined(HITLS_ATOMIC_THREAD_LOCK)
+    SKIP_TEST();
+#else
+    CRYPT_EAL_LibCtx *libCtx = NULL;
+    int32_t ret = CRYPT_SUCCESS;
+    uint32_t poisonFreeCalls = 0;
+
+    TestMemInit();
+    ASSERT_EQ(TestThreadLockFailureStart(), BSL_SUCCESS);
+    libCtx = CRYPT_EAL_LibCtxNew();
+    ASSERT_TRUE(libCtx != NULL);
+
+    TestThreadLockFailureSetIndex(0);
+    ret = CRYPT_EAL_ProviderRegister(libCtx, "ref_init_failure", ProviderAInit, NULL, NULL);
+
+    TestThreadLockFailureSetIndex(-1);
+    CRYPT_EAL_LibCtxFree(libCtx);
+    libCtx = NULL;
+    poisonFreeCalls = TestThreadLockFailureGetFreeCalls();
+    TestThreadLockFailureStop();
+
+    ASSERT_EQ(ret, BSL_MALLOC_FAIL);
+    ASSERT_EQ(poisonFreeCalls, 0);
+EXIT:
+    TestThreadLockFailureSetIndex(-1);
+    CRYPT_EAL_LibCtxFree(libCtx);
+    TestThreadLockFailureStop();
 #endif
 }
 /* END_CASE */

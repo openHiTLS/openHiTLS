@@ -81,7 +81,11 @@ CRYPT_HybridKemCtx *CRYPT_HYBRID_KEM_NewCtx(void)
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         return NULL;
     }
-    BSL_SAL_ReferencesInit(&(hybridKey->references));
+    if (BSL_SAL_ReferencesInit(&(hybridKey->references)) != BSL_SUCCESS) {
+        BSL_SAL_Free(hybridKey);
+        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
+        return NULL;
+    }
     return hybridKey;
 }
 

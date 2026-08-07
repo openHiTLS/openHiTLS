@@ -56,6 +56,129 @@ void TestMemInit(void)
 #endif
 }
 
+typedef struct {
+    pthread_rwlock_t rwlock;
+} TestThreadLock;
+
+static uint8_t g_testPoisonLock;
+static int32_t g_testThreadLockFailIndex = -1;
+static uint32_t g_testThreadLockNewCalls = 0;
+static uint32_t g_testPoisonWriteCalls = 0;
+static uint32_t g_testPoisonFreeCalls = 0;
+
+static int32_t TestThreadLockNew(BSL_SAL_ThreadLockHandle *lock)
+{
+    if (lock == NULL) {
+        return BSL_SAL_ERR_BAD_PARAM;
+    }
+    uint32_t callIndex = g_testThreadLockNewCalls++;
+    if (g_testThreadLockFailIndex >= 0 && callIndex == (uint32_t)g_testThreadLockFailIndex) {
+        *lock = &g_testPoisonLock;
+        return BSL_MALLOC_FAIL;
+    }
+    TestThreadLock *newLock = BSL_SAL_Calloc(1, sizeof(TestThreadLock));
+    if (newLock == NULL) {
+        return BSL_MALLOC_FAIL;
+    }
+    if (pthread_rwlock_init(&newLock->rwlock, NULL) != 0) {
+        BSL_SAL_FREE(newLock);
+        return BSL_SAL_ERR_UNKNOWN;
+    }
+    *lock = newLock;
+    return BSL_SUCCESS;
+}
+
+static void TestThreadLockFree(BSL_SAL_ThreadLockHandle lock)
+{
+    if (lock == &g_testPoisonLock) {
+        g_testPoisonFreeCalls++;
+        return;
+    }
+    TestThreadLock *testLock = (TestThreadLock *)lock;
+    if (testLock != NULL) {
+        (void)pthread_rwlock_destroy(&testLock->rwlock);
+        BSL_SAL_FREE(testLock);
+    }
+}
+
+static int32_t TestThreadReadLock(BSL_SAL_ThreadLockHandle lock)
+{
+    if (lock == NULL || lock == &g_testPoisonLock) {
+        return BSL_SAL_ERR_BAD_PARAM;
+    }
+    return pthread_rwlock_rdlock(&((TestThreadLock *)lock)->rwlock) == 0 ? BSL_SUCCESS : BSL_SAL_ERR_UNKNOWN;
+}
+
+static int32_t TestThreadWriteLock(BSL_SAL_ThreadLockHandle lock)
+{
+    if (lock == &g_testPoisonLock) {
+        g_testPoisonWriteCalls++;
+        return BSL_SAL_ERR_BAD_PARAM;
+    }
+    if (lock == NULL) {
+        return BSL_SAL_ERR_BAD_PARAM;
+    }
+    return pthread_rwlock_wrlock(&((TestThreadLock *)lock)->rwlock) == 0 ? BSL_SUCCESS : BSL_SAL_ERR_UNKNOWN;
+}
+
+static int32_t TestThreadUnlock(BSL_SAL_ThreadLockHandle lock)
+{
+    if (lock == NULL || lock == &g_testPoisonLock) {
+        return BSL_SAL_ERR_BAD_PARAM;
+    }
+    return pthread_rwlock_unlock(&((TestThreadLock *)lock)->rwlock) == 0 ? BSL_SUCCESS : BSL_SAL_ERR_UNKNOWN;
+}
+
+int32_t TestThreadLockFailureStart(void)
+{
+    g_testThreadLockFailIndex = -1;
+    g_testThreadLockNewCalls = 0;
+    g_testPoisonWriteCalls = 0;
+    g_testPoisonFreeCalls = 0;
+    int32_t ret = BSL_SAL_CallBack_Ctrl(BSL_SAL_THREAD_LOCK_NEW_CB_FUNC, TestThreadLockNew);
+    if (ret != BSL_SUCCESS) {
+        return ret;
+    }
+    ret = BSL_SAL_CallBack_Ctrl(BSL_SAL_THREAD_LOCK_FREE_CB_FUNC, TestThreadLockFree);
+    if (ret != BSL_SUCCESS) {
+        return ret;
+    }
+    ret = BSL_SAL_CallBack_Ctrl(BSL_SAL_THREAD_LOCK_READ_LOCK_CB_FUNC, TestThreadReadLock);
+    if (ret != BSL_SUCCESS) {
+        return ret;
+    }
+    ret = BSL_SAL_CallBack_Ctrl(BSL_SAL_THREAD_LOCK_WRITE_LOCK_CB_FUNC, TestThreadWriteLock);
+    if (ret != BSL_SUCCESS) {
+        return ret;
+    }
+    return BSL_SAL_CallBack_Ctrl(BSL_SAL_THREAD_LOCK_UNLOCK_CB_FUNC, TestThreadUnlock);
+}
+
+void TestThreadLockFailureSetIndex(int32_t failIndex)
+{
+    g_testThreadLockFailIndex = failIndex;
+    g_testThreadLockNewCalls = 0;
+}
+
+uint32_t TestThreadLockFailureGetWriteCalls(void)
+{
+    return g_testPoisonWriteCalls;
+}
+
+uint32_t TestThreadLockFailureGetFreeCalls(void)
+{
+    return g_testPoisonFreeCalls;
+}
+
+void TestThreadLockFailureStop(void)
+{
+    (void)BSL_SAL_CallBack_Ctrl(BSL_SAL_THREAD_LOCK_NEW_CB_FUNC, NULL);
+    (void)BSL_SAL_CallBack_Ctrl(BSL_SAL_THREAD_LOCK_FREE_CB_FUNC, NULL);
+    (void)BSL_SAL_CallBack_Ctrl(BSL_SAL_THREAD_LOCK_READ_LOCK_CB_FUNC, NULL);
+    (void)BSL_SAL_CallBack_Ctrl(BSL_SAL_THREAD_LOCK_WRITE_LOCK_CB_FUNC, NULL);
+    (void)BSL_SAL_CallBack_Ctrl(BSL_SAL_THREAD_LOCK_UNLOCK_CB_FUNC, NULL);
+}
+
 void TestErrClear(void)
 {
 #ifdef HITLS_BSL_ERR

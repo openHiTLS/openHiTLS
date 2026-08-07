@@ -35,13 +35,16 @@
 
 CRYPT_DSA_Ctx *CRYPT_DSA_NewCtx(void)
 {
-    CRYPT_DSA_Ctx *ctx = BSL_SAL_Malloc(sizeof(CRYPT_DSA_Ctx));
+    CRYPT_DSA_Ctx *ctx = BSL_SAL_Calloc(1, sizeof(CRYPT_DSA_Ctx));
     if (ctx == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         return NULL;
     }
-    memset(ctx, 0, sizeof(CRYPT_DSA_Ctx));
-    BSL_SAL_ReferencesInit(&(ctx->references));
+    if (BSL_SAL_ReferencesInit(&(ctx->references)) != BSL_SUCCESS) {
+        BSL_SAL_Free(ctx);
+        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
+        return NULL;
+    }
     ctx->signMdId = CRYPT_MD_MAX;
     return ctx;
 }
@@ -326,13 +329,16 @@ CRYPT_DSA_Ctx *CRYPT_DSA_DupCtx(CRYPT_DSA_Ctx *dsaCtx)
         return NULL;
     }
 
-    CRYPT_DSA_Ctx *dsaNewCtx = BSL_SAL_Malloc(sizeof(CRYPT_DSA_Ctx));
+    CRYPT_DSA_Ctx *dsaNewCtx = BSL_SAL_Calloc(1, sizeof(CRYPT_DSA_Ctx));
     if (dsaNewCtx == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         return NULL;
     }
-
-    memset(dsaNewCtx, 0, sizeof(CRYPT_DSA_Ctx));
+    if (BSL_SAL_ReferencesInit(&(dsaNewCtx->references)) != BSL_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
+        BSL_SAL_Free(dsaNewCtx);
+        return NULL;
+    }
 
     GOTO_ERR_IF_SRC_NOT_NULL(dsaNewCtx->x, dsaCtx->x, BN_Dup(dsaCtx->x), CRYPT_MEM_ALLOC_FAIL);
     GOTO_ERR_IF_SRC_NOT_NULL(dsaNewCtx->y, dsaCtx->y, BN_Dup(dsaCtx->y), CRYPT_MEM_ALLOC_FAIL);
@@ -340,7 +346,6 @@ CRYPT_DSA_Ctx *CRYPT_DSA_DupCtx(CRYPT_DSA_Ctx *dsaCtx)
     GOTO_ERR_IF_SRC_NOT_NULL(dsaNewCtx->mdAttr, dsaCtx->mdAttr, BSL_SAL_Dump(dsaCtx->mdAttr,
         strlen(dsaCtx->mdAttr) + 1), CRYPT_MEM_ALLOC_FAIL);
     dsaNewCtx->libCtx = dsaCtx->libCtx;
-    BSL_SAL_ReferencesInit(&(dsaNewCtx->references));
     return dsaNewCtx;
 
 ERR:

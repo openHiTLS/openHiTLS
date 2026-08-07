@@ -41,7 +41,11 @@ CRYPT_ECDSA_Ctx *CRYPT_ECDSA_NewCtx(void)
         return NULL;
     }
     ctx->pointFormat = CRYPT_POINT_UNCOMPRESSED;    // point format is uncompressed by default.
-    BSL_SAL_ReferencesInit(&(ctx->references));
+    if (BSL_SAL_ReferencesInit(&(ctx->references)) != BSL_SUCCESS) {
+        BSL_SAL_Free(ctx);
+        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
+        return NULL;
+    }
     ctx->signMdId = CRYPT_MD_MAX;
     return ctx;
 }
