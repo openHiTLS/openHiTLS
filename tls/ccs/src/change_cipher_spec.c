@@ -114,18 +114,21 @@ int32_t CCS_Ctrl(TLS_Ctx *ctx, CCS_Cmd cmd)
             ctx->ccsCtx->isAllowActiveCipher = false;
             ctx->ccsCtx->activeCipherFlag = false;
             break;
-        case CCS_CMD_RECV_ACTIVE_CIPHER_SPEC:
+        case CCS_CMD_RECV_ACTIVE_CIPHER_SPEC: {
+            bool prevAllowActiveCipherState = ctx->ccsCtx->isAllowActiveCipher;
             ctx->ccsCtx->isAllowActiveCipher = true;
             if (ctx->ccsCtx->ccsRecvflag == true && ctx->ccsCtx->activeCipherFlag == false) {
                 /** Enable key specification */
                 int32_t ret = REC_ActivePendingState(ctx, false);
                 if (ret != HITLS_SUCCESS) {
+                    ctx->ccsCtx->isAllowActiveCipher = prevAllowActiveCipherState;
                     ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_INTERNAL_ERROR);
                     return ret;
                 }
                 ctx->ccsCtx->activeCipherFlag = true;
             }
             break;
+        }
         default:
             BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15619, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
                 "ChangeCipherSpec error ctrl cmd", 0, 0, 0, 0);

@@ -64,7 +64,7 @@ int32_t SAL_GetFunc(void *handle, const char *funcName, void **func)
          * - Linux: "undefined symbol"
          * - macOS: "symbol not found"
          */
-        if (strstr(error, "undefined symbol") != NULL || strstr(error, "symbol not found") != NULL) {
+        if (error != NULL && (strstr(error, "undefined symbol") != NULL || strstr(error, "symbol not found") != NULL)) {
             BSL_ERR_PUSH_ERROR(BSL_SAL_ERR_DL_NON_FUNCTION);
             return BSL_SAL_ERR_DL_NON_FUNCTION;
         }
