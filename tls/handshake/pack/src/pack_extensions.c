@@ -1277,7 +1277,8 @@ static bool IsNeedServerPackEncryptThenMac(const TLS_Ctx *ctx)
 {
     const TLS_Config *config = &(ctx->config.tlsConfig);
     const TLS_NegotiatedInfo *negoInfo = &ctx->negotiatedInfo;
-    if (config->isEncryptThenMac && negoInfo->isEncryptThenMac) {
+    if (config->isEncryptThenMac && negoInfo->isEncryptThenMac &&
+        negoInfo->cipherSuiteInfo.cipherType == HITLS_CBC_CIPHER) {
         return true;
     }
     return false;

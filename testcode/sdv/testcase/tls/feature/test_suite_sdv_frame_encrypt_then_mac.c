@@ -33,6 +33,107 @@ void DtlsPlainMsgGenerate(REC_TextInput *plainMsg, const TLS_Ctx *ctx,
 #define READ_BUF_SIZE 18432
 
 /* @
+* @test  SDV_HiTLS_ETM_TLS12_RENEGOTIATE_CBC_TO_GCM_TC001
+* @title TLS1.2 renegotiation from CBC with Encrypt-then-MAC to GCM should succeed.
+* @precon nan
+* @brief
+*   1. Establish a TLS1.2 PSK connection with the CBC cipher suite and EncryptThenMac enabled.
+*   2. Change both endpoints to the GCM cipher suite and start renegotiation.
+*   3. Complete renegotiation and exchange one application data record.
+* @expect
+*   1. The first handshake succeeds with EncryptThenMac enabled.
+*   2. Renegotiation succeeds with the GCM cipher suite and EncryptThenMac disabled.
+*   3. Application data is written and read successfully after renegotiation.
+@ */
+/* BEGIN_CASE */
+void SDV_HiTLS_ETM_TLS12_RENEGOTIATE_CBC_TO_GCM_TC001()
+{
+#if !(defined(HITLS_TLS_PROTO_TLS12) && defined(HITLS_BSL_UIO_TCP) && \
+    defined(HITLS_TLS_FEATURE_ETM) && defined(HITLS_TLS_FEATURE_RENEGOTIATION) && \
+    defined(HITLS_TLS_SUITE_PSK_WITH_AES_128_CBC_SHA) && \
+    defined(HITLS_TLS_SUITE_PSK_WITH_AES_128_GCM_SHA256))
+    SKIP_TEST();
+#else
+    FRAME_Init();
+
+    HITLS_Config *clientConfig = NULL;
+    HITLS_Config *serverConfig = NULL;
+    FRAME_LinkObj *client = NULL;
+    FRAME_LinkObj *server = NULL;
+
+    clientConfig = HITLS_CFG_NewTLS12Config();
+    serverConfig = HITLS_CFG_NewTLS12Config();
+    ASSERT_TRUE(clientConfig != NULL);
+    ASSERT_TRUE(serverConfig != NULL);
+
+    uint16_t cbcCipherSuite = HITLS_PSK_WITH_AES_128_CBC_SHA;
+    ASSERT_EQ(HITLS_CFG_SetCipherSuites(clientConfig, &cbcCipherSuite, 1), HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_CFG_SetCipherSuites(serverConfig, &cbcCipherSuite, 1), HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_CFG_SetEncryptThenMac(clientConfig, true), HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_CFG_SetEncryptThenMac(serverConfig, true), HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_CFG_SetRenegotiationSupport(clientConfig, true), HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_CFG_SetRenegotiationSupport(serverConfig, true), HITLS_SUCCESS);
+    HITLS_CFG_SetPskClientCallback(clientConfig, ExampleClientCb);
+    HITLS_CFG_SetPskServerCallback(serverConfig, ExampleServerCb);
+
+    client = FRAME_CreateLink(clientConfig, BSL_UIO_TCP);
+    server = FRAME_CreateLink(serverConfig, BSL_UIO_TCP);
+    ASSERT_TRUE(client != NULL);
+    ASSERT_TRUE(server != NULL);
+
+    ASSERT_EQ(FRAME_CreateConnection(client, server, false, HS_STATE_BUTT), HITLS_SUCCESS);
+    ASSERT_EQ(client->ssl->negotiatedInfo.cipherSuiteInfo.cipherSuite, cbcCipherSuite);
+    ASSERT_EQ(server->ssl->negotiatedInfo.cipherSuiteInfo.cipherSuite, cbcCipherSuite);
+
+    bool encryptThenMac = false;
+    ASSERT_EQ(HITLS_GetEncryptThenMac(client->ssl, &encryptThenMac), HITLS_SUCCESS);
+    ASSERT_TRUE(encryptThenMac);
+    ASSERT_EQ(HITLS_GetEncryptThenMac(server->ssl, &encryptThenMac), HITLS_SUCCESS);
+    ASSERT_TRUE(encryptThenMac);
+    ASSERT_TRUE(client->ssl->recCtx->readStates.currentState->isEncryptThenMac);
+    ASSERT_TRUE(client->ssl->recCtx->writeStates.currentState->isEncryptThenMac);
+    ASSERT_TRUE(server->ssl->recCtx->readStates.currentState->isEncryptThenMac);
+    ASSERT_TRUE(server->ssl->recCtx->writeStates.currentState->isEncryptThenMac);
+
+    uint16_t gcmCipherSuite = HITLS_PSK_WITH_AES_128_GCM_SHA256;
+    ASSERT_EQ(HITLS_SetCipherSuites(client->ssl, &gcmCipherSuite, 1), HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_SetCipherSuites(server->ssl, &gcmCipherSuite, 1), HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_Renegotiate(client->ssl), HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_Renegotiate(server->ssl), HITLS_SUCCESS);
+    ASSERT_EQ(FRAME_CreateRenegotiation(client, server), HITLS_SUCCESS);
+
+    ASSERT_EQ(client->ssl->negotiatedInfo.cipherSuiteInfo.cipherSuite, gcmCipherSuite);
+    ASSERT_EQ(server->ssl->negotiatedInfo.cipherSuiteInfo.cipherSuite, gcmCipherSuite);
+    ASSERT_EQ(HITLS_GetEncryptThenMac(client->ssl, &encryptThenMac), HITLS_SUCCESS);
+    ASSERT_TRUE(encryptThenMac);
+    ASSERT_EQ(HITLS_GetEncryptThenMac(server->ssl, &encryptThenMac), HITLS_SUCCESS);
+    ASSERT_TRUE(encryptThenMac);
+    ASSERT_TRUE(!client->ssl->recCtx->readStates.currentState->isEncryptThenMac);
+    ASSERT_TRUE(!client->ssl->recCtx->writeStates.currentState->isEncryptThenMac);
+    ASSERT_TRUE(!server->ssl->recCtx->readStates.currentState->isEncryptThenMac);
+    ASSERT_TRUE(!server->ssl->recCtx->writeStates.currentState->isEncryptThenMac);
+
+    uint8_t msg[] = {0x01, 0x02, 0x03};
+    uint8_t readBuf[READ_BUF_SIZE] = {0};
+    uint32_t writeLen = 0;
+    uint32_t readLen = 0;
+    ASSERT_EQ(HITLS_Write(client->ssl, msg, sizeof(msg), &writeLen), HITLS_SUCCESS);
+    ASSERT_EQ(writeLen, sizeof(msg));
+    ASSERT_EQ(FRAME_TrasferMsgBetweenLink(client, server), HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_Read(server->ssl, readBuf, sizeof(readBuf), &readLen), HITLS_SUCCESS);
+    ASSERT_EQ(readLen, sizeof(msg));
+    ASSERT_EQ(memcmp(msg, readBuf, sizeof(msg)), 0);
+
+EXIT:
+    HITLS_CFG_FreeConfig(clientConfig);
+    HITLS_CFG_FreeConfig(serverConfig);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+#endif
+}
+/* END_CASE */
+
+/* @
 * @test  SDV_HiTLS_ETM_DTLS12_RENEGOTIATE_MTE_TO_ETM_TC001
 * @title DTLS1.2 CBC renegotiation from Mac-then-Encrypt to Encrypt-then-MAC should succeed.
 * @precon nan

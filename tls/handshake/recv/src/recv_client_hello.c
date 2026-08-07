@@ -830,13 +830,12 @@ static int32_t ServerCheckEncryptThenMac(TLS_Ctx *ctx, const ClientHelloMsg *cli
 {
     bool haveEncryptThenMac = clientHello->extension.flag.haveEncryptThenMac;
     bool newEncryptThenMac = ctx->config.tlsConfig.isEncryptThenMac &&
-        !IS_TLS13_FAMILY_CTX(ctx) &&
-        haveEncryptThenMac &&
-        ctx->negotiatedInfo.cipherSuiteInfo.cipherType == HITLS_CBC_CIPHER;
+        !IS_TLS13_FAMILY_CTX(ctx) && haveEncryptThenMac;
 #ifdef HITLS_TLS_FEATURE_RENEGOTIATION
     bool oldEncryptThenMac = ctx->negotiatedInfo.isEncryptThenMac;
     /* Renegotiation cannot be downgraded from EncryptThenMac to MacThenEncrypt */
-    if (ctx->negotiatedInfo.isRenegotiation && oldEncryptThenMac && !newEncryptThenMac) {
+    if (ctx->negotiatedInfo.isRenegotiation && oldEncryptThenMac && !newEncryptThenMac &&
+        ctx->negotiatedInfo.cipherSuiteInfo.cipherType == HITLS_CBC_CIPHER) {
         BSL_ERR_PUSH_ERROR(HITLS_MSG_HANDLE_ENCRYPT_THEN_MAC_ERR);
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15919, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "regotiation should not change encrypt then mac to mac then encrypt.", 0, 0, 0, 0);
@@ -844,7 +843,10 @@ static int32_t ServerCheckEncryptThenMac(TLS_Ctx *ctx, const ClientHelloMsg *cli
         return HITLS_MSG_HANDLE_ENCRYPT_THEN_MAC_ERR;
     }
 #endif
-    ctx->negotiatedInfo.isEncryptThenMac = newEncryptThenMac;
+    /* Keep the negotiated ETM capability across renegotiation to a non-CBC suite. */
+    if (newEncryptThenMac && ctx->negotiatedInfo.cipherSuiteInfo.cipherType == HITLS_CBC_CIPHER) {
+        ctx->negotiatedInfo.isEncryptThenMac = true;
+    }
 
     return HITLS_SUCCESS;
 }
