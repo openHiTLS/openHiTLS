@@ -1,0 +1,35 @@
+UT_HITLS_APP_TlsMutualAuth_TC001 TLS 1.2 mutual authentication succeeds
+UT_HITLS_APP_TlsMutualAuth_TC001:"-tls1_2":"HITLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256"
+
+UT_HITLS_APP_TlsMutualAuth_TC001 TLS 1.3 mutual authentication succeeds
+UT_HITLS_APP_TlsMutualAuth_TC001:"-tls1_3":"HITLS_AES_128_GCM_SHA256"
+
+UT_HITLS_APP_TlsMutualAuth_TC002 TLS 1.2 rejects a client without a certificate
+UT_HITLS_APP_TlsMutualAuth_TC002:"-tls1_2":"HITLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256"
+
+UT_HITLS_APP_TlsMutualAuth_TC002 TLS 1.3 rejects a client without a certificate
+UT_HITLS_APP_TlsMutualAuth_TC002:"-tls1_3":"HITLS_AES_128_GCM_SHA256"
+
+UT_HITLS_APP_TlsMutualAuth_TC003 TLS 1.2 rejects a mismatched server hostname
+UT_HITLS_APP_TlsMutualAuth_TC003:"-tls1_2":"HITLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256"
+
+UT_HITLS_APP_TlsMutualAuth_TC003 TLS 1.3 rejects a mismatched server hostname
+UT_HITLS_APP_TlsMutualAuth_TC003:"-tls1_3":"HITLS_AES_128_GCM_SHA256"
+
+UT_HITLS_APP_TlcpMutualAuth_TC001 TLCP ECDHE SM4 CBC SM3 mutual authentication succeeds
+UT_HITLS_APP_TlcpMutualAuth_TC001:"HITLS_ECDHE_SM4_CBC_SM3"
+
+UT_HITLS_APP_TlcpMutualAuth_TC001 TLCP ECC SM4 CBC SM3 mutual authentication succeeds
+UT_HITLS_APP_TlcpMutualAuth_TC001:"HITLS_ECC_SM4_CBC_SM3"
+
+UT_HITLS_APP_TlcpMutualAuth_TC001 TLCP ECDHE SM4 GCM SM3 mutual authentication succeeds
+UT_HITLS_APP_TlcpMutualAuth_TC001:"HITLS_ECDHE_SM4_GCM_SM3"
+
+UT_HITLS_APP_TlcpMutualAuth_TC001 TLCP ECC SM4 GCM SM3 mutual authentication succeeds
+UT_HITLS_APP_TlcpMutualAuth_TC001:"HITLS_ECC_SM4_GCM_SM3"
+
+UT_HITLS_APP_TlcpMutualAuth_TC002 TLCP rejects a client without SM2 certificates
+UT_HITLS_APP_TlcpMutualAuth_TC002:"HITLS_ECDHE_SM4_GCM_SM3"
+
+UT_HITLS_APP_TlcpMutualAuth_TC003 TLCP rejects a mismatched SM2 server hostname
+UT_HITLS_APP_TlcpMutualAuth_TC003:"HITLS_ECDHE_SM4_GCM_SM3"

@@ -36,3 +36,9 @@ UT_HITLS_APP_ServerNoVerify_TC003:
 
 UT_HITLS_APP_TlsOptions_TC001 test1
 UT_HITLS_APP_TlsOptions_TC001:
+
+UT_HITLS_APP_TlsOptions_TC002 test2
+UT_HITLS_APP_TlsOptions_TC002:
+
+UT_HITLS_APP_TlsOptions_TC003 test3
+UT_HITLS_APP_TlsOptions_TC003:

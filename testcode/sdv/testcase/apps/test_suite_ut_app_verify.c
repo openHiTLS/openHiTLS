@@ -43,6 +43,7 @@ STUB_DEFINE_RET3(int32_t, HITLS_X509_CertParseBundleFile, int32_t, const char *,
 STUB_DEFINE_RET4(int32_t, HITLS_X509_StoreCtxCtrl, HITLS_X509_StoreCtx *, int32_t, void *, uint32_t);
 STUB_DEFINE_RET0(HITLS_X509_StoreCtx *, HITLS_X509_StoreCtxNew);
 STUB_DEFINE_RET2(int32_t, HITLS_X509_CertVerify, HITLS_X509_StoreCtx *, HITLS_X509_List *);
+STUB_DEFINE_RET2(int, CreateTCPSocket, APP_NetworkAddr *, int);
 
 
 #define MAX_CRLFILE_SIZE (256 * 1024)
@@ -59,6 +60,9 @@ STUB_DEFINE_RET2(int32_t, HITLS_X509_CertVerify, HITLS_X509_StoreCtx *, HITLS_X5
 #define MISTAKE_CERT_PATH "../testdata/certificate/VerifyCAfile/mistakeCert.pem"
 #define SM2_WITH_USERID_CA "../testdata/cert/sm2_with_userid/ca.crt"
 #define SM2_WITH_USERID_INTER "../testdata/cert/sm2_with_userid/inter.crt"
+#define TLS_RSA_CLIENT_CERT "../testdata/tls/certificate/pem/rsa_sha256/client.pem"
+#define TLS_RSA_CLIENT_KEY "../testdata/tls/certificate/pem/rsa_sha256/client.key.pem"
+#define TLS_ECDSA_CLIENT_KEY "../testdata/tls/certificate/pem/ecdsa_sha256/client.key.pem"
 
 /* INCLUDE_SOURCE  ${HITLS_ROOT_PATH}/apps/src/app_print.c ${HITLS_ROOT_PATH}/apps/src/app_verify.c ${HITLS_ROOT_PATH}/apps/src/app_opt.c ${HITLS_ROOT_PATH}/apps/src/app_utils.c */
 
@@ -67,6 +71,23 @@ typedef struct {
     char **argv;
     int expect;
 } OptTestData;
+
+static int32_t RunTlsClientMain(int32_t argc, char **argv)
+{
+    if (APP_Create_LibCtx() == NULL) {
+        return HITLS_APP_INIT_FAILED;
+    }
+    int32_t ret = HITLS_ClientMain(argc, argv);
+    HITLS_APP_FreeLibCtx();
+    return ret;
+}
+
+static int STUB_CreateTCPSocket(APP_NetworkAddr *addr, int timeout)
+{
+    (void)addr;
+    (void)timeout;
+    return -1;
+}
 
 /**
  * @test UT_HITLS_APP_Verify_TC001
@@ -481,11 +502,76 @@ void UT_HITLS_APP_TlsOptions_TC001(void)
     ASSERT_EQ(AppPrintErrorUioInit(stderr), HITLS_APP_SUCCESS);
     ASSERT_EQ(HITLS_ClientMain(7, clientArgv), HITLS_APP_HELP);
     ASSERT_EQ(HITLS_ServerMain(7, serverArgv), HITLS_APP_HELP);
+    ASSERT_EQ(ParseProtocolType("tls"), APP_PROTOCOL_TLS);
     ASSERT_EQ(ParseProtocolType("tls1_2"), APP_PROTOCOL_TLS12);
     ASSERT_EQ(ParseProtocolType("tls1_3"), APP_PROTOCOL_TLS13);
 
 EXIT:
     AppPrintErrorUioUnInit();
+    return;
+}
+/* END_CASE */
+
+/**
+ * @test UT_HITLS_APP_TlsOptions_TC002
+ * @spec  -
+ * @title Test successful TLS configuration through the s_client command path
+ */
+/* BEGIN_CASE */
+void UT_HITLS_APP_TlsOptions_TC002(void)
+{
+    char *argv[][12] = {
+        {"s_client", "-host", "127.0.0.1", "-tls",
+            "-cipher", "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256", "-cert", TLS_RSA_CLIENT_CERT,
+            "-key", TLS_RSA_CLIENT_KEY, "-noverify", "-quiet"},
+        {"s_client", "-host", "127.0.0.1", "-tls1_2",
+            "-cipher", "HITLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256", "-cert", TLS_RSA_CLIENT_CERT,
+            "-key", TLS_RSA_CLIENT_KEY, "-noverify", "-quiet"},
+        {"s_client", "-host", "127.0.0.1", "-tls1_3",
+            "-cipher", "HITLS_AES_128_GCM_SHA256", "-cert", TLS_RSA_CLIENT_CERT,
+            "-key", TLS_RSA_CLIENT_KEY, "-noverify", "-quiet"},
+    };
+
+    STUB_REPLACE(CreateTCPSocket, STUB_CreateTCPSocket);
+    for (size_t i = 0; i < sizeof(argv) / sizeof(argv[0]); i++) {
+        ASSERT_EQ(RunTlsClientMain(12, argv[i]), HITLS_APP_ERR_CONNECT);
+    }
+
+EXIT:
+    STUB_RESTORE(CreateTCPSocket);
+    HITLS_APP_FreeLibCtx();
+    return;
+}
+/* END_CASE */
+
+/**
+ * @test UT_HITLS_APP_TlsOptions_TC003
+ * @spec  -
+ * @title Test TLS cipher-version conflicts and certificate/private-key errors
+ */
+/* BEGIN_CASE */
+void UT_HITLS_APP_TlsOptions_TC003(void)
+{
+    char *tls12CipherArgv[] = {"s_client", "-host", "127.0.0.1", "-tls1_2",
+        "-cipher", "TLS_AES_128_GCM_SHA256", "-noverify", "-quiet"};
+    char *tls13CipherArgv[] = {"s_client", "-host", "127.0.0.1", "-tls1_3",
+        "-cipher", "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256", "-noverify", "-quiet"};
+    char *missingKeyArgv[] = {"s_client", "-host", "127.0.0.1", "-tls1_2",
+        "-cert", TLS_RSA_CLIENT_CERT, "-noverify", "-quiet"};
+    char *mismatchKeyArgv[] = {"s_client", "-host", "127.0.0.1", "-tls1_2",
+        "-cert", TLS_RSA_CLIENT_CERT, "-key", TLS_ECDSA_CLIENT_KEY, "-noverify", "-quiet"};
+
+    ASSERT_EQ(RunTlsClientMain(sizeof(tls12CipherArgv) / sizeof(tls12CipherArgv[0]), tls12CipherArgv),
+        HITLS_APP_INVALID_ARG);
+    ASSERT_EQ(RunTlsClientMain(sizeof(tls13CipherArgv) / sizeof(tls13CipherArgv[0]), tls13CipherArgv),
+        HITLS_APP_INVALID_ARG);
+    ASSERT_EQ(RunTlsClientMain(sizeof(missingKeyArgv) / sizeof(missingKeyArgv[0]), missingKeyArgv),
+        HITLS_APP_INVALID_ARG);
+    ASSERT_EQ(RunTlsClientMain(sizeof(mismatchKeyArgv) / sizeof(mismatchKeyArgv[0]), mismatchKeyArgv),
+        HITLS_APP_INVALID_ARG);
+
+EXIT:
+    HITLS_APP_FreeLibCtx();
     return;
 }
 /* END_CASE */
