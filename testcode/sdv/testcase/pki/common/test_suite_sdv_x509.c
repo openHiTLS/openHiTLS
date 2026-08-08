@@ -1075,9 +1075,11 @@ void SDV_HITLS_MLDSA_PQCCert_TC004(int format, int type, int key_format, int key
     ASSERT_EQ(CRYPT_EAL_PkeySetParaById(pkey, CRYPT_MLDSA_TYPE_MLDSA_87), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_PkeyGen(pkey), CRYPT_SUCCESS);
 
-    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_SET_MLDSA_PRVKEY_FORMAT, &key_format, sizeof(uint32_t)), CRYPT_SUCCESS);
-
-    ASSERT_EQ(CRYPT_EAL_EncodeBuffKey(pkey, NULL, format, type, &encodeAsn1), CRYPT_SUCCESS);
+    BSL_Param encodeParam[] = {
+        {CRYPT_PARAM_ENCODE_OUTPUT_FORMATS, BSL_PARAM_TYPE_UINT32_PTR, &key_format, sizeof(key_format), 0},
+        BSL_PARAM_END
+    };
+    ASSERT_EQ(CRYPT_EAL_EncodeBuffKeyEx(pkey, encodeParam, format, type, &encodeAsn1), CRYPT_SUCCESS);
     ASSERT_EQ(keylen, encodeAsn1.dataLen);
 
     ASSERT_EQ(CRYPT_EAL_EncodeFileKey(pkey, NULL, format, type, path), CRYPT_SUCCESS);
@@ -1589,9 +1591,12 @@ void SDV_HITLS_MLDSA_PQCCert_TC009(int key_format)
     ASSERT_EQ(CRYPT_EAL_PkeySetParaById(pkey, CRYPT_MLDSA_TYPE_MLDSA_44), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_PkeyGen(pkey), CRYPT_SUCCESS);
 
-    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_SET_MLDSA_PRVKEY_FORMAT, &key_format, sizeof(uint32_t)), CRYPT_SUCCESS);
-
-    ASSERT_EQ(CRYPT_EAL_EncodeBuffKey(pkey, NULL, BSL_FORMAT_ASN1, CRYPT_PRIKEY_PKCS8_UNENCRYPT, &encodeAsn1), CRYPT_SUCCESS);
+    BSL_Param encodeParam[] = {
+        {CRYPT_PARAM_ENCODE_OUTPUT_FORMATS, BSL_PARAM_TYPE_UINT32_PTR, &key_format, sizeof(key_format), 0},
+        BSL_PARAM_END
+    };
+    ASSERT_EQ(CRYPT_EAL_EncodeBuffKeyEx(pkey, encodeParam, BSL_FORMAT_ASN1, CRYPT_PRIKEY_PKCS8_UNENCRYPT,
+        &encodeAsn1), CRYPT_SUCCESS);
     ASSERT_TRUE(TestIsErrStackEmpty());
     switch (key_format)
     {
@@ -1638,8 +1643,12 @@ void SDV_HITLS_MLDSA_PQCCert_TC010()
     ASSERT_NE(pkey, NULL);
     ASSERT_EQ(CRYPT_EAL_PkeySetParaById(pkey, CRYPT_MLDSA_TYPE_MLDSA_44), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_PkeyGen(pkey), CRYPT_SUCCESS);
-    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_SET_MLDSA_PRVKEY_FORMAT, &key_format, sizeof(uint32_t)), CRYPT_SUCCESS);
-    ASSERT_EQ(CRYPT_EAL_EncodeBuffKey(pkey, NULL, BSL_FORMAT_ASN1, CRYPT_PRIKEY_PKCS8_UNENCRYPT, &encodeAsn1), CRYPT_SUCCESS);
+    BSL_Param encodeParam[] = {
+        {CRYPT_PARAM_ENCODE_OUTPUT_FORMATS, BSL_PARAM_TYPE_UINT32_PTR, &key_format, sizeof(key_format), 0},
+        BSL_PARAM_END
+    };
+    ASSERT_EQ(CRYPT_EAL_EncodeBuffKeyEx(pkey, encodeParam, BSL_FORMAT_ASN1, CRYPT_PRIKEY_PKCS8_UNENCRYPT,
+        &encodeAsn1), CRYPT_SUCCESS);
     ASSERT_TRUE(TestIsErrStackEmpty());
     encodeAsn1.data[40]++;
     ASSERT_EQ(CRYPT_EAL_DecodeBuffKey(BSL_FORMAT_ASN1, CRYPT_PRIKEY_PKCS8_UNENCRYPT, &encodeAsn1, NULL, 0, &pkeyout), CRYPT_MLDSA_PRVKEY_SEED_INCONSISTENT);

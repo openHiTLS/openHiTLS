@@ -27,6 +27,7 @@
 #include "crypt_bn.h"
 #include "eal_pkey_local.h"
 #include "xmss_wots.h"
+#include "xmss_common.h"
 #include "test.h"
 /* END_HEADER */
 
@@ -102,16 +103,8 @@ void SDV_CRYPTO_XMSS_GENKEY_TC001(int isProvider)
     } else {
         ASSERT_EQ(TestRandInit(), CRYPT_SUCCESS);
     }
-    CRYPT_EAL_PkeyCtx *pkey = NULL;
-#ifdef HITLS_CRYPTO_PROVIDER
-    if (isProvider == 1) {
-        pkey = CRYPT_EAL_ProviderPkeyNewCtx(NULL, CRYPT_PKEY_XMSS, CRYPT_EAL_PKEY_SIGN_OPERATE, "provider=default");
-    } else
-#endif
-    {
-        (void)isProvider;
-        pkey = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_XMSS);
-    }
+    CRYPT_EAL_PkeyCtx *pkey = TestPkeyNewCtx(NULL, CRYPT_PKEY_XMSS, CRYPT_EAL_PKEY_SIGN_OPERATE,
+        "provider=default", isProvider);
     ASSERT_TRUE(pkey != NULL);
     ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_SET_PARA_BY_ID, NULL, 0) == CRYPT_NULL_INPUT);
     ASSERT_TRUE(CRYPT_EAL_PkeyGen(pkey) == CRYPT_XMSS_ERR_INVALID_ALGID);
@@ -609,19 +602,10 @@ void SDV_CRYPTO_XMSSMT_GETID_TC001(int isProvider)
         ASSERT_EQ(TestRandInit(), CRYPT_SUCCESS);
     }
 
-#ifdef HITLS_CRYPTO_PROVIDER
-    if (isProvider == 1) {
-        xmssPkey = CRYPT_EAL_ProviderPkeyNewCtx(NULL, CRYPT_PKEY_XMSS,
-            CRYPT_EAL_PKEY_SIGN_OPERATE, "provider=default");
-        xmssmtPkey = CRYPT_EAL_ProviderPkeyNewCtx(NULL, CRYPT_PKEY_XMSSMT,
-            CRYPT_EAL_PKEY_SIGN_OPERATE, "provider=default");
-    } else
-#endif
-    {
-        (void)isProvider;
-        xmssPkey = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_XMSS);
-        xmssmtPkey = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_XMSSMT);
-    }
+    xmssPkey = TestPkeyNewCtx(NULL, CRYPT_PKEY_XMSS, CRYPT_EAL_PKEY_SIGN_OPERATE,
+        "provider=default", isProvider);
+    xmssmtPkey = TestPkeyNewCtx(NULL, CRYPT_PKEY_XMSSMT, CRYPT_EAL_PKEY_SIGN_OPERATE,
+        "provider=default", isProvider);
     ASSERT_TRUE(xmssPkey != NULL);
     ASSERT_TRUE(xmssmtPkey != NULL);
 
@@ -668,16 +652,8 @@ void SDV_CRYPTO_XMSSMT_GENKEY_TC001(int isProvider)
     } else {
         ASSERT_EQ(TestRandInit(), CRYPT_SUCCESS);
     }
-#ifdef HITLS_CRYPTO_PROVIDER
-    if (isProvider == 1) {
-        pkey = CRYPT_EAL_ProviderPkeyNewCtx(NULL, CRYPT_PKEY_XMSSMT,
-            CRYPT_EAL_PKEY_SIGN_OPERATE, "provider=default");
-    } else
-#endif
-    {
-        (void)isProvider;
-        pkey = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_XMSSMT);
-    }
+    pkey = TestPkeyNewCtx(NULL, CRYPT_PKEY_XMSSMT, CRYPT_EAL_PKEY_SIGN_OPERATE,
+        "provider=default", isProvider);
     ASSERT_TRUE(pkey != NULL);
 
     int32_t algId = CRYPT_XMSSMT_SHA2_20_2_256;
@@ -724,16 +700,8 @@ void SDV_CRYPTO_XMSSMT_SIGN_VERIFY_TC001(int isProvider)
     } else {
         ASSERT_EQ(TestRandInit(), CRYPT_SUCCESS);
     }
-#ifdef HITLS_CRYPTO_PROVIDER
-    if (isProvider == 1) {
-        pkey = CRYPT_EAL_ProviderPkeyNewCtx(NULL, CRYPT_PKEY_XMSSMT,
-            CRYPT_EAL_PKEY_SIGN_OPERATE, "provider=default");
-    } else
-#endif
-    {
-        (void)isProvider;
-        pkey = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_XMSSMT);
-    }
+    pkey = TestPkeyNewCtx(NULL, CRYPT_PKEY_XMSSMT, CRYPT_EAL_PKEY_SIGN_OPERATE,
+        "provider=default", isProvider);
     ASSERT_TRUE(pkey != NULL);
 
     int32_t algId = CRYPT_XMSSMT_SHA2_20_2_256;
@@ -808,6 +776,47 @@ void SDV_CRYPTO_XMSS_SET_XDR_ALG_REPEATED_TC001(void)
 
 EXIT:
     CRYPT_EAL_PkeyFreeCtx(pkey);
+    return;
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_CRYPTO_HBS_HASH_IF_TC001(void)
+{
+    TestMemInit();
+    static const uint8_t msg[] = {'a', 'b', 'c'};
+    static const uint8_t sha256Expected[32] = {
+        0xba, 0x78, 0x16, 0xbf, 0x8f, 0x01, 0xcf, 0xea,
+        0x41, 0x41, 0x40, 0xde, 0x5d, 0xae, 0x22, 0x23,
+        0xb0, 0x03, 0x61, 0xa3, 0x96, 0x17, 0x7a, 0x9c,
+        0xb4, 0x10, 0xff, 0x61, 0xf2, 0x00, 0x15, 0xad
+    };
+    static const uint8_t shake128Expected[32] = {
+        0x58, 0x81, 0x09, 0x2d, 0xd8, 0x18, 0xbf, 0x5c,
+        0xf8, 0xa3, 0xdd, 0xb7, 0x93, 0xfb, 0xcb, 0xa7,
+        0x40, 0x97, 0xd5, 0xc5, 0x26, 0xa6, 0xd3, 0x5f,
+        0x97, 0xb8, 0x33, 0x51, 0x94, 0x0f, 0x2c, 0xc8
+    };
+    static const uint8_t shake256Expected[32] = {
+        0x48, 0x33, 0x66, 0x60, 0x13, 0x60, 0xa8, 0x77,
+        0x1c, 0x68, 0x63, 0x08, 0x0c, 0xc4, 0x11, 0x4d,
+        0x8d, 0xb4, 0x45, 0x30, 0xf8, 0xf1, 0xe1, 0xee,
+        0x4f, 0x94, 0xea, 0x37, 0xe7, 0x8b, 0x57, 0x39
+    };
+    const CRYPT_ConstData data = {msg, sizeof(msg)};
+    uint8_t out[32] = {0};
+
+    ASSERT_EQ(CalcMultiMsgHash(CRYPT_MD_SHA256, &data, 1, out, sizeof(out)), CRYPT_SUCCESS);
+    ASSERT_TRUE(memcmp(out, sha256Expected, sizeof(out)) == 0);
+
+#ifdef HITLS_CRYPTO_SHA3
+    ASSERT_EQ(CalcMultiMsgHash(CRYPT_MD_SHAKE128, &data, 1, out, sizeof(out)), CRYPT_SUCCESS);
+    ASSERT_TRUE(memcmp(out, shake128Expected, sizeof(out)) == 0);
+    ASSERT_EQ(CalcMultiMsgHash(CRYPT_MD_SHAKE256, &data, 1, out, sizeof(out)), CRYPT_SUCCESS);
+    ASSERT_TRUE(memcmp(out, shake256Expected, sizeof(out)) == 0);
+#endif
+
+EXIT:
     return;
 }
 /* END_CASE */

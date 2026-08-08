@@ -284,7 +284,7 @@ int32_t EncodeEccPrikeyAsn1Buff(CRYPT_EAL_PkeyCtx *ealPriKey, BSL_ASN1_Buffer *p
 int32_t CRYPT_ENCODE_EccPrikeyAsn1Buff(BSL_ASN1_Buffer *asn1, uint32_t asn1Num, BSL_Buffer *encode);
 #endif
 
-int32_t EncodePk8PriKeyBuff(CRYPT_EAL_PkeyCtx *ealPriKey, BSL_Buffer *asn1);
+int32_t EncodePk8PriKeyBuff(CRYPT_EAL_PkeyCtx *ealPriKey, const BSL_Param *param, BSL_Buffer *asn1);
 
 int32_t CRYPT_ENCODE_SubPubkeyByInfo(BSL_ASN1_Buffer *algo, BSL_Buffer *bitStr, BSL_Buffer *encodeH,
     bool isComplete);
@@ -297,7 +297,7 @@ int32_t CRYPT_ENCODE_PkcsEncryptedBuff(CRYPT_EAL_LibCtx *libCtx, const char *att
 
 #ifdef HITLS_CRYPTO_KEY_EPKI
 int32_t EncodePk8EncPriKeyBuff(CRYPT_EAL_LibCtx *libCtx, const char *attrName, CRYPT_EAL_PkeyCtx *ealPriKey,
-    const CRYPT_EncodeParam *encodeParam, BSL_Buffer *encode);
+    const CRYPT_EncodeParam *encodeParam, const BSL_Param *param, BSL_Buffer *encode);
 #endif
 
 int32_t CRYPT_EAL_EncodeAsn1SubPubkey(CRYPT_EAL_PkeyCtx *ealPubKey, bool isComplete, BSL_Buffer *encodeH);

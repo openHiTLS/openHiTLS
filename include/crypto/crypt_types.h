@@ -643,9 +643,8 @@ typedef enum {
     CRYPT_CTRL_GET_PUBKEY_LEN,           /**< Get the encapsulation key length */
     CRYPT_CTRL_GET_PRVKEY_LEN,           /**< Get the decapsulation key length */
     CRYPT_CTRL_GET_CIPHERTEXT_LEN,       /**< Get the ciphertext length */
-    CRYPT_CTRL_SET_DETERMINISTIC_FLAG,   /**< Whether to use deterministic signatures.
-                                              Only supports switching from non-deterministic to deterministic.
-                                              Switching back to non-deterministic is not supported. */
+    CRYPT_CTRL_SET_DETERMINISTIC_FLAG,   /**< Whether to use deterministic signatures. The accepted value type and
+                                              whether the mode can be switched back are algorithm-specific. */
     CRYPT_CTRL_SET_CTX_INFO,             /**< Set the context string. */
     CRYPT_CTRL_SET_PREHASH_MODE,         /**< Change the SLH-DSA or ML-DSA mode to prehash version or pure version. */
     CRYPT_CTRL_GEN_PARA,                 /**< Asymmetric cipher generate para. For DSA, the maximum seed length is 256 bytes. */
@@ -719,17 +718,12 @@ typedef enum {
 
     // slh-dsa
     CRYPT_CTRL_GET_SLH_DSA_KEY_LEN = 600,     /**< Get the SLH-DSA key length. */
-    CRYPT_CTRL_SET_SLH_DSA_ADDRAND, /**< Set the SLH-DSA additional random bytes. */
     // mldsa
     CRYPT_CTRL_SET_MLDSA_MUMSG_FLAG = 701,   /**< Whether to calculate message representative */
     CRYPT_CTRL_GET_MLDSA_SEED,               /**< Get MLDSA private key seed */
-    CRYPT_CTRL_SET_MLDSA_PRVKEY_FORMAT,      /**< Set MLDSA private key encode format */
-    CRYPT_CTRL_GET_MLDSA_PRVKEY_FORMAT,      /**< Get MLDSA private key encode format*/
 
     // mlkem
     CRYPT_CTRL_GET_MLKEM_SEED = 750,         /**< Get MLKEM private key seed (d||z) */
-    CRYPT_CTRL_SET_MLKEM_DK_FORMAT,          /**< Set MLKEM decapsulation key encode format */
-    CRYPT_CTRL_GET_MLKEM_DK_FORMAT,          /**< Get MLKEM decapsulation key encode format */
 
     // xmss
     CRYPT_CTRL_GET_XMSS_XDR_ALG_TYPE = 800,     /**< Get the XMSS xdr algId. */
@@ -864,19 +858,15 @@ typedef enum {
 } CRYPT_ALGO_TYPE;
 
 typedef enum {
-    CRYPT_ALGO_MLDSA_PRIV_FORMAT_NOT_SET = 0,
-    CRYPT_ALGO_MLDSA_PRIV_FORMAT_BOTH,
+    CRYPT_ALGO_MLDSA_PRIV_FORMAT_BOTH = 0,
     CRYPT_ALGO_MLDSA_PRIV_FORMAT_PRIV_ONLY,
     CRYPT_ALGO_MLDSA_PRIV_FORMAT_SEED_ONLY,
-    CRYPT_ALGO_MLDSA_PRIV_FORMAT_END,
 } CRYPT_ALGO_MLDSA_PRIV_KEY_FORMAT_TYPE;
 
 typedef enum {
-    CRYPT_ALGO_MLKEM_DK_FORMAT_NOT_SET = 0,
-    CRYPT_ALGO_MLKEM_DK_FORMAT_BOTH,
+    CRYPT_ALGO_MLKEM_DK_FORMAT_BOTH = 0,
     CRYPT_ALGO_MLKEM_DK_FORMAT_DK_ONLY,
     CRYPT_ALGO_MLKEM_DK_FORMAT_SEED_ONLY,
-    CRYPT_ALGO_MLKEM_DK_FORMAT_END,
 } CRYPT_ALGO_MLKEM_DK_FORMAT_TYPE;
 
 /**

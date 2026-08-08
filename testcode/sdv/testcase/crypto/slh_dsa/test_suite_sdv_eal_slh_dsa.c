@@ -128,7 +128,7 @@ void SDV_CRYPTO_SLH_DSA_API_CTRL_TC001(void)
     CRYPT_EAL_PkeyCtx *pkey = NULL;
     pkey = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_SLH_DSA);
     ASSERT_TRUE(pkey != NULL);
-    ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_SET_CTX_INFO, NULL, 0) == CRYPT_INVALID_ARG);
+    ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_SET_CTX_INFO, NULL, 0) == CRYPT_SUCCESS);
     uint8_t context[128] = {0};
     ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_SET_CTX_INFO, context, sizeof(context)) == CRYPT_SUCCESS);
     ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_SET_PREHASH_MODE, NULL, 0) == CRYPT_INVALID_ARG);
@@ -150,16 +150,8 @@ void SDV_CRYPTO_SLH_DSA_GENKEY_TC001(int isProvider)
     } else {
         ASSERT_EQ(TestRandInit(), CRYPT_SUCCESS);
     }
-    CRYPT_EAL_PkeyCtx *pkey = NULL;
-#ifdef HITLS_CRYPTO_PROVIDER
-    if (isProvider == 1) {
-        pkey = CRYPT_EAL_ProviderPkeyNewCtx(NULL, CRYPT_PKEY_SLH_DSA, CRYPT_EAL_PKEY_SIGN_OPERATE, "provider=default");
-    } else
-#endif
-    {
-        (void)isProvider;
-        pkey = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_SLH_DSA);
-    }
+    CRYPT_EAL_PkeyCtx *pkey = TestPkeyNewCtx(NULL, CRYPT_PKEY_SLH_DSA, CRYPT_EAL_PKEY_SIGN_OPERATE,
+        "provider=default", isProvider);
     ASSERT_TRUE(pkey != NULL);
     ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_SET_PARA_BY_ID, NULL, 0) == CRYPT_INVALID_ARG);
     ASSERT_TRUE(CRYPT_EAL_PkeyGen(pkey) == CRYPT_SLHDSA_ERR_INVALID_ALGID);
@@ -306,15 +298,9 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_CRYPTO_SLH_DSA_SIGN_KAT_TC001(int isProvider, int id, Hex *key, Hex *addrand, Hex *msg, Hex *context, Hex *sig)
 {
-    (void)key;
-    (void)addrand;
-    (void)msg;
-    (void)context;
-    (void)sig;
     TestMemInit();
-    if (isProvider) {
-        CRYPT_RandRegistEx(RandInjectionExSelfCheck);
-    }
+    CRYPT_EAL_RandFunc oldRandFunc = CRYPT_RandRegistGet();
+    CRYPT_EAL_RandFuncEx oldRandFuncEx = CRYPT_RandRegistExGet();
 
     CRYPT_EAL_PkeyCtx *pkey = NULL;
     pkey = TestPkeyNewCtx(NULL, CRYPT_PKEY_SLH_DSA, CRYPT_EAL_PKEY_UNKNOWN_OPERATE, "provider=default", isProvider);
@@ -323,14 +309,10 @@ void SDV_CRYPTO_SLH_DSA_SIGN_KAT_TC001(int isProvider, int id, Hex *key, Hex *ad
     ASSERT_EQ(CRYPT_EAL_PkeySetParaById(pkey, algId), CRYPT_SUCCESS);
     uint32_t keyLen = 0;
     ASSERT_EQ(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_GET_SLH_DSA_KEY_LEN, (void *)&keyLen, sizeof(keyLen)), CRYPT_SUCCESS);
-    int32_t isDeterministic = 1;
+    int32_t isDeterministic = addrand->len == 0;
     ASSERT_EQ(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_SET_DETERMINISTIC_FLAG, (void *)&isDeterministic,
                                  sizeof(isDeterministic)),
               CRYPT_SUCCESS);
-    if (addrand->len != 0) {
-        ASSERT_EQ(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_SET_SLH_DSA_ADDRAND, (void *)addrand->x, addrand->len),
-                  CRYPT_SUCCESS);
-    }
 
     CRYPT_EAL_PkeyPrv prv;
     (void)memset_s(&prv, sizeof(CRYPT_EAL_PkeyPrv), 0, sizeof(CRYPT_EAL_PkeyPrv));
@@ -344,6 +326,14 @@ void SDV_CRYPTO_SLH_DSA_SIGN_KAT_TC001(int isProvider, int id, Hex *key, Hex *ad
     if (context->len != 0) {
         ASSERT_EQ(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_SET_CTX_INFO, context->x, context->len), CRYPT_SUCCESS);
     }
+    uint8_t *stubRand[1] = {addrand->x};
+    uint32_t stubRandLen[1] = {addrand->len};
+    if (addrand->len != 0) {
+        RandInjectionInit();
+        RandInjectionSet(stubRand, stubRandLen);
+        CRYPT_RandRegist(RandInjection);
+        CRYPT_RandRegistEx(isProvider ? RandInjectionExSelfCheck : RandInjectionEx);
+    }
     uint8_t sigOut[50000] = {0};
     uint32_t sigOutLen = sizeof(sigOut);
     ASSERT_EQ(CRYPT_EAL_PkeySign(pkey, CRYPT_MD_SHA256, msg->x, msg->len, sigOut, &sigOutLen), CRYPT_SUCCESS);
@@ -352,7 +342,8 @@ void SDV_CRYPTO_SLH_DSA_SIGN_KAT_TC001(int isProvider, int id, Hex *key, Hex *ad
     ASSERT_TRUE(TestIsErrStackEmpty());
 EXIT:
     CRYPT_EAL_PkeyFreeCtx(pkey);
-    CRYPT_RandRegistEx(RandInjectionEx);
+    CRYPT_RandRegist(oldRandFunc);
+    CRYPT_RandRegistEx(oldRandFuncEx);
     return;
 }
 /* END_CASE */
@@ -362,6 +353,8 @@ EXIT:
 void SDV_CRYPTO_SLH_DSA_SIGN_KAT_TC002(int id, Hex *key, Hex *addrand, Hex *msg, Hex *context, int preHashId, Hex *sig)
 {
     TestMemInit();
+    CRYPT_EAL_RandFunc oldRandFunc = CRYPT_RandRegistGet();
+    CRYPT_EAL_RandFuncEx oldRandFuncEx = CRYPT_RandRegistExGet();
 
     CRYPT_EAL_PkeyCtx *pkey = NULL;
     pkey = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_SLH_DSA);
@@ -370,14 +363,10 @@ void SDV_CRYPTO_SLH_DSA_SIGN_KAT_TC002(int id, Hex *key, Hex *addrand, Hex *msg,
     ASSERT_EQ(CRYPT_EAL_PkeySetParaById(pkey, algId), CRYPT_SUCCESS);
     uint32_t keyLen = 0;
     ASSERT_EQ(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_GET_SLH_DSA_KEY_LEN, (void *)&keyLen, sizeof(keyLen)), CRYPT_SUCCESS);
-    int32_t isDeterministic = 1;
+    int32_t isDeterministic = addrand->len == 0;
     ASSERT_EQ(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_SET_DETERMINISTIC_FLAG, (void *)&isDeterministic,
                                  sizeof(isDeterministic)),
               CRYPT_SUCCESS);
-    if (addrand->len != 0) {
-        ASSERT_EQ(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_SET_SLH_DSA_ADDRAND, (void *)addrand->x, addrand->len),
-                  CRYPT_SUCCESS);
-    }
     int32_t prehash = 1;
     ASSERT_EQ(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_SET_PREHASH_MODE, (void *)&prehash, sizeof(prehash)),
               CRYPT_SUCCESS);
@@ -393,16 +382,27 @@ void SDV_CRYPTO_SLH_DSA_SIGN_KAT_TC002(int id, Hex *key, Hex *addrand, Hex *msg,
     if (context->len != 0) {
         ASSERT_EQ(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_SET_CTX_INFO, context->x, context->len), CRYPT_SUCCESS);
     }
+    uint8_t *stubRand[1] = {addrand->x};
+    uint32_t stubRandLen[1] = {addrand->len};
+    if (addrand->len != 0) {
+        RandInjectionInit();
+        RandInjectionSet(stubRand, stubRandLen);
+        CRYPT_RandRegist(RandInjection);
+        CRYPT_RandRegistEx(RandInjectionEx);
+    }
     uint8_t sigOut[50000] = {0};
     uint32_t sigOutLen = sizeof(sigOut);
     ASSERT_EQ(CRYPT_EAL_PkeySign(pkey, preHashId, msg->x, msg->len, sigOut, &sigOutLen), CRYPT_SUCCESS);
     ASSERT_TRUE(sigOutLen == sig->len);
     ASSERT_TRUE(memcmp(sigOut, sig->x, sigOutLen) == 0);
+    ASSERT_EQ(CRYPT_EAL_PkeyVerify(pkey, preHashId, msg->x, msg->len, sig->x, sig->len), CRYPT_SUCCESS);
     ASSERT_TRUE(TestIsErrStackEmpty());
     ASSERT_EQ(CRYPT_EAL_PkeySign(pkey, (int32_t)BSL_CID_AES128_ECB, msg->x, msg->len, sigOut, &sigOutLen),
         CRYPT_SLHDSA_ERR_PREHASH_ID_NOT_SUPPORTED);
 EXIT:
     CRYPT_EAL_PkeyFreeCtx(pkey);
+    CRYPT_RandRegist(oldRandFunc);
+    CRYPT_RandRegistEx(oldRandFuncEx);
     return;
 }
 /* END_CASE */
@@ -468,7 +468,7 @@ void SDV_CRYPTO_SLH_DSA_CHECK_KEYPAIR_TC001(int algId)
     ASSERT_EQ(CRYPT_EAL_PkeyGetPrv(pkey, &prv), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_PkeySetPrv(prvKey, &prv), CRYPT_SUCCESS);
     ASSERT_TRUE(TestIsErrStackEmpty());
-    ASSERT_EQ(CRYPT_EAL_PkeyPairCheck(prvKey, prvKey), CRYPT_SLHDSA_ERR_NO_PUBKEY);
+    ASSERT_EQ(CRYPT_EAL_PkeyPairCheck(prvKey, prvKey), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_PkeyPairCheck(pubKey, pubKey), CRYPT_SLHDSA_ERR_NO_PRVKEY);
     ASSERT_EQ(CRYPT_EAL_PkeyPairCheck(pubKey, prvKey), CRYPT_SUCCESS);
 EXIT:
@@ -669,9 +669,23 @@ void SDV_CRYPTO_SLH_DSA_SIGN_ADDRAND_TC002(int id)
     ASSERT_EQ(CRYPT_EAL_PkeyVerify(pkey, CRYPT_MD_SHA256, msg, sizeof(msg), sig1, sigLen1), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_PkeyVerify(pkey, CRYPT_MD_SHA256, msg, sizeof(msg), sig2, sigLen2), CRYPT_SUCCESS);
 
+    isDeterministic = 0;
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_SET_DETERMINISTIC_FLAG, &isDeterministic, sizeof(isDeterministic)),
+        CRYPT_SUCCESS);
+    sigLen1 = sizeof(sig1);
+    ASSERT_EQ(CRYPT_EAL_PkeySign(pkey, CRYPT_MD_SHA256, msg, sizeof(msg), sig1, &sigLen1), CRYPT_SUCCESS);
+    ASSERT_EQ(sigLen1, sigLen2);
+    ASSERT_TRUE(memcmp(sig1, sig2, sigLen2) != 0);
+    ASSERT_EQ(CRYPT_EAL_PkeyVerify(pkey, CRYPT_MD_SHA256, msg, sizeof(msg), sig1, sigLen1), CRYPT_SUCCESS);
+
+    isDeterministic = 1;
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_SET_DETERMINISTIC_FLAG, &isDeterministic, sizeof(isDeterministic)),
+        CRYPT_SUCCESS);
+
     uint8_t sig3[50000] = {0};
     uint32_t sigLen3 = sizeof(sig3);
     ASSERT_EQ(CRYPT_EAL_PkeySign(pkey, CRYPT_MD_SHA256, msg, sizeof(msg), sig3, &sigLen3), CRYPT_SUCCESS);
+    ASSERT_EQ(sigLen3, sigLen2);
     ASSERT_TRUE(memcmp(sig2, sig3, sigLen2) == 0);
 
 EXIT:

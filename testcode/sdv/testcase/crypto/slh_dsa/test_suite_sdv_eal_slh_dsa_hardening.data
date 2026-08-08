@@ -1,0 +1,28 @@
+SLH_DSA: pure profiles retain their identifiers and parameters
+SDV_CRYPTO_SLH_DSA_PURE_PROFILE_TC001:0
+SLH_DSA: pure profiles retain their identifiers and parameters
+SDV_CRYPTO_SLH_DSA_PURE_PROFILE_TC001:1
+
+SLH_DSA: empty messages are supported by the pure interface
+SDV_CRYPTO_SLH_DSA_EMPTY_MESSAGE_TC001:
+
+SLH_DSA: imported key state and root consistency checks
+SDV_CRYPTO_SLH_DSA_KEY_STATE_TC001:
+
+SLH_DSA: cleaning public material preserves private seeds
+SDV_CRYPTO_SLH_DSA_CLEAN_PUB_KEY_TC001:
+
+SLH_DSA: key import validates all parameters before changing existing state
+SDV_CRYPTO_SLH_DSA_KEY_IMPORT_ATOMICITY_TC001:
+
+SLH_DSA: preparation failures preserve output and internal failures clear it
+SDV_CRYPTO_SLH_DSA_FAILURE_CLEANUP_TC001:
+
+SLH_DSA: corrupted embedded public root is rejected by private-key check
+SDV_CRYPTO_SLH_DSA_CHECK_PRVKEY_TC002:
+
+SLH_DSA: context replacement preserves the old value on allocation failure
+SDV_CRYPTO_SLH_DSA_CONTEXT_ATOMICITY_TC001:
+
+SLH_DSA: prehash mode controls signing and verification consistently
+SDV_CRYPTO_SLH_DSA_MODE_CONSISTENCY_TC001:

@@ -122,8 +122,6 @@ struct SlhDsaCtx {
     uint8_t *context; // user specific context
     uint32_t contextLen; // length of the user specific context
     bool isDeterministic;
-    uint8_t *addrand; // optional random bytes, can be set through CTRL interface, or comes from RNG
-    uint32_t addrandLen; // length of the optional random bytes
     bool isPrehash;
     SlhDsaPrvKey prvKey;
     const CryptHashFuncs *hashFuncs;  // Generic hash function table pointer
@@ -132,7 +130,17 @@ struct SlhDsaCtx {
     void *libCtx;
 };
 
-int32_t SlhDsaSignInternal(CryptSlhDsaCtx *ctx, const uint8_t *msg, uint32_t msgLen, uint8_t *sig, uint32_t *sigLen);
+/**
+ * Sign an already encoded SLH-DSA message.
+ *
+ * @param ctx The SLH-DSA context containing the private key.
+ * @param msg The encoded message and its length.
+ * @param addrand Per-call additional randomness; it must contain n bytes.
+ * @param sig Output signature buffer.
+ * @param sigLen Input capacity of sig and output signature length. The caller must provide sufficient capacity.
+ */
+int32_t SlhDsaSignInternal(const CryptSlhDsaCtx *ctx, const uint8_t *msg, uint32_t msgLen, const uint8_t *addrand,
+    uint8_t *sig, uint32_t *sigLen);
 
 int32_t SlhDsaVerifyInternal(const CryptSlhDsaCtx *ctx, const uint8_t *msg, uint32_t msgLen, const uint8_t *sig, uint32_t sigLen);
 

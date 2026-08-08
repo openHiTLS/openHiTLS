@@ -297,3 +297,6 @@ SDV_CRYPTO_XMSSMT_SIGN_VERIFY_TC001:1
 
 XMSS: set XDR alg type repeated test
 SDV_CRYPTO_XMSS_SET_XDR_ALG_REPEATED_TC001:
+
+XMSS/HBS: generic multi-message hash interface vectors
+SDV_CRYPTO_HBS_HASH_IF_TC001:

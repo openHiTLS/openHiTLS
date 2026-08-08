@@ -132,6 +132,31 @@ static int32_t TestSignCb(int32_t mdId, CRYPT_EAL_PkeyCtx *prvKey, HITLS_X509_As
     return ret;
 }
 
+typedef struct {
+    uint8_t message;
+    uint8_t *signature;
+    uint32_t signatureLen;
+    int32_t signAlgId;
+} X509PqcSignResult;
+
+static int32_t TestPqcSignCb(int32_t mdId, CRYPT_EAL_PkeyCtx *prvKey, HITLS_X509_Asn1AlgId *signAlgId, void *obj)
+{
+    X509PqcSignResult *result = (X509PqcSignResult *)obj;
+    result->signatureLen = CRYPT_EAL_PkeyGetSignLen(prvKey);
+    result->signature = BSL_SAL_Malloc(result->signatureLen);
+    if (result->signature == NULL) {
+        return BSL_MALLOC_FAIL;
+    }
+    result->signAlgId = signAlgId->algId;
+    int32_t ret = CRYPT_EAL_PkeySign(prvKey, mdId, &result->message, sizeof(result->message), result->signature,
+        &result->signatureLen);
+    if (ret != CRYPT_SUCCESS) {
+        BSL_SAL_FREE(result->signature);
+        result->signatureLen = 0;
+    }
+    return ret;
+}
+
 static void X509DnStringThread(void *arg)
 {
     X509DnThreadArg *threadArg = (X509DnThreadArg *)arg;
@@ -1583,6 +1608,96 @@ EXIT:
 }
 /* END_CASE */
 
+/**
+ * @test   SDV_X509_SIGN_PQC_STATE_ISOLATION_TC001
+ * @title  X.509 PQC signing uses an isolated profile-bound, empty-context key.
+ * @brief  Pollute the caller key with a non-empty context and mutable prehash mode, plus Mu-message mode for
+ *         ML-DSA, then verify that HITLS_X509_Sign preserves the profile while clearing per-operation state.
+ * @expect The X.509 signature verifies only with a normalized duplicate.
+ */
+/* BEGIN_CASE */
+void SDV_X509_SIGN_PQC_STATE_ISOLATION_TC001(int algId, int paraId, int mdId, int isProvider)
+{
+#if !defined(HITLS_CRYPTO_MLDSA) && !defined(HITLS_CRYPTO_SLH_DSA)
+    (void)algId;
+    (void)paraId;
+    (void)mdId;
+    (void)isProvider;
+    SKIP_TEST();
+#else
+#if !defined(HITLS_CRYPTO_MLDSA)
+    if (algId == CRYPT_PKEY_ML_DSA) {
+        SKIP_TEST();
+    }
+#endif
+#if !defined(HITLS_CRYPTO_SLH_DSA)
+    if (algId == CRYPT_PKEY_SLH_DSA) {
+        SKIP_TEST();
+    }
+#endif
+#ifndef HITLS_CRYPTO_PROVIDER
+    if (isProvider != 0) {
+        SKIP_TEST();
+    }
+#endif
+    CRYPT_EAL_PkeyCtx *prvKey = NULL;
+    CRYPT_EAL_PkeyCtx *pureKey = NULL;
+    uint8_t context[] = {0x01, 0x02, 0x03};
+    int32_t enabled = 1;
+    int32_t disabled = 0;
+    X509PqcSignResult result = {.message = 0x5a};
+    TestMemInit();
+    TestRandInit();
+    prvKey = TestPkeyNewCtx(NULL, algId, CRYPT_EAL_PKEY_SIGN_OPERATE, "provider=default", isProvider);
+    ASSERT_NE(prvKey, NULL);
+    ASSERT_EQ(CRYPT_EAL_PkeySetParaById(prvKey, paraId), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyGen(prvKey), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(prvKey, CRYPT_CTRL_SET_CTX_INFO, context, sizeof(context)), CRYPT_SUCCESS);
+    int32_t fixedMdId = BSL_CID_UNKNOWN;
+    ASSERT_EQ(OBJ_GetHashIdFromSignId((BslCid)paraId, &fixedMdId), BSL_SUCCESS);
+    if (fixedMdId == BSL_CID_UNKNOWN) {
+        ASSERT_EQ(CRYPT_EAL_PkeyCtrl(prvKey, CRYPT_CTRL_SET_PREHASH_MODE, &enabled, sizeof(enabled)), CRYPT_SUCCESS);
+    }
+#ifdef HITLS_CRYPTO_MLDSA
+    if (algId == CRYPT_PKEY_ML_DSA) {
+        ASSERT_EQ(CRYPT_EAL_PkeyCtrl(prvKey, CRYPT_CTRL_SET_MLDSA_MUMSG_FLAG, &enabled, sizeof(enabled)),
+            CRYPT_SUCCESS);
+    }
+#endif
+    ASSERT_EQ(HITLS_X509_Sign(mdId, prvKey, NULL, &result, TestPqcSignCb), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(result.signAlgId, paraId);
+    pureKey = CRYPT_EAL_PkeyDupCtx(prvKey);
+    ASSERT_NE(pureKey, NULL);
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(pureKey, CRYPT_CTRL_SET_CTX_INFO, NULL, 0), CRYPT_SUCCESS);
+    if (fixedMdId == BSL_CID_UNKNOWN) {
+        ASSERT_EQ(CRYPT_EAL_PkeyCtrl(pureKey, CRYPT_CTRL_SET_PREHASH_MODE, &disabled, sizeof(disabled)), CRYPT_SUCCESS);
+    }
+#ifdef HITLS_CRYPTO_MLDSA
+    if (algId == CRYPT_PKEY_ML_DSA) {
+        ASSERT_EQ(CRYPT_EAL_PkeyCtrl(pureKey, CRYPT_CTRL_SET_MLDSA_MUMSG_FLAG, &disabled, sizeof(disabled)),
+            CRYPT_SUCCESS);
+    }
+#endif
+    ASSERT_EQ(CRYPT_EAL_PkeyVerify(pureKey, mdId, &result.message, sizeof(result.message), result.signature,
+        result.signatureLen), CRYPT_SUCCESS);
+    HITLS_X509_Asn1AlgId signAlg = {.algId = result.signAlgId};
+    BSL_ASN1_BitString signature = {
+        .buff = result.signature, .len = result.signatureLen, .unusedBits = 0
+    };
+    ASSERT_EQ(HITLS_X509_CheckSignature(prvKey, &result.message, sizeof(result.message), &signAlg, &signature),
+        HITLS_PKI_SUCCESS);
+    ASSERT_NE(CRYPT_EAL_PkeyVerify(prvKey, mdId, &result.message, sizeof(result.message), result.signature,
+        result.signatureLen), CRYPT_SUCCESS);
+    TestErrClear();
+EXIT:
+    BSL_SAL_FREE(result.signature);
+    CRYPT_EAL_PkeyFreeCtx(pureKey);
+    CRYPT_EAL_PkeyFreeCtx(prvKey);
+    TestRandDeInit();
+#endif
+}
+/* END_CASE */
+
 /* BEGIN_CASE */
 void SDV_X509_SIGN_Func_TC001(char *keyPath, int keyFormat, int keyType, int mdId, int pad, int hashId, int mgfId,
     int saltLen, int ret)
@@ -2144,10 +2259,13 @@ void SDV_HITLS_MLKEM_PrivateKey_SeedFormat_TC001(int format, int type, char *pat
 
     // Set the private key format to seed-only before encoding
     uint32_t dkFormat = CRYPT_ALGO_MLKEM_DK_FORMAT_SEED_ONLY;
-    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(key, CRYPT_CTRL_SET_MLKEM_DK_FORMAT, &dkFormat, sizeof(uint32_t)), CRYPT_SUCCESS);
+    BSL_Param encodeParam[] = {
+        {CRYPT_PARAM_ENCODE_OUTPUT_FORMATS, BSL_PARAM_TYPE_UINT32_PTR, &dkFormat, sizeof(dkFormat), 0},
+        BSL_PARAM_END
+    };
 
     // Encode back to buffer
-    ASSERT_EQ(CRYPT_EAL_EncodeBuffKey(key, NULL, format, type, &encodeAsn1), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_EncodeBuffKeyEx(key, encodeParam, format, type, &encodeAsn1), CRYPT_SUCCESS);
 
     // Compare with original file
     ASSERT_EQ(ReadFile(path, expectBuf, encodeAsn1.dataLen, &expectBufLen), 0);
@@ -2226,10 +2344,13 @@ void SDV_HITLS_MLKEM_PrivateKey_ExpandedFormat_TC001(int format, int type, char 
 
     // Set the private key format to expanded-only before encoding
     uint32_t dkFormat = CRYPT_ALGO_MLKEM_DK_FORMAT_DK_ONLY;
-    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(key, CRYPT_CTRL_SET_MLKEM_DK_FORMAT, &dkFormat, sizeof(uint32_t)), CRYPT_SUCCESS);
+    BSL_Param encodeParam[] = {
+        {CRYPT_PARAM_ENCODE_OUTPUT_FORMATS, BSL_PARAM_TYPE_UINT32_PTR, &dkFormat, sizeof(dkFormat), 0},
+        BSL_PARAM_END
+    };
 
     // Encode back to buffer
-    ASSERT_EQ(CRYPT_EAL_EncodeBuffKey(key, NULL, format, type, &encodeAsn1), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_EncodeBuffKeyEx(key, encodeParam, format, type, &encodeAsn1), CRYPT_SUCCESS);
 
     // Compare with original file
     ASSERT_EQ(ReadFile(path, expectBuf, encodeAsn1.dataLen, &expectBufLen), 0);
@@ -2277,10 +2398,13 @@ void SDV_HITLS_MLKEM_PrivateKey_BothFormat_TC001(int format, int type, char *pat
 
     // Set the private key format to both before encoding
     uint32_t dkFormat = CRYPT_ALGO_MLKEM_DK_FORMAT_BOTH;
-    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(key, CRYPT_CTRL_SET_MLKEM_DK_FORMAT, &dkFormat, sizeof(uint32_t)), CRYPT_SUCCESS);
+    BSL_Param encodeParam[] = {
+        {CRYPT_PARAM_ENCODE_OUTPUT_FORMATS, BSL_PARAM_TYPE_UINT32_PTR, &dkFormat, sizeof(dkFormat), 0},
+        BSL_PARAM_END
+    };
 
     // Encode back to buffer
-    ASSERT_EQ(CRYPT_EAL_EncodeBuffKey(key, NULL, format, type, &encodeAsn1), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_EncodeBuffKeyEx(key, encodeParam, format, type, &encodeAsn1), CRYPT_SUCCESS);
 
     // Compare with original file
     ASSERT_EQ(ReadFile(path, expectBuf, encodeAsn1.dataLen, &expectBufLen), 0);
@@ -2486,14 +2610,16 @@ void SDV_HITLS_MLKEM_PrivateKey_GenerateEncode_TC001(int mlkemType, int format, 
     // Generate key pair
     ASSERT_EQ(CRYPT_EAL_PkeyGen(pkey), CRYPT_SUCCESS);
 
-    // Set private key output format
-    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_SET_MLKEM_DK_FORMAT, &dkFormat, sizeof(uint32_t)), CRYPT_SUCCESS);
+    BSL_Param encodeParam[] = {
+        {CRYPT_PARAM_ENCODE_OUTPUT_FORMATS, BSL_PARAM_TYPE_UINT32_PTR, &dkFormat, sizeof(dkFormat), 0},
+        BSL_PARAM_END
+    };
 
     // Encode to buffer
-    ASSERT_EQ(CRYPT_EAL_EncodeBuffKey(pkey, NULL, format, type, &encodeAsn1), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_EncodeBuffKeyEx(pkey, encodeParam, format, type, &encodeAsn1), CRYPT_SUCCESS);
 
     // Encode to file
-    ASSERT_EQ(CRYPT_EAL_EncodeFileKey(pkey, NULL, format, type, path), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_EncodeFileKeyEx(pkey, encodeParam, format, type, path), CRYPT_SUCCESS);
     ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
@@ -2514,7 +2640,13 @@ void SDV_HITLS_MLDSA_PQCCert_TC001(int format, int type, char *path)
     uint8_t expectBuf[MAX_BUFF_SIZE * 2] = {};
     uint32_t expectBufLen = sizeof(expectBuf);
     ASSERT_EQ(CRYPT_EAL_DecodeFileKey(format, type, path, NULL, 0, &key), CRYPT_SUCCESS);
-    ASSERT_EQ(CRYPT_EAL_EncodeBuffKey(key, NULL, format, type, &encodeAsn1), CRYPT_SUCCESS);
+    uint32_t outputFormat = strstr(path, "_both.") != NULL ? CRYPT_ALGO_MLDSA_PRIV_FORMAT_BOTH :
+        CRYPT_ALGO_MLDSA_PRIV_FORMAT_PRIV_ONLY;
+    BSL_Param encodeParam[] = {
+        {CRYPT_PARAM_ENCODE_OUTPUT_FORMATS, BSL_PARAM_TYPE_UINT32_PTR, &outputFormat, sizeof(outputFormat), 0},
+        BSL_PARAM_END
+    };
+    ASSERT_EQ(CRYPT_EAL_EncodeBuffKeyEx(key, encodeParam, format, type, &encodeAsn1), CRYPT_SUCCESS);
 
     ASSERT_EQ(ReadFile(path, expectBuf, encodeAsn1.dataLen, &expectBufLen), 0);
     ASSERT_COMPARE("key ", encodeAsn1.data, encodeAsn1.dataLen, expectBuf, expectBufLen);
@@ -2528,7 +2660,7 @@ EXIT:
 /* END_CASE */
 
 /* BEGIN_CASE */
-void SDV_HITLS_MLDSA_PQCCert_TC005(int format, int type, char *path, int key_format, int err)
+void SDV_HITLS_MLDSA_PQCCert_TC005(int format, int type, char *path, int use_default, int key_format, int err)
 {
     TestMemInit();
     BSL_GLOBAL_Init();
@@ -2536,13 +2668,187 @@ void SDV_HITLS_MLDSA_PQCCert_TC005(int format, int type, char *path, int key_for
     BSL_Buffer encodeAsn1 = {0};
     ASSERT_EQ(CRYPT_EAL_DecodeFileKey(format, type, path, NULL, 0, &key), CRYPT_SUCCESS);
 
-    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(key, CRYPT_CTRL_SET_MLDSA_PRVKEY_FORMAT, &key_format, sizeof(uint32_t)), CRYPT_SUCCESS);
-    ASSERT_TRUE(TestIsErrStackEmpty());
-
-    ASSERT_EQ(CRYPT_EAL_EncodeBuffKey(key, NULL, format, type, &encodeAsn1), err);
+    BSL_Param encodeParam[] = {
+        {CRYPT_PARAM_ENCODE_OUTPUT_FORMATS, BSL_PARAM_TYPE_UINT32_PTR, &key_format, sizeof(key_format), 0},
+        BSL_PARAM_END
+    };
+    const BSL_Param *encodeParamPtr = use_default != 0 ? NULL : encodeParam;
+    ASSERT_EQ(CRYPT_EAL_EncodeBuffKeyEx(key, encodeParamPtr, format, type, &encodeAsn1), err);
 EXIT:
     BSL_SAL_FREE(encodeAsn1.data);
     CRYPT_EAL_PkeyFreeCtx(key);
+    BSL_GLOBAL_DeInit();
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_HITLS_PQC_EncodeOutputFormatType_TC001(int algId, int paraId, int expected)
+{
+#if defined(HITLS_CRYPTO_MLDSA) || defined(HITLS_CRYPTO_MLKEM)
+#ifndef HITLS_CRYPTO_MLDSA
+    if (algId == CRYPT_PKEY_ML_DSA) {
+        SKIP_TEST();
+    }
+#endif
+#ifndef HITLS_CRYPTO_MLKEM
+    if (algId == CRYPT_PKEY_ML_KEM) {
+        SKIP_TEST();
+    }
+#endif
+    TestMemInit();
+    ASSERT_EQ(TestRandInit(), CRYPT_SUCCESS);
+    CRYPT_EAL_PkeyCtx *key = CRYPT_EAL_PkeyNewCtx(algId);
+    BSL_Buffer encoded = {0};
+    uint32_t format = 0;
+    ASSERT_NE(key, NULL);
+    ASSERT_EQ(CRYPT_EAL_PkeySetParaById(key, paraId), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyGen(key), CRYPT_SUCCESS);
+    BSL_Param encodeParam[] = {
+        {CRYPT_PARAM_ENCODE_OUTPUT_FORMATS, BSL_PARAM_TYPE_OCTETS, &format, sizeof(format), 0},
+        BSL_PARAM_END
+    };
+    ASSERT_EQ(CRYPT_EAL_EncodeBuffKeyEx(key, encodeParam, BSL_FORMAT_ASN1,
+        CRYPT_PRIKEY_PKCS8_UNENCRYPT, &encoded), expected);
+EXIT:
+    BSL_SAL_FREE(encoded.data);
+    CRYPT_EAL_PkeyFreeCtx(key);
+    TestRandDeInit();
+#else
+    (void)algId;
+    (void)paraId;
+    (void)expected;
+    SKIP_TEST();
+#endif
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_HITLS_MLDSA_OUTPUT_FORMATS_TC001(char *priv_only_path)
+{
+    TestMemInit();
+    BSL_GLOBAL_Init();
+    ASSERT_EQ(TestRandInit(), CRYPT_SUCCESS);
+    CRYPT_EAL_PkeyCtx *key = NULL;
+    CRYPT_EAL_PkeyCtx *privOnlyKey = NULL;
+    BSL_Buffer defaultEncode = {0};
+    BSL_Buffer seedOnlyEncode = {0};
+    BSL_Buffer privOnlyEncode = {0};
+    BSL_Buffer bothEncode = {0};
+    BSL_Buffer failedEncode = {0};
+#ifdef HITLS_CRYPTO_PROVIDER
+    BSL_Buffer providerPrivOnlyEncode = {0};
+    BSL_Buffer providerBothEncode = {0};
+#endif
+    uint32_t formats[] = {CRYPT_ALGO_MLDSA_PRIV_FORMAT_SEED_ONLY, CRYPT_ALGO_MLDSA_PRIV_FORMAT_PRIV_ONLY};
+    uint32_t seedOnly = CRYPT_ALGO_MLDSA_PRIV_FORMAT_SEED_ONLY;
+    uint32_t privOnly = CRYPT_ALGO_MLDSA_PRIV_FORMAT_PRIV_ONLY;
+    uint32_t both = CRYPT_ALGO_MLDSA_PRIV_FORMAT_BOTH;
+    uint32_t invalid = 3;
+    BSL_Param multipleParam[] = {
+        {CRYPT_PARAM_ENCODE_OUTPUT_FORMATS, BSL_PARAM_TYPE_UINT32_PTR, formats, sizeof(formats), 0}, BSL_PARAM_END
+    };
+    BSL_Param emptyParam[] = {
+        {CRYPT_PARAM_ENCODE_OUTPUT_FORMATS, BSL_PARAM_TYPE_UINT32_PTR, &seedOnly, 0, 0}, BSL_PARAM_END
+    };
+    BSL_Param seedParam[] = {
+        {CRYPT_PARAM_ENCODE_OUTPUT_FORMATS, BSL_PARAM_TYPE_UINT32_PTR, &seedOnly, sizeof(seedOnly), 0}, BSL_PARAM_END
+    };
+    BSL_Param privParam[] = {
+        {CRYPT_PARAM_ENCODE_OUTPUT_FORMATS, BSL_PARAM_TYPE_UINT32_PTR, &privOnly, sizeof(privOnly), 0}, BSL_PARAM_END
+    };
+    BSL_Param bothParam[] = {
+        {CRYPT_PARAM_ENCODE_OUTPUT_FORMATS, BSL_PARAM_TYPE_UINT32_PTR, &both, sizeof(both), 0}, BSL_PARAM_END
+    };
+    BSL_Param invalidParam[] = {
+        {CRYPT_PARAM_ENCODE_OUTPUT_FORMATS, BSL_PARAM_TYPE_UINT32_PTR, &invalid, sizeof(invalid), 0}, BSL_PARAM_END
+    };
+    BSL_Param invalidTypeParam[] = {
+        {CRYPT_PARAM_ENCODE_OUTPUT_FORMATS, BSL_PARAM_TYPE_OCTETS, &both, sizeof(both), 0}, BSL_PARAM_END
+    };
+
+    key = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_ML_DSA);
+    ASSERT_NE(key, NULL);
+    ASSERT_EQ(CRYPT_EAL_PkeySetParaById(key, CRYPT_MLDSA_TYPE_MLDSA_44), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyGen(key), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_EncodeBuffKey(key, NULL, BSL_FORMAT_ASN1, CRYPT_PRIKEY_PKCS8_UNENCRYPT, &defaultEncode),
+        CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_EncodeBuffKeyEx(key, seedParam, BSL_FORMAT_ASN1, CRYPT_PRIKEY_PKCS8_UNENCRYPT,
+        &seedOnlyEncode), CRYPT_SUCCESS);
+    ASSERT_COMPARE("default seed-only", defaultEncode.data, defaultEncode.dataLen, seedOnlyEncode.data,
+        seedOnlyEncode.dataLen);
+    ASSERT_EQ(CRYPT_EAL_EncodeBuffKeyEx(key, privParam, BSL_FORMAT_ASN1, CRYPT_PRIKEY_PKCS8_UNENCRYPT,
+        &privOnlyEncode), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_EncodeBuffKeyEx(key, bothParam, BSL_FORMAT_ASN1, CRYPT_PRIKEY_PKCS8_UNENCRYPT,
+        &bothEncode), CRYPT_SUCCESS);
+#ifdef HITLS_CRYPTO_PROVIDER
+    ASSERT_EQ(CRYPT_EAL_ProviderEncodeBuffKeyEx(NULL, NULL, key, privParam, "ASN1",
+        "PRIKEY_PKCS8_UNENCRYPT", &providerPrivOnlyEncode), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_ProviderEncodeBuffKeyEx(NULL, NULL, key, bothParam, "ASN1",
+        "PRIKEY_PKCS8_UNENCRYPT", &providerBothEncode), CRYPT_SUCCESS);
+    ASSERT_COMPARE("provider priv-only", providerPrivOnlyEncode.data, providerPrivOnlyEncode.dataLen,
+        privOnlyEncode.data, privOnlyEncode.dataLen);
+    ASSERT_COMPARE("provider both", providerBothEncode.data, providerBothEncode.dataLen, bothEncode.data,
+        bothEncode.dataLen);
+#endif
+    ASSERT_NE(seedOnlyEncode.dataLen, privOnlyEncode.dataLen);
+    ASSERT_NE(seedOnlyEncode.dataLen, bothEncode.dataLen);
+
+    ASSERT_EQ(CRYPT_EAL_EncodeBuffKeyEx(key, multipleParam, BSL_FORMAT_ASN1, CRYPT_PRIKEY_PKCS8_UNENCRYPT,
+        &failedEncode), CRYPT_MLDSA_PRVKEY_FORMAT_ERROR);
+    TestErrClear();
+    ASSERT_EQ(CRYPT_EAL_EncodeBuffKeyEx(key, emptyParam, BSL_FORMAT_ASN1, CRYPT_PRIKEY_PKCS8_UNENCRYPT,
+        &failedEncode), CRYPT_MLDSA_PRVKEY_FORMAT_ERROR);
+    TestErrClear();
+    ASSERT_EQ(CRYPT_EAL_EncodeBuffKeyEx(key, invalidParam, BSL_FORMAT_ASN1, CRYPT_PRIKEY_PKCS8_UNENCRYPT,
+        &failedEncode), CRYPT_MLDSA_PRVKEY_FORMAT_ERROR);
+    TestErrClear();
+    ASSERT_EQ(CRYPT_EAL_EncodeBuffKeyEx(key, invalidTypeParam, BSL_FORMAT_ASN1, CRYPT_PRIKEY_PKCS8_UNENCRYPT,
+        &failedEncode), CRYPT_MLDSA_PRVKEY_FORMAT_ERROR);
+    TestErrClear();
+#ifdef HITLS_CRYPTO_PROVIDER
+    ASSERT_EQ(CRYPT_EAL_ProviderEncodeBuffKeyEx(NULL, NULL, key, multipleParam, "ASN1",
+        "PRIKEY_PKCS8_UNENCRYPT", &failedEncode), CRYPT_MLDSA_PRVKEY_FORMAT_ERROR);
+    TestErrClear();
+    ASSERT_EQ(CRYPT_EAL_ProviderEncodeBuffKeyEx(NULL, NULL, key, emptyParam, "ASN1",
+        "PRIKEY_PKCS8_UNENCRYPT", &failedEncode), CRYPT_MLDSA_PRVKEY_FORMAT_ERROR);
+    TestErrClear();
+    ASSERT_EQ(CRYPT_EAL_ProviderEncodeBuffKeyEx(NULL, NULL, key, invalidParam, "ASN1",
+        "PRIKEY_PKCS8_UNENCRYPT", &failedEncode), CRYPT_MLDSA_PRVKEY_FORMAT_ERROR);
+    TestErrClear();
+    ASSERT_EQ(CRYPT_EAL_ProviderEncodeBuffKeyEx(NULL, NULL, key, invalidTypeParam, "ASN1",
+        "PRIKEY_PKCS8_UNENCRYPT", &failedEncode), CRYPT_MLDSA_PRVKEY_FORMAT_ERROR);
+    TestErrClear();
+#endif
+
+    ASSERT_EQ(CRYPT_EAL_DecodeFileKey(BSL_FORMAT_PEM, CRYPT_PRIKEY_PKCS8_UNENCRYPT, priv_only_path, NULL, 0,
+        &privOnlyKey), CRYPT_SUCCESS);
+    BSL_SAL_FREE(failedEncode.data);
+    failedEncode.data = NULL;
+    failedEncode.dataLen = 0;
+    ASSERT_EQ(CRYPT_EAL_EncodeBuffKey(privOnlyKey, NULL, BSL_FORMAT_ASN1, CRYPT_PRIKEY_PKCS8_UNENCRYPT,
+        &failedEncode), CRYPT_SUCCESS);
+    BSL_SAL_FREE(failedEncode.data);
+    failedEncode.data = NULL;
+    failedEncode.dataLen = 0;
+    ASSERT_EQ(CRYPT_EAL_EncodeBuffKeyEx(privOnlyKey, seedParam, BSL_FORMAT_ASN1, CRYPT_PRIKEY_PKCS8_UNENCRYPT,
+        &failedEncode), CRYPT_MLDSA_PRVKEY_FORMAT_ERROR);
+    TestErrClear();
+    ASSERT_EQ(CRYPT_EAL_EncodeBuffKeyEx(privOnlyKey, bothParam, BSL_FORMAT_ASN1, CRYPT_PRIKEY_PKCS8_UNENCRYPT,
+        &failedEncode), CRYPT_MLDSA_PRVKEY_FORMAT_ERROR);
+    TestErrClear();
+EXIT:
+    BSL_SAL_FREE(defaultEncode.data);
+    BSL_SAL_FREE(seedOnlyEncode.data);
+    BSL_SAL_FREE(privOnlyEncode.data);
+    BSL_SAL_FREE(bothEncode.data);
+    BSL_SAL_FREE(failedEncode.data);
+#ifdef HITLS_CRYPTO_PROVIDER
+    BSL_SAL_FREE(providerPrivOnlyEncode.data);
+    BSL_SAL_FREE(providerBothEncode.data);
+#endif
+    CRYPT_EAL_PkeyFreeCtx(key);
+    CRYPT_EAL_PkeyFreeCtx(privOnlyKey);
+    TestRandDeInit();
     BSL_GLOBAL_DeInit();
 }
 /* END_CASE */

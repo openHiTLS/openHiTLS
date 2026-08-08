@@ -61,6 +61,9 @@ int32_t ForsSign(const uint8_t *md, uint32_t mdLen, SlhDsaAdrs *adrs, const Cryp
     }
     *sigLen = offset;
 ERR:
+    if (ret != CRYPT_SUCCESS) {
+        BSL_SAL_CleanseData(sig, (a + 1) * n * k);
+    }
     BSL_SAL_Free(indices);
     return ret;
 }
@@ -71,6 +74,8 @@ int32_t ForsPkFromSig(const uint8_t *sig, uint32_t sigLen, const uint8_t *md, ui
     int32_t ret;
     uint32_t *indices = NULL;
     uint8_t *root = NULL;
+    uint8_t node0[SLH_DSA_MAX_N] = {0};
+    uint8_t node1[SLH_DSA_MAX_N] = {0};
     uint32_t n = ctx->para.n;
     uint32_t a = ctx->para.a;
     uint32_t k = ctx->para.k;
@@ -91,9 +96,6 @@ int32_t ForsPkFromSig(const uint8_t *sig, uint32_t sigLen, const uint8_t *md, ui
     }
 
     BaseB(md, mdLen, a, indices, k);
-
-    uint8_t node0[SLH_DSA_MAX_N] = {0};
-    uint8_t node1[SLH_DSA_MAX_N] = {0};
 
     for (uint32_t i = 0; i < k; i++) {
         ctx->adrsOps.setTreeHeight(adrs, 0);
@@ -136,6 +138,8 @@ int32_t ForsPkFromSig(const uint8_t *sig, uint32_t sigLen, const uint8_t *md, ui
     }
 
 ERR:
+    BSL_SAL_CleanseData(node0, sizeof(node0));
+    BSL_SAL_CleanseData(node1, sizeof(node1));
     BSL_SAL_Free(indices);
     BSL_SAL_Free(root);
     return ret;
@@ -160,6 +164,7 @@ int32_t ForsNode(uint32_t idx, uint32_t height, SlhDsaAdrs *adrs, const CryptSlh
         uint8_t sk[SLH_DSA_MAX_N] = {0};
         ret = ForsGenPrvKey(adrs, idx, ctx, sk);
         if (ret != 0) {
+            BSL_SAL_CleanseData(sk, sizeof(sk));
             return ret;
         }
         ctx->adrsOps.setTreeHeight(adrs, height);
@@ -169,17 +174,21 @@ int32_t ForsNode(uint32_t idx, uint32_t height, SlhDsaAdrs *adrs, const CryptSlh
         return ret;
     }
 
-    uint8_t dnode[SLH_DSA_MAX_N * 2];
+    uint8_t dnode[SLH_DSA_MAX_N * 2] = {0};
     ret = ForsNode(idx * 2, height - 1, adrs, ctx, dnode);
     if (ret != 0) {
+        BSL_SAL_CleanseData(dnode, sizeof(dnode));
         return ret;
     }
     ret = ForsNode(idx * 2 + 1, height - 1, adrs, ctx, dnode + n);
     if (ret != 0) {
+        BSL_SAL_CleanseData(dnode, sizeof(dnode));
         return ret;
     }
     ctx->adrsOps.setTreeHeight(adrs, height);
     ctx->adrsOps.setTreeIndex(adrs, idx);
-    return ctx->hashFuncs->h(ctx, adrs, dnode, 2 * n, node);
+    ret = ctx->hashFuncs->h(ctx, adrs, dnode, 2 * n, node);
+    BSL_SAL_CleanseData(dnode, sizeof(dnode));
+    return ret;
 }
 #endif // HITLS_CRYPTO_SLH_DSA

@@ -163,21 +163,10 @@ void SDV_CRYPTO_HYBRID_ENCAPS_DECAPS_FUNC_TC001(int algid, int type, int isProvi
     CRYPT_RandRegistEx(TestSimpleRandEx);
     CRYPT_EAL_PkeyCtx *ctxA = NULL;
     CRYPT_EAL_PkeyCtx *ctxB = NULL;
-#ifdef HITLS_CRYPTO_PROVIDER
-    if (isProvider == 1) {
-        ctxA = CRYPT_EAL_ProviderPkeyNewCtx(NULL, algid, CRYPT_EAL_PKEY_KEM_OPERATE, "provider=default");
-        ASSERT_TRUE(ctxA != NULL);
-        ctxB = CRYPT_EAL_ProviderPkeyNewCtx(NULL, algid, CRYPT_EAL_PKEY_KEM_OPERATE, "provider=default");
-        ASSERT_TRUE(ctxB != NULL);
-    } else
-#endif    
-    {
-        (void) isProvider;
-        ctxA = CRYPT_EAL_PkeyNewCtx(algid);
-        ASSERT_TRUE(ctxA != NULL);
-        ctxB = CRYPT_EAL_PkeyNewCtx(algid);
-        ASSERT_TRUE(ctxB != NULL);
-    }
+    ctxA = TestPkeyNewCtx(NULL, algid, CRYPT_EAL_PKEY_KEM_OPERATE, "provider=default", isProvider);
+    ASSERT_TRUE(ctxA != NULL);
+    ctxB = TestPkeyNewCtx(NULL, algid, CRYPT_EAL_PKEY_KEM_OPERATE, "provider=default", isProvider);
+    ASSERT_TRUE(ctxB != NULL);
 
     uint32_t val = (uint32_t)type;
     ASSERT_EQ(CRYPT_EAL_PkeySetParaById(ctxA, val), CRYPT_SUCCESS);
@@ -234,21 +223,10 @@ void SDV_CRYPTO_HYBRID_ENCAPS_DECAPS_API_TC002(int algid, int type, int isProvid
     TestRandInit();
     CRYPT_EAL_PkeyCtx *ctxA = NULL;
     CRYPT_EAL_PkeyCtx *ctxB = NULL;
-#ifdef HITLS_CRYPTO_PROVIDER
-    if (isProvider == 1) {
-        ctxA = CRYPT_EAL_ProviderPkeyNewCtx(NULL, algid, CRYPT_EAL_PKEY_KEM_OPERATE, "provider=default");
-        ASSERT_TRUE(ctxA != NULL);
-        ctxB = CRYPT_EAL_ProviderPkeyNewCtx(NULL, algid, CRYPT_EAL_PKEY_KEM_OPERATE, "provider=default");
-        ASSERT_TRUE(ctxB != NULL);
-    } else
-#endif    
-    {
-        (void) isProvider;
-        ctxA = CRYPT_EAL_PkeyNewCtx(algid);
-        ASSERT_TRUE(ctxA != NULL);
-        ctxB = CRYPT_EAL_PkeyNewCtx(algid);
-        ASSERT_TRUE(ctxB != NULL);
-    }
+    ctxA = TestPkeyNewCtx(NULL, algid, CRYPT_EAL_PKEY_KEM_OPERATE, "provider=default", isProvider);
+    ASSERT_TRUE(ctxA != NULL);
+    ctxB = TestPkeyNewCtx(NULL, algid, CRYPT_EAL_PKEY_KEM_OPERATE, "provider=default", isProvider);
+    ASSERT_TRUE(ctxB != NULL);
 
     uint32_t val = (uint32_t)type;
     ASSERT_EQ(CRYPT_EAL_PkeySetParaById(ctxA, val), CRYPT_SUCCESS);
@@ -319,21 +297,10 @@ void SDV_CRYPTO_HYBRID_ENCAPS_DECAPS_FUNC_TC002(int algid, int type, int isProvi
     CRYPT_RandRegistEx(TestSimpleRandEx);
     CRYPT_EAL_PkeyCtx *ctxA = NULL;
     CRYPT_EAL_PkeyCtx *ctxB = NULL;
-#ifdef HITLS_CRYPTO_PROVIDER
-    if (isProvider == 1) {
-        ctxA = CRYPT_EAL_ProviderPkeyNewCtx(NULL, algid, CRYPT_EAL_PKEY_KEM_OPERATE, "provider=default");
-        ASSERT_TRUE(ctxA != NULL);
-        ctxB = CRYPT_EAL_ProviderPkeyNewCtx(NULL, algid, CRYPT_EAL_PKEY_KEM_OPERATE, "provider=default");
-        ASSERT_TRUE(ctxB != NULL);
-    } else
-#endif
-    {
-        (void)isProvider;
-        ctxA = CRYPT_EAL_PkeyNewCtx(algid);
-        ASSERT_TRUE(ctxA != NULL);
-        ctxB = CRYPT_EAL_PkeyNewCtx(algid);
-        ASSERT_TRUE(ctxB != NULL);
-    }
+    ctxA = TestPkeyNewCtx(NULL, algid, CRYPT_EAL_PKEY_KEM_OPERATE, "provider=default", isProvider);
+    ASSERT_TRUE(ctxA != NULL);
+    ctxB = TestPkeyNewCtx(NULL, algid, CRYPT_EAL_PKEY_KEM_OPERATE, "provider=default", isProvider);
+    ASSERT_TRUE(ctxB != NULL);
     uint32_t val = (uint32_t)type;
     ASSERT_EQ(CRYPT_EAL_PkeySetParaById(ctxA, val), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_PkeySetParaById(ctxB, val), CRYPT_SUCCESS);

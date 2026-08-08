@@ -588,6 +588,15 @@ int32_t CRYPT_ENCODE_DsaKeyParamAsn1Buff(BSL_ASN1_Buffer *asn1, uint32_t asn1Num
 }
 #endif
 
+static bool ParamOmitAlg(BslCid cid)
+{
+    return cid == BSL_CID_ED25519 || cid == BSL_CID_X25519 ||
+        (cid >= BSL_CID_ML_DSA_44 && cid <= BSL_CID_ML_DSA_87) ||
+        (cid >= BSL_CID_ML_KEM_512 && cid <= BSL_CID_ML_KEM_1024) ||
+        cid == BSL_CID_XMSS || cid == BSL_CID_XMSSMT ||
+        (cid >= BSL_CID_SLH_DSA_SHA2_128S && cid <= BSL_CID_SLH_DSA_SHAKE_256F);
+}
+
 static int32_t DecSubKeyInfoCb(int32_t type, uint32_t idx, void *data, void *expVal)
 {
     (void)idx;
@@ -601,8 +610,7 @@ static int32_t DecSubKeyInfoCb(int32_t type, uint32_t idx, void *data, void *exp
                 *(uint8_t *)expVal = BSL_ASN1_TAG_OBJECT_ID;
             } else if (cid == BSL_CID_DSA || cid == BSL_CID_DH || cid == BSL_CID_RSASSAPSS) {
                 *(uint8_t *)expVal = BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE;
-            } else if (cid == BSL_CID_ED25519 || cid == BSL_CID_X25519) {
-                /* RFC8410: Ed25519/X25519 has no algorithm parameters */
+            } else if (ParamOmitAlg(cid)) {
                 *(uint8_t *)expVal = BSL_ASN1_TAG_EMPTY; // is empty
             } else {
                 *(uint8_t *)expVal = BSL_ASN1_TAG_NULL; // is null

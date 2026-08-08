@@ -105,7 +105,7 @@
         "elgamal": ["test_suite_sdv_eal_elgamal"],
         "hybridkem": ["test_suite_sdv_hybridkem"],
         "mlkem": ["test_suite_sdv_mlkem"],
-        "slh_dsa": ["test_suite_sdv_eal_slh_dsa"],
+        "slh_dsa": ["test_suite_sdv_eal_slh_dsa", "test_suite_sdv_eal_slh_dsa_hardening"],
         "xmss": ["test_suite_sdv_eal_xmss"],
 
         "encode": ["test_suite_sdv_encode"],
@@ -285,6 +285,7 @@
         "test_suite_sdv_eal_paillier": [],
         "test_suite_sdv_mlkem": [],
         "test_suite_sdv_eal_slh_dsa": [],
+        "test_suite_sdv_eal_slh_dsa_hardening": [],
         "test_suite_sdv_eal_xmss": [],
         "test_suite_sdv_eal_elgamal": [],
         "test_suite_sdv_x509": [],

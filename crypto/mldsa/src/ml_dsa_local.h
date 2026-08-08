@@ -90,7 +90,6 @@ struct CryptMlDsaCtx {
     bool deterministicSignFlag;
     BSL_SAL_RefCount references;
     void *libCtx;
-    CRYPT_ALGO_MLDSA_PRIV_KEY_FORMAT_TYPE prvKeyFormat;
     bool hasSeed;
     uint8_t seed[MLDSA_SEED_BYTES_LEN];
 };
