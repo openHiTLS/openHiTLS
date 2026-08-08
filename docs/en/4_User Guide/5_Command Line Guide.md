@@ -910,67 +910,6 @@ hitls s_client -host 127.0.0.1 -port 4433 -tls1_3 \
 
 ### 3.5.2 s_server
 
-<<<<<<< HEAD
-**Function**: SSL/TLS server tool
-
-**Usage**:
-
-```
-hitls s_server [-accept <host:port> | -port <port>] [-tls | -tlcp | -dtlcp] [-cipher <cipher suite list>] [-CAfile <CA certificate file>] [-chainCAfile <CA chain file>] [-tlcp_sign_cert <file> -tlcp_sign_key <file>] [-tlcp_enc_cert <file> -tlcp_enc_key <file>] [-certform PEM|DER] [-keyform PEM|DER] [-accept_once] [-quiet] [-state] [-provider <name>] [-provider-path <path>] [-provider-attr <attr>]
-```
-
-**Supported Options**:
-
-- `-help`: Display help information
-- `-accept <host:port>`: Choose one of `-accept` or `-port`. Listen address and port in `host:port` format, `host` can be omitted, defaults to `0.0.0.0:4433`
-- `-port <port>`: Choose one of `-accept` or `-port`. Listen port, defaults to `4433`
-- `-tls`: Use TLS protocol, this is the default
-- `-tlcp`: Use TLCP protocol, defaults to TLS
-- `-dtlcp`: Use DTLCP protocol, defaults to TLS
-- `-cipher <suite list>`: Specify cipher suites, multiple suites separated by `:`. If not specified, protocol default suites will be used
-- `-CAfile <file>`: Single CA certificate file for verifying client certificates. If not specified, system default CA will be used
-- `-chainCAfile <file>`: Bundle file containing multiple CA certificates for intermediate CA chain
-- `-tlcp_enc_cert <file>`: TLCP/DTLCP encryption certificate
-- `-tlcp_enc_key <file>`: TLCP/DTLCP encryption private key
-- `-tlcp_sign_cert <file>`: TLCP/DTLCP signing certificate
-- `-tlcp_sign_key <file>`: TLCP/DTLCP signing private key
-- `-certform PEM|DER`: Certificate file format, choose from `PEM` or `DER`, defaults to PEM
-- `-keyform PEM|DER`: Private key file format, choose from `PEM` or `DER`, defaults to PEM
-- `-quiet`: Quiet mode, suppress all informational output
-- `-state`: Display handshake state
-- `-accept_once`: Accept only one connection and then exit
-- `-provider`, `-provider-path`, `-provider-attr`: See [Provider Options](#21-provider-options)
-
-**Examples**:
-
-```bash
-# Default startup
-hitls s_server
-
-# Specify port and accept only one connection
-hitls s_server -port 8443 -accept_once
-
-# Bind to specific IP and port
-hitls s_server -accept 192.168.1.1:8443
-
-# TLCP mode
-hitls s_server -tlcp -tlcp_sign_cert sm2_sign_cert.pem -tlcp_sign_key  sm2_sign_key.pem -tlcp_enc_cert  sm2_enc_cert.pem -tlcp_enc_key sm2_enc_key.pem -chainCAfile sm2_ca_bundle.pem
-
-# Quiet mode
-hitls s_server -port 8443 -accept_once -quiet
-
-# Display handshake state information
-hitls s_server -port 8443 -state
-
-# Specify cipher suites
-hitls s_server -tlcp -tlcp_sign_cert sm2_sign.pem -tlcp_sign_key sm2_sign.key -tlcp_enc_cert  sm2_enc.pem -tlcp_enc_key  sm2_enc.key -cipher "ECC_SM4_CBC_SM3:ECC_SM4_GCM_SM3"
-
-# Use DER format certificates
-hitls s_server -tlcp -tlcp_sign_cert sm2_sign.der -tlcp_sign_key sm2_sign_key.der -tlcp_enc_cert sm2_enc.der -tlcp_enc_key sm2_enc_key.der -certform DER -keyform DER
-
-# DTLCP mode
-hitls s_server -dtlcp -port 5433 -tlcp_sign_cert sm2_sign.pem -tlcp_sign_key sm2_sign.key -tlcp_enc_cert sm2_enc.pem -tlcp_enc_key sm2_enc.key
-=======
 **Function**: Start a TLS, TLCP, or DTLCP server with an explicit protocol version, cipher list, server certificate, and client-certificate verification policy.
 
 **Usage**:
@@ -989,7 +928,6 @@ hitls s_server [-accept <host:port>] [-port <port>] [-tls|-tls1_2|-tls1_3|-tlcp|
 hitls s_server -accept 127.0.0.1:4433 -tls1_3 \
     -cert server.pem -key server.key.pem \
     -CAfile ca.pem -chainCAfile intermediate.pem
->>>>>>> 0ad9d860 (fix(apps): improve TLS CLI certificate and cipher handling)
 ```
 
 ## 3.6 Other Utility Tools

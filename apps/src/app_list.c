@@ -388,7 +388,7 @@ static void PrintKdfAlg(void)
         if (!CRYPT_EAL_KdfIsValidAlgId(g_allKdfAlgInfo[i].cid)) {
             continue;
         }
-        AppPrint(g_stdout, "%-20s\t%3zu\n", g_allKdfAlgInfo[i].name, g_allKdfAlgInfo[i].cid);
+        AppPrint(g_stdout, "%-20s\t%3ld\n", g_allKdfAlgInfo[i].name, (long)g_allKdfAlgInfo[i].cid);
     }
 }
 
