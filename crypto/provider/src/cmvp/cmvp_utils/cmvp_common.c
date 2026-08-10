@@ -85,7 +85,7 @@ char *CMVP_ReadFile(const char *path, const char *mode, uint32_t *bufLen)
 
     fp = fopen(path, mode);
     if (fp == NULL) {
-        return false;
+        return NULL;
     }
     GOTO_ERR_IF_TRUE(fseek(fp, 0, SEEK_END) != 0, CRYPT_CMVP_COMMON_ERR);
     len = ftell(fp);

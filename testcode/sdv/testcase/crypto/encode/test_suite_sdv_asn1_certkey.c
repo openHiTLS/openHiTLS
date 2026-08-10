@@ -365,6 +365,24 @@ EXIT:
 }
 /* END_CASE */
 
+/* BEGIN_CASE */
+void SDV_BSL_ASN1_PARSE_SUBPUBKEY_UNUSED_BITS_TC001(int encodeType, Hex *subKeyInfo)
+{
+    (void)encodeType;
+    CRYPT_DECODE_SubPubkeyInfo subPubkeyInfo = {0};
+    CRYPT_EAL_PkeyCtx *pctx = NULL;
+
+    ASSERT_EQ(CRYPT_DECODE_SubPubkey(subKeyInfo->x, subKeyInfo->len, NULL, &subPubkeyInfo, false),
+        CRYPT_DECODE_NO_SUPPORT_FORMAT);
+    ASSERT_EQ(CRYPT_EAL_ParseAsn1SubPubkey(NULL, NULL, subKeyInfo->x, subKeyInfo->len, (void **)&pctx, false),
+        CRYPT_DECODE_NO_SUPPORT_FORMAT);
+
+EXIT:
+    CRYPT_EAL_PkeyFreeCtx(pctx);
+    TestErrClear();
+}
+/* END_CASE */
+
 static int32_t DecodeKeyFile(int isProvider, const char *path, int format, const char *formatStr, int fileType,
     const char *fileTypeStr, uint8_t *pwd, uint32_t pwdLen, CRYPT_EAL_PkeyCtx **pkeyCtx)
 {

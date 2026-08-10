@@ -680,6 +680,10 @@ int32_t CRYPT_DECODE_SubPubkey(uint8_t *buff, uint32_t buffLen, BSL_ASN1_DecTemp
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
+    if (bitPubkey.unusedBits != 0) {
+        BSL_ERR_PUSH_ERROR(CRYPT_DECODE_NO_SUPPORT_FORMAT);
+        return CRYPT_DECODE_NO_SUPPORT_FORMAT;
+    }
     BslCid cid = BSL_OBJ_GetCidFromOidBuff(oid->buff, oid->len);
     if (cid == BSL_CID_UNKNOWN) {
         BSL_ERR_PUSH_ERROR(CRYPT_DECODE_UNKNOWN_OID);

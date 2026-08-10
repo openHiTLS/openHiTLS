@@ -98,10 +98,6 @@ int32_t CRYPT_MLDSA_ParseSubPubkeyAsn1Buff(void *libCtx, uint8_t *buff, uint32_t
         BSL_ERR_PUSH_ERROR(CRYPT_DECODE_ERR_KEY_TYPE_NOT_MATCH);
         return CRYPT_DECODE_ERR_KEY_TYPE_NOT_MATCH;
     }
-    if (subPubkeyInfo.pubKey.unusedBits != 0) {
-        BSL_ERR_PUSH_ERROR(CRYPT_DECODE_NO_SUPPORT_FORMAT);
-        return CRYPT_DECODE_NO_SUPPORT_FORMAT;
-    }
     CRYPT_ML_DSA_Ctx *pctx = CRYPT_ML_DSA_NewCtxEx(libCtx);
     if (pctx == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
@@ -232,10 +228,6 @@ int32_t CRYPT_SLHDSA_ParseSubPubkeyAsn1Buff(void *libCtx, uint8_t *buff, uint32_
     if (!IsSlhDsaKeyType(subPubkeyInfo.keyType)) {
         BSL_ERR_PUSH_ERROR(CRYPT_DECODE_ERR_KEY_TYPE_NOT_MATCH);
         return CRYPT_DECODE_ERR_KEY_TYPE_NOT_MATCH;
-    }
-    if (subPubkeyInfo.pubKey.unusedBits != 0) {
-        BSL_ERR_PUSH_ERROR(CRYPT_DECODE_NO_SUPPORT_FORMAT);
-        return CRYPT_DECODE_NO_SUPPORT_FORMAT;
     }
     CryptSlhDsaCtx *pctx = CRYPT_SLH_DSA_NewCtxEx(libCtx);
     if (pctx == NULL) {
@@ -440,10 +432,6 @@ static int32_t XmssDecodeSubPubkeyInfo(uint8_t *buff, uint32_t buffLen, bool isC
     if (subPubkeyInfo->keyType != expectedType) {
         BSL_ERR_PUSH_ERROR(CRYPT_DECODE_ERR_KEY_TYPE_NOT_MATCH);
         return CRYPT_DECODE_ERR_KEY_TYPE_NOT_MATCH;
-    }
-    if (subPubkeyInfo->pubKey.unusedBits != 0) {
-        BSL_ERR_PUSH_ERROR(CRYPT_DECODE_NO_SUPPORT_FORMAT);
-        return CRYPT_DECODE_NO_SUPPORT_FORMAT;
     }
     if (subPubkeyInfo->pubKey.len <= 4 || (subPubkeyInfo->pubKey.len - 4) % 2 != 0) {
         BSL_ERR_PUSH_ERROR(CRYPT_XMSS_ERR_INVALID_KEY);

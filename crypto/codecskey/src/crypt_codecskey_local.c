@@ -821,10 +821,6 @@ static int32_t ParseCurve25519PubkeyAsn1Buff(CRYPT_EAL_LibCtx *libctx, const cha
 static int32_t ParseMldsaPubkeyAsn1Buff(CRYPT_EAL_LibCtx *libctx, const char *attrName,
     const BSL_ASN1_BitString *pubKey, BslCid cid, CRYPT_EAL_PkeyCtx **ealPubKey)
 {
-    if (pubKey->unusedBits != 0) {
-        BSL_ERR_PUSH_ERROR(CRYPT_DECODE_NO_SUPPORT_FORMAT);
-        return CRYPT_DECODE_NO_SUPPORT_FORMAT;
-    }
     CRYPT_EAL_PkeyCtx *pctx = CRYPT_EAL_ProviderPkeyNewCtx(libctx, CRYPT_PKEY_ML_DSA, CRYPT_EAL_PKEY_UNKNOWN_OPERATE,
         attrName);
     if (pctx == NULL) {
@@ -1049,10 +1045,6 @@ static int32_t ParseXmssPubKeyAsn1Buff(CRYPT_EAL_LibCtx *libCtx, const char *att
 static int32_t ParseSlhDsaPubkeyAsn1Buff(CRYPT_EAL_LibCtx *libctx, const char *attrName,
     const BSL_ASN1_BitString *pubKey, BslCid cid, CRYPT_EAL_PkeyCtx **ealPubKey)
 {
-    if (pubKey->unusedBits != 0) {
-        BSL_ERR_PUSH_ERROR(CRYPT_DECODE_NO_SUPPORT_FORMAT);
-        return CRYPT_DECODE_NO_SUPPORT_FORMAT;
-    }
     CRYPT_EAL_PkeyCtx *pctx = CRYPT_EAL_ProviderPkeyNewCtx(libctx, CRYPT_PKEY_SLH_DSA,
         CRYPT_EAL_PKEY_UNKNOWN_OPERATE, attrName);
     if (pctx == NULL) {
@@ -3044,12 +3036,13 @@ int32_t CRYPT_EAL_ParseAsn1PKCS7EncryptedData(CRYPT_EAL_LibCtx *libCtx, const ch
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
-    if (version == 0 && asn1[HITLS_P7_ENCRYPTDATA_UNPROTECTEDATTRS_IDX].buff != NULL) {
+    if (version != 0 && version != 2) {
         BSL_ERR_PUSH_ERROR(CRYPT_DECODE_PKCS7_INVALIDE_ENCRYPTDATA_TYPE);
         return CRYPT_DECODE_PKCS7_INVALIDE_ENCRYPTDATA_TYPE;
-    }
-    // In RFC5652, if the encapsulated content type is other than id-data, then the value of version MUST be 2.
-    if (version == 2 && asn1[HITLS_P7_ENCRYPTDATA_UNPROTECTEDATTRS_IDX].buff == NULL) {
+    } else if (version == 0 && asn1[HITLS_P7_ENCRYPTDATA_UNPROTECTEDATTRS_IDX].buff != NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_DECODE_PKCS7_INVALIDE_ENCRYPTDATA_TYPE);
+        return CRYPT_DECODE_PKCS7_INVALIDE_ENCRYPTDATA_TYPE;
+    } else if (version == 2 && asn1[HITLS_P7_ENCRYPTDATA_UNPROTECTEDATTRS_IDX].buff == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_DECODE_PKCS7_INVALIDE_ENCRYPTDATA_TYPE);
         return CRYPT_DECODE_PKCS7_INVALIDE_ENCRYPTDATA_TYPE;
     }

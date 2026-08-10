@@ -194,7 +194,8 @@ int32_t HITLS_X509_ParseAttrsListAsnItem(uint32_t layer, BSL_ASN1_Buffer *asn, v
         if (ret != BSL_SUCCESS) {
             BSL_ERR_PUSH_ERROR(ret);
         }
-        // In parseCb, should add node to list, so no matter parse success or not, node should be freed.
+        // parseCb copies/extracts node's data into its own struct.
+        // The temporary node wrapper is freed in the ERR cleanup below.
         goto ERR;
     }
 

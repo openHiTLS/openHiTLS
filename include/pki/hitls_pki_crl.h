@@ -86,6 +86,8 @@ int32_t HITLS_X509_CrlParseBuff(int32_t format, const BSL_Buffer *encode, HITLS_
  * @par Description: Parse multiple CRLs from a buffer.
  *  If parsing is successful, memory for the CRL list is allocated internally,
  *  and the user needs to free it after use.
+ * @note When parsing CRL bundles from untrusted sources, the number of CRLs
+ *  is not limited. Users should validate the input data source to prevent memory exhaustion.
  * @attention
  *  Support character : UTF8String(only English), PrintableString, TeletexString, T61String,
  *  IA5String.
