@@ -342,7 +342,7 @@ int32_t MODES_CHACHA20POLY1305_Ctrl(MODES_CHACHAPOLY_Ctx *modeCtx, int32_t cmd, 
         case CRYPT_CTRL_SET_AAD:
             return SetAad(&modeCtx->chachaCtx, val, len);
         case CRYPT_CTRL_SET_TAG:
-            return MODES_SetVfyTag(modeCtx->vfyTag, &modeCtx->vfyTagLen, POLY1305_MAX_TAGSIZE, val, len);
+            return MODES_SetVfyTag(modeCtx->vfyTag, &modeCtx->vfyTagLen, POLY1305_MAX_TAGSIZE, val, len, modeCtx->enc);
         case CRYPT_CTRL_GET_BLOCKSIZE:
             if (val == NULL || len != sizeof(uint32_t)) {
                 return CRYPT_INVALID_ARG;

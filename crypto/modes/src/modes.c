@@ -120,13 +120,13 @@ void MODES_ClearVfyTag(uint8_t *vfyTag, uint32_t *vfyTagLen, uint32_t maxTagLen)
 }
 
 int32_t MODES_SetVfyTag(uint8_t *vfyTag, uint32_t *vfyTagLen, uint32_t maxTagLen,
-    const uint8_t *tag, uint32_t inputTagLen)
+    const uint8_t *tag, uint32_t inputTagLen, bool enc)
 {
     if (vfyTag == NULL || vfyTagLen == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
-    if ((tag == NULL && inputTagLen > 0) || inputTagLen == 0) {
+    if (enc || (tag == NULL && inputTagLen > 0) || inputTagLen == 0) {
         BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
         return CRYPT_INVALID_ARG;
     }

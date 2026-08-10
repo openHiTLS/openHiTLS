@@ -423,7 +423,7 @@ int32_t MODES_GCM_Ctrl(MODES_GCM_Ctx *modeCtx, int32_t cmd, void *val, uint32_t 
         case CRYPT_CTRL_SET_AAD:
             return SetAad(&modeCtx->gcmCtx, val, len);
         case CRYPT_CTRL_SET_TAG:
-            return MODES_SetVfyTag(modeCtx->vfyTag, &modeCtx->vfyTagLen, GCM_MAX_TAGSIZE, val, len);
+            return MODES_SetVfyTag(modeCtx->vfyTag, &modeCtx->vfyTagLen, GCM_MAX_TAGSIZE, val, len, modeCtx->enc);
         case CRYPT_CTRL_GET_TAG:
             return GetTag(&modeCtx->gcmCtx, val, len);
         case CRYPT_CTRL_GET_BLOCKSIZE:
@@ -508,14 +508,12 @@ int32_t MODES_GCM_DeInitCtx(MODES_GCM_Ctx *modeCtx)
     if (modeCtx == NULL) {
         return CRYPT_NULL_INPUT;
     }
-    int32_t algId = modeCtx->algId;
     void *ciphCtx = modeCtx->gcmCtx.ciphCtx;
     const EAL_SymMethod *ciphMeth = modeCtx->gcmCtx.ciphMeth;
     modeCtx->gcmCtx.ciphMeth->cipherDeInitCtx(ciphCtx);
     BSL_SAL_CleanseData((void *)(&(modeCtx->gcmCtx)), sizeof(MODES_CipherGCMCtx));
     modeCtx->gcmCtx.ciphCtx = ciphCtx;
     modeCtx->gcmCtx.ciphMeth = ciphMeth;
-    modeCtx->algId = algId;
     MODES_ClearVfyTag(modeCtx->vfyTag, &modeCtx->vfyTagLen, GCM_MAX_TAGSIZE);
     return CRYPT_SUCCESS;
 }
