@@ -512,7 +512,7 @@ int32_t MODES_CCM_Ctrl(MODES_CCM_Ctx *modeCtx, int32_t opt, void *val, uint32_t 
         case CRYPT_CTRL_SET_AAD:
             return SetAad(&modeCtx->ccmCtx, val, len);
         case CRYPT_CTRL_SET_TAG:
-            return MODES_SetVfyTag(modeCtx->vfyTag, &modeCtx->vfyTagLen, CCM_MAX_TAGSIZE, val, len);
+            return MODES_SetVfyTag(modeCtx->vfyTag, &modeCtx->vfyTagLen, CCM_MAX_TAGSIZE, val, len, modeCtx->enc);
         case CRYPT_CTRL_GET_TAG:
             return GetTag(&modeCtx->ccmCtx, val, len);
         default:

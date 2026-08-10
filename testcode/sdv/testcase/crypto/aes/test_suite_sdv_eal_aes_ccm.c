@@ -561,6 +561,11 @@ void SDV_CRYPTO_AES_CCM_FINAL_API_TC001(int id, int keyLen)
     ASSERT_TRUE(CRYPT_EAL_CipherCtrl(ctx, CRYPT_CTRL_SET_MSGLEN, &count, sizeof(count)) == CRYPT_SUCCESS);
     ASSERT_TRUE(CRYPT_EAL_CipherCtrl(ctx, CRYPT_CTRL_SET_AAD, aad, sizeof(aad)) == CRYPT_SUCCESS);
     ASSERT_TRUE(CRYPT_EAL_CipherUpdate(ctx, pt, sizeof(pt), ct, &outLen) == CRYPT_SUCCESS);
+    // set tag can not use in enc
+    ASSERT_TRUE(CRYPT_EAL_CipherCtrl(ctx, CRYPT_CTRL_SET_TAG, tag, tagLen) == CRYPT_INVALID_ARG);
+    // test get tag is success
+    ASSERT_TRUE(CRYPT_EAL_CipherCtrl(ctx, CRYPT_CTRL_GET_TAG, tag, tagLen) == CRYPT_SUCCESS);
+    // test can get tag multiple times.
     ASSERT_TRUE(CRYPT_EAL_CipherCtrl(ctx, CRYPT_CTRL_GET_TAG, tag, tagLen) == CRYPT_SUCCESS);
 
     outLen = sizeof(out);
@@ -570,6 +575,7 @@ void SDV_CRYPTO_AES_CCM_FINAL_API_TC001(int id, int keyLen)
     ASSERT_TRUE(CRYPT_EAL_CipherCtrl(ctx, CRYPT_CTRL_SET_AAD, aad, sizeof(aad)) == CRYPT_SUCCESS);
     ASSERT_TRUE(CRYPT_EAL_CipherCtrl(ctx, CRYPT_CTRL_SET_TAG, tag, tagLen) == CRYPT_SUCCESS);
     ASSERT_TRUE(CRYPT_EAL_CipherUpdate(ctx, ct, sizeof(ct), out, &outLen) == CRYPT_SUCCESS);
+    // test final is success after set right tag
     ASSERT_TRUE(CRYPT_EAL_CipherFinal(ctx, out, &outLen) == CRYPT_SUCCESS);
     ASSERT_TRUE(memcmp(out, pt, sizeof(pt)) == 0);
     ASSERT_TRUE(outLen == 0);
@@ -580,7 +586,8 @@ void SDV_CRYPTO_AES_CCM_FINAL_API_TC001(int id, int keyLen)
     ASSERT_TRUE(CRYPT_EAL_CipherCtrl(ctx, CRYPT_CTRL_SET_MSGLEN, &count, sizeof(count)) == CRYPT_SUCCESS);
     ASSERT_TRUE(CRYPT_EAL_CipherCtrl(ctx, CRYPT_CTRL_SET_AAD, aad, sizeof(aad)) == CRYPT_SUCCESS);
     ASSERT_TRUE(CRYPT_EAL_CipherUpdate(ctx, ct, sizeof(ct), out, &outLen) == CRYPT_SUCCESS);
-    ASSERT_EQ(CRYPT_EAL_CipherFinal(ctx, out, &outLen), CRYPT_MODES_TAG_ERROR);
+    // test final is success after set wrong tag
+    ASSERT_EQ(CRYPT_EAL_CipherFinal(ctx, out, &outLen), CRYPT_MODES_TAGLEN_ERROR);
 
 EXIT:
     CRYPT_EAL_CipherFreeCtx(ctx);
