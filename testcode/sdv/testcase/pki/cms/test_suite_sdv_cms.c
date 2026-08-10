@@ -41,6 +41,7 @@ void SDV_CMS_PARSE_ENCRYPTEDDATA_TC001(Hex *buff)
     SKIP_TEST();
 #else
     BSL_Buffer output = {0};
+    BSL_Buffer invalidVersion = {0};
     char *pwd = "123456";
     uint32_t pwdlen = strlen(pwd);
 
@@ -61,6 +62,19 @@ void SDV_CMS_PARSE_ENCRYPTEDDATA_TC001(Hex *buff)
     ret =  CRYPT_EAL_ParseAsn1PKCS7EncryptedData(NULL, NULL, (BSL_Buffer *)buff, (const uint8_t *)pwd, 8192, &output);
     ASSERT_EQ(ret, CRYPT_INVALID_ARG);
 
+    invalidVersion.data = BSL_SAL_Dump(buff->x, buff->len);
+    invalidVersion.dataLen = buff->len;
+    ASSERT_TRUE(invalidVersion.data != NULL);
+    ASSERT_TRUE(invalidVersion.dataLen > 6); // The test vector starts with SEQUENCE + INTEGER version.
+    ASSERT_EQ(invalidVersion.data[4], 0x02);
+    ASSERT_EQ(invalidVersion.data[5], 0x01);
+    ASSERT_EQ(invalidVersion.data[6], 0x00);
+    invalidVersion.data[6] = 0x01;
+    ret = CRYPT_EAL_ParseAsn1PKCS7EncryptedData(NULL, NULL, &invalidVersion, (const uint8_t *)pwd, pwdlen, &output);
+    ASSERT_EQ(ret, CRYPT_DECODE_PKCS7_INVALIDE_ENCRYPTDATA_TYPE);
+    BSL_SAL_Free(invalidVersion.data);
+    invalidVersion.data = NULL;
+
     char *pwd1 = "123456@123";
     ret =  CRYPT_EAL_ParseAsn1PKCS7EncryptedData(NULL, NULL, (BSL_Buffer *)buff, (const uint8_t *)pwd1, strlen(pwd1),
         &output);
@@ -76,6 +90,7 @@ void SDV_CMS_PARSE_ENCRYPTEDDATA_TC001(Hex *buff)
         &output);
     ASSERT_EQ(ret, CRYPT_EAL_CIPHER_DATA_ERROR);
 EXIT:
+    BSL_SAL_Free(invalidVersion.data);
     return;
 #endif
 }

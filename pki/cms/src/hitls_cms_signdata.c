@@ -1416,7 +1416,7 @@ static int32_t EnsureRequiredAttrsExist(CMS_SignerInfo *signerInfo, uint8_t *dig
 
 // Generate signature
 static int32_t GenerateSignature(const CRYPT_EAL_PkeyCtx *prvKey, int32_t mdId,
-    uint8_t *signData, uint32_t signDataLen, BSL_Buffer *sigValue)
+    uint8_t *signData, uint32_t signDataLen, bool signDataIsDigest, BSL_Buffer *sigValue)
 {
     uint32_t sigLen = CRYPT_EAL_PkeyGetSignLen(prvKey);
     if (sigLen == 0) {
@@ -1430,7 +1430,18 @@ static int32_t GenerateSignature(const CRYPT_EAL_PkeyCtx *prvKey, int32_t mdId,
         return BSL_MALLOC_FAIL;
     }
 
-    int32_t ret = CRYPT_EAL_PkeySign(prvKey, mdId, signData, signDataLen, sig, &sigLen);
+    int32_t ret;
+    if (signDataIsDigest) {
+        uint32_t mdSize = CRYPT_EAL_MdGetDigestSize((CRYPT_MD_AlgId)mdId);
+        if (mdSize == 0 || signDataLen != mdSize) {
+            BSL_ERR_PUSH_ERROR(HITLS_CMS_ERR_INVALID_DATA);
+            BSL_SAL_FREE(sig);
+            return HITLS_CMS_ERR_INVALID_DATA;
+        }
+        ret = CRYPT_EAL_PkeySignData(prvKey, signData, signDataLen, sig, &sigLen);
+    } else {
+        ret = CRYPT_EAL_PkeySign(prvKey, mdId, signData, signDataLen, sig, &sigLen);
+    }
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         BSL_SAL_FREE(sig);
@@ -1443,10 +1454,11 @@ static int32_t GenerateSignature(const CRYPT_EAL_PkeyCtx *prvKey, int32_t mdId,
 }
 
 static int32_t SignAndFinalize(CMS_SignedData *signedData, CMS_SignerInfo *signerInfo,
-    const CRYPT_EAL_PkeyCtx *prvKey, uint8_t *signData, uint32_t signDataLen)
+    const CRYPT_EAL_PkeyCtx *prvKey, uint8_t *signData, uint32_t signDataLen, bool signDataIsDigest)
 {
     // Generate signature
-    int32_t ret = GenerateSignature(prvKey, signerInfo->digestAlg.id, signData, signDataLen, &signerInfo->sigValue);
+    int32_t ret = GenerateSignature(prvKey, signerInfo->digestAlg.id, signData, signDataLen, signDataIsDigest,
+        &signerInfo->sigValue);
     if (ret != HITLS_PKI_SUCCESS) {
         return ret;
     }
@@ -1555,7 +1567,7 @@ static int32_t AddOptionalParams(CMS_SignedData *signedData, const BSL_Param *op
 }
 
 static int32_t SignedDataCore(CMS_SignedData *signedData, CMS_SignerInfo *signerInfo, CRYPT_EAL_PkeyCtx *prvKey,
-    uint8_t *digest, uint32_t digestLen, const BSL_Param *optionalParam)
+    uint8_t *digest, uint32_t digestLen, bool signDataIsDigest, const BSL_Param *optionalParam)
 {
     SetContentType(signedData);
     int32_t ret;
@@ -1570,10 +1582,11 @@ static int32_t SignedDataCore(CMS_SignedData *signedData, CMS_SignerInfo *signer
             HITLS_CMS_SignerInfoFree(signerInfo);
             return ret;
         }
+        signDataIsDigest = false;
         needFree = true;
     }
     // Encode signed attributes, generate signature
-    ret = SignAndFinalize(signedData, signerInfo, prvKey, signData, signDataLen);
+    ret = SignAndFinalize(signedData, signerInfo, prvKey, signData, signDataLen, signDataIsDigest);
     if (needFree) {
         BSL_SAL_Free(signData);
     }
@@ -1704,7 +1717,8 @@ int32_t HITLS_CMS_DataSign(HITLS_CMS *cms, CRYPT_EAL_PkeyCtx *prvKey, HITLS_X509
         HITLS_CMS_SignerInfoFree(signerInfo);
         return ret;
     }
-    return SignedDataCore(signedData, signerInfo, prvKey, signedBuf.data, signedBuf.dataLen, optionalParam);
+    return SignedDataCore(signedData, signerInfo, prvKey, signedBuf.data, signedBuf.dataLen,
+        false, optionalParam);
 }
 
 // Initialize MD context for all digest algorithms
@@ -2472,7 +2486,7 @@ int32_t SignedData_SignFinal(HITLS_CMS *cms, const BSL_Param *optionalParam)
     if (ret != HITLS_PKI_SUCCESS) {
         return ret;
     }
-    ret = SignedDataCore(signedData, signerInfo, prvKey, digest, digestLen, optionalParam);
+    ret = SignedDataCore(signedData, signerInfo, prvKey, digest, digestLen, true, optionalParam);
     if (ret != HITLS_PKI_SUCCESS) {
         return ret;
     }

@@ -247,6 +247,12 @@ SDV_CMS_STREAM_SIGN_DETACHED_TC001:"../testdata/cert/asn1/cms/signeddata/ca_cert
 SDV_CMS_STREAM_VERIFY_NO_SIGNED_ATTRS_TC001 Support streaming verify for detached SignedData without signedAttrs
 SDV_CMS_STREAM_VERIFY_NO_SIGNED_ATTRS_TC001:"../testdata/cert/asn1/cms/signeddata/ca_cert.pem":"../testdata/cert/asn1/cms/signeddata/rsa-pkcsv5/cert.pem":"../testdata/cert/asn1/cms/signeddata/rsa-pkcsv5/key.pem":"../testdata/cert/asn1/cms/signeddata/msg.txt"
 
+SDV_CMS_STREAM_SIGN_NO_SIGNED_ATTRS_TC001 Support streaming sign for detached SignedData without signedAttrs
+SDV_CMS_STREAM_SIGN_NO_SIGNED_ATTRS_TC001:"../testdata/cert/asn1/cms/signeddata/ca_cert.pem":"../testdata/cert/asn1/cms/signeddata/rsa-pkcsv5/cert.pem":"../testdata/cert/asn1/cms/signeddata/rsa-pkcsv5/key.pem":"../testdata/cert/asn1/cms/signeddata/msg.txt":1
+
+SDV_CMS_STREAM_SIGN_NO_SIGNED_ATTRS_TC001 Support streaming sign for detached SignedData without signedAttrs
+SDV_CMS_STREAM_SIGN_NO_SIGNED_ATTRS_TC001:"../testdata/cert/asn1/cms/signeddata/ca_cert.pem":"../testdata/cert/asn1/cms/signeddata/rsa-pkcsv5/cert.pem":"../testdata/cert/asn1/cms/signeddata/rsa-pkcsv5/key.pem":"../testdata/cert/asn1/cms/signeddata/msg.txt":0
+
 SDV_CMS_STREAM_NODETACHED_TEST_TC001 Stream sign/verify with non-detached SignedData
 SDV_CMS_STREAM_NODETACHED_TEST_TC001:
 

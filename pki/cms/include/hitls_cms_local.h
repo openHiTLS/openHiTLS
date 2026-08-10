@@ -174,7 +174,7 @@ int32_t HITLS_CMS_AddCert(HITLS_X509_List **list, HITLS_X509_Cert *cert);
 int32_t HITLS_CMS_AddCrl(HITLS_X509_List **list, HITLS_X509_Crl *crl);
 
 /**
- * @brief Initialize streaming operation for SignedData
+ * @brief Initialize streaming operation for SignedData, not support sm2.
  */
 int32_t HITLS_CMS_SignedDataInit(HITLS_CMS *cms, int32_t option, const BSL_Param *param);
 

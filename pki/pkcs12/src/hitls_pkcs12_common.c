@@ -584,7 +584,7 @@ static int32_t SetEntityCert(HITLS_PKCS12 *p12)
         HITLS_PKCS12_Bag *node = (HITLS_PKCS12_Bag *)BSL_LIST_GetData(bagNode);
         BSL_Buffer *certId = FindLocatedId(node->attributes);
         if (certId != NULL && certId->dataLen == keyId->dataLen &&
-            memcmp(certId->data, keyId->data, keyId->dataLen) == 0) {
+            ConstTimeMemcmp(certId->data, keyId->data, keyId->dataLen) != 0) {
             p12->entityCert = node;
             BSL_LIST_DetachNode(bags, &bagNode);
             return HITLS_PKI_SUCCESS;

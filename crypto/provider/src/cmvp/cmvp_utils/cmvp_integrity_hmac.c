@@ -23,6 +23,7 @@
 #include "bsl_err.h"
 #include "securec.h"
 #include "bsl_err_internal.h"
+#include "bsl_bytes.h"
 #include "crypt_utils.h"
 #include "bsl_sal.h"
 #include "cmvp_integrity_hmac.h"
@@ -113,7 +114,7 @@ bool CMVP_IntegrityHmac(void *libCtx, const char *attrName, const char *libPath,
     expectHmac = GetExpectHmac(hmacPath, &expectHmacLen);
     GOTO_ERR_IF_TRUE(expectHmac == NULL, CRYPT_CMVP_ERR_INTEGRITY);
     GOTO_ERR_IF_TRUE(hmacLen != expectHmacLen, CRYPT_CMVP_ERR_INTEGRITY);
-    GOTO_ERR_IF_TRUE(memcmp(expectHmac, hmac, hmacLen) != 0, CRYPT_CMVP_ERR_INTEGRITY);
+    GOTO_ERR_IF_TRUE(ConstTimeMemcmp(expectHmac, hmac, hmacLen) == 0, CRYPT_CMVP_ERR_INTEGRITY);
 
     ret = true;
 ERR:
