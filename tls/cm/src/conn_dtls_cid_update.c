@@ -22,6 +22,7 @@
 #include "tls_binlog_id.h"
 #include "hitls.h"
 #include "hitls_error.h"
+#include "hitls_dtls_cid.h"
 #include "tls.h"
 #include "hs.h"
 #include "hs_common.h"

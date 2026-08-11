@@ -23,6 +23,7 @@
 #include "hitls_error.h"
 #include "hs_ctx.h"
 #include "pack.h"
+#include "pack_msg.h"
 
 /*
  * RFC 9147 Section 9 NewConnectionId wire format:

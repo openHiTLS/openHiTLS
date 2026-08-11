@@ -635,55 +635,100 @@ static int32_t ReadDtlsHsMessage(TLS_Ctx *ctx, HS_MsgInfo *hsMsgInfo)
     return ret;
 }
 
-static int32_t DtlsReadAndParseHandshakeMsg(TLS_Ctx *ctx, HS_Msg *hsMsg)
+static bool DtlsIsRepeatedInitialClientHello(TLS_Ctx *ctx, const HS_MsgInfo *hsMsgInfo)
 {
-    /* Read the message with the expected sequence number from the reassembly queue. If no message exists, read the
-     * message from the record layer */
-    uint32_t dataLen = 0;
-    HS_MsgInfo hsMsgInfo = {0};
-    int32_t ret = HS_GetReassMsg(ctx, &hsMsgInfo, &dataLen);
+    return hsMsgInfo->sequence == 0 && ctx->hsCtx->expectRecvSeq == 1 &&
+        ctx->hsCtx->state == TRY_RECV_CLIENT_HELLO && hsMsgInfo->type == CLIENT_HELLO &&
+        !IsUnexpectedHandshaking(ctx) && ctx->state == CM_STATE_HANDSHAKING &&
+        !BSL_UIO_GetUioChainTransportType(ctx->uio, BSL_UIO_SCTP);
+}
+
+static void Dtls13CleanRetransmitOnNextFlight(TLS_Ctx *ctx, const HS_MsgInfo *hsMsgInfo)
+{
+    if (ctx->negotiatedInfo.version == HITLS_VERSION_DTLS13 &&
+        hsMsgInfo->sequence >= ctx->hsCtx->expectRecvSeq &&
+        !IsUnexpectedHandshaking(ctx)) {
+        REC_RetransmitListClean(ctx->recCtx);
+    }
+}
+
+static int32_t DtlsGetCompleteHandshakeMsg(TLS_Ctx *ctx, HS_MsgInfo *hsMsgInfo, uint32_t *msgLen)
+{
+    /* A zero output length means no complete message is ready for parsing. */
+    *msgLen = 0;
+    uint32_t reassMsgLen = 0;
+    int32_t ret = HS_GetReassMsg(ctx, hsMsgInfo, &reassMsgLen);
+    if (ret != HITLS_SUCCESS) {
+        return ret;
+    }
+    if (reassMsgLen != 0) {
+        *msgLen = reassMsgLen;
+        return HITLS_SUCCESS;
+    }
+
+    ret = ReadDtlsHsMessage(ctx, hsMsgInfo);
     if (ret != HITLS_SUCCESS) {
         return ret;
     }
 
-    uint8_t *buf = ctx->hsCtx->msgBuf;
-    if (dataLen == 0) {
-        ret = ReadDtlsHsMessage(ctx, &hsMsgInfo);
-        if (ret != HITLS_SUCCESS) {
-            return ret;
-        }
-        buf = ctx->hsCtx->msgBuf;
-        dataLen = ctx->hsCtx->msgLen;
-        ctx->hsCtx->msgLen = 0;
-        if (ctx->negotiatedInfo.version == HITLS_VERSION_DTLS13 &&
-            hsMsgInfo.sequence >= ctx->hsCtx->expectRecvSeq &&
-            !IsUnexpectedHandshaking(ctx)) {
-            REC_RetransmitListClean(ctx->recCtx);
-        }
-        if (hsMsgInfo.sequence != ctx->hsCtx->expectRecvSeq) {
-            if (GET_VERSION_FROM_CTX(ctx) == HITLS_VERSION_DTLS13) {
-                return DtlsDisorderMsgProcess(ctx, &hsMsgInfo);
-            }
-            /* when the hello verify request is lost and a clienthello with 0 message sequence is received again,
-            the expect sequence is reset and dealt with same as receiving it for the first time. */
-            if (hsMsgInfo.sequence == 0 && ctx->hsCtx->expectRecvSeq == 1 && ctx->hsCtx->state == TRY_RECV_CLIENT_HELLO &&
-                hsMsgInfo.type == CLIENT_HELLO && !IsUnexpectedHandshaking(ctx) && ctx->state == CM_STATE_HANDSHAKING &&
-                !BSL_UIO_GetUioChainTransportType(ctx->uio, BSL_UIO_SCTP)) {
-                ctx->hsCtx->expectRecvSeq = 0;
-                ctx->hsCtx->nextSendSeq = 0;
-            }
+    uint32_t recordMsgLen = ctx->hsCtx->msgLen;
+    ctx->hsCtx->msgLen = 0;
+    Dtls13CleanRetransmitOnNextFlight(ctx, hsMsgInfo);
 
-            /* SCTP messages are not out of order. Therefore, an alert message must be sent for the out-of-order messages */
-            if (hsMsgInfo.sequence != ctx->hsCtx->expectRecvSeq && !IsUnexpectedHandshaking(ctx)) {
-                return DtlsDisorderMsgProcess(ctx, &hsMsgInfo);
-            }
+    if (hsMsgInfo->sequence != ctx->hsCtx->expectRecvSeq) {
+        if (GET_VERSION_FROM_CTX(ctx) == HITLS_VERSION_DTLS13) {
+            return DtlsDisorderMsgProcess(ctx, hsMsgInfo);
+        }
+        /* When the hello verify request is lost, handle a repeated initial ClientHello as the first one. */
+        if (DtlsIsRepeatedInitialClientHello(ctx, hsMsgInfo)) {
+            ctx->hsCtx->expectRecvSeq = 0;
+            ctx->hsCtx->nextSendSeq = 0;
         }
 
-        /* If the message is fragmented, the message needs to be reassembled. */
-        if (hsMsgInfo.fragmentLength != hsMsgInfo.length) {
-            return HS_ReassAppend(ctx, &hsMsgInfo);
+        /* SCTP messages are not out of order. Therefore, alert on out-of-order messages. */
+        if (hsMsgInfo->sequence != ctx->hsCtx->expectRecvSeq && !IsUnexpectedHandshaking(ctx)) {
+            return DtlsDisorderMsgProcess(ctx, hsMsgInfo);
         }
     }
+
+    if (hsMsgInfo->fragmentLength != hsMsgInfo->length) {
+        return HS_ReassAppend(ctx, hsMsgInfo);
+    }
+    *msgLen = recordMsgLen;
+    return HITLS_SUCCESS;
+}
+
+static int32_t DtlsAppendHandshakeTranscript(TLS_Ctx *ctx, const HS_MsgInfo *hsMsgInfo,
+    const uint8_t *rawMsg, uint32_t msgLen)
+{
+    if (hsMsgInfo->type == HELLO_REQUEST) {
+        return HITLS_SUCCESS;
+    }
+#ifdef HITLS_TLS_FEATURE_DTLS_CID
+    if (hsMsgInfo->type == NEW_CONNECTION_ID || hsMsgInfo->type == REQUEST_CONNECTION_ID) {
+        return HITLS_SUCCESS;
+    }
+#endif
+#ifdef HITLS_TLS_PROTO_DTLS13
+    VERIFY_TranscriptStyle style = (ctx->negotiatedInfo.version == HITLS_VERSION_DTLS13) ?
+        VERIFY_TRANSCRIPT_DTLS13 : VERIFY_TRANSCRIPT_RAW;
+    return VERIFY_AppendDtlsRaw(ctx->hsCtx->verifyCtx, rawMsg, msgLen, style);
+#else
+    return VERIFY_AppendDtlsRaw(ctx->hsCtx->verifyCtx, rawMsg, msgLen, VERIFY_TRANSCRIPT_RAW);
+#endif
+}
+
+static int32_t DtlsReadAndParseHandshakeMsg(TLS_Ctx *ctx, HS_Msg *hsMsg)
+{
+    /* Read the message with the expected sequence number from the reassembly queue. If no message exists, read the
+     * message from the record layer */
+    uint32_t msgLen = 0;
+    HS_MsgInfo hsMsgInfo = {0};
+    int32_t ret = DtlsGetCompleteHandshakeMsg(ctx, &hsMsgInfo, &msgLen);
+    if (ret != HITLS_SUCCESS || msgLen == 0) {
+        return ret;
+    }
+    const uint8_t *rawMsg = ctx->hsCtx->msgBuf;
 
     ret = DtlsCheckAndParseMsg(ctx, &hsMsgInfo, hsMsg);
     if (ret != HITLS_SUCCESS) {
@@ -691,22 +736,10 @@ static int32_t DtlsReadAndParseHandshakeMsg(TLS_Ctx *ctx, HS_Msg *hsMsg)
     }
 
     /* The HelloRequest message is not included. */
-    if (hsMsgInfo.type != HELLO_REQUEST
-#ifdef HITLS_TLS_FEATURE_DTLS_CID
-        && hsMsgInfo.type != NEW_CONNECTION_ID && hsMsgInfo.type != REQUEST_CONNECTION_ID
-#endif
-    ) {
-#ifdef HITLS_TLS_PROTO_DTLS13
-        VERIFY_TranscriptStyle style = (ctx->negotiatedInfo.version == HITLS_VERSION_DTLS13) ?
-            VERIFY_TRANSCRIPT_DTLS13 : VERIFY_TRANSCRIPT_RAW;
-        ret = VERIFY_AppendDtlsRaw(ctx->hsCtx->verifyCtx, buf, dataLen, style);
-#else
-        ret = VERIFY_AppendDtlsRaw(ctx->hsCtx->verifyCtx, buf, dataLen, VERIFY_TRANSCRIPT_RAW);
-#endif
-        if (ret != HITLS_SUCCESS) {
-            HS_CleanMsg(hsMsg);
-            return RETURN_ERROR_NUMBER_PROCESS(ret, BINLOG_ID17036, "VERIFY_Append fail");
-        }
+    ret = DtlsAppendHandshakeTranscript(ctx, &hsMsgInfo, rawMsg, msgLen);
+    if (ret != HITLS_SUCCESS) {
+        HS_CleanMsg(hsMsg);
+        return RETURN_ERROR_NUMBER_PROCESS(ret, BINLOG_ID17036, "VERIFY_Append fail");
     }
     ctx->hsCtx->hsMsg = hsMsg;
 #ifdef HITLS_TLS_FEATURE_INDICATOR

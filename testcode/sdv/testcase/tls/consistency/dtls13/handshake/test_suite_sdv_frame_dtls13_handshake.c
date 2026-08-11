@@ -4128,7 +4128,7 @@ EXIT:
 *    2. Stop after the client sends ClientHello and enters TRY_RECV_SERVER_HELLO.
 *    3. Let the server produce ServerHello, then change ServerHello message_seq to one greater than the client's
 *       expected receive sequence.
-*    4. Deliver the modified ServerHello to the client.
+*    4. Mark the client as DTLS1.3 negotiated, then deliver the modified ServerHello to the client.
 * @expect
 *    1. The client initially has a ClientHello retransmit node.
 *    2. The future-sequence ServerHello is cached in the reassembly queue.
@@ -4173,6 +4173,7 @@ void SDV_TLS_DTLS13_HANDSHAKE_CONSISTENCY_FUNC_TC054(void)
 
     FrameUioUserData *clientIoUserData = BSL_UIO_GetUserData(client->io);
     ASSERT_TRUE(clientIoUserData != NULL);
+    client->ssl->negotiatedInfo.version = HITLS_VERSION_DTLS13;
     clientIoUserData->recMsg.len = 0;
     ASSERT_EQ(FRAME_TransportRecMsg(client->io, sendBuf, sendLen), HITLS_SUCCESS);
 

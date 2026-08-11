@@ -23,6 +23,7 @@
 #include "bsl_module_list.h"
 #include "bsl_bytes.h"
 #include "hitls_error.h"
+#include "hs.h"
 #include "hs_common.h"
 #include "hs_ctx.h"
 #include "hs_msg.h"

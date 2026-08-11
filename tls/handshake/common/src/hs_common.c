@@ -613,61 +613,73 @@ int32_t HS_ReSizeMsgBuf(TLS_Ctx *ctx, uint32_t msgSize)
     return HS_GrowMsgBuf(ctx, msgSize, keepOldData);
 }
 
-uint32_t HS_MaxMessageSize(TLS_Ctx *ctx, HS_MsgType type)
-{
-    switch (type) {
-        case HELLO_REQUEST:
-            return HITLS_HELLO_REQUEST_MAX_SIZE;
-        case CLIENT_HELLO:
-            return HITLS_CLIENT_HELLO_MAX_SIZE;
+typedef struct {
+    HS_MsgType type;
+    uint32_t maxSize;
+} HS_MaxMessageSizeMap;
+
+static const HS_MaxMessageSizeMap HS_MAX_MESSAGE_SIZE_MAP[] = {
+    { HELLO_REQUEST, HITLS_HELLO_REQUEST_MAX_SIZE },
+    { CLIENT_HELLO, HITLS_CLIENT_HELLO_MAX_SIZE },
 #ifdef HITLS_TLS_PROTO_DTLS12
-        case HELLO_VERIFY_REQUEST:
-            return HITLS_HELLO_VERIFY_REQUEST_MAX_SIZE;
+    { HELLO_VERIFY_REQUEST, HITLS_HELLO_VERIFY_REQUEST_MAX_SIZE },
 #endif
-        case SERVER_HELLO:
-            return HITLS_SERVER_HELLO_MAX_SIZE;
+    { SERVER_HELLO, HITLS_SERVER_HELLO_MAX_SIZE },
+    { SERVER_HELLO_DONE, HITLS_SERVER_HELLO_DONE_MAX_SIZE },
+    { SERVER_KEY_EXCHANGE, HITLS_SERVER_KEY_EXCH_MAX_SIZE },
+    { CLIENT_KEY_EXCHANGE, HITLS_CLIENT_KEY_EXCH_MAX_SIZE },
+    { CERTIFICATE_VERIFY, MAX_CERT_VERIFY_SIZE },
+    { FINISHED, HITLS_FINISHED_MAX_SIZE },
 #if defined(HITLS_TLS_PROTO_TLS13_FAMILY)
-        case ENCRYPTED_EXTENSIONS:
-            return HITLS_ENCRYPTED_EXTENSIONS_MAX_SIZE;
-#endif
-        case SERVER_KEY_EXCHANGE:
-            return HITLS_SERVER_KEY_EXCH_MAX_SIZE;
-        case CERTIFICATE:
-        case CERTIFICATE_REQUEST:
-            return ctx->config.tlsConfig.maxCertList == 0 ? HITLS_MAX_CERT_LIST_DEFAULT
-                                                          : ctx->config.tlsConfig.maxCertList;
-        case SERVER_HELLO_DONE:
-            return HITLS_SERVER_HELLO_DONE_MAX_SIZE;
-        case CLIENT_KEY_EXCHANGE:
-            return HITLS_CLIENT_KEY_EXCH_MAX_SIZE;
-        case CERTIFICATE_VERIFY:
-            return MAX_CERT_VERIFY_SIZE;
-        case NEW_SESSION_TICKET:
-#if defined(HITLS_TLS_PROTO_TLS13_FAMILY)
-            if (IS_TLS13_FAMILY_VERSION(GET_VERSION_FROM_CTX(ctx))) {
-                return HITLS_SESSION_TICKET_MAX_SIZE_TLS13;
-            }
-#endif
-            return HITLS_SESSION_TICKET_MAX_SIZE_TLS12;
-#if defined(HITLS_TLS_PROTO_TLS13_FAMILY)
-        case END_OF_EARLY_DATA:
-            return HITLS_END_OF_EARLY_DATA_MAX_SIZE;
-#endif
-        case FINISHED:
-            return HITLS_FINISHED_MAX_SIZE;
-#if defined(HITLS_TLS_PROTO_TLS13_FAMILY)
-        case KEY_UPDATE:
-            return HITLS_KEY_UPDATE_MAX_SIZE;
+    { ENCRYPTED_EXTENSIONS, HITLS_ENCRYPTED_EXTENSIONS_MAX_SIZE },
+    { END_OF_EARLY_DATA, HITLS_END_OF_EARLY_DATA_MAX_SIZE },
+    { KEY_UPDATE, HITLS_KEY_UPDATE_MAX_SIZE },
 #endif
 #ifdef HITLS_TLS_FEATURE_DTLS_CID
-        case NEW_CONNECTION_ID:
-            return HITLS_NEW_CONNECTION_ID_MAX_SIZE;
-        case REQUEST_CONNECTION_ID:
-            return HITLS_REQUEST_CONNECTION_ID_MAX_SIZE;
+    { NEW_CONNECTION_ID, HITLS_NEW_CONNECTION_ID_MAX_SIZE },
+    { REQUEST_CONNECTION_ID, HITLS_REQUEST_CONNECTION_ID_MAX_SIZE },
 #endif
-        default:
-            return 0;
+};
+
+static uint32_t HS_FindStaticMaxMessageSize(HS_MsgType type)
+{
+    for (uint32_t i = 0; i < sizeof(HS_MAX_MESSAGE_SIZE_MAP) / sizeof(HS_MAX_MESSAGE_SIZE_MAP[0]); i++) {
+        if (HS_MAX_MESSAGE_SIZE_MAP[i].type == type) {
+            return HS_MAX_MESSAGE_SIZE_MAP[i].maxSize;
+        }
     }
+    return 0;
+}
+
+static uint32_t HS_MaxCertMessageSize(const TLS_Ctx *ctx)
+{
+    if (ctx->config.tlsConfig.maxCertList == 0) {
+        return HITLS_MAX_CERT_LIST_DEFAULT;
+    }
+    return ctx->config.tlsConfig.maxCertList;
+}
+
+static uint32_t HS_MaxSessionTicketMessageSize(const TLS_Ctx *ctx)
+{
+#if defined(HITLS_TLS_PROTO_TLS13_FAMILY)
+    if (IS_TLS13_FAMILY_VERSION(GET_VERSION_FROM_CTX(ctx))) {
+        return HITLS_SESSION_TICKET_MAX_SIZE_TLS13;
+    }
+#else
+    (void)ctx;
+#endif
+    return HITLS_SESSION_TICKET_MAX_SIZE_TLS12;
+}
+
+uint32_t HS_MaxMessageSize(TLS_Ctx *ctx, HS_MsgType type)
+{
+    if (type == CERTIFICATE || type == CERTIFICATE_REQUEST) {
+        return HS_MaxCertMessageSize(ctx);
+    }
+    if (type == NEW_SESSION_TICKET) {
+        return HS_MaxSessionTicketMessageSize(ctx);
+    }
+    return HS_FindStaticMaxMessageSize(type);
 }
 
 #if defined(HITLS_TLS_PROTO_TLS13_FAMILY)
