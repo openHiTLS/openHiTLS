@@ -44,7 +44,11 @@ static int32_t UpdateTicket(TLS_Ctx *ctx, NewSessionTicketMsg *msg, uint8_t *psk
     }
 
     SESS_SetStartTime(newSession, (uint64_t)BSL_SAL_CurrentSysTimeGet());
-    HITLS_SESS_SetTimeout(newSession, msg->ticketLifetimeHint);
+    uint32_t lifetimeHint = msg->ticketLifetimeHint;
+    if (IS_TLS13_FAMILY_CTX(ctx) && lifetimeHint > HITLS_ONE_WEEK_SECONDS) {
+        lifetimeHint = HITLS_ONE_WEEK_SECONDS;
+    }
+    HITLS_SESS_SetTimeout(newSession, lifetimeHint);
 
     if (IS_TLS13_FAMILY_CTX(ctx)) {
         SESS_SetTicketAgeAdd(newSession, msg->ticketAgeAdd);
