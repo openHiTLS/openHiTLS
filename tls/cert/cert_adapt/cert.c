@@ -220,7 +220,7 @@ void FreeCertList(HITLS_CERT_X509 **certList, uint32_t certNum)
 }
 
 #ifdef HITLS_TLS_FEATURE_SECURITY
-static int32_t CheckCertChainFromStore(HITLS_Config *config, HITLS_CERT_X509 *cert)
+static int32_t CheckCertChainFromStore(HITLS_Config *config, HITLS_CERT_X509 *cert, bool isCa)
 {
     HITLS_CERT_Key *pubkey = NULL;
     CERT_MgrCtx *mgrCtx = config->certMgrCtx;
@@ -236,11 +236,15 @@ static int32_t CheckCertChainFromStore(HITLS_Config *config, HITLS_CERT_X509 *ce
         return RETURN_ERROR_NUMBER_PROCESS(ret, BINLOG_ID16319, "GET_SECBITS fail");
     }
 
-    ret = SECURITY_CfgCheck(config, HITLS_SECURITY_SECOP_CA_KEY, secBits, 0, cert);  // cert key
+    if (isCa) {
+        ret = SECURITY_CfgCheck(config, HITLS_SECURITY_SECOP_CA_KEY, secBits, 0, cert);  // cert key
+    } else {
+        ret = SECURITY_CfgCheck(config, HITLS_SECURITY_SECOP_EE_KEY, secBits, 0, cert);  // cert key
+    }
     if (ret != SECURITY_SUCCESS) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16320, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "CfgCheck fail, ret %d", ret, 0, 0, 0);
-        return HITLS_CERT_ERR_CA_KEY_WITH_INSECURE_SECBITS;
+        return isCa ? HITLS_CERT_ERR_CA_KEY_WITH_INSECURE_SECBITS : HITLS_CERT_ERR_EE_KEY_WITH_INSECURE_SECBITS;
     }
 
     int32_t signAlg = 0;
@@ -274,7 +278,7 @@ static int32_t EncodeEECert(HITLS_Ctx *ctx, PackPacket *pkt, HITLS_CERT_X509 **c
     if (ret != HITLS_SUCCESS) {
         return RETURN_ERROR_NUMBER_PROCESS(ret, BINLOG_ID16317, "check key fail");
     }
-    ret = CheckCertChainFromStore(&ctx->config.tlsConfig, tmpCert);
+    ret = CheckCertChainFromStore(&ctx->config.tlsConfig, tmpCert, false);
     if (ret != HITLS_SUCCESS) {
         return RETURN_ERROR_NUMBER_PROCESS(ret, BINLOG_ID15111, "check ee cert fail");
     }
@@ -330,7 +334,7 @@ static int32_t EncodeCertificateChain(HITLS_Ctx *ctx, PackPacket *pkt)
         chainNode = BSL_LIST_GetNextNode(chain, chainNode)) {
         tempCert = (HITLS_CERT_X509 *)BSL_LIST_GetData(chainNode);
 #ifdef HITLS_TLS_FEATURE_SECURITY
-        ret = CheckCertChainFromStore(config, tempCert);
+        ret = CheckCertChainFromStore(config, tempCert, true);
         if (ret != HITLS_SUCCESS) {
             return RETURN_ERROR_NUMBER_PROCESS(ret, BINLOG_ID15115, "check chain cert fail");
         }
@@ -359,7 +363,7 @@ static int32_t EncodeCertStore(HITLS_Ctx *ctx, PackPacket *pkt, HITLS_CERT_X509 
         /* The first device certificate has been written. The certificate starts from the second one. */
         for (uint32_t i = 1; i < certNum; i++) {
 #ifdef HITLS_TLS_FEATURE_SECURITY
-            ret = CheckCertChainFromStore(config, certList[i]);
+            ret = CheckCertChainFromStore(config, certList[i], true);
             if (ret != HITLS_SUCCESS) {
                 FreeCertList(certList, certNum);
                 return ret;

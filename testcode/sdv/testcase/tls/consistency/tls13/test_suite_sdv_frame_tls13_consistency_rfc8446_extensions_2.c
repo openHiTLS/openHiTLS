@@ -1031,6 +1031,64 @@ EXIT:
 }
 /* END_CASE */
 
+static void Test_NewSessionTicketLifetimeExceedsOneWeek(HITLS_Ctx *ctx, uint8_t *data, uint32_t *len,
+    uint32_t bufSize, void *user)
+{
+    (void)ctx;
+    (void)user;
+    FRAME_Type frameType = { 0 };
+    frameType.versionType = HITLS_VERSION_TLS13;
+    FRAME_Msg frameMsg = { 0 };
+    frameMsg.recType.data = REC_TYPE_HANDSHAKE;
+    frameMsg.length.data = *len;
+    frameMsg.recVersion.data = HITLS_VERSION_TLS13;
+    uint32_t parseLen = 0;
+    ASSERT_EQ(FRAME_ParseMsgBody(&frameType, data, *len, &frameMsg, &parseLen), HITLS_SUCCESS);
+    ASSERT_EQ(frameMsg.body.hsMsg.type.data, NEW_SESSION_TICKET);
+    FRAME_NewSessionTicketMsg *newSessionTicket = &frameMsg.body.hsMsg.body.newSessionTicket;
+    newSessionTicket->ticketLifetime.data = 604801;
+    newSessionTicket->ticketLifetime.state = ASSIGNED_FIELD;
+    ASSERT_EQ(parseLen, *len);
+    ASSERT_EQ(FRAME_PackRecordBody(&frameType, &frameMsg, data, bufSize, len), HITLS_SUCCESS);
+EXIT:
+    FRAME_CleanMsg(&frameType, &frameMsg);
+}
+
+/** @
+* @test  UT_TLS_TLS13_RFC8446_CONSISTENCY_PSKTICKETLIFETIME_FUNC_TC002
+* @spec  RFC 8446 section 4.6.1
+* @title The client limits a received TLS 1.3 ticket lifetime to seven days.
+* @brief Establish a TLS 1.3 connection while changing the server's NewSessionTicket lifetime to more than seven days.
+* @expect The ticket is accepted, but the client stores it with a 604800-second timeout.
+@ */
+/* BEGIN_CASE */
+void UT_TLS_TLS13_RFC8446_CONSISTENCY_PSKTICKETLIFETIME_FUNC_TC002()
+{
+    FRAME_Init();
+    ResumeTestInfo testInfo = {0};
+    testInfo.version = HITLS_VERSION_TLS13;
+    testInfo.uioType = BSL_UIO_TCP;
+    testInfo.config = HITLS_CFG_NewTLS13Config();
+    ASSERT_TRUE(testInfo.config != NULL);
+
+    RecWrapper wrapper = {TRY_SEND_NEW_SESSION_TICKET, REC_TYPE_HANDSHAKE, false, NULL,
+        Test_NewSessionTicketLifetimeExceedsOneWeek};
+    RegisterWrapper(wrapper);
+    ASSERT_EQ(DoHandshake(&testInfo), HITLS_SUCCESS);
+
+    testInfo.clientSession = HITLS_GetDupSession(testInfo.client->ssl);
+    ASSERT_TRUE(testInfo.clientSession != NULL);
+    ASSERT_EQ(HITLS_SESS_GetTimeout(testInfo.clientSession), 604800);
+    ASSERT_TRUE(TestIsErrStackEmpty());
+EXIT:
+    ClearWrapper();
+    HITLS_CFG_FreeConfig(testInfo.config);
+    FRAME_FreeLink(testInfo.client);
+    FRAME_FreeLink(testInfo.server);
+    HITLS_SESS_Free(testInfo.clientSession);
+}
+/* END_CASE */
+
 /** @
 * @test  UT_TLS_TLS13_RFC8446_CONSISTENCY_CERT_SIGNATURE_FUNC_TC001
 * @spec  -

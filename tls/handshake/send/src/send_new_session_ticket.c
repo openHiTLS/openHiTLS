@@ -30,9 +30,6 @@
 #include "pack.h"
 #include "send_process.h"
 
-#ifdef HITLS_TLS_PROTO_TLS13
-#define HITLS_ONE_WEEK_SECONDS (604800)
-#endif
 #ifdef HITLS_TLS_PROTO_TLS_BASIC
 int32_t SendNewSessionTicketProcess(TLS_Ctx *ctx)
 {
