@@ -2553,14 +2553,17 @@ EXIT:
 #ifdef HITLS_CRYPTO_BN_CB
 static uint32_t g_rsaBnCbCallCount = 0;
 static bool g_rsaBnCbParamValid = true;
+static bool g_rsaBnCbUserDataIsNull = true;
 
-static int32_t RsaBnGenCb(void *ctx, BSL_Param *param)
+static int32_t RsaBnGenCb(void *userData, BSL_Param *param)
 {
     uint32_t iteration = 0;
     uint32_t len = sizeof(iteration);
-    if (ctx == NULL || param == NULL ||
-        BSL_PARAM_GetValue(param, CRYPT_PARAM_BN_CB_ITER, BSL_PARAM_TYPE_UINT32,
-            &iteration, &len) != BSL_SUCCESS) {
+    if (userData != NULL) {
+        g_rsaBnCbUserDataIsNull = false;
+    }
+    if (param == NULL || BSL_PARAM_GetValue(param, CRYPT_PARAM_BN_CB_ITER, BSL_PARAM_TYPE_UINT32,
+        &iteration, &len) != BSL_SUCCESS) {
         g_rsaBnCbParamValid = false;
         return CRYPT_INVALID_ARG;
     }
@@ -2571,7 +2574,7 @@ static int32_t RsaBnGenCb(void *ctx, BSL_Param *param)
 
 /**
  * @test   SDV_CRYPTO_RSA_BN_GEN_CB_FUNC_TC001
- * @title  RSA key generation forwards the configured callback to BN.
+ * @title  RSA key generation invokes the configured callback with NULL user data.
  */
 /* BEGIN_CASE */
 void SDV_CRYPTO_RSA_BN_GEN_CB_FUNC_TC001(int bits, int isProvider)
@@ -2599,9 +2602,11 @@ void SDV_CRYPTO_RSA_BN_GEN_CB_FUNC_TC001(int bits, int isProvider)
 
     g_rsaBnCbCallCount = 0;
     g_rsaBnCbParamValid = true;
+    g_rsaBnCbUserDataIsNull = true;
     ASSERT_EQ(CRYPT_EAL_PkeyGen(pkey), CRYPT_SUCCESS);
     ASSERT_TRUE(g_rsaBnCbCallCount > 0);
     ASSERT_TRUE(g_rsaBnCbParamValid);
+    ASSERT_TRUE(g_rsaBnCbUserDataIsNull);
 
 EXIT:
     TestRandDeInit();

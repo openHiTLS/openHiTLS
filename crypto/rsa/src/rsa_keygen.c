@@ -1216,7 +1216,7 @@ int32_t CRYPT_RSA_Gen(CRYPT_RSA_Ctx *ctx)
         if (bnCb == NULL) {
             goto ERR;
         }
-        BN_CbCtxSet(bnCb, ctx->bnGenCb, ctx);
+        BN_CbCtxSet(bnCb, ctx->bnGenCb, NULL);
     }
 #endif
     if (ctx->para->bits < 1024) {
