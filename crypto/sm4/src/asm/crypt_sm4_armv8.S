@@ -73,6 +73,15 @@ vtmp5q     .req q25
 vtmp6q     .req q22
 vtmp7q     .req q23
 
+.macro CLEAR_XTS_STACK
+	mov	x9, sp
+	add	x10, sp, #192
+.Lclear_xts_stack_loop\@:
+	stp	xzr, xzr, [x9], #16
+	cmp	x9, x10
+	b.lo	.Lclear_xts_stack_loop\@
+.endm
+
 inp      .req   x0
 outp     .req   x1
 blocks   .req   w2
@@ -2556,6 +2565,7 @@ AARCH64_PACIASP
 	eor	v4.16b, v4.16b, v18.16b
 	st1	{v4.4s}, [x26]
 .Lxts_cipher_return:
+	CLEAR_XTS_STACK
 	add	sp, sp, #192
 	ldp	d14, d15, [sp], #0x10
 	ldp	d12, d13, [sp], #0x10

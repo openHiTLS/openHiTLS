@@ -196,6 +196,73 @@ ECP256_Neg:
 .size   ECP256_Neg, .-ECP256_Neg
 
 /**
+ * Function description: conditionally negates an ECP256 field element in place.
+ * Function prototype: void ECP256_CondNeg(Coord *r, uint32_t sign);
+ * Input register:
+ *       rdi: Pointer to the input/output Coord structure
+ *       esi: sign value
+ * Change register: rdx, rcx, rax, r8, r9, r10, r11, xmm0, xmm2, xmm3, xmm4, xmm5, xmm7
+ * Output register: None
+ * Function/Macro Call:
+ */
+.globl  ECP256_CondNeg
+.type   ECP256_CondNeg,@function
+.align 32
+ECP256_CondNeg:
+.cfi_startproc
+    movl    %esi, %eax
+    negl    %eax
+    cltq                                // rax = sign ? -1 : 0
+    movq    %rax, %xmm7
+    punpcklqdq %xmm7, %xmm7             // xmm7 = {sign_mask, sign_mask}
+
+    movdqu  (%rdi), %xmm2               // orig[0], orig[1]
+    movdqu  16(%rdi), %xmm3             // orig[2], orig[3]
+
+    movq    $-1, %r8                    // neg = P - r
+    movq    8+.Lpoly(%rip), %r9
+    xorq    %r10, %r10
+    movq    24+.Lpoly(%rip), %r11
+    subq    (%rdi), %r8
+    sbbq    8(%rdi), %r9
+    sbbq    16(%rdi), %r10
+    sbbq    24(%rdi), %r11
+
+    movq    (%rdi), %rcx                // zero_mask = r ? -1 : 0
+    orq     8(%rdi), %rcx
+    orq     16(%rdi), %rcx
+    orq     24(%rdi), %rcx
+    xorq    %rdx, %rdx
+    testq   %rcx, %rcx
+    setne   %dl
+    negq    %rdx
+
+    andq    %rdx, %r8                   // r == 0 ? 0 : P - r
+    andq    %rdx, %r9
+    andq    %rdx, %r10
+    andq    %rdx, %r11
+
+    movq    %r8, %xmm4
+    movq    %r9, %xmm0
+    punpcklqdq %xmm0, %xmm4             // neg[0], neg[1]
+    movq    %r10, %xmm5
+    movq    %r11, %xmm0
+    punpcklqdq %xmm0, %xmm5             // neg[2], neg[3]
+
+    pxor    %xmm2, %xmm4
+    pxor    %xmm3, %xmm5
+    pand    %xmm7, %xmm4
+    pand    %xmm7, %xmm5
+    pxor    %xmm2, %xmm4                // sign ? neg : orig
+    pxor    %xmm3, %xmm5
+
+    movdqu  %xmm4, (%rdi)
+    movdqu  %xmm5, 16(%rdi)
+    ret
+.cfi_endproc
+.size   ECP256_CondNeg, .-ECP256_CondNeg
+
+/**
  *  Function description: multiplication of the ECP256 field: res = a * b * 2^-256 mod P
  *  Function prototype: void ECP256_Mul(Coord *r, const Coord *a, const Coord *b);
  *  Input register:
@@ -2464,7 +2531,7 @@ ECP256_AddAffine:
  *        rdi: Points to the base address of the pre-computation table.
  *        rsi: Points to P256_Point.
  *        rdx: Index value. The value ranges from 1 to 16.
- *  Change register: rdx, rsi, rdi, r8, r9, r10, r11
+ *  Change register: rdx, rdi, xmm0, xmm1, xmm2, xmm3, xmm4, xmm5
  *  Output register: None
  *  Function/Macro Call:
  */
@@ -2474,42 +2541,22 @@ ECP256_AddAffine:
 ECP256_Scatterw5:
 .cfi_startproc
     subq    $1, %rdx                // index - 1
-    movq    (%rsi), %r8             // x[0]
-    movq    8(%rsi), %r9            // x[1]
-    movq    16(%rsi), %r10          // x[2]
-    movq    24(%rsi), %r11          // x[3]
-    leaq    (%rdi, %rdx, 8), %rdi   // base = base + (index - 1) * 8 . offset for table
+    leaq    (%rdx, %rdx, 2), %rdx   // (index - 1) * 3
+    shlq    $5, %rdx                // (index - 1) * 96
+    leaq    (%rdi, %rdx), %rdi      // table[index - 1], sizeof(P256_Point) = 96
 
-    movq    %r8, (%rdi)             // x[0] --> base + 0 * 128
-    movq    %r9, 128(%rdi)          // x[1] --> base + 1 * 128
-    movq    %r10, 256(%rdi)         // x[2] --> base + 2 * 128
-    movq    %r11, 384(%rdi)         // x[3] --> base + 3 * 128
-    leaq    512(%rdi), %rdi         // base + 128 * 4
-
-    leaq    32(%rsi), %rsi          // addr(y) --> rsi
-
-    movq    (%rsi), %r8             // y[0]
-    movq    8(%rsi), %r9            // y[1]
-    movq    16(%rsi), %r10          // y[2]
-    movq    24(%rsi), %r11          // y[3]
-
-    movq    %r8, (%rdi)             // y[0] --> base + 4 * 128
-    movq    %r9, 128(%rdi)          // y[1] --> base + 5 * 128
-    movq    %r10, 256(%rdi)         // y[2] --> base + 6 * 128
-    movq    %r11, 384(%rdi)         // y[3] --> base + 7 * 128
-    leaq    512(%rdi), %rdi         // base + 128 * 8
-
-    leaq    32(%rsi), %rsi          // addr(z) --> rsi
-
-    movq    (%rsi), %r8             // z[0]
-    movq    8(%rsi), %r9            // z[1]
-    movq    16(%rsi), %r10          // z[2]
-    movq    24(%rsi), %r11          // z[3]
-
-    movq    %r8, (%rdi)             // z[0] --> base + 8 * 128
-    movq    %r9, 128(%rdi)          // z[1] --> base + 9 * 128
-    movq    %r10, 256(%rdi)         // z[2] --> base + 10 * 128
-    movq    %r11, 384(%rdi)         // z[3] --> base + 11 * 128
+    movdqu  (%rsi), %xmm0
+    movdqu  16(%rsi), %xmm1
+    movdqu  32(%rsi), %xmm2
+    movdqu  48(%rsi), %xmm3
+    movdqu  64(%rsi), %xmm4
+    movdqu  80(%rsi), %xmm5
+    movdqu  %xmm0, (%rdi)
+    movdqu  %xmm1, 16(%rdi)
+    movdqu  %xmm2, 32(%rdi)
+    movdqu  %xmm3, 48(%rdi)
+    movdqu  %xmm4, 64(%rdi)
+    movdqu  %xmm5, 80(%rdi)
 
     ret
 .cfi_endproc
@@ -2531,64 +2578,52 @@ ECP256_Scatterw5:
 .align 32
 ECP256_Gatherw5:
 .cfi_startproc
-    movq    $-1, %rax
-    xorq    %rcx, %rcx
-    cmp     $0, %rdx
-    cmovzq  %rcx, %rax              // rax = (rdx == 0) ? 0 : -1
-    add     %rax, %rdx              // rdx = (rdx == 0) ? rdx : (rdx - 1)
+    pxor    %xmm2, %xmm2            // x[0], x[1]
+    pxor    %xmm3, %xmm3            // x[2], x[3]
+    pxor    %xmm4, %xmm4            // y[0], y[1]
+    pxor    %xmm5, %xmm5            // y[2], y[3]
+    pxor    %xmm6, %xmm6            // z[0], z[1]
+    pxor    %xmm7, %xmm7            // z[2], z[3]
 
-    leaq    (%rsi, %rdx, 8), %rsi   // Calculate offset. base = base + (index -1) * 8
+    movq    $1, %rcx
+.Lgather_w5_loop:
+    xorq    %rax, %rax
+    cmpq    %rcx, %rdx
+    sete    %al
+    negq    %rax                    // rax = (rcx == rdx) ? -1 : 0
+    movq    %rax, %xmm0
+    punpcklqdq %xmm0, %xmm0         // xmm0 = {mask, mask}
 
-    movq    (%rsi), %r8             // x[0]
-    movq    128(%rsi), %r9          // x[1]
-    movq    256(%rsi), %r10         // x[2]
-    movq    384(%rsi), %r11         // x[3]
-    leaq    512(%rsi), %rsi         // base += 512
+    movdqu  (%rsi), %xmm1
+    pand    %xmm0, %xmm1
+    por     %xmm1, %xmm2
+    movdqu  16(%rsi), %xmm1
+    pand    %xmm0, %xmm1
+    por     %xmm1, %xmm3
+    movdqu  32(%rsi), %xmm1
+    pand    %xmm0, %xmm1
+    por     %xmm1, %xmm4
+    movdqu  48(%rsi), %xmm1
+    pand    %xmm0, %xmm1
+    por     %xmm1, %xmm5
+    movdqu  64(%rsi), %xmm1
+    pand    %xmm0, %xmm1
+    por     %xmm1, %xmm6
+    movdqu  80(%rsi), %xmm1
+    pand    %xmm0, %xmm1
+    por     %xmm1, %xmm7
 
-    andq    %rax, %r8
-    andq    %rax, %r9
-    andq    %rax, %r10
-    andq    %rax, %r11
+    leaq    96(%rsi), %rsi
+    addq    $1, %rcx
+    cmpq    $17, %rcx
+    jne     .Lgather_w5_loop
 
-    movq    %r8, (%rdi)             // Write back
-    movq    %r9, 8(%rdi)
-    movq    %r10, 16(%rdi)
-    movq    %r11, 24(%rdi)
-
-    leaq    32(%rdi), %rdi          // Write back point offset
-
-    movq    (%rsi), %r8             // y[0]
-    movq    128(%rsi), %r9          // y[1]
-    movq    256(%rsi), %r10         // y[2]
-    movq    384(%rsi), %r11         // y[3]
-    leaq    512(%rsi), %rsi         // base += 512
-
-    andq    %rax, %r8
-    andq    %rax, %r9
-    andq    %rax, %r10
-    andq    %rax, %r11
-
-    movq    %r8, (%rdi)             // Write back
-    movq    %r9, 8(%rdi)
-    movq    %r10, 16(%rdi)
-    movq    %r11, 24(%rdi)
-
-    leaq    32(%rdi), %rdi          // Write back point offset
-
-    movq    (%rsi), %r8             // z[0]
-    movq    128(%rsi), %r9          // z[1]
-    movq    256(%rsi), %r10         // z[2]
-    movq    384(%rsi), %r11         // z[3]
-
-    andq    %rax, %r8
-    andq    %rax, %r9
-    andq    %rax, %r10
-    andq    %rax, %r11
-
-    movq    %r8, (%rdi)             // Write back
-    movq    %r9, 8(%rdi)
-    movq    %r10, 16(%rdi)
-    movq    %r11, 24(%rdi)
+    movdqu  %xmm2, (%rdi)
+    movdqu  %xmm3, 16(%rdi)
+    movdqu  %xmm4, 32(%rdi)
+    movdqu  %xmm5, 48(%rdi)
+    movdqu  %xmm6, 64(%rdi)
+    movdqu  %xmm7, 80(%rdi)
 
     ret
 .cfi_endproc

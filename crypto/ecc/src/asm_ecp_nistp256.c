@@ -78,18 +78,6 @@ static BN_UINT IsZero(const Coord *a)
     return BN_IsZeroUintConsttime(ret);
 }
 
-// r = cond == 0 ? r : a, the input parameter cond can only be 0 or 1.
-// If cond is 0, the value remains unchanged. If cond is 1, copy a.
-static void CopyConditional(Coord *r, const Coord *a, BN_UINT cond)
-{
-    BN_UINT mask1 = ~cond & (cond - 1);
-    BN_UINT mask2 = ~mask1;
-
-    for (uint32_t i = 0; i < P256_SIZE; i++) {
-        r->value[i] = (r->value[i] & mask1) ^ (a->value[i] & mask2);
-    }
-}
-
 // Jacobian affine -> Jacobian projection, (X,Y)->(X,Y,Z)
 static void Affine2Jproj(P256_Point *r, const P256_AffinePoint *a, BN_UINT mask)
 {
@@ -315,7 +303,6 @@ static void ECP256_WindowMul(P256_Point *r, const BN_BigNum *k, const ECC_Point 
     uint8_t kOctets[33] = {0}; // m big endian byte stream. Apply for 33 bytes and reserve one byte for the following offset.
     P256_Point table[16]; // The pre-computation window is 2 ^ (5 - 1) = 16 points
     P256_Point temp; // Apply for temporary space of two points.
-    Coord tempY;
     (void)BN_Bn2BinFixZero(k, kOctets, sizeof(kOctets));
 
     ECP256_EccPoint2P256Point(&temp, point);
@@ -354,9 +341,8 @@ static void ECP256_WindowMul(P256_Point *r, const BN_BigNum *k, const ECC_Point 
         wCode = (wCode >> shift) & mask;
         wCode = Recodew5(wCode);
         ECP256_Gatherw5(&temp, table, wCode >> 1);
-        ECP256_Neg(&tempY, &(temp.y));
         // If the least significant bit of the code is 1, plus -(wCode >> 1) times point.
-        CopyConditional(&(temp.y), &tempY, wCode & 1);
+        ECP256_CondNeg(&(temp.y), wCode & 1);
         ECP256_PointAdd(r, r, &temp);
     }
 
@@ -367,16 +353,14 @@ static void ECP256_WindowMul(P256_Point *r, const BN_BigNum *k, const ECC_Point 
     wCode = (wCode << 1) & mask;
     wCode = Recodew5(wCode);
     ECP256_Gatherw5(&temp, table, wCode >> 1);
-    ECP256_Neg(&tempY, &(temp.y));
     // If the least significant bit of the code is 1, plus -(wCode >> 1) times point.
-    CopyConditional(&(temp.y), &tempY, wCode & 1);
+    ECP256_CondNeg(&(temp.y), wCode & 1);
     ECP256_PointAdd(r, r, &temp);
 }
 
 static void ComputeK1G(P256_Point *k1G, const BN_BigNum *k1)
 {
     uint8_t kOctets[33] = {0}; // applies for 33 bytes and reserves one byte for the following offset. 256 bits are 32 bytes.
-    Coord tempY;
     P256_AffinePoint k1GAffine;
     const ECP256_TableRow *preCompTable = NULL; // precompute window size is 2 ^(7 - 1) = 64
     preCompTable = ECP256_GetPreCompTable();
@@ -390,9 +374,8 @@ static void ComputeK1G(P256_Point *k1G, const BN_BigNum *k1)
     uint32_t wCode = (kOctets[32] << 1) & mask; // Last byte kOctets[32] is the least significant 7 bits.
     wCode = Recodew7(wCode);
     ECP256_Gatherw7(&k1GAffine, preCompTable[0], wCode >> 1);
-    ECP256_Neg(&tempY, &(k1GAffine.y));
     // If the least significant bit of the code is 1, plus -(wCode >> 1) times point.
-    CopyConditional(&(k1GAffine.y), &tempY, wCode & 1);
+    ECP256_CondNeg(&(k1GAffine.y), wCode & 1);
     // If the x and y coordinates of k1GAffine are both 0, then the infinity is all Fs; otherwise, the infinity is 0.
     BN_UINT infinity = IsZero(&(k1GAffine.x)) & IsZero(&(k1GAffine.y));
     Affine2Jproj(k1G, &k1GAffine, ~infinity);
@@ -408,9 +391,8 @@ static void ComputeK1G(P256_Point *k1G, const BN_BigNum *k1)
         wCode = (wCode >> shift) & mask;
         wCode = Recodew7(wCode);
         ECP256_Gatherw7(&k1GAffine, preCompTable[i], wCode >> 1);
-        ECP256_Neg(&tempY, &(k1GAffine.y));
         // If the least significant bit of the code is 1, plus -(wCode >> 1) times point.
-        CopyConditional(&(k1GAffine.y), &tempY, wCode & 1);
+        ECP256_CondNeg(&(k1GAffine.y), wCode & 1);
         ECP256_AddAffine(k1G, k1G, &k1GAffine);
     }
 }

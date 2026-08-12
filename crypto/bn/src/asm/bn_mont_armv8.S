@@ -49,6 +49,16 @@
 .arch   armv8-a+crypto
 .text
 
+.macro CLEAR_STACK_RANGE end
+    mov     x16, sp
+.Lclear_stack_range\@:
+    cmp     x16, \end
+    b.hs    .Lclear_stack_done\@
+    str     xzr, [x16], #8
+    b       .Lclear_stack_range\@
+.Lclear_stack_done\@:
+.endm
+
 .global MontMul_Asm
 .type   MontMul_Asm, %function
 .align  5
@@ -244,6 +254,7 @@ AARCH64_PACIASP
     cbnz    x5 , .LMul1xCopy
 
 .LMul1xEnd:
+    CLEAR_STACK_RANGE x29
     ldp     x23, x24, [x29, #16]
     mov     sp , x29
     ldp     x21, x22, [x29, #32]
@@ -1060,6 +1071,7 @@ MontSqr8:
     cbnz    x5, .LSqr8xCopy
 
 .LMontSqr8xEnd:
+    CLEAR_STACK_RANGE x29
     ldr     x30, [x29, #8]          // Pop-Stack
     ldp     x27, x28, [x29, #16]
     mov     sp ,  x29
@@ -1419,6 +1431,7 @@ MontMul4:
     cbnz    x5, .LMul4xCopy
 
 .LMontMul4xEnd:
+    CLEAR_STACK_RANGE x29
     ldr     x30, [x29, #8]          // Value Pop-Stack in x30 (address of next instruction)
     ldp     x27, x28, [x29, #16]
     ldp     x25, x26, [x29, #32]
