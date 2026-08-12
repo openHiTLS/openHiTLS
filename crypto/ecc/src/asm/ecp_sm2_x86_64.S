@@ -45,6 +45,16 @@
 	popq	%r12
 .endm
 
+.macro	CLEAR_STACK_BYTES bytes
+	xorq	%rax, %rax
+	xorq	%rcx, %rcx
+.Lclear_stack_loop\@:
+	movq	%rax, (%rsp,%rcx,8)
+	addq	$1, %rcx
+	cmpq	$(\bytes / 8), %rcx
+	jne	.Lclear_stack_loop\@
+.endm
+
 # The polynomial
 .align	64
 .Lpoly:
@@ -1952,6 +1962,7 @@ ECP_Sm2PointDoubleMont:
 	vmovq	%xmm1, %rdi
 	call	ECP_Sm2SubAB
 
+	CLEAR_STACK_BYTES 168
 	leaq	168(%rsp), %rsp
 	REGISTER_POP
 	ret
@@ -2132,6 +2143,7 @@ ECP_Sm2PointAddMont:
 .Ladd_double:
 	vmovq	%xmm1, %rsi
 	vmovq	%xmm0, %rdi
+	CLEAR_STACK_BYTES 416
 	addq	$416, %rsp
 	jmp	.Lpoint_double
 
@@ -2337,6 +2349,7 @@ ECP_Sm2PointAddMont:
 	vmovdqu	%xmm3,48(%rdi)
 
 .Ladd_done:
+	CLEAR_STACK_BYTES 584
 	leaq	584(%rsp), %rsp
 	REGISTER_POP
 	ret
@@ -2642,6 +2655,7 @@ ECP_Sm2PointAddAffineMont:
 	vmovdqu	%xmm2,32(%rdi)
 	vmovdqu	%xmm3,48(%rdi)
 
+	CLEAR_STACK_BYTES 488
 	leaq	488(%rsp), %rsp
 	REGISTER_POP
 	ret

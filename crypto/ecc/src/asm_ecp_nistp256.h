@@ -54,6 +54,8 @@ void ECP256_Sqr(Coord *r, const Coord *a);
 
 void ECP256_Neg(Coord *r, const Coord *a);
 
+void ECP256_CondNeg(Coord *r, uint32_t sign);
+
 void ECP256_OrdMul(Coord *r, const Coord *a, const Coord *b);
 
 void ECP256_OrdSqr(Coord *r, const Coord *a, int32_t repeat);

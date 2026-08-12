@@ -21,6 +21,7 @@
 #include "crypt_utils.h"
 #include "crypt_errno.h"
 #include "bsl_err_internal.h"
+#include "bsl_bytes.h"
 #include "asm_ecp_sm2_armv7.h"
 
 /// The type representing a Non-Adjacent Form (NAF) for efficient scalar multiplication
@@ -423,19 +424,33 @@ static void ECP_Sm2PointAddCore(Sm2Point *r, const Sm2Point *p, const Sm2Point *
     ECP_Sm2PointSet(r, x3, y3, z3);
 }
 
-/**
- * @brief Subtracts one jacobian point from another.
- * @param [out] r Pointer to the resulting SM2jacobianPoint.
- * @param [in] p Pointer to the minuend SM2jacobianPoint.
- * @param [in] q Pointer to the subtrahend SM2jacobianPoint.
- * @ref https://hyperelliptic.org/EFD/g1p/auto-shortw-jacobian-3.html#addition-add-1998-cmo-2
- */
-static void ECP_Sm2PointSubCore(Sm2Point *r, const Sm2Point *p, const Sm2Point *q) {
-    Sm2Point t;
-    memcpy(t.x, q->x, sizeof(Sm2Fp));
-    memcpy(t.z, q->z, sizeof(Sm2Fp));
-    ECP_Sm2FpNeg(t.y, q->y);
-    ECP_Sm2PointAddCore(r, p, &t);
+static void ECP_Sm2FpCopyWithMask(Sm2Fp r, const Sm2Fp a, uint32_t mask)
+{
+    for (uint32_t i = 0; i < SM2_LIMBS; i++) {
+        r[i] = Uint32ConstTimeSelect(mask, a[i], r[i]);
+    }
+}
+
+static void ECP_Sm2PointSelect(Sm2Point *r, const Sm2Point table[8], int8_t digit)
+{
+    int32_t d = digit;
+    uint32_t sign = (uint32_t)d >> 31;
+    uint32_t absDigit = (((uint32_t)d ^ (0 - sign)) + sign);
+    uint32_t tableIndex = absDigit >> 1;
+    uint32_t nonZero = ~Uint32ConstTimeIsZero(absDigit);
+    uint32_t signMask = 0 - sign;
+    Sm2Fp negY;
+
+    memset(r, 0, sizeof(*r));
+    for (uint32_t i = 0; i < 8; i++) {
+        uint32_t mask = Uint32ConstTimeEqual(tableIndex, i) & nonZero;
+        ECP_Sm2FpCopyWithMask(r->x, table[i].x, mask);
+        ECP_Sm2FpCopyWithMask(r->y, table[i].y, mask);
+        ECP_Sm2FpCopyWithMask(r->z, table[i].z, mask);
+    }
+
+    ECP_Sm2FpNeg(negY, r->y);
+    ECP_Sm2FpCopyWithMask(r->y, negY, signMask & nonZero);
 }
 
 /**
@@ -568,21 +583,14 @@ static void ECP_Sm2PointMulCore(Sm2Point *r, const Sm2Fp k, const Sm2Point *g) {
     }
 
     // compute the result
-    uint32_t i = 0, j = 1;
+    uint32_t i = 0;
     ECP_Sm2PointSetInfinity(r);
     do {
-        if (K[i] == 0) {
-            j++;
-        } else {
-            ECP_Sm2PointMultDoubleCore(r, j, r);
-            if (K[i] > 0)
-                ECP_Sm2PointAddCore(r, r, &upt[K[i] >> 1]);
-            else
-                ECP_Sm2PointSubCore(r, r, &upt[-K[i] >> 1]);
-            j = 1;
-        }
+        Sm2Point selected;
+        ECP_Sm2PointDouCore(r, r);
+        ECP_Sm2PointSelect(&selected, upt, K[i]);
+        ECP_Sm2PointAddCore(r, r, &selected);
     } while (++i <= SM2_BITS);
-    ECP_Sm2PointMultDoubleCore(r, j - 1, r);
 }
 
 /**
@@ -938,4 +946,3 @@ ERR:
     return ret;
 }
 #endif
-

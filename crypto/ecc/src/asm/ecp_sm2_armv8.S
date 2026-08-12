@@ -26,6 +26,15 @@
 #define	s6 x13
 #define	s7 x14
 
+.macro CLEAR_STACK_BYTES bytes
+	mov	x16, sp
+	add	x17, sp, #\bytes
+.Lclear_stack_loop\@:
+	stp	xzr, xzr, [x16], #16
+	cmp	x16, x17
+	b.lo	.Lclear_stack_loop\@
+.endm
+
 CRYPT_AARCH64_RODATA_SECTION
 # The polynomial
 .p2align 4
@@ -1557,6 +1566,7 @@ AARCH64_PACIASP
 	add		x0, x21, #32
 	bl CRYPT_AARCH64_SYM(ECP_Sm2SubAB)       // res_y = s - res_y
 
+	CLEAR_STACK_BYTES 32*4
 	mov		sp, x29
 	ldp		x19, x20,[x29, #16]
 	ldp		x21, x22,[x29, #32]
@@ -1699,6 +1709,7 @@ AARCH64_PACIASP
 	mov		x0, x21
 	ldp		x23, x24,[x29, #48]
 	ldp		x25, x26,[x29, #64]
+	CLEAR_STACK_BYTES 32*(12-4)
 	add		sp,sp, #32*(12-4)
 	b		.Lpoint_double
 
@@ -1844,6 +1855,7 @@ AARCH64_PACIASP
 	stp		x10, x11,[x21, #64+16]
 
 .Ladd_done:
+	CLEAR_STACK_BYTES 32*12
 	mov		sp, x29
 	ldp		x19, x20,[x29, #16]
 	ldp		x21, x22,[x29, #32]
@@ -2082,6 +2094,7 @@ AARCH64_PACIASP
 	stp		x8, x9, [x21, #64]
 	stp		x10, x11, [x21, #64+16]
 
+	CLEAR_STACK_BYTES 32*10
 	mov		sp, x29
 	ldp		x19, x20,[x29, #16]
 	ldp		x21, x22,[x29, #32]

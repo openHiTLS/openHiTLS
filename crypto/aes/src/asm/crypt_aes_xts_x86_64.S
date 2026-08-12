@@ -84,6 +84,15 @@
     vmovdqa \twkin,\twkout
 .endm
 
+.macro CLEAR_XTS_STACK zero
+    vmovdqa \zero, (%rsp)
+    vmovdqa \zero, 16(%rsp)
+    vmovdqa \zero, 32(%rsp)
+    vmovdqa \zero, 48(%rsp)
+    vmovdqa \zero, 64(%rsp)
+    vmovdqa \zero, 80(%rsp)
+.endm
+
 .macro SAVE_STACK
     push %rbx
     push %rbp
@@ -529,6 +538,7 @@ CRYPT_AES_XTS_Encrypt:
     vpxor BLK6, BLK6, BLK6
     vpxor RDK, RDK, RDK
     movl $0, RET
+    CLEAR_XTS_STACK RDK
 
     mov %rbp,%rsp
     add $96,%rsp
@@ -973,6 +983,7 @@ CRYPT_AES_XTS_Decrypt:
     vpxor BLK6, BLK6, BLK6
     vpxor RDK, RDK, RDK
     movl $0, RET
+    CLEAR_XTS_STACK RDK
 
     mov %rbp,%rsp
     add $96,%rsp

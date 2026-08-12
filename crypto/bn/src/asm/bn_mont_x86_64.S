@@ -41,6 +41,17 @@
     popq    %r15
 .endm
 
+.macro CLEAR_STACK_RANGE end
+    movq    %rsp,%rdx
+.Lclear_stack_range\@:
+    cmpq    \end,%rdx
+    jae     .Lclear_stack_done\@
+    movq    $0,(%rdx)
+    leaq    8(%rdx),%rdx
+    jmp     .Lclear_stack_range\@
+.Lclear_stack_done\@:
+.endm
+
 /*
 * void MontMul_Asm(uint64_t *r, const uint64_t *a, const uint64_t *b,
 *                     const uint64_t *n, const uint64_t k0, uint32_t size);
@@ -231,6 +242,7 @@ MontMul_Asm:
 
     movq    8(%rsp,%r9,8),%rsi          // rsi = pressed-stacked rsp.
     movq    $1,%rax                     // rax = 1
+    CLEAR_STACK_RANGE %rsi
     leaq    (%rsi),%rsp                 // restore rsp.
     RESTORE_REGISTERS                   // Restore non-volatile register.
     ret
@@ -594,6 +606,7 @@ MontMul4:
     jnz     .LoopCopy4x
     movq    8(%rsp,%r9,8),%rsi          // rsi = pressed-stacked rsp.
     movq    $1,%rax
+    CLEAR_STACK_RANGE %rsi
     leaq    (%rsi),%rsp                 // Restore srsp.
     RESTORE_REGISTERS
     ret
@@ -720,6 +733,7 @@ MontSqr8:
     jnz     .LoopCopy8x
 
     movq    $1,%rax
+    CLEAR_STACK_RANGE %rsi
     leaq    (%rsi),%rsp             // Restore rsp.
     RESTORE_REGISTERS               // Restore non-volatile register.
     ret

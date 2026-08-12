@@ -210,6 +210,52 @@ AARCH64_AUTIASP
     ret
 CRYPT_AARCH64_FUNC_END(ECP256_Neg)
 
+CRYPT_AARCH64_FUNC_START(ECP256_CondNeg)
+AARCH64_PACIASP
+    and     x1, x1, #1
+    neg     x1, x1                      // sign_mask = sign ? -1 : 0
+    ldp     x2, x3, [x0]                // orig[0], orig[1]
+    ldp     x4, x5, [x0, #16]           // orig[2], orig[3]
+
+    CRYPT_AARCH64_GET_RELA(x7, .Lpoly+8)
+    ldr     x9, [x7]                    // P[1]
+    ldr     x11, [x7, #16]              // P[3]
+    mov     x8, #-1                     // neg = P - orig
+    mov     x10, xzr
+    subs    x8, x8, x2
+    sbcs    x9, x9, x3
+    sbcs    x10, x10, x4
+    sbc     x11, x11, x5
+
+    orr     x6, x2, x3                  // zero_mask = orig ? -1 : 0
+    orr     x6, x6, x4
+    orr     x6, x6, x5
+    cmp     x6, xzr
+    csetm   x6, ne
+    and     x8, x8, x6                  // orig == 0 ? 0 : P - orig
+    and     x9, x9, x6
+    and     x10, x10, x6
+    and     x11, x11, x6
+
+    eor     x8, x8, x2
+    eor     x9, x9, x3
+    eor     x10, x10, x4
+    eor     x11, x11, x5
+    and     x8, x8, x1
+    and     x9, x9, x1
+    and     x10, x10, x1
+    and     x11, x11, x1
+    eor     x2, x2, x8                  // sign ? neg : orig
+    eor     x3, x3, x9
+    eor     x4, x4, x10
+    eor     x5, x5, x11
+
+    stp     x2, x3, [x0]
+    stp     x4, x5, [x0, #16]
+AARCH64_AUTIASP
+    ret
+CRYPT_AARCH64_FUNC_END(ECP256_CondNeg)
+
 
 CRYPT_AARCH64_LOCAL_FUNC_START(ECP256_MulCore)
 AARCH64_PACIASP
@@ -1817,97 +1863,83 @@ AARCH64_PACIASP
     stp     x29, x30, [sp, #-16]!
     add     x29, sp , #0
 
-    add     x0 , x0 , x2 , lsl#3    // Needs x0 = x0 + (x2-1)*8 = x0 + x2*8 - 8
-                                    // The action of -8 is placed in the str instruction.
+    sub     x2 , x2 , #1            // index - 1
+    add     x2 , x2 , x2 , lsl#1    // (index - 1) * 3
+    add     x0 , x0 , x2 , lsl#5    // table[index - 1], sizeof(P256_Point) = 96
 
-    ldp     x4 , x5 , [x1]          // x
+    ldp     x4 , x5 , [x1]
     ldp     x6 , x7 , [x1, #16]
+    stp     x4 , x5 , [x0]
+    stp     x6 , x7 , [x0, #16]
 
-    str     x4 , [x0, #128*0-8]     // 8*16*0
-    str     x5 , [x0, #128*1-8]     // 8*16*1
-    str     x6 , [x0, #128*2-8]     // 8*16*2
-    str     x7 , [x0, #128*3-8]     // 8*16*3
+    ldp     x4 , x5 , [x1, #32]
+    ldp     x6 , x7 , [x1, #48]
+    stp     x4 , x5 , [x0, #32]
+    stp     x6 , x7 , [x0, #48]
 
-    add     x0 , x0 , #64*8
+    ldp     x4 , x5 , [x1, #64]
+    ldp     x6 , x7 , [x1, #80]
+    stp     x4 , x5 , [x0, #64]
+    stp     x6 , x7 , [x0, #80]
 
-    ldp     x4 , x5 , [x1, #32]     // y
-    ldp     x6 , x7 , [x1, #32+16]
-
-    str     x4 , [x0, #128*0-8]     // 8*16*0
-    str     x5 , [x0, #128*1-8]     // 8*16*1
-    str     x6 , [x0, #128*2-8]     // 8*16*2
-    str     x7 , [x0, #128*3-8]     // 8*16*3
-
-    add     x0 , x0 , #64*8
-
-    ldp     x4 , x5 , [x1, #64]     // z
-    ldp     x6 , x7 , [x1, #64+16]
-
-    str     x4 , [x0, #128*0-8]     // 8*16*0
-    str     x5 , [x0, #128*1-8]     // 8*16*1
-    str     x6 , [x0, #128*2-8]     // 8*16*2
-    str     x7 , [x0, #128*3-8]     // 8*16*3
-
-    ldr     x29, [sp], #16
+    ldp     x29, x30, [sp], #16
 AARCH64_AUTIASP
     ret
 CRYPT_AARCH64_FUNC_END(ECP256_Scatterw5)
 
+// x0: point, x1: table, x2: index
 CRYPT_AARCH64_FUNC_START(ECP256_Gatherw5)
 AARCH64_PACIASP
     stp     x29, x30, [sp, #-16]!
     add     x29, sp , #0
+    mov     x9,  #1
+    eor     v2.16b, v2.16b, v2.16b     // x[0], x[1]
+    eor     v3.16b, v3.16b, v3.16b     // x[2], x[3]
+    eor     v4.16b, v4.16b, v4.16b     // y[0], y[1]
+    eor     v5.16b, v5.16b, v5.16b     // y[2], y[3]
+    eor     v6.16b, v6.16b, v6.16b     // z[0], z[1]
+    eor     v7.16b, v7.16b, v7.16b     // z[2], z[3]
+.Lgather_w5_loop:
+    cmp     x9,  x2
+    csetm   x16, eq
+    dup     v0.2d, x16
 
-    cmp     x2 , xzr
-    csetm   x3 , ne                 // x3 = (x2 == 0) ? 0 : -1
-    add     x2 , x2 , x3            // x2 += x3, if x2 != 0, then x2 = x2 - 1, if not x2 = 0
+    ldr     q1, [x1]
+    and     v1.16b, v1.16b, v0.16b
+    orr     v2.16b, v2.16b, v1.16b
 
-    add     x1 , x1 , x2 , lsl#3    // x1 += x2*8, offset
+    ldr     q1, [x1, #16]
+    and     v1.16b, v1.16b, v0.16b
+    orr     v3.16b, v3.16b, v1.16b
 
-    ldr     x4 , [x1, #128*0]
-    ldr     x5 , [x1, #128*1]
-    ldr     x6 , [x1, #128*2]
-    ldr     x7 , [x1, #128*3]
+    ldr     q1, [x1, #32]
+    and     v1.16b, v1.16b, v0.16b
+    orr     v4.16b, v4.16b, v1.16b
 
-    csel    x4 , x4 , xzr, ne       // If x2 = 0, Then return to 0. Otherwise, returns the read point coordinates
-    csel    x5 , x5 , xzr, ne
-    csel    x6 , x6 , xzr, ne
-    csel    x7 , x7 , xzr, ne
+    ldr     q1, [x1, #48]
+    and     v1.16b, v1.16b, v0.16b
+    orr     v5.16b, v5.16b, v1.16b
 
-    stp     x4 , x5 , [x0]          // r->x
-    stp     x6 , x7 , [x0, #16]
+    ldr     q1, [x1, #64]
+    and     v1.16b, v1.16b, v0.16b
+    orr     v6.16b, v6.16b, v1.16b
 
-    add     x1 , x1 , #64*8
+    ldr     q1, [x1, #80]
+    and     v1.16b, v1.16b, v0.16b
+    orr     v7.16b, v7.16b, v1.16b
 
-    ldr     x4 , [x1, #128*0]
-    ldr     x5 , [x1, #128*1]
-    ldr     x6 , [x1, #128*2]
-    ldr     x7 , [x1, #128*3]
-
-    csel    x4 , x4 , xzr, ne       // If x2 = 0, return 0. Otherwise, returns the read point coordinates
-    csel    x5 , x5 , xzr, ne
-    csel    x6 , x6 , xzr, ne
-    csel    x7 , x7 , xzr, ne
-
-    stp     x4 , x5 , [x0, #32]          // r->y
-    stp     x6 , x7 , [x0, #48]
-
-    add     x1 , x1 , #64*8
-
-    ldr     x4 , [x1, #128*0]
-    ldr     x5 , [x1, #128*1]
-    ldr     x6 , [x1, #128*2]
-    ldr     x7 , [x1, #128*3]
-
-    csel    x4 , x4 , xzr, ne       // If x2 = 0, return 0. Otherwise, returns the read point coordinates
-    csel    x5 , x5 , xzr, ne
-    csel    x6 , x6 , xzr, ne
-    csel    x7 , x7 , xzr, ne
-
-    stp     x4 , x5 , [x0, #64]          // r->z
-    stp     x6 , x7 , [x0, #80]
-
-    ldr     x29, [sp], #16
+    add     x9, x9, #1
+    add     x1, x1, #96
+    cmp     x9, #17
+    b.ne    .Lgather_w5_loop
+    // restore output
+    str     q2, [x0]
+    str     q3, [x0, #16]
+    str     q4, [x0, #32]
+    str     q5, [x0, #48]
+    str     q6, [x0, #64]
+    str     q7, [x0, #80]
+    ldp     x29, x30, [sp], #16
 AARCH64_AUTIASP
     ret
 CRYPT_AARCH64_FUNC_END(ECP256_Gatherw5)

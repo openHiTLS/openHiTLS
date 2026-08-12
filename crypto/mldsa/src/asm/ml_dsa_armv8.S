@@ -996,7 +996,13 @@ MLDSA_ComputesPower2Round:
 .endm
 
 .macro pop_stack
-        add sp, sp, #MLD_STACK_SIZE
+    mov x10, sp
+    add x11, sp, #MLD_STACK_SIZE
+.Lclear_rej_uniform_stack\@:
+    stp xzr, xzr, [x10], #16
+    cmp x10, x11
+    b.lo .Lclear_rej_uniform_stack\@
+    add sp, sp, #MLD_STACK_SIZE
 .endm
 
     /* Parameters */
@@ -1373,6 +1379,12 @@ AARCH64_AUTIASP
 .endm
 
 .macro pop_stack
+    mov x10, sp
+    add x11, sp, #MLD_STACK_SIZE
+.Lclear_rej_uniform_eta2_stack\@:
+    stp xzr, xzr, [x10], #16
+    cmp x10, x11
+    b.lo .Lclear_rej_uniform_eta2_stack\@
     add sp, sp, #MLD_STACK_SIZE
 .endm
 
@@ -1692,6 +1704,12 @@ AARCH64_AUTIASP
 .endm
 
 .macro pop_stack
+    mov x10, sp
+    add x11, sp, #MLD_STACK_SIZE
+.Lclear_rej_uniform_eta4_stack\@:
+    stp xzr, xzr, [x10], #16
+    cmp x10, x11
+    b.lo .Lclear_rej_uniform_eta4_stack\@
     add sp, sp, #MLD_STACK_SIZE
 .endm
 
