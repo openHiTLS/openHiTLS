@@ -116,45 +116,304 @@ static void DrainStartupSeed(CRYPT_EAL_Es *es)
     }
 }
 
-static bool IsCollectionEntropy(void *ctx)
+static bool EsRetryableAlarm(int32_t ret)
+{
+    if (ret == CRYPT_ENTROPY_RCT_FAILURE || ret == CRYPT_ENTROPY_APT_FAILURE) {
+        return true;
+    }
+    if (ret != CRYPT_ENTROPY_ES_ENTROPY_NOT_ENOUGH) {
+        return false;
+    }
+#ifdef HITLS_BSL_ERR
+    int32_t root = BSL_ERR_PeekError();
+    return root == CRYPT_ENTROPY_RCT_FAILURE || root == CRYPT_ENTROPY_APT_FAILURE;
+#else
+    /* Without an error stack a wrapper's root cannot be confirmed. */
+    return false;
+#endif
+}
+
+#ifdef HITLS_BSL_ERR
+/* BSL_ERR_Init is not thread-safe. Run it on the loader thread, before any
+   worker can race the first initialization; helpers only read the result. */
+static int32_t g_esRetryErrInitRet = BSL_ERR_ERR_ACQUIRE_READ_LOCK_FAIL;
+
+__attribute__((constructor))
+static void EsRetryErrInit(void)
+{
+    g_esRetryErrInitRet = BSL_ERR_Init();
+}
+#endif
+
+static int32_t EsGatherRetryOnAlarm(CRYPT_EAL_Es *es, const char *tag)
+{
+    /* One initial attempt plus NS_PERMANENT_FAIL_STREAK recovery windows: a
+       source alarming on every window has retired by the last attempt. */
+    const int maxAttempts = 5;
+    int32_t ret = CRYPT_NULL_INPUT;
+#ifdef HITLS_BSL_ERR
+    /* The BSL stack has no per-call boundary, so residue from an earlier
+       operation would be misread as this call's root and destroyed by the
+       retry's clear; retry only on a stack this call owns. */
+    bool rootIsBound = (g_esRetryErrInitRet == BSL_SUCCESS) && (BSL_ERR_PeekError() == BSL_SUCCESS);
+#else
+    /* No stack exists, so nothing can be misread or destroyed. */
+    bool rootIsBound = true;
+#endif
+    for (int attempt = 1; attempt <= maxAttempts; attempt++) {
+        ret = CRYPT_EAL_EsCtrl(es, CRYPT_ENTROPY_GATHER_ENTROPY, NULL, 0);
+        if (ret == CRYPT_SUCCESS) {
+            if (attempt > 1) {
+                printf("[%s] gather succeeded on attempt %d/%d\n", tag, attempt, maxAttempts);
+            }
+            return ret;
+        }
+        if (!rootIsBound || !EsRetryableAlarm(ret) || attempt == maxAttempts) {
+            return ret;
+        }
+        TestErrClear();
+    }
+    return ret;
+}
+
+/* The consumption path shares the alarm exposure: EsEntropyGet runs the
+   recovery gate and, on an empty pool, a full gather (es_entropy.c), but
+   reports failure only as a zero length. The verdict exists solely on the
+   error stack, so without a bound root there is nothing to classify and the
+   first failure stands. */
+static uint32_t EsGetRetryOnAlarm(CRYPT_EAL_Es *es, uint8_t *buf, uint32_t len, const char *tag)
+{
+    const int maxAttempts = 5;
+    uint32_t got = 0;
+#ifdef HITLS_BSL_ERR
+    bool rootIsBound = (g_esRetryErrInitRet == BSL_SUCCESS) && (BSL_ERR_PeekError() == BSL_SUCCESS);
+    for (int attempt = 1; attempt <= maxAttempts; attempt++) {
+        got = CRYPT_EAL_EsEntropyGet(es, buf, len);
+        if (got > 0) {
+            if (attempt > 1) {
+                printf("[%s] get succeeded on attempt %d/%d\n", tag, attempt, maxAttempts);
+            }
+            return got;
+        }
+        int32_t root = BSL_ERR_PeekError();
+        if (!rootIsBound || attempt == maxAttempts ||
+            (root != CRYPT_ENTROPY_RCT_FAILURE && root != CRYPT_ENTROPY_APT_FAILURE)) {
+            return got;
+        }
+        TestErrClear();
+    }
+#else
+    got = CRYPT_EAL_EsEntropyGet(es, buf, len);
+    (void)tag;
+#endif
+    return got;
+}
+
+/* Init fails on an alarm two ways, both intermittent tiers. A startup seed
+   alarm surfaces as NS_NOT_AVA with the verdict at the root. A raw RCT/APT
+   is a startup window that exhausted the osr ladder, which the source books
+   as one floor-failure cycle of the NS_PERMANENT_FAIL_STREAK retirement
+   budget (es_noise_source.c); retirement then latches as PERMANENT_FAILURE,
+   which is not retried. A failed init has already torn everything down, so
+   a retry is a fresh cycle. */
+#ifdef HITLS_BSL_ERR
+/* Shared by the init helper and the count-calibrating tests that need their
+   own retry loop: a raw RCT/APT verdict, or NS_NOT_AVA whose stack root is
+   one, is the intermittent tier; everything else fails as-is. */
+static bool EsInitAlarmRetryable(int32_t ret)
+{
+    if (ret == CRYPT_ENTROPY_RCT_FAILURE || ret == CRYPT_ENTROPY_APT_FAILURE) {
+        return true;
+    }
+    if (ret != CRYPT_ENTROPY_ES_NS_NOT_AVA) {
+        return false;
+    }
+    int32_t root = BSL_ERR_PeekError();
+    return root == CRYPT_ENTROPY_RCT_FAILURE || root == CRYPT_ENTROPY_APT_FAILURE;
+}
+
+/* Init retry for count-calibrating tests: the caller's cycle counter is
+   zeroed before every attempt, so a retried init still reports the reads of
+   exactly one clean cycle. */
+static int32_t EsInitRetryCountReset(CRYPT_EAL_Es *es, const char *tag, uint32_t *cycleCounter)
+{
+    const int resetAttempts = 5;
+    int32_t ret = CRYPT_NULL_INPUT;
+    for (int attempt = 1; attempt <= resetAttempts; attempt++) {
+        *cycleCounter = 0;
+        ret = CRYPT_EAL_EsInit(es);
+        if (ret == CRYPT_SUCCESS) {
+            if (attempt > 1) {
+                printf("[%s] init succeeded on attempt %d/%d\n", tag, attempt, resetAttempts);
+            }
+            return ret;
+        }
+        if (attempt == resetAttempts || !EsInitAlarmRetryable(ret)) {
+            return ret;
+        }
+        TestErrClear();
+    }
+    return ret;
+}
+#endif
+
+static int32_t EsInitRetryOnAlarm(CRYPT_EAL_Es *es, const char *tag)
+{
+    const int maxAttempts = 5;
+    int32_t ret = CRYPT_NULL_INPUT;
+#ifdef HITLS_BSL_ERR
+    bool rootIsBound = (g_esRetryErrInitRet == BSL_SUCCESS) && (BSL_ERR_PeekError() == BSL_SUCCESS);
+    for (int attempt = 1; attempt <= maxAttempts; attempt++) {
+        ret = CRYPT_EAL_EsInit(es);
+        if (ret == CRYPT_SUCCESS) {
+            if (attempt > 1) {
+                printf("[%s] init succeeded on attempt %d/%d\n", tag, attempt, maxAttempts);
+            }
+            return ret;
+        }
+        if (!rootIsBound || attempt == maxAttempts || !EsInitAlarmRetryable(ret)) {
+            return ret;
+        }
+        TestErrClear();
+    }
+#else
+    ret = CRYPT_EAL_EsInit(es);
+    (void)tag;
+#endif
+    return ret;
+}
+
+/* Worker-side asserts would race the global test result, so thread helpers
+   report only through their EsAutoArg rc and the parent asserts after the
+   join. 1 = keep collecting, 0 = no room for another block, -1 = ctrl
+   error. */
+typedef struct {
+    CRYPT_EAL_Es *es;
+    intptr_t rc;
+} EsAutoArg;
+
+static int IsCollectionEntropy(CRYPT_EAL_Es *es)
 {
     bool isWork = false;
-    ASSERT_TRUE(CRYPT_EAL_EsCtrl(ctx, CRYPT_ENTROPY_GET_STATE, &isWork, 1) == CRYPT_SUCCESS);
     uint32_t poolSize = 0;
     uint32_t currSize = 0;
     uint32_t cfSize = 0;
-    ASSERT_TRUE(CRYPT_EAL_EsCtrl(ctx, CRYPT_ENTROPY_GET_POOL_SIZE, &poolSize, 4) == CRYPT_SUCCESS);
-    ASSERT_TRUE(CRYPT_EAL_EsCtrl(ctx, CRYPT_ENTROPY_POOL_GET_CURRSIZE, &currSize, 4) == CRYPT_SUCCESS);
-    ASSERT_TRUE(CRYPT_EAL_EsCtrl(ctx, CRYPT_ENTROPY_GET_CF_SIZE, &cfSize, 4) == CRYPT_SUCCESS);
-    return isWork && (cfSize <= poolSize - currSize);
-EXIT:
-    return false;
+    if (CRYPT_EAL_EsCtrl(es, CRYPT_ENTROPY_GET_STATE, &isWork, 1) != CRYPT_SUCCESS ||
+        CRYPT_EAL_EsCtrl(es, CRYPT_ENTROPY_GET_POOL_SIZE, &poolSize, 4) != CRYPT_SUCCESS ||
+        CRYPT_EAL_EsCtrl(es, CRYPT_ENTROPY_POOL_GET_CURRSIZE, &currSize, 4) != CRYPT_SUCCESS ||
+        CRYPT_EAL_EsCtrl(es, CRYPT_ENTROPY_GET_CF_SIZE, &cfSize, 4) != CRYPT_SUCCESS) {
+        return -1;
+    }
+    return (isWork && (cfSize <= poolSize - currSize)) ? 1 : 0;
 }
 
-static void *EsGatherAuto(void *ctx)
+static void *EsGatherAuto(void *arg)
 {
-    while(true) {
-        if (!IsCollectionEntropy(ctx)) {
+    EsAutoArg *wa = (EsAutoArg *)arg;
+    while (true) {
+        int state = IsCollectionEntropy(wa->es);
+        if (state < 0) {
+            goto EXIT;
+        }
+        if (state == 0) {
             break;
         }
-        ASSERT_TRUE(CRYPT_EAL_EsCtrl(ctx, CRYPT_ENTROPY_GATHER_ENTROPY, NULL, 0) == CRYPT_SUCCESS);
         uint32_t size;
-        ASSERT_TRUE(CRYPT_EAL_EsCtrl(ctx, CRYPT_ENTROPY_POOL_GET_CURRSIZE, (void *)&size, sizeof(uint32_t)) == CRYPT_SUCCESS);
+        if (EsGatherRetryOnAlarm(wa->es, "EsGatherAuto") != CRYPT_SUCCESS ||
+            CRYPT_EAL_EsCtrl(wa->es, CRYPT_ENTROPY_POOL_GET_CURRSIZE, (void *)&size, sizeof(uint32_t)) != CRYPT_SUCCESS) {
+            goto EXIT;
+        }
         usleep(1000);
     }
+    wa->rc = 0;
 EXIT:
+#ifdef HITLS_BSL_ERR
+    BSL_ERR_RemoveErrorStack(false);
+#endif
     return NULL;
 }
 
-static void *EsGetAuto(void *ctx)
+static void *EsGetAuto(void *arg)
 {
+    EsAutoArg *wa = (EsAutoArg *)arg;
     uint8_t buf[48] = {0};
     for (int32_t iter = 0; iter < 3; iter++) {
-        uint32_t len = CRYPT_EAL_EsEntropyGet(ctx, buf, 48);
-        ASSERT_TRUE(len > 0);
+        if (EsGetRetryOnAlarm(wa->es, buf, 48, "EsGetAuto") == 0) {
+            goto EXIT;
+        }
     }
+    wa->rc = 0;
 EXIT:
+#ifdef HITLS_BSL_ERR
+    BSL_ERR_RemoveErrorStack(false);
+#endif
     return NULL;
+}
+
+/* Joins every thread that actually started before returning, so a failed
+   second create cannot leave a worker racing the caller's frame. */
+static int32_t EsRunGatherGetPair(CRYPT_EAL_Es *es)
+{
+    BSL_SAL_ThreadId thrd = NULL;
+    BSL_SAL_ThreadId thrdget = NULL;
+    /* Static: a variant that breaks the close leaks the worker past this
+       frame, and its final rc store must not land in a dead frame. Callers
+       are serial. */
+    static EsAutoArg gatherArg;
+    static EsAutoArg getArg;
+    gatherArg.es = es;
+    gatherArg.rc = 1;
+    getArg.es = es;
+    getArg.rc = 1;
+    int32_t createGather = BSL_SAL_ThreadCreate(&thrd, EsGatherAuto, &gatherArg);
+    int32_t createGet = (createGather == BSL_SUCCESS)
+        ? BSL_SAL_ThreadCreate(&thrdget, EsGetAuto, &getArg) : createGather;
+    if (createGather == BSL_SUCCESS) {
+        BSL_SAL_ThreadClose(thrd);
+    }
+    if (createGather == BSL_SUCCESS && createGet == BSL_SUCCESS) {
+        BSL_SAL_ThreadClose(thrdget);
+    }
+    if (createGather != BSL_SUCCESS || createGet != BSL_SUCCESS) {
+        return createGather != BSL_SUCCESS ? createGather : createGet;
+    }
+    if (gatherArg.rc != 0 || getArg.rc != 0) {
+        return CRYPT_ENTROPY_ES_STATE_ERROR;
+    }
+    return CRYPT_SUCCESS;
+}
+
+/* Fails the Nth SAL thread create while staying faithful to the shipped
+   pass-through (posix_lock.c SAL_ThreadCreate). BSL_SAL_ThreadClose calls
+   the close hook and then falls through to its own join, so the hook only
+   counts: one count proves the pair helper closed the started worker before
+   returning. The create hook keeps the last created id so a variant that
+   breaks the close can still be reaped deterministically. */
+static uint32_t g_threadCreateCalls = 0;
+static uint32_t g_threadCreateFailAt = 0;
+static uint32_t g_threadCloseCalls = 0;
+static BSL_SAL_ThreadId g_threadCreatedId = NULL;
+
+static int32_t EntropyThreadCreateHook(BSL_SAL_ThreadId *thread, void *(*startFunc)(void *), void *arg)
+{
+    g_threadCreateCalls++;
+    if (g_threadCreateFailAt != 0 && g_threadCreateCalls == g_threadCreateFailAt) {
+        return BSL_SAL_ERR_UNKNOWN;
+    }
+    if (thread == NULL || startFunc == NULL) {
+        return BSL_SAL_ERR_BAD_PARAM;
+    }
+    if (pthread_create((pthread_t *)thread, NULL, startFunc, arg) != 0) {
+        return BSL_SAL_ERR_UNKNOWN;
+    }
+    g_threadCreatedId = *thread;
+    return BSL_SUCCESS;
+}
+
+static void EntropyThreadCloseHook(BSL_SAL_ThreadId thread)
+{
+    (void)thread;
+    g_threadCloseCalls++;
 }
 
 static const char *EsGetCfMode(uint32_t algId)
@@ -257,56 +516,68 @@ static void EntropyDeinitCount(void *ctx)
     g_entropyDeinitCalls++;
 }
 
-static void *EsMutiAuto(void *ctx)
+static void *EsMutiAuto(void *arg)
 {
-    CRYPT_EAL_NsPara para = {
-        "aaa",
-        false,
-        7,
-        {
-            NULL,
-            NULL,
-            EntropyReadNormal,
-            NULL,
-        },
-        {5, 39, 512},
-    };
-    CRYPT_EAL_EsCtrl(ctx, CRYPT_ENTROPY_SET_CF, (void *)(intptr_t)"sha256_df", strlen("sha256_df"));
-    CRYPT_EAL_EsCtrl(ctx, CRYPT_ENTROPY_ADD_NS, (void *)&para, sizeof(CRYPT_EAL_NsPara));
-    uint32_t size = 512;
-    CRYPT_EAL_EsCtrl(ctx, CRYPT_ENTROPY_SET_POOL_SIZE, (void *)&size, sizeof(uint32_t));
-    ASSERT_TRUE(CRYPT_EAL_EsInit(ctx) == CRYPT_SUCCESS);
+    EsAutoArg *wa = (EsAutoArg *)arg;
+    if (EsInitRetryOnAlarm(wa->es, "EsMutiAuto") != CRYPT_SUCCESS) {
+        goto EXIT;
+    }
     uint8_t buf[48] = {0};
     for (int32_t iter = 0; iter < 3; iter++) {
-        uint32_t len = CRYPT_EAL_EsEntropyGet(ctx, buf, 48);
-        ASSERT_TRUE(len > 0);
+        if (EsGetRetryOnAlarm(wa->es, buf, 48, "EsMutiAuto") == 0) {
+            goto EXIT;
+        }
     }
+    wa->rc = 0;
 EXIT:
+#ifdef HITLS_BSL_ERR
+    BSL_ERR_RemoveErrorStack(false);
+#endif
     return NULL;
 }
 
-static void EntropyESMutilTest(void *alg)
+/* Worker asserts would race the global test result across five threads, so
+   each worker only reports through its own rc and the parent asserts after
+   the join. */
+typedef struct {
+    int alg;
+    intptr_t rc;
+} EsMutilWorkerArg;
+
+static void *EntropyESMutilTest(void *arg)
 {
+    EsMutilWorkerArg *wa = (EsMutilWorkerArg *)arg;
     uint32_t poolSize = 4096;
     uint32_t expectGetLen = 32;
     uint8_t buf[1024] = {0};
     uint32_t currPoolSize = 0;
 
     CRYPT_EAL_Es *es = CRYPT_EAL_EsNew();
-    ASSERT_TRUE(es != NULL);
-    const char *mode = EsGetCfMode((uint32_t)(*(int *)alg));
-    ASSERT_TRUE(CRYPT_EAL_EsCtrl(es, CRYPT_ENTROPY_SET_CF, (void *)(intptr_t)mode, strlen(mode)) == CRYPT_SUCCESS);
-    ASSERT_TRUE(CRYPT_EAL_EsCtrl(es, CRYPT_ENTROPY_SET_POOL_SIZE, (void *)&poolSize, sizeof(uint32_t)) == CRYPT_SUCCESS);
-    ASSERT_TRUE(CRYPT_EAL_EsInit(es) == CRYPT_SUCCESS);
-    for(int iter = 0; iter < 1; iter++) {
-        ASSERT_TRUE(CRYPT_EAL_EsCtrl(es, CRYPT_ENTROPY_GATHER_ENTROPY, NULL, 0) == CRYPT_SUCCESS);
+    if (es == NULL) {
+        goto EXIT;
     }
-    ASSERT_TRUE(CRYPT_EAL_EsCtrl(es, CRYPT_ENTROPY_POOL_GET_CURRSIZE, &currPoolSize, sizeof(uint32_t)) == CRYPT_SUCCESS);
-    ASSERT_TRUE(currPoolSize > expectGetLen);
-    uint32_t resLen = CRYPT_EAL_EsEntropyGet(es, buf, expectGetLen);
-    ASSERT_TRUE(resLen == expectGetLen);
+    const char *mode = EsGetCfMode((uint32_t)wa->alg);
+    if (CRYPT_EAL_EsCtrl(es, CRYPT_ENTROPY_SET_CF, (void *)(intptr_t)mode, strlen(mode)) != CRYPT_SUCCESS ||
+        CRYPT_EAL_EsCtrl(es, CRYPT_ENTROPY_SET_POOL_SIZE, (void *)&poolSize, sizeof(uint32_t)) != CRYPT_SUCCESS) {
+        goto EXIT;
+    }
+    if (EsInitRetryOnAlarm(es, "EsMutilTest") != CRYPT_SUCCESS ||
+        EsGatherRetryOnAlarm(es, "EsMutilTest") != CRYPT_SUCCESS) {
+        goto EXIT;
+    }
+    if (CRYPT_EAL_EsCtrl(es, CRYPT_ENTROPY_POOL_GET_CURRSIZE, &currPoolSize, sizeof(uint32_t)) != CRYPT_SUCCESS ||
+        currPoolSize <= expectGetLen) {
+        goto EXIT;
+    }
+    if (CRYPT_EAL_EsEntropyGet(es, buf, expectGetLen) == expectGetLen) {
+        wa->rc = 0;
+    }
 EXIT:
     CRYPT_EAL_EsFree(es);
+#ifdef HITLS_BSL_ERR
+    BSL_ERR_RemoveErrorStack(false);
+#endif
+    return NULL;
 }
 static int32_t GetEntropyTest(void *seedCtx, CRYPT_Data *entropy, uint32_t strength, CRYPT_Range *lenRange)
 {
@@ -393,6 +664,7 @@ static uint32_t ErrorGetEsEntropy(CRYPT_EAL_Es *esCtx, uint8_t *data, uint32_t l
 
     return 0;
 }
+
 #endif
 
 static CRYPT_EAL_SeedPoolCtx *GetPoolCtx(uint32_t ent1, uint32_t ent2, bool pes1, bool pes2)
@@ -1244,13 +1516,8 @@ void SDV_CRYPTO_ENTROPY_EsNormalTest(int alg, int size, int test)
     bool healthTest = IsRunningOnWSL() ? false : (bool)test;
     ASSERT_TRUE(CRYPT_EAL_EsCtrl(es, CRYPT_ENTROPY_ENABLE_TEST, &healthTest, 1) == CRYPT_SUCCESS);
     ASSERT_TRUE(CRYPT_EAL_EsCtrl(es, CRYPT_ENTROPY_SET_POOL_SIZE, (void *)&size, sizeof(uint32_t)) == CRYPT_SUCCESS);
-    ASSERT_TRUE(CRYPT_EAL_EsInit(es) == CRYPT_SUCCESS);
-    BSL_SAL_ThreadId thrd;
-    ASSERT_TRUE(BSL_SAL_ThreadCreate(&thrd, EsGatherAuto, es) == 0);
-    BSL_SAL_ThreadId thrdget;
-    ASSERT_TRUE(BSL_SAL_ThreadCreate(&thrdget, EsGetAuto, es) == 0);
-    BSL_SAL_ThreadClose(thrd);
-    BSL_SAL_ThreadClose(thrdget);
+    ASSERT_TRUE(EsInitRetryOnAlarm(es, "EsNormalTest") == CRYPT_SUCCESS);
+    ASSERT_EQ(EsRunGatherGetPair(es), CRYPT_SUCCESS);
     ASSERT_TRUE(TestIsErrStackEmpty());
 EXIT:
     CRYPT_EAL_EsFree(es);
@@ -1282,7 +1549,7 @@ void SDV_CRYPTO_ENTROPY_EsCtrlTest1(int type, int state, int excRes)
     if (state == 1) {
         ASSERT_TRUE(CRYPT_EAL_EsCtrl(es, CRYPT_ENTROPY_SET_CF, (void *)(intptr_t)"sm3_df", strlen("sm3_df")) == CRYPT_SUCCESS);
         ASSERT_TRUE(CRYPT_EAL_EsCtrl(es, CRYPT_ENTROPY_SET_POOL_SIZE, (void *)&len, sizeof(uint32_t)) == CRYPT_SUCCESS);
-        ASSERT_TRUE(CRYPT_EAL_EsInit(es) == CRYPT_SUCCESS);
+        ASSERT_TRUE(EsInitRetryOnAlarm(es, "EsCtrlTest1") == CRYPT_SUCCESS);
     }
     if (excRes == 1) {
         ASSERT_TRUE(CRYPT_EAL_EsCtrl(es, type, (void *)&len, sizeof(uint32_t)) == CRYPT_SUCCESS);
@@ -1338,7 +1605,7 @@ void SDV_CRYPTO_ENTROPY_EsCtrlTest2(void)
     bool flag = false;
     ASSERT_TRUE(CRYPT_EAL_EsCtrl(es, CRYPT_ENTROPY_GET_STATE, &flag, 1) == CRYPT_SUCCESS);
     ASSERT_TRUE(flag == false);
-    ASSERT_TRUE(CRYPT_EAL_EsInit(es) == CRYPT_SUCCESS);
+    ASSERT_TRUE(EsInitRetryOnAlarm(es, "EsCtrlTest2") == CRYPT_SUCCESS);
     ASSERT_TRUE(CRYPT_EAL_EsCtrl(es, CRYPT_ENTROPY_GET_STATE, &flag, 1) == CRYPT_SUCCESS);
     ASSERT_TRUE(flag == true);
     ASSERT_TRUE(TestIsErrStackEmpty());
@@ -1986,11 +2253,13 @@ void SDV_CRYPTO_ENTROPY_EsGatherTest(int gather, int length, int expRes)
     ASSERT_TRUE(CRYPT_EAL_EsCtrl(es, CRYPT_ENTROPY_ENABLE_TEST, &healthTest, 1) == CRYPT_SUCCESS);
     uint32_t size = 512;
     ASSERT_TRUE(CRYPT_EAL_EsCtrl(es, CRYPT_ENTROPY_SET_POOL_SIZE, (void *)&size, sizeof(uint32_t)) == CRYPT_SUCCESS);
-    ASSERT_TRUE(CRYPT_EAL_EsInit(es) == CRYPT_SUCCESS);
+    ASSERT_TRUE(EsInitRetryOnAlarm(es, "EsGatherTest") == CRYPT_SUCCESS);
     if (gather == 1) {
         BSL_SAL_ThreadId thrd;
-        ASSERT_TRUE(BSL_SAL_ThreadCreate(&thrd, EsGatherAuto, es) == 0);
+        EsAutoArg gatherArg = {es, 1};
+        ASSERT_TRUE(BSL_SAL_ThreadCreate(&thrd, EsGatherAuto, &gatherArg) == 0);
         BSL_SAL_ThreadClose(thrd);
+        ASSERT_EQ(gatherArg.rc, 0);
     }
     uint8_t buf[513] = {0};
     uint32_t len = CRYPT_EAL_EsEntropyGet(es, buf, length);
@@ -2138,7 +2407,7 @@ void SDV_CRYPTO_ENTROPY_EsMultiNsTest()
     /* The NTG.1.4 startup gate gathers at init, so the failing source is
        observed (and disabled) during EsInit already; count from there. */
     g_entropyNsFailCount = 0;
-    ASSERT_TRUE(CRYPT_EAL_EsInit(es) == CRYPT_SUCCESS);
+    ASSERT_TRUE(EsInitRetryOnAlarm(es, "EsMultiNsTest") == CRYPT_SUCCESS);
     uint8_t buf[32] = {0};
     ASSERT_TRUE(CRYPT_EAL_EsEntropyGet(es, buf, 32) == 32);
     ASSERT_TRUE(g_entropyNsFailCount > 0);
@@ -2326,14 +2595,18 @@ void SDV_CRYPTO_ENTROPY_MutiTest(void)
     ASSERT_TRUE(CRYPT_EAL_EsCtrl(es, CRYPT_ENTROPY_SET_CF, (void *)(intptr_t)"sha256_df", strlen("sha256_df")) == CRYPT_SUCCESS);
     uint32_t size = 512;
     ASSERT_TRUE(CRYPT_EAL_EsCtrl(es, CRYPT_ENTROPY_SET_POOL_SIZE, (void *)&size, sizeof(uint32_t)) == CRYPT_SUCCESS);
-    ASSERT_TRUE(CRYPT_EAL_EsInit(es) == CRYPT_SUCCESS);
+    ASSERT_TRUE(EsInitRetryOnAlarm(es, "MutiTest") == CRYPT_SUCCESS);
     BSL_SAL_ThreadId thrd;
-    ASSERT_TRUE(BSL_SAL_ThreadCreate(&thrd, EsGatherAuto, es) == 0);
+    EsAutoArg gatherArg = {es, 1};
+    ASSERT_TRUE(BSL_SAL_ThreadCreate(&thrd, EsGatherAuto, &gatherArg) == 0);
     BSL_SAL_ThreadClose(thrd);
+    ASSERT_EQ(gatherArg.rc, 0);
     for (int32_t iter = 0; iter < 3; iter++) {
         BSL_SAL_ThreadId thrdget;
-        ASSERT_TRUE(BSL_SAL_ThreadCreate(&thrdget, EsGetAuto, es) == 0);
+        EsAutoArg getArg = {es, 1};
+        ASSERT_TRUE(BSL_SAL_ThreadCreate(&thrdget, EsGetAuto, &getArg) == 0);
         BSL_SAL_ThreadClose(thrdget);
+        ASSERT_EQ(getArg.rc, 0);
     }
     ASSERT_TRUE(TestIsErrStackEmpty());
 
@@ -2360,14 +2633,26 @@ void SDV_CRYPTO_ENTROPY_MutiBeforeInitTest(void)
 #ifdef HITLS_CRYPTO_ENTROPY_SYS
     CRYPT_EAL_Es *es = CRYPT_EAL_EsNew();
     ASSERT_TRUE(es != NULL);
+    /* Configure once on this thread; the workers then race init and reads
+       on a fixed configuration. */
+    CRYPT_EAL_NsPara mutiPara = {"aaa", false, 7, {NULL, NULL, EntropyReadNormal, NULL}, {5, 39, 512}};
+    ASSERT_TRUE(CRYPT_EAL_EsCtrl(es, CRYPT_ENTROPY_SET_CF, (void *)(intptr_t)"sha256_df",
+        strlen("sha256_df")) == CRYPT_SUCCESS);
+    ASSERT_TRUE(CRYPT_EAL_EsCtrl(es, CRYPT_ENTROPY_ADD_NS, (void *)&mutiPara, sizeof(CRYPT_EAL_NsPara)) == CRYPT_SUCCESS);
+    uint32_t mutiPool = 512;
+    ASSERT_TRUE(CRYPT_EAL_EsCtrl(es, CRYPT_ENTROPY_SET_POOL_SIZE, (void *)&mutiPool, sizeof(uint32_t)) == CRYPT_SUCCESS);
     for (int32_t iter = 0; iter < 3; iter++) {
         BSL_SAL_ThreadId thrdget;
-        ASSERT_TRUE(BSL_SAL_ThreadCreate(&thrdget, EsMutiAuto, es) == 0);
+        EsAutoArg mutiArg = {es, 1};
+        ASSERT_TRUE(BSL_SAL_ThreadCreate(&thrdget, EsMutiAuto, &mutiArg) == 0);
         BSL_SAL_ThreadClose(thrdget);
+        ASSERT_EQ(mutiArg.rc, 0);
     }
     BSL_SAL_ThreadId thrd;
-    ASSERT_TRUE(BSL_SAL_ThreadCreate(&thrd, EsGatherAuto, es) == 0);
+    EsAutoArg gatherArg = {es, 1};
+    ASSERT_TRUE(BSL_SAL_ThreadCreate(&thrd, EsGatherAuto, &gatherArg) == 0);
     BSL_SAL_ThreadClose(thrd);
+    ASSERT_EQ(gatherArg.rc, 0);
     ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
@@ -2398,12 +2683,12 @@ void SDV_CRYPTO_ENTROPY_ES_FUNC_0001(int enableTest)
         bool healthTest = IsRunningOnWSL() ? false : true;
         ASSERT_TRUE(CRYPT_EAL_EsCtrl(es, CRYPT_ENTROPY_ENABLE_TEST, &healthTest, 1) == CRYPT_SUCCESS);
     }
-    ASSERT_TRUE(CRYPT_EAL_EsInit(es) == CRYPT_SUCCESS);
+    ASSERT_TRUE(EsInitRetryOnAlarm(es, "ES_FUNC_0001") == CRYPT_SUCCESS);
     DrainStartupSeed(es);
     uint32_t size;
     ASSERT_TRUE(CRYPT_EAL_EsCtrl(es, CRYPT_ENTROPY_POOL_GET_CURRSIZE, (void *)&size, sizeof(uint32_t)) == CRYPT_SUCCESS);
     ASSERT_EQ(size, 0);
-    ASSERT_TRUE(CRYPT_EAL_EsCtrl(es, CRYPT_ENTROPY_GATHER_ENTROPY, NULL, 0) == CRYPT_SUCCESS);
+    ASSERT_TRUE(EsGatherRetryOnAlarm(es, "ES_FUNC_0001") == CRYPT_SUCCESS);
     ASSERT_TRUE(CRYPT_EAL_EsCtrl(es, CRYPT_ENTROPY_POOL_GET_CURRSIZE, (void *)&size, sizeof(uint32_t)) == CRYPT_SUCCESS);
     ASSERT_EQ(size, 64);
     uint8_t buf[8192] = {0};
@@ -2503,12 +2788,12 @@ void SDV_CRYPTO_ENTROPY_ES_FUNC_0003(int alg, int enableTest)
         bool healthTest = IsRunningOnWSL() ? false : true;
         ASSERT_TRUE(CRYPT_EAL_EsCtrl(es, CRYPT_ENTROPY_ENABLE_TEST, &healthTest, 1) == CRYPT_SUCCESS);
     }
-    ASSERT_TRUE(CRYPT_EAL_EsInit(es) == CRYPT_SUCCESS);
+    ASSERT_TRUE(EsInitRetryOnAlarm(es, "ES_FUNC_0003") == CRYPT_SUCCESS);
     DrainStartupSeed(es);
     uint32_t size;
     ASSERT_TRUE(CRYPT_EAL_EsCtrl(es, CRYPT_ENTROPY_POOL_GET_CURRSIZE, (void *)&size, sizeof(uint32_t)) == CRYPT_SUCCESS);
     ASSERT_EQ(size, 0);
-    ASSERT_TRUE(CRYPT_EAL_EsCtrl(es, CRYPT_ENTROPY_GATHER_ENTROPY, NULL, 0) == CRYPT_SUCCESS);
+    ASSERT_TRUE(EsGatherRetryOnAlarm(es, "ES_FUNC_0003") == CRYPT_SUCCESS);
     ASSERT_TRUE(CRYPT_EAL_EsCtrl(es, CRYPT_ENTROPY_POOL_GET_CURRSIZE, (void *)&size, sizeof(uint32_t)) == CRYPT_SUCCESS);
     ASSERT_EQ(size, expectGetLen);
     uint8_t buf[8192] = {0};
@@ -2640,7 +2925,10 @@ void SDV_CRYPTO_ENTROPY_ES_FUNC_0005(void)
         ret = CRYPT_EAL_EsCtrl(es, CRYPT_ENTROPY_SET_POOL_SIZE, (void *)&poolErrorSize[i], sizeof(uint32_t));
         if (ret == CRYPT_SUCCESS) {
             ASSERT_TRUE(CRYPT_EAL_EsCtrl(es, CRYPT_ENTROPY_GET_POOL_SIZE, &poolSize, sizeof(uint32_t)) == CRYPT_ENTROPY_ES_STATE_ERROR);
-            ASSERT_TRUE(CRYPT_EAL_EsInit(es) == CRYPT_SUCCESS);
+            /* The expected error above is stack residue that would disable
+               the retry guard. */
+            TestErrClear();
+            ASSERT_TRUE(EsInitRetryOnAlarm(es, "ES_FUNC_0005") == CRYPT_SUCCESS);
             ASSERT_TRUE(CRYPT_EAL_EsCtrl(es, CRYPT_ENTROPY_GET_POOL_SIZE, &poolSize, sizeof(uint32_t)) == CRYPT_SUCCESS);
             ASSERT_EQ(poolSize, poolErrorSize[i]);
         } else {
@@ -2670,14 +2958,34 @@ void SDV_CRYPTO_ENTROPY_ES_FUNC_0006(int alg)
 #ifdef HITLS_CRYPTO_ENTROPY_SYS
     const uint32_t threadNum = 5;
     pthread_t threadId[threadNum];
+    EsMutilWorkerArg wargs[threadNum];
+    uint32_t created = 0;
+    int createRc = 0;
+    int joinFails = 0;
 
     for(uint32_t i = 0; i < threadNum; i++) {
-        int ret = pthread_create(&threadId[i], NULL, (void *)EntropyESMutilTest, &alg);
-        ASSERT_TRUE(ret == 0);
+        wargs[i].alg = alg;
+        wargs[i].rc = 1;
     }
-
     for(uint32_t i = 0; i < threadNum; i++) {
-        pthread_join(threadId[i], NULL);
+        createRc = pthread_create(&threadId[i], NULL, EntropyESMutilTest, &wargs[i]);
+        if (createRc != 0) {
+            break;
+        }
+        created++;
+    }
+    /* Join everything that started before any assert can leave the scope the
+       workers still reference. */
+    for(uint32_t i = 0; i < created; i++) {
+        if (pthread_join(threadId[i], NULL) != 0) {
+            joinFails++;
+        }
+    }
+    ASSERT_EQ(createRc, 0);
+    ASSERT_EQ(created, threadNum);
+    ASSERT_EQ(joinFails, 0);
+    for(uint32_t i = 0; i < threadNum; i++) {
+        ASSERT_EQ(wargs[i].rc, 0);
     }
 EXIT:
     return;
@@ -2948,9 +3256,9 @@ void SDV_CRYPTO_ENTROPY_DrbgTest(void)
         {5, 39, 512},
     };
     ASSERT_TRUE(CRYPT_EAL_EsCtrl(es, CRYPT_ENTROPY_ADD_NS, (void *)&para, sizeof(CRYPT_EAL_NsPara)) == CRYPT_SUCCESS);
-    ASSERT_TRUE(CRYPT_EAL_EsInit(es) == CRYPT_SUCCESS);
+    ASSERT_TRUE(EsInitRetryOnAlarm(es, "DrbgTest") == CRYPT_SUCCESS);
     for (int32_t iter = 0; iter < 5; iter++) {
-        ASSERT_TRUE(CRYPT_EAL_EsCtrl(es, CRYPT_ENTROPY_GATHER_ENTROPY, NULL, 0) == CRYPT_SUCCESS);
+        ASSERT_TRUE(EsGatherRetryOnAlarm(es, "DrbgTest") == CRYPT_SUCCESS);
     }
     CRYPT_RandSeedMethod meth = {GetEntropyTest, CleanEntropyTest, GetNonceTest, CleanNonceTest};
     ASSERT_TRUE(CRYPT_EAL_RandInit(CRYPT_RAND_SHA256, &meth, (void *)es, NULL, 0) == CRYPT_SUCCESS);
@@ -3252,10 +3560,12 @@ void SDV_CRYPTO_SEEDPOOL_CompleteTest(void)
         {5, 39, 512},
     };
     ASSERT_TRUE(CRYPT_EAL_EsCtrl(es, CRYPT_ENTROPY_ADD_NS, (void *)&para, sizeof(CRYPT_EAL_NsPara)) == CRYPT_SUCCESS);
-    ASSERT_TRUE(CRYPT_EAL_EsInit(es) == CRYPT_SUCCESS);
+    ASSERT_TRUE(EsInitRetryOnAlarm(es, "SDV_CRYPTO_SEEDPOOL_Comp") == CRYPT_SUCCESS);
     BSL_SAL_ThreadId thrd;
-    ASSERT_TRUE(BSL_SAL_ThreadCreate(&thrd, EsGatherAuto, es) == 0);
+    EsAutoArg gatherArg = {es, 1};
+    ASSERT_TRUE(BSL_SAL_ThreadCreate(&thrd, EsGatherAuto, &gatherArg) == 0);
     BSL_SAL_ThreadClose(thrd);
+    ASSERT_EQ(gatherArg.rc, 0);
 
     CRYPT_EAL_EsPara para1 = {false, 8, es, (CRYPT_EAL_EntropyGet)CRYPT_EAL_EsEntropyGet};
     ASSERT_TRUE(CRYPT_EAL_SeedPoolAddEs(pool, &para1) == CRYPT_SUCCESS);
@@ -3305,33 +3615,10 @@ void HITLS_SDV_DRBG_GM_FUNC_TC019(int isCreateNullPool, int isPhysical, int minE
     bool healthTest = IsRunningOnWSL() ? false : true;
     ASSERT_TRUE(CRYPT_EAL_EsCtrl(es, CRYPT_ENTROPY_ENABLE_TEST, &healthTest, sizeof(bool)) == CRYPT_SUCCESS);
 
-    /* Retry startup health tests for timing-dependent cpu-jitter samples. */
-    int32_t ret = CRYPT_NULL_INPUT;
-    const int maxRetries = 5;
-    for (int attempt = 1; attempt <= maxRetries; attempt++) {
-        ret = CRYPT_EAL_EsInit(es);
-        if (ret == CRYPT_SUCCESS) {
-            if (attempt > 1) {
-                printf("[TC019] CRYPT_EAL_EsInit succeeded on attempt %d/%d\n", attempt, maxRetries);
-            }
-            break;
-        }
-        if (attempt < maxRetries) {
-            printf("[TC019] CRYPT_EAL_EsInit attempt %d/%d failed: 0x%08x (%d), retrying...\n",
-                   attempt, maxRetries, ret, ret);
-            TestErrClear();
-        } else {
-            printf("[TC019] CRYPT_EAL_EsInit failed after %d attempts, last error: 0x%08x (%d)\n",
-                   maxRetries, ret, ret);
-            printf("[TC019] Test parameters: isCreateNullPool=%d, isPhysical=%d, minEntropy=%d, minL=%d, maxL=%d, entropyL=%d, isValid=%d\n",
-                   isCreateNullPool, isPhysical, minEntropy, minL, maxL, entropyL, isValid);
-            printf("[TC019] Health test enabled: %s\n", healthTest ? "true" : "false");
-        }
-    }
-    ASSERT_TRUE(ret == CRYPT_SUCCESS);
+    ASSERT_TRUE(EsInitRetryOnAlarm(es, "TC019") == CRYPT_SUCCESS);
     if (isCreateNullPool) {
         for (int i = 0; i < 16; i++) {
-            ASSERT_TRUE(CRYPT_EAL_EsCtrl(es, CRYPT_ENTROPY_GATHER_ENTROPY, NULL, 0) == CRYPT_SUCCESS);
+            ASSERT_TRUE(EsGatherRetryOnAlarm(es, "TC019") == CRYPT_SUCCESS);
         }
     }
     CRYPT_EAL_EsPara esPara = {isPhysical, (uint32_t)minEntropy, es, NULL};
@@ -3399,68 +3686,28 @@ void HITLS_SDV_DRBG_GM_FUNC_TC039(int isCreateNullPool, int isPhysical, int minE
     bool healthTest = IsRunningOnWSL() ? false : true;
     ASSERT_TRUE(CRYPT_EAL_EsCtrl(es1, CRYPT_ENTROPY_ENABLE_TEST, &healthTest, sizeof(bool)) == CRYPT_SUCCESS);
 
-    int32_t ret1 = CRYPT_NULL_INPUT;
-    const int maxRetries = 5;
-    for (int attempt = 1; attempt <= maxRetries; attempt++) {
-        ret1 = CRYPT_EAL_EsInit(es1);
-        if (ret1 == CRYPT_SUCCESS) {
-            if (attempt > 1) {
-                printf("[TC039] es1 init succeeded on attempt %d/%d\n", attempt, maxRetries);
-            }
-            break;
-        }
-        if (attempt < maxRetries) {
-            TestErrClear();
-        }
-    }
-    ASSERT_TRUE(ret1 == CRYPT_SUCCESS);
+    ASSERT_TRUE(EsInitRetryOnAlarm(es1, "TC039") == CRYPT_SUCCESS);
 
-    ASSERT_TRUE(CRYPT_EAL_EsCtrl(es1, CRYPT_ENTROPY_GATHER_ENTROPY, NULL, 0) == CRYPT_SUCCESS);
+    ASSERT_TRUE(EsGatherRetryOnAlarm(es1, "TC039") == CRYPT_SUCCESS);
     CRYPT_EAL_EsPara esPara1 = {isPhysical, (uint32_t)minEntropy, es1, (CRYPT_EAL_EntropyGet)CRYPT_EAL_EsEntropyGet};
     es2 = CRYPT_EAL_EsNew();
     ASSERT_TRUE(es2 != NULL);
     ASSERT_TRUE(CRYPT_EAL_EsCtrl(es2, CRYPT_ENTROPY_SET_CF, (void *)(intptr_t)mode, strlen(mode)) == CRYPT_SUCCESS);
     ASSERT_TRUE(CRYPT_EAL_EsCtrl(es2, CRYPT_ENTROPY_ENABLE_TEST, &healthTest, sizeof(bool)) == CRYPT_SUCCESS);
 
-    int32_t ret2 = CRYPT_NULL_INPUT;
-    for (int attempt = 1; attempt <= maxRetries; attempt++) {
-        ret2 = CRYPT_EAL_EsInit(es2);
-        if (ret2 == CRYPT_SUCCESS) {
-            if (attempt > 1) {
-                printf("[TC039] es2 init succeeded on attempt %d/%d\n", attempt, maxRetries);
-            }
-            break;
-        }
-        if (attempt < maxRetries) {
-            TestErrClear();
-        }
-    }
-    ASSERT_TRUE(ret2 == CRYPT_SUCCESS);
+    ASSERT_TRUE(EsInitRetryOnAlarm(es2, "TC039") == CRYPT_SUCCESS);
 
-    ASSERT_TRUE(CRYPT_EAL_EsCtrl(es2, CRYPT_ENTROPY_GATHER_ENTROPY, NULL, 0) == CRYPT_SUCCESS);
+    ASSERT_TRUE(EsGatherRetryOnAlarm(es2, "TC039") == CRYPT_SUCCESS);
     CRYPT_EAL_EsPara esPara2 = {!isPhysical, (uint32_t)minEntropy, es2, (CRYPT_EAL_EntropyGet)CRYPT_EAL_EsEntropyGet};
     es3 = CRYPT_EAL_EsNew();
     ASSERT_TRUE(es3 != NULL);
     ASSERT_TRUE(CRYPT_EAL_EsCtrl(es3, CRYPT_ENTROPY_SET_CF, (void *)(intptr_t)mode, strlen(mode)) == CRYPT_SUCCESS);
     ASSERT_TRUE(CRYPT_EAL_EsCtrl(es3, CRYPT_ENTROPY_ENABLE_TEST, &healthTest, sizeof(bool)) == CRYPT_SUCCESS);
 
-    int32_t ret3 = CRYPT_NULL_INPUT;
-    for (int attempt = 1; attempt <= maxRetries; attempt++) {
-        ret3 = CRYPT_EAL_EsInit(es3);
-        if (ret3 == CRYPT_SUCCESS) {
-            if (attempt > 1) {
-                printf("[TC039] es3 init succeeded on attempt %d/%d\n", attempt, maxRetries);
-            }
-            break;
-        }
-        if (attempt < maxRetries) {
-            TestErrClear();
-        }
-    }
-    ASSERT_TRUE(ret3 == CRYPT_SUCCESS);
+    ASSERT_TRUE(EsInitRetryOnAlarm(es3, "TC039") == CRYPT_SUCCESS);
     if (isCreateNullPool) {
         for (int i = 0; i < 3; i++) {
-            ASSERT_TRUE(CRYPT_EAL_EsCtrl(es3, CRYPT_ENTROPY_GATHER_ENTROPY, NULL, 0) == CRYPT_SUCCESS);
+            ASSERT_TRUE(EsGatherRetryOnAlarm(es3, "TC039") == CRYPT_SUCCESS);
         }
     }
     CRYPT_EAL_EsPara esPara3 = {isPhysical, (uint32_t)minEntropy, es3, (CRYPT_EAL_EntropyGet)CRYPT_EAL_EsEntropyGet};
@@ -3516,65 +3763,25 @@ void HITLS_SDV_DRBG_GM_FUNC_TC067(int isCreateNullPool, int isPhysical, int minE
     bool healthTest = IsRunningOnWSL() ? false : true;
     ASSERT_TRUE(CRYPT_EAL_EsCtrl(es1, CRYPT_ENTROPY_ENABLE_TEST, &healthTest, sizeof(bool)) == CRYPT_SUCCESS);
 
-    int32_t ret1 = CRYPT_NULL_INPUT;
-    const int maxRetries = 5;
-    for (int attempt = 1; attempt <= maxRetries; attempt++) {
-        ret1 = CRYPT_EAL_EsInit(es1);
-        if (ret1 == CRYPT_SUCCESS) {
-            if (attempt > 1) {
-                printf("[TC067] es1 init succeeded on attempt %d/%d\n", attempt, maxRetries);
-            }
-            break;
-        }
-        if (attempt < maxRetries) {
-            TestErrClear();
-        }
-    }
-    ASSERT_TRUE(ret1 == CRYPT_SUCCESS);
+    ASSERT_TRUE(EsInitRetryOnAlarm(es1, "TC067") == CRYPT_SUCCESS);
 
-    ASSERT_TRUE(CRYPT_EAL_EsCtrl(es1, CRYPT_ENTROPY_GATHER_ENTROPY, NULL, 0) == CRYPT_SUCCESS);
+    ASSERT_TRUE(EsGatherRetryOnAlarm(es1, "TC067") == CRYPT_SUCCESS);
     CRYPT_EAL_EsPara esPara1 = {isPhysical, (uint32_t)minEntropy, es1, (CRYPT_EAL_EntropyGet)ErrorGetEsEntropy};
     es2 = CRYPT_EAL_EsNew();
     ASSERT_TRUE(es2 != NULL);
     ASSERT_TRUE(CRYPT_EAL_EsCtrl(es2, CRYPT_ENTROPY_SET_CF, (void *)(intptr_t)mode, strlen(mode)) == CRYPT_SUCCESS);
     ASSERT_TRUE(CRYPT_EAL_EsCtrl(es2, CRYPT_ENTROPY_ENABLE_TEST, &healthTest, sizeof(bool)) == CRYPT_SUCCESS);
 
-    int32_t ret2 = CRYPT_NULL_INPUT;
-    for (int attempt = 1; attempt <= maxRetries; attempt++) {
-        ret2 = CRYPT_EAL_EsInit(es2);
-        if (ret2 == CRYPT_SUCCESS) {
-            if (attempt > 1) {
-                printf("[TC067] es2 init succeeded on attempt %d/%d\n", attempt, maxRetries);
-            }
-            break;
-        }
-        if (attempt < maxRetries) {
-            TestErrClear();
-        }
-    }
-    ASSERT_TRUE(ret2 == CRYPT_SUCCESS);
+    ASSERT_TRUE(EsInitRetryOnAlarm(es2, "TC067") == CRYPT_SUCCESS);
 
-    ASSERT_TRUE(CRYPT_EAL_EsCtrl(es2, CRYPT_ENTROPY_GATHER_ENTROPY, NULL, 0) == CRYPT_SUCCESS);
+    ASSERT_TRUE(EsGatherRetryOnAlarm(es2, "TC067") == CRYPT_SUCCESS);
     CRYPT_EAL_EsPara esPara2 = {!isPhysical, (uint32_t)minEntropy, es2, (CRYPT_EAL_EntropyGet)ErrorGetEsEntropy};
     es3 = CRYPT_EAL_EsNew();
     ASSERT_TRUE(es3 != NULL);
     ASSERT_TRUE(CRYPT_EAL_EsCtrl(es3, CRYPT_ENTROPY_SET_CF, (void *)(intptr_t)mode, strlen(mode)) == CRYPT_SUCCESS);
     ASSERT_TRUE(CRYPT_EAL_EsCtrl(es3, CRYPT_ENTROPY_ENABLE_TEST, &healthTest, sizeof(bool)) == CRYPT_SUCCESS);
 
-    int32_t ret3 = CRYPT_NULL_INPUT;
-    for (int attempt = 1; attempt <= maxRetries; attempt++) {
-        ret3 = CRYPT_EAL_EsInit(es3);
-        if (ret3 == CRYPT_SUCCESS) {
-            if (attempt > 1) {
-                printf("[TC067] es3 init succeeded on attempt %d/%d\n", attempt, maxRetries);
-            }
-            break;
-        }
-        if (attempt < maxRetries) {
-            TestErrClear();
-        }
-    }
-    ASSERT_TRUE(ret3 == CRYPT_SUCCESS);
+    ASSERT_TRUE(EsInitRetryOnAlarm(es3, "TC067") == CRYPT_SUCCESS);
     CRYPT_EAL_EsPara esPara3 = {isPhysical, (uint32_t)minEntropy, es3, (CRYPT_EAL_EntropyGet)ErrorGetEsEntropy};
     ASSERT_TRUE(CRYPT_EAL_SeedPoolAddEs(pool, &esPara1) == CRYPT_SUCCESS);
     ASSERT_TRUE(CRYPT_EAL_SeedPoolAddEs(pool, &esPara2) == CRYPT_SUCCESS);
@@ -3632,68 +3839,28 @@ void HITLS_SDV_DRBG_GM_FUNC_TC071(int isCreateNullPool, int isPhysical, int minE
     bool healthTest = IsRunningOnWSL() ? false : true;
     ASSERT_TRUE(CRYPT_EAL_EsCtrl(es1, CRYPT_ENTROPY_ENABLE_TEST, &healthTest, sizeof(bool)) == CRYPT_SUCCESS);
 
-    int32_t ret1 = CRYPT_NULL_INPUT;
-    const int maxRetries = 5;
-    for (int attempt = 1; attempt <= maxRetries; attempt++) {
-        ret1 = CRYPT_EAL_EsInit(es1);
-        if (ret1 == CRYPT_SUCCESS) {
-            if (attempt > 1) {
-                printf("[TC071] es1 init succeeded on attempt %d/%d\n", attempt, maxRetries);
-            }
-            break;
-        }
-        if (attempt < maxRetries) {
-            TestErrClear();
-        }
-    }
-    ASSERT_TRUE(ret1 == CRYPT_SUCCESS);
+    ASSERT_TRUE(EsInitRetryOnAlarm(es1, "TC071") == CRYPT_SUCCESS);
 
-    ASSERT_TRUE(CRYPT_EAL_EsCtrl(es1, CRYPT_ENTROPY_GATHER_ENTROPY, NULL, 0) == CRYPT_SUCCESS);
+    ASSERT_TRUE(EsGatherRetryOnAlarm(es1, "TC071") == CRYPT_SUCCESS);
     CRYPT_EAL_EsPara esPara1 = {!isPhysical, (uint32_t)minEntropy, es1, (CRYPT_EAL_EntropyGet)ErrorGetEsEntropy};
     es2 = CRYPT_EAL_EsNew();
     ASSERT_TRUE(es2 != NULL);
     ASSERT_TRUE(CRYPT_EAL_EsCtrl(es2, CRYPT_ENTROPY_SET_CF, (void *)(intptr_t)mode, strlen(mode)) == CRYPT_SUCCESS);
     ASSERT_TRUE(CRYPT_EAL_EsCtrl(es2, CRYPT_ENTROPY_ENABLE_TEST, &healthTest, sizeof(bool)) == CRYPT_SUCCESS);
 
-    int32_t ret2 = CRYPT_NULL_INPUT;
-    for (int attempt = 1; attempt <= maxRetries; attempt++) {
-        ret2 = CRYPT_EAL_EsInit(es2);
-        if (ret2 == CRYPT_SUCCESS) {
-            if (attempt > 1) {
-                printf("[TC071] es2 init succeeded on attempt %d/%d\n", attempt, maxRetries);
-            }
-            break;
-        }
-        if (attempt < maxRetries) {
-            TestErrClear();
-        }
-    }
-    ASSERT_TRUE(ret2 == CRYPT_SUCCESS);
+    ASSERT_TRUE(EsInitRetryOnAlarm(es2, "TC071") == CRYPT_SUCCESS);
 
-    ASSERT_TRUE(CRYPT_EAL_EsCtrl(es2, CRYPT_ENTROPY_GATHER_ENTROPY, NULL, 0) == CRYPT_SUCCESS);
+    ASSERT_TRUE(EsGatherRetryOnAlarm(es2, "TC071") == CRYPT_SUCCESS);
     CRYPT_EAL_EsPara esPara2 = {isPhysical, (uint32_t)minEntropy, es2, (CRYPT_EAL_EntropyGet)ErrorGetEsEntropy};
     es3 = CRYPT_EAL_EsNew();
     ASSERT_TRUE(es3 != NULL);
     ASSERT_TRUE(CRYPT_EAL_EsCtrl(es3, CRYPT_ENTROPY_SET_CF, (void *)(intptr_t)mode, strlen(mode)) == CRYPT_SUCCESS);
     ASSERT_TRUE(CRYPT_EAL_EsCtrl(es3, CRYPT_ENTROPY_ENABLE_TEST, &healthTest, sizeof(bool)) == CRYPT_SUCCESS);
 
-    int32_t ret3 = CRYPT_NULL_INPUT;
-    for (int attempt = 1; attempt <= maxRetries; attempt++) {
-        ret3 = CRYPT_EAL_EsInit(es3);
-        if (ret3 == CRYPT_SUCCESS) {
-            if (attempt > 1) {
-                printf("[TC071] es3 init succeeded on attempt %d/%d\n", attempt, maxRetries);
-            }
-            break;
-        }
-        if (attempt < maxRetries) {
-            TestErrClear();
-        }
-    }
-    ASSERT_TRUE(ret3 == CRYPT_SUCCESS);
+    ASSERT_TRUE(EsInitRetryOnAlarm(es3, "TC071") == CRYPT_SUCCESS);
     if (isCreateNullPool) {
         for (int i = 0; i < 13; i++) {
-            ASSERT_TRUE(CRYPT_EAL_EsCtrl(es3, CRYPT_ENTROPY_GATHER_ENTROPY, NULL, 0) == CRYPT_SUCCESS);
+            ASSERT_TRUE(EsGatherRetryOnAlarm(es3, "TC071") == CRYPT_SUCCESS);
         }
     }
     CRYPT_EAL_EsPara esPara3 = {isPhysical, (uint32_t)minEntropy, es3, (CRYPT_EAL_EntropyGet)CRYPT_EAL_EsEntropyGet};
@@ -3750,25 +3917,11 @@ void HITLS_SDV_DRBG_GM_FUNC_TC051(int isCreateNullPool, int isPhysical, int minE
     bool healthTest = IsRunningOnWSL() ? false : true;
     ASSERT_TRUE(CRYPT_EAL_EsCtrl(es1, CRYPT_ENTROPY_ENABLE_TEST, &healthTest, sizeof(bool)) == CRYPT_SUCCESS);
 
-    int32_t ret1 = CRYPT_NULL_INPUT;
-    const int maxRetries = 5;
-    for (int attempt = 1; attempt <= maxRetries; attempt++) {
-        ret1 = CRYPT_EAL_EsInit(es1);
-        if (ret1 == CRYPT_SUCCESS) {
-            if (attempt > 1) {
-                printf("[TC051] es1 init succeeded on attempt %d/%d\n", attempt, maxRetries);
-            }
-            break;
-        }
-        if (attempt < maxRetries) {
-            TestErrClear();
-        }
-    }
-    ASSERT_TRUE(ret1 == CRYPT_SUCCESS);
+    ASSERT_TRUE(EsInitRetryOnAlarm(es1, "TC051") == CRYPT_SUCCESS);
 
     if (isCreateNullPool) {
         for (int i = 0; i < 1; i++) {
-            ASSERT_TRUE(CRYPT_EAL_EsCtrl(es1, CRYPT_ENTROPY_GATHER_ENTROPY, NULL, 0) == CRYPT_SUCCESS);
+            ASSERT_TRUE(EsGatherRetryOnAlarm(es1, "TC051") == CRYPT_SUCCESS);
         }
     }
     CRYPT_EAL_EsPara esPara1 = {!isPhysical, (uint32_t)minEntropy1, es1, (CRYPT_EAL_EntropyGet)ErrorGetEsEntropy};
@@ -3777,24 +3930,11 @@ void HITLS_SDV_DRBG_GM_FUNC_TC051(int isCreateNullPool, int isPhysical, int minE
     ASSERT_TRUE(CRYPT_EAL_EsCtrl(es2, CRYPT_ENTROPY_SET_CF, (void *)(intptr_t)mode, strlen(mode)) == CRYPT_SUCCESS);
     ASSERT_TRUE(CRYPT_EAL_EsCtrl(es2, CRYPT_ENTROPY_ENABLE_TEST, &healthTest, sizeof(bool)) == CRYPT_SUCCESS);
 
-    int32_t ret2 = CRYPT_NULL_INPUT;
-    for (int attempt = 1; attempt <= maxRetries; attempt++) {
-        ret2 = CRYPT_EAL_EsInit(es2);
-        if (ret2 == CRYPT_SUCCESS) {
-            if (attempt > 1) {
-                printf("[TC051] es2 init succeeded on attempt %d/%d\n", attempt, maxRetries);
-            }
-            break;
-        }
-        if (attempt < maxRetries) {
-            TestErrClear();
-        }
-    }
-    ASSERT_TRUE(ret2 == CRYPT_SUCCESS);
+    ASSERT_TRUE(EsInitRetryOnAlarm(es2, "TC051") == CRYPT_SUCCESS);
 
     if (isCreateNullPool) {
         for (int i = 0; i < 2; i++) {
-            ASSERT_TRUE(CRYPT_EAL_EsCtrl(es2, CRYPT_ENTROPY_GATHER_ENTROPY, NULL, 0) == CRYPT_SUCCESS);
+            ASSERT_TRUE(EsGatherRetryOnAlarm(es2, "TC051") == CRYPT_SUCCESS);
         }
     }
     CRYPT_EAL_EsPara esPara2 = {isPhysical, (uint32_t)minEntropy2, es2, (CRYPT_EAL_EntropyGet)ErrorGetEsEntropy};
@@ -3803,23 +3943,10 @@ void HITLS_SDV_DRBG_GM_FUNC_TC051(int isCreateNullPool, int isPhysical, int minE
     ASSERT_TRUE(CRYPT_EAL_EsCtrl(es3, CRYPT_ENTROPY_SET_CF, (void *)(intptr_t)mode, strlen(mode)) == CRYPT_SUCCESS);
     ASSERT_TRUE(CRYPT_EAL_EsCtrl(es3, CRYPT_ENTROPY_ENABLE_TEST, &healthTest, sizeof(bool)) == CRYPT_SUCCESS);
 
-    int32_t ret3 = CRYPT_NULL_INPUT;
-    for (int attempt = 1; attempt <= maxRetries; attempt++) {
-        ret3 = CRYPT_EAL_EsInit(es3);
-        if (ret3 == CRYPT_SUCCESS) {
-            if (attempt > 1) {
-                printf("[TC051] es3 init succeeded on attempt %d/%d\n", attempt, maxRetries);
-            }
-            break;
-        }
-        if (attempt < maxRetries) {
-            TestErrClear();
-        }
-    }
-    ASSERT_TRUE(ret3 == CRYPT_SUCCESS);
+    ASSERT_TRUE(EsInitRetryOnAlarm(es3, "TC051") == CRYPT_SUCCESS);
     if (isCreateNullPool) {
         for (int i = 0; i < 13; i++) {
-            ASSERT_TRUE(CRYPT_EAL_EsCtrl(es3, CRYPT_ENTROPY_GATHER_ENTROPY, NULL, 0) == CRYPT_SUCCESS);
+            ASSERT_TRUE(EsGatherRetryOnAlarm(es3, "TC051") == CRYPT_SUCCESS);
         }
     }
     CRYPT_EAL_EsPara esPara3 = {isPhysical, (uint32_t)minEntropy3, es3, (CRYPT_EAL_EntropyGet)CRYPT_EAL_EsEntropyGet};
@@ -3878,21 +4005,7 @@ void HITLS_SDV_DRBG_GM_FUNC_TC056(int isCreateNullPool, int isPhysical, int minE
     bool healthTest = IsRunningOnWSL() ? false : true;
     ASSERT_TRUE(CRYPT_EAL_EsCtrl(es1, CRYPT_ENTROPY_ENABLE_TEST, &healthTest, sizeof(bool)) == CRYPT_SUCCESS);
 
-    int32_t ret1 = CRYPT_NULL_INPUT;
-    const int maxRetries = 5;
-    for (int attempt = 1; attempt <= maxRetries; attempt++) {
-        ret1 = CRYPT_EAL_EsInit(es1);
-        if (ret1 == CRYPT_SUCCESS) {
-            if (attempt > 1) {
-                printf("[TC056] es1 init succeeded on attempt %d/%d\n", attempt, maxRetries);
-            }
-            break;
-        }
-        if (attempt < maxRetries) {
-            TestErrClear();
-        }
-    }
-    ASSERT_TRUE(ret1 == CRYPT_SUCCESS);
+    ASSERT_TRUE(EsInitRetryOnAlarm(es1, "TC056") == CRYPT_SUCCESS);
 
     CRYPT_EAL_EsPara esPara1 = {!isPhysical, (uint32_t)minEntropy1, es1, (CRYPT_EAL_EntropyGet)ErrorGetEsEntropy};
     es2 = CRYPT_EAL_EsNew();
@@ -3900,20 +4013,7 @@ void HITLS_SDV_DRBG_GM_FUNC_TC056(int isCreateNullPool, int isPhysical, int minE
     ASSERT_TRUE(CRYPT_EAL_EsCtrl(es2, CRYPT_ENTROPY_SET_CF, (void *)(intptr_t)mode, strlen(mode)) == CRYPT_SUCCESS);
     ASSERT_TRUE(CRYPT_EAL_EsCtrl(es2, CRYPT_ENTROPY_ENABLE_TEST, &healthTest, sizeof(bool)) == CRYPT_SUCCESS);
 
-    int32_t ret2 = CRYPT_NULL_INPUT;
-    for (int attempt = 1; attempt <= maxRetries; attempt++) {
-        ret2 = CRYPT_EAL_EsInit(es2);
-        if (ret2 == CRYPT_SUCCESS) {
-            if (attempt > 1) {
-                printf("[TC056] es2 init succeeded on attempt %d/%d\n", attempt, maxRetries);
-            }
-            break;
-        }
-        if (attempt < maxRetries) {
-            TestErrClear();
-        }
-    }
-    ASSERT_TRUE(ret2 == CRYPT_SUCCESS);
+    ASSERT_TRUE(EsInitRetryOnAlarm(es2, "TC056") == CRYPT_SUCCESS);
 
     CRYPT_EAL_EsPara esPara2 = {isPhysical, (uint32_t)minEntropy2, es2, (CRYPT_EAL_EntropyGet)ErrorGetEsEntropy};
     es3 = CRYPT_EAL_EsNew();
@@ -3921,20 +4021,7 @@ void HITLS_SDV_DRBG_GM_FUNC_TC056(int isCreateNullPool, int isPhysical, int minE
     ASSERT_TRUE(CRYPT_EAL_EsCtrl(es3, CRYPT_ENTROPY_SET_CF, (void *)(intptr_t)mode, strlen(mode)) == CRYPT_SUCCESS);
     ASSERT_TRUE(CRYPT_EAL_EsCtrl(es3, CRYPT_ENTROPY_ENABLE_TEST, &healthTest, sizeof(bool)) == CRYPT_SUCCESS);
 
-    int32_t ret3 = CRYPT_NULL_INPUT;
-    for (int attempt = 1; attempt <= maxRetries; attempt++) {
-        ret3 = CRYPT_EAL_EsInit(es3);
-        if (ret3 == CRYPT_SUCCESS) {
-            if (attempt > 1) {
-                printf("[TC056] es3 init succeeded on attempt %d/%d\n", attempt, maxRetries);
-            }
-            break;
-        }
-        if (attempt < maxRetries) {
-            TestErrClear();
-        }
-    }
-    ASSERT_TRUE(ret3 == CRYPT_SUCCESS);
+    ASSERT_TRUE(EsInitRetryOnAlarm(es3, "TC056") == CRYPT_SUCCESS);
 
     CRYPT_EAL_EsPara esPara3 = {isPhysical, (uint32_t)minEntropy3, es3, (CRYPT_EAL_EntropyGet)ErrorGetEsEntropy};
     ASSERT_TRUE(CRYPT_EAL_SeedPoolAddEs(pool, &esPara1) == CRYPT_SUCCESS);
@@ -4014,7 +4101,7 @@ void SDV_CRYPTO_ENTROPY_POOL_GATHER_DRAIN_TC001(void)
     ASSERT_TRUE(es != NULL);
     ASSERT_EQ(CRYPT_EAL_EsCtrl(es, CRYPT_ENTROPY_SET_CF, (void *)(intptr_t)"sha256_df", strlen("sha256_df")),
         CRYPT_SUCCESS);
-    ASSERT_EQ(CRYPT_EAL_EsInit(es), CRYPT_SUCCESS);
+    ASSERT_EQ(EsInitRetryOnAlarm(es, "POOL_GATHER_DRAIN_TC001"), CRYPT_SUCCESS);
     uint32_t cur = 0;
     ASSERT_EQ(CRYPT_EAL_EsCtrl(es, CRYPT_ENTROPY_POOL_GET_CURRSIZE, &cur, sizeof(uint32_t)), CRYPT_SUCCESS);
     ASSERT_EQ(cur, 32);
@@ -4174,8 +4261,13 @@ void SDV_CRYPTO_ENTROPY_ES_BUILTIN_RAW_CREDIT_TC001(void)
         strlen("sha256_df")), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_EsCtrl(es, CRYPT_ENTROPY_SET_LOG_CALLBACK, (void *)EntropyReadCountLog, 0),
         CRYPT_SUCCESS);
+    (void)TestErrClear();
+#ifdef HITLS_BSL_ERR
+    ASSERT_EQ(EsInitRetryCountReset(es, "BUILTIN_RAW_CREDIT", &g_entropyReadLogCalls), CRYPT_SUCCESS);
+#else
     g_entropyReadLogCalls = 0;
     ASSERT_EQ(CRYPT_EAL_EsInit(es), CRYPT_SUCCESS);
+#endif
     ASSERT_TRUE(g_entropyReadLogCalls >= 320 * NS_DELTA_OSR_MIN);
     ASSERT_TRUE(g_entropyReadLogCalls <= 320 * NS_DELTA_OSR_MAX);
 EXIT:
@@ -5596,7 +5688,7 @@ void SDV_CRYPTO_ENTROPY_ES_SEED_COND_FAULT_RETIRES_TC001(void)
     bool healthTest = true;
     ASSERT_EQ(CRYPT_EAL_EsCtrl(es, CRYPT_ENTROPY_ENABLE_TEST, &healthTest, 1), CRYPT_SUCCESS);
     (void)TestErrClear();
-    ASSERT_EQ(CRYPT_EAL_EsInit(es), CRYPT_SUCCESS);
+    ASSERT_EQ(EsInitRetryOnAlarm(es, "ES_SEED_COND_FAULT_RETIR"), CRYPT_SUCCESS);
     uint32_t posAfterInit = g_entropySeedFaultPos;
     ASSERT_TRUE(posAfterInit > 1024);
     /* Real deinit through the inner handle: the EAL surface has no deinit. */
@@ -5692,7 +5784,7 @@ void SDV_CRYPTO_ENTROPY_ES_RUNTIME_COND_FAULT_RETIRES_TC001(void)
     ASSERT_EQ(CRYPT_EAL_EsCtrl(es, CRYPT_ENTROPY_ADD_NS, (void *)&para, sizeof(CRYPT_EAL_NsPara)), CRYPT_SUCCESS);
     bool healthTest = true;
     ASSERT_EQ(CRYPT_EAL_EsCtrl(es, CRYPT_ENTROPY_ENABLE_TEST, &healthTest, 1), CRYPT_SUCCESS);
-    ASSERT_EQ(CRYPT_EAL_EsInit(es), CRYPT_SUCCESS);
+    ASSERT_EQ(EsInitRetryOnAlarm(es, "ES_RUNTIME_COND_FAULT_RE"), CRYPT_SUCCESS);
     /* Arm the fault only after init, then drain the retained seed block so
        the next request forces a runtime gather that polls the source. */
     g_entropyCondReadCalls = 0;
@@ -5782,7 +5874,10 @@ void SDV_CRYPTO_ENTROPY_ES_SEED_AGGREGATE_GATE_TC001(void)
     bool healthTest = true;
     ASSERT_EQ(CRYPT_EAL_EsCtrl(es, CRYPT_ENTROPY_ENABLE_TEST, &healthTest, 1), CRYPT_SUCCESS);
     (void)TestErrClear();
-    ASSERT_EQ(CRYPT_EAL_EsInit(es), CRYPT_SUCCESS);
+    /* A builtin alarm aborts the transaction before the appended seed-poll
+       source is read (EsCollect returns on the failed block), so a retried
+       init still reaches the exact count below. */
+    ASSERT_EQ(EsInitRetryOnAlarm(es, "SEED_AGGREGATE_GATE"), CRYPT_SUCCESS);
     /* 320-bit need at 1 bit per sample, drawn as one contiguous block. */
     ASSERT_EQ(g_entropySeedPollCalls, 320);
     ASSERT_TRUE(TestIsErrStackEmpty());
@@ -5812,7 +5907,7 @@ void SDV_CRYPTO_ENTROPY_ES_DIRECT_GATHER_ERRSTACK_TC001(void)
     ASSERT_EQ(CRYPT_EAL_EsCtrl(es, CRYPT_ENTROPY_ADD_NS, (void *)&para, sizeof(CRYPT_EAL_NsPara)), CRYPT_SUCCESS);
     bool healthTest = true;
     ASSERT_EQ(CRYPT_EAL_EsCtrl(es, CRYPT_ENTROPY_ENABLE_TEST, &healthTest, 1), CRYPT_SUCCESS);
-    ASSERT_EQ(CRYPT_EAL_EsInit(es), CRYPT_SUCCESS);
+    ASSERT_EQ(EsInitRetryOnAlarm(es, "ES_DIRECT_GATHER_ERRSTAC"), CRYPT_SUCCESS);
     g_entropyCondReadCalls = 0;
     g_entropyFaultArmed = 1;
     uint8_t out[4];
@@ -6456,17 +6551,29 @@ EXIT:
 static uint32_t g_recArmed = 0;
 static uint32_t g_recPersistArmed = 0;
 static uint32_t g_auxRecArmed = 0;
+static uint32_t g_recStartupArmed = 0;
+static uint32_t g_recSeedReads = 0;
 
+/* The bufLen == 1 gate makes the armed verdict phase-selective: the startup
+   test reads its whole 1024-sample window as one chunk, so only the
+   per-record reads of a collection - startup seed or gather - can trip it. */
 static int32_t EntropyReadRec(void *ctx, uint32_t timeout, uint8_t *buf, uint32_t bufLen)
 {
     (void)ctx;
     (void)timeout;
     static uint32_t pos = 0;
+    if (bufLen == 1) {
+        g_recSeedReads++;
+    }
     if (bufLen == 1 && g_recPersistArmed != 0) {
         return CRYPT_ENTROPY_RCT_FAILURE;
     }
     if (bufLen == 1 && g_recArmed != 0) {
         g_recArmed = 0;
+        return CRYPT_ENTROPY_RCT_FAILURE;
+    }
+    if (bufLen > 1 && g_recStartupArmed != 0) {
+        g_recStartupArmed = 0;
         return CRYPT_ENTROPY_RCT_FAILURE;
     }
     for (uint32_t i = 0; i < bufLen; i++, pos++) {
@@ -6576,7 +6683,258 @@ static CRYPT_EAL_Es *EntropySuspendRecoverEs(ES_NoiseSource **outNs, int32_t (*r
     *outNs = ns;
     return es;
 }
+
+static int32_t EntropyRecoverAlarmOnceCb(void *usrdata)
+{
+    (void)usrdata;
+    g_recCalls++;
+    return (g_recCalls == 1) ? CRYPT_ENTROPY_RCT_FAILURE : CRYPT_SUCCESS;
+}
 #endif
+
+/* The wrapped-alarm leg of EsGatherRetryOnAlarm: a mid-transaction RCT reaches
+   the caller as ENTROPY_NOT_ENOUGH with the verdict at the stack root, and the
+   retry runs the pending recovery and completes the gather. */
+/* BEGIN_CASE */
+void SDV_CRYPTO_ENTROPY_ES_GATHER_ALARM_RETRY_TC001(void)
+{
+#if defined(HITLS_CRYPTO_ENTROPY_SYS)
+    ES_NoiseSource *ns = NULL;
+    CRYPT_EAL_Es *es = EntropyBuildRecoverEs();
+    ASSERT_TRUE(es != NULL);
+    g_recArmed = 0;
+    g_recCalls = 0;
+    g_recRet = CRYPT_SUCCESS;
+    ASSERT_EQ(CRYPT_EAL_EsInit(es), CRYPT_SUCCESS);
+    ns = EntropyFindNs(es, "credit-r");
+    ASSERT_TRUE(ns != NULL);
+    ns->recover = EntropyRecoverCb;
+    (void)TestErrClear();
+    g_recArmed = 1;
+    ASSERT_EQ(EsGatherRetryOnAlarm(es, "ALARM_RETRY_TC001"), CRYPT_SUCCESS);
+    ASSERT_EQ(g_recCalls, 1);
+    ASSERT_TRUE(!ns->needRecovery && ns->isEnable);
+    ASSERT_TRUE(TestIsErrStackEmpty());
+EXIT:
+    g_recArmed = 0;
+    CRYPT_EAL_EsFree(es);
+    return;
+#else
+    SKIP_TEST();
+#endif
+}
+/* END_CASE */
+
+/* The raw-verdict leg: a failing recovery window surfaces the RCT verdict as
+   the gather return code itself, and the next attempt recovers and succeeds. */
+/* BEGIN_CASE */
+void SDV_CRYPTO_ENTROPY_ES_GATHER_RAW_ALARM_RETRY_TC001(void)
+{
+#if defined(HITLS_CRYPTO_ENTROPY_SYS)
+    ES_NoiseSource *ns = NULL;
+    g_recRet = CRYPT_SUCCESS;
+    CRYPT_EAL_Es *es = EntropySuspendRecoverEs(&ns, EntropyRecoverAlarmOnceCb);
+    ASSERT_TRUE(es != NULL);
+    ASSERT_EQ(EsGatherRetryOnAlarm(es, "RAW_ALARM_RETRY_TC001"), CRYPT_SUCCESS);
+    ASSERT_EQ(g_recCalls, 2);
+    ASSERT_TRUE(!ns->needRecovery && ns->isEnable);
+    ASSERT_TRUE(TestIsErrStackEmpty());
+EXIT:
+    g_recArmed = 0;
+    CRYPT_EAL_EsFree(es);
+    return;
+#else
+    SKIP_TEST();
+#endif
+}
+/* END_CASE */
+
+/* The init leg: the startup test reads its window as one chunk, so an armed
+   single-byte verdict fires at the first startup seed record, suspends the
+   source and fails init as NS_NOT_AVA with the verdict at the root; the
+   retry runs a fresh full init cycle and succeeds. */
+/* BEGIN_CASE */
+void SDV_CRYPTO_ENTROPY_ES_INIT_ALARM_RETRY_TC001(void)
+{
+#if defined(HITLS_CRYPTO_ENTROPY_SYS)
+    CRYPT_EAL_Es *es = EntropyBuildRecoverEs();
+    ASSERT_TRUE(es != NULL);
+    (void)TestErrClear();
+    g_recArmed = 1;
+    ASSERT_EQ(EsInitRetryOnAlarm(es, "INIT_ALARM_RETRY_TC001"), CRYPT_SUCCESS);
+    ASSERT_EQ(g_recArmed, 0);
+    ASSERT_TRUE(TestIsErrStackEmpty());
+EXIT:
+    g_recArmed = 0;
+    CRYPT_EAL_EsFree(es);
+    return;
+#else
+    SKIP_TEST();
+#endif
+}
+/* END_CASE */
+
+/* The raw-verdict init leg: an alarm inside the startup test window comes
+   back as the raw RCT code itself and the retry reruns a full init that
+   passes. The mock source covers only the raw-return branch; builtin
+   floor-cycle bookkeeping is initAt-gated and not exercised here. */
+/* BEGIN_CASE */
+void SDV_CRYPTO_ENTROPY_ES_INIT_RAW_ALARM_RETRY_TC001(void)
+{
+#if defined(HITLS_CRYPTO_ENTROPY_SYS)
+    CRYPT_EAL_Es *es = EntropyBuildRecoverEs();
+    ASSERT_TRUE(es != NULL);
+    (void)TestErrClear();
+    g_recStartupArmed = 1;
+    ASSERT_EQ(EsInitRetryOnAlarm(es, "INIT_RAW_ALARM_RETRY_TC001"), CRYPT_SUCCESS);
+    ASSERT_EQ(g_recStartupArmed, 0);
+    ASSERT_TRUE(TestIsErrStackEmpty());
+EXIT:
+    g_recStartupArmed = 0;
+    CRYPT_EAL_EsFree(es);
+    return;
+#else
+    SKIP_TEST();
+#endif
+}
+/* END_CASE */
+
+/* A failed second create must not leave the first worker racing the frame:
+   the pair helper joins whatever started before it returns, so the gather
+   worker has run to pool-full by the time the call comes back. */
+/* BEGIN_CASE */
+void SDV_CRYPTO_ENTROPY_ES_THREAD_PAIR_CREATE_FAIL_TC001(void)
+{
+#if defined(HITLS_CRYPTO_ENTROPY_SYS)
+    CRYPT_EAL_Es *es = CRYPT_EAL_EsNew();
+    bool hooked = false;
+    uint32_t before = 0;
+    uint32_t after = 0;
+    ASSERT_TRUE(es != NULL);
+    ASSERT_EQ(CRYPT_EAL_EsCtrl(es, CRYPT_ENTROPY_SET_CF, (void *)(intptr_t)"sha256_df",
+        strlen("sha256_df")), CRYPT_SUCCESS);
+    ASSERT_EQ(EsInitRetryOnAlarm(es, "THREAD_PAIR_CREATE_FAIL"), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_EsCtrl(es, CRYPT_ENTROPY_POOL_GET_CURRSIZE, &before, sizeof(uint32_t)), CRYPT_SUCCESS);
+    g_threadCreateCalls = 0;
+    g_threadCreateFailAt = 2;
+    g_threadCloseCalls = 0;
+    g_threadCreatedId = NULL;
+    ASSERT_EQ(BSL_SAL_CallBack_Ctrl(BSL_SAL_THREAD_CREATE_CB_FUNC, EntropyThreadCreateHook), BSL_SUCCESS);
+    hooked = true;
+    ASSERT_EQ(BSL_SAL_CallBack_Ctrl(BSL_SAL_THREAD_CLOSE_CB_FUNC, EntropyThreadCloseHook), BSL_SUCCESS);
+    ASSERT_TRUE(EsRunGatherGetPair(es) != CRYPT_SUCCESS);
+    ASSERT_EQ(g_threadCreateCalls, 2);
+    /* One close = the started gather worker was joined inside the pair
+       helper, before it returned. */
+    ASSERT_EQ(g_threadCloseCalls, 1);
+    ASSERT_EQ(CRYPT_EAL_EsCtrl(es, CRYPT_ENTROPY_POOL_GET_CURRSIZE, &after, sizeof(uint32_t)), CRYPT_SUCCESS);
+    ASSERT_TRUE(after >= before + 64);
+EXIT:
+    if (hooked && g_threadCloseCalls == 0 && g_threadCreatedId != NULL) {
+        /* A variant that breaks the close leaks the worker: reap it before
+           es is torn down. */
+        (void)pthread_join((pthread_t)(uintptr_t)g_threadCreatedId, NULL);
+    }
+    if (hooked) {
+        (void)BSL_SAL_CallBack_Ctrl(BSL_SAL_THREAD_CREATE_CB_FUNC, NULL);
+        (void)BSL_SAL_CallBack_Ctrl(BSL_SAL_THREAD_CLOSE_CB_FUNC, NULL);
+    }
+    g_threadCreateFailAt = 0;
+    CRYPT_EAL_EsFree(es);
+    return;
+#else
+    SKIP_TEST();
+#endif
+}
+/* END_CASE */
+
+/* The count-reset retry must report the reads of exactly one clean cycle:
+   the counter of a run that retried through a raw startup alarm matches the
+   counter of an undisturbed run. */
+/* BEGIN_CASE */
+void SDV_CRYPTO_ENTROPY_ES_INIT_COUNT_RESET_TC001(void)
+{
+#if defined(HITLS_CRYPTO_ENTROPY_SYS) && defined(HITLS_BSL_ERR)
+    CRYPT_EAL_Es *esBase = EntropyBuildRecoverEs();
+    CRYPT_EAL_Es *esRetry = NULL;
+    uint32_t base = 0;
+    ASSERT_TRUE(esBase != NULL);
+    (void)TestErrClear();
+    ASSERT_EQ(EsInitRetryCountReset(esBase, "COUNT_RESET_BASE", &g_recSeedReads), CRYPT_SUCCESS);
+    base = g_recSeedReads;
+    ASSERT_TRUE(base > 0);
+    esRetry = EntropyBuildRecoverEs();
+    ASSERT_TRUE(esRetry != NULL);
+    (void)TestErrClear();
+    g_recStartupArmed = 1;
+    ASSERT_EQ(EsInitRetryCountReset(esRetry, "COUNT_RESET_RETRY", &g_recSeedReads), CRYPT_SUCCESS);
+    ASSERT_EQ(g_recStartupArmed, 0);
+    ASSERT_EQ(g_recSeedReads, base);
+EXIT:
+    g_recStartupArmed = 0;
+    CRYPT_EAL_EsFree(esBase);
+    CRYPT_EAL_EsFree(esRetry);
+    return;
+#else
+    SKIP_TEST();
+#endif
+}
+/* END_CASE */
+
+/* Both sides of the ownership guard: residue from an earlier operation
+   disables the retry, and clearing it restores the retry. */
+/* BEGIN_CASE */
+void SDV_CRYPTO_ENTROPY_ES_INIT_DIRTY_STACK_TC001(void)
+{
+#if defined(HITLS_CRYPTO_ENTROPY_SYS)
+    CRYPT_EAL_Es *es = EntropyBuildRecoverEs();
+    ASSERT_TRUE(es != NULL);
+    (void)TestErrClear();
+    ASSERT_EQ(CRYPT_EAL_EsInit(NULL), CRYPT_NULL_INPUT);
+    g_recArmed = 1;
+    ASSERT_TRUE(EsInitRetryOnAlarm(es, "INIT_DIRTY_STACK_TC001") != CRYPT_SUCCESS);
+    ASSERT_EQ(g_recArmed, 0);
+    /* The guard must leave the caller's oldest error untouched. */
+    ASSERT_EQ(BSL_ERR_PeekError(), CRYPT_NULL_INPUT);
+    TestErrClear();
+    g_recArmed = 1;
+    ASSERT_EQ(EsInitRetryOnAlarm(es, "INIT_DIRTY_STACK_TC001"), CRYPT_SUCCESS);
+    ASSERT_TRUE(TestIsErrStackEmpty());
+EXIT:
+    g_recArmed = 0;
+    CRYPT_EAL_EsFree(es);
+    return;
+#else
+    SKIP_TEST();
+#endif
+}
+/* END_CASE */
+
+/* The consumption-path leg: EsEntropyGet reports the recovery-window verdict
+   only as a zero length with the verdict at the stack root, and the retry
+   runs the next window and pops the retained startup seed. */
+/* BEGIN_CASE */
+void SDV_CRYPTO_ENTROPY_ES_GET_ALARM_RETRY_TC001(void)
+{
+#if defined(HITLS_CRYPTO_ENTROPY_SYS)
+    ES_NoiseSource *ns = NULL;
+    uint8_t buf[48] = {0};
+    g_recRet = CRYPT_SUCCESS;
+    CRYPT_EAL_Es *es = EntropySuspendRecoverEs(&ns, EntropyRecoverAlarmOnceCb);
+    ASSERT_TRUE(es != NULL);
+    ASSERT_TRUE(EsGetRetryOnAlarm(es, buf, sizeof(buf), "GET_ALARM_RETRY_TC001") > 0);
+    ASSERT_EQ(g_recCalls, 2);
+    ASSERT_TRUE(!ns->needRecovery && ns->isEnable);
+    ASSERT_TRUE(TestIsErrStackEmpty());
+EXIT:
+    g_recArmed = 0;
+    CRYPT_EAL_EsFree(es);
+    return;
+#else
+    SKIP_TEST();
+#endif
+}
+/* END_CASE */
 
 /* BEGIN_CASE */
 void SDV_CRYPTO_ENTROPY_ES_UNCREDITED_RECOVERY_TC001(void)
@@ -8347,8 +8705,8 @@ void SDV_CRYPTO_ENTROPY_LOCK_FAIL_TC001(void)
     ASSERT_EQ(CRYPT_EAL_EsCtrl(es, CRYPT_ENTROPY_SET_CF, (void *)(intptr_t)"sha256_df", strlen("sha256_df")),
         CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_EsCtrl(es, CRYPT_ENTROPY_SET_POOL_SIZE, &poolSize, sizeof(poolSize)), CRYPT_SUCCESS);
-    ASSERT_EQ(CRYPT_EAL_EsInit(es), CRYPT_SUCCESS);
-    ASSERT_EQ(CRYPT_EAL_EsCtrl(es, CRYPT_ENTROPY_GATHER_ENTROPY, NULL, 0), CRYPT_SUCCESS);
+    ASSERT_EQ(EsInitRetryOnAlarm(es, "LOCK_FAIL_TC001"), CRYPT_SUCCESS);
+    ASSERT_EQ(EsGatherRetryOnAlarm(es, "LOCK_FAIL_TC001"), CRYPT_SUCCESS);
     ASSERT_TRUE(CRYPT_EAL_EsEntropyGet(es, buf, sizeof(buf)) > 0);
 
     ASSERT_EQ(BSL_SAL_CallBack_Ctrl(BSL_SAL_THREAD_LOCK_WRITE_LOCK_CB_FUNC, EntropyWriteLockFail), BSL_SUCCESS);

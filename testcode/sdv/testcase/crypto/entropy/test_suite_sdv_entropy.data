@@ -828,6 +828,30 @@ SDV_CRYPTO_ENTROPY_DELTA_RECOVERY_WINDOW_TC001:4
 SDV_CRYPTO_ENTROPY_NS_CONSTRUCTOR_RECOVER_TC001 built-in delta sources install their recovery callback
 SDV_CRYPTO_ENTROPY_NS_CONSTRUCTOR_RECOVER_TC001
 
+SDV_CRYPTO_ENTROPY_ES_GATHER_ALARM_RETRY_TC001 a wrapped intermittent alarm is retried through the pending recovery
+SDV_CRYPTO_ENTROPY_ES_GATHER_ALARM_RETRY_TC001
+
+SDV_CRYPTO_ENTROPY_ES_GATHER_RAW_ALARM_RETRY_TC001 a raw recovery-window verdict is retried and the next window succeeds
+SDV_CRYPTO_ENTROPY_ES_GATHER_RAW_ALARM_RETRY_TC001
+
+SDV_CRYPTO_ENTROPY_ES_INIT_ALARM_RETRY_TC001 an alarm in the startup seed collection is retried as a fresh init
+SDV_CRYPTO_ENTROPY_ES_INIT_ALARM_RETRY_TC001
+
+SDV_CRYPTO_ENTROPY_ES_INIT_RAW_ALARM_RETRY_TC001 a raw startup-window verdict is retried as a fresh init
+SDV_CRYPTO_ENTROPY_ES_INIT_RAW_ALARM_RETRY_TC001
+
+SDV_CRYPTO_ENTROPY_ES_THREAD_PAIR_CREATE_FAIL_TC001 a failed second create joins the running worker before returning
+SDV_CRYPTO_ENTROPY_ES_THREAD_PAIR_CREATE_FAIL_TC001
+
+SDV_CRYPTO_ENTROPY_ES_INIT_COUNT_RESET_TC001 a retried init reports the reads of exactly one clean cycle
+SDV_CRYPTO_ENTROPY_ES_INIT_COUNT_RESET_TC001
+
+SDV_CRYPTO_ENTROPY_ES_INIT_DIRTY_STACK_TC001 residue disables the retry and clearing it restores the retry
+SDV_CRYPTO_ENTROPY_ES_INIT_DIRTY_STACK_TC001
+
+SDV_CRYPTO_ENTROPY_ES_GET_ALARM_RETRY_TC001 a get that hits a recovery-window verdict retries and pops the seed
+SDV_CRYPTO_ENTROPY_ES_GET_ALARM_RETRY_TC001
+
 SDV_CRYPTO_ENTROPY_ES_UNCREDITED_RECOVERY_TC001 an auxiliary source runs its pending recovery before the next gather
 SDV_CRYPTO_ENTROPY_ES_UNCREDITED_RECOVERY_TC001
 

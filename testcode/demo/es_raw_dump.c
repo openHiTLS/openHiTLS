@@ -108,12 +108,15 @@ typedef struct {
     void (*freeState)(void *state);
     uint64_t (*sample)(void *state);
     ES_NoiseSource *(*newNs)(void);
+    int32_t (*verdict)(void *state);
 } RawSource;
 
 #ifdef HITLS_CRYPTO_ENTROPY_NS_CPUJITTER
-/* Shipped JitterStateNew + JitterMeasure: raw pre-conditioning deltas,
-   health verdicts not filtering the stream (no osr walk, no startup test);
-   recording every measurement matches the credited population. */
+/* Shipped JitterStateNew + JitterMeasure: raw pre-conditioning deltas.
+   Intermittent verdicts leave the stream untouched (no osr walk, no startup
+   test), so recording every measurement matches the credited population; a
+   permanent latch zeroizes further deltas, so the dump aborts instead of
+   archiving zeros. */
 static int32_t RawJitterNew(void **state)
 {
     ES_JitterState *e = NULL;
@@ -134,14 +137,19 @@ static uint64_t RawJitterSample(void *state)
     return e->ns.lastDelta;
 }
 
+static int32_t RawJitterVerdict(void *state)
+{
+    return ((ES_JitterState *)state)->ns.testFailure;
+}
+
 static const RawSource g_rawJitter = {
-    RawJitterNew, ES_CpuJitterFree, RawJitterSample, ES_CpuJitterGetCtx
+    RawJitterNew, ES_CpuJitterFree, RawJitterSample, ES_CpuJitterGetCtx, RawJitterVerdict
 };
 #endif
 
 #ifdef HITLS_CRYPTO_ENTROPY_NS_HASHLOOP
 /* Shipped HashLoopStateNew + HashLoopMeasure: raw pre-conditioning deltas,
-   health verdicts not filtering the stream (no osr walk, no startup test).
+   same verdict handling as the jitter source above.
    Iteration count is HITLS_HASHLOOP_ITERATIONS. */
 static int32_t RawHashLoopNew(void **state)
 {
@@ -161,8 +169,13 @@ static uint64_t RawHashLoopSample(void *state)
     return e->ns.lastDelta;
 }
 
+static int32_t RawHashLoopVerdict(void *state)
+{
+    return ((ES_HashLoopState *)state)->ns.testFailure;
+}
+
 static const RawSource g_rawHashLoop = {
-    RawHashLoopNew, ES_HashLoopFree, RawHashLoopSample, ES_HashLoopGetCtx
+    RawHashLoopNew, ES_HashLoopFree, RawHashLoopSample, ES_HashLoopGetCtx, RawHashLoopVerdict
 };
 #endif
 
@@ -220,6 +233,15 @@ static int WriteSamples(const RawSource *src, void *state, FILE *fp, FILE *fu, R
         uint32_t chunk = (uint32_t)((n - done > RAW_IO_CHUNK) ? RAW_IO_CHUNK : (n - done));
         for (uint32_t i = 0; i < chunk; i++) {
             uint64_t delta = src->sample(state);
+            /* The latching call already zeroized its own delta; abort before
+               this chunk is written so no zeroized record reaches the
+               archive. */
+            if (src->verdict(state) == NS_ENTROPY_PERMANENT_FAILURE) {
+                fprintf(stderr, "permanent health verdict after %llu samples: "
+                    "the engine zeroizes further deltas, aborting the dump\n",
+                    (unsigned long long)(done + i));
+                return 1;
+            }
             RawHealthUpdate(hs, delta);
             /* Same little-endian record the production conditioner
                absorbs, so archives stay comparable across platforms. */
@@ -395,7 +417,14 @@ static int DumpBlocks(const char *outfile, uint64_t targetBytes)
     /* runtimeBytes counts captured bytes directly, so the buffer only needs
        the target plus startup/overshoot slack. */
     g_blkSize = targetBytes + (1U << 20);
-    g_blkBuf = malloc(g_blkSize);
+    /* malloc takes size_t: on a 32-bit build a uint64 target would truncate
+       and undersize the buffer the 64-bit bound check then overruns. */
+    if (g_blkSize > SIZE_MAX / 2) {
+        fprintf(stderr, "capture size %llu exceeds the addressable buffer\n",
+            (unsigned long long)g_blkSize);
+        goto done;
+    }
+    g_blkBuf = malloc((size_t)g_blkSize);
     journal = malloc(sizeof(BlkTxn) * BLOCKS_MAX_TXN);
     if (g_blkBuf == NULL || journal == NULL) {
         fprintf(stderr, "allocation failed\n");

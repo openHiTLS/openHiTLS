@@ -256,11 +256,11 @@ parse_option()
                 feature_options="${feature_options} -DHITLS_TLS_FEATURE_PROVIDER=OFF -DHITLS_CRYPTO_PROVIDER=OFF -DHITLS_CRYPTO_CODECS=OFF -DHITLS_CRYPTO_KEY_DECODE_CHAIN=OFF"
                 ;;
             "gcov")
+                local -a ccCmd
                 debug_mode=true
                 add_options="${add_options} -fno-omit-frame-pointer -fprofile-arcs -ftest-coverage"
-                # -fdump-rtl-expand is a GCC-only pass (RTL is GCC's IR); skip it on clang
-                # regardless of OS, else it hits -Werror as an unknown argument.
-                if ! "${CC:-cc}" --version 2>/dev/null | grep -qi clang; then
+                read -r -a ccCmd <<< "${CC:-cc}"
+                if ! "${ccCmd[@]}" --version 2>/dev/null | grep -qi clang; then
                     add_options="${add_options} -fdump-rtl-expand"
                 fi
                 del_options="${del_options} -O3"

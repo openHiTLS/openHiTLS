@@ -323,16 +323,22 @@ run_demos()
     builtin_ns=""
     if grep -qx -- '-DHITLS_CRYPTO_ENTROPY_NS_CPUJITTER' "${HITLS_ROOT_DIR}/build/macros.txt"; then
         builtin_ns="jitter"
-    elif grep -qx -- '-DHITLS_CRYPTO_ENTROPY_NS_HASHLOOP' "${HITLS_ROOT_DIR}/build/macros.txt"; then
-        builtin_ns="hashloop"
+    fi
+    if grep -qx -- '-DHITLS_CRYPTO_ENTROPY_NS_HASHLOOP' "${HITLS_ROOT_DIR}/build/macros.txt"; then
+        builtin_ns="${builtin_ns} hashloop"
     fi
     if [ -x ./es_raw_dump ] && [ -n "${builtin_ns}" ]; then
-        echo "./es_raw_dump start"
-        ./es_raw_dump "${builtin_ns}" seq /tmp/es_raw_dump_smoke.bin 1000 lsb8
-        if [ $? -ne 0 ]; then
-            echo "Demo ./es_raw_dump failed"
-            exit 1
-        fi
+        for smoke_ns in ${builtin_ns}; do
+            echo "./es_raw_dump ${smoke_ns} start"
+            smoke_raw=$(mktemp /tmp/es_raw_dump_smoke.XXXXXX)
+            ./es_raw_dump "${smoke_ns}" seq "${smoke_raw}" 1000 lsb8
+            smoke_rc=$?
+            rm -f "${smoke_raw}" "${smoke_raw}.u64"
+            if [ ${smoke_rc} -ne 0 ]; then
+                echo "Demo ./es_raw_dump ${smoke_ns} failed"
+                exit 1
+            fi
+        done
     fi
     if [ -x ./entropy_dump ] && [ -n "${builtin_ns}" ]; then
         # The default conditioner follows the build: sm3_df under GM_CF,
@@ -342,8 +348,11 @@ run_demos()
             smoke_df="sm3_df"
         fi
         echo "./entropy_dump start"
-        ./entropy_dump /tmp/entropy_dump_smoke.bin 1 "${smoke_df}" drbg
-        if [ $? -ne 0 ]; then
+        smoke_ent=$(mktemp /tmp/entropy_dump_smoke.XXXXXX)
+        ./entropy_dump "${smoke_ent}" 1 "${smoke_df}" drbg
+        smoke_rc=$?
+        rm -f "${smoke_ent}"
+        if [ ${smoke_rc} -ne 0 ]; then
             echo "Demo ./entropy_dump failed"
             exit 1
         fi
