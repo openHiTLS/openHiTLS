@@ -30,16 +30,6 @@
 #include "crypt_eal_codecs.h"
 #include "crypt_codecskey.h"
 #include "crypt_params_key.h"
-#include "bsl_pem_internal.h"
-#include "hitls_pki_cert.h"
-#include "hitls_pki_csr.h"
-#include "hitls_pki_crl.h"
-#include "hitls_pki_errno.h"
-#include "hitls_pki_types.h"
-#include "hitls_cert_local.h"
-#include "hitls_csr_local.h"
-#include "hitls_crl_local.h"
-#include "hitls_x509_local.h"
 #include "stub_utils.h"
 /* END_HEADER */
 
@@ -220,6 +210,30 @@ static int32_t CloneCompositePubKey(const CRYPT_EAL_PkeyPub *srcPub, CRYPT_EAL_P
     return CRYPT_SUCCESS;
 }
 
+static int32_t CloneCompositePrvKey(const CRYPT_EAL_PkeyPrv *srcPrv, CRYPT_EAL_PkeyPrv *dstPrv)
+{
+    dstPrv->id = CRYPT_PKEY_COMPOSITE;
+    dstPrv->key.compositePrv.len = srcPrv->key.compositePrv.len;
+    dstPrv->key.compositePrv.data = BSL_SAL_Malloc(dstPrv->key.compositePrv.len);
+    if (dstPrv->key.compositePrv.data == NULL) {
+        return CRYPT_MEM_ALLOC_FAIL;
+    }
+    (void)memcpy(dstPrv->key.compositePrv.data, srcPrv->key.compositePrv.data, dstPrv->key.compositePrv.len);
+    return CRYPT_SUCCESS;
+}
+
+#ifdef HITLS_BSL_PARAMS
+static int32_t InitCompositeOctetsParam(BSL_Param *params, int32_t key, uint8_t *data, uint32_t dataLen)
+{
+    int32_t ret = BSL_PARAM_InitValue(&params[0], key, BSL_PARAM_TYPE_OCTETS, data, dataLen);
+    if (ret != CRYPT_SUCCESS) {
+        return ret;
+    }
+    params[1] = (BSL_Param)BSL_PARAM_END;
+    return CRYPT_SUCCESS;
+}
+#endif
+
 #if defined(HITLS_CRYPTO_CODECSKEY) && defined(HITLS_BSL_SAL_FILE) && \
     defined(HITLS_CRYPTO_KEY_DECODE) && defined(HITLS_CRYPTO_KEY_ENCODE)
 static uint32_t DecodeCompositeDerLen(const uint8_t *data, uint32_t *offset)
@@ -252,34 +266,7 @@ static uint8_t GetCompositeDerTradPointTag(const BSL_Buffer *der, uint32_t pqcPu
     offset++;
     return der->data[offset + pqcPubkeyLen];
 }
-#endif
 
-static int32_t CloneCompositePrvKey(const CRYPT_EAL_PkeyPrv *srcPrv, CRYPT_EAL_PkeyPrv *dstPrv)
-{
-    dstPrv->id = CRYPT_PKEY_COMPOSITE;
-    dstPrv->key.compositePrv.len = srcPrv->key.compositePrv.len;
-    dstPrv->key.compositePrv.data = BSL_SAL_Malloc(dstPrv->key.compositePrv.len);
-    if (dstPrv->key.compositePrv.data == NULL) {
-        return CRYPT_MEM_ALLOC_FAIL;
-    }
-    (void)memcpy(dstPrv->key.compositePrv.data, srcPrv->key.compositePrv.data, dstPrv->key.compositePrv.len);
-    return CRYPT_SUCCESS;
-}
-
-#ifdef HITLS_BSL_PARAMS
-static int32_t InitCompositeOctetsParam(BSL_Param *params, int32_t key, uint8_t *data, uint32_t dataLen)
-{
-    int32_t ret = BSL_PARAM_InitValue(&params[0], key, BSL_PARAM_TYPE_OCTETS, data, dataLen);
-    if (ret != CRYPT_SUCCESS) {
-        return ret;
-    }
-    params[1] = (BSL_Param)BSL_PARAM_END;
-    return CRYPT_SUCCESS;
-}
-#endif
-
-#if (defined(HITLS_CRYPTO_CODECSKEY) && defined(HITLS_BSL_SAL_FILE) && defined(HITLS_CRYPTO_KEY_DECODE)) || \
-    (defined(HITLS_BSL_PEM) && defined(HITLS_BSL_SAL_FILE) && defined(HITLS_PKI_X509))
 static int32_t CheckCompositeDecodedKey(CRYPT_EAL_PkeyCtx *key, int32_t expectParaId)
 {
     ASSERT_EQ(CRYPT_EAL_PkeyGetId(key), CRYPT_PKEY_COMPOSITE);
@@ -288,10 +275,7 @@ static int32_t CheckCompositeDecodedKey(CRYPT_EAL_PkeyCtx *key, int32_t expectPa
 EXIT:
     return -1;
 }
-#endif
 
-#if (defined(HITLS_CRYPTO_CODECSKEY) && defined(HITLS_BSL_SAL_FILE) && defined(HITLS_CRYPTO_KEY_DECODE)) || \
-    (defined(HITLS_BSL_PEM) && defined(HITLS_BSL_SAL_FILE) && defined(HITLS_PKI_X509))
 static int32_t JoinCompositeSamplePath(char *path, uint32_t pathLen, const char *sampleDir, const char *fileName)
 {
     int ret;
@@ -311,10 +295,7 @@ static int32_t ReadCompositeSampleFile(const char *sampleDir, const char *fileNa
     }
     return BSL_SAL_ReadFile(path, &data->data, &data->dataLen);
 }
-#endif
 
-#if defined(HITLS_CRYPTO_CODECSKEY) && defined(HITLS_BSL_SAL_FILE) && \
-    defined(HITLS_CRYPTO_KEY_DECODE) && defined(HITLS_CRYPTO_KEY_ENCODE)
 static int32_t CheckSha256Hex(const char *log, const uint8_t *data, uint32_t dataLen, Hex *expectDigest)
 {
     uint8_t digest[COMPOSITE_SHA256_LEN] = {0};
@@ -354,406 +335,6 @@ static int32_t CheckCompositePrvRawSha256(CRYPT_EAL_PkeyCtx *key, Hex *expectDig
     return CRYPT_SUCCESS;
 EXIT:
     BSL_SAL_ClearFree(prv.key.compositePrv.data, prv.key.compositePrv.len);
-    return -1;
-}
-#endif
-
-#if defined(HITLS_BSL_PEM) && defined(HITLS_BSL_SAL_FILE) && defined(HITLS_PKI_X509)
-static int32_t CheckCompositeCertFields(HITLS_X509_Cert *cert, int32_t expectParaId, int32_t expectKeyUsage)
-{
-    CRYPT_EAL_PkeyCtx *pubKey = NULL;
-    int32_t signAlg = 0;
-    int32_t keyUsage = 0;
-
-    ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_GET_PUBKEY, &pubKey, 0), HITLS_PKI_SUCCESS);
-    ASSERT_TRUE(pubKey != NULL);
-    ASSERT_EQ(CRYPT_EAL_PkeyGetId(pubKey), CRYPT_PKEY_COMPOSITE);
-    ASSERT_EQ(CRYPT_EAL_PkeyGetParaId(pubKey), expectParaId);
-    ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_GET_SIGNALG, &signAlg, sizeof(signAlg)), HITLS_PKI_SUCCESS);
-    ASSERT_EQ(signAlg, expectParaId);
-    ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_EXT_GET_KUSAGE, &keyUsage, sizeof(keyUsage)), HITLS_PKI_SUCCESS);
-    ASSERT_EQ(keyUsage, expectKeyUsage);
-    CRYPT_EAL_PkeyFreeCtx(pubKey);
-    return CRYPT_SUCCESS;
-EXIT:
-    CRYPT_EAL_PkeyFreeCtx(pubKey);
-    return -1;
-}
-
-static int32_t CheckCompositeCsrFields(HITLS_X509_Csr *csr, int32_t expectParaId)
-{
-    CRYPT_EAL_PkeyCtx *pubKey = NULL;
-    int32_t signAlg = 0;
-
-    ASSERT_EQ(HITLS_X509_CsrCtrl(csr, HITLS_X509_GET_PUBKEY, &pubKey, 0), HITLS_PKI_SUCCESS);
-    ASSERT_TRUE(pubKey != NULL);
-    ASSERT_EQ(CRYPT_EAL_PkeyGetId(pubKey), CRYPT_PKEY_COMPOSITE);
-    ASSERT_EQ(CRYPT_EAL_PkeyGetParaId(pubKey), expectParaId);
-    ASSERT_EQ(HITLS_X509_CsrCtrl(csr, HITLS_X509_GET_SIGNALG, &signAlg, sizeof(signAlg)), HITLS_PKI_SUCCESS);
-    ASSERT_EQ(signAlg, expectParaId);
-    CRYPT_EAL_PkeyFreeCtx(pubKey);
-    return CRYPT_SUCCESS;
-EXIT:
-    CRYPT_EAL_PkeyFreeCtx(pubKey);
-    return -1;
-}
-
-static int32_t CheckCompositeCrlFields(HITLS_X509_Crl *crl, int32_t expectParaId)
-{
-    ASSERT_EQ(crl->signAlgId.algId, expectParaId);
-    ASSERT_EQ(crl->tbs.signAlgId.algId, expectParaId);
-    return CRYPT_SUCCESS;
-EXIT:
-    return -1;
-}
-#endif
-
-#if defined(HITLS_PKI_X509_CRL_GEN)
-int32_t HITLS_X509_EncodeCrlTbsRaw(HITLS_X509_CrlTbs *crlTbs, BSL_ASN1_Buffer *asn);
-#endif
-
-#if defined(HITLS_BSL_PEM) && defined(HITLS_PKI_X509_CRT_GEN)
-#define COMPOSITE_TEST_CERT_CTX_SPECIFIC_TAG_VER 0
-#define COMPOSITE_TEST_CERT_CTX_SPECIFIC_TAG_EXTENSION 3
-#define COMPOSITE_TEST_CERT_TBS_SIZE 9
-#define COMPOSITE_TEST_CERT_BRIEF_SIZE 3
-
-static BSL_ASN1_TemplateItem g_compositeTestCertTbsTempl[] = {
-    {BSL_ASN1_CLASS_CTX_SPECIFIC | BSL_ASN1_TAG_CONSTRUCTED | COMPOSITE_TEST_CERT_CTX_SPECIFIC_TAG_VER,
-     BSL_ASN1_FLAG_DEFAULT, 0},
-        {BSL_ASN1_TAG_INTEGER, BSL_ASN1_FLAG_DEFAULT, 1},
-    {BSL_ASN1_TAG_INTEGER, 0, 0},
-    {BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE, 0, 0},
-    {BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE, BSL_ASN1_FLAG_HEADERONLY | BSL_ASN1_FLAG_SAME, 0},
-    {BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE, 0, 0},
-        {BSL_ASN1_TAG_CHOICE, 0, 1},
-        {BSL_ASN1_TAG_CHOICE, 0, 1},
-    {BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE, BSL_ASN1_FLAG_HEADERONLY | BSL_ASN1_FLAG_SAME, 0},
-    {BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE, BSL_ASN1_FLAG_HEADERONLY, 0},
-    {BSL_ASN1_CLASS_CTX_SPECIFIC | BSL_ASN1_TAG_CONSTRUCTED | COMPOSITE_TEST_CERT_CTX_SPECIFIC_TAG_EXTENSION,
-     BSL_ASN1_FLAG_OPTIONAL | BSL_ASN1_FLAG_HEADERONLY | BSL_ASN1_FLAG_SAME, 0},
-};
-
-static BSL_ASN1_TemplateItem g_compositeTestCertTempl[] = {
-    {BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE, 0, 0},
-        {BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE, 0, 1},
-        {BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE, 0, 1},
-        {BSL_ASN1_TAG_BITSTRING, 0, 1},
-};
-
-static int32_t EncodeParsedCompositeCertTbs(HITLS_X509_Cert *cert, BSL_ASN1_Buffer *encode)
-{
-    BSL_ASN1_Buffer signAlg = {BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE, 0, NULL};
-    BSL_ASN1_Buffer issuer = {0};
-    BSL_ASN1_Buffer subject = {0};
-    BSL_ASN1_Buffer pubkey = {BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE, 0, NULL};
-    BSL_ASN1_Buffer ext = {BSL_ASN1_CLASS_CTX_SPECIFIC | BSL_ASN1_TAG_CONSTRUCTED |
-        COMPOSITE_TEST_CERT_CTX_SPECIFIC_TAG_EXTENSION, 0, NULL};
-    BSL_Buffer pub = {0};
-    uint8_t version = (uint8_t)cert->tbs.version;
-    int32_t ret = HITLS_X509_EncodeSignAlgInfo(&cert->tbs.signAlgId, &signAlg);
-    if (ret != HITLS_PKI_SUCCESS) {
-        return ret;
-    }
-    ret = HITLS_X509_EncodeNameList(cert->tbs.issuerName, &issuer);
-    if (ret != HITLS_PKI_SUCCESS) {
-        goto EXIT;
-    }
-    ret = HITLS_X509_EncodeNameList(cert->tbs.subjectName, &subject);
-    if (ret != HITLS_PKI_SUCCESS) {
-        goto EXIT;
-    }
-    ret = CRYPT_EAL_EncodePubKeyBuffInternal(cert->tbs.ealPubKey, BSL_FORMAT_ASN1, CRYPT_PUBKEY_SUBKEY, false, &pub);
-    if (ret != CRYPT_SUCCESS) {
-        goto EXIT;
-    }
-    if (cert->tbs.version == HITLS_X509_VERSION_3) {
-        ret = HITLS_X509_EncodeExt(BSL_ASN1_CLASS_CTX_SPECIFIC | BSL_ASN1_TAG_CONSTRUCTED |
-            COMPOSITE_TEST_CERT_CTX_SPECIFIC_TAG_EXTENSION, cert->tbs.ext.extList, &ext);
-        if (ret != HITLS_PKI_SUCCESS) {
-            goto EXIT;
-        }
-    }
-    pubkey.buff = pub.data;
-    pubkey.len = pub.dataLen;
-
-    BSL_ASN1_Buffer asns[COMPOSITE_TEST_CERT_TBS_SIZE] = {
-        {BSL_ASN1_TAG_INTEGER, version == HITLS_X509_VERSION_1 ? 0 : 1,
-            version == HITLS_X509_VERSION_1 ? NULL : &version},
-        cert->tbs.serialNum,
-        signAlg,
-        issuer,
-        {(cert->tbs.validTime.flag & BSL_TIME_BEFORE_IS_UTC) != 0 ? BSL_ASN1_TAG_UTCTIME :
-            BSL_ASN1_TAG_GENERALIZEDTIME, sizeof(BSL_TIME), (uint8_t *)&cert->tbs.validTime.start},
-        {(cert->tbs.validTime.flag & BSL_TIME_AFTER_IS_UTC) != 0 ? BSL_ASN1_TAG_UTCTIME :
-            BSL_ASN1_TAG_GENERALIZEDTIME, sizeof(BSL_TIME), (uint8_t *)&cert->tbs.validTime.end},
-        subject,
-        pubkey,
-        ext,
-    };
-    BSL_ASN1_Template templ = {g_compositeTestCertTbsTempl,
-        sizeof(g_compositeTestCertTbsTempl) / sizeof(g_compositeTestCertTbsTempl[0])};
-    ret = BSL_ASN1_EncodeTemplate(&templ, asns, COMPOSITE_TEST_CERT_TBS_SIZE, &encode->buff, &encode->len);
-    if (ret == HITLS_PKI_SUCCESS) {
-        encode->tag = BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE;
-    }
-
-EXIT:
-    BSL_SAL_Free(signAlg.buff);
-    BSL_SAL_Free(issuer.buff);
-    BSL_SAL_Free(subject.buff);
-    BSL_SAL_Free(pubkey.buff);
-    if (version == HITLS_X509_VERSION_3) {
-        BSL_SAL_Free(ext.buff);
-    }
-    return ret;
-}
-
-static int32_t EncodeParsedCompositeCertDer(HITLS_X509_Cert *cert, BSL_Buffer *encode)
-{
-    BSL_ASN1_Buffer tbs = {0};
-    BSL_ASN1_Buffer asns[COMPOSITE_TEST_CERT_BRIEF_SIZE] = {
-        {BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE, 0, NULL},
-        {BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE, 0, NULL},
-        {BSL_ASN1_TAG_BITSTRING, sizeof(BSL_ASN1_BitString), (uint8_t *)&cert->signature},
-    };
-    int32_t ret = EncodeParsedCompositeCertTbs(cert, &tbs);
-    if (ret != HITLS_PKI_SUCCESS) {
-        return ret;
-    }
-    asns[0] = tbs;
-    ret = HITLS_X509_EncodeSignAlgInfo(&cert->signAlgId, &asns[1]);
-    if (ret != HITLS_PKI_SUCCESS) {
-        goto EXIT;
-    }
-    BSL_ASN1_Template templ = {g_compositeTestCertTempl,
-        sizeof(g_compositeTestCertTempl) / sizeof(g_compositeTestCertTempl[0])};
-    ret = BSL_ASN1_EncodeTemplate(&templ, asns, COMPOSITE_TEST_CERT_BRIEF_SIZE, &encode->data, &encode->dataLen);
-
-EXIT:
-    BSL_SAL_Free(asns[1].buff);
-    BSL_SAL_Free(tbs.buff);
-    return ret;
-}
-
-static int32_t EncodeParsedCompositeCertPem(HITLS_X509_Cert *cert, BSL_Buffer *encode)
-{
-    BSL_Buffer der = {0};
-    BSL_PEM_Symbol symbol = {BSL_PEM_CERT_BEGIN_STR, BSL_PEM_CERT_END_STR};
-    int32_t ret = EncodeParsedCompositeCertDer(cert, &der);
-    if (ret != HITLS_PKI_SUCCESS) {
-        return ret;
-    }
-    ret = BSL_PEM_EncodeAsn1ToPem(der.data, der.dataLen, &symbol, (char **)&encode->data, &encode->dataLen);
-    BSL_SAL_Free(der.data);
-    return ret;
-}
-
-static int32_t CheckParsedCompositeCertRoundTrip(HITLS_X509_Cert *cert, BSL_Buffer *originPem,
-    BSL_Buffer *roundTripPem)
-{
-    BSL_Buffer der = {0};
-
-    ASSERT_EQ(EncodeParsedCompositeCertDer(cert, &der), HITLS_PKI_SUCCESS);
-    ASSERT_COMPARE("cert der structural reencode", der.data, der.dataLen, cert->rawData, cert->rawDataLen);
-    ASSERT_EQ(EncodeParsedCompositeCertPem(cert, roundTripPem), HITLS_PKI_SUCCESS);
-    ASSERT_COMPARE("cert pem roundtrip", roundTripPem->data, roundTripPem->dataLen,
-        originPem->data, originPem->dataLen);
-    BSL_SAL_Free(der.data);
-    return CRYPT_SUCCESS;
-EXIT:
-    BSL_SAL_Free(der.data);
-    return -1;
-}
-#endif
-
-#if defined(HITLS_BSL_PEM) && defined(HITLS_PKI_X509_CSR_GEN)
-#define COMPOSITE_TEST_CSR_CTX_SPECIFIC_TAG_ATTRIBUTE 0
-#define COMPOSITE_TEST_CSR_REQINFO_SIZE 4
-#define COMPOSITE_TEST_CSR_BRIEF_SIZE 3
-
-static BSL_ASN1_TemplateItem g_compositeTestCsrReqInfoTempl[] = {
-    {BSL_ASN1_TAG_INTEGER, 0, 0},
-    {BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE, BSL_ASN1_FLAG_HEADERONLY | BSL_ASN1_FLAG_SAME, 0},
-    {BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE, BSL_ASN1_FLAG_HEADERONLY, 0},
-    {BSL_ASN1_CLASS_CTX_SPECIFIC | BSL_ASN1_TAG_CONSTRUCTED | COMPOSITE_TEST_CSR_CTX_SPECIFIC_TAG_ATTRIBUTE,
-        BSL_ASN1_FLAG_HEADERONLY | BSL_ASN1_FLAG_SAME, 0},
-};
-
-static BSL_ASN1_TemplateItem g_compositeTestCsrTempl[] = {
-    {BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE, 0, 0},
-        {BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE, 0, 1},
-        {BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE, 0, 1},
-        {BSL_ASN1_TAG_BITSTRING, 0, 1},
-};
-
-static int32_t EncodeParsedCompositeCsrReqInfo(HITLS_X509_Csr *csr, BSL_ASN1_Buffer *encode)
-{
-    BSL_ASN1_Buffer subject = {0};
-    BSL_ASN1_Buffer publicKey = {BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE, 0, NULL};
-    BSL_ASN1_Buffer attributes = {0};
-    BSL_Buffer pub = {0};
-    uint8_t version = (uint8_t)csr->reqInfo.version;
-    int32_t ret = HITLS_X509_EncodeNameList(csr->reqInfo.subjectName, &subject);
-    if (ret != HITLS_PKI_SUCCESS) {
-        return ret;
-    }
-    ret = CRYPT_EAL_EncodePubKeyBuffInternal(csr->reqInfo.ealPubKey, BSL_FORMAT_ASN1, CRYPT_PUBKEY_SUBKEY, false,
-        &pub);
-    if (ret != CRYPT_SUCCESS) {
-        goto EXIT;
-    }
-#ifdef HITLS_PKI_X509_CSR_ATTR
-    ret = HITLS_X509_EncodeAttrList(BSL_ASN1_CLASS_CTX_SPECIFIC | BSL_ASN1_TAG_CONSTRUCTED |
-        COMPOSITE_TEST_CSR_CTX_SPECIFIC_TAG_ATTRIBUTE, csr->reqInfo.attributes, NULL, &attributes);
-    if (ret != HITLS_PKI_SUCCESS) {
-        goto EXIT;
-    }
-#else
-    attributes.tag = BSL_ASN1_CLASS_CTX_SPECIFIC | BSL_ASN1_TAG_CONSTRUCTED |
-        COMPOSITE_TEST_CSR_CTX_SPECIFIC_TAG_ATTRIBUTE;
-#endif
-    publicKey.buff = pub.data;
-    publicKey.len = pub.dataLen;
-
-    BSL_ASN1_Buffer asns[COMPOSITE_TEST_CSR_REQINFO_SIZE] = {
-        {BSL_ASN1_TAG_INTEGER, 1, &version},
-        subject,
-        publicKey,
-        attributes,
-    };
-    BSL_ASN1_Template templ = {g_compositeTestCsrReqInfoTempl,
-        sizeof(g_compositeTestCsrReqInfoTempl) / sizeof(g_compositeTestCsrReqInfoTempl[0])};
-    ret = BSL_ASN1_EncodeTemplate(&templ, asns, COMPOSITE_TEST_CSR_REQINFO_SIZE, &encode->buff, &encode->len);
-    if (ret == HITLS_PKI_SUCCESS) {
-        encode->tag = BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE;
-    }
-
-EXIT:
-    BSL_SAL_Free(subject.buff);
-    BSL_SAL_Free(publicKey.buff);
-    BSL_SAL_Free(attributes.buff);
-    return ret;
-}
-
-static int32_t EncodeParsedCompositeCsrDer(HITLS_X509_Csr *csr, BSL_Buffer *encode)
-{
-    BSL_ASN1_Buffer reqInfo = {0};
-    BSL_ASN1_Buffer asns[COMPOSITE_TEST_CSR_BRIEF_SIZE] = {
-        {BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE, 0, NULL},
-        {BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE, 0, NULL},
-        {BSL_ASN1_TAG_BITSTRING, sizeof(BSL_ASN1_BitString), (uint8_t *)&csr->signature},
-    };
-    int32_t ret = EncodeParsedCompositeCsrReqInfo(csr, &reqInfo);
-    if (ret != HITLS_PKI_SUCCESS) {
-        return ret;
-    }
-    asns[0] = reqInfo;
-    ret = HITLS_X509_EncodeSignAlgInfo(&csr->signAlgId, &asns[1]);
-    if (ret != HITLS_PKI_SUCCESS) {
-        goto EXIT;
-    }
-    BSL_ASN1_Template templ = {g_compositeTestCsrTempl,
-        sizeof(g_compositeTestCsrTempl) / sizeof(g_compositeTestCsrTempl[0])};
-    ret = BSL_ASN1_EncodeTemplate(&templ, asns, COMPOSITE_TEST_CSR_BRIEF_SIZE, &encode->data, &encode->dataLen);
-
-EXIT:
-    BSL_SAL_Free(asns[1].buff);
-    BSL_SAL_Free(reqInfo.buff);
-    return ret;
-}
-
-static int32_t EncodeParsedCompositeCsrPem(HITLS_X509_Csr *csr, BSL_Buffer *encode)
-{
-    BSL_Buffer der = {0};
-    BSL_PEM_Symbol symbol = {BSL_PEM_CERT_REQ_BEGIN_STR, BSL_PEM_CERT_REQ_END_STR};
-    int32_t ret = EncodeParsedCompositeCsrDer(csr, &der);
-    if (ret != HITLS_PKI_SUCCESS) {
-        return ret;
-    }
-    ret = BSL_PEM_EncodeAsn1ToPem(der.data, der.dataLen, &symbol, (char **)&encode->data, &encode->dataLen);
-    BSL_SAL_Free(der.data);
-    return ret;
-}
-
-static int32_t CheckParsedCompositeCsrRoundTrip(HITLS_X509_Csr *csr, BSL_Buffer *originPem, BSL_Buffer *roundTripPem)
-{
-    BSL_Buffer der = {0};
-
-    ASSERT_EQ(EncodeParsedCompositeCsrDer(csr, &der), HITLS_PKI_SUCCESS);
-    ASSERT_COMPARE("csr der structural reencode", der.data, der.dataLen, csr->rawData, csr->rawDataLen);
-    ASSERT_EQ(EncodeParsedCompositeCsrPem(csr, roundTripPem), HITLS_PKI_SUCCESS);
-    ASSERT_COMPARE("csr pem roundtrip", roundTripPem->data, roundTripPem->dataLen, originPem->data, originPem->dataLen);
-    BSL_SAL_Free(der.data);
-    return CRYPT_SUCCESS;
-EXIT:
-    BSL_SAL_Free(der.data);
-    return -1;
-}
-#endif
-
-#if defined(HITLS_BSL_PEM) && defined(HITLS_PKI_X509_CRL_GEN)
-#define COMPOSITE_TEST_CRL_BRIEF_SIZE 3
-
-static BSL_ASN1_TemplateItem g_compositeTestCrlTempl[] = {
-    {BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE, 0, 0},
-        {BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE, BSL_ASN1_FLAG_HEADERONLY, 1},
-        {BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE, BSL_ASN1_FLAG_HEADERONLY, 1},
-        {BSL_ASN1_TAG_BITSTRING, 0, 1},
-};
-
-static int32_t EncodeParsedCompositeCrlDer(HITLS_X509_Crl *crl, BSL_Buffer *encode)
-{
-    BSL_ASN1_Buffer tbsValue = {0};
-    BSL_ASN1_Buffer asns[COMPOSITE_TEST_CRL_BRIEF_SIZE] = {
-        {BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE, 0, NULL},
-        {BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE, 0, NULL},
-        {BSL_ASN1_TAG_BITSTRING, sizeof(BSL_ASN1_BitString), (uint8_t *)&crl->signature},
-    };
-    int32_t ret = HITLS_X509_EncodeCrlTbsRaw(&crl->tbs, &tbsValue);
-    if (ret != HITLS_PKI_SUCCESS) {
-        return ret;
-    }
-    asns[0] = tbsValue;
-    ret = HITLS_X509_EncodeSignAlgInfo(&crl->signAlgId, &asns[1]);
-    if (ret != HITLS_PKI_SUCCESS) {
-        goto EXIT;
-    }
-    BSL_ASN1_Template templ = {g_compositeTestCrlTempl,
-        sizeof(g_compositeTestCrlTempl) / sizeof(g_compositeTestCrlTempl[0])};
-    ret = BSL_ASN1_EncodeTemplate(&templ, asns, COMPOSITE_TEST_CRL_BRIEF_SIZE, &encode->data, &encode->dataLen);
-
-EXIT:
-    BSL_SAL_Free(asns[1].buff);
-    BSL_SAL_Free(tbsValue.buff);
-    return ret;
-}
-
-static int32_t EncodeParsedCompositeCrlPem(HITLS_X509_Crl *crl, BSL_Buffer *encode)
-{
-    BSL_Buffer der = {0};
-    BSL_PEM_Symbol symbol = {BSL_PEM_CRL_BEGIN_STR, BSL_PEM_CRL_END_STR};
-    int32_t ret = EncodeParsedCompositeCrlDer(crl, &der);
-    if (ret != HITLS_PKI_SUCCESS) {
-        return ret;
-    }
-    ret = BSL_PEM_EncodeAsn1ToPem(der.data, der.dataLen, &symbol, (char **)&encode->data, &encode->dataLen);
-    BSL_SAL_Free(der.data);
-    return ret;
-}
-
-static int32_t CheckParsedCompositeCrlRoundTrip(HITLS_X509_Crl *crl, BSL_Buffer *originPem, BSL_Buffer *roundTripPem)
-{
-    BSL_Buffer der = {0};
-
-    ASSERT_EQ(EncodeParsedCompositeCrlDer(crl, &der), HITLS_PKI_SUCCESS);
-    ASSERT_COMPARE("crl der structural reencode", der.data, der.dataLen, crl->rawData, crl->rawDataLen);
-    ASSERT_EQ(EncodeParsedCompositeCrlPem(crl, roundTripPem), HITLS_PKI_SUCCESS);
-    ASSERT_COMPARE("crl pem roundtrip", roundTripPem->data, roundTripPem->dataLen, originPem->data, originPem->dataLen);
-    BSL_SAL_Free(der.data);
-    return CRYPT_SUCCESS;
-EXIT:
-    BSL_SAL_Free(der.data);
     return -1;
 }
 #endif
@@ -2809,175 +2390,6 @@ EXIT:
     CRYPT_EAL_PkeyFreeCtx(prvCtx);
     CRYPT_EAL_PkeyFreeCtx(pubCtx);
     TestRandDeInit();
-#endif
-}
-/* END_CASE */
-
-/* @
- * @test SDV_CRYPT_EAL_COMPOSITE_CERT_ROUNDTRIP_TC001
- * @spec -
- * @title Test Composite BC certificate samples support parse/encode/parse roundtrip.
- * @precon BC Composite root/leaf certificate samples are available in PEM.
- * @brief
- * 1.Parse BC Composite root and leaf certificates.
- * 2.Check Composite key/signature algorithm fields and key usage expectations.
- * 3.Verify root self-signature and leaf issuer signature.
- * 4.Re-encode PEM, compare with the original BC files, and parse again.
- * 5.Repeat the field and signature checks on the reparsed certificates.
- * @expect
- * 1.Root/leaf certificate parse and PEM roundtrip succeed.
- * 2.Composite paraId/signature algorithm/key usage remain unchanged.
- * 3.Signature verification succeeds before and after roundtrip.
- * @prior nan
- * @auto FALSE
- @ */
-/* BEGIN_CASE */
-void SDV_CRYPT_EAL_COMPOSITE_CERT_ROUNDTRIP_TC001(char *sampleDir, int expectParaId,
-    int expectRootKeyUsage, int expectLeafKeyUsage)
-{
-#if !defined(HITLS_BSL_PEM) || !defined(HITLS_BSL_SAL_FILE) || !defined(HITLS_PKI_X509)
-    (void)sampleDir;
-    (void)expectParaId;
-    (void)expectRootKeyUsage;
-    (void)expectLeafKeyUsage;
-    SKIP_TEST();
-#else
-    char rootPath[COMPOSITE_SAMPLE_PATH_MAX] = {0};
-    char leafPath[COMPOSITE_SAMPLE_PATH_MAX] = {0};
-    BSL_Buffer rootFile = {0};
-    BSL_Buffer leafFile = {0};
-    BSL_Buffer rootEncode = {0};
-    BSL_Buffer leafEncode = {0};
-    HITLS_X509_Cert *rootCert = NULL;
-    HITLS_X509_Cert *leafCert = NULL;
-    HITLS_X509_Cert *rootParsed = NULL;
-    HITLS_X509_Cert *leafParsed = NULL;
-
-    TestMemInit();
-    BSL_GLOBAL_Init();
-
-    ASSERT_EQ(ReadCompositeSampleFile(sampleDir, "root_cert.pem", &rootFile, rootPath, sizeof(rootPath)), BSL_SUCCESS);
-    ASSERT_EQ(ReadCompositeSampleFile(sampleDir, "leaf_cert.pem", &leafFile, leafPath, sizeof(leafPath)), BSL_SUCCESS);
-
-    ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_PEM, rootPath, &rootCert), HITLS_PKI_SUCCESS);
-    ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_PEM, leafPath, &leafCert), HITLS_PKI_SUCCESS);
-    ASSERT_EQ(CheckCompositeCertFields(rootCert, expectParaId, expectRootKeyUsage), CRYPT_SUCCESS);
-    ASSERT_EQ(CheckCompositeCertFields(leafCert, expectParaId, expectLeafKeyUsage), CRYPT_SUCCESS);
-    ASSERT_EQ(HITLS_X509_CheckSignature(rootCert->tbs.ealPubKey, rootCert->tbs.tbsRawData,
-        rootCert->tbs.tbsRawDataLen, &rootCert->signAlgId, &rootCert->signature), HITLS_PKI_SUCCESS);
-    ASSERT_EQ(HITLS_X509_CheckSignature(rootCert->tbs.ealPubKey, leafCert->tbs.tbsRawData,
-        leafCert->tbs.tbsRawDataLen, &leafCert->signAlgId, &leafCert->signature), HITLS_PKI_SUCCESS);
-
-    ASSERT_EQ(CheckParsedCompositeCertRoundTrip(rootCert, &rootFile, &rootEncode), CRYPT_SUCCESS);
-    ASSERT_EQ(HITLS_X509_CertParseBuff(BSL_FORMAT_PEM, &rootEncode, &rootParsed), HITLS_PKI_SUCCESS);
-    ASSERT_EQ(CheckCompositeCertFields(rootParsed, expectParaId, expectRootKeyUsage), CRYPT_SUCCESS);
-    ASSERT_EQ(HITLS_X509_CheckSignature(rootParsed->tbs.ealPubKey, rootParsed->tbs.tbsRawData,
-        rootParsed->tbs.tbsRawDataLen, &rootParsed->signAlgId, &rootParsed->signature), HITLS_PKI_SUCCESS);
-
-    ASSERT_EQ(CheckParsedCompositeCertRoundTrip(leafCert, &leafFile, &leafEncode), CRYPT_SUCCESS);
-    ASSERT_EQ(HITLS_X509_CertParseBuff(BSL_FORMAT_PEM, &leafEncode, &leafParsed), HITLS_PKI_SUCCESS);
-    ASSERT_EQ(CheckCompositeCertFields(leafParsed, expectParaId, expectLeafKeyUsage), CRYPT_SUCCESS);
-    ASSERT_EQ(HITLS_X509_CheckSignature(rootParsed->tbs.ealPubKey, leafParsed->tbs.tbsRawData,
-        leafParsed->tbs.tbsRawDataLen, &leafParsed->signAlgId, &leafParsed->signature), HITLS_PKI_SUCCESS);
-
-EXIT:
-    HITLS_X509_CertFree(leafParsed);
-    HITLS_X509_CertFree(rootParsed);
-    HITLS_X509_CertFree(leafCert);
-    HITLS_X509_CertFree(rootCert);
-    BSL_SAL_FREE(leafEncode.data);
-    BSL_SAL_FREE(rootEncode.data);
-    BSL_SAL_FREE(leafFile.data);
-    BSL_SAL_FREE(rootFile.data);
-    BSL_GLOBAL_DeInit();
-#endif
-}
-/* END_CASE */
-
-/* @
- * @test SDV_CRYPT_EAL_COMPOSITE_CSR_CRL_ROUNDTRIP_TC001
- * @spec -
- * @title Test Composite BC CSR and CRL samples support parse/encode/parse roundtrip.
- * @precon BC Composite root certificate, CSR, and CRL PEM samples are available.
- * @brief
- * 1.Parse the issuer root certificate, leaf CSR, and issuer CRL.
- * 2.Check Composite key/signature algorithm fields on CSR and CRL.
- * 3.Verify the CSR signature with its embedded public key and the CRL signature with the issuer public key.
- * 4.Re-encode CSR/CRL PEM, compare with the original BC files, and parse again.
- * 5.Repeat the field and signature checks on the reparsed CSR/CRL.
- * @expect
- * 1.CSR/CRL parse and PEM roundtrip succeed.
- * 2.Composite paraId/signature algorithm remain unchanged.
- * 3.Signature verification succeeds before and after roundtrip.
- * @prior nan
- * @auto FALSE
- @ */
-/* BEGIN_CASE */
-void SDV_CRYPT_EAL_COMPOSITE_CSR_CRL_ROUNDTRIP_TC001(char *sampleDir, int expectParaId)
-{
-#if !defined(HITLS_BSL_PEM) || !defined(HITLS_BSL_SAL_FILE) || !defined(HITLS_PKI_X509)
-    (void)sampleDir;
-    (void)expectParaId;
-    SKIP_TEST();
-#else
-    char rootPath[COMPOSITE_SAMPLE_PATH_MAX] = {0};
-    char csrPath[COMPOSITE_SAMPLE_PATH_MAX] = {0};
-    char crlPath[COMPOSITE_SAMPLE_PATH_MAX] = {0};
-    BSL_Buffer csrFile = {0};
-    BSL_Buffer crlFile = {0};
-    BSL_Buffer csrEncode = {0};
-    BSL_Buffer crlEncode = {0};
-    HITLS_X509_Cert *rootCert = NULL;
-    HITLS_X509_Csr *csr = NULL;
-    HITLS_X509_Csr *csrParsed = NULL;
-    HITLS_X509_Crl *crl = NULL;
-    HITLS_X509_Crl *crlParsed = NULL;
-
-    TestMemInit();
-    BSL_GLOBAL_Init();
-
-    ASSERT_EQ(JoinCompositeSamplePath(rootPath, sizeof(rootPath), sampleDir, "root_cert.pem"), CRYPT_SUCCESS);
-    ASSERT_EQ(ReadCompositeSampleFile(sampleDir, "leaf.csr.pem", &csrFile, csrPath, sizeof(csrPath)), BSL_SUCCESS);
-    ASSERT_EQ(ReadCompositeSampleFile(sampleDir, "issuer.crl.pem", &crlFile, crlPath, sizeof(crlPath)), BSL_SUCCESS);
-
-    ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_PEM, rootPath, &rootCert), HITLS_PKI_SUCCESS);
-    ASSERT_EQ(CheckCompositeDecodedKey(rootCert->tbs.ealPubKey, expectParaId), CRYPT_SUCCESS);
-
-    ASSERT_EQ(HITLS_X509_CsrParseFile(BSL_FORMAT_PEM, csrPath, &csr), HITLS_PKI_SUCCESS);
-    ASSERT_EQ(CheckCompositeCsrFields(csr, expectParaId), CRYPT_SUCCESS);
-    ASSERT_EQ(HITLS_X509_CheckSignature(csr->reqInfo.ealPubKey, csr->reqInfo.reqInfoRawData,
-        csr->reqInfo.reqInfoRawDataLen, &csr->signAlgId, &csr->signature), HITLS_PKI_SUCCESS);
-    ASSERT_EQ(HITLS_X509_CsrVerify(csr), HITLS_PKI_SUCCESS);
-    ASSERT_EQ(CheckParsedCompositeCsrRoundTrip(csr, &csrFile, &csrEncode), CRYPT_SUCCESS);
-    ASSERT_EQ(HITLS_X509_CsrParseBuff(BSL_FORMAT_PEM, &csrEncode, &csrParsed), HITLS_PKI_SUCCESS);
-    ASSERT_EQ(CheckCompositeCsrFields(csrParsed, expectParaId), CRYPT_SUCCESS);
-    ASSERT_EQ(HITLS_X509_CheckSignature(csrParsed->reqInfo.ealPubKey, csrParsed->reqInfo.reqInfoRawData,
-        csrParsed->reqInfo.reqInfoRawDataLen, &csrParsed->signAlgId, &csrParsed->signature), HITLS_PKI_SUCCESS);
-    ASSERT_EQ(HITLS_X509_CsrVerify(csrParsed), HITLS_PKI_SUCCESS);
-
-    ASSERT_EQ(HITLS_X509_CrlParseFile(BSL_FORMAT_PEM, crlPath, &crl), HITLS_PKI_SUCCESS);
-    ASSERT_EQ(CheckCompositeCrlFields(crl, expectParaId), CRYPT_SUCCESS);
-    ASSERT_EQ(HITLS_X509_CheckSignature(rootCert->tbs.ealPubKey, crl->tbs.tbsRawData,
-        crl->tbs.tbsRawDataLen, &crl->signAlgId, &crl->signature), HITLS_PKI_SUCCESS);
-    ASSERT_EQ(HITLS_X509_CrlVerify(rootCert->tbs.ealPubKey, crl), HITLS_PKI_SUCCESS);
-    ASSERT_EQ(CheckParsedCompositeCrlRoundTrip(crl, &crlFile, &crlEncode), CRYPT_SUCCESS);
-    ASSERT_EQ(HITLS_X509_CrlParseBuff(BSL_FORMAT_PEM, &crlEncode, &crlParsed), HITLS_PKI_SUCCESS);
-    ASSERT_EQ(CheckCompositeCrlFields(crlParsed, expectParaId), CRYPT_SUCCESS);
-    ASSERT_EQ(HITLS_X509_CheckSignature(rootCert->tbs.ealPubKey, crlParsed->tbs.tbsRawData,
-        crlParsed->tbs.tbsRawDataLen, &crlParsed->signAlgId, &crlParsed->signature), HITLS_PKI_SUCCESS);
-    ASSERT_EQ(HITLS_X509_CrlVerify(rootCert->tbs.ealPubKey, crlParsed), HITLS_PKI_SUCCESS);
-
-EXIT:
-    HITLS_X509_CrlFree(crlParsed);
-    HITLS_X509_CrlFree(crl);
-    HITLS_X509_CsrFree(csrParsed);
-    HITLS_X509_CsrFree(csr);
-    HITLS_X509_CertFree(rootCert);
-    BSL_SAL_FREE(crlEncode.data);
-    BSL_SAL_FREE(csrEncode.data);
-    BSL_SAL_FREE(crlFile.data);
-    BSL_SAL_FREE(csrFile.data);
-    BSL_GLOBAL_DeInit();
 #endif
 }
 /* END_CASE */
