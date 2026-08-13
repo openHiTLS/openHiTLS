@@ -2992,3 +2992,67 @@ EXIT:
     FRAME_FreeLink(server);
 }
 /* END_CASE */
+
+/** @
+* @test SDV_TLS_DTLS13_UNIFIED_EPOCH0_DISCARD_TC039
+* @spec -
+* @title DTLS1.3 silently discards a unified-header record that reconstructs to epoch 0.
+* @precon nan
+* @brief
+*    1. Establish a DTLS1.3 connection and set the receiver read epoch to 0.
+*    2. Inject a DTLS1.3 unified-header record whose low epoch bits reconstruct to epoch 0.
+*    3. Read application data on the receiver.
+* @expect
+*    1. Epoch reconstruction succeeds and returns epoch 0.
+*    2. The record is discarded and no alert is sent.
+@ */
+/* BEGIN_CASE */
+void SDV_TLS_DTLS13_UNIFIED_EPOCH0_DISCARD_TC039(void)
+{
+    HITLS_Config *config = NULL;
+    FRAME_LinkObj *client = NULL;
+    FRAME_LinkObj *server = NULL;
+    FrameUioUserData *serverIo = NULL;
+    uint8_t record[REC_DTLS13_UNI_HEADER_LENGTH + 1] = {0};
+    uint32_t recordLen = 0;
+    uint8_t readBuf[APP_READ_BUF_SIZE] = {0};
+    uint32_t readLen = 0;
+    uint64_t reconstructedEpoch = 1;
+    ALERT_Info alert = {0};
+
+    FRAME_Init();
+
+    config = HITLS_CFG_NewDTLS13Config();
+    ASSERT_TRUE(config != NULL);
+    ASSERT_EQ(HITLS_CFG_SetTicketNums(config, 0), HITLS_SUCCESS);
+
+    client = FRAME_CreateLink(config, BSL_UIO_UDP);
+    ASSERT_TRUE(client != NULL);
+    server = FRAME_CreateLink(config, BSL_UIO_UDP);
+    ASSERT_TRUE(server != NULL);
+
+    ASSERT_EQ(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_SUCCESS);
+    serverIo = BSL_UIO_GetUserData(server->io);
+    ASSERT_TRUE(serverIo != NULL);
+    serverIo->recMsg.len = 0;
+    serverIo->sndMsg.len = 0;
+
+    Dtls13SetReadEpoch(server->ssl, 0);
+    ASSERT_EQ(Dtls13ReconstructEpoch(server->ssl, 0, &reconstructedEpoch), HITLS_SUCCESS);
+    ASSERT_EQ(reconstructedEpoch, 0);
+
+    recordLen = BuildDtls13UnifiedHeader(record, sizeof(record), 0, 0, 0, REC_TYPE_APP);
+    ASSERT_TRUE(recordLen != 0);
+    ASSERT_EQ(FRAME_TransportRecMsg(server->io, record, recordLen), HITLS_SUCCESS);
+
+    ASSERT_EQ(HITLS_Read(server->ssl, readBuf, sizeof(readBuf), &readLen), HITLS_REC_NORMAL_RECV_BUF_EMPTY);
+    ASSERT_EQ(readLen, 0);
+    ALERT_GetInfo(server->ssl, &alert);
+    ASSERT_TRUE(alert.flag != ALERT_FLAG_SEND);
+
+EXIT:
+    HITLS_CFG_FreeConfig(config);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+}
+/* END_CASE */

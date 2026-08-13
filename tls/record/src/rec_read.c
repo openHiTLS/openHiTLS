@@ -908,6 +908,9 @@ static int32_t Dtls13GetRecordUnifiedHeader(TLS_Ctx *ctx, const uint8_t *msg, ui
     if (ret != HITLS_SUCCESS) {
         return ret;
     }
+    if (epoch == 0) {
+        return HITLS_REC_NORMAL_RECV_BUF_EMPTY;
+    }
     ret = Dtls13TrySendRetransAckOnEpoch2(ctx, epoch);
     if (ret != HITLS_SUCCESS) {
         return ret;
