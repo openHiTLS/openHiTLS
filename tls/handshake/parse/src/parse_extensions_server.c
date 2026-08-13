@@ -336,9 +336,15 @@ static int32_t ParseClientConnectionId(ParsePacket *pkt, ClientHelloMsg *msg)
 int32_t ParseIdentities(TLS_Ctx *ctx, PreSharedKey *preSharedKey, const uint8_t *buf, uint32_t bufLen)
 {
     uint32_t bufOffset = 0u;
+    uint32_t identityCount = 0;
     PreSharedKey *tmp = preSharedKey;
 
     while (bufOffset + sizeof(uint16_t) < bufLen) {
+        if (identityCount >= MAX_PSK_IDENTITY_COUNT) {
+            ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_ILLEGAL_PARAMETER);
+            BSL_ERR_PUSH_ERROR(HITLS_PARSE_INVALID_MSG_LEN);
+            return HITLS_PARSE_INVALID_MSG_LEN;
+        }
         /* Create a linked list node */
         PreSharedKey *node = (PreSharedKey *)BSL_SAL_Calloc(1, sizeof(PreSharedKey));
         if (node == NULL) {
@@ -376,6 +382,7 @@ int32_t ParseIdentities(TLS_Ctx *ctx, PreSharedKey *preSharedKey, const uint8_t 
 
         node->obfuscatedTicketAge = BSL_ByteToUint32(&buf[bufOffset]);
         bufOffset += sizeof(uint32_t);
+        identityCount++;
     }
 
     if (bufOffset != bufLen) {
