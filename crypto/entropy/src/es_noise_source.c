@@ -211,6 +211,67 @@ static int32_t NsCycleInit(ES_NoiseSource *ns, bool enableTest)
     return ret;
 }
 
+static void NsNodeInit(ES_NoiseSource *ns, bool enableTest, bool *nsUsed, bool *allPermanent,
+                       int32_t *structuralRet, int32_t *cycleRet, int32_t *creditedRet)
+{
+    if (ns->permanentFailure) {
+        if (ns->credited) {
+            *creditedRet = CRYPT_ENTROPY_ES_PERMANENT_FAILURE;
+        }
+        return;
+    }
+    int32_t ret = NsCycleInit(ns, enableTest);
+    if (ret == CRYPT_SUCCESS) {
+        ns->floorFailStreak = 0;
+        /* A fresh startup timer check supersedes any pending recovery:
+           drop the suspension, probation and streak so a
+           reinitialized source starts clean. */
+        ns->needRecovery = false;
+        ns->onProbation = false;
+        ns->recoveryFailStreak = 0;
+        ns->isEnable = true;
+        *nsUsed = true;
+        *allPermanent = false;
+        return;
+    }
+    ns->isEnable = false;
+    if (ret < 0) {
+        /* Private negative encodings from init paths stop here; the list
+           boundary speaks CRYPT_* verdicts only. */
+        ret = CRYPT_ENTROPY_ES_NS_NOT_AVA;
+    }
+    bool recordsCreditedRet = ns->credited && *creditedRet == CRYPT_SUCCESS;
+    if (recordsCreditedRet) {
+        *creditedRet = ret;
+    }
+    if (ES_NsVerdictRetires(ret)) {
+        ES_NsRetire(ns);
+        if (ns->credited) {
+            *creditedRet = CRYPT_ENTROPY_ES_PERMANENT_FAILURE;
+        }
+        if (*structuralRet == CRYPT_SUCCESS) {
+            *structuralRet = ret;
+        }
+        return;
+    }
+    if (ns->initAt != NULL && ES_NsVerdictDemotes(ret)) {
+        /* Walk exhaustion or an authoritative window failure after the
+           ladder topped out: floor-level health evidence. */
+        ns->osr = ns->osrMax;
+        if (++ns->floorFailStreak >= NS_PERMANENT_FAIL_STREAK) {
+            ES_NsRetire(ns);
+            if (ns->credited) {
+                *creditedRet = CRYPT_ENTROPY_ES_PERMANENT_FAILURE;
+            }
+            return;
+        }
+    }
+    *allPermanent = false;
+    if (*cycleRet == CRYPT_SUCCESS) {
+        *cycleRet = ret;
+    }
+}
+
 int32_t ES_NsListInit(BslList *nsList, bool enableTest)
 {
     if (BSL_LIST_COUNT(nsList) == 0) {
@@ -226,63 +287,8 @@ int32_t ES_NsListInit(BslList *nsList, bool enableTest)
        among non-permanent errors the first one wins. */
     int32_t creditedRet = CRYPT_SUCCESS;
     for (BslListNode *node = BSL_LIST_FirstNode(nsList); node != NULL; node = BSL_LIST_GetNextNode(nsList, node)) {
-        ES_NoiseSource *ns = BSL_LIST_GetData(node);
-        if (ns->permanentFailure) {
-            if (ns->credited) {
-                creditedRet = CRYPT_ENTROPY_ES_PERMANENT_FAILURE;
-            }
-            continue;
-        }
-        int32_t ret = NsCycleInit(ns, enableTest);
-        if (ret == CRYPT_SUCCESS) {
-            ns->floorFailStreak = 0;
-            /* A fresh startup timer check supersedes any pending recovery:
-               drop the suspension, probation and streak so a
-               reinitialized source starts clean. */
-            ns->needRecovery = false;
-            ns->onProbation = false;
-            ns->recoveryFailStreak = 0;
-            ns->isEnable = true;
-            nsUsed = true;
-            allPermanent = false;
-            continue;
-        }
-        ns->isEnable = false;
-        if (ret < 0) {
-            /* Private negative encodings from init paths stop here; the list
-               boundary speaks CRYPT_* verdicts only. */
-            ret = CRYPT_ENTROPY_ES_NS_NOT_AVA;
-        }
-        bool recordsCreditedRet = ns->credited && creditedRet == CRYPT_SUCCESS;
-        if (recordsCreditedRet) {
-            creditedRet = ret;
-        }
-        if (ES_NsVerdictRetires(ret)) {
-            ES_NsRetire(ns);
-            if (ns->credited) {
-                creditedRet = CRYPT_ENTROPY_ES_PERMANENT_FAILURE;
-            }
-            if (structuralRet == CRYPT_SUCCESS) {
-                structuralRet = ret;
-            }
-            continue;
-        }
-        if (ns->initAt != NULL && ES_NsVerdictDemotes(ret)) {
-            /* Walk exhaustion or an authoritative window failure after the
-               ladder topped out: floor-level health evidence. */
-            ns->osr = ns->osrMax;
-            if (++ns->floorFailStreak >= NS_PERMANENT_FAIL_STREAK) {
-                ES_NsRetire(ns);
-                if (ns->credited) {
-                    creditedRet = CRYPT_ENTROPY_ES_PERMANENT_FAILURE;
-                }
-                continue;
-            }
-        }
-        allPermanent = false;
-        if (cycleRet == CRYPT_SUCCESS) {
-            cycleRet = ret;
-        }
+        NsNodeInit(BSL_LIST_GetData(node), enableTest, &nsUsed, &allPermanent, &structuralRet, &cycleRet,
+                   &creditedRet);
     }
     if (nsUsed && creditedRet == CRYPT_SUCCESS) {
         return CRYPT_SUCCESS;
