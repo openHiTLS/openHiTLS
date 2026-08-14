@@ -19,6 +19,7 @@
 #include "bsl_err.h"
 #include "crypt_params_key.h"
 #include "crypt_local_types.h"
+#include "stub_utils.h"
 
 /* END_HEADER */
 /**
@@ -2551,8 +2552,21 @@ EXIT:
 /* END_CASE */
 
 #ifdef HITLS_CRYPTO_BN_CB
+STUB_DEFINE_RET2(void *, BSL_SAL_Calloc, uint32_t, uint32_t);
+
+static void *RsaBnCbCallocFail(uint32_t count, uint32_t size)
+{
+    (void)count;
+    (void)size;
+    return NULL;
+}
+
 static uint32_t g_rsaBnCbCallCount = 0;
 static bool g_rsaBnCbParamValid = true;
+static int32_t g_rsaBnCbRet = CRYPT_SUCCESS;
+static uint32_t g_rsaBnCbCancelAt = 0;
+static uint32_t g_rsaBnCbLastIteration = 0;
+
 static bool g_rsaBnCbUserDataIsNull = true;
 
 static int32_t RsaBnGenCb(void *userData, BSL_Param *param)
@@ -2568,6 +2582,10 @@ static int32_t RsaBnGenCb(void *userData, BSL_Param *param)
         return CRYPT_INVALID_ARG;
     }
     g_rsaBnCbCallCount++;
+    g_rsaBnCbLastIteration = iteration;
+    if (g_rsaBnCbCancelAt != 0 && g_rsaBnCbCallCount >= g_rsaBnCbCancelAt) {
+        return g_rsaBnCbRet;
+    }
     return CRYPT_SUCCESS;
 }
 #endif
@@ -2593,8 +2611,7 @@ void SDV_CRYPTO_RSA_BN_GEN_CB_FUNC_TC001(int bits, int isProvider)
     TestMemInit();
     ASSERT_EQ(TestRandInit(), CRYPT_SUCCESS);
 
-    pkey = TestPkeyNewCtx(NULL, CRYPT_PKEY_RSA, CRYPT_EAL_PKEY_UNKNOWN_OPERATE,
-        "provider=default", isProvider);
+    pkey = TestPkeyNewCtx(NULL, CRYPT_PKEY_RSA, CRYPT_EAL_PKEY_UNKNOWN_OPERATE, "provider=default", isProvider);
     ASSERT_TRUE(pkey != NULL);
     ASSERT_EQ(CRYPT_EAL_PkeySetPara(pkey, &para), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_SET_BN_GEN_CB, &callback, 0), CRYPT_INVALID_ARG);
@@ -2602,6 +2619,9 @@ void SDV_CRYPTO_RSA_BN_GEN_CB_FUNC_TC001(int bits, int isProvider)
 
     g_rsaBnCbCallCount = 0;
     g_rsaBnCbParamValid = true;
+    g_rsaBnCbRet = CRYPT_SUCCESS;
+    g_rsaBnCbCancelAt = 0;
+    g_rsaBnCbLastIteration = 0;
     g_rsaBnCbUserDataIsNull = true;
     ASSERT_EQ(CRYPT_EAL_PkeyGen(pkey), CRYPT_SUCCESS);
     ASSERT_TRUE(g_rsaBnCbCallCount > 0);
@@ -2614,3 +2634,240 @@ EXIT:
 #endif
 }
 /* END_CASE */
+
+/**
+ * @test   SDV_CRYPTO_RSA_BN_GEN_CB_CTRL_TC001
+ * @title  BN generation callback control parameter validation.
+ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_RSA_BN_GEN_CB_CTRL_TC001(int isProvider)
+{
+#if !defined(HITLS_CRYPTO_BN_CB) || !defined(HITLS_CRYPTO_RSA_GEN)
+    (void)isProvider;
+    SKIP_TEST();
+#else
+    uint8_t e[] = {1, 0, 1};
+    CRYPT_EAL_PkeyPara para = {0};
+    CRYPT_EAL_PKEY_CB callback = RsaBnGenCb;
+    CRYPT_EAL_PkeyCtx *pkey = NULL;
+
+    SetRsaPara(&para, e, sizeof(e), 512);
+    TestMemInit();
+    pkey = TestPkeyNewCtx(NULL, CRYPT_PKEY_RSA, CRYPT_EAL_PKEY_UNKNOWN_OPERATE, "provider=default", isProvider);
+    ASSERT_TRUE(pkey != NULL);
+    ASSERT_EQ(CRYPT_EAL_PkeySetPara(pkey, &para), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_SET_BN_GEN_CB, &callback, 0), CRYPT_INVALID_ARG);
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_SET_BN_GEN_CB, &callback, sizeof(callback) - 1), CRYPT_INVALID_ARG);
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_SET_BN_GEN_CB, &callback, sizeof(callback) + 1), CRYPT_INVALID_ARG);
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_SET_BN_GEN_CB, &callback, (uint32_t)-1), CRYPT_INVALID_ARG);
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_SET_BN_GEN_CB, NULL, sizeof(callback)), CRYPT_NULL_INPUT);
+
+EXIT:
+    CRYPT_EAL_PkeyFreeCtx(pkey);
+#endif
+}
+/* END_CASE */
+
+/**
+ * @test   SDV_CRYPTO_RSA_BN_GEN_CB_ERROR_TC001
+ * @title  BN generation callback error propagation by RSA key size.
+ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_RSA_BN_GEN_CB_ERROR_TC001(int bits, int isProvider, int cbRet)
+{
+#if !defined(HITLS_CRYPTO_BN_CB) || !defined(HITLS_CRYPTO_RSA_GEN)
+    (void)bits;
+    (void)isProvider;
+    (void)cbRet;
+    SKIP_TEST();
+#else
+    uint8_t e[] = {1, 0, 1};
+    CRYPT_EAL_PkeyPara para = {0};
+    CRYPT_EAL_PKEY_CB callback = RsaBnGenCb;
+    CRYPT_EAL_PkeyCtx *pkey = NULL;
+    int32_t ret;
+
+    SetRsaPara(&para, e, sizeof(e), bits);
+    TestMemInit();
+    ASSERT_EQ(TestRandInit(), CRYPT_SUCCESS);
+    pkey = TestPkeyNewCtx(NULL, CRYPT_PKEY_RSA, CRYPT_EAL_PKEY_UNKNOWN_OPERATE, "provider=default", isProvider);
+    ASSERT_TRUE(pkey != NULL);
+    ASSERT_EQ(CRYPT_EAL_PkeySetPara(pkey, &para), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_SET_BN_GEN_CB, &callback, sizeof(callback)), CRYPT_SUCCESS);
+    g_rsaBnCbCallCount = 0;
+    g_rsaBnCbParamValid = true;
+    g_rsaBnCbRet = cbRet;
+    g_rsaBnCbCancelAt = 1;
+    ret = CRYPT_EAL_PkeyGen(pkey);
+    if (bits < 1024) {
+        ASSERT_EQ(ret, CRYPT_BN_NOR_GEN_PRIME);
+        ASSERT_TRUE(g_rsaBnCbCallCount > 1);
+    } else {
+        ASSERT_EQ(ret, cbRet);
+        ASSERT_EQ(g_rsaBnCbCallCount, 1);
+    }
+    ASSERT_TRUE(g_rsaBnCbParamValid);
+
+EXIT:
+    TestRandDeInit();
+    CRYPT_EAL_PkeyFreeCtx(pkey);
+#endif
+}
+/* END_CASE */
+
+/**
+ * @test   SDV_CRYPTO_RSA_BN_GEN_CB_CLEAR_TC001
+ * @title  Clearing the callback removes the callback from subsequent generation.
+ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_RSA_BN_GEN_CB_CLEAR_TC001(int isProvider)
+{
+#if !defined(HITLS_CRYPTO_BN_CB) || !defined(HITLS_CRYPTO_RSA_GEN)
+    (void)isProvider;
+    SKIP_TEST();
+#else
+    uint8_t e[] = {1, 0, 1};
+    CRYPT_EAL_PkeyPara para = {0};
+    CRYPT_EAL_PKEY_CB callback = RsaBnGenCb;
+    CRYPT_EAL_PKEY_CB clearCallback = NULL;
+    CRYPT_EAL_PkeyCtx *pkey = NULL;
+
+    SetRsaPara(&para, e, sizeof(e), 512);
+    TestMemInit();
+    ASSERT_EQ(TestRandInit(), CRYPT_SUCCESS);
+    pkey = TestPkeyNewCtx(NULL, CRYPT_PKEY_RSA, CRYPT_EAL_PKEY_UNKNOWN_OPERATE, "provider=default", isProvider);
+    ASSERT_TRUE(pkey != NULL);
+    ASSERT_EQ(CRYPT_EAL_PkeySetPara(pkey, &para), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_SET_BN_GEN_CB, &callback, sizeof(callback)), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_SET_BN_GEN_CB, &clearCallback, sizeof(clearCallback)), CRYPT_SUCCESS);
+    g_rsaBnCbCallCount = 0;
+    g_rsaBnCbParamValid = true;
+    g_rsaBnCbRet = CRYPT_SUCCESS;
+    g_rsaBnCbCancelAt = 0;
+    g_rsaBnCbLastIteration = 0;
+    ASSERT_EQ(CRYPT_EAL_PkeyGen(pkey), CRYPT_SUCCESS);
+    ASSERT_EQ(g_rsaBnCbCallCount, 0);
+
+EXIT:
+    TestRandDeInit();
+    CRYPT_EAL_PkeyFreeCtx(pkey);
+#endif
+}
+/* END_CASE */
+
+/**
+ * @test   SDV_CRYPTO_RSA_BN_GEN_CB_DUP_TC001
+ * @title  Duplicated RSA context retains the callback configuration.
+ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_RSA_BN_GEN_CB_DUP_TC001(int isProvider)
+{
+#if !defined(HITLS_CRYPTO_BN_CB) || !defined(HITLS_CRYPTO_RSA_GEN)
+    (void)isProvider;
+    SKIP_TEST();
+#else
+    uint8_t e[] = {1, 0, 1};
+    CRYPT_EAL_PkeyPara para = {0};
+    CRYPT_EAL_PKEY_CB callback = RsaBnGenCb;
+    CRYPT_EAL_PkeyCtx *source = NULL;
+    CRYPT_EAL_PkeyCtx *duplicate = NULL;
+
+    SetRsaPara(&para, e, sizeof(e), 512);
+    TestMemInit();
+    ASSERT_EQ(TestRandInit(), CRYPT_SUCCESS);
+    source = TestPkeyNewCtx(NULL, CRYPT_PKEY_RSA, CRYPT_EAL_PKEY_UNKNOWN_OPERATE, "provider=default", isProvider);
+    ASSERT_TRUE(source != NULL);
+    ASSERT_EQ(CRYPT_EAL_PkeySetPara(source, &para), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(source, CRYPT_CTRL_SET_BN_GEN_CB, &callback, sizeof(callback)), CRYPT_SUCCESS);
+    duplicate = CRYPT_EAL_PkeyDupCtx(source);
+    ASSERT_TRUE(duplicate != NULL);
+    g_rsaBnCbCallCount = 0;
+    g_rsaBnCbParamValid = true;
+    g_rsaBnCbRet = CRYPT_SUCCESS;
+    g_rsaBnCbCancelAt = 0;
+    ASSERT_EQ(CRYPT_EAL_PkeyGen(source), CRYPT_SUCCESS);
+    ASSERT_TRUE(g_rsaBnCbCallCount > 0);
+    g_rsaBnCbCallCount = 0;
+    ASSERT_EQ(CRYPT_EAL_PkeyGen(duplicate), CRYPT_SUCCESS);
+    ASSERT_TRUE(g_rsaBnCbCallCount > 0);
+
+EXIT:
+    TestRandDeInit();
+    CRYPT_EAL_PkeyFreeCtx(source);
+    CRYPT_EAL_PkeyFreeCtx(duplicate);
+#endif
+}
+/* END_CASE */
+
+/**
+ * @test   SDV_CRYPTO_RSA_BN_GEN_CB_CANCEL_TC001
+ * @title  Callback cancellation at a configured invocation count.
+ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_RSA_BN_GEN_CB_CANCEL_TC001(int isProvider)
+{
+#if !defined(HITLS_CRYPTO_BN_CB) || !defined(HITLS_CRYPTO_RSA_GEN)
+    (void)isProvider;
+    SKIP_TEST();
+#else
+    uint8_t e[] = {1, 0, 1};
+    CRYPT_EAL_PkeyPara para = {0};
+    CRYPT_EAL_PKEY_CB callback = RsaBnGenCb;
+    CRYPT_EAL_PkeyCtx *pkey = NULL;
+
+    SetRsaPara(&para, e, sizeof(e), 1024);
+    TestMemInit();
+    ASSERT_EQ(TestRandInit(), CRYPT_SUCCESS);
+    pkey = TestPkeyNewCtx(NULL, CRYPT_PKEY_RSA, CRYPT_EAL_PKEY_UNKNOWN_OPERATE, "provider=default", isProvider);
+    ASSERT_TRUE(pkey != NULL);
+    ASSERT_EQ(CRYPT_EAL_PkeySetPara(pkey, &para), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_SET_BN_GEN_CB, &callback, sizeof(callback)), CRYPT_SUCCESS);
+    g_rsaBnCbCallCount = 0;
+    g_rsaBnCbParamValid = true;
+    g_rsaBnCbRet = CRYPT_CALLBACK_ERROR;
+    g_rsaBnCbCancelAt = 2;
+    ASSERT_EQ(CRYPT_EAL_PkeyGen(pkey), CRYPT_CALLBACK_ERROR);
+    ASSERT_EQ(g_rsaBnCbCallCount, 2);
+    ASSERT_TRUE(g_rsaBnCbParamValid);
+
+EXIT:
+    TestRandDeInit();
+    CRYPT_EAL_PkeyFreeCtx(pkey);
+#endif
+}
+/* END_CASE */
+
+/**
+ * @test   SDV_CRYPTO_RSA_BN_GEN_CB_OOM_TC001
+ * @title  Callback context allocation failure is returned to the caller.
+ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_RSA_BN_GEN_CB_OOM_TC001(int isProvider)
+{
+#if !defined(HITLS_CRYPTO_BN_CB) || !defined(HITLS_CRYPTO_RSA_GEN)
+    (void)isProvider;
+    SKIP_TEST();
+#else
+    uint8_t e[] = {1, 0, 1};
+    CRYPT_EAL_PkeyPara para = {0};
+    CRYPT_EAL_PKEY_CB callback = RsaBnGenCb;
+    CRYPT_EAL_PkeyCtx *pkey = NULL;
+
+    SetRsaPara(&para, e, sizeof(e), 512);
+    TestMemInit();
+    ASSERT_EQ(TestRandInit(), CRYPT_SUCCESS);
+    pkey = TestPkeyNewCtx(NULL, CRYPT_PKEY_RSA, CRYPT_EAL_PKEY_UNKNOWN_OPERATE, "provider=default", isProvider);
+    ASSERT_TRUE(pkey != NULL);
+    ASSERT_EQ(CRYPT_EAL_PkeySetPara(pkey, &para), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_SET_BN_GEN_CB, &callback, sizeof(callback)), CRYPT_SUCCESS);
+    STUB_REPLACE(BSL_SAL_Calloc, RsaBnCbCallocFail);
+    ASSERT_EQ(CRYPT_EAL_PkeyGen(pkey), CRYPT_MEM_ALLOC_FAIL);
+
+EXIT:
+    STUB_RESTORE(BSL_SAL_Calloc);
+    TestRandDeInit();
+    CRYPT_EAL_PkeyFreeCtx(pkey);
+#endif
+}
+/* END_CASE */
+
