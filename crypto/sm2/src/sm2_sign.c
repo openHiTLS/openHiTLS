@@ -628,6 +628,7 @@ static int32_t Sm2VerifyCore(const CRYPT_SM2_Ctx *ctx, BN_BigNum *e, const BN_Bi
     if (BN_IsZero(t)) {
         ret = CRYPT_SM2_VERIFY_FAIL;
         BSL_ERR_PUSH_ERROR(ret);
+        goto ERR;
     }
     // calculate the point (x1', y1')=[s']G + [t]PA
     GOTO_ERR_IF(ECC_PointMulAdd(ctx->pkey->para, tpt, s, t, ctx->pkey->pubkey), ret);

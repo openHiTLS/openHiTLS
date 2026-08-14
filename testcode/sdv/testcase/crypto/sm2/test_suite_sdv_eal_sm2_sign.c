@@ -1286,3 +1286,27 @@ EXIT:
     CRYPT_RandRegistEx(NULL);
 }
 /* END_CASE */
+
+/**
+ * @test   SDV_CRYPTO_SM2_VERIFY_DATA_FUNC_TC001
+ * @title  SM2 CRYPT_EAL_PkeyVerifyData rejects a signature whose r + s is the group order.
+ * @precon A valid SM2 public key and a DER-encoded signature with r = 1 and s = n - 1. expect verify fail.
+ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_SM2_VERIFY_DATA_FUNC_TC001(Hex *pubKey, Hex *hashData, Hex *sign, int isProvider)
+{
+    CRYPT_EAL_PkeyCtx *ctx = NULL;
+    CRYPT_EAL_PkeyPub pub = {0};
+
+    TestMemInit();
+    SetSm2PubKey(&pub, pubKey->x, pubKey->len);
+    ctx = TestPkeyNewCtx(NULL, CRYPT_PKEY_SM2,
+        CRYPT_EAL_PKEY_SIGN_OPERATE, "provider=default", isProvider);
+    ASSERT_TRUE(ctx != NULL);
+    ASSERT_EQ(CRYPT_EAL_PkeySetPub(ctx, &pub), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyVerifyData(ctx, hashData->x, hashData->len, sign->x, sign->len),
+        CRYPT_SM2_VERIFY_FAIL);
+EXIT:
+    CRYPT_EAL_PkeyFreeCtx(ctx);
+}
+/* END_CASE */
