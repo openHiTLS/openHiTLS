@@ -14,6 +14,7 @@
  */
 #include "app_utils.h"
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 #include <limits.h>
@@ -70,6 +71,9 @@
 
 #define APP_PASS_FILE_STR "file:"
 #define APP_PASS_FILE_STR_LEN ((int)(sizeof(APP_PASS_FILE_STR) - 1))
+
+#define APP_PASS_ENV_STR "env:"
+#define APP_PASS_ENV_STR_LEN ((int)(sizeof(APP_PASS_ENV_STR) - 1))
 
 #ifdef HITLS_APP_SM_MODE
 #ifndef HITLS_PROVIDER_LIB_NAME
@@ -303,6 +307,30 @@ static char *GetStrAfterPreFix(const char *inputArg, uint32_t inputArgLen, uint3
     return str;
 }
 
+static int32_t GetPasswdByEnv(const char *passwdArg, size_t passwdArgLen, char **pass)
+{
+    if (passwdArgLen <= APP_PASS_ENV_STR_LEN) {
+        AppPrintError("Failed to read passwd from environment variable.\n");
+        return HITLS_APP_INVALID_ARG;
+    }
+    const char *envValue = getenv(passwdArg + APP_PASS_ENV_STR_LEN);
+    if (envValue == NULL) {
+        AppPrintError("Failed to read passwd from environment variable.\n");
+        return HITLS_APP_PASSWD_FAIL;
+    }
+    size_t passLen = strlen(envValue);
+    if (passLen >= UINT32_MAX) {
+        AppPrintError("Failed to read passwd from environment variable.\n");
+        return HITLS_APP_PASSWD_FAIL;
+    }
+    *pass = BSL_SAL_Dump(envValue, (uint32_t)passLen + 1);
+    if (*pass == NULL) {
+        AppPrintError("Failed to read passwd from environment variable.\n");
+        return HITLS_APP_MEM_ALLOC_FAIL;
+    }
+    return HITLS_APP_SUCCESS;
+}
+
 int32_t HITLS_APP_ParsePasswd(const char *passArg, char **pass)
 {
     if (passArg == NULL) {
@@ -315,8 +343,10 @@ int32_t HITLS_APP_ParsePasswd(const char *passArg, char **pass)
         *pass = GetPasswdByStdin(&passParam);
     } else if (strncmp(passArg, APP_PASS_FILE_STR, APP_PASS_FILE_STR_LEN) == 0) {
         return GetPasswdByFile(passArg, strlen(passArg), pass);
+    } else if (strncmp(passArg, APP_PASS_ENV_STR, APP_PASS_ENV_STR_LEN) == 0) {
+        return GetPasswdByEnv(passArg, strlen(passArg), pass);
     } else {
-        AppPrintError("Unsupported password source. Use pass:, stdin, or file:.\n");
+        AppPrintError("Unsupported password source. Use pass:, stdin, file:, or env:.\n");
         return HITLS_APP_PASSWD_FAIL;
     }
     if (*pass == NULL) {

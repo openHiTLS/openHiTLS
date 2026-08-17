@@ -64,6 +64,10 @@ static void AppUninit(void)
 {
     remove("../testdata/apps/enc/res_encfile");
     remove("../testdata/apps/enc/res_decfile");
+    remove("../testdata/apps/enc/res_hex_encfile");
+    remove("../testdata/apps/enc/res_hex_decfile");
+    remove("../testdata/apps/enc/res_b64_encfile");
+    remove("../testdata/apps/enc/res_b64_decfile");
     remove("res_tmpfile");
     AppPrintErrorUioUnInit();
     HITLS_APP_FreeLibCtx();
@@ -339,6 +343,41 @@ void UT_HITLS_APP_ENC_TC006(void)
         HITLS_APP_SUCCESS);
 
 EXIT:
+    AppUninit();
+    return;
+}
+/* END_CASE */
+
+/**
+ * @test UT_HITLS_APP_ENC_TC007
+ * @spec  -
+ * @title Test encryption and decryption using a password from an environment variable
+ */
+/* BEGIN_CASE */
+void UT_HITLS_APP_ENC_TC007(void)
+{
+    char *encArgv[] = {"enc", "-enc", "-cipher", "aes128_cbc", "-in", "../testdata/apps/enc/test_encfile",
+        "-pass", "env:HITLS_APP_TEST_ENC_PASSWD", "-out", "env_pass_enc_tmpfile"};
+    char *decArgv[] = {"enc", "-dec", "-cipher", "aes128_cbc", "-in", "env_pass_enc_tmpfile",
+        "-pass", "env:HITLS_APP_TEST_ENC_PASSWD", "-out", "env_pass_dec_tmpfile"};
+    char *missingEnvArgv[] = {"enc", "-enc", "-cipher", "aes128_cbc", "-in",
+        "../testdata/apps/enc/test_encfile", "-pass", "env:HITLS_APP_TEST_MISSING_ENC_PASSWD", "-out",
+        "env_pass_enc_tmpfile"};
+
+    ASSERT_EQ(AppInit(), HITLS_APP_SUCCESS);
+    ASSERT_EQ(setenv("HITLS_APP_TEST_ENC_PASSWD", "12345678", 1), 0);
+    ASSERT_EQ(unsetenv("HITLS_APP_TEST_MISSING_ENC_PASSWD"), 0);
+    ASSERT_EQ(HITLS_EncMain((int)(sizeof(encArgv) / sizeof(encArgv[0])), encArgv), HITLS_APP_SUCCESS);
+    ASSERT_EQ(HITLS_EncMain((int)(sizeof(decArgv) / sizeof(decArgv[0])), decArgv), HITLS_APP_SUCCESS);
+    ASSERT_EQ(CompareFile("../testdata/apps/enc/test_encfile", "env_pass_dec_tmpfile"), HITLS_APP_SUCCESS);
+    ASSERT_EQ(HITLS_EncMain((int)(sizeof(missingEnvArgv) / sizeof(missingEnvArgv[0])), missingEnvArgv),
+        HITLS_APP_PASSWD_FAIL);
+
+EXIT:
+    (void)unsetenv("HITLS_APP_TEST_ENC_PASSWD");
+    (void)unsetenv("HITLS_APP_TEST_MISSING_ENC_PASSWD");
+    (void)remove("env_pass_enc_tmpfile");
+    (void)remove("env_pass_dec_tmpfile");
     AppUninit();
     return;
 }

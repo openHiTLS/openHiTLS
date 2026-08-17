@@ -544,7 +544,8 @@ static int32_t ReadPasswd(EncCmdOpt *encOpt, char **pwd, uint32_t *pwdLen)
         return HITLS_APP_SUCCESS;
     }
     if (HITLS_APP_ParsePasswd(encOpt->passOptStr, pwd) != HITLS_APP_SUCCESS) {
-        AppPrintError("enc: Failed to read passwd. Enter '-pass file:filePath' or '-pass pass:passwd'.\n");
+        AppPrintError("enc: Failed to read passwd. Enter '-pass file:filePath', '-pass pass:passwd', "
+            "or '-pass env:var'.\n");
         return HITLS_APP_PASSWD_FAIL;
     }
     *pwdLen = (uint32_t)strlen(*pwd);

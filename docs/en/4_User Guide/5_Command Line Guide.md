@@ -125,6 +125,7 @@ hitls enc -cipher <algorithm> {-enc|-dec} [-in <file>] [-out <file>] [-pass <pas
   - `stdin`: Standard input
   - `pass:<password>`: Read password from command line
   - `file:<file path>`: Read password from file
+  - `env:<variable>`: Read password from an environment variable
 - `-md <algorithm>`: Key derivation algorithm, defaults to SHA-256
 - `-provider`, `-provider-path`, `-provider-attr`: See [Provider Options](#21-provider-options)
 
@@ -139,6 +140,10 @@ hitls enc -cipher aes256_cbc -dec -in encrypted.enc -out decrypted.txt -pass pas
 
 # Encrypt using SM4 algorithm
 hitls enc -cipher sm4_cbc -enc -in data.bin -out data.enc -pass stdin
+
+# Read the password from an environment variable
+export FILE_PASSWORD=mypassword
+hitls enc -cipher aes256_cbc -enc -in plain.txt -out encrypted.enc -pass env:FILE_PASSWORD
 
 # Use SHA3-256 as key derivation algorithm
 hitls enc -cipher aes128_gcm -enc -in file.txt -out file.enc -pass file:password.txt -md sha3_256
@@ -160,7 +165,7 @@ hitls enc -cipher <alg> -enc|-dec -in <infile> -out <outfile> -pass <pass> [opti
 - `-dec`: Decryption
 - `-in <file>`: Input file
 - `-out <file>`: Output file
-- `-pass <pass:xxx|file:xxx>`: Passphrase source
+- `-pass <pass:xxx|file:xxx|env:xxx>`: Passphrase source
 - `-hex`: Hex-encoded output/input
 - `-base64`: Base64-encoded output/input
 - `-md <alg>`: Digest algorithm used to derive the key (default: SHA256)
@@ -408,6 +413,7 @@ hitls genpkey -algorithm <algorithm> [-pkeyopt <param>:<value>] [-out <file>] [-
   - `stdin`: Standard input
   - `pass:<password>`: Read password from command line
   - `file:<file path>`: Read password from file
+  - `env:<variable>`: Read password from an environment variable
 
 **Examples**:
 
@@ -446,6 +452,7 @@ hitls pkey [-in <file>] [-passin <password source>] [-out <file>] [-pubout] [-<a
   - `stdin`: Standard input
   - `pass:<password>`: Read password from command line
   - `file:<file path>`: Read password from file
+  - `env:<variable>`: Read password from an environment variable
 - `-out <file>`: Output file, defaults to standard output
 - `-pubout`: Extract and output the public key from the private key
 - `-<algorithm>`: Specify the encryption algorithm for the output private key
@@ -453,6 +460,7 @@ hitls pkey [-in <file>] [-passin <password source>] [-out <file>] [-pubout] [-<a
   - `stdin`: Standard input
   - `pass:<password>`: Read password from command line
   - `file:<file path>`: Read password from file
+  - `env:<variable>`: Read password from an environment variable
 - `-text`: RSA only. Print key details in text format
 - `-noout`: Do not output the key in PEM format
 
@@ -523,6 +531,7 @@ hitls pkeyutl {-encrypt | -decrypt | -derive} [-pubin <public key file>] [-prvin
   - `stdin`: Standard input
   - `pass:<password>`: Read password from command line
   - `file:<file path>`: Read password from file
+  - `env:<variable>`: Read password from an environment variable
 
 - `-provider`, `-provider-path`, `-provider-attr`: See [Provider Options](#21-provider-options)
 
@@ -581,10 +590,12 @@ Key management functions, including key creation, deletion, querying, etc. (SM m
   - `stdin`: Standard input
   - `pass:<password>`: Read password from command line
   - `file:<file path>`: Read password from file
+  - `env:<variable>`: Read password from an environment variable
 - `-passout <password source>`: Output file password source, defaults to interactive input
   - `stdin`: Standard input
   - `pass:<password>`: Read password from command line
   - `file:<file path>`: Read password from file
+  - `env:<variable>`: Read password from an environment variable
 - `-inkey <file>`: Required in export mode. Specify private key file (PEM format)
 - `-clcerts`: Effective in import mode. Output only user certificates
 - `-name <string>`: Effective in export mode. Set friendly name for user certificate and private key
@@ -646,6 +657,7 @@ hitls x509 [-help] [-in <file>] [-inform PEM|DER] [-out <file>] [-outform PEM|DE
   - `stdin`: Standard input
   - `pass:<password>`: Read password from command line
   - `file:<file path>`: Read password from file
+  - `env:<variable>`: Read password from an environment variable
 - `-userid <ID>`: Requires `-req` option. User ID for SM2 signing
 - `-text`: Print full certificate information in text format
 - `-issuer`: Print issuer DN
@@ -816,10 +828,12 @@ hitls verify -CAfile wrong_ca_cert.pem -verbose user_cert.pem
   - `stdin`: Standard input
   - `pass:<password>`: Read password from command line
   - `file:<file path>`: Read password from file
+  - `env:<variable>`: Read password from an environment variable
 - `-passout <password source>`: Password source for encrypting the output key file when auto-generating keys, defaults to interactive input
   - `stdin`: Standard input
   - `pass:<password>`: Read password from command line
   - `file:<file path>`: Read password from file
+  - `env:<variable>`: Read password from an environment variable
 - `-noout`: Do not output CSR encoded data
 - `-text`: Print full CSR information in text format
 - `-config <file>`: Effective only when generating a new CSR. Configuration file for adding extensions
