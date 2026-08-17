@@ -32,6 +32,72 @@
 /* END_HEADER */
 
 /* @
+* @test  SDV_CRYPTO_MLDSA_ARMV8_USEHINT_TC001
+* @spec  -
+* @title ML-DSA Armv8 UseHint stays within each polynomial buffer
+@ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_MLDSA_ARMV8_USEHINT_TC001(void)
+{
+#if !defined(__aarch64__) || !defined(HITLS_CRYPTO_MLDSA_ARMV8)
+    SKIP_TEST();
+#else
+    /* One polynomial is MLDSA_N int32 (1024 bytes, 16 x 64-byte chunks). The
+     * Armv8 pipeline used to emit a 17th chunk store, so a canary is placed
+     * right after the last w polynomial to catch an out-of-bounds write. */
+    static CRYPT_ML_DSA_Info info88 = {
+        .paramId = CRYPT_MLDSA_TYPE_MLDSA_44, .k = 4, .l = 4, .eta = 2, .tau = 39,
+        .beta = 78, .gamma1 = 131072, .gamma2 = 95232, .omega = 80, .secBits = 128,
+    };
+    static CRYPT_ML_DSA_Info info32 = {
+        .paramId = CRYPT_MLDSA_TYPE_MLDSA_87, .k = 8, .l = 7, .eta = 2, .tau = 49,
+        .beta = 196, .gamma1 = 524288, .gamma2 = 261888, .omega = 55, .secBits = 192,
+    };
+    const CRYPT_ML_DSA_Info *infos[2] = {&info88, &info32};
+    const uint32_t canaryBytes = 256;
+    const int32_t canaryWord = (int32_t)0xAAAAAAAA;
+
+    for (uint32_t v = 0; v < 2; v++) {
+        const CRYPT_ML_DSA_Info *info = infos[v];
+        uint8_t k = info->k;
+        uint32_t bufWords = k * MLDSA_N + canaryBytes / sizeof(int32_t);
+        int32_t *wBuf = BSL_SAL_Malloc(bufWords * sizeof(int32_t));
+        int32_t *hBuf = BSL_SAL_Malloc(bufWords * sizeof(int32_t));
+        ASSERT_TRUE(wBuf != NULL && hBuf != NULL);
+
+        int32_t *w[MLDSA_K_MAX] = {0};
+        int32_t *h[MLDSA_K_MAX] = {0};
+        for (uint8_t i = 0; i < k; i++) {
+            w[i] = wBuf + (uint32_t)i * MLDSA_N;
+            h[i] = hBuf + (uint32_t)i * MLDSA_N;
+        }
+        for (uint32_t j = 0; j < k * MLDSA_N; j++) {
+            wBuf[j] = (int32_t)(rand() % (2 * MLDSA_Q)) - (int32_t)MLDSA_Q;
+            hBuf[j] = (int32_t)(rand() & 1);
+        }
+        /* Guard the last polynomial and the post-buffer region. */
+        int32_t *canary = wBuf + (uint32_t)k * MLDSA_N;
+        for (uint32_t j = 0; j < canaryBytes / sizeof(int32_t); j++) {
+            canary[j] = canaryWord;
+        }
+
+        CRYPT_ML_DSA_Ctx ctx = {0};
+        ctx.info = info;
+        MLDSA_UseHint(&ctx, h, w);
+
+        for (uint32_t j = 0; j < canaryBytes / sizeof(int32_t); j++) {
+            ASSERT_EQ(canary[j], canaryWord);
+        }
+        BSL_SAL_Free(wBuf);
+        BSL_SAL_Free(hBuf);
+    }
+EXIT:
+    return;
+#endif
+}
+/* END_CASE */
+
+/* @
 * @test  SDV_CRYPTO_MLDSA_CHECK_KEYPAIR_TC001
 * @spec  -
 * @title Key pair generation function test

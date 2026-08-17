@@ -203,6 +203,11 @@ static void ParseOptions(int argc, char **argv, BenchOptions *opts)
                 break;
             case 'l':
                 opts->len = (uint32_t)atoi(optarg);
+                if (opts->len > sizeof(BenchGetSharedData()->plain)) {
+                    printf("-l exceeds the maximum supported length %zu\n",
+                        sizeof(BenchGetSharedData()->plain));
+                    exit(1);
+                }
                 break;
             case 'd':
                 opts->hashId = AlgStr2Id(optarg);

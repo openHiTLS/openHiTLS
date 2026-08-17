@@ -552,7 +552,10 @@ void SDV_CRYPTO_SHA256_MB_API_TC001(void)
     ASSERT_EQ(CRYPT_SHA256_MBFinal(mbCtx, dgstArr, &outlen, 2), CRYPT_SUCCESS);
     
     /* Test one-shot API with NULL parameters */
-    ASSERT_EQ(CRYPT_SHA256_MB(dataArr, 64, NULL, &outlen, 1), CRYPT_NOT_SUPPORT);
+    ASSERT_EQ(CRYPT_SHA256_MB(NULL, 64, dgstArr, &outlen, 2), CRYPT_NULL_INPUT);
+    ASSERT_EQ(CRYPT_SHA256_MB(dataArr, 64, NULL, &outlen, 2), CRYPT_NULL_INPUT);
+    ASSERT_EQ(CRYPT_SHA256_MB(dataArr, 64, dgstArr, NULL, 2), CRYPT_NULL_INPUT);
+    ASSERT_EQ(CRYPT_SHA256_MB(dataArr, 64, dgstArr, &outlen, 1), CRYPT_NOT_SUPPORT);
     
     /* Test valid one-shot API */
     ASSERT_EQ(CRYPT_SHA256_MB(dataArr, 64, dgstArr, &outlen, 2), CRYPT_SUCCESS);

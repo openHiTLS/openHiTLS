@@ -23,8 +23,17 @@
 #include "bsl_err_internal.h"
 #include "sha2_core.h"
 #include "bsl_sal.h"
+#if defined(__aarch64__)
+#include "crypt_arm.h"
+#endif
 
 #define SHA256_INIT_ARRAY {0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a, 0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19}
+
+#if defined(__aarch64__)
+// The sha256x2 assembly path unconditionally uses the ARMv8 SHA256 crypto
+// extension instructions, so it may only run when the extension is available at runtime.
+#define SHA256_MB_ASM_SUPPORTED() (((g_cryptArmCpuInfo) & (CRYPT_ARM_SHA256)) != 0)
+#endif
 
 static const uint32_t SHA256_INIT_STATE[8] = SHA256_INIT_ARRAY;
 
@@ -309,6 +318,10 @@ int32_t CRYPT_SHA256_MBInit(CRYPT_SHA2_256_MB_Ctx *ctx)
         BSL_ERR_PUSH_ERROR(CRYPT_NOT_SUPPORT);
         return CRYPT_NOT_SUPPORT;
     }
+    if (!SHA256_MB_ASM_SUPPORTED()) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NOT_SUPPORT);
+        return CRYPT_NOT_SUPPORT;
+    }
     (void)CRYPT_SHA2_256_Init(&ctx->ctxs[0]);
     (void)CRYPT_SHA2_256_Init(&ctx->ctxs[1]);
     return CRYPT_SUCCESS;
@@ -457,7 +470,20 @@ int32_t CRYPT_SHA256_MB(const uint8_t *data[], uint32_t nbytes, uint8_t *digest[
 {
 #if defined(__aarch64__) && defined(HITLS_CRYPTO_SHA2_ASM)
     // currently only support sha256x2 in aarch64
+    if (UNLIKELY(data == NULL || digest == NULL || outlen == NULL)) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return CRYPT_NULL_INPUT;
+    }
     if (num != 2) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NOT_SUPPORT);
+        return CRYPT_NOT_SUPPORT;
+    }
+    if (UNLIKELY(digest[0] == NULL || digest[1] == NULL ||
+        (nbytes != 0 && (data[0] == NULL || data[1] == NULL)))) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return CRYPT_NULL_INPUT;
+    }
+    if (!SHA256_MB_ASM_SUPPORTED()) {
         BSL_ERR_PUSH_ERROR(CRYPT_NOT_SUPPORT);
         return CRYPT_NOT_SUPPORT;
     }
