@@ -2188,6 +2188,7 @@ Usehint32:
     mls v9.4s, v24.4s, v11.4s
     srshr v15.4s, v1.4s, #18
     cmle v1.4s, v30.4s, #0
+    sub x4, x4, #1
 
     .Lusehint_loop_32:
     add v8.4s, v9.4s, v19.4s
@@ -2355,6 +2356,7 @@ Usehint88:
     orr v29.4s, #1
     mla v16.4s, v29.4s, v3.4s
     cmle v3.4s, v30.4s, #0
+    sub x4, x4, #1
 
     .Lusehint_loop_88:
     cmgt v17.4s, v31.4s, v12.4s

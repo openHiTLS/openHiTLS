@@ -115,7 +115,8 @@ CRYPT_CURVE25519_Ctx *CRYPT_CURVE25519_DupCtx(CRYPT_CURVE25519_Ctx *ctx)
     memcpy(newCtx, ctx, sizeof(CRYPT_CURVE25519_Ctx));
     memset(&(newCtx->references), 0, sizeof(BSL_SAL_RefCount));
     if (BSL_SAL_ReferencesInit(&(newCtx->references)) != BSL_SUCCESS) {
-        BSL_SAL_Free(newCtx);
+        // newCtx contains a copy of the private key, cleanse it before freeing
+        BSL_SAL_ClearFree(newCtx, sizeof(CRYPT_CURVE25519_Ctx));
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         return NULL;
     }

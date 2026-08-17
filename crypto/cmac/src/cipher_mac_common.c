@@ -117,11 +117,8 @@ int32_t CipherMacUpdate(Cipher_MAC_Common_Ctx *ctx, const uint8_t *in, uint32_t 
         inTmp += blockSize;
     }
     uint8_t *left = ctx->left;
-    const uint8_t *leftSrcEnd = inTmp + lenTmp;
-    while (inTmp < leftSrcEnd) {
-        *left = *inTmp;
-        left++;
-        inTmp++;
+    for (uint32_t i = 0; i < lenTmp; i++) {
+        left[i] = inTmp[i];
     }
     ctx->len = lenTmp;
     return CRYPT_SUCCESS;
