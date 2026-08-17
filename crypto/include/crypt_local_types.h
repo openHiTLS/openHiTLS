@@ -409,6 +409,7 @@ typedef enum {
 typedef enum {
     CRYPT_PKEY_CHECK_KEYPAIR = 1, /**< Check the key pair. */
     CRYPT_PKEY_CHECK_PRVKEY = 2,  /**< Check the private key. */
+    CRYPT_PKEY_CHECK_PARAM = 3,   /**< Check the domain parameters. */
     CRYPT_PKEY_CHECK_MAX,
 } CRYPT_KeyCheckType;
 

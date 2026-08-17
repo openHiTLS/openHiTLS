@@ -172,17 +172,7 @@ void CRYPT_DSA_FreeCtx(CRYPT_DSA_Ctx *ctx)
     BSL_SAL_FREE(ctx);
 }
 
-static int32_t ParaPrimeCheck(const BN_BigNum *n, BN_Optimizer *opt)
-{
-    int32_t ret = BN_PrimeCheck(n, 0, opt, NULL);
-    if (ret == CRYPT_BN_NOR_CHECK_PRIME) {
-        BSL_ERR_PUSH_ERROR(CRYPT_DSA_ERR_KEY_PARA);
-        return CRYPT_DSA_ERR_KEY_PARA;
-    }
-    return ret;
-}
-
-static int32_t ParaPQGCheck(void *libCtx, const BN_BigNum *p, const BN_BigNum *q, const BN_BigNum *g)
+static int32_t ParaPQGCheck(const BN_BigNum *p, const BN_BigNum *q, const BN_BigNum *g)
 {
     uint32_t pBits = BN_Bits(p);
     BN_BigNum *r = BN_Create(pBits);
@@ -192,11 +182,11 @@ static int32_t ParaPQGCheck(void *libCtx, const BN_BigNum *p, const BN_BigNum *q
         BSL_ERR_PUSH_ERROR(ret);
         goto EXIT;
     }
-    BN_OptimizerSetLibCtx(libCtx, opt);
     // judgment of numeric values
     // r = p - 1
     ret = BN_SubLimb(r, p, 1);
     if (ret != CRYPT_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
         goto EXIT;
     }
     // q < p - 1
@@ -214,27 +204,11 @@ static int32_t ParaPQGCheck(void *libCtx, const BN_BigNum *p, const BN_BigNum *q
     // judgment of multiple relationship about p & q
     ret = BN_Div(NULL, r, r, q, opt);
     if (ret != CRYPT_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
         goto EXIT;
     }
     // (p - 1) % q == 0
     if (!BN_IsZero(r)) {
-        ret = CRYPT_DSA_ERR_KEY_PARA;
-        BSL_ERR_PUSH_ERROR(ret);
-        goto EXIT;
-    }
-    ret = ParaPrimeCheck(q, opt);
-    if (ret != CRYPT_SUCCESS) {
-        goto EXIT;
-    }
-    ret = ParaPrimeCheck(p, opt);
-    if (ret != CRYPT_SUCCESS) {
-        goto EXIT;
-    }
-    ret = BN_ModExp(r, g, q, p, opt);
-    if (ret != CRYPT_SUCCESS) {
-        goto EXIT;
-    }
-    if (!BN_IsOne(r)) {
         ret = CRYPT_DSA_ERR_KEY_PARA;
         BSL_ERR_PUSH_ERROR(ret);
     }
@@ -244,7 +218,7 @@ EXIT:
     return ret;
 }
 
-static int32_t ParaDataCheck(void *libCtx, const CRYPT_DSA_Para *para)
+static int32_t ParaDataCheck(const CRYPT_DSA_Para *para)
 {
     const BN_BigNum *p = para->p;
     const BN_BigNum *q = para->q;
@@ -271,7 +245,8 @@ static int32_t ParaDataCheck(void *libCtx, const CRYPT_DSA_Para *para)
         return CRYPT_DSA_ERR_KEY_PARA;
     }
     // This interface is invoked only here, and pushErr is performed internally.
-    return ParaPQGCheck(libCtx, p, q, g);
+    // If this interface fails, pushErr does not need to be invoked.
+    return ParaPQGCheck(p, q, g);
 }
 
 static CRYPT_DSA_Para *ParaDup(const CRYPT_DSA_Para *para)
@@ -303,7 +278,7 @@ int32_t CRYPT_DSA_SetPara(CRYPT_DSA_Ctx *ctx, const CRYPT_DsaPara *para)
         BSL_ERR_PUSH_ERROR(CRYPT_EAL_ERR_NEW_PARA_FAIL);
         return CRYPT_EAL_ERR_NEW_PARA_FAIL;
     }
-    int32_t ret = ParaDataCheck(ctx->libCtx, dsaPara);
+    int32_t ret = ParaDataCheck(dsaPara);
     if (ret != CRYPT_SUCCESS) {
         CRYPT_DSA_FreePara(dsaPara);
         return ret;
@@ -1721,6 +1696,51 @@ static int32_t DsaPrvKeyCheck(const CRYPT_DSA_Ctx *pkey)
     return ret;
 }
 
+static int32_t ParaPrimeCheck(const BN_BigNum *n, BN_Optimizer *opt)
+{
+    int32_t ret = BN_PrimeCheck(n, 0, opt, NULL);
+    if (ret == CRYPT_BN_NOR_CHECK_PRIME) {
+        BSL_ERR_PUSH_ERROR(CRYPT_DSA_ERR_KEY_PARA);
+        return CRYPT_DSA_ERR_KEY_PARA;
+    }
+    return ret;
+}
+
+static int32_t DsaParaCheck(const CRYPT_DSA_Ctx *pkey)
+{
+    if (pkey == NULL || pkey->para == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return CRYPT_NULL_INPUT;
+    }
+    const CRYPT_DSA_Para *para = pkey->para;
+    BN_BigNum *r = BN_Create(BN_Bits(para->p));
+    BN_Optimizer *opt = BN_OptimizerCreate();
+    int32_t ret = CRYPT_MEM_ALLOC_FAIL;
+    if (r == NULL || opt == NULL) {
+        BSL_ERR_PUSH_ERROR(ret);
+        goto EXIT;
+    }
+    (void)BN_OptimizerSetLibCtx(pkey->libCtx, opt);
+    ret = BN_ModExp(r, para->g, para->q, para->p, opt);
+    if (ret != CRYPT_SUCCESS) {
+        goto EXIT;
+    }
+    if (!BN_IsOne(r)) {
+        ret = CRYPT_DSA_ERR_KEY_PARA;
+        BSL_ERR_PUSH_ERROR(ret);
+        goto EXIT;
+    }
+    ret = ParaPrimeCheck(para->q, opt);
+    if (ret != CRYPT_SUCCESS) {
+        goto EXIT;
+    }
+    ret = ParaPrimeCheck(para->p, opt);
+EXIT:
+    BN_Destroy(r);
+    BN_OptimizerDestroy(opt);
+    return ret;
+}
+
 int32_t CRYPT_DSA_Check(uint32_t checkType, const CRYPT_DSA_Ctx *pkey1, const CRYPT_DSA_Ctx *pkey2)
 {
     switch (checkType) {
@@ -1728,6 +1748,8 @@ int32_t CRYPT_DSA_Check(uint32_t checkType, const CRYPT_DSA_Ctx *pkey1, const CR
             return DsaKeyPairCheck(pkey1, pkey2);
         case CRYPT_PKEY_CHECK_PRVKEY:
             return DsaPrvKeyCheck(pkey1);
+        case CRYPT_PKEY_CHECK_PARAM:
+            return DsaParaCheck(pkey1);
         default:
             BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
             return CRYPT_INVALID_ARG;

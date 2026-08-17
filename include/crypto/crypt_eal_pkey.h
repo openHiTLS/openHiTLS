@@ -592,6 +592,17 @@ int32_t CRYPT_EAL_PkeyPrvCheck(CRYPT_EAL_PkeyCtx *prvKey);
 
 /**
  * @ingroup crypt_eal_pkey
+ * @brief   Check the domain parameters of the key.
+ *
+ * @param   pkey [IN] Key context with domain parameters set
+ *
+ * @retval  #CRYPT_SUCCESS, if successful.
+ *          For other error codes, see crypt_errno.h.
+ */
+int32_t CRYPT_EAL_PkeyParaCheck(CRYPT_EAL_PkeyCtx *pkey);
+
+/**
+ * @ingroup crypt_eal_pkey
  * @brief   Compute the shared key.
  *
  * @param   pkey         [IN] Key session
