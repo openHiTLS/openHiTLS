@@ -85,6 +85,15 @@ SDV_X509_STORE_VFY_CRL_TIME_ERR_FUNC_TC001:HITLS_X509_ERR_VFY_NEXTUPDATE_EXPIRED
 SDV_X509_STORE_VFY_CRL_MALFORMED_DELTA_FUNC_TC001: malformed deltaCRLIndicator is not treated as base CRL
 SDV_X509_STORE_VFY_CRL_MALFORMED_DELTA_FUNC_TC001:"../testdata/cert/test_for_crl/crl_verify/cases/case1/certs.pem":"../testdata/cert/test_for_crl/crl_verify/cases/case1/crls.pem"
 
+SDV_X509_STORE_VFY_CRL_LITE_CERT_CDP_CRITICAL_FUNC_TC001: cert critical CRLDistributionPoints is rejected in crl lite mode
+SDV_X509_STORE_VFY_CRL_LITE_CERT_CDP_CRITICAL_FUNC_TC001:"../testdata/cert/asn1/crldp/normal/parse_normal_composite.der"
+
+SDV_X509_STORE_VFY_CRL_LITE_CRL_IDP_CRITICAL_FUNC_TC001: crl critical IssuingDistributionPoint is rejected in crl lite mode
+SDV_X509_STORE_VFY_CRL_LITE_CRL_IDP_CRITICAL_FUNC_TC001:"../testdata/cert/test_for_crl/crl_verify/cases/case11/certs.pem":"../testdata/cert/test_for_crl/crl_verify/cases/case11/crls.pem"
+
+SDV_X509_STORE_VFY_CRL_LITE_CRL_DELTA_CRITICAL_FUNC_TC001: case35 single delta crl is rejected in crl lite mode
+SDV_X509_STORE_VFY_CRL_LITE_CRL_DELTA_CRITICAL_FUNC_TC001:"../testdata/cert/test_for_crl/crl_verify/cases/case35/certs.pem":"../testdata/cert/test_for_crl/crl_verify/cases/case35/crls.pem"
+
 SDV_X509_STORE_VFY_CRL_EXTENDED_FUNC_TC001: case21: cdp relative name matches idp fullName
 SDV_X509_STORE_VFY_CRL_EXTENDED_FUNC_TC001:HITLS_PKI_SUCCESS:"../testdata/cert/test_for_crl/crl_verify/cases/case21/certs.pem":"../testdata/cert/test_for_crl/crl_verify/cases/case21/crls.pem"
 
@@ -623,7 +632,7 @@ SDV_X509_CERT_VERIFY_MULTI_THREAD_WITH_VARIOUS_CHARSET_FUNC_TC001
 SDV_X509_CERT_VERIFY_MULTI_THREAD_WITH_VARIOUS_CHARSET_FUNC_TC001:"../testdata/cert/chain/charset/convert_to_utf8/ca_mix.crt":"../testdata/cert/chain/charset/convert_to_utf8/user_utf8.crt"
 
 SDV_X509_VERIFY_CRL_MULTI_THREAD_FUNC_TC001
-SDV_X509_VERIFY_CRL_MULTI_THREAD_FUNC_TC001:"../testdata/cert/test_for_crl/crl_verify/cases/case1/certs.pem":"../testdata/cert/test_for_crl/crl_verify/cases/case1/crls.pem"
+SDV_X509_VERIFY_CRL_MULTI_THREAD_FUNC_TC001:"../testdata/cert/test_for_crl/crl_verify/cases/case33/certs.pem":"../testdata/cert/test_for_crl/crl_verify/cases/case33/crls.pem"
 
 SDV_X509_SECBITS_COMBINED_TC001: A_112: secbits=112, Root:112>=112 PASS, Inter:128>=112 PASS, Leaf:128>=112 PASS
 SDV_X509_SECBITS_COMBINED_TC001:"../testdata/cert/chain/secbits/a_ecp256_sha256_leaf.der":"../testdata/cert/chain/secbits/a_rsa3072_sha384_inter.der":"../testdata/cert/chain/secbits/a_rsa2048_sha256_root.der":112:HITLS_PKI_SUCCESS

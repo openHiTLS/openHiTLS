@@ -1156,14 +1156,26 @@ static int32_t HITLS_X509_SecBitsCheck(HITLS_X509_StoreCtx *storeCtx, HITLS_X509
     return HITLS_PKI_SUCCESS;
 }
 
+static bool X509_IsCrlLiteMode(const HITLS_X509_StoreCtx *storeCtx)
+{
+#ifdef HITLS_PKI_X509_VFY_CRL_LITE
+    (void)storeCtx;
+    return true;
+#else
+    return (storeCtx->verifyParam.flags & HITLS_X509_VFY_FLAG_CRL_LITE) != 0;
+#endif
+}
+
 static int32_t HITLS_X509_CheckCertExtNode(void *ctx, HITLS_X509_ExtEntry *extNode, int32_t depth)
 {
-    (void)ctx;
+    HITLS_X509_StoreCtx *storeCtx = (HITLS_X509_StoreCtx *)ctx;
+    bool crlLiteMode = X509_IsCrlLiteMode(storeCtx);
     (void)depth;
-    if (extNode->cid != BSL_CID_CE_KEYUSAGE && extNode->cid != BSL_CID_CE_BASICCONSTRAINTS &&
-        extNode->cid != BSL_CID_CE_EXTKEYUSAGE && extNode->cid != BSL_CID_CE_SUBJECTALTNAME &&
-        extNode->cid != BSL_CID_CE_AUTHORITYKEYIDENTIFIER && extNode->cid != BSL_CID_CE_SUBJECTKEYIDENTIFIER &&
-        extNode->cid != BSL_CID_CE_CRLDISTRIBUTIONPOINTS && extNode->critical == true) {
+    bool supported = (extNode->cid == BSL_CID_CE_KEYUSAGE || extNode->cid == BSL_CID_CE_BASICCONSTRAINTS ||
+        extNode->cid == BSL_CID_CE_EXTKEYUSAGE || extNode->cid == BSL_CID_CE_SUBJECTALTNAME ||
+        extNode->cid == BSL_CID_CE_AUTHORITYKEYIDENTIFIER || extNode->cid == BSL_CID_CE_SUBJECTKEYIDENTIFIER ||
+        (!crlLiteMode && extNode->cid == BSL_CID_CE_CRLDISTRIBUTIONPOINTS));
+    if (!supported && extNode->critical == true) {
 #ifdef HITLS_PKI_X509_VFY_CB
         if (VerifyCertCbk(ctx, NULL, -1, HITLS_X509_ERR_PROCESS_CRITICALEXT) != HITLS_PKI_SUCCESS) {
             BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_PROCESS_CRITICALEXT);
@@ -1179,20 +1191,18 @@ static int32_t HITLS_X509_CheckCertExtNode(void *ctx, HITLS_X509_ExtEntry *extNo
 
 static int32_t HITLS_X509_CheckCrlExtNode(void *ctx, HITLS_X509_ExtEntry *extNode, int32_t depth)
 {
-    (void)ctx;
+    HITLS_X509_StoreCtx *storeCtx = (HITLS_X509_StoreCtx *)ctx;
+    bool crlLiteMode = X509_IsCrlLiteMode(storeCtx);
     (void)depth;
-    switch (extNode->cid) {
-        case BSL_CID_CE_AUTHORITYKEYIDENTIFIER:
-        case BSL_CID_CE_CRLNUMBER:
-        case BSL_CID_CE_ISSUINGDISTRIBUTIONPOINT:
-        case BSL_CID_CE_DELTACRLINDICATOR:
-            return HITLS_PKI_SUCCESS;
-        default:
-            if (extNode->critical == true) {
-                return HITLS_X509_ERR_PROCESS_CRITICALEXT;
-            }
-            return HITLS_PKI_SUCCESS;
+    if (extNode->cid == BSL_CID_CE_AUTHORITYKEYIDENTIFIER || extNode->cid == BSL_CID_CE_CRLNUMBER ||
+        (!crlLiteMode && (extNode->cid == BSL_CID_CE_ISSUINGDISTRIBUTIONPOINT ||
+        extNode->cid == BSL_CID_CE_DELTACRLINDICATOR))) {
+        return HITLS_PKI_SUCCESS;
     }
+    if (extNode->critical == true) {
+        return HITLS_X509_ERR_PROCESS_CRITICALEXT;
+    }
+    return HITLS_PKI_SUCCESS;
 }
 
 #if defined(HITLS_CRYPTO_MLDSA) || defined(HITLS_CRYPTO_SLH_DSA) || defined(HITLS_CRYPTO_COMPOSITE)

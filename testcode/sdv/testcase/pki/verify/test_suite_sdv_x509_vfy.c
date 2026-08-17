@@ -527,6 +527,152 @@ EXIT:
 }
 /* END_CASE */
 
+/* @
+ * @test SDV_X509_STORE_VFY_CRL_LITE_CERT_CDP_CRITICAL_FUNC_TC001
+ * @spec -
+ * @title Test CRL lite mode rejects a critical certificate CRLDistributionPoints extension.
+ * @precon One certificate fixture contains a critical CRLDistributionPoints extension.
+ * @brief
+ * 1.Create a mock store context and certificate chain from the input certificate fixture.
+ * 2.Clear the security-bits verification flag so the fixture does not fail before extension checking.
+ * 3.In non-lite builds, call HITLS_X509_VerifyParamAndExt in full mode first and expect success.
+ * 4.Enable CRL lite mode when runtime flag switching is required.
+ * 5.Call HITLS_X509_VerifyParamAndExt again in CRL lite mode.
+ * @expect
+ * 1.After the security-bits precheck is cleared, full mode accepts the supported certificate extension set.
+ * 2.CRL lite mode returns HITLS_X509_ERR_PROCESS_CRITICALEXT for critical CRLDistributionPoints.
+ * @prior nan
+ * @auto FALSE
+ @ */
+/* BEGIN_CASE */
+void SDV_X509_STORE_VFY_CRL_LITE_CERT_CDP_CRITICAL_FUNC_TC001(char *certPath)
+{
+    int32_t ret;
+    int64_t clrSec = (int64_t)HITLS_X509_VFY_FLAG_SECBITS;
+    TestMemInit();
+    HITLS_X509_StoreCtx *storeCtx = HITLS_X509_NewStoreCtxMock();
+    ASSERT_NE(storeCtx, NULL);
+    BslList *chain = BSL_LIST_New(sizeof(HITLS_X509_Cert *));
+    ASSERT_NE(chain, NULL);
+    ret = HITLS_BuildChain(chain, 0, certPath, NULL, NULL, NULL, NULL);
+    ASSERT_EQ(ret, HITLS_PKI_SUCCESS);
+    ret = HITLS_X509_StoreCtxCtrl(storeCtx, HITLS_X509_STORECTX_CLR_PARAM_FLAGS, &clrSec, sizeof(clrSec));
+    ASSERT_EQ(ret, HITLS_PKI_SUCCESS);
+
+#ifndef HITLS_PKI_X509_VFY_CRL_LITE
+    ret = HITLS_X509_VerifyParamAndExt(storeCtx, chain);
+    ASSERT_EQ(ret, HITLS_PKI_SUCCESS);
+    ASSERT_TRUE(TestIsErrStackEmpty());
+    storeCtx->verifyParam.flags |= HITLS_X509_VFY_FLAG_CRL_LITE;
+#endif
+
+    ret = HITLS_X509_VerifyParamAndExt(storeCtx, chain);
+    ASSERT_EQ(ret, HITLS_X509_ERR_PROCESS_CRITICALEXT);
+EXIT:
+    HITLS_X509_FreeStoreCtxMock(storeCtx);
+    BSL_LIST_FREE(chain, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);
+}
+/* END_CASE */
+
+/* @
+ * @test SDV_X509_STORE_VFY_CRL_LITE_CRL_IDP_CRITICAL_FUNC_TC001
+ * @spec -
+ * @title Test CRL lite mode rejects a single CRL with critical IssuingDistributionPoint.
+ * @precon One certificate bundle and one CRL bundle share the same issuer, and the CRL carries a critical
+ *          IssuingDistributionPoint extension.
+ * @brief
+ * 1.Create a mock store context and load the certificate bundle and CRL bundle.
+ * 2.Set a fixed verification time that is inside the certificate and CRL validity window.
+ * 3.In non-lite builds, call HITLS_X509_VerifyCrl in full mode first and expect success.
+ * 4.Enable CRL lite mode when runtime flag switching is required.
+ * 5.Call HITLS_X509_VerifyCrl again in CRL lite mode.
+ * @expect
+ * 1.Full mode verifies the single CRL successfully.
+ * 2.CRL lite mode returns HITLS_X509_ERR_PROCESS_CRITICALEXT for critical IssuingDistributionPoint.
+ * @prior nan
+ * @auto FALSE
+ @ */
+/* BEGIN_CASE */
+void SDV_X509_STORE_VFY_CRL_LITE_CRL_IDP_CRITICAL_FUNC_TC001(char *certPath, char *crlPath)
+{
+    int32_t ret;
+    TestMemInit();
+    HITLS_X509_StoreCtx *storeCtx = HITLS_X509_NewStoreCtxMock();
+    ASSERT_NE(storeCtx, NULL);
+    BslList *chain = BSL_LIST_New(sizeof(HITLS_X509_Cert *));
+    ASSERT_NE(chain, NULL);
+    ret = HITLS_AddBundlePemToChain(&chain, BUNDLE_TYPE_CERT, certPath);
+    ASSERT_EQ(ret, HITLS_PKI_SUCCESS);
+    ret = HITLS_LoadBundlePemToStoreCrl(storeCtx, crlPath);
+    ASSERT_EQ(ret, HITLS_PKI_SUCCESS);
+    int64_t timeval = 1781481600; /* 2026-06-15 00:00:00 UTC */
+    storeCtx->certChain = chain;
+
+#ifndef HITLS_PKI_X509_VFY_CRL_LITE
+    ret = HITLS_X509_VerifyCrl(storeCtx, chain, &timeval);
+    ASSERT_EQ(ret, HITLS_PKI_SUCCESS);
+    ASSERT_TRUE(TestIsErrStackEmpty());
+    storeCtx->verifyParam.flags |= HITLS_X509_VFY_FLAG_CRL_LITE;
+#endif
+
+    ret = HITLS_X509_VerifyCrl(storeCtx, chain, &timeval);
+    ASSERT_EQ(ret, HITLS_X509_ERR_PROCESS_CRITICALEXT);
+EXIT:
+    HITLS_X509_FreeStoreCtxMock(storeCtx);
+    BSL_LIST_FREE(chain, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);
+}
+/* END_CASE */
+
+/* @
+ * @test SDV_X509_STORE_VFY_CRL_LITE_CRL_DELTA_CRITICAL_FUNC_TC001
+ * @spec -
+ * @title Test CRL lite mode rejects a single delta CRL with critical DeltaCRLIndicator.
+ * @precon One certificate bundle and one single-CRL bundle share the same issuer, and the CRL carries a critical
+ *          DeltaCRLIndicator extension only.
+ * @brief
+ * 1.Create a mock store context and load the certificate bundle and single delta-CRL bundle.
+ * 2.Set a fixed verification time that is inside the generated 10-year certificate and CRL validity window.
+ * 3.In non-lite builds, call HITLS_X509_VerifyCrl in full mode first and expect HITLS_X509_ERR_VFY_CRL_NOT_FOUND,
+ *   because a standalone delta CRL cannot be selected as a base CRL.
+ * 4.Enable CRL lite mode when runtime flag switching is required.
+ * 5.Call HITLS_X509_VerifyCrl again in CRL lite mode.
+ * @expect
+ * 1.Full mode returns HITLS_X509_ERR_VFY_CRL_NOT_FOUND for the standalone delta CRL fixture.
+ * 2.CRL lite mode returns HITLS_X509_ERR_PROCESS_CRITICALEXT for critical DeltaCRLIndicator.
+ * @prior nan
+ * @auto FALSE
+ @ */
+/* BEGIN_CASE */
+void SDV_X509_STORE_VFY_CRL_LITE_CRL_DELTA_CRITICAL_FUNC_TC001(char *certPath, char *crlPath)
+{
+    int32_t ret;
+    TestMemInit();
+    HITLS_X509_StoreCtx *storeCtx = HITLS_X509_NewStoreCtxMock();
+    ASSERT_NE(storeCtx, NULL);
+    BslList *chain = BSL_LIST_New(sizeof(HITLS_X509_Cert *));
+    ASSERT_NE(chain, NULL);
+    ret = HITLS_AddBundlePemToChain(&chain, BUNDLE_TYPE_CERT, certPath);
+    ASSERT_EQ(ret, HITLS_PKI_SUCCESS);
+    ret = HITLS_LoadBundlePemToStoreCrl(storeCtx, crlPath);
+    ASSERT_EQ(ret, HITLS_PKI_SUCCESS);
+    int64_t timeval = 1789430400; /* 2026-09-15 00:00:00 UTC */
+    storeCtx->certChain = chain;
+
+#ifndef HITLS_PKI_X509_VFY_CRL_LITE
+    /* A standalone delta CRL is ignored by full CRL verification because no base CRL can be selected. */
+    ret = HITLS_X509_VerifyCrl(storeCtx, chain, &timeval);
+    ASSERT_EQ(ret, HITLS_X509_ERR_VFY_CRL_NOT_FOUND);
+    storeCtx->verifyParam.flags |= HITLS_X509_VFY_FLAG_CRL_LITE;
+#endif
+
+    ret = HITLS_X509_VerifyCrl(storeCtx, chain, &timeval);
+    ASSERT_EQ(ret, HITLS_X509_ERR_PROCESS_CRITICALEXT);
+EXIT:
+    HITLS_X509_FreeStoreCtxMock(storeCtx);
+    BSL_LIST_FREE(chain, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);
+}
+/* END_CASE */
+
 /* BEGIN_CASE */
 void SDV_X509_STORE_CTRL_FUNC_TC001(void)
 {
