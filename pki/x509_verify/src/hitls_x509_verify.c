@@ -1946,13 +1946,18 @@ static int32_t NotifyErrors(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_Cert *cert
     (void)cert;
 #endif
     if ((selection->errorPath & HITLS_X509_CRL_ERROR_TIME) != 0) {
+        int32_t ret;
+        // Repeat checking crl time, and HITLS_X509_CheckCrlTime will notify errors.
         if (selection->deltaCrl != NULL) {
-            int32_t ret = HITLS_X509_CheckCrlTime(storeCtx, selection->deltaCrl, depth, time);
+            ret = HITLS_X509_CheckCrlTime(storeCtx, selection->deltaCrl, depth, time);
             if (ret != HITLS_PKI_SUCCESS) {
                 return ret;
             }
         }
-        return HITLS_X509_CheckCrlTime(storeCtx, selection->baseCrl, depth, time);
+        ret = HITLS_X509_CheckCrlTime(storeCtx, selection->baseCrl, depth, time);
+        if (ret != HITLS_PKI_SUCCESS) {
+            return ret;
+        }
     }
     for (uint32_t i = 0; i < sizeof(g_errorPathMap) / sizeof(g_errorPathMap[0]); ++i) {
         VFYCBK_FAIL_IF((selection->errorPath & g_errorPathMap[i].errorPathBit) != 0,

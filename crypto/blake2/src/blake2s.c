@@ -126,7 +126,7 @@ int32_t CRYPT_BLAKE2S_Update(CRYPT_BLAKE2S_Ctx *ctx, const uint8_t *data, uint32
     if (nbytes == 0) {
         return CRYPT_SUCCESS;
     }
-    if (nbytes > UINT64_MAX - ctx->t) {
+    if (nbytes > UINT64_MAX - ctx->t - ctx->blockLen) {
         BSL_ERR_PUSH_ERROR(CRYPT_MD_INPUT_OVERFLOW);
         return CRYPT_MD_INPUT_OVERFLOW;
     }
