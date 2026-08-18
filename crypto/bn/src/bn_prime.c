@@ -556,7 +556,6 @@ int32_t BN_GenPrime(BN_BigNum *r, BN_BigNum *e, uint32_t bits, bool half, BN_Opt
         }
         ret = MillerRabinPrimeVerify(rnd, 0, opt, cb);
         time++;
-#endif
         // Only a composite candidate is retryable. Any other error (e.g. a rand
         // or memory failure) would repeat identically, so abort immediately.
         if (ret != CRYPT_SUCCESS && ret != CRYPT_BN_NOR_CHECK_PRIME) {

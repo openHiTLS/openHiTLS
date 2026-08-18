@@ -135,51 +135,6 @@ int32_t CRYPT_PAILLIER_Gen(CRYPT_PAILLIER_Ctx *ctx);
 
 /**
  * @ingroup paillier
- * @brief Paillier public key encryption
- *
- * @param ctx [IN] Paillier context structure
- * @param input [IN] Information to be encrypted
- * @param inputLen [IN] Length of the information to be encrypted
- * @param out [OUT] Pointer to the encrypted information output.
- * @param outLen [IN/OUT] Pointer to the length of the encrypted information.
- *                        Before being transferred, the value must be set to the maximum length of the array.
- *
- * @retval CRYPT_NULL_INPUT                 Invalid null pointer input
- * @retval CRYPT_PAILLIER_NO_KEY_INFO       does not contain the key information.
- * @retval CRYPT_PAILLIER_ERR_INPUT_VALUE   The entered value does not meet the calculation conditions.
- * @retval CRYPT_MEM_ALLOC_FAIL             Memory allocation failure
- * @retval CRYPT_SECUREC_FAIL               A security function error occurs.
- * @retval BN error                         An error occurs in the internal BigNum operation.
- * @retval CRYPT_SUCCESS                    encryption succeeded.
- */
-int32_t  CRYPT_PAILLIER_PubEnc(const CRYPT_PAILLIER_Ctx *ctx, const uint8_t *input, uint32_t inputLen,
-    uint8_t *out, uint32_t *outLen);
-
-/**
- * @ingroup paillier
- * @brief Paillier private key decryption
- *
- * @param ctx [IN] Paillier context structure
- * @param ciphertext [IN] Information to be decrypted
- * @param bits [IN] Length of the information to be decrypted
- * @param out [OUT] Pointer to the decrypted information output.
- * @param outLen [IN/OUT] Pointer to the length of the decrypted information.
- *                        Before being transferred, the value must be set to the maximum length of the array.
- *
- * @retval CRYPT_NULL_INPUT                 Invalid null pointer input
- * @retval CRYPT_PAILLIER_ERR_DEC_BITS      Incorrect length of the encrypted private key.
- * @retval CRYPT_PAILLIER_NO_KEY_INFO       does not contain the key information.
- * @retval CRYPT_PAILLIER_ERR_INPUT_VALUE   The entered value does not meet the calculation conditions.
- * @retval CRYPT_MEM_ALLOC_FAIL             Memory allocation failure
- * @retval CRYPT_SECUREC_FAIL               A security function error occurs.
- * @retval BN error.                        An error occurs in the internal BigNum operation.
- * @retval CRYPT_SUCCESS                    Decrypted Successfully
- */
-int32_t CRYPT_PAILLIER_PrvDec(const CRYPT_PAILLIER_Ctx *ctx, const BN_BigNum *ciphertext, uint32_t bits,
-    uint8_t *out, uint32_t *outLen);
-
-/**
- * @ingroup paillier
  * @brief Paillier Set the private key information.
  *
  * @param ctx [OUT] paillier context structure

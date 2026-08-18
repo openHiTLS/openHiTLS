@@ -25,7 +25,6 @@
 #include "securec.h"
 #include "bsl_sal.h"
 
-
 static int32_t SetPrvPara(const CRYPT_RSA_PrvKey *prvKey, const CRYPT_RsaPrv *prv)
 {
     int32_t ret = BN_Bin2Bn(prvKey->n, prv->n, prv->nLen);
@@ -572,7 +571,6 @@ static int32_t FactorPrimeCheck(const BN_BigNum *n, const BN_BigNum *e, const BN
         return ret;
     }
     uint32_t nBits = BN_Bits(n);
-    uint32_t checkTimes = nBits < 1536 ? 5 : 4; // ref. FIPS 186-5, Table B.1
     uint32_t needRoom = nBits / BN_UINT_BITS;
     BN_BigNum *tmp1 = OptimizerGetBn(opt, needRoom);
     BN_BigNum *tmp2 = OptimizerGetBn(opt, needRoom);
@@ -613,8 +611,8 @@ static int32_t FactorPrimeCheck(const BN_BigNum *n, const BN_BigNum *e, const BN
         BSL_ERR_PUSH_ERROR(ret);
         goto ERR;
     }
-    GOTO_ERR_IF(PrimalityTest(p, checkTimes, opt), ret);
-    GOTO_ERR_IF(PrimalityTest(q, checkTimes, opt), ret);
+    GOTO_ERR_IF(PrimalityTest(p, 0, opt), ret);
+    GOTO_ERR_IF(PrimalityTest(q, 0, opt), ret);
 ERR:
     OptimizerEnd(opt);
     return ret;
