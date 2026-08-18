@@ -1,0 +1,236 @@
+name: openhitls-ci
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    types:
+      - open
+      - update
+      - reopen
+  workflow_dispatch:
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  build-STM32F4:
+    name: build/STM32F4
+    runs-on: [ubuntu-latest, x64, medium]
+    steps:
+      - name: Checkout source code
+        uses: checkout
+      - name: Install arm-none-eabi toolchain
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc-arm-none-eabi libnewlib-arm-none-eabi
+      - name: Cross compile for STM32F4
+        run: |
+          codeBranch="${ATOMGIT_BASE_REF:-$ATOMGIT_REF_NAME}"
+          set -e
+          if [ "${codeBranch}" = "main" ]; then
+              echo "arm-none-eabi-gcc Start execution"
+              mkdir build && cd build
+              if [ -f "../configure.py" ]; then
+                  python3 ../configure.py --feature_config="config/json/STM32F4/STM32F4_feature_config.json" --compile_config="config/json/STM32F4/STM32F4_compile_config.json"
+                  cmake .. -DCMAKE_TOOLCHAIN_FILE=../config/toolchain/arm-none-eabi-gcc.cmake
+              else
+                  cmake .. -DCMAKE_TOOLCHAIN_FILE=../cmake/toolchain/arm-none-eabi-gcc.cmake  -C ../testcode/config/cmake/STM32F4/STM32F4_feature_config.cmake
+              fi
+              make -j VERBOSE=1
+              echo "arm-none-eabi-gcc Execution completed"
+          fi
+
+  build-mini-x8664:
+    name: build/mini_x8664
+    runs-on: [ubuntu-latest, x64, medium]
+    steps:
+      - name: Checkout source code
+        uses: checkout
+      - name: Miniaturized build and test
+        run: |
+          cd testcode/script
+          bash all_mini_test.sh all x8664
+
+  build-no-provider:
+    name: build/no-provider
+    runs-on: [ubuntu-latest, x64, medium]
+    steps:
+      - name: Checkout source code
+        uses: checkout
+      - name: Build and run SDV without provider
+        run: |
+          codeBranch="${ATOMGIT_BASE_REF:-$ATOMGIT_REF_NAME}"
+          cd testcode/script
+
+          if [ "${codeBranch}" = "openhitls-0.2" ]; then
+              bash build_hitls.sh  add-options=-Wno-cast-function-type add-options=-Wno-type-limits no-provider gcov
+              bash build_sdv.sh add-options=-Wno-cast-function-type add-options=-Wno-type-limits gcov
+          else
+              bash build_hitls.sh add-options=-fshort-enums add-options=-Wno-cast-function-type add-options=-Wno-type-limits no-provider gcov
+              bash build_sdv.sh add-options=-fshort-enums add-options=-Wno-cast-function-type add-options=-Wno-type-limits gcov
+          fi
+
+          bash execute_sdv.sh
+
+  build-asan:
+    name: build/asan
+    runs-on: [ubuntu-latest, x64, large]
+    steps:
+      - name: Checkout source code
+        uses: checkout
+      - name: Build and run SDV with ASan
+        run: |
+          set -e
+          sudo modprobe sctp
+          sudo sysctl -w net.sctp.auth_enable=1
+          cd testcode/script
+          sudo bash build_hitls.sh asan gcov
+          sudo bash build_sdv.sh asan gcov fail-repeat
+          sudo bash execute_sdv.sh
+
+  build-app-arm64:
+    name: build/app-arm64
+    runs-on: [ubuntu-latest, arm64, large]
+    steps:
+      - name: Checkout source code
+        uses: checkout
+      - name: Build SM and run SDV apps on aarch64
+        run: |
+          set -e
+
+          codeBranch="${ATOMGIT_BASE_REF:-$ATOMGIT_REF_NAME}"
+          [ "${codeBranch}" != "main" ] && exit
+          cd testcode/script
+          bash build_hitls.sh sm armv8_le
+          bash build_hitls.sh exe add-options=-DHITLS_APP_SM_MODE
+          bash build_sdv.sh apps add-options="-DHITLS_APP_SM_MODE -DHITLS_CRYPTO_CMVP_SM_ARMV8_LE"
+          script -q -e -c "bash execute_sdv.sh" /dev/null
+
+  build-app-x8664:
+    name: build/app-x8664
+    runs-on: [ubuntu-latest, x64, large]
+    steps:
+      - name: Checkout source code
+        uses: checkout
+      - name: Build and run SDV apps on x86_64
+        run: |
+          set -e
+
+          codeBranch="${ATOMGIT_BASE_REF:-$ATOMGIT_REF_NAME}"
+          [ "${codeBranch}" != "main" ] && exit
+          cd testcode/script
+          bash build_hitls.sh exe
+          bash build_sdv.sh apps
+          script -q -e -c "bash execute_sdv.sh" /dev/null
+
+  build-arm64:
+    name: build/arm64
+    runs-on: [ubuntu-latest, arm64, large]
+    steps:
+      - name: Checkout source code
+        uses: checkout
+      - name: Build and run SDV on aarch64
+        run: |
+          cd testcode/script
+          bash build_hitls.sh gcov armv8_le
+          bash build_sdv.sh gcov fail-repeat
+          bash execute_sdv.sh
+
+  build-iso-arm64:
+    name: build/iso_arm64
+    runs-on: [ubuntu-latest, arm64, medium]
+    steps:
+      - name: Checkout source code
+        uses: checkout
+      - name: Build and run ISO19790 SDV on aarch64
+        run: |
+          set -e
+
+          codeBranch="${ATOMGIT_BASE_REF:-$ATOMGIT_REF_NAME}"
+          [ "${codeBranch}" != "main" ] && exit
+          cd testcode/script
+          bash build_hitls.sh iso armv8_le
+          bash build_hitls.sh add-options=-DHITLS_CRYPTO_CMVP
+          bash build_sdv.sh add-options=-DHITLS_CRYPTO_CMVP_ISO19790_ARMV8_LE
+          bash execute_sdv.sh test_suite_sdv_eal_iso19790_provider
+
+  build-iso-pure-c:
+    name: build/iso_pure_c
+    runs-on: [ubuntu-latest, x64, medium]
+    steps:
+      - name: Checkout source code
+        uses: checkout
+      - name: Build and run ISO19790 SDV in pure C
+        run: |
+          set -e
+
+          codeBranch="${ATOMGIT_BASE_REF:-$ATOMGIT_REF_NAME}"
+          [ "${codeBranch}" != "main" ] && exit
+          cd testcode/script
+          bash build_hitls.sh iso pure_c
+          bash build_hitls.sh add-options=-DHITLS_CRYPTO_CMVP
+          bash build_sdv.sh add-options=-DHITLS_CRYPTO_CMVP_ISO19790_PURE_C
+          bash execute_sdv.sh test_suite_sdv_eal_iso19790_provider
+
+  build-iso-x8664:
+    name: build/iso_x8664
+    runs-on: [ubuntu-latest, x64, medium]
+    steps:
+      - name: Checkout source code
+        uses: checkout
+      - name: Build and run ISO19790 SDV on x86_64
+        run: |
+          set -e
+
+          codeBranch="${ATOMGIT_BASE_REF:-$ATOMGIT_REF_NAME}"
+          [ "${codeBranch}" != "main" ] && exit
+          cd testcode/script
+          bash build_hitls.sh iso x86_64
+          bash build_hitls.sh add-options=-DHITLS_CRYPTO_CMVP
+          bash build_sdv.sh add-options=-DHITLS_CRYPTO_CMVP_ISO19790_X86_64
+          bash execute_sdv.sh test_suite_sdv_eal_iso19790_provider
+
+  build-sm-arm64:
+    name: build/sm_arm64
+    runs-on: [ubuntu-latest, arm64, medium]
+    steps:
+      - name: Checkout source code
+        uses: checkout
+      - name: Build and run SM SDV on aarch64
+        run: |
+          set -e
+
+          codeBranch="${ATOMGIT_BASE_REF:-$ATOMGIT_REF_NAME}"
+          [ "${codeBranch}" != "main" ] && exit
+          cd testcode/script
+          bash build_hitls.sh sm armv8_le
+          bash build_hitls.sh add-options=-DHITLS_CRYPTO_CMVP
+          bash build_sdv.sh add-options=-DHITLS_CRYPTO_CMVP_SM_ARMV8_LE
+          bash execute_sdv.sh test_suite_sdv_eal_sm_provider
+
+  build-tls-sdv-arm64:
+    name: build/tls_sdv_arm64
+    runs-on: [ubuntu-latest, arm64, medium]
+    steps:
+      - name: Checkout source code
+        uses: checkout
+      - name: Miniaturized TLS SDV on aarch64
+        run: |
+          cd testcode/script
+          bash all_mini_test.sh tls armv8
+
+  build-x8664:
+    name: build/x8664
+    runs-on: [ubuntu-latest, x64, large]
+    steps:
+      - name: Checkout source code
+        uses: checkout
+      - name: Build and run SDV on x86_64
+        run: |
+          cd testcode/script
+          bash build_hitls.sh gcov
+          bash build_sdv.sh gcov fail-repeat
+          bash execute_sdv.sh
