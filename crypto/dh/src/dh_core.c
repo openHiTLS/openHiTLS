@@ -404,6 +404,45 @@ static int32_t PubCheck(const BN_BigNum *y, const BN_BigNum *minP)
     return CRYPT_SUCCESS;
 }
 
+static bool IsKnownSafePrimeGroup(CRYPT_PKEY_ParaId id)
+{
+    switch (id) {
+        case CRYPT_DH_RFC2409_768:
+        case CRYPT_DH_RFC2409_1024:
+        case CRYPT_DH_RFC3526_1536:
+        case CRYPT_DH_RFC3526_2048:
+        case CRYPT_DH_RFC3526_3072:
+        case CRYPT_DH_RFC3526_4096:
+        case CRYPT_DH_RFC3526_6144:
+        case CRYPT_DH_RFC3526_8192:
+        case CRYPT_DH_RFC7919_2048:
+        case CRYPT_DH_RFC7919_3072:
+        case CRYPT_DH_RFC7919_4096:
+        case CRYPT_DH_RFC7919_6144:
+        case CRYPT_DH_RFC7919_8192:
+            return true;
+        default:
+            return false;
+    }
+}
+
+static int32_t PubSubgroupCheck(const CRYPT_DH_Para *para, const BN_BigNum *y, BN_BigNum *tmp,
+    BN_Mont *mont, BN_Optimizer *opt)
+{
+    if (para->q == NULL || IsKnownSafePrimeGroup(para->id)) {
+        return CRYPT_SUCCESS;
+    }
+    int32_t ret = BN_MontExp(tmp, y, para->q, mont, opt);
+    if (ret != CRYPT_SUCCESS) {
+        return ret;
+    }
+    if (!BN_IsOne(tmp)) {
+        BSL_ERR_PUSH_ERROR(CRYPT_DH_KEYINFO_ERROR);
+        return CRYPT_DH_KEYINFO_ERROR;
+    }
+    return CRYPT_SUCCESS;
+}
+
 // Get p-2 or q-1
 static int32_t GetXLimb(BN_BigNum *xLimb, const BN_BigNum *p, const BN_BigNum *q)
 {
@@ -598,17 +637,18 @@ int32_t CRYPT_DH_ComputeShareKey(const CRYPT_DH_Ctx *ctx, const CRYPT_DH_Ctx *pu
     /* Check whether the public key meets the requirements. */
     ret = PubCheck(pubKey->y, tmp);
     if (ret != CRYPT_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
+        goto EXIT;
+    }
+    ret = PubSubgroupCheck(ctx->para, pubKey->y, tmp, mont, opt);
+    if (ret != CRYPT_SUCCESS) {
         goto EXIT;
     }
     ret = BN_MontExpConsttime(tmp, pubKey->y, ctx->x, mont, opt);
     if (ret != CRYPT_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
         goto EXIT;
     }
     ret = BN_Bn2Bin(tmp, shareKey, shareKeyLen);
     if (ret != CRYPT_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
         goto EXIT;
     }
     // no need to filled zero in the leading.
