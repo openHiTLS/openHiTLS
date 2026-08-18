@@ -1096,6 +1096,50 @@ EXIT:
 /* END_CASE */
 
 /**
+ * @test   SDV_CRYPTO_RSA_VERIFY_PSS_SMALL_KEY_TC001
+ * @title  RSA 512-bit PSS SHA-512 verification rejects an undersized EM.
+ * @precon Use a 512-bit RSA public key and an attacker-controlled signature.
+ * @expect Verification returns CRYPT_RSA_NOR_VERIFY_FAIL without accessing
+ *         memory outside the temporary DB buffer.
+ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_RSA_VERIFY_PSS_SMALL_KEY_TC001(Hex *n, Hex *e, Hex *sign, int isProvider)
+{
+#if !defined(HITLS_CRYPTO_RSA_VERIFY) || !defined(HITLS_CRYPTO_RSA_EMSA_PSS)
+    (void)n;
+    (void)e;
+    (void)sign;
+    (void)isProvider;
+    SKIP_TEST();
+#else
+    uint8_t dataHash[64] = {0};
+    int32_t saltLengths = CRYPT_RSA_SALTLEN_TYPE_AUTOLEN;
+    CRYPT_MD_AlgId mdId = CRYPT_MD_SHA512;
+    CRYPT_EAL_PkeyPub publicKey = {0};
+    CRYPT_EAL_PkeyCtx *pkeyCtx = NULL;
+
+    BSL_Param pssParam[4] = {
+        {CRYPT_PARAM_RSA_MD_ID, BSL_PARAM_TYPE_INT32, &mdId, sizeof(mdId), 0},
+        {CRYPT_PARAM_RSA_MGF1_ID, BSL_PARAM_TYPE_INT32, &mdId, sizeof(mdId), 0},
+        {CRYPT_PARAM_RSA_SALTLEN, BSL_PARAM_TYPE_INT32, &saltLengths, sizeof(saltLengths), 0},
+        BSL_PARAM_END};
+
+    TestMemInit();
+    pkeyCtx = TestPkeyNewCtx(NULL, CRYPT_PKEY_RSA, CRYPT_EAL_PKEY_SIGN_OPERATE, "provider=default", isProvider);
+    ASSERT_TRUE(pkeyCtx != NULL);
+
+    SetRsaPubKey(&publicKey, n->x, n->len, e->x, e->len);
+    ASSERT_EQ(CRYPT_EAL_PkeySetPub(pkeyCtx, &publicKey), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(pkeyCtx, CRYPT_CTRL_SET_RSA_EMSA_PSS, pssParam, 0), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyVerifyData(pkeyCtx, dataHash, sizeof(dataHash), sign->x, sign->len),
+        CRYPT_RSA_NOR_VERIFY_FAIL);
+EXIT:
+    CRYPT_EAL_PkeyFreeCtx(pkeyCtx);
+#endif
+}
+/* END_CASE */
+
+/**
  * @test   SDV_CRYPTO_RSA_BLINDING_FUNC_TC001
  * @title  RSA EAL sign and verify with blinding.
  * @precon nan

@@ -323,6 +323,10 @@ int32_t CRYPT_RSA_VerifyPss(CRYPT_RSA_Ctx *ctx, const EAL_MdMethod *hashMethod, 
     // if msBit == 0, 8emLen == emBits, pad[0] should be 0
     // the leftmost 8emLen - emBits bits of the leftmost octet in maskedDB should be 0
     RETURN_RET_IF(((pad[0] >> msBit) != 0), CRYPT_RSA_NOR_VERIFY_FAIL);
+    if (emLen < hLen + 1) {
+        BSL_ERR_PUSH_ERROR(CRYPT_RSA_NOR_VERIFY_FAIL);
+        return CRYPT_RSA_NOR_VERIFY_FAIL;
+    }
     uint8_t *tmpBuff = BSL_SAL_Malloc(emLen); // for maskDB' / DB' and H'
     RETURN_RET_IF((tmpBuff == NULL), CRYPT_MEM_ALLOC_FAIL);
 

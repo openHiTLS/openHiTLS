@@ -24,7 +24,7 @@
 #include "bsl_sal.h"
 #include "bsl_err_internal.h"
 
-int32_t  CRYPT_PAILLIER_PubEnc(const CRYPT_PAILLIER_Ctx *ctx, const uint8_t *input, uint32_t inputLen,
+static int32_t CRYPT_PAILLIER_PubEnc(const CRYPT_PAILLIER_Ctx *ctx, const uint8_t *input, uint32_t inputLen,
     uint8_t *out, uint32_t *outLen)
 {
     int32_t ret;
@@ -126,7 +126,7 @@ EXIT:
     return ret;
 }
 
-int32_t CRYPT_PAILLIER_PrvDec(const CRYPT_PAILLIER_Ctx *ctx, const BN_BigNum *ciphertext, uint32_t bits,
+static int32_t CRYPT_PAILLIER_PrvDec(const CRYPT_PAILLIER_Ctx *ctx, const BN_BigNum *ciphertext, uint32_t bits,
     uint8_t *out, uint32_t *outLen)
 {
     int32_t ret;
