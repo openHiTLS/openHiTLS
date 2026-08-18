@@ -9,6 +9,10 @@ on:
       - open
       - update
       - reopen
+    branches:
+      - main
+      - openhitls-0.3
+      - openhitls-0.2
   workflow_dispatch:
 
 defaults:
