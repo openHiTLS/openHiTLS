@@ -594,8 +594,8 @@ static void ECP_Sm2PointMulCore(Sm2Point *r, const Sm2Fp k, const Sm2Point *g) {
 static void ECP_Sm2PointGenCore(Sm2Point *r, const Sm2Fp k) {
 
     // The optimal parameter (window width) w = 5 is used here. Thus, the number of windows is ⌈256/5⌉ = 52
-    static Sm2Point a, b;
-    static int8_t K[52];
+    Sm2Point a, b;
+    int8_t K[52];
 
     // set infinity point(1, 1, 0)
     ECP_Sm2PointSetInfinity(&a);
