@@ -19,10 +19,12 @@
     "cmac_aes": "HITLS_CRYPTO_CMAC_AES",
     "cmac_sm4": "HITLS_CRYPTO_CMAC_SM4",
     "codecskey": "HITLS_CRYPTO_CODECSKEY",
+    "composite": "HITLS_CRYPTO_COMPOSITE",
     "ctr": "HITLS_CRYPTO_CTR",
     "curve_bp256r1": "HITLS_CRYPTO_CURVE_BP256R1",
     "curve_bp384r1": "HITLS_CRYPTO_CURVE_BP384R1",
     "curve_bp512r1": "HITLS_CRYPTO_CURVE_BP512R1",
+    "curve25519": "HITLS_CRYPTO_CURVE25519",
     "curve_nistp192": "HITLS_CRYPTO_CURVE_NISTP192",
     "curve_nistp224": "HITLS_CRYPTO_CURVE_NISTP224",
     "curve_nistp256": "HITLS_CRYPTO_CURVE_NISTP256",
@@ -30,6 +32,7 @@
     "curve_nistp521": "HITLS_CRYPTO_CURVE_NISTP521",
     "dh": "HITLS_CRYPTO_DH",
     "drbg_hash": "HITLS_CRYPTO_DRBG_HASH",
+    "drbg_ctr": "HITLS_CRYPTO_DRBG_CTR",
     "dsa": "HITLS_CRYPTO_DSA",
     "eal": "HITLS_CRYPTO_EAL",
     "eal_bn": "HITLS_CRYPTO_EAL_BN",
@@ -44,8 +47,10 @@
     "err": "HITLS_BSL_ERR",
     "gcm": "HITLS_CRYPTO_GCM",
     "gmac": "HITLS_CRYPTO_GMAC",
+    "frodokem": "HITLS_CRYPTO_FRODOKEM",
     "hash": "HITLS_BSL_HASH",
     "hkdf": "HITLS_CRYPTO_HKDF",
+    "hss_lms": "HITLS_CRYPTO_HSS_LMS",
     "hmac": "HITLS_CRYPTO_HMAC",
     "hybridkem": "HITLS_CRYPTO_HYBRIDKEM",
     "info_crl": "HITLS_PKI_INFO_CRL",
@@ -140,3 +145,4 @@
     "xmssmt": "HITLS_CRYPTO_XMSSMT",
     "xts": "HITLS_CRYPTO_XTS"
 }
+

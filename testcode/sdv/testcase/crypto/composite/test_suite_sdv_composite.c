@@ -469,6 +469,670 @@ EXIT:
 /* END_CASE */
 
 /* @
+ * @test SDV_CRYPTO_COMPOSITE_EMPTY_MESSAGE_TC001
+ * @title Test Composite empty, boundary, binary-pattern and large messages.
+ @ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_COMPOSITE_EMPTY_MESSAGE_TC001(int type)
+{
+    static const uint8_t emptyMessage = 0;
+    static const uint8_t oneByteMessage[] = {0x00};
+    CRYPT_EAL_PkeyCtx *ctx = NULL;
+    uint8_t *sign = NULL;
+    /* 64-byte pattern messages, a 65-byte boundary message and a 4 KiB large message. */
+    uint8_t allZeroMessage[64] = {0};
+    uint8_t allFfMessage[64] = {0};
+    uint8_t leadingZeroMessage[64] = {0};
+    uint8_t trailingZeroMessage[64] = {0};
+    uint8_t boundaryMessage[65] = {0};
+    uint8_t largeMessage[4096] = {0};
+    /* Nine cases: NULL, empty, one byte, four patterns, boundary and large input. */
+    const uint8_t *messages[9] = {NULL, &emptyMessage, oneByteMessage, allZeroMessage,
+        allFfMessage, leadingZeroMessage, trailingZeroMessage, boundaryMessage, largeMessage};
+    const uint32_t messageLens[9] = {0, 0, 1, 64, 64, 64, 64, 65, 4096};
+    uint32_t signLen = 0;
+    uint32_t i;
+    CRYPT_MD_AlgId mdId = GetCompositeHashAlgId(type);
+
+    TestMemInit();
+    TestRandInit();
+    /* 0xFF, 0xA5, 0x5A and 0x3C are distinct binary-pattern test values. */
+    (void)memset(allFfMessage, 0xFF, sizeof(allFfMessage));
+    (void)memset(leadingZeroMessage, 0xA5, sizeof(leadingZeroMessage));
+    (void)memset(trailingZeroMessage, 0xA5, sizeof(trailingZeroMessage));
+    (void)memset(boundaryMessage, 0x5A, sizeof(boundaryMessage));
+    (void)memset(largeMessage, 0x3C, sizeof(largeMessage));
+    leadingZeroMessage[0] = 0;
+    trailingZeroMessage[sizeof(trailingZeroMessage) - 1] = 0;
+    ASSERT_TRUE(mdId != CRYPT_MD_MAX);
+    ctx = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_COMPOSITE);
+    ASSERT_TRUE(ctx != NULL);
+    ASSERT_EQ(CRYPT_EAL_PkeySetParaById(ctx, type), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyGen(ctx), CRYPT_SUCCESS);
+    signLen = CRYPT_EAL_PkeyGetSignLen(ctx);
+    ASSERT_TRUE(signLen > 0);
+    sign = BSL_SAL_Malloc(signLen);
+    ASSERT_TRUE(sign != NULL);
+
+    for (i = 0; i < sizeof(messages) / sizeof(messages[0]); i++) {
+        signLen = CRYPT_EAL_PkeyGetSignLen(ctx);
+        ASSERT_EQ(CRYPT_EAL_PkeySign(ctx, mdId, messages[i], messageLens[i], sign, &signLen), CRYPT_SUCCESS);
+        ASSERT_EQ(CRYPT_EAL_PkeyVerify(ctx, mdId, messages[i], messageLens[i], sign, signLen), CRYPT_SUCCESS);
+    }
+
+EXIT:
+    BSL_SAL_Free(sign);
+    CRYPT_EAL_PkeyFreeCtx(ctx);
+    TestRandDeInit();
+}
+/* END_CASE */
+
+/* @
+ * @test SDV_CRYPTO_COMPOSITE_REFCOUNT_TC001
+ * @title Test Composite EAL context reference increments and release ordering.
+ @ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_COMPOSITE_REFCOUNT_TC001(int type)
+{
+    static const uint8_t message[] = "composite reference count";
+    CRYPT_EAL_PkeyCtx *ctx = NULL;
+    CRYPT_EAL_PkeyCtx *aliasA = NULL;
+    CRYPT_EAL_PkeyCtx *aliasB = NULL;
+    CRYPT_MD_AlgId mdId = GetCompositeHashAlgId(type);
+    uint8_t *sign = NULL;
+    uint32_t signLen = 0;
+
+    TestMemInit();
+    TestRandInit();
+    ASSERT_TRUE(mdId != CRYPT_MD_MAX);
+    ctx = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_COMPOSITE);
+    ASSERT_TRUE(ctx != NULL);
+    ASSERT_EQ(CRYPT_EAL_PkeySetParaById(ctx, type), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyGen(ctx), CRYPT_SUCCESS);
+    ASSERT_EQ(ctx->references.count, 1);
+    aliasA = ctx;
+    aliasB = ctx;
+    ASSERT_EQ(CRYPT_EAL_PkeyUpRef(aliasA), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyUpRef(aliasB), CRYPT_SUCCESS);
+    /* Three references: the original context plus two EAL up-references. */
+    ASSERT_EQ(ctx->references.count, 3);
+
+    CRYPT_EAL_PkeyFreeCtx(aliasA);
+    aliasA = NULL;
+    /* One alias was released, leaving the original and one alias. */
+    ASSERT_EQ(ctx->references.count, 2);
+    CRYPT_EAL_PkeyFreeCtx(aliasB);
+    aliasB = NULL;
+    ASSERT_EQ(ctx->references.count, 1);
+    signLen = CRYPT_EAL_PkeyGetSignLen(ctx);
+    sign = BSL_SAL_Malloc(signLen);
+    ASSERT_TRUE(sign != NULL);
+    ASSERT_EQ(CRYPT_EAL_PkeySign(ctx, mdId, message, sizeof(message) - 1, sign, &signLen), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyVerify(ctx, mdId, message, sizeof(message) - 1, sign, signLen), CRYPT_SUCCESS);
+
+EXIT:
+    BSL_SAL_Free(sign);
+    CRYPT_EAL_PkeyFreeCtx(aliasA);
+    CRYPT_EAL_PkeyFreeCtx(aliasB);
+    CRYPT_EAL_PkeyFreeCtx(ctx);
+    TestRandDeInit();
+}
+/* END_CASE */
+
+/* @
+ * @test SDV_CRYPTO_COMPOSITE_API_NULL_TC001
+ * @title Test null-pointer handling across Composite public EAL APIs.
+ @ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_COMPOSITE_API_NULL_TC001(int type)
+{
+    static const uint8_t message[] = "null-api";
+    CRYPT_EAL_PkeyPub pub = {0};
+    CRYPT_EAL_PkeyPrv prv = {0};
+    CRYPT_EAL_PkeyPara para = {0};
+    /* 64-byte buffers are intentionally oversized scratch buffers for NULL checks. */
+    uint8_t sign[64] = {0};
+    uint8_t digest[64] = {0};
+    uint32_t signLen = sizeof(sign);
+    uint32_t digestLen = sizeof(digest);
+    int32_t value = 0;
+
+    TestMemInit();
+    ASSERT_EQ(CRYPT_EAL_PkeySetParaById(NULL, type), CRYPT_NULL_INPUT);
+    ASSERT_EQ(CRYPT_EAL_PkeySetPara(NULL, &para), CRYPT_NULL_INPUT);
+    ASSERT_EQ(CRYPT_EAL_PkeySetParaEx(NULL, NULL), CRYPT_NULL_INPUT);
+    ASSERT_EQ(CRYPT_EAL_PkeyGen(NULL), CRYPT_NULL_INPUT);
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(NULL, CRYPT_CTRL_GET_PUBKEY_LEN, &value, sizeof(value)), CRYPT_NULL_INPUT);
+    ASSERT_EQ(CRYPT_EAL_PkeySetPub(NULL, &pub), CRYPT_NULL_INPUT);
+    ASSERT_EQ(CRYPT_EAL_PkeySetPubEx(NULL, NULL), CRYPT_NULL_INPUT);
+    ASSERT_EQ(CRYPT_EAL_PkeySetPrv(NULL, &prv), CRYPT_NULL_INPUT);
+    ASSERT_EQ(CRYPT_EAL_PkeySetPrvEx(NULL, NULL), CRYPT_NULL_INPUT);
+    ASSERT_EQ(CRYPT_EAL_PkeyGetPub(NULL, &pub), CRYPT_NULL_INPUT);
+    ASSERT_EQ(CRYPT_EAL_PkeyGetPubEx(NULL, NULL), CRYPT_NULL_INPUT);
+    ASSERT_EQ(CRYPT_EAL_PkeyGetPrv(NULL, &prv), CRYPT_NULL_INPUT);
+    ASSERT_EQ(CRYPT_EAL_PkeyGetPrvEx(NULL, NULL), CRYPT_NULL_INPUT);
+    ASSERT_EQ(CRYPT_EAL_PkeySign(NULL, CRYPT_MD_SHA256, message, sizeof(message) - 1,
+        sign, &signLen), CRYPT_NULL_INPUT);
+    ASSERT_EQ(CRYPT_EAL_PkeyVerify(NULL, CRYPT_MD_SHA256, message, sizeof(message) - 1,
+        sign, signLen), CRYPT_NULL_INPUT);
+    ASSERT_EQ(CRYPT_EAL_PkeySignData(NULL, digest, digestLen, sign, &signLen), CRYPT_NULL_INPUT);
+    ASSERT_EQ(CRYPT_EAL_PkeyVerifyData(NULL, digest, digestLen, sign, signLen), CRYPT_NULL_INPUT);
+    ASSERT_TRUE(CRYPT_EAL_PkeyDupCtx(NULL) == NULL);
+    ASSERT_EQ(CRYPT_EAL_PkeyCmp(NULL, NULL), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyUpRef(NULL), CRYPT_NULL_INPUT);
+    ASSERT_EQ(CRYPT_EAL_PkeyGetKeyLen(NULL), 0);
+    ASSERT_EQ(CRYPT_EAL_PkeyGetKeyBits(NULL), 0);
+    ASSERT_EQ(CRYPT_EAL_PkeyGetSecurityBits(NULL), 0);
+    ASSERT_EQ(CRYPT_EAL_PkeyGetSignLen(NULL), 0);
+    ASSERT_EQ(CRYPT_EAL_PkeyGetParaId(NULL), CRYPT_PKEY_PARAID_MAX);
+    ASSERT_EQ(CRYPT_EAL_PkeyGetPara(NULL, &para), CRYPT_NULL_INPUT);
+    CRYPT_EAL_PkeyFreeCtx(NULL);
+
+EXIT:
+    return;
+}
+/* END_CASE */
+
+/* @
+ * @test SDV_CRYPTO_COMPOSITE_PARAM_COMBO_TC001
+ * @title Test Composite API parameter combinations and invalid algorithm values.
+ @ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_COMPOSITE_PARAM_COMBO_TC001(int type)
+{
+    static const uint8_t message[] = {0x00};
+    CRYPT_EAL_PkeyCtx *ctx = NULL;
+    CRYPT_EAL_PkeyCtx *invalidCtx = NULL;
+    CRYPT_MD_AlgId mdId = GetCompositeHashAlgId(type);
+    uint8_t *sign = NULL;
+    /* 64 bytes provide a fixed digest scratch buffer for invalid-length calls. */
+    uint8_t digest[64] = {0};
+    uint32_t signLen = 0;
+    uint32_t value = 0;
+    int32_t invalidType = CRYPT_PKEY_PARAID_MAX;
+
+    TestMemInit();
+    TestRandInit();
+    ASSERT_TRUE(mdId != CRYPT_MD_MAX);
+    ctx = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_COMPOSITE);
+    ASSERT_TRUE(ctx != NULL);
+    ASSERT_EQ(CRYPT_EAL_PkeySetParaById(ctx, type), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyGen(ctx), CRYPT_SUCCESS);
+    invalidCtx = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_COMPOSITE);
+    ASSERT_TRUE(invalidCtx != NULL);
+    ASSERT_EQ(CRYPT_EAL_PkeySetParaById(invalidCtx, invalidType), CRYPT_INVALID_ARG);
+    signLen = CRYPT_EAL_PkeyGetSignLen(ctx);
+    sign = BSL_SAL_Malloc(signLen);
+    ASSERT_TRUE(sign != NULL);
+    ASSERT_EQ(CRYPT_EAL_PkeySign(ctx, mdId, message, sizeof(message), sign, &signLen), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyVerify(ctx, mdId, message, sizeof(message), sign, signLen), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeySign(ctx, mdId, NULL, sizeof(message), sign, &signLen), CRYPT_NULL_INPUT);
+    ASSERT_EQ(CRYPT_EAL_PkeySign(ctx, CRYPT_MD_MAX, message, sizeof(message), sign, &signLen), CRYPT_INVALID_ARG);
+    ASSERT_EQ(CRYPT_EAL_PkeySign(ctx, mdId, message, sizeof(message), NULL, &signLen), CRYPT_NULL_INPUT);
+    ASSERT_EQ(CRYPT_EAL_PkeySign(ctx, mdId, message, sizeof(message), sign, NULL), CRYPT_NULL_INPUT);
+    ASSERT_EQ(CRYPT_EAL_PkeyVerify(ctx, mdId, NULL, sizeof(message), sign, signLen), CRYPT_NULL_INPUT);
+    ASSERT_NE(CRYPT_EAL_PkeyVerify(ctx, mdId, message, 0, sign, signLen), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyVerify(ctx, CRYPT_MD_MAX, message, sizeof(message), sign, signLen), CRYPT_INVALID_ARG);
+    ASSERT_EQ(CRYPT_EAL_PkeyVerify(ctx, mdId, message, sizeof(message), NULL, signLen), CRYPT_NULL_INPUT);
+    ASSERT_EQ(CRYPT_EAL_PkeyVerify(ctx, mdId, message, sizeof(message), sign, 0),
+        CRYPT_COMPOSITE_INVALID_SIG_LEN);
+    ASSERT_EQ(CRYPT_EAL_PkeySignData(ctx, NULL, 1, sign, &signLen), CRYPT_INVALID_ARG);
+    ASSERT_EQ(CRYPT_EAL_PkeySignData(ctx, digest, 0, sign, &signLen), CRYPT_INVALID_ARG);
+    ASSERT_EQ(CRYPT_EAL_PkeyVerifyData(ctx, NULL, 1, sign, signLen), CRYPT_INVALID_ARG);
+    ASSERT_EQ(CRYPT_EAL_PkeyVerifyData(ctx, digest, 0, sign, signLen), CRYPT_INVALID_ARG);
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_GET_PUBKEY_LEN, NULL, 0), CRYPT_INVALID_ARG);
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_GET_PUBKEY_LEN, &value, 1), CRYPT_INVALID_ARG);
+
+EXIT:
+    BSL_SAL_Free(sign);
+    CRYPT_EAL_PkeyFreeCtx(invalidCtx);
+    CRYPT_EAL_PkeyFreeCtx(ctx);
+    TestRandDeInit();
+}
+/* END_CASE */
+
+/* @
+ * @test SDV_CRYPTO_COMPOSITE_TRIM_MATRIX_TC001
+ * @title Test that every registered Composite parameter can be selected and queried.
+ @ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_COMPOSITE_TRIM_MATRIX_TC001(int type)
+{
+    CRYPT_EAL_PkeyCtx *ctx = NULL;
+    int32_t paraId = 0;
+    int32_t invalidType = CRYPT_PKEY_PARAID_MAX;
+
+    TestMemInit();
+    ctx = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_COMPOSITE);
+    ASSERT_TRUE(ctx != NULL);
+    ASSERT_EQ(CRYPT_EAL_PkeySetParaById(ctx, type), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyGetParaId(ctx), type);
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_GET_PARAID, &paraId, sizeof(paraId)), CRYPT_SUCCESS);
+    ASSERT_EQ(paraId, type);
+    ASSERT_EQ(CRYPT_EAL_PkeySetParaById(ctx, invalidType), CRYPT_COMPOSITE_CTRL_INIT_REPEATED);
+
+EXIT:
+    CRYPT_EAL_PkeyFreeCtx(ctx);
+}
+/* END_CASE */
+
+/* @
+ * @test SDV_CRYPTO_COMPOSITE_ALGID_TC001
+ * @title Test Composite Sign/Verify binds the configured hash algorithm.
+ @ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_COMPOSITE_ALGID_TC001(int type)
+{
+    static const uint8_t message[] = "composite algid binding";
+    CRYPT_EAL_PkeyCtx *ctx = NULL;
+    CRYPT_MD_AlgId mdId = GetCompositeHashAlgId(type);
+    CRYPT_MD_AlgId wrongMdId = CRYPT_MD_SHA256;
+    uint8_t *sign = NULL;
+    uint32_t signLen = 0;
+
+    TestMemInit();
+    TestRandInit();
+    ASSERT_TRUE(mdId != CRYPT_MD_MAX);
+    if (mdId == CRYPT_MD_SHA256) {
+        wrongMdId = CRYPT_MD_SHA512;
+    }
+    ctx = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_COMPOSITE);
+    ASSERT_TRUE(ctx != NULL);
+    ASSERT_EQ(CRYPT_EAL_PkeySetParaById(ctx, type), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyGen(ctx), CRYPT_SUCCESS);
+    signLen = CRYPT_EAL_PkeyGetSignLen(ctx);
+    ASSERT_TRUE(signLen > 0);
+    sign = BSL_SAL_Malloc(signLen);
+    ASSERT_TRUE(sign != NULL);
+    ASSERT_EQ(CRYPT_EAL_PkeySign(ctx, mdId, message, sizeof(message) - 1, sign, &signLen), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyVerify(ctx, mdId, message, sizeof(message) - 1, sign, signLen), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeySign(ctx, wrongMdId, message, sizeof(message) - 1, sign, &signLen), CRYPT_INVALID_ARG);
+    ASSERT_EQ(CRYPT_EAL_PkeyVerify(ctx, wrongMdId, message, sizeof(message) - 1, sign, signLen), CRYPT_INVALID_ARG);
+    ASSERT_EQ(CRYPT_EAL_PkeySign(ctx, CRYPT_MD_MAX, message, sizeof(message) - 1, sign, &signLen), CRYPT_INVALID_ARG);
+    ASSERT_EQ(CRYPT_EAL_PkeyVerify(ctx, CRYPT_MD_MAX, message, sizeof(message) - 1, sign, signLen), CRYPT_INVALID_ARG);
+
+EXIT:
+    BSL_SAL_Free(sign);
+    CRYPT_EAL_PkeyFreeCtx(ctx);
+    TestRandDeInit();
+}
+/* END_CASE */
+
+/* @
+ * @test SDV_CRYPTO_COMPOSITE_GENKEY_REPLACE_TC001
+ * @title Test repeated GenKey replaces the key pair without cross-key acceptance.
+ @ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_COMPOSITE_GENKEY_REPLACE_TC001(int type)
+{
+    static const uint8_t oldMessage[] = "composite old key";
+    static const uint8_t newMessage[] = "composite new key";
+    CRYPT_EAL_PkeyCtx *ctx = NULL;
+    CRYPT_EAL_PkeyCtx *oldVerify = NULL;
+    CRYPT_EAL_PkeyCtx *newVerify = NULL;
+    CRYPT_EAL_PkeyPub oldPub = {0};
+    CRYPT_EAL_PkeyPub newPub = {0};
+    CRYPT_EAL_PkeyPrv oldPrv = {0};
+    CRYPT_EAL_PkeyPrv newPrv = {0};
+    CRYPT_MD_AlgId mdId = GetCompositeHashAlgId(type);
+    uint8_t *oldSign = NULL;
+    uint8_t *newSign = NULL;
+    uint32_t oldSignLen = 0;
+    uint32_t newSignLen = 0;
+
+    TestMemInit();
+    TestRandInit();
+    ASSERT_TRUE(mdId != CRYPT_MD_MAX);
+    ctx = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_COMPOSITE);
+    oldVerify = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_COMPOSITE);
+    newVerify = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_COMPOSITE);
+    ASSERT_TRUE(ctx != NULL);
+    ASSERT_TRUE(oldVerify != NULL);
+    ASSERT_TRUE(newVerify != NULL);
+    ASSERT_EQ(CRYPT_EAL_PkeySetParaById(ctx, type), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeySetParaById(oldVerify, type), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeySetParaById(newVerify, type), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyGen(ctx), CRYPT_SUCCESS);
+    ASSERT_EQ(ExportCompositePubKey(ctx, &oldPub), CRYPT_SUCCESS);
+    ASSERT_EQ(ExportCompositePrvKey(ctx, &oldPrv), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeySetPub(oldVerify, &oldPub), CRYPT_SUCCESS);
+    oldSignLen = CRYPT_EAL_PkeyGetSignLen(ctx);
+    oldSign = BSL_SAL_Malloc(oldSignLen);
+    ASSERT_TRUE(oldSign != NULL);
+    ASSERT_EQ(CRYPT_EAL_PkeySign(ctx, mdId, oldMessage, sizeof(oldMessage) - 1, oldSign, &oldSignLen), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyGen(ctx), CRYPT_SUCCESS);
+    ASSERT_EQ(ExportCompositePubKey(ctx, &newPub), CRYPT_SUCCESS);
+    ASSERT_EQ(ExportCompositePrvKey(ctx, &newPrv), CRYPT_SUCCESS);
+    ASSERT_TRUE(oldPub.key.compositePub.len != newPub.key.compositePub.len ||
+        memcmp(oldPub.key.compositePub.data, newPub.key.compositePub.data, oldPub.key.compositePub.len) != 0);
+    ASSERT_TRUE(oldPrv.key.compositePrv.len != newPrv.key.compositePrv.len ||
+        memcmp(oldPrv.key.compositePrv.data, newPrv.key.compositePrv.data, oldPrv.key.compositePrv.len) != 0);
+    ASSERT_EQ(CRYPT_EAL_PkeySetPub(newVerify, &newPub), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyVerify(oldVerify, mdId, oldMessage, sizeof(oldMessage) - 1, oldSign, oldSignLen),
+        CRYPT_SUCCESS);
+    ASSERT_NE(CRYPT_EAL_PkeyVerify(ctx, mdId, oldMessage, sizeof(oldMessage) - 1, oldSign, oldSignLen), CRYPT_SUCCESS);
+    newSignLen = CRYPT_EAL_PkeyGetSignLen(ctx);
+    newSign = BSL_SAL_Malloc(newSignLen);
+    ASSERT_TRUE(newSign != NULL);
+    ASSERT_EQ(CRYPT_EAL_PkeySign(ctx, mdId, newMessage, sizeof(newMessage) - 1, newSign, &newSignLen), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyVerify(newVerify, mdId, newMessage, sizeof(newMessage) - 1, newSign, newSignLen), 0);
+
+EXIT:
+    BSL_SAL_Free(oldSign);
+    BSL_SAL_Free(newSign);
+    BSL_SAL_Free(oldPub.key.compositePub.data);
+    BSL_SAL_Free(newPub.key.compositePub.data);
+    BSL_SAL_ClearFree(oldPrv.key.compositePrv.data, oldPrv.key.compositePrv.len);
+    BSL_SAL_ClearFree(newPrv.key.compositePrv.data, newPrv.key.compositePrv.len);
+    CRYPT_EAL_PkeyFreeCtx(oldVerify);
+    CRYPT_EAL_PkeyFreeCtx(newVerify);
+    CRYPT_EAL_PkeyFreeCtx(ctx);
+    TestRandDeInit();
+}
+/* END_CASE */
+
+/* @
+ * @test SDV_CRYPTO_COMPOSITE_SIGN_VERIFY_MUTATION_TC001
+ * @title Test Composite message, component and signature-length mutation matrix.
+ @ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_COMPOSITE_SIGN_VERIFY_MUTATION_TC001(int type)
+{
+    static const uint8_t emptyMessage = 0;
+    static const uint8_t oneByteMessage[] = {0x00};
+    CRYPT_EAL_PkeyCtx *ctx = NULL;
+    CRYPT_EAL_PkeyCtx *otherCtx = NULL;
+    CRYPT_CompositeCtx *composite = NULL;
+    CRYPT_MD_AlgId mdId = GetCompositeHashAlgId(type);
+    /* Five cases: NULL, empty, one byte, a valid message and a one-byte mutation. */
+    const uint8_t *messages[5] = {NULL, &emptyMessage, oneByteMessage,
+        (const uint8_t *)"composite mutation message", (const uint8_t *)"composite mutation messagf"};
+    /* The two string messages are 27 bytes long, excluding their terminators. */
+    const uint32_t messageLens[5] = {0, 0, 1, 27, 27};
+    uint8_t *sign = NULL;
+    uint8_t *mutated = NULL;
+    uint32_t signLen = 0;
+    uint32_t pqcSigLen = 0;
+    uint32_t i;
+    /* Four mutation offsets: first PQC byte, PQC boundary, first traditional byte and last byte. */
+    uint32_t offsets[4] = {0};
+
+    TestMemInit();
+    TestRandInit();
+    ASSERT_TRUE(mdId != CRYPT_MD_MAX);
+    ctx = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_COMPOSITE);
+    otherCtx = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_COMPOSITE);
+    ASSERT_TRUE(ctx != NULL && otherCtx != NULL);
+    ASSERT_EQ(CRYPT_EAL_PkeySetParaById(ctx, type), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeySetParaById(otherCtx, type), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyGen(ctx), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyGen(otherCtx), CRYPT_SUCCESS);
+    signLen = CRYPT_EAL_PkeyGetSignLen(ctx);
+    ASSERT_TRUE(signLen > 1);
+    composite = (CRYPT_CompositeCtx *)ctx->key;
+    ASSERT_TRUE(composite != NULL);
+    ASSERT_TRUE(composite->info != NULL);
+    pqcSigLen = composite->info->pqcSigLen;
+    ASSERT_TRUE(pqcSigLen > 1);
+    ASSERT_TRUE(pqcSigLen < signLen);
+    sign = BSL_SAL_Malloc(signLen);
+    mutated = BSL_SAL_Malloc(signLen + 1);
+    ASSERT_TRUE(sign != NULL && mutated != NULL);
+
+    signLen = CRYPT_EAL_PkeyGetSignLen(ctx);
+    ASSERT_EQ(CRYPT_EAL_PkeySign(ctx, mdId, messages[3], messageLens[3], sign, &signLen), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyVerify(ctx, mdId, messages[3], messageLens[3], sign, signLen), CRYPT_SUCCESS);
+    ASSERT_NE(CRYPT_EAL_PkeyVerify(otherCtx, mdId, messages[3], messageLens[3], sign, signLen), CRYPT_SUCCESS);
+    for (i = 0; i < sizeof(messages) / sizeof(messages[0]); i++) {
+        signLen = CRYPT_EAL_PkeyGetSignLen(ctx);
+        ASSERT_EQ(CRYPT_EAL_PkeySign(ctx, mdId, messages[i], messageLens[i], sign, &signLen), CRYPT_SUCCESS);
+        ASSERT_EQ(CRYPT_EAL_PkeyVerify(ctx, mdId, messages[i], messageLens[i], sign, signLen), CRYPT_SUCCESS);
+    }
+
+    signLen = CRYPT_EAL_PkeyGetSignLen(ctx);
+    ASSERT_EQ(CRYPT_EAL_PkeySign(ctx, mdId, messages[3], messageLens[3], sign, &signLen), CRYPT_SUCCESS);
+    offsets[0] = 0;
+    offsets[1] = pqcSigLen - 1;
+    offsets[2] = pqcSigLen;
+    offsets[3] = signLen - 1;
+    for (i = 0; i < sizeof(offsets) / sizeof(offsets[0]); i++) {
+        (void)memcpy(mutated, sign, signLen);
+        mutated[offsets[i]] ^= 0x01;
+        ASSERT_NE(CRYPT_EAL_PkeyVerify(ctx, mdId, messages[3], messageLens[3], mutated, signLen), CRYPT_SUCCESS);
+    }
+    (void)memset(mutated, 0, signLen);
+    ASSERT_NE(CRYPT_EAL_PkeyVerify(ctx, mdId, messages[3], messageLens[3], mutated, signLen), CRYPT_SUCCESS);
+    (void)memset(mutated, 0xFF, signLen);
+    ASSERT_NE(CRYPT_EAL_PkeyVerify(ctx, mdId, messages[3], messageLens[3], mutated, signLen), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyVerify(ctx, mdId, messages[3], messageLens[3], sign, 0),
+        CRYPT_COMPOSITE_INVALID_SIG_LEN);
+    ASSERT_EQ(CRYPT_EAL_PkeyVerify(ctx, mdId, messages[3], messageLens[3], sign, pqcSigLen - 1),
+        CRYPT_COMPOSITE_INVALID_SIG_LEN);
+    ASSERT_NE(CRYPT_EAL_PkeyVerify(ctx, mdId, messages[3], messageLens[3], sign, pqcSigLen), CRYPT_SUCCESS);
+    (void)memcpy(mutated, sign, signLen);
+    ASSERT_NE(CRYPT_EAL_PkeyVerify(ctx, mdId, messages[3], messageLens[3], mutated, signLen + 1), CRYPT_SUCCESS);
+
+EXIT:
+    BSL_SAL_Free(sign);
+    BSL_SAL_Free(mutated);
+    CRYPT_EAL_PkeyFreeCtx(otherCtx);
+    CRYPT_EAL_PkeyFreeCtx(ctx);
+    TestRandDeInit();
+}
+/* END_CASE */
+
+/* @
+ * @test SDV_CRYPTO_COMPOSITE_RAW_PREHASH_MATRIX_TC001
+ * @title Test raw-message and pre-hashed-message paths with binary message patterns.
+ @ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_COMPOSITE_RAW_PREHASH_MATRIX_TC001(int type)
+{
+    CRYPT_EAL_PkeyCtx *ctx = NULL;
+    CRYPT_MD_AlgId mdId = CRYPT_MD_MAX;
+    const uint8_t *messages[4] = {NULL};
+    uint32_t messageLens[4] = {0};
+    uint8_t zeroMessage[32] = {0};
+    uint8_t ffMessage[32] = {0};
+    uint8_t leadingMessage[32] = {0};
+    uint8_t trailingMessage[32] = {0};
+    uint8_t digest[64] = {0};
+    uint8_t *rawSign = NULL;
+    uint8_t *prehashSign = NULL;
+    uint32_t requiredSignLen = 0;
+    uint32_t rawSignLen = 0;
+    uint32_t prehashSignLen = 0;
+    uint32_t digestLen = 0;
+    uint32_t i;
+
+    TestMemInit();
+    TestRandInit();
+    mdId = GetCompositeHashAlgId(type);
+    ASSERT_TRUE(mdId != CRYPT_MD_MAX);
+    for (i = 0; i < sizeof(leadingMessage); i++) {
+        leadingMessage[i] = (uint8_t)(i + 1);
+        trailingMessage[i] = (uint8_t)(i + 1);
+        ffMessage[i] = 0xFF;
+    }
+    leadingMessage[0] = 0x00;
+    trailingMessage[sizeof(trailingMessage) - 1] = 0x00;
+    messages[0] = zeroMessage;
+    messages[1] = ffMessage;
+    messages[2] = leadingMessage;
+    messages[3] = trailingMessage;
+    for (i = 0; i < sizeof(messageLens) / sizeof(messageLens[0]); i++) {
+        messageLens[i] = sizeof(zeroMessage);
+    }
+
+    ctx = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_COMPOSITE);
+    ASSERT_TRUE(ctx != NULL);
+    ASSERT_EQ(CRYPT_EAL_PkeySetParaById(ctx, type), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyGen(ctx), CRYPT_SUCCESS);
+    requiredSignLen = CRYPT_EAL_PkeyGetSignLen(ctx);
+    ASSERT_TRUE(requiredSignLen > 0);
+    rawSign = BSL_SAL_Malloc(requiredSignLen);
+    prehashSign = BSL_SAL_Malloc(requiredSignLen);
+    ASSERT_TRUE(rawSign != NULL);
+    ASSERT_TRUE(prehashSign != NULL);
+
+    for (i = 0; i < sizeof(messages) / sizeof(messages[0]); i++) {
+        rawSignLen = requiredSignLen;
+        ASSERT_EQ(CRYPT_EAL_PkeySign(ctx, mdId, messages[i], messageLens[i], rawSign, &rawSignLen), CRYPT_SUCCESS);
+        ASSERT_EQ(CRYPT_EAL_PkeyVerify(ctx, mdId, messages[i], messageLens[i], rawSign, rawSignLen), CRYPT_SUCCESS);
+        digestLen = sizeof(digest);
+        ASSERT_EQ(CRYPT_EAL_Md(mdId, messages[i], messageLens[i], digest, &digestLen), CRYPT_SUCCESS);
+        prehashSignLen = requiredSignLen;
+        ASSERT_EQ(CRYPT_EAL_PkeySignData(ctx, digest, digestLen, prehashSign, &prehashSignLen), CRYPT_SUCCESS);
+        ASSERT_EQ(CRYPT_EAL_PkeyVerifyData(ctx, digest, digestLen, prehashSign, prehashSignLen), CRYPT_SUCCESS);
+    }
+
+EXIT:
+    BSL_SAL_Free(rawSign);
+    BSL_SAL_Free(prehashSign);
+    CRYPT_EAL_PkeyFreeCtx(ctx);
+    TestRandDeInit();
+}
+/* END_CASE */
+
+/* @
+ * @test SDV_CRYPTO_COMPOSITE_CTX_MATRIX_TC001
+ * @spec -
+ * @title Test Composite context length and binary-content matrix.
+ * @precon nan
+ * @brief Set context values of length 0, 1, 254, 255 and 256, then sign and verify.
+ * @expect Supported lengths preserve binary bytes and cross-context verification succeeds;
+ *         length 256 is rejected without changing the previous context.
+ @ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_COMPOSITE_CTX_MATRIX_TC001(int type)
+{
+    static const uint8_t message[] = "composite context matrix";
+    CRYPT_EAL_PkeyCtx *signCtx = NULL;
+    CRYPT_EAL_PkeyCtx *verifyCtx = NULL;
+    CRYPT_EAL_PkeyPub pub = {0};
+    /* Context capacity is 255 bytes; 256 is the deliberately rejected boundary. */
+    uint8_t context[256] = {0};
+    uint8_t *sign = NULL;
+    uint32_t signLen = 0;
+    /* Exercise empty, one-byte, below-limit, limit and above-limit context lengths. */
+    uint32_t contextLens[5] = {0, 1, 254, 255, 256};
+    uint32_t i;
+    int32_t ret;
+    CRYPT_MD_AlgId mdId = GetCompositeHashAlgId(type);
+
+    TestMemInit();
+    TestRandInit();
+    ASSERT_TRUE(mdId != CRYPT_MD_MAX);
+    signCtx = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_COMPOSITE);
+    verifyCtx = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_COMPOSITE);
+    ASSERT_TRUE(signCtx != NULL);
+    ASSERT_TRUE(verifyCtx != NULL);
+    ASSERT_EQ(CRYPT_EAL_PkeySetParaById(signCtx, type), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeySetParaById(verifyCtx, type), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyGen(signCtx), CRYPT_SUCCESS);
+    ASSERT_EQ(ExportCompositePubKey(signCtx, &pub), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeySetPub(verifyCtx, &pub), CRYPT_SUCCESS);
+    signLen = CRYPT_EAL_PkeyGetSignLen(signCtx);
+    ASSERT_TRUE(signLen > 0);
+    sign = BSL_SAL_Malloc(signLen);
+    ASSERT_TRUE(sign != NULL);
+    (void)memset(context, 0, sizeof(context));
+    for (i = 0; i < sizeof(contextLens) / sizeof(contextLens[0]); i++) {
+        uint32_t contextLen = contextLens[i];
+        (void)memset(context, (int)(i + 1), sizeof(context));
+        ret = CRYPT_EAL_PkeyCtrl(signCtx, CRYPT_CTRL_SET_CTX_INFO,
+            contextLen == 0 ? NULL : context, contextLen);
+        if (contextLen == 256) {
+            ASSERT_EQ(ret, CRYPT_COMPOSITE_KEYLEN_ERROR);
+            signLen = CRYPT_EAL_PkeyGetSignLen(signCtx);
+            ASSERT_EQ(CRYPT_EAL_PkeySign(signCtx, mdId, message, sizeof(message) - 1, sign, &signLen), CRYPT_SUCCESS);
+            ASSERT_EQ(CRYPT_EAL_PkeyVerify(verifyCtx, mdId, message, sizeof(message) - 1, sign, signLen),
+                CRYPT_SUCCESS);
+            continue;
+        }
+        ASSERT_EQ(ret, CRYPT_SUCCESS);
+        ASSERT_EQ(CRYPT_EAL_PkeyCtrl(verifyCtx, CRYPT_CTRL_SET_CTX_INFO, contextLen == 0 ? NULL : context, contextLen),
+            CRYPT_SUCCESS);
+        signLen = CRYPT_EAL_PkeyGetSignLen(signCtx);
+        ASSERT_EQ(CRYPT_EAL_PkeySign(signCtx, mdId, message, sizeof(message) - 1, sign, &signLen), CRYPT_SUCCESS);
+        ASSERT_EQ(CRYPT_EAL_PkeyVerify(verifyCtx, mdId, message, sizeof(message) - 1, sign, signLen), CRYPT_SUCCESS);
+    }
+
+EXIT:
+    BSL_SAL_Free(sign);
+    BSL_SAL_FREE(pub.key.compositePub.data);
+    CRYPT_EAL_PkeyFreeCtx(verifyCtx);
+    CRYPT_EAL_PkeyFreeCtx(signCtx);
+    TestRandDeInit();
+}
+/* END_CASE */
+
+/* @
+ * @test SDV_CRYPTO_COMPOSITE_OUTPUT_BOUNDARY_TC001
+ * @spec -
+ * @title Test Composite signature output boundary and trailing sentinel handling.
+ * @precon nan
+ * @brief Exercise L-1, L and L+1 output capacities with a prefilled caller buffer.
+ * @expect L-1 fails without changing output; L and L+1 succeed and bytes after the
+ *         actual signature remain unchanged.
+ @ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_COMPOSITE_OUTPUT_BOUNDARY_TC001(int type)
+{
+    static const uint8_t message[] = "composite output boundary";
+    CRYPT_EAL_PkeyCtx *ctx = NULL;
+    uint8_t *sign = NULL;
+    uint8_t *baseline = NULL;
+    uint32_t requiredLen = 0;
+    uint32_t signLen = 0;
+    uint32_t i;
+    uint32_t j;
+    CRYPT_MD_AlgId mdId = GetCompositeHashAlgId(type);
+
+    TestMemInit();
+    TestRandInit();
+    ASSERT_TRUE(mdId != CRYPT_MD_MAX);
+    ctx = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_COMPOSITE);
+    ASSERT_TRUE(ctx != NULL);
+    ASSERT_EQ(CRYPT_EAL_PkeySetParaById(ctx, type), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyGen(ctx), CRYPT_SUCCESS);
+    requiredLen = CRYPT_EAL_PkeyGetSignLen(ctx);
+    ASSERT_TRUE(requiredLen > 1);
+    sign = BSL_SAL_Malloc(requiredLen + 1);
+    baseline = BSL_SAL_Malloc(requiredLen + 1);
+    ASSERT_TRUE(sign != NULL);
+    ASSERT_TRUE(baseline != NULL);
+    /* 0xA5 is the trailing sentinel used to detect writes beyond the signature. */
+    (void)memset(sign, 0xA5, requiredLen + 1);
+    (void)memcpy(baseline, sign, requiredLen + 1);
+    signLen = requiredLen - 1;
+    ASSERT_EQ(CRYPT_EAL_PkeySign(ctx, mdId, message, sizeof(message) - 1, sign, &signLen),
+        CRYPT_COMPOSITE_INVALID_SIG_LEN);
+    ASSERT_EQ(signLen, requiredLen - 1);
+    ASSERT_COMPARE("short output unchanged", sign, requiredLen + 1, baseline, requiredLen + 1);
+
+    for (i = requiredLen; i <= requiredLen + 1; i++) {
+        /* Refill the signature buffer and sentinel before each L/L+1 attempt. */
+        (void)memset(sign, 0xA5, requiredLen + 1);
+        signLen = i;
+        ASSERT_EQ(CRYPT_EAL_PkeySign(ctx, mdId, message, sizeof(message) - 1, sign, &signLen), CRYPT_SUCCESS);
+        ASSERT_TRUE(signLen > 0);
+        ASSERT_TRUE(signLen <= requiredLen);
+        for (j = signLen; j < requiredLen + 1; j++) {
+            ASSERT_EQ(sign[j], 0xA5);
+        }
+        ASSERT_EQ(CRYPT_EAL_PkeyVerify(ctx, mdId, message, sizeof(message) - 1, sign, signLen), CRYPT_SUCCESS);
+    }
+
+EXIT:
+    BSL_SAL_Free(baseline);
+    BSL_SAL_Free(sign);
+    CRYPT_EAL_PkeyFreeCtx(ctx);
+    TestRandDeInit();
+}
+/* END_CASE */
+
+/* @
  * @test SDV_CRYPTO_COMPOSITE_GENKEY_ATOMIC_TC001
  * @spec -
  * @title Test Composite GenKey failure under deterministic malloc injection.
@@ -594,7 +1258,8 @@ void SDV_CRYPTO_COMPOSITE_SIGN_ATOMIC_TC001(int type)
 
     uint32_t shortSignLen = signLen - 1;
     CompositeDetRandReset();
-    ASSERT_NE(CRYPT_EAL_PkeySignData(ctx, digest, digestLen, sign, &shortSignLen), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeySignData(ctx, digest, digestLen, sign, &shortSignLen),
+        CRYPT_COMPOSITE_INVALID_SIG_LEN);
     ASSERT_EQ(shortSignLen, signLen - 1);
     ASSERT_COMPARE("sign unchanged after short buffer fail", sign, signLen, baseline, signLen);
 

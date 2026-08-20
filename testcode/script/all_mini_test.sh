@@ -29,7 +29,7 @@ parse_option()
     for i in $PARAM_LIST
     do
         case "${i}" in
-            "bsl"|"md"|"mac"|"kdf"|"cipher"|"bn"|"ecc"|"pkey"|"pki"|"all"|"tls"|"provider")
+            "bsl"|"md"|"mac"|"kdf"|"cipher"|"bn"|"ecc"|"pkey"|"pqc"|"pki"|"all"|"tls"|"provider")
                 TEST=$i
                 ;;
             "x8664"|"armv8")
@@ -325,25 +325,55 @@ test_pkey()
     bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=${EAL_ENABLE},x25519,drbg_hash,sha2 test=x25519
     bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=${EAL_ENABLE},ed25519,drbg_hash,sha2 test=ed25519
 
-    # mldsa
-    bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=${EAL_ENABLE},mldsa,pkey_cmp,drbg_hash,sha2 test=mldsa
-
     # paillier
     bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=${EAL_ENABLE},paillier,drbg_hash,sha2 test=paillier
 
-    # mlkem
-    bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=${EAL_ENABLE},mlkem,pkey_cmp,drbg_hash,sha2 test=mlkem
-
-    # hybridkem
-    bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=${EAL_ENABLE},hybridkem,x25519,ecdh,ecc,drbg_hash,sha2 test=hybridkem
-
     # elgamal
     bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=${EAL_ENABLE},elgamal,drbg_hash,sha2 test=elgamal
+}
 
-    # slh_dsa
+test_pqc()
+{
+    NO_LIB="no-tls"
+    EAL_ENABLE="eal"
+    ECDSA_CURVES="curve_nistp256,curve_nistp384,curve_nistp521,curve_bp256r1,curve_bp384r1"
+    if [ "$ASM_TYPE" = "x8664" -o "$ASM_TYPE" = "armv8" ]; then
+        EAL_ENABLE="eal,ealinit"
+    fi
+
+    # Composite covers ML-DSA with RSA, ECDSA and Ed25519 components.
+    COMPOSITE_ENABLE="${EAL_ENABLE},composite,mldsa,pkey_cmp,drbg_hash,sha2,sha3,"
+    COMPOSITE_ENABLE+="rsa,rsa_sign,rsa_verify,rsa_emsa_pss,rsa_emsa_pkcsv15,ecc,ecdsa,${ECDSA_CURVES},"
+    COMPOSITE_ENABLE+="curve25519,ed25519,codecskey,key_encode,key_decode,pem,sal_file,sal_str,sal_thread,"
+    COMPOSITE_ENABLE+="cipher,modes,aes,hmac,pbkdf2,md,x509,x509_crt,x509_crt_parse,x509_crt_gen,"
+    COMPOSITE_ENABLE+="x509_csr,x509_csr_parse,x509_csr_gen,x509_crl,x509_crl_parse,x509_crl_gen,x509_vfy"
+    bash mini_build_test.sh $COMMON_PARAM $NO_LIB \
+        enable=${COMPOSITE_ENABLE} test=composite
+
+    # ML-DSA
+    bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=${EAL_ENABLE},mldsa,pkey_cmp,drbg_hash,sha2 test=mldsa
+
+    # ML-KEM
+    bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=${EAL_ENABLE},mlkem,pkey_cmp,drbg_hash,sha2 test=mlkem
+
+    # HybridKEM
+    bash mini_build_test.sh $COMMON_PARAM $NO_LIB \
+        enable=${EAL_ENABLE},hybridkem,x25519,ecdh,ecc,drbg_hash,sha2 test=hybridkem
+
+    # FrodoKEM covers the standard AES and SHAKE parameter families.
+    FRODOKEM_ENABLE="${EAL_ENABLE},frodokem,drbg_hash,drbg_ctr,cipher,modes,aes,sha3"
+    bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=${FRODOKEM_ENABLE} \
+        add-feature-options="-DHITLS_CRYPTO_RAND_CB=ON" test=frodokem
+
+    # HSS-LMS uses EAL stateful signing with SHA-256 based LMS/LMOTS parameters.
+    HSS_LMS_ENABLE="${EAL_ENABLE},hss_lms,drbg_hash,sha2"
+    bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=${HSS_LMS_ENABLE} \
+        add-feature-options="-DHITLS_CRYPTO_RAND_CB=ON" test=hss_lms
+
+    # SLH-DSA
     bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=${EAL_ENABLE},slh_dsa,drbg_hash,sha2 test=slh_dsa
-    
-    # xmss
+
+    # XMSS and XMSS^MT
     bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=${EAL_ENABLE},xmss,xmssmt,drbg_hash,sha2 test=xmss
 }
 
@@ -571,6 +601,7 @@ case $TEST in
         test_bn
         test_ecc
         test_pkey
+        test_pqc
         test_pki
         test_tls
         test_provider
@@ -599,6 +630,9 @@ case $TEST in
     "pkey")
         test_pkey
         ;;
+    "pqc")
+        test_pqc
+        ;;
     "pki")
         test_pki
         ;;
@@ -611,3 +645,4 @@ case $TEST in
     *)
         ;;
 esac
+

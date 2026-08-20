@@ -29,6 +29,9 @@
 /* END_HEADER */
 static uint8_t gRandNumber = 0;
 STUB_DEFINE_RET1(void *, BSL_SAL_Malloc, uint32_t);
+static CRYPT_EAL_PkeyCtx *NewFrodoKemCtx(void);
+static int32_t TestRand(uint8_t *randBuf, uint32_t len);
+static int32_t TestRandEx(void *libctx, uint8_t *randBuf, uint32_t len);
 /* @
 * @test  SDV_CRYPTO_FRODOKEM_CTRL_API_TC001
 * @spec  -
@@ -70,6 +73,769 @@ EXIT:
     CRYPT_EAL_PkeyFreeCtx(ctx);
     CRYPT_RandRegist(NULL);
     return;
+}
+/* END_CASE */
+
+static uint32_t gFrodoRandCallCount = 0;
+static uint32_t gFrodoRandLastLen = 0;
+static uint32_t gFrodoRandFailAt = UINT32_MAX;
+static uint8_t gFrodoRandByte = 0xA5; // 0xA5 is a fixed nonzero byte that makes injected RNG output observable.
+
+static int32_t FrodoQualityRand(uint8_t *randBuf, uint32_t len)
+{
+    if (gFrodoRandCallCount == gFrodoRandFailAt) {
+        gFrodoRandCallCount++;
+        gFrodoRandLastLen = len;
+        return -1;
+    }
+    gFrodoRandCallCount++;
+    gFrodoRandLastLen = len;
+    memset(randBuf, gFrodoRandByte, len);
+    return 0;
+}
+
+static int32_t FrodoQualityRandEx(void *libCtx, uint8_t *randBuf, uint32_t len)
+{
+    (void)libCtx;
+    return FrodoQualityRand(randBuf, len);
+}
+
+static void FrodoQualityRandReset(uint32_t failAt, uint8_t randByte)
+{
+    gFrodoRandCallCount = 0;
+    gFrodoRandLastLen = 0;
+    gFrodoRandFailAt = failAt;
+    gFrodoRandByte = randByte;
+}
+
+/* The helper returns -1 for any key export or length mismatch. */
+static int32_t FrodoQualityGetKeys(CRYPT_EAL_PkeyCtx *ctx, uint8_t *pub, uint32_t pubLen,
+    uint8_t *prv, uint32_t prvLen)
+{
+    CRYPT_EAL_PkeyPub pubKey = {0};
+    CRYPT_EAL_PkeyPrv prvKey = {0};
+
+    pubKey.id = CRYPT_PKEY_FRODOKEM;
+    pubKey.key.kemEk.data = pub;
+    pubKey.key.kemEk.len = pubLen;
+    prvKey.id = CRYPT_PKEY_FRODOKEM;
+    prvKey.key.kemDk.data = prv;
+    prvKey.key.kemDk.len = prvLen;
+    if (CRYPT_EAL_PkeyGetPub(ctx, &pubKey) != CRYPT_SUCCESS) {
+        return -1;
+    }
+    if (CRYPT_EAL_PkeyGetPrv(ctx, &prvKey) != CRYPT_SUCCESS) {
+        return -1;
+    }
+    return (pubKey.key.kemEk.len == pubLen && prvKey.key.kemDk.len == prvLen) ?
+        CRYPT_SUCCESS : -1;
+}
+
+/* The helper returns -1 when implicit-rejection outputs are inconsistent. */
+static int32_t FrodoQualityCheckImplicitReject(CRYPT_EAL_PkeyCtx *ctx, const uint8_t *ct, uint32_t ctLen,
+    uint8_t *ss1, uint8_t *ss2, uint32_t ssLen, const uint8_t *validSs)
+{
+    uint32_t outLen1 = ssLen;
+    uint32_t outLen2 = ssLen;
+    int32_t ret = CRYPT_EAL_PkeyDecaps(ctx, ct, ctLen, ss1, &outLen1);
+    if (ret != CRYPT_SUCCESS) {
+        return ret;
+    }
+    ret = CRYPT_EAL_PkeyDecaps(ctx, ct, ctLen, ss2, &outLen2);
+    if (ret != CRYPT_SUCCESS || outLen1 != ssLen || outLen2 != ssLen) {
+        return -1;
+    }
+    if (memcmp(ss1, ss2, ssLen) != 0 || memcmp(ss1, validSs, ssLen) == 0) {
+        return -1;
+    }
+    return CRYPT_SUCCESS;
+}
+
+/* @
+* @test  SDV_CRYPTO_FRODOKEM_ENCAPS_BUFFER_TC001
+* @spec  -
+* @title  Encapsulation output boundary and transaction test
+* @precon  nan
+* @brief  Test L-1/L/L+1 ciphertext and K-1/K/K+1 shared-secret capacities.
+* @expect  Short buffers fail without output or length changes; sufficient buffers succeed.
+* @prior  nan
+* @auto  TRUE
+@ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_FRODOKEM_ENCAPS_BUFFER_TC001(int algId)
+{
+    CRYPT_EAL_PkeyCtx *ctx = NULL;
+    uint8_t *cipher = NULL;
+    uint8_t *shared = NULL;
+    uint8_t *cipherBefore = NULL;
+    uint8_t *sharedBefore = NULL;
+    uint32_t ctLen = 0;
+    uint32_t ssLen = 0;
+    uint32_t ctCapacity = 0;
+    uint32_t ssCapacity = 0;
+    uint32_t ctCaps[3] = {0};
+    uint32_t ssCaps[3] = {0};
+    uint32_t ctExpected = 0;
+    uint32_t ssExpected = 0;
+    int32_t ret = 0;
+
+    TestMemInit();
+    CRYPT_RandRegist(TestSimpleRand);
+    CRYPT_RandRegistEx(TestSimpleRandEx);
+    ctx = NewFrodoKemCtx();
+    ASSERT_TRUE(ctx != NULL);
+    ASSERT_EQ(CRYPT_EAL_PkeySetParaById(ctx, (uint32_t)algId), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyGen(ctx), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyEncapsInit(ctx, NULL), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_GET_CIPHERTEXT_LEN, &ctExpected, sizeof(ctExpected)), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_GET_SHARED_KEY_LEN, &ssExpected, sizeof(ssExpected)), CRYPT_SUCCESS);
+    ctCapacity = ctExpected + 1;
+    ssCapacity = ssExpected + 1;
+    cipher = BSL_SAL_Malloc(ctCapacity);
+    shared = BSL_SAL_Malloc(ssCapacity);
+    cipherBefore = BSL_SAL_Malloc(ctCapacity);
+    sharedBefore = BSL_SAL_Malloc(ssCapacity);
+    ASSERT_TRUE(cipher != NULL && shared != NULL && cipherBefore != NULL && sharedBefore != NULL);
+    ctCaps[0] = ctExpected - 1;
+    ctCaps[1] = ctExpected;
+    ctCaps[2] = ctExpected + 1;
+    ssCaps[0] = ssExpected - 1;
+    ssCaps[1] = ssExpected;
+    ssCaps[2] = ssExpected + 1;
+    /* Three capacities cover one byte below, exactly at and one byte above each limit. */
+    for (uint32_t i = 0; i < 3; i++) {
+        for (uint32_t j = 0; j < 3; j++) {
+            /* 0xA5 is the caller-buffer sentinel checked after each boundary attempt. */
+            memset(cipher, 0xA5, ctCapacity);
+            memset(shared, 0xA5, ssCapacity);
+            memcpy(cipherBefore, cipher, ctCapacity);
+            memcpy(sharedBefore, shared, ssCapacity);
+            ctLen = ctCaps[i];
+            ssLen = ssCaps[j];
+            ret = CRYPT_EAL_PkeyEncaps(ctx, cipher, &ctLen, shared, &ssLen);
+            if (ctCaps[i] < ctExpected || ssCaps[j] < ssExpected) {
+                ASSERT_EQ(ret, CRYPT_FRODOKEM_BUFLEN_NOT_ENOUGH);
+                ASSERT_TRUE(ctLen == ctCaps[i] && ssLen == ssCaps[j]);
+                ASSERT_EQ(memcmp(cipher, cipherBefore, ctCapacity), 0);
+                ASSERT_EQ(memcmp(shared, sharedBefore, ssCapacity), 0);
+            } else {
+                ASSERT_EQ(ret, CRYPT_SUCCESS);
+                ASSERT_EQ(ctLen, ctExpected);
+                ASSERT_EQ(ssLen, ssExpected);
+                ASSERT_TRUE(cipher[ctExpected] == 0xA5 && shared[ssExpected] == 0xA5);
+            }
+        }
+    }
+EXIT:
+    CRYPT_EAL_PkeyFreeCtx(ctx);
+    BSL_SAL_FREE(cipher);
+    BSL_SAL_FREE(shared);
+    BSL_SAL_FREE(cipherBefore);
+    BSL_SAL_FREE(sharedBefore);
+    CRYPT_RandRegist(NULL);
+    CRYPT_RandRegistEx(NULL);
+}
+/* END_CASE */
+
+/* @
+* @test  SDV_CRYPTO_FRODOKEM_DECAPS_LENGTH_TC001
+* @spec  -
+* @title  Decapsulation ciphertext length boundary test
+* @precon  nan
+* @brief  Test zero, short, exact, long and maximum ciphertext lengths.
+* @expect  Only the exact parameter ciphertext length is accepted.
+* @prior  nan
+* @auto  TRUE
+@ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_FRODOKEM_DECAPS_LENGTH_TC001(int algId)
+{
+    CRYPT_EAL_PkeyCtx *ctx = NULL;
+    uint8_t *cipher = NULL;
+    uint8_t *shared = NULL;
+    uint8_t *sharedBefore = NULL;
+    uint32_t ctExpected = 0;
+    uint32_t ssExpected = 0;
+    uint32_t ctLen = 0;
+    uint32_t ssLen = 0;
+    uint32_t inputLens[6] = {0}; // 6 ciphertext lengths: zero, one, short, exact, long and UINT32_MAX.
+    int32_t ret = 0;
+
+    TestMemInit();
+    CRYPT_RandRegist(TestSimpleRand);
+    CRYPT_RandRegistEx(TestSimpleRandEx);
+    ctx = NewFrodoKemCtx();
+    ASSERT_TRUE(ctx != NULL);
+    ASSERT_EQ(CRYPT_EAL_PkeySetParaById(ctx, (uint32_t)algId), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyGen(ctx), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyEncapsInit(ctx, NULL), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_GET_CIPHERTEXT_LEN, &ctExpected, sizeof(ctExpected)), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_GET_SHARED_KEY_LEN, &ssExpected, sizeof(ssExpected)), CRYPT_SUCCESS);
+    cipher = BSL_SAL_Malloc(ctExpected + 1);
+    shared = BSL_SAL_Malloc(ssExpected + 1);
+    sharedBefore = BSL_SAL_Malloc(ssExpected + 1);
+    ASSERT_TRUE(cipher != NULL && shared != NULL && sharedBefore != NULL);
+    ctLen = ctExpected;
+    ssLen = ssExpected;
+    ASSERT_EQ(CRYPT_EAL_PkeyEncaps(ctx, cipher, &ctLen, shared, &ssLen), CRYPT_SUCCESS);
+    inputLens[0] = 0;
+    inputLens[1] = 1;
+    inputLens[2] = ctExpected - 1;
+    inputLens[3] = ctExpected;
+    inputLens[4] = ctExpected + 1;
+    inputLens[5] = UINT32_MAX;
+    /* Check every length boundary independently. */
+    for (uint32_t i = 0; i < 6; i++) {
+        memset(shared, 0xA5, ssExpected + 1);
+        memcpy(sharedBefore, shared, ssExpected + 1);
+        ssLen = ssExpected;
+        ret = CRYPT_EAL_PkeyDecaps(ctx, cipher, inputLens[i], shared, &ssLen);
+        if (inputLens[i] == ctExpected) {
+            ASSERT_EQ(ret, CRYPT_SUCCESS);
+            ASSERT_EQ(ssLen, ssExpected);
+        } else {
+            ASSERT_EQ(ret, CRYPT_FRODOKEM_INVALID_CIPHER);
+            ASSERT_EQ(ssLen, ssExpected);
+            ASSERT_EQ(memcmp(shared, sharedBefore, ssExpected + 1), 0);
+        }
+    }
+EXIT:
+    CRYPT_EAL_PkeyFreeCtx(ctx);
+    BSL_SAL_FREE(cipher);
+    BSL_SAL_FREE(shared);
+    BSL_SAL_FREE(sharedBefore);
+    CRYPT_RandRegist(NULL);
+    CRYPT_RandRegistEx(NULL);
+}
+/* END_CASE */
+
+/* @
+* @test  SDV_CRYPTO_FRODOKEM_IMPLICIT_REJECT_TC001
+* @spec  -
+* @title  Structured equal-length ciphertext implicit rejection test
+* @precon  nan
+* @brief  Test all-zero, all-FF, leading-zero and trailing-zero ciphertexts.
+* @expect  Fallback secrets are deterministic and differ from the valid secret.
+* @prior  nan
+* @auto  TRUE
+@ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_FRODOKEM_IMPLICIT_REJECT_TC001(int algId)
+{
+    CRYPT_EAL_PkeyCtx *ctx = NULL;
+    uint8_t *cipher = NULL;
+    uint8_t *mutated = NULL;
+    uint8_t *validSs = NULL;
+    uint8_t *fallback1 = NULL;
+    uint8_t *fallback2 = NULL;
+    uint32_t ctLen = 0;
+    uint32_t ssLen = 0;
+
+    TestMemInit();
+    CRYPT_RandRegist(TestSimpleRand);
+    CRYPT_RandRegistEx(TestSimpleRandEx);
+    ctx = NewFrodoKemCtx();
+    ASSERT_TRUE(ctx != NULL);
+    ASSERT_EQ(CRYPT_EAL_PkeySetParaById(ctx, (uint32_t)algId), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyGen(ctx), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyEncapsInit(ctx, NULL), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_GET_CIPHERTEXT_LEN, &ctLen, sizeof(ctLen)), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_GET_SHARED_KEY_LEN, &ssLen, sizeof(ssLen)), CRYPT_SUCCESS);
+    cipher = BSL_SAL_Malloc(ctLen);
+    mutated = BSL_SAL_Malloc(ctLen);
+    validSs = BSL_SAL_Malloc(ssLen);
+    fallback1 = BSL_SAL_Malloc(ssLen);
+    fallback2 = BSL_SAL_Malloc(ssLen);
+    ASSERT_TRUE(cipher != NULL && mutated != NULL && validSs != NULL && fallback1 != NULL && fallback2 != NULL);
+    ASSERT_EQ(CRYPT_EAL_PkeyEncaps(ctx, cipher, &ctLen, validSs, &ssLen), CRYPT_SUCCESS);
+    /* 4 equal-length mutations: all-zero, all-FF, leading-zero and trailing-zero. */
+    for (uint32_t i = 0; i < 4; i++) {
+        if (i == 0) {
+            memset(mutated, 0x00, ctLen);
+        } else if (i == 1) {
+            memset(mutated, 0xFF, ctLen);
+        } else {
+            memcpy(mutated, cipher, ctLen);
+            /* Keep the requested zero prefix/suffix while guaranteeing a real mutation. */
+            if (i == 2) {
+                mutated[0] = 0;
+                if (memcmp(mutated, cipher, ctLen) == 0) {
+                    /* Flip the adjacent byte if the prefix is already zero. */
+                    mutated[1] = (uint8_t)(cipher[1] ^ 0xFF);
+                }
+            } else {
+                mutated[ctLen - 1] = 0;
+                if (memcmp(mutated, cipher, ctLen) == 0) {
+                    /* Flip the adjacent byte if the suffix is already zero. */
+                    mutated[ctLen - 2] = (uint8_t)(cipher[ctLen - 2] ^ 0xFF);
+                }
+            }
+        }
+        ASSERT_EQ(FrodoQualityCheckImplicitReject(ctx, mutated, ctLen, fallback1, fallback2, ssLen, validSs), 0);
+    }
+EXIT:
+    CRYPT_EAL_PkeyFreeCtx(ctx);
+    BSL_SAL_FREE(cipher);
+    BSL_SAL_FREE(mutated);
+    BSL_SAL_FREE(validSs);
+    BSL_SAL_FREE(fallback1);
+    BSL_SAL_FREE(fallback2);
+    CRYPT_RandRegist(NULL);
+    CRYPT_RandRegistEx(NULL);
+}
+/* END_CASE */
+
+static uint32_t FrodoQualitySeedSeLen(int algId, uint32_t ssLen)
+{
+    switch (algId) {
+        case CRYPT_KEM_TYPE_FRODOKEM_640_SHAKE:
+        case CRYPT_KEM_TYPE_FRODOKEM_640_AES:
+        case CRYPT_KEM_TYPE_FRODOKEM_976_SHAKE:
+        case CRYPT_KEM_TYPE_FRODOKEM_976_AES:
+        case CRYPT_KEM_TYPE_FRODOKEM_1344_SHAKE:
+        case CRYPT_KEM_TYPE_FRODOKEM_1344_AES:
+            /* The standard Frodo parameter families request two shared-secret lengths. */
+            return ssLen * 2;
+        default:
+            return ssLen;
+    }
+}
+
+/* @
+* @test  SDV_CRYPTO_FRODOKEM_RNG_MATRIX_TC001
+* @spec  -
+* @title  FrodoKEM random request and failure test
+* @precon  nan
+* @brief  Check key generation and encapsulation random request lengths and failures.
+* @expect  Request lengths follow the parameter variant and failures produce no usable output.
+* @prior  nan
+* @auto  TRUE
+@ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_FRODOKEM_RNG_MATRIX_TC001(int algId)
+{
+    CRYPT_EAL_PkeyCtx *ctx = NULL;
+    uint8_t *cipher = NULL;
+    uint8_t *shared = NULL;
+    uint32_t ctLen = 0;
+    uint32_t ssLen = 0;
+    uint32_t ctExpected = 0;
+    uint32_t ssExpected = 0;
+    uint32_t seedSeLen = 0;
+    uint32_t keyRandLen = 0;
+    uint32_t encapsRandLen = 0;
+
+    TestMemInit();
+    CRYPT_RandRegist(FrodoQualityRand);
+    CRYPT_RandRegistEx(FrodoQualityRandEx);
+    /* UINT32_MAX disables failure injection; 0x00 identifies the normal stream. */
+    FrodoQualityRandReset(UINT32_MAX, 0x00);
+    ctx = NewFrodoKemCtx();
+    ASSERT_TRUE(ctx != NULL);
+    ASSERT_EQ(CRYPT_EAL_PkeySetParaById(ctx, (uint32_t)algId), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyEncapsInit(ctx, NULL), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_GET_CIPHERTEXT_LEN, &ctExpected, sizeof(ctExpected)), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_GET_SHARED_KEY_LEN, &ssExpected, sizeof(ssExpected)), CRYPT_SUCCESS);
+    seedSeLen = FrodoQualitySeedSeLen(algId, ssExpected);
+    keyRandLen = ssExpected + seedSeLen + 16; // 16 bytes are the fixed seedA request used by Frodo key generation.
+    /* The multiplier accounts for the variant-specific seedSE request length. */
+    encapsRandLen = ssExpected + (seedSeLen == ssExpected ? 0 : ssExpected * 2);
+    ASSERT_EQ(CRYPT_EAL_PkeyGen(ctx), CRYPT_SUCCESS);
+    ASSERT_EQ(gFrodoRandLastLen, keyRandLen);
+    cipher = BSL_SAL_Malloc(ctExpected);
+    shared = BSL_SAL_Malloc(ssExpected);
+    ASSERT_TRUE(cipher != NULL && shared != NULL);
+    ctLen = ctExpected;
+    ssLen = ssExpected;
+    ASSERT_EQ(CRYPT_EAL_PkeyEncaps(ctx, cipher, &ctLen, shared, &ssLen), CRYPT_SUCCESS);
+    ASSERT_EQ(gFrodoRandLastLen, encapsRandLen);
+
+    /* failAt=0 injects at the first RNG request; 0xFF/0x11/0x22 identify streams. */
+    FrodoQualityRandReset(0, 0xFF);
+    ASSERT_EQ(CRYPT_EAL_PkeyGen(ctx), -1);
+    FrodoQualityRandReset(UINT32_MAX, 0x11);
+    ASSERT_EQ(CRYPT_EAL_PkeyGen(ctx), CRYPT_SUCCESS);
+    FrodoQualityRandReset(0, 0x22);
+    ctLen = ctExpected;
+    ssLen = ssExpected;
+    ASSERT_EQ(CRYPT_EAL_PkeyEncaps(ctx, cipher, &ctLen, shared, &ssLen), -1);
+EXIT:
+    CRYPT_EAL_PkeyFreeCtx(ctx);
+    BSL_SAL_FREE(cipher);
+    BSL_SAL_FREE(shared);
+    CRYPT_RandRegist(NULL);
+    CRYPT_RandRegistEx(NULL);
+    return;
+}
+/* END_CASE */
+
+/* @
+* @test  SDV_CRYPTO_FRODOKEM_KEYGEN_REPLACE_TC001
+* @spec  -
+* @title  Repeated key generation replacement test
+* @precon  nan
+* @brief  Generate two key pairs in one context and use the second pair.
+* @expect  The second pair replaces the first and completes KEM.
+* @prior  nan
+* @auto  TRUE
+@ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_FRODOKEM_KEYGEN_REPLACE_TC001(int algId)
+{
+    CRYPT_EAL_PkeyCtx *ctx = NULL;
+    uint8_t *pub1 = NULL;
+    uint8_t *pub2 = NULL;
+    uint8_t *prv1 = NULL;
+    uint8_t *prv2 = NULL;
+    uint8_t *cipher = NULL;
+    uint8_t *shared1 = NULL;
+    uint8_t *shared2 = NULL;
+    uint32_t pubLen = 0;
+    uint32_t prvLen = 0;
+    uint32_t ctLen = 0;
+    uint32_t ssLen = 0;
+    uint32_t ctExpected = 0;
+    uint32_t ssExpected = 0;
+
+    TestMemInit();
+    CRYPT_RandRegist(TestRand);
+    CRYPT_RandRegistEx(TestRandEx);
+    gRandNumber = 1;
+    ctx = NewFrodoKemCtx();
+    ASSERT_TRUE(ctx != NULL);
+    ASSERT_EQ(CRYPT_EAL_PkeySetParaById(ctx, (uint32_t)algId), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyEncapsInit(ctx, NULL), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_GET_PUBKEY_LEN, &pubLen, sizeof(pubLen)), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_GET_PRVKEY_LEN, &prvLen, sizeof(prvLen)), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_GET_CIPHERTEXT_LEN, &ctExpected, sizeof(ctExpected)), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_GET_SHARED_KEY_LEN, &ssExpected, sizeof(ssExpected)), CRYPT_SUCCESS);
+    pub1 = BSL_SAL_Malloc(pubLen);
+    pub2 = BSL_SAL_Malloc(pubLen);
+    prv1 = BSL_SAL_Malloc(prvLen);
+    prv2 = BSL_SAL_Malloc(prvLen);
+    cipher = BSL_SAL_Malloc(ctExpected);
+    shared1 = BSL_SAL_Malloc(ssExpected);
+    shared2 = BSL_SAL_Malloc(ssExpected);
+    ASSERT_TRUE(pub1 != NULL && pub2 != NULL && prv1 != NULL && prv2 != NULL && cipher != NULL && shared1 != NULL);
+    ASSERT_TRUE(shared2 != NULL);
+    ASSERT_EQ(CRYPT_EAL_PkeyGen(ctx), CRYPT_SUCCESS);
+    ASSERT_EQ(FrodoQualityGetKeys(ctx, pub1, pubLen, prv1, prvLen), CRYPT_SUCCESS);
+    gRandNumber = 3; // 3 selects a distinct deterministic RNG stream for the replacement key pair.
+    ASSERT_EQ(CRYPT_EAL_PkeyGen(ctx), CRYPT_SUCCESS);
+    ASSERT_EQ(FrodoQualityGetKeys(ctx, pub2, pubLen, prv2, prvLen), CRYPT_SUCCESS);
+    ASSERT_TRUE(memcmp(pub1, pub2, pubLen) != 0);
+    ASSERT_TRUE(memcmp(prv1, prv2, prvLen) != 0);
+    ctLen = ctExpected;
+    ssLen = ssExpected;
+    ASSERT_EQ(CRYPT_EAL_PkeyEncaps(ctx, cipher, &ctLen, shared1, &ssLen), CRYPT_SUCCESS);
+    ssLen = ssExpected;
+    ASSERT_EQ(CRYPT_EAL_PkeyDecaps(ctx, cipher, ctLen, shared2, &ssLen), CRYPT_SUCCESS);
+    ASSERT_EQ(ssLen, ssExpected);
+    ASSERT_EQ(memcmp(shared1, shared2, ssExpected), 0);
+EXIT:
+    CRYPT_EAL_PkeyFreeCtx(ctx);
+    BSL_SAL_FREE(pub1);
+    BSL_SAL_FREE(pub2);
+    BSL_SAL_FREE(prv1);
+    BSL_SAL_FREE(prv2);
+    BSL_SAL_FREE(cipher);
+    BSL_SAL_FREE(shared1);
+    BSL_SAL_FREE(shared2);
+    CRYPT_RandRegist(NULL);
+    CRYPT_RandRegistEx(NULL);
+}
+/* END_CASE */
+
+/* @
+* @test  SDV_CRYPTO_FRODOKEM_SETPUB_MATRIX_TC001
+* @spec  -
+* @title  Raw public key content and length boundary matrix test
+* @precon  nan
+* @brief  Test fixed binary payload patterns with L-1/L/L+1 repeated imports.
+* @expect  Exact-length keys roundtrip; boundary lengths fail on fresh contexts.
+* @prior  nan
+* @auto  TRUE
+@ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_FRODOKEM_SETPUB_MATRIX_TC001(int algId)
+{
+    CRYPT_EAL_PkeyCtx *source = NULL;
+    CRYPT_EAL_PkeyCtx *ctx = NULL;
+    CRYPT_EAL_PkeyPub pubKey = {0};
+    uint8_t *pub = NULL;
+    uint8_t *mutated = NULL;
+    uint8_t *output = NULL;
+    uint8_t *boundary = NULL;
+    uint32_t pubLen = 0;
+
+    TestMemInit();
+    CRYPT_RandRegist(TestSimpleRand);
+    CRYPT_RandRegistEx(TestSimpleRandEx);
+    source = NewFrodoKemCtx();
+    ASSERT_TRUE(source != NULL);
+    ASSERT_EQ(CRYPT_EAL_PkeySetParaById(source, (uint32_t)algId), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyGen(source), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(source, CRYPT_CTRL_GET_PUBKEY_LEN, &pubLen, sizeof(pubLen)), CRYPT_SUCCESS);
+    pub = BSL_SAL_Malloc(pubLen);
+    mutated = BSL_SAL_Malloc(pubLen);
+    output = BSL_SAL_Malloc(pubLen);
+    boundary = BSL_SAL_Malloc(pubLen + 1);
+    ASSERT_TRUE(pub != NULL && mutated != NULL && output != NULL && boundary != NULL);
+    {
+        CRYPT_EAL_PkeyPub sourcePub = {0};
+        sourcePub.id = CRYPT_PKEY_FRODOKEM;
+        sourcePub.key.kemEk.data = pub;
+        sourcePub.key.kemEk.len = pubLen;
+        ASSERT_EQ(CRYPT_EAL_PkeyGetPub(source, &sourcePub), CRYPT_SUCCESS);
+    }
+    /* Four payload modes: all-zero, all-FF, leading-zero and trailing-zero. */
+    for (uint32_t mode = 0; mode < 4; mode++) {
+        if (mode == 0) {
+            memset(mutated, 0x00, pubLen);
+        } else if (mode == 1) {
+            memset(mutated, 0xFF, pubLen);
+        } else {
+            memcpy(mutated, pub, pubLen);
+            mutated[mode == 2 ? 0 : pubLen - 1] = 0;
+        }
+        ctx = NewFrodoKemCtx();
+        ASSERT_TRUE(ctx != NULL);
+        ASSERT_EQ(CRYPT_EAL_PkeySetParaById(ctx, (uint32_t)algId), CRYPT_SUCCESS);
+        pubKey.id = CRYPT_PKEY_FRODOKEM;
+        pubKey.key.kemEk.data = mutated;
+        pubKey.key.kemEk.len = pubLen;
+        ASSERT_EQ(CRYPT_EAL_PkeySetPub(ctx, &pubKey), CRYPT_SUCCESS);
+        memset(output, 0xA5, pubLen); // 0xA5 is a sentinel confirming that the exact public-key length is written.
+        pubKey.key.kemEk.data = output;
+        pubKey.key.kemEk.len = pubLen;
+        ASSERT_EQ(CRYPT_EAL_PkeyGetPub(ctx, &pubKey), CRYPT_SUCCESS);
+        ASSERT_EQ(memcmp(output, mutated, pubLen), 0);
+
+        /* Boundary imports use fresh contexts because SetPub forbids repeated key setting. */
+        CRYPT_EAL_PkeyFreeCtx(ctx);
+        ctx = NULL;
+
+        ctx = NewFrodoKemCtx();
+        ASSERT_TRUE(ctx != NULL);
+        ASSERT_EQ(CRYPT_EAL_PkeySetParaById(ctx, (uint32_t)algId), CRYPT_SUCCESS);
+        /* L-1 must be rejected before any key is stored in the context. */
+        pubKey.key.kemEk.data = mutated;
+        pubKey.key.kemEk.len = pubLen - 1;
+        ASSERT_EQ(CRYPT_EAL_PkeySetPub(ctx, &pubKey), CRYPT_INVALID_ARG);
+        CRYPT_EAL_PkeyFreeCtx(ctx);
+        ctx = NULL;
+
+        /* A fresh exact-length import must succeed. */
+        ctx = NewFrodoKemCtx();
+        ASSERT_TRUE(ctx != NULL);
+        ASSERT_EQ(CRYPT_EAL_PkeySetParaById(ctx, (uint32_t)algId), CRYPT_SUCCESS);
+        pubKey.key.kemEk.data = mutated;
+        pubKey.key.kemEk.len = pubLen;
+        ASSERT_EQ(CRYPT_EAL_PkeySetPub(ctx, &pubKey), CRYPT_SUCCESS);
+        memset(output, 0xA5, pubLen);
+        pubKey.key.kemEk.data = output;
+        pubKey.key.kemEk.len = pubLen;
+        ASSERT_EQ(CRYPT_EAL_PkeyGetPub(ctx, &pubKey), CRYPT_SUCCESS);
+        ASSERT_EQ(memcmp(output, mutated, pubLen), 0);
+        CRYPT_EAL_PkeyFreeCtx(ctx);
+        ctx = NULL;
+
+        ctx = NewFrodoKemCtx();
+        ASSERT_TRUE(ctx != NULL);
+        ASSERT_EQ(CRYPT_EAL_PkeySetParaById(ctx, (uint32_t)algId), CRYPT_SUCCESS);
+        memcpy(boundary, mutated, pubLen);
+        /* 0xA5 marks the byte beyond the valid public-key payload. */
+        boundary[pubLen] = 0xA5;
+        pubKey.key.kemEk.data = boundary;
+        pubKey.key.kemEk.len = pubLen + 1;
+        /* L+1 must also be rejected before any key is stored in the context. */
+        ASSERT_EQ(CRYPT_EAL_PkeySetPub(ctx, &pubKey), CRYPT_INVALID_ARG);
+        CRYPT_EAL_PkeyFreeCtx(ctx);
+        ctx = NULL;
+    }
+EXIT:
+    CRYPT_EAL_PkeyFreeCtx(source);
+    CRYPT_EAL_PkeyFreeCtx(ctx);
+    BSL_SAL_FREE(pub);
+    BSL_SAL_FREE(mutated);
+    BSL_SAL_FREE(output);
+    BSL_SAL_FREE(boundary);
+    CRYPT_RandRegist(NULL);
+    CRYPT_RandRegistEx(NULL);
+}
+/* END_CASE */
+
+/* @
+* @test  SDV_CRYPTO_FRODOKEM_SETPRV_MATRIX_TC001
+* @spec  -
+* @title  Raw private key field validation test
+* @precon  nan
+* @brief  Test private key fields and the embedded public-key hash.
+* @expect  Valid keys roundtrip; H(pk) inconsistency is rejected.
+* @prior  nan
+* @auto  TRUE
+@ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_FRODOKEM_SETPRV_MATRIX_TC001(int algId)
+{
+    CRYPT_EAL_PkeyCtx *source = NULL;
+    CRYPT_EAL_PkeyCtx *ctx = NULL;
+    CRYPT_EAL_PkeyPrv prvKey = {0};
+    uint8_t *pub = NULL;
+    uint8_t *prv = NULL;
+    uint8_t *mutated = NULL;
+    uint8_t *output = NULL;
+    uint32_t pubLen = 0;
+    uint32_t prvLen = 0;
+    uint32_t ssLen = 0;
+    uint32_t hashStart = 0;
+    int32_t ret = 0;
+
+    TestMemInit();
+    CRYPT_RandRegist(TestSimpleRand);
+    CRYPT_RandRegistEx(TestSimpleRandEx);
+    source = NewFrodoKemCtx();
+    ASSERT_TRUE(source != NULL);
+    ASSERT_EQ(CRYPT_EAL_PkeySetParaById(source, (uint32_t)algId), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyGen(source), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(source, CRYPT_CTRL_GET_PUBKEY_LEN, &pubLen, sizeof(pubLen)), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(source, CRYPT_CTRL_GET_PRVKEY_LEN, &prvLen, sizeof(prvLen)), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(source, CRYPT_CTRL_GET_SHARED_KEY_LEN, &ssLen, sizeof(ssLen)), CRYPT_SUCCESS);
+    pub = BSL_SAL_Malloc(pubLen);
+    prv = BSL_SAL_Malloc(prvLen);
+    mutated = BSL_SAL_Malloc(prvLen);
+    output = BSL_SAL_Malloc(prvLen);
+    ASSERT_TRUE(pub != NULL && prv != NULL && mutated != NULL && output != NULL);
+    {
+        CRYPT_EAL_PkeyPub pubKey = {0};
+        pubKey.id = CRYPT_PKEY_FRODOKEM;
+        pubKey.key.kemEk.data = pub;
+        pubKey.key.kemEk.len = pubLen;
+        ASSERT_EQ(CRYPT_EAL_PkeyGetPub(source, &pubKey), CRYPT_SUCCESS);
+    }
+    {
+        CRYPT_EAL_PkeyPrv sourcePrv = {0};
+        sourcePrv.id = CRYPT_PKEY_FRODOKEM;
+        sourcePrv.key.kemDk.data = prv;
+        sourcePrv.key.kemDk.len = prvLen;
+        ASSERT_EQ(CRYPT_EAL_PkeyGetPrv(source, &sourcePrv), CRYPT_SUCCESS);
+    }
+    hashStart = prvLen - ssLen;
+    /* Five modes: original, first field, second field, public key and hash mutations. */
+    for (uint32_t mode = 0; mode < 5; mode++) {
+        memcpy(mutated, prv, prvLen);
+        if (mode == 1) {
+            mutated[0] ^= 0x01;
+        } else if (mode == 2) {
+            mutated[ssLen] ^= 0x01;
+        } else if (mode == 3) {
+            mutated[ssLen + pubLen] ^= 0x01;
+        } else if (mode == 4) {
+            mutated[hashStart] ^= 0x01;
+        }
+        ctx = NewFrodoKemCtx();
+        ASSERT_TRUE(ctx != NULL);
+        ASSERT_EQ(CRYPT_EAL_PkeySetParaById(ctx, (uint32_t)algId), CRYPT_SUCCESS);
+        prvKey.id = CRYPT_PKEY_FRODOKEM;
+        prvKey.key.kemDk.data = mutated;
+        prvKey.key.kemDk.len = prvLen;
+        ret = CRYPT_EAL_PkeySetPrv(ctx, &prvKey);
+        if (mode == 0 || mode == 1 || mode == 3) {
+            ASSERT_EQ(ret, CRYPT_SUCCESS);
+            memset(output, 0xA5, prvLen); // 0xA5 is a sentinel for exact-length private-key export.
+            prvKey.key.kemDk.data = output;
+            ASSERT_EQ(CRYPT_EAL_PkeyGetPrv(ctx, &prvKey), CRYPT_SUCCESS);
+            ASSERT_EQ(memcmp(output, mutated, prvLen), 0);
+        } else {
+            ASSERT_EQ(ret, CRYPT_FRODOKEM_INVALID_PRVKEY);
+        }
+        CRYPT_EAL_PkeyFreeCtx(ctx);
+        ctx = NULL;
+    }
+EXIT:
+    CRYPT_EAL_PkeyFreeCtx(source);
+    CRYPT_EAL_PkeyFreeCtx(ctx);
+    BSL_SAL_FREE(pub);
+    BSL_SAL_FREE(prv);
+    BSL_SAL_FREE(mutated);
+    BSL_SAL_FREE(output);
+    CRYPT_RandRegist(NULL);
+    CRYPT_RandRegistEx(NULL);
+}
+/* END_CASE */
+
+/* @
+* @test  SDV_CRYPTO_FRODOKEM_STATE_CMP_TC001
+* @spec  -
+* @title  Partial-key state and cross-parameter comparison test
+* @precon  nan
+* @brief  Compare public-only, private-only and different-parameter contexts with a complete key context.
+* @expect  Partial-key and different-parameter contexts are not equal to the complete key context or each other.
+* @prior  nan
+* @auto  TRUE
+@ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_FRODOKEM_STATE_CMP_TC001(int algId)
+{
+    CRYPT_EAL_PkeyCtx *full = NULL;
+    CRYPT_EAL_PkeyCtx *pubOnly = NULL;
+    CRYPT_EAL_PkeyCtx *prvOnly = NULL;
+    CRYPT_EAL_PkeyCtx *different = NULL;
+    CRYPT_EAL_PkeyPub pubKey = {0};
+    CRYPT_EAL_PkeyPrv prvKey = {0};
+    uint8_t *pub = NULL;
+    uint8_t *prv = NULL;
+    uint32_t pubLen = 0;
+    uint32_t prvLen = 0;
+    uint32_t differentAlgId = 0;
+
+    TestMemInit();
+    CRYPT_RandRegist(TestSimpleRand);
+    CRYPT_RandRegistEx(TestSimpleRandEx);
+    full = NewFrodoKemCtx();
+    pubOnly = NewFrodoKemCtx();
+    prvOnly = NewFrodoKemCtx();
+    different = NewFrodoKemCtx();
+    ASSERT_TRUE(full != NULL);
+    ASSERT_TRUE(pubOnly != NULL);
+    ASSERT_TRUE(prvOnly != NULL);
+    ASSERT_TRUE(different != NULL);
+    ASSERT_EQ(CRYPT_EAL_PkeySetParaById(full, (uint32_t)algId), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeySetParaById(pubOnly, (uint32_t)algId), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeySetParaById(prvOnly, (uint32_t)algId), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(full, CRYPT_CTRL_GET_PUBKEY_LEN, &pubLen, sizeof(pubLen)), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(full, CRYPT_CTRL_GET_PRVKEY_LEN, &prvLen, sizeof(prvLen)), CRYPT_SUCCESS);
+    pub = BSL_SAL_Malloc(pubLen);
+    prv = BSL_SAL_Malloc(prvLen);
+    ASSERT_TRUE(pub != NULL && prv != NULL);
+    ASSERT_EQ(CRYPT_EAL_PkeyGen(full), CRYPT_SUCCESS);
+    pubKey.id = CRYPT_PKEY_FRODOKEM;
+    pubKey.key.kemEk.data = pub;
+    pubKey.key.kemEk.len = pubLen;
+    prvKey.id = CRYPT_PKEY_FRODOKEM;
+    prvKey.key.kemDk.data = prv;
+    prvKey.key.kemDk.len = prvLen;
+    ASSERT_EQ(CRYPT_EAL_PkeyGetPub(full, &pubKey), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyGetPrv(full, &prvKey), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeySetPub(pubOnly, &pubKey), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeySetPrv(prvOnly, &prvKey), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyCmp(full, pubOnly), CRYPT_FRODOKEM_KEY_NOT_EQUAL);
+    ASSERT_EQ(CRYPT_EAL_PkeyCmp(full, prvOnly), CRYPT_FRODOKEM_KEY_NOT_EQUAL);
+    ASSERT_EQ(CRYPT_EAL_PkeyCmp(pubOnly, prvOnly), CRYPT_FRODOKEM_KEY_NOT_EQUAL);
+    differentAlgId = (algId == CRYPT_KEM_TYPE_FRODOKEM_640_SHAKE) ?
+        CRYPT_KEM_TYPE_FRODOKEM_976_SHAKE : CRYPT_KEM_TYPE_FRODOKEM_640_SHAKE;
+    ASSERT_EQ(CRYPT_EAL_PkeySetParaById(different, differentAlgId), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyGen(different), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyCmp(full, different), CRYPT_FRODOKEM_KEY_NOT_EQUAL);
+EXIT:
+    CRYPT_EAL_PkeyFreeCtx(full);
+    CRYPT_EAL_PkeyFreeCtx(pubOnly);
+    CRYPT_EAL_PkeyFreeCtx(prvOnly);
+    CRYPT_EAL_PkeyFreeCtx(different);
+    BSL_SAL_FREE(pub);
+    BSL_SAL_FREE(prv);
+    CRYPT_RandRegist(NULL);
+    CRYPT_RandRegistEx(NULL);
 }
 /* END_CASE */
 
@@ -590,7 +1356,8 @@ static void RandTeardown()
 
 
 /* BEGIN_CASE */
-void SDV_CRYPTO_FRODOKEM_ENCAPS_DECAPS_FUNC_TC001(int bits, Hex *seed, Hex *testEk, Hex *testDk, Hex *testCt, Hex *testSs)
+void SDV_CRYPTO_FRODOKEM_ENCAPS_DECAPS_FUNC_TC001(int bits, Hex *seed, Hex *testEk,
+    Hex *testDk, Hex *testCt, Hex *testSs)
 {
     TestMemInit();
     if (seed->len <= 48) {

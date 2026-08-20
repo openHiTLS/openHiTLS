@@ -46,6 +46,7 @@ TLS_FLAG=""
 FEATURE_CONFIG_FILE=""
 
 CMAKE_BUILD_OPTIONS=""
+CMAKE_BUILD_ARGS=()
 
 print_usage() {
     printf "Usage: $0\n"
@@ -190,35 +191,46 @@ show_macro()
 build_args_to_cmake_options()
 {
     local options="-DHITLS_BUILD_PROFILE=none"
+    CMAKE_BUILD_ARGS=("-DHITLS_BUILD_PROFILE=none")
 
     # asm type
     if [ "$ASM_TYPE" != "" ]; then
-        options="$options -DHITLS_ASM_$(echo $ASM_TYPE | tr '[:lower:]' '[:upper:]')=ON"
+        local asm_option="-DHITLS_ASM_$(echo $ASM_TYPE | tr '[:lower:]' '[:upper:]')=ON"
+        options="$options $asm_option"
+        CMAKE_BUILD_ARGS+=("$asm_option")
     fi
     # lib type
-    [[ "$LIB_TYPE" == *"static"* ]] && options="${options} -DHITLS_BUILD_STATIC=ON"
-    [[ "$LIB_TYPE" == *"shared"* ]] && options="${options} -DHITLS_BUILD_SHARED=ON"
+    [[ "$LIB_TYPE" == *"static"* ]] && options="${options} -DHITLS_BUILD_STATIC=ON" && \
+        CMAKE_BUILD_ARGS+=("-DHITLS_BUILD_STATIC=ON")
+    [[ "$LIB_TYPE" == *"shared"* ]] && options="${options} -DHITLS_BUILD_SHARED=ON" && \
+        CMAKE_BUILD_ARGS+=("-DHITLS_BUILD_SHARED=ON")
     # bits
     if [ "$BITS" != "" ]; then
         options="$options -DHITLS_PLATFORM_BITS=$BITS"
+        CMAKE_BUILD_ARGS+=("-DHITLS_PLATFORM_BITS=$BITS")
     fi
     # endian
     if [ "$ENDIAN" != "" ]; then
         options="$options -DHITLS_PLATFORM_ENDIAN=$ENDIAN"
+        CMAKE_BUILD_ARGS+=("-DHITLS_PLATFORM_ENDIAN=$ENDIAN")
     fi
     # add feature options
     if [ "$ADD_FEATURE_OPTIONS" != "" ]; then
         options="$options $ADD_FEATURE_OPTIONS"
+        read -r -a add_feature_args <<< "$ADD_FEATURE_OPTIONS"
+        CMAKE_BUILD_ARGS+=("${add_feature_args[@]}")
     fi
     # add compile options
     if [ "$ADD_OPTIONS" != "" ]; then
         ADD_OPTIONS=$(echo "$ADD_OPTIONS" | xargs)
         options="$options -DCMAKE_C_FLAGS=\"$ADD_OPTIONS\""
+        CMAKE_BUILD_ARGS+=("-DCMAKE_C_FLAGS=$ADD_OPTIONS")
     fi
     # del compile options
     if [ "$DEL_OPTIONS" != "" ]; then
         DEL_OPTIONS=$(echo "$DEL_OPTIONS" | xargs)
         options="$options -D_HITLS_COMPILE_OPTIONS_DEL=\"$DEL_OPTIONS\""
+        CMAKE_BUILD_ARGS+=("-D_HITLS_COMPILE_OPTIONS_DEL=$DEL_OPTIONS")
     fi
     # features
     if [ ${#FEATURES[@]} -gt 0 ]; then
@@ -236,12 +248,15 @@ for feat in sys.argv[2:]:
         print('Warning: No macro mapping found for feature: {}'.format(feat), file=sys.stderr)
 print(' '.join(opts))
 END
-)
+        )
         options="$options $FEATURE_MACRO_OPTS"
+        read -r -a feature_macro_args <<< "$FEATURE_MACRO_OPTS"
+        CMAKE_BUILD_ARGS+=("${feature_macro_args[@]}")
     fi
     # feature config file
     if [ "$FEATURE_CONFIG_FILE" != "" ]; then
         options="$options -C $FEATURE_CONFIG_FILE"
+        CMAKE_BUILD_ARGS+=("-C" "$FEATURE_CONFIG_FILE")
     fi
 
     echo "================= CMake build options ================="
@@ -271,7 +286,7 @@ build_hitls()
     build_args_to_cmake_options
 
     # cmake ..
-    cmake .. ${CMAKE_BUILD_OPTIONS} > cmake.txt
+    cmake .. "${CMAKE_BUILD_ARGS[@]}" > cmake.txt
 
     # cmake ..
     check_cmd_res "cmake .."
@@ -378,3 +393,4 @@ fi
 if [ "$TEST_FEATURE" != "" ]; then
     test_feature $TEST_FEATURE
 fi
+
