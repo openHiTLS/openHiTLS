@@ -2257,6 +2257,7 @@ void SDV_TLS_DTLS13_HANDSHAKE_CONSISTENCY_FUNC_TC024(void)
 
     clientConfig = HITLS_CFG_NewDTLSConfig();
     ASSERT_TRUE(NewDtlsConfigSupportsDtls12AndDtls13(clientConfig));
+    ASSERT_EQ(Dtls13UseSingleKeyShareGroup(clientConfig), HITLS_SUCCESS);
     serverConfig = HITLS_CFG_NewDTLSConfig();
     ASSERT_TRUE(NewDtlsConfigSupportsDtls12AndDtls13(serverConfig));
     ASSERT_EQ(HITLS_CFG_SetTicketNums(serverConfig, 0), HITLS_SUCCESS);
@@ -2949,6 +2950,7 @@ void SDV_TLS_DTLS13_HANDSHAKE_CONSISTENCY_FUNC_TC034(void)
 
     clientConfig = HITLS_CFG_NewDTLSConfig();
     ASSERT_TRUE(NewDtlsConfigSupportsDtls12AndDtls13(clientConfig));
+    ASSERT_EQ(Dtls13UseSingleKeyShareGroup(clientConfig), HITLS_SUCCESS);
     serverConfig = HITLS_CFG_NewDTLS12Config();
     ASSERT_TRUE(serverConfig != NULL);
     ASSERT_EQ(HITLS_CFG_SetDtlsCookieExchangeSupport(serverConfig, true), HITLS_SUCCESS);
@@ -3026,6 +3028,7 @@ void SDV_TLS_DTLS13_HANDSHAKE_CONSISTENCY_FUNC_TC035(void)
 
     config = HITLS_CFG_NewDTLSConfig();
     ASSERT_TRUE(NewDtlsConfigSupportsDtls12AndDtls13(config));
+    ASSERT_EQ(Dtls13UseSingleKeyShareGroup(config), HITLS_SUCCESS);
 
     client = FRAME_CreateLink(config, BSL_UIO_UDP);
     ASSERT_TRUE(client != NULL);
@@ -3164,6 +3167,7 @@ void SDV_TLS_DTLS13_HANDSHAKE_CONSISTENCY_FUNC_TC037(void)
 
     config = HITLS_CFG_NewDTLSConfig();
     ASSERT_TRUE(NewDtlsConfigSupportsDtls12AndDtls13(config));
+    ASSERT_EQ(Dtls13UseSingleKeyShareGroup(config), HITLS_SUCCESS);
     ASSERT_EQ(HITLS_CFG_SetDtlsCookieExchangeSupport(config, true), HITLS_SUCCESS);
     client = FRAME_CreateLink(config, BSL_UIO_UDP);
     ASSERT_TRUE(client != NULL);
@@ -3216,6 +3220,7 @@ void SDV_TLS_DTLS13_HANDSHAKE_CONSISTENCY_FUNC_TC040(void)
 
     config = HITLS_CFG_NewDTLSConfig();
     ASSERT_TRUE(NewDtlsConfigSupportsDtls12AndDtls13(config));
+    ASSERT_EQ(Dtls13UseSingleKeyShareGroup(config), HITLS_SUCCESS);
     ASSERT_EQ(HITLS_CFG_SetDtlsCookieExchangeSupport(config, true), HITLS_SUCCESS);
 
     client = FRAME_CreateLink(config, BSL_UIO_UDP);
@@ -4272,7 +4277,7 @@ EXIT:
 /** @
 * @test SDV_TLS_DTLS13_HANDSHAKE_CONSISTENCY_FUNC_TC056
 * @spec -
-* @title DTLS1.3 client tolerates a non-empty ServerHello legacy_session_id_echo.
+* @title DTLS1.3 client rejects a non-empty ServerHello legacy_session_id_echo.
 * @precon nan
 * @brief
 *    1. Create DTLS1.3 client and server links over UDP.
@@ -4281,8 +4286,8 @@ EXIT:
 *    4. Deliver the modified ServerHello to the client.
 * @expect
 *    1. The modified ServerHello can be packed and delivered.
-*    2. The client does not reject the message because of the legacy_session_id_echo.
-*    3. The client continues to receive EncryptedExtensions.
+*    2. The client rejects the ServerHello with an illegal session ID error.
+*    3. The client sends a fatal illegal_parameter alert.
 @ */
 /* BEGIN_CASE */
 void SDV_TLS_DTLS13_HANDSHAKE_CONSISTENCY_FUNC_TC056(void)
@@ -4325,8 +4330,13 @@ void SDV_TLS_DTLS13_HANDSHAKE_CONSISTENCY_FUNC_TC056(void)
     ASSERT_TRUE(clientIoUserData != NULL);
     clientIoUserData->recMsg.len = 0;
     ASSERT_EQ(FRAME_TransportRecMsg(client->io, sendBuf, sendLen), HITLS_SUCCESS);
-    ASSERT_TRUE(IsFrameIoPendingRet(HITLS_Connect(client->ssl)));
-    ASSERT_EQ(client->ssl->hsCtx->state, TRY_RECV_ENCRYPTED_EXTENSIONS);
+    ASSERT_EQ(HITLS_Connect(client->ssl), HITLS_MSG_HANDLE_ILLEGAL_SESSION_ID);
+
+    ALERT_Info alert = {0};
+    ALERT_GetInfo(client->ssl, &alert);
+    ASSERT_EQ(alert.flag, ALERT_FLAG_SEND);
+    ASSERT_EQ(alert.level, ALERT_LEVEL_FATAL);
+    ASSERT_EQ(alert.description, ALERT_ILLEGAL_PARAMETER);
 
 EXIT:
     FRAME_CleanMsg(&serverHelloType, &serverHelloMsg);
@@ -4442,6 +4452,7 @@ void SDV_TLS_DTLS13_HANDSHAKE_CONSISTENCY_FUNC_TC058(void)
     resumeClientConfig = NewDtls12AndDtls13Config();
     resumeServerConfig = NewDtls12AndDtls13Config();
     ASSERT_TRUE(resumeClientConfig != NULL && resumeServerConfig != NULL);
+    ASSERT_EQ(Dtls13UseSingleKeyShareGroup(resumeClientConfig), HITLS_SUCCESS);
 
     client = FRAME_CreateLink(resumeClientConfig, BSL_UIO_UDP);
     ASSERT_TRUE(client != NULL);
@@ -4575,6 +4586,7 @@ void SDV_TLS_DTLS13_HANDSHAKE_CONSISTENCY_FUNC_TC060(void)
     resumeClientConfig = NewDtls12AndDtls13Config();
     resumeServerConfig = NewDtls12AndDtls13Config();
     ASSERT_TRUE(resumeClientConfig != NULL && resumeServerConfig != NULL);
+    ASSERT_EQ(Dtls13UseSingleKeyShareGroup(resumeClientConfig), HITLS_SUCCESS);
 
     client = FRAME_CreateLink(resumeClientConfig, BSL_UIO_UDP);
     ASSERT_TRUE(client != NULL);
@@ -4677,5 +4689,59 @@ EXIT:
     FRAME_FreeLink(client);
     FRAME_FreeLink(server);
     HITLS_SESS_Free(session);
+}
+/* END_CASE */
+
+/** @
+* @test SDV_TLS_DTLS13_HANDSHAKE_CONSISTENCY_FUNC_TC062
+* @spec RFC 7919
+* @title DTLS1.3 establishes a connection with an FFDHE key exchange group.
+* @precon nan
+* @brief
+*    1. Create DTLS1.3 client and server configurations.
+*    2. Configure both peers with the same FFDHE group.
+*    3. Establish a UDP frame connection and exchange application data.
+* @expect
+*    1. The handshake succeeds and negotiates the configured FFDHE group.
+*    2. The server receives the application data unchanged.
+@ */
+/* BEGIN_CASE */
+void SDV_TLS_DTLS13_HANDSHAKE_CONSISTENCY_FUNC_TC062(int group)
+{
+    FRAME_Init();
+    HITLS_Config *clientConfig = HITLS_CFG_NewDTLS13Config();
+    HITLS_Config *serverConfig = HITLS_CFG_NewDTLS13Config();
+    FRAME_LinkObj *client = NULL;
+    FRAME_LinkObj *server = NULL;
+    uint16_t namedGroup = (uint16_t)group;
+    uint8_t writeData[] = "DTLS1.3 FFDHE";
+    uint8_t readData[sizeof(writeData)] = {0};
+    uint32_t writeLen = 0;
+    uint32_t readLen = 0;
+
+    ASSERT_TRUE(clientConfig != NULL && serverConfig != NULL);
+    ASSERT_EQ(HITLS_CFG_SetGroups(clientConfig, &namedGroup, 1), HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_CFG_SetGroups(serverConfig, &namedGroup, 1), HITLS_SUCCESS);
+
+    client = FRAME_CreateLink(clientConfig, BSL_UIO_UDP);
+    server = FRAME_CreateLink(serverConfig, BSL_UIO_UDP);
+    ASSERT_TRUE(client != NULL && server != NULL);
+    ASSERT_EQ(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_SUCCESS);
+    ASSERT_EQ(client->ssl->negotiatedInfo.negotiatedGroup, namedGroup);
+    ASSERT_EQ(server->ssl->negotiatedInfo.negotiatedGroup, namedGroup);
+
+    ASSERT_EQ(HITLS_Write(client->ssl, writeData, sizeof(writeData), &writeLen), HITLS_SUCCESS);
+    ASSERT_EQ(writeLen, sizeof(writeData));
+    ASSERT_EQ(FRAME_TrasferMsgBetweenLink(client, server), HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_Read(server->ssl, readData, sizeof(readData), &readLen), HITLS_SUCCESS);
+    ASSERT_EQ(readLen, sizeof(writeData));
+    ASSERT_EQ(memcmp(writeData, readData, readLen), 0);
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
+EXIT:
+    HITLS_CFG_FreeConfig(clientConfig);
+    HITLS_CFG_FreeConfig(serverConfig);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
 }
 /* END_CASE */

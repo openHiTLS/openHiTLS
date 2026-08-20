@@ -827,28 +827,25 @@ static int32_t Tls13ClientCheckHelloRetryRequest(TLS_Ctx *ctx, const ServerHello
 
 static int32_t Tls13ClientCheckSessionId(TLS_Ctx *ctx, const ServerHelloMsg *serverHello)
 {
-    if (ctx->negotiatedInfo.version == HITLS_VERSION_DTLS13) {
+    /* The legacy_session_id_echo field must be valid for the negotiated protocol. */
+#ifdef HITLS_TLS_PROTO_DTLS13
+    if (IS_DTLS13_CTX(ctx)) {
+        if (serverHello->sessionIdSize == 0) {
+            return HITLS_SUCCESS;
+        }
+    } else
+#endif
+    if (ctx->hsCtx->sessionIdSize == serverHello->sessionIdSize &&
+        (serverHello->sessionIdSize == 0 ||
+        memcmp(ctx->hsCtx->sessionId, serverHello->sessionId, serverHello->sessionIdSize) == 0)) {
         return HITLS_SUCCESS;
     }
 
-    /* The legacy_session_id_echo field must be the same as the sent field */
-    if (ctx->hsCtx->sessionIdSize != serverHello->sessionIdSize) {
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17090, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "sessionIdSize err", 0, 0, 0, 0);
-        BSL_ERR_PUSH_ERROR(HITLS_MSG_HANDLE_ILLEGAL_SESSION_ID);
-        ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_ILLEGAL_PARAMETER);
-        return HITLS_MSG_HANDLE_ILLEGAL_SESSION_ID;
-    }
-    if (serverHello->sessionIdSize != 0) {
-        if (memcmp(ctx->hsCtx->sessionId, serverHello->sessionId, serverHello->sessionIdSize) != 0) {
-            BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17091, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-                "sessionId err", 0, 0, 0, 0);
-            BSL_ERR_PUSH_ERROR(HITLS_MSG_HANDLE_ILLEGAL_SESSION_ID);
-            ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_ILLEGAL_PARAMETER);
-            return HITLS_MSG_HANDLE_ILLEGAL_SESSION_ID;
-        }
-    }
-    return HITLS_SUCCESS;
+    BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17090, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+        "server hello session ID is invalid", 0, 0, 0, 0);
+    BSL_ERR_PUSH_ERROR(HITLS_MSG_HANDLE_ILLEGAL_SESSION_ID);
+    ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_ILLEGAL_PARAMETER);
+    return HITLS_MSG_HANDLE_ILLEGAL_SESSION_ID;
 }
 
 static int32_t Tls13ClientCheckServerHello(TLS_Ctx *ctx, const ServerHelloMsg *serverHello, bool isHrr)

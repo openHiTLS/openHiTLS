@@ -223,7 +223,7 @@ static const TLS_GroupInfo GROUP_INFO[] = {
         192, // secBits
         HITLS_FF_DHE_8192, // groupId
         1024, 1024, 0, // pubkeyLen=1024, sharedkeyLen=1024 (8192 bits)
-        TLS13_VERSION_BIT, // versionBits
+        TLS13_VERSION_BIT | DTLS13_VERSION_BIT, // versionBits
         false,
     },
     {
@@ -233,7 +233,7 @@ static const TLS_GroupInfo GROUP_INFO[] = {
         128, // secBits
         HITLS_FF_DHE_6144, // groupId
         768, 768, 0, // pubkeyLen=768, sharedkeyLen=768 (6144 bits)
-        TLS13_VERSION_BIT, // versionBits
+        TLS13_VERSION_BIT | DTLS13_VERSION_BIT, // versionBits
         false,
     },
     {
@@ -243,7 +243,7 @@ static const TLS_GroupInfo GROUP_INFO[] = {
         128, // secBits
         HITLS_FF_DHE_4096, // groupId
         512, 512, 0, // pubkeyLen=512, sharedkeyLen=512 (4096 bits)
-        TLS13_VERSION_BIT, // versionBits
+        TLS13_VERSION_BIT | DTLS13_VERSION_BIT, // versionBits
         false,
     },
     {
@@ -253,7 +253,7 @@ static const TLS_GroupInfo GROUP_INFO[] = {
         128,
         HITLS_FF_DHE_3072,
         384, 384, 0, // pubkeyLen=384, sharedkeyLen=384 (3072 bits)
-        TLS13_VERSION_BIT,
+        TLS13_VERSION_BIT | DTLS13_VERSION_BIT,
         false,
     },
     {
@@ -263,7 +263,7 @@ static const TLS_GroupInfo GROUP_INFO[] = {
         112, // secBits
         HITLS_FF_DHE_2048, // groupId
         256, 256, 0, // pubkeyLen=256, sharedkeyLen=256 (2048 bits)
-        TLS13_VERSION_BIT, // versionBits
+        TLS13_VERSION_BIT | DTLS13_VERSION_BIT, // versionBits
         false,
     }
 #endif /* HITLS_CRYPTO_DH */

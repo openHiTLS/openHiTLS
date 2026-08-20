@@ -22,6 +22,12 @@
 static uint8_t g_testCidA[TEST_CID_A_LEN] = {0x01, 0x02, 0x03, 0x04};
 static uint8_t g_testCidB[TEST_CID_B_LEN] = {0xAA, 0xBB, 0xCC, 0xDD};
 
+static int32_t Dtls13UseSingleKeyShareGroup(HITLS_Config *config)
+{
+    uint16_t groups[] = {HITLS_EC_GROUP_SECP256R1};
+    return HITLS_CFG_SetGroups(config, groups, sizeof(groups) / sizeof(groups[0]));
+}
+
 /*
  *===========================================================================
  * Helpers for tampering with DTLS 1.3 unified-header records on the wire.
@@ -1992,6 +1998,7 @@ void SDV_TLS_DTLS13_CID_CONSISTENCY_NEGOTIATE_FUNC_TC018(void)
     HITLS_Config *c_config = HITLS_CFG_NewDTLSConfig();
     ASSERT_TRUE(c_config != NULL);
     c_config->maxVersion = HITLS_VERSION_DTLS12;
+    ASSERT_EQ(Dtls13UseSingleKeyShareGroup(c_config), HITLS_SUCCESS);
     HITLS_Config *s_config = HITLS_CFG_NewDTLSConfig();
     ASSERT_TRUE(s_config != NULL);
     s_config->maxVersion = HITLS_VERSION_DTLS12;
