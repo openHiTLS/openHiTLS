@@ -127,6 +127,7 @@ typedef struct CustomExtMethods HITLS_CustomExts;
 #define MAX_KEY_SHARE_ENTRY_COUNT 16u
 /* Retain at most this many peer PSK identity entries; excess entries are rejected. */
 #define MAX_PSK_IDENTITY_COUNT 16u
+
 /**
  * @brief   TLS Global Configuration
  */

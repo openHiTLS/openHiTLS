@@ -45,6 +45,9 @@
 #ifdef HITLS_TLS_FEATURE_INDICATOR
 #include "indicator.h"
 #endif /* HITLS_TLS_FEATURE_INDICATOR */
+#ifdef HITLS_TLS_FEATURE_QUIC_TLS
+#include "quic_tls_internal.h"
+#endif
 
 static int32_t CheckHsMsg(TLS_Ctx *ctx, HS_Msg *hsMsg, int32_t ret)
 {
@@ -837,9 +840,17 @@ int32_t HS_RecvMsgProcess(TLS_Ctx *ctx)
 {
     int32_t ret = HITLS_SUCCESS;
 #ifdef HITLS_TLS_FEATURE_FLIGHT
-    /* If isFlightTransmitEnable is enabled, the handshake information stored in the bUio needs to be sent when the
-     * receiving status is changed. */
+    /*
+     * Sending has reached a flight boundary. Flush all accumulated output before waiting
+     * for the peer's next handshake message. QUIC-TLS force-enables FLIGHT at the build
+     * level; at runtime REC_FlightTransmit dispatches a QUIC connection to its
+     * flushFlight callback instead of flushing a record UIO.
+     */
+#ifdef HITLS_TLS_FEATURE_QUIC_TLS
+    if (ctx->config.tlsConfig.isFlightTransmitEnable || QUIC_TLS_IsMode(ctx)) {
+#else
     if (ctx->config.tlsConfig.isFlightTransmitEnable) {
+#endif
         ret = REC_FlightTransmit(ctx);
         if (ret != HITLS_SUCCESS) {
             return ret;

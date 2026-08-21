@@ -49,6 +49,9 @@
 #endif
 #include "bsl_bytes.h"
 #include "cert_method.h"
+#ifdef HITLS_TLS_FEATURE_QUIC_TLS
+#include "quic_tls_internal.h"
+#endif
 
 #if defined(HITLS_TLS_PROTO_TLS13_FAMILY)
 #if defined(HITLS_TLS_FEATURE_SESSION) || defined(HITLS_TLS_FEATURE_PSK)
@@ -479,6 +482,11 @@ static int32_t CheckCipherSuite(TLS_Ctx *ctx, const ClientHelloMsg *clientHello,
     bool preferSha256)
 {
     (void)preferSha256;
+#ifdef HITLS_TLS_FEATURE_QUIC_TLS
+    if (!QUIC_TLS_IsCipherSuiteSupported(ctx, cipherSuite)) {
+        return HITLS_CONFIG_UNSUPPORT_CIPHER_SUITE;
+    }
+#endif
     if (!IsCipherSuiteAllowed(ctx, cipherSuite, true)) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17046, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "No proper cipher suite", 0, 0, 0, 0);
@@ -663,6 +671,19 @@ static int32_t ServerSelectNegoVersion(TLS_Ctx *ctx, const ClientHelloMsg *clien
             break;
         }
     }
+#ifdef HITLS_TLS_FEATURE_QUIC_TLS
+    /*
+     * This path selects a legacy version from ClientHello. A regular TLS connection may negotiate TLS 1.2 when it is
+     * within the configured range, but QUIC cannot fall back from TLS 1.3. Reject any legacy selection in QUIC mode.
+     */
+    if (QUIC_TLS_IsMode(ctx) && ctx->negotiatedInfo.version != HITLS_VERSION_TLS13) {
+        BSL_ERR_PUSH_ERROR(HITLS_MSG_HANDLE_UNSUPPORT_VERSION);
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17422, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+            "QUIC client offered a protocol version other than TLS 1.3.", 0, 0, 0, 0);
+        ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_PROTOCOL_VERSION);
+        return HITLS_MSG_HANDLE_UNSUPPORT_VERSION;
+    }
+#endif
 #ifdef HITLS_TLS_FEATURE_SECURITY
     /* Version security check */
     ret = SECURITY_SslCheck((HITLS_Ctx *)ctx, HITLS_SECURITY_SECOP_VERSION, 0, ctx->negotiatedInfo.version, NULL);
@@ -2125,6 +2146,24 @@ static int32_t Tls13ServerCheckSecondClientHello(TLS_Ctx *ctx, ClientHelloMsg *c
             return HITLS_MSG_HANDLE_HANDSHAKE_FAILURE;
         }
 #endif /* HITLS_TLS_FEATURE_DTLS_CID */
+#ifdef HITLS_TLS_FEATURE_QUIC_TLS
+        const ClientHelloMsg *firstQuicClientHello = ctx->hsCtx->firstClientHello;
+        const uint8_t *firstParams = firstQuicClientHello->extension.content.quicTransportParams;
+        uint32_t firstParamsLen = firstQuicClientHello->extension.content.quicTransportParamsLen;
+        /* RFC 9001 Section 8.2 requires a missing QUIC TP extension to produce missing_extension. Compare values only
+         * when CH2 contains the extension; QuicTlsCheckClientHelloExts reports its absence during post-processing. */
+        if (QUIC_TLS_IsMode(ctx) &&
+            clientHello->extension.flag.haveQuicTlsTransportParams &&
+            (!firstQuicClientHello->extension.flag.haveQuicTlsTransportParams ||
+                firstParamsLen != clientHello->extension.content.quicTransportParamsLen ||
+                (firstParamsLen != 0 &&
+                memcmp(firstParams, clientHello->extension.content.quicTransportParams, firstParamsLen) != 0))) {
+            BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17062, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+                "ClientHello QUIC transport parameters changed after HRR.", 0, 0, 0, 0);
+            ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_ILLEGAL_PARAMETER);
+            return HITLS_MSG_HANDLE_HANDSHAKE_FAILURE;
+        }
+#endif /* HITLS_TLS_FEATURE_QUIC_TLS */
         return HITLS_SUCCESS;
     }
     if (ctx->hsCtx->firstClientHello != NULL) {
@@ -2253,6 +2292,13 @@ static int32_t Tls13ServerBasicCheckClientHello(TLS_Ctx *ctx, ClientHelloMsg *cl
     memcpy(ctx->hsCtx->clientRandom, clientHello->randomValue, HS_RANDOM_SIZE);
 
     /* Copy the session ID */
+#ifdef HITLS_TLS_FEATURE_QUIC_TLS
+    /* RFC 9001 s8.4: QUIC requires legacy_session_id to be empty. */
+    if (QUIC_TLS_IsMode(ctx) && clientHello->sessionIdSize != 0) {
+        BSL_ERR_PUSH_ERROR(HITLS_QUIC_TLS_PROTOCOL_VIOLATION);
+        return HITLS_QUIC_TLS_PROTOCOL_VIOLATION;
+    }
+#endif
     ret = Tls13ServerSetSessionId(ctx, clientHello->sessionId, clientHello->sessionIdSize);
     if (ret != HITLS_SUCCESS) {
         return ret;
@@ -2378,6 +2424,29 @@ static int32_t Tls13ServerPostCheckClientHello(TLS_Ctx *ctx, ClientHelloMsg *cli
     if (ret != HITLS_SUCCESS) {
         return ret;
     }
+#ifdef HITLS_TLS_FEATURE_QUIC_TLS
+    if (QUIC_TLS_IsMode(ctx)) {
+        /* RFC 9001: the client must send QUIC transport parameters and offer ALPN. */
+        if (!clientHello->extension.flag.haveQuicTlsTransportParams) {
+            ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_MISSING_EXTENSION);
+            BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17418, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+                "QUIC extension check failed; reason (1=local TP, 2=local ALPN, 3=peer TP, 4=peer ALPN)=%u, error=%d.",
+                3u, HITLS_MSG_HANDLE_MISSING_EXTENSION, 0, 0);
+            BSL_ERR_PUSH_ERROR(HITLS_MSG_HANDLE_MISSING_EXTENSION);
+            return HITLS_MSG_HANDLE_MISSING_EXTENSION;
+        }
+        if (!clientHello->extension.flag.haveAlpn ||
+            (!(*isNeedSendHrr) &&
+            (ctx->negotiatedInfo.alpnSelected == NULL || ctx->negotiatedInfo.alpnSelectedSize == 0))) {
+            ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_NO_APPLICATION_PROTOCOL);
+            BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17418, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+                "QUIC extension check failed; reason (1=local TP, 2=local ALPN, 3=peer TP, 4=peer ALPN)=%u, error=%d.",
+                4u, HITLS_MSG_HANDLE_ALPN_PROTOCOL_NO_MATCH, 0, 0);
+            BSL_ERR_PUSH_ERROR(HITLS_MSG_HANDLE_ALPN_PROTOCOL_NO_MATCH);
+            return HITLS_MSG_HANDLE_ALPN_PROTOCOL_NO_MATCH;
+        }
+    }
+#endif
     return Tls13ServerSelectCert(ctx, clientHello);
 }
 
@@ -2390,7 +2459,11 @@ static int32_t CheckSupportVersion(TLS_Ctx *ctx, uint16_t version, uint16_t *sel
         version = HITLS_VERSION_DTLS12;
     }
     uint32_t versionBits = MapVersion2VersionBit(IS_SUPPORT_DATAGRAM(ctx->config.tlsConfig.originVersionMask), version);
-    if ((versionBits & ctx->config.tlsConfig.version) == versionBits && (versionBits != 0)) {
+    bool isVersionSupported = true;
+#ifdef HITLS_TLS_FEATURE_QUIC_TLS
+    isVersionSupported = !QUIC_TLS_IsMode(ctx) || version == HITLS_VERSION_TLS13;
+#endif
+    if (isVersionSupported && (versionBits & ctx->config.tlsConfig.version) == versionBits && (versionBits != 0)) {
         *selectVersion = version;
         return HITLS_SUCCESS;
     }
@@ -2451,6 +2524,11 @@ static int32_t SelectVersion(TLS_Ctx *ctx, const ClientHelloMsg *clientHello, ui
     /* Find the supported version in the extended field supportedVersions. */
     for (uint32_t j = 0; j < sizeof(versions) / sizeof(uint16_t); j++) {
         version = versions[j];
+#ifdef HITLS_TLS_FEATURE_QUIC_TLS
+        if (QUIC_TLS_IsMode(ctx) && version != HITLS_VERSION_TLS13) {
+            continue;
+        }
+#endif
          /* Check whether the version is supported */
         for (int i = 0; i < clientHello->extension.content.supportedVersionsCount; i++) {
             versionBits = MapVersion2VersionBit(IS_SUPPORT_DATAGRAM(ctx->config.tlsConfig.originVersionMask), version);

@@ -37,6 +37,9 @@
 #include "dtls_cid.h"
 #endif
 #include "rec_crypto_aead.h"
+#ifdef HITLS_TLS_FEATURE_QUIC_TLS
+#include "quic_tls_internal.h"
+#endif
 
 RecConnState *GetWriteConnState(const TLS_Ctx *ctx)
 {
@@ -644,6 +647,27 @@ int32_t TlsRecordWrite(TLS_Ctx *ctx, REC_Type recordType, const uint8_t *data, u
 #ifdef HITLS_TLS_FEATURE_FLIGHT
 int32_t REC_FlightTransmit(TLS_Ctx *ctx)
 {
+#ifdef HITLS_TLS_FEATURE_QUIC_TLS
+    /*
+     * QUIC mode: the flight boundary is reused as the flush signal for the QUIC stack's
+     * buffered CRYPTO data; the record UIO below is never involved.
+     */
+    if (QUIC_TLS_IsMode(ctx)) {
+        QUIC_TLS_Ctx *quicTlsCtx = ctx->quicTlsCtx;
+        /* Avoid emitting an empty flight when no addHandshakeData callback has succeeded since the last flush. */
+        if (!quicTlsCtx->flightPending) {
+            return HITLS_SUCCESS;
+        }
+        /* Reuse the record flight boundary while letting the QUIC stack transmit its buffered CRYPTO data. */
+        int32_t callbackRet = quicTlsCtx->cbs.flushFlight(ctx, quicTlsCtx->callbackArg);
+        if (callbackRet != HITLS_SUCCESS) {
+            return QUIC_TLS_CallbackFailed(HITLS_QUIC_TLS_FUNC_FLUSH_FLIGHT, callbackRet);
+        }
+        /* Clear the marker only after a successful callback; a failed flush remains pending. */
+        quicTlsCtx->flightPending = false;
+        return HITLS_SUCCESS;
+    }
+#endif
     int32_t ret = HITLS_SUCCESS;
 #if defined(HITLS_TLS_PROTO_DATAGRAM) && defined(HITLS_BSL_UIO_UDP)
     /* Reset the buffer uio size */

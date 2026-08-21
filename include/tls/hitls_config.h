@@ -789,6 +789,7 @@ int32_t HITLS_CFG_GetDhAutoSupport(HITLS_Config *config, bool *isSupport);
  * @retval  HITLS_NULL_INPUT, The config parameter is empty.
  * @attention Before enabling this function on the server, enable HITLS_CFG_SetClientVerifySupport.
  * Otherwise, the configuration does not take effect.
+ * @attention HITLS_QUIC_TLS_SetQuicTlsMethod disables this setting on the connection because QUIC forbids PHA.
  */
 int32_t HITLS_CFG_SetPostHandshakeAuthSupport(HITLS_Config *config, bool support);
 

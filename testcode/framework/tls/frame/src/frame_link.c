@@ -217,6 +217,58 @@ FRAME_LinkObj *FRAME_CreateLinkBase(HITLS_Config *config, BSL_UIO_TransportType 
     return CreateLink(config, type);
 }
 
+#ifdef HITLS_TLS_FEATURE_QUIC_TLS
+FRAME_LinkObj *FRAME_CreateQuicLink(HITLS_Config *config)
+{
+    int32_t ret;
+    char verifyPath[MAX_CERT_PATH_LENGTH] = {0};
+    char chainPath[MAX_CERT_PATH_LENGTH] = {0};
+    char certPath[MAX_CERT_PATH_LENGTH] = {0};
+    char keyPath[MAX_CERT_PATH_LENGTH] = {0};
+    FRAME_LinkObj *linkObj;
+
+#ifdef HITLS_TLS_CONFIG_KEY_USAGE
+    HITLS_CFG_SetCheckKeyUsage(config, false);
+#endif /* HITLS_TLS_CONFIG_KEY_USAGE */
+
+#ifdef HITLS_TLS_FEATURE_SECURITY
+    HITLS_CFG_SetSecurityLevel(config, HITLS_SECURITY_LEVEL_ZERO);
+#endif /* HITLS_TLS_FEATURE_SECURITY */
+
+    snprintf(verifyPath, MAX_CERT_PATH_LENGTH, "%s:%s", ECDSA_SHA_CA_PATH, RSA_SHA_CA_PATH);
+    snprintf(chainPath, MAX_CERT_PATH_LENGTH, "%s:%s",
+        ECDSA_SHA_CHAIN_PATH, RSA_SHA_CHAIN_PATH);
+    snprintf(certPath, MAX_CERT_PATH_LENGTH, "%s:%s", ECDSA_SHA256_EE_PATH, RSA_SHA256_EE_PATH3);
+    snprintf(keyPath, MAX_CERT_PATH_LENGTH, "%s:%s",
+        ECDSA_SHA256_PRIV_PATH, RSA_SHA256_PRIV_PATH3);
+    ret = HiTLS_X509_LoadCertAndKey(config, verifyPath, chainPath, certPath, NULL, keyPath, NULL);
+    if (ret != HITLS_SUCCESS) {
+        return NULL;
+    }
+
+    HITLS_CFG_SetReadAhead(config, 1);
+    HITLS_Ctx *sslObj = HITLS_New(config);
+    if (sslObj == NULL) {
+        return NULL;
+    }
+
+    linkObj = BSL_SAL_Calloc(1u, sizeof(FRAME_LinkObj));
+    if (linkObj == NULL) {
+        HITLS_Free(sslObj);
+        return NULL;
+    }
+    linkObj->ssl = sslObj;
+
+    /* A QUIC link carries no transport UIO: handshake bytes are exchanged by
+     * the test through HITLS_QUIC_TLS_ProvideData, not through HITLS_Read or
+     * HITLS_Write. */
+    linkObj->io = NULL;
+
+    RegisterConnection(sslObj);
+    return linkObj;
+}
+#endif /* HITLS_TLS_FEATURE_QUIC_TLS */
+
 FRAME_LinkObj *FRAME_CreateLink(HITLS_Config *config, BSL_UIO_TransportType type)
 {
 #ifdef HITLS_TLS_CONFIG_KEY_USAGE
@@ -306,19 +358,22 @@ void FRAME_FreeLink(FRAME_LinkObj *linkObj)
         RemoveWrapperFromConnection(linkObj->ssl);
     }
 
-    FRAME_IO_FreeUserData(BSL_UIO_GetUserData(linkObj->io));
-    // BSL_UIO_Free is automatically invoked twice in HITLS_Free
+    if (linkObj->io != NULL) {
+        FRAME_IO_FreeUserData(BSL_UIO_GetUserData(linkObj->io));
+        // BSL_UIO_Free is automatically invoked twice in HITLS_Free
 #ifdef HITLS_TLS_FEATURE_FLIGHT
-    if (linkObj->io != NULL && linkObj->io->references.count >= 2) {
-        while (linkObj->io->references.count > 2) {
+        if (linkObj->io->references.count >= 2) {
+            while (linkObj->io->references.count > 2) {
+                BSL_UIO_Free(linkObj->io);
+            }
+        } else {
+#endif
             BSL_UIO_Free(linkObj->io);
-        }
-    } else {
-#endif
-        BSL_UIO_Free(linkObj->io);
 #ifdef HITLS_TLS_FEATURE_FLIGHT
-    }
+        }
 #endif
+    }
+    /* A QUIC link has no UIO (linkObj->io == NULL) and nothing to free here. */
     HITLS_Free(linkObj->ssl);
     BSL_SAL_FREE(linkObj);
     return;

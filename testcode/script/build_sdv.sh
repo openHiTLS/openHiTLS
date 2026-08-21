@@ -28,7 +28,7 @@ usage()
     printf "%-50s %-30s\n" "* no-tls       : Custom tls testcase."             "bash ${BASH_SOURCE[0]} no-tls"
     printf "%-50s %-30s\n" "* no-pki       : Custom pki testcase."             "bash ${BASH_SOURCE[0]} no-pki"
     printf "%-50s %-30s\n" "* no-auth      : Custom auth testcase."            "bash ${BASH_SOURCE[0]} no-auth"
-    printf "%-50s %-30s\n" "* no-demos     : Not build demos."                 "bash ${BASH_SOURCE[0]} no-auth"
+    printf "%-50s %-30s\n" "* no-demos     : Not build demos."                 "bash ${BASH_SOURCE[0]} no-demos"
     printf "%-50s %-30s\n" "* verbose      : Show detailse."                   "bash ${BASH_SOURCE[0]} verbose"
     printf "%-50s %-30s\n" "* gcov         : Enable the coverage capability."  "bash ${BASH_SOURCE[0]} gcov"
     printf "%-50s %-30s\n" "* asan         : Enabling the ASAN capability."    "bash ${BASH_SOURCE[0]} asan"

@@ -32,6 +32,9 @@
 #include "alert.h"
 #include "parse_extensions.h"
 #include "custom_extensions.h"
+#ifdef HITLS_TLS_FEATURE_QUIC_TLS
+#include "quic_tls_internal.h"
+#endif
 
 static int32_t StorePeerSupportGroup(TLS_Ctx *ctx, ClientHelloMsg *msg)
 {
@@ -870,6 +873,50 @@ static int32_t ParseClientRecordSizeLimit(ParsePacket *pkt, ClientHelloMsg *msg)
 }
 #endif
 
+#ifdef HITLS_TLS_FEATURE_QUIC_TLS
+static int32_t ParseClientQuicTransportParams(ParsePacket *pkt, ClientHelloMsg *msg)
+{
+    uint32_t paramsLen = pkt->bufLen;
+    int32_t ret;
+    if (!QUIC_TLS_IsMode(pkt->ctx)) {
+        return HITLS_MSG_HANDLE_STATE_ILLEGAL;
+    }
+    ret = ParseBytesToArray(pkt, &msg->extension.content.quicTransportParams, paramsLen);
+    if (ret == HITLS_MEMALLOC_FAIL) {
+        return ParseErrorProcess(pkt->ctx, HITLS_MEMALLOC_FAIL, BINLOG_ID15976,
+            BINGLOG_STR("QUIC transport parameters malloc fail."), ALERT_INTERNAL_ERROR);
+    }
+    if (ret != HITLS_SUCCESS || pkt->bufLen != *pkt->bufOffset) {
+        return ParseErrorExtLengthProcess(pkt->ctx, BINLOG_ID15121,
+            BINGLOG_STR("QUIC transport parameters"));
+    }
+    msg->extension.content.quicTransportParamsLen = paramsLen;
+    msg->extension.flag.haveQuicTlsTransportParams = true;
+
+    /* The ClientHello callback runs before receive-side extension processing,
+     * so store CH1 now for HITLS_QUIC_TLS_GetPeerTransportParams(). Keep that owned
+     * value stable across HRR; CH2 stays in its message for the equality check. */
+    if (pkt->ctx->hsCtx != NULL && pkt->ctx->hsCtx->haveHrr) {
+        return HITLS_SUCCESS;
+    }
+    {
+        QUIC_TLS_Ctx *quicTlsCtx = pkt->ctx->quicTlsCtx;
+        uint8_t *copy = NULL;
+        if (paramsLen != 0) {
+            copy = (uint8_t *)BSL_SAL_Dump(msg->extension.content.quicTransportParams, paramsLen);
+            if (copy == NULL) {
+                return ParseErrorProcess(pkt->ctx, HITLS_MEMALLOC_FAIL, BINLOG_ID15976,
+                    BINGLOG_STR("QUIC transport parameters malloc fail."), ALERT_INTERNAL_ERROR);
+            }
+        }
+        BSL_SAL_FREE(quicTlsCtx->peerTransportParams);
+        quicTlsCtx->peerTransportParams = copy;
+        quicTlsCtx->peerTransportParamsLen = paramsLen;
+    }
+    return HITLS_SUCCESS;
+}
+#endif
+
 // parses the extension message from client
 static int32_t ParseClientExBody(TLS_Ctx *ctx, uint16_t extMsgType, const uint8_t *buf, uint32_t extMsgLen,
     ClientHelloMsg *msg)
@@ -917,6 +964,9 @@ static int32_t ParseClientExBody(TLS_Ctx *ctx, uint16_t extMsgType, const uint8_
 #endif /* HITLS_TLS_FEATURE_ETM */
 #ifdef HITLS_TLS_FEATURE_RECORD_SIZE_LIMIT
         { .exMsgType = HS_EX_TYPE_RECORD_SIZE_LIMIT, .parseFunc = ParseClientRecordSizeLimit},
+#endif
+#ifdef HITLS_TLS_FEATURE_QUIC_TLS
+        { .exMsgType = HS_EX_TYPE_QUIC_TRANSPORT_PARAMETERS, .parseFunc = ParseClientQuicTransportParams},
 #endif
     };
     for (uint32_t index = 0; index < sizeof(extMsgList) / sizeof(extMsgList[0]); index++) {
@@ -1057,6 +1107,9 @@ void CleanClientHelloExtension(ClientHelloMsg *msg)
     BSL_SAL_FREE(msg->extension.content.keModes);
     BSL_SAL_FREE(msg->extension.content.cookie);
     BSL_SAL_FREE(msg->extension.content.connectionId);
+#ifdef HITLS_TLS_FEATURE_QUIC_TLS
+    BSL_SAL_FREE(msg->extension.content.quicTransportParams);
+#endif
     CleanKeyShare(msg->extension.content.keyShare);
     msg->extension.content.keyShare = NULL;
     CleanPreShareKey(msg->extension.content.preSharedKey);

@@ -35,6 +35,9 @@
 #include "hs_state_send.h"
 #include "hs_common.h"
 #include "sal_net.h"
+#ifdef HITLS_TLS_FEATURE_QUIC_TLS
+#include "quic_tls_internal.h"
+#endif
 
 #if defined(HITLS_TLS_PROTO_DATAGRAM) && defined(HITLS_BSL_UIO_UDP)
 #define DTLS_MAX_MTU_OVERHEAD 48    /* Max overhead, ipv6 40 + udp 8 */
@@ -502,6 +505,11 @@ int32_t HITLS_Close(HITLS_Ctx *ctx)
     if (ctx == NULL) {
         return HITLS_NULL_INPUT;
     }
+#ifdef HITLS_TLS_FEATURE_QUIC_TLS
+    if (QUIC_TLS_IsMode(ctx)) {
+        return HITLS_CONFIG_UNSUPPORT;
+    }
+#endif
 
     ctx->userShutDown = 1;
 
@@ -546,6 +554,11 @@ int32_t HITLS_Close(HITLS_Ctx *ctx)
     if (ctx == NULL) {
         return HITLS_NULL_INPUT;
     }
+#ifdef HITLS_TLS_FEATURE_QUIC_TLS
+    if (QUIC_TLS_IsMode(ctx)) {
+        return HITLS_CONFIG_UNSUPPORT;
+    }
+#endif
 
     if (ctx->recCtx == NULL || ctx->alertCtx == NULL) {
         return HITLS_SUCCESS;
@@ -786,6 +799,11 @@ int32_t HITLS_KeyUpdate(HITLS_Ctx *ctx, uint32_t updateType)
     if (ctx == NULL) {
         return HITLS_NULL_INPUT;
     }
+#ifdef HITLS_TLS_FEATURE_QUIC_TLS
+    if (QUIC_TLS_IsMode(ctx)) {
+        return HITLS_CONFIG_UNSUPPORT;
+    }
+#endif
     // Check whether the version is TLS1.3, whether the current status is transporting, and whether update is allowed.
     int32_t ret = HS_CheckKeyUpdateState(ctx, updateType);
     if (ret != HITLS_SUCCESS) {
@@ -907,6 +925,11 @@ int32_t HITLS_VerifyClientPostHandshake(HITLS_Ctx *ctx)
     if (ctx == NULL) {
         return HITLS_NULL_INPUT;
     }
+#ifdef HITLS_TLS_FEATURE_QUIC_TLS
+    if (QUIC_TLS_IsMode(ctx)) {
+        return HITLS_CONFIG_UNSUPPORT;
+    }
+#endif
     if (ctx->isClient) {
         return HITLS_INVALID_INPUT;
     }

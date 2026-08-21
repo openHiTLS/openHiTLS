@@ -973,6 +973,9 @@ uint32_t HS_GetExtensionTypeId(uint32_t hsExtensionsType)
         case HS_EX_TYPE_POST_HS_AUTH: return HS_EX_TYPE_ID_POST_HS_AUTH;
         case HS_EX_TYPE_KEY_SHARE: return HS_EX_TYPE_ID_KEY_SHARE;
         case HS_EX_TYPE_CONNECTION_ID: return HS_EX_TYPE_ID_CONNECTION_ID;
+#ifdef HITLS_TLS_FEATURE_QUIC_TLS
+        case HS_EX_TYPE_QUIC_TRANSPORT_PARAMETERS: return HS_EX_TYPE_ID_QUIC_TRANSPORT_PARAMETERS;
+#endif
         case HS_EX_TYPE_RENEGOTIATION_INFO: return HS_EX_TYPE_ID_RENEGOTIATION_INFO;
         default: break;
     }

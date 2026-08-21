@@ -28,6 +28,9 @@
 #include "pack_common.h"
 #include "pack_extensions.h"
 #include "hs_common.h"
+#ifdef HITLS_TLS_FEATURE_QUIC_TLS
+#include "quic_tls_internal.h"
+#endif
 
 #define CIPHER_SUITES_LEN_SIZE   2u
 
@@ -67,6 +70,11 @@ static int32_t PackCipherSuites(const TLS_Ctx *ctx, PackPacket *pkt, bool isTls1
 
     int32_t ret = HITLS_SUCCESS;
     for (uint32_t i = 0; i < cipherSuitesSize; i++) {
+#ifdef HITLS_TLS_FEATURE_QUIC_TLS
+        if (!QUIC_TLS_IsCipherSuiteSupported(ctx, cipherSuites[i])) {
+            continue;
+        }
+#endif
         if (!IsCipherSuiteAllowed(ctx, cipherSuites[i], false)) {
             BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15845, BSL_LOG_LEVEL_WARN, BSL_LOG_BINLOG_TYPE_RUN,
                 "The cipher suite [0x%04x] is NOT supported, index=[%u].", cipherSuites[i], i, 0, 0);
@@ -106,6 +114,10 @@ static int32_t PackScsvCipherSuites(const TLS_Ctx *ctx, PackPacket *pkt)
 static int32_t PackClientCipherSuites(const TLS_Ctx *ctx, PackPacket *pkt)
 {
     uint32_t cipherLenPosition = 0u;
+    bool isQuicTlsMode = false;
+#ifdef HITLS_TLS_FEATURE_QUIC_TLS
+    isQuicTlsMode = QUIC_TLS_IsMode(ctx);
+#endif
     /* Finally fill in the length of the cipher suites */
     int32_t ret = PackStartLengthField(pkt, CIPHER_SUITES_LEN_SIZE, &cipherLenPosition);
     if (ret != HITLS_SUCCESS) {
@@ -122,7 +134,7 @@ static int32_t PackClientCipherSuites(const TLS_Ctx *ctx, PackPacket *pkt)
         }
     }
 #endif /* HITLS_TLS_PROTO_TLS13_FAMILY */
-    if (!IS_TLS13_FAMILY_VERSION(ctx->config.tlsConfig.minVersion)) {
+    if (!IS_TLS13_FAMILY_VERSION(ctx->config.tlsConfig.minVersion) && !isQuicTlsMode) {
         ret = PackCipherSuites(ctx, pkt, 0);
         if (ret != HITLS_SUCCESS) {
             BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16926, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,

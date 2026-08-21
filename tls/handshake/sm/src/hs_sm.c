@@ -37,24 +37,30 @@
 #endif /* HITLS_TLS_FEATURE_INDICATOR */
 #include "transcript_hash.h"
 #include "recv_process.h"
+#ifdef HITLS_TLS_FEATURE_QUIC_TLS
+#include "quic_tls_internal.h"
+#endif
 
 static int32_t HandshakeDone(TLS_Ctx *ctx)
 {
     (void)ctx;
     int32_t ret = HITLS_SUCCESS;
 #ifdef HITLS_TLS_FEATURE_FLIGHT
-    /* If isFlightTransmitEnable is enabled, the server CCS and Finish information stored in the bUio must be sent after
-     * the handshake is complete */
+    /*
+     * QUIC-TLS force-enables FLIGHT at the build level; at runtime a QUIC connection
+     * keeps isFlightTransmitEnable off, and REC_FlightTransmit internally dispatches
+     * to the QUIC flushFlight callback instead of flushing the record UIO.
+     */
+#ifdef HITLS_TLS_FEATURE_QUIC_TLS
+    if (ctx->config.tlsConfig.isFlightTransmitEnable || QUIC_TLS_IsMode(ctx)) {
+#else
     if (ctx->config.tlsConfig.isFlightTransmitEnable) {
-        ret = BSL_UIO_Ctrl(ctx->uio, BSL_UIO_FLUSH, 0, NULL);
-        if (ret == BSL_UIO_IO_BUSY) {
-            return HITLS_REC_NORMAL_IO_BUSY;
-        }
-        if (ret != BSL_SUCCESS) {
-            BSL_ERR_PUSH_ERROR(HITLS_REC_ERR_IO_EXCEPTION);
-            BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16109, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-                "fail to send the CCS and Finish message of server in bUio.", 0, 0, 0, 0);
-            return HITLS_REC_ERR_IO_EXCEPTION;
+#endif
+        /* The final outbound flight has no following receive state, so flush it as part
+         * of completing the handshake. */
+        ret = REC_FlightTransmit(ctx);
+        if (ret != HITLS_SUCCESS) {
+            return ret;
         }
     }
 #endif /* HITLS_TLS_FEATURE_FLIGHT */

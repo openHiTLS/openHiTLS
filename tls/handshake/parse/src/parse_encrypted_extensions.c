@@ -29,6 +29,9 @@
 #include "parse_extensions.h"
 #include "parse_common.h"
 #include "custom_extensions.h"
+#ifdef HITLS_TLS_FEATURE_QUIC_TLS
+#include "quic_tls_internal.h"
+#endif
 
 /**
  * @brief   Release the memory in the message structure.
@@ -44,8 +47,34 @@ void CleanEncryptedExtensions(EncryptedExtensions *msg)
 #ifdef HITLS_TLS_FEATURE_ALPN
     BSL_SAL_FREE(msg->alpnSelected);
 #endif /* HITLS_TLS_FEATURE_ALPN */
+#ifdef HITLS_TLS_FEATURE_QUIC_TLS
+    BSL_SAL_FREE(msg->quicTransportParams);
+#endif /* HITLS_TLS_FEATURE_QUIC_TLS */
     return;
 }
+
+#ifdef HITLS_TLS_FEATURE_QUIC_TLS
+static int32_t ParseEncryptedQuicTransportParams(ParsePacket *pkt, EncryptedExtensions *msg)
+{
+    uint32_t paramsLen = pkt->bufLen;
+    int32_t ret;
+    if (!QUIC_TLS_IsMode(pkt->ctx)) {
+        return HITLS_MSG_HANDLE_STATE_ILLEGAL;
+    }
+    ret = ParseBytesToArray(pkt, &msg->quicTransportParams, paramsLen);
+    if (ret == HITLS_MEMALLOC_FAIL) {
+        return ParseErrorProcess(pkt->ctx, HITLS_MEMALLOC_FAIL, BINLOG_ID15976,
+            BINGLOG_STR("QUIC transport parameters malloc fail."), ALERT_INTERNAL_ERROR);
+    }
+    if (ret != HITLS_SUCCESS || pkt->bufLen != *pkt->bufOffset) {
+        return ParseErrorExtLengthProcess(pkt->ctx, BINLOG_ID16239,
+            BINGLOG_STR("QUIC transport parameters"));
+    }
+    msg->quicTransportParamsLen = paramsLen;
+    msg->haveQuicTlsTransportParams = true;
+    return HITLS_SUCCESS;
+}
+#endif /* HITLS_TLS_FEATURE_QUIC_TLS */
 
 static int32_t ParseEncryptedSupportGroups(ParsePacket *pkt, EncryptedExtensions *msg)
 {
@@ -93,6 +122,10 @@ static int32_t ParseEncryptedExBody(TLS_Ctx *ctx, uint16_t extMsgType, const uin
     uint32_t bufOffset = 0u;
     ParsePacket pkt = {.ctx = ctx, .buf = buf, .bufLen = extMsgLen, .bufOffset = &bufOffset};
     switch (extMsgType) {
+#ifdef HITLS_TLS_FEATURE_QUIC_TLS
+        case HS_EX_TYPE_QUIC_TRANSPORT_PARAMETERS:
+            return ParseEncryptedQuicTransportParams(&pkt, msg);
+#endif
         case HS_EX_TYPE_SUPPORTED_GROUPS:
             return ParseEncryptedSupportGroups(&pkt, msg);
         case HS_EX_TYPE_EARLY_DATA:

@@ -362,13 +362,23 @@ uint32_t APP_GetReadPendingBytes(const TLS_Ctx *ctx);
 int32_t REC_RecOutBufReSet(TLS_Ctx *ctx);
 
 /**
- * @brief   Flush the buffer uio
+ * @brief   Flush one complete outbound flight at a flight boundary.
+ *
+ * @details Two dispatch modes share the flight-boundary concept:
+ *          - Flight transmit enabled (isFlightTransmitEnable): flushes the buffered
+ *            record UIO that accumulated handshake records of the current flight.
+ *          - QUIC mode (HITLS_TLS_FEATURE_QUIC_TLS): invokes the registered flushFlight
+ *            callback so the QUIC stack transmits its buffered CRYPTO data; nothing is
+ *            written to a record UIO. An empty flight (no successful addHandshakeData
+ *            since the last flush) is skipped. Enabling QUIC-TLS force-enables
+ *            HITLS_TLS_FEATURE_FLIGHT at the build level.
  *
  * @param   ctx [IN] ssl context
  *
  * @retval  HITLS_SUCCESS
  * @retval  HITLS_REC_NORMAL_IO_BUSY uio busy
  * @retval  HITLS_REC_ERR_IO_EXCEPTION uio error
+ * @retval  HITLS_REC_CB_FAIL QUIC flushFlight callback failed
  */
 int32_t REC_FlightTransmit(TLS_Ctx *ctx);
 

@@ -27,6 +27,9 @@
 #include "tls.h"
 #include "tls_config.h"
 #include "cert.h"
+#ifdef HITLS_TLS_FEATURE_QUIC_TLS
+#include "quic_tls_internal.h"
+#endif
 #ifdef HITLS_TLS_FEATURE_SESSION
 #include "session.h"
 #include "session_mgr.h"
@@ -195,6 +198,10 @@ void HITLS_Free(HITLS_Ctx *ctx)
     SAL_CRYPT_DigestFree(ctx->phaCurHash);
     BSL_SAL_FREE(ctx->certificateReqCtx);
 #endif
+#ifdef HITLS_TLS_FEATURE_QUIC_TLS
+    QUIC_TLS_CtxFree(ctx->quicTlsCtx);
+    ctx->quicTlsCtx = NULL;
+#endif
     ConnCleanSensitiveData(ctx);
     BSL_SAL_Free(ctx);
 }
@@ -269,6 +276,9 @@ int32_t HITLS_Clear(HITLS_Ctx *ctx)
     ctx->newCidState = DTLS_CID_MSG_STATE_IDLE;
     ctx->reqCidState = DTLS_CID_MSG_STATE_IDLE;
     ctx->reqCidNum = 0;
+#endif
+#ifdef HITLS_TLS_FEATURE_QUIC_TLS
+    QUIC_TLS_CtxReset(ctx->quicTlsCtx);
 #endif
     return HITLS_SUCCESS;
 }
@@ -727,6 +737,11 @@ int32_t HITLS_SetPostHandshakeAuthSupport(HITLS_Ctx *ctx, bool support)
     if (ctx == NULL) {
         return HITLS_NULL_INPUT;
     }
+#ifdef HITLS_TLS_FEATURE_QUIC_TLS
+    if (support && QUIC_TLS_IsMode(ctx)) {
+        return HITLS_CONFIG_UNSUPPORT;
+    }
+#endif
 
     return HITLS_CFG_SetPostHandshakeAuthSupport(&(ctx->config.tlsConfig), support);
 }

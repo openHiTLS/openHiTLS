@@ -27,6 +27,9 @@
 #include "hs_common.h"
 #include "transcript_hash.h"
 #include "config_type.h"
+#ifdef HITLS_TLS_FEATURE_QUIC_TLS
+#include "quic_tls_internal.h"
+#endif
 
 static void SetDtls13HkdfLabelPrefix(const TLS_Ctx *ctx, CRYPT_KeyDeriveParameters *deriveInfo)
 {
@@ -600,6 +603,11 @@ int32_t HS_TLS13CalcServerFinishProcessSecret(TLS_Ctx *ctx)
 
 int32_t HS_SwitchTrafficKey(TLS_Ctx *ctx, uint8_t *secret, uint32_t secretLen, bool isOut)
 {
+#ifdef HITLS_TLS_FEATURE_QUIC_TLS
+    if (QUIC_TLS_IsMode(ctx)) {
+        return QUIC_TLS_SetTrafficSecret(ctx, secret, secretLen, isOut);
+    }
+#endif
     int32_t ret;
     CipherSuiteInfo *cipherSuiteInfo = &(ctx->negotiatedInfo.cipherSuiteInfo);
     uint32_t hashLen = SAL_CRYPT_DigestSize(cipherSuiteInfo->hashAlg);

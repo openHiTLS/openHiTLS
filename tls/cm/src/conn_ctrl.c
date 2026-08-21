@@ -26,6 +26,9 @@
 #include "cert_method.h"
 #include "record.h"
 #include "hs_ctx.h"
+#ifdef HITLS_TLS_FEATURE_QUIC_TLS
+#include "quic_tls_internal.h"
+#endif
 
 #ifdef HITLS_TLS_CONNECTION_INFO_NEGOTIATION
 int32_t HITLS_GetNegotiatedVersion(const HITLS_Ctx *ctx, uint16_t *version)
@@ -573,6 +576,21 @@ int32_t HITLS_SetFlightTransmitSwitch(HITLS_Ctx *ctx, bool isEnable)
     if (ctx == NULL) {
         return HITLS_NULL_INPUT;
     }
+
+#ifdef HITLS_TLS_FEATURE_QUIC_TLS
+    /*
+     * QUIC owns CRYPTO-stream transmission through the registered callbacks; the buffered
+     * flight-transmit path (records staged in bUio until a flight boundary) must never be
+     * activated for a QUIC connection. A later enable here would send handshake records to
+     * the (nonexistent) buffer UIO instead of the addHandshakeData callback, so reject the
+     * request instead of storing it. QuicTlsMethodEnable keeps the switch off for the whole
+     * QUIC connection lifetime; this guard makes that invariant unoverrideable.
+     */
+    if (isEnable && QUIC_TLS_IsMode((TLS_Ctx *)ctx)) {
+        BSL_ERR_PUSH_ERROR(HITLS_CONFIG_UNSUPPORT);
+        return HITLS_CONFIG_UNSUPPORT;
+    }
+#endif
 
     return HITLS_CFG_SetFlightTransmitSwitch(&(ctx->config.tlsConfig), isEnable);
 }

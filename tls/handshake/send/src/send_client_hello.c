@@ -36,6 +36,9 @@
 #include "bsl_bytes.h"
 #include "config_type.h"
 #include "security.h"
+#ifdef HITLS_TLS_FEATURE_QUIC_TLS
+#include "quic_tls_internal.h"
+#endif
 
 #if defined(HITLS_TLS_PROTO_TLS_BASIC) || defined(HITLS_TLS_PROTO_DTLS12)
 #ifdef HITLS_TLS_FEATURE_SESSION
@@ -289,6 +292,15 @@ static int32_t Tls13ClientPrepareKeyShare(TLS_Ctx *ctx, uint32_t tls13BasicKeyEx
 static int32_t Tls13ClientPrepareSession(TLS_Ctx *ctx)
 {
     HS_Ctx *hsCtx = (HS_Ctx *)ctx->hsCtx;
+
+#ifdef HITLS_TLS_FEATURE_QUIC_TLS
+    /* QUIC requires an empty legacy_session_id, even when a legacy session is configured. */
+    if (QUIC_TLS_IsMode(ctx)) {
+        BSL_SAL_FREE(hsCtx->sessionId);
+        hsCtx->sessionIdSize = 0;
+        return HITLS_SUCCESS;
+    }
+#endif
 
 #if defined(HITLS_TLS_FEATURE_SESSION) && (defined(HITLS_TLS_PROTO_TLS_BASIC) || defined(HITLS_TLS_PROTO_DTLS12))
     bool isDatagram = IS_SUPPORT_DATAGRAM(ctx->config.tlsConfig.originVersionMask);

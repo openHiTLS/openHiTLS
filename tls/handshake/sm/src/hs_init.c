@@ -26,10 +26,25 @@
 #include "hs_kx.h"
 #include "hs.h"
 #include "parse.h"
+#ifdef HITLS_TLS_FEATURE_QUIC_TLS
+#include "quic_tls_internal.h"
+#endif
 
 #ifdef HITLS_TLS_FEATURE_FLIGHT
 static int32_t UIO_Init(TLS_Ctx *ctx)
 {
+#ifdef HITLS_TLS_FEATURE_QUIC_TLS
+    /*
+     * QUIC never uses the buffered UIO: handshake bytes leave through the registered
+     * callbacks, not through ctx->uio. The isFlightTransmitEnable gate at the call site
+     * already keeps QUIC out (QuicTlsMethodEnable forces the switch off); this early
+     * return is a defensive guard so a future change to that switch cannot silently
+     * graft a useless buffer UIO onto a QUIC connection.
+     */
+    if (QUIC_TLS_IsMode(ctx)) {
+        return HITLS_SUCCESS;
+    }
+#endif
     if (ctx->bUio != NULL) {
         return HITLS_SUCCESS;
     }

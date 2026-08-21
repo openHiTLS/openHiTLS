@@ -240,4 +240,9 @@ target_include_directories(_hitls_tls_handshake
         ${CMAKE_CURRENT_SOURCE_DIR}/parse/src
 )
 
+if(HITLS_TLS_FEATURE_QUIC_TLS)
+    target_include_directories(_hitls_tls_handshake PRIVATE
+        ${PROJECT_SOURCE_DIR}/tls/feature/quic_tls/include)
+endif()
+
 hitls_register_objects(TLS _hitls_tls_handshake)

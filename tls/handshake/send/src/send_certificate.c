@@ -26,6 +26,9 @@
 #include "hs_kx.h"
 #include "pack.h"
 #include "send_process.h"
+#ifdef HITLS_TLS_FEATURE_QUIC_TLS
+#include "quic_tls_internal.h"
+#endif
 #if defined(HITLS_TLS_PROTO_TLS_BASIC) || defined(HITLS_TLS_PROTO_DTLS12)
 int32_t SendCertificateProcess(TLS_Ctx *ctx)
 {
@@ -99,7 +102,13 @@ int32_t Tls13ClientSendCertificateProcess(TLS_Ctx *ctx)
                 return ret;
             }
         }
-        if (ctx->negotiatedInfo.version != HITLS_VERSION_DTLS13 && ctx->phaState != PHA_REQUESTED) {
+        if (ctx->negotiatedInfo.version != HITLS_VERSION_DTLS13 && ctx->phaState != PHA_REQUESTED
+#ifdef HITLS_TLS_FEATURE_QUIC_TLS
+            /* QUIC installs this secret already at ServerHello; the per-level
+             * install-once guard would reject the second install. */
+            && !QUIC_TLS_IsMode(ctx)
+#endif
+        ) {
             /* CCS messages cannot be encrypted. Therefore, you need to activate the
                 sending key of the client after sending CCS messages. */
             uint32_t hashLen = SAL_CRYPT_DigestSize(ctx->negotiatedInfo.cipherSuiteInfo.hashAlg);

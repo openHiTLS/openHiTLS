@@ -601,6 +601,7 @@ int32_t HITLS_SetNoClientCertSupport(HITLS_Ctx *ctx, bool support);
  * @param   support [IN] true: yes; false: no.
  * @retval  HITLS_SUCCESS, if successful.
  * @retval  HITLS_NULL_INPUT, config is null.
+ * @retval  HITLS_CONFIG_UNSUPPORT, if support is true on a QUIC connection.
  */
 int32_t HITLS_SetPostHandshakeAuthSupport(HITLS_Ctx *ctx, bool support);
 
@@ -1457,7 +1458,11 @@ int32_t HITLS_GetDtlsCookieExangeSupport(const HITLS_Ctx *ctx, bool *isSupport);
  * @param   ctx [IN/OUT] TLS connection handle.
  * @param   isEnable [IN] Indicates whether to enable handshake information sending by flight distance.
  * The value 0 indicates disable, other values indicate enable.
+ * @attention Enabling is rejected with HITLS_CONFIG_UNSUPPORT on a QUIC-TLS connection: QUIC
+ *            transmits handshake bytes through the registered callbacks, and the buffered
+ *            flight-transmit path must stay off for the connection lifetime.
  * @retval  HITLS_NULL_INPUT, the input parameter pointer is NULL.
+ * @retval  HITLS_CONFIG_UNSUPPORT, enabling was requested on a QUIC-TLS connection.
  * @retval  HITLS_SUCCESS, if successful.
  */
 int32_t HITLS_SetFlightTransmitSwitch(HITLS_Ctx *ctx, bool isEnable);
@@ -1593,6 +1598,7 @@ int32_t HITLS_ExportKeyingMaterial(HITLS_Ctx *ctx, uint8_t *out, size_t outLen, 
  * @param   ctx [IN] TLS Connection Handle
  * @retval  HITLS_INVALID_INPUT, invalid input parameter.
  * @retval  HITLS_SUCCESS, if successful.
+ * @retval  HITLS_CONFIG_UNSUPPORT, QUIC mode does not support post-handshake client authentication.
  * @retval  For details about other error codes, see hitls_error.h.
  */
 int32_t HITLS_VerifyClientPostHandshake(HITLS_Ctx *ctx);

@@ -267,6 +267,7 @@ bool GetExtensionFlagValue(TLS_Ctx *ctx, uint32_t hsExTypeId)
         case HS_EX_TYPE_ID_RECORD_SIZE_LIMIT:        return ctx->hsCtx->extFlag.haveRecordSizeLimit;
         case HS_EX_TYPE_ID_SIGNATURE_ALGORITHMS_CERT:return ctx->hsCtx->extFlag.haveSignatureAlgorithmsCert;
         case HS_EX_TYPE_ID_CONNECTION_ID:            return ctx->hsCtx->extFlag.haveConnectionId;
+        case HS_EX_TYPE_ID_QUIC_TRANSPORT_PARAMETERS:return ctx->hsCtx->extFlag.haveQuicTlsTransportParams;
         case HS_EX_TYPE_ID_COOKIE:
         case HS_EX_TYPE_ID_RENEGOTIATION_INFO:
         default:

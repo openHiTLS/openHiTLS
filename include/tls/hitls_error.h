@@ -432,6 +432,8 @@ typedef enum {
     HITLS_CALLBACK_CLIENT_HELLO_RETRY,                 /**< ClientHello callback retry. */
     HITLS_CALLBACK_CLIENT_HELLO_INVALID_CALL,          /**< Invalid use of HITLS_ClientHelloGet* function. */
     HITLS_CALLBACK_CLIENT_HELLO_EXTENSION_NOT_FOUND,   /**< Extension not found. */
+
+    HITLS_QUIC_TLS_PROTOCOL_VIOLATION = 0x02150001,        /**< QUIC transport PROTOCOL_VIOLATION; close the connection. */
 } HITLS_ERROR;
 
 

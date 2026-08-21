@@ -29,6 +29,9 @@
 #include "hs_msg.h"
 #include "hs_verify.h"
 #include "alpn.h"
+#ifdef HITLS_TLS_FEATURE_QUIC_TLS
+#include "quic_tls_internal.h"
+#endif
 
 
 typedef int32_t (*CheckEncryptedExtFunc)(TLS_Ctx *ctx, const EncryptedExtensions *eEMsg);
@@ -142,6 +145,48 @@ static int32_t ClientCheckEncryptedExtensionsFlag(TLS_Ctx *ctx, const EncryptedE
     return HITLS_SUCCESS;
 }
 
+#ifdef HITLS_TLS_FEATURE_QUIC_TLS
+/* RFC 9001: the server must send QUIC transport parameters and an ALPN
+ * extension with a selected protocol. */
+static int32_t QuicTlsCheckEncryptedExtensions(TLS_Ctx *ctx,
+    bool haveTransportParams, bool haveAlpn)
+{
+    if (!haveTransportParams) {
+        ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_MISSING_EXTENSION);
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17418, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+            "QUIC extension check failed; reason (1=local TP, 2=local ALPN, 3=peer TP, 4=peer ALPN)=%u, error=%d.",
+            3u, HITLS_MSG_HANDLE_MISSING_EXTENSION, 0, 0);
+        BSL_ERR_PUSH_ERROR(HITLS_MSG_HANDLE_MISSING_EXTENSION);
+        return HITLS_MSG_HANDLE_MISSING_EXTENSION;
+    }
+    if (!haveAlpn || ctx->negotiatedInfo.alpnSelected == NULL || ctx->negotiatedInfo.alpnSelectedSize == 0) {
+        ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_NO_APPLICATION_PROTOCOL);
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17418, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+            "QUIC extension check failed; reason (1=local TP, 2=local ALPN, 3=peer TP, 4=peer ALPN)=%u, error=%d.",
+            4u, HITLS_MSG_HANDLE_ALPN_PROTOCOL_NO_MATCH, 0, 0);
+        BSL_ERR_PUSH_ERROR(HITLS_MSG_HANDLE_ALPN_PROTOCOL_NO_MATCH);
+        return HITLS_MSG_HANDLE_ALPN_PROTOCOL_NO_MATCH;
+    }
+    return HITLS_SUCCESS;
+}
+
+/* Store an owned copy of the peer transport parameters from EncryptedExtensions. */
+static int32_t QuicTlsStorePeerTransportParams(TLS_Ctx *ctx, const uint8_t *params, uint32_t paramsLen)
+{
+    uint8_t *copy = NULL;
+    if (paramsLen != 0) {
+        copy = (uint8_t *)BSL_SAL_Dump(params, paramsLen);
+        if (copy == NULL) {
+            return HITLS_MEMALLOC_FAIL;
+        }
+    }
+    BSL_SAL_FREE(ctx->quicTlsCtx->peerTransportParams);
+    ctx->quicTlsCtx->peerTransportParams = copy;
+    ctx->quicTlsCtx->peerTransportParamsLen = paramsLen;
+    return HITLS_SUCCESS;
+}
+#endif /* HITLS_TLS_FEATURE_QUIC_TLS */
+
 int32_t Tls13ClientRecvEncryptedExtensionsProcess(TLS_Ctx *ctx, const HS_Msg *msg)
 {
     int32_t ret;
@@ -152,6 +197,21 @@ int32_t Tls13ClientRecvEncryptedExtensionsProcess(TLS_Ctx *ctx, const HS_Msg *ms
     if (ret != HITLS_SUCCESS) {
         return ret;
     }
+#ifdef HITLS_TLS_FEATURE_QUIC_TLS
+    if (QUIC_TLS_IsMode(ctx)) {
+        ret = QuicTlsCheckEncryptedExtensions(ctx,
+            eEMsg->haveQuicTlsTransportParams,
+            eEMsg->haveSelectedAlpn);
+        if (ret != HITLS_SUCCESS) {
+            return ret;
+        }
+        ret = QuicTlsStorePeerTransportParams(ctx, eEMsg->quicTransportParams, eEMsg->quicTransportParamsLen);
+        if (ret != HITLS_SUCCESS) {
+            ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_INTERNAL_ERROR);
+            return ret;
+        }
+    }
+#endif
 
     /* In psk_only mode, the 'server verify data' needs to be calculated
      * for verifying the 'finished' message from the server. */

@@ -76,3 +76,6 @@ if(_feature_sources)
 
     hitls_register_objects(TLS _hitls_tls_feature)
 endif()
+
+# QUIC-TLS - TLS 1.3 record-layer bypass and push API
+add_subdirectory(quic_tls)

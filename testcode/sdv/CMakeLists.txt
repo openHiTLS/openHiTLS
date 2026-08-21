@@ -56,7 +56,16 @@ if(ENABLE_AUTH AND ${BUILD_AUTH} GREATER -1)
     list(APPEND TEST_INTF_LIBS hitls_auth)
 endif()
 
-if(ENABLE_CRYPTO AND ${BUILD_CRYPTO} GREATER -1)
+# The common test framework (crypto_test_util.c) always links against the
+# crypto library, so link it whenever the library artifact exists. ENABLE_CRYPTO
+# only controls which built-in testcase suites are generated. Mini builds
+# (HITLS_BUILD_PROFILE=none) advertise crypto feature macros in macros.txt but
+# only produce libhitls_bsl, so the existence check keeps them from linking a
+# library that is not there.
+set(HITLS_CRYPTO_LIB_BASE "${openHiTLS_SRC}/build/libhitls_crypto")
+if(${BUILD_CRYPTO} GREATER -1 AND
+   (EXISTS "${HITLS_CRYPTO_LIB_BASE}${CMAKE_SHARED_LIBRARY_SUFFIX}" OR
+    EXISTS "${HITLS_CRYPTO_LIB_BASE}${CMAKE_STATIC_LIBRARY_SUFFIX}"))
     list(APPEND TEST_INTF_LIBS hitls_crypto)
 endif()
 
@@ -201,6 +210,7 @@ set(TEST_INTF_INCLUDE_DIRS
     ${openHiTLS_SRC}/tls/handshake/recv/include
     ${openHiTLS_SRC}/tls/handshake/common/src
     ${openHiTLS_SRC}/tls/feature/session/src
+    ${openHiTLS_SRC}/tls/feature/quic_tls/include
     ${openHiTLS_SRC}/tls/cert/include
     ${openHiTLS_SRC}/tls/cert/cert_adapt
     ${openHiTLS_SRC}/tls/cert/hitls_x509_adapt

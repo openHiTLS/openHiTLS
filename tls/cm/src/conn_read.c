@@ -34,6 +34,9 @@
 #include "hs_state_recv.h"
 #include "bsl_bytes.h"
 #include "dtls_cid.h"
+#ifdef HITLS_TLS_FEATURE_QUIC_TLS
+#include "quic_tls_internal.h"
+#endif
 
 #define HS_MESSAGE_LEN_FIELD 3u
 #if defined(HITLS_TLS_PROTO_DATAGRAM) && defined(HITLS_BSL_UIO_UDP)
@@ -260,6 +263,19 @@ static int32_t PreprocessUnexpectHsMsg(HITLS_Ctx *ctx)
     }
 
     HS_Ctx *hsCtx = ctx->hsCtx;
+#ifdef HITLS_TLS_FEATURE_QUIC_TLS
+    if (QUIC_TLS_IsMode(ctx)) {
+        bool isPhaViolation = ctx->isClient && hsCtx->msgBuf[0] == CERTIFICATE_REQUEST;
+        /* QUIC forbids TLS KeyUpdate and post-handshake client authentication. */
+        if (hsCtx->msgBuf[0] == KEY_UPDATE || isPhaViolation) {
+            ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_UNEXPECTED_MESSAGE);
+            int32_t errCode = isPhaViolation ? HITLS_QUIC_TLS_PROTOCOL_VIOLATION :
+                                             HITLS_MSG_HANDLE_UNEXPECTED_MESSAGE;
+            BSL_ERR_PUSH_ERROR(errCode);
+            return errCode;
+        }
+    }
+#endif
     switch (hsCtx->msgBuf[0]) {
         case HELLO_REQUEST:
         case CLIENT_HELLO:
@@ -503,6 +519,44 @@ static int32_t ReadProcess(HITLS_Ctx *ctx, uint8_t *data, uint32_t bufSize, uint
     return proc(ctx, data, bufSize, readLen);
 }
 
+#ifdef HITLS_TLS_FEATURE_QUIC_TLS
+int32_t HITLS_QUIC_TLS_ProcessPostHandshake(HITLS_Ctx *ctx)
+{
+    if (ctx == NULL) {
+        return HITLS_NULL_INPUT;
+    }
+    if (!QUIC_TLS_IsMode(ctx)) {
+        return HITLS_MSG_HANDLE_STATE_ILLEGAL;
+    }
+    if (ctx->state != CM_STATE_TRANSPORTING &&
+        (ctx->state != CM_STATE_HANDSHAKING || ctx->preState != CM_STATE_TRANSPORTING)) {
+        return HITLS_MSG_HANDLE_STATE_ILLEGAL;
+    }
+
+    /* ReadProcess requires an application buffer, but the QUIC REC_TYPE_APP probe never writes application data. */
+    uint8_t unused = 0;
+    uint32_t readLen = 0;
+    while (true) {
+        int32_t ret = ReadProcess(ctx, &unused, sizeof(unused), &readLen);
+        /* Only BUF_EMPTY needs state-aware handling; propagate success and all actual processing errors unchanged. */
+        if (ret != HITLS_REC_NORMAL_RECV_BUF_EMPTY) {
+            return ret;
+        }
+        /* BUF_EMPTY in HANDSHAKING means the current fragmented message needs more CRYPTO data. */
+        if (ctx->state == CM_STATE_HANDSHAKING) {
+            return ret;
+        }
+        /*
+         * With AUTO_RETRY enabled, ReadProcess normally consumes all buffered messages in one call.
+         * With AUTO_RETRY disabled, ReadProcess may consume only one message, so this loop handles the remainder.
+         * An incomplete message remains in HANDSHAKING and returns BUF_EMPTY above to request more CRYPTO data.
+         */
+        if (!QUIC_TLS_BufferHasData(ctx->quicTlsCtx, ctx->quicTlsCtx->readLevel)) {
+            return HITLS_SUCCESS;
+        }
+    }
+}
+#endif
 
 int32_t HITLS_Read(HITLS_Ctx *ctx, uint8_t *data, uint32_t bufSize, uint32_t *readLen)
 {
@@ -510,6 +564,12 @@ int32_t HITLS_Read(HITLS_Ctx *ctx, uint8_t *data, uint32_t bufSize, uint32_t *re
     if (ctx == NULL || data == NULL || readLen == NULL) {
         return HITLS_NULL_INPUT;
     }
+#ifdef HITLS_TLS_FEATURE_QUIC_TLS
+    /* QUIC application data bypasses TLS; post-handshake CRYPTO data uses its dedicated state-machine entry point. */
+    if (QUIC_TLS_IsMode(ctx)) {
+        return HITLS_CONFIG_UNSUPPORT;
+    }
+#endif
     ctx->allowAppOut = true;
     /* Process the unsent alert message first, and then enter the corresponding state processing function based on the
      * processing result */

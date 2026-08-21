@@ -26,6 +26,9 @@
 #include "pack_common.h"
 #include "pack_extensions.h"
 #include "custom_extensions.h"
+#ifdef HITLS_TLS_FEATURE_QUIC_TLS
+#include "quic_tls_internal.h"
+#endif
 
 static int32_t PackEncryptedSupportedGroups(const TLS_Ctx *ctx, PackPacket *pkt)
 {
@@ -54,6 +57,34 @@ static int32_t PackEncryptedSupportedGroups(const TLS_Ctx *ctx, PackPacket *pkt)
 
     return HITLS_SUCCESS;
 }
+
+#ifdef HITLS_TLS_FEATURE_QUIC_TLS
+/* Pack the QUIC transport parameters extension in EncryptedExtensions. The
+ * server must have set local transport parameters and selected an ALPN protocol. */
+static int32_t PackEncryptedQuicTransportParams(const TLS_Ctx *ctx, PackPacket *pkt)
+{
+    const QUIC_TLS_Ctx *quicTlsCtx = ctx->quicTlsCtx;
+    if (quicTlsCtx->localTransportParams == NULL || quicTlsCtx->localTransportParamsLen == 0) {
+        BSL_ERR_PUSH_ERROR(HITLS_CONFIG_INVALID_SET);
+        return HITLS_CONFIG_INVALID_SET;
+    }
+    if (ctx->negotiatedInfo.alpnSelected == NULL || ctx->negotiatedInfo.alpnSelectedSize == 0) {
+        BSL_ERR_PUSH_ERROR(HITLS_CONFIG_INVALID_SET);
+        return HITLS_CONFIG_INVALID_SET;
+    }
+    int32_t ret = PackExtensionHeader(HS_EX_TYPE_QUIC_TRANSPORT_PARAMETERS,
+        (uint16_t)quicTlsCtx->localTransportParamsLen, pkt);
+    if (ret != HITLS_SUCCESS) {
+        return ret;
+    }
+    ret = PackAppendDataToBuf(pkt, quicTlsCtx->localTransportParams, quicTlsCtx->localTransportParamsLen);
+    if (ret != HITLS_SUCCESS) {
+        return ret;
+    }
+    ctx->hsCtx->extFlag.haveQuicTlsTransportParams = true;
+    return HITLS_SUCCESS;
+}
+#endif /* HITLS_TLS_FEATURE_QUIC_TLS */
 
 /**
  * @brief Pack the Encrypted_extensions extension.
@@ -91,6 +122,11 @@ static int32_t PackEncryptedExs(const TLS_Ctx *ctx, PackPacket *pkt)
          .needPack = (ctx->negotiatedInfo.alpnSelected != NULL),
          .packFunc = PackServerSelectAlpnProto},
 #endif /* HITLS_TLS_FEATURE_ALPN */
+#ifdef HITLS_TLS_FEATURE_QUIC_TLS
+        {.exMsgType = HS_EX_TYPE_QUIC_TRANSPORT_PARAMETERS,
+         .needPack = QUIC_TLS_IsMode(ctx),
+         .packFunc = PackEncryptedQuicTransportParams},
+#endif
     };
 #ifdef HITLS_TLS_FEATURE_CUSTOM_EXTENSION
     if (IsPackNeedCustomExtensions(CUSTOM_EXT_FROM_CTX(ctx), HITLS_EX_TYPE_ENCRYPTED_EXTENSIONS)) {
@@ -154,6 +190,13 @@ int32_t PackEncryptedExtensions(const TLS_Ctx *ctx, PackPacket *pkt)
     }
 
     /* Close extensions length field */
+    if (*pkt->bufOffset > extensionsLenPosition + UINT16_MAX + sizeof(uint16_t)) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17418, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+                              "PackEncryptedExtensions: extensions list length exceeds the uint16 length field.", 0, 0,
+                              0, 0);
+        BSL_ERR_PUSH_ERROR(HITLS_INTERNAL_EXCEPTION);
+        return HITLS_INTERNAL_EXCEPTION;
+    }
     PackCloseUint16Field(pkt, extensionsLenPosition);
 
     return HITLS_SUCCESS;

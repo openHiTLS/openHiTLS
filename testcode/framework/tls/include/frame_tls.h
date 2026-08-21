@@ -61,6 +61,19 @@ FRAME_LinkObj *FRAME_CreateLink(HITLS_Config *config, BSL_UIO_TransportType type
 // The SSL CTX application and bottom-layer UIO creation are completed. The default certificate is not loaded.
 FRAME_LinkObj *FRAME_CreateLinkEx(HITLS_Config *config, BSL_UIO_TransportType type);
 
+#ifdef HITLS_TLS_FEATURE_QUIC_TLS
+/**
+* @brief  Create a QUIC-TLS test connection.
+          This interface loads the default certificate and creates the SSL CTX. Unlike FRAME_CreateLink,
+          it creates no transport UIO: QUIC-TLS tests exchange handshake bytes through the
+          HITLS_QUIC_TLS_ProvideData push API instead of HITLS_Read/HITLS_Write, so binding the
+          connection to a TCP/UDP transport would be wrong for this scenario.
+*
+* @return Return the connection object; the release method is the same as FRAME_CreateLink (FRAME_FreeLink)
+*/
+FRAME_LinkObj *FRAME_CreateQuicLink(HITLS_Config *config);
+#endif /* HITLS_TLS_FEATURE_QUIC_TLS */
+
 FRAME_LinkObj *FRAME_CreateLinkWithCert(
     HITLS_Config *config, BSL_UIO_TransportType type, const FRAME_CertInfo *certInfo);
 

@@ -12,6 +12,7 @@
  * MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
  * See the Mulan PSL v2 for more details.
  */
+#include <string.h>
 #include "bsl_sal.h"
 #include "tls_binlog_id.h"
 #include "bsl_log_internal.h"
@@ -27,6 +28,9 @@
 #include "hs.h"
 #include "hs_common.h"
 #include "record.h"
+#ifdef HITLS_TLS_FEATURE_QUIC_TLS
+#include "quic_tls_internal.h"
+#endif
 #ifdef HITLS_TLS_FEATURE_DTLS_CID
 #include "dtls_cid.h"
 #endif
@@ -251,10 +255,104 @@ static int32_t InnerRecWrite(TLS_Ctx *ctx, REC_Type recordType, const uint8_t *d
 #endif
 }
 
-static int32_t RecConnStatesInit(RecCtx *recordCtx)
+#ifdef HITLS_TLS_FEATURE_QUIC_TLS
+static int32_t RecReadQuic(TLS_Ctx *ctx, REC_Type recordType, uint8_t *data, uint32_t *readLen, uint32_t num)
 {
-    recordCtx->recRead = InnerRecRead;
-    recordCtx->recWrite = InnerRecWrite;
+    QUIC_TLS_Ctx *quicTlsCtx = ctx->quicTlsCtx;
+    /* Validate the level before using it to index the per-encryption-level input buffers. */
+    if ((uint32_t)quicTlsCtx->readLevel >= QUIC_TLS_ENCRYPTION_LEVEL_COUNT) {
+        return HITLS_INVALID_INPUT;
+    }
+
+    QUIC_TLS_InputBuffer *srcBuf = &quicTlsCtx->input[quicTlsCtx->readLevel];
+    uint32_t available = srcBuf->length - srcBuf->offset;
+    if (recordType == REC_TYPE_APP) {
+        /*
+         * QUIC application data bypasses TLS. An application read is only a probe used by the common transporting
+         * state to discover buffered post-handshake CRYPTO data without consuming it.
+         */
+        *readLen = 0;
+        if (available != 0) {
+            ctx->recCtx->unexpectedMsgType = REC_TYPE_HANDSHAKE;
+            return HITLS_REC_NORMAL_RECV_UNEXPECT_MSG;
+        }
+        return HITLS_REC_NORMAL_RECV_BUF_EMPTY;
+    }
+    /* Only TLS handshake messages are carried on QUIC CRYPTO streams. */
+    if (recordType != REC_TYPE_HANDSHAKE) {
+        BSL_ERR_PUSH_ERROR(HITLS_REC_ERR_RECV_UNEXPECTED_MSG);
+        return HITLS_REC_ERR_RECV_UNEXPECTED_MSG;
+    }
+
+    if (available == 0) {
+        *readLen = 0;
+        return HITLS_REC_NORMAL_RECV_BUF_EMPTY;
+    }
+
+    uint32_t copyLen = available < num ? available : num;
+    (void)memcpy(data, srcBuf->data + srcBuf->offset, copyLen);
+    srcBuf->offset += copyLen;
+    if (srcBuf->offset == srcBuf->length) {
+        /* Reset both cursors after full consumption so QuicTlsBufferAppend can reuse the buffer from its start. */
+        srcBuf->offset = 0;
+        srcBuf->length = 0;
+    }
+    *readLen = copyLen;
+    return HITLS_SUCCESS;
+}
+
+/* Route record-layer output to QUIC callbacks because QUIC protects TLS handshake bytes instead of TLS records. */
+static int32_t RecWriteQuic(TLS_Ctx *ctx, REC_Type recordType, const uint8_t *data, uint32_t num)
+{
+    QUIC_TLS_Ctx *quicTlsCtx = ctx->quicTlsCtx;
+    uint32_t callbackId;
+    int32_t ret;
+    switch (recordType) {
+        case REC_TYPE_HANDSHAKE:
+            callbackId = HITLS_QUIC_TLS_FUNC_ADD_HANDSHAKE_DATA;
+            ret = quicTlsCtx->cbs.addHandshakeData((HITLS_Ctx *)ctx, quicTlsCtx->writeLevel, data, num, quicTlsCtx->callbackArg);
+            if (ret == HITLS_SUCCESS) {
+                /* One flight may contain several messages; flush it only at a handshake flight boundary. */
+                quicTlsCtx->flightPending = true;
+            }
+            break;
+        case REC_TYPE_ALERT:
+            /* 2: A TLS alert payload contains two bytes: the alert level and the alert description. */
+            if (data == NULL || num < 2u) {
+                return HITLS_REC_ERR_RECV_UNEXPECTED_MSG;
+            }
+            callbackId = HITLS_QUIC_TLS_FUNC_SEND_ALERT;
+            /* 1: The alert description is the second byte, following the alert level. */
+            ret = quicTlsCtx->cbs.sendAlert((HITLS_Ctx *)ctx, quicTlsCtx->writeLevel, data[1], quicTlsCtx->callbackArg);
+            break;
+        case REC_TYPE_CHANGE_CIPHER_SPEC:
+            /* TLS 1.3 compatibility CCS records are not sent on QUIC CRYPTO streams. */
+            return HITLS_SUCCESS;
+        default:
+            BSL_ERR_PUSH_ERROR(HITLS_REC_ERR_RECV_UNEXPECTED_MSG);
+            return HITLS_REC_ERR_RECV_UNEXPECTED_MSG;
+    }
+    if (ret != HITLS_SUCCESS) {
+        return QUIC_TLS_CallbackFailed(callbackId, ret);
+    }
+    return HITLS_SUCCESS;
+}
+#endif
+
+static int32_t RecConnStatesInit(TLS_Ctx *ctx, RecCtx *recordCtx)
+{
+    (void)ctx;
+#ifdef HITLS_TLS_FEATURE_QUIC_TLS
+    /* Bind transport-specific I/O once so REC_Read and REC_Write use the same callback dispatch for every mode. */
+    if (QUIC_TLS_IsMode(ctx)) {
+        recordCtx->recRead = RecReadQuic;
+        recordCtx->recWrite = RecWriteQuic;
+    } else
+#endif
+    {
+        recordCtx->recRead = InnerRecRead;
+        recordCtx->recWrite = InnerRecWrite;
+    }
     recordCtx->readStates.currentState = RecConnStateNew();
     if (recordCtx->readStates.currentState == NULL) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17297, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
@@ -362,7 +460,7 @@ int32_t REC_Init(TLS_Ctx *ctx)
         goto err;
     }
 
-    ret = RecConnStatesInit(newRecCtx);
+    ret = RecConnStatesInit(ctx, newRecCtx);
     if (ret != HITLS_SUCCESS) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15534, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "Record: init connect state fail.", 0, 0, 0, 0);

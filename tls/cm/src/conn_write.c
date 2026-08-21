@@ -26,6 +26,9 @@
 #include "hs.h"
 #include "hs_ctx.h"
 #include "record.h"
+#ifdef HITLS_TLS_FEATURE_QUIC_TLS
+#include "quic_tls_internal.h"
+#endif
 
 
 int32_t HITLS_GetMaxWriteSize(const HITLS_Ctx *ctx, uint32_t *len)
@@ -230,6 +233,11 @@ int32_t HITLS_Write(HITLS_Ctx *ctx, const uint8_t *data, uint32_t dataLen, uint3
     if (ctx == NULL || data == NULL || dataLen == 0 || writeLen == NULL) {
         return HITLS_NULL_INPUT;
     }
+#ifdef HITLS_TLS_FEATURE_QUIC_TLS
+    if (QUIC_TLS_IsMode(ctx)) {
+        return HITLS_CONFIG_UNSUPPORT;
+    }
+#endif
     ctx->allowAppOut = false;
 
     int32_t ret = HITLS_WritePreporcess(ctx);

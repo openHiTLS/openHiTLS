@@ -44,6 +44,9 @@
 #include "hs_kx.h"
 #include "config_type.h"
 #include "config_check.h"
+#ifdef HITLS_TLS_FEATURE_QUIC_TLS
+#include "quic_tls_internal.h"
+#endif
 
 typedef int32_t (*CheckExtFunc)(TLS_Ctx *ctx, const ServerHelloMsg *serverHello);
 
@@ -479,6 +482,13 @@ static int32_t ClientCheckCipherSuite(TLS_Ctx *ctx, const ServerHelloMsg *server
 {
     int32_t ret;
     (void)isHrr;
+#ifdef HITLS_TLS_FEATURE_QUIC_TLS
+    if (!QUIC_TLS_IsCipherSuiteSupported(ctx, serverHello->cipherSuite)) {
+        ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_ILLEGAL_PARAMETER);
+        BSL_ERR_PUSH_ERROR(HITLS_MSG_HANDLE_CIPHER_SUITE_ERR);
+        return HITLS_MSG_HANDLE_CIPHER_SUITE_ERR;
+    }
+#endif
     if (!IsCipherSuiteSupport(ctx, serverHello->cipherSuite)) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15269, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "no supported cipher suites found.", 0, 0, 0, 0);
@@ -559,8 +569,15 @@ static int32_t ClientCheckVersion(TLS_Ctx *ctx, const ServerHelloMsg *serverHell
             return HITLS_MSG_HANDLE_UNSUPPORT_VERSION;
         }
     } else {
-        if ((serverVersion < clientMinVersion) || (serverVersion > clientMaxVersion)) {
-            /* The TLS version selected by the server is too early and cannot be negotiated */
+        bool unsupported = (serverVersion < clientMinVersion) || (serverVersion > clientMaxVersion);
+#ifdef HITLS_TLS_FEATURE_QUIC_TLS
+        /*
+         * The configured TLS range may include TLS 1.2, but QUIC uses TLS 1.3 exclusively. Reject a non-TLS 1.3
+         * ServerHello even when its version is otherwise within the configured range.
+         */
+        unsupported = unsupported || (QUIC_TLS_IsMode(ctx) && serverVersion != HITLS_VERSION_TLS13);
+#endif
+        if (unsupported) {
             BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15268, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
                 "client support version is from %02x to %02x, server selected unsupported version %02x.",
                 clientMinVersion, clientMaxVersion, serverVersion, 0);
@@ -1022,6 +1039,7 @@ static int32_t CheckDowngradeRandom(TLS_Ctx *ctx, const ServerHelloMsg *serverHe
 }
 static int32_t GetNegotiatedVersion(TLS_Ctx *ctx, const ServerHelloMsg *serverHello, uint16_t *negotiatedVersion)
 {
+    int32_t ret;
     bool isDtls13 = IsDtls13ClientVersionCtx(ctx);
     /* As a client that supports TLS1.3, if the received server hello message does not contain the supported version
      * extension, the peer end wants to negotiate a version earlier than TLS1.3 */
@@ -1033,7 +1051,25 @@ static int32_t GetNegotiatedVersion(TLS_Ctx *ctx, const ServerHelloMsg *serverHe
             BSL_ERR_PUSH_ERROR(HITLS_MSG_HANDLE_UNSUPPORT_VERSION);
             return HITLS_MSG_HANDLE_UNSUPPORT_VERSION;
         }
-        return CheckDowngradeRandom(ctx, serverHello, negotiatedVersion);
+#ifdef HITLS_TLS_FEATURE_QUIC_TLS
+        /*
+         * TLS 1.3 selects its version only through supported_versions; legacy_version is a compatibility field and
+         * cannot select TLS 1.3 even when it contains 0x0304. Because QUIC permits only TLS 1.3, any QUIC ServerHello
+         * without supported_versions must be rejected before the legacy-version fallback can run.
+         */
+        if (QUIC_TLS_IsMode(ctx)) {
+            BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17423, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+                "QUIC ServerHello omitted supported_versions.", 0, 0, 0, 0);
+            ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_PROTOCOL_VERSION);
+            BSL_ERR_PUSH_ERROR(HITLS_MSG_HANDLE_UNSUPPORT_VERSION);
+            return HITLS_MSG_HANDLE_UNSUPPORT_VERSION;
+        }
+#endif
+        ret = CheckDowngradeRandom(ctx, serverHello, negotiatedVersion);
+        if (ret != HITLS_SUCCESS) {
+            return ret;
+        }
+        return HITLS_SUCCESS;
     }
 
     /* If the serverHello of TLS1.3 is used, the version selected by the server must be earlier than TLS1.3, and the
@@ -1281,6 +1317,19 @@ int32_t Tls13ProcessServerHello(TLS_Ctx *ctx, const HS_Msg *msg)
 
 #ifdef HITLS_TLS_PROTO_DTLS13
     if (ctx->negotiatedInfo.version == HITLS_VERSION_DTLS13) {
+        ret = HS_SwitchTrafficKey(ctx, ctx->hsCtx->clientHsTrafficSecret, hashLen, true);
+        if (ret != HITLS_SUCCESS) {
+            return ret;
+        }
+    }
+#endif
+#ifdef HITLS_TLS_FEATURE_QUIC_TLS
+    /* QUIC installs the client handshake write secret together with the read
+     * secret, before any server flight data is processed: the QUIC stack
+     * needs handshake-level send capability (notably ACKs; RFC 9000 s13.1
+     * allows acknowledging a packet only at the same or a higher level)
+     * while the server flight is still arriving. */
+    if (QUIC_TLS_IsMode(ctx)) {
         ret = HS_SwitchTrafficKey(ctx, ctx->hsCtx->clientHsTrafficSecret, hashLen, true);
         if (ret != HITLS_SUCCESS) {
             return ret;

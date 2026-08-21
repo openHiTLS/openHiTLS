@@ -124,8 +124,11 @@ typedef struct {
     uint8_t *secRenegoInfo; /* renegotiation extension information */
     uint8_t *ticket;        /* ticket information */
     uint8_t *connectionId;  /* DTLS connection_id extension value */
+    uint8_t *quicTransportParams; /* QUIC transport_parameters extension value */
 
     uint32_t ticketSize;
+    uint32_t quicTransportParamsLen;
+
     uint16_t supportedGroupsSize;
     uint16_t signatureAlgorithmsSize;
     uint16_t signatureAlgorithmsCertSize;
@@ -172,6 +175,7 @@ typedef struct {
     bool haveEncryptThenMac; /* Indicates whether EncryptThenMac is supported. */
     bool haveRecordSizeLimit;
     bool haveConnectionId;   /* Whether the DTLS connection_id extension exists. */
+    bool haveQuicTlsTransportParams; /* Whether the QUIC transport_parameters extension exists. */
 } ExtensionFlag;
 
 typedef struct {
@@ -364,6 +368,8 @@ typedef struct {
     uint16_t recordSizeLimit;
     uint16_t alpnSelectedSize; /* selected alpn protocol length */
     uint8_t *alpnSelected; /* selected alpn protocol */
+    uint8_t *quicTransportParams; /* QUIC transport_parameters extension value */
+    uint32_t quicTransportParamsLen;
     uint64_t extensionTypeMask;
 
     bool haveSupportedGroups;
@@ -371,6 +377,7 @@ typedef struct {
     bool haveServerName;
     bool haveRecordSizeLimit;
     bool haveSelectedAlpn;
+    bool haveQuicTlsTransportParams; /* Whether the QUIC transport_parameters extension exists. */
 } EncryptedExtensions;
 
 /* Used to parse the handshake message header. */

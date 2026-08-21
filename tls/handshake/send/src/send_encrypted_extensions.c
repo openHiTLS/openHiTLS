@@ -29,6 +29,9 @@
 #include "hs_msg.h"
 #include "pack.h"
 #include "send_process.h"
+#ifdef HITLS_TLS_FEATURE_QUIC_TLS
+#include "quic_tls_internal.h"
+#endif
 
 
 int32_t Tls13ServerSendEncryptedExtensionsProcess(TLS_Ctx *ctx)
@@ -53,6 +56,22 @@ int32_t Tls13ServerSendEncryptedExtensionsProcess(TLS_Ctx *ctx)
                 "SwitchTrafficKey fail", 0, 0, 0, 0);
             return ret;
         }
+#ifdef HITLS_TLS_FEATURE_QUIC_TLS
+        /* QUIC installs the client handshake read secret together with the
+         * server write secret: while the server flight is still being sent,
+         * client handshake-level packets (ACKs) already arrive and the QUIC
+         * stack needs the read secret to decrypt them.  Deferring it to the
+         * send-Finished state drops those ACKs, which stalls flights larger
+         * than the initial congestion window. */
+        if (QUIC_TLS_IsMode(ctx)) {
+            ret = HS_SwitchTrafficKey(ctx, ctx->hsCtx->clientHsTrafficSecret, hashLen, false);
+            if (ret != HITLS_SUCCESS) {
+                BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17131, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+                                      "Install client read secret and server write secret fail", 0, 0, 0, 0);
+                return ret;
+            }
+        }
+#endif
 
         ret = HS_PackMsg(ctx, ENCRYPTED_EXTENSIONS);
         if (ret != HITLS_SUCCESS) {

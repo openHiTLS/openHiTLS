@@ -12,36 +12,32 @@
 # See the Mulan PSL v2 for more details.
 
 
-file(GLOB _cm_sources ${CMAKE_CURRENT_SOURCE_DIR}/src/*.c)
+if(NOT HITLS_TLS_FEATURE_QUIC_TLS)
+    return()
+endif()
 
-add_library(_hitls_tls_cm OBJECT ${_cm_sources})
+set(_quic_tls_sources
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/quic_tls_api.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/quic_tls_internal.c
+)
 
-target_link_libraries(_hitls_tls_cm
-    PUBLIC
-        _hitls_tls_common_include)
+add_library(_hitls_tls_quic_tls OBJECT ${_quic_tls_sources})
 
-target_include_directories(_hitls_tls_cm
+target_link_libraries(_hitls_tls_quic_tls PUBLIC _hitls_tls_common_include)
+
+target_include_directories(_hitls_tls_quic_tls
     PUBLIC
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
     PRIVATE
-        ${CMAKE_CURRENT_SOURCE_DIR}/src
         ${PROJECT_SOURCE_DIR}/tls/alert/include
-        ${PROJECT_SOURCE_DIR}/tls/app/include
-        ${PROJECT_SOURCE_DIR}/tls/ccs/include
         ${PROJECT_SOURCE_DIR}/tls/cert/include
-        ${PROJECT_SOURCE_DIR}/tls/config/include
+        ${PROJECT_SOURCE_DIR}/tls/cm/include
         ${PROJECT_SOURCE_DIR}/tls/crypt/include
         ${PROJECT_SOURCE_DIR}/tls/handshake/include
         ${PROJECT_SOURCE_DIR}/tls/handshake/common/include
+        ${PROJECT_SOURCE_DIR}/tls/handshake/pack/include
         ${PROJECT_SOURCE_DIR}/tls/handshake/recv/include
-        ${PROJECT_SOURCE_DIR}/tls/handshake/send/include
         ${PROJECT_SOURCE_DIR}/tls/record/include
-        ${PROJECT_SOURCE_DIR}/tls/record/src
 )
 
-if(HITLS_TLS_FEATURE_QUIC_TLS)
-    target_include_directories(_hitls_tls_cm PRIVATE
-        ${PROJECT_SOURCE_DIR}/tls/feature/quic_tls/include)
-endif()
-
-hitls_register_objects(TLS _hitls_tls_cm)
+hitls_register_objects(TLS _hitls_tls_quic_tls)

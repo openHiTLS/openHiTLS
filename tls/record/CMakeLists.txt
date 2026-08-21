@@ -56,4 +56,9 @@ target_include_directories(_hitls_tls_record
         ${PROJECT_SOURCE_DIR}/tls/handshake/common/include
 )
 
+if(HITLS_TLS_FEATURE_QUIC_TLS)
+    target_include_directories(_hitls_tls_record PRIVATE
+        ${PROJECT_SOURCE_DIR}/tls/feature/quic_tls/include)
+endif()
+
 hitls_register_objects(TLS _hitls_tls_record)

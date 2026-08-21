@@ -43,6 +43,9 @@
 #include "security.h"
 #include "pack_extensions.h"
 #include "dtls_cid.h"
+#ifdef HITLS_TLS_FEATURE_QUIC_TLS
+#include "quic_tls_internal.h"
+#endif
 
 
 #define EXTENSION_MSG(exMsgT, needP, packF) \
@@ -103,6 +106,18 @@ static int32_t PackExtensionEnd(PackPacket *pkt, uint32_t extensionLenPosition)
 
     /* Update the packet length */
     if (extensionLength != sizeof(uint16_t)) {
+        /* extensionLength includes the 2-byte length field itself
+         * (sizeof(uint16_t)). The field holds a uint16, so the packed
+         * extensions content must not exceed UINT16_MAX (65535). Fail
+         * cleanly when it does, instead of truncating the field into a
+         * malformed message. */
+        if (extensionLength > UINT16_MAX + sizeof(uint16_t)) {
+            BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17418, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+                                  "PackExtensionEnd: extensions list length exceeds the uint16 length field.", 0, 0, 0,
+                                  0);
+            BSL_ERR_PUSH_ERROR(HITLS_INTERNAL_EXCEPTION);
+            return HITLS_INTERNAL_EXCEPTION;
+        }
         PackCloseUint16Field(pkt, extensionLenPosition);
     } else {
         *pkt->bufOffset -= sizeof(uint16_t);
@@ -212,6 +227,40 @@ int32_t PackEmptyExtension(uint16_t exMsgType, bool needPack, PackPacket *pkt)
     }
     return HITLS_SUCCESS;
 }
+
+#ifdef HITLS_TLS_FEATURE_QUIC_TLS
+/* Pack the QUIC transport parameters extension in the ClientHello. The client
+ * must have configured local transport parameters and an ALPN list. */
+static int32_t PackQuicTransportParams(const TLS_Ctx *ctx, PackPacket *pkt)
+{
+    const QUIC_TLS_Ctx *quicTlsCtx = ctx->quicTlsCtx;
+    if (quicTlsCtx->localTransportParams == NULL || quicTlsCtx->localTransportParamsLen == 0) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17418, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+            "QUIC extension check failed; reason (1=local TP, 2=local ALPN, 3=peer TP, 4=peer ALPN)=%u, error=%d.",
+            1u, HITLS_CONFIG_INVALID_SET, 0, 0);
+        BSL_ERR_PUSH_ERROR(HITLS_CONFIG_INVALID_SET);
+        return HITLS_CONFIG_INVALID_SET;
+    }
+    if (ctx->config.tlsConfig.alpnList == NULL || ctx->config.tlsConfig.alpnListSize == 0) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17418, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+            "QUIC extension check failed; reason (1=local TP, 2=local ALPN, 3=peer TP, 4=peer ALPN)=%u, error=%d.",
+            2u, HITLS_CONFIG_INVALID_SET, 0, 0);
+        BSL_ERR_PUSH_ERROR(HITLS_CONFIG_INVALID_SET);
+        return HITLS_CONFIG_INVALID_SET;
+    }
+    int32_t ret = PackExtensionHeader(HS_EX_TYPE_QUIC_TRANSPORT_PARAMETERS,
+        (uint16_t)quicTlsCtx->localTransportParamsLen, pkt);
+    if (ret != HITLS_SUCCESS) {
+        return ret;
+    }
+    ret = PackAppendDataToBuf(pkt, quicTlsCtx->localTransportParams, quicTlsCtx->localTransportParamsLen);
+    if (ret != HITLS_SUCCESS) {
+        return ret;
+    }
+    ctx->hsCtx->extFlag.haveQuicTlsTransportParams = true;
+    return HITLS_SUCCESS;
+}
+#endif /* HITLS_TLS_FEATURE_QUIC_TLS */
 
 #ifdef HITLS_TLS_FEATURE_RECORD_SIZE_LIMIT
 int32_t PackRecordSizeLimit(const TLS_Ctx *ctx, PackPacket *pkt)
@@ -611,9 +660,22 @@ static int32_t PackClientSupportedVersions(const TLS_Ctx *ctx, PackPacket *pkt)
     const TLS_Config *config = &(ctx->config.tlsConfig);
     uint16_t minVersion = config->minVersion;
     uint16_t maxVersion = config->maxVersion;
-    bool isDtls13 = config->maxVersion == HITLS_VERSION_DTLS13;
+#ifdef HITLS_TLS_FEATURE_QUIC_TLS
+    if (QUIC_TLS_IsMode(ctx)) {
+        /* QUIC requires TLS 1.3. Reject a config whose maximum version is
+         * below it: the forced minimum would exceed the maximum and the
+         * version range computation below would emit an empty
+         * supported_versions list. */
+        if (maxVersion < HITLS_VERSION_TLS13) {
+            BSL_ERR_PUSH_ERROR(HITLS_MSG_HANDLE_UNSUPPORT_VERSION);
+            return HITLS_MSG_HANDLE_UNSUPPORT_VERSION;
+        }
+        minVersion = HITLS_VERSION_TLS13;
+    }
+#endif
+    bool isDtls13 = maxVersion == HITLS_VERSION_DTLS13;
 
-    if (config->minVersion < HITLS_VERSION_SSL30) {
+    if (minVersion < HITLS_VERSION_SSL30) {
         BSL_ERR_PUSH_ERROR(HITLS_INTERNAL_EXCEPTION);
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15418, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "pack supported version  extension error, invalid input parameter.", 0, 0, 0, 0);
@@ -883,6 +945,11 @@ static bool IsNeedPackPha(const TLS_Ctx *ctx)
     if (!IS_TLS13_FAMILY_VERSION(GET_VERSION_FROM_CTX(ctx))) {
         return false;
     }
+#ifdef HITLS_TLS_FEATURE_QUIC_TLS
+    if (QUIC_TLS_IsMode(ctx)) {
+        return false;
+    }
+#endif
     return tlsConfig->isSupportPostHandshakeAuth;
 }
 #endif /* HITLS_TLS_FEATURE_PHA */
@@ -960,6 +1027,13 @@ static int32_t PackClientExtensions(const TLS_Ctx *ctx, PackPacket *pkt)
         { EXTENSION_MSG(HS_EX_TYPE_ENCRYPT_THEN_MAC, tlsConfig->isEncryptThenMac, NULL) },
 #endif /* HITLS_TLS_FEATURE_ETM */
 #if defined(HITLS_TLS_PROTO_TLS13_FAMILY)
+        /* RFC 8446 Section 4.2.11: pre_shared_key must be the last
+         * ClientHello extension, so quic_transport_parameters is packed
+         * before it. */
+#ifdef HITLS_TLS_FEATURE_QUIC_TLS
+        { EXTENSION_MSG(HS_EX_TYPE_QUIC_TRANSPORT_PARAMETERS, QUIC_TLS_IsMode(ctx),
+            PackQuicTransportParams) },
+#endif
         { EXTENSION_MSG(HS_EX_TYPE_PRE_SHARED_KEY, isTls13, PackClientPreSharedKey) },
 #endif /* HITLS_TLS_PROTO_TLS13_FAMILY */
     };

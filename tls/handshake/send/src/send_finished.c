@@ -28,6 +28,9 @@
 #include "pack.h"
 #include "send_process.h"
 #include "hs_kx.h"
+#ifdef HITLS_TLS_FEATURE_QUIC_TLS
+#include "quic_tls_internal.h"
+#endif
 
 #ifdef HITLS_TLS_HOST_CLIENT
 #if defined(HITLS_TLS_PROTO_TLS_BASIC) || defined(HITLS_TLS_PROTO_DTLS12)
@@ -248,7 +251,13 @@ int32_t Tls13ClientSendFinishedProcess(TLS_Ctx *ctx)
         /* If the certificate of the client is sent, the key has been activated when the certificate is sent. You do not
          * need to activate the key again */
         if (!ctx->hsCtx->isNeedClientCert && ctx->negotiatedInfo.version != HITLS_VERSION_DTLS13 &&
-            ctx->phaState != PHA_REQUESTED) {
+            ctx->phaState != PHA_REQUESTED
+#ifdef HITLS_TLS_FEATURE_QUIC_TLS
+            /* QUIC installs this secret already at ServerHello; the per-level
+             * install-once guard would reject the second install. */
+            && !QUIC_TLS_IsMode(ctx)
+#endif
+        ) {
             /* The CCS message cannot be encrypted. Therefore, the sending key of the client must be activated
              * after the CCS message is sent */
             uint32_t hashLen = SAL_CRYPT_DigestSize(ctx->negotiatedInfo.cipherSuiteInfo.hashAlg);
@@ -498,9 +507,16 @@ int32_t Tls13ServerSendFinishedProcess(TLS_Ctx *ctx)
     if (hashLen == 0) {
         return RETURN_ERROR_NUMBER_PROCESS(HITLS_CRYPT_ERR_DIGEST, BINLOG_ID17146, "DigestSize fail");
     }
-    ret = HS_SwitchTrafficKey(ctx, ctx->hsCtx->clientHsTrafficSecret, hashLen, false);
-    if (ret != HITLS_SUCCESS) {
-        return RETURN_ERROR_NUMBER_PROCESS(ret, BINLOG_ID17147, "SwitchTrafficKey fail");
+    /* QUIC installs this secret already when the EE flight starts; the
+     * per-level install-once guard would reject the second install. */
+#ifdef HITLS_TLS_FEATURE_QUIC_TLS
+    if (!QUIC_TLS_IsMode(ctx))
+#endif
+    {
+        ret = HS_SwitchTrafficKey(ctx, ctx->hsCtx->clientHsTrafficSecret, hashLen, false);
+        if (ret != HITLS_SUCCESS) {
+            return RETURN_ERROR_NUMBER_PROCESS(ret, BINLOG_ID17147, "SwitchTrafficKey fail");
+        }
     }
 
     /* Activating the local serverAppTrafficSecret-encrypted App Data */

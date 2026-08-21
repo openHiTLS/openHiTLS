@@ -421,6 +421,9 @@ struct TlsCtx {
     BSL_TIME dtls2MslDeadline;              /* DTLS 2MSL end time */
     bool isDtls2MslTimerActive;             /* Whether the DTLS 2MSL timer is active */
 #endif
+#ifdef HITLS_TLS_FEATURE_QUIC_TLS
+    struct QuicTlsCtx *quicTlsCtx;                /* QUIC TLS push-mode state */
+#endif
 };
 
 typedef struct {
