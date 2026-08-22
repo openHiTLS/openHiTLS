@@ -5102,3 +5102,85 @@ EXIT:
     FRAME_FreeLink(server);
 }
 /* END_CASE */
+
+static void Test_CorruptServerHelloKeyShare(HITLS_Ctx *ctx, uint8_t *data, uint32_t *len, uint32_t bufSize,
+    void *userData)
+{
+    (void)ctx;
+    (void)userData;
+    FRAME_Type frameType = {0};
+    frameType.versionType = HITLS_VERSION_TLS13;
+    frameType.recordType = REC_TYPE_HANDSHAKE;
+    frameType.handshakeType = SERVER_HELLO;
+    frameType.keyExType = HITLS_KEY_EXCH_ECDHE;
+    frameType.transportType = BSL_UIO_TCP;
+    FRAME_Msg frameMsg = {0};
+    frameMsg.recType.data = REC_TYPE_HANDSHAKE;
+    frameMsg.length.data = *len;
+    frameMsg.recVersion.data = HITLS_VERSION_TLS13;
+    uint32_t parseLen = 0;
+    ASSERT_EQ(FRAME_ParseMsgBody(&frameType, data, *len, &frameMsg, &parseLen), HITLS_SUCCESS);
+    ASSERT_EQ(parseLen, *len);
+    ASSERT_EQ(frameMsg.body.hsMsg.type.data, SERVER_HELLO);
+    FRAME_ServerHelloMsg *serverMsg = &frameMsg.body.hsMsg.body.serverHello;
+    uint8_t *keyExchange = serverMsg->keyShare.data.keyExchange.data;
+    uint32_t keyExchangeLen = serverMsg->keyShare.data.keyExchange.size;
+    ASSERT_TRUE(keyExchange != NULL && keyExchangeLen > 0);
+    keyExchange[keyExchangeLen - 1] ^= 0xFF;
+    FRAME_PackRecordBody(&frameType, &frameMsg, data, bufSize, len);
+EXIT:
+    FRAME_CleanMsg(&frameType, &frameMsg);
+    return;
+}
+
+/** @
+* @test UT_TLS_TLS13_RFC8446_CONSISTENCY_CORRUPT_KEYSHARE_TC001
+* @title   SAL_CRYPT_CalcEcdhSharedSecret fails on the client; verify the client sends a fatal alert and disconnects.
+* @precon  nan
+* @brief   1. Register a RecWrapper that corrupts the key_share public key in the ServerHello as the server sends it.
+*          2. Establish a TLS1.3 handshake. The client receives a corrupted ServerHello and ECDH fails.
+* @expect  1. The handshake fails.
+*          2. The client sends a fatal alert (ALERT_FLAG_SEND) and transitions to CM_STATE_ALERTED.
+@ */
+/* BEGIN_CASE */
+void UT_TLS_TLS13_RFC8446_CONSISTENCY_CORRUPT_KEYSHARE_TC001()
+{
+    FRAME_Init();
+
+    HITLS_Config *clientConfig = HITLS_CFG_NewTLS13Config();
+    ASSERT_TRUE(clientConfig != NULL);
+    HITLS_Config *serverConfig = HITLS_CFG_NewTLS13Config();
+    ASSERT_TRUE(serverConfig != NULL);
+    uint16_t ecdheGroup = HITLS_EC_GROUP_SECP256R1;
+    ASSERT_EQ(HITLS_CFG_SetGroups(clientConfig, &ecdheGroup, 1), HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_CFG_SetGroups(serverConfig, &ecdheGroup, 1), HITLS_SUCCESS);
+
+    RecWrapper wrapper = {TRY_SEND_SERVER_HELLO,
+        REC_TYPE_HANDSHAKE,
+        false,
+        NULL,
+        Test_CorruptServerHelloKeyShare};
+    RegisterWrapper(wrapper);
+
+    FRAME_LinkObj *client = FRAME_CreateLink(clientConfig, BSL_UIO_TCP);
+    FRAME_LinkObj *server = FRAME_CreateLink(serverConfig, BSL_UIO_TCP);
+    ASSERT_TRUE(client != NULL);
+    ASSERT_TRUE(server != NULL);
+
+    ASSERT_NE(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_SUCCESS);
+
+    ALERT_Info info = {0};
+    ALERT_GetInfo(client->ssl, &info);
+    ASSERT_EQ(info.flag, ALERT_FLAG_SEND);
+    ASSERT_EQ(info.level, ALERT_LEVEL_FATAL);
+    ASSERT_EQ(info.description, ALERT_ILLEGAL_PARAMETER);
+    ASSERT_EQ(client->ssl->state, CM_STATE_ALERTED);
+
+EXIT:
+    ClearWrapper();
+    HITLS_CFG_FreeConfig(clientConfig);
+    HITLS_CFG_FreeConfig(serverConfig);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+}
+/* END_CASE */
