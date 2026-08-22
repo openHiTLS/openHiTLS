@@ -39,12 +39,6 @@ extern "C" {
 #define HITLS_HS_BUFFER_SIZE_LIMIT 20480u
 #endif
 
-/* Maximum number of rejected early data bytes the server discards while skipping 0-RTT records
- * (RFC 8446 section 4.2.10). Exceeding the budget terminates the connection with a fatal
- * unexpected_message alert. Records are counted by ciphertext body; empty records count the
- * 5-byte record header so that they cannot spin the discard loop. */
-#define HITLS_MAX_EARLY_DATA_DISCARD_SIZE 16384u
-
 #if HITLS_HS_INIT_BUFFER_SIZE < 32
 #error "HITLS_HS_INIT_BUFFER_SIZE must be greater than or equal to 32"
 #endif

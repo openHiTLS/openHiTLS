@@ -23,10 +23,10 @@
 #include "hitls_error.h"
 #include "record.h"
 #include "hs_common.h"
-#include "hs_ctx.h"
 #include "rec_alert.h"
 #include "rec_conn.h"
 #include "rec_header.h"
+#include "rec_read.h"
 #include "rec_crypto_aead.h"
 #include "crypt_eal_cipher.h"
 
@@ -245,12 +245,10 @@ static int32_t AeadDecrypt(TLS_Ctx *ctx, RecConnState *state, const REC_TextInpu
          * Rejected 0-RTT data (RFC 8446 section 4.2.10, behaviour 1): the client offered early
          * data and this server rejected it, so trial decryption with the handshake traffic key
          * is expected to fail here. Report the failure as an empty buffer so the record-layer
-         * discard loop drops the record silently; any other failure still aborts with
+         * discard path drops the record silently; any other failure still aborts with
          * bad_record_mac below.
          */
-        if (IS_TLS13_FAMILY_CTX(ctx) && !ctx->isClient &&
-            ctx->hsCtx != NULL && ctx->hsCtx->extFlag.haveEarlyData &&
-            IS_SUPPORT_STREAM(ctx->config.tlsConfig.originVersionMask)) {
+        if (RecCanDiscardEarlyData(ctx)) {
             BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15397, BSL_LOG_LEVEL_INFO, BSL_LOG_BINLOG_TYPE_RUN,
                 "discard early data record (deprotection failure)", 0, 0, 0, 0);
             return HITLS_REC_NORMAL_RECV_BUF_EMPTY;

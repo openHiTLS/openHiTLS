@@ -484,6 +484,15 @@ void REC_DeInit(TLS_Ctx *ctx)
     }
 }
 
+void REC_SetEarlyDataDiscard(TLS_Ctx *ctx, bool enable)
+{
+    if (ctx == NULL || ctx->recCtx == NULL) {
+        return;
+    }
+    ctx->recCtx->discardEarlyData = enable;
+    ctx->recCtx->earlyDataDiscardBytes = 0;
+}
+
 bool REC_ReadHasPending(const TLS_Ctx *ctx)
 {
     if ((ctx == NULL) || (ctx->recCtx == NULL)) {

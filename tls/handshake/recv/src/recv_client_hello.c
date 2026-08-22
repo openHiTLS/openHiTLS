@@ -2126,10 +2126,12 @@ static int32_t Tls13ServerCheckClientHelloExtension(TLS_Ctx *ctx, const ClientHe
             return HITLS_MSG_HANDLE_ILLEGAL_EARLY_DATA;
         }
 
-        /* Sync the per-message flag into the handshake context: the record layer reads
-         * hsCtx->extFlag.haveEarlyData to arm the 0-RTT discard mode, i.e. to silently drop
-         * records that fail trial decryption (RFC 8446 section 4.2.10, behaviour 1). */
+        /* Sync the per-message flag into the handshake context (read back by
+         * GetExtensionFlagValue) and arm the record-layer 0-RTT discard mode: the record layer
+         * silently drops records that fail trial decryption (RFC 8446 section 4.2.10,
+         * behaviour 1). */
         ctx->hsCtx->extFlag.haveEarlyData = clientHello->extension.flag.haveEarlyData;
+        REC_SetEarlyDataDiscard(ctx, clientHello->extension.flag.haveEarlyData);
 
         // with psk && psk mode is dhe && without keyshare
         uint32_t clientKeMode = GetClientKeMode(&clientHello->extension.content);

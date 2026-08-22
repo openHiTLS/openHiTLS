@@ -65,6 +65,15 @@ int32_t DtlsRecordRead(TLS_Ctx *ctx, REC_Type recordType, uint8_t *data, uint32_
 int32_t TlsRecordRead(TLS_Ctx *ctx, REC_Type recordType, uint8_t *data, uint32_t *readLen, uint32_t num);
 
 /**
+ * @brief   Whether the record layer is currently discarding rejected 0-RTT records
+ *          (RFC 8446 section 4.2.10)
+ *
+ * @param   ctx [IN] TLS context
+ * @return  whether the 0-RTT discard mode is armed on this connection
+ */
+bool RecCanDiscardEarlyData(const TLS_Ctx *ctx);
+
+/**
  * @brief   Read data from the UIO of the TLS context to the inBuf
  *
  * @param   ctx [IN] TLS context

@@ -117,6 +117,20 @@ int32_t REC_Init(TLS_Ctx *ctx);
 
 /**
  * @ingroup record
+ * @brief   Arm/disarm the rejected-0-RTT discard mode (RFC 8446 section 4.2.10).
+ *
+ * Called by the handshake layer (server side) after processing a ClientHello that carries the
+ * early_data extension: the client's in-flight 0-RTT records cannot be deprotected (the early
+ * traffic secret is never derived), so the record layer silently skips them, bounded by
+ * REC_MAX_EARLY_DATA_DISCARD_SIZE, until the first record deprotects successfully.
+ *
+ * @param   ctx [IN] TLS object
+ * @param   enable [IN] true to arm the discard mode, false to disarm it
+ */
+void REC_SetEarlyDataDiscard(TLS_Ctx *ctx, bool enable);
+
+/**
+ * @ingroup record
  * @brief   record deinitialize
  *
  * @param   ctx [IN] TLS object

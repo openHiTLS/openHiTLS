@@ -53,6 +53,12 @@ extern "C" {
 #define REC_DTLS13_ACK_ITEM_LEN (sizeof(uint64_t) * 2u)
 #define REC_DTLS13_ACK_LIST_MAX_COUNT 128u
 
+/* Maximum number of rejected early data bytes the server discards while skipping 0-RTT records
+ * (RFC 8446 section 4.2.10). Exceeding the budget terminates the connection with a fatal
+ * unexpected_message alert. Records are counted by ciphertext body; empty records count the
+ * 5-byte record header so that they cannot spin the discard path forever. */
+#define REC_MAX_EARLY_DATA_DISCARD_SIZE 16384u
+
 typedef struct {
     RecConnState *outdatedState;
     RecConnState *currentState;
@@ -107,6 +113,12 @@ typedef struct RecCtx {
     RecBufList *hsRecList; /* hs plaintext data cache */
     RecBufList *appRecList; /* app plaintext data cache */
     uint32_t emptyRecordCnt; /* Count of empty records */
+    /* 0-RTT discard mode state (RFC 8446 section 4.2.10), owned by the record layer: the
+     * handshake layer arms it through REC_SetEarlyDataDiscard() once a rejected ClientHello
+     * carrying early_data is processed; the record layer disarms it on the first record that
+     * deprotects successfully. */
+    bool discardEarlyData;
+    uint32_t earlyDataDiscardBytes; /* Accumulated size of dropped rejected 0-RTT records */
 #if defined(HITLS_TLS_PROTO_DATAGRAM)
     uint16_t writeEpoch;
     uint16_t readEpoch;

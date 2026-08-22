@@ -18,7 +18,7 @@
  *
  * Scenarios:
  *  1. Server silently discards AEAD-undecryptable 0-RTT records and completes the handshake.
- *  2. Discard byte limit (> HITLS_MAX_EARLY_DATA_DISCARD_SIZE) terminates with unexpected_message.
+ *  2. Discard byte limit (> REC_MAX_EARLY_DATA_DISCARD_SIZE) terminates with unexpected_message.
  *  3. Empty application_data records are discarded while in 0-RTT discard mode.
  *  4. Records shorter than the minimum ciphertext length are discarded.
  *  5. early_data without pre_shared_key is rejected with missing_extension.
@@ -197,6 +197,28 @@ static int32_t EdPushJunkThenClientFlight(FRAME_LinkObj *client, FRAME_LinkObj *
     return ret;
 }
 
+/* Upper bound on HITLS_Accept retries: every skipped 0-RTT record yields one empty-buffer
+ * return. HITLS_Accept reports the record-layer code directly, so both the raw BUF_EMPTY and
+ * its user-side HITLS_WANT_READ mapping mean "keep driving". */
+#define ED_ACCEPT_MAX_DRIVE 64u
+
+/*
+ * Drive HITLS_Accept in a loop: the record layer skips at most one rejected 0-RTT record per
+ * invocation and reports it through an empty-buffer return, so the caller must keep retrying
+ * until a terminal result (success, alert or exhaustion of the in-flight records).
+ */
+static int32_t EdDriveAccept(FRAME_LinkObj *server)
+{
+    int32_t ret = HITLS_SUCCESS;
+    for (uint32_t i = 0; i < ED_ACCEPT_MAX_DRIVE; i++) {
+        ret = HITLS_Accept(server->ssl);
+        if (ret != HITLS_WANT_READ && ret != HITLS_REC_NORMAL_RECV_BUF_EMPTY) {
+            break;
+        }
+    }
+    return ret;
+}
+
 /*
  * ClientHello wrapper: inject an empty "early_data" (42) extension. The extension is inserted
  * before the pre_shared_key extension because RFC 8446 4.2.11 requires pre_shared_key to stay the
@@ -282,10 +304,11 @@ void UT_TLS_TLS13_EARLY_DATA_SERVER_DISCARD_FUNC_TC001()
     ASSERT_EQ(FRAME_CreateConnection(testInfo.client, testInfo.server, true, TRY_SEND_FINISH), HITLS_SUCCESS);
     /* 0-RTT records hit the server before the (handshake-key protected) Finished. */
     ASSERT_EQ(EdPushJunkThenClientFlight(testInfo.client, testInfo.server, junk, junkLen), HITLS_SUCCESS);
-    /* The server digests the 0-RTT records and the compat CCS. The client Finished is not on the
-     * wire yet, so any of these intermediate returns is legal. */
-    int32_t acceptRet = HITLS_Accept(testInfo.server->ssl);
-    ASSERT_TRUE(acceptRet == HITLS_SUCCESS || acceptRet == HITLS_REC_NORMAL_RECV_BUF_EMPTY ||
+    /* The server digests the 0-RTT records and the compat CCS (one per Accept retry). The client
+     * Finished is not on the wire yet, so any of these intermediate returns is legal. */
+    int32_t acceptRet = EdDriveAccept(testInfo.server);
+    ASSERT_TRUE(acceptRet == HITLS_SUCCESS || acceptRet == HITLS_WANT_READ ||
+        acceptRet == HITLS_REC_NORMAL_RECV_BUF_EMPTY ||
         acceptRet == HITLS_REC_NORMAL_RECV_UNEXPECT_MSG);
 
     /* No alert so far and the connection is still alive. */
@@ -336,7 +359,7 @@ void UT_TLS_TLS13_EARLY_DATA_SERVER_DISCARD_FUNC_TC002()
 
     ASSERT_EQ(FRAME_CreateConnection(testInfo.client, testInfo.server, true, TRY_SEND_FINISH), HITLS_SUCCESS);
     ASSERT_EQ(EdPushJunkThenClientFlight(testInfo.client, testInfo.server, junk, junkLen), HITLS_SUCCESS);
-    ASSERT_TRUE(HITLS_Accept(testInfo.server->ssl) == HITLS_REC_ERR_RECV_UNEXPECTED_MSG);
+    ASSERT_TRUE(EdDriveAccept(testInfo.server) == HITLS_REC_ERR_RECV_UNEXPECTED_MSG);
 
     ALERT_Info alert = { 0 };
     ALERT_GetInfo(testInfo.server->ssl, &alert);
@@ -375,8 +398,9 @@ void UT_TLS_TLS13_EARLY_DATA_SERVER_DISCARD_FUNC_TC003()
 
     ASSERT_EQ(FRAME_CreateConnection(testInfo.client, testInfo.server, true, TRY_SEND_FINISH), HITLS_SUCCESS);
     ASSERT_EQ(EdPushJunkThenClientFlight(testInfo.client, testInfo.server, junk, junkLen), HITLS_SUCCESS);
-    int32_t acceptRet = HITLS_Accept(testInfo.server->ssl);
-    ASSERT_TRUE(acceptRet == HITLS_SUCCESS || acceptRet == HITLS_REC_NORMAL_RECV_BUF_EMPTY ||
+    int32_t acceptRet = EdDriveAccept(testInfo.server);
+    ASSERT_TRUE(acceptRet == HITLS_SUCCESS || acceptRet == HITLS_WANT_READ ||
+        acceptRet == HITLS_REC_NORMAL_RECV_BUF_EMPTY ||
         acceptRet == HITLS_REC_NORMAL_RECV_UNEXPECT_MSG);
     ALERT_Info alert = { 0 };
     ALERT_GetInfo(testInfo.server->ssl, &alert);
@@ -419,8 +443,9 @@ void UT_TLS_TLS13_EARLY_DATA_SERVER_DISCARD_FUNC_TC004()
 
     ASSERT_EQ(FRAME_CreateConnection(testInfo.client, testInfo.server, true, TRY_SEND_FINISH), HITLS_SUCCESS);
     ASSERT_EQ(EdPushJunkThenClientFlight(testInfo.client, testInfo.server, junk, junkLen), HITLS_SUCCESS);
-    int32_t acceptRet = HITLS_Accept(testInfo.server->ssl);
-    ASSERT_TRUE(acceptRet == HITLS_SUCCESS || acceptRet == HITLS_REC_NORMAL_RECV_BUF_EMPTY ||
+    int32_t acceptRet = EdDriveAccept(testInfo.server);
+    ASSERT_TRUE(acceptRet == HITLS_SUCCESS || acceptRet == HITLS_WANT_READ ||
+        acceptRet == HITLS_REC_NORMAL_RECV_BUF_EMPTY ||
         acceptRet == HITLS_REC_NORMAL_RECV_UNEXPECT_MSG);
     ALERT_Info alert = { 0 };
     ALERT_GetInfo(testInfo.server->ssl, &alert);
@@ -568,8 +593,9 @@ void UT_TLS_TLS13_EARLY_DATA_SERVER_DISCARD_FUNC_TC007()
     static uint8_t junk[ED_JUNK_BUF_SIZE];
     uint32_t junkLen = EdMakeJunkAppRecords(junk, ED_JUNK_BUF_SIZE, 64, 3);
     ASSERT_EQ(EdPushJunkThenClientFlight(testInfo.client, testInfo.server, junk, junkLen), HITLS_SUCCESS);
-    int32_t acceptRet = HITLS_Accept(testInfo.server->ssl);
-    ASSERT_TRUE(acceptRet == HITLS_SUCCESS || acceptRet == HITLS_REC_NORMAL_RECV_BUF_EMPTY ||
+    int32_t acceptRet = EdDriveAccept(testInfo.server);
+    ASSERT_TRUE(acceptRet == HITLS_SUCCESS || acceptRet == HITLS_WANT_READ ||
+        acceptRet == HITLS_REC_NORMAL_RECV_BUF_EMPTY ||
         acceptRet == HITLS_REC_NORMAL_RECV_UNEXPECT_MSG);
     ALERT_Info alert = { 0 };
     ALERT_GetInfo(testInfo.server->ssl, &alert);
@@ -616,7 +642,7 @@ void UT_TLS_TLS13_EARLY_DATA_SERVER_DISCARD_FUNC_TC008()
     uint32_t junkLen = EdMakeJunkAppRecords(junk, ED_JUNK_BUF_SIZE, 512, 1);
     ASSERT_EQ(EdPushJunkThenClientFlight(testInfo.client, testInfo.server, junk, junkLen), HITLS_SUCCESS);
     /* The record is genuinely corrupt: the connection must fail with bad_record_mac. */
-    ASSERT_TRUE(HITLS_Accept(testInfo.server->ssl) == HITLS_REC_BAD_RECORD_MAC);
+    ASSERT_TRUE(EdDriveAccept(testInfo.server) == HITLS_REC_BAD_RECORD_MAC);
 
     ALERT_Info alert = { 0 };
     ALERT_GetInfo(testInfo.server->ssl, &alert);
@@ -674,8 +700,9 @@ void UT_TLS_TLS13_EARLY_DATA_SERVER_DISCARD_FUNC_TC009()
     static uint8_t junk[ED_JUNK_BUF_SIZE];
     uint32_t junkLen = EdMakeJunkAppRecords(junk, ED_JUNK_BUF_SIZE, 0, 3); /* 3 empty records */
     ASSERT_EQ(EdPushJunkThenClientFlight(testInfo.client, testInfo.server, junk, junkLen), HITLS_SUCCESS);
-    int32_t acceptRet = HITLS_Accept(testInfo.server->ssl);
-    ASSERT_TRUE(acceptRet == HITLS_SUCCESS || acceptRet == HITLS_REC_NORMAL_RECV_BUF_EMPTY ||
+    int32_t acceptRet = EdDriveAccept(testInfo.server);
+    ASSERT_TRUE(acceptRet == HITLS_SUCCESS || acceptRet == HITLS_WANT_READ ||
+        acceptRet == HITLS_REC_NORMAL_RECV_BUF_EMPTY ||
         acceptRet == HITLS_REC_NORMAL_RECV_UNEXPECT_MSG);
     ALERT_Info alert = { 0 };
     ALERT_GetInfo(testInfo.server->ssl, &alert);
