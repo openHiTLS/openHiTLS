@@ -204,6 +204,7 @@ typedef enum {
     HITLS_MSG_HANDLE_DTLS_RETRANSMIT_NOT_TIMEOUT,
     HITLS_MSG_HANDLE_ERR_WITHOUT_TIMEOUT_ACTION,
     HITLS_MSG_HANDLE_ERR_TIMEOUT_REWIND,
+    HITLS_MSG_HANDLE_ILLEGAL_EARLY_DATA,            /**< early_data is illegal, such as in a second ClientHello */
 
     HITLS_PACK_FAIL_START = 0x02050001,             /**< Start bit of the pack error code. */
     HITLS_PACK_UNSUPPORT_VERSION,                   /**< Unsupported version. */

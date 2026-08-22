@@ -976,6 +976,7 @@ uint32_t HS_GetExtensionTypeId(uint32_t hsExtensionsType)
 #ifdef HITLS_TLS_FEATURE_QUIC_TLS
         case HS_EX_TYPE_QUIC_TRANSPORT_PARAMETERS: return HS_EX_TYPE_ID_QUIC_TRANSPORT_PARAMETERS;
 #endif
+        case HS_EX_TYPE_EARLY_DATA: return HS_EX_TYPE_ID_EARLY_DATA;
         case HS_EX_TYPE_RENEGOTIATION_INFO: return HS_EX_TYPE_ID_RENEGOTIATION_INFO;
         default: break;
     }

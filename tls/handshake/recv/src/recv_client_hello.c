@@ -2110,6 +2110,27 @@ static int32_t Tls13ServerCheckClientHelloExtension(TLS_Ctx *ctx, const ClientHe
             break;
         }
 
+        /* RFC 8446 §4.2.10: If the client opts to send early_data,
+           it MUST supply both "pre_shared_key" and "early_data" extensions. */
+        if (clientHello->extension.flag.haveEarlyData && !clientHello->extension.flag.havePreShareKey) {
+            break;
+        }
+
+        /* RFC 8446 §4.2.10: A client MUST NOT include the "early_data" extension in its followup ClientHello after a
+         * HelloRetryRequest. */
+        if (ctx->hsCtx->haveHrr && clientHello->extension.flag.haveEarlyData) {
+            BSL_ERR_PUSH_ERROR(HITLS_MSG_HANDLE_ILLEGAL_EARLY_DATA);
+            BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16139, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+                "invalid client hello: early_data in second client hello.", 0, 0, 0, 0);
+            ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_ILLEGAL_PARAMETER);
+            return HITLS_MSG_HANDLE_ILLEGAL_EARLY_DATA;
+        }
+
+        /* Sync the per-message flag into the handshake context: the record layer reads
+         * hsCtx->extFlag.haveEarlyData to arm the 0-RTT discard mode, i.e. to silently drop
+         * records that fail trial decryption (RFC 8446 section 4.2.10, behaviour 1). */
+        ctx->hsCtx->extFlag.haveEarlyData = clientHello->extension.flag.haveEarlyData;
+
         // with psk && psk mode is dhe && without keyshare
         uint32_t clientKeMode = GetClientKeMode(&clientHello->extension.content);
         if (clientHello->extension.flag.havePreShareKey &&

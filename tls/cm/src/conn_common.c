@@ -302,6 +302,8 @@ int32_t CommonEventInHandshakingState(HITLS_Ctx *ctx)
             break;
         }
         if (ret == HITLS_REC_NORMAL_RECV_UNEXPECT_MSG && REC_GetUnexpectedMsgType(ctx) == REC_TYPE_APP) {
+            /* An application data record surfaced during the handshake and was not discarded as
+             * rejected early data by the record layer: a protocol violation (RFC 8446 4.2.10). */
             BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16489, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
                 "The app message is received in the handshake state", 0, 0, 0, 0);
             ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_UNEXPECTED_MESSAGE);

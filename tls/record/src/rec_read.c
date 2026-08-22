@@ -32,6 +32,7 @@
 #endif
 #include "hs.h"
 #include "hs_common.h"
+#include "hs_ctx.h"
 #include "rec_crypto.h"
 #include "rec_crypto_aead.h"
 #include "bsl_list.h"
@@ -309,6 +310,22 @@ static int32_t EmptyRecordProcess(TLS_Ctx *ctx, uint8_t type)
     }
 }
 
+/*
+ * Whether the record layer is currently discarding rejected 0-RTT records (RFC 8446 section
+ * 4.2.10, behaviour 1/2; RFC 9147 section 4.2.10 for DTLS 1.3). All three conditions must hold:
+ *   - TLS 1.3 family and server side: only a server can reject early data;
+ *   - the client actually offered the "early_data" extension (hsCtx->extFlag.haveEarlyData is
+ *     synced from the ClientHello during handshake processing and cleared once the first record
+ *     deprotects successfully);
+ *   - the record layer must drop such records before RecordUnexpectedMsg can cache them in
+ *     appRecList, otherwise HITLS_Read would deliver the rejected early data after the handshake.
+ */
+static bool RecordCanDiscardEarlyData(const TLS_Ctx *ctx)
+{
+    return IS_TLS13_FAMILY_CTX(ctx) && !ctx->isClient &&
+        ctx->hsCtx != NULL && ctx->hsCtx->extFlag.haveEarlyData;
+}
+
 #ifdef HITLS_TLS_PROTO_DTLS13
 int32_t Dtls13ReconstructSequenceNumber(TLS_Ctx *ctx, uint64_t epoch, uint16_t incompleteSeq, uint8_t seqLen, uint64_t *reconstructedSeq)
 {
@@ -558,7 +575,16 @@ static int32_t RecordDecryptPostProcess(TLS_Ctx *ctx, RecConnState *state, const
 static int32_t RecordDecrypt(TLS_Ctx *ctx, RecBuf *decryptBuf, REC_TextInput *encryptedMsg, RecHdr *hdr)
 {
     (void)hdr;
+    bool discardEarlyData = RecordCanDiscardEarlyData(ctx);
     if (encryptedMsg->textLen == 0) {
+        /* Rejected 0-RTT discard mode: an empty record can never be a valid TLS 1.3 record (every
+         * encrypted record carries at least the inner content type byte and the authentication
+         * tag), so treat it as early data to be skipped instead of aborting the handshake. */
+        if (discardEarlyData && encryptedMsg->type == REC_TYPE_APP) {
+            BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15397, BSL_LOG_LEVEL_INFO, BSL_LOG_BINLOG_TYPE_RUN,
+                "discard early data record (empty record)", 0, 0, 0, 0);
+            return HITLS_REC_NORMAL_RECV_BUF_EMPTY;
+        }
         return EmptyRecordProcess(ctx, encryptedMsg->type);
     } else {
         ctx->recCtx->emptyRecordCnt = 0;
@@ -579,6 +605,15 @@ static int32_t RecordDecrypt(TLS_Ctx *ctx, RecBuf *decryptBuf, REC_TextInput *en
         funcs = RecGetCryptoFuncs(NULL);
     }
 #endif
+    /* Rejected 0-RTT discard mode: a record shorter than the minimum ciphertext length (inner
+     * content type byte + authentication tag) can never deprotect successfully, so skip it before
+     * entering the AEAD machinery instead of failing with a fatal bad_record_mac alert. */
+    if (discardEarlyData && state->suiteInfo != NULL &&
+        encryptedMsg->textLen < funcs->calCiphertextLen(ctx, state->suiteInfo, 0, true)) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15397, BSL_LOG_LEVEL_INFO, BSL_LOG_BINLOG_TYPE_RUN,
+            "discard early data record (record too short to deprotect)", 0, 0, 0, 0);
+        return HITLS_REC_NORMAL_RECV_BUF_EMPTY;
+    }
     ret = RecordPrepareDecryptBuf(ctx, state, funcs, encryptedMsg, decryptBuf);
     if (ret != HITLS_SUCCESS) {
         return ret;
@@ -1425,6 +1460,26 @@ static int32_t DtlsRecordReadPostDecrypt(TLS_Ctx *ctx, REC_Type recordType, RecH
         RecTryFreeRecBuf(ctx, false);
     }
 #endif
+    /* Rejected 0-RTT data (RFC 8446 section 4.2.10, RFC 9147 for DTLS 1.3): an unexpected
+     * application record surfacing while the discard mode is armed is leftover early data.
+     * Drop it here instead of caching it in appRecList, otherwise HITLS_Read would deliver the
+     * rejected early data after the handshake. DTLS 1.3 unified-header records are recovered
+     * as REC_TYPE_UNKNOWN while the server has no read keys (HRR window): they are early data
+     * by construction and are skipped the same way. */
+    if (recordType != cryptMsg->type && RecordCanDiscardEarlyData(ctx) &&
+        (cryptMsg->type == REC_TYPE_APP ||
+        (cryptMsg->type == REC_TYPE_UNKNOWN && !REC_HaveReadSuiteInfo(ctx)))) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15397, BSL_LOG_LEVEL_INFO, BSL_LOG_BINLOG_TYPE_RUN,
+            "discard early data record (unexpected record)", 0, 0, 0, 0);
+        FreeHeldRecordBuf(decryptBuf);
+        return HITLS_REC_NORMAL_RECV_BUF_EMPTY;
+    }
+    /* The first record that is not discarded ends the early data phase: disarm the discard
+     * mode so that later records are handled normally (mirrors the stream path, where the
+     * mode is disarmed once the first record deprotects successfully). */
+    if (RecordCanDiscardEarlyData(ctx)) {
+        ctx->hsCtx->extFlag.haveEarlyData = false;
+    }
     if (recordType == cryptMsg->type) {
         return HITLS_SUCCESS;
     }
@@ -1789,23 +1844,92 @@ int32_t TlsRecordRead(TLS_Ctx *ctx, REC_Type recordType, uint8_t *data, uint32_t
         return RecBufListGetBuffer(bufList, data, num, readLen, (ctx->peekFlag != 0 && (recordType == REC_TYPE_APP)));
     }
 
-    int32_t ret = RecIoBufInit(ctx, (RecCtx *)ctx->recCtx, true);
-    if (ret != HITLS_SUCCESS) {
-        return ret;
-    }
+    /*
+     * Discard loop for rejected 0-RTT data (RFC 8446 section 4.2.10, behaviour 1/2).
+     *
+     * The client offered early data and this server rejected it, so the client_early_traffic_secret
+     * was never derived and every in-flight 0-RTT record fails trial decryption with the handshake
+     * traffic key. Instead of aborting, keep reading records:
+     *   step 1: read one record (header + body) from the transport;
+     *   step 2: trial-decrypt it with the current (handshake) read keys;
+     *   step 3: if deprotection fails while the discard mode is armed, account the record body
+     *           against HITLS_MAX_EARLY_DATA_DISCARD_SIZE and drop it silently;
+     *   step 4: the first record that deprotects successfully is the client's first
+     *           handshake-key protected record (normally client Finished): disarm the discard mode
+     *           and deliver it, then continue with an ordinary 1-RTT handshake;
+     *   step 5: if the byte budget is exhausted, the peer is misbehaving: terminate with a fatal
+     *           unexpected_message alert so that garbage cannot spin the loop forever.
+     */
+    bool earlyDataDiscard = RecordCanDiscardEarlyData(ctx);
+    uint32_t discardBytes = 0;
 
+    int32_t ret;
     REC_TextInput encryptedMsg = { 0 };
-    ret = RecordDecryptPrepare(ctx, ctx->negotiatedInfo.version, recordType, &encryptedMsg);
-    if (ret != HITLS_SUCCESS) {
-        return ret;
-    }
     RecBuf decryptBuf = {0};
-    decryptBuf.buf = data;
-    decryptBuf.bufSize = num;
-    ret = RecordDecrypt(ctx, &decryptBuf, &encryptedMsg, NULL);
-    if (ret != HITLS_SUCCESS) {
-        return ret;
-    }
+    do {
+        /* step 1: fetch one record from the IO buffer. */
+        ret = RecIoBufInit(ctx, (RecCtx *)ctx->recCtx, true);
+        if (ret != HITLS_SUCCESS) {
+            return ret;
+        }
+
+        encryptedMsg = (REC_TextInput){ 0 };
+        ret = RecordDecryptPrepare(ctx, ctx->negotiatedInfo.version, recordType, &encryptedMsg);
+        if (ret != HITLS_SUCCESS) {
+            return ret;
+        }
+        decryptBuf = (RecBuf){0};
+        decryptBuf.buf = data;
+        decryptBuf.bufSize = num;
+        /* step 2: trial-decrypt the record with the current read connection state. */
+        ret = RecordDecrypt(ctx, &decryptBuf, &encryptedMsg, NULL);
+
+        /* step 3: deprotection failed while the discard mode is armed: this is an expected early
+         * data record, account it and read the next one. */
+        if (ret == HITLS_REC_NORMAL_RECV_BUF_EMPTY && earlyDataDiscard) {
+            /* Count at least the record header so that a stream of empty records cannot spin the
+             * discard loop forever. */
+            discardBytes += (encryptedMsg.textLen == 0) ? REC_TLS_RECORD_HEADER_LEN : encryptedMsg.textLen;
+            if (discardBytes > HITLS_MAX_EARLY_DATA_DISCARD_SIZE) {
+                BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17261, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+                    "early data discard limit exceeded: %u bytes", discardBytes, 0, 0, 0);
+                ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_UNEXPECTED_MESSAGE);
+                return HITLS_REC_ERR_RECV_UNEXPECTED_MSG;
+            }
+            continue;
+        }
+        if (ret != HITLS_SUCCESS) {
+            return ret;
+        }
+        if (earlyDataDiscard) {
+            /* step 4a (HRR variant, RFC 8446 section 4.2.10, behaviour 2): after a
+             * HelloRetryRequest the server has no read keys at all yet, so rejected early data
+             * arrives as plaintext application_data records. Skip and count them against the same
+             * budget instead of caching them as unexpected application data. */
+            if (encryptedMsg.type == REC_TYPE_APP && !REC_HaveReadSuiteInfo(ctx)) {
+                /* Release the hold buffer allocated for the (null-decrypted) record before
+                 * dropping it: the normal path frees it in RecordUnexpectedMsg, which we skip. */
+                if (decryptBuf.isHoldBuffer) {
+                    BSL_SAL_FREE(decryptBuf.buf);
+                    decryptBuf.isHoldBuffer = false;
+                }
+                discardBytes += encryptedMsg.textLen;
+                if (discardBytes > HITLS_MAX_EARLY_DATA_DISCARD_SIZE) {
+                    BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17261, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+                        "early data discard limit exceeded: %u bytes", discardBytes, 0, 0, 0);
+                    ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_UNEXPECTED_MESSAGE);
+                    return HITLS_REC_ERR_RECV_UNEXPECTED_MSG;
+                }
+                continue;
+            }
+            /* step 4b: first successfully deprotected record: the early data phase is over. Disarm
+             * the discard mode and hand the record to the normal receive path. */
+            ctx->hsCtx->extFlag.haveEarlyData = false;
+            earlyDataDiscard = false;
+        }
+        break;
+    } while (true);
+
 #ifdef HITLS_TLS_PROTO_DFX_ALERT_NUMBER
     ctx->method.clearAlert(ctx, encryptedMsg.type);
 #endif

@@ -846,6 +846,26 @@ static int32_t ParseClientTicket(ParsePacket *pkt, ClientHelloMsg *msg)
 }
 #endif /* HITLS_TLS_FEATURE_SESSION_TICKET */
 
+#if defined(HITLS_TLS_PROTO_TLS13_FAMILY)
+/*
+ * Parse the "early_data" extension in a ClientHello (RFC 8446 section 4.2.10). The extension
+ * data is an empty struct, so the only valid payload is zero length; duplicates are rejected.
+ * On success the per-message flag is set; the handshake layer later syncs it into
+ * hsCtx->extFlag.haveEarlyData to arm the record-layer 0-RTT discard mode.
+ */
+static int32_t ParseClientEarlyData(ParsePacket *pkt, ClientHelloMsg *msg)
+{
+    if (msg->extension.flag.haveEarlyData) {
+        return ParseDupExtProcess(pkt->ctx, BINLOG_ID15190, BINGLOG_STR("earlyData"));
+    }
+    if (pkt->bufLen != 0) {
+        return ParseErrorExtLengthProcess(pkt->ctx, BINLOG_ID15191, BINGLOG_STR("earlyData"));
+    }
+    msg->extension.flag.haveEarlyData = true;
+    return HITLS_SUCCESS;
+}
+#endif /* HITLS_TLS_PROTO_TLS13_FAMILY */
+
 #ifdef HITLS_TLS_FEATURE_RECORD_SIZE_LIMIT
 static int32_t ParseClientRecordSizeLimit(ParsePacket *pkt, ClientHelloMsg *msg)
 {
@@ -946,6 +966,7 @@ static int32_t ParseClientExBody(TLS_Ctx *ctx, uint16_t extMsgType, const uint8_
 #endif /* HITLS_TLS_FEATURE_DTLS_CID */
         { .exMsgType = HS_EX_TYPE_PRE_SHARED_KEY, .parseFunc = ParseClientPreSharedKey},
         { .exMsgType = HS_EX_TYPE_PSK_KEY_EXCHANGE_MODES, .parseFunc = ParseClientPskKeyExModes},
+        { .exMsgType = HS_EX_TYPE_EARLY_DATA, .parseFunc = ParseClientEarlyData},
         { .exMsgType = HS_EX_TYPE_COOKIE, .parseFunc = ParseClientCookie},
 #ifdef HITLS_TLS_FEATURE_CERTIFICATE_AUTHORITIES
         { .exMsgType = HS_EX_TYPE_CERTIFICATE_AUTHORITIES, .parseFunc = ParseClientTrustedCaList},
