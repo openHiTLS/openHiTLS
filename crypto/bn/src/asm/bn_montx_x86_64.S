@@ -80,11 +80,13 @@ MontMulx_Asm:
     jnz     .LMontMul                   // If size is not divisible by 4, LMontMul.
     cmpl    $8,%r9d
     jb      .LMontMul                   // LMontMul
-    cmpq    %rsi,%rdx
-    jne     MontMul4x                    // if a != b, MontMul4x
     testl   $7,%r9d
-    jz      MontSqr8x                    // If size is divisible by 8，enter MontSqr8x.
-    jmp     MontMul4x
+    jnz     MontMul4x                   // size ≡ 4 (mod 8): 4x kernel
+    cmpq    %rsi,%rdx
+    je      MontSqr8x                   // squares: 8x frame at any 8-divisible size
+    cmpl    $16,%r9d
+    jae     MontSqr8x                   // multiplies: the 8x frame pays off from 16 limbs
+    jmp     MontMul4x                   // 8-limb multiply: frame overhead dominates
 
 .align  16
 .LMontMul:
@@ -701,7 +703,13 @@ MontSqr8x:
     pxor    %xmm2,%xmm2             // xmm0 = 0
     movq    %rdi, %xmm0             // Pointer to saving r.
     movq    %r15, %xmm5             // Save size.
+    cmpq    %rsi,%rdx               // multiply and square share this frame and
+    je      .L8xCallSqr             // the reduction; only the product phase differs
+    call    MontMul8xInner
+    jmp     .L8xReduced
+.L8xCallSqr:
     call    MontSqr8Inner
+.L8xReduced:
 
     leaq    (%rdi,%r9),%rbx       // rbx = t[size]
     movq    %r9,%rcx                // rcx = -size
@@ -1424,6 +1432,140 @@ MontSqr8Inner:
     ret
 .cfi_endproc
 .size   MontSqr8Inner,.-MontSqr8Inner
+
+/*
+ * Product phase of the 8x Montgomery multiplication: computes the full
+ * 2*size-limb product t = a * b into the scratch buffer at 88(%rsp) and then
+ * jumps into the reduction shared with MontSqr8Inner, whose ret returns to
+ * the MontSqr8x frame that called us. Expected state at entry (set up by the
+ * MontSqr8x prologue): rsi = a, rdx = b, rcx = n, r9 = size * 8, k0 saved at
+ * 40(%rsp), xmm0 = r, xmm1 = n, xmm5 = -size * 8; size divisible by 8.
+ *
+ * Row 0 stores a * b[0] into t[0..size]; every following row i accumulates
+ * a * b[i] into t[i..i+size-1] in place and extends the buffer by one top
+ * limb, so each row only reads limbs the previous row wrote and the final
+ * row tops out exactly at t[2*size-1]. The mulx chain rides the OF flag and
+ * the t-accumulate chain rides CF; dec clears OF, so the pending OF is
+ * folded into the high-limb register before every loop branch (the high
+ * half of a 64x64 product is at most 2^64-2, so that fold cannot wrap).
+ */
+.type   MontMul8xInner,@function
+.align  32
+MontMul8xInner:
+.cfi_startproc
+    leaq    88(%rsp,%r9,2),%rax
+    movq    %rax,16(%rsp)               // t[2 * size], reduction end marker
+    leaq    (%rcx,%r9),%rax
+    movq    %rax,8(%rsp)                // n[size], reduction end marker
+    movq    %rdx,%r13                   // r13 walks b
+    leaq    (%rdx,%r9),%rax
+    movq    %rax,64(%rsp)               // b[size]
+    leaq    88(%rsp),%rbp               // rbp walks t
+    xorq    %r10,%r10                   // r10 = 0 for the flag folds
+
+    // row 0: t[0 .. size] = a * b[0], single CF chain
+    movq    (%r13),%rdx                 // rdx = b[0]
+    leaq    8(%r13),%r13
+    movq    %r9,%rcx
+    shrq    $6,%rcx                     // size / 8 chunks per row
+    xorq    %rbx,%rbx                   // no pending high limb, clear CF OF
+
+.align  32
+.LMul8xRow0:
+    mulx    0*8(%rsi),%rax,%r14         // (r14, rax) = a[j] * b[0]
+    adcx    %rbx,%rax                   // rax += pending hi + CF
+    movq    %rax,0*8(%rbp)
+    mulx    1*8(%rsi),%rax,%r15
+    adcx    %r14,%rax
+    movq    %rax,1*8(%rbp)
+    mulx    2*8(%rsi),%rax,%r14
+    adcx    %r15,%rax
+    movq    %rax,2*8(%rbp)
+    mulx    3*8(%rsi),%rax,%r15
+    adcx    %r14,%rax
+    movq    %rax,3*8(%rbp)
+    mulx    4*8(%rsi),%rax,%r14
+    adcx    %r15,%rax
+    movq    %rax,4*8(%rbp)
+    mulx    5*8(%rsi),%rax,%r15
+    adcx    %r14,%rax
+    movq    %rax,5*8(%rbp)
+    mulx    6*8(%rsi),%rax,%r14
+    adcx    %r15,%rax
+    movq    %rax,6*8(%rbp)
+    mulx    7*8(%rsi),%rax,%rbx         // last hi of the chunk stays pending in rbx
+    adcx    %r14,%rax
+    movq    %rax,7*8(%rbp)
+    leaq    64(%rsi),%rsi
+    leaq    64(%rbp),%rbp
+    decq    %rcx                        // leaves CF for the next chunk
+    jnz     .LMul8xRow0
+
+    movq    $0,%rax
+    adcx    %rax,%rbx                   // top limb = pending hi + CF, cannot wrap
+    movq    %rbx,(%rbp)                 // t[size]
+
+.align  32
+.LMul8xOuter:
+    // row i: t[i .. i+size-1] += a * b[i], new top limb at t[i+size]
+    movq    (%r13),%rdx                 // rdx = b[i]
+    leaq    8(%r13),%r13
+    subq    %r9,%rsi                    // rsi back to a[0]
+    subq    %r9,%rbp
+    leaq    8(%rbp),%rbp                // rbp = t[i]
+    movq    %r9,%rcx
+    shrq    $6,%rcx
+    xorq    %rbx,%rbx                   // no pending high limb, clear CF OF
+
+.align  32
+.LMul8xInner:
+    mulx    0*8(%rsi),%r12,%r14         // (r14, r12) = a[j] * b[i]
+    adox    %rbx,%r12                   // mulx chain rides OF
+    adcx    0*8(%rbp),%r12              // t accumulate rides CF
+    movq    %r12,0*8(%rbp)
+    mulx    1*8(%rsi),%r12,%r15
+    adox    %r14,%r12
+    adcx    1*8(%rbp),%r12
+    movq    %r12,1*8(%rbp)
+    mulx    2*8(%rsi),%r12,%r14
+    adox    %r15,%r12
+    adcx    2*8(%rbp),%r12
+    movq    %r12,2*8(%rbp)
+    mulx    3*8(%rsi),%r12,%r15
+    adox    %r14,%r12
+    adcx    3*8(%rbp),%r12
+    movq    %r12,3*8(%rbp)
+    mulx    4*8(%rsi),%r12,%r14
+    adox    %r15,%r12
+    adcx    4*8(%rbp),%r12
+    movq    %r12,4*8(%rbp)
+    mulx    5*8(%rsi),%r12,%r15
+    adox    %r14,%r12
+    adcx    5*8(%rbp),%r12
+    movq    %r12,5*8(%rbp)
+    mulx    6*8(%rsi),%r12,%r14
+    adox    %r15,%r12
+    adcx    6*8(%rbp),%r12
+    movq    %r12,6*8(%rbp)
+    mulx    7*8(%rsi),%r12,%rbx
+    adox    %r14,%r12
+    adcx    7*8(%rbp),%r12
+    movq    %r12,7*8(%rbp)
+    adox    %r10,%rbx                   // fold OF into the pending hi before dec
+    leaq    64(%rsi),%rsi
+    leaq    64(%rbp),%rbp
+    decq    %rcx                        // leaves CF, clears the folded OF
+    jnz     .LMul8xInner
+
+    movq    $0,%rax
+    adcx    %rax,%rbx                   // top limb = pending hi + CF, cannot wrap
+    movq    %rbx,(%rbp)                 // t[i + size]
+    cmpq    64(%rsp),%r13
+    jb      .LMul8xOuter
+
+    jmp     .LoopReduceSqr8xBegin       // shared reduction, its ret leaves the frame
+.cfi_endproc
+.size   MontMul8xInner,.-MontMul8xInner
 
 #endif
 

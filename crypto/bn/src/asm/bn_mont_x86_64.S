@@ -80,11 +80,13 @@ MontMul_Asm:
     jnz     .LMontMul                   // If size is not divisible by 4, LMontMul.
     cmpl    $8,%r9d
     jb      .LMontMul                   // LMontMul
-    cmpq    %rsi,%rdx
-    jne     MontMul4                    // if a != b, MontMul4
     testl   $7,%r9d
-    jz      MontSqr8                    // If size is divisible by 8，enter MontSqr8.
-    jmp     MontMul4
+    jnz     MontMul4                    // size ≡ 4 (mod 8): 4x kernel
+    cmpq    %rsi,%rdx
+    je      MontSqr8                    // squares: 8x frame at any 8-divisible size
+    cmpl    $24,%r9d
+    jae     MontSqr8                    // multiplies: the 8x frame pays off from 24 limbs
+    jmp     MontMul4                    // small multiplies: the 4x kernel stays ahead
 
 .align  16
 .LMontMul:
@@ -681,7 +683,13 @@ MontSqr8:
     pxor    %xmm2,%xmm2             // xmm0 = 0
     movq    %rdi, %xmm0             // Pointer to saving r.
     movq    %r15, %xmm5             // Save size.
+    cmpq    %rsi,%rdx               // multiply and square share this frame and
+    je      .L8CallSqr              // the reduction; only the product phase differs
+    call    MontMul8Inner
+    jmp     .L8Reduced
+.L8CallSqr:
     call    MontSqr8Inner
+.L8Reduced:
 
     leaq    (%rdi,%r9),%rbx       // rbx = t[size]
     movq    %r9,%rcx                // rcx = -size
@@ -1153,6 +1161,10 @@ MontSqr8Inner:
     movq    %rbx,-16(%rdi)          // t[14] = rbx
     movq    %r8,-8(%rdi)            // t[15] = r8
 
+/* Montgomery reduction of the 2*size-limb value in t at 56(%rsp). Entered
+   from the squaring above or jumped to from MontMul8Inner; expects only
+   xmm1 = n and r9 = size * 8 (k0 is at 40(%rsp) from the MontSqr8 frame). */
+.LMont8ReduceEntry:
     movq    %xmm1,%rbp              // rbp = n
     xorq    %rax,%rax               // rax = 0
     leaq    (%r9,%rbp),%rcx       // rcx = n[size]
@@ -1377,6 +1389,152 @@ MontSqr8Inner:
     ret
 .cfi_endproc
 .size   MontSqr8Inner,.-MontSqr8Inner
+
+/*
+ * Product phase of the 8x Montgomery multiplication: computes the full
+ * 2*size-limb product t = a * b into the scratch buffer at 56(%rsp) and then
+ * jumps into the reduction shared with MontSqr8Inner, whose ret returns to
+ * the MontSqr8 frame that called us. Expected state at entry (set up by the
+ * MontSqr8 prologue): rsi = a, rdx = b, rcx = n, r9 = size * 8, k0 saved at
+ * 40(%rsp), xmm0 = r, xmm1 = n, xmm5 = -size * 8; size divisible by 8.
+ *
+ * Row 0 stores a * b[0] into t[0..size]; every following row i accumulates
+ * a * b[i] into t[i..i+size-1] in place and extends the buffer by one top
+ * limb, so each row only reads limbs the previous row wrote and the final
+ * row tops out exactly at t[2*size-1]. Each limb re-establishes its own
+ * carry through r15, so the loop control never has to preserve flags.
+ */
+.type   MontMul8Inner,@function
+.align  32
+MontMul8Inner:
+.cfi_startproc
+    movq    %rdx,%r13                   // r13 walks b
+    leaq    (%rdx,%r9),%rax
+    movq    %rax,24(%rsp)               // b[size]
+    leaq    56(%rsp),%rbp               // rbp walks t
+
+    // row 0: t[0 .. size] = a * b[0], carry in r15
+    movq    (%r13),%rbx                 // rbx = b[0]
+    leaq    8(%r13),%r13
+    movq    %r9,%rcx
+    shrq    $6,%rcx                     // size / 8 chunks per row
+    xorq    %r15,%r15
+
+.align  32
+.LMul8Row0:
+    movq    0*8(%rsi),%rax
+    mulq    %rbx                        // (rdx, rax) = a[j] * b[0]
+    ADD_CARRY    %r15,%rax              // rax += carry, rdx += CF
+    movq    %rax,0*8(%rbp)
+    movq    %rdx,%r15
+    movq    1*8(%rsi),%rax
+    mulq    %rbx
+    ADD_CARRY    %r15,%rax
+    movq    %rax,1*8(%rbp)
+    movq    %rdx,%r15
+    movq    2*8(%rsi),%rax
+    mulq    %rbx
+    ADD_CARRY    %r15,%rax
+    movq    %rax,2*8(%rbp)
+    movq    %rdx,%r15
+    movq    3*8(%rsi),%rax
+    mulq    %rbx
+    ADD_CARRY    %r15,%rax
+    movq    %rax,3*8(%rbp)
+    movq    %rdx,%r15
+    movq    4*8(%rsi),%rax
+    mulq    %rbx
+    ADD_CARRY    %r15,%rax
+    movq    %rax,4*8(%rbp)
+    movq    %rdx,%r15
+    movq    5*8(%rsi),%rax
+    mulq    %rbx
+    ADD_CARRY    %r15,%rax
+    movq    %rax,5*8(%rbp)
+    movq    %rdx,%r15
+    movq    6*8(%rsi),%rax
+    mulq    %rbx
+    ADD_CARRY    %r15,%rax
+    movq    %rax,6*8(%rbp)
+    movq    %rdx,%r15
+    movq    7*8(%rsi),%rax
+    mulq    %rbx
+    ADD_CARRY    %r15,%rax
+    movq    %rax,7*8(%rbp)
+    movq    %rdx,%r15
+    leaq    64(%rsi),%rsi
+    leaq    64(%rbp),%rbp
+    decq    %rcx
+    jnz     .LMul8Row0
+
+    movq    %r15,(%rbp)                 // t[size]
+
+.align  32
+.LMul8Outer:
+    // row i: t[i .. i+size-1] += a * b[i], new top limb at t[i+size]
+    movq    (%r13),%rbx                 // rbx = b[i]
+    leaq    8(%r13),%r13
+    subq    %r9,%rsi                    // rsi back to a[0]
+    subq    %r9,%rbp
+    leaq    8(%rbp),%rbp                // rbp = t[i]
+    movq    %r9,%rcx
+    shrq    $6,%rcx
+    xorq    %r15,%r15
+
+.align  32
+.LMul8Inner:
+    movq    0*8(%rsi),%rax
+    mulq    %rbx                        // (rdx, rax) = a[j] * b[i]
+    ADD_CARRY    %r15,%rax              // rax += carry, rdx += CF
+    ADD_CARRY    %rax,0*8(%rbp)         // t[i+j] += rax, rdx += CF
+    movq    %rdx,%r15
+    movq    1*8(%rsi),%rax
+    mulq    %rbx
+    ADD_CARRY    %r15,%rax
+    ADD_CARRY    %rax,1*8(%rbp)
+    movq    %rdx,%r15
+    movq    2*8(%rsi),%rax
+    mulq    %rbx
+    ADD_CARRY    %r15,%rax
+    ADD_CARRY    %rax,2*8(%rbp)
+    movq    %rdx,%r15
+    movq    3*8(%rsi),%rax
+    mulq    %rbx
+    ADD_CARRY    %r15,%rax
+    ADD_CARRY    %rax,3*8(%rbp)
+    movq    %rdx,%r15
+    movq    4*8(%rsi),%rax
+    mulq    %rbx
+    ADD_CARRY    %r15,%rax
+    ADD_CARRY    %rax,4*8(%rbp)
+    movq    %rdx,%r15
+    movq    5*8(%rsi),%rax
+    mulq    %rbx
+    ADD_CARRY    %r15,%rax
+    ADD_CARRY    %rax,5*8(%rbp)
+    movq    %rdx,%r15
+    movq    6*8(%rsi),%rax
+    mulq    %rbx
+    ADD_CARRY    %r15,%rax
+    ADD_CARRY    %rax,6*8(%rbp)
+    movq    %rdx,%r15
+    movq    7*8(%rsi),%rax
+    mulq    %rbx
+    ADD_CARRY    %r15,%rax
+    ADD_CARRY    %rax,7*8(%rbp)
+    movq    %rdx,%r15
+    leaq    64(%rsi),%rsi
+    leaq    64(%rbp),%rbp
+    decq    %rcx
+    jnz     .LMul8Inner
+
+    movq    %r15,(%rbp)                 // t[i + size]
+    cmpq    24(%rsp),%r13
+    jb      .LMul8Outer
+
+    jmp     .LMont8ReduceEntry          // shared reduction, its ret leaves the frame
+.cfi_endproc
+.size   MontMul8Inner,.-MontMul8Inner
 
 #endif
 
