@@ -781,8 +781,8 @@ int32_t CRYPT_DSA_Gen(CRYPT_DSA_Ctx *ctx)
             // Internal API, the BSL_ERR_PUSH_ERROR info is already exists when failed.
             goto ERR;
         }
-        /* Calculate the public key y. */
-        ret = BN_MontExpConsttime(y, ctx->para->g, x, mont, opt);
+        /* Calculate the public key y; x < q, so bits(q) is a public bound. */
+        ret = BN_MontExpConsttimeBits(y, ctx->para->g, x, BN_Bits(ctx->para->q), mont, opt);
         if (ret != CRYPT_SUCCESS) {
             BSL_ERR_PUSH_ERROR(ret);
             goto ERR;
@@ -873,8 +873,8 @@ static int32_t SignCore(const CRYPT_DSA_Ctx *ctx, BN_BigNum *d, BN_BigNum *r,
             // Internal function. The BSL_ERR_PUSH_ERROR information exists when the failure occurs.
             goto EXIT;
         }
-        // Compute r = g^k mod p mod q, see RFC6979-2.4.3 */
-        ret = BN_MontExpConsttime(r, ctx->para->g, k, montP, opt);
+        // Compute r = g^k mod p mod q, see RFC6979-2.4.3; k < q, so bits(q) is a public bound. */
+        ret = BN_MontExpConsttimeBits(r, ctx->para->g, k, BN_Bits(ctx->para->q), montP, opt);
         if (ret != CRYPT_SUCCESS) {
             BSL_ERR_PUSH_ERROR(ret);
             goto EXIT;

@@ -297,6 +297,7 @@ CRYPT_DH_Ctx *CRYPT_DH_DupCtx(CRYPT_DH_Ctx *ctx)
     }
     // If x, y and para is not empty, copy the value.
     GOTO_ERR_IF_SRC_NOT_NULL(newKeyCtx->x, ctx->x, BN_Dup(ctx->x), CRYPT_MEM_ALLOC_FAIL);
+    newKeyCtx->xBits = ctx->xBits;
     GOTO_ERR_IF_SRC_NOT_NULL(newKeyCtx->y, ctx->y, BN_Dup(ctx->y), CRYPT_MEM_ALLOC_FAIL);
     GOTO_ERR_IF_SRC_NOT_NULL(newKeyCtx->para, ctx->para, ParaDup(ctx->para), CRYPT_MEM_ALLOC_FAIL);
     newKeyCtx->libCtx = ctx->libCtx;
@@ -514,13 +515,17 @@ static int32_t DH_GenSp80056ATestCandidates(CRYPT_DH_Ctx *ctx)
         if (BN_Cmp(x, m) >= 0) {
             continue;
         }
-        GOTO_ERR_IF(BN_MontExpConsttime(y, ctx->para->g, x, mont, opt), ret);
+        /* x < min(2^n, q), so n is a public bound of its bit length */
+        GOTO_ERR_IF(BN_MontExpConsttimeBits(y, ctx->para->g, x, n, mont, opt), ret);
         goto ERR; // The function exits successfully.
     }
     ret = CRYPT_DH_RAND_GENERATE_ERROR;
     BSL_ERR_PUSH_ERROR(ret);
 ERR:
     RefreshCtx(ctx, x, y, ret);
+    if (ret == CRYPT_SUCCESS) {
+        ctx->xBits = n;
+    }
     BN_Destroy(twoPowN);
     BN_MontDestroy(mont);
     BN_OptimizerDestroy(opt);
@@ -544,12 +549,13 @@ static int32_t DH_GenSp80056ASafePrime(CRYPT_DH_Ctx *ctx)
     }
     GOTO_ERR_IF(BN_SubLimb(minP, ctx->para->p, 1), ret);
     GOTO_ERR_IF(GetXLimb(xLimb, ctx->para->p, ctx->para->q), ret);
+    uint32_t xBound = BN_Bits(xLimb); /* x <= xLimb, a public bound */
     for (int32_t cnt = 0; cnt < CRYPT_DH_TRY_CNT_MAX; cnt++) {
         /*  Generate private key x for [1, q-1] or [1, p-2] */
         GOTO_ERR_IF(BN_RandRangeEx(ctx->libCtx, x, xLimb), ret);
         GOTO_ERR_IF(BN_AddLimb(x, x, 1), ret);
         /* Calculate the public key y. */
-        GOTO_ERR_IF(BN_MontExpConsttime(y, ctx->para->g, x, mont, opt), ret);
+        GOTO_ERR_IF(BN_MontExpConsttimeBits(y, ctx->para->g, x, xBound, mont, opt), ret);
         /* Check whether the public key meets the requirements. If not, try to generate the key again. */
         // y != 0, y != 1, y < p - 1
         if (BN_IsZero(y) || BN_IsOne(y) || BN_Cmp(y, minP) >= 0) {
@@ -561,6 +567,9 @@ static int32_t DH_GenSp80056ASafePrime(CRYPT_DH_Ctx *ctx)
     BSL_ERR_PUSH_ERROR(ret);
 ERR:
     RefreshCtx(ctx, x, y, ret);
+    if (ret == CRYPT_SUCCESS) {
+        ctx->xBits = xBound;
+    }
     BN_Destroy(minP);
     BN_Destroy(xLimb);
     BN_MontDestroy(mont);
@@ -650,7 +659,7 @@ int32_t CRYPT_DH_ComputeShareKey(const CRYPT_DH_Ctx *ctx, const CRYPT_DH_Ctx *pu
     if (ret != CRYPT_SUCCESS) {
         goto EXIT;
     }
-    ret = BN_MontExpConsttime(tmp, pubKey->y, ctx->x, mont, opt);
+    ret = BN_MontExpConsttimeBits(tmp, pubKey->y, ctx->x, ctx->xBits, mont, opt);
     if (ret != CRYPT_SUCCESS) {
         goto EXIT;
     }
@@ -726,6 +735,7 @@ int32_t CRYPT_DH_SetPrvKey(CRYPT_DH_Ctx *ctx, const CRYPT_DhPrv *prv)
     BN_Destroy(xLimb);
     BN_Destroy(ctx->x);
     ctx->x = bnX;
+    ctx->xBits = BN_BYTES_TO_BITS(prv->len); /* the input length is public metadata */
     return ret;
 ERR:
     BN_Destroy(bnX);

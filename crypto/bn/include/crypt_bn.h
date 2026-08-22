@@ -1115,6 +1115,35 @@ int32_t BN_MontExpConsttime(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *e
     BN_Mont *mont, BN_Optimizer *opt);
 
 /**
+ * @ingroup bn
+ * @brief Constant time BigNum Montgomery modular exponentiation with a public
+ *        exponent bit bound: r = a ^ (e mod 2^eBits) mod mont.
+ *        The execution time depends on eBits (and the operand word counts),
+ *        never on the value of e, so eBits must be a public quantity, for
+ *        example the bit length of a group order that e was sampled below.
+ *        When e < 2^eBits the result equals a ^ e; passing 0 (or any value
+ *        not below the word width of e) processes the full word width.
+ *
+ * @param r     [OUT] Modular exponentiation result
+ * @param a     [IN] base
+ * @param e     [IN] exponent
+ * @param eBits [IN] public upper bound of the exponent bit length, 0 for the
+ *                   full word width of e
+ * @param mont  [IN] Montgomery context
+ * @param opt   [IN] Optimizer
+ *
+ * @retval CRYPT_SUCCESS                    calculated successfully.
+ * @retval CRYPT_NULL_INPUT                 Invalid null pointer
+ * @retval CRYPT_MEM_ALLOC_FAIL             Memory allocation failure
+ * @retval CRYPT_BN_OPTIMIZER_GET_FAIL      Failed to apply for space from the optimizer.
+ * @retval CRYPT_BN_MONT_BASE_TOO_MAX       Montgomery Modular exponentiation base is too large
+ * @retval CRYPT_BN_OPTIMIZER_STACK_FULL    The optimizer stack is full.
+ * @retval CRYPT_BN_ERR_EXP_NO_NEGATE       exponent cannot be a negative number
+ */
+int32_t BN_MontExpConsttimeBits(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *e,
+    uint32_t eBits, BN_Mont *mont, BN_Optimizer *opt);
+
+/**
  * @ingroup mont
  * @brief BigNum Montgomery Context Destruction
  *

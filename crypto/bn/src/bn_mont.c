@@ -206,6 +206,15 @@ static void MontExpScatter(BN_UINT *tbl, const BN_UINT *src, uint32_t mSize, uin
     }
 }
 
+/* Read entry idx from the interleaved table. Only used with public idx values
+   (the fixed order of the precomputation). */
+static void MontExpReadEntry(BN_UINT *dst, const BN_UINT *tbl, uint32_t mSize, uint32_t winBits, uint32_t idx)
+{
+    for (uint32_t j = 0; j < mSize; j++) {
+        dst[j] = tbl[(j << winBits) + idx];
+    }
+}
+
 /* Load entry idx from the interleaved table. idx is secret: every table word
    is read and selected with masks, never addressed by idx. Splitting
    idx = hi * stride + lo lets the 4 hi masks and the stride lo masks be
@@ -235,6 +244,52 @@ static void MontExpGather(BN_UINT *dst, const BN_UINT *tbl, uint32_t mSize, uint
     }
 }
 
+#if defined(HITLS_CRYPTO_BN_X8664) && defined(__x86_64__) && defined(HITLS_SIXTY_FOUR_BITS) && \
+    (defined(__GNUC__) || defined(__clang__))
+#define HITLS_BN_MONT_GATHER_AVX2
+#include <immintrin.h>
+
+/* MontExpGather with 256-bit loads: the table scan is bound by load width, so
+   the wider accesses roughly halve its cost. Same security contract: every
+   table word is read, idx only reaches the compare masks. */
+__attribute__((target("avx2")))
+static void MontExpGatherAvx2(BN_UINT *dst, const BN_UINT *tbl, uint32_t mSize, uint32_t winBits, BN_UINT idx)
+{
+    const uint32_t nvec = (1u << winBits) >> 2;
+    __m256i vm[16]; /* tabSize / 4 <= 16 selection mask vectors */
+    __m256i vi = _mm256_set_epi64x(3, 2, 1, 0);
+    const __m256i vidx = _mm256_set1_epi64x((long long)idx);
+    const __m256i vstep = _mm256_set1_epi64x(4);
+    for (uint32_t i = 0; i < nvec; i++) {
+        vm[i] = _mm256_cmpeq_epi64(vi, vidx);
+        vi = _mm256_add_epi64(vi, vstep);
+    }
+    for (uint32_t j = 0; j < mSize; j++) {
+        const BN_UINT *row = tbl + ((uintptr_t)j << winBits);
+        __m256i acc = _mm256_setzero_si256();
+        for (uint32_t i = 0; i < nvec; i++) {
+            acc = _mm256_or_si256(acc,
+                _mm256_and_si256(_mm256_loadu_si256((const __m256i *)(row + 4 * i)), vm[i]));
+        }
+        __m128i fold = _mm_or_si128(_mm256_castsi256_si128(acc), _mm256_extracti128_si256(acc, 1));
+        fold = _mm_or_si128(fold, _mm_unpackhi_epi64(fold, fold));
+        dst[j] = (BN_UINT)_mm_cvtsi128_si64(fold);
+    }
+}
+#endif
+
+typedef void (*MontExpGatherFunc)(BN_UINT *dst, const BN_UINT *tbl, uint32_t mSize, uint32_t winBits, BN_UINT idx);
+
+static MontExpGatherFunc MontExpSelectGather(void)
+{
+#ifdef HITLS_BN_MONT_GATHER_AVX2
+    if (IsSupportAVX2() && IsOSSupportAVX()) {
+        return MontExpGatherAvx2;
+    }
+#endif
+    return MontExpGather;
+}
+
 /* BinFixSize equivalent without value-dependent branches: the scan always
    reads every word and selects the highest nonzero index with masks. */
 static uint32_t ConsttimeFixSize(const BN_UINT *data, uint32_t size)
@@ -261,24 +316,31 @@ static int32_t MontExpWinStep(BN_UINT *r, const BN_UINT *tblEntry, uint32_t winB
 }
 
 /*
- * r = r ^ e mod mont, r holds the Montgomery form of the base on entry.
+ * r = r ^ (e mod 2^eBits) mod mont, r holds the Montgomery form of the base
+ * on entry. eBits is a public upper bound of the exponent bit length: 0 (or
+ * anything above the word width of e) selects the full eSize * BN_UINT_BITS.
  * Fixed-window exponentiation whose control flow, operation count, and memory
- * access pattern depend only on the public sizes (eSize, mSize), never on the
- * value of e:
- *  - all eSize * BN_UINT_BITS exponent bits are processed, so the timing does
- *    not reveal the bit length of e (the classic leading-zero-bits leak on
+ * access pattern depend only on the public quantities (eBits, eSize, mSize),
+ * never on the value of e:
+ *  - a fixed number of exponent bits is processed, so the timing does not
+ *    reveal the bit length of e (the classic leading-zero-bits leak on
  *    DSA/DH secrets), and an all-zero e correctly yields R = mont(1);
  *  - the table holds b^0, so every window performs exactly winBits squarings
  *    and one multiplication, with no zero-window special case;
- *  - window values only select table entries through MontExpGather.
+ *  - window values only select table entries through the gather scan.
  * The first window needs no squaring and no multiplication (its table entry is
  * the result so far), which also saves rounds compared to consuming the top
- * window bit by bit.
+ * window bit by bit. Even table entries are filled by squaring the half-index
+ * entry (public indexes), which is cheaper than the multiplication chain.
  */
-static int32_t MontExpConsttimeBin(BN_UINT *r, const BN_UINT *e, uint32_t eSize, BN_Mont *mont, BN_Optimizer *opt)
+static int32_t MontExpConsttimeBin(BN_UINT *r, const BN_UINT *e, uint32_t eSize, uint32_t eBits,
+    BN_Mont *mont, BN_Optimizer *opt)
 {
     const uint32_t mSize = mont->mSize;
-    const uint32_t bits = eSize * BN_UINT_BITS;
+    uint32_t bits = eSize * BN_UINT_BITS;
+    if (eBits != 0 && eBits < bits) {
+        bits = eBits;
+    }
     uint32_t winBits = ConsttimeWinSize(bits);
     /* Keep the table inside the BigNum size limit; the mask split needs
        winBits >= 2 (a modulus large enough to still overflow the table at
@@ -287,6 +349,7 @@ static int32_t MontExpConsttimeBin(BN_UINT *r, const BN_UINT *e, uint32_t eSize,
     while (winBits > 2 && (mSize << winBits) > BITS_TO_BN_UNIT(BN_MAX_BITS)) {
         winBits--;
     }
+    const MontExpGatherFunc gather = MontExpSelectGather();
     int32_t ret = OptimizerStart(opt);
     if (ret != CRYPT_SUCCESS) {
         return ret;
@@ -307,7 +370,12 @@ static int32_t MontExpConsttimeBin(BN_UINT *r, const BN_UINT *e, uint32_t eSize,
     memcpy(mont->b, r, mSize * sizeof(BN_UINT));
     memcpy(cur->data, r, mSize * sizeof(BN_UINT));
     for (uint32_t i = 2; i < (1u << winBits); i++) {
-        ret = MontMulBin(cur->data, cur->data, mont->b, mont, opt, true);
+        if ((i & 1) == 0) { /* b^i = (b^(i/2))^2, squaring is cheaper than multiplying */
+            MontExpReadEntry(cur->data, tbl, mSize, winBits, i >> 1);
+            ret = MontSqrBin(cur->data, mont, opt, true);
+        } else { /* b^i = b^(i-1) * b, cur still holds b^(i-1) */
+            ret = MontMulBin(cur->data, cur->data, mont->b, mont, opt, true);
+        }
         if (ret != CRYPT_SUCCESS) {
             OptimizerEnd(opt);
             return ret;
@@ -318,10 +386,10 @@ static int32_t MontExpConsttimeBin(BN_UINT *r, const BN_UINT *e, uint32_t eSize,
     uint32_t cnt = bits % winBits;
     cnt = (cnt == 0) ? winBits : cnt;
     (void)GetELimb(e, &eLimb, bits, cnt);
-    MontExpGather(r, tbl, mSize, winBits, eLimb);
+    gather(r, tbl, mSize, winBits, eLimb);
     for (uint32_t remain = bits - cnt; remain != 0; remain -= winBits) {
         (void)GetELimb(e, &eLimb, remain, winBits);
-        MontExpGather(cur->data, tbl, mSize, winBits, eLimb);
+        gather(cur->data, tbl, mSize, winBits, eLimb);
         ret = MontExpWinStep(r, cur->data, winBits, mont, opt);
         if (ret != CRYPT_SUCCESS) {
             OptimizerEnd(opt);
@@ -401,7 +469,7 @@ static bool MontExpIsZero(const BN_BigNum *e)
  * branch, loop bound, or memory index depends on the values of a, e, or the
  * result — only on their public word counts.
  */
-static int32_t MontExpConsttimeCore(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *e,
+static int32_t MontExpConsttimeCore(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *e, uint32_t eBits,
     BN_Mont *mont, BN_Optimizer *opt)
 {
     const uint32_t mSize = mont->mSize;
@@ -440,7 +508,7 @@ static int32_t MontExpConsttimeCore(BN_BigNum *r, const BN_BigNum *a, const BN_B
         return ret;
     }
     /* modular exponentiation */
-    ret = MontExpConsttimeBin(r->data, te, e->size, mont, opt);
+    ret = MontExpConsttimeBin(r->data, te, e->size, eBits, mont, opt);
     if (ret != CRYPT_SUCCESS) {
         OptimizerEnd(opt);
         return ret;
@@ -470,7 +538,7 @@ static int32_t MontExpCore(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *e,
     BN_Mont *mont, BN_Optimizer *opt, bool consttime)
 {
     if (consttime) {
-        return MontExpConsttimeCore(r, a, e, mont, opt);
+        return MontExpConsttimeCore(r, a, e, 0, mont, opt);
     }
     if (MontExpIsZero(e)) {
         if (mont->mSize != 1) {
@@ -545,6 +613,17 @@ int32_t BN_MontExp(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *e, BN_Mont
 int32_t BN_MontExpConsttime(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *e, BN_Mont *mont, BN_Optimizer *opt)
 {
     return MontExp(r, a, e, mont, opt, true);
+}
+
+/* must satisfy the absolute value x < mod */
+int32_t BN_MontExpConsttimeBits(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *e, uint32_t eBits,
+    BN_Mont *mont, BN_Optimizer *opt)
+{
+    int32_t ret = MontParaCheck(r, a, e, mont, opt);
+    if (ret != CRYPT_SUCCESS) {
+        return ret;
+    }
+    return MontExpConsttimeCore(r, a, e, eBits, mont, opt);
 }
 
 static uint32_t MontSize(uint32_t room)

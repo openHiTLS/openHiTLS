@@ -42,6 +42,7 @@ struct DH_Para {
 /* DH key context */
 struct DH_Ctx {
     BN_BigNum *x; // Private key
+    uint32_t xBits; // public upper bound of the bit length of x, 0 when unknown
     BN_BigNum *y; // Public key
     CRYPT_DH_Para *para; // key parameter
     BSL_SAL_RefCount references;
