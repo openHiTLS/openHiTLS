@@ -70,8 +70,6 @@ typedef struct QuicTlsCtx {
     uint32_t peerTransportParamsLen; /* Length of peerTransportParams in bytes. */
     HITLS_QUIC_TLS_EncryptionLevel readLevel; /* Current inbound CRYPTO encryption level. */
     HITLS_QUIC_TLS_EncryptionLevel writeLevel; /* Current level outbound handshake bytes belong to. */
-    bool readSecretInstalled[QUIC_TLS_ENCRYPTION_LEVEL_COUNT]; /* Whether a read secret was installed per level. */
-    bool writeSecretInstalled[QUIC_TLS_ENCRYPTION_LEVEL_COUNT]; /* Whether a write secret was installed per level. */
     bool flightPending; /* Handshake bytes are buffered awaiting a flush. */
 } QUIC_TLS_Ctx;
 
@@ -140,8 +138,9 @@ int32_t QUIC_TLS_CallbackFailed(uint32_t callbackId, int32_t callbackRet);
 /**
  * @brief Deliver a newly derived traffic secret to the QUIC stack.
  *
- * Maps the secret to its encryption level (HANDSHAKE or APPLICATION), rejects a
- * duplicate install, and invokes the read or write secret callback. Switching
+ * Maps the secret to its encryption level (HANDSHAKE or APPLICATION), rejects
+ * duplicate or out-of-order installs (levels only advance monotonically), and
+ * invokes the read or write secret callback. Switching
  * the read level while the old level still holds unconsumed data is a protocol
  * violation. On success advances the corresponding read/write level.
  *
@@ -151,7 +150,7 @@ int32_t QUIC_TLS_CallbackFailed(uint32_t callbackId, int32_t callbackRet);
  * @param isOut     [IN] true for the write (outbound) secret, false for read (inbound).
  *
  * @retval HITLS_SUCCESS                     succeeded.
- * @retval HITLS_MSG_HANDLE_STATE_ILLEGAL    not in QUIC mode, bad input, or duplicate install.
+ * @retval HITLS_MSG_HANDLE_STATE_ILLEGAL    not in QUIC mode, bad input, or duplicate/out-of-order install.
  * @retval HITLS_CONFIG_UNSUPPORT            secret does not map to a QUIC encryption level.
  * @retval HITLS_QUIC_TLS_PROTOCOL_VIOLATION     read-level switch left unconsumed data behind.
  * @retval HITLS_REC_CB_FAIL                 the setReadSecret/setWriteSecret callback failed.

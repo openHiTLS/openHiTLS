@@ -58,8 +58,6 @@ void QUIC_TLS_CtxReset(QUIC_TLS_Ctx *quicTlsCtx)
 
     quicTlsCtx->readLevel = HITLS_QUIC_TLS_ENCRYPTION_LEVEL_INITIAL;
     quicTlsCtx->writeLevel = HITLS_QUIC_TLS_ENCRYPTION_LEVEL_INITIAL;
-    BSL_SAL_CleanseData(quicTlsCtx->readSecretInstalled, sizeof(quicTlsCtx->readSecretInstalled));
-    BSL_SAL_CleanseData(quicTlsCtx->writeSecretInstalled, sizeof(quicTlsCtx->writeSecretInstalled));
 
     quicTlsCtx->flightPending = false;
 }
@@ -142,14 +140,17 @@ int32_t QUIC_TLS_SetTrafficSecret(TLS_Ctx *ctx, const uint8_t *secret, uint32_t 
     }
 
     QUIC_TLS_Ctx *quicTlsCtx = ctx->quicTlsCtx;
-    /* A read or write secret may be installed only once at each level during a QUIC-TLS handshake. */
-    if ((isOut && quicTlsCtx->writeSecretInstalled[level]) || (!isOut && quicTlsCtx->readSecretInstalled[level])) {
+    /*
+     * Levels advance monotonically during a QUIC-TLS handshake and each secret is installed at
+     * most once per level, so an install at or below the current level is duplicate or replayed.
+     */
+    if ((isOut && level <= quicTlsCtx->writeLevel) || (!isOut && level <= quicTlsCtx->readLevel)) {
         BSL_ERR_PUSH_ERROR(HITLS_MSG_HANDLE_STATE_ILLEGAL);
         return HITLS_MSG_HANDLE_STATE_ILLEGAL;
     }
 
     /* RFC 9001 s4.1.3: the peer must consume all CRYPTO data at the current level before advancing. */
-    if (!isOut && level != quicTlsCtx->readLevel && QUIC_TLS_BufferHasData(quicTlsCtx, quicTlsCtx->readLevel)) {
+    if (!isOut && QUIC_TLS_BufferHasData(quicTlsCtx, quicTlsCtx->readLevel)) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17417, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
                               "QUIC read-level switch from %u to %u with unconsumed data at old level.",
                               quicTlsCtx->readLevel, level, 0, 0);
@@ -169,10 +170,8 @@ int32_t QUIC_TLS_SetTrafficSecret(TLS_Ctx *ctx, const uint8_t *secret, uint32_t 
 
     /* Commit the level transition only after the QUIC has accepted and installed the secret. */
     if (isOut) {
-        quicTlsCtx->writeSecretInstalled[level] = true;
         quicTlsCtx->writeLevel = level;
     } else {
-        quicTlsCtx->readSecretInstalled[level] = true;
         quicTlsCtx->readLevel = level;
     }
     return HITLS_SUCCESS;
