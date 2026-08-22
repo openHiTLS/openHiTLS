@@ -66,7 +66,7 @@ static BN_UINT Inverse(BN_UINT m0)
 }
 
 /* Pre-computation */
-static int32_t MontExpReady(BN_BigNum *table[], uint32_t num, BN_Mont *mont, BN_Optimizer *opt, bool consttime)
+static int32_t MontExpReady(BN_BigNum *table[], uint32_t num, BN_Mont *mont, BN_Optimizer *opt)
 {
     BN_UINT *b = mont->b;
     uint32_t i;
@@ -81,7 +81,7 @@ static int32_t MontExpReady(BN_BigNum *table[], uint32_t num, BN_Mont *mont, BN_
     memcpy(table[1]->data, b, mont->mSize * sizeof(BN_UINT));
 
     for (i = 2; i < num; i++) { /* precompute num - 2 data blocks */
-        int32_t ret = MontMulBin(table[i]->data, table[0]->data, table[i - 1]->data, mont, opt, consttime);
+        int32_t ret = MontMulBin(table[i]->data, table[0]->data, table[i - 1]->data, mont, opt, false);
         if (ret != CRYPT_SUCCESS) {
             return ret;
         }
@@ -127,8 +127,7 @@ static uint32_t GetReadySize(uint32_t bits)
 }
 
 /* r = r ^ e mod mont */
-static int32_t MontExpBin(BN_UINT *r, const BN_UINT *e, uint32_t eSize, BN_Mont *mont,
-    BN_Optimizer *opt, bool consttime)
+static int32_t MontExpBin(BN_UINT *r, const BN_UINT *e, uint32_t eSize, BN_Mont *mont, BN_Optimizer *opt)
 {
     BN_BigNum *table[64] = { 0 }; /* 0 -- 2^6 that is 0 -- 64 */
     int32_t ret = OptimizerStart(opt);
@@ -139,7 +138,7 @@ static int32_t MontExpBin(BN_UINT *r, const BN_UINT *e, uint32_t eSize, BN_Mont 
     uint32_t base = BinBits(e, eSize) - 1;
     uint32_t perSize = GetReadySize(base);
     const uint32_t readySize = 1 << perSize;
-    ret = MontExpReady(table, readySize, mont, opt, consttime);
+    ret = MontExpReady(table, readySize, mont, opt);
     if (ret != CRYPT_SUCCESS) {
         OptimizerEnd(opt);
         return ret;
@@ -148,23 +147,14 @@ static int32_t MontExpBin(BN_UINT *r, const BN_UINT *e, uint32_t eSize, BN_Mont 
         BN_UINT eLimb;
         uint32_t bit = GetELimb(e, &eLimb, base, perSize);
         for (uint32_t i = 0; i < bit; i++) {
-            ret = MontSqrBin(r, mont, opt, consttime);
+            ret = MontSqrBin(r, mont, opt, false);
             if (ret != CRYPT_SUCCESS) {
                 OptimizerEnd(opt);
                 return ret;
             }
         }
-        if (consttime == true) {
-            BN_UINT *x = mont->t;
-            BN_UINT mask = ~BN_IsZeroUintConsttime(eLimb);
-            ret = MontMulBin(x, r, table[eLimb]->data, mont, opt, consttime);
-            if (ret != CRYPT_SUCCESS) {
-                OptimizerEnd(opt);
-                return ret;
-            }
-            CopyConsttime(r, x, r, mont->mSize, mask);
-        } else if (eLimb != 0) {
-            ret = MontMulBin(r, r, table[eLimb]->data, mont, opt, consttime);
+        if (eLimb != 0) {
+            ret = MontMulBin(r, r, table[eLimb]->data, mont, opt, false);
             if (ret != CRYPT_SUCCESS) {
                 OptimizerEnd(opt);
                 return ret;
@@ -172,6 +162,184 @@ static int32_t MontExpBin(BN_UINT *r, const BN_UINT *e, uint32_t eSize, BN_Mont 
         }
         base -= bit;
     } while (base != 0);
+    OptimizerEnd(opt);
+    return CRYPT_SUCCESS;
+}
+
+/*
+ * Window size (in bits) for the constant-time exponentiation, chosen from the
+ * public exponent bit bound. The thresholds account for the cost of the
+ * constant-time table scan, which grows with 2^w: they minimize
+ * bits/w multiplications + (2^w - 2) precomputations + (bits/w) table scans.
+ */
+static uint32_t ConsttimeWinSize(uint32_t bits)
+{
+    if (bits > 2560) { /* If bits are greater than 2560 */
+        return 6;      /* The window size is 6. */
+    }
+    if (bits > 320) {  /* If bits are greater than 320 */
+        return 5;      /* The window size is 5. */
+    }
+    if (bits > 80) {   /* If bits are greater than 80 */
+        return 4;      /* The window size is 4. */
+    }
+    if (bits > 20) {   /* If bits are greater than 20 */
+        return 3;      /* The window size is 3. */
+    }
+    return 2;
+}
+
+/*
+ * The constant-time precomputation table keeps b^0 .. b^(2^w - 1) in one
+ * contiguous buffer in limb-interleaved order: limb j of entry i is stored at
+ * tbl[(j << w) + i]. Secret-dependent entries are read by scanning the entire
+ * table with masks (MontExpGather), so the memory access pattern is
+ * independent of the exponent and reveals nothing through the data cache.
+ */
+
+/* Store entry idx into the interleaved table. Only used with public idx values
+   (the fixed 0..2^w-1 order of the precomputation). */
+static void MontExpScatter(BN_UINT *tbl, const BN_UINT *src, uint32_t mSize, uint32_t winBits, uint32_t idx)
+{
+    for (uint32_t j = 0; j < mSize; j++) {
+        tbl[(j << winBits) + idx] = src[j];
+    }
+}
+
+/* Load entry idx from the interleaved table. idx is secret: every table word
+   is read and selected with masks, never addressed by idx. Splitting
+   idx = hi * stride + lo lets the 4 hi masks and the stride lo masks be
+   computed once, so the scan needs ~1 logic operation per word read.
+   Requires winBits >= 2. */
+static void MontExpGather(BN_UINT *dst, const BN_UINT *tbl, uint32_t mSize, uint32_t winBits, BN_UINT idx)
+{
+    const uint32_t stride = (1u << winBits) >> 2;
+    const BN_UINT hi = idx >> (winBits - 2);
+    const BN_UINT y0 = BN_IsZeroUintConsttime(hi ^ 0);
+    const BN_UINT y1 = BN_IsZeroUintConsttime(hi ^ 1);
+    const BN_UINT y2 = BN_IsZeroUintConsttime(hi ^ 2);
+    const BN_UINT y3 = BN_IsZeroUintConsttime(hi ^ 3);
+    const BN_UINT lo = idx & (BN_UINT)(stride - 1);
+    BN_UINT loMask[16]; /* stride = 2^(winBits - 2) <= 16 */
+    for (uint32_t i = 0; i < stride; i++) {
+        loMask[i] = BN_IsZeroUintConsttime((BN_UINT)i ^ lo);
+    }
+    for (uint32_t j = 0; j < mSize; j++) {
+        const BN_UINT *row = tbl + ((uintptr_t)j << winBits);
+        BN_UINT acc = 0;
+        for (uint32_t i = 0; i < stride; i++) {
+            acc |= (((row[i] & y0) | (row[i + stride] & y1)) |
+                    ((row[i + 2 * stride] & y2) | (row[i + 3 * stride] & y3))) & loMask[i];
+        }
+        dst[j] = acc;
+    }
+}
+
+/*
+ * Upper bound of the exponent bit length, rounded up to 32-bit granularity
+ * and computed without value-dependent branches. Unlike the exact bit length
+ * (whose use as the round count leaked the number of leading zero bits of
+ * secret exponents, e.g. DSA/DH nonces), this bound coincides with the public
+ * quantity "32 * ceil(bits(e) / 32)": for a uniformly distributed secret it
+ * differs from the size-derived bound only with probability <= 2^-32 per
+ * 32-bit step, while avoiding up to 31 useless squarings per exponentiation.
+ */
+static uint32_t MontExpBitsBound(const BN_UINT *e, uint32_t eSize)
+{
+    const uint32_t blocksPerUint = BN_UINT_BITS / 32; /* 32-bit blocks per BN_UINT */
+    uint32_t cnt = 0; /* index (starting at 1) of the highest nonzero 32-bit block */
+    for (uint32_t i = 0; i < eSize; i++) {
+        for (uint32_t k = 0; k < blocksPerUint; k++) {
+            /* shift by k * 32 bits to get the k-th 32-bit block */
+            const BN_UINT blk = (e[i] >> (k * 32)) & (BN_UINT)0xFFFFFFFF;
+            const BN_UINT mask = ~BN_IsZeroUintConsttime(blk);
+            cnt = (uint32_t)((mask & (i * blocksPerUint + k + 1)) | (~mask & cnt));
+        }
+    }
+    return cnt * 32; /* 32 bits per block */
+}
+
+/* One window: winBits squarings followed by the multiplication with the
+   gathered table entry. */
+static int32_t MontExpWinStep(BN_UINT *r, const BN_UINT *tblEntry, uint32_t winBits, BN_Mont *mont, BN_Optimizer *opt)
+{
+    for (uint32_t i = 0; i < winBits; i++) {
+        int32_t ret = MontSqrBin(r, mont, opt, true);
+        if (ret != CRYPT_SUCCESS) {
+            return ret;
+        }
+    }
+    return MontMulBin(r, r, tblEntry, mont, opt, true);
+}
+
+/*
+ * r = r ^ e mod mont, r holds the Montgomery form of the base on entry.
+ * Fixed-window exponentiation whose operation count and memory access pattern
+ * depend only on the sizes (MontExpBitsBound(e), mSize), never on the value
+ * of e beyond that 32-bit-granularity bound:
+ *  - the timing does not reveal the exact bit length of e (the exponentiation
+ *    processes a whole number of 32-bit blocks), closing the classic
+ *    leading-zero-bits leak on DSA/DH secrets;
+ *  - the table holds b^0, so every window performs exactly winBits squarings
+ *    and one multiplication, with no zero-window special case;
+ *  - window values only select table entries through MontExpGather.
+ * The first window needs no squaring and no multiplication (its table entry is
+ * the result so far), which also saves rounds compared to consuming the top
+ * window bit by bit.
+ */
+static int32_t MontExpConsttimeBin(BN_UINT *r, const BN_UINT *e, uint32_t eSize, BN_Mont *mont, BN_Optimizer *opt)
+{
+    const uint32_t mSize = mont->mSize;
+    const uint32_t bits = MontExpBitsBound(e, eSize);
+    uint32_t winBits = ConsttimeWinSize(bits);
+    /* Keep the table inside the BigNum size limit; the mask split needs
+       winBits >= 2 (a modulus large enough to still overflow the table at
+       winBits == 2 is far beyond any computable exponentiation and fails
+       cleanly at the allocation below). */
+    while (winBits > 2 && (mSize << winBits) > BITS_TO_BN_UNIT(BN_MAX_BITS)) {
+        winBits--;
+    }
+    int32_t ret = OptimizerStart(opt);
+    if (ret != CRYPT_SUCCESS) {
+        return ret;
+    }
+    BN_BigNum *tblBn = OptimizerGetBn(opt, mSize << winBits);
+    BN_BigNum *cur = OptimizerGetBn(opt, mSize);
+    if (tblBn == NULL || cur == NULL) {
+        OptimizerEnd(opt);
+        BSL_ERR_PUSH_ERROR(CRYPT_BN_OPTIMIZER_GET_FAIL);
+        return CRYPT_BN_OPTIMIZER_GET_FAIL;
+    }
+    BN_UINT *tbl = tblBn->data;
+    /* entry 0 is b^0 = R mod N = reduce(montRR) */
+    BN_COPY_BYTES(mont->t, mSize << 1, mont->montRR, mSize);
+    Reduce(cur->data, mont->t, mont->one, mont->mod, mSize, mont->k0);
+    MontExpScatter(tbl, cur->data, mSize, winBits, 0);
+    MontExpScatter(tbl, r, mSize, winBits, 1);
+    memcpy(mont->b, r, mSize * sizeof(BN_UINT));
+    memcpy(cur->data, r, mSize * sizeof(BN_UINT));
+    for (uint32_t i = 2; i < (1u << winBits); i++) {
+        ret = MontMulBin(cur->data, cur->data, mont->b, mont, opt, true);
+        if (ret != CRYPT_SUCCESS) {
+            OptimizerEnd(opt);
+            return ret;
+        }
+        MontExpScatter(tbl, cur->data, mSize, winBits, i);
+    }
+    BN_UINT eLimb = 0;
+    uint32_t cnt = bits % winBits;
+    cnt = (cnt == 0) ? winBits : cnt;
+    (void)GetELimb(e, &eLimb, bits, cnt);
+    MontExpGather(r, tbl, mSize, winBits, eLimb);
+    for (uint32_t remain = bits - cnt; remain != 0; remain -= winBits) {
+        (void)GetELimb(e, &eLimb, remain, winBits);
+        MontExpGather(cur->data, tbl, mSize, winBits, eLimb);
+        ret = MontExpWinStep(r, cur->data, winBits, mont, opt);
+        if (ret != CRYPT_SUCCESS) {
+            OptimizerEnd(opt);
+            return ret;
+        }
+    }
     OptimizerEnd(opt);
     return CRYPT_SUCCESS;
 }
@@ -266,7 +434,11 @@ static int32_t MontExpCore(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *e,
         return ret;
     }
     /* modular exponentiation */
-    ret = MontExpBin(r->data, te, e->size, mont, opt, consttime);
+    if (consttime) {
+        ret = MontExpConsttimeBin(r->data, te, e->size, mont, opt);
+    } else {
+        ret = MontExpBin(r->data, te, e->size, mont, opt);
+    }
     if (ret != CRYPT_SUCCESS) {
         OptimizerEnd(opt);
         return ret;
