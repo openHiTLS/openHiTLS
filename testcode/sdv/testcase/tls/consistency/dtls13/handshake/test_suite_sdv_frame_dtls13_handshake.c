@@ -54,6 +54,7 @@
 #include "parse.h"
 #include "cipher_suite.h"
 #include "crypt.h"
+#include "rec_wrapper.h"
 
 #define APP_READ_BUF_SIZE (18 * 1024)
 #define TEST_SHA256_DIGEST_LEN 32u
@@ -4739,6 +4740,93 @@ void SDV_TLS_DTLS13_HANDSHAKE_CONSISTENCY_FUNC_TC062(int group)
     ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
+    HITLS_CFG_FreeConfig(clientConfig);
+    HITLS_CFG_FreeConfig(serverConfig);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+}
+/* END_CASE */
+
+static void Test_CorruptServerHelloKeyShare(HITLS_Ctx *ctx, uint8_t *data, uint32_t *len, uint32_t bufSize,
+    void *userData)
+{
+    (void)ctx;
+    (void)userData;
+    FRAME_Type frameType = {0};
+    SetDtls13FrameType(&frameType, REC_TYPE_HANDSHAKE, SERVER_HELLO);
+    FRAME_Msg frameMsg = {0};
+    frameMsg.recType.data = REC_TYPE_HANDSHAKE;
+    frameMsg.length.data = *len;
+    frameMsg.recVersion.data = HITLS_VERSION_DTLS13;
+    uint32_t parseLen = 0;
+    ASSERT_EQ(FRAME_ParseMsgBody(&frameType, data, *len, &frameMsg, &parseLen), HITLS_SUCCESS);
+    ASSERT_EQ(parseLen, *len);
+    ASSERT_EQ(frameMsg.body.hsMsg.type.data, SERVER_HELLO);
+    FRAME_ServerHelloMsg *serverMsg = &frameMsg.body.hsMsg.body.serverHello;
+    uint8_t *keyExchange = serverMsg->keyShare.data.keyExchange.data;
+    uint32_t keyExchangeLen = serverMsg->keyShare.data.keyExchange.size;
+    ASSERT_TRUE(keyExchange != NULL && keyExchangeLen > 0);
+    keyExchange[keyExchangeLen - 1] ^= 0xFF;
+    FRAME_PackRecordBody(&frameType, &frameMsg, data, bufSize, len);
+EXIT:
+    FRAME_CleanMsg(&frameType, &frameMsg);
+    return;
+}
+
+/** @
+* @test SDV_TLS_DTLS13_HANDSHAKE_CONSISTENCY_FUNC_TC063
+* @title   SAL_CRYPT_CalcEcdhSharedSecret fails on the client; verify the client sends a fatal alert and disconnects.
+* @precon  nan
+* @brief   1. Register a RecWrapper that corrupts the key_share public key in the ServerHello as the server sends it.
+*          2. Establish a DTLS1.3 handshake. The client receives a corrupted ServerHello and ECDH fails.
+* @expect  1. The handshake fails.
+*          2. The client sends a fatal alert (ALERT_FLAG_SEND) and transitions to CM_STATE_ALERTED.
+@ */
+/* BEGIN_CASE */
+void SDV_TLS_DTLS13_HANDSHAKE_CONSISTENCY_FUNC_TC063(void)
+{
+    HITLS_Config *clientConfig = NULL;
+    HITLS_Config *serverConfig = NULL;
+    FRAME_LinkObj *client = NULL;
+    FRAME_LinkObj *server = NULL;
+
+    FRAME_Init();
+
+    clientConfig = HITLS_CFG_NewDTLS13Config();
+    ASSERT_TRUE(clientConfig != NULL);
+    serverConfig = HITLS_CFG_NewDTLS13Config();
+    ASSERT_TRUE(serverConfig != NULL);
+    ASSERT_EQ(HITLS_CFG_SetTicketNums(clientConfig, 0), HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_CFG_SetTicketNums(serverConfig, 0), HITLS_SUCCESS);
+    /* Force ECDH group (secp256r1) so that SAL_CRYPT_CalcEcdhSharedSecret is used
+     * instead of KEM, and the corrupted key causes the ECDH computation to fail. */
+    uint16_t ecdheGroup = HITLS_EC_GROUP_SECP256R1;
+    ASSERT_EQ(HITLS_CFG_SetGroups(clientConfig, &ecdheGroup, 1), HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_CFG_SetGroups(serverConfig, &ecdheGroup, 1), HITLS_SUCCESS);
+
+    RecWrapper wrapper = {TRY_SEND_SERVER_HELLO,
+        REC_TYPE_HANDSHAKE,
+        false,
+        NULL,
+        Test_CorruptServerHelloKeyShare};
+    RegisterWrapper(wrapper);
+
+    client = FRAME_CreateLink(clientConfig, BSL_UIO_UDP);
+    ASSERT_TRUE(client != NULL);
+    server = FRAME_CreateLink(serverConfig, BSL_UIO_UDP);
+    ASSERT_TRUE(server != NULL);
+
+    ASSERT_NE(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_SUCCESS);
+
+    ALERT_Info alert = {0};
+    ALERT_GetInfo(client->ssl, &alert);
+    ASSERT_EQ(alert.flag, ALERT_FLAG_SEND);
+    ASSERT_EQ(alert.level, ALERT_LEVEL_FATAL);
+    ASSERT_EQ(alert.description, ALERT_ILLEGAL_PARAMETER);
+    ASSERT_EQ(client->ssl->state, CM_STATE_ALERTED);
+
+EXIT:
+    ClearWrapper();
     HITLS_CFG_FreeConfig(clientConfig);
     HITLS_CFG_FreeConfig(serverConfig);
     FRAME_FreeLink(client);

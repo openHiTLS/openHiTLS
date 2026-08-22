@@ -1294,6 +1294,7 @@ int32_t Tls13ProcessServerHello(TLS_Ctx *ctx, const HS_Msg *msg)
     if (ret != HITLS_SUCCESS) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17095, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "CalcServerHelloProcessSecret fail", 0, 0, 0, 0);
+        ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_ILLEGAL_PARAMETER);
         return ret;
     }
 
