@@ -62,6 +62,19 @@ void MontGatherSse2_Asm(BN_UINT *dst, const BN_UINT *tbl, uint32_t mSize, uint32
 void MontGatherAvx2_Asm(BN_UINT *dst, const BN_UINT *tbl, uint32_t mSize, uint32_t winBits, BN_UINT idx);
 #endif
 
+#if defined(HITLS_CRYPTO_BN_ARMV8) && defined(__aarch64__)
+/**
+ *  Function description: constant-time NEON gather from the limb-interleaved
+ *  Montgomery exponentiation table (limb j of entry i at tbl[(j << winBits) + i]).
+ *  Every table word is read with full-width loads at public addresses; the
+ *  secret idx only reaches equality masks, and the mask scratch is wiped from
+ *  the stack before returning. winBits must be in [2, 6], idx < 2^winBits.
+ *  Advanced SIMD is mandatory in AArch64, so no runtime capability check is
+ *  needed.
+ */
+void MontGatherNeon_Asm(BN_UINT *dst, const BN_UINT *tbl, uint32_t mSize, uint32_t winBits, BN_UINT idx);
+#endif
+
 #ifdef __cplusplus
 }
 #endif

@@ -50,13 +50,27 @@
 CRYPT_AARCH64_ARCH_CRYPTO
 .text
 
+/* Wipe the Montgomery intermediates the kernels leave between sp and \end.
+   NEON 32-byte stores clear the bulk, a word loop the sub-64-byte tail; the
+   cleared length depends only on the public operand size. Clobbers x16, v0, v1. */
 .macro CLEAR_STACK_RANGE end
+    eor     v0.16b, v0.16b, v0.16b
+    eor     v1.16b, v1.16b, v1.16b
     mov     x16, sp
-.Lclear_stack_range\@:
+.Lclear_stack_blk\@:
+    add     x16, x16, #64
+    cmp     x16, \end
+    b.hi    .Lclear_stack_tail\@
+    stp     q0, q1, [x16, #-64]
+    stp     q0, q1, [x16, #-32]
+    b       .Lclear_stack_blk\@
+.Lclear_stack_tail\@:
+    sub     x16, x16, #64
+.Lclear_stack_word\@:
     cmp     x16, \end
     b.hs    .Lclear_stack_done\@
     str     xzr, [x16], #8
-    b       .Lclear_stack_range\@
+    b       .Lclear_stack_word\@
 .Lclear_stack_done\@:
 .endm
 

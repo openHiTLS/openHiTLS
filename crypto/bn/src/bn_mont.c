@@ -215,7 +215,9 @@ static void MontExpReadEntry(BN_UINT *dst, const BN_UINT *tbl, uint32_t mSize, u
     }
 }
 
-#if defined(HITLS_CRYPTO_BN_X8664) && defined(__x86_64__) && defined(HITLS_SIXTY_FOUR_BITS)
+#if defined(HITLS_SIXTY_FOUR_BITS) && \
+    ((defined(HITLS_CRYPTO_BN_X8664) && defined(__x86_64__)) || \
+     (defined(HITLS_CRYPTO_BN_ARMV8) && defined(__aarch64__)))
 #define HITLS_BN_MONT_GATHER_SIMD
 #endif
 
@@ -256,20 +258,24 @@ static void MontExpGather(BN_UINT *dst, const BN_UINT *tbl, uint32_t mSize, uint
 
 typedef void (*MontExpGatherFunc)(BN_UINT *dst, const BN_UINT *tbl, uint32_t mSize, uint32_t winBits, BN_UINT idx);
 
-/* The vector gathers live in bn_gather_x86_64.S; they share the scalar
-   gather's contract (full loads at public addresses, idx only in equality
-   masks). A 512-bit tier was measured and rejected: the scan is a small share
-   of the runtime, and the AVX-512 frequency licensing it triggers slows the
-   surrounding scalar multiplication kernels by far more than it saves. */
+/* The vector gathers live in bn_gather_x86_64.S / bn_gather_armv8.S; they
+   share the scalar gather's contract (full loads at public addresses, idx only
+   in equality masks). On x86-64, a 512-bit tier was measured and rejected: the
+   scan is a small share of the runtime, and the AVX-512 frequency licensing it
+   triggers slows the surrounding scalar multiplication kernels by far more
+   than it saves. */
 static MontExpGatherFunc MontExpSelectGather(void)
 {
-#ifdef HITLS_BN_MONT_GATHER_SIMD
+#if !defined(HITLS_BN_MONT_GATHER_SIMD)
+    return MontExpGather;
+#elif defined(__x86_64__)
     if (IsSupportAVX2() && IsOSSupportAVX()) {
         return MontGatherAvx2_Asm;
     }
     return MontGatherSse2_Asm;
 #else
-    return MontExpGather;
+    /* Advanced SIMD is mandatory in AArch64: no runtime capability check. */
+    return MontGatherNeon_Asm;
 #endif
 }
 

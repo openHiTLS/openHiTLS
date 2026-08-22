@@ -54,6 +54,7 @@ elseif(HITLS_CRYPTO_BN_ARMV8)
         ${CMAKE_CURRENT_SOURCE_DIR}/src/asm_bn_mont.c
         ${CMAKE_CURRENT_SOURCE_DIR}/src/armv8_bn_bincal.c
         ${CMAKE_CURRENT_SOURCE_DIR}/src/asm/bn_mont_armv8.S
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/asm/bn_gather_armv8.S
     )
 else()
     list(APPEND _bn_sources
