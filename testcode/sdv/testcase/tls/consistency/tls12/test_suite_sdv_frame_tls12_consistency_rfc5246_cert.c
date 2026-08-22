@@ -1574,3 +1574,116 @@ EXIT:
     FRAME_FreeLink(server);
 }
 /* END_CASE */
+
+static void Test_RemoveScsvAndRenegoExt(HITLS_Ctx *ctx, uint8_t *data, uint32_t *len, uint32_t bufSize, void *user)
+{
+    (void)ctx;
+    (void)bufSize;
+    (void)user;
+    FRAME_Type frameType = {0};
+    frameType.versionType = HITLS_VERSION_TLS12;
+    FRAME_Msg frameMsg = {0};
+    frameMsg.recType.data = REC_TYPE_HANDSHAKE;
+    frameMsg.length.data = *len;
+    frameMsg.recVersion.data = HITLS_VERSION_TLS12;
+    uint32_t parseLen = 0;
+    FRAME_ParseMsgBody(&frameType, data, *len, &frameMsg, &parseLen);
+    ASSERT_EQ(frameMsg.body.hsMsg.type.data, CLIENT_HELLO);
+    ASSERT_EQ(parseLen, *len);
+    FRAME_ClientHelloMsg *clientMsg = &frameMsg.body.hsMsg.body.clientHello;
+    clientMsg->secRenego.exState = MISSING_FIELD;
+    for (uint32_t i = 0; i < clientMsg->cipherSuites.size; i++) {
+        if (clientMsg->cipherSuites.data[i] == TLS_EMPTY_RENEGOTIATION_INFO_SCSV) {
+            clientMsg->cipherSuites.data[i] = clientMsg->cipherSuites.data[0];
+            break;
+        }
+    }
+    FRAME_PackRecordBody(&frameType, &frameMsg, data, bufSize, len);
+EXIT:
+    FRAME_CleanMsg(&frameType, &frameMsg);
+    return;
+}
+
+/** @
+* @test UT_TLS_TLS12_RFC5246_CONSISTENCY_FORBID_LEGACY_CLIENT_RENEGOTIATE_TC001
+* @title Server rejects or allows legacy client based on forbidLegacyClientRenegotiate configuration.
+* @precon nan
+* @brief    1. Set allowLegacyRenegotiate to true and forbidLegacyClientRenegotiate on the server.
+*           2. Use a wrapper to remove both the SCSV and the renegotiation_info extension from the ClientHello,
+*              simulating a legacy client that does not support secure renegotiation.
+*           3. When isForbid is true, the server rejects the connection with HITLS_MSG_HANDLE_RENEGOTIATION_FAIL
+*              and sends ALERT_LEVEL_FATAL/ALERT_HANDSHAKE_FAILURE.
+*           4. When isForbid is false, the server allows the connection.
+* @expect   1. isForbid=true: handshake fails with FATAL alert. isForbid=false: connection succeeds.
+@ */
+/* BEGIN_CASE */
+void UT_TLS_TLS12_RFC5246_CONSISTENCY_FORBID_LEGACY_CLIENT_RENEGOTIATE_TC001(int isForbid)
+{
+    FRAME_Init();
+
+    HITLS_Config *config = HITLS_CFG_NewTLS12Config();
+    ASSERT_TRUE(config != NULL);
+    ASSERT_TRUE(HITLS_CFG_SetForbidLegacyClientRenegotiate(config, isForbid ? true : false) == HITLS_SUCCESS);
+    HITLS_CFG_SetLegacyRenegotiateSupport(config, true);
+
+    FRAME_LinkObj *client = FRAME_CreateLink(config, BSL_UIO_TCP);
+    ASSERT_TRUE(client != NULL);
+    FRAME_LinkObj *server = FRAME_CreateLink(config, BSL_UIO_TCP);
+    ASSERT_TRUE(server != NULL);
+
+    RecWrapper wrapper = {TRY_SEND_CLIENT_HELLO, REC_TYPE_HANDSHAKE, false, NULL, Test_RemoveScsvAndRenegoExt};
+    RegisterWrapper(wrapper);
+
+    if (isForbid) {
+        ASSERT_EQ(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_MSG_HANDLE_RENEGOTIATION_FAIL);
+        ALERT_Info alertInfo = {0};
+        ALERT_GetInfo(server->ssl, &alertInfo);
+        ASSERT_EQ(alertInfo.level, ALERT_LEVEL_FATAL);
+        ASSERT_EQ(alertInfo.description, ALERT_HANDSHAKE_FAILURE);
+    } else {
+        ASSERT_EQ(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_SUCCESS);
+    }
+
+EXIT:
+    ClearWrapper();
+    HITLS_CFG_FreeConfig(config);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+}
+/* END_CASE */
+
+/** @
+* @test UT_TLS_TLS12_RFC5246_CONSISTENCY_FORBID_LEGACY_CLIENT_RENEGOTIATE_TC002
+* @title When allowLegacyRenegotiate is true and forbidLegacyClientRenegotiate is false (default),
+*         the server allows a legacy client that does not support secure renegotiation.
+* @precon nan
+* @brief    1. Set allowLegacyRenegotiate to true on the server, forbidLegacyClientRenegotiate defaults to false.
+*           2. Use a wrapper to remove both the SCSV and the renegotiation_info extension from the ClientHello,
+*              simulating a legacy client.
+*           3. Establish the connection.
+* @expect   1. The connection succeeds.
+@ */
+/* BEGIN_CASE */
+void UT_TLS_TLS12_RFC5246_CONSISTENCY_FORBID_LEGACY_CLIENT_RENEGOTIATE_TC002()
+{
+    FRAME_Init();
+
+    HITLS_Config *config = HITLS_CFG_NewTLS12Config();
+    ASSERT_TRUE(config != NULL);
+    HITLS_CFG_SetLegacyRenegotiateSupport(config, true);
+
+    FRAME_LinkObj *client = FRAME_CreateLink(config, BSL_UIO_TCP);
+    ASSERT_TRUE(client != NULL);
+    FRAME_LinkObj *server = FRAME_CreateLink(config, BSL_UIO_TCP);
+    ASSERT_TRUE(server != NULL);
+
+    RecWrapper wrapper = {TRY_SEND_CLIENT_HELLO, REC_TYPE_HANDSHAKE, false, NULL, Test_RemoveScsvAndRenegoExt};
+    RegisterWrapper(wrapper);
+    ASSERT_EQ(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_SUCCESS);
+EXIT:
+    ClearWrapper();
+    HITLS_CFG_FreeConfig(config);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+}
+/* END_CASE */

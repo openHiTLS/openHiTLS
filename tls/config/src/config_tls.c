@@ -40,6 +40,7 @@ static HITLS_Config *DefaultCreateTLCPConfig(HITLS_Lib_Ctx *libCtx, const char *
     }
     newConfig->emsMode = HITLS_EMS_MODE_FORBID;
     newConfig->allowLegacyRenegotiate = true;
+    newConfig->forbidLegacyClientRenegotiate = false;
 #ifdef HITLS_TLS_FEATURE_SESSION_TICKET
     newConfig->isSupportSessionTicket = false;
 #endif

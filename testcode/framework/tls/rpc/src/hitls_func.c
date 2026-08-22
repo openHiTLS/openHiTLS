@@ -776,6 +776,10 @@ int HitlsSetCtx(HITLS_Config *outCfg, HLT_Ctx_Config *inCtxCfg)
     LOG_DEBUG("HiTLS Set allow Legacy Renegotiate is %d", inCtxCfg->allowLegacyRenegotiate);
     ret = HITLS_CFG_SetLegacyRenegotiateSupport(outCfg, inCtxCfg->allowLegacyRenegotiate);
     ASSERT_RETURN(ret == SUCCESS, "HITLS_CFG_SetLegacyRenegotiateSupport ERROR");
+
+    LOG_DEBUG("HiTLS Set forbid Legacy Client Renegotiate is %d", inCtxCfg->forbidLegacyClientRenegotiate);
+    ret = HITLS_CFG_SetForbidLegacyClientRenegotiate(outCfg, inCtxCfg->forbidLegacyClientRenegotiate);
+    ASSERT_RETURN(ret == SUCCESS, "HITLS_CFG_SetForbidLegacyClientRenegotiate ERROR");
 #endif /* defined(HITLS_TLS_PROTO_TLS_BASIC) || defined(HITLS_TLS_PROTO_DTLS12) */
 #ifdef HITLS_TLS_FEATURE_CERTIFICATE_AUTHORITIES
     if (inCtxCfg->caList != NULL) {

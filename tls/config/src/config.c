@@ -159,6 +159,7 @@ static void ShallowCopy(HITLS_Ctx *ctx, const HITLS_Config *srcConfig)
 #endif
 #if defined(HITLS_TLS_PROTO_TLS_BASIC) || defined(HITLS_TLS_PROTO_DTLS12)
     destConfig->allowLegacyRenegotiate = srcConfig->allowLegacyRenegotiate;
+    destConfig->forbidLegacyClientRenegotiate = srcConfig->forbidLegacyClientRenegotiate;
 #endif
 #ifdef HITLS_TLS_SUITE_KX_RSA
     destConfig->needCheckPmsVersion = srcConfig->needCheckPmsVersion;
@@ -1425,6 +1426,24 @@ int32_t HITLS_CFG_GetLegacyRenegotiateSupport(HITLS_Config *config, bool *isSupp
         return HITLS_NULL_INPUT;
     }
     *isSupport = config->allowLegacyRenegotiate;
+    return HITLS_SUCCESS;
+}
+
+int32_t HITLS_CFG_SetForbidLegacyClientRenegotiate(HITLS_Config *config, bool forbid)
+{
+    if (config == NULL) {
+        return HITLS_NULL_INPUT;
+    }
+    config->forbidLegacyClientRenegotiate = forbid;
+    return HITLS_SUCCESS;
+}
+
+int32_t HITLS_CFG_GetForbidLegacyClientRenegotiate(HITLS_Config *config, bool *isForbid)
+{
+    if (config == NULL || isForbid == NULL) {
+        return HITLS_NULL_INPUT;
+    }
+    *isForbid = config->forbidLegacyClientRenegotiate;
     return HITLS_SUCCESS;
 }
 #endif /* defined(HITLS_TLS_PROTO_TLS_BASIC) || defined(HITLS_TLS_PROTO_DTLS12) */

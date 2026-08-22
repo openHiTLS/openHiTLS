@@ -57,6 +57,7 @@ int HLT_SetVersion(HLT_Ctx_Config* ctxConfig, uint16_t minVersion, uint16_t maxV
 int HLT_SetSecurityLevel(HLT_Ctx_Config *ctxConfig, int32_t level);
 int HLT_SetRenegotiationSupport(HLT_Ctx_Config* ctxConfig, bool support);
 int HLT_SetLegacyRenegotiateSupport(HLT_Ctx_Config* ctxConfig, bool support);
+int HLT_SetForbidLegacyClientRenegotiate(HLT_Ctx_Config* ctxConfig, bool forbid);
 int HLT_SetClientRenegotiateSupport(HLT_Ctx_Config* ctxConfig, bool support);
 int HLT_SetEmptyRecordsNum(HLT_Ctx_Config *ctxConfig, uint32_t emptyNum);
 int HLT_SetRecordSizeLimit(HLT_Ctx_Config *ctxConfig, uint16_t recordSize);

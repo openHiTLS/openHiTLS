@@ -231,6 +231,7 @@ typedef struct TlsConfig {
     bool isSupportRenegotiation;        /* support renegotiation */
     bool allowClientRenegotiate;      /* allow a renegotiation initiated by the client */
     bool allowLegacyRenegotiate;        /* whether to abort handshake when server doesn't support SecRenegotiation */
+    bool forbidLegacyClientRenegotiate;  /* whether to abort handshake when client doesn't support SecRenegotiation */
     bool isResumptionOnRenego;          /* supports session resume during renegotiation */
     bool isSupportDhAuto;               /* the DH parameter to be automatically selected */
 

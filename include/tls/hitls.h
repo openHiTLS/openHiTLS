@@ -1409,6 +1409,26 @@ int32_t HITLS_SetLegacyRenegotiateSupport(HITLS_Ctx *ctx, bool isSupport);
 
 /**
  * @ingroup tls
+ * @brief   Set whether to abort handshake when client doesn't support SecRenegotiation
+ * @param   ctx   [IN/OUT] TLS connection handle.
+ * @param   forbid  [IN] Whether to forbid the function，true: yes; false: no.
+ * @retval  HITLS_SUCCESS, if successful.
+ * @retval  HITLS_NULL_INPUT, the input parameter pointer is NULL.
+ */
+int32_t HITLS_SetForbidLegacyClientRenegotiate(HITLS_Ctx *ctx, bool forbid);
+
+/**
+ * @ingroup tls
+ * @brief   Get whether to abort handshake when client doesn't support SecRenegotiation
+ * @param   ctx   [IN] TLS connection handle.
+ * @param   isForbid  [OUT] Whether to forbid the function，true: yes; false: no.
+ * @retval  HITLS_SUCCESS, if successful.
+ * @retval  HITLS_NULL_INPUT, the input parameter pointer is NULL.
+ */
+int32_t HITLS_GetForbidLegacyClientRenegotiate(HITLS_Ctx *ctx, bool *isForbid);
+
+/**
+ * @ingroup tls
  * @brief   Sets whether to support session tickets.
  *
  * @param   ctx  [IN/OUT] TLS connection handle.

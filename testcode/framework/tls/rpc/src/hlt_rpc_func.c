@@ -276,7 +276,7 @@ int HLT_RpcTlsSetCtx(HLT_Process *peerProcess, int ctxId, HLT_Ctx_Config *config
     "%d|%d|%d|"
     "%d|%u|%d|%d|"
     "%u|%d|%d|%s|"
-    "%d|%d",
+    "%d|%d|%d",
     g_cmdIndex, __FUNCTION__, ctxId,
     config->minVersion, config->maxVersion, config->cipherSuites, config->tls13CipherSuites,
     config->pointFormats, config->groups, config->signAlgorithms, config->isSupportRenegotiation,
@@ -290,7 +290,7 @@ int HLT_RpcTlsSetCtx(HLT_Process *peerProcess, int ctxId, HLT_Ctx_Config *config
     config->readAhead, config->needCheckKeyUsage, config->isSupportVerifyNone,
     config->allowClientRenegotiate, config->emptyRecordsNum, config->allowLegacyRenegotiate, config->isEncryptThenMac,
     config->modeSupport, config->isMiddleBoxCompat, config->isSupportDtlsCookieExchange, config->attrName,
-    config->recordSizeLimit, config->isSupportConnectionId);
+    config->recordSizeLimit, config->isSupportConnectionId, config->forbidLegacyClientRenegotiate);
     dataBuf->dataLen = strlen(dataBuf->data);
     cmdIndex = g_cmdIndex;
     g_cmdIndex++;

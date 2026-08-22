@@ -222,6 +222,7 @@ typedef struct {
     bool isSupportRenegotiation;
     bool allowClientRenegotiate;        /* allow a renegotiation initiated by the client */
     bool allowLegacyRenegotiate;        /* whether to abort handshake when server doesn't support SecRenegotiation */
+    bool forbidLegacyClientRenegotiate;  /* whether to abort handshake when client doesn't support SecRenegotiation */
     int  SupportType;                   // 1:The server algorithm is preferred
     bool needCheckKeyUsage;             // Client verification is supported. The default value is False
     // Indicates whether to allow the empty certificate list on the client. The default value is False

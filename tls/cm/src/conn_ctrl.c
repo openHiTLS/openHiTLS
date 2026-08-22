@@ -473,6 +473,24 @@ int32_t HITLS_GetLegacyRenegotiateSupport(HITLS_Ctx *ctx, bool *isSupport)
 
     return HITLS_CFG_GetLegacyRenegotiateSupport(&(ctx->config.tlsConfig), isSupport);
 }
+
+int32_t HITLS_SetForbidLegacyClientRenegotiate(HITLS_Ctx *ctx, bool forbid)
+{
+    if (ctx == NULL) {
+        return HITLS_NULL_INPUT;
+    }
+
+    return HITLS_CFG_SetForbidLegacyClientRenegotiate(&(ctx->config.tlsConfig), forbid);
+}
+
+int32_t HITLS_GetForbidLegacyClientRenegotiate(HITLS_Ctx *ctx, bool *isForbid)
+{
+    if (ctx == NULL) {
+        return HITLS_NULL_INPUT;
+    }
+
+    return HITLS_CFG_GetForbidLegacyClientRenegotiate(&(ctx->config.tlsConfig), isForbid);
+}
 #endif /* defined(HITLS_TLS_PROTO_TLS_BASIC) || defined(HITLS_TLS_PROTO_DTLS12) */
 #ifdef HITLS_TLS_FEATURE_SESSION_TICKET
 int32_t HITLS_SetSessionTicketSupport(HITLS_Ctx *ctx, bool isSupport)

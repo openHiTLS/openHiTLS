@@ -631,6 +631,7 @@ HLT_Ctx_Config* HLT_NewCtxConfigTLCP(char *setFile, const char *key, bool isClie
     ctxConfig->isSupportRenegotiation = false;
     ctxConfig->allowClientRenegotiate = false;
     ctxConfig->allowLegacyRenegotiate = false;
+    ctxConfig->forbidLegacyClientRenegotiate = false;
     ctxConfig->isSupportClientVerify = false;
     ctxConfig->isSupportNoClientCert = false;
     ctxConfig->emsMode = HITLS_EMS_MODE_PREFER;
@@ -679,6 +680,7 @@ HLT_Ctx_Config* HLT_NewCtxConfig(char *setFile, const char *key)
     ctxConfig->isSupportRenegotiation = false;
     ctxConfig->allowClientRenegotiate = false;
     ctxConfig->allowLegacyRenegotiate = false;
+    ctxConfig->forbidLegacyClientRenegotiate = false;
     ctxConfig->isSupportClientVerify = false;
     ctxConfig->isSupportNoClientCert = false;
     ctxConfig->isSupportVerifyNone = false;
@@ -1136,6 +1138,12 @@ int HLT_SetRenegotiationSupport(HLT_Ctx_Config *ctxConfig, bool support)
 int HLT_SetLegacyRenegotiateSupport(HLT_Ctx_Config *ctxConfig, bool support)
 {
     ctxConfig->allowLegacyRenegotiate = support;
+    return SUCCESS;
+}
+
+int HLT_SetForbidLegacyClientRenegotiate(HLT_Ctx_Config *ctxConfig, bool forbid)
+{
+    ctxConfig->forbidLegacyClientRenegotiate = forbid;
     return SUCCESS;
 }
 

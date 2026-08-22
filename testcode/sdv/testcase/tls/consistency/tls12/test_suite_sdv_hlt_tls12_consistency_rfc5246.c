@@ -604,3 +604,92 @@ EXIT:
     HLT_FreeAllProcess();
 }
 /* END_CASE */
+
+static void Test_RemoveScsvAndRenegoExt(HITLS_Ctx *ctx, uint8_t *data, uint32_t *len, uint32_t bufSize, void *user)
+{
+    (void)ctx;
+    (void)bufSize;
+    (void)user;
+    FRAME_Type frameType = {0};
+    frameType.versionType = HITLS_VERSION_TLS12;
+    FRAME_Msg frameMsg = {0};
+    frameMsg.recType.data = REC_TYPE_HANDSHAKE;
+    frameMsg.length.data = *len;
+    frameMsg.recVersion.data = HITLS_VERSION_TLS12;
+    uint32_t parseLen = 0;
+    FRAME_ParseMsgBody(&frameType, data, *len, &frameMsg, &parseLen);
+    ASSERT_EQ(frameMsg.body.hsMsg.type.data, CLIENT_HELLO);
+    ASSERT_EQ(parseLen, *len);
+    FRAME_ClientHelloMsg *clientMsg = &frameMsg.body.hsMsg.body.clientHello;
+    clientMsg->secRenego.exState = MISSING_FIELD;
+    for (uint32_t i = 0; i < clientMsg->cipherSuites.size; i++) {
+        if (clientMsg->cipherSuites.data[i] == TLS_EMPTY_RENEGOTIATION_INFO_SCSV) {
+            clientMsg->cipherSuites.data[i] = clientMsg->cipherSuites.data[0];
+            break;
+        }
+    }
+    FRAME_PackRecordBody(&frameType, &frameMsg, data, bufSize, len);
+EXIT:
+    FRAME_CleanMsg(&frameType, &frameMsg);
+    return;
+}
+
+/** @
+* @test SDV_TLS_TLS12_RFC5246_FORBID_LEGACY_CLIENT_RENEGOTIATE_TC001
+* @title Server with forbidLegacyClientRenegotiate enabled rejects a legacy client that does not
+*        support secure renegotiation, and sends ALERT_LEVEL_FATAL/ALERT_HANDSHAKE_FAILURE.
+* @precon nan
+* @brief    1. The local end acts as the client, and the remote end acts as the server.
+*           2. Set allowLegacyRenegotiate to true on both sides, set forbidLegacyClientRenegotiate on the server.
+*           3. Use a RecWrapper to remove both the SCSV and the renegotiation_info extension from the
+*              ClientHello on the client side, simulating a legacy client.
+*           4. When isForbid is true, the connection fails and the server sends
+*              ALERT_LEVEL_FATAL/ALERT_HANDSHAKE_FAILURE.
+*           5. When isForbid is false, the connection succeeds.
+* @expect   1. isForbid=true: connection fails with FATAL alert. isForbid=false: connection succeeds.
+@ */
+/* BEGIN_CASE */
+void SDV_TLS_TLS12_RFC5246_FORBID_LEGACY_CLIENT_RENEGOTIATE_TC001(int isForbid)
+{
+    HLT_Tls_Res *serverRes = NULL;
+    HLT_Tls_Res *clientRes = NULL;
+    HLT_Process *localProcess = NULL;
+    HLT_Process *remoteProcess = NULL;
+    HLT_Ctx_Config *serverCtxConfig = NULL;
+    HLT_Ctx_Config *clientCtxConfig = NULL;
+
+    localProcess = HLT_InitLocalProcess(HITLS);
+    ASSERT_TRUE(localProcess != NULL);
+    remoteProcess = HLT_LinkRemoteProcess(HITLS, TCP, g_uiPort, true);
+    ASSERT_TRUE(remoteProcess != NULL);
+
+    clientCtxConfig = HLT_NewCtxConfig(NULL, "CLIENT");
+    ASSERT_TRUE(clientCtxConfig != NULL);
+    HLT_SetLegacyRenegotiateSupport(clientCtxConfig, true);
+
+    serverCtxConfig = HLT_NewCtxConfig(NULL, "SERVER");
+    ASSERT_TRUE(serverCtxConfig != NULL);
+    HLT_SetLegacyRenegotiateSupport(serverCtxConfig, true);
+    HLT_SetForbidLegacyClientRenegotiate(serverCtxConfig, isForbid ? true : false);
+
+    RecWrapper wrapper = {TRY_SEND_CLIENT_HELLO, REC_TYPE_HANDSHAKE, false, NULL, Test_RemoveScsvAndRenegoExt};
+    RegisterWrapper(wrapper);
+
+    serverRes = HLT_ProcessTlsAccept(remoteProcess, TLS1_2, serverCtxConfig, NULL);
+    ASSERT_TRUE(serverRes != NULL);
+
+    clientRes = HLT_ProcessTlsConnect(localProcess, TLS1_2, clientCtxConfig, NULL);
+
+    if (isForbid) {
+        ASSERT_TRUE(clientRes == NULL);
+        ASSERT_TRUE(HLT_RpcTlsGetAlertLevel(remoteProcess, serverRes->sslId) == ALERT_LEVEL_FATAL);
+        ASSERT_TRUE(HLT_RpcTlsGetAlertDescription(remoteProcess, serverRes->sslId) == ALERT_HANDSHAKE_FAILURE);
+    } else {
+        ASSERT_TRUE(clientRes != NULL);
+    }
+
+EXIT:
+    ClearWrapper();
+    HLT_FreeAllProcess();
+}
+/* END_CASE */

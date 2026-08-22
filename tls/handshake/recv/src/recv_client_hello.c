@@ -1254,6 +1254,13 @@ static int32_t ServerCheckRenegoInfoDuringFirstHandshake(TLS_Ctx *ctx, const Cli
 {
     /* If the peer does not support security renegotiation, the system returns */
     if (!clientHello->haveEmptyRenegoScsvCipher && !clientHello->extension.flag.haveSecRenego) {
+        if (!IS_TLS13_FAMILY_CTX(ctx) && ctx->config.tlsConfig.forbidLegacyClientRenegotiate) {
+            BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17412, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+                "Legacy Client Renegotiate is not allowed.", 0, 0, 0, 0);
+            ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_HANDSHAKE_FAILURE);
+            BSL_ERR_PUSH_ERROR(HITLS_MSG_HANDLE_RENEGOTIATION_FAIL);
+            return HITLS_MSG_HANDLE_RENEGOTIATION_FAIL;
+        }
         return HITLS_SUCCESS;
     }
 

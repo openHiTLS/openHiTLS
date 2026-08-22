@@ -4306,6 +4306,87 @@ EXIT:
 /* END_CASE */
 
 /* @
+* @test  HITLS_UT_TLS_SET_GET_FORBID_LEGACY_CLIENT_RENEGOTIATE_API_TC001
+* @spec  -
+* @title  Cover input parameters of HITLS_SetForbidLegacyClientRenegotiate, HITLS_GetForbidLegacyClientRenegotiate,
+*         HITLS_CFG_SetForbidLegacyClientRenegotiate and HITLS_CFG_GetForbidLegacyClientRenegotiate
+* @precon  nan
+* @brief  1.Create tls config and tls ctx. Expected result 1.
+*         2.Invoke the HITLS_SetForbidLegacyClientRenegotiate interface with NULL ctx. Expected result 2.
+*         3.Invoke the HITLS_GetForbidLegacyClientRenegotiate interface with NULL ctx. Expected result 2.
+*         4.Invoke the HITLS_GetForbidLegacyClientRenegotiate interface with NULL isForbid. Expected result 2.
+*         5.Invoke the HITLS_SetForbidLegacyClientRenegotiate interface with valid parameters. Expected result 3.
+*         6.Invoke the HITLS_GetForbidLegacyClientRenegotiate interface with valid parameters. Expected result 4.
+*         7.Invoke the HITLS_CFG_SetForbidLegacyClientRenegotiate interface with NULL config. Expected result 2.
+*         8.Invoke the HITLS_CFG_GetForbidLegacyClientRenegotiate interface with NULL config. Expected result 2.
+*         9.Invoke the HITLS_CFG_GetForbidLegacyClientRenegotiate interface with NULL isForbid. Expected result 2.
+*         10.Invoke the HITLS_CFG_SetForbidLegacyClientRenegotiate and HITLS_CFG_GetForbidLegacyClientRenegotiate
+*            interfaces with valid parameters. Expected result 3 and 4.
+* @expect  1.Return HITLS_SUCCESS
+*          2.Return HITLS_NULL_INPUT
+*          3.Return HITLS_SUCCESS and the value is set correctly
+*          4.Return HITLS_SUCCESS and the value matches what was set
+* @prior  Level 1
+* @auto  TRUE
+@ */
+/* BEGIN_CASE */
+void HITLS_UT_TLS_SET_GET_FORBID_LEGACY_CLIENT_RENEGOTIATE_API_TC001(void)
+{
+    FRAME_Init();
+    HITLS_Config *tlsConfig = HITLS_CFG_NewTLS12Config();
+    ASSERT_TRUE(tlsConfig != NULL);
+    HITLS_Ctx *ctx = HITLS_New(tlsConfig);
+    ASSERT_TRUE(ctx != NULL);
+    bool isForbid = false;
+    int32_t ret;
+
+    ret = HITLS_SetForbidLegacyClientRenegotiate(NULL, true);
+    ASSERT_TRUE(ret == HITLS_NULL_INPUT);
+    ret = HITLS_GetForbidLegacyClientRenegotiate(NULL, &isForbid);
+    ASSERT_TRUE(ret == HITLS_NULL_INPUT);
+    ret = HITLS_GetForbidLegacyClientRenegotiate(ctx, NULL);
+    ASSERT_TRUE(ret == HITLS_NULL_INPUT);
+
+    ret = HITLS_SetForbidLegacyClientRenegotiate(ctx, true);
+    ASSERT_TRUE(ret == HITLS_SUCCESS);
+    ASSERT_TRUE(ctx->config.tlsConfig.forbidLegacyClientRenegotiate == true);
+    ret = HITLS_GetForbidLegacyClientRenegotiate(ctx, &isForbid);
+    ASSERT_TRUE(ret == HITLS_SUCCESS);
+    ASSERT_TRUE(isForbid == true);
+
+    ret = HITLS_SetForbidLegacyClientRenegotiate(ctx, false);
+    ASSERT_TRUE(ret == HITLS_SUCCESS);
+    ASSERT_TRUE(ctx->config.tlsConfig.forbidLegacyClientRenegotiate == false);
+    ret = HITLS_GetForbidLegacyClientRenegotiate(ctx, &isForbid);
+    ASSERT_TRUE(ret == HITLS_SUCCESS);
+    ASSERT_TRUE(isForbid == false);
+
+    ret = HITLS_CFG_SetForbidLegacyClientRenegotiate(NULL, true);
+    ASSERT_TRUE(ret == HITLS_NULL_INPUT);
+    ret = HITLS_CFG_GetForbidLegacyClientRenegotiate(NULL, &isForbid);
+    ASSERT_TRUE(ret == HITLS_NULL_INPUT);
+    ret = HITLS_CFG_GetForbidLegacyClientRenegotiate(tlsConfig, NULL);
+    ASSERT_TRUE(ret == HITLS_NULL_INPUT);
+
+    ret = HITLS_CFG_SetForbidLegacyClientRenegotiate(tlsConfig, true);
+    ASSERT_TRUE(ret == HITLS_SUCCESS);
+    ret = HITLS_CFG_GetForbidLegacyClientRenegotiate(tlsConfig, &isForbid);
+    ASSERT_TRUE(ret == HITLS_SUCCESS);
+    ASSERT_TRUE(isForbid == true);
+
+    ret = HITLS_CFG_SetForbidLegacyClientRenegotiate(tlsConfig, false);
+    ASSERT_TRUE(ret == HITLS_SUCCESS);
+    ret = HITLS_CFG_GetForbidLegacyClientRenegotiate(tlsConfig, &isForbid);
+    ASSERT_TRUE(ret == HITLS_SUCCESS);
+    ASSERT_TRUE(isForbid == false);
+
+EXIT:
+    HITLS_CFG_FreeConfig(tlsConfig);
+    HITLS_Free(ctx);
+}
+/* END_CASE */
+
+/* @
 * @test SDV_HiTLS_HsCtx_Get_PeerCertificate_TC001
 * @spec -
 * @title The test obtains the peer certificate chain during the handshake process, and it is expected to succeed.

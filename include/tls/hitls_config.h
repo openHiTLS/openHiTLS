@@ -620,6 +620,16 @@ int32_t HITLS_CFG_SetLegacyRenegotiateSupport(HITLS_Config *config, bool support
 
 /**
  * @ingroup hitls_config
+ * @brief   Set whether to abort handshake when client doesn't support SecRenegotiation
+ * @param   config   [OUT] Config handle
+ * @param   forbid   [IN] Whether to forbid the function. The options are as follows: True: yes; False: no.
+ * @retval  HITLS_SUCCESS, if successful.
+ * @retval  HITLS_NULL_INPUT, config is null.
+ */
+int32_t HITLS_CFG_SetForbidLegacyClientRenegotiate(HITLS_Config *config, bool forbid);
+
+/**
+ * @ingroup hitls_config
  * @brief   Set whether to support session restoration during renegotiation.
  * By default, session restoration is not supported.
  * @param   config   [OUT] Config handle
@@ -1770,6 +1780,16 @@ int32_t HITLS_CFG_GetClientRenegotiateSupport(HITLS_Config *config, bool *isSupp
  * @retval  For other error codes, see hitls_error.h.
  */
 int32_t HITLS_CFG_GetLegacyRenegotiateSupport(HITLS_Config *config, bool *isSupport);
+
+/**
+ * @ingroup hitls_config
+ * @brief   Get whether to abort handshake when client doesn't support SecRenegotiation
+ * @param   config   [IN] Config handle
+ * @param   isForbid  [OUT] Indicates whether to abort handshake when client doesn't support SecRenegotiation
+ * @retval  HITLS_SUCCESS, if successful.
+ * @retval  For other error codes, see hitls_error.h.
+ */
+int32_t HITLS_CFG_GetForbidLegacyClientRenegotiate(HITLS_Config *config, bool *isForbid);
 
 /**
  * @ingroup hitls_config
