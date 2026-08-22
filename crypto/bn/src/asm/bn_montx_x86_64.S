@@ -41,14 +41,29 @@
     popq    %r15
 .endm
 
+/* Wipe [rsp, \end) with 64-byte vector blocks and a short word tail: the
+   scratch holds Montgomery intermediates and the cleared length depends only
+   on the public operand size. */
 .macro CLEAR_STACK_RANGE end
+    pxor    %xmm0,%xmm0
     movq    %rsp,%rdx
-.Lclear_stack_range\@:
+.Lclear_stack_blk\@:
+    addq    $64,%rdx
+    cmpq    \end,%rdx
+    ja      .Lclear_stack_tail\@
+    movdqu  %xmm0,-64(%rdx)
+    movdqu  %xmm0,-48(%rdx)
+    movdqu  %xmm0,-32(%rdx)
+    movdqu  %xmm0,-16(%rdx)
+    jmp     .Lclear_stack_blk\@
+.Lclear_stack_tail\@:
+    subq    $64,%rdx
+.Lclear_stack_word\@:
     cmpq    \end,%rdx
     jae     .Lclear_stack_done\@
     movq    $0,(%rdx)
     leaq    8(%rdx),%rdx
-    jmp     .Lclear_stack_range\@
+    jmp     .Lclear_stack_word\@
 .Lclear_stack_done\@:
 .endm
 
@@ -1411,3 +1426,5 @@ MontSqr8Inner:
 .size   MontSqr8Inner,.-MontSqr8Inner
 
 #endif
+
+.section .note.GNU-stack,"",@progbits

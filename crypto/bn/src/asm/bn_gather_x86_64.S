@@ -205,3 +205,5 @@ MontGatherAvx2_Asm:
 .size   MontGatherAvx2_Asm,.-MontGatherAvx2_Asm
 
 #endif /* HITLS_CRYPTO_BN */
+
+.section .note.GNU-stack,"",@progbits
