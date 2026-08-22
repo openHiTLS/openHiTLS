@@ -215,6 +215,12 @@ static void MontExpReadEntry(BN_UINT *dst, const BN_UINT *tbl, uint32_t mSize, u
     }
 }
 
+#if defined(HITLS_CRYPTO_BN_X8664) && defined(__x86_64__) && defined(HITLS_SIXTY_FOUR_BITS) && \
+    (defined(__GNUC__) || defined(__clang__))
+#define HITLS_BN_MONT_GATHER_SIMD
+#endif
+
+#ifndef HITLS_BN_MONT_GATHER_SIMD
 /* Load entry idx from the interleaved table. idx is secret: every table word
    is read and selected with masks, never addressed by idx. Splitting
    idx = hi * stride + lo lets the 4 hi masks and the stride lo masks be
@@ -243,15 +249,45 @@ static void MontExpGather(BN_UINT *dst, const BN_UINT *tbl, uint32_t mSize, uint
         dst[j] = acc;
     }
 }
+#endif /* !HITLS_BN_MONT_GATHER_SIMD */
 
-#if defined(HITLS_CRYPTO_BN_X8664) && defined(__x86_64__) && defined(HITLS_SIXTY_FOUR_BITS) && \
-    (defined(__GNUC__) || defined(__clang__))
-#define HITLS_BN_MONT_GATHER_AVX2
+#ifdef HITLS_BN_MONT_GATHER_SIMD
 #include <immintrin.h>
 
-/* MontExpGather with 256-bit loads: the table scan is bound by load width, so
-   the wider accesses roughly halve its cost. Same security contract: every
-   table word is read, idx only reaches the compare masks. */
+/* The SIMD gathers below share the scalar gather's security contract: every
+   table word is read with plain full-width loads at public addresses, and the
+   secret idx only reaches the equality masks. The table scan is bound by load
+   width, so each wider variant roughly halves its cost. */
+
+/* 128-bit loads, baseline on x86_64 (no runtime dispatch needed). */
+static void MontExpGatherSse2(BN_UINT *dst, const BN_UINT *tbl, uint32_t mSize, uint32_t winBits, BN_UINT idx)
+{
+    const uint32_t nvec = (1u << winBits) >> 1;
+    __m128i vm[32]; /* tabSize / 2 <= 32 selection mask vectors */
+    __m128i vi = _mm_set_epi64x(1, 0);
+    const __m128i vidx = _mm_set1_epi64x((long long)idx);
+    const __m128i vstep = _mm_set1_epi64x(2);
+    for (uint32_t i = 0; i < nvec; i++) {
+        /* 64-bit lane equality from two 32-bit compares (SSE2 has no pcmpeqq):
+           both halves of a lane match only when the whole lane matches, since
+           idx < 2^6 keeps the high halves zero. */
+        const __m128i eq = _mm_cmpeq_epi32(vi, vidx);
+        vm[i] = _mm_and_si128(eq, _mm_shuffle_epi32(eq, 0xB1)); /* 0xB1 swaps 32-bit pairs */
+        vi = _mm_add_epi64(vi, vstep);
+    }
+    for (uint32_t j = 0; j < mSize; j++) {
+        const BN_UINT *row = tbl + ((uintptr_t)j << winBits);
+        __m128i acc = _mm_setzero_si128();
+        for (uint32_t i = 0; i < nvec; i++) {
+            acc = _mm_or_si128(acc,
+                _mm_and_si128(_mm_loadu_si128((const __m128i *)(row + 2 * i)), vm[i]));
+        }
+        acc = _mm_or_si128(acc, _mm_unpackhi_epi64(acc, acc));
+        dst[j] = (BN_UINT)_mm_cvtsi128_si64(acc);
+    }
+}
+
+/* 256-bit loads, dispatched at run time. */
 __attribute__((target("avx2")))
 static void MontExpGatherAvx2(BN_UINT *dst, const BN_UINT *tbl, uint32_t mSize, uint32_t winBits, BN_UINT idx)
 {
@@ -276,18 +312,24 @@ static void MontExpGatherAvx2(BN_UINT *dst, const BN_UINT *tbl, uint32_t mSize, 
         dst[j] = (BN_UINT)_mm_cvtsi128_si64(fold);
     }
 }
+
 #endif
 
 typedef void (*MontExpGatherFunc)(BN_UINT *dst, const BN_UINT *tbl, uint32_t mSize, uint32_t winBits, BN_UINT idx);
 
+/* A 512-bit gather tier was measured and rejected: the scan is a small share
+   of the runtime, and the AVX-512 frequency licensing it triggers slows the
+   surrounding scalar multiplication kernels by far more than it saves. */
 static MontExpGatherFunc MontExpSelectGather(void)
 {
-#ifdef HITLS_BN_MONT_GATHER_AVX2
+#ifdef HITLS_BN_MONT_GATHER_SIMD
     if (IsSupportAVX2() && IsOSSupportAVX()) {
         return MontExpGatherAvx2;
     }
-#endif
+    return MontExpGatherSse2;
+#else
     return MontExpGather;
+#endif
 }
 
 /* BinFixSize equivalent without value-dependent branches: the scan always
