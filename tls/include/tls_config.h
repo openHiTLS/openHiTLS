@@ -227,6 +227,8 @@ typedef struct TlsConfig {
     bool isAutoKeyUpdateEnabled;        /* whether to enable automatic (D)TLS1.3 key update, default off */
 
     bool needCheckKeyUsage;             /* whether to check keyusage, default on */
+    bool needCheckChainSigAlg;          /* whether to strictly check chain cert signature algorithms
+                                           against peer's signature_algorithms extension, default off */
     bool needCheckPmsVersion;           /* whether to verify the version in premastersecret */
     bool isSupportRenegotiation;        /* support renegotiation */
     bool allowClientRenegotiate;      /* allow a renegotiation initiated by the client */

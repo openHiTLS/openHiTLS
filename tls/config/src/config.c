@@ -167,6 +167,7 @@ static void ShallowCopy(HITLS_Ctx *ctx, const HITLS_Config *srcConfig)
 #ifdef HITLS_TLS_CONFIG_KEY_USAGE
     destConfig->needCheckKeyUsage = srcConfig->needCheckKeyUsage;
 #endif
+    destConfig->needCheckChainSigAlg = srcConfig->needCheckChainSigAlg;
     destConfig->userData = srcConfig->userData;
     destConfig->userDataFreeCb = srcConfig->userDataFreeCb;
 #ifdef HITLS_TLS_FEATURE_MODE
@@ -1318,6 +1319,26 @@ int32_t HITLS_CFG_SetCheckKeyUsage(HITLS_Config *config, bool isCheck)
     return HITLS_SUCCESS;
 }
 #endif
+
+int32_t HITLS_CFG_SetChainSigAlgCheck(HITLS_Config *config, bool isCheck)
+{
+    if (config == NULL) {
+        return HITLS_NULL_INPUT;
+    }
+    config->needCheckChainSigAlg = isCheck;
+
+    return HITLS_SUCCESS;
+}
+
+int32_t HITLS_CFG_GetChainSigAlgCheck(const HITLS_Config *config, bool *isCheck)
+{
+    if (config == NULL || isCheck == NULL) {
+        return HITLS_NULL_INPUT;
+    }
+    *isCheck = config->needCheckChainSigAlg;
+
+    return HITLS_SUCCESS;
+}
 
 int32_t HITLS_CFG_SetReadAhead(HITLS_Config *config, int32_t onOff)
 {

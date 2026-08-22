@@ -1667,6 +1667,31 @@ int32_t HITLS_CFG_SetCheckKeyUsage(HITLS_Config *config, bool isCheck);
 
 /**
  * @ingroup hitls_config
+ * @brief   Enable or disable strict chain certificate signature algorithm check.
+ *          When enabled, all certificates in the chain (except self-signed/trust anchors in TLS1.3)
+ *          must be signed by an algorithm listed in the peer's signature_algorithms extension.
+ *          This function is disabled by default for compatibility.
+ *
+ * @param   config [OUT] Config context
+ * @param   isCheck [IN] Sets whether to check chain certificate signature algorithms.
+ * @retval  HITLS_NULL_INPUT, the input parameter pointer is null.
+ * @retval  HITLS_SUCCESS, if successful.
+ */
+int32_t HITLS_CFG_SetChainSigAlgCheck(HITLS_Config *config, bool isCheck);
+
+/**
+ * @ingroup hitls_config
+ * @brief   Get whether strict chain certificate signature algorithm check is enabled.
+ *
+ * @param   config [IN] Config context
+ * @param   isCheck [OUT] Whether chain certificate signature algorithm check is enabled.
+ * @retval  HITLS_NULL_INPUT, the input parameter pointer is null.
+ * @retval  HITLS_SUCCESS, if successful.
+ */
+int32_t HITLS_CFG_GetChainSigAlgCheck(const HITLS_Config *config, bool *isCheck);
+
+/**
+ * @ingroup hitls_config
  * @brief   Set read ahead flag to indicate whether read more data than user required to buffer in advance
  * @param   config [OUT] Hitls config
  * @param   onOff [IN] Read ahead flag, nonzero value indicates open, zero indicates close

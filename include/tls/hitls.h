@@ -1104,6 +1104,31 @@ int32_t HITLS_SetCheckKeyUsage(HITLS_Ctx *ctx, bool isCheck);
 
 /**
  * @ingroup tls
+ * @brief   Enable or disable strict chain certificate signature algorithm check.
+ *          When enabled, all certificates in the chain (except TLS1.3 self-signed
+ *          trust anchors) must be signed by an algorithm in the intersection of
+ *          the peer's signature_algorithms extension and the local signAlgorithms config.
+ *
+ * @param   ctx [IN] TLS context
+ * @param   isCheck [IN] true to enable, false to disable (default: false)
+ * @retval  HITLS_NULL_INPUT, the input parameter pointer is NULL.
+ * @retval  HITLS_SUCCESS, if successful.
+ */
+int32_t HITLS_SetChainSigAlgCheck(HITLS_Ctx *ctx, bool isCheck);
+
+/**
+ * @ingroup tls
+ * @brief   Get whether strict chain certificate signature algorithm check is enabled.
+ *
+ * @param   ctx [IN] TLS context
+ * @param   isCheck [OUT] true if enabled, false if disabled
+ * @retval  HITLS_NULL_INPUT, the input parameter pointer is NULL.
+ * @retval  HITLS_SUCCESS, if successful.
+ */
+int32_t HITLS_GetChainSigAlgCheck(const HITLS_Ctx *ctx, bool *isCheck);
+
+/**
+ * @ingroup tls
  * @brief   Obtain the verification data and length of the local end based on the sent finished message.
  *
  * @param   ctx [IN] TLS context

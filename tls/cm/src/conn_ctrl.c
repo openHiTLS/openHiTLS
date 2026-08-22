@@ -730,6 +730,22 @@ void *HITLS_GetRecordPaddingCbArg(HITLS_Ctx *ctx)
 }
 #endif
 
+int32_t HITLS_SetChainSigAlgCheck(HITLS_Ctx *ctx, bool isCheck)
+{
+    if (ctx == NULL) {
+        return HITLS_NULL_INPUT;
+    }
+    return HITLS_CFG_SetChainSigAlgCheck(&(ctx->config.tlsConfig), isCheck);
+}
+
+int32_t HITLS_GetChainSigAlgCheck(const HITLS_Ctx *ctx, bool *isCheck)
+{
+    if (ctx == NULL || isCheck == NULL) {
+        return HITLS_NULL_INPUT;
+    }
+    return HITLS_CFG_GetChainSigAlgCheck(&(ctx->config.tlsConfig), isCheck);
+}
+
 #ifdef HITLS_TLS_CONFIG_KEY_USAGE
 int32_t HITLS_SetCheckKeyUsage(HITLS_Ctx *ctx, bool isCheck)
 {

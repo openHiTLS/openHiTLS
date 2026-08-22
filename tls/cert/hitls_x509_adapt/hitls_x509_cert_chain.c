@@ -43,6 +43,11 @@ static int32_t BuildArrayFromList(HITLS_X509_List *list, HITLS_CERT_X509 **listA
         ret = HITLS_X509_CertCtrl(elemt, HITLS_X509_REF_UP, (void *)&ref, (int32_t)sizeof(int));
         if (ret != HITLS_SUCCESS) {
             BSL_ERR_PUSH_ERROR(ret);
+            for (uint32_t j = 0; j < i; j++) {
+                HITLS_X509_CertFree(listArray[j]);
+                listArray[j] = NULL;
+            }
+            *num = 0;
             return ret;
         }
         listArray[i] = elemt;

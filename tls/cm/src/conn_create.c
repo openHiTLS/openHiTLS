@@ -593,7 +593,7 @@ static int32_t CalculateSharedSigAlgs(const HITLS_Ctx *ctx, uint16_t *sharedAlgs
             continue;
         }
 
-        if (!SAL_CERT_IsSignAlgorithmAllowed(ctx, sig, allow, allowSize)) {
+        if (!SAL_CERT_IsSignAlgorithmAllowed(ctx, sig, allow, allowSize, false)) {
             continue;
         }
         sharedAlgs[sharedCount++] = sig;

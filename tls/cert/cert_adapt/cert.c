@@ -82,7 +82,7 @@ HITLS_SignHashAlgo SAL_CERT_GetDefaultSignHashAlgo(HITLS_CERT_KeyType keyType)
 }
 
 bool SAL_CERT_IsSignAlgorithmAllowed(const TLS_Ctx *ctx, uint16_t signScheme,
-    const uint16_t *allowList, uint32_t allowListSize)
+    const uint16_t *allowList, uint32_t allowListSize, bool isChainCheck)
 {
     (void)ctx;
     if (allowList != NULL) {
@@ -104,12 +104,14 @@ bool SAL_CERT_IsSignAlgorithmAllowed(const TLS_Ctx *ctx, uint16_t signScheme,
     }
 #endif
     if (ctx->negotiatedInfo.version != 0) {
-        /* It has already been verified at the outer level that `info` is not null. */
         const TLS_SigSchemeInfo *info = ConfigGetSignatureSchemeInfo(&ctx->config.tlsConfig, signScheme);
-        /* Check if the negotiated TLS version is supported by this signature scheme. */
+        if (info == NULL) {
+            return false;
+        }
         uint32_t negotiatedVersionBit = MapVersion2VersionBit(
             IS_SUPPORT_DATAGRAM(ctx->config.tlsConfig.originVersionMask), ctx->negotiatedInfo.version);
-        if ((negotiatedVersionBit & info->certVersionBits) == 0) {
+        uint32_t versionBits = isChainCheck ? info->chainVersionBits : info->certVersionBits;
+        if ((negotiatedVersionBit & versionBits) == 0) {
             return false;
         }
     }
@@ -379,6 +381,71 @@ static int32_t EncodeCertStore(HITLS_Ctx *ctx, PackPacket *pkt, HITLS_CERT_X509 
  * The client does not check, the message is sent based on the configuration.
  * If the message will be sent, the signature certificate must exist.
  * */
+
+static int32_t CheckCertSigAlgAgainstList(HITLS_Ctx *ctx, HITLS_Config *config,
+    HITLS_CERT_X509 *cert, const uint16_t *allowList, uint32_t allowListSize)
+{
+    HITLS_SignHashAlgo signAlg = CERT_SIG_SCHEME_UNKNOWN;
+    int32_t ret = SAL_CERT_X509Ctrl(config, cert, CERT_CTRL_GET_SIGN_ALGO, NULL, (void *)&signAlg);
+    if (ret != HITLS_SUCCESS) {
+        return RETURN_ERROR_NUMBER_PROCESS(ret, BINLOG_ID16321, "GET_SIGN_ALGO fail");
+    }
+
+    if (IS_TLS13_FAMILY_VERSION(ctx->negotiatedInfo.version)) {
+        bool isSelfSigned = false;
+        ret = SAL_CERT_X509Ctrl(config, cert, CERT_CTRL_IS_SELF_SIGNED, NULL, (void *)&isSelfSigned);
+        if (ret == HITLS_SUCCESS && isSelfSigned) {
+            return HITLS_SUCCESS;
+        }
+    }
+
+    for (uint32_t i = 0; i < allowListSize; i++) {
+        if (allowList[i] != (uint16_t)signAlg) {
+            continue;
+        }
+        if (SAL_CERT_IsSignAlgorithmAllowed(ctx, signAlg,
+            ctx->config.tlsConfig.signAlgorithms, ctx->config.tlsConfig.signAlgorithmsSize, true)) {
+            return HITLS_SUCCESS;
+        }
+    }
+
+    BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16399, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+        "chain cert sig alg 0x%04x not in peer sig_algs", (int)signAlg, 0, 0, 0);
+    return HITLS_CERT_ERR_CHAIN_SIG_ALG_MISMATCH;
+}
+
+int32_t SAL_CERT_CheckChainSigAlg(HITLS_Ctx *ctx, HITLS_CERT_X509 *eeCert,
+    HITLS_CERT_Chain *chain, const uint16_t *allowList, uint32_t allowListSize)
+{
+    if (ctx == NULL || eeCert == NULL || allowList == NULL || allowListSize == 0) {
+        return HITLS_SUCCESS;
+    }
+
+    HITLS_Config *config = &ctx->config.tlsConfig;
+    int32_t ret = CheckCertSigAlgAgainstList(ctx, config, eeCert, allowList, allowListSize);
+    if (ret != HITLS_SUCCESS) {
+        return ret;
+    }
+
+    if (chain == NULL) {
+        return HITLS_SUCCESS;
+    }
+
+    for (BslListNode *node = BSL_LIST_FirstNode(chain); node != NULL;
+        node = BSL_LIST_GetNextNode(chain, node)) {
+        HITLS_CERT_X509 *cert = (HITLS_CERT_X509 *)BSL_LIST_GetData(node);
+        if (cert == eeCert) {
+            continue;
+        }
+        ret = CheckCertSigAlgAgainstList(ctx, config, cert, allowList, allowListSize);
+        if (ret != HITLS_SUCCESS) {
+            return ret;
+        }
+    }
+
+    return HITLS_SUCCESS;
+}
+
 int32_t SAL_CERT_EncodeCertChain(HITLS_Ctx *ctx, PackPacket *pkt)
 {
     if (ctx == NULL || pkt == NULL) {

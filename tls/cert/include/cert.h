@@ -70,7 +70,7 @@ typedef struct {
  * @return true if the algorithm is allowed, false otherwise
  */
 bool SAL_CERT_IsSignAlgorithmAllowed(const TLS_Ctx *ctx, uint16_t signScheme,
-    const uint16_t *allowList, uint32_t allowListSize);
+    const uint16_t *allowList, uint32_t allowListSize, bool isChainCheck);
 
 /**
  * @brief Encode the certificate chain in ASN.1 DER format.
@@ -240,6 +240,24 @@ bool SAL_CERT_CheckCertKeyUsage(HITLS_Ctx *ctx, HITLS_CERT_X509 *cert, HITLS_CER
  * @retval For other error codes, see hitls_error.h.
  */
 int32_t SAL_CERT_CheckKeySecbits(HITLS_Ctx *ctx, HITLS_CERT_X509 *cert, HITLS_CERT_Key *key);
+
+/**
+ * @ingroup hitls_cert_reg
+ * @brief Check that all certificates in the chain have signature algorithms
+ *        that appear in the allowList (peer's signature_algorithms extension).
+ *        For TLS1.3, self-signed certificates are skipped per RFC 8446 Section 4.2.3.
+ *
+ * @param ctx [IN] tls Context
+ * @param eeCert [IN] End-entity certificate
+ * @param chain [IN] Certificate chain (may be NULL)
+ * @param allowList [IN] Allowed signature algorithm list
+ * @param allowListSize [IN] Size of allowList
+ *
+ * @retval HITLS_SUCCESS succeeded.
+ * @retval HITLS_CERT_ERR_CHAIN_SIG_ALG_MISMATCH chain cert sig alg not in allowList.
+ */
+int32_t SAL_CERT_CheckChainSigAlg(HITLS_Ctx *ctx, HITLS_CERT_X509 *eeCert,
+    HITLS_CERT_Chain *chain, const uint16_t *allowList, uint32_t allowListSize);
 
 #ifdef __cplusplus
 }

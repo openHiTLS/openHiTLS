@@ -100,6 +100,11 @@ extern "C" {
 #define RSA_SHA256_EE_PATH3     "rsa_sha/end-sha256.der"
 #define RSA_SHA256_PRIV_PATH3   "rsa_sha/end-sha256.key.der"
 
+#define MIXED_SIG_CA_PATH       "mixed_sig/ca.der:mixed_sig/inter.der"
+#define MIXED_SIG_CHAIN_PATH    "mixed_sig/inter.der"
+#define MIXED_SIG_EE_PATH       "mixed_sig/end.der"
+#define MIXED_SIG_PRIV_PATH     "mixed_sig/end.key.der"
+
 #define ECDSA_SHA256_CA_PATH    "ecdsa_sha256/ca.der:ecdsa_sha256/inter.der"
 #define ECDSA_SHA256_CHAIN_PATH "ecdsa_sha256/inter.der"
 #define ECDSA_SHA256_EE_PATH1   "ecdsa_sha256/server.der"

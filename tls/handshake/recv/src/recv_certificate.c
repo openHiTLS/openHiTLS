@@ -33,6 +33,7 @@
 #include "rec.h"
 #include "alert.h"
 #include "cert_method.h"
+#include "cert.h"
 #include "bsl_bytes.h"
 #include "hitls_pki_errno.h"
 
@@ -268,6 +269,15 @@ static int32_t ProcessPeerCertificate(TLS_Ctx *ctx, const CertificateMsg *certs)
         ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, GetAlertfromX509Err(ret));
         SAL_CERT_PairFree(ctx->config.tlsConfig.certMgrCtx, peerCert);
         return ret;
+    }
+    if (ctx->config.tlsConfig.needCheckChainSigAlg) {
+        ret = SAL_CERT_CheckChainSigAlg(ctx, SAL_CERT_PAIR_GET_X509(peerCert), peerCert->chain,
+            ctx->config.tlsConfig.signAlgorithms, ctx->config.tlsConfig.signAlgorithmsSize);
+        if (ret != HITLS_SUCCESS) {
+            ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_UNSUPPORTED_CERTIFICATE);
+            SAL_CERT_PairFree(ctx->config.tlsConfig.certMgrCtx, peerCert);
+            return ret;
+        }
     }
 
     ctx->hsCtx->peerCert = peerCert;

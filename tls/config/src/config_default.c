@@ -347,6 +347,7 @@ static void InitConfig(HITLS_Config *config)
 #ifdef HITLS_TLS_CONFIG_KEY_USAGE
     config->needCheckKeyUsage = true;
 #endif
+    config->needCheckChainSigAlg = false;
 #ifdef HITLS_TLS_CONFIG_MANUAL_DH
     config->isSupportDhAuto = false;
 #endif

@@ -16,6 +16,7 @@
 
 #include "bsl_err_internal.h"
 #include "bsl_hash.h"
+#include "bsl_list.h"
 
 #include "tls_binlog_id.h"
 #include "tls_config.h"
@@ -24,6 +25,7 @@
 #include "config_type.h"
 #include "cert_method.h"
 #include "cert.h"
+#include "cert_mgr.h"
 #include "security.h"
 #include "hs_common.h"
 #include "hs_cert.h"
@@ -94,7 +96,7 @@ static int32_t CheckSelectSignAlgorithms(TLS_Ctx *ctx, const SelectSignAlgorithm
 #endif /* HITLS_TLS_PROTO_TLS13_FAMILY */
         // Check algorithm in allow list, protocol version and security policy restrictions
         if (!SAL_CERT_IsSignAlgorithmAllowed(ctx, baseSignAlgorithms[i],
-            selectSignAlgorithms, selectSignAlgorithmsSize)) {
+            selectSignAlgorithms, selectSignAlgorithmsSize, false)) {
             continue;
         }
         if (info->keyType == TLS_CERT_KEY_TYPE_RSA_PSS) {
@@ -268,6 +270,42 @@ int32_t HS_CheckCertInfo(HITLS_Ctx *ctx, const CERT_ExpectInfo *expectCertInfo, 
     return ret;
 }
 
+static int32_t CheckLocalChainSigAlg(HITLS_Ctx *ctx, HITLS_CERT_X509 *eeCert,
+    HITLS_CERT_Chain *chain, const uint16_t *allowList, uint32_t allowListSize)
+{
+    CERT_MgrCtx *mgrCtx = ctx->config.tlsConfig.certMgrCtx;
+    if (chain == NULL || BSL_LIST_COUNT(chain) == 0) {
+        chain = mgrCtx->extraChain;
+    }
+    if (chain != NULL && BSL_LIST_COUNT(chain) > 0) {
+        return SAL_CERT_CheckChainSigAlg(ctx, eeCert, chain, allowList, allowListSize);
+    }
+    HITLS_CERT_Store *store = (mgrCtx->chainStore != NULL) ? mgrCtx->chainStore : mgrCtx->certStore;
+    if (store == NULL) {
+        return SAL_CERT_CheckChainSigAlg(ctx, eeCert, NULL, allowList, allowListSize);
+    }
+    HITLS_CERT_X509 *certList[TLS_DEFAULT_VERIFY_DEPTH] = {0};
+    uint32_t certNum = TLS_DEFAULT_VERIFY_DEPTH;
+    HITLS_Config *config = &ctx->config.tlsConfig;
+    int32_t ret = SAL_CERT_BuildChain(config, store, eeCert, certList, &certNum);
+    if (ret != HITLS_SUCCESS) {
+        return ret;
+    }
+    for (uint32_t i = 0; i < certNum; i++) {
+        ret = SAL_CERT_CheckChainSigAlg(ctx, certList[i], NULL, allowList, allowListSize);
+        if (ret != HITLS_SUCCESS) {
+            for (uint32_t j = 0; j < certNum; j++) {
+                SAL_CERT_X509Free(certList[j]);
+            }
+            return ret;
+        }
+    }
+    for (uint32_t j = 0; j < certNum; j++) {
+        SAL_CERT_X509Free(certList[j]);
+    }
+    return HITLS_SUCCESS;
+}
+
 /*
  * Server: Currently, two certificates are required for either of the two cipher suites supported.
  * If the ECDHE cipher suite is used, the client needs to obtain the encrypted certificate to generate the premaster key
@@ -347,7 +385,7 @@ static int32_t SelectCertBySignScheme(HITLS_Ctx *ctx, CERT_ExpectInfo *info)
             continue;
         }
         if (!SAL_CERT_IsSignAlgorithmAllowed(ctx, baseSignAlgorithms[i],
-            selectSignAlgorithms, selectSignAlgorithmsSize)) {
+            selectSignAlgorithms, selectSignAlgorithmsSize, false)) {
             continue;
         }
         CERT_Pair *certPair = NULL;
@@ -365,6 +403,14 @@ static int32_t SelectCertBySignScheme(HITLS_Ctx *ctx, CERT_ExpectInfo *info)
         info->signSchemeList = tmpsignSchemeList;
         if (ret != HITLS_SUCCESS) {
             continue;
+        }
+        if (ctx->config.tlsConfig.needCheckChainSigAlg && info->signSchemeList != NULL &&
+            info->signSchemeNum != 0) {
+            ret = CheckLocalChainSigAlg(ctx, certPair->cert, certPair->chain,
+                info->signSchemeList, info->signSchemeNum);
+            if (ret != HITLS_SUCCESS) {
+                continue;
+            }
         }
         mgrCtx->currentCertKeyType = (uint32_t)signInfo->keyType;
         return HITLS_SUCCESS;
@@ -400,6 +446,15 @@ static int32_t SelectCertByInfo(HITLS_Ctx *ctx, CERT_ExpectInfo *info)
         if (ret != HITLS_SUCCESS) {
             it = BSL_HASH_IterNext(certPairs, it);
             continue;
+        }
+        if (ctx->config.tlsConfig.needCheckChainSigAlg && info->signSchemeList != NULL &&
+            info->signSchemeNum != 0) {
+            ret = CheckLocalChainSigAlg(ctx, certPair->cert, certPair->chain,
+                info->signSchemeList, info->signSchemeNum);
+            if (ret != HITLS_SUCCESS) {
+                it = BSL_HASH_IterNext(certPairs, it);
+                continue;
+            }
         }
         /* Find a proper certificate and record the corresponding subscript. */
         mgrCtx->currentCertKeyType = keyType;
