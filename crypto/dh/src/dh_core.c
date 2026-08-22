@@ -337,6 +337,7 @@ static int32_t DhSetPara(CRYPT_DH_Ctx *ctx, CRYPT_DH_Para *para)
     BN_Destroy(ctx->y);
     CRYPT_DH_FreePara(ctx->para);
     ctx->x = NULL;
+    ctx->xBits = 0;
     ctx->y = NULL;
     ctx->para = para;
     return CRYPT_SUCCESS;
