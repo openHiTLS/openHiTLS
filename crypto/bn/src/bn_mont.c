@@ -397,11 +397,22 @@ static const BN_UINT *TmpValueHandle(BN_BigNum *r, const BN_BigNum *e, const BN_
     return te;
 }
 
+/* whether e == 0, reading every word without value-dependent branches
+   (BinBits' bit scan would leak the leading-zero count of a secret exponent) */
+static bool MontExpIsZero(const BN_BigNum *e)
+{
+    BN_UINT acc = 0;
+    for (uint32_t i = 0; i < e->size; i++) {
+        acc |= e->data[i];
+    }
+    return acc == 0;
+}
+
 /* must satisfy the absolute value x < mod */
 static int32_t MontExpCore(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *e,
     BN_Mont *mont, BN_Optimizer *opt, bool consttime)
 {
-    if ((BinBits(e->data, e->size) == 0)) {
+    if (MontExpIsZero(e)) {
         if (mont->mSize != 1) {
             return BN_SetLimb(r, 1);
         }
