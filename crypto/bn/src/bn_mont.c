@@ -215,8 +215,7 @@ static void MontExpReadEntry(BN_UINT *dst, const BN_UINT *tbl, uint32_t mSize, u
     }
 }
 
-#if defined(HITLS_CRYPTO_BN_X8664) && defined(__x86_64__) && defined(HITLS_SIXTY_FOUR_BITS) && \
-    (defined(__GNUC__) || defined(__clang__))
+#if defined(HITLS_CRYPTO_BN_X8664) && defined(__x86_64__) && defined(HITLS_SIXTY_FOUR_BITS)
 #define HITLS_BN_MONT_GATHER_SIMD
 #endif
 
@@ -252,81 +251,23 @@ static void MontExpGather(BN_UINT *dst, const BN_UINT *tbl, uint32_t mSize, uint
 #endif /* !HITLS_BN_MONT_GATHER_SIMD */
 
 #ifdef HITLS_BN_MONT_GATHER_SIMD
-#include <immintrin.h>
-
-/* The SIMD gathers below share the scalar gather's security contract: every
-   table word is read with plain full-width loads at public addresses, and the
-   secret idx only reaches the equality masks. The table scan is bound by load
-   width, so each wider variant roughly halves its cost. */
-
-/* 128-bit loads, baseline on x86_64 (no runtime dispatch needed). */
-static void MontExpGatherSse2(BN_UINT *dst, const BN_UINT *tbl, uint32_t mSize, uint32_t winBits, BN_UINT idx)
-{
-    const uint32_t nvec = (1u << winBits) >> 1;
-    __m128i vm[32]; /* tabSize / 2 <= 32 selection mask vectors */
-    __m128i vi = _mm_set_epi64x(1, 0);
-    const __m128i vidx = _mm_set1_epi64x((long long)idx);
-    const __m128i vstep = _mm_set1_epi64x(2);
-    for (uint32_t i = 0; i < nvec; i++) {
-        /* 64-bit lane equality from two 32-bit compares (SSE2 has no pcmpeqq):
-           both halves of a lane match only when the whole lane matches, since
-           idx < 2^6 keeps the high halves zero. */
-        const __m128i eq = _mm_cmpeq_epi32(vi, vidx);
-        vm[i] = _mm_and_si128(eq, _mm_shuffle_epi32(eq, 0xB1)); /* 0xB1 swaps 32-bit pairs */
-        vi = _mm_add_epi64(vi, vstep);
-    }
-    for (uint32_t j = 0; j < mSize; j++) {
-        const BN_UINT *row = tbl + ((uintptr_t)j << winBits);
-        __m128i acc = _mm_setzero_si128();
-        for (uint32_t i = 0; i < nvec; i++) {
-            acc = _mm_or_si128(acc,
-                _mm_and_si128(_mm_loadu_si128((const __m128i *)(row + 2 * i)), vm[i]));
-        }
-        acc = _mm_or_si128(acc, _mm_unpackhi_epi64(acc, acc));
-        dst[j] = (BN_UINT)_mm_cvtsi128_si64(acc);
-    }
-}
-
-/* 256-bit loads, dispatched at run time. */
-__attribute__((target("avx2")))
-static void MontExpGatherAvx2(BN_UINT *dst, const BN_UINT *tbl, uint32_t mSize, uint32_t winBits, BN_UINT idx)
-{
-    const uint32_t nvec = (1u << winBits) >> 2;
-    __m256i vm[16]; /* tabSize / 4 <= 16 selection mask vectors */
-    __m256i vi = _mm256_set_epi64x(3, 2, 1, 0);
-    const __m256i vidx = _mm256_set1_epi64x((long long)idx);
-    const __m256i vstep = _mm256_set1_epi64x(4);
-    for (uint32_t i = 0; i < nvec; i++) {
-        vm[i] = _mm256_cmpeq_epi64(vi, vidx);
-        vi = _mm256_add_epi64(vi, vstep);
-    }
-    for (uint32_t j = 0; j < mSize; j++) {
-        const BN_UINT *row = tbl + ((uintptr_t)j << winBits);
-        __m256i acc = _mm256_setzero_si256();
-        for (uint32_t i = 0; i < nvec; i++) {
-            acc = _mm256_or_si256(acc,
-                _mm256_and_si256(_mm256_loadu_si256((const __m256i *)(row + 4 * i)), vm[i]));
-        }
-        __m128i fold = _mm_or_si128(_mm256_castsi256_si128(acc), _mm256_extracti128_si256(acc, 1));
-        fold = _mm_or_si128(fold, _mm_unpackhi_epi64(fold, fold));
-        dst[j] = (BN_UINT)_mm_cvtsi128_si64(fold);
-    }
-}
-
+#include "bn_asm.h"
 #endif
 
 typedef void (*MontExpGatherFunc)(BN_UINT *dst, const BN_UINT *tbl, uint32_t mSize, uint32_t winBits, BN_UINT idx);
 
-/* A 512-bit gather tier was measured and rejected: the scan is a small share
+/* The vector gathers live in bn_gather_x86_64.S; they share the scalar
+   gather's contract (full loads at public addresses, idx only in equality
+   masks). A 512-bit tier was measured and rejected: the scan is a small share
    of the runtime, and the AVX-512 frequency licensing it triggers slows the
    surrounding scalar multiplication kernels by far more than it saves. */
 static MontExpGatherFunc MontExpSelectGather(void)
 {
 #ifdef HITLS_BN_MONT_GATHER_SIMD
     if (IsSupportAVX2() && IsOSSupportAVX()) {
-        return MontExpGatherAvx2;
+        return MontGatherAvx2_Asm;
     }
-    return MontExpGatherSse2;
+    return MontGatherSse2_Asm;
 #else
     return MontExpGather;
 #endif

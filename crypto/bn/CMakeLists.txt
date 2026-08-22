@@ -47,6 +47,7 @@ if(HITLS_CRYPTO_BN_X8664)
         ${CMAKE_CURRENT_SOURCE_DIR}/src/x8664_bn_bincal.c
         ${CMAKE_CURRENT_SOURCE_DIR}/src/asm/bn_mont_x86_64.S
         ${CMAKE_CURRENT_SOURCE_DIR}/src/asm/bn_montx_x86_64.S
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/asm/bn_gather_x86_64.S
     )
 elseif(HITLS_CRYPTO_BN_ARMV8)
     list(APPEND _bn_sources

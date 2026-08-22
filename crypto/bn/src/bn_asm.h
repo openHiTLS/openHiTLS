@@ -48,6 +48,18 @@ void MontMul_Asm(BN_UINT *r, const BN_UINT *a, const BN_UINT *b, const BN_UINT *
 
 #if defined(HITLS_CRYPTO_BN_X8664)
     void MontMulx_Asm(BN_UINT *r, const BN_UINT *a, const BN_UINT *b, const BN_UINT *n, const BN_UINT k0, size_t size);
+
+/**
+ *  Function description: constant-time gather from the limb-interleaved
+ *  Montgomery exponentiation table (limb j of entry i at tbl[(j << winBits) + i]).
+ *  Every table word is read with full-width loads at public addresses; the
+ *  secret idx only reaches equality masks, and the mask scratch is wiped from
+ *  the stack before returning. winBits must be in [2, 6], idx < 2^winBits.
+ *  MontGatherAvx2_Asm additionally requires the caller to have verified AVX2
+ *  support at run time; MontGatherSse2_Asm runs on any x86_64.
+ */
+void MontGatherSse2_Asm(BN_UINT *dst, const BN_UINT *tbl, uint32_t mSize, uint32_t winBits, BN_UINT idx);
+void MontGatherAvx2_Asm(BN_UINT *dst, const BN_UINT *tbl, uint32_t mSize, uint32_t winBits, BN_UINT idx);
 #endif
 
 #ifdef __cplusplus
