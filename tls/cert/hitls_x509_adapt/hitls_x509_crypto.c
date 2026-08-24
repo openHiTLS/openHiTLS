@@ -170,7 +170,14 @@ int32_t HITLS_X509_Adapt_CheckPrivateKey(HITLS_Config *config, HITLS_CERT_X509 *
         return ret;
     }
 
-    ret = CRYPT_EAL_PkeyPairCheck(ealPubKey, ealPrivKey);
+    if (CRYPT_EAL_PkeyGetId(ealPubKey) == CRYPT_PKEY_RSA) {
+        ret = CRYPT_EAL_PkeyCmp(ealPubKey, ealPrivKey);
+        if (ret == CRYPT_EAL_ALG_NOT_SUPPORT) {
+            ret = CRYPT_EAL_PkeyPairCheck(ealPubKey, ealPrivKey);
+        }
+    } else {
+        ret = CRYPT_EAL_PkeyPairCheck(ealPubKey, ealPrivKey);
+    }
     CRYPT_EAL_PkeyFreeCtx(ealPubKey);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
