@@ -63,7 +63,7 @@ bool CRYPT_KDFTLS12_IsValidAlgId(CRYPT_MAC_AlgId id)
 
 int32_t KDF_Hmac(const EAL_MacMethod *macMeth, void *macCtx, uint8_t *data, uint32_t *len)
 {
-    macMeth->reinit(macCtx);
+    (void)macMeth->reinit(macCtx);
     int32_t ret = macMeth->update(macCtx, data, *len);
     if (ret != CRYPT_SUCCESS) {
         return ret;
@@ -92,7 +92,7 @@ int32_t KDF_PHASH(CRYPT_KDFTLS12_Ctx *ctx, uint8_t *out, uint32_t len)
             GOTO_ERR_IF(KDF_Hmac(macMeth, ctx->macCtx, nextIn, &nextInLen), ret);
         }
 
-        macMeth->reinit(ctx->macCtx);
+        (void)macMeth->reinit(ctx->macCtx);
         GOTO_ERR_IF(macMeth->update(ctx->macCtx, nextIn, nextInLen), ret);
         GOTO_ERR_IF(macMeth->update(ctx->macCtx, ctx->label, ctx->labelLen), ret);
         GOTO_ERR_IF(macMeth->update(ctx->macCtx, ctx->seed, ctx->seedLen), ret);
