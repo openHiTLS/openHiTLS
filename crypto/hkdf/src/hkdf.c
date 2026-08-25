@@ -162,7 +162,7 @@ int32_t CRYPT_HKDF_Expand(void *macCtx, const EAL_MacMethod *macMeth, uint16_t m
     n = (outLen + hashLen - 1) / hashLen;
     for (uint32_t i = 1; i <= n; i++, counter++) {
         if (i > 1) {
-            macMeth->reinit(macCtx);
+            (void)macMeth->reinit(macCtx);
             GOTO_ERR_IF(macMeth->update(macCtx, hash, hashLen), ret);
         }
         GOTO_ERR_IF(macMeth->update(macCtx, info, infoLen), ret);

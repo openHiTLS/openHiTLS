@@ -99,7 +99,7 @@ int32_t CRYPT_PBKDF2_Un(const CRYPT_PBKDF2_Ctx *pCtx, uint8_t *u, uint32_t *bloc
     const EAL_MacMethod *macMeth = &pCtx->macMeth;
     void *macCtx = pCtx->macCtx;
 
-    macMeth->reinit(macCtx);
+    (void)macMeth->reinit(macCtx);
     if ((ret = macMeth->update(macCtx, u, *blockSize)) != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;

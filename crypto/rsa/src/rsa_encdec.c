@@ -568,7 +568,7 @@ ERR:
     }
     BN_Destroy(enMsg);
     BN_Destroy(gcd);
-    BSL_SAL_FREE(pad);
+    BSL_SAL_ClearFree(pad, padLen);
     BN_OptimizerDestroy(opt);
     return ret;
 }
