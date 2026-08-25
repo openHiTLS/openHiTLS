@@ -1,0 +1,6 @@
+[req]
+distinguished_name=req_distinguished_name
+
+[req_distinguished_name]
+C=CN
+CN=example.com

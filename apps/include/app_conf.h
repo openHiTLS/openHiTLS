@@ -88,7 +88,8 @@ typedef struct {
  * @param maxArrCnt     [IN] String array. Only the first string needs to be released after use.
  * @param realCnt       [OUT] Number of character strings after splitting。
  *
- * @retval HITLS_APP_SUCCESS
+ * @retval HITLS_APP_SUCCESS, success.
+ *         Other error codes.
  */
 int32_t HITLS_APP_SplitString(const char *str, char separator, bool allowEmpty, char **strArr, uint32_t maxArrCnt,
     uint32_t *realCnt);
@@ -102,7 +103,8 @@ int32_t HITLS_APP_SplitString(const char *str, char separator, bool allowEmpty, 
  * @param val         [IN] Data pointer.
  * @param ctx         [IN] Context.
  *
- * @retval HITLS_APP_SUCCESS
+ * @retval HITLS_APP_SUCCESS, success.
+ *         Other error codes.
  */
 typedef int32_t (*ProcExtCallBack)(BslCid cid, void *val, void *ctx);
 
@@ -116,7 +118,8 @@ typedef int32_t (*ProcExtCallBack)(BslCid cid, void *val, void *ctx);
  * @param extCb         [IN] Callback function of one extension.
  * @param ctx           [IN] Context of callback function.
  *
- * @retval HITLS_APP_SUCCESS
+ * @retval HITLS_APP_SUCCESS, success.
+ *         Other error codes.
  */
 int32_t HITLS_APP_CONF_ProcExt(BSL_CONF *cnf, const char *section, ProcExtCallBack extCb, void *ctx);
 
@@ -128,7 +131,8 @@ int32_t HITLS_APP_CONF_ProcExt(BSL_CONF *cnf, const char *section, ProcExtCallBa
  * @param ctx       [IN] The context of callback function
  * @param nameList  [IN] The linked list of subject name, the type is HITLS_X509_DN
  *
- * @retval HITLS_APP_SUCCESS
+ * @retval HITLS_APP_SUCCESS, success.
+ *         Other error codes.
  */
 typedef int32_t (*AddDnNameCb)(void *ctx, BslList *nameList);
 
@@ -140,7 +144,8 @@ typedef int32_t (*AddDnNameCb)(void *ctx, BslList *nameList);
  * @param ctx       [IN] The context of callback function
  * @param nameList  [IN] The linked list of subject name, the type is HITLS_X509_DN
  *
- * @retval HITLS_APP_SUCCESS
+ * @retval HITLS_APP_SUCCESS, success.
+ *         Other error codes.
  */
 int32_t HiTLS_AddSubjDnNameToCsr(void *csr, BslList *nameList);
 
@@ -154,9 +159,25 @@ int32_t HiTLS_AddSubjDnNameToCsr(void *csr, BslList *nameList);
  * @param cb            [IN] The callback function to add distinguish name to csr or cert
  * @param ctx           [IN] Context of callback function.
  *
- * @retval HITLS_APP_SUCCESS
+ * @retval HITLS_APP_SUCCESS, success.
+ *         Other error codes.
  */
 int32_t HITLS_APP_CFG_ProcDnName(const char *nameStr, AddDnNameCb cb, void *ctx);
+
+/**
+ * @ingroup apps
+ *
+ * @brief Process distinguish names in a configuration section.
+ *
+ * @param conf          [IN] Configuration context.
+ * @param section       [IN] Section containing distinguish names.
+ * @param cb            [IN] The callback function to add distinguish names to csr or cert.
+ * @param ctx           [IN] Context of callback function.
+ *
+ * @retval HITLS_APP_SUCCESS, success.
+ *         Other error codes.
+ */
+int32_t HITLS_APP_CONF_ProcDnSection(BSL_CONF *conf, const char *section, AddDnNameCb cb, void *ctx);
 
 #ifdef __cplusplus
 }

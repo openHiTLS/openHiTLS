@@ -886,7 +886,7 @@ hitls verify -CAfile wrong_ca_cert.pem -verbose user_cert.pem
 - Generate a new CSR
 
   ```
-  hitls req -new -subj <DN> [-key <private key file>] [-keyform PEM|DER] [-mdalg <algorithm>] [-config <config file>] [-passin <password source>] [-passout <password source>] [-out <file>] [-outform PEM|DER] [-verify] [-text] [-noout]
+  hitls req -new [-subj <DN>] [-key <private key file>] [-keyform PEM|DER] [-mdalg <algorithm>] [-config <config file>] [-passin <password source>] [-passout <password source>] [-out <file>] [-outform PEM|DER] [-verify] [-text] [-noout]
   ```
 
 - View/verify an existing CSR
@@ -901,7 +901,7 @@ hitls verify -CAfile wrong_ca_cert.pem -verbose user_cert.pem
 - `-new`: Generate new CSR mode, mutually exclusive with view/verify existing CSR mode
 - `-verify`: Verify the self-signature of the CSR. If used with `-new`, verifies the newly generated CSR
 - `-mdalg <algorithm>`: Effective only when generating a new CSR. Signature digest algorithm, defaults to SHA256 (RSA) / SM3 (SM2) / SHA512 (ED25519)
-- `-subj <DN>`: Required when generating a new CSR. Certificate subject DN in the format `/type1=value1/type2=value2/...`
+- `-subj <DN>`: Specifies the certificate subject DN in the format `/type1=value1/type2=value2/...`. If it is not specified, the subject is read from the `distinguished_name` setting in the `-config` file
 - `-key <file>`: Private key file, used for signing when generating a new CSR. Defaults to auto-generating a 2048-bit RSA private key
 - `-keyform PEM|DER`: Private key file format, choose from `PEM` or `DER`. If not specified, defaults to automatic format detection
 - `-passin <password source>`: Password source for reading the encrypted private key, defaults to interactive input
@@ -916,13 +916,15 @@ hitls verify -CAfile wrong_ca_cert.pem -verbose user_cert.pem
   - `env:<variable>`: Read password from an environment variable
 - `-noout`: Do not output CSR encoded data
 - `-text`: Print full CSR information in text format
-- `-config <file>`: Effective only when generating a new CSR. Configuration file for adding extensions
+- `-config <file>`: Effective only when generating a new CSR. Configuration file for the certificate subject DN and request extensions
 - `-in <file>`: Input CSR file, defaults to standard input
 - `-inform PEM|DER`: Input CSR file format, choose from `PEM` or `DER`, defaults to PEM
 - `-out <file>`: Output file, defaults to standard output
 - `-outform PEM|DER`: Output CSR file format, choose from `PEM` or `DER`, defaults to PEM
 
-**Supplementary Notes**: The configuration file uses INI style and **must** contain a `[req]` section, which references the extension section via `req_extensions`. Supported types are as follows:
+**Supplementary Notes**: When generating a new CSR, the subject DN must be provided by either `-subj` or the configuration file. If both are provided, `-subj` takes precedence.
+
+The configuration file uses INI style. To read the DN from the configuration file, use `distinguished_name` in the `[req]` section to reference the DN section. DN fields support short names such as `C`, `ST`, `L`, `O`, `OU`, and `CN`. For repeated fields, add numeric prefixes such as `1.OU` and `2.OU`. `req_extensions` can reference an extension section. Supported extension types are as follows:
 
 | Type Prefix | Description              | Example Value              |
 | ----------- | ------------------------ | -------------------------- |
@@ -936,7 +938,13 @@ Example configuration file:
 
 ```ini
 [req]
+distinguished_name = req_distinguished_name
 req_extensions = req_ext
+
+[req_distinguished_name]
+C = CN
+O = MyOrg
+CN = example.com
 
 [req_ext]
 subjectAltName = DNS:example.com, DNS:www.example.com, IP:192.168.1.1, email:user@example.com
@@ -956,6 +964,9 @@ hitls req -new -key encrypted_key.pem -passin pass:MyPassword123 -subj "/CN=User
 
 # Generate a CSR with SAN extension
 hitls req -new -key rsa_key.pem -subj "/CN=example.com/O=MyOrg/C=CN" -config san.cnf -out san_request.csr
+
+# Read the subject DN from a configuration file and generate a CSR
+hitls req -new -key rsa_key.pem -config req.cnf -out request.csr
 
 # View CSR text information, display both text and output PEM
 hitls req -in request.csr -text -out request_copy.csr

@@ -1,0 +1,14 @@
+[req]
+distinguished_name=req_distinguished_name
+req_extensions=SAN
+
+[req_distinguished_name]
+C=CN
+ST=Beijing
+O=openHiTLS
+1.OU=Development
+2.OU=Security
+CN=example.com
+
+[SAN]
+subjectAltName=DNS:example.com

@@ -818,6 +818,73 @@ static void FreeX509Dn(HITLS_X509_DN *name)
     BSL_SAL_FREE(name);
 }
 
+static const char *GetConfDnType(const char *key)
+{
+    const char *type = key;
+    for (const char *cur = key; *cur != '\0'; cur++) {
+        if ((*cur == '.' || *cur == ',') && *(cur + 1) != '\0') {
+            type = cur + 1;
+            break;
+        }
+    }
+    return type;
+}
+
+int32_t HITLS_APP_CONF_ProcDnSection(BSL_CONF *conf, const char *section, AddDnNameCb addCb, void *ctx)
+{
+    if (conf == NULL || conf->data == NULL || section == NULL || addCb == NULL) {
+        AppPrintError("Invalid input parameter.\n");
+        return HITLS_APP_CONF_FAIL;
+    }
+    BslList *sectionList = BSL_CONF_GetSection(conf, section);
+    if (sectionList == NULL || BSL_LIST_EMPTY(sectionList)) {
+        AppPrintError("Failed to get distinguish name section: %s.\n", section);
+        return HITLS_APP_CONF_FAIL;
+    }
+
+    uint32_t validDnCount = 0;
+    for (BslListNode *nodeIt = BSL_LIST_FirstNode(sectionList); nodeIt != NULL;
+        nodeIt = BSL_LIST_GetNextNode(sectionList, nodeIt)) {
+        BSL_CONF_KeyValue *confNode = BSL_LIST_GetData(nodeIt);
+        HITLS_X509_DN *name = BSL_SAL_Calloc(1, sizeof(HITLS_X509_DN));
+        if (name == NULL) {
+            return HITLS_APP_MEM_ALLOC_FAIL;
+        }
+        int32_t ret = SetDnTypeAndValue(name, GetConfDnType(confNode->key), confNode->value);
+        if (ret != HITLS_APP_SUCCESS) {
+            FreeX509Dn(name);
+            return ret;
+        }
+        if (name->data == NULL) {
+            FreeX509Dn(name);
+            continue;
+        }
+
+        BslList *nameList = BSL_LIST_New(sizeof(HITLS_X509_DN *));
+        if (nameList == NULL) {
+            FreeX509Dn(name);
+            return HITLS_APP_MEM_ALLOC_FAIL;
+        }
+        ret = BSL_LIST_AddElement(nameList, name, BSL_LIST_POS_END);
+        if (ret != BSL_SUCCESS) {
+            FreeX509Dn(name);
+            BSL_LIST_FREE(nameList, NULL);
+            return ret;
+        }
+        ret = addCb(ctx, nameList);
+        BSL_LIST_FREE(nameList, (BSL_LIST_PFUNC_FREE)FreeX509Dn);
+        if (ret != HITLS_APP_SUCCESS) {
+            return ret;
+        }
+        validDnCount++;
+    }
+    if (validDnCount == 0) {
+        AppPrintError("No valid distinguish name in section: %s.\n", section);
+        return HITLS_APP_CONF_FAIL;
+    }
+    return HITLS_APP_SUCCESS;
+}
+
 /* distinguish name format is /type0=value0/type1=value1/type2=... */
 int32_t HITLS_APP_CFG_ProcDnName(const char *nameStr, AddDnNameCb addCb, void *ctx)
 {

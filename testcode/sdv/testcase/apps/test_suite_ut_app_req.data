@@ -408,3 +408,24 @@ UT_HITLS_APP_REQ_TC001:"req -new -keyform DER -key ../testdata/cert/asn1/print/r
 
 UT_HITLS_APP_REQ_TC001 req gen key file not exist
 UT_HITLS_APP_REQ_TC001:"req -new -keyform DER -key ../../TEST/HiTLS_Binary/x509/cert/asn1/print/rsa.intca.key.der -subj /C=1 -config ../testdata/apps/app_conf/test_csr_withsan.cnf":HITLS_APP_LOAD_KEY_FAIL
+
+UT_HITLS_APP_REQ_TC001 req gen config distinguished_name missing
+UT_HITLS_APP_REQ_TC001:"req -new -keyform DER -key ../testdata/cert/asn1/print/rsa.intca.key.der -config ../testdata/apps/app_conf/test_req_distinguished_name_missing.cnf":HITLS_APP_CONF_FAIL
+
+UT_HITLS_APP_REQ_TC001 req gen config distinguished_name section missing
+UT_HITLS_APP_REQ_TC001:"req -new -keyform DER -key ../testdata/cert/asn1/print/rsa.intca.key.der -config ../testdata/apps/app_conf/test_req_distinguished_name_section_missing.cnf":HITLS_APP_CONF_FAIL
+
+UT_HITLS_APP_REQ_TC001 req gen config distinguished_name section empty
+UT_HITLS_APP_REQ_TC001:"req -new -keyform DER -key ../testdata/cert/asn1/print/rsa.intca.key.der -config ../testdata/apps/app_conf/test_req_distinguished_name_empty.cnf":HITLS_APP_CONF_FAIL
+
+UT_HITLS_APP_REQ_DN_CONF_TC001 req gen subject from config
+UT_HITLS_APP_REQ_DN_CONF_TC001:"req -new -keyform DER -key ../testdata/cert/asn1/print/rsa.intca.key.der -config ../testdata/apps/app_conf/test_req_distinguished_name.cnf -out req_dn_conf.pem":"req_dn_conf.pem":"3072310B300906035504061302434E3110300E06035504080C074265696A696E6731123010060355040A0C096F70656E4869544C5331143012060355040B0C0B446576656C6F706D656E743111300F060355040B0C0853656375726974793114301206035504030C0B6578616D706C652E636F6D"
+
+UT_HITLS_APP_REQ_DN_CONF_TC001 req subj takes precedence over config
+UT_HITLS_APP_REQ_DN_CONF_TC001:"req -new -keyform DER -key ../testdata/cert/asn1/print/rsa.intca.key.der -subj /CN=command-line -config ../testdata/apps/app_conf/test_req_distinguished_name.cnf -out req_dn_subj.pem":"req_dn_subj.pem":"30173115301306035504030C0C636F6D6D616E642D6C696E65"
+
+UT_HITLS_APP_REQ_DEFAULT_KEY_OVERWRITE_TC001 config failure preserves existing default private key
+UT_HITLS_APP_REQ_DEFAULT_KEY_OVERWRITE_TC001:"req -new -passout pass:123456 -config ../testdata/apps/app_conf/test_req_distinguished_name_missing.cnf":HITLS_APP_CONF_FAIL
+
+UT_HITLS_APP_REQ_NO_EXT_CONF_TC001 DN-only config does not add extensionRequest
+UT_HITLS_APP_REQ_NO_EXT_CONF_TC001:"req -new -keyform DER -key ../testdata/cert/asn1/print/rsa.intca.key.der -config ../testdata/apps/app_conf/test_req_distinguished_name_no_ext.cnf -out req_dn_no_ext.pem":"req_dn_no_ext.pem"

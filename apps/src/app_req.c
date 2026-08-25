@@ -33,6 +33,7 @@
 
 #define HITLS_APP_REQ_SECTION "req"
 #define HITLS_APP_REQ_EXTENSION_SECTION "req_extensions"
+#define HITLS_APP_REQ_DISTINGUISHED_NAME "distinguished_name"
 
 typedef enum {
     HITLS_REQ_APP_OPT_NEW = 2,
@@ -292,10 +293,7 @@ static int32_t ReqLoadPrvKey(ReqOptCtx *optCtx)
         if (optCtx->pkey == NULL) {
             return HITLS_APP_CRYPTO_FAIL;
         }
-        // default write to private.pem
-        int32_t ret = HITLS_APP_PrintPrvKey(
-            optCtx->pkey, "private.pem", BSL_FORMAT_PEM, CRYPT_CIPHER_AES256_CBC, &optCtx->passout);
-        return ret;
+        return HITLS_APP_SUCCESS;
     }
 
     optCtx->pkey =
@@ -378,11 +376,6 @@ static int32_t ParseConf(ReqOptCtx *optCtx)
     if (!optCtx->certOpt.new || (optCtx->certOpt.configFilePath == NULL)) {
         return HITLS_APP_SUCCESS;
     }
-    optCtx->ext = HITLS_X509_ExtNew(HITLS_X509_EXT_TYPE_CSR);
-    if (optCtx->ext == NULL) {
-        AppPrintError("req: Failed to create the ext context.\n");
-        return HITLS_APP_X509_FAIL;
-    }
     optCtx->conf = BSL_CONF_New(BSL_CONF_DefaultMethod());
     if (optCtx->conf == NULL) {
         AppPrintError("req: Failed to create profile context.\n");
@@ -403,8 +396,15 @@ static int32_t ParseConf(ReqOptCtx *optCtx)
         AppPrintError("req: Failed to get req_extensions, config file %s.\n", optCtx->certOpt.configFilePath);
         return HITLS_APP_CONF_FAIL;
     }
+    optCtx->ext = HITLS_X509_ExtNew(HITLS_X509_EXT_TYPE_CSR);
+    if (optCtx->ext == NULL) {
+        AppPrintError("req: Failed to create the ext context.\n");
+        return HITLS_APP_X509_FAIL;
+    }
     ret = HITLS_APP_CONF_ProcExt(optCtx->conf, extSectionStr, ProcSanExt, optCtx->ext);
     if (ret == HITLS_APP_NO_EXT) {
+        HITLS_X509_ExtFree(optCtx->ext);
+        optCtx->ext = NULL;
         return HITLS_APP_SUCCESS;
     } else if (ret != BSL_SUCCESS) {
         AppPrintError("req: Failed to parse SAN from config file %s.\n", optCtx->certOpt.configFilePath);
@@ -413,10 +413,39 @@ static int32_t ParseConf(ReqOptCtx *optCtx)
     return HITLS_APP_SUCCESS;
 }
 
+static int32_t SetSubject(ReqOptCtx *optCtx)
+{
+    if (optCtx->certOpt.subj != NULL) {
+        int32_t ret = HITLS_APP_CFG_ProcDnName(optCtx->certOpt.subj, HiTLS_AddSubjDnNameToCsr, optCtx->csr);
+        if (ret != HITLS_PKI_SUCCESS) {
+            AppPrintError("req: Failed to set subject name the csr, errCode = %d.\n", ret);
+            return HITLS_APP_X509_FAIL;
+        }
+        return HITLS_APP_SUCCESS;
+    }
+
+    char dnSection[BSL_CONF_SEC_SIZE + 1] = {0}; 
+    uint32_t dnSectionLen = sizeof(dnSection);
+    int32_t ret = BSL_CONF_GetString(optCtx->conf, HITLS_APP_REQ_SECTION, HITLS_APP_REQ_DISTINGUISHED_NAME,
+        dnSection, &dnSectionLen);
+    if (ret != BSL_SUCCESS) {
+        AppPrintError("req: Failed to get distinguished_name, config file %s.\n",
+            optCtx->certOpt.configFilePath);
+        return HITLS_APP_CONF_FAIL;
+    }
+    ret = HITLS_APP_CONF_ProcDnSection(optCtx->conf, dnSection, HiTLS_AddSubjDnNameToCsr, optCtx->csr);
+    if (ret != HITLS_APP_SUCCESS) {
+        AppPrintError("req: Failed to parse distinguished_name from config file %s.\n",
+            optCtx->certOpt.configFilePath);
+        return HITLS_APP_CONF_FAIL;
+    }
+    return HITLS_APP_SUCCESS;
+}
+
 static int32_t ReqGen(ReqOptCtx *optCtx)
 {
-    if (optCtx->certOpt.subj == NULL) {
-        AppPrintError("req: -subj must be included when -new is used.\n");
+    if (optCtx->certOpt.subj == NULL && optCtx->certOpt.configFilePath == NULL) {
+        AppPrintError("req: -subj or distinguished_name in config must be included when -new is used.\n");
         return HITLS_APP_INVALID_ARG;
     }
     if (optCtx->genOpt.inFilePath != NULL) {
@@ -444,10 +473,9 @@ static int32_t ReqGen(ReqOptCtx *optCtx)
         return HITLS_APP_CONF_FAIL;
     }
 
-    ret = HITLS_APP_CFG_ProcDnName(optCtx->certOpt.subj, HiTLS_AddSubjDnNameToCsr, optCtx->csr);
-    if (ret != HITLS_PKI_SUCCESS) {
-        AppPrintError("req: Failed to set subject name the csr, errCode = %d.\n", ret);
-        return HITLS_APP_X509_FAIL;
+    ret = SetSubject(optCtx);
+    if (ret != HITLS_APP_SUCCESS) {
+        return ret;
     }
 
     ret = SetRequestedExt(optCtx);
@@ -471,9 +499,15 @@ static int32_t ReqGen(ReqOptCtx *optCtx)
     ret = HITLS_X509_CsrGenBuff(optCtx->outPutOpt.outFormat, optCtx->csr, &optCtx->encode);
     if (ret != HITLS_PKI_SUCCESS) {
         AppPrintError("req: Failed to generate the csr, errCode = %x.\n", ret);
+        return ret;
     }
 
-    return ret;
+    if (optCtx->keyAndSignOpt.keyFilePath == NULL) {
+        // default write to private.pem
+        return HITLS_APP_PrintPrvKey(
+            optCtx->pkey, "private.pem", BSL_FORMAT_PEM, CRYPT_CIPHER_AES256_CBC, &optCtx->passout);
+    }
+    return HITLS_APP_SUCCESS;
 }
 
 static int32_t ReqLoad(ReqOptCtx *optCtx)
