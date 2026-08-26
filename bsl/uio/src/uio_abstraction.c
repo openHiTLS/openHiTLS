@@ -140,10 +140,6 @@ int32_t BSL_UIO_UpRef(BSL_UIO *uio)
         BSL_ERR_PUSH_ERROR(BSL_INTERNAL_EXCEPTION);
         return BSL_INTERNAL_EXCEPTION;
     }
-    if (uio->references.count == INT32_MAX) {
-        BSL_ERR_PUSH_ERROR(BSL_UIO_REF_MAX);
-        return BSL_UIO_REF_MAX;
-    }
     int val = 0;
     BSL_SAL_AtomicUpReferences(&(uio->references), &val);
     return BSL_SUCCESS;

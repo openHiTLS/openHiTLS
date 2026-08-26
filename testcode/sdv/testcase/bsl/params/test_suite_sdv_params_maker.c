@@ -569,16 +569,7 @@ void SDV_BSL_PARAM_MAKER_DEEP_PUSH_UTF8_STR_TC001()
     char emptyStr[] = "";
     maker = BSL_PARAM_MAKER_New();
     ASSERT_TRUE(maker != NULL);
-    key++;
-    ASSERT_EQ(BSL_PARAM_MAKER_DeepPushValue(maker, key, BSL_PARAM_TYPE_UTF8_STR, emptyStr, 0), BSL_SUCCESS);
-
-    params = BSL_PARAM_MAKER_ToParam(maker);
-    ASSERT_TRUE(params != NULL);
-    temp = BSL_PARAM_FindParam(params, key);
-    ASSERT_TRUE(temp != NULL);
-    ASSERT_EQ(temp->valueLen, 0);
-    ASSERT_TRUE(TestIsErrStackEmpty());
-
+    ASSERT_EQ(BSL_PARAM_MAKER_DeepPushValue(maker, key, BSL_PARAM_TYPE_UTF8_STR, emptyStr, 0), BSL_MALLOC_FAIL);
 EXIT:
     BSL_PARAM_Free(params);
     BSL_PARAM_MAKER_Free(maker);

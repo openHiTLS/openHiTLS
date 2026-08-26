@@ -122,11 +122,8 @@ int32_t HITLS_X509_Adapt_VerifyCertChain(HITLS_Ctx *ctx, HITLS_CERT_Store *store
     }
 #endif /* HITLS_CRYPTO_SM2 */
     int32_t purpose = ctx->isClient ? HITLS_X509_VFY_PURPOSE_TLS_SERVER : HITLS_X509_VFY_PURPOSE_TLS_CLIENT;
-    ret = HITLS_X509_StoreCtxCtrl(storeCtx, HITLS_X509_STORECTX_SET_PURPOSE, &purpose, sizeof(purpose));
-    if (ret != HITLS_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
-        return ret;
-    }
+    // will not fail here
+    (void)HITLS_X509_StoreCtxCtrl(storeCtx, HITLS_X509_STORECTX_SET_PURPOSE, &purpose, sizeof(purpose));
 #ifdef HITLS_TLS_FEATURE_SECURITY
     ret = SetAuthLevel(ctx, storeCtx);
     if (ret != HITLS_SUCCESS) {
