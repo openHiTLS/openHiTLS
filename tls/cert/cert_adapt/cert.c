@@ -382,6 +382,34 @@ static int32_t EncodeCertStore(HITLS_Ctx *ctx, PackPacket *pkt, HITLS_CERT_X509 
  * If the message will be sent, the signature certificate must exist.
  * */
 
+/*
+ * RSASSA-PSS signed certificates carry a single X.509 signature algorithm OID
+ * (BSL_CID_RSASSAPSS) regardless of the signer's public key type, so the
+ * scheme resolved from the certificate (rsa_pss_rsae_* or rsa_pss_pss_*) is
+ * ambiguous. TLS allows the same PSS verification for both RSA and RSA-PSS
+ * keys, therefore a peer that advertises one PSS family MUST be accepted when
+ * the certificate reports its sibling family (same hash, rsae<->pss swap).
+ */
+static HITLS_SignHashAlgo GetPssSiblingScheme(HITLS_SignHashAlgo scheme)
+{
+    switch (scheme) {
+        case CERT_SIG_SCHEME_RSA_PSS_PSS_SHA256:
+            return CERT_SIG_SCHEME_RSA_PSS_RSAE_SHA256;
+        case CERT_SIG_SCHEME_RSA_PSS_PSS_SHA384:
+            return CERT_SIG_SCHEME_RSA_PSS_RSAE_SHA384;
+        case CERT_SIG_SCHEME_RSA_PSS_PSS_SHA512:
+            return CERT_SIG_SCHEME_RSA_PSS_RSAE_SHA512;
+        case CERT_SIG_SCHEME_RSA_PSS_RSAE_SHA256:
+            return CERT_SIG_SCHEME_RSA_PSS_PSS_SHA256;
+        case CERT_SIG_SCHEME_RSA_PSS_RSAE_SHA384:
+            return CERT_SIG_SCHEME_RSA_PSS_PSS_SHA384;
+        case CERT_SIG_SCHEME_RSA_PSS_RSAE_SHA512:
+            return CERT_SIG_SCHEME_RSA_PSS_PSS_SHA512;
+        default:
+            return CERT_SIG_SCHEME_UNKNOWN;
+    }
+}
+
 static int32_t CheckCertSigAlgAgainstList(HITLS_Ctx *ctx, HITLS_Config *config,
     HITLS_CERT_X509 *cert, const uint16_t *allowList, uint32_t allowListSize)
 {
@@ -399,11 +427,15 @@ static int32_t CheckCertSigAlgAgainstList(HITLS_Ctx *ctx, HITLS_Config *config,
         }
     }
 
+    HITLS_SignHashAlgo pssSibling = GetPssSiblingScheme(signAlg);
     for (uint32_t i = 0; i < allowListSize; i++) {
-        if (allowList[i] != (uint16_t)signAlg) {
+        uint16_t candidate = allowList[i];
+        bool match = (candidate == (uint16_t)signAlg) ||
+            (pssSibling != CERT_SIG_SCHEME_UNKNOWN && candidate == (uint16_t)pssSibling);
+        if (!match) {
             continue;
         }
-        if (SAL_CERT_IsSignAlgorithmAllowed(ctx, signAlg,
+        if (SAL_CERT_IsSignAlgorithmAllowed(ctx, (HITLS_SignHashAlgo)candidate,
             ctx->config.tlsConfig.signAlgorithms, ctx->config.tlsConfig.signAlgorithmsSize, true)) {
             return HITLS_SUCCESS;
         }

@@ -135,6 +135,129 @@ EXIT:
 }
 /* END_CASE */
 
+/*
+ * PSS chain (rsa_pss_rsae):
+ *   Root CA:  self-signed sha256WithRSAEncryption (not sent over the wire)
+ *   Inter CA: signed by Root with RSASSA-PSS/SHA256, public key rsaEncryption
+ *   EE cert:  signed by Inter with RSASSA-PSS/SHA256, public key rsaEncryption
+ *
+ * X.509 encodes RSASSA-PSS with a single OID (BSL_CID_RSASSAPSS) regardless of
+ * the signer's public key type, so BslCid2SignHashAlgo() resolves both
+ * rsa_pss_rsae_* and rsa_pss_pss_* signatures to rsa_pss_pss_* (table order).
+ * Strict equality in CheckCertSigAlgAgainstList would therefore reject a
+ * genuine rsa_pss_rsae chain when the peer advertises only rsa_pss_rsae_*.
+ * The check must accept the PSS sibling scheme (same hash, rsae<->pss swap).
+ */
+
+/* @
+* @test  SDV_HiTLS_CHAIN_SIG_ALG_PSS_RSAE_TC001
+* @title  Strict check accepts rsa_pss_rsae chain when peer advertises rsa_pss_rsae.
+* @precon  Server uses the rsa_pss_rsae chain (EE and inter CA both signed with
+*          RSASSA-PSS/SHA256 by RSA keys). Client enables strict chain sigalg
+*          check and advertises ONLY rsa_pss_rsae_sha256.
+* @brief  1. Client signAlgorithms = {rsa_pss_rsae_sha256}, strict check ON.
+*         2. Server sends the rsa_pss_rsae chain.
+*         3. Run handshake.
+* @expect 1. Handshake succeeds; the resolved rsa_pss_pss_sha256 is accepted
+*            via its rsa_pss_rsae_sha256 sibling in the peer's list.
+@ */
+/* BEGIN_CASE */
+void SDV_HiTLS_CHAIN_SIG_ALG_PSS_RSAE_TC001(void)
+{
+#if !(defined(HITLS_TLS_PROTO_TLS12) && defined(HITLS_BSL_UIO_TCP))
+    SKIP_TEST();
+#else
+    FRAME_Init();
+
+    FRAME_CertInfo certInfo = {
+        .caFile = RSAPSS_RSAE_CA_PATH,
+        .chainFile = RSAPSS_RSAE_CHAIN_PATH,
+        .endEquipmentFile = RSAPSS_RSAE_EE_PATH,
+        .privKeyFile = RSAPSS_RSAE_PRIV_PATH,
+    };
+    uint16_t pssRsaeSha256Only[] = { CERT_SIG_SCHEME_RSA_PSS_RSAE_SHA256 };
+
+    HITLS_Config *clientConfig = HITLS_CFG_NewTLS12Config();
+    HITLS_Config *serverConfig = HITLS_CFG_NewTLS12Config();
+    FRAME_LinkObj *client = NULL;
+    FRAME_LinkObj *server = NULL;
+    ASSERT_TRUE(clientConfig != NULL && serverConfig != NULL);
+
+    HITLS_CFG_SetSecurityCb(clientConfig, NULL);
+    HITLS_CFG_SetSecurityCb(serverConfig, NULL);
+    HITLS_CFG_SetSignature(clientConfig, pssRsaeSha256Only,
+        sizeof(pssRsaeSha256Only) / sizeof(uint16_t));
+    ASSERT_EQ(HITLS_CFG_SetChainSigAlgCheck(clientConfig, true), HITLS_SUCCESS);
+
+    client = FRAME_CreateLinkWithCert(clientConfig, BSL_UIO_TCP, &certInfo);
+    server = FRAME_CreateLinkWithCert(serverConfig, BSL_UIO_TCP, &certInfo);
+    ASSERT_TRUE(client != NULL && server != NULL);
+
+    ASSERT_EQ(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_SUCCESS);
+
+EXIT:
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+    HITLS_CFG_FreeConfig(clientConfig);
+    HITLS_CFG_FreeConfig(serverConfig);
+#endif
+}
+/* END_CASE */
+
+/* @
+* @test  SDV_HiTLS_CHAIN_SIG_ALG_PSS_PSS_TC001
+* @title  Strict check accepts genuine rsa_pss_pss chain.
+* @precon  Server uses the rsa_pss_sha256 chain (all certs signed with
+*          RSASSA-PSS/SHA256 by RSA-PSS keys). Client enables strict chain
+*          sigalg check and advertises ONLY rsa_pss_pss_sha256.
+* @brief  1. Client signAlgorithms = {rsa_pss_pss_sha256}, strict check ON.
+*         2. Server sends the rsa_pss_sha256 chain.
+*         3. Run handshake.
+* @expect 1. Handshake succeeds.
+@ */
+/* BEGIN_CASE */
+void SDV_HiTLS_CHAIN_SIG_ALG_PSS_PSS_TC001(void)
+{
+#if !(defined(HITLS_TLS_PROTO_TLS12) && defined(HITLS_BSL_UIO_TCP))
+    SKIP_TEST();
+#else
+    FRAME_Init();
+
+    FRAME_CertInfo certInfo = {
+        .caFile = RSAPSS_SHA256_CA_PATH,
+        .chainFile = RSAPSS_SHA256_CHAIN_PATH,
+        .endEquipmentFile = RSAPSS_SHA256_EE_PATH,
+        .privKeyFile = RSAPSS_SHA256_PRIV_PATH,
+    };
+    uint16_t pssPssSha256Only[] = { CERT_SIG_SCHEME_RSA_PSS_PSS_SHA256 };
+
+    HITLS_Config *clientConfig = HITLS_CFG_NewTLS12Config();
+    HITLS_Config *serverConfig = HITLS_CFG_NewTLS12Config();
+    FRAME_LinkObj *client = NULL;
+    FRAME_LinkObj *server = NULL;
+    ASSERT_TRUE(clientConfig != NULL && serverConfig != NULL);
+
+    HITLS_CFG_SetSecurityCb(clientConfig, NULL);
+    HITLS_CFG_SetSecurityCb(serverConfig, NULL);
+    HITLS_CFG_SetSignature(clientConfig, pssPssSha256Only,
+        sizeof(pssPssSha256Only) / sizeof(uint16_t));
+    ASSERT_EQ(HITLS_CFG_SetChainSigAlgCheck(clientConfig, true), HITLS_SUCCESS);
+
+    client = FRAME_CreateLinkWithCert(clientConfig, BSL_UIO_TCP, &certInfo);
+    server = FRAME_CreateLinkWithCert(serverConfig, BSL_UIO_TCP, &certInfo);
+    ASSERT_TRUE(client != NULL && server != NULL);
+
+    ASSERT_EQ(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_SUCCESS);
+
+EXIT:
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+    HITLS_CFG_FreeConfig(clientConfig);
+    HITLS_CFG_FreeConfig(serverConfig);
+#endif
+}
+/* END_CASE */
+
 /* @
 * @test  SDV_HiTLS_CHAIN_SIG_ALG_CLIENT_SEND_TC001
 * @title  Client sends cert chain, server verifies chain sigalg (mutual auth).
