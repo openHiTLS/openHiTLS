@@ -51,7 +51,7 @@ static void PARAM_MAKER_DEF_Free(BSL_PARAM_MAKER_DEF *paramMakerDef)
         return;
     }
     if ((paramMakerDef->flag & PARAM_MAKER_MALLOCED_VALUE) != 0) {
-        BSL_SAL_ClearFree(paramMakerDef->value, paramMakerDef->allocLen);
+        BSL_SAL_FREE(paramMakerDef->value);
     }
     BSL_SAL_Free(paramMakerDef);
 }
@@ -223,18 +223,14 @@ int32_t BSL_PARAM_MAKER_DeepPushValue(BSL_ParamMaker *maker, int32_t key, uint32
         BSL_ERR_PUSH_ERROR(ret);
         goto EXIT;
     }
-    if (allocLen != 0) {
-        paramMakerDef->value = BSL_SAL_Malloc(allocLen);
-        if (paramMakerDef->value == NULL) {
-            ret = BSL_MALLOC_FAIL;
-            BSL_ERR_PUSH_ERROR(ret);
-            goto EXIT;
-        }
-        paramMakerDef->flag |= PARAM_MAKER_MALLOCED_VALUE;
-        if (len != 0) {
-            memcpy(paramMakerDef->value, value, len);
-        }
+    paramMakerDef->value = BSL_SAL_Malloc(len);	 
+     if (paramMakerDef->value == NULL && value != NULL) {	 
+         ret = BSL_MALLOC_FAIL;	 
+         BSL_ERR_PUSH_ERROR(ret);	 
+         goto EXIT;
     }
+    paramMakerDef->flag |= PARAM_MAKER_MALLOCED_VALUE; 
+    memcpy(paramMakerDef->value, value, len);
     paramMakerDef->allocLen = allocLen;
     maker->valueLen += paramMakerDef->allocLen;
     ret = BSL_LIST_AddElement(maker->params, paramMakerDef, BSL_LIST_POS_END);

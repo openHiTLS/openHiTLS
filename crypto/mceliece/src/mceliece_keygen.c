@@ -222,7 +222,7 @@ static int32_t GenerateFieldOrdering(uint16_t *alpha, const uint8_t *randomBits,
     qsort(pairs, MCELIECE_Q, sizeof(PairSt), ComparePairs);
     for (int32_t i = 0; i < MCELIECE_Q_1; i++) {
         if (pairs[i].val == pairs[i + 1].val) {
-            BSL_SAL_FREE(pairs);
+            BSL_SAL_ClearFree(pairs, MCELIECE_Q * sizeof(PairSt));
             return CRYPT_MCELIECE_KEYGEN_FAIL;
         }
     }
@@ -231,7 +231,7 @@ static int32_t GenerateFieldOrdering(uint16_t *alpha, const uint8_t *randomBits,
         pi[i] = v;
         alpha[i] = BitrevU16(v, m);
     }
-    BSL_SAL_FREE(pairs);
+    BSL_SAL_ClearFree(pairs, MCELIECE_Q * sizeof(PairSt));
     return CRYPT_SUCCESS;
 }
 
@@ -526,7 +526,7 @@ static int32_t KeyGenLoop(const uint8_t *sBitsPtr, const uint8_t *fieldOrderingB
 
 EXIT:
     MatrixFree(tmpH);
-    BSL_SAL_FREE(pi);
+    BSL_SAL_ClearFree(pi, MCELIECE_Q * sizeof(uint16_t));
     return ret;
 }
 
