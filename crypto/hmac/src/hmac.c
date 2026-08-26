@@ -234,7 +234,7 @@ int32_t CRYPT_HMAC_Reinit(CRYPT_HMAC_Ctx *ctx)
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
-    ctx->method.copyCtx(ctx->mdCtx, ctx->iCtx);
+    (void)ctx->method.copyCtx(ctx->mdCtx, ctx->iCtx);
     return CRYPT_SUCCESS;
 }
 
