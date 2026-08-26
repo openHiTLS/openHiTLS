@@ -70,10 +70,13 @@ bool BSL_IsLeapYear(uint32_t year);
 int32_t BSL_DateTimeAddUs(BSL_TIME *dateR, const BSL_TIME *dateA, uint32_t us);
 
 /**
- * @brief Add day and second to the given time
- * @param dateR [OUT] Destination time
- * @param dateA [IN]  Base time to start from.
- * @param offDay [IN] Number of days to add (can be negative).
+ * @brief Add the specified number of days and seconds to the given time.
+ * @note This function performs general calendar arithmetic. The result may
+ * precede BSL_TIME_SYSTEM_EPOCH_YEAR and is not constrained by
+ * BSL_DateTimeCheck.
+ * @param dateR [OUT] Destination time.
+ * @param dateA [IN] Base time.
+ * @param offsetDay [IN] Number of days to add (can be negative).
  * @param offsetSecond [IN] Number of seconds to add (can be negative).
  * @return BSL_SUCCESS is successfully executed.
  * BSL_SUCCESS on success, otherwise BSL_INTERNAL_EXCEPTION.

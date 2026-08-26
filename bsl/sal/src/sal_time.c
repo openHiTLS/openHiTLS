@@ -259,7 +259,10 @@ int32_t BSL_DateTimeAddDaySecond(BSL_TIME *dateR, const BSL_TIME *dateA, int32_t
     }
     utcTime += add;
 
-    /* Convert to the date after the number of seconds is added */
+    /*
+     * Negative UTC values represent dates before BSL_TIME_SYSTEM_EPOCH_YEAR
+     * and are valid inputs for this conversion.
+     */
     ret = BSL_SAL_UtcTimeToDateConvert(utcTime, dateR);
     if (ret != BSL_SUCCESS) {
         return ret;
