@@ -349,6 +349,10 @@ int32_t DRBG_Generate(DRBG_Ctx *ctx,
 
     ret = ctx->meth->generate(ctx, out, outLen, &adinData);
     if (ret != CRYPT_SUCCESS) {
+        // NIST SP 800-90Ar1 Section 9.3.1: on generate error the DRBG shall
+        // enter the error state, so the partially updated internal state
+        // (e.g. V mid-update) is destroyed and never used for output again.
+        ctx->state = DRBG_STATE_ERROR;
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }

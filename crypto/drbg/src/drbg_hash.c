@@ -169,6 +169,7 @@ static int32_t DRBG_HashDf(DRBG_HashCtx *ctx, uint8_t *out, uint32_t outLen,  co
             // and len is the actual length, which must be smaller than tmpOutLen.
             // Only the len length needs to be truncated as the output.
             memcpy(buf, tmpOut, len);
+            BSL_SAL_CleanseData(tmpOut, sizeof(tmpOut));
             break;
         }
         if ((ret = meth->final(mdCtx, buf, &tmpOutLen)) != CRYPT_SUCCESS) {

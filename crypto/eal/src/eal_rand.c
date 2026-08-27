@@ -290,6 +290,7 @@ static int32_t GetSeedDrbgEntropy(void *ctx, CRYPT_Data *entropy, uint32_t stren
 
     int32_t ret = EAL_DrbgbytesWithAdin(seed, entropy->data, entropy->len, NULL, 0);
     if (ret != CRYPT_SUCCESS) {
+        BSL_SAL_CleanseData(entropy->data, entropy->len);
         BSL_SAL_FREE(entropy->data);
     }
     return ret;
