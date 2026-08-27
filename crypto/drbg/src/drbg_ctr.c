@@ -311,23 +311,23 @@ static int32_t BlockCipherDf(DRBG_Ctx *drbg, const CRYPT_Data *in1, const CRYPT_
 
     if ((ret = DRBG_CtrBCCUpdate(drbg, in1, temp, &tempLen)) != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        return ret;
+        goto EXIT;
     }
 
     if ((ret = DRBG_CtrBCCUpdate(drbg, in2, temp, &tempLen)) != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        return ret;
+        goto EXIT;
     }
 
     if ((ret = DRBG_CtrBCCUpdate(drbg, in3, temp, &tempLen)) != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        return ret;
+        goto EXIT;
     }
 
     temp[tempLen++] = 0x80;
     if ((ret = DRBG_CtrBCCFinal(drbg, temp, tempLen)) != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        return ret;
+        goto EXIT;
     }
 
     /**
@@ -339,6 +339,7 @@ static int32_t BlockCipherDf(DRBG_Ctx *drbg, const CRYPT_Data *in1, const CRYPT_
         BSL_ERR_PUSH_ERROR(ret);
     }
 
+EXIT:
     BSL_SAL_CleanseData(temp, sizeof(temp));
     return ret;
 }
