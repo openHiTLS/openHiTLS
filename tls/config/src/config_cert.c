@@ -414,7 +414,7 @@ int32_t HITLS_CFG_ProviderLoadKeyBuffer(HITLS_Config *config, const uint8_t *buf
     if (config == NULL || buf == NULL || bufLen == 0) {
         return HITLS_NULL_INPUT;
     }
-    HITLS_CERT_Key *newKey = SAL_CERT_KeyParse(config, buf, bufLen, TLS_PARSE_TYPE_BUFF, type, format);
+    HITLS_CERT_Key *newKey = SAL_CERT_KeyParse(config, buf, bufLen, TLS_PARSE_TYPE_BUFF, format, type);
     if (newKey == NULL) {
         return HITLS_CFG_ERR_LOAD_KEY_BUFFER;
     }
