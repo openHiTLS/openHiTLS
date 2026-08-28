@@ -420,6 +420,55 @@ EXIT:
 /* END_CASE */
 
 /* @
+* @test  UT_TLS_CERT_PROVIDER_LOADKEYBUFFER_FUNC_TC001
+* @title Load private keys of every supported format and type through the provider buffer interfaces
+* @precon nan
+* @brief  1. Read a private key in one of the supported ASN1 or PEM formats and private key types.
+*            Expected result 1 is obtained.
+*         2. Load the key through the CFG and CTX provider interfaces with explicit format and type.
+*            Expected result 2 is obtained.
+*         3. Repeat step 2 with a null format, a null type, and both values null. Expected result 3 is obtained.
+* @expect 1. The private key file is read successfully.
+*         2. HITLS_SUCCESS is returned and the private key is configured by both interfaces.
+*         3. All legal null combinations are automatically detected and loaded successfully by both interfaces.
+@ */
+/* BEGIN_CASE */
+void UT_TLS_CERT_PROVIDER_LOADKEYBUFFER_FUNC_TC001(int version, char *keyPath, char *format, char *type,
+    char *password)
+{
+    HitlsInit();
+    HITLS_Config *tlsConfig = NULL;
+    HITLS_Ctx *ctx = NULL;
+    uint8_t keyBuffer[BUF_MAX_SIZE] = {0};
+    uint32_t keyBufferLen = ReadFileBuffer(keyPath, (char *)keyBuffer);
+    const char *formats[] = {format, NULL, format, NULL};
+    const char *types[] = {type, type, NULL, NULL};
+    ASSERT_TRUE(keyBufferLen > 0 && keyBufferLen <= BUF_MAX_SIZE);
+
+    tlsConfig = HitlsNewCtx(version);
+    ASSERT_TRUE(tlsConfig != NULL);
+    if (password[0] != '\0') {
+        ASSERT_EQ(HITLS_CFG_SetDefaultPasswordCb(tlsConfig, TestPasswordCb), HITLS_SUCCESS);
+        ASSERT_EQ(HITLS_CFG_SetDefaultPasswordCbUserdata(tlsConfig, password), HITLS_SUCCESS);
+    }
+    ctx = HITLS_New(tlsConfig);
+    ASSERT_TRUE(ctx != NULL);
+
+    for (uint32_t i = 0; i < sizeof(formats) / sizeof(formats[0]); i++) {
+        ASSERT_EQ(HITLS_CFG_ProviderLoadKeyBuffer(tlsConfig, keyBuffer, keyBufferLen, formats[i], types[i]),
+            HITLS_SUCCESS);
+        ASSERT_TRUE(HITLS_CFG_GetPrivateKey(tlsConfig) != NULL);
+        ASSERT_EQ(HITLS_ProviderLoadKeyBuffer(ctx, keyBuffer, keyBufferLen, formats[i], types[i]), HITLS_SUCCESS);
+        ASSERT_TRUE(HITLS_GetPrivateKey(ctx) != NULL);
+    }
+
+EXIT:
+    HITLS_CFG_FreeConfig(tlsConfig);
+    HITLS_Free(ctx);
+}
+/* END_CASE */
+
+/* @
 * @test     UT_TLS_CERT_CM_LoadKeyFile_API_TC001
 * @title    The error input parameter for HITLS_LoadKeyFile
 * @precon   nan
