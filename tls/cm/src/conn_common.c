@@ -145,16 +145,16 @@ int32_t CommonEventInAlertingState(HITLS_Ctx *ctx)
 #ifdef HITLS_TLS_PROTO_CLOSE_STATE
     /* If the close_notify message is sent, the link must be disconnected */
     if (alertInfo.description == ALERT_CLOSE_NOTIFY) {
-        if (ctx->userShutDown) {
-            ChangeConnState(ctx, CM_STATE_CLOSED);
-        } else {
-            ChangeConnState(ctx, CM_STATE_ALERTED);
-        }
         ctx->shutdownState |= HITLS_SENT_SHUTDOWN;
         /* If the previous state of alerting is not transporting, the link should be directly closed and read and
          * write are not allowed. */
         if (ctx->preState != CM_STATE_TRANSPORTING) {
             ctx->shutdownState |= HITLS_RECEIVED_SHUTDOWN;
+        }
+        if (ctx->userShutDown) {
+            ChangeConnState(ctx, CM_STATE_CLOSED);
+        } else {
+            ChangeConnState(ctx, CM_STATE_ALERTED);
         }
         return HITLS_SUCCESS;
     }
@@ -857,7 +857,7 @@ int32_t HITLS_GetExtendedMasterSecretSupport(HITLS_Ctx *ctx, bool *isSupport)
     if (ctx == NULL) {
         return HITLS_NULL_INPUT;
     }
-    
+
     return HITLS_CFG_GetExtendedMasterSecretSupport(&(ctx->config.tlsConfig), isSupport);
 }
 

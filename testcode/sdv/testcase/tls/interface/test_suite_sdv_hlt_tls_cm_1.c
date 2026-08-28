@@ -226,7 +226,7 @@ void SDV_HITLS_EXPORT_KEY_MATERIAL_005()
     ASSERT_TRUE(memcmp(localMaterial, readBuf, readLen) == 0);
 
     ASSERT_TRUE(TestIsErrStackEmpty());
-    
+
 EXIT:
     free(readBuf);
     free(localMaterial);
@@ -355,3 +355,88 @@ EXIT:
     HLT_FreeAllProcess();
 }
 /* END_CASE */
+
+/* @
+* @test When calling hitls_close and alert_flush initially fails in the transporting state, the connection will enter
+        the alerting state. Upon successful retry at the end, HITLS_RECEIVED_SHUTDOWN should not be set, because close_notify
+        is sent from a connection initially in the transporting state, and the close_notify from the peer has not yet been
+        received. Therefore, the application should still be able to read it.
+* @spec  -
+* @title  SDV_TLS_CM_RECV_SHUTDOWN_FUNC_TC001
+* @precon  nan
+* @brief
+* 1. Establish a TLS connection and obtain expected result 1
+* 2. Set the BSL_UIO_Write stub to fail, simulate a non-blocking I/O write failure, and call hitls_close on the client
+    to obtain the expected result 2
+* 3. Reset the piling function to ensure subsequent write operations succeed. Call hitls_close again on the client to
+    obtain the expected result 3
+* 4. Verify that the client has not set HITLS_RECEIVED_SHUTDOWN, as the connection was initially in the transporting
+    state, and obtain the expected result 4
+* 5. Pass close_notify to the server, which reads and obtains HITLS_CM_LINK_CLOSED. The server closes and sends its
+    close_notify to the client, which closes again. At this point, RECEIVED_SHUTDOWN is set, achieving the expected result 5.
+* @expect
+* 1. The connection has been established, and both parties are in the transporting state
+* 2. hitls_close returns an I/O error, and the client enters the alerting state
+* 3. hitls_close succeeds, and the client enters the closed state
+* 4. The client has not set HITLS_RECEIVED_SHUTDOWN
+* 5. After receiving the close_notify from the peer, the client sets HITLS_RECEIVED_SHUTDOWN
+* @prior  Level 1
+* @auto  TRUE
+@ */
+/* BEGIN_CASE */
+void SDV_TLS_CM_RECV_SHUTDOWN_FUNC_TC001(int version)
+{
+#ifdef HITLS_TLS_PROTO_CLOSE_STATE
+    FRAME_Init();
+    HITLS_Config *config = NULL;
+    FRAME_LinkObj *client = NULL;
+    FRAME_LinkObj *server = NULL;
+    config = GetHitlsConfigViaVersion(version);
+    ASSERT_TRUE(config != NULL);
+
+    client = FRAME_CreateLink(config, BSL_UIO_TCP);
+    ASSERT_TRUE(client != NULL);
+    server = FRAME_CreateLink(config, BSL_UIO_TCP);
+    ASSERT_TRUE(server != NULL);
+
+    ASSERT_TRUE(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT) == HITLS_SUCCESS);
+    ASSERT_TRUE(client->ssl->state == CM_STATE_TRANSPORTING);
+    ASSERT_TRUE(server->ssl->state == CM_STATE_TRANSPORTING);
+
+    STUB_REPLACE(BSL_UIO_Write, STUB_BSL_UIO_Write);;
+    int32_t ret = HITLS_Close(client->ssl);
+    ASSERT_TRUE(ret == HITLS_REC_ERR_IO_EXCEPTION);
+    ASSERT_TRUE(client->ssl->state == CM_STATE_ALERTING);
+    ASSERT_TRUE(client->ssl->preState == CM_STATE_TRANSPORTING);
+    STUB_RESTORE(BSL_UIO_Write);
+
+    ret = HITLS_Close(client->ssl);
+    ASSERT_TRUE(ret == HITLS_SUCCESS);
+    ASSERT_TRUE(client->ssl->state == CM_STATE_CLOSED);
+    ASSERT_TRUE((client->ssl->shutdownState & HITLS_SENT_SHUTDOWN) == HITLS_SENT_SHUTDOWN);
+    ASSERT_TRUE((client->ssl->shutdownState & HITLS_RECEIVED_SHUTDOWN) == 0);
+
+    ASSERT_TRUE(FRAME_TrasferMsgBetweenLink(client, server) == HITLS_SUCCESS);
+
+    uint8_t readBuf[READ_BUF_SIZE] = {0};
+    uint32_t readLen = 0;
+    ASSERT_EQ(HITLS_Read(server->ssl, readBuf, READ_BUF_SIZE, &readLen), HITLS_CM_LINK_CLOSED);
+    ret = HITLS_Close(server->ssl);
+    ASSERT_TRUE(ret == HITLS_SUCCESS);
+    ASSERT_TRUE(FRAME_TrasferMsgBetweenLink(server, client) == HITLS_SUCCESS);
+
+    ret = HITLS_Close(client->ssl);
+    ASSERT_TRUE(ret == HITLS_SUCCESS);
+    ASSERT_TRUE((client->ssl->shutdownState & HITLS_RECEIVED_SHUTDOWN) == HITLS_RECEIVED_SHUTDOWN);
+
+EXIT:
+    HITLS_CFG_FreeConfig(config);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+#else
+    SKIP_TEST();
+#endif
+}
+/* END_CASE */
+
+
