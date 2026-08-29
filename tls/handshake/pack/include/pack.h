@@ -116,18 +116,6 @@ int32_t PackAppendUint64ToBuf(PackPacket *pkt, uint64_t value);
 int32_t PackAppendDataToBuf(PackPacket *pkt, const uint8_t *data, uint32_t size);
 
 /**
- * @brief Pack an extension type and length, then reserve its body space.
- *
- * @param exMsgType [IN] Extension type.
- * @param exMsgLen  [IN] Extension body length.
- * @param pkt       [IN/OUT] Packet buffer.
- *
- * @retval HITLS_SUCCESS succeeded.
- * @retval other error propagated from the packing helpers.
- */
-int32_t PackExtensionHeader(uint16_t exMsgType, uint16_t exMsgLen, PackPacket *pkt);
-
-/**
  * @brief   Reserve bytes in the handshake buffer for packing, without increasing offset.
  * The reservedBuf should be used immediately after this function is called. Since the buffer may be reallocated.
  * If input reservedBuf == NULL, just prepare Handshake message buffer for handshake message packing.

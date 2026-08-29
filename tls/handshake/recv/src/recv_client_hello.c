@@ -2518,18 +2518,23 @@ bool IsTls13KeyExchAvailable(TLS_Ctx *ctx)
     return Tls13HasCertificate(ctx);
 }
 
-static int32_t SelectVersion(TLS_Ctx *ctx, const ClientHelloMsg *clientHello, uint16_t *selectVersion)
+/* Step 1: Negotiate legacy_version when ClientHello omits the supported_versions extension.
+ * Step 2: Otherwise validate legacy_version before selecting a version from the extension.
+ * needSelectFromList is set to true when the caller must continue with the server version list. */
+static int32_t ServerCheckClientHelloLegacyVersion(TLS_Ctx *ctx, const ClientHelloMsg *clientHello,
+    uint16_t *selectVersion, bool *needSelectFromList)
 {
     int32_t ret;
-    uint16_t version = clientHello->version;
+    uint16_t clientVer = clientHello->version;
     bool isDatagram = IS_SUPPORT_DATAGRAM(ctx->config.tlsConfig.originVersionMask);
+    *needSelectFromList = false;
 
     /**
      * According to rfc8446 section 4.2.1 if the ClientHello does not have the supportedVersions extension,
      * Then the server must negotiate TLS 1.2 or earlier as specified in rfc5246.
      */
     if (clientHello->extension.content.supportedVersionsCount == 0) {
-        ret = CheckSupportVersion(ctx, version, selectVersion);
+        ret = CheckSupportVersion(ctx, clientVer, selectVersion);
         if (ret != HITLS_SUCCESS) {
             BSL_ERR_PUSH_ERROR(HITLS_MSG_HANDLE_UNSUPPORT_VERSION);
             BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16134, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
@@ -2541,14 +2546,27 @@ static int32_t SelectVersion(TLS_Ctx *ctx, const ClientHelloMsg *clientHello, ui
 
     /* If the received message is not an earlier version, the version byte in the tls1.3 must be 0x0303 according to
      * section 4.1.2 in RFC 8446 */
-    if (version != (isDatagram ? HITLS_VERSION_DTLS12 : HITLS_VERSION_TLS12)) {
+    if (clientVer != (isDatagram ? HITLS_VERSION_DTLS12 : HITLS_VERSION_TLS12)) {
         BSL_ERR_PUSH_ERROR(HITLS_MSG_HANDLE_UNSUPPORT_VERSION);
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15249, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "illegal client legacy_version(0x%02x).", version, 0, 0, 0);
+            "illegal client legacy_version(0x%02x).", clientVer, 0, 0, 0);
         ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_PROTOCOL_VERSION);
         return HITLS_MSG_HANDLE_UNSUPPORT_VERSION;
     }
+    *needSelectFromList = true;
+    return HITLS_SUCCESS;
+}
+
+static int32_t SelectVersion(TLS_Ctx *ctx, const ClientHelloMsg *clientHello, uint16_t *selectVersion)
+{
+    bool needSelectFromList = false;
+    int32_t ret = ServerCheckClientHelloLegacyVersion(ctx, clientHello, selectVersion, &needSelectFromList);
+    if (ret != HITLS_SUCCESS || !needSelectFromList) {
+        return ret;
+    }
     uint32_t versionBits;
+    uint16_t version;
+    /* Iterate server-preferred versions in descending priority */
     uint16_t versions[] = {HITLS_VERSION_DTLS13, HITLS_VERSION_DTLS12, HITLS_VERSION_TLS13,
                            HITLS_VERSION_TLS12, HITLS_VERSION_TLCP_DTLCP11};
     /* Find the supported version in the extended field supportedVersions. */

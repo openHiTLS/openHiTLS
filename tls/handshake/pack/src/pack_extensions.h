@@ -81,6 +81,19 @@ int32_t PackTls13HelloRetryRequestExtension(const TLS_Ctx *ctx, PackPacket *pkt)
  * @retval  HITLS_PACK_NOT_ENOUGH_BUF_LENGTH The message buffer length is insufficient
  */
 int32_t PackEmptyExtension(uint16_t exMsgType, bool needPack, PackPacket *pkt);
+
+/**
+ * @brief   Pack the header of an extension
+ *
+ * @param   exMsgType [IN] Extension type
+ * @param   exMsgLen [IN] Extension length
+ * @param   pkt [IN/OUT] Context for packing
+ *
+ * @retval  HITLS_SUCCESS
+ * @retval  For other error codes, see hitls_error.h
+ */
+int32_t PackExtensionHeader(uint16_t exMsgType, uint16_t exMsgLen, PackPacket *pkt);
+
 int32_t PackRecordSizeLimit(const TLS_Ctx *ctx, PackPacket *pkt);
 
 int32_t PackServerSelectAlpnProto(const TLS_Ctx *ctx, PackPacket *pkt);

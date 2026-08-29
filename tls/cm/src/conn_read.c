@@ -235,6 +235,25 @@ static int32_t RecvPostFinishPreprocess(TLS_Ctx *ctx)
 }
 #endif
 
+#ifdef HITLS_TLS_FEATURE_QUIC_TLS
+static int32_t QuicTlsHsMsgPreprocess(HITLS_Ctx *ctx, HS_Ctx *hsCtx)
+{
+    if (!QUIC_TLS_IsMode(ctx)) {
+        return HITLS_SUCCESS;
+    }
+    bool isPhaViolation = ctx->isClient && hsCtx->msgBuf[0] == CERTIFICATE_REQUEST;
+    /* QUIC forbids TLS KeyUpdate and post-handshake client authentication. */
+    if (hsCtx->msgBuf[0] == KEY_UPDATE || isPhaViolation) {
+        ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_UNEXPECTED_MESSAGE);
+        int32_t errCode = isPhaViolation ? HITLS_QUIC_TLS_PROTOCOL_VIOLATION :
+                                         HITLS_MSG_HANDLE_UNEXPECTED_MESSAGE;
+        BSL_ERR_PUSH_ERROR(errCode);
+        return errCode;
+    }
+    return HITLS_SUCCESS;
+}
+#endif
+
 static int32_t PreprocessUnexpectHsMsg(HITLS_Ctx *ctx)
 {
     if (ctx->hsCtx != NULL) {
@@ -264,16 +283,9 @@ static int32_t PreprocessUnexpectHsMsg(HITLS_Ctx *ctx)
 
     HS_Ctx *hsCtx = ctx->hsCtx;
 #ifdef HITLS_TLS_FEATURE_QUIC_TLS
-    if (QUIC_TLS_IsMode(ctx)) {
-        bool isPhaViolation = ctx->isClient && hsCtx->msgBuf[0] == CERTIFICATE_REQUEST;
-        /* QUIC forbids TLS KeyUpdate and post-handshake client authentication. */
-        if (hsCtx->msgBuf[0] == KEY_UPDATE || isPhaViolation) {
-            ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_UNEXPECTED_MESSAGE);
-            int32_t errCode = isPhaViolation ? HITLS_QUIC_TLS_PROTOCOL_VIOLATION :
-                                             HITLS_MSG_HANDLE_UNEXPECTED_MESSAGE;
-            BSL_ERR_PUSH_ERROR(errCode);
-            return errCode;
-        }
+    ret = QuicTlsHsMsgPreprocess(ctx, hsCtx);
+    if (ret != HITLS_SUCCESS) {
+        return ret;
     }
 #endif
     switch (hsCtx->msgBuf[0]) {

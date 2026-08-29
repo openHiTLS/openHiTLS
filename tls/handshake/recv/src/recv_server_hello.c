@@ -1039,7 +1039,6 @@ static int32_t CheckDowngradeRandom(TLS_Ctx *ctx, const ServerHelloMsg *serverHe
 }
 static int32_t GetNegotiatedVersion(TLS_Ctx *ctx, const ServerHelloMsg *serverHello, uint16_t *negotiatedVersion)
 {
-    int32_t ret;
     bool isDtls13 = IsDtls13ClientVersionCtx(ctx);
     /* As a client that supports TLS1.3, if the received server hello message does not contain the supported version
      * extension, the peer end wants to negotiate a version earlier than TLS1.3 */
@@ -1065,11 +1064,7 @@ static int32_t GetNegotiatedVersion(TLS_Ctx *ctx, const ServerHelloMsg *serverHe
             return HITLS_MSG_HANDLE_UNSUPPORT_VERSION;
         }
 #endif
-        ret = CheckDowngradeRandom(ctx, serverHello, negotiatedVersion);
-        if (ret != HITLS_SUCCESS) {
-            return ret;
-        }
-        return HITLS_SUCCESS;
+        return CheckDowngradeRandom(ctx, serverHello, negotiatedVersion);
     }
 
     /* If the serverHello of TLS1.3 is used, the version selected by the server must be earlier than TLS1.3, and the
