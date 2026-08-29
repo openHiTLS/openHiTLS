@@ -40,6 +40,7 @@ typedef enum {
     SESS_OBJ_SUPPORT_EXTEND_MASTER_SECRET = 0x010B,
     SESS_OBJ_VERIFY_RESULT = 0x010C,
     SESS_OBJ_AGE_ADD = 0x010D,
+    SESS_OBJ_TICKET = 0x010E,
 } SessionObjType;
 
 /**

@@ -325,6 +325,48 @@ static int32_t DecSessObjTicketAgeAdd(HITLS_Session *sess, SessionObjType type, 
     return HITLS_SUCCESS;
 }
 
+static int32_t DecSessObjTicket(HITLS_Session *sess, SessionObjType type, const uint8_t *data, uint32_t length,
+    uint32_t *readLen)
+{
+    uint32_t offset = sizeof(uint32_t);
+    uint32_t tlvLen = BSL_ByteToUint32(&data[offset]);
+    /* Reject the declared value length before allocating, three checks:
+     *  - tlvLen == 0: an empty ticket is not a valid identity.
+     *  - tlvLen > MAX_SESSION_TICKET_LEN: RFC 8446 bounds the ticket to <1..2^16-1>.
+     *  - tlvLen > length - TLV_HEADER_LENGTH: the declared value must fit in the
+     *    bytes that actually remain after the 8-byte TLV header. */
+    if (tlvLen == 0 || tlvLen > MAX_SESSION_TICKET_LEN || tlvLen > length - TLV_HEADER_LENGTH) {
+        BSL_ERR_PUSH_ERROR(HITLS_SESS_ERR_DEC_PSK_IDENTITY_FAIL);
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16009, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+            "decode session ticket length fail. tlvLen = %u", tlvLen, 0, 0, 0);
+        return HITLS_SESS_ERR_DEC_PSK_IDENTITY_FAIL;
+    }
+
+    uint8_t *ticket = BSL_SAL_Calloc(1u, tlvLen);
+    if (ticket == NULL) {
+        BSL_ERR_PUSH_ERROR(HITLS_MEMALLOC_FAIL);
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16009, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+            "malloc ticket fail when decode session obj ticket.", 0, 0, 0, 0);
+        return HITLS_MEMALLOC_FAIL;
+    }
+
+    BSL_Tlv tlv = {0, tlvLen, ticket};
+    int32_t ret = BSL_TLV_Parse(type, data, length, &tlv, readLen);
+    if (ret != BSL_SUCCESS) {
+        BSL_SAL_FREE(ticket);
+        BSL_ERR_PUSH_ERROR(HITLS_SESS_ERR_DEC_PSK_IDENTITY_FAIL);
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16009, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+            "decode session ticket fail. ret %d", ret, 0, 0, 0);
+        return HITLS_SESS_ERR_DEC_PSK_IDENTITY_FAIL;
+    }
+
+    /* On success the allocated buffer is taken over by the session. */
+    BSL_SAL_FREE(sess->ticket);
+    sess->ticket = tlv.value;
+    sess->ticketSize = tlv.length;
+    return HITLS_SUCCESS;
+}
+
 /*
  * Decoding function list.
  * Ensure that the sequence of decode and encode types is the same.
@@ -344,6 +386,7 @@ static const SessObjDecFunc OBJ_LIST[] = {
     {SESS_OBJ_SUPPORT_EXTEND_MASTER_SECRET, DecSessObjExtendedMasterSecret},
     {SESS_OBJ_VERIFY_RESULT, DecSessObjVerifyResult},
     {SESS_OBJ_AGE_ADD, DecSessObjTicketAgeAdd},
+    {SESS_OBJ_TICKET, DecSessObjTicket},
 };
 
 int32_t SESS_Decode(HITLS_Session *sess, const uint8_t *data, uint32_t length)
@@ -362,6 +405,12 @@ int32_t SESS_Decode(HITLS_Session *sess, const uint8_t *data, uint32_t length)
     uint32_t readLen = 0;
 
     for (index = 0; index < sizeof(OBJ_LIST) / sizeof(SessObjDecFunc); index++) {
+        /* SESS_OBJ_TICKET was appended to the format.  Reaching the exact end
+         * only at this optional trailing object keeps older encodings readable
+         * without accepting a truncated mandatory prefix. */
+        if (offset == length && OBJ_LIST[index].type == SESS_OBJ_TICKET) {
+            break;
+        }
         if (length - offset < TLV_HEADER_LENGTH) {
             BSL_ERR_PUSH_ERROR(HITLS_SESS_ERR_DECODE_TICKET);
             BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16009, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,

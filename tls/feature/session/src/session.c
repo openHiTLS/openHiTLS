@@ -590,6 +590,15 @@ int32_t SESS_SetTicket(HITLS_Session *sess, uint8_t *ticket, uint32_t ticketSize
         return HITLS_NULL_INPUT;
     }
 
+    /* Reject an oversized ticket at the entry point: DecSessObjTicket enforces
+     * the same RFC 8446 bound (<1..2^16-1>). */
+    if (ticketSize > MAX_SESSION_TICKET_LEN) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16751, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+            "SetSessionTicket: ticket size %u exceeds the protocol limit.", ticketSize, 0, 0, 0);
+        BSL_ERR_PUSH_ERROR(HITLS_SESS_ERR_SESSION_TICKET_SIZE_INCORRECT);
+        return HITLS_SESS_ERR_SESSION_TICKET_SIZE_INCORRECT;
+    }
+
     BSL_SAL_ThreadWriteLock(sess->lock);
 
     BSL_SAL_FREE(sess->ticket);

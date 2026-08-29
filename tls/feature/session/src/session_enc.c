@@ -398,6 +398,39 @@ static int32_t EncSessObjTicketAgeAdd(const HITLS_Session *sess, SessionObjType 
     return HITLS_SUCCESS;
 }
 
+static int32_t EncSessObjTicket(const HITLS_Session *sess, SessionObjType type, uint8_t *data, uint32_t length,
+    uint32_t *encLen)
+{
+    /* A ticketless session carries no resumption identity, skip this object. */
+    if (sess->ticketSize == 0) {
+        return HITLS_SUCCESS;
+    }
+
+    if (sess->ticketSize > MAX_SESSION_TICKET_LEN) {
+        BSL_ERR_PUSH_ERROR(HITLS_SESS_ERR_ENC_PSK_IDENTITY_FAIL);
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16183, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+            "input ticket size %u, max ticket size %u", sess->ticketSize, MAX_SESSION_TICKET_LEN, 0, 0);
+        return HITLS_SESS_ERR_ENC_PSK_IDENTITY_FAIL;
+    }
+
+    BSL_Tlv tlv = {type, sess->ticketSize, sess->ticket};
+    if (data == NULL) {
+        /* If the input parameter is NULL, the length after encoding is returned. */
+        *encLen = sizeof(tlv.type) + sizeof(tlv.length) + tlv.length;
+        return HITLS_SUCCESS;
+    }
+
+    int32_t ret = BSL_TLV_Pack(&tlv, data, length, encLen);
+    if (ret != BSL_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(HITLS_SESS_ERR_ENC_PSK_IDENTITY_FAIL);
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16183, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+            "encode session ticket fail. ret %d", ret, 0, 0, 0);
+        return HITLS_SESS_ERR_ENC_PSK_IDENTITY_FAIL;
+    }
+
+    return HITLS_SUCCESS;
+}
+
 /*
  * Encoding function list.
  * Ensure that the sequence of decode and encode types is the same.
@@ -417,6 +450,7 @@ static const SessObjEncFunc OBJ_LIST[] = {
     {SESS_OBJ_SUPPORT_EXTEND_MASTER_SECRET, EncSessObjExtendedMasterSecret},
     {SESS_OBJ_VERIFY_RESULT, EncSessObjVerifyResult},
     {SESS_OBJ_AGE_ADD, EncSessObjTicketAgeAdd},
+    {SESS_OBJ_TICKET, EncSessObjTicket},
 };
 
 uint32_t SESS_GetTotalEncodeSize(const HITLS_Session *sess)
@@ -429,12 +463,17 @@ uint32_t SESS_GetTotalEncodeSize(const HITLS_Session *sess)
     uint32_t offset = 0;
     uint32_t encLen = 0;
 
+    /* Hold the read lock for the whole traversal so the size matches the
+     * fields of one consistent snapshot; this also protects internal callers
+     * such as server ticket generation. */
+    BSL_SAL_ThreadReadLock(sess->lock);
     for (index = 0; index < sizeof(OBJ_LIST) / sizeof(SessObjEncFunc); index++) {
         encLen = 0;
         /* This parameter is used only to obtain the encoded length and will not verified the returned value. */
         (void)OBJ_LIST[index].func(sess, OBJ_LIST[index].type, NULL, 0, &encLen);
         offset += encLen;
     }
+    BSL_SAL_ThreadUnlock(sess->lock);
 
     return offset;
 }
@@ -454,15 +493,21 @@ int32_t SESS_Encode(const HITLS_Session *sess, uint8_t *data, uint32_t length, u
     uint32_t offset = 0;
     uint32_t encLen = 0;
 
+    /* Hold the read lock for the whole traversal so the output matches the
+     * fields of one consistent snapshot; this also protects internal callers
+     * such as server ticket generation. */
+    BSL_SAL_ThreadReadLock(sess->lock);
     for (index = 0; index < sizeof(OBJ_LIST) / sizeof(SessObjEncFunc); index++) {
         encLen = 0;
         ret = OBJ_LIST[index].func(sess, OBJ_LIST[index].type, curPos, length - offset, &encLen);
         if (ret != HITLS_SUCCESS) {
+            BSL_SAL_ThreadUnlock(sess->lock);
             return ret;
         }
         offset += encLen;
         curPos += encLen;
     }
+    BSL_SAL_ThreadUnlock(sess->lock);
 
     *usedLen = offset;
     return HITLS_SUCCESS;

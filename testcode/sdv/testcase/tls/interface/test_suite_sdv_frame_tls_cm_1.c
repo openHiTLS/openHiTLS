@@ -131,6 +131,8 @@ uint32_t g_uiPort = 18888;
 #define HITLS_MIN_RECORDSIZE_LIMIT 64
 #define READ_BUF_LEN_18K 18432
 
+static uint8_t g_sessionEncodeTicket[] = {0x91, 0x92, 0x93, 0x94, 0x95};
+
 static int32_t InitSessionForEncodeTest(HITLS_Session *session)
 {
     uint8_t masterKey[] = {0x01, 0x03, 0x05, 0x07, 0x09, 0x0B, 0x0D, 0x0F};
@@ -142,6 +144,7 @@ static int32_t InitSessionForEncodeTest(HITLS_Session *session)
     ASSERT_EQ(HITLS_SESS_SetMasterKey(session, masterKey, sizeof(masterKey)), HITLS_SUCCESS);
     ASSERT_EQ(HITLS_SESS_SetSessionId(session, sessionId, sizeof(sessionId)), HITLS_SUCCESS);
     ASSERT_EQ(HITLS_SESS_SetSessionIdCtx(session, sessionIdCtx, sizeof(sessionIdCtx)), HITLS_SUCCESS);
+    ASSERT_EQ(SESS_SetTicket(session, g_sessionEncodeTicket, sizeof(g_sessionEncodeTicket)), HITLS_SUCCESS);
     ASSERT_EQ(HITLS_SESS_SetHaveExtMasterSecret(session, 1), HITLS_SUCCESS);
     ASSERT_EQ(HITLS_SESS_SetTimeout(session, 12345), HITLS_SUCCESS);
     return HITLS_SUCCESS;
@@ -159,6 +162,8 @@ static int32_t CheckDecodedSessionForEncodeTest(const HITLS_Session *session)
     uint32_t sessionIdLen = sizeof(sessionId);
     uint8_t sessionIdCtx[4] = {0};
     uint32_t sessionIdCtxLen = sizeof(sessionIdCtx);
+    uint8_t *ticket = NULL;
+    uint32_t ticketLen = 0;
     bool haveExtMasterSecret = false;
 
     const uint8_t expectedMasterKey[] = {0x01, 0x03, 0x05, 0x07, 0x09, 0x0B, 0x0D, 0x0F};
@@ -182,6 +187,10 @@ static int32_t CheckDecodedSessionForEncodeTest(const HITLS_Session *session)
     ASSERT_EQ(HITLS_SESS_GetSessionIdCtx(session, sessionIdCtx, &sessionIdCtxLen), HITLS_SUCCESS);
     ASSERT_EQ(sessionIdCtxLen, sizeof(expectedSessionIdCtx));
     ASSERT_EQ(memcmp(sessionIdCtx, expectedSessionIdCtx, sizeof(expectedSessionIdCtx)), 0);
+
+    ASSERT_EQ(SESS_GetTicket(session, &ticket, &ticketLen), HITLS_SUCCESS);
+    ASSERT_EQ(ticketLen, sizeof(g_sessionEncodeTicket));
+    ASSERT_EQ(memcmp(ticket, g_sessionEncodeTicket, sizeof(g_sessionEncodeTicket)), 0);
 
     ASSERT_EQ(HITLS_SESS_GetHaveExtMasterSecret((HITLS_Session *)session, &haveExtMasterSecret), HITLS_SUCCESS);
     ASSERT_EQ(haveExtMasterSecret, true);
@@ -4441,13 +4450,13 @@ EXIT:
 * @test  UT_TLS_CM_SESSION_ENCODE_DECODE_API_TC001
 * @title  Test HITLS_SESS_Encode/HITLS_SESS_Decode round-trip behavior
 * @precon  nan
-* @brief   1. Create a session and set several public fields.
+* @brief   1. Create a session and set several public fields, including a session ticket.
 *          2. Call HITLS_SESS_Encode with length 0 to obtain the required encoded length.
 *          3. Call HITLS_SESS_Encode and HITLS_SESS_Decode to complete round-trip serialization.
 *          4. Verify that the decoded session data is consistent with the original values.
 * @expect  1. Interfaces return HITLS_SUCCESS.
 *          2. Encoded length is greater than 0 and matches the used length.
-*          3. Decoded session field values are correct.
+*          3. Decoded session field values, including the session ticket, are correct.
 @*/
 /* BEGIN_CASE */
 void UT_TLS_CM_SESSION_ENCODE_DECODE_API_TC001(void)
@@ -4456,8 +4465,10 @@ void UT_TLS_CM_SESSION_ENCODE_DECODE_API_TC001(void)
     HITLS_Session *srcSession = HITLS_SESS_New();
     HITLS_Session *dstSession = NULL;
     uint8_t *encodeBuf = NULL;
+    uint8_t *ticket = NULL;
     uint32_t encodeLen;
     uint32_t usedLen = 0;
+    uint32_t ticketLen = 0;
 
     ASSERT_TRUE(srcSession != NULL);
     ASSERT_EQ(InitSessionForEncodeTest(srcSession), HITLS_SUCCESS);
@@ -4472,6 +4483,16 @@ void UT_TLS_CM_SESSION_ENCODE_DECODE_API_TC001(void)
     ASSERT_EQ(usedLen, encodeLen);
     ASSERT_EQ(HITLS_SESS_Decode(&dstSession, encodeBuf, usedLen), HITLS_SUCCESS);
     ASSERT_EQ(CheckDecodedSessionForEncodeTest(dstSession), HITLS_SUCCESS);
+
+    /* SESS_OBJ_TICKET is an appended optional TLV.  Encodings produced by an
+     * older library end after AGE_ADD and must remain readable. */
+    HITLS_SESS_Free(dstSession);
+    dstSession = NULL;
+    ASSERT_EQ(HITLS_SESS_Decode(&dstSession, encodeBuf,
+        usedLen - (sizeof(uint32_t) * 2u + sizeof(g_sessionEncodeTicket))), HITLS_SUCCESS);
+    ASSERT_EQ(SESS_GetTicket(dstSession, &ticket, &ticketLen), HITLS_SUCCESS);
+    ASSERT_EQ(ticketLen, 0u);
+    ASSERT_TRUE(ticket == NULL);
     ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
@@ -4583,6 +4604,227 @@ void UT_TLS_CM_SESSION_ENCODE_DECODE_API_TC003(void)
 EXIT:
     BSL_SAL_FREE(encodeBuf);
     HITLS_SESS_Free(srcSession);
+}
+/* END_CASE */
+
+/* @
+* @test  UT_TLS_CM_SESSION_ENCODE_DECODE_API_TC004
+* @title  Test session ticket length limit at input and the boundary round-trip
+* @precon  nan
+* @brief   1. Call SESS_SetTicket with a ticket of MAX_SESSION_TICKET_LEN + 1 bytes and verify the
+*          call is rejected and the previously set ticket is kept.
+*          2. Call SESS_SetTicket with a boundary-size ticket of exactly MAX_SESSION_TICKET_LEN
+*          bytes and verify the call succeeds.
+*          3. Encode and decode the session and verify the boundary ticket round-trips.
+* @expect  1. SESS_SetTicket returns HITLS_SESS_ERR_SESSION_TICKET_SIZE_INCORRECT.
+*          2. SESS_SetTicket returns HITLS_SUCCESS for the boundary size.
+*          3. Encode and decode return HITLS_SUCCESS and the decoded ticket matches the original
+*          in both size and content.
+@*/
+/* BEGIN_CASE */
+void UT_TLS_CM_SESSION_ENCODE_DECODE_API_TC004(void)
+{
+    HitlsInit();
+    HITLS_Session *srcSession = HITLS_SESS_New();
+    HITLS_Session *dstSession = NULL;
+    uint8_t *encodeBuf = NULL;
+    uint8_t *ticket = NULL;
+    uint8_t *gotTicket = NULL;
+    uint32_t gotTicketLen = 0;
+    uint32_t encodeLen;
+    uint32_t usedLen = 0;
+    uint32_t index;
+
+    ASSERT_TRUE(srcSession != NULL);
+    ticket = BSL_SAL_Calloc(1u, MAX_SESSION_TICKET_LEN + 1u);
+    ASSERT_TRUE(ticket != NULL);
+    for (index = 0; index < (MAX_SESSION_TICKET_LEN + 1u); index++) {
+        ticket[index] = (uint8_t)(index & 0xffu);
+    }
+    ASSERT_EQ(InitSessionForEncodeTest(srcSession), HITLS_SUCCESS);
+
+    /* RFC 8446 bounds the ticket to opaque<1..2^16-1>: input beyond the bound is rejected and the
+     * ticket already stored by InitSessionForEncodeTest is left untouched. */
+    ASSERT_EQ(SESS_SetTicket(srcSession, ticket, MAX_SESSION_TICKET_LEN + 1u),
+        HITLS_SESS_ERR_SESSION_TICKET_SIZE_INCORRECT);
+    ASSERT_TRUE(TestIsErrStackNotEmpty());
+    BSL_ERR_ClearError();
+    ASSERT_EQ(SESS_GetTicket(srcSession, &gotTicket, &gotTicketLen), HITLS_SUCCESS);
+    ASSERT_EQ(gotTicketLen, sizeof(g_sessionEncodeTicket));
+
+    /* The boundary size is still a valid identity and must survive encode/decode. */
+    ASSERT_EQ(SESS_SetTicket(srcSession, ticket, MAX_SESSION_TICKET_LEN), HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_SESS_Encode(srcSession, NULL, 0, &encodeLen), HITLS_SUCCESS);
+    encodeBuf = BSL_SAL_Calloc(1u, encodeLen);
+    ASSERT_TRUE(encodeBuf != NULL);
+    ASSERT_EQ(HITLS_SESS_Encode(srcSession, encodeBuf, encodeLen, &usedLen), HITLS_SUCCESS);
+    ASSERT_EQ(usedLen, encodeLen);
+    ASSERT_EQ(HITLS_SESS_Decode(&dstSession, encodeBuf, usedLen), HITLS_SUCCESS);
+    ASSERT_EQ(SESS_GetTicket(dstSession, &gotTicket, &gotTicketLen), HITLS_SUCCESS);
+    ASSERT_EQ(gotTicketLen, (uint32_t)MAX_SESSION_TICKET_LEN);
+    ASSERT_EQ(memcmp(gotTicket, ticket, MAX_SESSION_TICKET_LEN), 0);
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
+EXIT:
+    BSL_SAL_FREE(encodeBuf);
+    BSL_SAL_FREE(ticket);
+    HITLS_SESS_Free(srcSession);
+    HITLS_SESS_Free(dstSession);
+}
+/* END_CASE */
+
+/* @
+* @test  UT_TLS_CM_SESSION_ENCODE_DECODE_API_TC005
+* @title  Test repeated SESS_Decode into the same session keeps ticket ownership correct
+* @precon  nan
+* @brief   1. Create a session holding a ticket and encode it.
+*          2. Decode the encoding back into the same session object, twice.
+*          3. Verify the ticket content and size after every decode round.
+* @expect  1. Encode returns HITLS_SUCCESS.
+*          2. Each SESS_Decode returns HITLS_SUCCESS and replaces the old ticket
+*          without leaking it (guard via the ASAN/LSan build).
+*          3. Ticket size and content always match the fixture.
+@*/
+/* BEGIN_CASE */
+void UT_TLS_CM_SESSION_ENCODE_DECODE_API_TC005(void)
+{
+    HitlsInit();
+    HITLS_Session *session = HITLS_SESS_New();
+    uint8_t *encodeBuf = NULL;
+    uint8_t *ticket = NULL;
+    uint32_t ticketLen = 0;
+    uint32_t encodeLen;
+    uint32_t round;
+
+    ASSERT_TRUE(session != NULL);
+    ASSERT_EQ(InitSessionForEncodeTest(session), HITLS_SUCCESS);
+
+    ASSERT_EQ(HITLS_SESS_Encode(session, NULL, 0, &encodeLen), HITLS_SUCCESS);
+    encodeBuf = BSL_SAL_Calloc(1u, encodeLen);
+    ASSERT_TRUE(encodeBuf != NULL);
+    ASSERT_EQ(HITLS_SESS_Encode(session, encodeBuf, encodeLen, &encodeLen), HITLS_SUCCESS);
+
+    /* The session already holds a ticket, each decode must take over the new
+     * buffer and free the old one. Two rounds cover overwrite of both the
+     * fixture ticket and a previously decoded ticket; a leak is reported by
+     * the ASAN/LSan build when the process exits. */
+    for (round = 0; round < 2u; round++) {
+        ASSERT_EQ(SESS_Decode(session, encodeBuf, encodeLen), HITLS_SUCCESS);
+        ASSERT_EQ(SESS_GetTicket(session, &ticket, &ticketLen), HITLS_SUCCESS);
+        ASSERT_EQ(ticketLen, sizeof(g_sessionEncodeTicket));
+        ASSERT_EQ(memcmp(ticket, g_sessionEncodeTicket, sizeof(g_sessionEncodeTicket)), 0);
+    }
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
+EXIT:
+    BSL_SAL_FREE(encodeBuf);
+    HITLS_SESS_Free(session);
+}
+/* END_CASE */
+
+/* Concurrency fixture for the encode race guard test. */
+#define ENCODE_RACE_ITERATIONS 10000
+#define ENCODE_RACE_TICKET_A_LEN 16
+#define ENCODE_RACE_TICKET_B_LEN 200
+#define ENCODE_RACE_BUF_LEN 1024
+
+static HITLS_Session *g_encRaceSess = NULL;
+static uint8_t g_encRaceBuf[ENCODE_RACE_BUF_LEN];
+static uint8_t g_encRaceTicketA[ENCODE_RACE_TICKET_A_LEN];
+static uint8_t g_encRaceTicketB[ENCODE_RACE_TICKET_B_LEN];
+static volatile int32_t g_encRaceErrCnt = 0;
+
+static void *EncodeRaceEncodeThread(void *arg)
+{
+    (void)arg;
+    uint32_t usedLen = 0;
+    int32_t i;
+    for (i = 0; i < ENCODE_RACE_ITERATIONS; i++) {
+        int32_t ret;
+        switch (i % 3) {
+            case 0:
+                /* Length-query phase of the public API. */
+                ret = HITLS_SESS_Encode(g_encRaceSess, NULL, 0, &usedLen);
+                break;
+            case 1:
+                /* Internal packing path, also used by server ticket generation. */
+                ret = SESS_Encode(g_encRaceSess, g_encRaceBuf, ENCODE_RACE_BUF_LEN, &usedLen);
+                break;
+            default:
+                ret = HITLS_SESS_Encode(g_encRaceSess, g_encRaceBuf, ENCODE_RACE_BUF_LEN, &usedLen);
+                break;
+        }
+        if (ret != HITLS_SUCCESS) {
+            g_encRaceErrCnt++;
+        }
+    }
+    return NULL;
+}
+
+static void *EncodeRaceSetterThread(void *arg)
+{
+    (void)arg;
+    int32_t i;
+    for (i = 0; i < ENCODE_RACE_ITERATIONS; i++) {
+        /* Alternate between two ticket lengths so SetTicket frees and
+         * reallocates the ticket buffer on every iteration. */
+        uint8_t *ticket = ((i & 1) == 0) ? g_encRaceTicketA : g_encRaceTicketB;
+        uint32_t ticketLen = ((i & 1) == 0) ? ENCODE_RACE_TICKET_A_LEN : ENCODE_RACE_TICKET_B_LEN;
+        if (SESS_SetTicket(g_encRaceSess, ticket, ticketLen) != HITLS_SUCCESS) {
+            g_encRaceErrCnt++;
+        }
+        if (HITLS_SESS_SetTimeout(g_encRaceSess, (uint32_t)(100 + (i & 0x0f))) != HITLS_SUCCESS) {
+            g_encRaceErrCnt++;
+        }
+    }
+    return NULL;
+}
+
+/* @
+* @test  UT_TLS_CM_SESSION_ENCODE_DECODE_API_TC006
+* @title  Test concurrent HITLS_SESS_Encode and session field updates
+* @precon  nan
+* @brief   1. Create a session and prepare two ticket buffers of different lengths.
+*          2. Run one thread encoding the session in a loop and another thread
+*          replacing the ticket and timeout in a loop.
+*          3. Join both threads and verify the session stays consistent.
+* @expect  1. Thread creation succeeds.
+*          2. No encode or setter call fails and the ASAN build reports no
+*          use-after-free on the concurrently replaced ticket.
+*          3. The final ticket length matches one of the two fixtures.
+@*/
+/* BEGIN_CASE */
+void UT_TLS_CM_SESSION_ENCODE_DECODE_API_TC006(void)
+{
+    HitlsInit();
+    uint32_t index;
+    uint8_t *ticket = NULL;
+    uint32_t ticketLen = 0;
+    pthread_t encodeThread;
+    pthread_t setterThread;
+
+    ASSERT_TRUE((g_encRaceSess = HITLS_SESS_New()) != NULL);
+    ASSERT_EQ(InitSessionForEncodeTest(g_encRaceSess), HITLS_SUCCESS);
+    for (index = 0; index < ENCODE_RACE_TICKET_A_LEN; index++) {
+        g_encRaceTicketA[index] = (uint8_t)(index & 0xffu);
+    }
+    for (index = 0; index < ENCODE_RACE_TICKET_B_LEN; index++) {
+        g_encRaceTicketB[index] = (uint8_t)(0xa0u + (index & 0x0fu));
+    }
+    g_encRaceErrCnt = 0;
+
+    ASSERT_EQ(pthread_create(&encodeThread, NULL, EncodeRaceEncodeThread, NULL), 0);
+    ASSERT_EQ(pthread_create(&setterThread, NULL, EncodeRaceSetterThread, NULL), 0);
+    pthread_join(encodeThread, NULL);
+    pthread_join(setterThread, NULL);
+
+    ASSERT_EQ(g_encRaceErrCnt, 0);
+    ASSERT_EQ(SESS_GetTicket(g_encRaceSess, &ticket, &ticketLen), HITLS_SUCCESS);
+    ASSERT_TRUE(ticketLen == ENCODE_RACE_TICKET_A_LEN || ticketLen == ENCODE_RACE_TICKET_B_LEN);
+
+EXIT:
+    HITLS_SESS_Free(g_encRaceSess);
+    g_encRaceSess = NULL;
 }
 /* END_CASE */
 

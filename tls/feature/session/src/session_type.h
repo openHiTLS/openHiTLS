@@ -28,6 +28,11 @@
 extern "C" {
 #endif
 
+/* RFC 8446 section 4.6.1 bounds a session ticket to opaque<1..2^16-1>.
+ * Ticket input (SESS_SetTicket), encoding (EncSessObjTicket) and decoding
+ * (DecSessObjTicket) share this limit. */
+#define MAX_SESSION_TICKET_LEN 0xffff
+
 struct TlsSessionManager {
     void *lock;                                            /* Thread lock */
     int32_t references;                                    /* Reference times */

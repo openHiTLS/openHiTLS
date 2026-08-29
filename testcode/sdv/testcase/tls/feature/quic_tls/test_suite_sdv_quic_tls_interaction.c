@@ -27,6 +27,17 @@ static const uint16_t g_quicTestP256P384[] = {
 };
 
 #define QUIC_TEST_HELLO_SESSION_ID_LEN_OFFSET (HS_MSG_HEADER_SIZE + sizeof(uint16_t) + HS_RANDOM_SIZE)
+#define QUIC_TEST_TICKET_KEY_LEN 80u
+
+static HITLS_Session *g_quicTestSavedSession = NULL;
+
+static int32_t QuicTlsTestSaveSession(HITLS_Ctx *ctx, HITLS_Session *session)
+{
+    (void)ctx;
+    HITLS_SESS_Free(g_quicTestSavedSession);
+    g_quicTestSavedSession = session;
+    return 1;
+}
 
 static bool QuicTlsTestInjectLegacySessionId(QuicTlsTestBuffer *clientHello)
 {
@@ -1489,5 +1500,87 @@ void SDV_TLS_QUIC_INTERACTION_SET_PARAMS_MID_NST_FUNC_TC001(void)
 
 EXIT:
     QuicTlsTestPairFree(&pair);
+}
+/* END_CASE */
+
+/**
+ * @test SDV_TLS_QUIC_INTERACTION_SESSION_RESUME_FUNC_TC001
+ * @title Resume a QUIC-TLS connection from a serialized session ticket
+ * @precon Client and server use TLS 1.3 with matching ALPN and transport parameters.
+ * @brief
+ * 1. Complete the first handshake and capture the client session from NewSessionTicket. Expected result 1.
+ * 2. Encode the captured session and decode it into a new session object. Expected result 2.
+ * 3. Create a new pair, restore the server ticket key, and set the decoded client session. Expected result 3.
+ * 4. Complete the second handshake and query session reuse on both endpoints. Expected result 4.
+ * @expect
+ * 1. The first handshake and post-handshake processing succeed, and the captured session is resumable.
+ * 2. Session encoding and decoding succeed, the encoded lengths match, and the decoded session is resumable.
+ * 3. Restoring the server ticket key and setting the decoded client session succeed.
+ * 4. The second handshake succeeds without a failed endpoint, and both endpoints report session reuse.
+ */
+/* BEGIN_CASE */
+void SDV_TLS_QUIC_INTERACTION_SESSION_RESUME_FUNC_TC001(void)
+{
+    QuicTlsTestPair first = {0};
+    QuicTlsTestPair resumed = {0};
+    HITLS_Session *decodedSession = NULL;
+    uint8_t ticketKey[QUIC_TEST_TICKET_KEY_LEN] = {0};
+    uint8_t *encodedSession = NULL;
+    uint32_t ticketKeyLen = 0u;
+    uint32_t encodedLen = 0u;
+    uint32_t usedLen = 0u;
+    uint32_t failedSide = QUIC_TEST_SIDE_NONE;
+    bool isReused = false;
+
+    FRAME_Init();
+    HITLS_SESS_Free(g_quicTestSavedSession);
+    g_quicTestSavedSession = NULL;
+    ASSERT_EQ(QuicTlsTestPairNew(&first, g_quicTestP256, 1u, g_quicTestP256, 1u, true, true),
+        HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_CFG_SetNewSessionCb(first.clientConfig, QuicTlsTestSaveSession), HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_SetTicketNums(first.serverLink->ssl, 1u), HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_CFG_GetSessionTicketKey(first.serverConfig,
+        ticketKey, sizeof(ticketKey), &ticketKeyLen), HITLS_SUCCESS);
+    ASSERT_EQ(ticketKeyLen, sizeof(ticketKey));
+    ASSERT_EQ(QuicTlsTestRunHandshake(&first, SIZE_MAX, &failedSide), HITLS_SUCCESS);
+    while (first.serverEndpoint.output[HITLS_QUIC_TLS_ENCRYPTION_LEVEL_APPLICATION].len != 0u) {
+        ASSERT_EQ(QuicTlsTestTransferCurrentLevel(&first.serverEndpoint,
+            first.clientLink->ssl, SIZE_MAX), HITLS_SUCCESS);
+    }
+    ASSERT_EQ(HITLS_QUIC_TLS_ProcessPostHandshake(first.clientLink->ssl), HITLS_SUCCESS);
+    ASSERT_TRUE(g_quicTestSavedSession != NULL);
+    ASSERT_TRUE(HITLS_SESS_IsResumable(g_quicTestSavedSession));
+
+    ASSERT_EQ(HITLS_SESS_Encode(g_quicTestSavedSession, NULL, 0u, &encodedLen), HITLS_SUCCESS);
+    ASSERT_TRUE(encodedLen != 0u);
+    encodedSession = (uint8_t *)malloc(encodedLen);
+    ASSERT_TRUE(encodedSession != NULL);
+    ASSERT_EQ(HITLS_SESS_Encode(g_quicTestSavedSession,
+        encodedSession, encodedLen, &usedLen), HITLS_SUCCESS);
+    ASSERT_EQ(usedLen, encodedLen);
+    ASSERT_EQ(HITLS_SESS_Decode(&decodedSession, encodedSession, usedLen), HITLS_SUCCESS);
+    ASSERT_TRUE(decodedSession != NULL);
+    ASSERT_TRUE(HITLS_SESS_IsResumable(decodedSession));
+
+    QuicTlsTestPairFree(&first);
+    ASSERT_EQ(QuicTlsTestPairNew(&resumed, g_quicTestP256, 1u, g_quicTestP256, 1u, true, true),
+        HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_CFG_SetSessionTicketKey(resumed.serverConfig, ticketKey, ticketKeyLen), HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_SetSession(resumed.clientLink->ssl, decodedSession), HITLS_SUCCESS);
+    ASSERT_EQ(QuicTlsTestRunHandshake(&resumed, SIZE_MAX, &failedSide), HITLS_SUCCESS);
+    ASSERT_EQ(failedSide, QUIC_TEST_SIDE_NONE);
+    ASSERT_EQ(HITLS_IsSessionReused(resumed.clientLink->ssl, &isReused), HITLS_SUCCESS);
+    ASSERT_TRUE(isReused);
+    isReused = false;
+    ASSERT_EQ(HITLS_IsSessionReused(resumed.serverLink->ssl, &isReused), HITLS_SUCCESS);
+    ASSERT_TRUE(isReused);
+
+EXIT:
+    free(encodedSession);
+    HITLS_SESS_Free(decodedSession);
+    HITLS_SESS_Free(g_quicTestSavedSession);
+    g_quicTestSavedSession = NULL;
+    QuicTlsTestPairFree(&first);
+    QuicTlsTestPairFree(&resumed);
 }
 /* END_CASE */
