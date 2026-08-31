@@ -28,6 +28,8 @@
 #include "crypt_local_types.h"
 #include "crypt_modes.h"
 
+#define CFB_MAX_FEEDBACK_BITS 128U
+
 /* 8-bit | 64-bit | 128-bit CFB encryption. Here, len indicates the number of bytes to be processed. */
 static int32_t MODES_CFB_BytesEncrypt(MODES_CipherCFBCtx *ctx, const uint8_t *in, uint8_t *out, uint32_t len)
 {
@@ -405,6 +407,12 @@ static int32_t GetFeedbackSize(MODES_CipherCFBCtx *ctx, uint32_t *val, uint32_t 
     return CRYPT_SUCCESS;
 }
 
+static uint8_t GetDefaultFeedbackBits(uint8_t blockSize)
+{
+    uint8_t blockBits = blockSize * BITS_PER_BYTE;
+    return blockBits <= CFB_MAX_FEEDBACK_BITS ? blockBits : CFB_MAX_FEEDBACK_BITS;
+}
+
 int32_t MODES_CFB_Ctrl(MODES_CFB_Ctx *modeCtx, int32_t opt, void *val, uint32_t len)
 {
     if (modeCtx == NULL) {
@@ -459,12 +467,7 @@ MODES_CFB_Ctx *MODES_CFB_NewCtx(int32_t algId)
         return NULL;
     }
     ctx->cfbCtx.cacheIndex = 0;
-    uint8_t blockBits = method->blockSize * 8;
-    if (blockBits <= 128) {
-        ctx->cfbCtx.feedbackBits = blockBits;
-    } else {
-        ctx->cfbCtx.feedbackBits = 128;
-    }
+    ctx->cfbCtx.feedbackBits = GetDefaultFeedbackBits(method->blockSize);
     ctx->cfbCtx.modeCtx.blockSize = method->blockSize;
     ctx->cfbCtx.modeCtx.ciphMeth = method;
     ctx->cfbCtx.modeCtx.offset = 0;
@@ -508,6 +511,7 @@ int32_t MODES_CFB_DeInitCtx(MODES_CFB_Ctx *modeCtx)
     }
     MODES_Clean(&modeCtx->cfbCtx.modeCtx);
     BSL_SAL_CleanseData((void *)(modeCtx->cfbCtx.cipherCache[0]), DES_BLOCK_BYTE_NUM * 3); // 3 ciphertext caches
+    modeCtx->cfbCtx.feedbackBits = GetDefaultFeedbackBits(modeCtx->cfbCtx.modeCtx.blockSize);
     return CRYPT_SUCCESS;
 }
 
