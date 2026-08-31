@@ -24,6 +24,7 @@
 #include "crypto_test_util.h"
 
 #define BLOCKSIZE 16
+#define CFB_DEFAULT_FEEDBACK_BITS (BLOCKSIZE * 8)
 #define KEYSIZE 32
 #define MAXSIZE 1024
 #define MAX_OUTPUT 5000
@@ -930,6 +931,60 @@ void SDV_CRYPTO_SM4_REINIT_API_TC002(int algId, Hex *key, Hex *iv)
     ASSERT_TRUE(ret != CRYPT_SUCCESS);
 
 EXIT:
+    CRYPT_EAL_CipherFreeCtx(ctx);
+}
+/* END_CASE */
+
+/**
+ * @test  SDV_CRYPTO_SM4_CFB_FEEDBACKSIZE_FUNC_TC001
+ * @title  SM4-CFB feedback size lifecycle test
+ * @precon Registering memory-related functions.
+ * @brief
+ *    1.Set a custom feedback size and call Reinit. Expected result 1 is obtained.
+ *    2.Call Init again on the same context. Expected result 2 is obtained.
+ *    3.Set a custom feedback size, then call Deinit and Init. Expected result 3 is obtained.
+ * @expect
+ *    1.Reinit succeeds and preserves the custom feedback size.
+ *    2.Init succeeds and restores the default feedback size.
+ *    3.Deinit followed by Init succeeds and restores the default feedback size.
+ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_SM4_CFB_FEEDBACKSIZE_FUNC_TC001(int isProvider, int algId, Hex *key, Hex *iv)
+{
+    if (IsSm4AlgDisabled(algId)) {
+        SKIP_TEST();
+    }
+    TestMemInit();
+    uint32_t feedbackBits = 8;
+    uint32_t actualFeedbackBits = 0;
+
+    CRYPT_EAL_CipherCtx *ctx = TestCipherNewCtx(NULL, algId, "provider=default", isProvider);
+    ASSERT_TRUE(ctx != NULL);
+    ASSERT_EQ(CRYPT_EAL_CipherInit(ctx, key->x, key->len, iv->x, iv->len, true), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_CipherCtrl(ctx, CRYPT_CTRL_SET_FEEDBACKSIZE, &feedbackBits, sizeof(feedbackBits)),
+        CRYPT_SUCCESS);
+
+    ASSERT_EQ(CRYPT_EAL_CipherReinit(ctx, iv->x, iv->len), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_CipherCtrl(ctx, CRYPT_CTRL_GET_FEEDBACKSIZE, &actualFeedbackBits,
+        sizeof(actualFeedbackBits)), CRYPT_SUCCESS);
+    ASSERT_EQ(actualFeedbackBits, feedbackBits);
+
+    ASSERT_EQ(CRYPT_EAL_CipherInit(ctx, key->x, key->len, iv->x, iv->len, true), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_CipherCtrl(ctx, CRYPT_CTRL_GET_FEEDBACKSIZE, &actualFeedbackBits,
+        sizeof(actualFeedbackBits)), CRYPT_SUCCESS);
+    ASSERT_EQ(actualFeedbackBits, CFB_DEFAULT_FEEDBACK_BITS);
+
+    ASSERT_EQ(CRYPT_EAL_CipherCtrl(ctx, CRYPT_CTRL_SET_FEEDBACKSIZE, &feedbackBits, sizeof(feedbackBits)),
+        CRYPT_SUCCESS);
+    CRYPT_EAL_CipherDeinit(ctx);
+    ASSERT_EQ(CRYPT_EAL_CipherInit(ctx, key->x, key->len, iv->x, iv->len, true), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_CipherCtrl(ctx, CRYPT_CTRL_GET_FEEDBACKSIZE, &actualFeedbackBits,
+        sizeof(actualFeedbackBits)), CRYPT_SUCCESS);
+    ASSERT_EQ(actualFeedbackBits, CFB_DEFAULT_FEEDBACK_BITS);
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
+EXIT:
+    CRYPT_EAL_CipherDeinit(ctx);
     CRYPT_EAL_CipherFreeCtx(ctx);
 }
 /* END_CASE */
