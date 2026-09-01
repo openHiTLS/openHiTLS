@@ -156,6 +156,7 @@ void CRYPT_EAL_CipherDeinit(CRYPT_EAL_CipherCtx *ctx)
     int32_t ret = ctx->method.deinitCtx(ctx->ctx);
     if (ret != CRYPT_SUCCESS) {
         EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_CIPHER, ctx->id, ret);
+        return;
     }
 
     // Restore the state to the state after the new is successful.

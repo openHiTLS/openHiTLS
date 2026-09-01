@@ -243,6 +243,14 @@ static bool EalAsmIsValidScanLen(int algId, uint32_t dataLen)
     return true;
 }
 
+static int32_t g_testDeinitRet = CRYPT_SUCCESS;
+
+static int32_t TestStubDeinitCtx(void *ctx)
+{
+    (void)ctx;
+    return g_testDeinitRet;
+}
+
 static int32_t EalAsmPrepareCipher(CRYPT_EAL_CipherCtx *ctx, int algId, uint32_t msgLen)
 {
     uint32_t tagLen = EAL_ASM_AEAD_TAG_LEN;
@@ -1293,5 +1301,31 @@ void SDV_CRYPTO_EAL_GET_KEY_LEN_TC003_3(int algid, int rsaBits, Hex *p, Hex *q, 
     ASSERT_TRUE(TestIsErrStackEmpty());
 EXIT:
     CRYPT_EAL_PkeyFreeCtx(ctx);
+}
+/* END_CASE */
+
+/**
+ * @test   SDV_CRYPTO_EAL_CIPHER_DEINIT_FAIL_TC001
+ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_EAL_CIPHER_DEINIT_FAIL_TC001(void)
+{
+    CRYPT_EAL_CipherCtx *ctx = NULL;
+
+    TestMemInit();
+
+    ctx = CRYPT_EAL_CipherNewCtx(CRYPT_CIPHER_AES128_CBC);
+    ASSERT_TRUE(ctx != NULL);
+
+    ctx->method.deinitCtx = TestStubDeinitCtx;
+    ctx->states = EAL_CIPHER_STATE_INIT;
+
+    g_testDeinitRet = CRYPT_NULL_INPUT;
+    CRYPT_EAL_CipherDeinit(ctx);
+
+    ASSERT_EQ(ctx->states, EAL_CIPHER_STATE_INIT);
+EXIT:
+    g_testDeinitRet = CRYPT_SUCCESS;
+    CRYPT_EAL_CipherFreeCtx(ctx);
 }
 /* END_CASE */
