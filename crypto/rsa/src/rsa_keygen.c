@@ -212,6 +212,7 @@ ERR:
 }
 
 #ifdef HITLS_CRYPTO_ACVP_TESTS
+// The data provided by the trusted server is legitimate and acceptable.
 static int32_t ProcessRsaPrimeSeeds(const BSL_Param *para, CRYPT_RSA_Para *retPara, uint32_t bits)
 {
     const BSL_Param *sp = BSL_PARAM_FindConstParam(para, CRYPT_PARAM_RSA_XP);

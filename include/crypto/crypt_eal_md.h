@@ -54,6 +54,7 @@ CRYPT_EAL_MdCtx *CRYPT_EAL_MdNewCtx(CRYPT_MD_AlgId id);
  * @param libCtx [IN] Library context, if NULL, use the default provider
  * @param algId [IN] md algorithm ID.
  * @param attrName [IN] Specify expected attribute values
+ * @warning The selected provider must remain loaded until the returned ctx is freed.
  *
  * @retval  CRYPT_EAL_PkeyCtx pointer.
  *          NULL, if the operation fails.

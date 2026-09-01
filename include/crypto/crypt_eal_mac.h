@@ -63,6 +63,7 @@ CRYPT_EAL_MacCtx *CRYPT_EAL_MacNewCtx(CRYPT_MAC_AlgId id);
  * @param libCtx [IN] Library context
  * @param algId [IN] mac algorithm ID.
  * @param attrName [IN] Specify expected attribute values
+ * @warning The selected provider must remain loaded until the returned ctx is freed.
  *
  * @retval  CRYPT_EAL_MacCtx pointer.
  *          NULL, if the operation fails.

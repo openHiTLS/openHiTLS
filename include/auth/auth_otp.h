@@ -114,6 +114,7 @@ HITLS_AUTH_OtpCtx *HITLS_AUTH_OtpNewCtx(int32_t protocolType);
  * @param   libCtx [IN] Library context
  * @param   protocolType [IN] Type of protocol to use, defined in HITLS_AUTH_OtpType.
  * @param   attrName [IN] Specify expected attribute values
+ * @warning The selected provider must remain loaded until the returned ctx is freed.
  *
  * @retval  HITLS_AUTH_OtpCtx pointer.
  *          NULL, if the operation fails.

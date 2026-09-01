@@ -243,6 +243,7 @@ int32_t CRYPT_EAL_ProviderLoad(CRYPT_EAL_LibCtx *libCtx, BSL_SAL_LibFmtCmd cmd,
     if (IsEalPreDefinedProvider(providerFullName)) {
         initFunc = CRYPT_EAL_DefaultProvInit;
     } else {
+// Currently, the provider actually enforces and checks the activation of the DL feature macro during the compilation process.
 #ifdef HITLS_BSL_SAL_DL
         ret = FindProviderInitFunc(localCtx, providerFullName, (void **)&initFunc, &handle);
         if (ret != CRYPT_SUCCESS) {
