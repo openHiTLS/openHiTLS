@@ -40,6 +40,7 @@ typedef struct CRYPT_DecoderCtx CRYPT_DECODER_Ctx;
  * @param   libCtx  [IN] provider library context
  * @param   pkeyAlgId [IN] Input pkey algorithm ID, see CRYPT_PKEY_AlgId
  * @param   attrName [IN] Attribute name for specific type decoding (can be NULL)
+ * @warning The selected provider must remain loaded until the returned ctx is freed.
  * @return CRYPT_DECODER_Ctx* Decoder context, returns NULL on failure
  */
 CRYPT_DECODER_Ctx *CRYPT_DECODE_ProviderNewCtx(CRYPT_EAL_LibCtx *libCtx, int32_t pkeyAlgId, const char *attrName);

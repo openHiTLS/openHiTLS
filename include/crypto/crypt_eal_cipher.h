@@ -63,6 +63,7 @@ CRYPT_EAL_CipherCtx *CRYPT_EAL_CipherNewCtx(CRYPT_CIPHER_AlgId id);
  * @param libCtx [IN] Library context
  * @param algId [IN] Symmetric encryption/decryption algorithm ID.
  * @param attrName [IN] Specify expected attribute values
+ * @warning The selected provider must remain loaded until the returned ctx is freed.
  * @retval Success: cipher ctx.
  *         Fails: NULL.
  */

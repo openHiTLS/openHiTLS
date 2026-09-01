@@ -151,6 +151,7 @@ CRYPT_EAL_PkeyCtx *CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_AlgId id);
  * @param algId [IN] Asymmetric algorithm ID.
  * @param pkeyOperType [IN] Specify operation type.
  * @param attrName [IN] Specify expected attribute values
+ * @warning The selected provider must remain loaded until the returned ctx is freed.
  *
  * @retval  CRYPT_EAL_PkeyCtx pointer.
  *          NULL, if the operation fails.

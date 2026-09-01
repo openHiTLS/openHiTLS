@@ -117,6 +117,7 @@ int32_t CRYPT_EAL_RandInit(CRYPT_RAND_AlgId id, CRYPT_RandSeedMethod *seedMeth, 
  * @param pers [IN] Personal data, which can be NULL.
  * @param persLen [IN] Personal data length. the range is [0,0x7FFFFFF0].
  * @param param [IN] Transparent transmission of underlying parameters
+ * @warning The selected provider must remain loaded until the provider RAND context is deinitialized.
  *
  * @retval #CRYPT_SUCCESS, if successful.
  *         For other error codes, see the crypt_errno.h file.
@@ -280,6 +281,7 @@ CRYPT_EAL_RndCtx *CRYPT_EAL_DrbgNew(CRYPT_RAND_AlgId id, CRYPT_RandSeedMethod *s
  * @param algId [IN] rand algorithm ID.
  * @param attrName [IN] Specify expected attribute values
  * @param param [IN] Transparent transmission of underlying parameters
+ * @warning The selected provider must remain loaded until the returned ctx is deinitialized.
  *
  * @retval Success: DRBG ctx.
  *         Fails: NULL.

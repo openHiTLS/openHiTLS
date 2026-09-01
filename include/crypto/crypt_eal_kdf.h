@@ -54,6 +54,7 @@ bool CRYPT_EAL_KdfIsValidAlgId(CRYPT_KDF_AlgId id);
  * @param libCtx [IN] Library context
  * @param attrName [IN] Specify expected attribute values
  * @param algId [IN] kdf algorithm ID.
+ * @warning The selected provider must remain loaded until the returned ctx is freed.
  * @retval Success: kdf ctx.
  *         Fails: NULL.
  */

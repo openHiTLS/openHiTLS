@@ -64,6 +64,7 @@ void CRYPT_EAL_LibCtxFree(CRYPT_EAL_LibCtx *libCtx);
  *                 - BSL_SAL_LIB_FMT_DLL: Convert to .dll format
  *                 The specific conversion is handled by the BSL_SAL_LibNameFormat function.
  * @param mgrCtx [OUT] Provider context
+ * @warning The provider init callback must not re-enter provider manager APIs with the same libCtx.
  *
  * @retval #CRYPT_SUCCESS, if success.
  *         Other error codes see the crypt_errno.h
@@ -80,6 +81,7 @@ int32_t CRYPT_EAL_ProviderLoad(CRYPT_EAL_LibCtx *libCtx, BSL_SAL_LibFmtCmd cmd,
  * @param init [IN] Provider initialization function
  * @param param [IN] parameter is transparently passed to the initialization function of the underlying provider
  * @param mgrCtx [OUT] Provider context
+ * @warning The provider init callback must not re-enter provider manager APIs with the same libCtx.
  *
  * @retval #CRYPT_SUCCESS, if success.
  *         Other error codes see the crypt_errno.h
