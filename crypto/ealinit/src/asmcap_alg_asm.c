@@ -154,6 +154,11 @@ int32_t CRYPT_SHA2_AsmCheck(void)
         BSL_ERR_PUSH_ERROR(CRYPT_EAL_ALG_ASM_NOT_SUPPORT);
         return CRYPT_EAL_ALG_ASM_NOT_SUPPORT;
     }
+#elif defined(HITLS_CRYPTO_SHA2_RISCV64)
+    if (!IsSupportZBB()) {
+        BSL_ERR_PUSH_ERROR(CRYPT_EAL_ALG_ASM_NOT_SUPPORT);
+        return CRYPT_EAL_ALG_ASM_NOT_SUPPORT;
+    }
 #endif
     return CRYPT_SUCCESS;
 }

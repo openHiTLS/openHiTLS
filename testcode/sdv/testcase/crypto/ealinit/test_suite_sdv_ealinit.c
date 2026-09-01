@@ -31,6 +31,7 @@
 #include "asmcap_local.h"
 #include "bsl_params.h"
 #include "crypt_params_key.h"
+#include "crypt_riscv.h"
 /* END_HEADER */
 
 /* ============================================================================
@@ -336,5 +337,33 @@ EXIT:
     STUB_RESTORE(IsSupportAVX);
     STUB_RESTORE(IsSupportAES);
     ResetStatus();
+}
+/* END_CASE */
+
+/**
+ * @test SDV_CRYPTO_RISCV_SHA2_ASM_CHECK_FUNC_TC001
+ * @title RISC-V SHA2 assembly capability error detection test.
+ * @precon nan
+ * @brief Set the Zbb capability absent and present, expected result 1.
+ * @expect 1.The assembly check rejects absent Zbb and accepts present Zbb.
+ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_RISCV_SHA2_ASM_CHECK_FUNC_TC001(void)
+{
+#if defined(__riscv) && defined(HITLS_CRYPTO_SHA2_RISCV64) && defined(HITLS_CRYPTO_ASM_CHECK)
+    uint64_t savedCpuInfo = g_cryptRiscvCpuInfo;
+
+    g_cryptRiscvCpuInfo = 0;
+    ASSERT_EQ(CRYPT_SHA2_AsmCheck(), CRYPT_EAL_ALG_ASM_NOT_SUPPORT);
+    BSL_ERR_ClearError();
+    g_cryptRiscvCpuInfo = CRYPT_RISCV_ZBB;
+    ASSERT_EQ(CRYPT_SHA2_AsmCheck(), CRYPT_SUCCESS);
+
+EXIT:
+    g_cryptRiscvCpuInfo = savedCpuInfo;
+    BSL_ERR_ClearError();
+#else
+    SKIP_TEST();
+#endif
 }
 /* END_CASE */

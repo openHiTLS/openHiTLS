@@ -288,7 +288,75 @@ bool IsSupportSHA512(void)
 }
 #endif // __aarch64__
 
-#endif // x86_64 || __arm__ || __arm || __aarch64__
+#elif defined(__riscv) && (__riscv_xlen == 64)
+
+#include "crypt_riscv.h"
+#include <unistd.h>
+
+#if defined(__has_include)
+#if __has_include(<asm/hwprobe.h>)
+#define HITLS_RISCV_HWPROBE_HEADER
+#include <asm/hwprobe.h>
+#endif
+#endif
+
+#ifndef HITLS_RISCV_HWPROBE_HEADER
+#define RISCV_HWPROBE_KEY_IMA_EXT_0 4
+struct riscv_hwprobe {
+    int64_t key;
+    uint64_t value;
+};
+#endif
+
+uint64_t g_cryptRiscvCpuInfo = 0;
+
+bool IsSupportZBB(void)
+{
+    return g_cryptRiscvCpuInfo & CRYPT_RISCV_ZBB;
+}
+
+bool IsSupportAESD(void)
+{
+    return g_cryptRiscvCpuInfo & CRYPT_RISCV_ZKND;
+}
+
+bool IsSupportAESE(void)
+{
+    return g_cryptRiscvCpuInfo & CRYPT_RISCV_ZKNE;
+}
+
+bool IsSupportSHA2(void)
+{
+    return g_cryptRiscvCpuInfo & CRYPT_RISCV_ZKNH;
+}
+
+bool IsSupportSM4(void)
+{
+    return g_cryptRiscvCpuInfo & CRYPT_RISCV_ZKSED;
+}
+
+bool IsSupportSM3(void)
+{
+    return g_cryptRiscvCpuInfo & CRYPT_RISCV_ZKSH;
+}
+
+bool IsSupportV(void)
+{
+    return g_cryptRiscvCpuInfo & CRYPT_RISCV_V;
+}
+
+static void GetRiscvCap(void)
+{
+    struct riscv_hwprobe pairs[] = {
+        {RISCV_HWPROBE_KEY_IMA_EXT_0, 0},
+    };
+
+    if (syscall(__NR_riscv_hwprobe, pairs, 1, 0, NULL, 0) == 0) {
+        g_cryptRiscvCpuInfo = pairs[0].value;
+    }
+}
+
+#endif // x86_64 || __arm__ || __arm || __aarch64__ || __riscv
 
 void GetCpuInstrSupportState(void)
 {
@@ -323,5 +391,7 @@ void GetCpuInstrSupportState(void)
         g_cryptArmCpuInfo = (uint32_t)getauxval(CRYPT_CE) | CRYPT_ARM_NEON;
     }
 #endif // HITLS_CRYPTO_AUXVAL
-#endif // defined(__arm__) || defined (__arm) || defined(__aarch64__)
+#elif defined(__riscv) && (__riscv_xlen == 64)
+    GetRiscvCap();
+#endif // defined(__arm__) || defined (__arm) || defined(__aarch64__) || defined(__riscv)
 }

@@ -15,12 +15,14 @@
 
 /* BEGIN_HEADER */
 #include <pthread.h>
+#include <string.h>
 #include "eal_md_local.h"
 #include "crypt_eal_md.h"
 #include "crypt_errno.h"
 #include "bsl_sal.h"
 #include "crypt_sha2.h"
 #include "crypto_test_util.h"
+#include "sha2_core.h"
 /* END_HEADER */
 
 // 100 is greater than the digest length of all SHA algorithms.
@@ -1145,6 +1147,106 @@ EXIT:
     CRYPT_EAL_MdMBFreeCtx(mbCtx);
     CRYPT_EAL_MdFreeCtx(seqCtx1);
     CRYPT_EAL_MdFreeCtx(seqCtx2);
+#endif
+}
+/* END_CASE */
+
+/**
+ * @test   SDV_CRYPTO_SHA2_RISCV64_COMPRESS_FUNC_TC001
+ * @title  RISC-V SHA2 compression zero-block test.
+ * @precon nan
+ * @brief  Call SHA-256 and SHA-512 compression with zero blocks, expected result 1.
+ * @expect 1.The hash states remain unchanged.
+ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_SHA2_RISCV64_COMPRESS_FUNC_TC001(void)
+{
+#if !defined(__riscv) || !defined(HITLS_CRYPTO_SHA256_RISCV64) || !defined(HITLS_CRYPTO_SHA512_RISCV64)
+    SKIP_TEST();
+#else
+    const uint32_t initial256[8] = {
+        0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a,
+        0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19
+    };
+    const uint64_t initial512[8] = {
+        0x6a09e667f3bcc908ULL, 0xbb67ae8584caa73bULL,
+        0x3c6ef372fe94f82bULL, 0xa54ff53a5f1d36f1ULL,
+        0x510e527fade682d1ULL, 0x9b05688c2b3e6c1fULL,
+        0x1f83d9abfb41bd6bULL, 0x5be0cd19137e2179ULL
+    };
+    uint32_t state256[8];
+    uint64_t state512[8];
+
+    (void)memcpy(state256, initial256, sizeof(state256));
+    (void)memcpy(state512, initial512, sizeof(state512));
+    SHA256CompressMultiBlocks(state256, NULL, 0);
+    SHA512CompressMultiBlocks(state512, NULL, 0);
+    ASSERT_COMPARE("SHA256 zero blocks", state256, sizeof(state256), initial256, sizeof(initial256));
+    ASSERT_COMPARE("SHA512 zero blocks", state512, sizeof(state512), initial512, sizeof(initial512));
+EXIT:
+    return;
+#endif
+}
+/* END_CASE */
+
+/**
+ * @test   SDV_CRYPTO_SHA2_RISCV64_COMPRESS_FUNC_TC002
+ * @title  RISC-V SHA2 compression unaligned multi-block test.
+ * @precon nan
+ * @brief  Compress two unaligned SHA-256 and SHA-512 blocks, expected result 1.
+ * @expect 1.The resulting digests match the vectors.
+ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_SHA2_RISCV64_COMPRESS_FUNC_TC002(Hex *sha256Digest, Hex *sha512Digest)
+{
+#if !defined(__riscv) || !defined(HITLS_CRYPTO_SHA256_RISCV64) || !defined(HITLS_CRYPTO_SHA512_RISCV64)
+    SKIP_TEST();
+    (void)sha256Digest;
+    (void)sha512Digest;
+#else
+    uint32_t state256[8] = {
+        0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a,
+        0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19
+    };
+    uint64_t state512[8] = {
+        0x6a09e667f3bcc908ULL, 0xbb67ae8584caa73bULL,
+        0x3c6ef372fe94f82bULL, 0xa54ff53a5f1d36f1ULL,
+        0x510e527fade682d1ULL, 0x9b05688c2b3e6c1fULL,
+        0x1f83d9abfb41bd6bULL, 0x5be0cd19137e2179ULL
+    };
+    uint64_t blocks256Storage[17] = {0};
+    uint64_t blocks512Storage[33] = {0};
+    uint8_t *blocks256 = (uint8_t *)blocks256Storage + 1;
+    uint8_t *blocks512 = (uint8_t *)blocks512Storage + 1;
+    uint8_t output256[32];
+    uint8_t output512[64];
+
+    for (uint32_t i = 0; i < 64; i++) {
+        blocks256[i] = (uint8_t)i;
+    }
+    blocks256[64] = 0x80;
+    blocks256[126] = 0x02;
+    for (uint32_t i = 0; i < 128; i++) {
+        blocks512[i] = (uint8_t)i;
+    }
+    blocks512[128] = 0x80;
+    blocks512[254] = 0x04;
+
+    SHA256CompressMultiBlocks(state256, blocks256, 2);
+    SHA512CompressMultiBlocks(state512, blocks512, 2);
+    for (uint32_t i = 0; i < 8; i++) {
+        output256[i * 4] = (uint8_t)(state256[i] >> 24);
+        output256[i * 4 + 1] = (uint8_t)(state256[i] >> 16);
+        output256[i * 4 + 2] = (uint8_t)(state256[i] >> 8);
+        output256[i * 4 + 3] = (uint8_t)state256[i];
+        for (uint32_t j = 0; j < 8; j++) {
+            output512[i * 8 + j] = (uint8_t)(state512[i] >> (56 - j * 8));
+        }
+    }
+    ASSERT_COMPARE("SHA256 two blocks", output256, sizeof(output256), sha256Digest->x, sha256Digest->len);
+    ASSERT_COMPARE("SHA512 two blocks", output512, sizeof(output512), sha512Digest->x, sha512Digest->len);
+EXIT:
+    return;
 #endif
 }
 /* END_CASE */

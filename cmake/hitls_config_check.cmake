@@ -78,12 +78,13 @@ endmacro()
 
 # Check that ASM-specific crypto features have their corresponding ASM architecture enabled.
 # This macro automatically detects and validates all HITLS_CRYPTO_*_X8664, HITLS_CRYPTO_*_ARMV8,
-# and HITLS_CRYPTO_*_ARMV7 options without needing to manually list each one.
+# HITLS_CRYPTO_*_ARMV7, and HITLS_CRYPTO_*_RISCV64 options without needing to manually list each one.
 # Examples:
 #   - Any HITLS_CRYPTO_*_ARMV8 requires HITLS_ASM_ARMV8
 #   - Any HITLS_CRYPTO_*_ARMV7 requires HITLS_ASM_ARMV7
 #   - Any HITLS_CRYPTO_*_X8664 requires HITLS_ASM_X8664
 #   - Any HITLS_CRYPTO_*_X8664_AVX512 requires HITLS_ASM_X8664_AVX512
+#   - Any HITLS_CRYPTO_*_RISCV64 requires HITLS_ASM_RISCV64
 macro(hitls_check_asm_feature_auto)
     get_cmake_property(_all_vars CACHE_VARIABLES)
     foreach(_var ${_all_vars})
@@ -123,6 +124,14 @@ macro(hitls_check_asm_feature_auto)
             if(NOT HITLS_ASM_ARMV7)
                 hitls_add_dependency_warning(
                     "[HiTLS] The ${_var} requires HITLS_ASM_ARMV7 to be enabled. (HITLS_ASM_ARMV7)"
+                )
+            endif()
+        endif()
+
+        if(_var MATCHES "^HITLS_CRYPTO_.*_RISCV64$")
+            if(NOT HITLS_ASM_RISCV64)
+                hitls_add_dependency_warning(
+                    "[HiTLS] The ${_var} requires HITLS_ASM_RISCV64 to be enabled. (HITLS_ASM_RISCV64)"
                 )
             endif()
         endif()

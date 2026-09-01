@@ -50,6 +50,7 @@
 #cmakedefine HITLS_ASM_ARMV7
 #cmakedefine HITLS_ASM_X8664
 #cmakedefine HITLS_ASM_X8664_AVX512
+#cmakedefine HITLS_ASM_RISCV64
 #cmakedefine HITLS_CRYPTO_ASM_CHECK
 
 /* ==============================================================================
@@ -402,10 +403,13 @@
 #cmakedefine HITLS_CRYPTO_SHA2_ASM
 #cmakedefine HITLS_CRYPTO_SHA2_ARMV8
 #cmakedefine HITLS_CRYPTO_SHA2_X8664
+#cmakedefine HITLS_CRYPTO_SHA2_RISCV64
 #cmakedefine HITLS_CRYPTO_SHA256_ARMV8
 #cmakedefine HITLS_CRYPTO_SHA256_X8664
+#cmakedefine HITLS_CRYPTO_SHA256_RISCV64
 #cmakedefine HITLS_CRYPTO_SHA512_ARMV8
 #cmakedefine HITLS_CRYPTO_SHA512_X8664
+#cmakedefine HITLS_CRYPTO_SHA512_RISCV64
 #cmakedefine HITLS_CRYPTO_SHA3_ASM
 #cmakedefine HITLS_CRYPTO_SHA3_ARMV8
 #cmakedefine HITLS_CRYPTO_SM3_ASM

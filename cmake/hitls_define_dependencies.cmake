@@ -519,6 +519,10 @@ hitls_define_dependency(HITLS_CRYPTO_SHA2_X8664
     DEPS     HITLS_CRYPTO_SHA2_ASM
     CHILDREN HITLS_CRYPTO_SHA256_X8664 HITLS_CRYPTO_SHA512_X8664
 )
+hitls_define_dependency(HITLS_CRYPTO_SHA2_RISCV64
+    DEPS     HITLS_CRYPTO_SHA2_ASM
+    CHILDREN HITLS_CRYPTO_SHA256_RISCV64 HITLS_CRYPTO_SHA512_RISCV64
+)
 
 hitls_define_dependency(HITLS_CRYPTO_SHA256_ARMV8
     DEPS HITLS_CRYPTO_SHA2_ARMV8
@@ -527,6 +531,14 @@ hitls_define_dependency(HITLS_CRYPTO_SHA256_ARMV8
 hitls_define_dependency(HITLS_CRYPTO_SHA512_ARMV8       DEPS HITLS_CRYPTO_SHA2_ARMV8)
 hitls_define_dependency(HITLS_CRYPTO_SHA256_X8664       DEPS HITLS_CRYPTO_SHA2_X8664)
 hitls_define_dependency(HITLS_CRYPTO_SHA512_X8664       DEPS HITLS_CRYPTO_SHA2_X8664)
+hitls_define_dependency(HITLS_CRYPTO_SHA256_RISCV64
+    DEPS HITLS_CRYPTO_SHA2_RISCV64
+    DEPS_CHECK HITLS_CRYPTO_EALINIT
+)
+hitls_define_dependency(HITLS_CRYPTO_SHA512_RISCV64
+    DEPS HITLS_CRYPTO_SHA2_RISCV64
+    DEPS_CHECK HITLS_CRYPTO_EALINIT
+)
 hitls_define_dependency(HITLS_CRYPTO_SHA3_ARMV8         DEPS HITLS_CRYPTO_SHA3_ASM)
 hitls_define_dependency(HITLS_CRYPTO_SM3_ARMV8          DEPS HITLS_CRYPTO_SM3_ASM)
 hitls_define_dependency(HITLS_CRYPTO_SM3_ARMV7          DEPS HITLS_CRYPTO_SM3_ASM)
@@ -1604,6 +1616,14 @@ macro(hitls_auto_enable_asm_features)
                 if(${_var})
                     list(APPEND _all_user_enable_asms ${_var})
                 elseif(HITLS_ASM_X8664_AVX512 AND ${_main_feature})
+                    list(APPEND _all_user_not_enable_asms ${_var})
+                endif()
+            endif()
+            if(_var MATCHES "^HITLS_CRYPTO_.*_RISCV64$")
+                String(REPLACE "_RISCV64" "" _main_feature ${_var})
+                if(${_var})
+                    list(APPEND _all_user_enable_asms ${_var})
+                elseif(HITLS_ASM_RISCV64 AND ${_main_feature})
                     list(APPEND _all_user_not_enable_asms ${_var})
                 endif()
             endif()

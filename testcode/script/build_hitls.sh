@@ -17,6 +17,7 @@ SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 HITLS_ROOT_DIR=$(cd "${SCRIPT_DIR}/../.." && pwd)
 
 hitls_compile_option=()
+cmake_toolchain_option=""
 
 paramList=$@
 paramNum=$#
@@ -68,6 +69,7 @@ usage()
     printf "%-50s %-30s\n" "Build openHiTLS Code With X86_64"            "sh build_hitls.sh x86_64"
     printf "%-50s %-30s\n" "Build openHiTLS Code With Armv8_be"          "sh build_hitls.sh armv8_be"
     printf "%-50s %-30s\n" "Build openHiTLS Code With Armv8_le"          "sh build_hitls.sh armv8_le"
+    printf "%-50s %-30s\n" "Build openHiTLS Code With RISC-V 64"         "sh build_hitls.sh riscv64"
     printf "%-50s %-30s\n" "Build openHiTLS Code With Add Options"     "sh build_hitls.sh add-options=xxx"
     printf "%-50s %-30s\n" "Build openHiTLS Code With No Provider"     "sh build_hitls.sh no-provider"
     printf "%-50s %-30s\n" "Build openHiTLS Code With No Sctp"         "sh build_hitls.sh no_sctp"
@@ -153,6 +155,10 @@ build_hitls_code()
             add_options="${add_options} -O3"
         fi
         del_options="${del_options} -O2"
+    elif [[ $get_arch = "riscv64" ]]; then
+        echo "Compile: env=riscv64, asm + c, little endian, 64bits"
+        feature_options="${feature_options} -DHITLS_ASM_RISCV64=ON -DHITLS_PLATFORM_ENDIAN=little"
+        cmake_toolchain_option="-DCMAKE_TOOLCHAIN_FILE=${HITLS_ROOT_DIR}/cmake/toolchain/riscv64-linux-gnu-gcc.cmake"
     else
         echo "Compile: env=$get_arch, c, little endian, 64bits"
         feature_options="${feature_options} -DHITLS_PLATFORM_ENDIAN=little"
@@ -181,13 +187,13 @@ build_hitls_code()
     # This combination ensures STUB mechanism can intercept same-compilation-unit calls
     # ONLY needed for test builds - Production builds use default two-level namespace
     if [[ "$(uname)" = "Darwin" ]]; then
-        cmake .. ${feature_options} \
+        cmake .. ${cmake_toolchain_option} ${feature_options} \
                 -DCMAKE_C_FLAGS="${add_options}" \
                 -D_HITLS_COMPILE_OPTIONS_DEL="${del_options}" \
                 -DCMAKE_SHARED_LINKER_FLAGS="${add_link_flags} -flat_namespace -undefined dynamic_lookup -Wl,-interposable" \
                 -DCMAKE_EXE_LINKER_FLAGS="${add_link_flags} -flat_namespace -undefined dynamic_lookup"
     else
-        cmake .. ${feature_options} \
+        cmake .. ${cmake_toolchain_option} ${feature_options} \
                 -DCMAKE_C_FLAGS="${add_options}" \
                 -D_HITLS_COMPILE_OPTIONS_DEL="${del_options}" \
                 -DCMAKE_SHARED_LINKER_FLAGS="${add_link_flags}" \
@@ -218,7 +224,7 @@ build_hitls_provider()
     feature_options="${feature_options//-DHITLS_TLS_FEATURE_SM_TLS13=ON/}"
 
     echo "Building provider with config: ${config_file}"
-    cmake .. -DCMAKE_SKIP_RPATH=TRUE -DCMAKE_INSTALL_PREFIX=../output/${subdir}/${get_arch} \
+    cmake .. ${cmake_toolchain_option} -DCMAKE_SKIP_RPATH=TRUE -DCMAKE_INSTALL_PREFIX=../output/${subdir}/${get_arch} \
             -C ${config_file} \
             -D_HITLS_COMPILE_OPTIONS_DEL="${del_options}" \
             -DCMAKE_C_FLAGS="${add_options}" \

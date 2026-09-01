@@ -571,7 +571,17 @@ bool IsSupportSM4(void);
 bool IsSupportSHA512(void);
 #endif // __aarch64__
 
-#endif // __arm__ || __arm || __aarch64__
+#elif defined(__riscv) && (__riscv_xlen == 64)
+
+bool IsSupportZBB(void);
+bool IsSupportAESD(void);
+bool IsSupportAESE(void);
+bool IsSupportSHA2(void);
+bool IsSupportSM4(void);
+bool IsSupportSM3(void);
+bool IsSupportV(void);
+
+#endif // __arm__ || __arm || __aarch64__ || __riscv
 
 #ifdef __cplusplus
 }

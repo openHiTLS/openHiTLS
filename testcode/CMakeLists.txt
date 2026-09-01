@@ -104,13 +104,28 @@ string(FIND "${CUSTOM_CFLAGS}" "-DHITLS_CRYPTO" BUILD_CRYPTO)
 string(FIND "${CUSTOM_CFLAGS}" "-DHITLS_TLS" BUILD_TLS)
 
 include(ExternalProject)
+if(CMAKE_CROSSCOMPILING)
+    set(GEN_TESTCASE_CONFIGURE_COMMAND
+        ${CMAKE_COMMAND} -E env
+        --unset=CMAKE_TOOLCHAIN_FILE
+        --unset=CC
+        --unset=CXX
+        --unset=CFLAGS
+        --unset=CXXFLAGS
+        ${CMAKE_COMMAND} -DPRINT_TO_TERMINAL=${ENABLE_PRINT} ..
+    )
+else()
+    set(GEN_TESTCASE_CONFIGURE_COMMAND
+        ${CMAKE_COMMAND} -DCMAKE_C_FLAGS=${CMAKE_C_FLAGS} -DPRINT_TO_TERMINAL=${ENABLE_PRINT} ..
+    )
+endif()
 ExternalProject_Add(gen_testcase
     SOURCE_DIR            ${openHiTLS_SRC}
     PREFIX                ""
     BINARY_DIR            ${openHiTLS_SRC}/testcode/framework/gen_test/build/
     INSTALL_DIR           ""
     UPDATE_COMMAND        ""
-    CONFIGURE_COMMAND     cmake -DCMAKE_C_FLAGS=${CMAKE_C_FLAGS} -DPRINT_TO_TERMINAL=${ENABLE_PRINT} ..
+    CONFIGURE_COMMAND     ${GEN_TESTCASE_CONFIGURE_COMMAND}
     BUILD_COMMAND         make
     INSTALL_COMMAND       ""
     BUILD_ALWAYS          FALSE
