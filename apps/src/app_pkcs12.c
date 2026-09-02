@@ -55,6 +55,13 @@ typedef enum {
     HITLS_APP_OPT_NAME,
     HITLS_APP_OPT_CA_FILE,
     HITLS_APP_OPT_CIPHER_ALG,
+    HITLS_APP_OPT_MAC_SALT_LEN,
+    HITLS_APP_OPT_ITER,
+    HITLS_APP_OPT_NOMACVER,
+    HITLS_APP_OPT_NOKEYS,
+    HITLS_APP_OPT_NOCERTS,
+    HITLS_APP_OPT_NODES,
+    HITLS_APP_OPT_NOOUT,
 } HITLSOptType;
 
 typedef struct {
@@ -66,6 +73,11 @@ typedef struct {
 
 typedef struct {
     bool clcerts;
+    bool nomacver;
+    bool nokeys;
+    bool nocerts;
+    bool nodes;
+    bool noout;
     const char *cipherAlgName;
 } ImportOptions;
 
@@ -78,6 +90,8 @@ typedef struct {
     char *macAlgArg;
     char *certPbeArg;
     char *keyPbeArg;
+    char *macSaltLenArg;
+    char *iterArg;
     bool chain;
     bool export;
 } OutputOptions;
@@ -93,6 +107,8 @@ typedef struct {
     int32_t macAlg;
     int32_t certPbe;
     int32_t keyPbe;
+    uint32_t macSaltLen;
+    uint32_t iter;
     HITLS_PKCS12 *p12;
     HITLS_X509_StoreCtx *store;
     HITLS_X509_StoreCtx *dupStore;
@@ -113,6 +129,12 @@ typedef struct {
 #define MIN_NAME_LEN 1U
 #define MAX_NAME_LEN 1024U
 
+#define MIN_MAC_SALT_LEN 1U
+#define MAX_MAC_SALT_LEN 1024U
+
+#define MIN_ITER_CNT 1000U
+#define MAX_ITER_CNT ((uint32_t)INT_MAX)
+
 static const HITLS_CmdOption g_pkcs12Opts[] = {
     {"help", HITLS_APP_OPT_HELP, HITLS_APP_OPT_VALUETYPE_NO_VALUE, "Display this function summary"},
     {"in", HITLS_APP_OPT_IN_FILE, HITLS_APP_OPT_VALUETYPE_IN_FILE, "Input file"},
@@ -129,6 +151,15 @@ static const HITLS_CmdOption g_pkcs12Opts[] = {
     {"caname",  HITLS_APP_OPT_CANAME, HITLS_APP_OPT_VALUETYPE_STRING, "Input friendly ca name"},
     {"name", HITLS_APP_OPT_NAME, HITLS_APP_OPT_VALUETYPE_STRING, "Use name as friendly name"},
     {"CAfile", HITLS_APP_OPT_CA_FILE, HITLS_APP_OPT_VALUETYPE_STRING, "PEM-format file of CA's"},
+    {"macsaltlen", HITLS_APP_OPT_MAC_SALT_LEN, HITLS_APP_OPT_VALUETYPE_STRING,
+     "Length of salt used in MAC (default 16)"},
+    {"iter", HITLS_APP_OPT_ITER, HITLS_APP_OPT_VALUETYPE_STRING,
+     "Iteration count for encryption and MAC (default 2048)"},
+    {"nomacver", HITLS_APP_OPT_NOMACVER, HITLS_APP_OPT_VALUETYPE_NO_VALUE, "Do not verify the MAC of the input file"},
+    {"nokeys", HITLS_APP_OPT_NOKEYS, HITLS_APP_OPT_VALUETYPE_NO_VALUE, "Do not output private keys"},
+    {"nocerts", HITLS_APP_OPT_NOCERTS, HITLS_APP_OPT_VALUETYPE_NO_VALUE, "Do not output certificates"},
+    {"nodes", HITLS_APP_OPT_NODES, HITLS_APP_OPT_VALUETYPE_NO_VALUE, "Print private key without encryption"},
+    {"noout", HITLS_APP_OPT_NOOUT, HITLS_APP_OPT_VALUETYPE_NO_VALUE, "Do not output any encoded data"},
     {"", HITLS_APP_OPT_CIPHER_ALG, HITLS_APP_OPT_VALUETYPE_NO_VALUE, "Any supported cipher"},
     {NULL, 0, 0, NULL}
 };
@@ -281,6 +312,69 @@ static int32_t ParseCipher(Pkcs12OptCtx *opt)
     return HITLS_APP_GetAndCheckCipherOpt(opt->importOpt.cipherAlgName, &opt->cipherAlgCid);
 }
 
+static int32_t ParseMacSaltLen(Pkcs12OptCtx *opt)
+{
+    char *valStr = HITLS_APP_OptGetValueStr();
+    opt->outPutOpt.macSaltLenArg = valStr;
+    int32_t val = 0;
+    if (HITLS_APP_OptGetInt(valStr, &val) != HITLS_APP_SUCCESS) {
+        return HITLS_APP_OPT_VALUE_INVALID;
+    }
+    if ((val < (int32_t)MIN_MAC_SALT_LEN) || (val > (int32_t)MAX_MAC_SALT_LEN)) {
+        AppPrintError("pkcs12: The macsaltlen should be in the range of %u to %u.\n", MIN_MAC_SALT_LEN,
+            MAX_MAC_SALT_LEN);
+        return HITLS_APP_OPT_VALUE_INVALID;
+    }
+    opt->macSaltLen = (uint32_t)val;
+    return HITLS_APP_SUCCESS;
+}
+
+static int32_t ParseIter(Pkcs12OptCtx *opt)
+{
+    char *valStr = HITLS_APP_OptGetValueStr();
+    opt->outPutOpt.iterArg = valStr;
+    int32_t val = 0;
+    if (HITLS_APP_OptGetInt(valStr, &val) != HITLS_APP_SUCCESS) {
+        return HITLS_APP_OPT_VALUE_INVALID;
+    }
+    if ((val < (int32_t)MIN_ITER_CNT) || (val > (int32_t)MAX_ITER_CNT)) {
+        AppPrintError("pkcs12: The iter should be in the range of %u to %u.\n", MIN_ITER_CNT, MAX_ITER_CNT);
+        return HITLS_APP_OPT_VALUE_INVALID;
+    }
+    opt->iter = (uint32_t)val;
+    return HITLS_APP_SUCCESS;
+}
+
+static int32_t ParseNomacver(Pkcs12OptCtx *opt)
+{
+    opt->importOpt.nomacver = true;
+    return HITLS_APP_SUCCESS;
+}
+
+static int32_t ParseNokeys(Pkcs12OptCtx *opt)
+{
+    opt->importOpt.nokeys = true;
+    return HITLS_APP_SUCCESS;
+}
+
+static int32_t ParseNocerts(Pkcs12OptCtx *opt)
+{
+    opt->importOpt.nocerts = true;
+    return HITLS_APP_SUCCESS;
+}
+
+static int32_t ParseNodes(Pkcs12OptCtx *opt)
+{
+    opt->importOpt.nodes = true;
+    return HITLS_APP_SUCCESS;
+}
+
+static int32_t ParseNoout(Pkcs12OptCtx *opt)
+{
+    opt->importOpt.noout = true;
+    return HITLS_APP_SUCCESS;
+}
+
 static const OptHandleTable OPT_HANDLE_TABLE[] = {
     {HITLS_APP_OPT_ERR,        HandleOptErr},
     {HITLS_APP_OPT_HELP,       DisplayHelp},
@@ -298,7 +392,14 @@ static const OptHandleTable OPT_HANDLE_TABLE[] = {
     {HITLS_APP_OPT_CANAME,     ParseCaName},
     {HITLS_APP_OPT_NAME,       ParseName},
     {HITLS_APP_OPT_CA_FILE,    ParseCaFile},
-    {HITLS_APP_OPT_CIPHER_ALG, ParseCipher}
+    {HITLS_APP_OPT_CIPHER_ALG, ParseCipher},
+    {HITLS_APP_OPT_MAC_SALT_LEN, ParseMacSaltLen},
+    {HITLS_APP_OPT_ITER,       ParseIter},
+    {HITLS_APP_OPT_NOMACVER,   ParseNomacver},
+    {HITLS_APP_OPT_NOKEYS,     ParseNokeys},
+    {HITLS_APP_OPT_NOCERTS,    ParseNocerts},
+    {HITLS_APP_OPT_NODES,      ParseNodes},
+    {HITLS_APP_OPT_NOOUT,      ParseNoout}
 };
 
 static int32_t ParseOpt(int argc, char *argv[], Pkcs12OptCtx *opt)
@@ -613,15 +714,15 @@ static int32_t PrintPkcs12(Pkcs12OptCtx *opt)
     certPbParam.saltLen = DEFAULT_SALTLEN;
     certPbParam.pwd = passOutBuf;
     certPbParam.pwdLen = passOutBufLen;
-    certPbParam.itCnt = DEFAULT_ITCNT;
+    certPbParam.itCnt = opt->iter;
     CRYPT_EncodeParam certEncParam = { CRYPT_DERIVE_PBKDF2, &certPbParam };
 
     HITLS_PKCS12_KdfParam  hmacParam  = { 0 };
     hmacParam.macId = opt->macAlg;
-    hmacParam.saltLen = DEFAULT_SALTLEN;
+    hmacParam.saltLen = opt->macSaltLen;
     hmacParam.pwd = passOutBuf;
     hmacParam.pwdLen = passOutBufLen;
-    hmacParam.itCnt = DEFAULT_ITCNT;
+    hmacParam.itCnt = opt->iter;
     HITLS_PKCS12_MacParam macParam = { .para = &hmacParam, .algId = BSL_CID_PKCS12KDF };
     encodeParam.macParam = macParam;
     encodeParam.encParam = certEncParam;
@@ -723,15 +824,18 @@ static int32_t OutPutCert(const char *certType, BSL_UIO *wUio, HITLS_X509_Cert *
 
 static int32_t OutPutCerts(Pkcs12OptCtx *opt)
 {
-    // Output the user cert.
     int32_t ret = HITLS_PKCS12_Ctrl(opt->p12, HITLS_PKCS12_GET_ENTITY_CERT, &opt->userCert, 0);
-    if (ret != HITLS_PKI_SUCCESS) {
+    if (ret == HITLS_PKCS12_ERR_NO_ENTITYCERT) {
+        opt->userCert = NULL;
+    } else if (ret != HITLS_PKI_SUCCESS) {
         AppPrintError("pkcs12: Failed to get user cert, errCode = 0x%0x.\n", ret);
         return HITLS_APP_X509_FAIL;
     }
-    ret = OutPutCert("user cert", opt->wUio, opt->userCert);
-    if (ret != HITLS_APP_SUCCESS) {
-        return ret;
+    if (opt->userCert != NULL) {
+        ret = OutPutCert("user cert", opt->wUio, opt->userCert);
+        if (ret != HITLS_APP_SUCCESS) {
+            return ret;
+        }
     }
 
     // only output user cert
@@ -760,17 +864,23 @@ static int32_t OutPutKey(Pkcs12OptCtx *opt)
         AppPrintError("pkcs12: Failed to get private key, errCode = 0x%0x.\n", ret);
         return HITLS_APP_X509_FAIL;
     }
-    AppKeyPrintParam param = { opt->genOpt.outFile, BSL_FORMAT_PEM, opt->cipherAlgCid, false, false};
+    int32_t cipherAlgCid = opt->importOpt.nodes ? CRYPT_CIPHER_MAX : opt->cipherAlgCid;
+    AppKeyPrintParam param = { opt->genOpt.outFile, BSL_FORMAT_PEM, cipherAlgCid, false, false};
     return HITLS_APP_PrintPrvKeyByUio(opt->wUio, opt->pkey, &param, &opt->passout);
 }
 
 static int32_t OutPutCertsAndKey(Pkcs12OptCtx *opt)
 {
-    int32_t ret = OutPutCerts(opt);
-    if (ret != HITLS_APP_SUCCESS) {
-        return ret;
+    if (!opt->importOpt.nocerts) {
+        int32_t ret = OutPutCerts(opt);
+        if (ret != HITLS_APP_SUCCESS) {
+            return ret;
+        }
     }
-    return OutPutKey(opt);
+    if (!opt->importOpt.nokeys) {
+        return OutPutKey(opt);
+    }
+    return HITLS_APP_SUCCESS;
 }
 
 static int32_t ParsePkcs12File(Pkcs12OptCtx *opt)
@@ -785,13 +895,17 @@ static int32_t ParsePkcs12File(Pkcs12OptCtx *opt)
         .encPwd = &encPwd,
         .macPwd = &encPwd,
     };
-    int32_t ret = HITLS_PKCS12_ParseFile(BSL_FORMAT_ASN1, opt->genOpt.inFile, &param, &opt->p12, true);
+    int32_t ret = HITLS_PKCS12_ParseFile(BSL_FORMAT_ASN1, opt->genOpt.inFile, &param, &opt->p12,
+        !opt->importOpt.nomacver);
     BSL_SAL_CleanseData(encPwd.data, encPwd.dataLen);
     if (ret != HITLS_PKI_SUCCESS) {
         AppPrintError("pkcs12: Failed to parse the %s pkcs12 file, errCode = 0x%x.\n", opt->genOpt.inFile, ret);
         return HITLS_APP_X509_FAIL;
     }
 
+    if (opt->importOpt.noout) {
+        return HITLS_APP_SUCCESS;
+    }
     return OutPutCertsAndKey(opt);
 }
 
@@ -811,6 +925,21 @@ static int32_t CheckParam(Pkcs12OptCtx *opt)
         }
         if (opt->importOpt.clcerts) {
             AppPrintError("pkcs12: Warning: -clcerts option ignored with -export\n");
+        }
+        if (opt->importOpt.nomacver) {
+            AppPrintError("pkcs12: Warning: -nomacver option ignored with -export\n");
+        }
+        if (opt->importOpt.nokeys) {
+            AppPrintError("pkcs12: Warning: -nokeys option ignored with -export\n");
+        }
+        if (opt->importOpt.nocerts) {
+            AppPrintError("pkcs12: Warning: -nocerts option ignored with -export\n");
+        }
+        if (opt->importOpt.nodes) {
+            AppPrintError("pkcs12: Warning: -nodes option ignored with -export\n");
+        }
+        if (opt->importOpt.noout) {
+            AppPrintError("pkcs12: Warning: -noout option ignored with -export\n");
         }
         if (opt->importOpt.cipherAlgName != NULL) {
             AppPrintError("pkcs12: Warning: output encryption option -%s ignored with -export\n",
@@ -847,6 +976,12 @@ static int32_t CheckParam(Pkcs12OptCtx *opt)
         if (opt->outPutOpt.caNameSize != 0) {
             AppPrintError("pkcs12: Warning: ignoring -caname since -export is not given\n");
         }
+        if (opt->outPutOpt.macSaltLenArg != NULL) {
+            AppPrintError("pkcs12: Warning: ignoring -macsaltlen since -export is not given\n");
+        }
+        if (opt->outPutOpt.iterArg != NULL) {
+            AppPrintError("pkcs12: Warning: ignoring -iter since -export is not given\n");
+        }
     }
 
     return CheckOutFile(opt->genOpt.outFile);
@@ -861,6 +996,8 @@ static void InitPkcs12OptCtx(Pkcs12OptCtx *optCtx)
     optCtx->macAlg = BSL_CID_SHA256;
     optCtx->certPbe = BSL_CID_PBES2;
     optCtx->keyPbe = BSL_CID_PBES2;
+    optCtx->macSaltLen = DEFAULT_SALTLEN;
+    optCtx->iter = DEFAULT_ITCNT;
 
     optCtx->p12 = NULL;
     optCtx->store = NULL;
@@ -876,6 +1013,11 @@ static void InitPkcs12OptCtx(Pkcs12OptCtx *optCtx)
     optCtx->genOpt.passOutArg = NULL;
 
     optCtx->importOpt.clcerts = false;
+    optCtx->importOpt.nomacver = false;
+    optCtx->importOpt.nokeys = false;
+    optCtx->importOpt.nocerts = false;
+    optCtx->importOpt.nodes = false;
+    optCtx->importOpt.noout = false;
     optCtx->importOpt.cipherAlgName = NULL;
 
     optCtx->outPutOpt.inKey = NULL;
@@ -885,6 +1027,8 @@ static void InitPkcs12OptCtx(Pkcs12OptCtx *optCtx)
     optCtx->outPutOpt.macAlgArg = NULL;
     optCtx->outPutOpt.certPbeArg = NULL;
     optCtx->outPutOpt.keyPbeArg = NULL;
+    optCtx->outPutOpt.macSaltLenArg = NULL;
+    optCtx->outPutOpt.iterArg = NULL;
     optCtx->outPutOpt.chain = false;
     optCtx->outPutOpt.export = false;
 }
@@ -924,9 +1068,11 @@ static int32_t HandlePKCS12Opt(Pkcs12OptCtx *opt)
     }
 
     // 2.Create output uio
-    opt->wUio = HITLS_APP_UioOpenPrivate(opt->genOpt.outFile, 'w');
-    if (opt->wUio == NULL) {
-        return HITLS_APP_UIO_FAIL;
+    if (opt->outPutOpt.export || !opt->importOpt.noout) {
+        opt->wUio = HITLS_APP_UioOpenPrivate(opt->genOpt.outFile, 'w');
+        if (opt->wUio == NULL) {
+            return HITLS_APP_UIO_FAIL;
+        }
     }
 
     return opt->outPutOpt.export ? CreatePkcs12File(opt) : ParsePkcs12File(opt);

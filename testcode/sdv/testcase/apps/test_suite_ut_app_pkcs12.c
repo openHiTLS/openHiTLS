@@ -49,6 +49,8 @@ STUB_DEFINE_RET6(int32_t, CRYPT_EAL_ProviderRandInitCtx, CRYPT_EAL_LibCtx *, int
 #define EMPTY_FILE "../testdata/apps/pkcs12/empty.pem"
 #define PFX "../testdata/apps/pkcs12/out.pfx"
 #define NO_MACP12 "../testdata/apps/pkcs12/nomac.p12"
+#define CERT_ONLY_P12 "../testdata/apps/pkcs12/cert_only.p12"
+#define NOOUT_FILE "noout.pem"
 #define MIN_PASSWD "pass:12345678"
 #define MAX_PASSWD                                                                                                     \
     "pass:"                                                                                                            \
@@ -600,6 +602,185 @@ void UT_HITLS_APP_PKCS12_TC012(char *passFile, char *passArg, int expect)
         ASSERT_EQ(HITLS_PKCS12Main(9, argv[1]), expect);
     }
 EXIT:
+    AppPrintErrorUioUnInit();
+    return;
+}
+/* END_CASE */
+
+/**
+ * @test UT_HITLS_APP_PKCS12_TC013
+ * @spec  -
+ * @title   Test macsaltlen/iter export and nomacver/nokeys/nocerts/noout import options
+ */
+/* BEGIN_CASE */
+void UT_HITLS_APP_PKCS12_TC013(void)
+{
+    char *argv[][18] = {
+        /* export with custom macsaltlen/iter */
+        {"pkcs12", "-export", "-in", CERT, "-inkey", PRI_KEY, "-chain", "-CAfile", CHAIN,
+            "-passout", MIN_PASSWD, "-out", "out_new.pfx", "-macsaltlen", "32", "-iter", "4096"},
+        /* parse with the new import options */
+        {"pkcs12", "-in", "out_new.pfx", "-passin", MIN_PASSWD, "-nomacver", "-noout"},
+        {"pkcs12", "-in", "out_new.pfx", "-passin", MIN_PASSWD, "-nokeys", "-out", "nokeys.pem"},
+        {"pkcs12", "-in", "out_new.pfx", "-passin", MIN_PASSWD, "-passout", MIN_PASSWD, "-nocerts",
+            "-out", "nocerts.pem"},
+        {"pkcs12", "-in", "out_new.pfx", "-passin", MIN_PASSWD, "-noout"},
+        {"pkcs12", "-in", "out_new.pfx", "-passin", MIN_PASSWD, "-nodes", "-out", "nodes.pem"},
+        /* options used in the wrong mode are ignored with a warning */
+        {"pkcs12", "-in", "out_new.pfx", "-passin", MIN_PASSWD, "-noout", "-macsaltlen", "32"},
+        {"pkcs12", "-export", "-in", CERT, "-inkey", PRI_KEY, "-passout", MIN_PASSWD, "-out", "out_new.pfx", "-nokeys"},
+    };
+
+    OptTestData testData[] = {
+        {17, argv[0], HITLS_APP_SUCCESS},
+        {7, argv[1], HITLS_APP_SUCCESS},
+        {8, argv[2], HITLS_APP_SUCCESS},
+        {10, argv[3], HITLS_APP_SUCCESS},
+        {6, argv[4], HITLS_APP_SUCCESS},
+        {8, argv[5], HITLS_APP_SUCCESS},
+        {8, argv[6], HITLS_APP_SUCCESS},
+        {11, argv[7], HITLS_APP_SUCCESS},
+    };
+
+    ASSERT_EQ(AppPrintErrorUioInit(stderr), HITLS_APP_SUCCESS);
+    (void)remove("out_new.pfx");
+    (void)remove("nokeys.pem");
+    (void)remove("nocerts.pem");
+    (void)remove("nodes.pem");
+
+    ASSERT_EQ(HITLS_PKCS12Main(testData[0].argc, testData[0].argv), HITLS_APP_SUCCESS);
+
+    for (int i = 1; i < (int)(sizeof(testData) / sizeof(OptTestData)); ++i) {
+        int ret = HITLS_PKCS12Main(testData[i].argc, testData[i].argv);
+        ASSERT_EQ(ret, testData[i].expect);
+    }
+
+EXIT:
+    (void)remove("out_new.pfx");
+    (void)remove("nokeys.pem");
+    (void)remove("nocerts.pem");
+    (void)remove("nodes.pem");
+    AppPrintErrorUioUnInit();
+    return;
+}
+/* END_CASE */
+
+/**
+ * @test UT_HITLS_APP_PKCS12_TC014
+ * @spec  -
+ * @title   Test invalid macsaltlen and iter parameters
+ */
+/* BEGIN_CASE */
+void UT_HITLS_APP_PKCS12_TC014(void)
+{
+    char *argv[][12] = {
+        {"pkcs12", "-export", "-in", CERT, "-inkey", PRI_KEY, "-passout", MIN_PASSWD, "-out", "out_err.pfx",
+            "-macsaltlen", "0"},
+        {"pkcs12", "-export", "-in", CERT, "-inkey", PRI_KEY, "-passout", MIN_PASSWD, "-out", "out_err.pfx",
+            "-macsaltlen", "1025"},
+        {"pkcs12", "-export", "-in", CERT, "-inkey", PRI_KEY, "-passout", MIN_PASSWD, "-out", "out_err.pfx",
+            "-macsaltlen", "abc"},
+        {"pkcs12", "-export", "-in", CERT, "-inkey", PRI_KEY, "-passout", MIN_PASSWD, "-out", "out_err.pfx",
+            "-iter", "0"},
+        {"pkcs12", "-export", "-in", CERT, "-inkey", PRI_KEY, "-passout", MIN_PASSWD, "-out", "out_err.pfx",
+            "-iter", "999"},
+        {"pkcs12", "-export", "-in", CERT, "-inkey", PRI_KEY, "-passout", MIN_PASSWD, "-out", "out_err.pfx",
+            "-iter", "2147483648"},
+        {"pkcs12", "-export", "-in", CERT, "-inkey", PRI_KEY, "-passout", MIN_PASSWD, "-out", "out_err.pfx",
+            "-iter", "abc"},
+    };
+
+    OptTestData testData[] = {
+        {12, argv[0], HITLS_APP_OPT_VALUE_INVALID},
+        {12, argv[1], HITLS_APP_OPT_VALUE_INVALID},
+        {12, argv[2], HITLS_APP_OPT_VALUE_INVALID},
+        {12, argv[3], HITLS_APP_OPT_VALUE_INVALID},
+        {12, argv[4], HITLS_APP_OPT_VALUE_INVALID},
+        {12, argv[5], HITLS_APP_OPT_VALUE_INVALID},
+        {12, argv[6], HITLS_APP_OPT_VALUE_INVALID},
+    };
+
+    ASSERT_EQ(AppPrintErrorUioInit(stderr), HITLS_APP_SUCCESS);
+    for (int i = 0; i < (int)(sizeof(testData) / sizeof(OptTestData)); ++i) {
+        int ret = HITLS_PKCS12Main(testData[i].argc, testData[i].argv);
+        ASSERT_EQ(ret, testData[i].expect);
+    }
+
+EXIT:
+    (void)remove("out_err.pfx");
+    AppPrintErrorUioUnInit();
+    return;
+}
+/* END_CASE */
+
+/**
+ * @test UT_HITLS_APP_PKCS12_TC015
+ * @spec  -
+ * @title   Test -nokeys with a certificate-only PKCS#12 file
+ */
+/* BEGIN_CASE */
+void UT_HITLS_APP_PKCS12_TC015(void)
+{
+    char *argv[] = {"pkcs12", "-in", CERT_ONLY_P12, "-passin", MIN_PASSWD, "-nokeys", "-out", "cert_only.pem"};
+    char output[2048] = {0};
+    FILE *fp = NULL;
+
+    (void)remove("cert_only.pem");
+    ASSERT_EQ(AppPrintErrorUioInit(stderr), HITLS_APP_SUCCESS);
+    ASSERT_EQ(HITLS_PKCS12Main(8, argv), HITLS_APP_SUCCESS);
+    fp = fopen("cert_only.pem", "r");
+    ASSERT_NE(fp, NULL);
+    ASSERT_TRUE(fread(output, 1, sizeof(output) - 1, fp) > 0);
+    ASSERT_TRUE(strstr(output, "-----BEGIN CERTIFICATE-----") != NULL);
+
+EXIT:
+    if (fp != NULL) {
+        fclose(fp);
+    }
+    (void)remove("cert_only.pem");
+    AppPrintErrorUioUnInit();
+    return;
+}
+/* END_CASE */
+
+/**
+ * @test UT_HITLS_APP_PKCS12_TC016
+ * @spec  -
+ * @title   Test -noout does not truncate an existing output file
+ */
+/* BEGIN_CASE */
+void UT_HITLS_APP_PKCS12_TC016(void)
+{
+    char *argv[] = {"pkcs12", "-in", PFX, "-passin", MIN_PASSWD, "-noout", "-out", NOOUT_FILE};
+    const char expected[] = "keep existing content";
+    char output[sizeof(expected)] = {0};
+    uint32_t writeLen = 0;
+    size_t readLen = 0;
+    BSL_UIO *wUio = NULL;
+    FILE *fp = NULL;
+
+    (void)remove(NOOUT_FILE);
+    ASSERT_EQ(AppPrintErrorUioInit(stderr), HITLS_APP_SUCCESS);
+    wUio = HITLS_APP_UioOpenPrivate(NOOUT_FILE, 'w');
+    ASSERT_NE(wUio, NULL);
+    ASSERT_EQ(BSL_UIO_Write(wUio, expected, sizeof(expected) - 1, &writeLen), BSL_SUCCESS);
+    ASSERT_EQ(writeLen, sizeof(expected) - 1);
+    BSL_UIO_Free(wUio);
+    wUio = NULL;
+
+    ASSERT_EQ(HITLS_PKCS12Main(8, argv), HITLS_APP_SUCCESS);
+    fp = fopen(NOOUT_FILE, "r");
+    ASSERT_NE(fp, NULL);
+    readLen = fread(output, 1, sizeof(output), fp);
+    ASSERT_EQ(readLen, sizeof(expected) - 1);
+    ASSERT_EQ(memcmp(output, expected, sizeof(expected) - 1), 0);
+
+EXIT:
+    if (fp != NULL) {
+        fclose(fp);
+    }
+    BSL_UIO_Free(wUio);
+    (void)remove(NOOUT_FILE);
     AppPrintErrorUioUnInit();
     return;
 }

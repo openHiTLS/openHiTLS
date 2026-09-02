@@ -49,3 +49,15 @@ UT_HITLS_APP_PKCS12_TC012:"file:../testdata/apps/pkcs12/empty_pass.txt":"pass:12
 
 UT_HITLS_APP_PKCS12_TC012 multiline_pass only read first line
 UT_HITLS_APP_PKCS12_TC012:"file:../testdata/apps/pkcs12/multiline_pass.txt":"pass:12345678":HITLS_APP_SUCCESS
+
+UT_HITLS_APP_PKCS12_TC013 test macsaltlen iter and output control options
+UT_HITLS_APP_PKCS12_TC013:
+
+UT_HITLS_APP_PKCS12_TC014 test invalid macsaltlen and iter parameters
+UT_HITLS_APP_PKCS12_TC014:
+
+UT_HITLS_APP_PKCS12_TC015 test nokeys with a certificate-only PKCS12 file
+UT_HITLS_APP_PKCS12_TC015:
+
+UT_HITLS_APP_PKCS12_TC016 test noout does not truncate an existing output file
+UT_HITLS_APP_PKCS12_TC016:

@@ -619,13 +619,13 @@ Key management functions, including key creation, deletion, querying, etc. (SM m
 - Export mode (create PKCS#12 file)
 
   ```
-  hitls pkcs12 -export -in <certificate file> -inkey <private key file> [-out <file>] [-passin <password source>] [-passout <password source>] [-name <friendly name>] [-caname <CA name>]... [-chain -CAfile <CA certificate file>] [-keypbe <algorithm>] [-certpbe <algorithm>] [-macalg <algorithm>]
+  hitls pkcs12 -export -in <certificate file> -inkey <private key file> [-out <file>] [-passin <password source>] [-passout <password source>] [-name <friendly name>] [-caname <CA name>]... [-chain -CAfile <CA certificate file>] [-keypbe <algorithm>] [-certpbe <algorithm>] [-macalg <algorithm>] [-macsaltlen <length>] [-iter <count>]
   ```
 
 - Import mode (parse PKCS#12 file)
 
   ```
-  hitls pkcs12 -in <PKCS12 file> [-out <file>] [-passin <password source>] [-passout <password source>] [-clcerts] [-<algorithm>]
+  hitls pkcs12 -in <PKCS12 file> [-out <file>] [-passin <password source>] [-passout <password source>] [-clcerts] [-nomacver] [-nokeys] [-nocerts] [-nodes] [-noout] [-<algorithm>]
   ```
 
 **Supported Options**:
@@ -653,6 +653,13 @@ Key management functions, including key creation, deletion, querying, etc. (SM m
 - `-keypbe <algorithm>`: Effective in export mode. PBE encryption algorithm for the private key, defaults to `PBES2` (PKCS#5 v2.0 encryption scheme)
 - `-certpbe <algorithm>`: Effective in export mode. PBE encryption algorithm for the certificate, defaults to `PBES2` (PKCS#5 v2.0 encryption scheme)
 - `-macalg <algorithm>`: Effective in export mode. Digest algorithm for MAC integrity check, defaults to `sha256` (SHA-256 digest algorithm)
+- `-macsaltlen <length>`: Effective in export mode. Length in bytes of the salt used for MAC computation, range 1~1024, defaults to 16
+- `-iter <count>`: Effective in export mode. PBKDF iteration count for certificate/private key encryption and MAC computation, range 1000~2147483647, defaults to 2048
+- `-nomacver`: Effective in import mode. Do not verify the MAC integrity of the PKCS#12 file; modifications to the file cannot be detected when this option is used
+- `-nokeys`: Effective in import mode. Do not output private keys, only output certificates
+- `-nocerts`: Effective in import mode. Do not output certificates, only output private keys
+- `-nodes`: Effective in import mode. Output the private key in unencrypted PEM format; overrides the output private-key encryption algorithm
+- `-noout`: Effective in import mode. Do not output encoded certificates or private keys
 - `-<algorithm>`: Effective in import mode. Encryption algorithm for the output private key, defaults to `aes256_cbc` (AES-256-CBC encryption algorithm)
 
 **Examples**:
@@ -669,6 +676,15 @@ hitls pkcs12 -export -in user_cert.pem -inkey user_prv.pem -out user.p12 -passin
 
 # Create a PKCS#12 file with custom MAC algorithm
 hitls pkcs12 -export -in user_cert.pem -inkey user_prv.pem -out user.p12 -passin pass: -passout pass:test1234 -macalg sha512
+
+# Create a PKCS#12 file with custom MAC salt length and iteration count
+hitls pkcs12 -export -in user_cert.pem -inkey user_prv.pem -out user.p12 -passin pass: -passout pass:test1234 -macsaltlen 32 -iter 4096
+
+# Extract only certificates (no private key output)
+hitls pkcs12 -in user.p12 -out certs.pem -passin pass:test1234 -nokeys
+
+# Extract the private key without PEM encryption
+hitls pkcs12 -in user.p12 -out key.pem -passin pass:test1234 -nocerts -nodes
 
 # Parse a PKCS#12 file and output certificate and private key
 hitls pkcs12 -in user.p12 -out output.pem -passin pass:test1234 -passout pass:newpass
