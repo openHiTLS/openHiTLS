@@ -235,25 +235,25 @@ GMAC algorithms are not supported by the `mac` command.
 **Usage**:
 
 ```
-hitls dgst [-md <algorithm>] [-sign <private key file> | -verify <public key file> -signature <signature file>] [-out <file>] [-provider name] [-provider-path path] [-provider-attr attr] [file...]
+hitls dgst [-md <algorithm>] [-sign <private key file> | -verify <public key file> -signature <signature file>] [-out <file>] [-c] [-signfmt <hex|bin>] [-provider name] [-provider-path path] [-provider-attr attr] [file...]
 ```
 
 - Digest mode
 
   ```
-  hitls dgst [-md <algorithm>] [-out <file>] [file...]
+  hitls dgst [-md <algorithm>] [-out <file>] [-c] [file...]
   ```
 
 - Signing mode
 
   ```
-  hitls dgst [-md <algorithm>] -sign <private key file> [-out <file>] [-userid <user ID>] [file...]
+  hitls dgst [-md <algorithm>] -sign <private key file> [-out <file>] [-signfmt <hex|bin>] [-userid <user ID>] [file...]
   ```
 
 - Verification mode
 
   ```
-  hitls dgst [-md <algorithm>] -verify <public key file> -signature <signature file> [-userid <user ID>] [file...]
+  hitls dgst [-md <algorithm>] -verify <public key file> -signature <signature file> [-signfmt <hex|bin>] [-userid <user ID>] [file...]
   ```
 
 **Supported Options**:
@@ -261,9 +261,12 @@ hitls dgst [-md <algorithm>] [-sign <private key file> | -verify <public key fil
 - `-help`: Display help information
 - `-md <algorithm>`: Specify digest algorithm, defaults to SHA-256
 - `-out <file>`: Specify output file, defaults to standard output
+- `-c`: Effective only in digest mode. Print the hexadecimal digest with colons separating each byte
 - `-sign <private key file>`: Required in signing mode. Specify private key file
 - `-verify <public key file>`: Required in verification mode. Specify public key file
 - `-signature <signature file>`: Required in verification mode. Specify signature file
+- `-signfmt <hex|bin>`: Signature input/output format, defaults to `hex`. In signing mode, this specifies the
+  output format. In verification mode, this specifies the format of the file given by `-signature`
 - `-userid <user ID>`: User ID for SM2 algorithm, defaults to `1234567812345678`
 - `-provider`, `-provider-path`, `-provider-attr`: See [Provider Options](#21-provider-options)
 - `[file...]`: List of files to compute digest for, defaults to standard input
@@ -274,14 +277,23 @@ hitls dgst [-md <algorithm>] [-sign <private key file> | -verify <public key fil
 # Digest mode
 hitls dgst file1.txt file2.txt
 
+# Digest mode with colon-separated hexadecimal output
+hitls dgst -c file1.txt
+
 # Signing mode: ECDSA signature
 hitls dgst -md sha256 -sign ec_private.pem -out sig.txt msg.txt
+
+# Signing mode: output a binary signature
+hitls dgst -md sha256 -sign ec_private.pem -out sig.bin -signfmt bin msg.txt
 
 # Signing mode: SM2 signature
 hitls dgst -md sm3 -userid "my_user_id" -sign sm2_private.pem -out sig.txt msg.txt
 
 # Verification mode
 hitls dgst -md sha256 -verify public.pem -signature sig.txt msg.txt
+
+# Verification mode: read a binary signature
+hitls dgst -md sha256 -verify public.pem -signature sig.bin -signfmt bin msg.txt
 
 # SM2 verification
 hitls dgst -md sm3 -userid "my_user_id" -verify sm2_pub.pem -signature sig.txt msg.txt

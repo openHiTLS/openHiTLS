@@ -14,6 +14,7 @@
  */
 
  /* BEGIN_HEADER */
+#include <ctype.h>
 #include "string.h"
 #include "app_opt.h"
 #include "app_function.h"
@@ -46,6 +47,9 @@ STUB_DEFINE_RET3(int32_t, CRYPT_EAL_MdFinal, CRYPT_EAL_MdCtx *, uint8_t *, uint3
 
 #define PRV_PATH "../testdata/certificate/rsa_key/prvKey.pem"
 #define OUT_FILE_PATH "../testdata/certificate/rsa_key/out.pem"
+#define SIGN_PRV_PATH "../testdata/apps/sm2/prv.pem"
+#define SIGN_PUB_PATH "../testdata/apps/sm2/pub.pem"
+#define BIN_SIGN_FILE_PATH "_APP_dgst_sign.bin"
 
 typedef struct {
     int argc;
@@ -121,7 +125,9 @@ void UT_HITLS_APP_dgst_TC002(void)
         {"dgst", "-md", "md5", "-out"},
         {"dgst", "-md", "md5", "/noexist/noexist.txt"},
         {"dgst", "-md", "md5", "-out", "/noexist/filepath/outfile.txt", PRV_PATH},
-        {"dgst", "-md", "md5", "-out", "-out", "/noexist/filepath/outfile.txt", PRV_PATH}
+        {"dgst", "-md", "md5", "-out", "-out", "/noexist/filepath/outfile.txt", PRV_PATH},
+        {"dgst", "-signfmt"},
+        {"dgst", "-signfmt", "pem", PRV_PATH}
     };
 
     OptTestData testData[] = {
@@ -131,7 +137,9 @@ void UT_HITLS_APP_dgst_TC002(void)
         {4, argv[3], HITLS_APP_OPT_UNKOWN},
         {4, argv[4], HITLS_APP_UIO_FAIL},
         {6, argv[5], HITLS_APP_UIO_FAIL},
-        {7, argv[6], HITLS_APP_UIO_FAIL}
+        {7, argv[6], HITLS_APP_UIO_FAIL},
+        {2, argv[7], HITLS_APP_OPT_UNKOWN},
+        {4, argv[8], HITLS_APP_OPT_VALUE_INVALID}
     };
 
     ASSERT_EQ(AppInit(), HITLS_APP_SUCCESS);
@@ -549,6 +557,106 @@ EXIT:
     (void)fflush(stdout);
     /* Restore stdin to terminal to avoid affecting subsequent test cases */
     (void)freopen("/dev/tty", "r", stdin);
+    AppUninit();
+    return;
+}
+/* END_CASE */
+
+/**
+ * @test UT_HITLS_APP_dgst_COLON_TC001
+ * @spec  -
+ * @title Verify that -c separates every pair of digest hex digits with a colon
+ */
+/* BEGIN_CASE */
+void UT_HITLS_APP_dgst_COLON_TC001(void)
+{
+    char *argv[] = {"dgst", "-md", "md5", "-out", OUT_FILE_PATH, "-c", PRV_PATH, NULL};
+    const char *expected = "md5(" PRV_PATH ")= d6:55:65:70:ca:a4:39:3f:a5:73:33:45:29:3e:31:23\n";
+    char output[256] = {0};
+    FILE *file = NULL;
+
+    ASSERT_EQ(AppInit(), HITLS_APP_SUCCESS);
+    ASSERT_EQ(HITLS_DgstMain(7, argv), HITLS_APP_SUCCESS);
+
+    file = fopen(OUT_FILE_PATH, "r");
+    ASSERT_NE(file, NULL);
+    ASSERT_NE(fgets(output, sizeof(output), file), NULL);
+    (void)fclose(file);
+    file = NULL;
+
+    ASSERT_EQ(strcmp(output, expected), 0);
+
+EXIT:
+    if (file != NULL) {
+        (void)fclose(file);
+    }
+    AppUninit();
+    return;
+}
+/* END_CASE */
+
+/**
+ * @test UT_HITLS_APP_dgst_SIGNFMT_TC001
+ * @spec  -
+ * @title Sign, verify, and reject mismatched hexadecimal and binary signature formats
+ */
+/* BEGIN_CASE */
+void UT_HITLS_APP_dgst_SIGNFMT_TC001(void)
+{
+    FILE *hexFile = NULL;
+    FILE *binFile = NULL;
+    uint8_t hexSign[1024] = {0};
+    uint8_t binSign[1024] = {0};
+    bool binHasNonHex = false;
+    char *signHexArgv[] = {"dgst", "-md", "sm3", "-sign", SIGN_PRV_PATH, "-out", OUT_FILE_PATH,
+        "-signfmt", "hex", PRV_PATH, NULL};
+    char *signBinArgv[] = {"dgst", "-md", "sm3", "-sign", SIGN_PRV_PATH, "-out", BIN_SIGN_FILE_PATH,
+        "-signfmt", "bin", PRV_PATH, NULL};
+    char *verifyHexArgv[] = {"dgst", "-md", "sm3", "-verify", SIGN_PUB_PATH, "-signature", OUT_FILE_PATH,
+        "-signfmt", "hex", PRV_PATH, NULL};
+    char *verifyBinArgv[] = {"dgst", "-md", "sm3", "-verify", SIGN_PUB_PATH, "-signature", BIN_SIGN_FILE_PATH,
+        "-signfmt", "bin", PRV_PATH, NULL};
+    char *verifyHexAsBinArgv[] = {"dgst", "-md", "sm3", "-verify", SIGN_PUB_PATH, "-signature", OUT_FILE_PATH,
+        "-signfmt", "bin", PRV_PATH, NULL};
+    char *verifyBinAsHexArgv[] = {"dgst", "-md", "sm3", "-verify", SIGN_PUB_PATH, "-signature", BIN_SIGN_FILE_PATH,
+        "-signfmt", "hex", PRV_PATH, NULL};
+
+    ASSERT_EQ(AppInit(), HITLS_APP_SUCCESS);
+    ASSERT_EQ(HITLS_DgstMain(10, signHexArgv), HITLS_APP_SUCCESS);
+    ASSERT_EQ(HITLS_DgstMain(10, signBinArgv), HITLS_APP_SUCCESS);
+
+    hexFile = fopen(OUT_FILE_PATH, "rb");
+    binFile = fopen(BIN_SIGN_FILE_PATH, "rb");
+    ASSERT_NE(hexFile, NULL);
+    ASSERT_NE(binFile, NULL);
+    size_t hexSignLen = fread(hexSign, 1, sizeof(hexSign), hexFile);
+    size_t binSignLen = fread(binSign, 1, sizeof(binSign), binFile);
+    ASSERT_TRUE(hexSignLen > 0);
+    ASSERT_TRUE(binSignLen > 0);
+    for (size_t i = 0; i < hexSignLen; i++) {
+        ASSERT_TRUE(isxdigit(hexSign[i]) != 0);
+    }
+    for (size_t i = 0; i < binSignLen; i++) {
+        if (isxdigit(binSign[i]) == 0) {
+            binHasNonHex = true;
+            break;
+        }
+    }
+    ASSERT_TRUE(binHasNonHex);
+
+    ASSERT_EQ(HITLS_DgstMain(10, verifyHexArgv), HITLS_APP_SUCCESS);
+    ASSERT_EQ(HITLS_DgstMain(10, verifyBinArgv), HITLS_APP_SUCCESS);
+    ASSERT_NE(HITLS_DgstMain(10, verifyHexAsBinArgv), HITLS_APP_SUCCESS);
+    ASSERT_NE(HITLS_DgstMain(10, verifyBinAsHexArgv), HITLS_APP_SUCCESS);
+
+EXIT:
+    if (hexFile != NULL) {
+        (void)fclose(hexFile);
+    }
+    if (binFile != NULL) {
+        (void)fclose(binFile);
+    }
+    (void)remove(BIN_SIGN_FILE_PATH);
     AppUninit();
     return;
 }
