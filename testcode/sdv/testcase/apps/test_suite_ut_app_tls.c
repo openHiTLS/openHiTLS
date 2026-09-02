@@ -33,6 +33,7 @@
 #include "app_provider.h"
 #include "app_server.h"
 #include "app_tls_common.h"
+#include "hitls_psk.h"
 #include "stub_utils.h"
 /* END_HEADER */
 
@@ -56,14 +57,62 @@
 #define TLCP_AUTH_SIGN_KEY "../testdata/tls/certificate/der/sm2_cert_userid_and_san/sign.key.der"
 #define TLCP_AUTH_SERVER_NAME "localhost"
 #define TLCP_AUTH_WRONG_SERVER_NAME "wrong.localhost"
+#define TLS_PSK_IDENTITY "Client_identity"
+#define TLS_PSK_HEX "1a2b3c4d5e6f77889900aabbccddeeff"
+#define TLS_PSK_BAD_HEX "00112233445566778899aabbccddeeff"
 
 STUB_DEFINE_RET2(int, CreateTCPListenSocket, APP_NetworkAddr *, int);
+STUB_DEFINE_RET2(HITLS_Config *, CreateProtocolConfig, APP_ProtocolType, AppProvider *);
 STUB_DEFINE_RET1(struct hostent *, gethostbyname, const char *);
 STUB_DEFINE_RET1(int32_t, HITLS_Accept, HITLS_Ctx *);
 
 static int g_serverReadyFd = -1;
 static bool g_serverHandshakeObserved = false;
 static bool g_serverHandshakeSucceeded = false;
+static bool g_configurePskServer = false;
+static const uint8_t g_defaultPsk[] = {
+    0x1a, 0x2b, 0x3c, 0x4d, 0x5e, 0x6f, 0x77, 0x88,
+    0x99, 0x00, 0xaa, 0xbb, 0xcc, 0xdd, 0xee, 0xff,
+};
+static const char *g_expectedPskIdentity = TLS_PSK_IDENTITY;
+static const uint8_t *g_expectedPsk = g_defaultPsk;
+static uint32_t g_expectedPskLen = sizeof(g_defaultPsk);
+
+static void ResetExpectedPsk(void)
+{
+    g_expectedPskIdentity = TLS_PSK_IDENTITY;
+    g_expectedPsk = g_defaultPsk;
+    g_expectedPskLen = sizeof(g_defaultPsk);
+}
+
+static uint32_t TestPskServerCallback(HITLS_Ctx *ctx, const uint8_t *identity, uint8_t *psk,
+    uint32_t maxPskLen)
+{
+    (void)ctx;
+    if (identity == NULL || strcmp((const char *)identity, g_expectedPskIdentity) != 0 ||
+        g_expectedPskLen > maxPskLen) {
+        return 0;
+    }
+    (void)memcpy(psk, g_expectedPsk, g_expectedPskLen);
+    return g_expectedPskLen;
+}
+
+static HITLS_Config *STUB_CreatePskProtocolConfig(APP_ProtocolType protocol, AppProvider *provider)
+{
+    real_CreateProtocolConfig_func_t realFunc = get_real_CreateProtocolConfig();
+    if (realFunc == NULL) {
+        return NULL;
+    }
+    HITLS_Config *config = realFunc(protocol, provider);
+    if (config == NULL) {
+        return NULL;
+    }
+    if (HITLS_CFG_SetPskServerCallback(config, TestPskServerCallback) != HITLS_SUCCESS) {
+        HITLS_CFG_FreeConfig(config);
+        return NULL;
+    }
+    return config;
+}
 
 static int STUB_CreateTCPListenSocket(APP_NetworkAddr *addr, int backlog)
 {
@@ -231,6 +280,9 @@ static bool RunHandshakeProcesses(char **serverArgv, size_t serverArgc, char **c
         g_serverHandshakeSucceeded = false;
         STUB_REPLACE(CreateTCPListenSocket, STUB_CreateTCPListenSocket);
         STUB_REPLACE(HITLS_Accept, STUB_RecordHITLSAccept);
+        if (g_configurePskServer) {
+            STUB_REPLACE(CreateProtocolConfig, STUB_CreatePskProtocolConfig);
+        }
         int ret = RunServer((int)serverArgc, serverArgv);
         if (g_serverReadyFd >= 0) {
             (void)close(g_serverReadyFd);
@@ -270,6 +322,33 @@ static bool RunHandshakeProcesses(char **serverArgv, size_t serverArgc, char **c
     bool clientResultMatches = expectedClientRet == TLS_AUTH_IGNORE_CLIENT_RET || clientRet == expectedClientRet;
     return clientResultMatches && serverExited &&
         WIFEXITED(serverStatus) && WEXITSTATUS(serverStatus) == EXIT_SUCCESS;
+}
+
+static bool RunPskHandshake(const char *protocol, const char *cipher, const char *clientIdentity,
+    const char *clientPsk, int expectedClientRet, bool expectServerHandshakeSuccess)
+{
+    if (get_real_CreateTCPListenSocket() == NULL || get_real_CreateProtocolConfig() == NULL) {
+        return false;
+    }
+
+    char portString[8] = {0};
+    char *serverArgv[] = {
+        "s_server", "-accept", TLS_AUTH_BIND_PLACEHOLDER, (char *)protocol,
+        "-cipher", (char *)cipher, "-noverify", "-accept_once", "-quiet",
+    };
+    char *clientArgv[] = {
+        "s_client", "-host", TLS_AUTH_SERVER_NAME, "-port", portString, (char *)protocol,
+        "-cipher", (char *)cipher,
+        "-psk_identity", (char *)clientIdentity, "-psk", (char *)clientPsk,
+        "-noverify", "-prexit", "-quiet",
+    };
+
+    g_configurePskServer = true;
+    bool result = RunHandshakeProcesses(serverArgv, sizeof(serverArgv) / sizeof(serverArgv[0]),
+        clientArgv, sizeof(clientArgv) / sizeof(clientArgv[0]), portString, sizeof(portString),
+        expectedClientRet, expectServerHandshakeSuccess);
+    g_configurePskServer = false;
+    return result;
 }
 
 static bool RunTlsHandshake(const char *protocol, const char *cipher, const char *serverName,
@@ -464,6 +543,168 @@ void UT_HITLS_APP_TlcpMutualAuth_TC003(char *cipher)
         true, HITLS_APP_ERR_HANDSHAKE, false));
 
 EXIT:
+    STUB_RESTORE(gethostbyname);
+    return;
+}
+/* END_CASE */
+
+/**
+ * @test UT_HITLS_APP_TlsPsk_TC001
+ * @spec  -
+ * @title Test successful TLS 1.2 and TLS 1.3 PSK handshakes
+ */
+/* BEGIN_CASE */
+void UT_HITLS_APP_TlsPsk_TC001(char *protocol, char *cipher)
+{
+    ASSERT_TRUE(RunPskHandshake(protocol, cipher, TLS_PSK_IDENTITY, TLS_PSK_HEX, HITLS_APP_SUCCESS, true));
+
+EXIT:
+    g_configurePskServer = false;
+    STUB_RESTORE(gethostbyname);
+    return;
+}
+/* END_CASE */
+
+/**
+ * @test UT_HITLS_APP_TlsPsk_TC002
+ * @spec  -
+ * @title Test that TLS 1.2 and TLS 1.3 reject an incorrect PSK
+ */
+/* BEGIN_CASE */
+void UT_HITLS_APP_TlsPsk_TC002(char *protocol, char *cipher)
+{
+    ASSERT_TRUE(RunPskHandshake(protocol, cipher, TLS_PSK_IDENTITY, TLS_PSK_BAD_HEX,
+        HITLS_APP_ERR_HANDSHAKE, false));
+
+EXIT:
+    g_configurePskServer = false;
+    STUB_RESTORE(gethostbyname);
+    return;
+}
+/* END_CASE */
+
+/**
+ * @test UT_HITLS_APP_TlsPskOption_TC001
+ * @spec  -
+ * @title Test that s_client rejects malformed hexadecimal PSKs
+ */
+/* BEGIN_CASE */
+void UT_HITLS_APP_TlsPskOption_TC001(char *psk)
+{
+    char *argv[] = {"s_client", "-host", "127.0.0.1", "-psk", psk, "-prexit", "-quiet"};
+    ASSERT_EQ(RunClient((int)(sizeof(argv) / sizeof(argv[0])), argv), HITLS_APP_OPT_VALUE_INVALID);
+
+EXIT:
+    return;
+}
+/* END_CASE */
+
+/**
+ * @test UT_HITLS_APP_TlsPskOption_TC002
+ * @spec  -
+ * @title Test invalid PSK identity length boundaries
+ */
+/* BEGIN_CASE */
+void UT_HITLS_APP_TlsPskOption_TC002(void)
+{
+    char tooLongIdentity[HS_PSK_IDENTITY_MAX_LEN + 1] = {0};
+    (void)memset(tooLongIdentity, 'a', sizeof(tooLongIdentity) - 1);
+    char *emptyArgv[] = {
+        "s_client", "-host", "127.0.0.1", "-psk_identity", "", "-psk", TLS_PSK_HEX, "-prexit", "-quiet"
+    };
+    char *tooLongArgv[] = {
+        "s_client", "-host", "127.0.0.1", "-psk_identity", tooLongIdentity,
+        "-psk", TLS_PSK_HEX, "-prexit", "-quiet"
+    };
+    ASSERT_EQ(RunClient((int)(sizeof(emptyArgv) / sizeof(emptyArgv[0])), emptyArgv),
+        HITLS_APP_OPT_VALUE_INVALID);
+    ASSERT_EQ(RunClient((int)(sizeof(tooLongArgv) / sizeof(tooLongArgv[0])), tooLongArgv),
+        HITLS_APP_OPT_VALUE_INVALID);
+
+EXIT:
+    return;
+}
+/* END_CASE */
+
+/**
+ * @test UT_HITLS_APP_TlsPskOption_TC003
+ * @spec  -
+ * @title Test valid PSK identity length boundaries
+ */
+/* BEGIN_CASE */
+void UT_HITLS_APP_TlsPskOption_TC003(void)
+{
+    char minIdentity[] = "a";
+    char maxIdentity[HS_PSK_IDENTITY_MAX_LEN] = {0};
+    (void)memset(maxIdentity, 'a', sizeof(maxIdentity) - 1);
+
+    g_expectedPskIdentity = minIdentity;
+    ASSERT_TRUE(RunPskHandshake("-tls1_2", "HITLS_PSK_WITH_AES_128_GCM_SHA256", minIdentity,
+        TLS_PSK_HEX, HITLS_APP_SUCCESS, true));
+    g_expectedPskIdentity = maxIdentity;
+    ASSERT_TRUE(RunPskHandshake("-tls1_2", "HITLS_PSK_WITH_AES_128_GCM_SHA256", maxIdentity,
+        TLS_PSK_HEX, HITLS_APP_SUCCESS, true));
+
+EXIT:
+    ResetExpectedPsk();
+    g_configurePskServer = false;
+    STUB_RESTORE(gethostbyname);
+    return;
+}
+/* END_CASE */
+
+/**
+ * @test UT_HITLS_APP_TlsPskOption_TC004
+ * @spec  -
+ * @title Test invalid PSK length boundaries
+ */
+/* BEGIN_CASE */
+void UT_HITLS_APP_TlsPskOption_TC004(void)
+{
+    char tooLongPsk[HS_PSK_MAX_LEN * 2 + 3] = {0};
+    (void)memset(tooLongPsk, 'a', sizeof(tooLongPsk) - 1);
+    char *emptyArgv[] = {
+        "s_client", "-host", "127.0.0.1", "-psk", "", "-prexit", "-quiet"
+    };
+    char *tooLongArgv[] = {
+        "s_client", "-host", "127.0.0.1", "-psk", tooLongPsk, "-prexit", "-quiet"
+    };
+    ASSERT_EQ(RunClient((int)(sizeof(emptyArgv) / sizeof(emptyArgv[0])), emptyArgv),
+        HITLS_APP_OPT_VALUE_INVALID);
+    ASSERT_EQ(RunClient((int)(sizeof(tooLongArgv) / sizeof(tooLongArgv[0])), tooLongArgv),
+        HITLS_APP_OPT_VALUE_INVALID);
+
+EXIT:
+    return;
+}
+/* END_CASE */
+
+/**
+ * @test UT_HITLS_APP_TlsPskOption_TC005
+ * @spec  -
+ * @title Test valid PSK length boundaries
+ */
+/* BEGIN_CASE */
+void UT_HITLS_APP_TlsPskOption_TC005(void)
+{
+    static const uint8_t minPsk[] = {0};
+    uint8_t maxPsk[HS_PSK_MAX_LEN];
+    char maxPskHex[HS_PSK_MAX_LEN * 2 + 1] = {0};
+    (void)memset(maxPsk, 0xaa, sizeof(maxPsk));
+    (void)memset(maxPskHex, 'a', sizeof(maxPskHex) - 1);
+
+    g_expectedPsk = minPsk;
+    g_expectedPskLen = sizeof(minPsk);
+    ASSERT_TRUE(RunPskHandshake("-tls1_3", "HITLS_AES_128_GCM_SHA256", TLS_PSK_IDENTITY,
+        "00", HITLS_APP_SUCCESS, true));
+    g_expectedPsk = maxPsk;
+    g_expectedPskLen = sizeof(maxPsk);
+    ASSERT_TRUE(RunPskHandshake("-tls1_3", "HITLS_AES_128_GCM_SHA256", TLS_PSK_IDENTITY,
+        maxPskHex, HITLS_APP_SUCCESS, true));
+
+EXIT:
+    ResetExpectedPsk();
+    g_configurePskServer = false;
     STUB_RESTORE(gethostbyname);
     return;
 }

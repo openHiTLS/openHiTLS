@@ -33,6 +33,10 @@ typedef struct {
     /* Protocol parameters */
     char *protocol;
     char *cipherSuites;
+    char *pskIdentity;
+    char *pskHex;
+    uint8_t *psk;
+    uint32_t pskLen;
     
     /* Certificate parameters */
     char *caFile;

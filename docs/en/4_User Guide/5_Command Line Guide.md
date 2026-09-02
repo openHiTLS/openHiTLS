@@ -991,7 +991,9 @@ ASN.1 Encoding Structure Parsing and Cryptographic Object Diagnosis
 
 ```bash
 hitls s_client -host <host> [-port <port>] [-tls|-tls1_2|-tls1_3|-tlcp|-dtlcp]
-    [-cipher <suites>] [-CAfile <file>] [-chainCAfile <file>]
+    [-cipher <suites>]
+    [-psk_identity <identity> -psk <hexkey>]
+    [-CAfile <file>] [-chainCAfile <file>]
     [-cert <file> -key <file>] [-noverify] [-state] [-prexit]
 ```
 
@@ -1000,7 +1002,9 @@ hitls s_client -host <host> [-port <port>] [-tls|-tls1_2|-tls1_3|-tlcp|-dtlcp]
 - `-tls`: Use TLS and allow TLS 1.2 or TLS 1.3 negotiation by default.
 - `-tls1_2`, `-tls1_3`: Allow only the selected TLS version.
 - `-cert <file>`, `-key <file>`: Configure the TLS client certificate and private key for mutual authentication. They must be used together.
-- `-cipher <suites>`: Specify a colon-separated cipher suite list. Both standard `TLS_*` names and openHiTLS `HITLS_*` names are accepted.
+- `-cipher <suites>`: Specify a colon-separated cipher suite list for the selected protocol. Both standard `TLS_*` names and openHiTLS `HITLS_*` names are accepted.
+- `-psk_identity <identity>`: Specify the client PSK identity. The default is `Client_identity`.
+- `-psk <hexkey>`: Specify a non-empty PSK as an even-length hexadecimal string without a `0x` prefix. PSK options apply only to TLS. A raw TLS 1.3 PSK is associated with SHA-256. If the configured TLS 1.3 cipher suites contain no SHA-256 suite, the PSK does not participate in the handshake, which may continue using certificate authentication.
 - `-CAfile <file>`, `-chainCAfile <file>`: Configure the CA and intermediate certificates used to verify the server.
 - `-noverify`: Do not verify the server certificate. This does not prevent the client from sending its own certificate.
 - `-tlcp_sign_cert/-tlcp_sign_key`, `-tlcp_enc_cert/-tlcp_enc_key`: Configure the TLCP/DTLCP signing and encryption certificate pairs.
@@ -1011,6 +1015,15 @@ hitls s_client -host <host> [-port <port>] [-tls|-tls1_2|-tls1_3|-tlcp|-dtlcp]
 hitls s_client -host 127.0.0.1 -port 4433 -tls1_3 \
     -CAfile ca.pem -chainCAfile intermediate.pem \
     -cert client.pem -key client.key.pem
+```
+
+**TLS 1.3 PSK Example**:
+
+```bash
+hitls s_client -host 127.0.0.1 -port 4433 -tls1_3 \
+    -cipher TLS_AES_128_GCM_SHA256 \
+    -psk_identity Client_identity -psk 1a2b3c4d5e6f77889900aabbccddeeff \
+    -noverify -prexit
 ```
 
 ### 3.5.2 s_server
@@ -1025,7 +1038,7 @@ hitls s_server [-accept <host:port>] [-port <port>] [-tls|-tls1_2|-tls1_3|-tlcp|
     [-cert <file> -key <file>] [-noverify] [-accept_once] [-state]
 ```
 
-`-cert/-key` configure the TLS server certificate and private key. The server verifies client certificates by default; use `-CAfile/-chainCAfile` for its trust chain or `-noverify` to disable client-certificate verification. Protocol, cipher, and TLCP certificate options follow the same rules as `s_client`.
+`-cert/-key` configure the TLS server certificate and private key. The server verifies client certificates by default; use `-CAfile/-chainCAfile` for its trust chain or `-noverify` to disable client-certificate verification. The current `s_server` command uses `-cipher` for the cipher list of the selected protocol version; its protocol and TLCP certificate options otherwise follow the same rules as `s_client`.
 
 **TLS 1.3 Mutual Authentication Example**:
 

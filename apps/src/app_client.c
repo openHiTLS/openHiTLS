@@ -33,6 +33,8 @@
 #include "hitls_cert.h"
 #include "hitls_cert_init.h"
 #include "hitls_session.h"
+#include "hitls_psk.h"
+#include "hitls_crypt_type.h"
 #include "crypt_errno.h"
 #include "hitls_crypt_init.h"
 #include "bsl_uio.h"
@@ -47,6 +49,7 @@
 #define IS_SUPPORT_GET_EOF 1
 #define HEARTBEAT_MISS_COUNT 3
 #define HEARTBEAT_INTERVAL 1
+#define CLIENT_DEFAULT_PSK_IDENTITY "Client_identity"
 
 /* Client option types */
 typedef enum {
@@ -60,6 +63,8 @@ typedef enum {
     HITLS_CLIENT_OPT_TLCP,
     HITLS_CLIENT_OPT_DTLCP,
     HITLS_CLIENT_OPT_CIPHER,
+    HITLS_CLIENT_OPT_PSK_IDENTITY,
+    HITLS_CLIENT_OPT_PSK,
 
     /* Certificate options */
     HITLS_CLIENT_OPT_CAFILE,
@@ -102,6 +107,8 @@ static const HITLS_CmdOption g_clientOptions[] = {
     {"tlcp",        HITLS_CLIENT_OPT_TLCP,        HITLS_APP_OPT_VALUETYPE_NO_VALUE, "Use TLCP protocol"},
     {"dtlcp",       HITLS_CLIENT_OPT_DTLCP,       HITLS_APP_OPT_VALUETYPE_NO_VALUE, "Use DTLCP protocol"},
     {"cipher",      HITLS_CLIENT_OPT_CIPHER,      HITLS_APP_OPT_VALUETYPE_STRING,   "Specify cipher suites"},
+    {"psk_identity", HITLS_CLIENT_OPT_PSK_IDENTITY, HITLS_APP_OPT_VALUETYPE_STRING, "PSK identity"},
+    {"psk",         HITLS_CLIENT_OPT_PSK,         HITLS_APP_OPT_VALUETYPE_STRING,   "PSK in hexadecimal"},
 
     /* Certificate options */
     {"CAfile",      HITLS_CLIENT_OPT_CAFILE,      HITLS_APP_OPT_VALUETYPE_IN_FILE,  "CA certificate file"},
@@ -156,6 +163,7 @@ static void InitClientParams(HITLS_ClientParams *params, AppProvider *provider)
     params->port = 4433;
     params->connectTimeout = 10;
     params->protocol = NULL;
+    params->pskIdentity = CLIENT_DEFAULT_PSK_IDENTITY;
     params->verifyDepth = 9;
     params->certFormat = BSL_FORMAT_PEM;
     params->keyFormat = BSL_FORMAT_PEM;
@@ -221,6 +229,16 @@ static int HandleClientDTLCP(HITLS_ClientParams *params)
 static int HandleClientCipher(HITLS_ClientParams *params)
 {
     params->cipherSuites = HITLS_APP_OptGetValueStr();
+    return HITLS_APP_SUCCESS;
+}
+static int HandleClientPskIdentity(HITLS_ClientParams *params)
+{
+    params->pskIdentity = HITLS_APP_OptGetValueStr();
+    return HITLS_APP_SUCCESS;
+}
+static int HandleClientPsk(HITLS_ClientParams *params)
+{
+    params->pskHex = HITLS_APP_OptGetValueStr();
     return HITLS_APP_SUCCESS;
 }
 static int HandleClientCAFile(HITLS_ClientParams *params)
@@ -315,6 +333,8 @@ static const ClientOptHandleFuncMap g_clientOptHandleFuncMap[] = {
     {HITLS_CLIENT_OPT_TLCP, HandleClientTLCP},
     {HITLS_CLIENT_OPT_DTLCP, HandleClientDTLCP},
     {HITLS_CLIENT_OPT_CIPHER, HandleClientCipher},
+    {HITLS_CLIENT_OPT_PSK_IDENTITY, HandleClientPskIdentity},
+    {HITLS_CLIENT_OPT_PSK, HandleClientPsk},
     {HITLS_CLIENT_OPT_CAFILE, HandleClientCAFile},
     {HITLS_CLIENT_OPT_CHAINCAFILE, HandleClientCAChain},
     {HITLS_CLIENT_OPT_CERT, HandleClientCert},
@@ -375,6 +395,44 @@ static int32_t CheckSmParam(HITLS_ClientParams *params)
     return HITLS_APP_SUCCESS;
 }
 
+static int32_t ParseClientPsk(HITLS_ClientParams *params)
+{
+    if (params->pskHex == NULL) {
+        return HITLS_APP_SUCCESS;
+    }
+    APP_ProtocolType protocol = ParseProtocolType(params->protocol);
+    if (protocol == APP_PROTOCOL_TLCP || protocol == APP_PROTOCOL_DTLCP) {
+        AppPrintError("client: PSK options are only supported with TLS\n");
+        return HITLS_APP_OPT_VALUE_INVALID;
+    }
+
+    size_t identityLen = strlen(params->pskIdentity);
+    if (identityLen == 0 || identityLen + 1 > HS_PSK_IDENTITY_MAX_LEN) {
+        AppPrintError("client: PSK identity must be a non-empty string no longer than 255 bytes\n");
+        return HITLS_APP_OPT_VALUE_INVALID;
+    }
+
+    size_t hexLen = strlen(params->pskHex);
+    if (hexLen == 0 || (hexLen & 1u) != 0 || hexLen > HS_PSK_MAX_LEN * 2u) {
+        AppPrintError("client: PSK must be a non-empty, even-length hexadecimal string\n");
+        return HITLS_APP_OPT_VALUE_INVALID;
+    }
+
+    uint32_t pskLen = (uint32_t)(hexLen / 2u);
+    uint8_t *psk = BSL_SAL_Malloc(pskLen);
+    if (psk == NULL) {
+        return HITLS_APP_MEM_ALLOC_FAIL;
+    }
+    int32_t ret = HITLS_APP_HexToBytes(params->pskHex, psk, &pskLen);
+    if (ret != HITLS_APP_SUCCESS) {
+        BSL_SAL_ClearFree(psk, pskLen);
+        return ret;
+    }
+    params->psk = psk;
+    params->pskLen = pskLen;
+    return HITLS_APP_SUCCESS;
+}
+
 int ParseClientOptions(int argc, char *argv[], HITLS_ClientParams *params, AppProvider *provider)
 {
     if (params == NULL) {
@@ -410,6 +468,79 @@ int ParseClientOptions(int argc, char *argv[], HITLS_ClientParams *params, AppPr
         return ret;
     }
 
+    return ParseClientPsk(params);
+}
+
+static uint32_t ClientPskCallback(HITLS_Ctx *ctx, const uint8_t *hint, uint8_t *identity,
+    uint32_t maxIdentityLen, uint8_t *psk, uint32_t maxPskLen)
+{
+    (void)hint;
+    HITLS_ClientParams *params = HITLS_GetUserData(ctx);
+    if (params == NULL || params->psk == NULL || params->pskIdentity == NULL) {
+        return 0;
+    }
+    size_t identityLen = strlen(params->pskIdentity);
+    if (identityLen + 1 > maxIdentityLen || params->pskLen > maxPskLen) {
+        return 0;
+    }
+    (void)memcpy(identity, params->pskIdentity, identityLen + 1);
+    (void)memcpy(psk, params->psk, params->pskLen);
+    return params->pskLen;
+}
+
+static int32_t ClientPskUseSessionCallback(HITLS_Ctx *ctx, uint32_t hashAlgo, const uint8_t **id,
+    uint32_t *idLen, HITLS_Session **session)
+{
+    if (id == NULL || idLen == NULL || session == NULL) {
+        return HITLS_PSK_USE_SESSION_CB_FAIL;
+    }
+    *id = NULL;
+    *idLen = 0;
+    *session = NULL;
+
+    HITLS_ClientParams *params = HITLS_GetUserData(ctx);
+    if (params == NULL || params->psk == NULL || params->pskIdentity == NULL) {
+        return HITLS_PSK_USE_SESSION_CB_FAIL;
+    }
+    if (hashAlgo != HITLS_HASH_BUTT && hashAlgo != HITLS_HASH_SHA_256) {
+        return HITLS_PSK_USE_SESSION_CB_SUCCESS;
+    }
+
+    HITLS_Session *pskSession = HITLS_SESS_New();
+    if (pskSession == NULL) {
+        return HITLS_PSK_USE_SESSION_CB_FAIL;
+    }
+    int32_t ret = HITLS_SESS_SetMasterKey(pskSession, params->psk, params->pskLen);
+    if (ret == HITLS_SUCCESS) {
+        ret = HITLS_SESS_SetCipherSuite(pskSession, HITLS_AES_128_GCM_SHA256);
+    }
+    if (ret == HITLS_SUCCESS) {
+        ret = HITLS_SESS_SetProtocolVersion(pskSession, HITLS_VERSION_TLS13);
+    }
+    if (ret != HITLS_SUCCESS) {
+        HITLS_SESS_Free(pskSession);
+        return HITLS_PSK_USE_SESSION_CB_FAIL;
+    }
+
+    *id = (const uint8_t *)params->pskIdentity;
+    *idLen = (uint32_t)strlen(params->pskIdentity);
+    *session = pskSession;
+    return HITLS_PSK_USE_SESSION_CB_SUCCESS;
+}
+
+static int32_t ConfigureClientPsk(HITLS_Config *config, HITLS_ClientParams *params)
+{
+    if (params->psk == NULL) {
+        return HITLS_APP_SUCCESS;
+    }
+    int32_t ret = HITLS_CFG_SetPskClientCallback(config, ClientPskCallback);
+    if (ret == HITLS_SUCCESS) {
+        ret = HITLS_CFG_SetPskUseSessionCallback(config, ClientPskUseSessionCallback);
+    }
+    if (ret != HITLS_SUCCESS) {
+        AppPrintError("client: Failed to configure PSK: 0x%x\n", ret);
+        return HITLS_APP_INVALID_ARG;
+    }
     return HITLS_APP_SUCCESS;
 }
 
@@ -437,6 +568,12 @@ static HITLS_Config *CreateClientConfig(HITLS_ClientParams *params)
             HITLS_CFG_FreeConfig(config);
             return NULL;
         }
+    }
+
+    ret = ConfigureClientPsk(config, params);
+    if (ret != HITLS_APP_SUCCESS) {
+        HITLS_CFG_FreeConfig(config);
+        return NULL;
     }
 
     /* Configure certificate verification */
@@ -730,6 +867,15 @@ static void CleanupClientResources(HITLS_Ctx *ctx, HITLS_Config *config, BSL_UIO
         BSL_UIO_Free(uio);
     }
 }
+
+static void ClearClientSensitiveData(HITLS_ClientParams *params)
+{
+    if (params->psk != NULL) {
+        BSL_SAL_ClearFree(params->psk, params->pskLen);
+        params->psk = NULL;
+        params->pskLen = 0;
+    }
+}
 #ifdef HITLS_APP_SM_MODE
 static volatile bool g_serverOk = false;
 static volatile bool g_loopFlag = true;
@@ -930,6 +1076,15 @@ static int32_t CreateConfigAndConnection(HITLS_ClientParams *params, HITLS_Confi
             ret = HITLS_APP_ERR_CREATE_CTX;
             break;
         }
+
+        if (params->psk != NULL) {
+            ret = HITLS_SetUserData(ctxTmp, params);
+            if (ret != HITLS_SUCCESS) {
+                AppPrintError("client: Failed to set PSK user data: 0x%x\n", ret);
+                ret = HITLS_APP_INVALID_ARG;
+                break;
+            }
+        }
         
         /* Associate UIO with TLS context */
         ret = HITLS_SetUio(ctxTmp, uioTmp);
@@ -1031,6 +1186,7 @@ int HITLS_ClientMain(int argc, char *argv[])
     
 cleanup:
     CleanupClientResources(ctx, config, uio);
+    ClearClientSensitiveData(&params);
 
     if (!params.quiet && ret == HITLS_APP_SUCCESS) {
         AppPrintInfo("Client completed successfully\n");

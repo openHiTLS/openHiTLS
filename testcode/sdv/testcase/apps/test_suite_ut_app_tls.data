@@ -33,3 +33,33 @@ UT_HITLS_APP_TlcpMutualAuth_TC002:"HITLS_ECDHE_SM4_GCM_SM3"
 
 UT_HITLS_APP_TlcpMutualAuth_TC003 TLCP rejects a mismatched SM2 server hostname
 UT_HITLS_APP_TlcpMutualAuth_TC003:"HITLS_ECDHE_SM4_GCM_SM3"
+
+UT_HITLS_APP_TlsPsk_TC001 TLS 1.2 PSK handshake succeeds
+UT_HITLS_APP_TlsPsk_TC001:"-tls1_2":"HITLS_PSK_WITH_AES_128_GCM_SHA256"
+
+UT_HITLS_APP_TlsPsk_TC001 TLS 1.3 PSK handshake with -cipher succeeds
+UT_HITLS_APP_TlsPsk_TC001:"-tls1_3":"HITLS_AES_128_GCM_SHA256"
+
+UT_HITLS_APP_TlsPsk_TC002 TLS 1.2 rejects an incorrect PSK
+UT_HITLS_APP_TlsPsk_TC002:"-tls1_2":"HITLS_PSK_WITH_AES_128_GCM_SHA256"
+
+UT_HITLS_APP_TlsPsk_TC002 TLS 1.3 rejects an incorrect PSK
+UT_HITLS_APP_TlsPsk_TC002:"-tls1_3":"HITLS_AES_128_GCM_SHA256"
+
+UT_HITLS_APP_TlsPskOption_TC001 rejects an odd-length PSK
+UT_HITLS_APP_TlsPskOption_TC001:"abc"
+
+UT_HITLS_APP_TlsPskOption_TC001 rejects a non-hexadecimal PSK
+UT_HITLS_APP_TlsPskOption_TC001:"0011zz"
+
+UT_HITLS_APP_TlsPskOption_TC002 rejects invalid PSK identity length boundaries
+UT_HITLS_APP_TlsPskOption_TC002:
+
+UT_HITLS_APP_TlsPskOption_TC003 accepts valid PSK identity length boundaries
+UT_HITLS_APP_TlsPskOption_TC003:
+
+UT_HITLS_APP_TlsPskOption_TC004 rejects invalid PSK length boundaries
+UT_HITLS_APP_TlsPskOption_TC004:
+
+UT_HITLS_APP_TlsPskOption_TC005 accepts valid PSK length boundaries
+UT_HITLS_APP_TlsPskOption_TC005:
