@@ -13,6 +13,7 @@ The openHiTLS command source code is located in the apps directory, and the comp
 ||mac|Message authentication code calculation and verification|
 ||dgst|Message digest calculation and digital signature operations|
 ||kdf|Key derivation function, derive keys from input materials|
+||passwd|Generate password hashes; currently only SHA512-crypt is supported|
 |**Key and Parameter Management**|| |
 ||rsa|RSA key processing, including format conversion and information display|
 ||genrsa|Generate RSA private keys|
@@ -325,6 +326,41 @@ hitls kdf -keylen 32 -hexpass 0x70617373776f7264 -hexsalt 0x73616c74 -iter 1000 
 
 # Binary output to file
 hitls kdf -keylen 32 -pass "password" -salt "salt" -binary -out key.bin pbkdf2
+```
+
+### 3.2.5 passwd
+
+**Function**: Generate password hashes; currently only SHA512-crypt is supported
+
+**Usage**:
+
+```
+hitls passwd [-help] [-salt salt] [-rounds num] [-noverify] [-stdin] [password]
+```
+
+**Supported Options and Parameters**:
+
+- `-help`: Display help information
+- `-salt <salt>`: Specify the SHA-crypt salt setting in the form `[rounds=<num>$]<salt>`. This option may be specified only once. `<num>` must contain at least one decimal digit and digits only. If `<num>` contains a non-digit character, the rounds value is not parsed; instead, the entire input is handled as an ordinary salt and then truncated according to the salt rules. For example, `rounds=N$abc` uses the default rounds value and the effective salt is `rounds=N`. A valid embedded rounds value below 1000 is limited to 1000, and a value above 999999999 is limited to 999999999. The actual salt ends at the first `$` or after 16 characters, has no character-set restriction, and must not be empty. Do not use `-rounds` when this option contains a valid `rounds=<num>$`
+- `-rounds <num>`: Specify SHA-crypt rounds. The value must be in the range 1000 to 999999999. If omitted, the default is 5000 and the output omits `rounds=5000$`; if explicitly specified, the output includes `rounds=<num>$`. This option cannot be combined with `rounds=<num>$` in `-salt`
+- `-stdin`: Read passwords line by line from standard input and output one result per line. If no input data is read, no result is output and the command returns success; an empty line outputs `<NULL>`
+- `-noverify`: Do not verify terminal password input. It does not change behavior when `password` or `-stdin` is used
+- `password`: Optional unnamed parameter used as the password to hash. An empty string outputs `<NULL>`. This password is passed as a command-line argument, and the program cannot reliably clear argument contents retained by the caller
+
+**Input Sources**:
+
+- If `password` is specified, the command-line argument is used as the password. For security-sensitive use, prefer interactive terminal input or `-stdin`
+- If `-stdin` is specified, standard input is used as the password source
+- If neither `password` nor `-stdin` is specified, the password is read interactively from the terminal
+- For all input sources, only the first 256 bytes of a non-empty password are used to generate the hash. Command-line and terminal input print a warning when truncated; standard input is truncated silently line by line
+
+**Examples**:
+
+```bash
+hitls passwd -salt 12345678 alpha
+hitls passwd -rounds 10000 -salt 12345678 alpha
+hitls passwd -salt 'rounds=10000$12345678' alpha
+printf 'alpha\nbeta\n' | hitls passwd -salt 12345678 -stdin
 ```
 
 ## 3.3 Key and Parameter Management

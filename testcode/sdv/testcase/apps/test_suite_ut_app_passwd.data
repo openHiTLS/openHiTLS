@@ -1,0 +1,14 @@
+passwd command option parsing and validation
+UT_HITLS_APP_PASSWD_TC001:
+
+passwd fixed SHA-crypt vectors
+UT_HITLS_APP_PASSWD_TC002:
+
+passwd stdin input handling
+UT_HITLS_APP_PASSWD_TC003:
+
+passwd terminal input verification
+UT_HITLS_APP_PASSWD_TC004:
+
+passwd password length limit and truncation
+UT_HITLS_APP_PASSWD_TC005:

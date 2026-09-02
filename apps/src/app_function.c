@@ -34,6 +34,7 @@
 #include "app_req.h"
 #include "app_mac.h"
 #include "app_kdf.h"
+#include "app_passwd.h"
 #include "app_keymgmt.h"
 #include "app_client.h"
 #include "app_server.h"
@@ -59,6 +60,7 @@ HITLS_CmdFunc g_cmdFunc[] = {
     {"req",      FUNC_TYPE_GENERAL,   HITLS_ReqMain},
     {"mac",      FUNC_TYPE_GENERAL,   HITLS_MacMain},
     {"kdf",      FUNC_TYPE_GENERAL,   HITLS_KdfMain},
+    {"passwd",   FUNC_TYPE_GENERAL,   HITLS_PasswdMain},
     {"prime",    FUNC_TYPE_GENERAL,   HITLS_PrimeMain},
     {"errdecode", FUNC_TYPE_GENERAL,  HITLS_ErrdecodeMain},
 #ifdef HITLS_APP_SM_MODE
