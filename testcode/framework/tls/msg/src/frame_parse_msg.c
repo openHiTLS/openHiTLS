@@ -151,7 +151,8 @@ static int32_t ParseHsExtArrayForList(
     return HITLS_SUCCESS;
 }
 
-static int32_t ParseHsSessionTicketExtArray8(
+/* Parse a uint16 extension type, a uint16 extension data length, and extension data of that length. */
+static int32_t ParseHsExtOpaqueArray8(
     const uint8_t *buffer, uint32_t bufLen, FRAME_HsExtArray8 *field, uint32_t *offset)
 {
     uint32_t exOffset = 0;
@@ -397,7 +398,7 @@ static int32_t ParseClientHelloMsg(FRAME_Type *frameType, const uint8_t *buffer,
                 ParseHsExtArray8(&buffer[offset], bufLen - offset, &clientHello->secRenego, &offset);
                 break;
             case HS_EX_TYPE_SESSION_TICKET:
-                ParseHsSessionTicketExtArray8(&buffer[offset], bufLen - offset, &clientHello->sessionTicket, &offset);
+                ParseHsExtOpaqueArray8(&buffer[offset], bufLen - offset, &clientHello->sessionTicket, &offset);
                 break;
             case HS_EX_TYPE_SERVER_NAME:
                 ParseHsExtArrayForList(&buffer[offset], bufLen - offset, &clientHello->serverName, &offset);
@@ -428,6 +429,10 @@ static int32_t ParseClientHelloMsg(FRAME_Type *frameType, const uint8_t *buffer,
                 break;
             case HS_EX_TYPE_CONNECTION_ID:
                 ParseHsExtArray8(&buffer[offset], bufLen - offset, &clientHello->connectionId, &offset);
+                break;
+            case HS_EX_TYPE_QUIC_TRANSPORT_PARAMETERS:
+                ParseHsExtOpaqueArray8(
+                    &buffer[offset], bufLen - offset, &clientHello->quicTransportParams, &offset);
                 break;
             default: /* Unrecognized extension. Skip parsing the extension. */
                 ParseFieldInteger16(&buffer[tmpOffset], bufLen - tmpOffset, &tmpField, &tmpOffset);
@@ -475,6 +480,7 @@ static void CleanClientHelloMsg(FRAME_ClientHelloMsg *clientHello)
     BSL_SAL_FREE(clientHello->pskModes.exData.data);
     BSL_SAL_FREE(clientHello->caList.list.data);
     BSL_SAL_FREE(clientHello->connectionId.exData.data);
+    BSL_SAL_FREE(clientHello->quicTransportParams.exData.data);
     return;
 }
 
@@ -527,7 +533,7 @@ static int32_t ParseServerHelloMsg(const uint8_t *buffer, uint32_t bufLen, FRAME
                 ParseHsExtArray8(&buffer[offset], bufLen - offset, &serverHello->secRenego, &offset);
                 break;
             case HS_EX_TYPE_SESSION_TICKET:
-                ParseHsSessionTicketExtArray8(&buffer[offset], bufLen - offset, &serverHello->sessionTicket, &offset);
+                ParseHsExtOpaqueArray8(&buffer[offset], bufLen - offset, &serverHello->sessionTicket, &offset);
                 break;
             case HS_EX_TYPE_SERVER_NAME:
                 ParseHsExtArrayForList(&buffer[offset], bufLen - offset, &serverHello->serverName, &offset);

@@ -15,9 +15,12 @@
 
 /* BEGIN_HEADER */
 /* INCLUDE_BASE test_suite_sdv_quic_tls */
+#include "bsl_bytes.h"
 #include "hitls_session.h"
+#include "alert.h"
 #include "hs_extensions.h"
 #include "hs_msg.h"
+#include "rec_wrapper.h"
 #include "tls.h"
 /* END_HEADER */
 
@@ -28,6 +31,72 @@ static const uint16_t g_quicTestP256P384[] = {
 
 #define QUIC_TEST_HELLO_SESSION_ID_LEN_OFFSET (HS_MSG_HEADER_SIZE + sizeof(uint16_t) + HS_RANDOM_SIZE)
 #define QUIC_TEST_TICKET_KEY_LEN 80u
+
+/* Parse and repack ClientHello with a QUIC transport parameters extension containing one 0x00 byte. */
+static void QuicTlsTestAddClientTransportParameters(HITLS_Ctx *ctx, uint8_t *data, uint32_t *len,
+    uint32_t bufSize, void *userData)
+{
+    static const uint8_t transportParamsData[] = {0x00u};
+    bool *injected = (bool *)userData;
+    FRAME_Type frameType = {0};
+    FRAME_Msg frameMsg = {0};
+    uint32_t parseLen = 0u;
+    (void)ctx;
+    if (injected == NULL || *injected) {
+        return;
+    }
+
+    frameType.versionType = HITLS_VERSION_TLS13;
+    frameMsg.recType.data = REC_TYPE_HANDSHAKE;
+    frameMsg.length.data = *len;
+    frameMsg.recVersion.data = HITLS_VERSION_TLS13;
+    ASSERT_EQ(FRAME_ParseMsgBody(&frameType, data, *len, &frameMsg, &parseLen), HITLS_SUCCESS);
+    ASSERT_EQ(parseLen, *len);
+    ASSERT_EQ(frameMsg.body.hsMsg.type.data, CLIENT_HELLO);
+
+    FRAME_HsExtArray8 *transportParams = &frameMsg.body.hsMsg.body.clientHello.quicTransportParams;
+    transportParams->exState = INITIAL_FIELD;
+    transportParams->exType.state = INITIAL_FIELD;
+    transportParams->exType.data = HS_EX_TYPE_QUIC_TRANSPORT_PARAMETERS;
+    ASSERT_EQ(FRAME_ModifyMsgArray8(transportParamsData, sizeof(transportParamsData),
+        &transportParams->exData, &transportParams->exDataLen), HITLS_SUCCESS);
+    ASSERT_EQ(FRAME_PackRecordBody(&frameType, &frameMsg, data, bufSize, len), HITLS_SUCCESS);
+    *injected = true;
+
+EXIT:
+    FRAME_CleanMsg(&frameType, &frameMsg);
+}
+
+/* Append a one-byte QUIC transport parameters extension to EncryptedExtensions and repair both enclosing lengths. */
+static void QuicTlsTestAddEncryptedExtensionsTransportParameters(HITLS_Ctx *ctx, uint8_t *data, uint32_t *len,
+    uint32_t bufSize, void *userData)
+{
+    static const uint8_t transportParams[] = {0x00u, 0x39u, 0x00u, 0x01u, 0x00u};
+    bool *injected = (bool *)userData;
+    uint32_t handshakeLen;
+    uint16_t extensionsLen;
+    (void)ctx;
+    if (injected == NULL || *injected || data == NULL || len == NULL ||
+        *len < HS_MSG_HEADER_SIZE + sizeof(uint16_t) || data[0] != ENCRYPTED_EXTENSIONS ||
+        *len > bufSize || sizeof(transportParams) > bufSize - *len) {
+        return;
+    }
+
+    handshakeLen = BSL_ByteToUint24(&data[1]);
+    extensionsLen = BSL_ByteToUint16(&data[HS_MSG_HEADER_SIZE]);
+    if (handshakeLen != *len - HS_MSG_HEADER_SIZE ||
+        extensionsLen != *len - HS_MSG_HEADER_SIZE - sizeof(uint16_t) ||
+        handshakeLen > 0xffffffu - sizeof(transportParams) ||
+        extensionsLen > UINT16_MAX - sizeof(transportParams)) {
+        return;
+    }
+
+    (void)memcpy(&data[*len], transportParams, sizeof(transportParams));
+    *len += sizeof(transportParams);
+    BSL_Uint16ToByte((uint16_t)(extensionsLen + sizeof(transportParams)), &data[HS_MSG_HEADER_SIZE]);
+    BSL_Uint24ToByte(handshakeLen + sizeof(transportParams), &data[1]);
+    *injected = true;
+}
 
 static HITLS_Session *g_quicTestSavedSession = NULL;
 
@@ -1582,5 +1651,96 @@ EXIT:
     g_quicTestSavedSession = NULL;
     QuicTlsTestPairFree(&first);
     QuicTlsTestPairFree(&resumed);
+}
+/* END_CASE */
+
+/**
+ * @test SDV_TLS_QUIC_INTERACTION_NON_QUIC_SERVER_TP_FUNC_TC001
+ * @title A regular TLS server rejects QUIC transport parameters in ClientHello
+ * @precon Neither endpoint enables QUIC-TLS mode
+ * @brief Add a one-byte QUIC transport-parameters extension to the regular TLS client's ClientHello through FRAME.
+ * @expect The server returns unsupported-extension and sends a fatal unsupported_extension alert as required by
+ *         RFC 9001 Section 8.2.
+ */
+/* BEGIN_CASE */
+void SDV_TLS_QUIC_INTERACTION_NON_QUIC_SERVER_TP_FUNC_TC001(void)
+{
+    HITLS_Config *tlsConfig = NULL;
+    FRAME_LinkObj *client = NULL;
+    FRAME_LinkObj *server = NULL;
+    bool injected = false;
+    RecWrapper wrapper = {
+        TRY_SEND_CLIENT_HELLO, REC_TYPE_HANDSHAKE, false, &injected, QuicTlsTestAddClientTransportParameters};
+    ALERT_Info alert = {0};
+
+    FRAME_Init();
+    tlsConfig = HITLS_CFG_NewTLS13Config();
+    ASSERT_TRUE(tlsConfig != NULL);
+    client = FRAME_CreateLink(tlsConfig, BSL_UIO_TCP);
+    server = FRAME_CreateLink(tlsConfig, BSL_UIO_TCP);
+    ASSERT_TRUE(client != NULL);
+    ASSERT_TRUE(server != NULL);
+    RegisterWrapper(wrapper);
+
+    ASSERT_TRUE(QuicTlsTestIsProgressResult(HITLS_Connect(client->ssl)));
+    ASSERT_TRUE(injected);
+    ASSERT_EQ(FRAME_TrasferMsgBetweenLink(client, server), HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_Accept(server->ssl), HITLS_PARSE_UNSUPPORTED_EXTENSION);
+    ASSERT_EQ(server->ssl->state, CM_STATE_ALERTED);
+    ALERT_GetInfo(server->ssl, &alert);
+    ASSERT_EQ(alert.flag, ALERT_FLAG_SEND);
+    ASSERT_EQ(alert.level, ALERT_LEVEL_FATAL);
+    ASSERT_EQ(alert.description, ALERT_UNSUPPORTED_EXTENSION);
+
+EXIT:
+    ClearWrapper();
+    HITLS_CFG_FreeConfig(tlsConfig);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+}
+/* END_CASE */
+
+/**
+ * @test SDV_TLS_QUIC_INTERACTION_NON_QUIC_CLIENT_TP_FUNC_TC001
+ * @title A regular TLS client rejects QUIC transport parameters in EncryptedExtensions
+ * @precon Neither endpoint enables QUIC-TLS mode
+ * @brief Inject a one-byte QUIC transport-parameters extension into the regular TLS server's EncryptedExtensions.
+ * @expect The client rejects the unsolicited extension and sends a fatal unsupported_extension alert as required by
+ *         RFC 9001 Section 8.2.
+ */
+/* BEGIN_CASE */
+void SDV_TLS_QUIC_INTERACTION_NON_QUIC_CLIENT_TP_FUNC_TC001(void)
+{
+    HITLS_Config *tlsConfig = NULL;
+    FRAME_LinkObj *client = NULL;
+    FRAME_LinkObj *server = NULL;
+    bool injected = false;
+    RecWrapper wrapper = {TRY_SEND_ENCRYPTED_EXTENSIONS, REC_TYPE_HANDSHAKE, false, &injected,
+        QuicTlsTestAddEncryptedExtensionsTransportParameters};
+    ALERT_Info alert = {0};
+
+    FRAME_Init();
+    tlsConfig = HITLS_CFG_NewTLS13Config();
+    ASSERT_TRUE(tlsConfig != NULL);
+    client = FRAME_CreateLink(tlsConfig, BSL_UIO_TCP);
+    server = FRAME_CreateLink(tlsConfig, BSL_UIO_TCP);
+    ASSERT_TRUE(client != NULL);
+    ASSERT_TRUE(server != NULL);
+    RegisterWrapper(wrapper);
+
+    ASSERT_EQ(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT),
+        HITLS_MSG_HANDLE_UNSUPPORT_EXTENSION_TYPE);
+    ASSERT_TRUE(injected);
+    ASSERT_EQ(client->ssl->state, CM_STATE_ALERTED);
+    ALERT_GetInfo(client->ssl, &alert);
+    ASSERT_EQ(alert.flag, ALERT_FLAG_SEND);
+    ASSERT_EQ(alert.level, ALERT_LEVEL_FATAL);
+    ASSERT_EQ(alert.description, ALERT_UNSUPPORTED_EXTENSION);
+
+EXIT:
+    ClearWrapper();
+    HITLS_CFG_FreeConfig(tlsConfig);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
 }
 /* END_CASE */

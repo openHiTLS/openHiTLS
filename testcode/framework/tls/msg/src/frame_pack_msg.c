@@ -353,7 +353,8 @@ static int32_t PackHsExtArrayForList(const FRAME_HsExtArray8 *field, uint8_t *bu
 }
 
 
-static int32_t PackHsExtArrayForTicket(const FRAME_HsExtArray8 *field, uint8_t *buf, uint32_t bufLen, uint32_t *offset)
+/* Pack a uint16 extension type, a uint16 extension data length, and extension data of that length. */
+static int32_t PackHsExtOpaqueArray8(const FRAME_HsExtArray8 *field, uint8_t *buf, uint32_t bufLen, uint32_t *offset)
 {
     uint32_t repeats = ONE_TIME;
 
@@ -786,9 +787,10 @@ static int32_t PackClientHelloMsg(const FRAME_ClientHelloMsg *clientHello, uint8
         PackHsExtArray8(&clientHello->pskModes, &buf[offset], bufLen - offset, &offset);
         PackHsExtKeyShare(&clientHello->keyshares, &buf[offset], bufLen - offset, &offset);
         PackHsExtArray8(&clientHello->secRenego, &buf[offset], bufLen - offset, &offset);
-        PackHsExtArrayForTicket(&clientHello->sessionTicket, &buf[offset], bufLen - offset, &offset);
+        PackHsExtOpaqueArray8(&clientHello->sessionTicket, &buf[offset], bufLen - offset, &offset);
         PackHsExtArray8(&clientHello->encryptThenMac, &buf[offset], bufLen - offset, &offset);
         PackHsExtArray8(&clientHello->connectionId, &buf[offset], bufLen - offset, &offset);
+        PackHsExtOpaqueArray8(&clientHello->quicTransportParams, &buf[offset], bufLen - offset, &offset);
         PackHsExtOfferedPsks(&clientHello->psks, &buf[offset], bufLen - offset, &offset);
         PackHsExtCaList(&clientHello->caList, &buf[offset], bufLen - offset, &offset);
         if (clientHello->extensionLen.state == INITIAL_FIELD) {
@@ -862,7 +864,7 @@ static int32_t PackServerHelloMsg(const FRAME_ServerHelloMsg *serverHello, uint8
     PackHsExtArrayForList(&serverHello->serverName, &buf[offset], bufLen - offset, &offset);
     PackHsExtUint16(&serverHello->recordSizeLimit, &buf[offset], bufLen - offset, &offset);
     PackHsExtArrayForList(&serverHello->tls13Cookie, &buf[offset], bufLen - offset, &offset);
-    PackHsExtArrayForTicket(&serverHello->sessionTicket, &buf[offset], bufLen - offset, &offset);
+    PackHsExtOpaqueArray8(&serverHello->sessionTicket, &buf[offset], bufLen - offset, &offset);
     PackHsExtUint16(&serverHello->supportedVersion, &buf[offset], bufLen - offset, &offset);
     PackHsExtArray8(&serverHello->extendedMasterSecret, &buf[offset], bufLen - offset, &offset);
     PackHsExtArrayForList(&serverHello->alpn, &buf[offset], bufLen - offset, &offset);

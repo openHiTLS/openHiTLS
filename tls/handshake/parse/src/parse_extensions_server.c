@@ -899,7 +899,9 @@ static int32_t ParseClientQuicTransportParams(ParsePacket *pkt, ClientHelloMsg *
     uint32_t paramsLen = pkt->bufLen;
     int32_t ret;
     if (!QUIC_TLS_IsMode(pkt->ctx)) {
-        return HITLS_MSG_HANDLE_STATE_ILLEGAL;
+        /* RFC 9001 Section 8.2 requires a non-QUIC TLS connection to treat receipt of QUIC transport parameters as a
+         * fatal unsupported_extension error. */
+        return ParseErrorProcess(pkt->ctx, HITLS_PARSE_UNSUPPORTED_EXTENSION, 0, NULL, ALERT_UNSUPPORTED_EXTENSION);
     }
     ret = ParseBytesToArray(pkt, &msg->extension.content.quicTransportParams, paramsLen);
     if (ret == HITLS_MEMALLOC_FAIL) {

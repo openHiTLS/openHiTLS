@@ -179,6 +179,7 @@ typedef struct {
     FRAME_HsExtOfferedPsks psks;            /* tls1.3 psk */
     FRAME_HsExtCaList caList;
     FRAME_HsExtArray8 connectionId;         /* connection_id (RFC 9146 / RFC 9147) */
+    FRAME_HsExtArray8 quicTransportParams;  /* QUIC transport parameters (RFC 9001) */
 } FRAME_ClientHelloMsg;
 
 typedef struct {
