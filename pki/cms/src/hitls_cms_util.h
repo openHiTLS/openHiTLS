@@ -20,33 +20,23 @@
 #ifdef HITLS_PKI_CMS
 #include "bsl_asn1_internal.h"
 #include "bsl_obj.h"
+#include "hitls_cms_local.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cplusplus */
 
-/**
- * @brief Get default digest algorithm for ML-DSA variant
- * @param mldsaVariant ML-DSA variant CID
- * @param useSignedAttrs Whether signed attributes will be used
- * @return Recommended digest algorithm CID
- */
-BslCid HITLS_CMS_GetDefaultMlDsaDigestAlg(BslCid mldsaVariant, bool useSignedAttrs);
+#ifdef HITLS_PKI_CMS_SIGNEDDATA
+typedef int32_t (*CMS_AttrDecoder)(HITLS_X509_AttrEntry *attr, void *out);
 
-/**
- * @brief Check if algorithm is a PQC signature algorithm
- * @param algId Algorithm identifier CID
- * @return true if it's a PQC signature algorithm
- */
-bool HITLS_CMS_IsPqcSignAlg(BslCid algId);
+int32_t CMS_DecodeAttr(HITLS_X509_Attrs *attrs, BslCid attrCid, CMS_AttrDecoder attrDecode, void *out);
 
-/**
- * @brief Validate PQC signature algorithm and digest combination
- * @param signAlgId Signature algorithm CID
- * @param digestAlg Digest algorithm CID
- * @return HITLS_PKI_SUCCESS if valid, error code otherwise
- */
-int32_t HITLS_CMS_ValidatePqcSignDigest(BslCid signAlgId, BslCid digestAlg);
+int32_t HITLS_CMS_CheckOrGetPqcMd(const CRYPT_EAL_PkeyCtx *key, bool hasSignedAttr, int32_t *mdId,
+    bool isStream);
+
+int32_t HITLS_CMS_PrepareSignKey(const CRYPT_EAL_PkeyCtx *prvKey, CRYPT_EAL_PkeyCtx **signKey, bool *freeSignKey);
+
+#endif
 
 #ifdef __cplusplus
 }

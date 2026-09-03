@@ -228,6 +228,7 @@ typedef enum {
     HITLS_CMS_ERR_MLDSA_ERROR_DIGEST,
     HITLS_CMS_ERR_PQC_PARAMS_NOT_OMITTED,    /**< PQC algorithm parameters must be omitted */
     HITLS_CMS_ERR_NOT_SUPPORT_STREAM_PQC,    /**< Streaming mode is not supported for PQC algorithms */
+    HITLS_CMS_ERR_ALG_PROTECTION_MISMATCH,   /**< CMSAlgorithmProtection does not match SignerInfo */
 
     HITLS_PKCS12_ERR_NULL_POINTER = 0x04070001,
     HITLS_PKCS12_ERR_INVALID_PARAM,

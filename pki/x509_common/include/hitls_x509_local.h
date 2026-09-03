@@ -144,6 +144,11 @@ typedef struct {
     HITLS_X509_Free x509Free;
 } X509_ParseFuncCbk;
 
+#if defined(HITLS_CRYPTO_MLDSA) || defined(HITLS_CRYPTO_SLH_DSA) || defined(HITLS_CRYPTO_COMPOSITE)
+int32_t X509_NormalizePqcOperationState(CRYPT_EAL_PkeyCtx *key, CRYPT_PKEY_AlgId keyAlgId,
+    BslCid signAlgId);
+#endif
+
 int32_t HITLS_X509_ParseTbsRawData(uint8_t *encode, uint32_t encodeLen, uint8_t **tbsRawData, uint32_t *tbsRawDataLen);
 
 #if defined(HITLS_PKI_X509_CRT_PARSE) || defined(HITLS_PKI_X509_CSR) || defined(HITLS_PKI_X509_CRL_PARSE) ||\
@@ -192,6 +197,16 @@ int32_t HITLS_X509_EncodeExtEntry(BSL_ASN1_List *list, BSL_ASN1_Buffer *ext);
 
 typedef int32_t (*HITLS_X509_SignCb)(int32_t mdId, CRYPT_EAL_PkeyCtx *prvKey, HITLS_X509_Asn1AlgId *signAlgId,
     void *obj);
+
+#if defined(HITLS_CRYPTO_RSA) || defined(HITLS_CRYPTO_SM2) || defined(HITLS_CRYPTO_MLDSA) || \
+    defined(HITLS_CRYPTO_SLH_DSA) || defined(HITLS_CRYPTO_COMPOSITE)
+typedef int32_t (*X509_SetSignParamCb)(CRYPT_EAL_PkeyCtx *signKey, int32_t mdId,
+    const HITLS_X509_SignAlgParam *algParam, HITLS_X509_Asn1AlgId *signAlgId);
+
+int32_t X509_PrepareSignKey(const CRYPT_EAL_PkeyCtx *prvKey, CRYPT_EAL_PkeyCtx **signKey, int32_t mdId,
+    const HITLS_X509_SignAlgParam *algParam, HITLS_X509_Asn1AlgId *signAlgId, bool *freeSignKey,
+    X509_SetSignParamCb setSignParam);
+#endif
 
 int32_t HITLS_X509_Sign(int32_t mdId, const CRYPT_EAL_PkeyCtx *prvKey, const HITLS_X509_SignAlgParam *algParam,
     void *obj, HITLS_X509_SignCb signCb);
@@ -253,6 +268,9 @@ int32_t HITLS_X509_ParseBundleBuff(void *libCtx, const char *attrName, int32_t f
     const BSL_Buffer *encode, X509_ParseFuncCbk *cbk, bool isCert, uint32_t objSize, HITLS_X509_List **list);
 
 int32_t HITLS_X509_CheckAlg(CRYPT_EAL_PkeyCtx *pubkey, const HITLS_X509_Asn1AlgId *subAlg);
+
+int32_t HITLS_X509_PrepareVerifyKey(CRYPT_EAL_PkeyCtx *verifyKey, int32_t hashId,
+    const HITLS_X509_Asn1AlgId *alg);
 
 int32_t HITLS_X509_CheckSignAlgConsistency(const HITLS_X509_Asn1AlgId *inner,
     const HITLS_X509_Asn1AlgId *outer);

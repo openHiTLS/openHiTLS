@@ -54,7 +54,7 @@ int32_t HITLS_CMS_EncodeDigestInfoBuff(BslCid cid, BSL_Buffer *in, BSL_Buffer *e
  */
 typedef struct {
     int32_t id;     /**< Algorithm OID */
-    BSL_Buffer param; /**< Algorithm parameters (optional) */
+    BSL_ASN1_Buffer param; /**< Algorithm parameters, including the ASN.1 tag (optional) */
     CRYPT_EAL_MdCtx *mdCtx; /**< Message digest context for streaming signature */
 } CMS_AlgId;
 
@@ -153,6 +153,10 @@ CMS_SignerInfo *CMS_SignerInfoNew(uint32_t flag);
 
 void CMS_AlgIdFree(void *algId);
 
+int32_t CMS_ParseAlgIdInfo(BSL_ASN1_Buffer *asn, bool copyParam, CMS_AlgId *algId);
+
+int32_t CMS_EncodeAlgIdInfo(const CMS_AlgId *alg, BSL_ASN1_Buffer *asn);
+
 /**
  * @brief encode PKCS7-SignedDataa
  * @param format encoding format
@@ -231,6 +235,11 @@ int32_t HITLS_CMS_GenBuff(int32_t format, HITLS_CMS *cms, const BSL_Param *optio
  *         Error codes can be found in hitls_pki_errno.h
  */
 int32_t HITLS_CMS_GenFile(int32_t format, HITLS_CMS *cms, const BSL_Param *optionalParam, const char *path);
+
+/**
+ * @brief Check CMS-specific signature and digest constraints for a PQC SignerInfo
+ */
+int32_t HITLS_CMS_CheckPqcSignAlgAndDigest(const CMS_SignerInfo *si, bool isStream);
 
 #endif // HITLS_PKI_CMS_SIGNEDDATA
 

@@ -15,6 +15,7 @@
 
 #include "hitls_build.h"
 #ifdef HITLS_PKI_CMS
+#include <string.h>
 #include "bsl_err_internal.h"
 #include "bsl_sal.h"
 #include "bsl_list.h"
@@ -28,6 +29,7 @@
 #include "hitls_pki_crl.h"
 #include "hitls_pki_x509.h"
 #include "hitls_x509_verify.h"
+#include "hitls_cms_util.h"
 #ifdef HITLS_PKI_CMS_SIGNEDDATA
 
 void CMS_AlgIdFree(void *algId)
@@ -37,7 +39,7 @@ void CMS_AlgIdFree(void *algId)
     }
     CMS_AlgId *alg = (CMS_AlgId *)algId;
     CRYPT_EAL_MdFreeCtx(alg->mdCtx);
-    BSL_SAL_FREE(alg->param.data);
+    BSL_SAL_FREE(alg->param.buff);
     BSL_SAL_Free(alg);
 }
 
@@ -47,7 +49,7 @@ void HITLS_CMS_SignerInfoFree(void *signerInfo)
         return;
     }
     CMS_SignerInfo *si = (CMS_SignerInfo *)signerInfo;
-    BSL_SAL_FREE(si->digestAlg.param.data);
+    BSL_SAL_FREE(si->digestAlg.param.buff);
     HITLS_X509_AttrsFree(si->signedAttrs, NULL);
     HITLS_X509_AttrsFree(si->unsignedAttrs, NULL);
     if ((si->flag & HITLS_CMS_FLAG_PARSE) == 0) {
@@ -60,6 +62,19 @@ void HITLS_CMS_SignerInfoFree(void *signerInfo)
         BSL_LIST_FREE(si->issuerName, (BSL_LIST_PFUNC_FREE)HITLS_X509_FreeParsedNameNode);
     }
     BSL_SAL_Free(si);
+}
+
+int32_t CMS_DecodeAttr(HITLS_X509_Attrs *attrs, BslCid attrCid, CMS_AttrDecoder attrDecode, void *out)
+{
+    for (BslListNode *attrNode = BSL_LIST_FirstNode(attrs->list); attrNode != NULL;
+        attrNode = BSL_LIST_GetNextNode(attrs->list, attrNode)) {
+        HITLS_X509_AttrEntry *node = (HITLS_X509_AttrEntry *)BSL_LIST_GetData(attrNode);
+        if (node->cid == attrCid) {
+            return attrDecode(node, out);
+        }
+    }
+    BSL_ERR_PUSH_ERROR(HITLS_CMS_ERR_SIGNEDDATA_NO_FIND_SIGNERINFO_ATTR);
+    return HITLS_CMS_ERR_SIGNEDDATA_NO_FIND_SIGNERINFO_ATTR;
 }
 
 static void CMS_SignedDataFree(CMS_SignedData *sd)
@@ -238,6 +253,99 @@ int32_t HITLS_CMS_AddCrl(HITLS_X509_List **list, HITLS_X509_Crl *crl)
 static int32_t CmpAlgId(const CMS_AlgId *algId, const int32_t *mdId)
 {
     return (algId->id == *mdId) ? 0 : 1;
+}
+
+static BSL_ASN1_TemplateItem g_algIdTempl[] = {
+    {BSL_ASN1_TAG_OBJECT_ID, 0, 0},
+    {BSL_ASN1_TAG_ANY, BSL_ASN1_FLAG_OPTIONAL | BSL_ASN1_FLAG_HEADERONLY, 0},
+};
+
+typedef enum {
+    HITLS_CMS_ALGORITHM_IDENTIFIER_ALG_IDX,
+    HITLS_CMS_ALGORITHM_IDENTIFIER_PARAMS_IDX,
+    HITLS_CMS_ALGORITHM_IDENTIFIER_MAX_IDX,
+} HITLS_CMS_ALGORITHM_IDENTIFIER_IDX;
+
+int32_t CMS_ParseAlgIdInfo(BSL_ASN1_Buffer *asn, bool copyParam, CMS_AlgId *algId)
+{
+    BSL_ASN1_Buffer asn1[HITLS_CMS_ALGORITHM_IDENTIFIER_MAX_IDX] = {0};
+    uint8_t *temp = asn->buff;
+    uint32_t tempLen = asn->len;
+    int32_t ret = BSL_ASN1_DecodeItem(&temp, &tempLen,
+        &asn1[HITLS_CMS_ALGORITHM_IDENTIFIER_ALG_IDX]);
+    if (ret != BSL_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        return ret;
+    }
+    if (asn1[HITLS_CMS_ALGORITHM_IDENTIFIER_ALG_IDX].tag != BSL_ASN1_TAG_OBJECT_ID) {
+        BSL_ERR_PUSH_ERROR(HITLS_CMS_ERR_INVALID_DATA);
+        return HITLS_CMS_ERR_INVALID_DATA;
+    }
+    if (tempLen != 0) {
+        ret = BSL_ASN1_DecodeItem(&temp, &tempLen,
+            &asn1[HITLS_CMS_ALGORITHM_IDENTIFIER_PARAMS_IDX]);
+        if (ret != BSL_SUCCESS) {
+            BSL_ERR_PUSH_ERROR(ret);
+            return ret;
+        }
+        if (tempLen != 0) {
+            BSL_ERR_PUSH_ERROR(HITLS_CMS_ERR_INVALID_DATA);
+            return HITLS_CMS_ERR_INVALID_DATA;
+        }
+    }
+    algId->id = BSL_OBJ_GetCidFromOidBuff(asn1[HITLS_CMS_ALGORITHM_IDENTIFIER_ALG_IDX].buff,
+        asn1[HITLS_CMS_ALGORITHM_IDENTIFIER_ALG_IDX].len);
+    if (algId->id == BSL_CID_UNKNOWN) {
+        BSL_ERR_PUSH_ERROR(HITLS_CMS_ERR_PARSE_TYPE);
+        return HITLS_CMS_ERR_PARSE_TYPE;
+    }
+
+    algId->param.tag = asn1[HITLS_CMS_ALGORITHM_IDENTIFIER_PARAMS_IDX].tag;
+    algId->param.len = asn1[HITLS_CMS_ALGORITHM_IDENTIFIER_PARAMS_IDX].len;
+    if (algId->param.tag == 0 || algId->param.len == 0) {
+        return HITLS_PKI_SUCCESS;
+    }
+    if (!copyParam) {
+        algId->param.buff = asn1[HITLS_CMS_ALGORITHM_IDENTIFIER_PARAMS_IDX].buff;
+        return HITLS_PKI_SUCCESS;
+    }
+    algId->param.buff = BSL_SAL_Dump(asn1[HITLS_CMS_ALGORITHM_IDENTIFIER_PARAMS_IDX].buff,
+        asn1[HITLS_CMS_ALGORITHM_IDENTIFIER_PARAMS_IDX].len);
+    if (algId->param.buff == NULL) {
+        BSL_ERR_PUSH_ERROR(BSL_DUMP_FAIL);
+        return BSL_DUMP_FAIL;
+    }
+    return HITLS_PKI_SUCCESS;
+}
+
+int32_t CMS_EncodeAlgIdInfo(const CMS_AlgId *alg, BSL_ASN1_Buffer *asn)
+{
+    BslOidString *oidStr = BSL_OBJ_GetOID((BslCid)alg->id);
+    if (oidStr == NULL) {
+        BSL_ERR_PUSH_ERROR(HITLS_CMS_ERR_INVALID_ALGO);
+        return HITLS_CMS_ERR_INVALID_ALGO;
+    }
+    BSL_ASN1_Buffer items[HITLS_CMS_ALGORITHM_IDENTIFIER_MAX_IDX] = {
+        {BSL_ASN1_TAG_OBJECT_ID, oidStr->octetLen, (uint8_t *)oidStr->octs},
+        alg->param,
+    };
+    /* Preserve the ASN.1 type and contents of AlgorithmIdentifier parameters. */
+    BSL_ASN1_TemplateItem algIdTempl[] = {g_algIdTempl[0], g_algIdTempl[1]};
+    if (alg->param.tag != 0 && alg->param.tag != BSL_ASN1_TAG_ANY) {
+        /* An explicitly present parameter can have empty contents, such as
+         * RSASSA-PSS-params with every DEFAULT component omitted.
+         */
+        algIdTempl[HITLS_CMS_ALGORITHM_IDENTIFIER_PARAMS_IDX].flags &= (uint8_t)(~BSL_ASN1_FLAG_OPTIONAL);
+    }
+    BSL_ASN1_Template templ = {algIdTempl, sizeof(algIdTempl) / sizeof(algIdTempl[0])};
+    int32_t ret = BSL_ASN1_EncodeTemplate(&templ, items, HITLS_CMS_ALGORITHM_IDENTIFIER_MAX_IDX,
+        &asn->buff, &asn->len);
+    if (ret != BSL_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        return ret;
+    }
+    asn->tag = BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE;
+    return HITLS_PKI_SUCCESS;
 }
 
 int32_t HITLS_CMS_AddMd(HITLS_X509_List *list, int32_t mdId)

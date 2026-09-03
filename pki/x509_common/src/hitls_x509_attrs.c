@@ -418,7 +418,12 @@ int32_t HITLS_X509_EncodeAttrList(uint8_t tag, HITLS_X509_Attrs *attrs, HITLS_X5
     }
     static BSL_ASN1_TemplateItem attrSeqTempl = {BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE, 0, 0 };
     BSL_ASN1_Template templ = {&attrSeqTempl, 1};
-    ret = BSL_ASN1_EncodeListItem(BSL_ASN1_TAG_SEQUENCE, count, &templ, asnBuf, iter, attrAsn1);
+    /* RFC 5652 Sections 5.3 and 5.4: SignedAttributes is a SET OF Attribute
+     * and the signature input is its DER encoding, including DER SET sorting.
+     * The caller-provided tag may be an IMPLICIT context-specific tag, but the
+     * underlying collection still has SET OF ordering semantics.
+     */
+    ret = BSL_ASN1_EncodeListItem(BSL_ASN1_TAG_SET, count, &templ, asnBuf, iter, attrAsn1);
     FreeAsnAttrsBuff(asnBuf, count);
     if (ret != BSL_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);

@@ -117,7 +117,8 @@ int32_t HITLS_CMS_DataSign(HITLS_CMS *cms, CRYPT_EAL_PkeyCtx *prvKey, HITLS_X509
  *            This interface dose not impose an upper limit on the number of certificates.
  * @param cms             [IN] CMS structure containing signatures to verify
  * @param msg             [IN] Message data to verify (required for detached, optional for non-detached)
- * @param inputParam      [IN] Optional parameters (can be NULL). it may contains untrusted cert-list, ca-cert list,
+ * @param inputParam      [IN] Optional parameters (can be NULL). It may contain untrusted cert-list, ca-cert list,
+ *                             store flags, and HITLS_CMS_PARAM_VERIFY_PURPOSE.
  * @param output          [OUT] If not NULL, returns the actual message buffer used for verification
  *                             (points to msg for detached, or to embedded content for attached)
  * @retval #HITLS_PKI_SUCCESS on success (all signatures are valid).

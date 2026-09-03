@@ -548,6 +548,13 @@ int32_t CRYPT_EAL_ParseRsaPssAlgParam(BSL_ASN1_Buffer *param, CRYPT_RSA_PssPara 
     para->mgfId = (CRYPT_MD_AlgId)BSL_CID_SHA1; // maskGenAlgorithm  [1] MaskGenAlgorithm DEFAULT mgf1SHA1Identifier,
     para->saltLen = 20;                         // saltLength        [2] INTEGER DEFAULT 20
 
+    /* RFC 8017 Appendix A.2.3: every RSASSA-PSS-params component has
+     * a DEFAULT value, so an empty SEQUENCE represents all defaults.
+     */
+    if (param->tag == (BSL_ASN1_TAG_SEQUENCE | BSL_ASN1_TAG_CONSTRUCTED) && param->len == 0) {
+        return CRYPT_SUCCESS;
+    }
+
     uint8_t *temp = param->buff;
     uint32_t tempLen = param->len;
     BSL_ASN1_Buffer asns[CRYPT_RSAPSS_MAX] = {0};

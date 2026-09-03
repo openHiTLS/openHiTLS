@@ -18,6 +18,7 @@ set(_cms_sources
 )
 if(HITLS_PKI_CMS_SIGNEDDATA)
     list(APPEND _cms_sources
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/hitls_cms_algprotect.c
         ${CMAKE_CURRENT_SOURCE_DIR}/src/hitls_cms_pqc.c
         ${CMAKE_CURRENT_SOURCE_DIR}/src/hitls_cms_signdata.c
     )
