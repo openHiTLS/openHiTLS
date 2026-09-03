@@ -41,21 +41,36 @@ typedef enum OptionChoice {
     HITLS_APP_OPT_RSA_ROF = 0,
     HITLS_APP_OPT_RSA_HELP = 1,  // first opt of each option is help = 1, following opt can be customized.
     HITLS_APP_OPT_RSA_IN,
+    HITLS_APP_OPT_RSA_PASSIN,
     HITLS_APP_OPT_RSA_OUT,
     HITLS_APP_OPT_RSA_NOOUT,
     HITLS_APP_OPT_RSA_TEXT,
 } HITLSOptType;
 
 typedef struct {
-    int32_t outformat;
+    char *inFilePath;
+    BSL_ParseFormat inFormat;
+    char *passInArg;
+} RsaInputOptions;
+
+typedef struct {
+    char *outFilePath;
+    BSL_ParseFormat outFormat;
     bool text;
     bool noout;
-    char *outfile;
-} OutputInfo;
+} RsaOutputOptions;
+
+typedef struct {
+    RsaInputOptions input;
+    RsaOutputOptions output;
+    char *passin;
+    CRYPT_EAL_PkeyCtx *pkey;
+} RsaOptCtx;
 
 static const HITLS_CmdOption g_rsaOpts[] = {
     {"help", HITLS_APP_OPT_RSA_HELP, HITLS_APP_OPT_VALUETYPE_NO_VALUE, "Display this function summary"},
     {"in", HITLS_APP_OPT_RSA_IN, HITLS_APP_OPT_VALUETYPE_IN_FILE, "Input file"},
+    {"passin", HITLS_APP_OPT_RSA_PASSIN, HITLS_APP_OPT_VALUETYPE_STRING, "Input file pass phrase source"},
     {"out", HITLS_APP_OPT_RSA_OUT, HITLS_APP_OPT_VALUETYPE_OUT_FILE, "Output file"},
     {"noout", HITLS_APP_OPT_RSA_NOOUT, HITLS_APP_OPT_VALUETYPE_NO_VALUE, "No RSA output "},
     {"text", HITLS_APP_OPT_RSA_TEXT, HITLS_APP_OPT_VALUETYPE_NO_VALUE, "Print RSA key in text"},
@@ -73,22 +88,23 @@ static int32_t OutPemFormat(BSL_UIO *uio, void *encode)
     return writeRet;
 }
 
-static int32_t BufWriteToUio(void *pkey, OutputInfo outInfo)
+static int32_t BufWriteToUio(void *pkey, const RsaOutputOptions *output)
 {
     int32_t writeRet = HITLS_APP_SUCCESS;
-    BSL_UIO *uio = HITLS_APP_UioOpenPrivate(outInfo.outfile, 'w');
+    BSL_UIO *uio = HITLS_APP_UioOpenPrivate(output->outFilePath, 'w');
     if (uio == NULL) {
-        AppPrintError("Failed to open the file <%s> \n", outInfo.outfile != NULL ? outInfo.outfile : "stdout");
+        AppPrintError("Failed to open the file <%s> \n",
+            output->outFilePath != NULL ? output->outFilePath : "stdout");
         return HITLS_APP_UIO_FAIL;
     }
-    if (outInfo.text == true) {
+    if (output->text == true) {
         writeRet = CRYPT_EAL_PrintPrikey(0, pkey, uio);
         if (writeRet != HITLS_APP_SUCCESS) {
-            AppPrintError("Failed to export data in text format to a file <%s> \n", outInfo.outfile);
+            AppPrintError("Failed to export data in text format to a file <%s> \n", output->outFilePath);
             goto end;
         }
     }
-    if (outInfo.noout != true) {
+    if (output->noout != true) {
         BSL_Buffer encodeBuffer = {0};
         writeRet = CRYPT_EAL_EncodeBuffKey(pkey, NULL, BSL_FORMAT_PEM, CRYPT_PRIKEY_RSA, &encodeBuffer);
         if (writeRet != CRYPT_SUCCESS) {
@@ -98,7 +114,7 @@ static int32_t BufWriteToUio(void *pkey, OutputInfo outInfo)
         writeRet = OutPemFormat(uio, &encodeBuffer);
         BSL_SAL_FREE(encodeBuffer.data);
         if (writeRet != HITLS_APP_SUCCESS) {
-            AppPrintError("Failed to export data in pem format to a file <%s> \n", outInfo.outfile);
+            AppPrintError("Failed to export data in pem format to a file <%s> \n", output->outFilePath);
         }
     }
 end:
@@ -107,11 +123,10 @@ end:
 }
 
 
-static int32_t OptParse(char **infile, OutputInfo *outInfo)
+static int32_t OptParse(RsaOptCtx *optCtx)
 {
     HITLSOptType optType;
     int ret = HITLS_APP_SUCCESS;
-    outInfo->outformat = HITLS_APP_FORMAT_PEM;
     while ((optType = HITLS_APP_OptNext()) != HITLS_APP_OPT_RSA_ROF) {
         switch (optType) {
             case HITLS_APP_OPT_RSA_ROF:
@@ -124,24 +139,27 @@ static int32_t OptParse(char **infile, OutputInfo *outInfo)
                 (void)HITLS_APP_OptHelpPrint(g_rsaOpts);
                 return ret;
             case HITLS_APP_OPT_RSA_IN:
-                *infile = HITLS_APP_OptGetValueStr();
-                if (*infile == NULL || strlen(*infile) >= PATH_MAX) {
+                optCtx->input.inFilePath = HITLS_APP_OptGetValueStr();
+                if (optCtx->input.inFilePath == NULL || strlen(optCtx->input.inFilePath) >= PATH_MAX) {
                     AppPrintError("The length of infile error, range is (0, 4096).\n");
                     return HITLS_APP_OPT_VALUE_INVALID;
                 }
                 break;
+            case HITLS_APP_OPT_RSA_PASSIN:
+                optCtx->input.passInArg = HITLS_APP_OptGetValueStr();
+                break;
             case HITLS_APP_OPT_RSA_OUT:
-                outInfo->outfile = HITLS_APP_OptGetValueStr();
-                if (outInfo->outfile == NULL || strlen(outInfo->outfile) >= PATH_MAX) {
+                optCtx->output.outFilePath = HITLS_APP_OptGetValueStr();
+                if (optCtx->output.outFilePath == NULL || strlen(optCtx->output.outFilePath) >= PATH_MAX) {
                     AppPrintError("The length of out file error, range is (0, 4096).\n");
                     return HITLS_APP_OPT_VALUE_INVALID;
                 }
                 break;
             case HITLS_APP_OPT_RSA_NOOUT:
-                outInfo->noout = true;
+                optCtx->output.noout = true;
                 break;
             case HITLS_APP_OPT_RSA_TEXT:
-                outInfo->text = true;
+                optCtx->output.text = true;
                 break;
             default:
                 ret = HITLS_APP_OPT_UNKOWN;
@@ -153,16 +171,16 @@ static int32_t OptParse(char **infile, OutputInfo *outInfo)
 
 int32_t HITLS_RsaMain(int argc, char *argv[])
 {
-    char *infile = NULL;
-    char *passin = NULL;
+    RsaOptCtx optCtx = {
+        .input.inFormat = BSL_FORMAT_PEM,
+        .output.outFormat = BSL_FORMAT_PEM,
+    };
     int32_t mainRet = HITLS_APP_SUCCESS;
-    OutputInfo outInfo = {HITLS_APP_FORMAT_PEM, false, false, NULL};
-    CRYPT_EAL_PkeyCtx *ealPKey = NULL;
     mainRet = HITLS_APP_OptBegin(argc, argv, g_rsaOpts);
     if (mainRet != HITLS_APP_SUCCESS) {
         goto end;
     }
-    mainRet = OptParse(&infile, &outInfo);
+    mainRet = OptParse(&optCtx);
     if (mainRet != HITLS_APP_SUCCESS) {
         goto end;
     }
@@ -173,16 +191,22 @@ int32_t HITLS_RsaMain(int argc, char *argv[])
         mainRet = HITLS_APP_OPT_UNKOWN;
         goto end;
     }
-    ealPKey = HITLS_APP_LoadPrvKey(infile, BSL_FORMAT_PEM, &passin);
-    if (ealPKey == NULL) {
+    mainRet = HITLS_APP_ParsePasswd(optCtx.input.passInArg, &optCtx.passin);
+    if (mainRet != HITLS_APP_SUCCESS) {
+        goto end;
+    }
+    optCtx.pkey = HITLS_APP_LoadPrvKey(optCtx.input.inFilePath, optCtx.input.inFormat, &optCtx.passin);
+    if (optCtx.pkey == NULL) {
         AppPrintError("Failed to load RSA private key.\n");
         mainRet = HITLS_APP_DECODE_FAIL;
         goto end;
     }
-    mainRet = BufWriteToUio(ealPKey, outInfo);  // Selective output based on command line parameters.
+    mainRet = BufWriteToUio(optCtx.pkey, &optCtx.output);  // Selective output based on command line parameters.
 end:
-    CRYPT_EAL_PkeyFreeCtx(ealPKey);
-    BSL_SAL_FREE(passin);
+    CRYPT_EAL_PkeyFreeCtx(optCtx.pkey);
+    if (optCtx.passin != NULL) {
+        BSL_SAL_ClearFree(optCtx.passin, strlen(optCtx.passin));
+    }
     HITLS_APP_OptEnd();
     return mainRet;
 }

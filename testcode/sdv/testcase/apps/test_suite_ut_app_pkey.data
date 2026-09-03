@@ -30,3 +30,180 @@ UT_HITLS_APP_PKEY_IN_FILE_SIZE_TC001:"pkey -in ../testdata/apps/x509/257k.pem":H
 
 UT_HITLS_APP_PKEY_STDIN_TC001:
 UT_HITLS_APP_PKEY_STDIN_TC001:"../testdata/apps/pkey/ec_key_pkcs8.pem"
+
+UT_HITLS_APP_PKEY_PUBIN_TC001: PEM SubjectPublicKeyInfo
+UT_HITLS_APP_PKEY_PUBIN_TC001:"pkey -pubin -in ../testdata/cert/asn1/keypem/rsa-pub-key-p8.pem -out out_test.pem":HITLS_APP_SUCCESS
+
+UT_HITLS_APP_PKEY_PUBIN_TC001: PEM PKCS#1 RSA public key
+UT_HITLS_APP_PKEY_PUBIN_TC001:"pkey -pubin -in ../testdata/cert/asn1/keypem/rsa-pub-key.pem -out out_test.pem":HITLS_APP_SUCCESS
+
+UT_HITLS_APP_PKEY_PUBIN_TC001: DER SubjectPublicKeyInfo
+UT_HITLS_APP_PKEY_PUBIN_TC001:"pkey -pubin -inform DER -in ../testdata/cert/asn1/keypem/rsa-pub-key-p8.der -out out_test.pem":HITLS_APP_SUCCESS
+
+UT_HITLS_APP_PKEY_PUBIN_TC001: Reject a value supplied to -pubin
+UT_HITLS_APP_PKEY_PUBIN_TC001:"pkey -pubin PEM -in ../testdata/cert/asn1/keypem/rsa-pub-key-p8.pem -out out_test.pem":HITLS_APP_OPT_UNKOWN
+
+UT_HITLS_APP_PKEY_PUBIN_TC001: Reject private-key input
+UT_HITLS_APP_PKEY_PUBIN_TC001:"pkey -pubin -in ../testdata/apps/pkey/rsa_key_pkcs8.pem -out out_test.pem":HITLS_APP_LOAD_KEY_FAIL
+
+UT_HITLS_APP_PKEY_PUBIN_TC001: Reject -check with -pubin
+UT_HITLS_APP_PKEY_PUBIN_TC001:"pkey -pubin -check -in no_exist.pem -out out_test.pem":HITLS_APP_INVALID_ARG
+
+UT_HITLS_APP_PKEY_INFORM_TC001: Explicit PEM private-key input
+UT_HITLS_APP_PKEY_INFORM_TC001:"pkey -inform PEM -in ../testdata/apps/pkey/ec_key_pkcs8.pem -out out_test.pem":HITLS_APP_SUCCESS
+
+UT_HITLS_APP_PKEY_INFORM_TC001: DER PKCS#1 RSA private-key input
+UT_HITLS_APP_PKEY_INFORM_TC001:"pkey -inform DER -in ../testdata/cert/asn1/rsa_cert/rsa_p1.key.der -out out_test.pem":HITLS_APP_SUCCESS
+
+UT_HITLS_APP_PKEY_INFORM_TC001: DER input requires -in
+UT_HITLS_APP_PKEY_INFORM_TC001:"pkey -inform DER -out out_test.pem":HITLS_APP_LOAD_KEY_FAIL
+
+UT_HITLS_APP_PKEY_INFORM_TC001: Invalid input format
+UT_HITLS_APP_PKEY_INFORM_TC001:"pkey -inform TEXT -in ../testdata/apps/pkey/ec_key_pkcs8.pem -out out_test.pem":HITLS_APP_OPT_UNKOWN
+
+UT_HITLS_APP_PKEY_INFORM_TC001: Reject PEM input declared as DER
+UT_HITLS_APP_PKEY_INFORM_TC001:"pkey -inform DER -in ../testdata/apps/pkey/rsa_key_pkcs8.pem -out out_test.pem":HITLS_APP_LOAD_KEY_FAIL
+
+UT_HITLS_APP_PKEY_INFORM_TC001: Reject DER input declared as PEM
+UT_HITLS_APP_PKEY_INFORM_TC001:"pkey -inform PEM -in ../testdata/cert/asn1/rsa_cert/rsa_p8.key.der -out out_test.pem":HITLS_APP_LOAD_KEY_FAIL
+
+UT_HITLS_APP_PKEY_CHECK_TC001: Check a PEM RSA private key
+UT_HITLS_APP_PKEY_CHECK_TC001:"pkey -check -in ../testdata/cert/asn1/rsa2048key_pkcs8.pem -out out_test.pem":HITLS_APP_SUCCESS
+
+UT_HITLS_APP_PKEY_CHECK_TC001: Check a PEM EC private key
+UT_HITLS_APP_PKEY_CHECK_TC001:"pkey -check -in ../testdata/apps/pkey/ec_key_pkcs8.pem -out out_test.pem":HITLS_APP_SUCCESS
+
+UT_HITLS_APP_PKEY_CHECK_TC001: Check a DER RSA private key
+UT_HITLS_APP_PKEY_CHECK_TC001:"pkey -check -inform DER -in ../testdata/cert/asn1/rsa2048key_pkcs8.der -out out_test.pem":HITLS_APP_SUCCESS
+
+UT_HITLS_APP_PKEY_CHECK_TC001: Check a private key and output its public key
+UT_HITLS_APP_PKEY_CHECK_TC001:"pkey -check -pubout -in ../testdata/apps/pkey/ec_key_pkcs8.pem -out out_test.pem":HITLS_APP_SUCCESS
+
+UT_HITLS_APP_PKEY_CHECK_TC001: Reject a value supplied to -check
+UT_HITLS_APP_PKEY_CHECK_TC001:"pkey -check true -in ../testdata/apps/pkey/ec_key_pkcs8.pem -out out_test.pem":HITLS_APP_OPT_UNKOWN
+
+UT_HITLS_APP_PKEY_CHECK_TC002: Reject an invalid private key
+UT_HITLS_APP_PKEY_CHECK_TC002:"../testdata/apps/pkey/ec_key_pkcs8.pem"
+
+UT_HITLS_APP_PKEY_CHECK_TC003: Reject a key type without a pair-check implementation
+UT_HITLS_APP_PKEY_CHECK_TC003:"../testdata/apps/pkey/ec_key_pkcs8.pem"
+
+UT_HITLS_APP_PKEY_PRV_CODEC_TC001: PEM PKCS#1 RSA private key
+UT_HITLS_APP_PKEY_PRV_CODEC_TC001:"pkey -check -inform PEM -in ../testdata/cert/asn1/rsa2048key_pkcs1.pem -out out_test.pem"
+
+UT_HITLS_APP_PKEY_PRV_CODEC_TC001: PEM PKCS#8 RSA private key
+UT_HITLS_APP_PKEY_PRV_CODEC_TC001:"pkey -check -inform PEM -in ../testdata/cert/asn1/rsa2048key_pkcs8.pem -out out_test.pem"
+
+UT_HITLS_APP_PKEY_PRV_CODEC_TC001: PEM SEC1 EC private key
+UT_HITLS_APP_PKEY_PRV_CODEC_TC001:"pkey -check -inform PEM -in ../testdata/apps/pkey/ec_key_pkcs1.pem -out out_test.pem"
+
+UT_HITLS_APP_PKEY_PRV_CODEC_TC001: PEM PKCS#8 EC private key
+UT_HITLS_APP_PKEY_PRV_CODEC_TC001:"pkey -check -inform PEM -in ../testdata/apps/pkey/ec_key_pkcs8.pem -out out_test.pem"
+
+UT_HITLS_APP_PKEY_PRV_CODEC_TC001: DER PKCS#1 RSA private key
+UT_HITLS_APP_PKEY_PRV_CODEC_TC001:"pkey -check -inform DER -in ../testdata/cert/asn1/rsa2048key_pkcs1.der -out out_test.pem"
+
+UT_HITLS_APP_PKEY_PRV_CODEC_TC001: DER PKCS#8 RSA private key
+UT_HITLS_APP_PKEY_PRV_CODEC_TC001:"pkey -check -inform DER -in ../testdata/cert/asn1/rsa2048key_pkcs8.der -out out_test.pem"
+
+UT_HITLS_APP_PKEY_PRV_CODEC_TC001: DER SEC1 EC private key
+UT_HITLS_APP_PKEY_PRV_CODEC_TC001:"pkey -check -inform DER -in ../testdata/cert/asn1/ecdsa_cert/ecdsa_sha384_ssl.key.der -out out_test.pem"
+
+UT_HITLS_APP_PKEY_PRV_CODEC_TC001: DER PKCS#8 EC private key
+UT_HITLS_APP_PKEY_PRV_CODEC_TC001:"pkey -check -inform DER -in ../testdata/cert/asn1/ecdsa_cert/ecdsa_sha384.key.der -out out_test.pem"
+
+UT_HITLS_APP_PKEY_PRV_CODEC_TC001: PEM PKCS#8 DSA private key
+UT_HITLS_APP_PKEY_PRV_CODEC_TC001:"pkey -inform PEM -in ../testdata/cert/asn1/pkcs8_unencrypted/dh_dsakey/dsa_2048_private_key.pem -out out_test.pem"
+
+UT_HITLS_APP_PKEY_PRV_CODEC_TC001: PEM PKCS#8 DH private key
+UT_HITLS_APP_PKEY_PRV_CODEC_TC001:"pkey -inform PEM -in ../testdata/cert/asn1/pkcs8_unencrypted/dh_dsakey/dh_2048_private_key.pem -out out_test.pem"
+
+UT_HITLS_APP_PKEY_PRV_CODEC_TC001: PEM PKCS#8 SM2 private key
+UT_HITLS_APP_PKEY_PRV_CODEC_TC001:"pkey -check -inform PEM -in ../testdata/cert/asn1/print/sm2.root2.key.pem -out out_test.pem"
+
+UT_HITLS_APP_PKEY_PRV_CODEC_TC001: PEM PKCS#8 Ed25519 private key
+UT_HITLS_APP_PKEY_PRV_CODEC_TC001:"pkey -inform PEM -in ../testdata/cert/ed25519/ed25519.key.pem -out out_test.pem"
+
+UT_HITLS_APP_PKEY_PRV_CODEC_TC001: PEM PKCS#8 X25519 private key
+UT_HITLS_APP_PKEY_PRV_CODEC_TC001:"pkey -inform PEM -in ../testdata/cert/x25519/x25519.key.pem -out out_test.pem"
+
+UT_HITLS_APP_PKEY_PRV_CODEC_TC001: PEM PKCS#8 ML-DSA private key
+UT_HITLS_APP_PKEY_PRV_CODEC_TC001:"pkey -check -inform PEM -in ../testdata/cert/asn1/pkcs8_unencrypted/mldsa_44_p8_unencrypted.pem -out out_test.pem"
+
+UT_HITLS_APP_PKEY_PRV_CODEC_TC001: PEM PKCS#8 composite private key
+UT_HITLS_APP_PKEY_PRV_CODEC_TC001:"pkey -inform PEM -in ../testdata/cert/asn1/composite_keys/mldsa44_ecdsa_p256_sha256_privatekey.pem -out out_test.pem"
+
+UT_HITLS_APP_PKEY_PRV_CODEC_TC001: PEM PKCS#8 SLH-DSA private key
+UT_HITLS_APP_PKEY_PRV_CODEC_TC001:"pkey -check -inform PEM -in ../testdata/cert/asn1/slhdsa_keys/slhdsa_sha2_128s_privatekey.pem -out out_test.pem"
+
+UT_HITLS_APP_PKEY_PRV_CODEC_TC001: PEM PKCS#8 ML-KEM private key
+UT_HITLS_APP_PKEY_PRV_CODEC_TC001:"pkey -check -inform PEM -in ../testdata/cert/asn1/mlkem_keys/mlkem768/mlkem768_prikey_both.pem -out out_test.pem"
+
+UT_HITLS_APP_PKEY_PUB_CODEC_TC001: PEM SubjectPublicKeyInfo RSA public key
+UT_HITLS_APP_PKEY_PUB_CODEC_TC001:"pkey -pubin -inform PEM -in ../testdata/cert/asn1/keypem/rsa-pub-key-p8.pem -out out_test.pem"
+
+UT_HITLS_APP_PKEY_PUB_CODEC_TC001: PEM PKCS#1 RSA public key
+UT_HITLS_APP_PKEY_PUB_CODEC_TC001:"pkey -pubin -inform PEM -in ../testdata/cert/asn1/keypem/rsa-pub-key.pem -out out_test.pem"
+
+UT_HITLS_APP_PKEY_PUB_CODEC_TC001: DER SubjectPublicKeyInfo RSA public key
+UT_HITLS_APP_PKEY_PUB_CODEC_TC001:"pkey -pubin -inform DER -in ../testdata/cert/asn1/keypem/rsa-pub-key-p8.der -out out_test.pem"
+
+UT_HITLS_APP_PKEY_PUB_CODEC_TC001: DER PKCS#1 RSA public key
+UT_HITLS_APP_PKEY_PUB_CODEC_TC001:"pkey -pubin -inform DER -in ../testdata/cert/asn1/keypem/rsa-pub-key.der -out out_test.pem"
+
+UT_HITLS_APP_PKEY_PUB_CODEC_TC001: PEM SubjectPublicKeyInfo DSA public key
+UT_HITLS_APP_PKEY_PUB_CODEC_TC001:"pkey -pubin -inform PEM -in ../testdata/cert/asn1/pkcs8_unencrypted/dh_dsakey/dsa_2048_public_key.pem -out out_test.pem"
+
+UT_HITLS_APP_PKEY_PUB_CODEC_TC001: Extract a public key from a PEM traditional DSA private key
+UT_HITLS_APP_PKEY_PUB_CODEC_TC001:"pkey -inform PEM -in ../testdata/apps/pkey/dsa_key_traditional.pem -pubout -out out_test.pem"
+
+UT_HITLS_APP_PKEY_PUB_CODEC_TC001: PEM SubjectPublicKeyInfo DH public key
+UT_HITLS_APP_PKEY_PUB_CODEC_TC001:"pkey -pubin -inform PEM -in ../testdata/cert/asn1/pkcs8_unencrypted/dh_dsakey/dh_2048_public_key.pem -out out_test.pem"
+
+UT_HITLS_APP_PKEY_PUB_CODEC_TC001: PEM SubjectPublicKeyInfo ECDSA public key
+UT_HITLS_APP_PKEY_PUB_CODEC_TC001:"pkey -pubin -inform PEM -in ../testdata/cert/asn1/secp384r1pub.pem -out out_test.pem"
+
+UT_HITLS_APP_PKEY_PUB_CODEC_TC001: PEM SubjectPublicKeyInfo SM2 public key
+UT_HITLS_APP_PKEY_PUB_CODEC_TC001:"pkey -pubin -inform PEM -in ../testdata/apps/sm2/pub.pem -out out_test.pem"
+
+UT_HITLS_APP_PKEY_PUB_CODEC_TC001: PEM SubjectPublicKeyInfo Ed25519 public key
+UT_HITLS_APP_PKEY_PUB_CODEC_TC001:"pkey -pubin -inform PEM -in ../testdata/cert/ed25519/ed25519.pub.pem -out out_test.pem"
+
+UT_HITLS_APP_PKEY_PUB_CODEC_TC001: PEM SubjectPublicKeyInfo X25519 public key
+UT_HITLS_APP_PKEY_PUB_CODEC_TC001:"pkey -pubin -inform PEM -in ../testdata/cert/x25519/x25519.pub.pem -out out_test.pem"
+
+UT_HITLS_APP_PKEY_PUB_CODEC_TC001: PEM SubjectPublicKeyInfo ML-DSA public key
+UT_HITLS_APP_PKEY_PUB_CODEC_TC001:"pkey -pubin -inform PEM -in ../testdata/cert/asn1/mldsa_keys/mldsa44_publickey.pem -out out_test.pem"
+
+UT_HITLS_APP_PKEY_PUB_CODEC_TC001: DER SubjectPublicKeyInfo composite public key
+UT_HITLS_APP_PKEY_PUB_CODEC_TC001:"pkey -pubin -inform DER -in ../testdata/cert/asn1/composite_keys/mldsa44_ecdsa_p256_sha256_publickey.der -out out_test.pem"
+
+UT_HITLS_APP_PKEY_PUB_CODEC_TC001: PEM SubjectPublicKeyInfo SLH-DSA public key
+UT_HITLS_APP_PKEY_PUB_CODEC_TC001:"pkey -pubin -inform PEM -in ../testdata/cert/asn1/slhdsa_keys/slh_dsa_sha2_128s_publickey.pem -out out_test.pem"
+
+UT_HITLS_APP_PKEY_PUB_CODEC_TC001: PEM SubjectPublicKeyInfo ML-KEM public key
+UT_HITLS_APP_PKEY_PUB_CODEC_TC001:"pkey -pubin -inform PEM -in ../testdata/cert/asn1/mlkem_keys/mlkem768/mlkem768_publickey.pem -out out_test.pem"
+
+UT_HITLS_APP_PKEY_PUB_CODEC_TC001: DER SubjectPublicKeyInfo XMSS public key
+UT_HITLS_APP_PKEY_PUB_CODEC_TC001:"pkey -pubin -inform DER -in ../testdata/cert/asn1/xmss_cert/end_publickey.der -out out_test.pem"
+
+UT_HITLS_APP_PKEY_PUB_CODEC_TC001: DER SubjectPublicKeyInfo XMSSMT public key
+UT_HITLS_APP_PKEY_PUB_CODEC_TC001:"pkey -pubin -inform DER -in ../testdata/cert/asn1/xmssmt_cert/end_publickey.der -out out_test.pem"
+
+UT_HITLS_APP_PKEY_DSA_TRAD_TC001: PEM traditional DSA private key
+UT_HITLS_APP_PKEY_DSA_TRAD_TC001:"pkey -check -inform PEM -in ../testdata/apps/pkey/dsa_key_traditional.pem -out out_test.pem":HITLS_APP_SUCCESS
+
+UT_HITLS_APP_PKEY_DSA_TRAD_TC001: DER traditional DSA private key
+UT_HITLS_APP_PKEY_DSA_TRAD_TC001:"pkey -check -inform DER -in ../testdata/apps/pkey/dsa_key_traditional.der -out out_test.pem":HITLS_APP_SUCCESS
+
+UT_HITLS_APP_PKEY_NOOUT_TC001: -noout does not modify an existing output file
+UT_HITLS_APP_PKEY_NOOUT_TC001:"pkey -pubin -in ../testdata/cert/asn1/keypem/rsa-pub-key-p8.pem -noout -out out_test.pem"
+
+UT_HITLS_APP_PKEY_PUB_OUTPUT_TC001: -text outputs public-key text and encoded data
+UT_HITLS_APP_PKEY_PUB_OUTPUT_TC001:"pkey -pubin -in ../testdata/cert/asn1/keypem/rsa-pub-key-p8.pem -text -out out_test.pem":1
+
+UT_HITLS_APP_PKEY_PUB_OUTPUT_TC001: -text and -noout output only public-key text
+UT_HITLS_APP_PKEY_PUB_OUTPUT_TC001:"pkey -pubin -in ../testdata/cert/asn1/keypem/rsa-pub-key-p8.pem -text -noout -out out_test.pem":0
+
+UT_HITLS_APP_PKEY_PUB_OUTPUT_TC001: -pubout, -text and -noout output only public-key text
+UT_HITLS_APP_PKEY_PUB_OUTPUT_TC001:"pkey -in ../testdata/apps/pkey/rsa_key_pkcs8.pem -pubout -text -noout -out out_test.pem":0

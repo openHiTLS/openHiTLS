@@ -384,13 +384,14 @@ printf 'alpha\nbeta\n' | hitls passwd -salt 12345678 -stdin
 **Usage**:
 
 ```
-hitls rsa [-help] [-in <file>] [-out <file>] [-text] [-noout]
+hitls rsa [-help] [-in <file>] [-passin <password source>] [-out <file>] [-text] [-noout]
 ```
 
 **Supported Options**:
 
 - `-help`: Display help information
 - `-in <file>`: Input RSA private key file (PEM format), defaults to standard input
+- `-passin <password source>`: Decryption password for the input file. If the input file is encrypted and this option is not specified, defaults to interactive input. Supports `pass:<password>`, `file:<file>`, `env:<variable>`, and `stdin`
 - `-out <file>`: Specify output file, defaults to standard output
 - `-text`: Display RSA key details in text format
 - `-noout`: Do not output the key in PEM format
@@ -400,6 +401,9 @@ hitls rsa [-help] [-in <file>] [-out <file>] [-text] [-noout]
 ```bash
 # View key details
 hitls rsa -in rsa_private.pem -text -noout
+
+# Read an encrypted RSA private key
+hitls rsa -in rsa_private_enc.pem -passin pass:mypassword -noout
 
 # Output key to file
 hitls rsa -in rsa_private.pem -out output.pem
@@ -489,19 +493,21 @@ hitls genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:2048 -outform DER -out key
 **Usage**:
 
 ```
-hitls pkey [-in <file>] [-passin <password source>] [-out <file>] [-pubout] [-<algorithm> -passout <password source>] [-text] [-noout]
+hitls pkey [-help] [-in <file>] [-inform PEM|DER] [-passin <password source>] [-pubin] [-out <file>] [-pubout] [-<algorithm> -passout <password source>] [-text] [-noout] [-check]
 ```
 
 **Supported Options**:
 
 - `-help`: Display help information
-- `-in <file>`: Input key file, only PEM format is supported, defaults to standard input
+- `-in <file>`: Input key file. PEM input defaults to standard input; this option is required for DER input
+- `-inform PEM|DER`: Input key format, defaults to PEM. DER supports unencrypted private keys and public keys; encrypted PKCS#8 DER private keys are not supported
 - `-passin <password source>`: Decryption password for the input file. If the input file is encrypted and this option is not specified, defaults to interactive input. Formats:
   - `stdin`: Standard input
   - `pass:<password>`: Read password from command line
   - `file:<file path>`: Read password from file
   - `env:<variable>`: Read password from an environment variable
 - `-out <file>`: Output file, defaults to standard output
+- `-pubin`: Read the input file as a public key and output a public key
 - `-pubout`: Extract and output the public key from the private key
 - `-<algorithm>`: Specify the encryption algorithm for the output private key
 - `-passout <password source>`: Encryption password for the output file. If an encryption algorithm is specified and this option is not specified, defaults to interactive input. Formats:
@@ -511,12 +517,22 @@ hitls pkey [-in <file>] [-passin <password source>] [-out <file>] [-pubout] [-<a
   - `env:<variable>`: Read password from an environment variable
 - `-text`: RSA only. Print key details in text format
 - `-noout`: Do not output the key in PEM format
+- `-check`: Check the consistency between the public and private components of a private key; cannot be used with `-pubin`
 
 **Examples**:
 
 ```bash
 # Extract public key from private key
 hitls pkey -in private.pem -pubout -out public.pem
+
+# Read and output a public key
+hitls pkey -pubin -in public.pem -out public_copy.pem
+
+# Read a DER private key
+hitls pkey -inform DER -in private.der -out private.pem
+
+# Check a private key
+hitls pkey -in private.pem -check -noout
 
 # View RSA key details in text format
 hitls pkey -in rsa_private.pem -text -noout

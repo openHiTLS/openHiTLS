@@ -24,6 +24,7 @@
 #endif
 #include "bsl_types.h"
 #include "bsl_asn1_internal.h"
+#include "bsl_sal.h"
 
 #ifdef HITLS_BSL_PEM
 #include "bsl_pem_internal.h"
@@ -98,6 +99,12 @@ static int32_t EAL_GetPemPriKeySymbol(int32_t type, BSL_PEM_Symbol *symbol)
             symbol->tail = BSL_PEM_RSA_PRI_KEY_END_STR;
             return CRYPT_SUCCESS;
 #endif
+#ifdef HITLS_CRYPTO_DSA
+        case CRYPT_PRIKEY_DSA:
+            symbol->head = BSL_PEM_DSA_PRI_KEY_BEGIN_STR;
+            symbol->tail = BSL_PEM_DSA_PRI_KEY_END_STR;
+            return CRYPT_SUCCESS;
+#endif
         case CRYPT_PRIKEY_PKCS8_UNENCRYPT:
             symbol->head = BSL_PEM_PRI_KEY_BEGIN_STR;
             symbol->tail = BSL_PEM_PRI_KEY_END_STR;
@@ -128,6 +135,10 @@ int32_t CRYPT_EAL_ParseAsn1PriKey(CRYPT_EAL_LibCtx *libctx, const char *attrName
             return ParseRsaPrikeyAsn1Buff(libctx, attrName, encode->data, encode->dataLen, NULL, BSL_CID_UNKNOWN,
                 ealPriKey);
 #endif
+#ifdef HITLS_CRYPTO_DSA
+        case CRYPT_PRIKEY_DSA:
+            return ParseDsaPrikeyAsn1Buff(libctx, attrName, encode->data, encode->dataLen, ealPriKey);
+#endif
         case CRYPT_PRIKEY_PKCS8_UNENCRYPT:
             return ParsePk8PriKeyBuff(libctx, attrName, encode, ealPriKey);
 #ifdef HITLS_CRYPTO_KEY_EPKI
@@ -152,7 +163,7 @@ int32_t CRYPT_EAL_ParsePemPriKey(CRYPT_EAL_LibCtx *libctx, const char *attrName,
         return ret;
     }
     BSL_Buffer asn1 = {0};
-    ret = BSL_PEM_DecodePemToAsn1((char **)&buff, &buffLen, &symbol, &(asn1.data), &(asn1.dataLen));
+    ret = BSL_PEM_DecodePemToAsn1((char **)&buff, &buffLen, &symbol, &asn1.data, &asn1.dataLen);
     if (ret != BSL_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
@@ -268,7 +279,7 @@ int32_t CRYPT_EAL_UnKnownKeyParseBuff(CRYPT_EAL_LibCtx *libctx, const char *attr
 {
     int32_t ret;
     BSL_ERR_SET_MARK();
-    for (int32_t type = CRYPT_PRIKEY_PKCS8_UNENCRYPT; type <= CRYPT_PRIKEY_ECC; type++) {
+    for (int32_t type = CRYPT_PRIKEY_PKCS8_UNENCRYPT; type <= CRYPT_PRIKEY_DSA; type++) {
         ret = CRYPT_EAL_PriKeyParseBuff(libctx, attrName, format, type, encode, pwd, ealPKey);
         if (ret == CRYPT_SUCCESS) {
             BSL_ERR_POP_TO_MARK();
@@ -387,6 +398,9 @@ int32_t ProviderDecodeBuffKey(CRYPT_EAL_LibCtx *libCtx, const char *attrName, in
 #ifdef HITLS_CRYPTO_RSA
         case CRYPT_PRIKEY_RSA:
 #endif
+#ifdef HITLS_CRYPTO_DSA
+        case CRYPT_PRIKEY_DSA:
+#endif
             return CRYPT_EAL_PriKeyParseBuff(libCtx, attrName, format, type, encode, pwd, ealPKey);
         case CRYPT_PUBKEY_SUBKEY_WITHOUT_SEQ:
         case CRYPT_PUBKEY_SUBKEY:
@@ -489,7 +503,8 @@ int32_t CRYPT_EAL_GetEncodeType(const char *type)
     } TYPE_MAP[] = {
         {"PRIKEY_PKCS8_UNENCRYPT", CRYPT_PRIKEY_PKCS8_UNENCRYPT},
         {"PRIKEY_PKCS8_ENCRYPT", CRYPT_PRIKEY_PKCS8_ENCRYPT}, {"PRIKEY_RSA", CRYPT_PRIKEY_RSA},
-        {"PRIKEY_ECC", CRYPT_PRIKEY_ECC}, {"PUBKEY_SUBKEY", CRYPT_PUBKEY_SUBKEY}, {"PUBKEY_RSA", CRYPT_PUBKEY_RSA},
+        {"PRIKEY_ECC", CRYPT_PRIKEY_ECC}, {"PRIKEY_DSA", CRYPT_PRIKEY_DSA},
+        {"PUBKEY_SUBKEY", CRYPT_PUBKEY_SUBKEY}, {"PUBKEY_RSA", CRYPT_PUBKEY_RSA},
         {"PUBKEY_SUBKEY_WITHOUT_SEQ", CRYPT_PUBKEY_SUBKEY_WITHOUT_SEQ}
     };
 

@@ -791,7 +791,7 @@ EXIT:
  * @auto  TRUE
  */
 /* BEGIN_CASE */
-void SDV_BSL_PEM_REAL_KEY_PEM_TC001(char *pemPath, char *beginStr, char *endStr)
+void SDV_BSL_PEM_REAL_KEY_PEM_TC001(char *pemPath, char *beginStr, char *endStr, char *expectedType)
 {
     uint8_t *fileData = NULL;
     uint32_t fileLen = 0;
@@ -799,6 +799,13 @@ void SDV_BSL_PEM_REAL_KEY_PEM_TC001(char *pemPath, char *beginStr, char *endStr)
     ASSERT_TRUE(fileData != NULL && fileLen > 0);
 
     ASSERT_TRUE(BSL_PEM_IsPemFormat((char *)fileData, fileLen) == true);
+
+    BSL_PEM_Symbol detectedSymbol;
+    const char *detectedType = NULL;
+    ASSERT_EQ(BSL_PEM_GetSymbolAndType((char *)fileData, fileLen, &detectedSymbol, &detectedType), BSL_SUCCESS);
+    ASSERT_EQ(strcmp(detectedSymbol.head, beginStr), 0);
+    ASSERT_EQ(strcmp(detectedSymbol.tail, endStr), 0);
+    ASSERT_EQ(strcmp(detectedType, expectedType), 0);
 
     BSL_PEM_Symbol symbol = {beginStr, endStr};
     char *next = (char *)fileData;

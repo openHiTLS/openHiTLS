@@ -51,13 +51,6 @@ STUB_DEFINE_RET3(int32_t, HITLS_APP_GetPasswd, BSL_UI_ReadPwdParam *, char **, u
 #define OUT_FILE_PATH "../testdata/certificate/rsa_key/out.pem"
 
 typedef struct {
-    int32_t outformat;
-    bool text;
-    bool noout;
-    char *outfile;
-} OutputInfo;
-
-typedef struct {
     int argc;
     char **argv;
     int expect;
@@ -563,6 +556,42 @@ void UT_HITLS_APP_rsa_TC012(void)
         RestoreStdoutByFd(savedStdoutFd);
         ASSERT_EQ(ret, testData[i].expect);
     }
+EXIT:
+    if (savedStdoutFd >= 0) {
+        close(savedStdoutFd);
+    }
+    AppPrintErrorUioUnInit();
+    return;
+}
+/* END_CASE */
+
+/**
+ * @test UT_HITLS_APP_rsa_TC013
+ * @spec  -
+ * @title   测试rsa命令的passin选项
+ */
+/* BEGIN_CASE */
+void UT_HITLS_APP_rsa_TC013(void)
+{
+    int savedStdoutFd = dup(STDOUT_FILENO);
+    char *argv[][10] = {
+        {"rsa", "-in", PRV_PASSWD_PATH, "-passin", "pass:123456", "-noout"},
+        {"rsa", "-in", PRV_PASSWD_PATH, "-passin", "pass:654321", "-noout"},
+        {"rsa", "-in", PRV_PASSWD_PATH, "-passin", "unknown", "-noout"},
+    };
+    RsaTestData testData[] = {
+        {6, argv[0], HITLS_APP_SUCCESS},
+        {6, argv[1], HITLS_APP_DECODE_FAIL},
+        {6, argv[2], HITLS_APP_PASSWD_FAIL},
+    };
+
+    ASSERT_EQ(AppPrintErrorUioInit(stderr), HITLS_APP_SUCCESS);
+    for (int i = 0; i < (int)(sizeof(testData) / sizeof(RsaTestData)); ++i) {
+        int ret = HITLS_RsaMain(testData[i].argc, testData[i].argv);
+        RestoreStdoutByFd(savedStdoutFd);
+        ASSERT_EQ(ret, testData[i].expect);
+    }
+
 EXIT:
     if (savedStdoutFd >= 0) {
         close(savedStdoutFd);

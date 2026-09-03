@@ -183,6 +183,8 @@ typedef struct {
     bool noout;
 } AppKeyPrintParam;
 
+int32_t HITLS_APP_PrintPubKeyByUio(BSL_UIO *uio, CRYPT_EAL_PkeyCtx *pkey, AppKeyPrintParam *printKeyParam);
+
 int32_t HITLS_APP_PrintPrvKeyByUio(BSL_UIO *uio, CRYPT_EAL_PkeyCtx *pkey, AppKeyPrintParam *printKeyParam,
     char **passout);
 

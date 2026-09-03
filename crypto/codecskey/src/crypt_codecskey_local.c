@@ -335,6 +335,46 @@ static int32_t SetDsaDhKeyPair(CRYPT_EAL_PkeyCtx *pkey, CRYPT_PKEY_AlgId algId, 
 #endif
 
 #ifdef HITLS_CRYPTO_DSA
+int32_t ParseDsaPrikeyAsn1Buff(CRYPT_EAL_LibCtx *libctx, const char *attrName, uint8_t *buff, uint32_t buffLen,
+    CRYPT_EAL_PkeyCtx **ealPriKey)
+{
+    BSL_ASN1_Buffer asn1[CRYPT_DSA_TRAD_PRV_MAX] = {0};
+    int32_t ret = CRYPT_DECODE_DsaPrikeyAsn1Buff(buff, buffLen, asn1, CRYPT_DSA_TRAD_PRV_MAX);
+    if (ret != CRYPT_SUCCESS) {
+        return ret;
+    }
+    CRYPT_EAL_PkeyCtx *pctx = CRYPT_EAL_ProviderPkeyNewCtx(libctx, CRYPT_PKEY_DSA,
+        CRYPT_EAL_PKEY_UNKNOWN_OPERATE, attrName);
+    if (pctx == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
+        return CRYPT_MEM_ALLOC_FAIL;
+    }
+    CRYPT_EAL_PkeyPara keyparam = {0};
+    keyparam.id = CRYPT_PKEY_DSA;
+    keyparam.para.dsaPara.p = asn1[CRYPT_DSA_TRAD_PRV_P_IDX].buff;
+    keyparam.para.dsaPara.pLen = asn1[CRYPT_DSA_TRAD_PRV_P_IDX].len;
+    keyparam.para.dsaPara.q = asn1[CRYPT_DSA_TRAD_PRV_Q_IDX].buff;
+    keyparam.para.dsaPara.qLen = asn1[CRYPT_DSA_TRAD_PRV_Q_IDX].len;
+    keyparam.para.dsaPara.g = asn1[CRYPT_DSA_TRAD_PRV_G_IDX].buff;
+    keyparam.para.dsaPara.gLen = asn1[CRYPT_DSA_TRAD_PRV_G_IDX].len;
+    ret = CRYPT_EAL_PkeySetPara(pctx, &keyparam);
+    if (ret == CRYPT_SUCCESS) {
+        ret = SetDsaDhKeyPair(pctx, CRYPT_PKEY_DSA, false, asn1[CRYPT_DSA_TRAD_PRV_PUBKEY_IDX].buff,
+            asn1[CRYPT_DSA_TRAD_PRV_PUBKEY_IDX].len);
+    }
+    if (ret == CRYPT_SUCCESS) {
+        ret = SetDsaDhKeyPair(pctx, CRYPT_PKEY_DSA, true, asn1[CRYPT_DSA_TRAD_PRV_PRIKEY_IDX].buff,
+            asn1[CRYPT_DSA_TRAD_PRV_PRIKEY_IDX].len);
+    }
+    if (ret != CRYPT_SUCCESS) {
+        CRYPT_EAL_PkeyFreeCtx(pctx);
+        BSL_ERR_PUSH_ERROR(ret);
+        return ret;
+    }
+    *ealPriKey = pctx;
+    return CRYPT_SUCCESS;
+}
+
 int32_t ParseDsaKeyParamAsn1Buff(CRYPT_EAL_LibCtx *libctx, const char *attrName, bool isPriv, uint8_t *buff,
     uint32_t buffLen, BSL_ASN1_Buffer *pk8AlgoParam, CRYPT_EAL_PkeyCtx **pkey)
 {

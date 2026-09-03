@@ -43,6 +43,9 @@ extern "C" {
 #define BSL_PEM_EC_PRI_KEY_BEGIN_STR "-----BEGIN EC PRIVATE KEY-----"
 #define BSL_PEM_EC_PRI_KEY_END_STR "-----END EC PRIVATE KEY-----"
 
+#define BSL_PEM_DSA_PRI_KEY_BEGIN_STR "-----BEGIN DSA PRIVATE KEY-----"
+#define BSL_PEM_DSA_PRI_KEY_END_STR "-----END DSA PRIVATE KEY-----"
+
 /** rfc5958 section 5 */
 #define BSL_PEM_PRI_KEY_BEGIN_STR "-----BEGIN PRIVATE KEY-----"
 #define BSL_PEM_PRI_KEY_END_STR "-----END PRIVATE KEY-----"

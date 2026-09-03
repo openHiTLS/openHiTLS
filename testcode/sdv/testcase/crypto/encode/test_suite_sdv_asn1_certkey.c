@@ -3643,3 +3643,61 @@ EXIT:
 #endif
 }
 /* END_CASE */
+
+/**
+ * @test SDV_CRYPT_DECODE_DSA_TRADITIONAL_PRIKEY_INVALID_TC001
+ * @title Validate traditional DSA private key ASN.1 boundaries
+ * @expect Null arguments, an invalid array size, version, tag, truncation and trailing data are rejected.
+ */
+/* BEGIN_CASE */
+void SDV_CRYPT_DECODE_DSA_TRADITIONAL_PRIKEY_INVALID_TC001(void)
+{
+#if !defined(HITLS_CRYPTO_DSA) || !defined(HITLS_CRYPTO_KEY_DECODE)
+    SKIP_TEST();
+#else
+    uint8_t validDer[] = {
+        0x30, 0x12,
+        0x02, 0x01, 0x00,
+        0x02, 0x01, 0x17,
+        0x02, 0x01, 0x0B,
+        0x02, 0x01, 0x02,
+        0x02, 0x01, 0x04,
+        0x02, 0x01, 0x02,
+    };
+    uint8_t invalidVersion[sizeof(validDer)] = {0};
+    uint8_t invalidTag[sizeof(validDer)] = {0};
+    uint8_t trailingData[sizeof(validDer) + 1] = {0};
+    BSL_ASN1_Buffer asn1[CRYPT_DSA_TRAD_PRV_MAX] = {0};
+
+    ASSERT_EQ(CRYPT_EAL_GetEncodeType("PRIKEY_DSA"), CRYPT_PRIKEY_DSA);
+    ASSERT_EQ(CRYPT_DECODE_DsaPrikeyAsn1Buff(validDer, sizeof(validDer), asn1, CRYPT_DSA_TRAD_PRV_MAX),
+        CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_DECODE_DsaPrikeyAsn1Buff(NULL, sizeof(validDer), asn1, CRYPT_DSA_TRAD_PRV_MAX),
+        CRYPT_NULL_INPUT);
+    ASSERT_EQ(CRYPT_DECODE_DsaPrikeyAsn1Buff(validDer, sizeof(validDer), NULL, CRYPT_DSA_TRAD_PRV_MAX),
+        CRYPT_NULL_INPUT);
+    ASSERT_EQ(CRYPT_DECODE_DsaPrikeyAsn1Buff(validDer, sizeof(validDer), asn1, CRYPT_DSA_TRAD_PRV_MAX - 1),
+        CRYPT_INVALID_ARG);
+
+    (void)memcpy(invalidVersion, validDer, sizeof(validDer));
+    invalidVersion[4] = 1;
+    ASSERT_EQ(CRYPT_DECODE_DsaPrikeyAsn1Buff(invalidVersion, sizeof(invalidVersion), asn1,
+        CRYPT_DSA_TRAD_PRV_MAX), CRYPT_DECODE_ASN1_BUFF_FAILED);
+
+    (void)memcpy(invalidTag, validDer, sizeof(validDer));
+    invalidTag[5] = BSL_ASN1_TAG_OCTETSTRING;
+    ASSERT_NE(CRYPT_DECODE_DsaPrikeyAsn1Buff(invalidTag, sizeof(invalidTag), asn1,
+        CRYPT_DSA_TRAD_PRV_MAX), CRYPT_SUCCESS);
+    ASSERT_NE(CRYPT_DECODE_DsaPrikeyAsn1Buff(validDer, sizeof(validDer) - 1, asn1,
+        CRYPT_DSA_TRAD_PRV_MAX), CRYPT_SUCCESS);
+
+    (void)memcpy(trailingData, validDer, sizeof(validDer));
+    trailingData[sizeof(validDer)] = 0;
+    ASSERT_EQ(CRYPT_DECODE_DsaPrikeyAsn1Buff(trailingData, sizeof(trailingData), asn1,
+        CRYPT_DSA_TRAD_PRV_MAX), CRYPT_DECODE_ASN1_BUFF_FAILED);
+
+EXIT:
+    TestErrClear();
+#endif
+}
+/* END_CASE */

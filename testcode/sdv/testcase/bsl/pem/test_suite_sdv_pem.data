@@ -101,13 +101,16 @@ SDV_BSL_PEM_REAL_CERT_DER_TC001
 SDV_BSL_PEM_REAL_CERT_DER_TC001:"../testdata/cert/sm2/ca.mul.der"
 
 SDV_BSL_PEM_REAL_KEY_PEM_TC001
-SDV_BSL_PEM_REAL_KEY_PEM_TC001:"../testdata/apps/pkey/rsa_key_pkcs1.pem":"-----BEGIN RSA PRIVATE KEY-----":"-----END RSA PRIVATE KEY-----"
+SDV_BSL_PEM_REAL_KEY_PEM_TC001:"../testdata/apps/pkey/rsa_key_pkcs1.pem":"-----BEGIN RSA PRIVATE KEY-----":"-----END RSA PRIVATE KEY-----":"PRIKEY_RSA"
 
 SDV_BSL_PEM_REAL_KEY_PEM_TC001
-SDV_BSL_PEM_REAL_KEY_PEM_TC001:"../testdata/apps/pkey/ec_key_pkcs1.pem":"-----BEGIN EC PRIVATE KEY-----":"-----END EC PRIVATE KEY-----"
+SDV_BSL_PEM_REAL_KEY_PEM_TC001:"../testdata/apps/pkey/ec_key_pkcs1.pem":"-----BEGIN EC PRIVATE KEY-----":"-----END EC PRIVATE KEY-----":"PRIKEY_ECC"
 
 SDV_BSL_PEM_REAL_KEY_PEM_TC001
-SDV_BSL_PEM_REAL_KEY_PEM_TC001:"../testdata/apps/pkey/rsa_key_pkcs8.pem":"-----BEGIN PRIVATE KEY-----":"-----END PRIVATE KEY-----"
+SDV_BSL_PEM_REAL_KEY_PEM_TC001:"../testdata/apps/pkey/rsa_key_pkcs8.pem":"-----BEGIN PRIVATE KEY-----":"-----END PRIVATE KEY-----":"PRIKEY_PKCS8_UNENCRYPT"
+
+SDV_BSL_PEM_REAL_KEY_PEM_TC001 decode traditional DSA private key PEM
+SDV_BSL_PEM_REAL_KEY_PEM_TC001:"../testdata/apps/pkey/dsa_key_traditional.pem":"-----BEGIN DSA PRIVATE KEY-----":"-----END DSA PRIVATE KEY-----":"PRIKEY_DSA"
 
 SDV_BSL_PEM_REAL_KEY_DER_TC001
 SDV_BSL_PEM_REAL_KEY_DER_TC001:"../testdata/cert/x25519/x25519.key.der"

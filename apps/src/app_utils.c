@@ -55,6 +55,7 @@
 #define PEM_RSA_PRIVATEKEY_STR "RSA PRIVATE KEY"
 #define PEM_RSA_PUBLIC_STR "RSA PUBLIC KEY"
 #define PEM_EC_PRIVATEKEY_STR "EC PRIVATE KEY"
+#define PEM_DSA_PRIVATEKEY_STR "DSA PRIVATE KEY"
 #define PEM_PKCS8_PRIVATEKEY_STR "PRIVATE KEY"
 #define PEM_PKCS8_PUBLIC_STR "PUBLIC KEY"
 #define PEM_ENCRYPTED_PKCS8_PRIVATEKEY_STR "ENCRYPTED PRIVATE KEY"
@@ -363,6 +364,8 @@ static CRYPT_EAL_PkeyCtx *ReadPemPrvKey(BSL_Buffer *encode, const char *name, ui
         type = CRYPT_PRIKEY_RSA;
     } else if (strcmp(name, PEM_EC_PRIVATEKEY_STR) == 0) {
         type = CRYPT_PRIKEY_ECC;
+    } else if (strcmp(name, PEM_DSA_PRIVATEKEY_STR) == 0) {
+        type = CRYPT_PRIKEY_DSA;
     } else if (strcmp(name, PEM_PKCS8_PRIVATEKEY_STR) == 0) {
         type = CRYPT_PRIKEY_PKCS8_UNENCRYPT;
     } else if (strcmp(name, PEM_ENCRYPTED_PKCS8_PRIVATEKEY_STR) == 0) {
@@ -384,6 +387,8 @@ static CRYPT_EAL_PkeyCtx *ReadPemPubKey(BSL_Buffer *encode, const char *name)
         type = CRYPT_PUBKEY_RSA;
     } else if (strcmp(name, PEM_PKCS8_PUBLIC_STR) == 0) {
         type = CRYPT_PUBKEY_SUBKEY;
+    } else {
+        return NULL;
     }
 
     CRYPT_EAL_PkeyCtx *pkey = NULL;
@@ -420,7 +425,9 @@ static bool CheckFilePath(const char *filePath)
 
 static CRYPT_EAL_PkeyCtx *LoadPrvDerKey(const char *inFilePath)
 {
-    static CRYPT_ENCDEC_TYPE encodeType[] = {CRYPT_PRIKEY_ECC, CRYPT_PRIKEY_RSA, CRYPT_PRIKEY_PKCS8_UNENCRYPT};
+    static CRYPT_ENCDEC_TYPE encodeType[] = {
+        CRYPT_PRIKEY_ECC, CRYPT_PRIKEY_RSA, CRYPT_PRIKEY_DSA, CRYPT_PRIKEY_PKCS8_UNENCRYPT
+    };
 
     CRYPT_EAL_PkeyCtx *pkey = NULL;
     for (uint32_t i = 0; i < sizeof(encodeType) / sizeof(CRYPT_ENCDEC_TYPE); ++i) {
@@ -434,6 +441,22 @@ static CRYPT_EAL_PkeyCtx *LoadPrvDerKey(const char *inFilePath)
         return NULL;
     }
 
+    return pkey;
+}
+
+static CRYPT_EAL_PkeyCtx *LoadPubDerKey(const char *inFilePath)
+{
+    static CRYPT_ENCDEC_TYPE encodeType[] = {CRYPT_PUBKEY_SUBKEY, CRYPT_PUBKEY_RSA};
+
+    CRYPT_EAL_PkeyCtx *pkey = NULL;
+    for (uint32_t i = 0; i < sizeof(encodeType) / sizeof(CRYPT_ENCDEC_TYPE); ++i) {
+        if (CRYPT_EAL_DecodeFileKey(BSL_FORMAT_ASN1, encodeType[i], inFilePath, NULL, 0, &pkey) == CRYPT_SUCCESS) {
+            break;
+        }
+    }
+    if (pkey == NULL) {
+        AppPrintError("Failed to read the public key from \"%s\".\n", inFilePath);
+    }
     return pkey;
 }
 
@@ -553,16 +576,25 @@ CRYPT_EAL_PkeyCtx *HITLS_APP_LoadPrvKey(const char *inFilePath, BSL_ParseFormat 
 
 CRYPT_EAL_PkeyCtx *HITLS_APP_LoadPubKey(const char *inFilePath, BSL_ParseFormat informat)
 {
+    if (inFilePath == NULL && informat == BSL_FORMAT_ASN1) {
+        AppPrintError("The input file is required when reading a DER public key.\n");
+        return NULL;
+    }
+    if (!CheckFilePath(inFilePath)) {
+        return NULL;
+    }
+    if (informat == BSL_FORMAT_ASN1) {
+        return LoadPubDerKey(inFilePath);
+    }
     if (informat != BSL_FORMAT_PEM) {
-        AppPrintError("Reading public key from non-PEM files is not supported.\n");
+        AppPrintError("Unsupported public key format.\n");
         return NULL;
     }
     char *pubKeyName = NULL;
     uint8_t *data = NULL;
     uint32_t dataLen = 0;
     bool isEncrypted = false;
-    if (!CheckFilePath(inFilePath) ||
-        (ReadPemKeyFile(inFilePath, &data, &dataLen, &pubKeyName, &isEncrypted) != HITLS_APP_SUCCESS)) {
+    if (ReadPemKeyFile(inFilePath, &data, &dataLen, &pubKeyName, &isEncrypted) != HITLS_APP_SUCCESS) {
         PrintFileOrStdinError(inFilePath, "Failed to read the public key");
         return NULL;
     }
@@ -582,19 +614,35 @@ int32_t HITLS_APP_PrintPubKey(CRYPT_EAL_PkeyCtx *pkey, const char *outFilePath, 
         return HITLS_APP_INVALID_ARG;
     }
 
+    BSL_UIO *wPubKeyUio = HITLS_APP_UioOpen(outFilePath, 'w', outFilePath != NULL ? 1 : 0);
+    if (wPubKeyUio == NULL) {
+        return HITLS_APP_UIO_FAIL;
+    }
+    AppKeyPrintParam param = { outFilePath, outformat, CRYPT_CIPHER_MAX, false, false };
+    int32_t ret = HITLS_APP_PrintPubKeyByUio(wPubKeyUio, pkey, &param);
+    BSL_UIO_Free(wPubKeyUio);
+    return ret;
+}
+
+int32_t HITLS_APP_PrintPubKeyByUio(BSL_UIO *uio, CRYPT_EAL_PkeyCtx *pkey, AppKeyPrintParam *printKeyParam)
+{
+    int32_t ret = printKeyParam->text ? CRYPT_EAL_PrintPubkey(0, pkey, uio) : HITLS_APP_SUCCESS;
+    if (ret != HITLS_APP_SUCCESS) {
+        AppPrintError("Failed to print the public key text, errCode = 0x%x.\n", ret);
+        return HITLS_APP_CRYPTO_FAIL;
+    }
+    if (printKeyParam->noout) {
+        return HITLS_APP_SUCCESS;
+    }
+
     BSL_Buffer pubKeyBuf = { 0 };
-    if (CRYPT_EAL_EncodeBuffKey(pkey, NULL, outformat, CRYPT_PUBKEY_SUBKEY, &pubKeyBuf) != CRYPT_SUCCESS) {
+    if (CRYPT_EAL_EncodeBuffKey(pkey, NULL, printKeyParam->outformat, CRYPT_PUBKEY_SUBKEY, &pubKeyBuf) !=
+        CRYPT_SUCCESS) {
         AppPrintError("Failed to export the public key.\n");
         return HITLS_APP_ENCODE_KEY_FAIL;
     }
-    BSL_UIO *wPubKeyUio = HITLS_APP_UioOpen(outFilePath, 'w', outFilePath != NULL ? 1 : 0);
-    if (wPubKeyUio == NULL) {
-        BSL_SAL_FREE(pubKeyBuf.data);
-        return HITLS_APP_UIO_FAIL;
-    }
-    int32_t ret = HITLS_APP_OptWriteUio(wPubKeyUio, pubKeyBuf.data, pubKeyBuf.dataLen, HITLS_APP_FORMAT_PEM);
+    ret = HITLS_APP_OptWriteUio(uio, pubKeyBuf.data, pubKeyBuf.dataLen, HITLS_APP_FORMAT_PEM);
     BSL_SAL_FREE(pubKeyBuf.data);
-    BSL_UIO_Free(wPubKeyUio);
     return ret;
 }
 

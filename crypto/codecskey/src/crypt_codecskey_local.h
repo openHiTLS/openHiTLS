@@ -170,6 +170,16 @@ typedef enum {
 } CRYPT_DSA_KEYPARAM_TEMPL_IDX;
 
 typedef enum {
+    CRYPT_DSA_TRAD_PRV_VERSION_IDX = 0,
+    CRYPT_DSA_TRAD_PRV_P_IDX,
+    CRYPT_DSA_TRAD_PRV_Q_IDX,
+    CRYPT_DSA_TRAD_PRV_G_IDX,
+    CRYPT_DSA_TRAD_PRV_PUBKEY_IDX,
+    CRYPT_DSA_TRAD_PRV_PRIKEY_IDX,
+    CRYPT_DSA_TRAD_PRV_MAX
+} CRYPT_DSA_TRAD_PRIKEY_TEMPL_IDX;
+
+typedef enum {
     CRYPT_DH_PRV_P_IDX = 0,
     CRYPT_DH_PRV_G_IDX = 1,
     CRYPT_DH_PRV_Q_IDX = 2,
@@ -191,6 +201,11 @@ int32_t ParseRsaPubkeyAsn1Buff(CRYPT_EAL_LibCtx *libctx, const char *attrName, u
 
 int32_t ParseRsaPrikeyAsn1Buff(CRYPT_EAL_LibCtx *libctx, const char *attrName, uint8_t *buff, uint32_t buffLen,
     BSL_ASN1_Buffer *rsaPssParam, BslCid cid, CRYPT_EAL_PkeyCtx **ealPriKey);
+#endif
+
+#ifdef HITLS_CRYPTO_DSA
+int32_t ParseDsaPrikeyAsn1Buff(CRYPT_EAL_LibCtx *libctx, const char *attrName, uint8_t *buff, uint32_t buffLen,
+    CRYPT_EAL_PkeyCtx **ealPriKey);
 #endif
 
 #if defined(HITLS_CRYPTO_ECDSA) || defined(HITLS_CRYPTO_SM2)
@@ -236,6 +251,10 @@ int32_t CRYPT_DECODE_RsaPrikeyAsn1Buff(uint8_t *buff, uint32_t buffLen, BSL_ASN1
 int32_t CRYPT_DECODE_DsaKeyParamAsn1Buff(uint8_t *buff, uint32_t buffLen, BSL_ASN1_Buffer *asn1, uint32_t arrNum);
 
 int32_t CRYPT_ENCODE_DsaKeyParamAsn1Buff(BSL_ASN1_Buffer *asn1, uint32_t asn1Num, BSL_Buffer *encode);
+#endif
+
+#ifdef HITLS_CRYPTO_DSA
+int32_t CRYPT_DECODE_DsaPrikeyAsn1Buff(uint8_t *buff, uint32_t buffLen, BSL_ASN1_Buffer *asn1, uint32_t arrNum);
 #endif
 
 #ifdef HITLS_CRYPTO_MLDSA

@@ -32,25 +32,31 @@
 
 typedef enum {
     HITLS_APP_OPT_IN = 2,
+    HITLS_APP_OPT_INFORM,
     HITLS_APP_OPT_PASSIN,
+    HITLS_APP_OPT_PUBIN,
     HITLS_APP_OPT_OUT,
     HITLS_APP_OPT_PUBOUT,
     HITLS_APP_OPT_CIPHER_ALG,
     HITLS_APP_OPT_PASSOUT,
     HITLS_APP_OPT_TEXT,
     HITLS_APP_OPT_NOOUT,
+    HITLS_APP_OPT_CHECK,
 } HITLSOptType;
 
 static const HITLS_CmdOption g_pKeyOpts[] = {
     {"help", HITLS_APP_OPT_HELP, HITLS_APP_OPT_VALUETYPE_NO_VALUE, "Display this function summary"},
     {"in", HITLS_APP_OPT_IN, HITLS_APP_OPT_VALUETYPE_IN_FILE, "Input key"},
+    {"inform", HITLS_APP_OPT_INFORM, HITLS_APP_OPT_VALUETYPE_FMT_PEMDER, "Input format - DER or PEM"},
     {"passin", HITLS_APP_OPT_PASSIN, HITLS_APP_OPT_VALUETYPE_STRING, "Input file pass phrase source"},
+    {"pubin", HITLS_APP_OPT_PUBIN, HITLS_APP_OPT_VALUETYPE_NO_VALUE, "Read public key from input"},
     {"out", HITLS_APP_OPT_OUT, HITLS_APP_OPT_VALUETYPE_OUT_FILE, "Output file"},
     {"pubout", HITLS_APP_OPT_PUBOUT, HITLS_APP_OPT_VALUETYPE_NO_VALUE, "Output public key, not private"},
     {"", HITLS_APP_OPT_CIPHER_ALG, HITLS_APP_OPT_VALUETYPE_NO_VALUE, "Any supported cipher"},
     {"passout", HITLS_APP_OPT_PASSOUT, HITLS_APP_OPT_VALUETYPE_STRING, "Output file pass phrase source"},
     {"text", HITLS_APP_OPT_TEXT, HITLS_APP_OPT_VALUETYPE_NO_VALUE, "Print key in text(only RSA is supported)"},
     {"noout", HITLS_APP_OPT_NOOUT, HITLS_APP_OPT_VALUETYPE_NO_VALUE, "Do not output the key in encoded form"},
+    {"check", HITLS_APP_OPT_CHECK, HITLS_APP_OPT_VALUETYPE_NO_VALUE, "Check key consistency"},
     {NULL, 0, 0, NULL},
 };
 
@@ -76,6 +82,7 @@ typedef struct {
     char *passout;
     BSL_UIO *wUio;
     int32_t cipherAlgCid;
+    bool check;
     InputKeyPara inPara;
     OutPutKeyPara outPara;
 } PkeyOptCtx;
@@ -107,9 +114,22 @@ static int32_t PkeyOptIn(PkeyOptCtx *optCtx)
     return HITLS_APP_SUCCESS;
 }
 
+static int32_t PkeyOptInform(PkeyOptCtx *optCtx)
+{
+    return HITLS_APP_OptGetFormatType(HITLS_APP_OptGetValueStr(), HITLS_APP_OPT_VALUETYPE_FMT_PEMDER,
+        &optCtx->inPara.inFormat);
+}
+
 static int32_t PkeyOptPassin(PkeyOptCtx *optCtx)
 {
     optCtx->inPara.passInArg = HITLS_APP_OptGetValueStr();
+    return HITLS_APP_SUCCESS;
+}
+
+static int32_t PkeyOptPubin(PkeyOptCtx *optCtx)
+{
+    optCtx->inPara.pubin = true;
+    optCtx->outPara.pubout = true;
     return HITLS_APP_SUCCESS;
 }
 
@@ -149,17 +169,26 @@ static int32_t PkeyOptNoout(PkeyOptCtx *optCtx)
     return HITLS_APP_SUCCESS;
 }
 
+static int32_t PkeyOptCheck(PkeyOptCtx *optCtx)
+{
+    optCtx->check = true;
+    return HITLS_APP_SUCCESS;
+}
+
 static const PkeyOptHandleTable g_pkeyOptHandleTable[] = {
     {HITLS_APP_OPT_ERR, PkeyOptErr},
     {HITLS_APP_OPT_HELP, PkeyOptHelp},
     {HITLS_APP_OPT_IN, PkeyOptIn},
+    {HITLS_APP_OPT_INFORM, PkeyOptInform},
     {HITLS_APP_OPT_PASSIN, PkeyOptPassin},
+    {HITLS_APP_OPT_PUBIN, PkeyOptPubin},
     {HITLS_APP_OPT_OUT, PkeyOptOut},
     {HITLS_APP_OPT_PUBOUT, PkeyOptPubout},
     {HITLS_APP_OPT_CIPHER_ALG, PkeyOptCipher},
     {HITLS_APP_OPT_PASSOUT, PkeyOptPassout},
     {HITLS_APP_OPT_TEXT, PkeyOptText},
     {HITLS_APP_OPT_NOOUT, PkeyOptNoout},
+    {HITLS_APP_OPT_CHECK, PkeyOptCheck},
 };
 
 static int32_t ParsePkeyOpt(int argc, char *argv[], PkeyOptCtx *optCtx)
@@ -190,11 +219,33 @@ static int32_t ParsePkeyOpt(int argc, char *argv[], PkeyOptCtx *optCtx)
     return ret;
 }
 
+static int32_t CheckPkey(const PkeyOptCtx *optCtx)
+{
+    if (!optCtx->check) {
+        return HITLS_APP_SUCCESS;
+    }
+    int32_t ret = CRYPT_EAL_PkeyPairCheck(optCtx->pkey, optCtx->pkey);
+    if (ret == CRYPT_EAL_ALG_NOT_SUPPORT) {
+        AppPrintError("pkey: The -check option is not supported for this key type.\n");
+        return HITLS_APP_INVALID_ARG;
+    }
+    if (ret != CRYPT_SUCCESS) {
+        AppPrintError("Key is invalid, errCode: 0x%x.\n", ret);
+        return HITLS_APP_CRYPTO_FAIL;
+    }
+    AppPrintInfo("Key is valid\n");
+    return HITLS_APP_SUCCESS;
+}
+
 static int32_t HandlePkeyOpt(int argc, char *argv[], PkeyOptCtx *optCtx)
 {
     int32_t ret = ParsePkeyOpt(argc, argv, optCtx);
     if (ret != HITLS_APP_SUCCESS) {
         return ret;
+    }
+    if (optCtx->check && optCtx->inPara.pubin) {
+        AppPrintError("pkey: The -check option is not supported with -pubin.\n");
+        return HITLS_APP_INVALID_ARG;
     }
     // 1. Read Password
     if ((optCtx->cipherAlgCid == CRYPT_CIPHER_MAX) && (optCtx->outPara.passOutArg != NULL)) {
@@ -216,9 +267,25 @@ static int32_t HandlePkeyOpt(int argc, char *argv[], PkeyOptCtx *optCtx)
         return HITLS_APP_LOAD_KEY_FAIL;
     }
 
+    ret = CheckPkey(optCtx);
+    if (ret != HITLS_APP_SUCCESS) {
+        return ret;
+    }
+
+    if (optCtx->outPara.noout && !optCtx->outPara.text) {
+        return HITLS_APP_SUCCESS;
+    }
+
     // 3. Output the public or private key.
     if (optCtx->outPara.pubout) {
-        return HITLS_APP_PrintPubKey(optCtx->pkey, optCtx->outPara.outFilePath, optCtx->outPara.outFormat);
+        optCtx->wUio = HITLS_APP_UioOpen(optCtx->outPara.outFilePath, 'w',
+            optCtx->outPara.outFilePath != NULL ? 1 : 0);
+        if (optCtx->wUio == NULL) {
+            return HITLS_APP_UIO_FAIL;
+        }
+        AppKeyPrintParam param = { optCtx->outPara.outFilePath, optCtx->outPara.outFormat, CRYPT_CIPHER_MAX,
+                                   optCtx->outPara.text, optCtx->outPara.noout };
+        return HITLS_APP_PrintPubKeyByUio(optCtx->wUio, optCtx->pkey, &param);
     }
 
     optCtx->wUio = HITLS_APP_UioOpenPrivate(optCtx->outPara.outFilePath, 'w');
@@ -236,6 +303,7 @@ static void InitPkeyOptCtx(PkeyOptCtx *optCtx)
     optCtx->passin = NULL;
     optCtx->passout = NULL;
     optCtx->cipherAlgCid = CRYPT_CIPHER_MAX;
+    optCtx->check = false;
 
     optCtx->inPara.inFilePath = NULL;
     optCtx->inPara.inFormat = BSL_FORMAT_PEM;
