@@ -171,8 +171,8 @@ static int32_t FindProviderInitFunc(CRYPT_EAL_LibCtx *libCtx, char *providerName
         ret = snprintf(providerPath, pathLen + 1, "%s/%s", libCtx->searchProviderPath, providerName);
         if (ret < 0 || (size_t)ret >= pathLen + 1) {
             BSL_SAL_Free(providerPath);
-            BSL_ERR_PUSH_ERROR(ret);
-            return ret;
+            BSL_ERR_PUSH_ERROR(BSL_INTERNAL_EXCEPTION);
+            return BSL_INTERNAL_EXCEPTION;
         }
     }
     // Attempt to load the dynamic library
