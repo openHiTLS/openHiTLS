@@ -62,6 +62,12 @@ int32_t BSL_ASN1_DecodeLen(uint8_t **encode, uint32_t *encLen, bool completeLen,
 int32_t BSL_ASN1_DecodePrimitiveItem(BSL_ASN1_Buffer *asn, void *decodeData);
 
 /**
+ * Validate non-negative INTEGER content and remove sign padding.
+ * The output borrows the input buffer; its tag and input bytes are unchanged.
+ */
+int32_t BSL_ASN1_DecodeInteger(uint8_t *buff, uint32_t len, BSL_ASN1_Buffer *asn);
+
+/**
  * @ingroup bsl_asn1
  * @brief Decode one asn1 item.
  *

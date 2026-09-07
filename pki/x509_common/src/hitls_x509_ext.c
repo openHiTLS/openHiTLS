@@ -445,8 +445,15 @@ int32_t HITLS_X509_ParseAuthorityKeyId(HITLS_X509_ExtEntry *extEntry, HITLS_X509
         return HITLS_X509_ERR_EXT_ILLEGAL_AKI;
     }
     if (asnArr[HITLS_X509_EXT_AKI_SERIAL_IDX].tag != 0) {
-        aki->serialNum.data = asnArr[HITLS_X509_EXT_AKI_SERIAL_IDX].buff;
-        aki->serialNum.dataLen = asnArr[HITLS_X509_EXT_AKI_SERIAL_IDX].len;
+        BSL_ASN1_Buffer serial = asnArr[HITLS_X509_EXT_AKI_SERIAL_IDX];
+        /* The implicit [2] tag retains INTEGER content encoding. */
+        ret = BSL_ASN1_DecodeInteger(serial.buff, serial.len, &serial);
+        if (ret != BSL_SUCCESS) {
+            BSL_ERR_PUSH_ERROR(ret);
+            return ret;
+        }
+        aki->serialNum.data = serial.buff;
+        aki->serialNum.dataLen = serial.len;
     }
     if (asnArr[HITLS_X509_EXT_AKI_ISSUER_IDX].tag != 0) {
         list = BSL_LIST_New(sizeof(HITLS_X509_GeneralName));
@@ -504,9 +511,16 @@ int32_t X509_ParseCrlNumber(HITLS_X509_ExtEntry *extEntry, HITLS_X509_ExtCrlNumb
         return HITLS_X509_ERR_EXT_CRLNUMBER;
     }
 
+    BSL_ASN1_Buffer number = {BSL_ASN1_TAG_INTEGER, valueLen, temp};
+    ret = BSL_ASN1_DecodeInteger(number.buff, number.len, &number);
+    if (ret != BSL_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        return ret;
+    }
+
     // Store CRL Number value
-    crlNumber->crlNumber.data = temp;
-    crlNumber->crlNumber.dataLen = valueLen;
+    crlNumber->crlNumber.data = number.buff;
+    crlNumber->crlNumber.dataLen = number.len;
     crlNumber->critical = extEntry->critical;
 
     return HITLS_PKI_SUCCESS;

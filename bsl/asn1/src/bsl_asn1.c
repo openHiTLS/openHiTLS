@@ -475,8 +475,14 @@ static int32_t BSL_ASN1_ProcessWithoutDefOrOpt(BSL_ASN1_AnyOrChoiceParam *tagCbi
  *
  * Note: Currently, only positive integers are supported, and negative integers are not supported.
  */
-int32_t ProcessIntegerType(uint8_t *temp, uint32_t len, BSL_ASN1_Buffer *asn)
+int32_t BSL_ASN1_DecodeInteger(uint8_t *temp, uint32_t len, BSL_ASN1_Buffer *asn)
 {
+    if (temp == NULL || asn == NULL) {
+        return BSL_NULL_INPUT;
+    }
+    if (len == 0) {
+        return BSL_ASN1_ERR_DECODE_INT;
+    }
     // Check if it is a negative number
     if ((*temp & 0x80) != 0) {
         return BSL_ASN1_ERR_DECODE_INT;
@@ -565,7 +571,7 @@ static int32_t BSL_ASN1_ProcessNormal(BSL_ASN1_AnyOrChoiceParam *tagCbinfo,
     }
     asn->tag = tag; // update tag
     if ((tag == BSL_ASN1_TAG_INTEGER || tag == BSL_ASN1_TAG_ENUMERATED) && len > 0) {
-        ret = ProcessIntegerType(temp, len, asn);
+        ret = BSL_ASN1_DecodeInteger(temp, len, asn);
         if (ret != BSL_SUCCESS) {
             return ret;
         }
