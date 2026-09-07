@@ -259,6 +259,11 @@ int32_t CRYPT_CURVE25519_SetPubKey(CRYPT_CURVE25519_Ctx *pkey, const CRYPT_Curve
     return CRYPT_SUCCESS;
 }
 
+#ifdef HITLS_CRYPTO_ED25519
+static int32_t CRYPT_ED25519_PublicFromPrivate(const uint8_t prvKey[CRYPT_CURVE25519_KEYLEN],
+    uint8_t pubKey[CRYPT_CURVE25519_KEYLEN], const EAL_MdMethod *hashMethod);
+#endif
+
 int32_t CRYPT_CURVE25519_SetPrvKey(CRYPT_CURVE25519_Ctx *pkey, const CRYPT_Curve25519Prv *prv)
 {
     if (pkey == NULL || prv == NULL || prv->data == NULL) {
@@ -277,6 +282,23 @@ int32_t CRYPT_CURVE25519_SetPrvKey(CRYPT_CURVE25519_Ctx *pkey, const CRYPT_Curve
     memcpy(pkey->prvKey, prv->data, prv->len);
     pkey->keyType |= CURVE25519_PRVKEY;
 
+#ifdef HITLS_CRYPTO_ED25519
+    if (pkey->hashMethod != NULL && (pkey->keyType & CURVE25519_PUBKEY) == 0) {
+        int32_t ret = CRYPT_ED25519_PublicFromPrivate(pkey->prvKey, pkey->pubKey, pkey->hashMethod);
+        if (ret != CRYPT_SUCCESS) {
+            BSL_ERR_PUSH_ERROR(ret);
+            return ret;
+        }
+        pkey->keyType |= CURVE25519_PUBKEY;
+        return CRYPT_SUCCESS;
+    }
+#endif
+#ifdef HITLS_CRYPTO_X25519
+    if ((pkey->keyType & CURVE25519_PUBKEY) == 0) {
+        CRYPT_X25519_PublicFromPrivate(pkey->prvKey, pkey->pubKey);
+        pkey->keyType |= CURVE25519_PUBKEY;
+    }
+#endif
     return CRYPT_SUCCESS;
 }
 

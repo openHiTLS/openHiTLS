@@ -1185,6 +1185,27 @@ EXIT:
 /* END_CASE */
 
 /* BEGIN_CASE */
+void SDV_BSL_ASN1_PARSE_25519PRIKEY_FILE_TC003(int alg, char *path, int format, int type, Hex *pub)
+{
+    uint8_t rawPubKey[32] = {0};
+    CRYPT_EAL_PkeyPub pkeyPub = {0};
+    pkeyPub.id = alg;
+    pkeyPub.key.curve25519Pub.data = rawPubKey;
+    pkeyPub.key.curve25519Pub.len = sizeof(rawPubKey);
+
+    CRYPT_EAL_PkeyCtx *pkeyCtx = NULL;
+    ASSERT_EQ(CRYPT_EAL_DecodeFileKey(format, type, path, NULL, 0, &pkeyCtx), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyGetPub(pkeyCtx, &pkeyPub), CRYPT_SUCCESS);
+    ASSERT_COMPARE("pubkey cmp", pub->x, pub->len, pkeyPub.key.curve25519Pub.data,
+        pkeyPub.key.curve25519Pub.len);
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
+EXIT:
+    CRYPT_EAL_PkeyFreeCtx(pkeyCtx);
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
 void SDV_BSL_ASN1_PARSE_X25519PUBKEY_FILE_TC001(char *path, int fileType, Hex *expect)
 {
     CRYPT_EAL_PkeyCtx *pkeyCtx = NULL;
