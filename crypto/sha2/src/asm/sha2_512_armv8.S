@@ -122,7 +122,7 @@ CRYPT_AARCH64_RODATA_SECTION
  *  Function/Macro Call: None
  *
  */
-
+.text
 CRYPT_AARCH64_FUNC_START(SHA512CompressMultiBlocks)
 AARCH64_PACIASP
     cbz     x2, .Lend_sha512

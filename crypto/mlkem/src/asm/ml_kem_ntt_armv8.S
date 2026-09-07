@@ -145,16 +145,16 @@ AARCH64_PACIASP
 
     mov Q, #3329              // Q (ML-KEM modulus)
 
-    VLDQ_8H 0, table, # 0*16
-    VLDQ_8H 1, table, # 1*16
-    VLDQ_8H 2, table, # 2*16
-    VLDQ_8H 3, table, # 3*16
+    VLDQ_8H 0, table, #0*16
+    VLDQ_8H 1, table, #1*16
+    VLDQ_8H 2, table, #2*16
+    VLDQ_8H 3, table, #3*16
 
     mov v0.H[0], Q
 
     // ============================= Pass 1 (even vectors) =============================
     // Load upper half coefficients (indices 8-15 at stride 32)
-    VLDQ_8H 13, src, # 9*32
+    VLDQ_8H 13, src, #9*32
     VLDQ_8H 15, src, #11*32
     VLDQ_8H 17, src, #13*32
     VLDQ_8H 19, src, #15*32
@@ -689,10 +689,10 @@ AARCH64_PACIASP
     mov v0.H[0], Q
     mov v0.H[1], BarrettM
 
-    VLDQ_8H 28, src0, # 1*16
-    VLDQ_8H 29, src1, # 1*16
-    VLDQ_8H 30, src0, # 3*16
-    VLDQ_8H 31, src1, # 3*16
+    VLDQ_8H 28, src0, #1*16
+    VLDQ_8H 29, src1, #1*16
+    VLDQ_8H 30, src0, #3*16
+    VLDQ_8H 31, src1, #3*16
 
     // ========== 4×4 Matrix Transpose (pre-butterfly) ==========
     // Rearranges coefficient layout so that butterfly-dependent elements
@@ -880,13 +880,13 @@ AARCH64_PACIASP
 1:
 
     // ---- Store previous iteration results, load next 64-coeff block ----
-    VSTQ_8H 28, src0, # 1*16
+    VSTQ_8H 28, src0, #1*16
     VLDQ_8H 28, src0, #(64+1*16)
-    VSTQ_8H 29, src1, # 1*16
+    VSTQ_8H 29, src1, #1*16
     VLDQ_8H 29, src1, #(64+1*16)
-    VSTQ_8H 30, src0, # 3*16
+    VSTQ_8H 30, src0, #3*16
     VLDQ_8H 30, src0, #(64+3*16)
-    VSTQ_8H 31, src1, # 3*16
+    VSTQ_8H 31, src1, #3*16
     VLDQ_8H 31, src1, #(64+3*16)
 
     add src0, src0, #64
@@ -1071,10 +1071,10 @@ AARCH64_PACIASP
     sub counter, counter, #1
     cbnz counter, 1b
 
-    VSTQ_8H 28, src0, # 1*16
-    VSTQ_8H 29, src1, # 1*16
-    VSTQ_8H 30, src0, # 3*16
-    VSTQ_8H 31, src1, # 3*16
+    VSTQ_8H 28, src0, #1*16
+    VSTQ_8H 29, src1, #1*16
+    VSTQ_8H 30, src0, #3*16
+    VSTQ_8H 31, src1, #3*16
 
     add src0, src0, #64
     add src1, src1, #64
@@ -1650,8 +1650,8 @@ AARCH64_PACIASP
     VLDQ_8H 3, table, #3*16
 
     // Load second half of coefficients (indices 8-15)
-    VLDQ_8H 16, src, # 8*32
-    VLDQ_8H 17, src, # 9*32
+    VLDQ_8H 16, src, #8*32
+    VLDQ_8H 17, src, #9*32
     VLDQ_8H 18, src, #10*32
     VLDQ_8H 19, src, #11*32
     VLDQ_8H 20, src, #12*32
@@ -1920,13 +1920,13 @@ AARCH64_PACIASP
     mls      v14.8H, v26.8H, v0.H[0]
     mls      v15.8H, v27.8H, v0.H[0]
 
-    VSTQ_8H 12, src, # 4*32
+    VSTQ_8H 12, src, #4*32
     VLDQ_8H 12, src, #(16+ 4*32)
-    VSTQ_8H 13, src, # 5*32
+    VSTQ_8H 13, src, #5*32
     VLDQ_8H 13, src, #(16+ 5*32)
-    VSTQ_8H 14, src, # 6*32
+    VSTQ_8H 14, src, #6*32
     VLDQ_8H 14, src, #(16+ 6*32)
-    VSTQ_8H 15, src, # 7*32
+    VSTQ_8H 15, src, #7*32
     VLDQ_8H 15, src, #(16+ 7*32)
 
     // ============================= Pass 2 (odd vectors, offset +16) =============================
