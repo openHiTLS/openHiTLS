@@ -37,6 +37,7 @@
         "sha3": ["test_suite_sdv_eal_md_sha3"],
         "md5": ["test_suite_sdv_eal_md5"],
         "sm3": ["test_suite_sdv_eal_sm3"],
+        "blake2s256": ["test_suite_sdv_eal_md_blake2s"],
 
         "hmac": ["test_suite_sdv_eal_mac_hmac"],
         "gmac": ["test_suite_sdv_eal_gmac"],
@@ -169,6 +170,11 @@
         "test_suite_sdv_eal_sm3": [
             "SDV_CRYPT_EAL_SM3_FUNC_TC002",
             "SDV_CRYPTO_SM3_COPY_CTX_FUNC_TC001"
+        ],
+        "test_suite_sdv_eal_md_blake2s": [
+            "SDV_CRYPTO_BLAKE2S_API_TC001",
+            "SDV_CRYPTO_BLAKE2S_FUNC_TC002",
+            "SDV_CRYPTO_BLAKE2S_COPY_CTX_FUNC_TC001"
         ],
         "test_suite_sdv_eal_gmac":[
             "SDV_CRYPTO_EAL_GMAC_FUNC_TC001"

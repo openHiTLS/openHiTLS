@@ -21,6 +21,71 @@
 #include "crypt_algid.h"
 #include "crypt_errno.h"
 #include "crypt_blake2.h"
+#include "crypt_params_key.h"
+#include "eal_md_local.h"
+
+static CRYPT_EAL_MdCtx *Blake2sNewCtx(int provider)
+{
+#ifdef HITLS_CRYPTO_PROVIDER
+    if (provider) {
+        return CRYPT_EAL_ProviderMdNewCtx(NULL, CRYPT_MD_BLAKE2S256, "provider=default");
+    }
+#else
+    (void)provider;
+#endif
+    return CRYPT_EAL_MdNewCtx(CRYPT_MD_BLAKE2S256);
+}
+
+#ifdef HITLS_CRYPTO_PROVIDER
+#define BLAKE2S_CHECK_PROVIDER(provider) ((void)(provider))
+#else
+#define BLAKE2S_CHECK_PROVIDER(provider) do { if (provider) { SKIP_TEST(); } } while (0)
+#endif
+
+typedef struct {
+    Hex *hashes;
+    uint32_t index;
+    int provider;
+    int32_t result;
+} Blake2sThreadArg;
+
+static void *Blake2sThread(void *arg)
+{
+    Blake2sThreadArg *test = arg;
+    CRYPT_EAL_MdCtx *ctx = NULL;
+    uint8_t input[129];
+    uint8_t output[CRYPT_BLAKE2S256_DIGESTSIZE];
+    uint32_t outputLen;
+    uint32_t i;
+    uint32_t j;
+    int32_t ret;
+
+    test->result = -1;
+    for (i = 0; i < 100; i++) {
+        for (j = 0; j < sizeof(input); j++) {
+            input[j] = (uint8_t)(j * 29 + test->index * 100 + i);
+        }
+        ctx = Blake2sNewCtx(test->provider);
+        if (ctx == NULL) {
+            return NULL;
+        }
+        outputLen = sizeof(output);
+        ret = CRYPT_EAL_MdInit(ctx);
+        if (ret == CRYPT_SUCCESS) {
+            ret = CRYPT_EAL_MdUpdate(ctx, input, sizeof(input));
+        }
+        if (ret == CRYPT_SUCCESS) {
+            ret = CRYPT_EAL_MdFinal(ctx, output, &outputLen);
+        }
+        CRYPT_EAL_MdFreeCtx(ctx);
+        if (ret != CRYPT_SUCCESS || outputLen != sizeof(output) ||
+            memcmp(output, test->hashes->x + i * sizeof(output), sizeof(output)) != 0 || !TestIsErrStackEmpty()) {
+            return NULL;
+        }
+    }
+    test->result = CRYPT_SUCCESS;
+    return NULL;
+}
 /* END_HEADER */
 
 /*
@@ -42,12 +107,13 @@
 /* BEGIN_CASE */
 void SDV_CRYPTO_BLAKE2S_API_TC001(void)
 {
-    TestMemInit();
     uint8_t input[100] = {0};
     uint8_t output[CRYPT_BLAKE2S256_DIGESTSIZE + 1] = {0};
     uint32_t outputLen = CRYPT_BLAKE2S256_DIGESTSIZE;
     CRYPT_EAL_MdCtx *ctx = NULL;
 
+    TestMemInit();
+    ASSERT_TRUE(CRYPT_EAL_MdIsValidAlgId(CRYPT_MD_BLAKE2S256));
     ASSERT_EQ(CRYPT_EAL_MdGetDigestSize(CRYPT_MD_BLAKE2S256), CRYPT_BLAKE2S256_DIGESTSIZE);
     ASSERT_EQ(CRYPT_EAL_MdDeinit(ctx), CRYPT_NULL_INPUT);
     TestErrClear();
@@ -151,22 +217,35 @@ EXIT:
  * @expect Both streaming and one-shot digests match the expected vector.
  */
 /* BEGIN_CASE */
-void SDV_CRYPTO_BLAKE2S_FUNC_TC002(Hex *msg, Hex *hash)
+void SDV_CRYPTO_BLAKE2S_FUNC_TC002(int provider, Hex *msg, Hex *hash)
 {
-    TestMemInit();
     uint8_t output[CRYPT_BLAKE2S256_DIGESTSIZE] = {0};
     uint32_t outputLen = sizeof(output);
-    CRYPT_EAL_MdCtx *ctx = CRYPT_EAL_MdNewCtx(CRYPT_MD_BLAKE2S256);
+    CRYPT_EAL_MdCtx *ctx = NULL;
+
+    BLAKE2S_CHECK_PROVIDER(provider);
+    TestMemInit();
+    ctx = Blake2sNewCtx(provider);
     ASSERT_TRUE(ctx != NULL);
 
     ASSERT_EQ(CRYPT_EAL_MdInit(ctx), CRYPT_SUCCESS);
-    ASSERT_EQ(CRYPT_EAL_MdUpdate(ctx, msg->x, msg->len), CRYPT_SUCCESS);
+    if (msg->len != 0) {
+        ASSERT_EQ(CRYPT_EAL_MdUpdate(ctx, msg->x, msg->len), CRYPT_SUCCESS);
+    }
     ASSERT_EQ(CRYPT_EAL_MdFinal(ctx, output, &outputLen), CRYPT_SUCCESS);
     ASSERT_EQ(outputLen, CRYPT_BLAKE2S256_DIGESTSIZE);
     ASSERT_COMPARE("blake2s", output, outputLen, hash->x, hash->len);
 
     outputLen = sizeof(output);
-    ASSERT_EQ(CRYPT_EAL_Md(CRYPT_MD_BLAKE2S256, msg->x, msg->len, output, &outputLen), CRYPT_SUCCESS);
+#ifdef HITLS_CRYPTO_PROVIDER
+    if (provider) {
+        ASSERT_EQ(CRYPT_EAL_ProviderMd(NULL, CRYPT_MD_BLAKE2S256, "provider=default", msg->x, msg->len,
+            output, &outputLen), CRYPT_SUCCESS);
+    } else
+#endif
+    {
+        ASSERT_EQ(CRYPT_EAL_Md(CRYPT_MD_BLAKE2S256, msg->x, msg->len, output, &outputLen), CRYPT_SUCCESS);
+    }
     ASSERT_EQ(outputLen, CRYPT_BLAKE2S256_DIGESTSIZE);
     ASSERT_COMPARE("blake2s", output, outputLen, hash->x, hash->len);
     ASSERT_TRUE(TestIsErrStackEmpty());
@@ -179,26 +258,35 @@ EXIT:
 /**
  * @test   SDV_CRYPTO_BLAKE2S_FUNC_TC003
  * @title  BLAKE2s multiple update vector test.
- * @brief  Hash one message split across three Update calls and compare the final
- *         digest with the official KAT for the concatenated message.
+ * @brief  Compare single and parameterized split updates with a fixed digest.
  * @expect Multi-update digest matches the expected vector.
  */
 /* BEGIN_CASE */
-void SDV_CRYPTO_BLAKE2S_FUNC_TC003(Hex *data1, Hex *data2, Hex *data3, Hex *hash)
+void SDV_CRYPTO_BLAKE2S_FUNC_TC003(int provider, Hex *msg, int msgLen1, int msgLen2, int msgLen3, Hex *hash)
 {
-    TestMemInit();
-    uint8_t output[CRYPT_BLAKE2S256_DIGESTSIZE] = {0};
+    uint8_t output[CRYPT_BLAKE2S256_DIGESTSIZE];
     uint32_t outputLen = sizeof(output);
-    CRYPT_EAL_MdCtx *ctx = CRYPT_EAL_MdNewCtx(CRYPT_MD_BLAKE2S256);
-    ASSERT_TRUE(ctx != NULL);
+    CRYPT_EAL_MdCtx *ctx = NULL;
 
+    BLAKE2S_CHECK_PROVIDER(provider);
+    TestMemInit();
+    ASSERT_TRUE(msgLen1 >= 0 && msgLen2 >= 0 && msgLen3 >= 0);
+    ASSERT_EQ((uint64_t)msgLen1 + msgLen2 + msgLen3, msg->len);
+    ctx = Blake2sNewCtx(provider);
+    ASSERT_TRUE(ctx != NULL);
     ASSERT_EQ(CRYPT_EAL_MdInit(ctx), CRYPT_SUCCESS);
-    ASSERT_EQ(CRYPT_EAL_MdUpdate(ctx, data1->x, data1->len), CRYPT_SUCCESS);
-    ASSERT_EQ(CRYPT_EAL_MdUpdate(ctx, data2->x, data2->len), CRYPT_SUCCESS);
-    ASSERT_EQ(CRYPT_EAL_MdUpdate(ctx, data3->x, data3->len), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_MdUpdate(ctx, msg->x, msg->len), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_MdFinal(ctx, output, &outputLen), CRYPT_SUCCESS);
+    ASSERT_COMPARE("single update", output, outputLen, hash->x, hash->len);
+
+    outputLen = sizeof(output);
+    ASSERT_EQ(CRYPT_EAL_MdInit(ctx), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_MdUpdate(ctx, msg->x, msgLen1), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_MdUpdate(ctx, msg->x + msgLen1, msgLen2), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_MdUpdate(ctx, msg->x + msgLen1 + msgLen2, msgLen3), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_MdFinal(ctx, output, &outputLen), CRYPT_SUCCESS);
     ASSERT_EQ(outputLen, CRYPT_BLAKE2S256_DIGESTSIZE);
-    ASSERT_COMPARE("blake2s", output, outputLen, hash->x, hash->len);
+    ASSERT_COMPARE("split update", output, outputLen, hash->x, hash->len);
     ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
@@ -258,22 +346,26 @@ EXIT:
  * @test   SDV_CRYPTO_BLAKE2S_COPY_CTX_FUNC_TC001
  * @title  BLAKE2s copy and duplicate context test.
  * @brief  Validate null copy/dup error paths, then copy and duplicate a context
- *         after hashing a prefix and continue both contexts with the same suffix.
+ *         after hashing a prefix and continue three independent branches.
  * @expect Copied and duplicated contexts produce the expected digest and retain
  *         the original algorithm id.
  */
 /* BEGIN_CASE */
-void SDV_CRYPTO_BLAKE2S_COPY_CTX_FUNC_TC001(int id, Hex *prefix, Hex *suffix, Hex *hash)
+void SDV_CRYPTO_BLAKE2S_COPY_CTX_FUNC_TC001(int provider, Hex *prefix, Hex *suffix, Hex *hash,
+    Hex *copySuffix, Hex *copyHash, Hex *dupSuffix, Hex *dupHash)
 {
-    TestMemInit();
-    uint8_t output[CRYPT_BLAKE2S256_DIGESTSIZE] = {0};
+    uint8_t output[CRYPT_BLAKE2S256_DIGESTSIZE];
     uint32_t outputLen = sizeof(output);
-    CRYPT_EAL_MdCtx *ctx = CRYPT_EAL_MdNewCtx(id);
-    CRYPT_EAL_MdCtx *copyCtx = CRYPT_EAL_MdNewCtx(id);
+    CRYPT_EAL_MdCtx *ctx = NULL;
+    CRYPT_EAL_MdCtx *copyCtx = NULL;
     CRYPT_EAL_MdCtx *dupCtx = NULL;
+
+    BLAKE2S_CHECK_PROVIDER(provider);
+    TestMemInit();
+    ctx = Blake2sNewCtx(provider);
+    copyCtx = Blake2sNewCtx(provider);
     ASSERT_TRUE(ctx != NULL);
     ASSERT_TRUE(copyCtx != NULL);
-
     dupCtx = CRYPT_EAL_MdDupCtx(NULL);
     ASSERT_TRUE(dupCtx == NULL);
     ASSERT_EQ(CRYPT_EAL_MdGetId(dupCtx), CRYPT_MD_MAX);
@@ -287,15 +379,20 @@ void SDV_CRYPTO_BLAKE2S_COPY_CTX_FUNC_TC001(int id, Hex *prefix, Hex *suffix, He
     dupCtx = CRYPT_EAL_MdDupCtx(ctx);
     ASSERT_TRUE(dupCtx != NULL);
 
-    ASSERT_EQ(CRYPT_EAL_MdUpdate(copyCtx, suffix->x, suffix->len), CRYPT_SUCCESS);
-    ASSERT_EQ(CRYPT_EAL_MdFinal(copyCtx, output, &outputLen), CRYPT_SUCCESS);
-    ASSERT_COMPARE("blake2s-copy", output, outputLen, hash->x, hash->len);
+    ASSERT_EQ(CRYPT_EAL_MdUpdate(ctx, suffix->x, suffix->len), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_MdFinal(ctx, output, &outputLen), CRYPT_SUCCESS);
+    ASSERT_COMPARE("source branch", output, outputLen, hash->x, hash->len);
 
     outputLen = sizeof(output);
-    ASSERT_EQ(CRYPT_EAL_MdUpdate(dupCtx, suffix->x, suffix->len), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_MdUpdate(copyCtx, copySuffix->x, copySuffix->len), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_MdFinal(copyCtx, output, &outputLen), CRYPT_SUCCESS);
+    ASSERT_COMPARE("copy branch", output, outputLen, copyHash->x, copyHash->len);
+
+    outputLen = sizeof(output);
+    ASSERT_EQ(CRYPT_EAL_MdUpdate(dupCtx, dupSuffix->x, dupSuffix->len), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_MdFinal(dupCtx, output, &outputLen), CRYPT_SUCCESS);
-    ASSERT_COMPARE("blake2s-dup", output, outputLen, hash->x, hash->len);
-    ASSERT_EQ(CRYPT_EAL_MdGetId(dupCtx), id);
+    ASSERT_COMPARE("dup branch", output, outputLen, dupHash->x, dupHash->len);
+    ASSERT_EQ(CRYPT_EAL_MdGetId(dupCtx), CRYPT_MD_BLAKE2S256);
     ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
@@ -306,30 +403,38 @@ EXIT:
 /* END_CASE */
 
 /**
- * @test   SDV_CRYPTO_BLAKE2S_PROVIDER_FUNC_TC001
- * @title  BLAKE2s default provider vector test.
- * @brief  Create a default-provider BLAKE2s-256 context when provider support is
- *         enabled, otherwise use the regular EAL context, then hash a vector.
- * @expect The provider or fallback streaming digest matches the expected vector.
+ * @test   SDV_CRYPTO_BLAKE2S_PROVIDER_PARAM_TC001
+ * @title  BLAKE2s default provider metadata test.
+ * @brief  Verify provider context creation, digest/block sizes and algorithm id.
+ * @expect Sizes are 32/64 and the context has the requested algorithm id.
  */
 /* BEGIN_CASE */
-void SDV_CRYPTO_BLAKE2S_PROVIDER_FUNC_TC001(int id, Hex *msg, Hex *hash)
+void SDV_CRYPTO_BLAKE2S_PROVIDER_PARAM_TC001(int id)
 {
-    TestMemInit();
-    uint8_t output[CRYPT_BLAKE2S256_DIGESTSIZE] = {0};
-    uint32_t outputLen = sizeof(output);
     CRYPT_EAL_MdCtx *ctx = NULL;
 #ifdef HITLS_CRYPTO_PROVIDER
-    ctx = CRYPT_EAL_ProviderMdNewCtx(NULL, id, "provider=default");
+    uint16_t digestSize = 0;
+    uint16_t blockSize = 0;
+    BSL_Param params[] = {
+        {CRYPT_PARAM_MD_DIGEST_SIZE, BSL_PARAM_TYPE_UINT16, &digestSize, sizeof(digestSize), 0},
+        {CRYPT_PARAM_MD_BLOCK_SIZE, BSL_PARAM_TYPE_UINT16, &blockSize, sizeof(blockSize), 0},
+        BSL_PARAM_END
+    };
+#endif
+
+    BLAKE2S_CHECK_PROVIDER(1);
+    TestMemInit();
+#ifdef HITLS_CRYPTO_PROVIDER
+    ctx = CRYPT_EAL_ProviderMdNewCtx(NULL, id, NULL);
+    /* White-box metadata query has no public EAL block-size getter. */
+    ASSERT_EQ(CRYPT_BLAKE2S256_GetParam(NULL, params), CRYPT_SUCCESS);
+    ASSERT_EQ(digestSize, 32);
+    ASSERT_EQ(blockSize, 64);
 #else
     ctx = CRYPT_EAL_MdNewCtx(id);
 #endif
     ASSERT_TRUE(ctx != NULL);
-
-    ASSERT_EQ(CRYPT_EAL_MdInit(ctx), CRYPT_SUCCESS);
-    ASSERT_EQ(CRYPT_EAL_MdUpdate(ctx, msg->x, msg->len), CRYPT_SUCCESS);
-    ASSERT_EQ(CRYPT_EAL_MdFinal(ctx, output, &outputLen), CRYPT_SUCCESS);
-    ASSERT_COMPARE("blake2s-provider", output, outputLen, hash->x, hash->len);
+    ASSERT_EQ(CRYPT_EAL_MdGetId(ctx), id);
     ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
@@ -362,5 +467,44 @@ void SDV_CRYPTO_BLAKE2S_PROVIDER_FUNC_TC002(int id, Hex *msg, Hex *hash)
 
 EXIT:
     return;
+}
+/* END_CASE */
+
+/*
+ * @test   SDV_CRYPTO_BLAKE2S_CONCURRENCY_CONTEXT_TC001
+ * @brief  Four threads each hash 100 deterministic messages against fixed OpenSSL digests.
+ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_BLAKE2S_CONCURRENCY_CONTEXT_TC001(int provider, Hex *hash0, Hex *hash1, Hex *hash2, Hex *hash3)
+{
+    pthread_t threads[4];
+    Blake2sThreadArg args[4] = {{hash0, 0, provider, -1}, {hash1, 1, provider, -1},
+        {hash2, 2, provider, -1}, {hash3, 3, provider, -1}};
+    uint32_t started = 0;
+    uint32_t joined = 0;
+    uint32_t i;
+    int ret;
+
+    BLAKE2S_CHECK_PROVIDER(provider);
+    TestMemInit();
+    for (i = 0; i < 4; i++) {
+        ASSERT_EQ(args[i].hashes->len, 100 * CRYPT_BLAKE2S256_DIGESTSIZE);
+        ASSERT_EQ(pthread_create(&threads[i], NULL, Blake2sThread, &args[i]), 0);
+        started++;
+    }
+    while (joined < started) {
+        ret = pthread_join(threads[joined], NULL);
+        ASSERT_EQ(ret, 0);
+        joined++;
+    }
+    for (i = 0; i < 4; i++) {
+        ASSERT_EQ(args[i].result, CRYPT_SUCCESS);
+    }
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
+EXIT:
+    while (joined < started) {
+        (void)pthread_join(threads[joined++], NULL);
+    }
 }
 /* END_CASE */

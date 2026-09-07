@@ -2,6 +2,7 @@
     "aes": "HITLS_CRYPTO_AES",
     "asn1": "HITLS_BSL_ASN1",
     "base64": "HITLS_BSL_BASE64",
+    "blake2s256": "HITLS_CRYPTO_BLAKE2S256",
     "bn": "HITLS_CRYPTO_BN",
     "bn_basic": "HITLS_CRYPTO_BN_BASIC",
     "bn_cb": "HITLS_CRYPTO_BN_CB",

@@ -128,6 +128,7 @@ test_md()
         bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=eal,sha384 test=sha384
         bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=eal,sha512 test=sha512
         bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=eal,sha3 test=sha3
+        bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=eal,blake2s256 test=blake2s256
     fi
 }
 
