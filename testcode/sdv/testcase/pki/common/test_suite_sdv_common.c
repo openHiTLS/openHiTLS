@@ -1452,6 +1452,39 @@ EXIT:
 }
 /* END_CASE */
 
+/**
+ * @test SDV_X509_EXT_ParseCrlNumber_TC001
+ * @brief Parse crl number, check the parsed value.
+ */
+/* BEGIN_CASE */
+void SDV_X509_EXT_ParseCrlNumber_TC001(int cmd, int cid, Hex *encode, Hex *number, int ret)
+{
+#ifdef HITLS_PKI_X509_CRL_LITE
+    if (cmd == HITLS_X509_EXT_GET_DELTA_CRL) {
+        SKIP_TEST();
+    }
+#endif
+    HITLS_X509_Crl *crl = NULL;
+    HITLS_X509_ExtCrlNumber parsed = {0};
+    HITLS_X509_ExtEntry entry = {cid, {0}, cmd == HITLS_X509_EXT_GET_DELTA_CRL, {0, encode->len, encode->x}};
+
+    TestMemInit();
+    crl = HITLS_X509_CrlNew();
+    ASSERT_NE(crl, NULL);
+    crl->tbs.crlExt.flag = HITLS_X509_EXT_FLAG_PARSE;
+    ASSERT_EQ(HITLS_X509_AddListItemDefault(&entry, sizeof(entry), crl->tbs.crlExt.extList), 0);
+    ASSERT_EQ(HITLS_X509_CrlCtrl(crl, cmd, &parsed, sizeof(parsed)), ret);
+    if (ret == HITLS_PKI_SUCCESS) {
+        ASSERT_EQ(parsed.critical, entry.critical);
+        ASSERT_COMPARE("crl number", parsed.crlNumber.data, parsed.crlNumber.dataLen, number->x, number->len);
+        ASSERT_TRUE(TestIsErrStackEmpty());
+    }
+
+EXIT:
+    HITLS_X509_CrlFree(crl);
+}
+/* END_CASE */
+
 /* BEGIN_CASE */
 void SDV_X509_EXT_ParseAki_TC001(Hex *encode, Hex *kid, Hex *serial, int nameCnt)
 {
@@ -1470,6 +1503,90 @@ void SDV_X509_EXT_ParseAki_TC001(Hex *encode, Hex *kid, Hex *serial, int nameCnt
 
 EXIT:
     HITLS_X509_ClearAuthorityKeyId(&aki);
+}
+/* END_CASE */
+
+/**
+ * @test SDV_X509_EXT_CheckAkiSerial_TC001
+ * @brief Padded AKI serials must match the issuer's serial; different values or lengths must fail
+ */
+/* BEGIN_CASE */
+void SDV_X509_EXT_CheckAkiSerial_TC001(Hex *encode, Hex *serial, int ret)
+{
+    HITLS_X509_ExtAki aki = {0};
+    HITLS_X509_Ext issueExt = {0};
+    HITLS_X509_Ext subjectExt = {0};
+    uint8_t ski[] = {0x04, 0x02, 0x00, 0x80};
+    HITLS_X509_ExtEntry skiEntry = {BSL_CID_CE_SUBJECTKEYIDENTIFIER, {0}, false, {0, sizeof(ski), ski}};
+    HITLS_X509_ExtEntry akiEntry = {BSL_CID_CE_AUTHORITYKEYIDENTIFIER, {0}, false,
+        {0, encode->len, encode->x}};
+    BSL_ASN1_TemplateItem item = {BSL_ASN1_TAG_INTEGER, 0, 0};
+    BSL_ASN1_Template templ = {&item, 1};
+    BSL_ASN1_Buffer serialNum = {0};
+    uint8_t *temp = serial->x;
+    uint32_t tempLen = serial->len;
+
+    TestMemInit();
+    ASSERT_EQ(BSL_ASN1_DecodeTemplate(&templ, NULL, &temp, &tempLen, &serialNum, 1), 0);
+    ASSERT_EQ(HITLS_X509_ParseAuthorityKeyId(&akiEntry, &aki), 0);
+    HITLS_X509_GeneralName *name = BSL_LIST_GET_FIRST(aki.issuerName);
+    ASSERT_NE(name, NULL);
+    issueExt.extList = BSL_LIST_New(sizeof(HITLS_X509_ExtEntry));
+    subjectExt.extList = BSL_LIST_New(sizeof(HITLS_X509_ExtEntry));
+    ASSERT_NE(issueExt.extList, NULL);
+    ASSERT_NE(subjectExt.extList, NULL);
+    ASSERT_EQ(BSL_LIST_AddElement(issueExt.extList, &skiEntry, BSL_LIST_POS_END), 0);
+    ASSERT_EQ(BSL_LIST_AddElement(subjectExt.extList, &akiEntry, BSL_LIST_POS_END), 0);
+    ASSERT_EQ(HITLS_X509_CheckAki(&issueExt, &subjectExt, (BslList *)name->value.data, &serialNum), ret);
+
+EXIT:
+    BSL_LIST_FreeWithoutData(issueExt.extList);
+    BSL_LIST_FreeWithoutData(subjectExt.extList);
+    HITLS_X509_ClearAuthorityKeyId(&aki);
+}
+/* END_CASE */
+
+/**
+ * @test SDV_X509_AKI_CERT_CHAIN_TC001
+ * @brief Check AKI serial normalization, chain building and signature verification with sanitized certificates.
+ */
+/* BEGIN_CASE */
+void SDV_X509_AKI_CERT_CHAIN_TC001(char *caPath, char *serverPath)
+{
+    HITLS_X509_Cert *ca = NULL;
+    HITLS_X509_Cert *server = NULL;
+    HITLS_X509_StoreCtx *store = NULL;
+    HITLS_X509_List *chain = NULL;
+    HITLS_X509_ExtAki aki = {0};
+    int64_t verifyTime = 1893456000; /* 2030-01-01 UTC */
+    uint32_t securityBits = 80; /* Fixtures retain the original RSA-1024 key size. */
+
+    TestMemInit();
+    ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_PEM, caPath, &ca), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_PEM, serverPath, &server), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(ca->tbs.serialNum.len, 16);
+    ASSERT_EQ(ca->tbs.serialNum.buff[0], 0x80);
+    ASSERT_EQ(HITLS_X509_CertCtrl(server, HITLS_X509_EXT_GET_AKI, &aki, sizeof(aki)), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(aki.serialNum.dataLen, ca->tbs.serialNum.len);
+    ASSERT_COMPARE("AKI serial", aki.serialNum.data, aki.serialNum.dataLen,
+        ca->tbs.serialNum.buff, ca->tbs.serialNum.len);
+    ASSERT_TRUE(HITLS_X509_CheckIssued(ca, server));
+    store = HITLS_X509_StoreCtxNew();
+    ASSERT_NE(store, NULL);
+    ASSERT_EQ(HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_SET_TIME, &verifyTime, sizeof(verifyTime)), 0);
+    ASSERT_EQ(HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_SET_SECBITS, &securityBits, sizeof(securityBits)), 0);
+    ASSERT_EQ(HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_DEEP_COPY_SET_CA, ca, sizeof(*ca)), 0);
+    ASSERT_EQ(HITLS_X509_CertChainBuild(store, true, server, &chain), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(BSL_LIST_COUNT(chain), 2);
+    ASSERT_EQ(HITLS_X509_CertVerify(store, chain), HITLS_PKI_SUCCESS);
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
+EXIT:
+    HITLS_X509_ClearAuthorityKeyId(&aki);
+    HITLS_X509_StoreCtxFree(store);
+    BSL_LIST_FREE(chain, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);
+    HITLS_X509_CertFree(server);
+    HITLS_X509_CertFree(ca);
 }
 /* END_CASE */
 
