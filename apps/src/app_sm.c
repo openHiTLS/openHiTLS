@@ -18,7 +18,6 @@
 #include <stddef.h>
 #include <stdbool.h>
 #ifdef HITLS_APP_SM_MODE
-#include <sys/stat.h>
 #include <unistd.h>
 #endif
 #include "bsl_bytes.h"
@@ -46,7 +45,7 @@
 #define HITLS_APP_SM_VERSION 1
 #define HITLS_APP_SM_DERIVE_MAC_ID CRYPT_MAC_HMAC_SM3
 #define HITLS_APP_SM_INTEGRITY_MAC_ID CRYPT_MAC_HMAC_SM3
-#define HITLS_APP_SM_ITER 1024
+#define HITLS_APP_SM_ITER 10000
 #define HITLS_APP_SM_SALT_MAX_LEN 64
 #define HITLS_APP_SM_SALT_LEN 8
 #define HITLS_APP_SM_DKEY_LEN 32
@@ -279,8 +278,7 @@ static int32_t VerifyHMAC(AppProvider *provider, int32_t macId, const uint8_t *d
 
 static int32_t WriteUserFile(char *userFile, UserInfo *userInfo)
 {
-    // Simplified: use HITLS_APP_UioOpen instead of manual BSL_UIO_New + Ctrl
-    BSL_UIO *uio = HITLS_APP_UioOpen(userFile, 'w', userFile != NULL ? 1 : 0);
+    BSL_UIO *uio = HITLS_APP_UioOpenPrivate(userFile, 'w');
     if (uio == NULL) {
         AppPrintError("Failed to open userFile for writing: %s\n", userFile);
         return HITLS_APP_UIO_FAIL;
@@ -294,10 +292,6 @@ static int32_t WriteUserFile(char *userFile, UserInfo *userInfo)
         return HITLS_APP_UIO_FAIL;
     }
     BSL_UIO_Free(uio);
-    if (chmod(userFile, S_IRUSR | S_IWUSR) != 0) {
-        AppPrintError("Failed to set userFile permission: %s\n", userFile);
-        return HITLS_APP_UIO_FAIL;
-    }
     return HITLS_APP_SUCCESS;
 }
 
