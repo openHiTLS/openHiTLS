@@ -7,6 +7,7 @@ The openHiTLS command source code is located in the apps directory, and the comp
 |-|-|-|
 |**Basic Commands**| | |
 ||help|Display help information and list of supported commands|
+||version|Display the openHiTLS version string|
 ||list|List supported algorithms and functions, including digest, symmetric, asymmetric, MAC, random number, KDF algorithms, etc.|
 |**Encryption and Digest**|| |
 ||enc|Symmetric encryption and decryption operations, supporting multiple symmetric algorithms|
@@ -75,7 +76,24 @@ hitls help                # Display all supported commands
 hitls help rand           # Display help information for rand command
 ```
 
-### 3.1.2 list
+### 3.1.2 version
+
+**Function**: Display the openHiTLS version string
+
+**Usage**:
+```
+hitls version [-help]
+```
+
+**Supported Options**:
+- `-help`: Display help information
+
+**Examples**:
+```bash
+hitls version
+```
+
+### 3.1.3 list
 
 **Function**: List supported algorithms and functions, including digest, symmetric, asymmetric, MAC, random number, KDF algorithms, etc.
 
@@ -1064,7 +1082,7 @@ hitls rand [-help] [-out file] [-algorithm alg] [-hex] [-base64] [-provider name
 - `-hex`: Output in hexadecimal format, default format is binary
 - `-base64`: Output in Base64 format, default format is binary
 - `-out <file>`: Write output to specified file, if not specified, output to stdout
-- `-algorithm <algorithm>`: Specify random number generation algorithm, supported random number algorithms can be viewed using [list](#312-list) command
+- `-algorithm <algorithm>`: Specify random number generation algorithm, supported random number algorithms can be viewed using [list](#313-list) command
 - `-provider`, `-provider-path`, `-provider-attr`: Please refer to [Provider Options](#21-provider-options)
 
 **Examples**:

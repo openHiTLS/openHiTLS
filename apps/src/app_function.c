@@ -18,6 +18,7 @@
 #include <limits.h>
 #include "app_errno.h"
 #include "app_help.h"
+#include "app_version.h"
 #include "app_print.h"
 #include "app_rand.h"
 #include "app_enc.h"
@@ -45,6 +46,7 @@
 
 HITLS_CmdFunc g_cmdFunc[] = {
     {"help",     FUNC_TYPE_GENERAL,   HITLS_HelpMain},
+    {"version",  FUNC_TYPE_GENERAL,   HITLS_VersionMain},
     {"rand",     FUNC_TYPE_GENERAL,   HITLS_RandMain},
     {"enc",      FUNC_TYPE_GENERAL,   HITLS_EncMain},
     {"pkcs12",   FUNC_TYPE_GENERAL,   HITLS_PKCS12Main},
