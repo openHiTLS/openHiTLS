@@ -28,10 +28,32 @@
 #include "bsl_params.h"
 #include "crypt_params_key.h"
 
+#ifdef HITLS_CRYPTO_PBKDF2
+typedef struct {
+    CRYPT_PBKDF2_Ctx *ctx;
+    bool saltSet;
+} SmPbkdf2Ctx;
+
 /* Constants for parameter validation */
 #define KDF_DEF_MAC_ALGID   CRYPT_MAC_HMAC_SM3
 #define KDF_DEF_SALT_LEN    16
 #define KDF_DEF_PBKDF2_ITER 1024
+
+static SmPbkdf2Ctx *Pbkdf2NewCtx(void *libCtx, int32_t algId)
+{
+    SmPbkdf2Ctx *ctx = BSL_SAL_Calloc(1, sizeof(SmPbkdf2Ctx));
+    if (ctx == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
+        return NULL;
+    }
+    ctx->ctx = CRYPT_PBKDF2_NewCtxEx(libCtx, algId);
+    if (ctx->ctx == NULL) {
+        BSL_SAL_Free(ctx);
+        return NULL;
+    }
+    return ctx;
+}
+#endif
 
 void *CRYPT_EAL_SmKdfNewCtxEx(CRYPT_EAL_SmProvCtx *provCtx, int32_t algId)
 {
@@ -42,7 +64,7 @@ void *CRYPT_EAL_SmKdfNewCtxEx(CRYPT_EAL_SmProvCtx *provCtx, int32_t algId)
     switch (algId) {
 #ifdef HITLS_CRYPTO_PBKDF2
         case CRYPT_KDF_PBKDF2:
-            return CRYPT_PBKDF2_NewCtxEx(provCtx->libCtx, algId);
+            return Pbkdf2NewCtx(provCtx->libCtx, algId);
 #endif
 #ifdef HITLS_CRYPTO_KDFTLS12
         case CRYPT_KDF_KDFTLS12:
@@ -54,6 +76,7 @@ void *CRYPT_EAL_SmKdfNewCtxEx(CRYPT_EAL_SmProvCtx *provCtx, int32_t algId)
     }
 }
 
+#ifdef HITLS_CRYPTO_PBKDF2
 static int32_t GetPbkdf2Params(const BSL_Param *param, CRYPT_EAL_Pbkdf2Param *pbkdf2Param)
 {
     int32_t id = 0;
@@ -103,7 +126,7 @@ static int32_t CheckKdfParam(const BSL_Param *param)
     return ret;
 }
 
-static int32_t CRYPT_PBKDF2_SetParamWrapper(CRYPT_PBKDF2_Ctx *ctx, const BSL_Param *param)
+static int32_t CRYPT_PBKDF2_SetParamWrapper(SmPbkdf2Ctx *ctx, const BSL_Param *param)
 {
     if (ctx == NULL || param == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
@@ -113,16 +136,56 @@ static int32_t CRYPT_PBKDF2_SetParamWrapper(CRYPT_PBKDF2_Ctx *ctx, const BSL_Par
     if (ret != CRYPT_SUCCESS) {
         return ret;
     }
-    return CRYPT_PBKDF2_SetParam(ctx, param);
+    ret = CRYPT_PBKDF2_SetParam(ctx->ctx, param);
+    if (ret == CRYPT_SUCCESS && BSL_PARAM_FindConstParam(param, CRYPT_PARAM_KDF_SALT) != NULL) {
+        ctx->saltSet = true;
+    }
+    return ret;
 }
+
+static int32_t CRYPT_PBKDF2_DeriveWrapper(SmPbkdf2Ctx *ctx, uint8_t *out, uint32_t len)
+{
+    if (ctx == NULL || out == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return CRYPT_NULL_INPUT;
+    }
+    if (!ctx->saltSet) {
+        BSL_ERR_PUSH_ERROR(CRYPT_CMVP_ERR_PARAM_CHECK);
+        return CRYPT_CMVP_ERR_PARAM_CHECK;
+    }
+    return CRYPT_PBKDF2_Derive(ctx->ctx, out, len);
+}
+
+static int32_t CRYPT_PBKDF2_DeinitWrapper(SmPbkdf2Ctx *ctx)
+{
+    if (ctx == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return CRYPT_NULL_INPUT;
+    }
+    int32_t ret = CRYPT_PBKDF2_Deinit(ctx->ctx);
+    if (ret == CRYPT_SUCCESS) {
+        ctx->saltSet = false;
+    }
+    return ret;
+}
+
+static void CRYPT_PBKDF2_FreeCtxWrapper(SmPbkdf2Ctx *ctx)
+{
+    if (ctx == NULL) {
+        return;
+    }
+    CRYPT_PBKDF2_FreeCtx(ctx->ctx);
+    BSL_SAL_Free(ctx);
+}
+#endif
 
 const CRYPT_EAL_Func g_smKdfPBKdf2[] = {
 #ifdef HITLS_CRYPTO_PBKDF2
     {CRYPT_EAL_IMPLKDF_NEWCTX, (CRYPT_EAL_ImplKdfNewCtx)CRYPT_EAL_SmKdfNewCtxEx},
     {CRYPT_EAL_IMPLKDF_SETPARAM, (CRYPT_EAL_ImplKdfSetParam)CRYPT_PBKDF2_SetParamWrapper},
-    {CRYPT_EAL_IMPLKDF_DERIVE, (CRYPT_EAL_ImplKdfDerive)CRYPT_PBKDF2_Derive},
-    {CRYPT_EAL_IMPLKDF_DEINITCTX, (CRYPT_EAL_ImplKdfDeInitCtx)CRYPT_PBKDF2_Deinit},
-    {CRYPT_EAL_IMPLKDF_FREECTX, (CRYPT_EAL_ImplKdfFreeCtx)CRYPT_PBKDF2_FreeCtx},
+    {CRYPT_EAL_IMPLKDF_DERIVE, (CRYPT_EAL_ImplKdfDerive)CRYPT_PBKDF2_DeriveWrapper},
+    {CRYPT_EAL_IMPLKDF_DEINITCTX, (CRYPT_EAL_ImplKdfDeInitCtx)CRYPT_PBKDF2_DeinitWrapper},
+    {CRYPT_EAL_IMPLKDF_FREECTX, (CRYPT_EAL_ImplKdfFreeCtx)CRYPT_PBKDF2_FreeCtxWrapper},
 #endif
     CRYPT_EAL_FUNC_END,
 };

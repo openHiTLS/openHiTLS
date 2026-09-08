@@ -455,6 +455,69 @@ EXIT:
 /* END_CASE */
 
 /* BEGIN_CASE */
+void SDV_SM_PROVIDER_PBKDF2_SALT_TEST_TC001(int saltFirst)
+{
+#ifndef HITLS_CRYPTO_CMVP_SM
+    (void)saltFirst;
+    SKIP_TEST();
+#else
+    CRYPT_EAL_LibCtx *libCtx = NULL;
+    CRYPT_EAL_KdfCtx *kdfCtx = NULL;
+    uint8_t password[32] = {0};
+    uint8_t salt[8] = {0};
+    uint8_t derivedKey[32] = {0};
+    uint8_t expectedKey[32] = {0};
+    uint32_t macId = CRYPT_MAC_HMAC_SM3;
+    uint32_t iter = 1024;
+    BSL_Param param[4] = {0};
+    BSL_Param saltParam[2] = {0};
+
+    libCtx = SM_ProviderLoad();
+    ASSERT_TRUE(libCtx != NULL);
+    kdfCtx = CRYPT_EAL_ProviderKdfNewCtx(libCtx, CRYPT_KDF_PBKDF2, HITLS_SM_PROVIDER_ATTR);
+    ASSERT_TRUE(kdfCtx != NULL);
+
+    ASSERT_EQ(BSL_PARAM_InitValue(&param[0], CRYPT_PARAM_KDF_MAC_ID, BSL_PARAM_TYPE_UINT32,
+        &macId, sizeof(macId)), BSL_SUCCESS);
+    ASSERT_EQ(BSL_PARAM_InitValue(&param[1], CRYPT_PARAM_KDF_PASSWORD, BSL_PARAM_TYPE_OCTETS,
+        password, sizeof(password)), BSL_SUCCESS);
+    ASSERT_EQ(BSL_PARAM_InitValue(&param[2], CRYPT_PARAM_KDF_ITER, BSL_PARAM_TYPE_UINT32,
+        &iter, sizeof(iter)), BSL_SUCCESS);
+    ASSERT_EQ(BSL_PARAM_InitValue(&saltParam[0], CRYPT_PARAM_KDF_SALT, BSL_PARAM_TYPE_OCTETS,
+        salt, sizeof(salt)), BSL_SUCCESS);
+
+    saltParam[0].value = NULL;
+    ASSERT_EQ(CRYPT_EAL_KdfSetParam(kdfCtx, saltParam), CRYPT_NULL_INPUT);
+    saltParam[0].value = salt;
+    if (saltFirst) {
+        ASSERT_EQ(CRYPT_EAL_KdfSetParam(kdfCtx, saltParam), CRYPT_SUCCESS);
+    }
+    ASSERT_EQ(CRYPT_EAL_KdfSetParam(kdfCtx, param), CRYPT_SUCCESS);
+    if (!saltFirst) {
+        ASSERT_EQ(CRYPT_EAL_KdfDerive(kdfCtx, derivedKey, sizeof(derivedKey)), CRYPT_CMVP_ERR_PARAM_CHECK);
+        ASSERT_EQ(CRYPT_EAL_KdfSetParam(kdfCtx, saltParam), CRYPT_SUCCESS);
+    }
+    ASSERT_EQ(CRYPT_EAL_KdfDerive(kdfCtx, expectedKey, sizeof(expectedKey)), CRYPT_SUCCESS);
+
+    ASSERT_EQ(CRYPT_EAL_KdfSetParam(kdfCtx, param), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_KdfDerive(kdfCtx, derivedKey, sizeof(derivedKey)), CRYPT_SUCCESS);
+    ASSERT_COMPARE("Retain salt", derivedKey, sizeof(derivedKey), expectedKey, sizeof(expectedKey));
+
+    ASSERT_EQ(CRYPT_EAL_KdfDeInitCtx(kdfCtx), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_KdfSetParam(kdfCtx, param), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_KdfDerive(kdfCtx, derivedKey, sizeof(derivedKey)), CRYPT_CMVP_ERR_PARAM_CHECK);
+    ASSERT_EQ(CRYPT_EAL_KdfSetParam(kdfCtx, saltParam), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_KdfDerive(kdfCtx, derivedKey, sizeof(derivedKey)), CRYPT_SUCCESS);
+    ASSERT_COMPARE("Reset salt", derivedKey, sizeof(derivedKey), expectedKey, sizeof(expectedKey));
+
+EXIT:
+    CRYPT_EAL_KdfFreeCtx(kdfCtx);
+    SM_ProviderUnload(libCtx);
+#endif
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
 void SDV_SM_PROVIDER_SM2_CHECK_TEST_TC001()
 {
 #ifndef HITLS_CRYPTO_CMVP_SM
