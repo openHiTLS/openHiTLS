@@ -777,7 +777,7 @@ EXIT:
  *    2. CRYPT_RSA_PAD_NO_SET_ERROR
  *    3. CRYPT_SUCCESS
  *    4. CRYPT_NULL_INPUT
- *    5. CRYPT_RSA_ERR_DEC_BITS
+ *    5. CRYPT_RSA_ERR_INPUT_VALUE
  *    6. CRYPT_RSA_ERR_INPUT_VALUE
  */
 /* BEGIN_CASE */
@@ -813,7 +813,7 @@ void SDV_CRYPTO_RSA_DEC_API_TC001(Hex *n, Hex *d, int hashId, Hex *in, int isPro
     ASSERT_TRUE(CRYPT_EAL_PkeyDecrypt(pkey, NULL, in->len, crypt, &cryptLen) == CRYPT_NULL_INPUT);
     ASSERT_TRUE(CRYPT_EAL_PkeyDecrypt(pkey, in->x, 0, crypt, &cryptLen) == CRYPT_RSA_NOR_VERIFY_FAIL);
     const uint32_t invalidInLen = 1025;  // 1025: invalid data length
-    ASSERT_TRUE(CRYPT_EAL_PkeyDecrypt(pkey, invalidIn, invalidInLen, crypt, &cryptLen) == CRYPT_RSA_NOR_VERIFY_FAIL);
+    ASSERT_EQ(CRYPT_EAL_PkeyDecrypt(pkey, invalidIn, invalidInLen, crypt, &cryptLen), CRYPT_RSA_ERR_INPUT_VALUE);
     ASSERT_TRUE(CRYPT_EAL_PkeyDecrypt(pkey, in->x, in->len, NULL, &cryptLen) == CRYPT_NULL_INPUT);
     ASSERT_TRUE(CRYPT_EAL_PkeyDecrypt(pkey, in->x, in->len, crypt, NULL) == CRYPT_NULL_INPUT);
 

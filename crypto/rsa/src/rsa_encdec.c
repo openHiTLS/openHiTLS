@@ -45,6 +45,10 @@ static int32_t InputRangeCheck(const BN_BigNum *input, const BN_BigNum *n)
 static int32_t AllocResultAndInputBN(uint32_t bits, BN_BigNum **result, BN_BigNum **inputBN,
     const uint8_t *input, uint32_t inputLen)
 {
+    if (inputLen > BN_BITS_TO_BYTES(bits)) {
+        BSL_ERR_PUSH_ERROR(CRYPT_RSA_ERR_INPUT_VALUE);
+        return CRYPT_RSA_ERR_INPUT_VALUE;
+    }
     *result = BN_Create(bits + 1);
     *inputBN = BN_Create(bits);
     if (*result == NULL || *inputBN == NULL) {

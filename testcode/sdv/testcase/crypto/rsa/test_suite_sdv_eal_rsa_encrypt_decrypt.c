@@ -916,16 +916,13 @@ void SDV_CRYPTO_RSA_DECRYPT_LONG_INPUT_TC001(int bits, int padMode, int isProvid
 
     if (padMode == CRYPT_CTRL_SET_RSA_PADDING) {
         ASSERT_EQ(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_SET_RSA_PADDING, &noPad, sizeof(noPad)), CRYPT_SUCCESS);
-        ASSERT_EQ(CRYPT_EAL_PkeyDecrypt(pkey, longInput, longLen, pt, &ptLen), CRYPT_SUCCESS);
-        goto EXIT;
     } else if (padMode == CRYPT_CTRL_SET_RSA_RSAES_OAEP) {
         ASSERT_EQ(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_SET_RSA_RSAES_OAEP, oaepParam, 0), CRYPT_SUCCESS);
     } else {
         ASSERT_EQ(CRYPT_EAL_PkeyCtrl(pkey, padMode, &pkcsv15, sizeof(pkcsv15)), CRYPT_SUCCESS);
     }
 
-    // Over-length input will failed
-    ASSERT_EQ(CRYPT_EAL_PkeyDecrypt(pkey, longInput, longLen, pt, &ptLen), CRYPT_RSA_NOR_VERIFY_FAIL);
+    ASSERT_EQ(CRYPT_EAL_PkeyDecrypt(pkey, longInput, longLen, pt, &ptLen), CRYPT_RSA_ERR_INPUT_VALUE);
 
 EXIT:
     CRYPT_EAL_RandDeinit();
