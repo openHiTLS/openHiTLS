@@ -1409,7 +1409,7 @@ void SDV_HITLS_SetUriSrvId_TC001()
     HITLS_Ctx *ctx = HITLS_New(config);
     ASSERT_TRUE(ctx != NULL);
 
-    char uri[] = "sip:voice.example.edu";
+    char uri[] = "https://example.com";
     char uri2[] = "https://example.com:443/path";
     char srv[] = "_imaps.example.net";
     char srv2[] = "_xmpp-client.im.example.org";
@@ -1494,7 +1494,7 @@ void SDV_HITLS_UriSrvIdVerify_TC001()
     FRAME_LinkObj *server = FRAME_CreateLinkWithCert(s_config, BSL_UIO_TCP, &certInfoServer);
     ASSERT_TRUE(server != NULL);
 
-    char uri[] = "SIP:voice.example.edu";
+    char uri[] = "HTTPS://example.com";
     char srv[] = "_IMAPS.example.net";
     ASSERT_EQ(HITLS_SetUriId(client->ssl, uri), HITLS_SUCCESS);
     ASSERT_EQ(HITLS_SetSrvId(client->ssl, srv), HITLS_SUCCESS);
@@ -1507,7 +1507,7 @@ void SDV_HITLS_UriSrvIdVerify_TC001()
     ASSERT_TRUE(client != NULL);
     ASSERT_TRUE(server != NULL);
 
-    char wrongUri[] = "sips:voice.example.edu";
+    char wrongUri[] = "http://example.com";
     ASSERT_EQ(HITLS_SetUriId(client->ssl, wrongUri), HITLS_SUCCESS);
     ASSERT_EQ(HITLS_SetSrvId(client->ssl, srv), HITLS_SUCCESS);
     ASSERT_EQ(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_CERT_ERR_VERIFY_CERT_CHAIN);
@@ -1549,7 +1549,8 @@ void SDV_HITLS_UriSrvIdVerify_TC001()
     ASSERT_EQ(HITLS_SetUriId(client->ssl, uriWithPartialWildcard), HITLS_SUCCESS);
     ASSERT_EQ(HITLS_SetSrvId(client->ssl, srv), HITLS_SUCCESS);
     ASSERT_EQ(HITLS_SetHostFlags(client->ssl, HITLS_X509_FLAG_VFY_WITH_PARTIAL_WILDCARD), HITLS_SUCCESS);
-    ASSERT_EQ(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_SUCCESS);
+    /* URI references without // are rejected even when wildcard matching is enabled. */
+    ASSERT_EQ(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_CERT_ERR_VERIFY_CERT_CHAIN);
 
     FRAME_FreeLink(client);
     FRAME_FreeLink(server);

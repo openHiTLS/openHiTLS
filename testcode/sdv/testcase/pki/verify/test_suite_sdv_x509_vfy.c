@@ -1172,12 +1172,12 @@ static int32_t X509_ConfigStoreUriSrvIdentity(HITLS_X509_StoreCtx *storeCtx)
 {
 #if defined(HITLS_PKI_X509_VFY_IDENTITY)
     int32_t ret = HITLS_X509_StoreCtxCtrl(storeCtx, HITLS_X509_STORECTX_SET_URI_ID,
-        (void *)"sip:no-match.example.edu", 0);
+        (void *)"https://no-match.example.edu", 0);
     if (ret != HITLS_PKI_SUCCESS) {
         return ret;
     }
     ret = HITLS_X509_StoreCtxCtrl(storeCtx, HITLS_X509_STORECTX_ADD_URI_ID,
-        (void *)"sip:voice.example.edu", 0);
+        (void *)"https://example.com", 0);
     if (ret != HITLS_PKI_SUCCESS) {
         return ret;
     }

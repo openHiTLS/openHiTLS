@@ -199,6 +199,7 @@ int32_t HITLS_X509_CertChainBuild(HITLS_X509_StoreCtx *storeCtx, bool isWithRoot
 /**
  * @ingroup pki
  * @brief Verify URI-ID in certificate extension SAN.
+ * URI-IDs are parsed uniformly as scheme://authority with optional path, query, and fragment components.
  *
  * @param cert [IN] The certificate to verify, type : HITLS_X509_Cert *.
  * @param flags [IN] A flag controlling wildcard matching behavior for the host portion, type : uint32_t.

@@ -62,6 +62,8 @@ typedef struct BslParamMaker BSL_ParamMaker;
  * @brief Initialize a BSL parameter structure
  * @details Initializes a single BSL_Param structure by setting its key, type, value, and length
  *
+ * @attention The caller must ensure that valueLen matches type and that val points to sufficient storage.
+ *
  * @param param [IN] Pointer to the BSL_Param structure to be initialized
  * @param key [IN] Parameter key value, refer to crypt_params_key.h
  * @param type [IN] Parameter value type, refer to BSL_PARAM_VALUE_TYPE enum
@@ -77,6 +79,8 @@ int32_t BSL_PARAM_InitValue(BSL_Param *param, int32_t key, uint32_t type, void *
 /**
  * @brief Set BSL parameter value
  * @details Updates the value in an existing BSL_Param structure
+ *
+ * @attention The caller must ensure that len and param->valueLen match type and both buffers are large enough.
  *
  * @param param [IN] Pointer to the BSL_Param structure
  * @param key [IN] Parameter key value, refer to crypt_params_key.h

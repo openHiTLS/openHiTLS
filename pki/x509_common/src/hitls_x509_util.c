@@ -198,16 +198,10 @@ static const char *FindLastCharInView(const char *data, uint32_t len, char ch)
     return NULL;
 }
 
-static uint32_t FindUriPartEnd(const char *data, uint32_t len, bool isAuthority)
+static uint32_t FindUriPartEnd(const char *data, uint32_t len)
 {
     for (uint32_t i = 0; i < len; i++) {
-        if (data[i] == '?' || data[i] == '#') {
-            return i;
-        }
-        if (isAuthority && data[i] == '/') {
-            return i;
-        }
-        if (!isAuthority && (data[i] == '/' || data[i] == ';')) {
+        if (data[i] == '?' || data[i] == '#' || data[i] == '/') {
             return i;
         }
     }
@@ -244,14 +238,13 @@ static int32_t ParseUriId(const char *uri, uint32_t uriLen, X509_StringView *sch
 
     const char *hostStart = colon + 1;
     uint32_t remainLen = uriLen - scheme->len - 1;
-    bool isAuthority = false;
-    if (remainLen >= 2 && hostStart[0] == '/' && hostStart[1] == '/') {
-        hostStart += 2;
-        remainLen -= 2;
-        isAuthority = true;
+    if (remainLen < 2 || hostStart[0] != '/' || hostStart[1] != '/') {
+        return HITLS_X509_ERR_INVALID_PARAM;
     }
+    hostStart += 2;
+    remainLen -= 2;
 
-    uint32_t hostLen = FindUriPartEnd(hostStart, remainLen, isAuthority);
+    uint32_t hostLen = FindUriPartEnd(hostStart, remainLen);
     const char *at = FindLastCharInView(hostStart, hostLen, '@');
     if (at != NULL) {
         hostLen -= (uint32_t)(at + 1 - hostStart);

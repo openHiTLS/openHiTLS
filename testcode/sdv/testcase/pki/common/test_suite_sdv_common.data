@@ -1056,3 +1056,36 @@ SDV_X509_EXT_ParseCrlNumber_TC001:HITLS_X509_EXT_GET_DELTA_CRL:BSL_CID_CE_DELTAC
 
 SDV_X509_AKI_CERT_CHAIN_TC001: sanitized certificates normalize AKI serials and verify chain
 SDV_X509_AKI_CERT_CHAIN_TC001:"../testdata/cert/chain/aki_serial_padding/ca.pem":"../testdata/cert/chain/aki_serial_padding/server.pem"
+
+SDV_PKI_VERIFY_URI_AUTHORITY_TC001: authority match
+SDV_PKI_VERIFY_URI_AUTHORITY_TC001:"https://victim.example/path":"https://victim.example":HITLS_PKI_SUCCESS
+
+SDV_PKI_VERIFY_URI_AUTHORITY_TC001: presented missing authority
+SDV_PKI_VERIFY_URI_AUTHORITY_TC001:"https:victim.example/path":"https://victim.example":HITLS_X509_ERR_VFY_URI_ID_FAIL
+
+SDV_PKI_VERIFY_URI_AUTHORITY_TC001: reference missing authority
+SDV_PKI_VERIFY_URI_AUTHORITY_TC001:"https://victim.example":"https:victim.example/path":HITLS_X509_ERR_INVALID_PARAM
+
+SDV_PKI_VERIFY_URI_AUTHORITY_TC001: presented single slash
+SDV_PKI_VERIFY_URI_AUTHORITY_TC001:"https:/victim.example":"https://victim.example":HITLS_X509_ERR_VFY_URI_ID_FAIL
+
+SDV_PKI_VERIFY_URI_AUTHORITY_TC001: presented empty host
+SDV_PKI_VERIFY_URI_AUTHORITY_TC001:"https:///path":"https://victim.example":HITLS_X509_ERR_VFY_URI_ID_FAIL
+
+SDV_PKI_VERIFY_URI_AUTHORITY_TC001: reference empty host
+SDV_PKI_VERIFY_URI_AUTHORITY_TC001:"https://victim.example":"https://":HITLS_X509_ERR_INVALID_PARAM
+
+SDV_PKI_VERIFY_URI_AUTHORITY_TC001: reference empty suffix
+SDV_PKI_VERIFY_URI_AUTHORITY_TC001:"https://victim.example":"https:":HITLS_X509_ERR_INVALID_PARAM
+
+SDV_PKI_VERIFY_URI_AUTHORITY_TC001: reference single slash
+SDV_PKI_VERIFY_URI_AUTHORITY_TC001:"https://victim.example":"https:/":HITLS_X509_ERR_INVALID_PARAM
+
+SDV_PKI_VERIFY_URI_AUTHORITY_TC001: SIP authority match
+SDV_PKI_VERIFY_URI_AUTHORITY_TC001:"sip://voice.example.edu":"SIP://voice.example.edu":HITLS_PKI_SUCCESS
+
+SDV_PKI_VERIFY_URI_AUTHORITY_TC001: SIP presented without authority
+SDV_PKI_VERIFY_URI_AUTHORITY_TC001:"sip:voice.example.edu":"sip://voice.example.edu":HITLS_X509_ERR_VFY_URI_ID_FAIL
+
+SDV_PKI_VERIFY_URI_AUTHORITY_TC001: SIP reference without authority
+SDV_PKI_VERIFY_URI_AUTHORITY_TC001:"sip://voice.example.edu":"sip:voice.example.edu":HITLS_X509_ERR_INVALID_PARAM

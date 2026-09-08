@@ -47,6 +47,7 @@ int main(void)
     uint32_t outTotalLen = 0;
     uint32_t outLen = sizeof(cipherText);
     uint32_t cipherTextLen;
+    CRYPT_EAL_CipherCtx *ctx = NULL;
     int32_t ret;
 
     ret = CRYPT_EAL_Init(CRYPT_EAL_INIT_ALL);
@@ -65,7 +66,7 @@ int main(void)
      * Create a context. The switching between AES128, AES192, and AES256
      * can be achieved by modifying the input parameter and key length.
      */
-    CRYPT_EAL_CipherCtx *ctx = CRYPT_EAL_CipherNewCtx(CRYPT_CIPHER_AES128_CBC);
+    ctx = CRYPT_EAL_CipherNewCtx(CRYPT_CIPHER_AES128_CBC);
     if (ctx == NULL) {
         PrintLastError();
         CRYPT_EAL_Cleanup(CRYPT_EAL_INIT_ALL);

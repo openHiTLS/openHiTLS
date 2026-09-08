@@ -3620,6 +3620,30 @@ EXIT:
 /* END_CASE */
 
 /* BEGIN_CASE */
+void SDV_PKI_VERIFY_URI_AUTHORITY_TC001(char *presented, char *reference, int expected)
+{
+#if defined(HITLS_PKI_X509_CRT_GEN) && defined(HITLS_PKI_X509_CRT_PARSE) && defined(HITLS_PKI_X509_VFY_IDENTITY)
+    TestMemInit();
+    HITLS_X509_Cert *cert = HITLS_X509_CertNew();
+    BslList *names = BSL_LIST_New(sizeof(HITLS_X509_GeneralName));
+    ASSERT_NE(cert, NULL);
+    ASSERT_NE(names, NULL);
+    HITLS_X509_GeneralName uriName = {
+        HITLS_X509_GN_URI, {(uint8_t *)presented, (uint32_t)strlen(presented)}
+    };
+    HITLS_X509_ExtSan san = {false, names};
+    ASSERT_EQ(BSL_LIST_AddElement(names, &uriName, BSL_LIST_POS_END), BSL_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_EXT_SET_SAN, &san, sizeof(san)), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_VerifyUriId(cert, 0, reference, strlen(reference)), expected);
+    TestErrClear();
+EXIT:
+    HITLS_X509_CertFree(cert);
+    BSL_LIST_FREE(names, FreeSanListData);
+#endif
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
 void SDV_PKI_VERIFY_URI_SRV_ID_TC001()
 {
 #if defined(HITLS_PKI_X509_CRT_GEN) && defined(HITLS_PKI_X509_CRT_PARSE) && defined(HITLS_PKI_X509_VFY_IDENTITY)
@@ -3630,10 +3654,10 @@ void SDV_PKI_VERIFY_URI_SRV_ID_TC001()
     ASSERT_NE(cert, NULL);
     ASSERT_NE(names, NULL);
 
-    char *uri = "sip:voice.example.edu";
+    char *uri = "sip://voice.example.edu";
     char *uriWithAuthority = "https://user@example.com:443/path?query#frag";
-    char *uriWithWildcard = "sip:*.wild.example.com";
-    char *uriWithPartialWildcard = "sip:f*.partial.example.com";
+    char *uriWithWildcard = "sip://*.wild.example.com";
+    char *uriWithPartialWildcard = "sip://f*.partial.example.com";
     char *srv = "_imaps.example.net";
     HITLS_X509_GeneralName uriName = {HITLS_X509_GN_URI, {(uint8_t *)uri, (uint32_t)strlen(uri)}};
     HITLS_X509_GeneralName uriAuthorityName = {
@@ -3655,23 +3679,23 @@ void SDV_PKI_VERIFY_URI_SRV_ID_TC001()
     ASSERT_EQ(BSL_LIST_AddElement(names, &srvName, BSL_LIST_POS_END), BSL_SUCCESS);
     ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_EXT_SET_SAN, &san, sizeof(HITLS_X509_ExtSan)), HITLS_PKI_SUCCESS);
 
-    ASSERT_EQ(HITLS_X509_VerifyUriId(cert, 0, "SIP:voice.example.edu", strlen("SIP:voice.example.edu")),
+    ASSERT_EQ(HITLS_X509_VerifyUriId(cert, 0, "SIP://voice.example.edu", strlen("SIP://voice.example.edu")),
         HITLS_PKI_SUCCESS);
-    ASSERT_EQ(HITLS_X509_VerifyUriId(cert, 0, "sip:voice.example.edu;transport=tcp",
-        strlen("sip:voice.example.edu;transport=tcp")), HITLS_PKI_SUCCESS);
-    ASSERT_EQ(HITLS_X509_VerifyUriId(cert, 0, "SIPS:voice.example.edu", strlen("SIPS:voice.example.edu")),
+    ASSERT_EQ(HITLS_X509_VerifyUriId(cert, 0, "sip://voice.example.edu/path;transport=tcp",
+        strlen("sip://voice.example.edu/path;transport=tcp")), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_VerifyUriId(cert, 0, "SIPS://voice.example.edu", strlen("SIPS://voice.example.edu")),
         HITLS_X509_ERR_VFY_URI_ID_FAIL);
     ASSERT_EQ(HITLS_X509_VerifyUriId(cert, 0, "https://example.com", strlen("https://example.com")),
         HITLS_PKI_SUCCESS);
-    ASSERT_EQ(HITLS_X509_VerifyUriId(cert, 0, "sip:voice.wild.example.com",
-        strlen("sip:voice.wild.example.com")), HITLS_PKI_SUCCESS);
-    ASSERT_EQ(HITLS_X509_VerifyUriId(cert, 0, "sip:a.b.wild.example.com",
-        strlen("sip:a.b.wild.example.com")), HITLS_X509_ERR_VFY_URI_ID_FAIL);
-    ASSERT_EQ(HITLS_X509_VerifyUriId(cert, 0, "sip:foo.partial.example.com",
-        strlen("sip:foo.partial.example.com")), HITLS_X509_ERR_VFY_URI_ID_FAIL);
+    ASSERT_EQ(HITLS_X509_VerifyUriId(cert, 0, "sip://voice.wild.example.com",
+        strlen("sip://voice.wild.example.com")), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_VerifyUriId(cert, 0, "sip://a.b.wild.example.com",
+        strlen("sip://a.b.wild.example.com")), HITLS_X509_ERR_VFY_URI_ID_FAIL);
+    ASSERT_EQ(HITLS_X509_VerifyUriId(cert, 0, "sip://foo.partial.example.com",
+        strlen("sip://foo.partial.example.com")), HITLS_X509_ERR_VFY_URI_ID_FAIL);
     ASSERT_EQ(HITLS_X509_VerifyUriId(cert, HITLS_X509_FLAG_VFY_WITH_PARTIAL_WILDCARD,
-        "sip:foo.partial.example.com", strlen("sip:foo.partial.example.com")), HITLS_PKI_SUCCESS);
-    ASSERT_EQ(HITLS_X509_VerifyUriId(cert, 0, "sip:other.example.edu", strlen("sip:other.example.edu")),
+        "sip://foo.partial.example.com", strlen("sip://foo.partial.example.com")), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_VerifyUriId(cert, 0, "sip://other.example.edu", strlen("sip://other.example.edu")),
         HITLS_X509_ERR_VFY_URI_ID_FAIL);
     TestErrClear();
     ASSERT_EQ(HITLS_X509_VerifySrvId(cert, 0, "_IMAPS.example.net", strlen("_IMAPS.example.net")),
@@ -3684,7 +3708,7 @@ void SDV_PKI_VERIFY_URI_SRV_ID_TC001()
 
     certNoId = HITLS_X509_CertNew();
     ASSERT_NE(certNoId, NULL);
-    ASSERT_EQ(HITLS_X509_VerifyUriId(certNoId, 0, "sip:voice.example.edu", strlen("sip:voice.example.edu")),
+    ASSERT_EQ(HITLS_X509_VerifyUriId(certNoId, 0, "sip://voice.example.edu", strlen("sip://voice.example.edu")),
         HITLS_X509_ERR_VFY_URI_ID_FAIL);
     ASSERT_EQ(HITLS_X509_VerifySrvId(certNoId, 0, "_imaps.example.net", strlen("_imaps.example.net")),
         HITLS_X509_ERR_VFY_SRV_ID_FAIL);
