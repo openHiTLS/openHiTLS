@@ -2365,6 +2365,7 @@ void SDV_PRIMARY_DRBG_VECTOR_FUN_TC001(int algId, int entropyLen, Hex *result)
     }
     uint8_t output[32]; // Test Vector length
     uint32_t len = 32;
+    DRBG_Vec_t *seedCtx = NULL;
     uint8_t *entropy = BSL_SAL_Malloc(entropyLen);
     ASSERT_TRUE(entropy != NULL);
     (void)memset_s(entropy, entropyLen, 0xff, entropyLen);
@@ -2375,7 +2376,7 @@ void SDV_PRIMARY_DRBG_VECTOR_FUN_TC001(int algId, int entropyLen, Hex *result)
 
     CRYPT_RandSeedMethod seedMeth = {0};
     regSeedMeth(&seedMeth);
-    DRBG_Vec_t *seedCtx = seedCtxMem();
+    seedCtx = seedCtxMem();
     ASSERT_TRUE(seedCtx != NULL);
     Hex entropyHex = {.x = entropy, .len = entropyLen};
     Hex persHex = {.x = pers, .len = sizeof(pers)};

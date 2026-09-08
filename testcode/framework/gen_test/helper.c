@@ -1071,7 +1071,7 @@ static int ReadAllLogFile(DIR *logDir, int *totalSuiteCount, FILE *outFile, Test
             for (int i = end; i >= 1; i--) {
                 // Look for the last occurrence of "."
                 if (buf[i] == '.' && buf[i - 1] != '.') {
-                    dotPos = i; // Pointing to the second dot
+                    dotPos = i; // First separator dot
                     break;
                 }
             }
@@ -1081,7 +1081,7 @@ static int ReadAllLogFile(DIR *logDir, int *totalSuiteCount, FILE *outFile, Test
                 (void)fclose(fpAllLog);
                 return 1;
             }
-            int nameLen = dotPos - 1;
+            int nameLen = dotPos;
             if (nameLen >= MAX_TEST_FUNCTION_NAME || nameLen < 0) {
                 Print("TestCaseName is too long\n");
                 (void)fclose(fpLog);

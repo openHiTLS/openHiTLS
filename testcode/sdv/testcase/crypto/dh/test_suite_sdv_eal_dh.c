@@ -1620,6 +1620,7 @@ void SDV_CRYPTO_DH_TEST_FLAG_SET_TC001(Hex *p, Hex *g, Hex *q, Hex *prv1, Hex *p
     uint8_t shareLocal[1030];
     uint32_t shareLen = sizeof(shareLocal);
     uint32_t flag = CRYPT_DH_NO_PADZERO;
+    CRYPT_EAL_PkeyCtx *dupCtx = NULL;
 
     CRYPT_EAL_PkeyPara para = {0};
     CRYPT_EAL_PkeyPrv prv = {0};
@@ -1642,9 +1643,17 @@ void SDV_CRYPTO_DH_TEST_FLAG_SET_TC001(Hex *p, Hex *g, Hex *q, Hex *prv1, Hex *p
     ASSERT_TRUE(CRYPT_EAL_PkeyComputeShareKey(pkey1, pkey2, shareLocal, &shareLen) == CRYPT_SUCCESS);
     ASSERT_TRUE(shareLen == share->len - 1); // The highest bit of this vector is 0
     ASSERT_TRUE(memcmp(shareLocal, share->x + 1, shareLen) == 0);
+
+    dupCtx = CRYPT_EAL_PkeyDupCtx(pkey1);
+    ASSERT_TRUE(dupCtx != NULL);
+    shareLen = sizeof(shareLocal);
+    ASSERT_EQ(CRYPT_EAL_PkeyComputeShareKey(dupCtx, pkey2, shareLocal, &shareLen), CRYPT_SUCCESS);
+    ASSERT_EQ(shareLen, share->len - 1);
+    ASSERT_TRUE(memcmp(shareLocal, share->x + 1, shareLen) == 0);
 EXIT:
     CRYPT_EAL_PkeyFreeCtx(pkey1);
     CRYPT_EAL_PkeyFreeCtx(pkey2);
+    CRYPT_EAL_PkeyFreeCtx(dupCtx);
 }
 /* END_CASE */
 

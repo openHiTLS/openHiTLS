@@ -76,6 +76,10 @@ static int32_t ResultToOut(uint32_t bits, const BN_BigNum *result, uint8_t *out,
 static int32_t AllocResultAndInputBN(uint32_t bits, BN_BigNum **result, BN_BigNum **inputBN,
     const uint8_t *input, uint32_t inputLen)
 {
+    if (inputLen > BN_BITS_TO_BYTES(bits)) {
+        BSL_ERR_PUSH_ERROR(CRYPT_RSA_ERR_INPUT_VALUE);
+        return CRYPT_RSA_ERR_INPUT_VALUE;
+    }
     *result = BN_Create(bits + 1);
     *inputBN = BN_Create(bits);
     if (*result == NULL || *inputBN == NULL) {

@@ -843,6 +843,7 @@ void SDV_CRYPTO_RSA_VERIFY_PKCSV15_FUNC_TC001(
     CRYPT_EAL_PkeyPub publicKey = {0};
     int32_t pkcsv15 = mdAlgId;
     Hex mdOut = {0};
+    uint8_t *longSign = NULL;
 
     TestMemInit();
 
@@ -872,12 +873,23 @@ void SDV_CRYPTO_RSA_VERIFY_PKCSV15_FUNC_TC001(
         ASSERT_EQ(ret, CRYPT_RSA_NOR_VERIFY_FAIL);
     }
 
+    if (expect == SUCCESS) {
+        longSign = calloc(1u, sign->len + 1);
+        ASSERT_TRUE(longSign != NULL);
+        memcpy(longSign + 1, sign->x, sign->len);
+        ASSERT_EQ(CRYPT_EAL_PkeyVerify(pkeyCtx, mdAlgId, msg->x, msg->len, longSign, sign->len + 1),
+            CRYPT_RSA_ERR_INPUT_VALUE);
+        ASSERT_EQ(CRYPT_EAL_PkeyVerifyData(pkeyCtx, mdOut.x, mdOut.len, longSign, sign->len + 1),
+            CRYPT_RSA_ERR_INPUT_VALUE);
+    }
+
     ret = CRYPT_EAL_PkeyVerifyData(NULL, mdOut.x, mdOut.len, sign->x, sign->len);
     ASSERT_TRUE_AND_LOG("CRYPT_EAL_PkeyVerifyData", ret != CRYPT_SUCCESS);
 
 EXIT:
     CRYPT_EAL_PkeyFreeCtx(pkeyCtx);
     free(mdOut.x);
+    free(longSign);
 }
 /* END_CASE */
 
@@ -919,6 +931,7 @@ void SDV_CRYPTO_RSA_VERIFY_PSS_FUNC_TC001(
         {CRYPT_PARAM_RSA_SALTLEN, BSL_PARAM_TYPE_INT32, &salt->len, sizeof(salt->len), 0},
         BSL_PARAM_END};
     Hex mdOut = {0};
+    uint8_t *longSign = NULL;
 
     TestMemInit();
 
@@ -947,11 +960,22 @@ void SDV_CRYPTO_RSA_VERIFY_PSS_FUNC_TC001(
         ASSERT_EQ(ret, CRYPT_RSA_NOR_VERIFY_FAIL);
     }
 
+    if (expect == SUCCESS) {
+        longSign = calloc(1u, sign->len + 1);
+        ASSERT_TRUE(longSign != NULL);
+        memcpy(longSign + 1, sign->x, sign->len);
+        ASSERT_EQ(CRYPT_EAL_PkeyVerify(pkeyCtx, mdAlgId, msg->x, msg->len, longSign, sign->len + 1),
+            CRYPT_RSA_ERR_INPUT_VALUE);
+        ASSERT_EQ(CRYPT_EAL_PkeyVerifyData(pkeyCtx, mdOut.x, mdOut.len, longSign, sign->len + 1),
+            CRYPT_RSA_ERR_INPUT_VALUE);
+    }
+
 EXIT:
     CRYPT_EAL_PkeyFreeCtx(pkeyCtx);
     if (mdOut.x != NULL) {
         free(mdOut.x);
     }
+    free(longSign);
 }
 /* END_CASE */
 
