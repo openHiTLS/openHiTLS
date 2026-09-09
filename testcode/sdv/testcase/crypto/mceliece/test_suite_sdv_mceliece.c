@@ -440,6 +440,83 @@ EXIT:
 /* END_CASE */
 
 /* @
+* @test  SDV_CRYPTO_MCELIECE_DECAPS_PADDING_FUNC_TC001
+* @brief  Check that tampering with c0 padding bits preserves the session key, while tampering with
+* the following c0 bit derives the fallback key.
+* @precon  nan
+* @expect  Padding is ignored in session key derivation and the input ciphertext remains unchanged.
+@ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_MCELIECE_DECAPS_PADDING_FUNC_TC001(int algId)
+{
+    CRYPT_EAL_PkeyCtx *ctx = NULL;
+    uint8_t *ciphertext = NULL;
+    uint8_t sharedKey[MCELIECE_TEST_L_BYTES] = {0};
+    uint8_t decapsKey[MCELIECE_TEST_L_BYTES] = {0};
+    uint8_t fallbackKey[MCELIECE_TEST_L_BYTES] = {0};
+    uint32_t cipherLen = 0;
+    uint32_t sharedLen = sizeof(sharedKey);
+    uint32_t decapsLen = sizeof(decapsKey);
+    const uint32_t c0Bytes = 194;
+    const uint8_t paddingMask = 0xf8;
+
+    TestMemInit();
+    ASSERT_EQ(CRYPT_EAL_Init(CRYPT_EAL_INIT_RAND), CRYPT_SUCCESS);
+    ctx = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_MCELIECE);
+    ASSERT_TRUE(ctx != NULL);
+    ASSERT_TRUE(algId == CRYPT_KEM_TYPE_MCELIECE_6960119 || algId == CRYPT_KEM_TYPE_MCELIECE_6960119_F ||
+                algId == CRYPT_KEM_TYPE_MCELIECE_6960119_PC || algId == CRYPT_KEM_TYPE_MCELIECE_6960119_PCF);
+    int32_t val = algId;
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_SET_PARA_BY_ID, &val, sizeof(val)), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyGen(ctx), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_GET_CIPHERTEXT_LEN, &cipherLen, sizeof(cipherLen)), CRYPT_SUCCESS);
+    ASSERT_EQ(cipherLen, c0Bytes + (IsMceliecePcParam(algId) ? MCELIECE_TEST_L_BYTES : 0));
+    ciphertext = BSL_SAL_Malloc(cipherLen);
+    ASSERT_TRUE(ciphertext != NULL);
+    ASSERT_EQ(CRYPT_EAL_PkeyEncapsInit(ctx, NULL), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyEncaps(ctx, ciphertext, &cipherLen, sharedKey, &sharedLen), CRYPT_SUCCESS);
+    ASSERT_EQ(sharedLen, sizeof(sharedKey));
+    ASSERT_EQ(ciphertext[c0Bytes - 1] & paddingMask, 0);
+    ASSERT_EQ(CRYPT_EAL_PkeyDecapsInit(ctx, NULL), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyDecaps(ctx, ciphertext, cipherLen, decapsKey, &decapsLen), CRYPT_SUCCESS);
+    ASSERT_EQ(decapsLen, sharedLen);
+    ASSERT_COMPARE("shared key cmp", sharedKey, sharedLen, decapsKey, sharedLen);
+
+    uint8_t lastByte = ciphertext[c0Bytes - 1];
+    for (uint32_t bit = 3; bit < 8; bit++) {
+        uint8_t tamperedByte = lastByte | (uint8_t)(1U << bit);
+        ciphertext[c0Bytes - 1] = tamperedByte;
+        decapsLen = sizeof(decapsKey);
+        ASSERT_EQ(CRYPT_EAL_PkeyDecaps(ctx, ciphertext, cipherLen, decapsKey, &decapsLen), CRYPT_SUCCESS);
+        ASSERT_EQ(decapsLen, sharedLen);
+        ASSERT_COMPARE("shared key cmp", decapsKey, sharedLen, sharedKey, sharedLen);
+        ASSERT_EQ(ciphertext[c0Bytes - 1], tamperedByte);
+    }
+
+    ciphertext[c0Bytes - 1] = lastByte ^ 0x04U;
+    CRYPT_MCELIECE_Ctx *mcelieceCtx = (CRYPT_MCELIECE_Ctx *)ctx->key;
+    ASSERT_TRUE(mcelieceCtx != NULL);
+    ASSERT_TRUE(mcelieceCtx->privateKey != NULL);
+    uint32_t fallbackLen = sizeof(fallbackKey);
+    ASSERT_EQ(GetPrefixedSessionKey(0, mcelieceCtx->privateKey->s, mcelieceCtx->para->nBytes,
+        ciphertext, cipherLen, fallbackKey, &fallbackLen), CRYPT_SUCCESS);
+    ASSERT_EQ(fallbackLen, sharedLen);
+
+    decapsLen = sizeof(decapsKey);
+    ASSERT_EQ(CRYPT_EAL_PkeyDecaps(ctx, ciphertext, cipherLen, decapsKey, &decapsLen), CRYPT_SUCCESS);
+    ASSERT_EQ(decapsLen, fallbackLen);
+    ASSERT_COMPARE("fallback key cmp", decapsKey, decapsLen, fallbackKey, fallbackLen);
+EXIT:
+    BSL_SAL_CleanseData(sharedKey, sizeof(sharedKey));
+    BSL_SAL_CleanseData(decapsKey, sizeof(decapsKey));
+    BSL_SAL_CleanseData(fallbackKey, sizeof(fallbackKey));
+    BSL_SAL_FREE(ciphertext);
+    CRYPT_EAL_PkeyFreeCtx(ctx);
+    CRYPT_EAL_Cleanup(CRYPT_EAL_INIT_RAND);
+}
+/* END_CASE */
+
+/* @
 * @test  SDV_CRYPTO_MCELIECE_DECAPS_ZERO_CIPHERTEXT_TC001
 * @spec  -
 * @title  CRYPT_EAL_PkeyDecaps rejects attacker-computable zero-error success key

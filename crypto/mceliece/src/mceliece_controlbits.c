@@ -17,58 +17,24 @@
 #ifdef HITLS_CRYPTO_MCELIECE
 #include <string.h>
 
+#include "bsl_bytes.h"
 #include "bsl_sal.h"
 #include "crypt_errno.h"
 #include "bsl_err_internal.h"
 #include "mceliece_local.h"
 
-// Radix sort for 32-bit values (treat as unsigned for ordering)
-// Sort values in ascending SIGNED order using radix with sign bias
-static void RadixSortI32(uint32_t *ua, uint32_t *tmp, uint32_t n)
+static void SwapU32Masked(uint32_t *a, uint32_t *b, uint32_t mask)
 {
-    const uint32_t rad = 256; // Number of buckets per radix pass (8-bit digit --> 2^8 = 256)
-    uint32_t cnt[256];
-    uint32_t pref[256];
-    for (uint32_t pass = 0; pass < 4; pass++) { // Number of radix passes for full 32-bit key (32 / 8 = 4)
-        memset(cnt, 0, sizeof(cnt));
-        uint32_t shift = pass * 8; // Bit-shift per radix pass (8-bit digit size)
-        for (uint32_t i = 0; i < n; i++) {
-            // bias for signed order: flip sign bit once across full 32-bit key
-            uint32_t key =
-                ua[i] ^ 0x80000000u; // Bias XOR to convert signed 32-bit values into unsigned lexicographic order
-            uint32_t b = (key >> shift) & 0xFFu; // 8-bit mask to extract current radix digit
-            cnt[b]++;
-        }
-        pref[0] = 0;
-        for (uint32_t r = 1; r < rad; r++) {
-            pref[r] = pref[r - 1] + cnt[r - 1];
-        }
-        for (uint32_t i = 0; i < n; i++) {
-            uint32_t key = ua[i] ^ 0x80000000u;
-            uint32_t b = (key >> shift) & 0xFFu; // 8-bit mask to extract current radix digit
-            tmp[pref[b]++] = ua[i];
-        }
-        // swap buffers
-        uint32_t *swap = ua;
-        ua = tmp;
-        tmp = swap;
-    }
+    uint32_t diff = (*a ^ *b) & mask;
+    *a ^= diff;
+    *b ^= diff;
 }
 
-// 32-bit le sort
-static int32_t SortU32LE(uint32_t *a, uint32_t n)
+static void CompareSwapU32(void *a, void *b)
 {
-    // reinterpret as unsigned for radix order; allocate temporary buffer
-    uint32_t *ua = a;
-    uint32_t *tmp = BSL_SAL_Malloc(n * (uint32_t)sizeof(uint32_t));
-    if (tmp == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
-        return CRYPT_MEM_ALLOC_FAIL;
-    }
-
-    RadixSortI32(ua, tmp, n);
-    BSL_SAL_FREE(tmp);
-    return CRYPT_SUCCESS;
+    uint32_t *valueA = a;
+    uint32_t *valueB = b;
+    SwapU32Masked(valueA, valueB, Uint32ConstTimeGt(*valueA, *valueB));
 }
 
 static void Write1BitLE(uint8_t *buf, uint32_t bit_pos, uint8_t bit)
@@ -120,27 +86,18 @@ static int32_t ProcessSmallAlphabet(uint32_t *areaA, uint32_t *areaB, uint32_t n
     for (uint32_t i = 0; i < n; i++) {
         areaB[i] = ((areaA[i] & 0x3FFU) << 10) | (areaB[i] & 0x3FFU);
     }
-    int32_t ret;
     for (uint32_t lvl = 1; lvl < w - 1; lvl++) {
         for (uint32_t i = 0; i < n; i++) {
             areaA[i] = ((areaB[i] & ~0x3FFU) << 6) | i;
         }
-        ret = SortU32LE(areaA, n);
-        if (ret != CRYPT_SUCCESS) {
-            BSL_ERR_PUSH_ERROR(ret);
-            return ret;
-        }
+        ConstTimeMergeSort(areaA, n, sizeof(uint32_t), CompareSwapU32);
 
         for (uint32_t i = 0; i < n; i++) {
             areaA[i] =
                 (areaA[i] << 20) |
                 (areaB[i] & 0xFFFFF); // Bit-shift to pack 20-bit combined symbol during small-alphabet processing
         }
-        ret = SortU32LE(areaA, n);
-        if (ret != CRYPT_SUCCESS) {
-            BSL_ERR_PUSH_ERROR(ret);
-            return ret;
-        }
+        ConstTimeMergeSort(areaA, n, sizeof(uint32_t), CompareSwapU32);
         for (uint32_t i = 0; i < n; i++) {
             uint32_t ppcpx = areaA[i] & 0xFFFFF;
             uint32_t ppcx = (areaA[i] & 0xFFC00U) |
@@ -161,16 +118,11 @@ static int32_t ProcessLargeAlphabet(uint32_t *areaA, uint32_t *areaB, const uint
     for (uint32_t i = 0; i < n; i++) {
         areaB[i] = (areaA[i] << 16) | (areaB[i] & 0xFFFFU); // 16-bit mask to extract or keep 16-bit symbol halves
     }
-    int32_t ret;
     for (uint32_t lvl = 1; lvl < w - 1; lvl++) {
         for (uint32_t i = 0; i < n; i++) {
             areaA[i] = (areaB[i] & ~0xFFFFU) | i;
         }
-        ret = SortU32LE(areaA, n);
-        if (ret != CRYPT_SUCCESS) {
-            BSL_ERR_PUSH_ERROR(ret);
-            return ret;
-        }
+        ConstTimeMergeSort(areaA, n, sizeof(uint32_t), CompareSwapU32);
         for (uint32_t i = 0; i < n; i++) {
             areaA[i] = (areaA[i] << 16) | (areaB[i] & 0xFFFFU);
         }
@@ -178,20 +130,12 @@ static int32_t ProcessLargeAlphabet(uint32_t *areaA, uint32_t *areaB, const uint
             for (uint32_t i = 0; i < n; i++) {
                 areaB[i] = (areaA[i] & ~0xFFFFU) | (areaB[i] >> 16);
             }
-            ret = SortU32LE(areaB, n);
-            if (ret != CRYPT_SUCCESS) {
-                BSL_ERR_PUSH_ERROR(ret);
-                return ret;
-            }
+            ConstTimeMergeSort(areaB, n, sizeof(uint32_t), CompareSwapU32);
             for (uint32_t i = 0; i < n; i++) {
                 areaB[i] = (areaB[i] << 16) | (areaA[i] & 0xFFFFU);
             }
         }
-        ret = SortU32LE(areaA, n);
-        if (ret != CRYPT_SUCCESS) {
-            BSL_ERR_PUSH_ERROR(ret);
-            return ret;
-        }
+        ConstTimeMergeSort(areaA, n, sizeof(uint32_t), CompareSwapU32);
         for (uint32_t i = 0; i < n; i++) {
             uint32_t cpx = (areaB[i] & ~0xFFFFU) | (areaA[i] & 0xFFFFU);
             areaB[i] = (areaB[i] < cpx) ? areaB[i] : cpx;
@@ -209,11 +153,7 @@ static int32_t PrepareParentKeys(uint32_t *areaA, const uint16_t *pi, const uint
     for (uint32_t i = 0; i < n; i++) {
         areaA[i] = ((uint32_t)pi[i] << 16) | i;
     }
-    int32_t ret = SortU32LE(areaA, n);
-    if (ret != CRYPT_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
-        return ret;
-    }
+    ConstTimeMergeSort(areaA, n, sizeof(uint32_t), CompareSwapU32);
     return CRYPT_SUCCESS;
 }
 
@@ -234,11 +174,7 @@ static int32_t EmitFirstHalf(uint32_t *posOut, uint8_t *out, uint32_t pos, uint3
         areaB[x] = (areaA[x] << 16) | tmpFx;
         areaB[x + 1] = (areaA[x + 1] << 16) | tmpFx1;
     }
-    int32_t ret = SortU32LE(areaB, n);
-    if (ret != CRYPT_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
-        return ret;
-    }
+    ConstTimeMergeSort(areaB, n, sizeof(uint32_t), CompareSwapU32);
     *posOut = tmpPos;
     return CRYPT_SUCCESS;
 }
@@ -260,11 +196,7 @@ static int32_t EmitSecondHalf(uint32_t *posOut, uint8_t *out, uint32_t pos, uint
         areaA[y] = (tmpLy << 16) | (areaB[y] & 0xFFFFU);
         areaA[y + 1] = (tmpLy1 << 16) | (areaB[y + 1] & 0xFFFFU);
     }
-    int32_t ret = SortU32LE(areaA, n);
-    if (ret != CRYPT_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
-        return ret;
-    }
+    ConstTimeMergeSort(areaA, n, sizeof(uint32_t), CompareSwapU32);
     *posOut = tmpPos;
     return CRYPT_SUCCESS;
 }
@@ -304,32 +236,16 @@ static int32_t BenesNetControlbitsCore(uint8_t *out, uint32_t pos, uint32_t step
     }
     int32_t ret;
     Build32BitsKeys(areaA, pi, n);
-    ret = SortU32LE(areaA, n);
-    if (ret != CRYPT_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
-        return ret;
-    }
+    ConstTimeMergeSort(areaA, n, sizeof(uint32_t), CompareSwapU32);
 
     ExtractMinIndex(areaB, areaA, n);
-    ret = SortU32LE(areaA, n); // reuse A as scratch
-    if (ret != CRYPT_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
-        return ret;
-    }
+    ConstTimeMergeSort(areaA, n, sizeof(uint32_t), CompareSwapU32); // reuse A as scratch
 
     TagOriginalIndex(areaA, n);
-    ret = SortU32LE(areaA, n);
-    if (ret != CRYPT_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
-        return ret;
-    }
+    ConstTimeMergeSort(areaA, n, sizeof(uint32_t), CompareSwapU32);
 
     TagParentKey(areaA, areaB, n);
-    ret = SortU32LE(areaA, n);
-    if (ret != CRYPT_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
-        return ret;
-    }
+    ConstTimeMergeSort(areaA, n, sizeof(uint32_t), CompareSwapU32);
 
     if (w <= 10) { // Alphabet-size threshold to choose small-alphabet optimization path
         ret = ProcessSmallAlphabet(areaA, areaB, n, w);
@@ -435,16 +351,15 @@ static void LayerBits(uint8_t *bitvec, const uint8_t *layerCBits, uint32_t s, ui
 
 int32_t ControlBitsFromBenesNetwork(uint8_t *out, const uint16_t *pi, uint32_t w, uint32_t n)
 {
-    int32_t *temp = BSL_SAL_Malloc((uint32_t)(2 * n) * (uint32_t)sizeof(int32_t));
+    int32_t *temp = BSL_SAL_Calloc((uint32_t)(2 * n) * (uint32_t)sizeof(int32_t), 1);
     if (temp == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         return CRYPT_MEM_ALLOC_FAIL;
     }
-    memset(temp, 0, (uint32_t)(2 * n) * (uint32_t)sizeof(int32_t));
     uint32_t outBytes = (((2 * w - 1) * n / 2) + 7) / 8;
     memset(out, 0, outBytes);
     int32_t ret = BenesNetControlbitsCore(out, 0, 1, pi, w, n, temp);
-    BSL_SAL_FREE(temp);
+    BSL_SAL_ClearFree(temp, (uint32_t)(2 * n) * (uint32_t)sizeof(int32_t));
     return ret;
 }
 

@@ -20,6 +20,7 @@
 #include <stddef.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdbool.h>
 
 #include "crypt_errno.h"
 #include "crypt_algid.h"
@@ -46,7 +47,8 @@ extern "C" {
 
 #define MCELIECE_L_BYTES ((MCELIECE_L) / (8))
 
-#define MCELIECE_MAX_TRY_COUNT 50
+// The probability that all 1024 attempts fail is below 2^-500
+#define MCELIECE_MAX_TRY_COUNT 1024
 
 #define SAME_MASK(k, val) ((uint64_t)(-(int64_t)((((uint32_t)(k) ^ (uint32_t)(val)) - 1U) >> 31)))
 
@@ -140,7 +142,7 @@ static inline uint32_t VectorGetBit(const uint8_t *vec, const uint32_t bitIdx)
     return (uint32_t)((vec[byteIdx] >> bitPos) & 1u); // lsb
 }
 
-static inline uint32_t VectoWeight(const uint8_t *vec, uint32_t lenBytes)
+static inline uint32_t VectorWeight(const uint8_t *vec, uint32_t lenBytes)
 {
     uint32_t weight = 0;
     for (uint32_t i = 0; i < lenBytes; i++) {
@@ -155,6 +157,10 @@ static inline uint32_t VectoWeight(const uint8_t *vec, uint32_t lenBytes)
 // =================================================================================
 // Control Bits and Support Functions
 // =================================================================================
+typedef void (*McelieceCompareSwap)(void *a, void *b);
+
+void ConstTimeMergeSort(void *array, uint32_t arrayLen, uint32_t elemSize, McelieceCompareSwap compareSwap);
+
 /* Compute control bits for a Benes network from a permutation pi of size n=2^w.
  * out must point to ((2*w-1)*n/16) bytes, zeroed by the caller or by the impl. */
 int32_t ControlBitsFromBenesNetwork(uint8_t *out, const uint16_t *pi, uint32_t w, uint32_t n);
@@ -243,7 +249,7 @@ void MatrixFree(GFMatrix *mat);
 int32_t McElieceShake256(uint8_t *output, const uint32_t outlen, const uint8_t *input, uint32_t inLen);
 
 int32_t ComputeSyndrome(const uint8_t *received, const GFPolynomial *g, const uint16_t *alpha,
-    const McelieceParams *params, uint16_t *syndrome);
+    const McelieceParams *params, uint16_t *syndrome, bool constTime);
 #ifdef __cplusplus
 }
 #endif

@@ -208,7 +208,7 @@ EXIT:
 // Input: r is a length-n bit vector where r[0..mt-1] contains the ciphertext bits and the rest are zero
 // Output: syndrome[0..2t-1]
 int32_t ComputeSyndrome(const uint8_t *received, const GFPolynomial *g, const uint16_t *alpha,
-    const McelieceParams *params, uint16_t *syndrome)
+    const McelieceParams *params, uint16_t *syndrome, bool constTime)
 {
     uint32_t syndLen = params->t << 1;
 
@@ -226,12 +226,26 @@ int32_t ComputeSyndrome(const uint8_t *received, const GFPolynomial *g, const ui
         invG2[i] = GFInverse(GFMultiplication(gAlpha[i], gAlpha[i]));
     }
 
+    if (constTime) {
+        memset(syndrome, 0, syndLen * (uint32_t)sizeof(uint16_t));
+        for (uint32_t b = 0; b < params->n; ++b) {
+            uint16_t mask = 0U - (uint16_t)VectorGetBit(received, b);
+            uint16_t power = 1;
+            for (uint32_t j = 0; j < syndLen; j++) {
+                uint16_t t = GFMultiplication(power, invG2[b]);
+                syndrome[j] = GFAddtion(syndrome[j], t & mask);
+                power = GFMultiplication(power, alpha[b]);
+            }
+        }
+        BSL_SAL_ClearFree(gAlpha, params->n * (uint32_t)sizeof(uint16_t));
+        BSL_SAL_ClearFree(invG2, params->n * (uint32_t)sizeof(uint16_t));
+        return CRYPT_SUCCESS;
+    }
+
     for (uint32_t j = 0; j < syndLen; j++) {
         uint16_t acc = 0;
         for (uint32_t b = 0; b < params->n; ++b) {
-            uint32_t byteIdx = b >> 3;
-            uint32_t bitIdx = b & 0x07;
-            if ((received[byteIdx] & (1u << bitIdx)) != 0) {
+            if (VectorGetBit(received, b) != 0) {
                 uint16_t t = GFMultiplication(GFPower(alpha[b], j), invG2[b]);
                 acc = GFAddtion(acc, t);
             }
@@ -340,9 +354,8 @@ static int32_t LocateErrors(const uint16_t *syn, const uint16_t *alpha, uint8_t 
 int32_t DecodeGoppa(const uint8_t *received, const GFPolynomial *g, const uint16_t *alpha,
     const McelieceParams *params, uint8_t *errorVector, uint16_t *decodeSyndrome)
 {
-    int32_t ret = ComputeSyndrome(received, g, alpha, params, decodeSyndrome);
+    int32_t ret = ComputeSyndrome(received, g, alpha, params, decodeSyndrome, false);
     if (ret != CRYPT_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
     // if decodeSyndrome is zero, meaning that it has no errors to locate, return success

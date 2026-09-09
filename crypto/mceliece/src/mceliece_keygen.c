@@ -17,6 +17,7 @@
 #ifdef HITLS_CRYPTO_MCELIECE
 
 #include "mceliece_local.h"
+#include "bsl_bytes.h"
 #include "bsl_err_internal.h"
 #include "bsl_sal.h"
 #include "crypt_utils.h"
@@ -193,19 +194,50 @@ static uint16_t BitrevU16(uint16_t x, uint32_t m)
     return (uint16_t)(r & ((1U << m) - 1U));
 }
 
-static int32_t ComparePairs(const void *a, const void *b)
+static void SwapPairsMasked(PairSt *a, PairSt *b, uint32_t mask)
 {
-    const PairSt *p1 = (const PairSt *)a;
-    const PairSt *p2 = (const PairSt *)b;
-    if (p1->val < p2->val) {
-        return -1;
-    }
-    if (p1->val > p2->val) {
-        return 1;
-    }
-    return 0;
+    uint32_t valDiff = (a->val ^ b->val) & mask;
+    uint32_t posDiff = ((uint32_t)a->pos ^ (uint32_t)b->pos) & mask;
+    a->val ^= valDiff;
+    b->val ^= valDiff;
+    a->pos ^= (uint16_t)posDiff;
+    b->pos ^= (uint16_t)posDiff;
 }
 
+static void CompareSwapPairs(void *a, void *b)
+{
+    PairSt *pairA = a;
+    PairSt *pairB = b;
+    SwapPairsMasked(pairA, pairB, Uint32ConstTimeGt(pairA->val, pairB->val));
+}
+
+static void OddEvenMerge(void *array, uint32_t offset, uint32_t len, uint32_t stride, uint32_t elemSize,
+    McelieceCompareSwap compareSwap)
+{
+    uint8_t *data = array;
+    uint32_t step = stride << 1;
+    if (step < len) {
+        OddEvenMerge(array, offset, len, step, elemSize, compareSwap);
+        OddEvenMerge(array, offset + stride, len, step, elemSize, compareSwap);
+        for (uint32_t i = offset + stride; i + stride < offset + len; i += step) {
+            compareSwap(data + i * elemSize, data + (i + stride) * elemSize);
+        }
+    } else {
+        compareSwap(data + offset * elemSize, data + (offset + stride) * elemSize);
+    }
+}
+
+void ConstTimeMergeSort(void *array, uint32_t arrayLen, uint32_t elemSize, McelieceCompareSwap compareSwap)
+{
+    uint8_t *data = array;
+    if (arrayLen <= 1) {
+        return;
+    }
+    uint32_t half = arrayLen >> 1;
+    ConstTimeMergeSort(data, half, elemSize, compareSwap);
+    ConstTimeMergeSort(data + half * elemSize, half, elemSize, compareSwap);
+    OddEvenMerge(array, 0, arrayLen, 1, elemSize, compareSwap);
+}
 
 static int32_t GenerateFieldOrdering(uint16_t *alpha, const uint8_t *randomBits, uint32_t m, uint16_t *pi)
 {
@@ -219,12 +251,14 @@ static int32_t GenerateFieldOrdering(uint16_t *alpha, const uint8_t *randomBits,
         pairs[i].val = GET_UINT32_LE(randomBits, i * 4); // le 32-bit
         pairs[i].pos = (uint16_t)i;
     }
-    qsort(pairs, MCELIECE_Q, sizeof(PairSt), ComparePairs);
+    ConstTimeMergeSort(pairs, MCELIECE_Q, sizeof(PairSt), CompareSwapPairs);
+    uint32_t duplicate = 0;
     for (int32_t i = 0; i < MCELIECE_Q_1; i++) {
-        if (pairs[i].val == pairs[i + 1].val) {
-            BSL_SAL_ClearFree(pairs, MCELIECE_Q * sizeof(PairSt));
-            return CRYPT_MCELIECE_KEYGEN_FAIL;
-        }
+        duplicate |= Uint32ConstTimeEqual(pairs[i].val, pairs[i + 1].val);
+    }
+    if (duplicate != 0) {
+        BSL_SAL_ClearFree(pairs, MCELIECE_Q * sizeof(PairSt));
+        return CRYPT_MCELIECE_KEYGEN_FAIL;
     }
     for (int32_t i = 0; i < MCELIECE_Q; i++) {
         uint16_t v = pairs[i].pos & (uint16_t)MCELIECE_Q_1;
@@ -298,7 +332,7 @@ static int32_t GenPolyOverGF(GFPolynomial *g, const GFPolynomial *f, uint32_t t)
 ERR:
     GFPolyFree(power);
     GFPolyFree(product);
-    BSL_SAL_FREE(mat);
+    BSL_SAL_ClearFree(mat, (t + 1) * t * (uint32_t)sizeof(uint16_t));
     return ret;
 }
 
@@ -402,7 +436,7 @@ static int32_t BuildParityCheckMatrix(GFMatrix *matH, const GFPolynomial *g, con
             val ^= GFPolyGetCoeff(g, (uint32_t)d);
         }
         if (val == 0) {
-            BSL_SAL_FREE(inv);
+            BSL_SAL_ClearFree(inv, n * (uint32_t)sizeof(uint16_t));
             return CRYPT_MCELIECE_KEYGEN_FAIL;
         }
         inv[j] = GFInverse(val);
@@ -416,7 +450,7 @@ static int32_t BuildParityCheckMatrix(GFMatrix *matH, const GFPolynomial *g, con
             inv[j] = GFMultiplication(inv[j], a);
         }
     }
-    BSL_SAL_FREE(inv);
+    BSL_SAL_ClearFree(inv, n * (uint32_t)sizeof(uint16_t));
     return CRYPT_SUCCESS;
 }
 
