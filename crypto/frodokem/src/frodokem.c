@@ -531,25 +531,30 @@ int32_t CRYPT_FRODOKEM_Cmp(CRYPT_FRODOKEM_Ctx *ctx1, CRYPT_FRODOKEM_Ctx *ctx2)
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
+    if (ctx1->para == NULL || ctx2->para == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_FRODOKEM_KEYINFO_NOT_SET);
+        return CRYPT_FRODOKEM_KEYINFO_NOT_SET;
+    }
+    if ((ctx1->publicKey == NULL && ctx1->privateKey == NULL) ||
+        (ctx2->publicKey == NULL && ctx2->privateKey == NULL)) {
+        BSL_ERR_PUSH_ERROR(CRYPT_FRODOKEM_KEY_NOT_SET);
+        return CRYPT_FRODOKEM_KEY_NOT_SET;
+    }
     if (ctx1->para != ctx2->para) {
         BSL_ERR_PUSH_ERROR(CRYPT_FRODOKEM_KEY_NOT_EQUAL);
         return CRYPT_FRODOKEM_KEY_NOT_EQUAL;
     }
-    if (ctx1->publicKey != NULL && ctx2->publicKey != NULL) {
-        if (memcmp(ctx1->publicKey, ctx2->publicKey, ctx1->para->pkSize) != 0) {
-            BSL_ERR_PUSH_ERROR(CRYPT_FRODOKEM_KEY_NOT_EQUAL);
-            return CRYPT_FRODOKEM_KEY_NOT_EQUAL;
-        }
-    } else if (ctx1->publicKey != NULL || ctx2->publicKey != NULL) {
+    if ((ctx1->publicKey == NULL) != (ctx2->publicKey == NULL) ||
+        (ctx1->privateKey == NULL) != (ctx2->privateKey == NULL)) {
         BSL_ERR_PUSH_ERROR(CRYPT_FRODOKEM_KEY_NOT_EQUAL);
         return CRYPT_FRODOKEM_KEY_NOT_EQUAL;
     }
-    if (ctx1->privateKey != NULL && ctx2->privateKey != NULL) {
-        if (ConstTimeMemcmp(ctx1->privateKey, ctx2->privateKey, ctx1->para->kemSkSize) == 0) {
-            BSL_ERR_PUSH_ERROR(CRYPT_FRODOKEM_KEY_NOT_EQUAL);
-            return CRYPT_FRODOKEM_KEY_NOT_EQUAL;
-        }
-    } else if (ctx1->privateKey != NULL || ctx2->privateKey != NULL) {
+    if (ctx1->publicKey != NULL && memcmp(ctx1->publicKey, ctx2->publicKey, ctx1->para->pkSize) != 0) {
+        BSL_ERR_PUSH_ERROR(CRYPT_FRODOKEM_KEY_NOT_EQUAL);
+        return CRYPT_FRODOKEM_KEY_NOT_EQUAL;
+    }
+    if (ctx1->privateKey != NULL &&
+        ConstTimeMemcmp(ctx1->privateKey, ctx2->privateKey, ctx1->para->kemSkSize) == 0) {
         BSL_ERR_PUSH_ERROR(CRYPT_FRODOKEM_KEY_NOT_EQUAL);
         return CRYPT_FRODOKEM_KEY_NOT_EQUAL;
     }

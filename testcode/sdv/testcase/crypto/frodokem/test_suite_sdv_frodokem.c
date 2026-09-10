@@ -767,7 +767,7 @@ EXIT:
 /* @
 * @test  SDV_CRYPTO_FRODOKEM_STATE_CMP_TC001
 * @spec  -
-* @title  Partial-key state and cross-parameter comparison test
+* @title  Empty, partial-key and cross-parameter comparison test
 * @precon  nan
 * @brief  Compare public-only, private-only and different-parameter contexts with a complete key context.
 * @expect  Partial-key and different-parameter contexts are not equal to the complete key context or each other.
@@ -800,15 +800,24 @@ void SDV_CRYPTO_FRODOKEM_STATE_CMP_TC001(int algId)
     ASSERT_TRUE(pubOnly != NULL);
     ASSERT_TRUE(prvOnly != NULL);
     ASSERT_TRUE(different != NULL);
+    ASSERT_EQ(CRYPT_EAL_PkeyCmp(full, pubOnly), CRYPT_FRODOKEM_KEYINFO_NOT_SET);
+    ASSERT_EQ(CRYPT_EAL_PkeyCmp(full, full), CRYPT_FRODOKEM_KEYINFO_NOT_SET);
     ASSERT_EQ(CRYPT_EAL_PkeySetParaById(full, (uint32_t)algId), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyCmp(full, pubOnly), CRYPT_FRODOKEM_KEYINFO_NOT_SET);
+    ASSERT_EQ(CRYPT_EAL_PkeyCmp(pubOnly, full), CRYPT_FRODOKEM_KEYINFO_NOT_SET);
     ASSERT_EQ(CRYPT_EAL_PkeySetParaById(pubOnly, (uint32_t)algId), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_PkeySetParaById(prvOnly, (uint32_t)algId), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyCmp(full, pubOnly), CRYPT_FRODOKEM_KEY_NOT_SET);
+    ASSERT_EQ(CRYPT_EAL_PkeyCmp(pubOnly, full), CRYPT_FRODOKEM_KEY_NOT_SET);
+    ASSERT_EQ(CRYPT_EAL_PkeyCmp(full, full), CRYPT_FRODOKEM_KEY_NOT_SET);
     ASSERT_EQ(CRYPT_EAL_PkeyCtrl(full, CRYPT_CTRL_GET_PUBKEY_LEN, &pubLen, sizeof(pubLen)), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_PkeyCtrl(full, CRYPT_CTRL_GET_PRVKEY_LEN, &prvLen, sizeof(prvLen)), CRYPT_SUCCESS);
     pub = BSL_SAL_Malloc(pubLen);
     prv = BSL_SAL_Malloc(prvLen);
     ASSERT_TRUE(pub != NULL && prv != NULL);
     ASSERT_EQ(CRYPT_EAL_PkeyGen(full), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyCmp(full, pubOnly), CRYPT_FRODOKEM_KEY_NOT_SET);
+    ASSERT_EQ(CRYPT_EAL_PkeyCmp(pubOnly, full), CRYPT_FRODOKEM_KEY_NOT_SET);
     pubKey.id = CRYPT_PKEY_FRODOKEM;
     pubKey.key.kemEk.data = pub;
     pubKey.key.kemEk.len = pubLen;
@@ -819,6 +828,8 @@ void SDV_CRYPTO_FRODOKEM_STATE_CMP_TC001(int algId)
     ASSERT_EQ(CRYPT_EAL_PkeyGetPrv(full, &prvKey), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_PkeySetPub(pubOnly, &pubKey), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_PkeySetPrv(prvOnly, &prvKey), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyCmp(pubOnly, pubOnly), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyCmp(prvOnly, prvOnly), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_PkeyCmp(full, pubOnly), CRYPT_FRODOKEM_KEY_NOT_EQUAL);
     ASSERT_EQ(CRYPT_EAL_PkeyCmp(full, prvOnly), CRYPT_FRODOKEM_KEY_NOT_EQUAL);
     ASSERT_EQ(CRYPT_EAL_PkeyCmp(pubOnly, prvOnly), CRYPT_FRODOKEM_KEY_NOT_EQUAL);
@@ -1248,12 +1259,12 @@ void SDV_CRYPTO_FRODOKEM_KEYCMP_FUNC_TC001(int bits)
 
     CRYPT_EAL_PkeyCtx *ctx2 = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_FRODOKEM);
     ASSERT_NE(ctx2, NULL);
-    ASSERT_EQ(CRYPT_EAL_PkeyCmp(ctx, ctx2), CRYPT_FRODOKEM_KEY_NOT_EQUAL);
+    ASSERT_EQ(CRYPT_EAL_PkeyCmp(ctx, ctx2), CRYPT_FRODOKEM_KEYINFO_NOT_SET);
     val = (uint32_t)bits;
     ASSERT_EQ(CRYPT_EAL_PkeySetParaById(ctx2, val), CRYPT_SUCCESS);
-    ASSERT_EQ(CRYPT_EAL_PkeyCmp(ctx, ctx2), CRYPT_FRODOKEM_KEY_NOT_EQUAL);
+    ASSERT_EQ(CRYPT_EAL_PkeyCmp(ctx, ctx2), CRYPT_FRODOKEM_KEY_NOT_SET);
     ASSERT_EQ(CRYPT_EAL_PkeyEncapsInit(ctx2, NULL), CRYPT_SUCCESS);
-    ASSERT_EQ(CRYPT_EAL_PkeyCmp(ctx, ctx2), CRYPT_FRODOKEM_KEY_NOT_EQUAL);
+    ASSERT_EQ(CRYPT_EAL_PkeyCmp(ctx, ctx2), CRYPT_FRODOKEM_KEY_NOT_SET);
     ASSERT_EQ(CRYPT_EAL_PkeyGen(ctx2), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_PkeyCmp(ctx, ctx2), CRYPT_SUCCESS);
 
