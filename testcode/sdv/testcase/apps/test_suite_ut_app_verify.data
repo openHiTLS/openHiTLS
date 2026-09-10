@@ -42,3 +42,6 @@ UT_HITLS_APP_TlsOptions_TC002:
 
 UT_HITLS_APP_TlsOptions_TC003 test3
 UT_HITLS_APP_TlsOptions_TC003:
+
+UT_HITLS_APP_verify_TC012 test12
+UT_HITLS_APP_verify_TC012:

@@ -2,6 +2,8 @@
 
 The openHiTLS command source code is located in the apps directory, and the compiled result is hitls. Users can run the hitls command to perform various cryptographic operations. This tool provides a complete cryptographic function suite, including random number generation, symmetric/asymmetric encryption, digital signatures, PKI certificate management, and SSL/TLS connections.
 
+> Note: The hitls command line tool is not built by default. Rebuild with the switch enabled during CMake configuration: `cmake .. -DHITLS_BUILD_EXE=ON && make && make install`. See the "Build and Installation" section in README.
+
 ## 1.1 Supported Command List
 |Command Category|Command Name|Description|
 |-|-|-|
@@ -754,8 +756,8 @@ hitls x509 [-help] [-in <file>] [-inform PEM|DER] [-out <file>] [-outform PEM|DE
 - `-days <days>`: Requires `-req` option. Certificate validity period (days), must be an integer, defaults to 30
 - `-set_serial <hex value>`: Requires `-req` option. Certificate serial number as a `0x`-prefixed hexadecimal value, defaults to a randomly generated 20-byte number
 - `-md <algorithm>`: Digest algorithm for signing/fingerprint, signing defaults to `sha256`, fingerprint defaults to `sha1`
-- `-extfile <file>`: Requires `-req` option. X.509v3 extension configuration file, must be used with `-extensions`
-- `-extensions <section name>`: Requires `-req` option. Section name in the configuration file, must be used with `-extfile`
+- `-extfile <file>`: Requires `-req` option. X.509v3 extension configuration file; must be specified together with `-extensions`, otherwise the command exits with an error
+- `-extensions <section name>`: Requires `-req` option. Section name in the configuration file; must be specified together with `-extfile`, otherwise the command exits with an error
 - `-passin <password source>`: Requires `-req` option. Password source for private key/certificate file, defaults to interactive input
   - `stdin`: Standard input
   - `pass:<password>`: Read password from command line
@@ -873,14 +875,15 @@ hitls crl -in crl.pem -noout -CAfile ca.crt
 **Usage**:
 
 ```
-hitls verify -CAfile <CA certificate file> [-nokeyusage] [-verbose] [certificate files ...]
+hitls verify -CAfile <CA certificate file> [-untrusted <intermediate CA file>] [-nokeyusage] [-verbose] [certificate files ...]
 ```
 
 **Supported Options**:
 
 - `-help`: Display help information
 - `-CAfile <file>`: Required. Trusted CA certificate file (PEM format), can be a bundle file containing multiple CA certificates
-- `-nokeyusage`: Skip the keyUsage extension check of the certificate
+- `-untrusted <file>`: Optional. Untrusted intermediate CA certificate file (PEM format; can be a bundle). Provide it when the issuer of the certificate to verify is not in the `-CAfile` trust chain (e.g. an intermediate CA in a two-tier chain); otherwise the command fails with `errCode = 67108877` (issuer certificate not found)
+- `-nokeyusage`: Skip the keyUsage check of CA certificates loaded from `-CAfile`
 - `-verbose`: Print additional subject DN information when verification fails
 - `[certificate files...]`: Certificate files to verify (PEM format), multiple files accepted, defaults to standard input
 
@@ -893,8 +896,11 @@ hitls verify -CAfile root_ca_cert.pem user_cert.pem
 # Verify multiple certificates
 hitls verify -CAfile root_ca_cert.pem cert1.pem cert2.pem cert3.pem
 
-# Verify a certificate with only digitalSignature but no keyEncipherment
-hitls verify -CAfile root_ca_cert.pem -nokeyusage sign_only_cert.pem
+# Verify a certificate issued by an intermediate CA (two-tier chain)
+hitls verify -CAfile root_ca_cert.pem -untrusted intermediate_cert.pem leaf_cert.pem
+
+# Skip the keyUsage extension check of CA certificates
+hitls verify -CAfile root_ca_cert.pem -nokeyusage cert.pem
 
 # Print additional subject DN information when verification fails
 hitls verify -CAfile wrong_ca_cert.pem -verbose user_cert.pem
@@ -1006,6 +1012,59 @@ ASN.1 Encoding Structure Parsing and Cryptographic Object Diagnosis
 
 ## 3.5 SSL/TLS Communication
 
+### 3.5.0 Certificate Preparation
+
+The mutual authentication examples of s_client/s_server require v3 certificates containing keyUsage, extendedKeyUsage, and other extensions (v1 or extension-less certificates cause the handshake to fail). They can be generated with the genpkey, req, and x509 commands described earlier in this guide; the key point is to specify the v3 extensions via `-extfile` + `-extensions`:
+
+1. Generate the key and CA certificate (the CA certificate must contain `keyCertSign` and `subjectKeyIdentifier`; the latter is required to write `authorityKeyIdentifier` when issuing subordinate certificates):
+
+```bash
+hitls genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:2048 -out ca.key
+hitls req -new -key ca.key -subj "/CN=DemoCA/C=CN" -out ca.csr
+cat > ca.ext <<'XEOF'
+[v3_ca]
+basicConstraints=critical,CA:TRUE
+keyUsage=critical,keyCertSign,cRLSign
+subjectKeyIdentifier=hash
+XEOF
+hitls x509 -req -in ca.csr -signkey ca.key -set_serial 0x01 -days 3650 -extfile ca.ext -extensions v3_ca -out ca.crt
+```
+
+2. Generate the server certificate (`serverAuth` and `subjectAltName` must match the access address):
+
+```bash
+hitls genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:2048 -out server.key
+hitls req -new -key server.key -subj "/CN=localhost/C=CN" -out server.csr
+cat > server.ext <<'XEOF'
+[v3_server]
+basicConstraints=critical,CA:FALSE
+keyUsage=critical,digitalSignature,keyEncipherment
+extendedKeyUsage=serverAuth
+subjectKeyIdentifier=hash
+authorityKeyIdentifier=keyid
+subjectAltName=DNS:localhost,IP:127.0.0.1
+XEOF
+hitls x509 -req -in server.csr -CA ca.crt -CAkey ca.key -set_serial 0x02 -days 365 -extfile server.ext -extensions v3_server -out server.pem
+```
+
+3. Generate the client certificate (the client needs `clientAuth` for mutual authentication):
+
+```bash
+hitls genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:2048 -out client.key
+hitls req -new -key client.key -subj "/CN=demo-client/C=CN" -out client.csr
+cat > client.ext <<'XEOF'
+[v3_client]
+basicConstraints=critical,CA:FALSE
+keyUsage=critical,digitalSignature
+extendedKeyUsage=clientAuth
+subjectKeyIdentifier=hash
+authorityKeyIdentifier=keyid
+XEOF
+hitls x509 -req -in client.csr -CA ca.crt -CAkey ca.key -set_serial 0x03 -days 365 -extfile client.ext -extensions v3_client -out client.pem
+```
+
+The resulting `ca.crt`, `server.pem`, and `client.pem` can be used directly in the mutual authentication examples of 3.5.1/3.5.2.
+
 ### 3.5.1 s_client
 
 **Function**: Establish a TLS, TLCP, or DTLCP client connection with an explicit protocol version, cipher list, trust chain, and optional client certificate.
@@ -1036,8 +1095,8 @@ hitls s_client -host <host> [-port <port>] [-tls|-tls1_2|-tls1_3|-tlcp|-dtlcp]
 
 ```bash
 hitls s_client -host 127.0.0.1 -port 4433 -tls1_3 \
-    -CAfile ca.pem -chainCAfile intermediate.pem \
-    -cert client.pem -key client.key.pem
+    -CAfile ca.crt \
+    -cert client.pem -key client.key
 ```
 
 **TLS 1.3 PSK Example**:
@@ -1067,8 +1126,8 @@ hitls s_server [-accept <host:port>] [-port <port>] [-tls|-tls1_2|-tls1_3|-tlcp|
 
 ```bash
 hitls s_server -accept 127.0.0.1:4433 -tls1_3 \
-    -cert server.pem -key server.key.pem \
-    -CAfile ca.pem -chainCAfile intermediate.pem
+    -cert server.pem -key server.key \
+    -CAfile ca.crt
 ```
 
 ## 3.6 Other Utility Tools
@@ -1101,8 +1160,8 @@ hitls rand -hex 32
 # Generate 64 bytes of random data, save in Base64 format to rand.txt
 hitls rand -base64 -out rand.txt 64
 
-# Use hmac-sha256 random number algorithm to generate 10 bytes of random data, output in hexadecimal format
-hitls rand -algorithm hmac-sha256 -hex 10
+# Use hmac_sha256 random number algorithm to generate 10 bytes of random data, output in hexadecimal format
+hitls rand -algorithm hmac_sha256 -hex 10
 ```
 
 ### 3.6.2 prime

@@ -1,4 +1,4 @@
-The test project depends on the source code compilation. Prepare the environment on which the compilation depends by referring to *Build and Installation Guide* to ensure that the source code can be correctly compiled.
+The test project depends on the source code compilation. Prepare the environment on which the compilation depends by referring to [Build and Installation Guide](./1_Build%20and%20Installation%20Guide.md) to ensure that the source code can be correctly compiled.
 
 ## 1. Test Environment Preparation
 
@@ -118,7 +118,9 @@ The test project depends on the following scripts:
 
 ### 3.4 Viewing Test Case Results
 
-After the test is complete, you can go to the **output/log** directory to view the test case execution results. If a problem is found in the community repository, check whether there is a trouble ticket in the repository issue. If there is no trouble ticket, submit a trouble ticket to track the problem.
+After the test is complete, you can go to the **output/log** directory to view the test case execution results.
+
+`skipped` in the test results indicates that the feature macro required by the case is not enabled in the current build configuration (see `cmake/hitls_options.cmake`). It is a normal skip rather than a failure; to execute such cases, enable the corresponding feature macro and rebuild. If a problem is found in the community repository, check whether there is a trouble ticket in the repository issue. If there is no trouble ticket, submit a trouble ticket to track the problem.
 
 ## 4. CI Pipeline Test Commands
 

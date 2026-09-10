@@ -197,6 +197,12 @@ UT_HITLS_APP_X509_InvalidOpt_TC001:"x509 -in ../testdata/cert/asn1/print/rsa_pss
 "-md": shake128
 UT_HITLS_APP_X509_InvalidOpt_TC001:"x509 -in ../testdata/cert/asn1/print/rsa.intca.crt -fingerprint -noout -md shake128":HITLS_APP_SUCCESS
 
+"-extFile" without "-extensions" must be rejected
+UT_HITLS_APP_X509_InvalidOpt_TC001:"x509 -req -in ../testdata/cert/asn1/print/sm2.ca_v1.csr -signkey ../testdata/cert/asn1/print/sm2.ca_v1.key -days 365 -extfile ../testdata/cert/asn1/print/print2.cnf":HITLS_APP_OPT_TYPE_INVALID
+
+"-extensions" without "-extFile" must be rejected
+UT_HITLS_APP_X509_InvalidOpt_TC001:"x509 -req -in ../testdata/cert/asn1/print/sm2.ca_v1.csr -signkey ../testdata/cert/asn1/print/sm2.ca_v1.key -days 365 -extensions v3_intca":HITLS_APP_OPT_TYPE_INVALID
+
 UT_HITLS_APP_X509_NormalOpt_TC001
 UT_HITLS_APP_X509_NormalOpt_TC001:"x509 -req -days 3650 -signkey ../testdata/apps/x509/sm2.key -in ../testdata/apps/x509/sm2.csr -userid 1234567812345678 -out sm2.crt -md sm3"
 

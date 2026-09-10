@@ -63,6 +63,9 @@ STUB_DEFINE_RET2(int, CreateTCPSocket, APP_NetworkAddr *, int);
 #define TLS_RSA_CLIENT_CERT "../testdata/tls/certificate/pem/rsa_sha256/client.pem"
 #define TLS_RSA_CLIENT_KEY "../testdata/tls/certificate/pem/rsa_sha256/client.key.pem"
 #define TLS_ECDSA_CLIENT_KEY "../testdata/tls/certificate/pem/ecdsa_sha256/client.key.pem"
+#define TLS_RSA_ROOT_CA "../testdata/tls/certificate/pem/rsa_sha256/ca.pem"
+#define TLS_RSA_INTER_CA "../testdata/tls/certificate/pem/rsa_sha256/inter.pem"
+#define TLS_RSA_SERVER_CERT "../testdata/tls/certificate/pem/rsa_sha256/server.pem"
 
 /* INCLUDE_SOURCE  ${HITLS_ROOT_PATH}/apps/src/app_print.c ${HITLS_ROOT_PATH}/apps/src/app_verify.c ${HITLS_ROOT_PATH}/apps/src/app_opt.c ${HITLS_ROOT_PATH}/apps/src/app_utils.c */
 
@@ -135,6 +138,39 @@ void UT_HITLS_APP_verify_TC002(void)
 
     OptTestData testData[] = {
         {2, argv[0], HITLS_APP_HELP},
+    };
+
+    ASSERT_EQ(AppPrintErrorUioInit(stderr), HITLS_APP_SUCCESS);
+    for (int i = 0; i < (int)(sizeof(testData) / sizeof(OptTestData)); ++i) {
+        int ret = HITLS_VerifyMain(testData[i].argc, testData[i].argv);
+        ASSERT_EQ(ret, testData[i].expect);
+    }
+
+EXIT:
+    AppPrintErrorUioUnInit();
+    return;
+}
+/* END_CASE */
+
+/**
+ * @test UT_HITLS_APP_verify_TC012
+ * @spec  -
+ * @title  Verify a CA certificate and a two-tier chain.
+ * @brief  1) Verify a v3 middle CA whose keyUsage has no keyEncipherment against
+           the trust root; 2) verify a leaf with the intermediate supplied via
+           -untrusted. Both shall succeed.
+ */
+/* BEGIN_CASE */
+void UT_HITLS_APP_verify_TC012(void)
+{
+    char *argv[][100] = {
+        {"verify", "-CAfile", CAFILE_PATH, MID_CA_FILEPATH},
+        {"verify", "-CAfile", TLS_RSA_ROOT_CA, "-untrusted", TLS_RSA_INTER_CA, TLS_RSA_SERVER_CERT},
+    };
+
+    OptTestData testData[] = {
+        {4, argv[0], HITLS_APP_SUCCESS},
+        {6, argv[1], HITLS_APP_SUCCESS},
     };
 
     ASSERT_EQ(AppPrintErrorUioInit(stderr), HITLS_APP_SUCCESS);

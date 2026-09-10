@@ -26,7 +26,6 @@
 #include "app_print.h"
 #include "app_conf.h"
 #include "app_utils.h"
-#include "crypt_eal_rand.h"
 #include "hitls_pki_errno.h"
 
 typedef enum OptionChoice {
@@ -37,18 +36,21 @@ typedef enum OptionChoice {
     HITLS_APP_OPT_VERIFY_CAFILE,
     HITLS_APP_OPT_VERIFY_VERBOSE,
     HITLS_APP_OPT_VERIFY_NOKEYUSAGE,
-    HITLS_APP_OPT_VERIFY_USERID
+    HITLS_APP_OPT_VERIFY_USERID,
+    HITLS_APP_OPT_VERIFY_UNTRUSTED
 } HITLSOptType;
 
 static const HITLS_CmdOption g_verifyOpts[] = {
     {"help", HITLS_APP_OPT_HELP, HITLS_APP_OPT_VALUETYPE_NO_VALUE, "Display this function summary"},
-    {"nokeyusage", HITLS_APP_OPT_VERIFY_NOKEYUSAGE, HITLS_APP_OPT_VALUETYPE_NO_VALUE, "Set not to verify keyUsage"},
+    {"nokeyusage", HITLS_APP_OPT_VERIFY_NOKEYUSAGE, HITLS_APP_OPT_VALUETYPE_NO_VALUE,
+     "Set not to verify the keyUsage of CA certificates loaded from -CAfile"},
     {"CAfile", HITLS_APP_OPT_VERIFY_CAFILE, HITLS_APP_OPT_VALUETYPE_IN_FILE, "Input ca file"},
     {"verbose", HITLS_APP_OPT_VERIFY_VERBOSE, HITLS_APP_OPT_VALUETYPE_NO_VALUE, "Print extra information"},
     {"userid", HITLS_APP_OPT_VERIFY_USERID, HITLS_APP_OPT_VALUETYPE_STRING, "User ID for SM2"},
+    {"untrusted", HITLS_APP_OPT_VERIFY_UNTRUSTED, HITLS_APP_OPT_VALUETYPE_IN_FILE,
+     "Input untrusted intermediate CA file"},
     {"certs", HITLS_APP_OPT_VERIFY_CERTS, HITLS_APP_OPT_VALUETYPE_PARAMTERS, "Input certs"},
-    {NULL, 0, 0, NULL}
-};
+    {NULL, 0, 0, NULL}};
 
 static bool g_verbose = false;
 static bool g_noVerifyKeyUsage = false;
@@ -58,7 +60,7 @@ void PrintCertErr(HITLS_X509_Cert *cert)
     if (!g_verbose) {
         return;
     }
-    BSL_Buffer subjectName = { NULL, 0 };
+    BSL_Buffer subjectName = {NULL, 0};
     if (HITLS_X509_CertCtrl(cert, HITLS_X509_GET_SUBJECT_DN_STR, &subjectName, sizeof(BSL_Buffer)) ==
         HITLS_PKI_SUCCESS) {
         AppPrintError("%s\n", subjectName.data);
@@ -112,8 +114,7 @@ int32_t InitVerify(HITLS_X509_StoreCtx *store, const char *cafile)
         AppPrintError("Failed to parse certificate <%s>, errCode = %d.\n", cafile, ret);
         return HITLS_APP_X509_FAIL;
     }
-    for (BslListNode *node = BSL_LIST_FirstNode(certlist); node != NULL;
-        node = BSL_LIST_GetNextNode(certlist, node)) {
+    for (BslListNode *node = BSL_LIST_FirstNode(certlist); node != NULL; node = BSL_LIST_GetNextNode(certlist, node)) {
         HITLS_X509_Cert *cert = BSL_LIST_GetData(node);
         if (!CheckCertKeyUsage(cert, cafile, HITLS_X509_EXT_KU_KEY_CERT_SIGN)) {
             ret = HITLS_APP_X509_FAIL;
@@ -146,17 +147,13 @@ static int32_t AddCertToChain(HITLS_X509_List *chain, HITLS_X509_Cert *cert)
     return ret;
 }
 
-static int32_t VerifyCert(HITLS_X509_StoreCtx *storeCtx, const char *fileName)
+static int32_t VerifyCert(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_List *untrusted, const char *fileName)
 {
     HITLS_X509_Cert *cert = HITLS_APP_LoadCert(fileName, BSL_FORMAT_PEM);
     if (cert == NULL) {
         return HITLS_APP_X509_FAIL;
     }
     const char *errStr = fileName == NULL ? "stdin" : fileName;
-    if (!CheckCertKeyUsage(cert, errStr, HITLS_X509_EXT_KU_KEY_ENCIPHERMENT)) {
-        HITLS_X509_CertFree(cert);
-        return HITLS_APP_X509_FAIL;
-    }
     HITLS_X509_List *chain = BSL_LIST_New(sizeof(HITLS_X509_Cert *));
     if (chain == NULL) {
         AppPrintError("Failed to create the certificate chain from %s.\n", errStr);
@@ -169,6 +166,17 @@ static int32_t VerifyCert(HITLS_X509_StoreCtx *storeCtx, const char *fileName)
         HITLS_X509_CertFree(cert);
         BSL_LIST_FREE(chain, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);
         return HITLS_APP_X509_FAIL;
+    }
+    for (BslListNode *node = untrusted == NULL ? NULL : BSL_LIST_FirstNode(untrusted); node != NULL;
+         node = BSL_LIST_GetNextNode(untrusted, node)) {
+        HITLS_X509_Cert *untrustedCert = BSL_LIST_GetData(node);
+        ret = AddCertToChain(chain, untrustedCert);
+        if (ret != HITLS_APP_SUCCESS) {
+            AppPrintError("Failed to add the untrusted certificate to the chain, errCode = %d.\n", ret);
+            HITLS_X509_CertFree(cert);
+            BSL_LIST_FREE(chain, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);
+            return HITLS_APP_X509_FAIL;
+        }
     }
     ret = HITLS_X509_CertVerify(storeCtx, chain);
     if (ret != HITLS_PKI_SUCCESS) {
@@ -184,14 +192,14 @@ static int32_t VerifyCert(HITLS_X509_StoreCtx *storeCtx, const char *fileName)
     return HITLS_APP_SUCCESS;
 }
 
-static int32_t VerifyCerts(HITLS_X509_StoreCtx *storeCtx, int argc, char **argv)
+static int32_t VerifyCerts(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_List *untrusted, int argc, char **argv)
 {
     int32_t ret = HITLS_APP_SUCCESS;
     if (argc == 0) {
-        return VerifyCert(storeCtx, NULL);
+        return VerifyCert(storeCtx, untrusted, NULL);
     } else {
         for (int i = 0; i < argc; ++i) {
-            ret = VerifyCert(storeCtx, argv[i]);
+            ret = VerifyCert(storeCtx, untrusted, argv[i]);
             if (ret != HITLS_APP_SUCCESS) {
                 return HITLS_APP_X509_FAIL;
             }
@@ -200,7 +208,7 @@ static int32_t VerifyCerts(HITLS_X509_StoreCtx *storeCtx, int argc, char **argv)
     return ret;
 }
 
-static int32_t OptParse(char **cafile, char **userId)
+static int32_t OptParse(char **cafile, char **userId, char **untrustedFile)
 {
     HITLSOptType optType;
     int ret = HITLS_APP_SUCCESS;
@@ -235,6 +243,13 @@ static int32_t OptParse(char **cafile, char **userId)
                     return HITLS_APP_OPT_VALUE_INVALID;
                 }
                 break;
+            case HITLS_APP_OPT_VERIFY_UNTRUSTED:
+                *untrustedFile = HITLS_APP_OptGetValueStr();
+                if (*untrustedFile == NULL || strlen(*untrustedFile) >= PATH_MAX) {
+                    AppPrintError("The length of untrusted file error, range is (0, 4096).\n");
+                    return HITLS_APP_OPT_VALUE_INVALID;
+                }
+                break;
             default:
                 return HITLS_APP_OPT_UNKOWN;
         }
@@ -244,21 +259,19 @@ static int32_t OptParse(char **cafile, char **userId)
 
 int32_t HITLS_VerifyMain(int argc, char *argv[])
 {
+    g_noVerifyKeyUsage = false;
     HITLS_X509_StoreCtx *store = NULL;
     char *cafile = NULL;
     char *userId = NULL;
+    char *untrustedFile = NULL;
+    HITLS_X509_List *untrustedList = NULL;
     int32_t mainRet = HITLS_APP_SUCCESS;
-    if (CRYPT_EAL_ProviderRandInitCtx(NULL, CRYPT_RAND_AES128_CTR,
-        "provider=default", NULL, 0, NULL) != CRYPT_SUCCESS) {
-        mainRet = HITLS_APP_CRYPTO_FAIL;
-        goto end;
-    }
     mainRet = HITLS_APP_OptBegin(argc, argv, g_verifyOpts);
     if (mainRet != HITLS_APP_SUCCESS) {
         AppPrintError("error in opt begin.\n");
         goto end;
     }
-    mainRet = OptParse(&cafile, &userId);
+    mainRet = OptParse(&cafile, &userId, &untrustedFile);
     if (mainRet != HITLS_APP_SUCCESS) {
         goto end;
     }
@@ -290,13 +303,22 @@ int32_t HITLS_VerifyMain(int argc, char *argv[])
         goto end;
     }
 
+    if (untrustedFile != NULL) {
+        int32_t ret = HITLS_X509_CertParseBundleFile(BSL_FORMAT_PEM, untrustedFile, &untrustedList);
+        if (ret != HITLS_PKI_SUCCESS) {
+            AppPrintError("Failed to parse the untrusted file <%s>, errCode = %d.\n", untrustedFile, ret);
+            mainRet = HITLS_APP_X509_FAIL;
+            goto end;
+        }
+    }
+
     int unParseParamNum = HITLS_APP_GetRestOptNum();
     char **unParseParam = HITLS_APP_GetRestOpt();
 
-    mainRet = VerifyCerts(store, unParseParamNum, unParseParam);
+    mainRet = VerifyCerts(store, untrustedList, unParseParamNum, unParseParam);
 end:
+    BSL_LIST_FREE(untrustedList, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);
     HITLS_X509_StoreCtxFree(store);
     HITLS_APP_OptEnd();
-    CRYPT_EAL_RandDeinitEx(NULL);
     return mainRet;
 }

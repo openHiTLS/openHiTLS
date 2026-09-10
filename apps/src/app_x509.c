@@ -988,7 +988,8 @@ static int32_t SetNonSelfSignedCertAki(HITLS_CFG_ExtAki *cfgAki, X509OptCtx *opt
     bool isSkiExist;
     int32_t ret = HITLS_X509_CertCtrl(optCtx->ca, HITLS_X509_EXT_GET_SKI, &caSki, sizeof(HITLS_X509_ExtSki));
     if (ret != 0) {
-        AppPrintError("x509: Get issuer keyId failed, errCode = %d.\n", ret);
+        AppPrintError("x509: Failed to get the key identifier of the issuer certificate. Ensure that the issuer "
+                     "certificate contains the subjectKeyIdentifier extension, errCode = %d.\n", ret);
         return HITLS_APP_X509_FAIL;
     }
     aki.kid = caSki.kid;
@@ -1252,12 +1253,12 @@ static bool CheckGenCertOpt(X509OptCtx *optCtx)
         return false;
     }
     if (optCtx->certOpts.extFile != NULL && optCtx->certOpts.extSection == NULL) {
-        AppPrintError("x509: Warning: ignoring -extFile since -extensions is not given.\n");
-        optCtx->certOpts.extFile = NULL;
+        AppPrintError("x509: -extfile must be used with -extensions.\n");
+        return false;
     }
     if (optCtx->certOpts.extFile == NULL && optCtx->certOpts.extSection != NULL) {
-        AppPrintError("x509: Warning: ignoring -extensions since -extFile is not given.\n");
-        optCtx->certOpts.extSection = NULL;
+        AppPrintError("x509: -extensions must be used with -extfile.\n");
+        return false;
     }
     return true;
 }
