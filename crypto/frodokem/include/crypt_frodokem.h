@@ -40,6 +40,7 @@ void CRYPT_FRODOKEM_FreeCtx(CRYPT_FRODOKEM_Ctx *ctx);
 
 int32_t CRYPT_FRODOKEM_EncapsInit(CRYPT_FRODOKEM_Ctx *ctx, const BSL_Param *params);
 int32_t CRYPT_FRODOKEM_DecapsInit(CRYPT_FRODOKEM_Ctx *ctx, const BSL_Param *params);
+/* eFrodoKEM: callers must limit each public key to 256 (2^8) encapsulations across all contexts. */
 int32_t CRYPT_FRODOKEM_Encaps(CRYPT_FRODOKEM_Ctx *ctx, uint8_t *ciphertext, uint32_t *ctLen, uint8_t *sharedSecret,
                               uint32_t *ssLen);
 int32_t CRYPT_FRODOKEM_Decaps(CRYPT_FRODOKEM_Ctx *ctx, const uint8_t *ciphertext, uint32_t ctLen, uint8_t *sharedSecret,

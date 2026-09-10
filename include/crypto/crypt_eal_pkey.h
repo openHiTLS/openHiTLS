@@ -766,6 +766,8 @@ int32_t CRYPT_EAL_PkeyDecapsInit(CRYPT_EAL_PkeyCtx *pkey, const BSL_Param *param
  * @ingroup crypt_eal_pkey
  * @brief Perform key encapsulation operation
  *
+ * @note For eFrodoKEM, callers must limit each public key to 256 (2^8) encapsulations across all contexts.
+ *
  * @param pkey [in] Initialized key context
  * @param cipher [out] Output buffer for encapsulated ciphertext
  * @param cipherLen [in,out] Input: buffer capacity, Output: actual ciphertext length
