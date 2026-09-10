@@ -23,7 +23,6 @@
 #include "bsl_errno.h"
 #include "bsl_util_internal.h"
 #include "bsl_err_internal.h"
-#include "hash_local.h"
 #include "bsl_hash.h"
 
 #ifdef __cplusplus
@@ -41,6 +40,20 @@ struct BSL_HASH_TagNode {
 };
 
 typedef struct BSL_HASH_TagNode BSL_HASH_Node;
+
+typedef struct {
+    uintptr_t inputData;     /* Actual data input by the user. */
+    uint32_t dataSize;       /* Actual input size */
+} BSL_CstlUserData;
+
+/* Check whether overflow occurs when two uint32_t values are multiplied. */
+static bool BSL_IsMultiOverflow(uint32_t x, uint32_t y)
+{
+    if ((x > 0) && (y > 0)) {
+        return ((UINT32_MAX / x) < y);
+    }
+    return false;
+}
 
 /* Linear hash access macros removed - directly use hash->nextLevelSize instead */
 
@@ -389,7 +402,7 @@ static RawList *BSL_HASH_ResizeListArray(BSL_HASH_Hash *hash, uint32_t newCapaci
 {
     RawList *oldListArray = hash->listArray;
 
-    if (IsMultiOverflow(newCapacity, sizeof(RawList)) || IsMultiOverflow(oldCapacity, sizeof(RawList))) {
+    if (BSL_IsMultiOverflow(newCapacity, sizeof(RawList)) || BSL_IsMultiOverflow(oldCapacity, sizeof(RawList))) {
         BSL_ERR_PUSH_ERROR(BSL_INTERNAL_EXCEPTION);
         return NULL;
     }
@@ -449,8 +462,8 @@ static int32_t BSL_HASH_SplitBucket(BSL_HASH_Hash *hash)
 /* Check if resize (split or merge) is needed for linear hashing */
 static int32_t BSL_HASH_CheckResize(BSL_HASH_Hash *hash)
 {
-    if (IsMultiOverflow(hash->hashCount, FACTOR) ||
-        IsMultiOverflow(hash->bucketSize, BSL_HASH_DEFAULT_EXPAND_THRESHOLD)) {
+    if (BSL_IsMultiOverflow(hash->hashCount, FACTOR) ||
+        BSL_IsMultiOverflow(hash->bucketSize, BSL_HASH_DEFAULT_EXPAND_THRESHOLD)) {
         BSL_ERR_PUSH_ERROR(BSL_INTERNAL_EXCEPTION);
         return BSL_INTERNAL_EXCEPTION;
     }
@@ -510,7 +523,7 @@ BSL_HASH_Hash *BSL_HASH_Create(uint32_t bktSize, BSL_HASH_CodeCalcFunc hashFunc,
     }
 
     nextLevelSize = actualBktSize << 1;
-    if (IsMultiOverflow(nextLevelSize + 1, sizeof(RawList))) {
+    if (BSL_IsMultiOverflow(nextLevelSize + 1, sizeof(RawList))) {
         BSL_ERR_PUSH_ERROR(BSL_INTERNAL_EXCEPTION);
         return NULL;
     }
