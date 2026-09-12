@@ -299,8 +299,8 @@ typedef struct {
     uint32_t serverVerifyDataSize;                 /* server verify data size */
     uint32_t renegotiationNum;                     /* the number of renegotiation */
     uint32_t certReqSendTime;                      /* certificate request sending times */
-    uint32_t tls13BasicKeyExMode;                   /* TLS13_KE_MODE_PSK_ONLY || TLS13_KE_MODE_PSK_WITH_DHE ||
-                                                      TLS13_CERT_AUTH_WITH_DHE */
+    uint32_t tls13BasicKeyExMode;                   /* Offered TLS 1.3 profile bitmap before ServerHello; selected
+                                                      TLS13_* profile afterwards. */
     uint16_t negotiatedGroup;                      /* negotiated group */
     uint16_t recordSizeLimit;                      /* read record size limit */
     uint16_t renegoRecordSizeLimit;

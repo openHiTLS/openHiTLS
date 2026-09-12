@@ -89,7 +89,9 @@ int32_t Tls13ServerSendEncryptedExtensionsProcess(TLS_Ctx *ctx)
     BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15876, BSL_LOG_LEVEL_INFO, BSL_LOG_BINLOG_TYPE_RUN,
         "send (d)tls1.3 encrypted extensions success.", 0, 0, 0, 0);
 
-    if (ctx->hsCtx->kxCtx->pskInfo13.psk != NULL) {
+    /* 1. Skip certificate messages only for PSK_ONLY and PSK_WITH_DHE.
+     * 2. Mode 8 continues through certificate authentication even though a PSK is available. */
+    if (!HS_IsTls13CertAuthMode(ctx->negotiatedInfo.tls13BasicKeyExMode)) {
         return HS_ChangeState(ctx, TRY_SEND_FINISH);
     }
 #ifdef HITLS_TLS_FEATURE_CERT_MODE_CLIENT_VERIFY

@@ -86,8 +86,11 @@ typedef int32_t (*HITLS_PskFindSessionCb)(HITLS_Ctx *ctx, const uint8_t *identit
  * @ingroup hitls_psk
  * @brief   TLS1.3 client PSK negotiation callback
  *
+ * Called again after HRR. RFC 9973 retries must return the same identity and PSK.
+ *
  * @param   ctx       [IN] ctx context
- * @param   hashAlgo  [IN] Hash algorithm
+ * @param   hashAlgo  [IN] HITLS_HASH_BUTT initially; otherwise the HRR-selected hash.
+ *                       RFC 9973 retries use the original external PSK's hash instead.
  * @param   id        [IN] Identity information
  * @param   idLen     [IN] Identity information length
  * @param   session   [OUT] session

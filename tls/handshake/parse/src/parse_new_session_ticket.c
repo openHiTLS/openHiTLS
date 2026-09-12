@@ -93,6 +93,13 @@ static int32_t ParseNewSessionTicketExtension(TLS_Ctx *ctx, const uint8_t *buf, 
         if (bufLen - bufOffset < extMsgLen) {
             return HITLS_PARSE_INVALID_MSG_LEN;
         }
+#ifdef HITLS_TLS_FEATURE_CERT_WITH_EXTERNAL_PSK
+        /* 1. Reject extension 33 in tickets; it belongs to the initial ClientHello/ServerHello exchange. */
+        if (extMsgType == HS_EX_TYPE_CERT_WITH_EXTERNAL_PSK) {
+            return ParseErrorProcess(ctx, HITLS_PARSE_UNSUPPORTED_EXTENSION, BINLOG_ID15206,
+                "tls_cert_with_extern_psk is illegal in NewSessionTicket", ALERT_ILLEGAL_PARAMETER);
+        }
+#endif
         uint32_t hsExTypeId = HS_GetExtensionTypeId(extMsgType);
 #ifdef HITLS_TLS_FEATURE_CUSTOM_EXTENSION
         if (hsExTypeId == HS_EX_TYPE_ID_UNRECOGNIZED) {

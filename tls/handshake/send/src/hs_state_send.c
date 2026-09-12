@@ -273,8 +273,11 @@ static int32_t Tls13ProcessSendHandshakeMsg(TLS_Ctx *ctx)
         case TRY_SEND_CERTIFICATE_REQUEST:
             return Tls13ServerSendCertRequestProcess(ctx);
 #endif /* HITLS_TLS_FEATURE_CERT_MODE_CLIENT_VERIFY */
+#ifdef HITLS_TLS_FEATURE_SESSION_TICKET
+        /* 1. Issue tickets only when the ticket send handler is built. */
         case TRY_SEND_NEW_SESSION_TICKET:
             return Tls13SendNewSessionTicketProcess(ctx);
+#endif /* HITLS_TLS_FEATURE_SESSION_TICKET */
 #endif /* HITLS_TLS_HOST_SERVER */
         case TRY_SEND_CERTIFICATE:
 #ifdef HITLS_TLS_HOST_CLIENT

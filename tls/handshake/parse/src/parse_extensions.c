@@ -268,6 +268,10 @@ bool GetExtensionFlagValue(TLS_Ctx *ctx, uint32_t hsExTypeId)
         case HS_EX_TYPE_ID_SIGNATURE_ALGORITHMS_CERT:return ctx->hsCtx->extFlag.haveSignatureAlgorithmsCert;
         case HS_EX_TYPE_ID_CONNECTION_ID:            return ctx->hsCtx->extFlag.haveConnectionId;
         case HS_EX_TYPE_ID_QUIC_TRANSPORT_PARAMETERS:return ctx->hsCtx->extFlag.haveQuicTlsTransportParams;
+#ifdef HITLS_TLS_FEATURE_CERT_WITH_EXTERNAL_PSK
+        /* 1. Report whether extension 33 was sent, so an unsolicited server response can be rejected. */
+        case HS_EX_TYPE_ID_CERT_WITH_EXTERNAL_PSK:   return ctx->hsCtx->extFlag.haveCertWithExternalPsk;
+#endif
         case HS_EX_TYPE_ID_COOKIE:
         case HS_EX_TYPE_ID_RENEGOTIATION_INFO:
         default:

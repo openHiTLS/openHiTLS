@@ -412,11 +412,19 @@ static int32_t ParseClientHelloMsg(FRAME_Type *frameType, const uint8_t *buffer,
             case HS_EX_TYPE_KEY_SHARE:
                 ParseHsExtKeyShare(&buffer[offset], bufLen - offset, &clientHello->keyshares, &offset);
                 break;
+            /* 1. Retain extension 33 fields for inspection and mutation; production parsing checks validity. */
+            case HS_EX_TYPE_CERT_WITH_EXTERNAL_PSK:
+                ParseHsExtArray8(&buffer[offset], bufLen - offset, &clientHello->certWithExternalPsk, &offset);
+                break;
             case HS_EX_TYPE_PRE_SHARED_KEY:
                 ParseHsExtPsk(&buffer[offset], bufLen - offset, &clientHello->psks, &offset);
                 break;
             case HS_EX_TYPE_PSK_KEY_EXCHANGE_MODES:
                 ParseHsExtArray8(&buffer[offset], bufLen - offset, &clientHello->pskModes, &offset);
+                break;
+            /* 2. Retain early_data so RFC 9973 tests can inspect or inject it. */
+            case HS_EX_TYPE_EARLY_DATA:
+                ParseHsExtArray8(&buffer[offset], bufLen - offset, &clientHello->earlyData, &offset);
                 break;
             case HS_EX_TYPE_SUPPORTED_VERSIONS:
                 ParseHsSupportedVersion(&buffer[offset], bufLen - offset, &clientHello->supportedVersion, &offset);
@@ -473,11 +481,15 @@ static void CleanClientHelloMsg(FRAME_ClientHelloMsg *clientHello)
         BSL_SAL_FREE(clientHello->psks.binders.data[i].binder.data);
     }
     BSL_SAL_FREE(clientHello->keyshares.exKeyShares.data);
+    /* 1. Release any extension 33 payload allocated while parsing malformed test messages. */
+    BSL_SAL_FREE(clientHello->certWithExternalPsk.exData.data);
     BSL_SAL_FREE(clientHello->psks.binders.data);
     BSL_SAL_FREE(clientHello->psks.identities.data);
     BSL_SAL_FREE(clientHello->supportedVersion.exData.data);
     BSL_SAL_FREE(clientHello->tls13Cookie.exData.data);
     BSL_SAL_FREE(clientHello->pskModes.exData.data);
+    /* 2. Release the parsed early_data test payload as well. */
+    BSL_SAL_FREE(clientHello->earlyData.exData.data);
     BSL_SAL_FREE(clientHello->caList.list.data);
     BSL_SAL_FREE(clientHello->connectionId.exData.data);
     BSL_SAL_FREE(clientHello->quicTransportParams.exData.data);
@@ -550,6 +562,10 @@ static int32_t ParseServerHelloMsg(const uint8_t *buffer, uint32_t bufLen, FRAME
             case HS_EX_TYPE_KEY_SHARE:
                 ParseHsExtServerKeyShare(&buffer[offset], bufLen - offset, &serverHello->keyShare, &offset);
                 break;
+            /* 1. Retain extension 33 fields for inspection and mutation; production parsing checks validity. */
+            case HS_EX_TYPE_CERT_WITH_EXTERNAL_PSK:
+                ParseHsExtArray8(&buffer[offset], bufLen - offset, &serverHello->certWithExternalPsk, &offset);
+                break;
             case HS_EX_TYPE_PRE_SHARED_KEY:
                 ParseHsExtUint16(&buffer[offset], bufLen - offset, &serverHello->pskSelectedIdentity, &offset);
                 break;
@@ -582,6 +598,8 @@ static void CleanServerHelloMsg(FRAME_ServerHelloMsg *serverHello)
     BSL_SAL_FREE(serverHello->serverName.exData.data);
     BSL_SAL_FREE(serverHello->alpn.exData.data);
     BSL_SAL_FREE(serverHello->keyShare.data.keyExchange.data);
+    /* 1. Release any extension 33 payload allocated while parsing malformed test messages. */
+    BSL_SAL_FREE(serverHello->certWithExternalPsk.exData.data);
     BSL_SAL_FREE(serverHello->tls13Cookie.exData.data);
     BSL_SAL_FREE(serverHello->connectionId.exData.data);
     return;

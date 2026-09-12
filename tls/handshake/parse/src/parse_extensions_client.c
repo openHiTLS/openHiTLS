@@ -60,6 +60,23 @@ static int32_t ParseServerPointFormats(ParsePacket *pkt, ServerHelloMsg *msg)
 }
 
 #if defined(HITLS_TLS_PROTO_TLS13_FAMILY)
+#ifdef HITLS_TLS_FEATURE_CERT_WITH_EXTERNAL_PSK
+static int32_t ParseServerCertWithExternalPsk(ParsePacket *pkt, ServerHelloMsg *msg)
+{
+    /* 1. Reject a second copy of extension 33. */
+    if (msg->haveCertWithExternalPsk) {
+        return ParseDupExtProcess(pkt->ctx, BINLOG_ID15156, BINGLOG_STR("tls_cert_with_extern_psk"));
+    }
+    /* 2. Require an empty body; extension 33 carries no payload. */
+    if (pkt->bufLen != 0) {
+        return ParseErrorProcess(pkt->ctx, HITLS_PARSE_INVALID_MSG_LEN, BINLOG_ID15157,
+            BINGLOG_STR("tls_cert_with_extern_psk must be empty"), ALERT_ILLEGAL_PARAMETER);
+    }
+    /* 3. Record presence for the later protocol and companion-extension checks. */
+    msg->haveCertWithExternalPsk = true;
+    return HITLS_SUCCESS;
+}
+#endif
 #ifdef HITLS_TLS_FEATURE_DTLS_CID
 static int32_t ParseServerConnectionId(ParsePacket *pkt, ServerHelloMsg *msg)
 {
@@ -354,6 +371,11 @@ static int32_t ParseServerExBody(TLS_Ctx *ctx, uint16_t extMsgType, const uint8_
             return ParseServerKeyShare(&pkt, msg);
         case HS_EX_TYPE_PRE_SHARED_KEY:
             return ParseServerPreShareKey(&pkt, msg);
+#ifdef HITLS_TLS_FEATURE_CERT_WITH_EXTERNAL_PSK
+        /* 1. Route the extension body to the duplicate and length checks. */
+        case HS_EX_TYPE_CERT_WITH_EXTERNAL_PSK:
+            return ParseServerCertWithExternalPsk(&pkt, msg);
+#endif
         case HS_EX_TYPE_COOKIE:
             return ParseServerCookie(&pkt, msg);
         case HS_EX_TYPE_SUPPORTED_VERSIONS:
@@ -400,6 +422,25 @@ static int32_t ParseServerExBody(TLS_Ctx *ctx, uint16_t extMsgType, const uint8_
     return ParseErrorProcess(pkt.ctx, HITLS_PARSE_UNSUPPORTED_EXTENSION, 0, NULL, ALERT_UNSUPPORTED_EXTENSION);
 }
 
+#ifdef HITLS_TLS_FEATURE_CERT_WITH_EXTERNAL_PSK
+/* Reject extension 33 in HelloRetryRequest, as required by RFC 9973 Section 5. */
+static int32_t CheckHrrCertWithExternalPsk(TLS_Ctx *ctx, uint32_t extensionId, const ServerHelloMsg *msg)
+{
+    uint32_t hrrRandomLen = 0;
+    const uint8_t *hrrRandom = HS_GetHrrRandom(&hrrRandomLen);
+    /* 1. Check whether this is extension 33 (certificate with external PSK).
+     * 2. Require the full 32-byte HRR random value.
+     * 3. Match that value to identify HRR, which shares the ServerHello format.
+     */
+    if (extensionId == HS_EX_TYPE_ID_CERT_WITH_EXTERNAL_PSK && hrrRandomLen == HS_RANDOM_SIZE &&
+        memcmp(msg->randomValue, hrrRandom, hrrRandomLen) == 0) {
+        return ParseErrorProcess(ctx, HITLS_MSG_HANDLE_UNSUPPORT_EXTENSION_TYPE, BINLOG_ID17311,
+            BINGLOG_STR("tls_cert_with_extern_psk is forbidden in HelloRetryRequest"), ALERT_ILLEGAL_PARAMETER);
+    }
+    return HITLS_SUCCESS;
+}
+#endif /* HITLS_TLS_FEATURE_CERT_WITH_EXTERNAL_PSK */
+
 int32_t ParseServerExtension(TLS_Ctx *ctx, const uint8_t *buf, uint32_t bufLen, ServerHelloMsg *msg)
 {
     /* Initialize the message parsing length */
@@ -418,6 +459,13 @@ int32_t ParseServerExtension(TLS_Ctx *ctx, const uint8_t *buf, uint32_t bufLen, 
         if (ret != HITLS_SUCCESS) {
             return ret;
         }
+#ifdef HITLS_TLS_FEATURE_CERT_WITH_EXTERNAL_PSK
+        /* 1. Check HRR before normal ServerHello dispatch; only ServerHello may acknowledge extension 33. */
+        ret = CheckHrrCertWithExternalPsk(ctx, extensionId, msg);
+        if (ret != HITLS_SUCCESS) {
+            return ret;
+        }
+#endif
 #ifdef HITLS_TLS_FEATURE_CUSTOM_EXTENSION
         if (extensionId == HS_EX_TYPE_ID_UNRECOGNIZED) {
             ret = CheckForDuplicateCustomExtension(ctx, extMsgType,

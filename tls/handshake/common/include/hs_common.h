@@ -56,6 +56,31 @@ enum HITLS_CryptInfoCmd {
     HITLS_CRYPT_INFO_CMD_GET_HASH_LEN,           /* Get the length of the hash, param is HITLS_HashAlgo */
 };
 
+/*
+ * TLS_NegotiatedInfo.tls13BasicKeyExMode is an offered-profile bitmap before
+ * ServerHello and one selected profile afterwards. Keep authentication and
+ * key-establishment decisions explicit instead of inferring authentication
+ * from the presence of PSK bytes.
+ */
+static inline bool HS_IsTls13CertWithExternalPskMode(uint32_t mode)
+{
+    /* 1. Detect the RFC 9973 bit in either an offered bitmap or a selected mode. */
+    return (mode & TLS13_CERT_AUTH_WITH_EXTERNAL_PSK) != 0;
+}
+
+static inline bool HS_IsTls13CertAuthMode(uint32_t mode)
+{
+    /* 1. Both certificate-only and certificate-with-PSK modes require certificate messages. */
+    return (mode & (TLS13_CERT_AUTH_WITH_DHE | TLS13_CERT_AUTH_WITH_EXTERNAL_PSK)) != 0;
+}
+
+static inline bool HS_IsTls13DheMode(uint32_t mode)
+{
+    /* 1. Require DHE for PSK_WITH_DHE and both certificate authentication modes. */
+    return (mode & (TLS13_KE_MODE_PSK_WITH_DHE | TLS13_CERT_AUTH_WITH_DHE |
+        TLS13_CERT_AUTH_WITH_EXTERNAL_PSK)) != 0;
+}
+
 /**
 * @brief Obtain the random number of the hello retry request.
 *

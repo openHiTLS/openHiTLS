@@ -52,6 +52,12 @@ foreach(testcase ${TESTS})
     target_link_libraries(${testname} PRIVATE DEMO_INTF)
 endforeach()
 
+foreach(rfc9973_demo tls13_rfc9973_client tls13_rfc9973_server)
+    target_include_directories(${rfc9973_demo} PRIVATE
+                               ${HITLS_ROOT}/tls/include
+                               ${HITLS_ROOT}/bsl/sal/include)
+endforeach()
+
 # es_raw_dump compiles entropy sources in-tree for its per-source modes and
 # reaches internal headers for the production-path merged capture. Hidden
 # visibility keeps those in-tree copies from preempting the same symbols inside
@@ -59,8 +65,7 @@ endforeach()
 if(TARGET es_raw_dump)
     target_compile_options(es_raw_dump PRIVATE -fvisibility=hidden)
     # Private to this target: the in-tree entropy sources and the internal
-    # headers they pull in. Other demos link the library and see public
-    # headers only.
+    # headers they pull in.
     target_include_directories(es_raw_dump PRIVATE
                                ${HITLS_ROOT}/crypto/include
                                ${HITLS_ROOT}/crypto/entropy/include

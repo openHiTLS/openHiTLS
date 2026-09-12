@@ -874,7 +874,26 @@ static int32_t Tls13ClientCheckServerHello(TLS_Ctx *ctx, const ServerHelloMsg *s
         return ret;
     }
 
-    return ClientCheckCipherSuite(ctx, serverHello, isHrr);
+    ret = ClientCheckCipherSuite(ctx, serverHello, isHrr);
+    if (ret != HITLS_SUCCESS) {
+        return ret;
+    }
+#ifdef HITLS_TLS_FEATURE_CERT_WITH_EXTERNAL_PSK
+    /* 1. Apply the mode 8 hash policy to ServerHello and HRR, even when the server declines PSK. */
+    if (ctx->hsCtx->extFlag.haveCertWithExternalPsk) {
+        HITLS_HashAlgo pskHash = HITLS_HASH_BUTT;
+        UserPskList *externalPsk = ctx->hsCtx->kxCtx->pskInfo13.userPskSess;
+        /* 2. The external PSK was validated before extension 33 was sent. */
+        if (externalPsk == NULL || HS_GetBinderLen(externalPsk->pskSession, &pskHash) == 0 ||
+            pskHash != ctx->negotiatedInfo.cipherSuiteInfo.hashAlg) {
+            BSL_ERR_PUSH_ERROR(HITLS_MSG_HANDLE_PSK_SESSION_INVALID_CIPHER_SUITE);
+            return RETURN_ALERT_PROCESS(ctx, HITLS_MSG_HANDLE_PSK_SESSION_INVALID_CIPHER_SUITE, BINLOG_ID17093,
+                                        "server cipher hash does not match the offered external PSK",
+                                        ALERT_HANDSHAKE_FAILURE);
+        }
+    }
+#endif
+    return HITLS_SUCCESS;
 }
 
 static bool FindGroupInKeyShare(const TLS_Ctx *ctx, uint16_t selectedGroup)
@@ -1212,7 +1231,13 @@ static int32_t ClientProcessPreSharedKey(TLS_Ctx *ctx, const ServerHelloMsg *ser
 static uint32_t GetServertls13AuthType(const ServerHelloMsg *serverHello)
 {
     uint32_t tls13BasicKeyExMode = 0;
-    if (serverHello->haveKeyShare && serverHello->haveSelectedIdentity) {
+    /* 1. Extension 33 selects mode 8 only together with key_share and a selected PSK identity.
+     * 2. Keep mode zero for an incomplete offer, so it cannot become PSK-only authentication. */
+    if (serverHello->haveCertWithExternalPsk) {
+        if (serverHello->haveKeyShare && serverHello->haveSelectedIdentity) {
+            tls13BasicKeyExMode = TLS13_CERT_AUTH_WITH_EXTERNAL_PSK;
+        }
+    } else if (serverHello->haveKeyShare && serverHello->haveSelectedIdentity) {
         tls13BasicKeyExMode = TLS13_KE_MODE_PSK_WITH_DHE;
     } else if (serverHello->haveSelectedIdentity) {
         tls13BasicKeyExMode = TLS13_KE_MODE_PSK_ONLY;
@@ -1235,6 +1260,17 @@ static int32_t Tls13ProcessServerHelloExtension(TLS_Ctx *ctx, const ServerHelloM
     if (ret != HITLS_SUCCESS) {
         return ret;
     }
+
+#ifdef HITLS_TLS_FEATURE_CERT_WITH_EXTERNAL_PSK
+    /* 1. Require TLS 1.3, key_share, and a selected PSK whenever ServerHello acknowledges extension 33.
+     * 2. Send illegal_parameter before processing an incomplete mode 8 selection. */
+    if (serverHello->haveCertWithExternalPsk &&
+        (!serverHello->haveKeyShare || !serverHello->haveSelectedIdentity ||
+        ctx->negotiatedInfo.version != HITLS_VERSION_TLS13)) {
+        return RETURN_ALERT_PROCESS(ctx, HITLS_MSG_HANDLE_HANDSHAKE_FAILURE, BINLOG_ID16141,
+            "RFC 9973 ServerHello is missing a companion extension", ALERT_ILLEGAL_PARAMETER);
+    }
+#endif
 
 #ifdef HITLS_TLS_FEATURE_DTLS_CID
     ret = DTLS_CID_ProcessServerHello(ctx, serverHello->haveConnectionId,

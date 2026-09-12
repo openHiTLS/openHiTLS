@@ -174,7 +174,9 @@ typedef struct {
     FRAME_HsExtArray8 alpn;                 /* alpn */
     FRAME_HsExtArray8 tls13Cookie;           /* tls1.3 cookie */
     FRAME_HsExtKeyShare keyshares;          /* tls1.3 key share */
+    FRAME_HsExtArray8 certWithExternalPsk;  /* RFC 9973 tls_cert_with_extern_psk */
     FRAME_HsExtArray8 pskModes;             /* tls1.3 psk exchange mode */
+    FRAME_HsExtArray8 earlyData;            /* tls1.3 early_data */
     FRAME_HsExtArray16 supportedVersion;     /* tls1.3 support version */
     FRAME_HsExtOfferedPsks psks;            /* tls1.3 psk */
     FRAME_HsExtCaList caList;
@@ -206,6 +208,7 @@ typedef struct {
     FRAME_HsExtArray8 alpn;                 /* alpn */
     FRAME_HsExtUint16 supportedVersion;     /* tls1.3 supported version */
     FRAME_HsExtServerKeyShare keyShare;     /* tls1.3 key share */
+    FRAME_HsExtArray8 certWithExternalPsk;  /* RFC 9973 tls_cert_with_extern_psk */
     FRAME_HsExtUint16 pskSelectedIdentity;  /* tls1.3 psk extension */
     FRAME_HsExtArray8 tls13Cookie;          /* tls1.3 cookie */
     FRAME_HsExtArray8 encryptThenMac;

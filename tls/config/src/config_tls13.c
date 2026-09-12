@@ -65,12 +65,19 @@ int32_t HITLS_CFG_SetKeyExchMode(HITLS_Config *config, uint32_t mode)
     if (config == NULL) {
         return HITLS_NULL_INPUT;
     }
-    if (((mode & TLS13_KE_MODE_PSK_ONLY) == TLS13_KE_MODE_PSK_ONLY) ||
-        ((mode & TLS13_KE_MODE_PSK_WITH_DHE) == TLS13_KE_MODE_PSK_WITH_DHE)) {
-        config->keyExchMode = (mode & (TLS13_KE_MODE_PSK_ONLY | TLS13_KE_MODE_PSK_WITH_DHE));
-        return HITLS_SUCCESS;
+    /* 1. Accept PSK_ONLY and PSK_WITH_DHE; add mode 8 only when RFC 9973 support is built. */
+    uint32_t allowedMode = TLS13_KE_MODE_PSK_ONLY | TLS13_KE_MODE_PSK_WITH_DHE;
+#ifdef HITLS_TLS_FEATURE_CERT_WITH_EXTERNAL_PSK
+    allowedMode |= TLS13_CERT_AUTH_WITH_EXTERNAL_PSK;
+#endif
+    /* 2. Mask unsupported bits. Reject an empty result without changing the existing configuration. */
+    uint32_t selectedMode = mode & allowedMode;
+    if (selectedMode == 0) {
+        return HITLS_CONFIG_INVALID_SET;
     }
-    return HITLS_CONFIG_INVALID_SET;
+    /* 3. Store the recognized bits, preserving the historical masking behavior. */
+    config->keyExchMode = selectedMode;
+    return HITLS_SUCCESS;
 }
 
 uint32_t HITLS_CFG_GetKeyExchMode(HITLS_Config *config)

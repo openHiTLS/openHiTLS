@@ -1003,8 +1003,10 @@ void HITLS_CFG_ClearCAList(HITLS_Config *config);
  * @brief   Set the key exchange mode, which is used by TLS1.3.
  *
  * @param   config  [OUT] TLS link configuration
- * @param   mode  [IN] PSK key exchange mode. Currently, only TLS13_KE_MODE_PSK_ONLY and TLS13_KE_MODE_PSK_WITH_DHE
- * are supported. The corresponding bit is set to 1.
+ * @param   mode  [IN] TLS 1.3 handshake-profile bitmap. The supported bits are TLS13_KE_MODE_PSK_ONLY,
+ * TLS13_KE_MODE_PSK_WITH_DHE, and, when RFC 9973 support is built in, TLS13_CERT_AUTH_WITH_EXTERNAL_PSK.
+ * TLS13_CERT_AUTH_WITH_EXTERNAL_PSK maps to psk_dhe_ke on the wire; it is not a PskKeyExchangeMode value.
+ * Unsupported bits are ignored when at least one supported bit is present.
  * @return  HITLS_SUCCESS, if successful.
  *          For details about other error codes, see hitls_error.h.
  */

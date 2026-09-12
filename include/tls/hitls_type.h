@@ -78,6 +78,14 @@ typedef struct TlsSessCtx HITLS_Session;
 */
 #define TLS13_CERT_AUTH_WITH_DHE 4u
 
+/**
+* @ingroup hitls_type
+*
+* @brief   TLS1.3 certificate authentication with an external PSK and (EC)DHE, as specified by RFC 9973.
+*          This is a local handshake-profile bit. It is not a wire PskKeyExchangeMode value.
+*/
+#define TLS13_CERT_AUTH_WITH_EXTERNAL_PSK 8u
+
 #ifndef HITLS_DTLS_CID_LOCAL_MAX_LEN
 #define HITLS_DTLS_CID_LOCAL_MAX_LEN 32u
 #endif

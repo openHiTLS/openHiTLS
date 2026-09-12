@@ -423,8 +423,11 @@ int32_t Tls13ParseHandShakeMsg(TLS_Ctx *ctx, const uint8_t *hsBodyData, uint32_t
             return ParseEncryptedExtensions(ctx, hsBodyData, hsBodyLen, hsMsg);
         case CERTIFICATE_REQUEST:
             return Tls13ParseCertificateRequest(ctx, hsBodyData, hsBodyLen, hsMsg);
+#ifdef HITLS_TLS_FEATURE_SESSION_TICKET
+        /* 1. Dispatch ticket decoding only when the NewSessionTicket parser is built. */
         case NEW_SESSION_TICKET:
             return ParseNewSessionTicket(ctx, hsBodyData, hsBodyLen, hsMsg);
+#endif /* HITLS_TLS_FEATURE_SESSION_TICKET */
 #endif /* HITLS_TLS_HOST_CLIENT */
         case CERTIFICATE:
             return Tls13ParseCertificate(ctx, hsBodyData, hsBodyLen, hsMsg);

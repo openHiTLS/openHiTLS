@@ -864,6 +864,24 @@ static int32_t ParseClientEarlyData(ParsePacket *pkt, ClientHelloMsg *msg)
     msg->extension.flag.haveEarlyData = true;
     return HITLS_SUCCESS;
 }
+
+#ifdef HITLS_TLS_FEATURE_CERT_WITH_EXTERNAL_PSK
+static int32_t ParseClientCertWithExternalPsk(ParsePacket *pkt, ClientHelloMsg *msg)
+{
+    /* 1. Reject a second copy of extension 33. */
+    if (msg->extension.flag.haveCertWithExternalPsk) {
+        return ParseDupExtProcess(pkt->ctx, BINLOG_ID15190, BINGLOG_STR("tls_cert_with_extern_psk"));
+    }
+    /* 2. Require an empty body; extension 33 carries no payload. */
+    if (pkt->bufLen != 0) {
+        return ParseErrorProcess(pkt->ctx, HITLS_PARSE_INVALID_MSG_LEN, BINLOG_ID15191,
+            BINGLOG_STR("tls_cert_with_extern_psk must be empty"), ALERT_ILLEGAL_PARAMETER);
+    }
+    /* 3. Record presence for the later protocol and companion-extension checks. */
+    msg->extension.flag.haveCertWithExternalPsk = true;
+    return HITLS_SUCCESS;
+}
+#endif
 #endif /* HITLS_TLS_PROTO_TLS13_FAMILY */
 
 #ifdef HITLS_TLS_FEATURE_RECORD_SIZE_LIMIT
@@ -969,6 +987,10 @@ static int32_t ParseClientExBody(TLS_Ctx *ctx, uint16_t extMsgType, const uint8_
         { .exMsgType = HS_EX_TYPE_PRE_SHARED_KEY, .parseFunc = ParseClientPreSharedKey},
         { .exMsgType = HS_EX_TYPE_PSK_KEY_EXCHANGE_MODES, .parseFunc = ParseClientPskKeyExModes},
         { .exMsgType = HS_EX_TYPE_EARLY_DATA, .parseFunc = ParseClientEarlyData},
+#ifdef HITLS_TLS_FEATURE_CERT_WITH_EXTERNAL_PSK
+        /* 1. Parse extension 33 here; receive-side checks validate its companion extensions later. */
+        { .exMsgType = HS_EX_TYPE_CERT_WITH_EXTERNAL_PSK, .parseFunc = ParseClientCertWithExternalPsk},
+#endif
         { .exMsgType = HS_EX_TYPE_COOKIE, .parseFunc = ParseClientCookie},
 #ifdef HITLS_TLS_FEATURE_CERTIFICATE_AUTHORITIES
         { .exMsgType = HS_EX_TYPE_CERTIFICATE_AUTHORITIES, .parseFunc = ParseClientTrustedCaList},

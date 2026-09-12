@@ -111,9 +111,12 @@ static int32_t PackTls13HsMsgBody(TLS_Ctx *ctx, HS_MsgType type, PackPacket *pkt
             ret = Tls13PackCertificateRequest(ctx, pkt);
             break;
 #endif /* HITLS_TLS_FEATURE_CERT_MODE_CLIENT_VERIFY */
+#ifdef HITLS_TLS_FEATURE_SESSION_TICKET
+        /* 1. Dispatch ticket encoding only when the NewSessionTicket packer is built. */
         case NEW_SESSION_TICKET:
             ret = Tls13PackNewSessionTicket(ctx, pkt);
             break;
+#endif /* HITLS_TLS_FEATURE_SESSION_TICKET */
 #endif /* HITLS_TLS_HOST_SERVER */
         case CERTIFICATE:
             ret = Tls13PackCertificate(ctx, pkt);

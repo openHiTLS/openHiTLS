@@ -786,11 +786,15 @@ static int32_t PackClientHelloMsg(const FRAME_ClientHelloMsg *clientHello, uint8
         PackHsExtArrayForList(&clientHello->alpn, &buf[offset], bufLen - offset, &offset);
         PackHsExtArray8(&clientHello->pskModes, &buf[offset], bufLen - offset, &offset);
         PackHsExtKeyShare(&clientHello->keyshares, &buf[offset], bufLen - offset, &offset);
+        /* 1. Preserve extension 33 fields so tests can emit empty, nonempty, or absent offers. */
+        PackHsExtArray8(&clientHello->certWithExternalPsk, &buf[offset], bufLen - offset, &offset);
         PackHsExtArray8(&clientHello->secRenego, &buf[offset], bufLen - offset, &offset);
         PackHsExtOpaqueArray8(&clientHello->sessionTicket, &buf[offset], bufLen - offset, &offset);
         PackHsExtArray8(&clientHello->encryptThenMac, &buf[offset], bufLen - offset, &offset);
         PackHsExtArray8(&clientHello->connectionId, &buf[offset], bufLen - offset, &offset);
         PackHsExtOpaqueArray8(&clientHello->quicTransportParams, &buf[offset], bufLen - offset, &offset);
+        /* 2. Include early_data mutations so tests can exercise its forbidden combination with extension 33. */
+        PackHsExtArray8(&clientHello->earlyData, &buf[offset], bufLen - offset, &offset);
         PackHsExtOfferedPsks(&clientHello->psks, &buf[offset], bufLen - offset, &offset);
         PackHsExtCaList(&clientHello->caList, &buf[offset], bufLen - offset, &offset);
         if (clientHello->extensionLen.state == INITIAL_FIELD) {
@@ -869,6 +873,8 @@ static int32_t PackServerHelloMsg(const FRAME_ServerHelloMsg *serverHello, uint8
     PackHsExtArray8(&serverHello->extendedMasterSecret, &buf[offset], bufLen - offset, &offset);
     PackHsExtArrayForList(&serverHello->alpn, &buf[offset], bufLen - offset, &offset);
     PackHsExtServerKeyShare(&serverHello->keyShare, &buf[offset], bufLen - offset, &offset);
+    /* 1. Preserve extension 33 fields when repacking ServerHello or HRR test messages. */
+    PackHsExtArray8(&serverHello->certWithExternalPsk, &buf[offset], bufLen - offset, &offset);
     // hello retry request key share
     PackHsExtArray8(&serverHello->secRenego, &buf[offset], bufLen - offset, &offset);
     PackHsExtArray8(&serverHello->pointFormats, &buf[offset], bufLen - offset, &offset);

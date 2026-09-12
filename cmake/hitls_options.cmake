@@ -500,6 +500,7 @@ option(HITLS_TLS_FEATURE                                       "TLS Feature" OFF
   option(HITLS_TLS_FEATURE_SNI                                   "TLS Feature SNI" OFF)
   option(HITLS_TLS_FEATURE_PHA                                   "TLS Feature Post-Handshake Authentication" OFF)
   option(HITLS_TLS_FEATURE_PSK                                   "TLS Feature PSK" OFF)
+  option(HITLS_TLS_FEATURE_CERT_WITH_EXTERNAL_PSK                "TLS 1.3 certificate authentication with external PSK (RFC 9973)" OFF)
   option(HITLS_TLS_FEATURE_SECURITY                              "TLS Feature Security" OFF)
   option(HITLS_TLS_FEATURE_INDICATOR                             "TLS Feature Indicator" OFF)
   option(HITLS_TLS_FEATURE_SESSION                               "TLS Feature Session" OFF)

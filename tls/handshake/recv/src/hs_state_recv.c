@@ -348,8 +348,11 @@ static int32_t Tls13ProcessReceivedHandshakeMsg(TLS_Ctx *ctx, HS_Msg *hsMsg)
         case TRY_RECV_KEY_UPDATE:
             return Tls13RecvKeyUpdateProcess(ctx, hsMsg);
 #endif
+#ifdef HITLS_TLS_FEATURE_SESSION_TICKET
+        /* 1. Receive and store tickets only when the ticket receive handler is built. */
         case TRY_RECV_NEW_SESSION_TICKET:
             return Tls13ClientRecvNewSessionTicketProcess(ctx, hsMsg);
+#endif /* HITLS_TLS_FEATURE_SESSION_TICKET */
 #if defined(HITLS_TLS_PROTO_DTLS13) && defined(HITLS_TLS_FEATURE_DTLS_CID)
         case TRY_RECV_NEW_CONNECTION_ID:
             return Dtls13RecvNewConnectionIdProcess(ctx, hsMsg);

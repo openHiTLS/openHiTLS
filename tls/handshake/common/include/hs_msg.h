@@ -176,6 +176,7 @@ typedef struct {
     bool haveRecordSizeLimit;
     bool haveConnectionId;   /* Whether the DTLS connection_id extension exists. */
     bool haveQuicTlsTransportParams; /* Whether the QUIC transport_parameters extension exists. */
+    bool haveCertWithExternalPsk; /* Whether RFC 9973 tls_cert_with_extern_psk exists. */
 } ExtensionFlag;
 
 typedef struct {
@@ -243,7 +244,7 @@ typedef struct {
     bool haveEncryptThenMac;
     bool haveRecordSizeLimit;
     bool haveConnectionId;
-    bool reserved[1]; /* Four-byte alignment */
+    bool haveCertWithExternalPsk;
 } ServerHelloMsg;
 
 /* It is used to transmit hello verify request message */

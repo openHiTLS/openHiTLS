@@ -119,6 +119,13 @@ static int32_t ParseEncryptedSupportGroups(ParsePacket *pkt, EncryptedExtensions
 static int32_t ParseEncryptedExBody(TLS_Ctx *ctx, uint16_t extMsgType, const uint8_t *buf, uint32_t extMsgLen,
     EncryptedExtensions *msg)
 {
+#ifdef HITLS_TLS_FEATURE_CERT_WITH_EXTERNAL_PSK
+    /* 1. Reject extension 33 here: the server must acknowledge it in ServerHello. */
+    if (extMsgType == HS_EX_TYPE_CERT_WITH_EXTERNAL_PSK) {
+        return ParseErrorProcess(ctx, HITLS_PARSE_UNSUPPORTED_EXTENSION, BINLOG_ID16982,
+            "tls_cert_with_extern_psk is illegal in EncryptedExtensions", ALERT_ILLEGAL_PARAMETER);
+    }
+#endif
     uint32_t bufOffset = 0u;
     ParsePacket pkt = {.ctx = ctx, .buf = buf, .bufLen = extMsgLen, .bufOffset = &bufOffset};
     switch (extMsgType) {

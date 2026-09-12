@@ -601,8 +601,8 @@ static bool IsNeedPackEcExtension(const TLS_Ctx *ctx)
     const TLS_Config *config = &(ctx->config.tlsConfig);
 #if defined(HITLS_TLS_PROTO_TLS13_FAMILY)
     if (IS_TLS13_FAMILY_VERSION(GET_VERSION_FROM_CTX(ctx))) {
-        uint32_t needKeyShareMode = TLS13_KE_MODE_PSK_WITH_DHE | TLS13_CERT_AUTH_WITH_DHE;
-        if ((ctx->negotiatedInfo.tls13BasicKeyExMode & needKeyShareMode) != 0) {
+        /* 1. Include supported_groups for every DHE candidate, including certificate with external PSK. */
+        if (HS_IsTls13DheMode(ctx->negotiatedInfo.tls13BasicKeyExMode)) {
             return true;
         }
     }
@@ -721,10 +721,12 @@ static int32_t PackClientPskKeyExModes(const TLS_Ctx *ctx, PackPacket *pkt)
     uint16_t exMsgHeaderLen = sizeof(uint8_t);
     uint16_t exMsgDataLen = 0;
 
-    if ((bool)(configKxMode & TLS13_KE_MODE_PSK_WITH_DHE)) {
+    /* 1. Mode 8 also advertises psk_dhe_ke. It does not add a new value to this wire extension. */
+    if ((bool)(configKxMode & (TLS13_KE_MODE_PSK_WITH_DHE | TLS13_CERT_AUTH_WITH_EXTERNAL_PSK))) {
         exMsgDataLen++;
         allowDhe = true;
     }
+    /* 2. Advertise psk_ke only when PSK_ONLY is configured. */
     if ((bool)(configKxMode & TLS13_KE_MODE_PSK_ONLY)) {
         exMsgDataLen++;
         allowOnly = true;
@@ -752,8 +754,8 @@ static int32_t PackClientPskKeyExModes(const TLS_Ctx *ctx, PackPacket *pkt)
 
 static int32_t PackClientKeyShare(const TLS_Ctx *ctx, PackPacket *pkt)
 {
-    uint32_t needKeyShareMode = TLS13_KE_MODE_PSK_WITH_DHE | TLS13_CERT_AUTH_WITH_DHE;
-    if ((ctx->negotiatedInfo.tls13BasicKeyExMode & needKeyShareMode) == 0) {
+    /* 1. Mode 8 needs key_share too; omit it only when no DHE candidate remains. */
+    if (!HS_IsTls13DheMode(ctx->negotiatedInfo.tls13BasicKeyExMode)) {
         return HITLS_SUCCESS;
     }
 
@@ -813,6 +815,32 @@ static int32_t PackClientKeyShare(const TLS_Ctx *ctx, PackPacket *pkt)
     ctx->hsCtx->extFlag.haveKeyShare = true;
     return HITLS_SUCCESS;
 }
+
+#ifdef HITLS_TLS_FEATURE_CERT_WITH_EXTERNAL_PSK
+static int32_t PackClientCertWithExternalPsk(const TLS_Ctx *ctx, PackPacket *pkt)
+{
+    /* 1. Encode extension 33 with an empty body. */
+    int32_t ret = PackExtensionHeader(HS_EX_TYPE_CERT_WITH_EXTERNAL_PSK, 0, pkt);
+    /* 2. Record the offer only after packing succeeds, for later ServerHello response checks. */
+    if (ret == HITLS_SUCCESS) {
+        ctx->hsCtx->extFlag.haveCertWithExternalPsk = true;
+    }
+    return ret;
+}
+
+static bool IsClientCertWithExternalPskOffer(const TLS_Ctx *ctx)
+{
+    /* 1. Require an eligible mode 8 candidate in TLS 1.3; exclude DTLS. */
+    bool isOffer = GET_VERSION_FROM_CTX(ctx) == HITLS_VERSION_TLS13 &&
+        HS_IsTls13CertWithExternalPskMode(ctx->negotiatedInfo.tls13BasicKeyExMode) &&
+        !IS_SUPPORT_DATAGRAM(ctx->config.tlsConfig.originVersionMask);
+#ifdef HITLS_TLS_FEATURE_QUIC_TLS
+    /* 2. Suppress extension 33 for QUIC, which does not negotiate TLS PSK exchange modes. */
+    isOffer = isOffer && !QUIC_TLS_IsMode(ctx);
+#endif
+    return isOffer;
+}
+#endif
 
 static uint32_t GetPreSharedKeyExtLen(const PskInfo13 *pskInfo)
 {
@@ -1013,6 +1041,11 @@ static int32_t PackClientExtensions(const TLS_Ctx *ctx, PackPacket *pkt)
 #if defined(HITLS_TLS_PROTO_TLS13_FAMILY)
         { EXTENSION_MSG(HS_EX_TYPE_PSK_KEY_EXCHANGE_MODES, isTls13, PackClientPskKeyExModes) },
         { EXTENSION_MSG(HS_EX_TYPE_KEY_SHARE, isTls13, PackClientKeyShare) },
+#ifdef HITLS_TLS_FEATURE_CERT_WITH_EXTERNAL_PSK
+        /* 1. Add extension 33 only for an eligible offer; the PSK extension is packed separately afterward. */
+        { EXTENSION_MSG(HS_EX_TYPE_CERT_WITH_EXTERNAL_PSK, IsClientCertWithExternalPskOffer(ctx),
+            PackClientCertWithExternalPsk) },
+#endif
 #ifdef HITLS_TLS_FEATURE_CERTIFICATE_AUTHORITIES
         { EXTENSION_MSG(HS_EX_TYPE_CERTIFICATE_AUTHORITIES, isTls13 && tlsConfig->caList != NULL, PackClientCAList) },
 #endif /* HITLS_TLS_FEATURE_CERTIFICATE_AUTHORITIES */
@@ -1082,6 +1115,15 @@ int32_t PackClientExtension(const TLS_Ctx *ctx, PackPacket *pkt)
 }
 #endif /* HITLS_TLS_HOST_CLIENT */
 #ifdef HITLS_TLS_HOST_SERVER
+#ifdef HITLS_TLS_FEATURE_CERT_WITH_EXTERNAL_PSK
+static int32_t PackServerCertWithExternalPsk(const TLS_Ctx *ctx, PackPacket *pkt)
+{
+    (void)ctx;
+    /* 1. Acknowledge certificate-with-external-PSK selection with an empty extension 33. */
+    return PackExtensionHeader(HS_EX_TYPE_CERT_WITH_EXTERNAL_PSK, 0, pkt);
+}
+#endif
+
 static bool IsServerNeedPackEcExtension(const TLS_Ctx *ctx)
 {
     const TLS_NegotiatedInfo *negotiatedInfo = &(ctx->negotiatedInfo);
@@ -1399,6 +1441,12 @@ static int32_t PackServerExtensions(const TLS_Ctx *ctx, PackPacket *pkt)
 #endif /* HITLS_TLS_FEATURE_ALPN */
 #if defined(HITLS_TLS_PROTO_TLS13_FAMILY)
         { EXTENSION_MSG(HS_EX_TYPE_KEY_SHARE, isTls13, PackServerKeyShare) },
+#ifdef HITLS_TLS_FEATURE_CERT_WITH_EXTERNAL_PSK
+        /* 1. Send extension 33 only when TLS 1.3 selected mode 8; certificate fallback omits it. */
+        { EXTENSION_MSG(HS_EX_TYPE_CERT_WITH_EXTERNAL_PSK,
+            ctx->negotiatedInfo.version == HITLS_VERSION_TLS13 &&
+            HS_IsTls13CertWithExternalPskMode(negoInfo->tls13BasicKeyExMode), PackServerCertWithExternalPsk) },
+#endif
 #endif /* HITLS_TLS_PROTO_TLS13_FAMILY */
 #if defined(HITLS_TLS_PROTO_TLS_BASIC) || defined(HITLS_TLS_PROTO_DTLS12)
         { EXTENSION_MSG(HS_EX_TYPE_RENEGOTIATION_INFO, negoInfo->isSecureRenegotiation, PackServerSecRenegoInfo) },

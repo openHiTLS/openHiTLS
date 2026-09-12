@@ -973,6 +973,10 @@ uint32_t HS_GetExtensionTypeId(uint32_t hsExtensionsType)
         case HS_EX_TYPE_POST_HS_AUTH: return HS_EX_TYPE_ID_POST_HS_AUTH;
         case HS_EX_TYPE_KEY_SHARE: return HS_EX_TYPE_ID_KEY_SHARE;
         case HS_EX_TYPE_CONNECTION_ID: return HS_EX_TYPE_ID_CONNECTION_ID;
+#ifdef HITLS_TLS_FEATURE_CERT_WITH_EXTERNAL_PSK
+        /* 1. Map wire type 33 to the internal extension-mask bit when RFC 9973 is enabled. */
+        case HS_EX_TYPE_CERT_WITH_EXTERNAL_PSK: return HS_EX_TYPE_ID_CERT_WITH_EXTERNAL_PSK;
+#endif
 #ifdef HITLS_TLS_FEATURE_QUIC_TLS
         case HS_EX_TYPE_QUIC_TRANSPORT_PARAMETERS: return HS_EX_TYPE_ID_QUIC_TRANSPORT_PARAMETERS;
 #endif

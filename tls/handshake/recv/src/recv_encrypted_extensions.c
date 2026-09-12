@@ -213,10 +213,10 @@ int32_t Tls13ClientRecvEncryptedExtensionsProcess(TLS_Ctx *ctx, const HS_Msg *ms
     }
 #endif
 
-    /* In psk_only mode, the 'server verify data' needs to be calculated
-     * for verifying the 'finished' message from the server. */
-    PskInfo13 *pskInfo = &ctx->hsCtx->kxCtx->pskInfo13;
-    if ((pskInfo->psk != NULL)) {
+    /* 1. PSK_ONLY and PSK_WITH_DHE proceed directly to server Finished verification.
+     * 2. Both certificate modes, including mode 8, must receive the certificate flight first.
+     */
+    if (!HS_IsTls13CertAuthMode(ctx->negotiatedInfo.tls13BasicKeyExMode)) {
         ret = VERIFY_Tls13CalcVerifyData(ctx, false);
         if (ret != HITLS_SUCCESS) {
             BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15856, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
