@@ -197,12 +197,23 @@ if(NOT HITLS_SKIP_CONFIG_CHECK)
                 "(HITLS_CRYPTO_DRBG_HASH/HITLS_CRYPTO_DRBG_HMAC/HITLS_CRYPTO_DRBG_CTR)"
             )
         endif()
-        if(HITLS_CRYPTO_DRBG_CTR AND NOT HITLS_CRYPTO_DRBG_GM AND NOT HITLS_CRYPTO_CMAC_AES)
+        set(_hitls_seed_drbg_alg "${HITLS_SEED_DRBG_INIT_RAND_ALG}")
+        if(_hitls_seed_drbg_alg STREQUAL "")
+            if(HITLS_CRYPTO_AES)
+                set(_hitls_seed_drbg_alg "CRYPT_RAND_AES256_CTR")
+            else()
+                hitls_add_dependency_warning(
+                    "[HiTLS] HITLS_CRYPTO_ENTROPY requires HITLS_SEED_DRBG_INIT_RAND_ALG to be set when "
+                    "HITLS_CRYPTO_AES is disabled. (HITLS_SEED_DRBG_INIT_RAND_ALG)"
+                )
+            endif()
+        endif()
+        if(_hitls_seed_drbg_alg MATCHES "^CRYPT_RAND_AES(128|192|256)_CTR$" AND NOT HITLS_CRYPTO_CMAC_AES)
             hitls_add_dependency_warning(
-                "[HiTLS] Configure the conditioning function. Currently, CRYPT_MAC_CMAC_AES is supported. "
-                "others may be supported in the future. (HITLS_CRYPTO_CMAC_AES)"
+                "[HiTLS] Seed DRBG ${_hitls_seed_drbg_alg} entropy conditioning requires HITLS_CRYPTO_CMAC_AES."
             )
         endif()
+        unset(_hitls_seed_drbg_alg)
     endif()
 
     # CodecsKey
