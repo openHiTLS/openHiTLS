@@ -588,6 +588,7 @@ void SDV_X509_CRL_FILE_VERIFY_FUNC_TC004(char *caPath, char *crlPath, char *cert
 {
     uint64_t flag = HITLS_X509_VFY_FLAG_DISABLE_TIME_CHECK;
     TestMemInit();
+    HITLS_X509_List *certChain = NULL;
     HITLS_X509_StoreCtx *storeCtx = HITLS_X509_StoreCtxNew();
     ASSERT_TRUE(storeCtx != NULL);
     storeCtx->verifyParam.flags = flags; // HITLS_X509_VFY_FLAG_CRL_ALL or HITLS_X509_VFY_FLAG_CRL_DEV
@@ -610,7 +611,7 @@ void SDV_X509_CRL_FILE_VERIFY_FUNC_TC004(char *caPath, char *crlPath, char *cert
     ret = HITLS_X509_VerifyCrl(storeCtx, storeCtx->store->certs, NULL);
     ASSERT_EQ(ret, crlVerResult);
 
-    HITLS_X509_List *certChain = BSL_LIST_New(sizeof(HITLS_X509_Cert *));
+    certChain = BSL_LIST_New(sizeof(HITLS_X509_Cert *));
     ASSERT_TRUE(certChain != NULL);
 
     ret = HITLS_X509_CertParseFile(BSL_FORMAT_PEM, certPath, &testCert);
@@ -637,6 +638,7 @@ void SDV_X509_CRL_FILE_VERIFY_FUNC_TC005(char *rootCaPath, char *caPath, char *r
     char *certPath, int flags, int certVerResult, int crlVerResult, int isUseSm2UserId)
 {
     TestMemInit();
+    HITLS_X509_List *certChain = NULL;
     HITLS_X509_StoreCtx *storeCtx = HITLS_X509_StoreCtxNew();
     ASSERT_TRUE(storeCtx != NULL);
     storeCtx->verifyParam.flags = flags; // HITLS_X509_VFY_FLAG_CRL_ALL or HITLS_X509_VFY_FLAG_CRL_DEV
@@ -665,7 +667,7 @@ void SDV_X509_CRL_FILE_VERIFY_FUNC_TC005(char *rootCaPath, char *caPath, char *r
     ret = HITLS_X509_VerifyCrl(storeCtx, storeCtx->store->certs, NULL);
     ASSERT_EQ(ret, crlVerResult);
 
-    HITLS_X509_List *certChain = BSL_LIST_New(sizeof(HITLS_X509_Cert *));
+    certChain = BSL_LIST_New(sizeof(HITLS_X509_Cert *));
     ASSERT_TRUE(certChain != NULL);
 
     ret = HITLS_X509_CertParseFile(BSL_FORMAT_PEM, certPath, &testCert);
