@@ -30,7 +30,6 @@ extern "C" {
 #endif
 
 #define APP_MAX_PASS_LENGTH 1024
-#define APP_MIN_PASS_LENGTH 1
 #define APP_FILE_MAX_SIZE_KB 256
 #define APP_FILE_MAX_SIZE (APP_FILE_MAX_SIZE_KB * 1024) // 256KB
 #define APP_HEX_TO_BYTE 2
@@ -52,40 +51,59 @@ extern "C" {
  * @param password      [IN] Key entered by the user
  * @param passwordLen   [IN] Length of the key entered by the user
  *
- * @retval The key is valid：HITLS_APP_SUCCESS
- * @retval The key is invalid：HITLS_APP_PASSWD_FAIL
+ * @return HITLS_APP_SUCCESS on success, error code otherwise
  */
 int32_t HITLS_APP_CheckPasswd(const uint8_t *password, const uint32_t passwordLen);
 
-int32_t HITLS_APP_Passwd(char *buf, int32_t bufMaxLen, int32_t flag);
-
-void HITLS_APP_PrintPassErrlog(void);
 /**
  * @ingroup apps
  *
- * @brief Obtain the password from the command line argument.
+ * @brief Obtain a password from the source specified by the command line argument.
  *
- * @attention pass: The memory needs to be released automatically.
+ * @attention The password length is measured in bytes, excluding the terminating null byte. The maximum length is
+ *            fixed at APP_MAX_PASS_LENGTH. minLen must be in the range [0, APP_MAX_PASS_LENGTH). On success, the
+ *            password length is in the range [minLen, APP_MAX_PASS_LENGTH].
+ * @attention If passArg is NULL, no password is read and minLen is ignored. The caller must clear and free *pass.
  *
  * @param passArg        [IN] Command line password parameters
+ * @param minLen         [IN] Minimum password length
  * @param pass           [OUT] Parsed password
  *
- * @retval The key is valid：HITLS_APP_SUCCESS
- * @retval The key is invalid：HITLS_APP_PASSWD_FAIL
+ * @return HITLS_APP_SUCCESS on success, error code otherwise
  */
-int32_t HITLS_APP_ParsePasswd(const char *passArg, char **pass);
+int32_t HITLS_APP_ParsePasswd(const char *passArg, uint32_t minLen, char **pass);
 
 /**
  * @ingroup apps
  *
- * @brief Get the password from the command line argument.
+ * @brief Get the password from the terminal.
+ *
+ * @attention The password length is measured in bytes, excluding the terminating null byte. The maximum length is
+ *            fixed at APP_MAX_PASS_LENGTH. minLen must be in the range [0, APP_MAX_PASS_LENGTH). On success, the
+ *            password length is in the range [minLen, APP_MAX_PASS_LENGTH]. The caller must clear and free *pass.
  *
  * @param param            [IN] Password parameter
- * @param passin           [OUT] Parsed password
- * @param passLen          [OUT] Length of the password
+ * @param minLen           [IN] Minimum password length
+ * @param pass             [OUT] Password
  * @return HITLS_APP_SUCCESS on success, error code otherwise
  */
-int32_t HITLS_APP_GetPasswd(BSL_UI_ReadPwdParam *param, char **passin, uint32_t *passLen);
+int32_t HITLS_APP_GetPasswdFromTerminal(BSL_UI_ReadPwdParam *param, uint32_t minLen, char **pass);
+
+/**
+ * @ingroup apps
+ *
+ * @brief Ensure that a password is available and valid.
+ *
+ * @attention If *pass is NULL, the password is read from the terminal. Otherwise, the existing password is used.
+ *            The password length is measured in bytes, excluding the terminating null byte. The maximum length is
+ *            fixed at APP_MAX_PASS_LENGTH. minLen must be in the range [0, APP_MAX_PASS_LENGTH).
+ *
+ * @param param            [IN] Terminal password parameter, required when *pass is NULL
+ * @param minLen           [IN] Minimum password length
+ * @param pass             [IN/OUT] Password
+ * @return HITLS_APP_SUCCESS on success, error code otherwise
+ */
+int32_t HITLS_APP_EnsurePasswd(BSL_UI_ReadPwdParam *param, uint32_t minLen, char **pass);
 
 /**
  * @ingroup apps

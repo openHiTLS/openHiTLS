@@ -191,7 +191,7 @@ int32_t HITLS_RsaMain(int argc, char *argv[])
         mainRet = HITLS_APP_OPT_UNKOWN;
         goto end;
     }
-    mainRet = HITLS_APP_ParsePasswd(optCtx.input.passInArg, &optCtx.passin);
+    mainRet = HITLS_APP_ParsePasswd(optCtx.input.passInArg, 0, &optCtx.passin);
     if (mainRet != HITLS_APP_SUCCESS) {
         goto end;
     }

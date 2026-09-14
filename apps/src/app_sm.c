@@ -133,10 +133,6 @@ static int32_t CheckPassword(const uint8_t *password, const uint32_t passwordLen
     uint32_t hasUppercase = 0;
     uint32_t hasDigit = 0;
     uint32_t hasSpecial = 0;
-    if (passwordLen < 8) { // 8: minimum length of password
-        AppPrintError("The password must be at least 8 characters long.\n");
-        return HITLS_APP_PASSWD_FAIL;
-    }
     for (uint32_t i = 0; i < passwordLen; i++) {
         if (password[i] < '!' || password[i] > '~') {
             AppPrintError("The password can contain only the following characters:\n");
@@ -169,10 +165,10 @@ static int32_t GetPassword(char **password)
     char *pwd = NULL;
     uint32_t pwdLen;
     BSL_UI_ReadPwdParam param = {"password", NULL, true};
-    if (HITLS_APP_GetPasswd(&param, &pwd, &pwdLen) != HITLS_APP_SUCCESS) {
-        AppPrintError("Failed to read passwd from stdin.\n");
+    if (HITLS_APP_GetPasswdFromTerminal(&param, 8, &pwd) != HITLS_APP_SUCCESS) {
         return HITLS_APP_PASSWD_FAIL;
     }
+    pwdLen = (uint32_t)strlen(pwd);
     if (CheckPassword((uint8_t *)pwd, pwdLen) != HITLS_APP_SUCCESS) {
         BSL_SAL_ClearFree(pwd, pwdLen);
         AppPrintError("Failed to check passwd.\n");

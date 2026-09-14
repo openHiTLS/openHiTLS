@@ -75,10 +75,10 @@ int32_t HITLS_APP_Passwd(char *buf, int32_t bufMaxLen, int32_t flag)
     if (buf == NULL) {
         return errLen;
     }
-    if (HITLS_APP_GetPasswd(&param, &pwd, &pwdLen) != HITLS_APP_SUCCESS) {
-        AppPrintError("Failed to read passwd from stdin.\n");
+    if (HITLS_APP_GetPasswdFromTerminal(&param, 1, &pwd) != HITLS_APP_SUCCESS) {
         return errLen;
     }
+    pwdLen = (uint32_t)strlen(pwd);
     if (HITLS_APP_CheckPasswd((uint8_t *)pwd, pwdLen) != HITLS_APP_SUCCESS) {
         BSL_SAL_ClearFree(pwd, pwdLen);
         AppPrintError("Failed to check passwd.\n");

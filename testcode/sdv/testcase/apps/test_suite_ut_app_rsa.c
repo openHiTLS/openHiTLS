@@ -43,7 +43,7 @@ STUB_DEFINE_RET4(int32_t, BSL_UIO_Ctrl, BSL_UIO *, int32_t, int32_t, void *);
 STUB_DEFINE_RET0(char *, HITLS_APP_OptGetValueStr);
 STUB_DEFINE_RET4(int32_t, HITLS_APP_OptWriteUio, BSL_UIO *, uint8_t *, uint32_t, int32_t);
 STUB_DEFINE_RET5(int32_t, CRYPT_EAL_EncodeBuffKey, CRYPT_EAL_PkeyCtx *, const CRYPT_EncodeParam *, int32_t, int32_t, BSL_Buffer *);
-STUB_DEFINE_RET3(int32_t, HITLS_APP_GetPasswd, BSL_UI_ReadPwdParam *, char **, uint32_t *);
+STUB_DEFINE_RET3(int32_t, HITLS_APP_GetPasswdFromTerminal, BSL_UI_ReadPwdParam *, uint32_t, char **);
 
 #define PRV_PATH "../testdata/certificate/rsa_key/prvKey.pem"
 #define PRV_PASSWD_PATH "../testdata/cert/asn1/keypem/rsa-pri-key-p8-2048.pem"
@@ -481,12 +481,11 @@ EXIT:
 }
 /* END_CASE */
 
-int32_t STUB_HITLS_APP_GetPasswd(BSL_UI_ReadPwdParam *param, char **passin, uint32_t *passLen)
+int32_t STUB_HITLS_APP_GetPasswdFromTerminal(BSL_UI_ReadPwdParam *param, uint32_t minLen, char **passin)
 {
     (void)param;
-    *passin = (char *)malloc(6);
-    memcpy(*passin, "123456", 6);
-    *passLen = 6;
+    (void)minLen;
+    *passin = strdup("123456");
     return HITLS_APP_SUCCESS;
 }
 
@@ -494,7 +493,7 @@ int32_t STUB_HITLS_APP_GetPasswd(BSL_UI_ReadPwdParam *param, char **passin, uint
 void UT_HITLS_APP_rsa_T0011(void)
 {
     int savedStdoutFd = dup(STDOUT_FILENO);
-    STUB_REPLACE(HITLS_APP_GetPasswd, STUB_HITLS_APP_GetPasswd);;
+    STUB_REPLACE(HITLS_APP_GetPasswdFromTerminal, STUB_HITLS_APP_GetPasswdFromTerminal);;
     char *argv[][10] = {
         {"rsa", "-in", PRV_PASSWD_PATH, "-noout"},
         {"rsa", "-in", PRV_DER_PATH, "-noout"},
@@ -519,7 +518,7 @@ EXIT:
         close(savedStdoutFd);
     }
     AppPrintErrorUioUnInit();
-    STUB_RESTORE(HITLS_APP_GetPasswd);
+    STUB_RESTORE(HITLS_APP_GetPasswdFromTerminal);
     return;
 }
 /* END_CASE */

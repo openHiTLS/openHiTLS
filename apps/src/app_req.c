@@ -279,8 +279,9 @@ static int32_t ParseReqOpt(ReqOptCtx *optCtx)
         ret = HITLS_APP_OPT_UNKOWN;
     }
 
-    if ((HITLS_APP_ParsePasswd(optCtx->keyAndSignOpt.passInArg, &optCtx->passin) != HITLS_APP_SUCCESS) ||
-        (HITLS_APP_ParsePasswd(optCtx->keyAndSignOpt.passOutArg, &optCtx->passout) != HITLS_APP_SUCCESS)) {
+    if ((HITLS_APP_ParsePasswd(optCtx->keyAndSignOpt.passInArg, 0, &optCtx->passin) != HITLS_APP_SUCCESS) ||
+        (HITLS_APP_ParsePasswd(optCtx->keyAndSignOpt.passOutArg, 0, &optCtx->passout) !=
+        HITLS_APP_SUCCESS)) {
         return HITLS_APP_PASSWD_FAIL;
     }
     return ret;

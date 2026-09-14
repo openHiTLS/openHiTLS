@@ -713,7 +713,7 @@ static int32_t LoadRelatedFiles(X509OptCtx *optCtx)
         return HITLS_APP_X509_FAIL;
     }
 
-    if (HITLS_APP_ParsePasswd(optCtx->generalOpts.passInArg, &optCtx->passin) != HITLS_APP_SUCCESS) {
+    if (HITLS_APP_ParsePasswd(optCtx->generalOpts.passInArg, 0, &optCtx->passin) != HITLS_APP_SUCCESS) {
         return HITLS_APP_PASSWD_FAIL;
     }
 

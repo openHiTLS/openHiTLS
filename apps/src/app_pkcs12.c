@@ -701,9 +701,10 @@ static int32_t PrintPkcs12(Pkcs12OptCtx *opt)
     uint8_t *passOutBuf = NULL;
     uint32_t passOutBufLen = 0;
     BSL_UI_ReadPwdParam passParam = { "Export passwd", opt->genOpt.outFile, true };
-    if (HITLS_APP_GetPasswd(&passParam, &opt->passout, &passOutBufLen) != HITLS_APP_SUCCESS) {
+    if (HITLS_APP_EnsurePasswd(&passParam, 1, &opt->passout) != HITLS_APP_SUCCESS) {
         return HITLS_APP_PASSWD_FAIL;
     }
+    passOutBufLen = (uint32_t)strlen(opt->passout);
     passOutBuf = (uint8_t *)opt->passout;
     HITLS_PKCS12_EncodeParam encodeParam = { 0 };
     CRYPT_Pbkdf2Param certPbParam = { 0 };
@@ -887,9 +888,10 @@ static int32_t ParsePkcs12File(Pkcs12OptCtx *opt)
 {
     BSL_UI_ReadPwdParam passParam = { "Import passwd", NULL, false };
     BSL_Buffer encPwd = { (uint8_t *)"", 0 };
-    if (HITLS_APP_GetPasswd(&passParam, &opt->passin, &encPwd.dataLen) != HITLS_APP_SUCCESS) {
+    if (HITLS_APP_EnsurePasswd(&passParam, 1, &opt->passin) != HITLS_APP_SUCCESS) {
         return HITLS_APP_PASSWD_FAIL;
     }
+    encPwd.dataLen = (uint32_t)strlen(opt->passin);
     encPwd.data = (uint8_t *)opt->passin;
     HITLS_PKCS12_PwdParam param = {
         .encPwd = &encPwd,
@@ -1062,8 +1064,8 @@ static void UnInitPkcs12OptCtx(Pkcs12OptCtx *optCtx)
 static int32_t HandlePKCS12Opt(Pkcs12OptCtx *opt)
 {
     // 1.Read and Parse pass arg
-    if ((HITLS_APP_ParsePasswd(opt->genOpt.passInArg, &opt->passin) != HITLS_APP_SUCCESS) ||
-        (HITLS_APP_ParsePasswd(opt->genOpt.passOutArg, &opt->passout) != HITLS_APP_SUCCESS)) {
+    if ((HITLS_APP_ParsePasswd(opt->genOpt.passInArg, 0, &opt->passin) != HITLS_APP_SUCCESS) ||
+        (HITLS_APP_ParsePasswd(opt->genOpt.passOutArg, 0, &opt->passout) != HITLS_APP_SUCCESS)) {
         return HITLS_APP_PASSWD_FAIL;
     }
 

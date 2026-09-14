@@ -45,3 +45,48 @@ UT_HITLS_APP_dgst_STDIN_TC001:"../testdata/cert/asn1/pkcs8_unencrypted/mldsa_44_
 
 UT_HITLS_APP_dgst_SIGNFMT_TC001
 UT_HITLS_APP_dgst_SIGNFMT_TC001:
+
+UT_HITLS_APP_dgst_SIGN_VERIFY_TC001 sm2 sm3
+UT_HITLS_APP_dgst_SIGN_VERIFY_TC001:CRYPT_PKEY_SM2:"sm3":"../testdata/apps/sm2/prv.pem":"../testdata/apps/sm2/pub.pem":HITLS_APP_SUCCESS:HITLS_APP_SUCCESS
+
+UT_HITLS_APP_dgst_SIGN_VERIFY_TC001 rsa md5
+UT_HITLS_APP_dgst_SIGN_VERIFY_TC001:CRYPT_PKEY_RSA:"md5":"../testdata/cert/asn1/keypem/rsa-pri-key-p8.pem":"../testdata/cert/asn1/keypem/rsa-pub-key-p8.pem":HITLS_APP_SUCCESS:HITLS_APP_SUCCESS
+
+UT_HITLS_APP_dgst_SIGN_VERIFY_TC001 rsa sha1
+UT_HITLS_APP_dgst_SIGN_VERIFY_TC001:CRYPT_PKEY_RSA:"sha1":"../testdata/cert/asn1/keypem/rsa-pri-key-p8.pem":"../testdata/cert/asn1/keypem/rsa-pub-key-p8.pem":HITLS_APP_SUCCESS:HITLS_APP_SUCCESS
+
+UT_HITLS_APP_dgst_SIGN_VERIFY_TC001 rsa sha224
+UT_HITLS_APP_dgst_SIGN_VERIFY_TC001:CRYPT_PKEY_RSA:"sha224":"../testdata/cert/asn1/keypem/rsa-pri-key-p8.pem":"../testdata/cert/asn1/keypem/rsa-pub-key-p8.pem":HITLS_APP_SUCCESS:HITLS_APP_SUCCESS
+
+UT_HITLS_APP_dgst_SIGN_VERIFY_TC001 rsa sha256
+UT_HITLS_APP_dgst_SIGN_VERIFY_TC001:CRYPT_PKEY_RSA:"sha256":"../testdata/cert/asn1/keypem/rsa-pri-key-p8.pem":"../testdata/cert/asn1/keypem/rsa-pub-key-p8.pem":HITLS_APP_SUCCESS:HITLS_APP_SUCCESS
+
+UT_HITLS_APP_dgst_SIGN_VERIFY_TC001 rsa sha384
+UT_HITLS_APP_dgst_SIGN_VERIFY_TC001:CRYPT_PKEY_RSA:"sha384":"../testdata/cert/asn1/keypem/rsa-pri-key-p8.pem":"../testdata/cert/asn1/keypem/rsa-pub-key-p8.pem":HITLS_APP_SUCCESS:HITLS_APP_SUCCESS
+
+UT_HITLS_APP_dgst_SIGN_VERIFY_TC001 rsa sha512
+UT_HITLS_APP_dgst_SIGN_VERIFY_TC001:CRYPT_PKEY_RSA:"sha512":"../testdata/cert/asn1/keypem/rsa-pri-key-p8.pem":"../testdata/cert/asn1/keypem/rsa-pub-key-p8.pem":HITLS_APP_SUCCESS:HITLS_APP_SUCCESS
+
+UT_HITLS_APP_dgst_SIGN_VERIFY_TC001 rsa-pss unsupported
+UT_HITLS_APP_dgst_SIGN_VERIFY_TC001:CRYPT_PKEY_RSA:"sha256":"../testdata/cert/asn1/keypem/rsa_pss.key":"../testdata/cert/asn1/rsapsspubkey.pem":HITLS_APP_CRYPTO_FAIL:HITLS_APP_CRYPTO_FAIL
+
+UT_HITLS_APP_dgst_RSA_SIGOPT_TC001 pss
+UT_HITLS_APP_dgst_RSA_SIGOPT_TC001:"pss":"pkcs1"
+
+UT_HITLS_APP_dgst_RSA_SIGOPT_TC001 pkcs1
+UT_HITLS_APP_dgst_RSA_SIGOPT_TC001:"pkcs1":"pss"
+
+UT_HITLS_APP_dgst_RSA_PSS_AUTOLEN_TC001 zero salt
+UT_HITLS_APP_dgst_RSA_PSS_AUTOLEN_TC001:0
+
+UT_HITLS_APP_dgst_RSA_PSS_AUTOLEN_TC001 short salt
+UT_HITLS_APP_dgst_RSA_PSS_AUTOLEN_TC001:20
+
+UT_HITLS_APP_dgst_RSA_PSS_AUTOLEN_TC001 digest length salt
+UT_HITLS_APP_dgst_RSA_PSS_AUTOLEN_TC001:32
+
+UT_HITLS_APP_dgst_RSA_PSS_AUTOLEN_TC001 maximum salt
+UT_HITLS_APP_dgst_RSA_PSS_AUTOLEN_TC001:222
+
+UT_HITLS_APP_dgst_SIGOPT_INVALID_TC001
+UT_HITLS_APP_dgst_SIGOPT_INVALID_TC001:

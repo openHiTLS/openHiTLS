@@ -373,7 +373,9 @@ static int32_t CheckFilePathLength(const PkeyUtlOpt *opt)
 static int32_t GetrPass(PkeyUtlOpt *opt, char **pass)
 {
     char *tmpPass = NULL;
-    int32_t ret = HITLS_APP_ParsePasswd(opt->rpass == NULL ? "stdin" : opt->rpass, &tmpPass);
+    BSL_UI_ReadPwdParam param = {"password", NULL, false};
+    int32_t ret = opt->rpass == NULL ? HITLS_APP_GetPasswdFromTerminal(&param, 0, &tmpPass)
+                                     : HITLS_APP_ParsePasswd(opt->rpass, 0, &tmpPass);
     if (ret != HITLS_APP_SUCCESS) {
         AppPrintError("pkeyutl: Failed to parse the rpass, errCode: 0x%08x.\n", ret);
         return HITLS_APP_PASSWD_FAIL;

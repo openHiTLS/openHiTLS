@@ -537,31 +537,21 @@ static int32_t ReadPasswd(EncCmdOpt *encOpt, char **pwd, uint32_t *pwdLen)
         AppPrintError("enc: The password can contain the following characters:\n");
         AppPrintError("a~z A~Z 0~9 ! \" # $ %% & ' ( ) * + , - . / : ; < = > ? @ [ \\ ] ^ _ ` { | } ~\n");
         AppPrintError("The space is not supported.\n");
-        if (HITLS_APP_GetPasswd(&param, pwd, pwdLen) != HITLS_APP_SUCCESS) {
-            AppPrintError("Failed to read passwd from stdin.\n");
+        if (HITLS_APP_GetPasswdFromTerminal(&param, 1, pwd) != HITLS_APP_SUCCESS) {
             return HITLS_APP_PASSWD_FAIL;
         }
+        *pwdLen = (uint32_t)strlen(*pwd);
         return HITLS_APP_SUCCESS;
     }
-    if (HITLS_APP_ParsePasswd(encOpt->passOptStr, pwd) != HITLS_APP_SUCCESS) {
-        AppPrintError("enc: Failed to read passwd. Enter '-pass file:filePath', '-pass pass:passwd', "
-            "or '-pass env:var'.\n");
+    if (HITLS_APP_ParsePasswd(encOpt->passOptStr, 1, pwd) != HITLS_APP_SUCCESS) {
         return HITLS_APP_PASSWD_FAIL;
     }
     *pwdLen = (uint32_t)strlen(*pwd);
-    if (*pwdLen < APP_MIN_PASS_LENGTH || *pwdLen > APP_MAX_PASS_LENGTH) {
-        AppPrintError("enc: Invalid passwd length.\n");
-        return HITLS_APP_PASSWD_FAIL;
-    }
     return HITLS_APP_SUCCESS;
 }
 
 static int32_t ValidatePasswd(const char *pwd, uint32_t pwdLen)
 {
-    if (pwdLen == 0 || pwdLen > APP_MAX_PASS_LENGTH) {
-        AppPrintError("enc: Invalid passwd length.\n");
-        return HITLS_APP_PASSWD_FAIL;
-    }
     if (HITLS_APP_CheckPasswd((const uint8_t *)pwd, pwdLen) != HITLS_APP_SUCCESS) {
         AppPrintError("enc: Failed to check passwd.\n");
         return HITLS_APP_PASSWD_FAIL;
@@ -613,7 +603,7 @@ static int32_t HandlePasswd(EncCmdOpt *encOpt)
     }
 #endif
     // If the user enters the last value of -pass, the system parses the value directly.
-    // If the user does not enter the value, the system reads the value from the standard input.
+    // If the user does not enter the value, the system reads the value from the terminal.
     int32_t ret = HITLS_APP_PASSWD_FAIL;
     char *passBuf = NULL;
     uint32_t passLen = 0;

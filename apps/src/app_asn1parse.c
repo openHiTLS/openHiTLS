@@ -464,7 +464,7 @@ static void PrintOidValue(const uint8_t *buf, size_t bufLen, size_t valOff, size
     if (show > MAX_OID_HEX_DISPLAY_BYTES) {
         show = MAX_OID_HEX_DISPLAY_BYTES;
     }
-    char hexbuf[HEXBUF_SIZE];
+    char hexbuf[HEXBUF_SIZE] = {0};
     size_t hexpos = 0;
     for (size_t i = 0; i < show && i < sizeof(hexbuf) / HEX_CHARS_PER_BYTE; i++) {
         size_t remaining = sizeof(hexbuf) - hexpos;
@@ -743,6 +743,11 @@ static int ParseSingleNode(const uint8_t *buf, size_t bufLen, size_t p, ParseNod
         AppPrintError("Unsupported length form at %lu\n", (unsigned long)p);
         return HITLS_APP_DECODE_FAIL;
     }
+    if (result->tagInfo.tagClass == ASN1_CLASS_UNIVERSAL &&
+        result->tagInfo.tagNumber == ASN1_TAG_OBJECT_IDENTIFIER && result->contentLen == 0) {
+        AppPrintError("Empty OBJECT IDENTIFIER at %lu\n", (unsigned long)p);
+        return HITLS_APP_DECODE_FAIL;
+    }
 
     result->headerLen = result->tagInfo.tagBytes + lenLen;
     if (result->headerLen > SIZE_MAX - result->contentLen) {
@@ -1003,21 +1008,22 @@ static int ProcessStrparseNode(uint8_t *derbuf, size_t derlen, const Asn1ParseOp
         return HITLS_APP_OPT_VALUE_INVALID;
     }
 
-    if (!opts->noout) {
-        AppAsn1ParseBuffer(node, nodeLen, opts->showIndent ? 1 : 0, opts->noout ? 0 : 1);
+    ret = AppAsn1ParseBuffer(node, nodeLen, opts->showIndent ? 1 : 0, opts->noout ? 0 : 1);
+    if (ret != HITLS_APP_SUCCESS) {
+        BSL_SAL_FREE(node);
+        return ret;
     }
 
     if (opts->doDump) {
         HexDumpNode(node, nodeLen);
     }
 
-    int result = HITLS_APP_SUCCESS;
     if (opts->outpath) {
-        result = WriteNodeValue(node, nodeLen, opts->outpath);
+        ret = WriteNodeValue(node, nodeLen, opts->outpath);
     }
 
     BSL_SAL_FREE(node);
-    return result;
+    return ret;
 }
 
 static int HandleAsn1Option(int32_t opt, Asn1ParseOptions *opts)

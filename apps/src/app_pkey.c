@@ -251,8 +251,8 @@ static int32_t HandlePkeyOpt(int argc, char *argv[], PkeyOptCtx *optCtx)
     if ((optCtx->cipherAlgCid == CRYPT_CIPHER_MAX) && (optCtx->outPara.passOutArg != NULL)) {
         AppPrintError("Warning: The -passout option is ignored without a cipher option.\n");
     }
-    if ((HITLS_APP_ParsePasswd(optCtx->inPara.passInArg, &optCtx->passin) != HITLS_APP_SUCCESS) ||
-        (HITLS_APP_ParsePasswd(optCtx->outPara.passOutArg, &optCtx->passout) != HITLS_APP_SUCCESS)) {
+    if ((HITLS_APP_ParsePasswd(optCtx->inPara.passInArg, 0, &optCtx->passin) != HITLS_APP_SUCCESS) ||
+        (HITLS_APP_ParsePasswd(optCtx->outPara.passOutArg, 0, &optCtx->passout) != HITLS_APP_SUCCESS)) {
         return HITLS_APP_PASSWD_FAIL;
     }
 

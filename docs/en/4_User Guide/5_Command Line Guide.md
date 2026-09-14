@@ -165,10 +165,10 @@ export FILE_PASSWORD=mypassword
 hitls enc -cipher aes256_cbc -enc -in plain.txt -out encrypted.enc -pass env:FILE_PASSWORD
 
 # Use SHA3-256 as key derivation algorithm
-hitls enc -cipher aes128_gcm -enc -in file.txt -out file.enc -pass file:password.txt -md sha3_256
+hitls enc -cipher aes128_cbc -enc -in file.txt -out file.enc -pass file:password.txt -md sha3_256
 ```
 
-AES-WRAP algorithms are not supported by the `enc` command.
+AEAD and AES-WRAP algorithms are not supported by the `enc` command.
 
 **Function**: Symmetric encryption/decryption
 
@@ -265,13 +265,15 @@ hitls dgst [-md <algorithm>] [-sign <private key file> | -verify <public key fil
 - Signing mode
 
   ```
-  hitls dgst [-md <algorithm>] -sign <private key file> [-out <file>] [-signfmt <hex|bin>] [-userid <user ID>] [file...]
+  hitls dgst [-md <algorithm>] -sign <private key file> [-out <file>] [-signfmt <hex|bin>]
+    [-sigopt rsa_padding_mode:<pkcs1|pss>] [-userid <user ID>] [file...]
   ```
 
 - Verification mode
 
   ```
-  hitls dgst [-md <algorithm>] -verify <public key file> -signature <signature file> [-signfmt <hex|bin>] [-userid <user ID>] [file...]
+  hitls dgst [-md <algorithm>] -verify <public key file> -signature <signature file> [-signfmt <hex|bin>]
+    [-sigopt rsa_padding_mode:<pkcs1|pss>] [-userid <user ID>] [file...]
   ```
 
 **Supported Options**:
@@ -285,9 +287,12 @@ hitls dgst [-md <algorithm>] [-sign <private key file> | -verify <public key fil
 - `-signature <signature file>`: Required in verification mode. Specify signature file
 - `-signfmt <hex|bin>`: Signature input/output format, defaults to `hex`. In signing mode, this specifies the
   output format. In verification mode, this specifies the format of the file given by `-signature`
+- `-sigopt rsa_padding_mode:<pkcs1|pss>`: Select RSA signature padding
 - `-userid <user ID>`: User ID for SM2 algorithm, defaults to `1234567812345678`
 - `-provider`, `-provider-path`, `-provider-attr`: See [Provider Options](#21-provider-options)
 - `[file...]`: List of files to compute digest for, defaults to standard input
+
+RSA signing and verification use RSASSA-PSS by default; select PKCS#1 v1.5 or PSS with `-sigopt rsa_padding_mode:pkcs1|pss`. The message digest defaults to SHA-256, while the PSS MGF1 digest and salt length default to the message digest and its output length.
 
 **Examples**:
 

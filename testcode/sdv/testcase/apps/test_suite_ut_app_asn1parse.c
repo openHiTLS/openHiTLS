@@ -47,6 +47,7 @@
 #define ASN1_SHORT_HEADER_LEN (2)   /* Tag(1) + Length(1) */
 #define ASN1_LONG_FORM_HEADER_LEN (4)  /* Tag(1) + Length header(3) */
 #define TEST_BUFFER_SIZE (10)
+#define EMPTY_OID_FILE "../testdata/apps/asn1parse/empty_oid.pem"
 
 typedef struct {
     int argc;
@@ -338,6 +339,35 @@ void UT_HITLS_APP_ASN1PARSE_PARSE_OID_TC001(void)
     ASSERT_EQ(AppPrintErrorUioInit(stderr), HITLS_APP_SUCCESS);
     int ret = AppAsn1ParseBuffer(buf, bufLen, 0, 1);
     ASSERT_EQ(ret, HITLS_APP_SUCCESS);
+
+EXIT:
+    AppPrintErrorUioUnInit();
+    return;
+}
+/* END_CASE */
+
+/**
+ * @test UT_HITLS_APP_ASN1PARSE_EMPTY_OID_TC001
+ * @title Test CLI rejection of an empty ASN.1 OBJECT IDENTIFIER
+ * @precon None
+ * @brief Test that empty OIDs are rejected with and without -strparse and -noout
+ * @expect All commands return HITLS_APP_DECODE_FAIL
+ */
+/* BEGIN_CASE */
+void UT_HITLS_APP_ASN1PARSE_EMPTY_OID_TC001(void)
+{
+    char *normalArgv[] = {"asn1parse", "-inform", "PEM", "-in", EMPTY_OID_FILE};
+    char *strparseArgv[] = {"asn1parse", "-inform", "PEM", "-in", EMPTY_OID_FILE, "-strparse", "0"};
+    char *strparseNooutArgv[] = {
+        "asn1parse", "-inform", "PEM", "-in", EMPTY_OID_FILE, "-strparse", "0", "-noout"};
+
+    ASSERT_EQ(AppPrintErrorUioInit(stderr), HITLS_APP_SUCCESS);
+    int normalRet = HITLS_Asn1Main(sizeof(normalArgv) / sizeof(normalArgv[0]), normalArgv);
+    int strparseRet = HITLS_Asn1Main(sizeof(strparseArgv) / sizeof(strparseArgv[0]), strparseArgv);
+    int strparseNooutRet = HITLS_Asn1Main(sizeof(strparseNooutArgv) / sizeof(strparseNooutArgv[0]), strparseNooutArgv);
+    ASSERT_EQ(normalRet, HITLS_APP_DECODE_FAIL);
+    ASSERT_EQ(strparseNooutRet, HITLS_APP_DECODE_FAIL);
+    ASSERT_EQ(strparseRet, HITLS_APP_DECODE_FAIL);
 
 EXIT:
     AppPrintErrorUioUnInit();

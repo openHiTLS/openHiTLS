@@ -15,12 +15,14 @@
 #include "app_dgst.h"
 #include <limits.h>
 #include <string.h>
+#include "bsl_params.h"
 #include "bsl_sal.h"
 #include "crypt_errno.h"
 #include "crypt_eal_md.h"
 #include "crypt_eal_rand.h"
 #include "crypt_eal_pkey.h"
 #include "crypt_eal_codecs.h"
+#include "crypt_params_key.h"
 #include "bsl_errno.h"
 #include "app_opt.h"
 #include "app_function.h"
@@ -48,6 +50,7 @@ typedef enum OptionChoice {
     HITLS_APP_OPT_DGST_VERIFY,
     HITLS_APP_OPT_DGST_SIGNATURE,
     HITLS_APP_OPT_DGST_SIGN_FORMAT,
+    HITLS_APP_OPT_DGST_SIGOPT,
     HITLS_APP_OPT_DGST_USERID,
     HITLS_APP_PROV_ENUM,
 #ifdef HITLS_APP_SM_MODE
@@ -66,6 +69,8 @@ static const HITLS_CmdOption g_dgstOpts[] = {
     {"signature", HITLS_APP_OPT_DGST_SIGNATURE, HITLS_APP_OPT_VALUETYPE_IN_FILE, "Signature to be verified"},
     {"signfmt", HITLS_APP_OPT_DGST_SIGN_FORMAT, HITLS_APP_OPT_VALUETYPE_STRING,
         "Signature input/output format: hex or bin (default: hex)"},
+    {"sigopt", HITLS_APP_OPT_DGST_SIGOPT, HITLS_APP_OPT_VALUETYPE_STRING,
+        "Signature parameter: rsa_padding_mode:pkcs1|pss"},
     {"userid", HITLS_APP_OPT_DGST_USERID, HITLS_APP_OPT_VALUETYPE_STRING, "User ID for SM2"},
     HITLS_APP_PROV_OPTIONS,
 #ifdef HITLS_APP_SM_MODE
@@ -81,12 +86,19 @@ typedef struct {
     uint32_t digestSize;  // the length of default hash value of the algorithm
 } AlgInfo;
 
+typedef enum {
+    RSA_PADDING_UNSET = 0,
+    RSA_PADDING_PKCS1,
+    RSA_PADDING_PSS,
+} RsaPaddingMode;
+
 typedef struct {
     char *privateKeyFile;  // private key file for signing
     char *publicKeyFile;   // public key file for verification
     char *signatureFile;   // signature file for verification
     uint32_t signFormat;   // signature input/output format
     char *userid;          // user ID for SM2
+    RsaPaddingMode rsaPaddingMode;
     AppProvider *provider;
 #ifdef HITLS_APP_SM_MODE
     HITLS_APP_SM_Param *smParam;
@@ -503,6 +515,42 @@ static int32_t GetPkeyCtxFromUuid(SignInfo *signInfo, char *uuid, CRYPT_EAL_Pkey
 }
 #endif
 
+static int32_t SetRsaSignParam(CRYPT_EAL_PkeyCtx *ctx, int32_t mdId, RsaPaddingMode paddingMode, bool isVerify)
+{
+    int32_t padType = 0;
+    int32_t ret = CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_GET_RSA_PADDING, &padType, sizeof(padType));
+    if (ret != CRYPT_SUCCESS) {
+        AppPrintError("dgst: Failed to get the RSA padding mode, ret=%d\n", ret);
+        return HITLS_APP_CRYPTO_FAIL;
+    }
+    if (padType == CRYPT_EMSA_PSS) {
+        AppPrintError("dgst: RSA-PSS restricted keys are not supported\n");
+        return HITLS_APP_CRYPTO_FAIL;
+    }
+
+    if (paddingMode == RSA_PADDING_PKCS1) {
+        ret = CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_SET_RSA_EMSA_PKCSV15, &mdId, sizeof(mdId));
+        if (ret != CRYPT_SUCCESS) {
+            AppPrintError("dgst: Failed to set the RSA PKCS#1 v1.5 parameters, ret=%d\n", ret);
+            return HITLS_APP_CRYPTO_FAIL;
+        }
+        return HITLS_APP_SUCCESS;
+    }
+
+    int32_t saltLen = isVerify ? CRYPT_RSA_SALTLEN_TYPE_AUTOLEN : CRYPT_RSA_SALTLEN_TYPE_HASHLEN;
+    BSL_Param params[4] = {
+        {CRYPT_PARAM_RSA_MD_ID, BSL_PARAM_TYPE_INT32, &mdId, sizeof(mdId), 0},
+        {CRYPT_PARAM_RSA_MGF1_ID, BSL_PARAM_TYPE_INT32, &mdId, sizeof(mdId), 0},
+        {CRYPT_PARAM_RSA_SALTLEN, BSL_PARAM_TYPE_INT32, &saltLen, sizeof(saltLen), 0},
+        BSL_PARAM_END};
+    ret = CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_SET_RSA_EMSA_PSS, params, 0);
+    if (ret != CRYPT_SUCCESS) {
+        AppPrintError("dgst: Failed to set the RSA-PSS parameters, ret=%d\n", ret);
+        return HITLS_APP_CRYPTO_FAIL;
+    }
+    return HITLS_APP_SUCCESS;
+}
+
 static int32_t CalculateSign(DgstOptCtx *optCtx, uint8_t *msgBuf, uint32_t msgBufLen)
 {
     int32_t ret = HITLS_APP_SUCCESS;
@@ -510,6 +558,7 @@ static int32_t CalculateSign(DgstOptCtx *optCtx, uint8_t *msgBuf, uint32_t msgBu
     uint64_t bufLen = 0;
     uint8_t *signBuf = NULL;
     uint32_t signLen;
+    int32_t pkeyId;
     BSL_Buffer prv = {0};
     CRYPT_EAL_PkeyCtx *ctx = NULL;
     do {
@@ -539,12 +588,23 @@ static int32_t CalculateSign(DgstOptCtx *optCtx, uint8_t *msgBuf, uint32_t msgBu
 #ifdef HITLS_APP_SM_MODE
         }
 #endif
-        if (CRYPT_EAL_PkeyGetId(ctx) == CRYPT_PKEY_SM2) {
+        pkeyId = CRYPT_EAL_PkeyGetId(ctx);
+        if (pkeyId != CRYPT_PKEY_RSA && optCtx->signInfo.rsaPaddingMode != RSA_PADDING_UNSET) {
+            AppPrintError("dgst: rsa_padding_mode is only valid for RSA keys\n");
+            ret = HITLS_APP_OPT_VALUE_INVALID;
+            break;
+        }
+        if (pkeyId == CRYPT_PKEY_SM2) {
             ret = CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_SET_SM2_USER_ID, optCtx->signInfo.userid,
                 strlen(optCtx->signInfo.userid));
             if (ret != CRYPT_SUCCESS) {
                 AppPrintError("dgst: Failed to set the SM2 user ID, ret=%d\n", ret);
                 ret = HITLS_APP_CRYPTO_FAIL;
+                break;
+            }
+        } else if (pkeyId == CRYPT_PKEY_RSA) {
+            ret = SetRsaSignParam(ctx, optCtx->algInfo.algId, optCtx->signInfo.rsaPaddingMode, false);
+            if (ret != HITLS_APP_SUCCESS) {
                 break;
             }
         }
@@ -634,10 +694,17 @@ static int32_t VerifySign(DgstOptCtx *optCtx, uint8_t *msgBuf, uint32_t msgBufLe
     uint64_t inputLen = 0;
     uint8_t *signBuf = NULL;
     uint32_t signLen;
+    int32_t pkeyId;
     CRYPT_EAL_PkeyCtx *ctx = NULL;
     do {
         ret = GetPubKeyCtx(&optCtx->signInfo, &ctx);
         if (ret != HITLS_APP_SUCCESS) {
+            break;
+        }
+        pkeyId = CRYPT_EAL_PkeyGetId(ctx);
+        if (pkeyId != CRYPT_PKEY_RSA && optCtx->signInfo.rsaPaddingMode != RSA_PADDING_UNSET) {
+            AppPrintError("dgst: rsa_padding_mode is only valid for RSA keys\n");
+            ret = HITLS_APP_OPT_VALUE_INVALID;
             break;
         }
         ret = HITLS_APP_ReadFileOrStdin(
@@ -662,13 +729,17 @@ static int32_t VerifySign(DgstOptCtx *optCtx, uint8_t *msgBuf, uint32_t msgBufLe
                 break;
             }
         }
-
-        if (CRYPT_EAL_PkeyGetId(ctx) == CRYPT_PKEY_SM2) {
+        if (pkeyId == CRYPT_PKEY_SM2) {
             ret = CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_SET_SM2_USER_ID, optCtx->signInfo.userid,
                 strlen(optCtx->signInfo.userid));
             if (ret != CRYPT_SUCCESS) {
                 AppPrintError("dgst: Failed to set the SM2 user ID, ret=%d\n", ret);
                 ret = HITLS_APP_CRYPTO_FAIL;
+                break;
+            }
+        } else if (pkeyId == CRYPT_PKEY_RSA) {
+            ret = SetRsaSignParam(ctx, optCtx->algInfo.algId, optCtx->signInfo.rsaPaddingMode, true);
+            if (ret != HITLS_APP_SUCCESS) {
                 break;
             }
         }
@@ -721,6 +792,53 @@ static int32_t ParseSignFormat(SignInfo *signInfo)
         return HITLS_APP_SUCCESS;
     }
     AppPrintError("dgst: Invalid signature format: %s. Use hex or bin.\n", format);
+    return HITLS_APP_OPT_VALUE_INVALID;
+}
+
+static int32_t ParseRsaPaddingMode(SignInfo *signInfo, const char *value)
+{
+    if (signInfo->rsaPaddingMode != RSA_PADDING_UNSET) {
+        AppPrintError("dgst: Duplicate signature option: rsa_padding_mode\n");
+        return HITLS_APP_OPT_VALUE_INVALID;
+    }
+    if (strcmp(value, "pkcs1") == 0) {
+        signInfo->rsaPaddingMode = RSA_PADDING_PKCS1;
+    } else if (strcmp(value, "pss") == 0) {
+        signInfo->rsaPaddingMode = RSA_PADDING_PSS;
+    } else {
+        AppPrintError("dgst: Invalid rsa_padding_mode: %s. Use pkcs1 or pss.\n", value);
+        return HITLS_APP_OPT_VALUE_INVALID;
+    }
+    return HITLS_APP_SUCCESS;
+}
+
+typedef int32_t (*SigOptHandler)(SignInfo *signInfo, const char *value);
+
+typedef struct {
+    const char *name;
+    SigOptHandler handler;
+} SigOptHandlerItem;
+
+static const SigOptHandlerItem g_sigOptHandlers[] = {
+    {"rsa_padding_mode", ParseRsaPaddingMode},
+};
+
+static int32_t ParseSigOpt(SignInfo *signInfo)
+{
+    const char *sigOpt = HITLS_APP_OptGetValueStr();
+    const char *separator = sigOpt == NULL ? NULL : strchr(sigOpt, ':');
+    if (separator == NULL || separator == sigOpt || separator[1] == '\0') {
+        AppPrintError("dgst: Invalid -sigopt format, expected name:value\n");
+        return HITLS_APP_OPT_VALUE_INVALID;
+    }
+    size_t nameLen = (size_t)(separator - sigOpt);
+    for (size_t i = 0; i < sizeof(g_sigOptHandlers) / sizeof(g_sigOptHandlers[0]); i++) {
+        if (strlen(g_sigOptHandlers[i].name) == nameLen &&
+            strncmp(g_sigOptHandlers[i].name, sigOpt, nameLen) == 0) {
+            return g_sigOptHandlers[i].handler(signInfo, separator + 1);
+        }
+    }
+    AppPrintError("dgst: Unsupported signature option: %.*s\n", (int)nameLen, sigOpt);
     return HITLS_APP_OPT_VALUE_INVALID;
 }
 
@@ -785,6 +903,12 @@ static int32_t OptParse(DgstOptCtx *optCtx)
                     return ret;
                 }
                 break;
+            case HITLS_APP_OPT_DGST_SIGOPT:
+                ret = ParseSigOpt(&optCtx->signInfo);
+                if (ret != HITLS_APP_SUCCESS) {
+                    return ret;
+                }
+                break;
             case HITLS_APP_OPT_DGST_USERID:
                 optCtx->signInfo.userid = HITLS_APP_OptGetValueStr();
                 if (optCtx->signInfo.userid == NULL) {
@@ -837,6 +961,12 @@ int32_t HITLS_DgstMain(int argc, char *argv[])
     }
     mainRet = OptParse(&optCtx);
     if (mainRet != HITLS_APP_SUCCESS) {
+        goto end;
+    }
+    if (optCtx.signInfo.rsaPaddingMode != RSA_PADDING_UNSET && optCtx.signInfo.privateKeyFile == NULL &&
+        optCtx.signInfo.publicKeyFile == NULL) {
+        AppPrintError("dgst: -sigopt requires RSA signing or verification\n");
+        mainRet = HITLS_APP_OPT_VALUE_INVALID;
         goto end;
     }
     mainRet = CheckSmParam(&optCtx.signInfo);

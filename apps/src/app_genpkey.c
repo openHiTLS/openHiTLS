@@ -407,7 +407,7 @@ static int32_t HandleGenPkeyOpt(GenPkeyOptCtx *optCtx)
     }
 
     // 2. Read Password
-    if (HITLS_APP_ParsePasswd(optCtx->outPara.passOutArg, &optCtx->passout) != HITLS_APP_SUCCESS) {
+    if (HITLS_APP_ParsePasswd(optCtx->outPara.passOutArg, 0, &optCtx->passout) != HITLS_APP_SUCCESS) {
         return HITLS_APP_PASSWD_FAIL;
     }
 

@@ -68,7 +68,6 @@
 #define APP_PASS_ARG_STR_LEN ((int)(sizeof(APP_PASS_ARG_STR) - 1))
 
 #define APP_PASS_STDIN_STR "stdin"
-#define APP_PASS_STDIN_STR_LEN ((int)(sizeof(APP_PASS_STDIN_STR) - 1))
 
 #define APP_PASS_FILE_STR "file:"
 #define APP_PASS_FILE_STR_LEN ((int)(sizeof(APP_PASS_FILE_STR) - 1))
@@ -226,7 +225,27 @@ static int32_t ReadPemKeyFile(const char *inFilePath, uint8_t **inData, uint32_t
     return HITLS_APP_SUCCESS;
 }
 
-static int32_t GetPasswdByFile(const char *passwdArg, size_t passwdArgLen, char **pass)
+static int32_t CheckPasswdLength(size_t passLen, uint32_t minLen)
+{
+    if (passLen >= minLen && passLen <= APP_MAX_PASS_LENGTH) {
+        return HITLS_APP_SUCCESS;
+    }
+    AppPrintError("The password length must be between %u and %d bytes.\n", minLen, APP_MAX_PASS_LENGTH);
+    return HITLS_APP_PASSWD_FAIL;
+}
+
+static void RemovePasswdLineEnding(char *pass, uint32_t *passLen)
+{
+    if (*passLen > 0 && pass[*passLen - 1] == '\n') {
+        (*passLen)--;
+        if (*passLen > 0 && pass[*passLen - 1] == '\r') {
+            (*passLen)--;
+        }
+        pass[*passLen] = '\0';
+    }
+}
+
+static int32_t GetPasswdByFile(const char *passwdArg, size_t passwdArgLen, uint32_t minLen, char **pass)
 {
     if (passwdArgLen <= APP_PASS_FILE_STR_LEN) {
         AppPrintError("Failed to read passwd from file.\n");
@@ -252,63 +271,123 @@ static int32_t GetPasswdByFile(const char *passwdArg, size_t passwdArgLen, char 
         BSL_UIO_Free(passUio);
         return HITLS_APP_UIO_FAIL;
     }
-    char *passBuf = (char *)BSL_SAL_Calloc(APP_MAX_PASS_LENGTH + 1 + 1, 1);
+    const uint32_t passBufSize = APP_MAX_PASS_LENGTH + 3;
+    char *passBuf = (char *)BSL_SAL_Calloc(passBufSize, 1);
     if (passBuf == NULL) {
         BSL_UIO_Free(passUio);
         AppPrintError("Failed to read passwd from file.\n");
         return HITLS_APP_MEM_ALLOC_FAIL;
     }
-    // When the number of bytes exceeds 1024 bytes, only one more bit is read.
-    uint32_t passLen = APP_MAX_PASS_LENGTH + 1 + 1;
+    uint32_t passLen = passBufSize;
     if (BSL_UIO_Gets(passUio, passBuf, &passLen) != BSL_SUCCESS) {
         AppPrintError("Failed to read passwd from file.\n");
         BSL_UIO_Free(passUio);
-        BSL_SAL_FREE(passBuf);
+        BSL_SAL_ClearFree(passBuf, passBufSize);
         return HITLS_APP_UIO_FAIL;
     }
     BSL_UIO_Free(passUio);
-
-    if (passLen <= 0) {
-        passBuf[0] = '\0';
-    } else if (passBuf[passLen - 1] == '\n') {
-        passBuf[passLen - 1] = '\0';
+    RemovePasswdLineEnding(passBuf, &passLen);
+    if (CheckPasswdLength(passLen, minLen) != HITLS_APP_SUCCESS) {
+        BSL_SAL_ClearFree(passBuf, passBufSize);
+        return HITLS_APP_PASSWD_FAIL;
     }
     *pass = passBuf;
     return HITLS_APP_SUCCESS;
 }
 
-static char *GetPasswdByStdin(BSL_UI_ReadPwdParam *param)
+int32_t HITLS_APP_GetPasswdFromTerminal(BSL_UI_ReadPwdParam *param, uint32_t minLen, char **pass)
 {
-    uint32_t passLen = APP_MAX_PASS_LENGTH + 1;
-    char *pass = (char *)BSL_SAL_Calloc(APP_MAX_PASS_LENGTH + 1, 1);
-    if (pass == NULL) {
+    if (param == NULL || minLen >= APP_MAX_PASS_LENGTH || pass == NULL) {
+        return HITLS_APP_INVALID_ARG;
+    }
+    const uint32_t passBufSize = APP_MAX_PASS_LENGTH + 1;
+    uint32_t passLen = passBufSize;
+    char *passBuf = (char *)BSL_SAL_Calloc(passBufSize, 1);
+    if (passBuf == NULL) {
         AppPrintError("Fail to alloc memory.\n");
-        return NULL;
+        return HITLS_APP_MEM_ALLOC_FAIL;
     }
-    if (BSL_UI_ReadPwdUtil(param, pass, &passLen, NULL, NULL) != BSL_SUCCESS) {
-        BSL_SAL_FREE(pass);
-        AppPrintError("Fail to read pwd from stdin.\n");
-        return NULL;
+    int32_t ret = BSL_UI_ReadPwdUtil(param, passBuf, &passLen, NULL, NULL);
+    if (ret == BSL_UI_READ_LEN_TOO_SHORT && !param->verify) {
+        passBuf[0] = '\0';
+        ret = BSL_SUCCESS;
     }
-    return pass;
+    if (ret != BSL_SUCCESS) {
+        BSL_SAL_ClearFree(passBuf, passBufSize);
+        AppPrintError("Fail to read pwd from terminal.\n");
+        return HITLS_APP_PASSWD_FAIL;
+    }
+    if (CheckPasswdLength(strlen(passBuf), minLen) != HITLS_APP_SUCCESS) {
+        BSL_SAL_ClearFree(passBuf, passBufSize);
+        return HITLS_APP_PASSWD_FAIL;
+    }
+    *pass = passBuf;
+    return HITLS_APP_SUCCESS;
 }
 
-static char *GetStrAfterPreFix(const char *inputArg, uint32_t inputArgLen, uint32_t prefixLen)
+int32_t HITLS_APP_EnsurePasswd(BSL_UI_ReadPwdParam *param, uint32_t minLen, char **pass)
 {
-    if (prefixLen > inputArgLen) {
-        return NULL;
+    if (minLen >= APP_MAX_PASS_LENGTH || pass == NULL || (*pass == NULL && param == NULL)) {
+        return HITLS_APP_INVALID_ARG;
     }
-    uint32_t len = inputArgLen - prefixLen;
-    char *str = (char *)BSL_SAL_Calloc(len + 1, 1);
-    if (str == NULL) {
-        return NULL;
+    if (*pass == NULL) {
+        int32_t ret = HITLS_APP_GetPasswdFromTerminal(param, minLen, pass);
+        if (ret != HITLS_APP_SUCCESS) {
+            return ret;
+        }
     }
-    memcpy(str, inputArg + prefixLen, len);
-    str[len] = '\0';
-    return str;
+    if (CheckPasswdLength(strlen(*pass), minLen) != HITLS_APP_SUCCESS) {
+        return HITLS_APP_PASSWD_FAIL;
+    }
+    return HITLS_APP_SUCCESS;
 }
 
-static int32_t GetPasswdByEnv(const char *passwdArg, size_t passwdArgLen, char **pass)
+static int32_t GetPasswdFromStdin(uint32_t minLen, char **pass)
+{
+    const uint32_t passBufSize = APP_MAX_PASS_LENGTH + 3;
+    char *passBuf = (char *)BSL_SAL_Calloc(passBufSize, 1);
+    if (passBuf == NULL) {
+        AppPrintError("Fail to alloc memory.\n");
+        return HITLS_APP_MEM_ALLOC_FAIL;
+    }
+    BSL_UIO *passUio = HITLS_APP_UioOpen(NULL, 'r', 0);
+    if (passUio == NULL) {
+        AppPrintError("Fail to open stdin.\n");
+        BSL_SAL_ClearFree(passBuf, passBufSize);
+        return HITLS_APP_STDIN_FAIL;
+    }
+
+    uint32_t passLen = passBufSize;
+    int32_t ret = BSL_UIO_Gets(passUio, passBuf, &passLen);
+    BSL_UIO_Free(passUio);
+    if (ret != BSL_SUCCESS || passLen == 0) {
+        AppPrintError("Fail to read pwd from stdin.\n");
+        BSL_SAL_ClearFree(passBuf, passBufSize);
+        return HITLS_APP_STDIN_FAIL;
+    }
+    RemovePasswdLineEnding(passBuf, &passLen);
+    if (CheckPasswdLength(passLen, minLen) != HITLS_APP_SUCCESS) {
+        BSL_SAL_ClearFree(passBuf, passBufSize);
+        return HITLS_APP_PASSWD_FAIL;
+    }
+    *pass = passBuf;
+    return HITLS_APP_SUCCESS;
+}
+
+static int32_t GetPasswdByArg(const char *passwdArg, size_t passwdArgLen, uint32_t minLen, char **pass)
+{
+    size_t passLen = passwdArgLen - APP_PASS_ARG_STR_LEN;
+    if (CheckPasswdLength(passLen, minLen) != HITLS_APP_SUCCESS) {
+        return HITLS_APP_PASSWD_FAIL;
+    }
+    *pass = BSL_SAL_Dump(passwdArg + APP_PASS_ARG_STR_LEN, (uint32_t)passLen + 1);
+    if (*pass == NULL) {
+        return HITLS_APP_MEM_ALLOC_FAIL;
+    }
+    return HITLS_APP_SUCCESS;
+}
+
+static int32_t GetPasswdByEnv(const char *passwdArg, size_t passwdArgLen, uint32_t minLen, char **pass)
 {
     if (passwdArgLen <= APP_PASS_ENV_STR_LEN) {
         AppPrintError("Failed to read passwd from environment variable.\n");
@@ -320,8 +399,7 @@ static int32_t GetPasswdByEnv(const char *passwdArg, size_t passwdArgLen, char *
         return HITLS_APP_PASSWD_FAIL;
     }
     size_t passLen = strlen(envValue);
-    if (passLen >= UINT32_MAX) {
-        AppPrintError("Failed to read passwd from environment variable.\n");
+    if (CheckPasswdLength(passLen, minLen) != HITLS_APP_SUCCESS) {
         return HITLS_APP_PASSWD_FAIL;
     }
     *pass = BSL_SAL_Dump(envValue, (uint32_t)passLen + 1);
@@ -332,28 +410,28 @@ static int32_t GetPasswdByEnv(const char *passwdArg, size_t passwdArgLen, char *
     return HITLS_APP_SUCCESS;
 }
 
-int32_t HITLS_APP_ParsePasswd(const char *passArg, char **pass)
+int32_t HITLS_APP_ParsePasswd(const char *passArg, uint32_t minLen, char **pass)
 {
     if (passArg == NULL) {
         return HITLS_APP_SUCCESS;
     }
+    if (minLen >= APP_MAX_PASS_LENGTH || pass == NULL) {
+        return HITLS_APP_INVALID_ARG;
+    }
+    int32_t ret;
     if (strncmp(passArg, APP_PASS_ARG_STR, APP_PASS_ARG_STR_LEN) == 0) {
-        *pass = GetStrAfterPreFix(passArg, strlen(passArg), APP_PASS_ARG_STR_LEN);
-    } else if (strncmp(passArg, APP_PASS_STDIN_STR, APP_PASS_STDIN_STR_LEN) == 0) {
-        BSL_UI_ReadPwdParam passParam = { "passwd", NULL, false };
-        *pass = GetPasswdByStdin(&passParam);
+        ret = GetPasswdByArg(passArg, strlen(passArg), minLen, pass);
+    } else if (strcmp(passArg, APP_PASS_STDIN_STR) == 0) {
+        ret = GetPasswdFromStdin(minLen, pass);
     } else if (strncmp(passArg, APP_PASS_FILE_STR, APP_PASS_FILE_STR_LEN) == 0) {
-        return GetPasswdByFile(passArg, strlen(passArg), pass);
+        ret = GetPasswdByFile(passArg, strlen(passArg), minLen, pass);
     } else if (strncmp(passArg, APP_PASS_ENV_STR, APP_PASS_ENV_STR_LEN) == 0) {
-        return GetPasswdByEnv(passArg, strlen(passArg), pass);
+        ret = GetPasswdByEnv(passArg, strlen(passArg), minLen, pass);
     } else {
         AppPrintError("Unsupported password source. Use pass:, stdin, file:, or env:.\n");
         return HITLS_APP_PASSWD_FAIL;
     }
-    if (*pass == NULL) {
-        return HITLS_APP_PASSWD_FAIL;
-    }
-    return HITLS_APP_SUCCESS;
+    return ret;
 }
 
 static CRYPT_EAL_PkeyCtx *ReadPemPrvKey(BSL_Buffer *encode, const char *name, uint8_t *pass, uint32_t passLen)
@@ -396,19 +474,6 @@ static CRYPT_EAL_PkeyCtx *ReadPemPubKey(BSL_Buffer *encode, const char *name)
         return NULL;
     }
     return pkey;
-}
-
-int32_t HITLS_APP_GetPasswd(BSL_UI_ReadPwdParam *param, char **passin, uint32_t *passLen)
-{
-    if (*passin == NULL) {
-        *passin = GetPasswdByStdin(param);
-    }
-    if ((*passin == NULL) || (strlen(*passin) > APP_MAX_PASS_LENGTH) || (strlen(*passin) < APP_MIN_PASS_LENGTH)) {
-        HITLS_APP_PrintPassErrlog();
-        return HITLS_APP_PASSWD_FAIL;
-    }
-    *passLen = strlen(*passin);
-    return HITLS_APP_SUCCESS;
 }
 
 static bool CheckFilePath(const char *filePath)
@@ -516,10 +581,13 @@ CRYPT_EAL_PkeyCtx *HITLS_APP_ProviderLoadPrvKey(CRYPT_EAL_LibCtx *libCtx, const 
     uint8_t *pass = NULL;
     uint32_t passLen = 0;
     BSL_UI_ReadPwdParam passParam = { "passwd", inFilePath, false };
-    if (isEncrypted && (HITLS_APP_GetPasswd(&passParam, passin, &passLen) != HITLS_APP_SUCCESS)) {
-        BSL_SAL_ClearFree(data, dataLen);
-        BSL_SAL_FREE(prvkeyName);
-        return NULL;
+    if (isEncrypted) {
+        if (HITLS_APP_EnsurePasswd(&passParam, 1, passin) != HITLS_APP_SUCCESS) {
+            BSL_SAL_ClearFree(data, dataLen);
+            BSL_SAL_FREE(prvkeyName);
+            return NULL;
+        }
+        passLen = (uint32_t)strlen(*passin);
     }
     pass = (uint8_t *)*passin;
     BSL_Buffer encode = { data, dataLen };
@@ -557,10 +625,13 @@ CRYPT_EAL_PkeyCtx *HITLS_APP_LoadPrvKey(const char *inFilePath, BSL_ParseFormat 
     uint8_t *pass = NULL;
     uint32_t passLen = 0;
     BSL_UI_ReadPwdParam passParam = { "passwd", inFilePath, false };
-    if (isEncrypted && (HITLS_APP_GetPasswd(&passParam, passin, &passLen) != HITLS_APP_SUCCESS)) {
-        BSL_SAL_ClearFree(data, dataLen);
-        BSL_SAL_FREE(prvkeyName);
-        return NULL;
+    if (isEncrypted) {
+        if (HITLS_APP_EnsurePasswd(&passParam, 1, passin) != HITLS_APP_SUCCESS) {
+            BSL_SAL_ClearFree(data, dataLen);
+            BSL_SAL_FREE(prvkeyName);
+            return NULL;
+        }
+        passLen = (uint32_t)strlen(*passin);
     }
     pass = (uint8_t *)*passin;
     BSL_Buffer encode = { data, dataLen };
@@ -679,9 +750,11 @@ int32_t HITLS_APP_PrintPrvKeyByUio(BSL_UIO *uio, CRYPT_EAL_PkeyCtx *pkey, AppKey
     uint8_t *pass = NULL;
     uint32_t passLen = 0;
     BSL_UI_ReadPwdParam passParam = { "passwd", printKeyParam->name, true };
-    if ((type == CRYPT_PRIKEY_PKCS8_ENCRYPT) &&
-        (HITLS_APP_GetPasswd(&passParam, passout, &passLen) != HITLS_APP_SUCCESS)) {
-        return HITLS_APP_PASSWD_FAIL;
+    if (type == CRYPT_PRIKEY_PKCS8_ENCRYPT) {
+        if (HITLS_APP_EnsurePasswd(&passParam, 1, passout) != HITLS_APP_SUCCESS) {
+            return HITLS_APP_PASSWD_FAIL;
+        }
+        passLen = (uint32_t)strlen(*passout);
     }
     pass = (uint8_t *)*passout;
     CRYPT_Pbkdf2Param param = { 0 };
@@ -1034,12 +1107,6 @@ CRYPT_EAL_PkeyCtx *HITLS_APP_GenRsaPkeyCtx(uint32_t bits)
         return NULL;
     }
     return pkey;
-}
-
-void HITLS_APP_PrintPassErrlog(void)
-{
-    AppPrintError("The password length is incorrect. It should be in the range of %d to %d.\n", APP_MIN_PASS_LENGTH,
-        APP_MAX_PASS_LENGTH);
 }
 
 int32_t HITLS_APP_ParseHex(const char *hexStr, bool expectPrefix, uint8_t **bytes, uint32_t *bytesLen)
