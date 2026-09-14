@@ -128,7 +128,7 @@ static int32_t ClientCheckEncryptedExtensionsFlag(TLS_Ctx *ctx, const EncryptedE
     };
 
     int32_t ret = HS_CheckReceivedExtension(ctx, ENCRYPTED_EXTENSIONS, eEMsg->extensionTypeMask,
-        HS_EX_TYPE_TLS1_3_ALLOWED_OF_ENCRYPTED_EXTENSIONS);
+                                            HS_EX_TYPE_TLS1_3_ALLOWED_OF_ENCRYPTED_EXTENSIONS);
     if (ret != HITLS_SUCCESS) {
         return ret;
     }

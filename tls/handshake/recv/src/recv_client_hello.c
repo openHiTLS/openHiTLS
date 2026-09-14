@@ -1223,7 +1223,10 @@ static int32_t ServerCheckResume(TLS_Ctx *ctx, const ClientHelloMsg *clientHello
         if (supportTicket && clientHello->extension.flag.haveTicket) {
             ctx->negotiatedInfo.isTicket = true;
         }
+#ifdef HITLS_TLS_FEATURE_SESSION_ID
+        /* Session storage can be enabled without Session ID resumption. */
         sess = SESSMGR_Find(ctx, clientHello->sessionId, clientHello->sessionIdSize);
+#endif
 
         int32_t ret = ResumeCheckExtendedMasterScret(ctx, clientHello, &sess);
         if (ret != HITLS_SUCCESS) {
@@ -1894,7 +1897,6 @@ static int32_t TLS13ServerProcessTicket(TLS_Ctx *ctx, PreSharedKey *cur,
 #ifdef HITLS_TLS_FEATURE_CERT_WITH_EXTERNAL_PSK
     if (rejectResume) {
         HITLS_SESS_Free(pskSession);
-        BSL_ERR_PUSH_ERROR(HITLS_MSG_HANDLE_PSK_INVALID);
         return RETURN_ALERT_PROCESS(ctx, HITLS_MSG_HANDLE_PSK_INVALID, BINLOG_ID15940,
             "RFC 9973 PSK list contains a resumption ticket", ALERT_ILLEGAL_PARAMETER);
     }
@@ -2039,8 +2041,9 @@ Section 4.2.11.2 below). If this value is not present or does not validate, the 
 SHOULD NOT attempt to validate multiple binders; rather, they SHOULD select a single PSK and validate solely the binder
 that corresponds to that PSK.
 */
-static int32_t ServerSelectPskAndCheckBinder(TLS_Ctx *ctx, const ClientHelloMsg *clientHello, bool certWithExternalPsk)
+static int32_t ServerSelectPskAndCheckBinder(TLS_Ctx *ctx, const ClientHelloMsg *clientHello)
 {
+    bool certWithExternalPsk = clientHello->extension.flag.haveCertWithExternalPsk;
     int32_t ret = HITLS_SUCCESS;
     uint16_t index = 0;
     /* 1. Clear the previous selection, including one made before HRR. */
@@ -2500,7 +2503,7 @@ static int32_t Tls13ServerCheckClientHello(TLS_Ctx *ctx, ClientHelloMsg *clientH
 #if defined(HITLS_TLS_FEATURE_SESSION_TICKET) || defined(HITLS_TLS_FEATURE_PSK)
     if (clientHello->extension.flag.havePreShareKey && selectKeMode != 0) {
         /* Select one PSK and validate one binder through the existing shared path. */
-        ret = ServerSelectPskAndCheckBinder(ctx, clientHello, clientHello->extension.flag.haveCertWithExternalPsk);
+        ret = ServerSelectPskAndCheckBinder(ctx, clientHello);
         if (ret != HITLS_SUCCESS) {
             BSL_ERR_PUSH_ERROR(HITLS_MSG_HANDLE_PSK_INVALID);
             BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15940, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
@@ -2723,6 +2726,7 @@ static int32_t UpdateServerBaseKeyExMode(TLS_Ctx *ctx, const ClientHelloMsg *cli
         tls13BasicKeyExMode = TLS13_CERT_AUTH_WITH_EXTERNAL_PSK;
     } else if (kxCtx->pskInfo13.psk != NULL && kxCtx->peerPubkey != NULL) {
 #else
+    (void)clientHello;
     if (kxCtx->pskInfo13.psk != NULL && kxCtx->peerPubkey != NULL) {
 #endif
         tls13BasicKeyExMode = TLS13_KE_MODE_PSK_WITH_DHE;

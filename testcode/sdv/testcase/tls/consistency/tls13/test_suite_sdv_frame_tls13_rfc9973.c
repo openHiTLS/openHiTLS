@@ -1578,10 +1578,10 @@ EXIT:
 * @test UT_TLS_TLS13_RFC9973_WRONG_MESSAGE_FUNC_TC001
 * @spec RFC 9973 Section 5
 * @title Inject extension 33 into a forbidden TLS 1.3 handshake message.
-* @expect The receiving client recognizes the extension and aborts with fatal illegal_parameter.
+* @expect The receiving client aborts with the specified fatal alert.
 @ */
 /* BEGIN_CASE */
-void UT_TLS_TLS13_RFC9973_WRONG_MESSAGE_FUNC_TC001(int wrongMessage, int transport)
+void UT_TLS_TLS13_RFC9973_WRONG_MESSAGE_FUNC_TC001(int wrongMessage, int offerCertPsk, int transport, int expectedAlert)
 {
 #ifndef HITLS_TLS_PROTO_DTLS13
     if (transport == BSL_UIO_UDP) {
@@ -1592,7 +1592,9 @@ void UT_TLS_TLS13_RFC9973_WRONG_MESSAGE_FUNC_TC001(int wrongMessage, int transpo
     /* 1. Choose a forbidden server message and enable client authentication for CertificateRequest. */
     FRAME_Init();
     ASSERT_TRUE(wrongMessage >= RFC9973_WRONG_ENCRYPTED_EXTENSIONS && wrongMessage <= RFC9973_WRONG_NEW_SESSION_TICKET);
-    HITLS_Config *config = Rfc9973NewConfig(TLS13_CERT_AUTH_WITH_EXTERNAL_PSK, true, true);
+    /* Extension 33 is forbidden here, whether or not the client offered it. */
+    uint32_t mode = offerCertPsk ? TLS13_CERT_AUTH_WITH_EXTERNAL_PSK : TLS13_KE_MODE_PSK_WITH_DHE;
+    HITLS_Config *config = Rfc9973NewConfig(mode, true, true);
     FRAME_LinkObj *client = NULL;
     FRAME_LinkObj *server = NULL;
     ASSERT_TRUE(config != NULL);
@@ -1604,10 +1606,11 @@ void UT_TLS_TLS13_RFC9973_WRONG_MESSAGE_FUNC_TC001(int wrongMessage, int transpo
                                                   TRY_SEND_CERTIFICATE, TRY_SEND_NEW_SESSION_TICKET};
     RecWrapper wrapper = {states[wrongMessage], REC_TYPE_HANDSHAKE, false, (void *)(uintptr_t)wrongMessage,
                           Rfc9973InjectWrongMessageExtension};
-    /* 2. Insert extension 33 into that message and require client illegal_parameter. */
+    /* 2. Insert extension 33 and check the fatal alert. EncryptedExtensions rejects it during parsing. */
     RegisterWrapper(wrapper);
     ASSERT_NE(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_SUCCESS);
-    Rfc9973AssertFatalAlert(client, ALERT_ILLEGAL_PARAMETER);
+    ASSERT_EQ(client->ssl->hsCtx->extFlag.haveCertWithExternalPsk, offerCertPsk);
+    Rfc9973AssertFatalAlert(client, expectedAlert);
 EXIT:
     ClearWrapper();
     FRAME_FreeLink(client);

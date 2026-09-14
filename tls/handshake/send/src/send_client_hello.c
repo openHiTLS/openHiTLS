@@ -454,8 +454,17 @@ static UserPskList *ConstructUserPsk(HITLS_Session *sessoin, const uint8_t *iden
 #ifdef HITLS_TLS_FEATURE_CERT_WITH_EXTERNAL_PSK
 static bool ShouldClientSendExternalPskExt(const TLS_Ctx *ctx, const UserPskList *userPsk)
 {
-    return ctx->hsCtx->kxCtx->pskInfo13.resumeSession == NULL && userPsk != NULL &&
-        (ctx->config.tlsConfig.keyExchMode & TLS13_CERT_AUTH_WITH_EXTERNAL_PSK) != 0;
+    /*
+     * 1. Do not add extension 33 for the first time after HRR.
+     *    !haveHrr: this is ClientHello1, so a new offer is allowed.
+     *    haveCertWithExternalPsk: ClientHello1 already offered extension 33.
+     *    After HRR, !haveHrr is false, so the saved offer flag must be true.
+     * 2. Require an external PSK and no resumption PSK. Extension 33 allows external PSKs only.
+     * 3. Require mode 8 (certificate authentication with an external PSK) in the configuration.
+     */
+    return (!ctx->hsCtx->haveHrr || ctx->hsCtx->extFlag.haveCertWithExternalPsk) &&
+           ctx->hsCtx->kxCtx->pskInfo13.resumeSession == NULL && userPsk != NULL &&
+           (ctx->config.tlsConfig.keyExchMode & TLS13_CERT_AUTH_WITH_EXTERNAL_PSK) != 0;
 }
 #endif
 
@@ -475,12 +484,15 @@ static int32_t Tls13ClientPreparePSK(TLS_Ctx *ctx)
     /* Obtain the resume psk information from the session */
     HITLS_SESS_Free(hsCtx->kxCtx->pskInfo13.resumeSession);
     hsCtx->kxCtx->pskInfo13.resumeSession = NULL;
+#ifdef HITLS_TLS_FEATURE_SESSION_TICKET
+    /* Ticket lookup is optional; external PSKs still use session objects below. */
     if (HITLS_SESS_HasTicket(ctx->session) &&
         IsTls13SessionValid(expectedVersion, hashAlgo, ctx->session, ctx->config.tlsConfig.tls13CipherSuites,
                             ctx->config.tlsConfig.tls13cipherSuitesSize) &&
         SESS_CheckValidity(ctx->session, (uint64_t)BSL_SAL_CurrentSysTimeGet())) {
         hsCtx->kxCtx->pskInfo13.resumeSession = HITLS_SESS_Dup(ctx->session);
     }
+#endif
 
     uint8_t index = (hsCtx->kxCtx->pskInfo13.resumeSession == NULL) ? 0 : 1;
     if (ctx->config.tlsConfig.pskUseSessionCb != NULL) {
