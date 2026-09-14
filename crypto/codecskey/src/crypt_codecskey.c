@@ -473,7 +473,7 @@ int32_t CRYPT_EAL_DecodeFileKey(int32_t format, int32_t type, const char *path, 
     }
     BSL_Buffer encode = {data, dataLen};
     ret = CRYPT_EAL_DecodeBuffKey(format, type, &encode, pwd, pwdlen, ealPKey);
-    BSL_SAL_Free(data);
+    BSL_SAL_ClearFree(data, dataLen);
     return ret;
 }
 
@@ -493,7 +493,7 @@ int32_t CRYPT_EAL_ProviderDecodeFileKey(CRYPT_EAL_LibCtx *libCtx, const char *at
     }
     BSL_Buffer encode = {data, dataLen};
     ret = CRYPT_EAL_ProviderDecodeBuffKey(libCtx, attrName, pkeyAlgId, format, type, &encode, pwd, ealPKey);
-    BSL_SAL_Free(data);
+    BSL_SAL_ClearFree(data, dataLen);
     return ret;
 }
 #endif // HITLS_BSL_SAL_FILE

@@ -870,11 +870,29 @@ static const Fp25 SQRTM1 = {-32595792, -7943725, 9377950, 3500415, 12389472, -27
 static const Fp25 D = {-10913610, 13857413, -15372611, 6949391, 114729, -8787816,
     -6275908, -3247719, -18696448, -12055116};
 
+/* RFC 8032 5.1.3: decoding fails if y >= p, bit 255 is the sign of x */
+static bool YIsNotCanonical(const uint8_t in[CRYPT_CURVE25519_KEYLEN])
+{
+    static const uint8_t p[CRYPT_CURVE25519_KEYLEN] = {0xed, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+                                                       0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+                                                       0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x7f};
+    for (int32_t i = CRYPT_CURVE25519_KEYLEN - 1; i >= 0; i--) {
+        uint8_t b = (i == CRYPT_CURVE25519_KEYLEN - 1) ? (uint8_t)(in[i] & 0x7f) : in[i];
+        if (b != p[i]) {
+            return b > p[i];
+        }
+    }
+    return true;
+}
+
 int32_t PointDecoding(GeE *point, const uint8_t in[CRYPT_CURVE25519_KEYLEN])
 {
     Fp25 u, v, v3, x2, result;
     // get the last block (31), shift 7 for first bit
     uint8_t x0 = in[31] >> 7;
+    if (YIsNotCanonical(in)) {
+        return 1;
+    }
     DataToPolynomial(point->y, in);
     
     CURVE25519_FP_SET(point->z, 1);
@@ -904,6 +922,10 @@ int32_t PointDecoding(GeE *point, const uint8_t in[CRYPT_CURVE25519_KEYLEN])
             return 1;
         }
         FpMul(point->x, point->x, SQRTM1);
+    }
+    if (x0 == 1 && CheckZero(point->x)) {
+        /* RFC 8032 5.1.3: decoding fails if x = 0 and x_0 = 1 */
+        return 1;
     }
     uint8_t bit = GetXBit(point->x);
     if (bit != x0) {
