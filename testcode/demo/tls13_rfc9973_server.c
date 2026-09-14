@@ -45,8 +45,7 @@ static const uint8_t g_rfc9973DemoPsk[] = {0x01, 0x23, 0x45, 0x67, 0x89, 0xab, 0
                                            0x67, 0x89, 0xab, 0xcd, 0xef, 0x01, 0x23, 0x45, 0x67, 0x89, 0xab,
                                            0xcd, 0xef, 0x01, 0x23, 0x45, 0x67, 0x89, 0xab, 0xcd, 0xef};
 
-static uint32_t Rfc9973ServerPskCallback(HITLS_Ctx *ctx, const uint8_t *identity,
-    uint8_t *psk, uint32_t maxPskLen)
+static uint32_t Rfc9973ServerPskCallback(HITLS_Ctx *ctx, const uint8_t *identity, uint8_t *psk, uint32_t maxPskLen)
 {
     (void)ctx;
     /* 1. Match the configured identity and check the output buffer capacity. */
@@ -59,12 +58,12 @@ static uint32_t Rfc9973ServerPskCallback(HITLS_Ctx *ctx, const uint8_t *identity
     return sizeof(g_rfc9973DemoPsk);
 }
 
-static int32_t ConfigureServer(HITLS_Config *config, const char *certFile,
-    const char *keyFile, const char *chainFile)
+static int32_t ConfigureServer(HITLS_Config *config, const char *certFile, const char *keyFile, const char *chainFile)
 {
-    /* 1. Enable mode 8, choose the SHA-256 suite, and install the external PSK callback. */
+    /* 1. Enable mode 8 with its required psk_dhe_ke mode, choose SHA-256, and install the external PSK callback. */
     uint16_t cipherSuite = HITLS_AES_128_GCM_SHA256;
-    int32_t ret = HITLS_CFG_SetKeyExchMode(config, TLS13_CERT_AUTH_WITH_EXTERNAL_PSK);
+    int32_t ret = HITLS_CFG_SetKeyExchMode(config,
+        TLS13_KE_MODE_PSK_WITH_DHE | TLS13_CERT_AUTH_WITH_EXTERNAL_PSK);
     if (ret == HITLS_SUCCESS) {
         ret = HITLS_CFG_SetCipherSuites(config, &cipherSuite, 1);
     }
@@ -83,8 +82,9 @@ static int32_t ConfigureServer(HITLS_Config *config, const char *certFile,
     }
 
     /* 3. Add the optional intermediate certificate, transferring ownership only on success. */
-    HITLS_CERT_X509 *chainCert = HITLS_CFG_ParseCert(config, (const uint8_t *)chainFile,
-        (uint32_t)strlen(chainFile) + 1u, TLS_PARSE_TYPE_FILE, TLS_PARSE_FORMAT_PEM);
+    HITLS_CERT_X509 *chainCert =
+        HITLS_CFG_ParseCert(config, (const uint8_t *)chainFile, (uint32_t)strlen(chainFile) + 1u, TLS_PARSE_TYPE_FILE,
+                            TLS_PARSE_FORMAT_PEM);
     if (chainCert == NULL) {
         return HITLS_INTERNAL_EXCEPTION;
     }
@@ -191,8 +191,8 @@ int main(int argc, char **argv)
         (void)fprintf(stderr, "application write failed: 0x%x\n", ret);
         goto EXIT;
     }
-    (void)printf("RFC9973 handshake and application data succeeded (mode=%u); peer sent: %.*s\n",
-        mode, (int)messageLen, message);
+    (void)printf("RFC9973 handshake and application data succeeded (mode=%u); peer sent: %.*s\n", mode, (int)messageLen,
+                 message);
     exitCode = EXIT_SUCCESS;
 
 EXIT:

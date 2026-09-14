@@ -266,8 +266,7 @@ static int32_t Tls13ClientPrepareKeyShare(TLS_Ctx *ctx, uint32_t tls13BasicKeyEx
 {
     TLS_Config *tlsConfig = &ctx->config.tlsConfig;
     // Certificate authentication and PSK with DHE authentication require key share
-    uint32_t needKeyShareMode = TLS13_KE_MODE_PSK_WITH_DHE | TLS13_CERT_AUTH_WITH_DHE;
-    if ((tls13BasicKeyExMode & needKeyShareMode) == 0) {
+    if (!HS_IsTls13DheMode(tls13BasicKeyExMode)) {
         return HITLS_SUCCESS;
     }
 
@@ -453,77 +452,37 @@ static UserPskList *ConstructUserPsk(HITLS_Session *sessoin, const uint8_t *iden
 }
 
 #ifdef HITLS_TLS_FEATURE_CERT_WITH_EXTERNAL_PSK
-/*
- * Check the supplied candidate without replacing the PSK stored in ctx.
- * 1. An external PSK and the RFC 9973 configuration flag must be present.
- * 2. RFC 9973 supports TLS only; the server supplies the required certificate.
- */
 static bool ShouldClientSendExternalPskExt(const TLS_Ctx *ctx, const UserPskList *userPsk)
 {
-    bool extFlag =
-        userPsk != NULL && // an external PSK is available
-        (ctx->config.tlsConfig.keyExchMode & TLS13_CERT_AUTH_WITH_EXTERNAL_PSK) != 0 && // mode 8 allowed by config
-        !IS_SUPPORT_DATAGRAM(ctx->config.tlsConfig.originVersionMask); // TLS only, no DTLS
-    return extFlag;
-}
-
-/*
- * Adjust the PSK identity list according to the RFC 9973 offer decision:
- * offering extension 33 drops the resumption ticket (all-external list),
- * while without any ordinary PSK mode the external PSK is dropped instead
- * (bit 8 alone still permits DHE ticket resumption).
- * Must be called after userPsk is stored into pskInfo13.userPskSess.
- */
-static void AdjustPskIdentityList(TLS_Ctx *ctx, UserPskList *userPsk)
-{
-    if (ShouldClientSendExternalPskExt(ctx, userPsk)) {
-        /*
-         * 1. Extension 33 requires an all-external list (RFC 9973 Section 5.1).
-         * Remove the ticket and renumber the external PSK to index 0.
-         */
-        HITLS_SESS_Free(ctx->hsCtx->kxCtx->pskInfo13.resumeSession);
-        ctx->hsCtx->kxCtx->pskInfo13.resumeSession = NULL;
-        userPsk->num = 0;
-    } else if ((ctx->config.tlsConfig.keyExchMode & (TLS13_KE_MODE_PSK_ONLY | TLS13_KE_MODE_PSK_WITH_DHE)) == 0) {
-        /*
-         * 2. This external PSK cannot use mode 8, PSK_ONLY, or PSK_WITH_DHE. Remove it.
-         * Keep any ticket; Tls13ClientCalcCandidateMode permits DHE resumption under mode 8.
-         */
-        if (userPsk != NULL) {
-            BSL_SAL_FREE(userPsk->identity);
-            HITLS_SESS_Free(userPsk->pskSession);
-            BSL_SAL_FREE(userPsk);
-            ctx->hsCtx->kxCtx->pskInfo13.userPskSess = NULL;
-        }
-    }
+    return ctx->hsCtx->kxCtx->pskInfo13.resumeSession == NULL && userPsk != NULL &&
+        (ctx->config.tlsConfig.keyExchMode & TLS13_CERT_AUTH_WITH_EXTERNAL_PSK) != 0;
 }
 #endif
 
-/*
- * Get PSK bytes from callbacks. hashAlgo filters PSKs; it does not derive or modify the key bytes.
- * 1. Pass hashAlgo to the TLS 1.3 session callback to request a PSK bound to that hash.
- * 2. Compare the returned session's cipher-suite hash with hashAlgo before accepting the PSK.
- *    For example, SHA-384 rejects a session bound to SHA-256.
- * 3. HITLS_HASH_BUTT allows any hash supported by the configured TLS 1.3 cipher suites.
- * The caller owns *userPsk; NULL means no usable candidate.
- */
-static int32_t Tls13ClientGetExternalPSK(TLS_Ctx *ctx, HITLS_HashAlgo hashAlgo, UserPskList **userPsk)
+static int32_t Tls13ClientPreparePSK(TLS_Ctx *ctx)
 {
     int32_t ret = 0;
+    HS_Ctx *hsCtx = ctx->hsCtx;
+    HITLS_HashAlgo hashAlgo = hsCtx->haveHrr ? ctx->negotiatedInfo.cipherSuiteInfo.hashAlg : HITLS_HASH_BUTT;
     uint16_t expectedVersion =
         IS_SUPPORT_DATAGRAM(ctx->config.tlsConfig.originVersionMask) ? HITLS_VERSION_DTLS13 : HITLS_VERSION_TLS13;
-    uint8_t index = (ctx->hsCtx->kxCtx->pskInfo13.resumeSession == NULL) ? 0 : 1;
     uint8_t identity[HS_PSK_IDENTITY_MAX_LEN + 1] = {0};
     const uint8_t *id = NULL;
     uint32_t idLen = 0;
     HITLS_Session *pskSession = NULL;
-    *userPsk = NULL;
+    UserPskList *userPsk = NULL;
 
-    /*
-     * 1. Ask the TLS 1.3 session callback first. Its session supplies the PSK and its hash.
-     * hashAlgo selects the required hash; HITLS_HASH_BUTT allows any configured hash.
-     * A callback error aborts processing. Success with a NULL session allows the legacy fallback.
-     */
+    /* Obtain the resume psk information from the session */
+    HITLS_SESS_Free(hsCtx->kxCtx->pskInfo13.resumeSession);
+    hsCtx->kxCtx->pskInfo13.resumeSession = NULL;
+    if (HITLS_SESS_HasTicket(ctx->session) &&
+        IsTls13SessionValid(expectedVersion, hashAlgo, ctx->session, ctx->config.tlsConfig.tls13CipherSuites,
+                            ctx->config.tlsConfig.tls13cipherSuitesSize) &&
+        SESS_CheckValidity(ctx->session, (uint64_t)BSL_SAL_CurrentSysTimeGet())) {
+        hsCtx->kxCtx->pskInfo13.resumeSession = HITLS_SESS_Dup(ctx->session);
+    }
+
+    uint8_t index = (hsCtx->kxCtx->pskInfo13.resumeSession == NULL) ? 0 : 1;
     if (ctx->config.tlsConfig.pskUseSessionCb != NULL) {
         ret = ctx->config.tlsConfig.pskUseSessionCb(ctx, hashAlgo, &id, &idLen, &pskSession);
         if (ret != HITLS_PSK_USE_SESSION_CB_SUCCESS) {
@@ -533,12 +492,8 @@ static int32_t Tls13ClientGetExternalPSK(TLS_Ctx *ctx, HITLS_HashAlgo hashAlgo, 
         }
     }
 
-    /*
-     * 2. Use the legacy callback only when no session was supplied.
-     * CreatePskSession wraps its raw key in a TLS/DTLS 1.3 session bound to SHA-256.
-     * Keep the returned identity until ConstructUserPsk copies it below.
-     */
     if (pskSession == NULL) {
+        // use 1.2 psk callback default hashalgo == sha256
         ret = CreatePskSession(ctx, identity, HS_PSK_IDENTITY_MAX_LEN, &pskSession);
         if (ret != HITLS_SUCCESS) {
             return ret;
@@ -547,106 +502,21 @@ static int32_t Tls13ClientGetExternalPSK(TLS_Ctx *ctx, HITLS_HashAlgo hashAlgo, 
         idLen = (uint32_t)strlen((char *)identity);
     }
 
-    /* 3. Use the selected hash after HRR. No special hash override is needed. */
-    bool validSession = pskSession != NULL && IsTls13SessionValid(expectedVersion, hashAlgo, pskSession,
-                                                                  ctx->config.tlsConfig.tls13CipherSuites,
-                                                                  ctx->config.tlsConfig.tls13cipherSuitesSize);
-#ifdef HITLS_TLS_FEATURE_CERT_WITH_EXTERNAL_PSK
-    /* 4. A second ClientHello must keep the external identity and an eligible PSK. */
-    const UserPskList *previous = ctx->hsCtx->kxCtx->pskInfo13.userPskSess;
-    bool keepExternalOffer = ctx->hsCtx->haveHrr && ctx->hsCtx->extFlag.haveCertWithExternalPsk;
-    if (keepExternalOffer &&
-        (!validSession || idLen != previous->identityLen || memcmp(id, previous->identity, idLen) != 0)) {
-        HITLS_SESS_Free(pskSession);
-        BSL_ERR_PUSH_ERROR(HITLS_MSG_HANDLE_PSK_USE_SESSION_FAIL);
-        return HITLS_MSG_HANDLE_PSK_USE_SESSION_FAIL;
-    }
-#endif
-    if (validSession) {
-        *userPsk = ConstructUserPsk(pskSession, id, idLen, index);
+    if (pskSession != NULL && IsTls13SessionValid(expectedVersion, hashAlgo, pskSession,
+                                                  ctx->config.tlsConfig.tls13CipherSuites,
+                                                  ctx->config.tlsConfig.tls13cipherSuitesSize)) {
+        userPsk = ConstructUserPsk(pskSession, id, idLen, index);
     }
     HITLS_SESS_Free(pskSession);
-    /* Do not turn a construction failure into an omitted PSK offer. */
-    if (validSession && *userPsk == NULL) {
-        BSL_ERR_PUSH_ERROR(HITLS_MSG_HANDLE_PSK_USE_SESSION_FAIL);
-        return HITLS_MSG_HANDLE_PSK_USE_SESSION_FAIL;
+    pskSession = NULL;
+
+    if (ctx->hsCtx->kxCtx->pskInfo13.userPskSess != NULL) {
+        BSL_SAL_FREE(ctx->hsCtx->kxCtx->pskInfo13.userPskSess->identity);
+        HITLS_SESS_Free(ctx->hsCtx->kxCtx->pskInfo13.userPskSess->pskSession);
+        BSL_SAL_FREE(ctx->hsCtx->kxCtx->pskInfo13.userPskSess);
     }
+    ctx->hsCtx->kxCtx->pskInfo13.userPskSess = userPsk;
     return HITLS_SUCCESS;
-}
-
-/* Rebuild ticket and external PSK candidates for each ClientHello. Packing recalculates the binders. */
-static int32_t Tls13ClientPreparePSK(TLS_Ctx *ctx)
-{
-    HS_Ctx *hsCtx = ctx->hsCtx;
-    HITLS_HashAlgo hashAlgo = hsCtx->haveHrr ? ctx->negotiatedInfo.cipherSuiteInfo.hashAlg : HITLS_HASH_BUTT;
-
-    /* 1. Refresh the ticket candidate. After HRR, its hash must match the selected cipher. */
-    HITLS_SESS_Free(hsCtx->kxCtx->pskInfo13.resumeSession);
-    hsCtx->kxCtx->pskInfo13.resumeSession = NULL;
-#ifdef HITLS_TLS_FEATURE_SESSION_TICKET
-    uint16_t expectedVersion =
-        IS_SUPPORT_DATAGRAM(ctx->config.tlsConfig.originVersionMask) ? HITLS_VERSION_DTLS13 : HITLS_VERSION_TLS13;
-    if (HITLS_SESS_HasTicket(ctx->session) &&
-        IsTls13SessionValid(expectedVersion, hashAlgo, ctx->session, ctx->config.tlsConfig.tls13CipherSuites,
-                            ctx->config.tlsConfig.tls13cipherSuitesSize) &&
-        SESS_CheckValidity(ctx->session, (uint64_t)BSL_SAL_CurrentSysTimeGet())) {
-        hsCtx->kxCtx->pskInfo13.resumeSession = HITLS_SESS_Dup(ctx->session);
-    }
-#endif /* HITLS_TLS_FEATURE_SESSION_TICKET */
-
-    /* 2. Both candidates use the original session/callback preparation and the selected HRR hash. */
-    UserPskList *userPsk = NULL;
-    int32_t ret = Tls13ClientGetExternalPSK(ctx, hashAlgo, &userPsk);
-    if (ret != HITLS_SUCCESS) {
-        return ret;
-    }
-
-    /* 3. Replace the external candidate only after lookup and HRR checks succeed. */
-    PskInfo13 *pskInfo = &hsCtx->kxCtx->pskInfo13;
-    if (pskInfo->userPskSess != NULL) {
-        BSL_SAL_FREE(pskInfo->userPskSess->identity);
-        HITLS_SESS_Free(pskInfo->userPskSess->pskSession);
-        BSL_SAL_FREE(pskInfo->userPskSess);
-    }
-    pskInfo->userPskSess = userPsk;
-#ifdef HITLS_TLS_FEATURE_CERT_WITH_EXTERNAL_PSK
-    AdjustPskIdentityList(ctx, userPsk);
-#endif
-    return HITLS_SUCCESS;
-}
-
-/*
- * Calculate the candidate key-exchange mode bitmap for the ClientHello.
- * Sources are OR-ed together: each available PSK material contributes the
- * ordinary PSK modes allowed by the configuration, and the certificate
- * material contributes TLS13_CERT_AUTH_WITH_DHE. The server picks the
- * final mode in the ServerHello.
- */
-static uint32_t Tls13ClientCalcCandidateMode(const TLS_Ctx *ctx)
-{
-    uint32_t tls13BasicKeyExMode = 0;
-    const PskInfo13 *pskInfo = &ctx->hsCtx->kxCtx->pskInfo13;
-    const uint32_t clientAllowedKxMode =
-        ctx->config.tlsConfig.keyExchMode & (TLS13_KE_MODE_PSK_ONLY | TLS13_KE_MODE_PSK_WITH_DHE);
-    /* 1. Both PSK types contribute the configured PSK_ONLY/PSK_WITH_DHE modes. */
-    if (pskInfo->resumeSession != NULL || pskInfo->userPskSess != NULL) {
-        tls13BasicKeyExMode |= clientAllowedKxMode;
-    }
-#ifdef HITLS_TLS_FEATURE_CERT_WITH_EXTERNAL_PSK
-    /* 2. Only userPskSess may offer extension 33. A stored ticket remains a resumption PSK. */
-    if (ShouldClientSendExternalPskExt(ctx, pskInfo->userPskSess)) {
-        tls13BasicKeyExMode |= TLS13_CERT_AUTH_WITH_EXTERNAL_PSK;
-    }
-    if (pskInfo->resumeSession != NULL &&
-        (ctx->config.tlsConfig.keyExchMode & TLS13_CERT_AUTH_WITH_EXTERNAL_PSK) != 0) {
-        tls13BasicKeyExMode |= TLS13_KE_MODE_PSK_WITH_DHE;
-    }
-#endif
-    /* 3. Keep the existing client signature capability check; this does not test for a local certificate. */
-    if (ctx->config.tlsConfig.signAlgorithmsSize != 0) { // base cert auth
-        tls13BasicKeyExMode |= TLS13_CERT_AUTH_WITH_DHE;
-    }
-    return tls13BasicKeyExMode;
 }
 
 int32_t Tls13ClientHelloPrepare(TLS_Ctx *ctx)
@@ -682,15 +552,26 @@ int32_t Tls13ClientHelloPrepare(TLS_Ctx *ctx)
             return ret;
         }
     }
-    /* 1. Refresh PSK candidates for this ClientHello, including the second one after HRR. */
     ret = Tls13ClientPreparePSK(ctx);
     if (ret != HITLS_SUCCESS) {
         ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_INTERNAL_ERROR);
         return ret;
     }
 
-    /* 2. Derive offered modes from the available candidates before preparing key_share. */
-    uint32_t tls13BasicKeyExMode = Tls13ClientCalcCandidateMode(ctx);
+    uint32_t tls13BasicKeyExMode = 0;
+    PskInfo13 *pskInfo = &ctx->hsCtx->kxCtx->pskInfo13;
+    if (pskInfo->resumeSession != NULL || pskInfo->userPskSess != NULL) {
+        tls13BasicKeyExMode |= ctx->config.tlsConfig.keyExchMode;
+#ifdef HITLS_TLS_FEATURE_CERT_WITH_EXTERNAL_PSK
+        if (!ShouldClientSendExternalPskExt(ctx, pskInfo->userPskSess)) {
+            tls13BasicKeyExMode &= ~TLS13_CERT_AUTH_WITH_EXTERNAL_PSK;
+        }
+#endif
+    }
+
+    if (ctx->config.tlsConfig.signAlgorithmsSize != 0) { // base cert auth
+        tls13BasicKeyExMode |= TLS13_CERT_AUTH_WITH_DHE;
+    }
 
     /* Prepare the key share extension. The keyshares in two clientHello messages are different. Therefore,
      * both the keyshares must be prepared */
@@ -741,27 +622,40 @@ static int32_t PackClientPreSharedKeyBinders(const TLS_Ctx *ctx, uint8_t *buf, u
     PskInfo13 *pskInfo = &ctx->hsCtx->kxCtx->pskInfo13;
     uint32_t offset = sizeof(uint16_t); // skip binders len
     uint8_t psk[HS_PSK_MAX_LEN] = {0};
-    /* 1. Preserve wire identity order: ticket first, external PSK second. */
-    HITLS_Session *sessions[] = {pskInfo->resumeSession,
-                                 pskInfo->userPskSess == NULL ? NULL : pskInfo->userPskSess->pskSession};
-    for (uint32_t i = 0; i < sizeof(sessions) / sizeof(sessions[0]); i++) {
-        if (sessions[i] == NULL) {
-            continue;
-        }
-        /* 2. Both PSK types load their key and binder hash from the corresponding session. */
+    uint32_t pskLen = HS_PSK_MAX_LEN;
+    uint32_t binderLen = 0;
+    int32_t ret = HITLS_SUCCESS;
+    if (pskInfo->resumeSession != NULL) {
         HITLS_HashAlgo hashAlg = HITLS_HASH_BUTT;
-        uint32_t binderLen = HS_GetBinderLen(sessions[i], &hashAlg);
-        uint32_t pskLen = sizeof(psk);
-        buf[offset++] = (uint8_t)binderLen;
-        int32_t ret = HITLS_SESS_GetMasterKey(sessions[i], psk, &pskLen);
+        binderLen = HS_GetBinderLen(pskInfo->resumeSession, &hashAlg);  // Success guaranteed by the context
+        buf[offset] = binderLen;
+        offset++;
+        ret = HITLS_SESS_GetMasterKey(pskInfo->resumeSession, psk, &pskLen);
         if (ret != HITLS_SUCCESS) {
-            BSL_SAL_CleanseData(psk, sizeof(psk));
             return ret;
         }
-        /* 3. Only the binder label differs: i == 0 is resumption; i == 1 is external. */
-        ret = VERIFY_CalcPskBinder(ctx, hashAlg, i == 1, psk, pskLen, ctx->hsCtx->msgBuf, trucatedLen, &buf[offset],
-                                   binderLen);
-        BSL_SAL_CleanseData(psk, sizeof(psk));
+        ret = VERIFY_CalcPskBinder(ctx, hashAlg, false, psk, pskLen,
+            ctx->hsCtx->msgBuf, trucatedLen, &buf[offset], binderLen);
+        BSL_SAL_CleanseData(psk, HS_PSK_MAX_LEN);
+        if (ret != HITLS_SUCCESS) {
+            return ret;
+        }
+        offset += binderLen;
+    }
+
+    if (pskInfo->userPskSess != NULL) {
+        HITLS_HashAlgo hashAlg = HITLS_HASH_BUTT;
+        pskLen = HS_PSK_MAX_LEN;
+        binderLen = HS_GetBinderLen(pskInfo->userPskSess->pskSession, &hashAlg);  // context is guaranteed to succeed
+        buf[offset] = (uint8_t)binderLen;
+        offset++;
+        ret = HITLS_SESS_GetMasterKey(pskInfo->userPskSess->pskSession, psk, &pskLen);
+        if (ret != HITLS_SUCCESS) {
+            return ret;
+        }
+        ret = VERIFY_CalcPskBinder(ctx, hashAlg, true, psk, pskLen,
+            ctx->hsCtx->msgBuf, trucatedLen, &buf[offset], binderLen);
+        BSL_SAL_CleanseData(psk, HS_PSK_MAX_LEN);
         if (ret != HITLS_SUCCESS) {
             return ret;
         }

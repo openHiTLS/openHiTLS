@@ -54,13 +54,6 @@
 #endif
 
 #if defined(HITLS_TLS_PROTO_TLS13_FAMILY)
-/*
- * 1. SESSION_TICKET: TLS13ServerProcessTicket() decrypts the ticket.
- *    GetPskFromSession() then loads the resumption PSK, even without external PSK support.
- *    SESSION alone does not enable this ticket resumption path.
- * 2. PSK: PskFindSession()/GetPskByIdentity() obtain external PSKs from callbacks.
- * 3. Both paths use CompareBinder() and its binder buffer. Either feature needs this size.
- */
 #if defined(HITLS_TLS_FEATURE_SESSION_TICKET) || defined(HITLS_TLS_FEATURE_PSK)
 #define HS_MAX_BINDER_SIZE 64
 #endif
@@ -1875,7 +1868,7 @@ static bool IsPSKValid(TLS_Ctx *ctx, HITLS_Session *pskSession)
 
 #ifdef HITLS_TLS_FEATURE_SESSION_TICKET
 static int32_t TLS13ServerProcessTicket(TLS_Ctx *ctx, PreSharedKey *cur,
-    uint8_t *psk, uint32_t *pskLen)
+    uint8_t *psk, uint32_t *pskLen, bool rejectResume)
 {
     const uint8_t *ticket = cur->identity;
     uint32_t ticketLen = cur->identitySize;
@@ -1896,6 +1889,18 @@ static int32_t TLS13ServerProcessTicket(TLS_Ctx *ctx, PreSharedKey *cur,
         *pskLen = 0;
         return HITLS_SUCCESS;
     }
+
+    /* RFC 9973 does not permit a resumption ticket alongside extension 33. */
+#ifdef HITLS_TLS_FEATURE_CERT_WITH_EXTERNAL_PSK
+    if (rejectResume) {
+        HITLS_SESS_Free(pskSession);
+        BSL_ERR_PUSH_ERROR(HITLS_MSG_HANDLE_PSK_INVALID);
+        return RETURN_ALERT_PROCESS(ctx, HITLS_MSG_HANDLE_PSK_INVALID, BINLOG_ID15940,
+            "RFC 9973 PSK list contains a resumption ticket", ALERT_ILLEGAL_PARAMETER);
+    }
+#else
+    (void)rejectResume;
+#endif
 
     /* Check whether the session is valid */
     if (!IsPSKValid(ctx, pskSession) ||
@@ -1932,10 +1937,14 @@ static int32_t TLS13ServerProcessTicket(TLS_Ctx *ctx, PreSharedKey *cur,
 }
 #endif /* HITLS_TLS_FEATURE_SESSION_TICKET */
 
-static int32_t ServerFindPsk(TLS_Ctx *ctx, PreSharedKey *cur, uint8_t *psk, uint32_t *pskLen, bool externalOnly)
+static int32_t ServerFindPsk(TLS_Ctx *ctx, PreSharedKey *cur, uint8_t *psk, uint32_t *pskLen,
+    bool certWithExternalPsk)
 {
     int32_t ret = HITLS_SUCCESS;
     ctx->negotiatedInfo.isResume = false;
+#ifndef HITLS_TLS_FEATURE_SESSION_TICKET
+    (void)certWithExternalPsk;
+#endif
 #ifdef HITLS_TLS_FEATURE_PSK
     const uint8_t *identity = cur->identity;
     uint32_t identitySize = cur->identitySize;
@@ -1976,16 +1985,9 @@ static int32_t ServerFindPsk(TLS_Ctx *ctx, PreSharedKey *cur, uint8_t *psk, uint
         }
     }
 #endif /* HITLS_TLS_FEATURE_PSK */
-    /* 1. External and resumption PSKs share the callback lookup above.
-     * 2. An extension 33 offer cannot fall through to ticket resumption.
-     */
-    if (externalOnly) {
-        *pskLen = 0;
-        return HITLS_SUCCESS;
-    }
 #ifdef HITLS_TLS_FEATURE_SESSION_TICKET
     /* Try to decrypt the ticket for session resumption */
-    ret = TLS13ServerProcessTicket(ctx, cur, psk, pskLen);
+    ret = TLS13ServerProcessTicket(ctx, cur, psk, pskLen, certWithExternalPsk);
 #else
     if (ret == HITLS_SUCCESS && *pskLen != 0) {
         *pskLen = 0;
@@ -2018,10 +2020,12 @@ int32_t CompareBinder(TLS_Ctx *ctx, const PreSharedKey *pskNode, uint8_t *psk, u
     ret = VERIFY_CalcPskBinder(ctx, hashAlg, isExternalPsk, psk, pskLen, ctx->hsCtx->msgBuf, truncateHelloLen,
         computedBinder, binderLen);
     if (ret != HITLS_SUCCESS) {
+        BSL_SAL_CleanseData(computedBinder, sizeof(computedBinder));
         return ret;
     }
     /* 4. Compare secret-derived bytes in constant time. ConstTimeMemcmp returns zero on mismatch. */
     ret = ConstTimeMemcmp(computedBinder, recvBinder, binderLen) == 0 ? HITLS_INTERNAL_EXCEPTION : HITLS_SUCCESS;
+    BSL_SAL_CleanseData(computedBinder, sizeof(computedBinder));
     if (ret != HITLS_SUCCESS) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17061, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "memcmp fail, ret %d", ret, 0, 0, 0);
@@ -2029,52 +2033,6 @@ int32_t CompareBinder(TLS_Ctx *ctx, const PreSharedKey *pskNode, uint8_t *psk, u
     }
     return ret;
 }
-
-#ifdef HITLS_TLS_FEATURE_CERT_WITH_EXTERNAL_PSK
-
-/*
- * RFC 9973 Section 5.1: "All of the listed PSKs MUST be external PSKs. If a
- * resumption PSK is listed along with the tls_cert_with_extern_psk extension,
- * the server MUST abort the handshake with an 'illegal_parameter' alert."
- * Every identity is trial-decrypted as a ticket; any success is a violation.
- */
-static int32_t CheckCertWithExternalPskListHasNoTicket(TLS_Ctx *ctx, const PreSharedKey *offeredPsks)
-{
-#ifdef HITLS_TLS_FEATURE_SESSION_TICKET
-    ListHead *node = NULL;
-    ListHead *tmpNode = NULL;
-    PreSharedKey *cur = NULL;
-
-    /* 1. Classify every identity, including entries after a usable external PSK. */
-    LIST_FOR_EACH_ITEM_SAFE(node, tmpNode, &(offeredPsks->pskNode))
-    {
-        cur = BSL_LIST_ENTRY(node, PreSharedKey, pskNode);
-        bool isTicketExcept = false;
-        HITLS_Session *ticketSession = NULL;
-        /* 2. Trial-decrypt the identity using the server ticket keys. A NULL session means no ticket was decoded. */
-        int32_t ret = SESSMGR_DecryptSessionTicket(LIBCTX_FROM_CTX(ctx), ATTRIBUTE_FROM_CTX(ctx),
-            ctx->globalConfig->sessMgr, &ticketSession, cur->identity, cur->identitySize, &isTicketExcept);
-        (void)isTicketExcept;
-        if (ret != HITLS_SUCCESS) {
-            HITLS_SESS_Free(ticketSession);
-            return RETURN_ALERT_PROCESS(ctx, ret, BINLOG_ID16048,
-                "decrypt ticket while classifying RFC 9973 PSK", ALERT_INTERNAL_ERROR);
-        }
-        /* 3. A decoded ticket violates the all-external list rule; reject it before choosing any PSK. */
-        if (ticketSession != NULL) {
-            HITLS_SESS_Free(ticketSession);
-            return RETURN_ALERT_PROCESS(ctx, HITLS_MSG_HANDLE_PSK_INVALID, BINLOG_ID15940,
-                "RFC 9973 PSK list contains a resumption ticket", ALERT_ILLEGAL_PARAMETER);
-        }
-    }
-#else
-    (void)ctx;
-    (void)offeredPsks;
-#endif
-    return HITLS_SUCCESS;
-}
-
-#endif
 
 /* Prior to accepting PSK key establishment, the server MUST validate the corresponding binder value (see
 Section 4.2.11.2 below). If this value is not present or does not validate, the server MUST abort the handshake. Servers
@@ -2173,14 +2131,15 @@ static int32_t Tls13ServerCheckCertWithExternalPsk(TLS_Ctx *ctx, const ClientHel
      * The caller already checked key_share/supported_groups pairing and the PSK/modes dependency.
      * These presence checks also reject an absent DHE pair or a certificate-only offer.
      */
-    bool missingCompanion = !clientHello->extension.flag.haveKeyShare || !clientHello->extension.flag.havePreShareKey;
-    if (missingCompanion) {
+    if (!clientHello->extension.flag.haveKeyShare || !clientHello->extension.flag.havePreShareKey) {
+        BSL_ERR_PUSH_ERROR(HITLS_MSG_HANDLE_MISSING_EXTENSION);
         return RETURN_ALERT_PROCESS(ctx, HITLS_MSG_HANDLE_MISSING_EXTENSION, BINLOG_ID16139,
                                     "RFC 9973 ClientHello is missing a companion extension", ALERT_MISSING_EXTENSION);
     }
 
     /* 3. Extension 33 requires TLS 1.3 and must not accompany early_data (RFC 9973 Section 4). */
-    if (ctx->negotiatedInfo.version != HITLS_VERSION_TLS13 || clientHello->extension.flag.haveEarlyData) {
+    if (clientHello->extension.flag.haveEarlyData) {
+        BSL_ERR_PUSH_ERROR(HITLS_MSG_HANDLE_HANDSHAKE_FAILURE);
         return RETURN_ALERT_PROCESS(ctx, HITLS_MSG_HANDLE_HANDSHAKE_FAILURE, BINLOG_ID16139,
                                     "RFC 9973 extension used outside an initial TLS 1.3 handshake",
                                     ALERT_ILLEGAL_PARAMETER);
@@ -2189,8 +2148,8 @@ static int32_t Tls13ServerCheckCertWithExternalPsk(TLS_Ctx *ctx, const ClientHel
     /* 4. Convert the ClientHello modes to internal bits and require psk_dhe_ke.
      * Certificate authentication with an external PSK also requires DHE (RFC 9973 Section 5.1).
      */
-    uint32_t certPskKeMode = GetClientKeMode(&clientHello->extension.content);
-    if ((certPskKeMode & TLS13_KE_MODE_PSK_WITH_DHE) == 0) {
+    if ((GetClientKeMode(&clientHello->extension.content) & TLS13_KE_MODE_PSK_WITH_DHE) == 0) {
+        BSL_ERR_PUSH_ERROR(HITLS_MSG_HANDLE_HANDSHAKE_FAILURE);
         return RETURN_ALERT_PROCESS(ctx, HITLS_MSG_HANDLE_HANDSHAKE_FAILURE, BINLOG_ID16139,
                                     "RFC 9973 ClientHello does not offer psk_dhe_ke", ALERT_ILLEGAL_PARAMETER);
     }
@@ -2290,6 +2249,7 @@ static int32_t Tls13ServerCheckSecondClientHello(TLS_Ctx *ctx, ClientHelloMsg *c
          * 2. Reject either addition or removal after HRR; it is not an allowed ClientHello2 change. */
         if (ctx->hsCtx->firstClientHello->extension.flag.haveCertWithExternalPsk !=
             clientHello->extension.flag.haveCertWithExternalPsk) {
+            BSL_ERR_PUSH_ERROR(HITLS_MSG_HANDLE_HANDSHAKE_FAILURE);
             return RETURN_ALERT_PROCESS(ctx, HITLS_MSG_HANDLE_HANDSHAKE_FAILURE, BINLOG_ID17062,
                 "RFC 9973 extension changed after HelloRetryRequest", ALERT_ILLEGAL_PARAMETER);
         }
@@ -2468,11 +2428,24 @@ static int32_t Tls13ServerBasicCheckClientHello(TLS_Ctx *ctx, ClientHelloMsg *cl
     return ServerSelectCipherSuite(ctx, clientHello);
 }
 
+#ifdef HITLS_TLS_FEATURE_CERT_WITH_EXTERNAL_PSK
+static bool Tls13ServerCanUseCertWithExternalPsk(TLS_Ctx *ctx, const ClientHelloMsg *clientHello)
+{
+    return clientHello->extension.flag.haveCertWithExternalPsk &&
+        (ctx->config.tlsConfig.keyExchMode & TLS13_CERT_AUTH_WITH_EXTERNAL_PSK) != 0 &&
+        ctx->hsCtx->kxCtx->pskInfo13.psk != NULL && Tls13HasCertificate(ctx);
+}
+#endif
+
 static int32_t Tls13ServerSelectCert(TLS_Ctx *ctx, const ClientHelloMsg *clientHello)
 {
-    /* 1. Use the selected authentication mode to decide whether a certificate is needed.
-     * 2. Mode 8 still needs certificate selection even though a PSK is already stored. */
-    if (!HS_IsTls13CertAuthMode(ctx->negotiatedInfo.tls13BasicKeyExMode)) {
+#ifdef HITLS_TLS_FEATURE_CERT_WITH_EXTERNAL_PSK
+    if (ctx->hsCtx->kxCtx->pskInfo13.psk != NULL &&
+        !((ctx->config.tlsConfig.keyExchMode & TLS13_CERT_AUTH_WITH_EXTERNAL_PSK) != 0 &&
+            clientHello->extension.flag.haveCertWithExternalPsk && Tls13HasCertificate(ctx))) {
+#else
+    if (ctx->hsCtx->kxCtx->pskInfo13.psk != NULL) {
+#endif
         return HITLS_SUCCESS;
     }
 
@@ -2507,25 +2480,6 @@ static int32_t Tls13ServerSelectCert(TLS_Ctx *ctx, const ClientHelloMsg *clientH
     return HITLS_SUCCESS;
 }
 
-static void SetTls13ServerSelectedKeyExMode(TLS_Ctx *ctx, uint32_t selectedPskMode)
-{
-    /* 1. Preserve mode 8 selected by external PSK and binder validation. */
-    if (HS_IsTls13CertWithExternalPskMode(ctx->negotiatedInfo.tls13BasicKeyExMode)) {
-        return;
-    }
-
-    /* 2. With no selected PSK, use certificate authentication with DHE. */
-    if (ctx->hsCtx->kxCtx->pskInfo13.psk == NULL) {
-        ctx->negotiatedInfo.tls13BasicKeyExMode = TLS13_CERT_AUTH_WITH_DHE;
-        return;
-    }
-
-    /* 3. For PSK authentication, prefer DHE within the already-validated common modes. */
-    ctx->negotiatedInfo.tls13BasicKeyExMode =
-        (selectedPskMode & TLS13_KE_MODE_PSK_WITH_DHE) != 0 ?
-        TLS13_KE_MODE_PSK_WITH_DHE : TLS13_KE_MODE_PSK_ONLY;
-}
-
 static int32_t Tls13ServerCheckClientHello(TLS_Ctx *ctx, ClientHelloMsg *clientHello, bool *isNeedSendHrr)
 {
     uint32_t selectKeMode = 0;
@@ -2541,49 +2495,22 @@ static int32_t Tls13ServerCheckClientHello(TLS_Ctx *ctx, ClientHelloMsg *clientH
         return ret;
     }
 
-    /* 1. Intersect PSK_ONLY/PSK_WITH_DHE. Extension 33 negotiates mode 8 separately. */
-    ctx->negotiatedInfo.tls13BasicKeyExMode = 0;
     uint32_t clientKeMode = GetClientKeMode(&clientHello->extension.content);
-    selectKeMode =
-        clientKeMode & ctx->config.tlsConfig.keyExchMode & (TLS13_KE_MODE_PSK_ONLY | TLS13_KE_MODE_PSK_WITH_DHE);
+    selectKeMode = clientKeMode & ctx->config.tlsConfig.keyExchMode;
 #if defined(HITLS_TLS_FEATURE_SESSION_TICKET) || defined(HITLS_TLS_FEATURE_PSK)
-    bool certWithExternalPsk = false;
-#ifdef HITLS_TLS_FEATURE_CERT_WITH_EXTERNAL_PSK
-    if (clientHello->extension.flag.haveCertWithExternalPsk) {
-        /* 2. Check the whole list before lookup, including entries after a matching external PSK. */
-        ret = CheckCertWithExternalPskListHasNoTicket(ctx, clientHello->extension.content.preSharedKey);
-        if (ret != HITLS_SUCCESS) {
-            return ret;
-        }
-        /* 3. Mode 8 needs a server certificate and private key, not merely signature algorithms. */
-        certWithExternalPsk =
-            (ctx->config.tlsConfig.keyExchMode & TLS13_CERT_AUTH_WITH_EXTERNAL_PSK) != 0 && Tls13HasCertificate(ctx);
-    }
-#endif
-    if (clientHello->extension.flag.havePreShareKey) {
-        /* 4. Select one PSK and validate one binder through the existing shared path. */
-        ret = ServerSelectPskAndCheckBinder(ctx, clientHello, certWithExternalPsk);
+    if (clientHello->extension.flag.havePreShareKey && selectKeMode != 0) {
+        /* Select one PSK and validate one binder through the existing shared path. */
+        ret = ServerSelectPskAndCheckBinder(ctx, clientHello, clientHello->extension.flag.haveCertWithExternalPsk);
         if (ret != HITLS_SUCCESS) {
             BSL_ERR_PUSH_ERROR(HITLS_MSG_HANDLE_PSK_INVALID);
             BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15940, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
                 "ServerSelectPskAndCheckBinder failed. ret %d", ret, 0, 0, 0);
             return HITLS_MSG_HANDLE_PSK_INVALID;
         }
-        if (ctx->hsCtx->kxCtx->pskInfo13.psk != NULL) {
-            if (certWithExternalPsk) {
-                selectKeMode = TLS13_CERT_AUTH_WITH_EXTERNAL_PSK;
-                ctx->negotiatedInfo.tls13BasicKeyExMode = selectKeMode;
-            } else if (selectKeMode == 0) {
-                /* 5. A selected PSK without a common exchange mode must not fall back to another identity. */
-                BSL_ERR_PUSH_ERROR(HITLS_MSG_HANDLE_HANDSHAKE_FAILURE);
-                return RETURN_ALERT_PROCESS(ctx, HITLS_MSG_HANDLE_HANDSHAKE_FAILURE, BINLOG_ID16137,
-                                            "selected PSK has no common key exchange mode", ALERT_HANDSHAKE_FAILURE);
-            }
-        }
     }
 #endif
-    /* 6. Process key_share for certificate fallback and every DHE mode, including mode 8. */
-    if (ctx->hsCtx->kxCtx->pskInfo13.psk == NULL || HS_IsTls13DheMode(selectKeMode)) {
+    if (ctx->hsCtx->kxCtx->pskInfo13.psk == NULL ||
+        (selectKeMode & TLS13_KE_MODE_PSK_WITH_DHE) == TLS13_KE_MODE_PSK_WITH_DHE) {
         ret = Tls13ServerProcessKeyShare(ctx, clientHello, isNeedSendHrr);
         /* The group has been selected during the cipher suite selection. Therefore, the keyshare can be processed here
          */
@@ -2591,8 +2518,6 @@ static int32_t Tls13ServerCheckClientHello(TLS_Ctx *ctx, ClientHelloMsg *clientH
             return ret;
         }
     }
-    /* 7. Store the selected mode for certificate selection and the later handshake states. */
-    SetTls13ServerSelectedKeyExMode(ctx, selectKeMode);
 #ifdef HITLS_TLS_FEATURE_SNI
     /* The message contains a server_name extension with the length greater than 0 */
     ret = ServerDealServerName(ctx, clientHello);
@@ -2788,19 +2713,18 @@ static int32_t SelectVersion(TLS_Ctx *ctx, const ClientHelloMsg *clientHello, ui
     return HITLS_MSG_HANDLE_UNSUPPORT_VERSION;
 }
 
-static int32_t UpdateServerBaseKeyExMode(TLS_Ctx *ctx)
+static int32_t UpdateServerBaseKeyExMode(TLS_Ctx *ctx, const ClientHelloMsg *clientHello)
 {
     uint32_t tls13BasicKeyExMode = 0;
     KeyExchCtx *kxCtx = ctx->hsCtx->kxCtx;
-    /* 1. Mode 8 requires both the validated external PSK and the peer DHE public key. */
-    if (HS_IsTls13CertWithExternalPskMode(ctx->negotiatedInfo.tls13BasicKeyExMode)) {
-        if (kxCtx->pskInfo13.psk == NULL || kxCtx->peerPubkey == NULL) {
-            BSL_ERR_PUSH_ERROR(HITLS_INTERNAL_EXCEPTION);
-            return HITLS_INTERNAL_EXCEPTION;
-        }
-        /* 2. Preserve certificate authentication; PSK plus DHE alone would otherwise select PSK_WITH_DHE. */
+    /* Mode 8 requires the validated external PSK and the client extension. */
+#ifdef HITLS_TLS_FEATURE_CERT_WITH_EXTERNAL_PSK
+    if (Tls13ServerCanUseCertWithExternalPsk(ctx, clientHello)) {
         tls13BasicKeyExMode = TLS13_CERT_AUTH_WITH_EXTERNAL_PSK;
     } else if (kxCtx->pskInfo13.psk != NULL && kxCtx->peerPubkey != NULL) {
+#else
+    if (kxCtx->pskInfo13.psk != NULL && kxCtx->peerPubkey != NULL) {
+#endif
         tls13BasicKeyExMode = TLS13_KE_MODE_PSK_WITH_DHE;
     } else if (kxCtx->pskInfo13.psk != NULL) {
         tls13BasicKeyExMode = TLS13_KE_MODE_PSK_ONLY;
@@ -2845,7 +2769,7 @@ static int32_t Tls13ServerProcessClientHello(TLS_Ctx *ctx, HS_Msg *msg)
         if (isNeedSendHrr) {
             return HS_ChangeState(ctx, TRY_SEND_HELLO_RETRY_REQUEST);
         }
-        ret = UpdateServerBaseKeyExMode(ctx);
+        ret = UpdateServerBaseKeyExMode(ctx, clientHello);
         if (ret != HITLS_SUCCESS) {
             return ret;
         }

@@ -879,8 +879,8 @@ static int32_t Tls13ClientCheckServerHello(TLS_Ctx *ctx, const ServerHelloMsg *s
         return ret;
     }
 #ifdef HITLS_TLS_FEATURE_CERT_WITH_EXTERNAL_PSK
-    /* 1. Apply the mode 8 hash policy to ServerHello and HRR, even when the server declines PSK. */
-    if (ctx->hsCtx->extFlag.haveCertWithExternalPsk) {
+    /* An incompatible HRR cannot preserve this external PSK offer in ClientHello2. */
+    if (isHrr && ctx->hsCtx->extFlag.haveCertWithExternalPsk) {
         HITLS_HashAlgo pskHash = HITLS_HASH_BUTT;
         UserPskList *externalPsk = ctx->hsCtx->kxCtx->pskInfo13.userPskSess;
         /* 2. The external PSK was validated before extension 33 was sent. */
@@ -1266,7 +1266,8 @@ static int32_t Tls13ProcessServerHelloExtension(TLS_Ctx *ctx, const ServerHelloM
      * 2. Send illegal_parameter before processing an incomplete mode 8 selection. */
     if (serverHello->haveCertWithExternalPsk &&
         (!serverHello->haveKeyShare || !serverHello->haveSelectedIdentity ||
-        ctx->negotiatedInfo.version != HITLS_VERSION_TLS13)) {
+        !IS_TLS13_FAMILY_VERSION(ctx->negotiatedInfo.version))) {
+        BSL_ERR_PUSH_ERROR(HITLS_MSG_HANDLE_HANDSHAKE_FAILURE);
         return RETURN_ALERT_PROCESS(ctx, HITLS_MSG_HANDLE_HANDSHAKE_FAILURE, BINLOG_ID16141,
             "RFC 9973 ServerHello is missing a companion extension", ALERT_ILLEGAL_PARAMETER);
     }

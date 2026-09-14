@@ -75,6 +75,12 @@ int32_t HITLS_CFG_SetKeyExchMode(HITLS_Config *config, uint32_t mode)
     if (selectedMode == 0) {
         return HITLS_CONFIG_INVALID_SET;
     }
+#ifdef HITLS_TLS_FEATURE_CERT_WITH_EXTERNAL_PSK
+    if ((selectedMode & TLS13_CERT_AUTH_WITH_EXTERNAL_PSK) != 0 &&
+        (selectedMode & TLS13_KE_MODE_PSK_WITH_DHE) == 0) {
+        return HITLS_CONFIG_INVALID_SET;
+    }
+#endif
     /* 3. Store the recognized bits, preserving the historical masking behavior. */
     config->keyExchMode = selectedMode;
     return HITLS_SUCCESS;

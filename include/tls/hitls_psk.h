@@ -90,7 +90,7 @@ typedef int32_t (*HITLS_PskFindSessionCb)(HITLS_Ctx *ctx, const uint8_t *identit
  *
  * @param   ctx       [IN] ctx context
  * @param   hashAlgo  [IN] HITLS_HASH_BUTT initially; otherwise the HRR-selected hash.
- *                       RFC 9973 retries use the original external PSK's hash instead.
+ *                       RFC 9973 retries require this to match the original external PSK's hash.
  * @param   id        [IN] Identity information
  * @param   idLen     [IN] Identity information length
  * @param   session   [OUT] session

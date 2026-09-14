@@ -23,6 +23,7 @@
 #include "hitls_error.h"
 #include "hitls_psk.h"
 #include "bsl_sal.h"
+#include "bsl_bytes.h"
 #include "bsl_uio.h"
 #include "tls.h"
 #include "frame_link.h"
@@ -39,17 +40,16 @@
 
 static const uint8_t g_rfc9973Identity[] = "openhitls-rfc9973";
 static const uint8_t g_rfc9973Psk[RFC9973_TEST_PSK_LEN] = {
-    0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17,
-    0x18, 0x19, 0x1a, 0x1b, 0x1c, 0x1d, 0x1e, 0x1f,
-    0x20, 0x21, 0x22, 0x23, 0x24, 0x25, 0x26, 0x27,
-    0x28, 0x29, 0x2a, 0x2b, 0x2c, 0x2d, 0x2e, 0x2f
-};
+    0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18, 0x19, 0x1a, 0x1b, 0x1c, 0x1d, 0x1e, 0x1f,
+    0x20, 0x21, 0x22, 0x23, 0x24, 0x25, 0x26, 0x27, 0x28, 0x29, 0x2a, 0x2b, 0x2c, 0x2d, 0x2e, 0x2f};
+static BSL_UIO_TransportType g_rfc9973Transport = BSL_UIO_TCP;
+
 static uint32_t g_rfc9973PskLen = RFC9973_TEST_PSK_LEN;
 static uint32_t g_rfc9973ServerPskCbCalls = 0;
 static uint32_t g_rfc9973ServerPskCbMatches = 0;
 
-static uint32_t Rfc9973ClientPskCb(HITLS_Ctx *ctx, const uint8_t *hint, uint8_t *identity,
-    uint32_t maxIdentityLen, uint8_t *psk, uint32_t maxPskLen)
+static uint32_t Rfc9973ClientPskCb(HITLS_Ctx *ctx, const uint8_t *hint, uint8_t *identity, uint32_t maxIdentityLen,
+                                   uint8_t *psk, uint32_t maxPskLen)
 {
     /* 1. Supply the fixed identity and configurable key length after checking output capacities. */
     (void)ctx;
@@ -83,7 +83,8 @@ static HITLS_Session *Rfc9973Sha384PskSession(void)
     if (session == NULL) {
         return NULL;
     }
-    if (HITLS_SESS_SetProtocolVersion(session, HITLS_VERSION_TLS13) != HITLS_SUCCESS ||
+    if (HITLS_SESS_SetProtocolVersion(
+            session, g_rfc9973Transport == BSL_UIO_UDP ? HITLS_VERSION_DTLS13 : HITLS_VERSION_TLS13) != HITLS_SUCCESS ||
         HITLS_SESS_SetCipherSuite(session, HITLS_AES_256_GCM_SHA384) != HITLS_SUCCESS ||
         HITLS_SESS_SetMasterKey(session, g_rfc9973Psk, g_rfc9973PskLen) != HITLS_SUCCESS) {
         HITLS_SESS_Free(session);
@@ -173,8 +174,24 @@ static uint32_t Rfc9973UnknownPskCb(HITLS_Ctx *ctx, const uint8_t *identity, uin
 static HITLS_Config *Rfc9973NewConfig(uint32_t mode, bool withClientPsk, bool withServerPsk)
 {
     /* 1. Create a TLS 1.3 configuration with the requested modes and the fixed SHA-256 suite. */
-    HITLS_Config *config = HITLS_CFG_NewTLS13Config();
+    HITLS_Config *config = NULL;
+#ifdef HITLS_TLS_PROTO_DTLS13
+    if (g_rfc9973Transport == BSL_UIO_UDP) {
+        config = HITLS_CFG_NewDTLS13Config();
+    } else
+#endif
+    {
+        config = HITLS_CFG_NewTLS13Config();
+    }
+    if ((mode & TLS13_CERT_AUTH_WITH_EXTERNAL_PSK) != 0) {
+        mode |= TLS13_KE_MODE_PSK_WITH_DHE;
+    }
     if (config == NULL || HITLS_CFG_SetKeyExchMode(config, mode) != HITLS_SUCCESS) {
+        HITLS_CFG_FreeConfig(config);
+        return NULL;
+    }
+    uint16_t groups[] = {HITLS_EC_GROUP_SECP256R1, HITLS_EC_GROUP_SECP521R1};
+    if (HITLS_CFG_SetGroups(config, groups, 2) != HITLS_SUCCESS) {
         HITLS_CFG_FreeConfig(config);
         return NULL;
     }
@@ -184,6 +201,7 @@ static HITLS_Config *Rfc9973NewConfig(uint32_t mode, bool withClientPsk, bool wi
         return NULL;
     }
     (void)HITLS_CFG_SetCheckKeyUsage(config, false);
+    (void)HITLS_CFG_SetFlightTransmitSwitch(config, false);
     /* 2. Install only the callbacks requested by the case, controlling whether either peer knows the PSK. */
     if (withClientPsk) {
         (void)HITLS_CFG_SetPskClientCallback(config, Rfc9973ClientPskCb);
@@ -212,7 +230,15 @@ static void Rfc9973AssertPeerReceivesIllegalParameter(FRAME_LinkObj *server, FRA
     const uint8_t expected[] = {0x15, 0x03, 0x03, 0x00, 0x02, 0x02, 0x2f};
     FrameUioUserData *serverIo = BSL_UIO_GetUserData(server->io);
     ASSERT_TRUE(serverIo != NULL);
-    ASSERT_COMPARE("illegal_parameter record", serverIo->sndMsg.msg, serverIo->sndMsg.len, expected, sizeof(expected));
+    if (g_rfc9973Transport == BSL_UIO_TCP) {
+        ASSERT_COMPARE("illegal_parameter record", serverIo->sndMsg.msg, serverIo->sndMsg.len, expected,
+                       sizeof(expected));
+    } else {
+        ASSERT_EQ(serverIo->sndMsg.len, 15);
+        ASSERT_EQ(serverIo->sndMsg.msg[0], REC_TYPE_ALERT);
+        ASSERT_EQ(serverIo->sndMsg.msg[13], ALERT_LEVEL_FATAL);
+        ASSERT_EQ(serverIo->sndMsg.msg[14], ALERT_ILLEGAL_PARAMETER);
+    }
 
     /* 2. Deliver the alert after the server handshake error stops FRAME_CreateConnection. */
     ASSERT_EQ(FRAME_TrasferMsgBetweenLink(server, client), HITLS_SUCCESS);
@@ -233,7 +259,8 @@ static void Rfc9973ObserveClientOffer(TLS_Ctx *ctx, uint8_t *data, uint32_t *len
     (void)bufSize;
     const uint32_t *expected = user;
     FRAME_Type frameType = {0};
-    frameType.versionType = HITLS_VERSION_TLS13;
+    frameType.versionType = g_rfc9973Transport == BSL_UIO_UDP ? HITLS_VERSION_DTLS13 : HITLS_VERSION_TLS13;
+    frameType.transportType = g_rfc9973Transport;
     FRAME_Msg frameMsg = {0};
     frameMsg.recType.data = REC_TYPE_HANDSHAKE;
     frameMsg.recVersion.data = HITLS_VERSION_TLS13;
@@ -291,7 +318,8 @@ static void Rfc9973MutateHello(TLS_Ctx *ctx, uint8_t *data, uint32_t *len, uint3
     (void)ctx;
     Rfc9973Mutation mutation = (Rfc9973Mutation)(uintptr_t)user;
     FRAME_Type frameType = {0};
-    frameType.versionType = HITLS_VERSION_TLS13;
+    frameType.versionType = g_rfc9973Transport == BSL_UIO_UDP ? HITLS_VERSION_DTLS13 : HITLS_VERSION_TLS13;
+    frameType.transportType = g_rfc9973Transport;
     FRAME_Msg frameMsg = {0};
     frameMsg.recType.data = REC_TYPE_HANDSHAKE;
     frameMsg.recVersion.data = HITLS_VERSION_TLS13;
@@ -303,16 +331,14 @@ static void Rfc9973MutateHello(TLS_Ctx *ctx, uint8_t *data, uint32_t *len, uint3
     /* 2. Observe the required fields or apply one requested client/server mutation. */
     if (frameMsg.body.hsMsg.type.data == CLIENT_HELLO) {
         FRAME_ClientHelloMsg *clientHello = &frameMsg.body.hsMsg.body.clientHello;
-        if (mutation == RFC9973_OBSERVE_CLIENT_HELLO ||
-            mutation == RFC9973_OBSERVE_CLIENT_HELLO_WITH_PSK_KE) {
+        if (mutation == RFC9973_OBSERVE_CLIENT_HELLO || mutation == RFC9973_OBSERVE_CLIENT_HELLO_WITH_PSK_KE) {
             ASSERT_EQ(clientHello->certWithExternalPsk.exState, INITIAL_FIELD);
             ASSERT_EQ(clientHello->certWithExternalPsk.exType.data, HS_EX_TYPE_CERT_WITH_EXTERNAL_PSK);
             ASSERT_EQ(clientHello->certWithExternalPsk.exLen.data, 0);
             ASSERT_EQ(clientHello->keyshares.exState, INITIAL_FIELD);
             ASSERT_EQ(clientHello->supportedGroups.exState, INITIAL_FIELD);
             ASSERT_EQ(clientHello->pskModes.exState, INITIAL_FIELD);
-            ASSERT_EQ(clientHello->pskModes.exData.size,
-                mutation == RFC9973_OBSERVE_CLIENT_HELLO ? 1 : 2);
+            ASSERT_EQ(clientHello->pskModes.exData.size, mutation == RFC9973_OBSERVE_CLIENT_HELLO ? 1 : 2);
             ASSERT_EQ(clientHello->pskModes.exData.data[0], 1u); /* psk_dhe_ke */
             if (mutation == RFC9973_OBSERVE_CLIENT_HELLO_WITH_PSK_KE) {
                 ASSERT_EQ(clientHello->pskModes.exData.data[1], 0u); /* psk_ke */
@@ -352,8 +378,7 @@ static void Rfc9973MutateHello(TLS_Ctx *ctx, uint8_t *data, uint32_t *len, uint3
                 clientHello->psks.binders.data[0].binder.data[0] ^= 0x80u;
                 break;
             case RFC9973_ADD_CERT_WITH_EXTERNAL_PSK:
-                Rfc9973SetEmptyExtension(&clientHello->certWithExternalPsk,
-                    HS_EX_TYPE_CERT_WITH_EXTERNAL_PSK);
+                Rfc9973SetEmptyExtension(&clientHello->certWithExternalPsk, HS_EX_TYPE_CERT_WITH_EXTERNAL_PSK);
                 break;
             case RFC9973_MISSING_CERT_WITH_EXTERNAL_PSK:
                 clientHello->certWithExternalPsk.exState = MISSING_FIELD;
@@ -389,8 +414,7 @@ static void Rfc9973MutateHello(TLS_Ctx *ctx, uint8_t *data, uint32_t *len, uint3
                 serverHello->pskSelectedIdentity.exState = MISSING_FIELD;
                 break;
             case RFC9973_ADD_CERT_WITH_EXTERNAL_PSK:
-                Rfc9973SetEmptyExtension(&serverHello->certWithExternalPsk,
-                    HS_EX_TYPE_CERT_WITH_EXTERNAL_PSK);
+                Rfc9973SetEmptyExtension(&serverHello->certWithExternalPsk, HS_EX_TYPE_CERT_WITH_EXTERNAL_PSK);
                 break;
             case RFC9973_SERVER_SELECTED_IDENTITY_OUT_OF_RANGE:
                 serverHello->pskSelectedIdentity.data.state = ASSIGNED_FIELD;
@@ -408,24 +432,19 @@ EXIT:
     FRAME_CleanMsg(&frameType, &frameMsg);
 }
 
-static int32_t Rfc9973ConnectWithMutation(Rfc9973Mutation mutation, bool mutateServer,
-    FRAME_LinkObj **client, FRAME_LinkObj **server, HITLS_Config **config)
+static int32_t Rfc9973ConnectWithMutation(Rfc9973Mutation mutation, bool mutateServer, FRAME_LinkObj **client,
+                                          FRAME_LinkObj **server, HITLS_Config **config)
 {
     /* 1. Install the requested ClientHello or ServerHello mutation before creating the peers. */
-    RecWrapper wrapper = {
-        mutateServer ? TRY_SEND_SERVER_HELLO : TRY_SEND_CLIENT_HELLO,
-        REC_TYPE_HANDSHAKE,
-        false,
-        (void *)(uintptr_t)mutation,
-        Rfc9973MutateHello
-    };
+    RecWrapper wrapper = {mutateServer ? TRY_SEND_SERVER_HELLO : TRY_SEND_CLIENT_HELLO, REC_TYPE_HANDSHAKE, false,
+                          (void *)(uintptr_t)mutation, Rfc9973MutateHello};
     RegisterWrapper(wrapper);
     *config = Rfc9973NewConfig(TLS13_CERT_AUTH_WITH_EXTERNAL_PSK, true, true);
     if (*config == NULL) {
         return HITLS_INTERNAL_EXCEPTION;
     }
-    *client = FRAME_CreateLink(*config, BSL_UIO_TCP);
-    *server = FRAME_CreateLink(*config, BSL_UIO_TCP);
+    *client = FRAME_CreateLink(*config, g_rfc9973Transport);
+    *server = FRAME_CreateLink(*config, g_rfc9973Transport);
     if (*client == NULL || *server == NULL) {
         return HITLS_INTERNAL_EXCEPTION;
     }
@@ -438,8 +457,7 @@ typedef struct {
     bool addOnSecondClientHello;
 } Rfc9973SecondClientHelloMutation;
 
-static void Rfc9973MutateSecondClientHello(TLS_Ctx *ctx, uint8_t *data, uint32_t *len,
-    uint32_t bufSize, void *user)
+static void Rfc9973MutateSecondClientHello(TLS_Ctx *ctx, uint8_t *data, uint32_t *len, uint32_t bufSize, void *user)
 {
     /* 1. Count ClientHellos and change extension 33 only in the second one. */
     Rfc9973SecondClientHelloMutation *mutation = (Rfc9973SecondClientHelloMutation *)user;
@@ -448,8 +466,8 @@ static void Rfc9973MutateSecondClientHello(TLS_Ctx *ctx, uint8_t *data, uint32_t
         return;
     }
     Rfc9973MutateHello(ctx, data, len, bufSize,
-        (void *)(uintptr_t)(mutation->addOnSecondClientHello ?
-        RFC9973_ADD_CERT_WITH_EXTERNAL_PSK : RFC9973_MISSING_CERT_WITH_EXTERNAL_PSK));
+                       (void *)(uintptr_t)(mutation->addOnSecondClientHello ? RFC9973_ADD_CERT_WITH_EXTERNAL_PSK :
+                                                                              RFC9973_MISSING_CERT_WITH_EXTERNAL_PSK));
 }
 
 static void Rfc9973ForceHelloRetryRequest(FRAME_LinkObj *server)
@@ -493,8 +511,8 @@ static void Rfc9973WriteUint16(uint16_t value, uint8_t *data)
     data[1] = (uint8_t)value;
 }
 
-static void Rfc9973AppendExtensionAt(uint8_t *data, uint32_t *len, uint32_t bufSize,
-    uint32_t insertOffset, uint32_t extensionLengthOffset, uint32_t enclosingLengthOffset)
+static void Rfc9973AppendExtensionAt(uint8_t *data, uint32_t *len, uint32_t bufSize, uint32_t insertOffset,
+                                     uint32_t extensionLengthOffset, uint32_t enclosingLengthOffset)
 {
     /* 1. Reserve four bytes and insert the empty extension 33 header at the selected offset. */
     ASSERT_TRUE(*len + HS_EX_HEADER_LEN <= bufSize && insertOffset <= *len);
@@ -509,13 +527,15 @@ static void Rfc9973AppendExtensionAt(uint8_t *data, uint32_t *len, uint32_t bufS
         Rfc9973WriteUint24(enclosingLength + HS_EX_HEADER_LEN, data + enclosingLengthOffset);
     }
     Rfc9973WriteUint24(Rfc9973ReadUint24(data + 1) + HS_EX_HEADER_LEN, data + 1);
+    if (g_rfc9973Transport == BSL_UIO_UDP) {
+        Rfc9973WriteUint24(Rfc9973ReadUint24(data + 9) + HS_EX_HEADER_LEN, data + 9);
+    }
     *len += HS_EX_HEADER_LEN;
 EXIT:
     return;
 }
 
-static void Rfc9973InjectWrongMessageExtension(TLS_Ctx *ctx, uint8_t *data, uint32_t *len,
-    uint32_t bufSize, void *user)
+static void Rfc9973InjectWrongMessageExtension(TLS_Ctx *ctx, uint8_t *data, uint32_t *len, uint32_t bufSize, void *user)
 {
     (void)ctx;
     Rfc9973WrongMessage wrongMessage = (Rfc9973WrongMessage)(uintptr_t)user;
@@ -523,34 +543,32 @@ static void Rfc9973InjectWrongMessageExtension(TLS_Ctx *ctx, uint8_t *data, uint
     uint32_t insertOffset = 0;
     uint32_t enclosingLengthOffset = UINT32_MAX;
 
+    uint32_t headerLen = g_rfc9973Transport == BSL_UIO_UDP ? DTLS_HS_MSG_HEADER_SIZE : HS_MSG_HEADER_SIZE;
     /* 1. Locate the extension vector using the selected handshake message format. */
     switch (wrongMessage) {
         case RFC9973_WRONG_ENCRYPTED_EXTENSIONS:
-            extensionLengthOffset = 4;
-            insertOffset = 6 + Rfc9973ReadUint16(data + extensionLengthOffset);
+            extensionLengthOffset = headerLen;
+            insertOffset = headerLen + 2 + Rfc9973ReadUint16(data + extensionLengthOffset);
             break;
         case RFC9973_WRONG_CERTIFICATE_REQUEST:
-            extensionLengthOffset = 5 + data[4];
-            insertOffset = extensionLengthOffset + sizeof(uint16_t) +
-                Rfc9973ReadUint16(data + extensionLengthOffset);
+            extensionLengthOffset = headerLen + 1 + data[headerLen];
+            insertOffset = extensionLengthOffset + sizeof(uint16_t) + Rfc9973ReadUint16(data + extensionLengthOffset);
             break;
         case RFC9973_WRONG_CERTIFICATE: {
-            uint32_t certificateListLengthOffset = 5 + data[4];
+            uint32_t certificateListLengthOffset = headerLen + 1 + data[headerLen];
             uint32_t certificateOffset = certificateListLengthOffset + 3;
             uint32_t certificateLength = Rfc9973ReadUint24(data + certificateOffset);
             extensionLengthOffset = certificateOffset + 3 + certificateLength;
-            insertOffset = extensionLengthOffset + sizeof(uint16_t) +
-                Rfc9973ReadUint16(data + extensionLengthOffset);
+            insertOffset = extensionLengthOffset + sizeof(uint16_t) + Rfc9973ReadUint16(data + extensionLengthOffset);
             enclosingLengthOffset = certificateListLengthOffset;
             break;
         }
         case RFC9973_WRONG_NEW_SESSION_TICKET: {
-            uint32_t offset = 12; /* Handshake header, ticket_lifetime, and ticket_age_add. */
+            uint32_t offset = headerLen + 8; /* ticket_lifetime and ticket_age_add */
             offset += sizeof(uint8_t) + data[offset];
             uint16_t ticketLength = Rfc9973ReadUint16(data + offset);
             extensionLengthOffset = offset + sizeof(uint16_t) + ticketLength;
-            insertOffset = extensionLengthOffset + sizeof(uint16_t) +
-                Rfc9973ReadUint16(data + extensionLengthOffset);
+            insertOffset = extensionLengthOffset + sizeof(uint16_t) + Rfc9973ReadUint16(data + extensionLengthOffset);
             break;
         }
         default:
@@ -562,8 +580,7 @@ EXIT:
     return;
 }
 
-static void Rfc9973ObserveHandshakeMessage(TLS_Ctx *ctx, uint8_t *data, uint32_t *len,
-    uint32_t bufSize, void *user)
+static void Rfc9973ObserveHandshakeMessage(TLS_Ctx *ctx, uint8_t *data, uint32_t *len, uint32_t bufSize, void *user)
 {
     /* 1. Check the record wrapper received the expected handshake message type. */
     (void)ctx;
@@ -574,13 +591,13 @@ EXIT:
     return;
 }
 
-static void Rfc9973SetExternalPskAge(TLS_Ctx *ctx, uint8_t *data, uint32_t *len,
-    uint32_t bufSize, void *user)
+static void Rfc9973SetExternalPskAge(TLS_Ctx *ctx, uint8_t *data, uint32_t *len, uint32_t bufSize, void *user)
 {
     /* 1. Parse the offer, replace obfuscated_ticket_age, and repack the ClientHello. */
     uint32_t age = (uint32_t)(uintptr_t)user;
     FRAME_Type frameType = {0};
-    frameType.versionType = HITLS_VERSION_TLS13;
+    frameType.versionType = g_rfc9973Transport == BSL_UIO_UDP ? HITLS_VERSION_DTLS13 : HITLS_VERSION_TLS13;
+    frameType.transportType = g_rfc9973Transport;
     FRAME_Msg frameMsg = {0};
     frameMsg.recType.data = REC_TYPE_HANDSHAKE;
     frameMsg.recVersion.data = HITLS_VERSION_TLS13;
@@ -600,9 +617,9 @@ static void Rfc9973SetExternalPskAge(TLS_Ctx *ctx, uint8_t *data, uint32_t *len,
     uint32_t binderLen = psks->binders.data[0].binder.size;
     uint32_t binderVectorLen = sizeof(uint16_t) + sizeof(uint8_t) + binderLen;
     ASSERT_TRUE(*len > binderVectorLen && binderLen == 32u);
-    ASSERT_EQ(VERIFY_CalcPskBinder(ctx, HITLS_HASH_SHA_256, true,
-        (uint8_t *)(uintptr_t)g_rfc9973Psk, g_rfc9973PskLen, data, *len - binderVectorLen,
-        data + *len - binderLen, binderLen), HITLS_SUCCESS);
+    ASSERT_EQ(VERIFY_CalcPskBinder(ctx, HITLS_HASH_SHA_256, true, (uint8_t *)(uintptr_t)g_rfc9973Psk, g_rfc9973PskLen,
+                                   data, *len - binderVectorLen, data + *len - binderLen, binderLen),
+              HITLS_SUCCESS);
 EXIT:
     FRAME_CleanMsg(&frameType, &frameMsg);
 }
@@ -618,7 +635,8 @@ static void Rfc9973InsertTicketIdentity(TLS_Ctx *ctx, uint8_t *data, uint32_t *l
     /* 1. Parse the external-only offer and grow both identity and binder arrays to two entries. */
     Rfc9973TicketMutation *mutation = (Rfc9973TicketMutation *)user;
     FRAME_Type frameType = {0};
-    frameType.versionType = HITLS_VERSION_TLS13;
+    frameType.versionType = g_rfc9973Transport == BSL_UIO_UDP ? HITLS_VERSION_DTLS13 : HITLS_VERSION_TLS13;
+    frameType.transportType = g_rfc9973Transport;
     FRAME_Msg frameMsg = {0};
     frameMsg.recType.data = REC_TYPE_HANDSHAKE;
     frameMsg.recVersion.data = HITLS_VERSION_TLS13;
@@ -704,7 +722,8 @@ static void Rfc9973PrependExternalIdentity(TLS_Ctx *ctx, uint8_t *data, uint32_t
 {
     Rfc9973PrependMutation *mutation = (Rfc9973PrependMutation *)user;
     FRAME_Type frameType = {0};
-    frameType.versionType = HITLS_VERSION_TLS13;
+    frameType.versionType = g_rfc9973Transport == BSL_UIO_UDP ? HITLS_VERSION_DTLS13 : HITLS_VERSION_TLS13;
+    frameType.transportType = g_rfc9973Transport;
     FRAME_Msg frameMsg = {0};
     frameMsg.recType.data = REC_TYPE_HANDSHAKE;
     frameMsg.recVersion.data = HITLS_VERSION_TLS13;
@@ -774,13 +793,13 @@ EXIT:
     FRAME_CleanMsg(&frameType, &frameMsg);
 }
 
-static void Rfc9973SelectSecondExternalPsk(TLS_Ctx *ctx, uint8_t *data, uint32_t *len,
-    uint32_t bufSize, void *user)
+static void Rfc9973SelectSecondExternalPsk(TLS_Ctx *ctx, uint8_t *data, uint32_t *len, uint32_t bufSize, void *user)
 {
     /* 1. Parse the single external PSK offer and grow the identity and binder arrays. */
     (void)user;
     FRAME_Type frameType = {0};
-    frameType.versionType = HITLS_VERSION_TLS13;
+    frameType.versionType = g_rfc9973Transport == BSL_UIO_UDP ? HITLS_VERSION_DTLS13 : HITLS_VERSION_TLS13;
+    frameType.transportType = g_rfc9973Transport;
     FRAME_Msg frameMsg = {0};
     frameMsg.recType.data = REC_TYPE_HANDSHAKE;
     frameMsg.recVersion.data = HITLS_VERSION_TLS13;
@@ -824,9 +843,10 @@ static void Rfc9973SelectSecondExternalPsk(TLS_Ctx *ctx, uint8_t *data, uint32_t
     /* 3. Recalculate only the known identity binder; the server must skip the unknown identity. */
     uint32_t binderVectorLen = sizeof(uint16_t) + 2u * (sizeof(uint8_t) + binders[1].binder.size);
     ASSERT_TRUE(*len > binderVectorLen && binders[1].binder.size == 32u);
-    ASSERT_EQ(VERIFY_CalcPskBinder(ctx, HITLS_HASH_SHA_256, true,
-        (uint8_t *)(uintptr_t)g_rfc9973Psk, g_rfc9973PskLen, data, *len - binderVectorLen,
-        data + *len - binders[1].binder.size, binders[1].binder.size), HITLS_SUCCESS);
+    ASSERT_EQ(VERIFY_CalcPskBinder(ctx, HITLS_HASH_SHA_256, true, (uint8_t *)(uintptr_t)g_rfc9973Psk, g_rfc9973PskLen,
+                                   data, *len - binderVectorLen, data + *len - binders[1].binder.size,
+                                   binders[1].binder.size),
+              HITLS_SUCCESS);
 EXIT:
     FRAME_CleanMsg(&frameType, &frameMsg);
 }
@@ -838,23 +858,36 @@ EXIT:
 * @expect Legal bits round-trip, mixed unknown bits are masked, and values with no supported bit are rejected.
 @ */
 /* BEGIN_CASE */
-void UT_TLS_TLS13_RFC9973_MODE_API_FUNC_TC001(void)
+void UT_TLS_TLS13_RFC9973_MODE_API_FUNC_TC001(int transport)
 {
-    /* 1. Create a TLS 1.3 configuration and check mode 8 alone and combined with PSK modes. */
+#ifndef HITLS_TLS_PROTO_DTLS13
+    if (transport == BSL_UIO_UDP) {
+        SKIP_TEST();
+    }
+#endif
+    g_rfc9973Transport = (BSL_UIO_TransportType)transport;
+    /* 1. Create a TLS 1.3 configuration and check the mode 8 dependency on PSK-DHE. */
     FRAME_Init();
-    HITLS_Config *config = HITLS_CFG_NewTLS13Config();
+    HITLS_Config *config = NULL;
+#ifdef HITLS_TLS_PROTO_DTLS13
+    if (g_rfc9973Transport == BSL_UIO_UDP) {
+        config = HITLS_CFG_NewDTLS13Config();
+    } else
+#endif
+    {
+        config = HITLS_CFG_NewTLS13Config();
+    }
     ASSERT_TRUE(config != NULL);
-    ASSERT_EQ(HITLS_CFG_SetKeyExchMode(config, TLS13_CERT_AUTH_WITH_EXTERNAL_PSK), HITLS_SUCCESS);
-    ASSERT_EQ(HITLS_CFG_GetKeyExchMode(config), TLS13_CERT_AUTH_WITH_EXTERNAL_PSK);
-    ASSERT_EQ(HITLS_CFG_SetKeyExchMode(config,
-        TLS13_KE_MODE_PSK_ONLY | TLS13_KE_MODE_PSK_WITH_DHE | TLS13_CERT_AUTH_WITH_EXTERNAL_PSK), HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_CFG_SetKeyExchMode(config, TLS13_CERT_AUTH_WITH_EXTERNAL_PSK), HITLS_CONFIG_INVALID_SET);
+    ASSERT_EQ(HITLS_CFG_SetKeyExchMode(config, TLS13_KE_MODE_PSK_ONLY | TLS13_KE_MODE_PSK_WITH_DHE |
+                                                   TLS13_CERT_AUTH_WITH_EXTERNAL_PSK),
+              HITLS_SUCCESS);
     ASSERT_EQ(HITLS_CFG_GetKeyExchMode(config),
-        TLS13_KE_MODE_PSK_ONLY | TLS13_KE_MODE_PSK_WITH_DHE | TLS13_CERT_AUTH_WITH_EXTERNAL_PSK);
+              TLS13_KE_MODE_PSK_ONLY | TLS13_KE_MODE_PSK_WITH_DHE | TLS13_CERT_AUTH_WITH_EXTERNAL_PSK);
     /* 2. Reject unsupported-only values and mask unknown bits when a supported bit remains. */
     ASSERT_EQ(HITLS_CFG_SetKeyExchMode(config, 0), HITLS_CONFIG_INVALID_SET);
     ASSERT_EQ(HITLS_CFG_SetKeyExchMode(config, 16u), HITLS_CONFIG_INVALID_SET);
-    ASSERT_EQ(HITLS_CFG_SetKeyExchMode(config, TLS13_CERT_AUTH_WITH_EXTERNAL_PSK | 16u), HITLS_SUCCESS);
-    ASSERT_EQ(HITLS_CFG_GetKeyExchMode(config), TLS13_CERT_AUTH_WITH_EXTERNAL_PSK);
+    ASSERT_EQ(HITLS_CFG_SetKeyExchMode(config, TLS13_CERT_AUTH_WITH_EXTERNAL_PSK | 16u), HITLS_CONFIG_INVALID_SET);
 EXIT:
     HITLS_CFG_FreeConfig(config);
 }
@@ -862,13 +895,20 @@ EXIT:
 
 /** @
 * @test UT_TLS_TLS13_RFC9973_PSK_CIPHER_FUNC_TC001
-* @title Preserve cipher preference and reject an incompatible external PSK hash on the client.
-* @expect A hash mismatch omits server PSK and aborts the client; another suite with the same hash succeeds.
+* @brief Preserve cipher preference and use certificate fallback when the server declines the external PSK. An incompatible HRR cannot preserve the external PSK offer.
+* @expect Certificate fallback succeeds without HRR; a selected PSK requires a matching hash.
+* @precon nan
 @ */
 /* BEGIN_CASE */
 void UT_TLS_TLS13_RFC9973_PSK_CIPHER_FUNC_TC001(int sessionPsk, int serverPreference, int helloRetry, int serverPsk,
-                                                int cipherCase, int badBinder)
+                                                int cipherCase, int badBinder, int transport)
 {
+#ifndef HITLS_TLS_PROTO_DTLS13
+    if (transport == BSL_UIO_UDP) {
+        SKIP_TEST();
+    }
+#endif
+    g_rfc9973Transport = (BSL_UIO_TransportType)transport;
     /* 1. Put a different cipher first and test both matching and mismatching PSK hashes. */
     FRAME_Init();
     HITLS_Config *clientConfig = Rfc9973NewConfig(TLS13_CERT_AUTH_WITH_EXTERNAL_PSK, !sessionPsk, false);
@@ -901,8 +941,8 @@ void UT_TLS_TLS13_RFC9973_PSK_CIPHER_FUNC_TC001(int sessionPsk, int serverPrefer
             ASSERT_EQ(HITLS_CFG_SetPskFindSessionCallback(serverConfig, Rfc9973FindSha384Psk), HITLS_SUCCESS);
         }
     }
-    client = FRAME_CreateLink(clientConfig, BSL_UIO_TCP);
-    server = FRAME_CreateLink(serverConfig, BSL_UIO_TCP);
+    client = FRAME_CreateLink(clientConfig, g_rfc9973Transport);
+    server = FRAME_CreateLink(serverConfig, g_rfc9973Transport);
     ASSERT_TRUE(client != NULL && server != NULL);
     if (helloRetry) {
         Rfc9973ForceHelloRetryRequest(server);
@@ -925,10 +965,19 @@ void UT_TLS_TLS13_RFC9973_PSK_CIPHER_FUNC_TC001(int sessionPsk, int serverPrefer
     /* 3. Preserve cipher preference; PSK matching compares hashes, not suite IDs. */
     ASSERT_EQ(server->ssl->negotiatedInfo.cipherSuiteInfo.cipherSuite, otherCipher);
     if (cipherCase != 2) {
-        ASSERT_NE(ret, HITLS_SUCCESS);
-        Rfc9973AssertFatalAlert(client, ALERT_HANDSHAKE_FAILURE);
-        ASSERT_EQ(server->ssl->negotiatedInfo.tls13BasicKeyExMode, TLS13_CERT_AUTH_WITH_DHE);
-        ASSERT_TRUE(server->ssl->hsCtx->kxCtx->pskInfo13.psk == NULL);
+        if (helloRetry) {
+            ASSERT_NE(ret, HITLS_SUCCESS);
+            Rfc9973AssertFatalAlert(client, ALERT_HANDSHAKE_FAILURE);
+        } else {
+            ASSERT_EQ(ret, HITLS_SUCCESS);
+            ASSERT_EQ(client->ssl->negotiatedInfo.tls13BasicKeyExMode, TLS13_CERT_AUTH_WITH_DHE);
+        }
+        if (!helloRetry) {
+            ASSERT_EQ(server->ssl->negotiatedInfo.tls13BasicKeyExMode, TLS13_CERT_AUTH_WITH_DHE);
+        }
+        if (helloRetry) {
+            ASSERT_TRUE(server->ssl->hsCtx->kxCtx->pskInfo13.psk == NULL);
+        }
         goto EXIT;
     }
     ASSERT_EQ(ret, HITLS_SUCCESS);
@@ -954,16 +1003,22 @@ EXIT:
 * @expect Both peers select profile bit 8 and complete the certificate flight and Finished validation.
 @ */
 /* BEGIN_CASE */
-void UT_TLS_TLS13_RFC9973_HANDSHAKE_FUNC_TC001(void)
+void UT_TLS_TLS13_RFC9973_HANDSHAKE_FUNC_TC001(int transport)
 {
+#ifndef HITLS_TLS_PROTO_DTLS13
+    if (transport == BSL_UIO_UDP) {
+        SKIP_TEST();
+    }
+#endif
+    g_rfc9973Transport = (BSL_UIO_TransportType)transport;
     /* 1. Configure matching external PSKs and certificates on both peers. */
     FRAME_Init();
     HITLS_Config *config = Rfc9973NewConfig(TLS13_CERT_AUTH_WITH_EXTERNAL_PSK, true, true);
     FRAME_LinkObj *client = NULL;
     FRAME_LinkObj *server = NULL;
     ASSERT_TRUE(config != NULL);
-    client = FRAME_CreateLink(config, BSL_UIO_TCP);
-    server = FRAME_CreateLink(config, BSL_UIO_TCP);
+    client = FRAME_CreateLink(config, g_rfc9973Transport);
+    server = FRAME_CreateLink(config, g_rfc9973Transport);
     ASSERT_TRUE(client != NULL && server != NULL);
     /* 2. Complete mode 8, verify it is not resumption, then exchange application data in both directions. */
     ASSERT_EQ(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_SUCCESS);
@@ -981,13 +1036,13 @@ void UT_TLS_TLS13_RFC9973_HANDSHAKE_FUNC_TC001(void)
     ASSERT_EQ(FRAME_TrasferMsgBetweenLink(client, server), HITLS_SUCCESS);
     ASSERT_EQ(HITLS_Read(server->ssl, readBuf, sizeof(readBuf), &readLen), HITLS_SUCCESS);
     ASSERT_EQ(readLen, sizeof(clientData));
-    ASSERT_EQ(memcmp(readBuf, clientData, sizeof(clientData)), 0);
+    ASSERT_EQ(ConstTimeMemcmp(readBuf, clientData, sizeof(clientData)), 0xffffffffu);
     ASSERT_EQ(HITLS_Write(server->ssl, serverData, sizeof(serverData), &writeLen), HITLS_SUCCESS);
     ASSERT_EQ(writeLen, sizeof(serverData));
     ASSERT_EQ(FRAME_TrasferMsgBetweenLink(server, client), HITLS_SUCCESS);
     ASSERT_EQ(HITLS_Read(client->ssl, readBuf, sizeof(readBuf), &readLen), HITLS_SUCCESS);
     ASSERT_EQ(readLen, sizeof(serverData));
-    ASSERT_EQ(memcmp(readBuf, serverData, sizeof(serverData)), 0);
+    ASSERT_EQ(ConstTimeMemcmp(readBuf, serverData, sizeof(serverData)), 0xffffffffu);
 EXIT:
     ClearWrapper();
     FRAME_FreeLink(client);
@@ -1003,8 +1058,14 @@ EXIT:
 * @expect Both mandatory server-authentication messages are sent and the handshake succeeds.
 @ */
 /* BEGIN_CASE */
-void UT_TLS_TLS13_RFC9973_SERVER_AUTH_FLIGHT_FUNC_TC001(int observedMessage)
+void UT_TLS_TLS13_RFC9973_SERVER_AUTH_FLIGHT_FUNC_TC001(int observedMessage, int transport)
 {
+#ifndef HITLS_TLS_PROTO_DTLS13
+    if (transport == BSL_UIO_UDP) {
+        SKIP_TEST();
+    }
+#endif
+    g_rfc9973Transport = (BSL_UIO_TransportType)transport;
     /* 1. Select Certificate or CertificateVerify as the message to observe. */
     FRAME_Init();
     static const HITLS_HandshakeState states[] = {TRY_SEND_CERTIFICATE, TRY_SEND_CERTIFICATE_VERIFY};
@@ -1015,13 +1076,11 @@ void UT_TLS_TLS13_RFC9973_SERVER_AUTH_FLIGHT_FUNC_TC001(int observedMessage)
     ASSERT_TRUE(observedMessage >= 0 && (uint32_t)observedMessage < sizeof(states) / sizeof(states[0]));
     config = Rfc9973NewConfig(TLS13_CERT_AUTH_WITH_EXTERNAL_PSK, true, true);
     ASSERT_TRUE(config != NULL);
-    client = FRAME_CreateLink(config, BSL_UIO_TCP);
-    server = FRAME_CreateLink(config, BSL_UIO_TCP);
+    client = FRAME_CreateLink(config, g_rfc9973Transport);
+    server = FRAME_CreateLink(config, g_rfc9973Transport);
     ASSERT_TRUE(client != NULL && server != NULL);
-    RecWrapper wrapper = {
-        states[observedMessage], REC_TYPE_HANDSHAKE, false,
-        (void *)(uintptr_t)messageTypes[observedMessage], Rfc9973ObserveHandshakeMessage
-    };
+    RecWrapper wrapper = {states[observedMessage], REC_TYPE_HANDSHAKE, false,
+                          (void *)(uintptr_t)messageTypes[observedMessage], Rfc9973ObserveHandshakeMessage};
     /* 2. Observe the selected authentication message and require a successful mode 8 handshake. */
     RegisterWrapper(wrapper);
     ASSERT_EQ(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_SUCCESS);
@@ -1041,8 +1100,14 @@ EXIT:
 * @expect Extension 33 is empty; all required companion extensions are present; the only wire PSK mode is psk_dhe_ke.
 @ */
 /* BEGIN_CASE */
-void UT_TLS_TLS13_RFC9973_WIRE_FORMAT_FUNC_TC001(int observeServer)
+void UT_TLS_TLS13_RFC9973_WIRE_FORMAT_FUNC_TC001(int observeServer, int transport)
 {
+#ifndef HITLS_TLS_PROTO_DTLS13
+    if (transport == BSL_UIO_UDP) {
+        SKIP_TEST();
+    }
+#endif
+    g_rfc9973Transport = (BSL_UIO_TransportType)transport;
     /* 1. Choose ClientHello or ServerHello for field inspection. */
     FRAME_Init();
     FRAME_LinkObj *client = NULL;
@@ -1066,8 +1131,14 @@ EXIT:
 * @expect The server aborts with fatal missing_extension.
 @ */
 /* BEGIN_CASE */
-void UT_TLS_TLS13_RFC9973_MISSING_COMPANION_FUNC_TC001(int missingField)
+void UT_TLS_TLS13_RFC9973_MISSING_COMPANION_FUNC_TC001(int missingField, int transport)
 {
+#ifndef HITLS_TLS_PROTO_DTLS13
+    if (transport == BSL_UIO_UDP) {
+        SKIP_TEST();
+    }
+#endif
+    g_rfc9973Transport = (BSL_UIO_TransportType)transport;
     /* 1. Remove one required companion extension from ClientHello. */
     FRAME_Init();
     FRAME_LinkObj *client = NULL;
@@ -1092,16 +1163,21 @@ EXIT:
 * @expect The server aborts with fatal illegal_parameter.
 @ */
 /* BEGIN_CASE */
-void UT_TLS_TLS13_RFC9973_ILLEGAL_CLIENT_HELLO_FUNC_TC001(int mutationOffset)
+void UT_TLS_TLS13_RFC9973_ILLEGAL_CLIENT_HELLO_FUNC_TC001(int mutationOffset, int transport)
 {
+#ifndef HITLS_TLS_PROTO_DTLS13
+    if (transport == BSL_UIO_UDP) {
+        SKIP_TEST();
+    }
+#endif
+    g_rfc9973Transport = (BSL_UIO_TransportType)transport;
     /* 1. Select a malformed ClientHello offer or bad binder. */
     FRAME_Init();
     FRAME_LinkObj *client = NULL;
     FRAME_LinkObj *server = NULL;
     HITLS_Config *config = NULL;
-    static const Rfc9973Mutation mutations[] = {
-        RFC9973_CLIENT_EXT_NONEMPTY, RFC9973_ONLY_PSK_KE, RFC9973_ADD_EARLY_DATA, RFC9973_BAD_BINDER
-    };
+    static const Rfc9973Mutation mutations[] = {RFC9973_CLIENT_EXT_NONEMPTY, RFC9973_ONLY_PSK_KE,
+                                                RFC9973_ADD_EARLY_DATA, RFC9973_BAD_BINDER};
     ASSERT_TRUE(mutationOffset >= 0 && (uint32_t)mutationOffset < sizeof(mutations) / sizeof(mutations[0]));
     ASSERT_NE(Rfc9973ConnectWithMutation(mutations[mutationOffset], false, &client, &server, &config), HITLS_SUCCESS);
     /* 2. Require the server to send fatal illegal_parameter. */
@@ -1121,16 +1197,21 @@ EXIT:
 * @expect The client aborts with fatal illegal_parameter.
 @ */
 /* BEGIN_CASE */
-void UT_TLS_TLS13_RFC9973_ILLEGAL_SERVER_HELLO_FUNC_TC001(int mutationOffset)
+void UT_TLS_TLS13_RFC9973_ILLEGAL_SERVER_HELLO_FUNC_TC001(int mutationOffset, int transport)
 {
+#ifndef HITLS_TLS_PROTO_DTLS13
+    if (transport == BSL_UIO_UDP) {
+        SKIP_TEST();
+    }
+#endif
+    g_rfc9973Transport = (BSL_UIO_TransportType)transport;
     /* 1. Select a nonempty extension 33 or a missing ServerHello companion. */
     FRAME_Init();
     FRAME_LinkObj *client = NULL;
     FRAME_LinkObj *server = NULL;
     HITLS_Config *config = NULL;
-    static const Rfc9973Mutation mutations[] = {
-        RFC9973_SERVER_EXT_NONEMPTY, RFC9973_SERVER_MISSING_KEY_SHARE, RFC9973_SERVER_MISSING_PRE_SHARED_KEY
-    };
+    static const Rfc9973Mutation mutations[] = {RFC9973_SERVER_EXT_NONEMPTY, RFC9973_SERVER_MISSING_KEY_SHARE,
+                                                RFC9973_SERVER_MISSING_PRE_SHARED_KEY};
     ASSERT_TRUE(mutationOffset >= 0 && (uint32_t)mutationOffset < sizeof(mutations) / sizeof(mutations[0]));
     ASSERT_NE(Rfc9973ConnectWithMutation(mutations[mutationOffset], true, &client, &server, &config), HITLS_SUCCESS);
     /* 2. Require the client to send fatal illegal_parameter. */
@@ -1150,21 +1231,25 @@ EXIT:
 * @expect The client rejects the unsolicited extension with fatal unsupported_extension.
 @ */
 /* BEGIN_CASE */
-void UT_TLS_TLS13_RFC9973_UNSOLICITED_SERVER_EXTENSION_FUNC_TC001(void)
+void UT_TLS_TLS13_RFC9973_UNSOLICITED_SERVER_EXTENSION_FUNC_TC001(int transport)
 {
+#ifndef HITLS_TLS_PROTO_DTLS13
+    if (transport == BSL_UIO_UDP) {
+        SKIP_TEST();
+    }
+#endif
+    g_rfc9973Transport = (BSL_UIO_TransportType)transport;
     /* 1. Use PSK_WITH_DHE without a client extension 33 offer. */
     FRAME_Init();
     HITLS_Config *config = Rfc9973NewConfig(TLS13_KE_MODE_PSK_WITH_DHE, true, true);
     FRAME_LinkObj *client = NULL;
     FRAME_LinkObj *server = NULL;
     ASSERT_TRUE(config != NULL);
-    client = FRAME_CreateLink(config, BSL_UIO_TCP);
-    server = FRAME_CreateLink(config, BSL_UIO_TCP);
+    client = FRAME_CreateLink(config, g_rfc9973Transport);
+    server = FRAME_CreateLink(config, g_rfc9973Transport);
     ASSERT_TRUE(client != NULL && server != NULL);
-    RecWrapper wrapper = {
-        TRY_SEND_SERVER_HELLO, REC_TYPE_HANDSHAKE, false,
-        (void *)(uintptr_t)RFC9973_ADD_CERT_WITH_EXTERNAL_PSK, Rfc9973MutateHello
-    };
+    RecWrapper wrapper = {TRY_SEND_SERVER_HELLO, REC_TYPE_HANDSHAKE, false,
+                          (void *)(uintptr_t)RFC9973_ADD_CERT_WITH_EXTERNAL_PSK, Rfc9973MutateHello};
     /* 2. Inject extension 33 into ServerHello and require client unsupported_extension. */
     RegisterWrapper(wrapper);
     ASSERT_NE(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_SUCCESS);
@@ -1184,18 +1269,24 @@ EXIT:
 * @expect A client allowing bit 2 and bit 8 accepts an ordinary bit-2 selection from a server that does not enable bit 8.
 @ */
 /* BEGIN_CASE */
-void UT_TLS_TLS13_RFC9973_FALLBACK_FUNC_TC001(void)
+void UT_TLS_TLS13_RFC9973_FALLBACK_FUNC_TC001(int transport)
 {
+#ifndef HITLS_TLS_PROTO_DTLS13
+    if (transport == BSL_UIO_UDP) {
+        SKIP_TEST();
+    }
+#endif
+    g_rfc9973Transport = (BSL_UIO_TransportType)transport;
     /* 1. Let the client allow mode 8 and PSK_WITH_DHE; let the server allow only PSK_WITH_DHE. */
     FRAME_Init();
-    HITLS_Config *clientConfig = Rfc9973NewConfig(
-        TLS13_KE_MODE_PSK_WITH_DHE | TLS13_CERT_AUTH_WITH_EXTERNAL_PSK, true, false);
+    HITLS_Config *clientConfig =
+        Rfc9973NewConfig(TLS13_KE_MODE_PSK_WITH_DHE | TLS13_CERT_AUTH_WITH_EXTERNAL_PSK, true, false);
     HITLS_Config *serverConfig = Rfc9973NewConfig(TLS13_KE_MODE_PSK_WITH_DHE, false, true);
     FRAME_LinkObj *client = NULL;
     FRAME_LinkObj *server = NULL;
     ASSERT_TRUE(clientConfig != NULL && serverConfig != NULL);
-    client = FRAME_CreateLink(clientConfig, BSL_UIO_TCP);
-    server = FRAME_CreateLink(serverConfig, BSL_UIO_TCP);
+    client = FRAME_CreateLink(clientConfig, g_rfc9973Transport);
+    server = FRAME_CreateLink(serverConfig, g_rfc9973Transport);
     ASSERT_TRUE(client != NULL && server != NULL);
     /* 2. Require both peers to complete using the shared PSK_WITH_DHE mode. */
     ASSERT_EQ(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_SUCCESS);
@@ -1217,8 +1308,14 @@ EXIT:
 * @expect The connection falls back to ordinary certificate authentication and selects profile bit 4.
 @ */
 /* BEGIN_CASE */
-void UT_TLS_TLS13_RFC9973_CERT_FALLBACK_FUNC_TC001(void)
+void UT_TLS_TLS13_RFC9973_CERT_FALLBACK_FUNC_TC001(int transport)
 {
+#ifndef HITLS_TLS_PROTO_DTLS13
+    if (transport == BSL_UIO_UDP) {
+        SKIP_TEST();
+    }
+#endif
+    g_rfc9973Transport = (BSL_UIO_TransportType)transport;
     /* 1. Offer mode 8 to a server with certificates but no external PSK callback. */
     FRAME_Init();
     HITLS_Config *clientConfig = Rfc9973NewConfig(TLS13_CERT_AUTH_WITH_EXTERNAL_PSK, true, false);
@@ -1226,8 +1323,8 @@ void UT_TLS_TLS13_RFC9973_CERT_FALLBACK_FUNC_TC001(void)
     FRAME_LinkObj *client = NULL;
     FRAME_LinkObj *server = NULL;
     ASSERT_TRUE(clientConfig != NULL && serverConfig != NULL);
-    client = FRAME_CreateLink(clientConfig, BSL_UIO_TCP);
-    server = FRAME_CreateLink(serverConfig, BSL_UIO_TCP);
+    client = FRAME_CreateLink(clientConfig, g_rfc9973Transport);
+    server = FRAME_CreateLink(serverConfig, g_rfc9973Transport);
     ASSERT_TRUE(client != NULL && server != NULL);
     /* 2. Require certificate authentication on both peers when no PSK matches. */
     ASSERT_EQ(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_SUCCESS);
@@ -1249,8 +1346,14 @@ EXIT:
 * @expect The server aborts with fatal illegal_parameter instead of skipping or selecting the ticket.
 @ */
 /* BEGIN_CASE */
-void UT_TLS_TLS13_RFC9973_REJECT_RESUMPTION_IN_LIST_FUNC_TC001(void)
+void UT_TLS_TLS13_RFC9973_REJECT_RESUMPTION_IN_LIST_FUNC_TC001(int transport)
 {
+#ifndef HITLS_TLS_PROTO_DTLS13
+    if (transport == BSL_UIO_UDP) {
+        SKIP_TEST();
+    }
+#endif
+    g_rfc9973Transport = (BSL_UIO_TransportType)transport;
     /* 1. Complete a certificate handshake and retain the issued ticket. */
     FRAME_Init();
     HITLS_Config *config = Rfc9973NewConfig(TLS13_KE_MODE_PSK_WITH_DHE, false, false);
@@ -1258,8 +1361,8 @@ void UT_TLS_TLS13_RFC9973_REJECT_RESUMPTION_IN_LIST_FUNC_TC001(void)
     FRAME_LinkObj *server = NULL;
     HITLS_Session *session = NULL;
     ASSERT_TRUE(config != NULL);
-    client = FRAME_CreateLink(config, BSL_UIO_TCP);
-    server = FRAME_CreateLink(config, BSL_UIO_TCP);
+    client = FRAME_CreateLink(config, g_rfc9973Transport);
+    server = FRAME_CreateLink(config, g_rfc9973Transport);
     ASSERT_TRUE(client != NULL && server != NULL);
     ASSERT_EQ(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_SUCCESS);
     session = HITLS_GetDupSession(client->ssl);
@@ -1269,16 +1372,14 @@ void UT_TLS_TLS13_RFC9973_REJECT_RESUMPTION_IN_LIST_FUNC_TC001(void)
     client = NULL;
     server = NULL;
 
-    ASSERT_EQ(HITLS_CFG_SetKeyExchMode(config,
-        TLS13_KE_MODE_PSK_WITH_DHE | TLS13_CERT_AUTH_WITH_EXTERNAL_PSK), HITLS_SUCCESS);
-    RecWrapper wrapper = {
-        TRY_SEND_CLIENT_HELLO, REC_TYPE_HANDSHAKE, false,
-        (void *)(uintptr_t)RFC9973_ADD_CERT_WITH_EXTERNAL_PSK, Rfc9973MutateHello
-    };
+    ASSERT_EQ(HITLS_CFG_SetKeyExchMode(config, TLS13_KE_MODE_PSK_WITH_DHE | TLS13_CERT_AUTH_WITH_EXTERNAL_PSK),
+              HITLS_SUCCESS);
+    RecWrapper wrapper = {TRY_SEND_CLIENT_HELLO, REC_TYPE_HANDSHAKE, false,
+                          (void *)(uintptr_t)RFC9973_ADD_CERT_WITH_EXTERNAL_PSK, Rfc9973MutateHello};
     /* 2. Add extension 33 to the ticket offer and require rejection before PSK selection. */
     RegisterWrapper(wrapper);
-    client = FRAME_CreateLink(config, BSL_UIO_TCP);
-    server = FRAME_CreateLink(config, BSL_UIO_TCP);
+    client = FRAME_CreateLink(config, g_rfc9973Transport);
+    server = FRAME_CreateLink(config, g_rfc9973Transport);
     ASSERT_TRUE(client != NULL && server != NULL);
     ASSERT_EQ(HITLS_SetSession(client->ssl, session), HITLS_SUCCESS);
     ASSERT_NE(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_SUCCESS);
@@ -1295,12 +1396,18 @@ EXIT:
 /** @
 * @test UT_TLS_TLS13_RFC9973_RESUMPTION_FUNC_TC001
 * @spec RFC 9973 Section 5.1
-* @title Resume an RFC 9973 session only with an explicitly enabled PSK exchange mode.
-* @expect Mode 8 alone rejects resumption; enabling PSK_ONLY or PSK_WITH_DHE permits it.
+* @title Resume an RFC 9973 session after the mode 8 configuration is normalized to PSK-DHE.
+* @expect Session resumption uses PSK_WITH_DHE after the external PSK callback is removed.
 @ */
 /* BEGIN_CASE */
-void UT_TLS_TLS13_RFC9973_RESUMPTION_FUNC_TC001(int offerPskKe)
+void UT_TLS_TLS13_RFC9973_RESUMPTION_FUNC_TC001(int offerPskKe, int transport)
 {
+#ifndef HITLS_TLS_PROTO_DTLS13
+    if (transport == BSL_UIO_UDP) {
+        SKIP_TEST();
+    }
+#endif
+    g_rfc9973Transport = (BSL_UIO_TransportType)transport;
     /* 1. Complete mode 8 and retain its ticket under the selected resumption-mode configuration. */
     FRAME_Init();
     uint32_t mode = TLS13_CERT_AUTH_WITH_EXTERNAL_PSK |
@@ -1311,8 +1418,8 @@ void UT_TLS_TLS13_RFC9973_RESUMPTION_FUNC_TC001(int offerPskKe)
     HITLS_Session *session = NULL;
     bool isReused = false;
     ASSERT_TRUE(config != NULL);
-    client = FRAME_CreateLink(config, BSL_UIO_TCP);
-    server = FRAME_CreateLink(config, BSL_UIO_TCP);
+    client = FRAME_CreateLink(config, g_rfc9973Transport);
+    server = FRAME_CreateLink(config, g_rfc9973Transport);
     ASSERT_TRUE(client != NULL && server != NULL);
     ASSERT_EQ(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_SUCCESS);
     session = HITLS_GetDupSession(client->ssl);
@@ -1324,19 +1431,14 @@ void UT_TLS_TLS13_RFC9973_RESUMPTION_FUNC_TC001(int offerPskKe)
 
     /* 2. Remove the external offer. Ticket resumption needs an explicitly shared PSK_ONLY or PSK_WITH_DHE mode. */
     ASSERT_EQ(HITLS_CFG_SetPskClientCallback(config, NULL), HITLS_SUCCESS);
-    client = FRAME_CreateLink(config, BSL_UIO_TCP);
-    server = FRAME_CreateLink(config, BSL_UIO_TCP);
+    client = FRAME_CreateLink(config, g_rfc9973Transport);
+    server = FRAME_CreateLink(config, g_rfc9973Transport);
     ASSERT_TRUE(client != NULL && server != NULL);
     ASSERT_EQ(HITLS_SetSession(client->ssl, session), HITLS_SUCCESS);
-    if (offerPskKe == 0) {
-        ASSERT_NE(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_SUCCESS);
-        Rfc9973AssertFatalAlert(server, ALERT_HANDSHAKE_FAILURE);
-        goto EXIT;
-    }
     ASSERT_EQ(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_SUCCESS);
     ASSERT_EQ(HITLS_IsSessionReused(client->ssl, &isReused), HITLS_SUCCESS);
     ASSERT_EQ(isReused, true);
-    uint32_t expectedMode = offerPskKe == 1 ? TLS13_KE_MODE_PSK_ONLY : TLS13_KE_MODE_PSK_WITH_DHE;
+    uint32_t expectedMode = TLS13_KE_MODE_PSK_WITH_DHE;
     ASSERT_EQ(client->ssl->negotiatedInfo.tls13BasicKeyExMode, expectedMode);
     ASSERT_EQ(server->ssl->negotiatedInfo.tls13BasicKeyExMode, expectedMode);
 EXIT:
@@ -1355,16 +1457,22 @@ EXIT:
 * @expect CH1 and CH2 contain extension 33, the HRR omits it, and the final handshake selects profile bit 8.
 @ */
 /* BEGIN_CASE */
-void UT_TLS_TLS13_RFC9973_HRR_FUNC_TC001(void)
+void UT_TLS_TLS13_RFC9973_HRR_FUNC_TC001(int transport)
 {
+#ifndef HITLS_TLS_PROTO_DTLS13
+    if (transport == BSL_UIO_UDP) {
+        SKIP_TEST();
+    }
+#endif
+    g_rfc9973Transport = (BSL_UIO_TransportType)transport;
     /* 1. Configure matching mode 8 credentials on both peers. */
     FRAME_Init();
     HITLS_Config *config = Rfc9973NewConfig(TLS13_CERT_AUTH_WITH_EXTERNAL_PSK, true, true);
     FRAME_LinkObj *client = NULL;
     FRAME_LinkObj *server = NULL;
     ASSERT_TRUE(config != NULL);
-    client = FRAME_CreateLink(config, BSL_UIO_TCP);
-    server = FRAME_CreateLink(config, BSL_UIO_TCP);
+    client = FRAME_CreateLink(config, g_rfc9973Transport);
+    server = FRAME_CreateLink(config, g_rfc9973Transport);
     ASSERT_TRUE(client != NULL && server != NULL);
     /* 2. Force a different key-share group and require mode 8 to survive HRR. */
     Rfc9973ForceHelloRetryRequest(server);
@@ -1388,22 +1496,26 @@ EXIT:
 * @expect The client aborts with fatal illegal_parameter.
 @ */
 /* BEGIN_CASE */
-void UT_TLS_TLS13_RFC9973_HRR_EXTENSION_FUNC_TC001(void)
+void UT_TLS_TLS13_RFC9973_HRR_EXTENSION_FUNC_TC001(int transport)
 {
+#ifndef HITLS_TLS_PROTO_DTLS13
+    if (transport == BSL_UIO_UDP) {
+        SKIP_TEST();
+    }
+#endif
+    g_rfc9973Transport = (BSL_UIO_TransportType)transport;
     /* 1. Configure mode 8 and force a HelloRetryRequest. */
     FRAME_Init();
     HITLS_Config *config = Rfc9973NewConfig(TLS13_CERT_AUTH_WITH_EXTERNAL_PSK, true, true);
     FRAME_LinkObj *client = NULL;
     FRAME_LinkObj *server = NULL;
     ASSERT_TRUE(config != NULL);
-    client = FRAME_CreateLink(config, BSL_UIO_TCP);
-    server = FRAME_CreateLink(config, BSL_UIO_TCP);
+    client = FRAME_CreateLink(config, g_rfc9973Transport);
+    server = FRAME_CreateLink(config, g_rfc9973Transport);
     ASSERT_TRUE(client != NULL && server != NULL);
     Rfc9973ForceHelloRetryRequest(server);
-    RecWrapper wrapper = {
-        TRY_SEND_HELLO_RETRY_REQUEST, REC_TYPE_HANDSHAKE, false,
-        (void *)(uintptr_t)RFC9973_ADD_CERT_WITH_EXTERNAL_PSK, Rfc9973MutateHello
-    };
+    RecWrapper wrapper = {TRY_SEND_HELLO_RETRY_REQUEST, REC_TYPE_HANDSHAKE, false,
+                          (void *)(uintptr_t)RFC9973_ADD_CERT_WITH_EXTERNAL_PSK, Rfc9973MutateHello};
     /* 2. Insert extension 33 into HRR and require client illegal_parameter. */
     RegisterWrapper(wrapper);
     ASSERT_NE(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_SUCCESS);
@@ -1423,8 +1535,14 @@ EXIT:
 * @expect The server aborts with fatal illegal_parameter.
 @ */
 /* BEGIN_CASE */
-void UT_TLS_TLS13_RFC9973_SECOND_CLIENT_HELLO_FUNC_TC001(int addOnSecondClientHello)
+void UT_TLS_TLS13_RFC9973_SECOND_CLIENT_HELLO_FUNC_TC001(int addOnSecondClientHello, int transport)
 {
+#ifndef HITLS_TLS_PROTO_DTLS13
+    if (transport == BSL_UIO_UDP) {
+        SKIP_TEST();
+    }
+#endif
+    g_rfc9973Transport = (BSL_UIO_TransportType)transport;
     /* 1. Choose whether extension 33 is absent or present in ClientHello1. */
     FRAME_Init();
     uint32_t mode = addOnSecondClientHello ? TLS13_KE_MODE_PSK_WITH_DHE : TLS13_CERT_AUTH_WITH_EXTERNAL_PSK;
@@ -1433,17 +1551,16 @@ void UT_TLS_TLS13_RFC9973_SECOND_CLIENT_HELLO_FUNC_TC001(int addOnSecondClientHe
     FRAME_LinkObj *server = NULL;
     Rfc9973SecondClientHelloMutation mutation = {0, addOnSecondClientHello != 0};
     ASSERT_TRUE(config != NULL);
-    client = FRAME_CreateLink(config, BSL_UIO_TCP);
-    server = FRAME_CreateLink(config, BSL_UIO_TCP);
+    client = FRAME_CreateLink(config, g_rfc9973Transport);
+    server = FRAME_CreateLink(config, g_rfc9973Transport);
     ASSERT_TRUE(client != NULL && server != NULL);
     if (addOnSecondClientHello) {
         ASSERT_EQ(HITLS_CFG_SetKeyExchMode(&server->ssl->config.tlsConfig,
-            TLS13_KE_MODE_PSK_WITH_DHE | TLS13_CERT_AUTH_WITH_EXTERNAL_PSK), HITLS_SUCCESS);
+                                           TLS13_KE_MODE_PSK_WITH_DHE | TLS13_CERT_AUTH_WITH_EXTERNAL_PSK),
+                  HITLS_SUCCESS);
     }
     Rfc9973ForceHelloRetryRequest(server);
-    RecWrapper wrapper = {
-        TRY_SEND_CLIENT_HELLO, REC_TYPE_HANDSHAKE, false, &mutation, Rfc9973MutateSecondClientHello
-    };
+    RecWrapper wrapper = {TRY_SEND_CLIENT_HELLO, REC_TYPE_HANDSHAKE, false, &mutation, Rfc9973MutateSecondClientHello};
     /* 2. Change its presence only in ClientHello2 and require server illegal_parameter. */
     RegisterWrapper(wrapper);
     ASSERT_NE(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_SUCCESS);
@@ -1464,28 +1581,29 @@ EXIT:
 * @expect The receiving client recognizes the extension and aborts with fatal illegal_parameter.
 @ */
 /* BEGIN_CASE */
-void UT_TLS_TLS13_RFC9973_WRONG_MESSAGE_FUNC_TC001(int wrongMessage)
+void UT_TLS_TLS13_RFC9973_WRONG_MESSAGE_FUNC_TC001(int wrongMessage, int transport)
 {
+#ifndef HITLS_TLS_PROTO_DTLS13
+    if (transport == BSL_UIO_UDP) {
+        SKIP_TEST();
+    }
+#endif
+    g_rfc9973Transport = (BSL_UIO_TransportType)transport;
     /* 1. Choose a forbidden server message and enable client authentication for CertificateRequest. */
     FRAME_Init();
-    ASSERT_TRUE(wrongMessage >= RFC9973_WRONG_ENCRYPTED_EXTENSIONS &&
-        wrongMessage <= RFC9973_WRONG_NEW_SESSION_TICKET);
+    ASSERT_TRUE(wrongMessage >= RFC9973_WRONG_ENCRYPTED_EXTENSIONS && wrongMessage <= RFC9973_WRONG_NEW_SESSION_TICKET);
     HITLS_Config *config = Rfc9973NewConfig(TLS13_CERT_AUTH_WITH_EXTERNAL_PSK, true, true);
     FRAME_LinkObj *client = NULL;
     FRAME_LinkObj *server = NULL;
     ASSERT_TRUE(config != NULL);
     config->isSupportClientVerify = true;
-    client = FRAME_CreateLink(config, BSL_UIO_TCP);
-    server = FRAME_CreateLink(config, BSL_UIO_TCP);
+    client = FRAME_CreateLink(config, g_rfc9973Transport);
+    server = FRAME_CreateLink(config, g_rfc9973Transport);
     ASSERT_TRUE(client != NULL && server != NULL);
-    static const HITLS_HandshakeState states[] = {
-        TRY_SEND_ENCRYPTED_EXTENSIONS, TRY_SEND_CERTIFICATE_REQUEST,
-        TRY_SEND_CERTIFICATE, TRY_SEND_NEW_SESSION_TICKET
-    };
-    RecWrapper wrapper = {
-        states[wrongMessage], REC_TYPE_HANDSHAKE, false,
-        (void *)(uintptr_t)wrongMessage, Rfc9973InjectWrongMessageExtension
-    };
+    static const HITLS_HandshakeState states[] = {TRY_SEND_ENCRYPTED_EXTENSIONS, TRY_SEND_CERTIFICATE_REQUEST,
+                                                  TRY_SEND_CERTIFICATE, TRY_SEND_NEW_SESSION_TICKET};
+    RecWrapper wrapper = {states[wrongMessage], REC_TYPE_HANDSHAKE, false, (void *)(uintptr_t)wrongMessage,
+                          Rfc9973InjectWrongMessageExtension};
     /* 2. Insert extension 33 into that message and require client illegal_parameter. */
     RegisterWrapper(wrapper);
     ASSERT_NE(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_SUCCESS);
@@ -1505,21 +1623,25 @@ EXIT:
 * @expect The server ignores the age and completes the RFC 9973 handshake.
 @ */
 /* BEGIN_CASE */
-void UT_TLS_TLS13_RFC9973_EXTERNAL_PSK_AGE_FUNC_TC001(int age)
+void UT_TLS_TLS13_RFC9973_EXTERNAL_PSK_AGE_FUNC_TC001(int age, int transport)
 {
+#ifndef HITLS_TLS_PROTO_DTLS13
+    if (transport == BSL_UIO_UDP) {
+        SKIP_TEST();
+    }
+#endif
+    g_rfc9973Transport = (BSL_UIO_TransportType)transport;
     /* 1. Configure mode 8 with the shared external PSK. */
     FRAME_Init();
     HITLS_Config *config = Rfc9973NewConfig(TLS13_CERT_AUTH_WITH_EXTERNAL_PSK, true, true);
     FRAME_LinkObj *client = NULL;
     FRAME_LinkObj *server = NULL;
     ASSERT_TRUE(config != NULL);
-    client = FRAME_CreateLink(config, BSL_UIO_TCP);
-    server = FRAME_CreateLink(config, BSL_UIO_TCP);
+    client = FRAME_CreateLink(config, g_rfc9973Transport);
+    server = FRAME_CreateLink(config, g_rfc9973Transport);
     ASSERT_TRUE(client != NULL && server != NULL);
-    RecWrapper wrapper = {
-        TRY_SEND_CLIENT_HELLO, REC_TYPE_HANDSHAKE, false,
-        (void *)(uintptr_t)(uint32_t)age, Rfc9973SetExternalPskAge
-    };
+    RecWrapper wrapper = {TRY_SEND_CLIENT_HELLO, REC_TYPE_HANDSHAKE, false, (void *)(uintptr_t)(uint32_t)age,
+                          Rfc9973SetExternalPskAge};
     /* 2. Change the age and recalculate its binder; the handshake must still succeed. */
     RegisterWrapper(wrapper);
     ASSERT_EQ(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_SUCCESS);
@@ -1540,8 +1662,14 @@ EXIT:
 * @expect CertificateRequest is permitted despite PSK use, and both peers complete with profile bit 8.
 @ */
 /* BEGIN_CASE */
-void UT_TLS_TLS13_RFC9973_MUTUAL_AUTH_FUNC_TC001(void)
+void UT_TLS_TLS13_RFC9973_MUTUAL_AUTH_FUNC_TC001(int transport)
 {
+#ifndef HITLS_TLS_PROTO_DTLS13
+    if (transport == BSL_UIO_UDP) {
+        SKIP_TEST();
+    }
+#endif
+    g_rfc9973Transport = (BSL_UIO_TransportType)transport;
     /* 1. Configure matching external PSKs and enable client certificate verification. */
     FRAME_Init();
     HITLS_Config *config = Rfc9973NewConfig(TLS13_CERT_AUTH_WITH_EXTERNAL_PSK, true, true);
@@ -1549,8 +1677,8 @@ void UT_TLS_TLS13_RFC9973_MUTUAL_AUTH_FUNC_TC001(void)
     FRAME_LinkObj *server = NULL;
     ASSERT_TRUE(config != NULL);
     config->isSupportClientVerify = true;
-    client = FRAME_CreateLink(config, BSL_UIO_TCP);
-    server = FRAME_CreateLink(config, BSL_UIO_TCP);
+    client = FRAME_CreateLink(config, g_rfc9973Transport);
+    server = FRAME_CreateLink(config, g_rfc9973Transport);
     ASSERT_TRUE(client != NULL && server != NULL);
     /* 2. Require mutual certificate authentication to complete with mode 8. */
     ASSERT_EQ(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_SUCCESS);
@@ -1571,23 +1699,26 @@ EXIT:
 * @expect ClientHello sends psk_dhe_ke followed by psk_ke, while the initial handshake still selects RFC 9973 bit 8.
 @ */
 /* BEGIN_CASE */
-void UT_TLS_TLS13_RFC9973_PSK_KE_ADVERTISEMENT_FUNC_TC001(void)
+void UT_TLS_TLS13_RFC9973_PSK_KE_ADVERTISEMENT_FUNC_TC001(int transport)
 {
+#ifndef HITLS_TLS_PROTO_DTLS13
+    if (transport == BSL_UIO_UDP) {
+        SKIP_TEST();
+    }
+#endif
+    g_rfc9973Transport = (BSL_UIO_TransportType)transport;
     /* 1. Allow PSK_ONLY alongside mode 8 on both peers. */
     FRAME_Init();
-    HITLS_Config *config = Rfc9973NewConfig(
-        TLS13_KE_MODE_PSK_ONLY | TLS13_CERT_AUTH_WITH_EXTERNAL_PSK, true, true);
+    HITLS_Config *config = Rfc9973NewConfig(TLS13_KE_MODE_PSK_ONLY | TLS13_CERT_AUTH_WITH_EXTERNAL_PSK, true, true);
     FRAME_LinkObj *client = NULL;
     FRAME_LinkObj *server = NULL;
     ASSERT_TRUE(config != NULL);
-    RecWrapper wrapper = {
-        TRY_SEND_CLIENT_HELLO, REC_TYPE_HANDSHAKE, false,
-        (void *)(uintptr_t)RFC9973_OBSERVE_CLIENT_HELLO_WITH_PSK_KE, Rfc9973MutateHello
-    };
+    RecWrapper wrapper = {TRY_SEND_CLIENT_HELLO, REC_TYPE_HANDSHAKE, false,
+                          (void *)(uintptr_t)RFC9973_OBSERVE_CLIENT_HELLO_WITH_PSK_KE, Rfc9973MutateHello};
     /* 2. Check that psk_ke and psk_dhe_ke are advertised while the initial handshake still selects mode 8. */
     RegisterWrapper(wrapper);
-    client = FRAME_CreateLink(config, BSL_UIO_TCP);
-    server = FRAME_CreateLink(config, BSL_UIO_TCP);
+    client = FRAME_CreateLink(config, g_rfc9973Transport);
+    server = FRAME_CreateLink(config, g_rfc9973Transport);
     ASSERT_TRUE(client != NULL && server != NULL);
     ASSERT_EQ(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_SUCCESS);
     ASSERT_EQ(client->ssl->negotiatedInfo.tls13BasicKeyExMode, TLS13_CERT_AUTH_WITH_EXTERNAL_PSK);
@@ -1603,11 +1734,17 @@ EXIT:
 * @test UT_TLS_TLS13_RFC9973_PROFILE_ISOLATION_FUNC_TC001
 * @spec RFC 9973 profile negotiation
 * @title Let a server that has not enabled bit 8 select ordinary External-PSK-DHE.
-* @expect A bit-8-only client rejects that distinct profile with fatal illegal_parameter.
+* @expect The client accepts the ordinary External-PSK-DHE profile as a fallback.
 @ */
 /* BEGIN_CASE */
-void UT_TLS_TLS13_RFC9973_PROFILE_ISOLATION_FUNC_TC001(void)
+void UT_TLS_TLS13_RFC9973_PROFILE_ISOLATION_FUNC_TC001(int transport)
 {
+#ifndef HITLS_TLS_PROTO_DTLS13
+    if (transport == BSL_UIO_UDP) {
+        SKIP_TEST();
+    }
+#endif
+    g_rfc9973Transport = (BSL_UIO_TransportType)transport;
     /* 1. Let the client allow only mode 8 and the server allow only PSK_WITH_DHE. */
     FRAME_Init();
     HITLS_Config *clientConfig = Rfc9973NewConfig(TLS13_CERT_AUTH_WITH_EXTERNAL_PSK, true, false);
@@ -1615,12 +1752,13 @@ void UT_TLS_TLS13_RFC9973_PROFILE_ISOLATION_FUNC_TC001(void)
     FRAME_LinkObj *client = NULL;
     FRAME_LinkObj *server = NULL;
     ASSERT_TRUE(clientConfig != NULL && serverConfig != NULL);
-    client = FRAME_CreateLink(clientConfig, BSL_UIO_TCP);
-    server = FRAME_CreateLink(serverConfig, BSL_UIO_TCP);
+    client = FRAME_CreateLink(clientConfig, g_rfc9973Transport);
+    server = FRAME_CreateLink(serverConfig, g_rfc9973Transport);
     ASSERT_TRUE(client != NULL && server != NULL);
-    /* 2. Require the client to reject PSK authentication without the requested certificate authentication. */
-    ASSERT_NE(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_SUCCESS);
-    Rfc9973AssertFatalAlert(client, ALERT_ILLEGAL_PARAMETER);
+    /* 2. The server may omit extension 33 and use ordinary External-PSK-DHE. */
+    ASSERT_EQ(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_SUCCESS);
+    ASSERT_EQ(client->ssl->negotiatedInfo.tls13BasicKeyExMode, TLS13_KE_MODE_PSK_WITH_DHE);
+    ASSERT_EQ(server->ssl->negotiatedInfo.tls13BasicKeyExMode, TLS13_KE_MODE_PSK_WITH_DHE);
 EXIT:
     ClearWrapper();
     FRAME_FreeLink(client);
@@ -1637,15 +1775,22 @@ EXIT:
 * @expect The client aborts with fatal illegal_parameter.
 @ */
 /* BEGIN_CASE */
-void UT_TLS_TLS13_RFC9973_SELECTED_IDENTITY_FUNC_TC001(void)
+void UT_TLS_TLS13_RFC9973_SELECTED_IDENTITY_FUNC_TC001(int transport)
 {
+#ifndef HITLS_TLS_PROTO_DTLS13
+    if (transport == BSL_UIO_UDP) {
+        SKIP_TEST();
+    }
+#endif
+    g_rfc9973Transport = (BSL_UIO_TransportType)transport;
     /* 1. Offer one external identity and make ServerHello select index 1. */
     FRAME_Init();
     FRAME_LinkObj *client = NULL;
     FRAME_LinkObj *server = NULL;
     HITLS_Config *config = NULL;
-    ASSERT_NE(Rfc9973ConnectWithMutation(RFC9973_SERVER_SELECTED_IDENTITY_OUT_OF_RANGE,
-        true, &client, &server, &config), HITLS_SUCCESS);
+    ASSERT_NE(
+        Rfc9973ConnectWithMutation(RFC9973_SERVER_SELECTED_IDENTITY_OUT_OF_RANGE, true, &client, &server, &config),
+        HITLS_SUCCESS);
     /* 2. Require the client to reject the out-of-range selected identity. */
     Rfc9973AssertFatalAlert(client, ALERT_ILLEGAL_PARAMETER);
 EXIT:
@@ -1663,8 +1808,14 @@ EXIT:
 * @expect The server ignores the unknown first identity, validates only the second binder, and selects index 1.
 @ */
 /* BEGIN_CASE */
-void UT_TLS_TLS13_RFC9973_SELECT_SECOND_EXTERNAL_PSK_FUNC_TC001(void)
+void UT_TLS_TLS13_RFC9973_SELECT_SECOND_EXTERNAL_PSK_FUNC_TC001(int transport)
 {
+#ifndef HITLS_TLS_PROTO_DTLS13
+    if (transport == BSL_UIO_UDP) {
+        SKIP_TEST();
+    }
+#endif
+    g_rfc9973Transport = (BSL_UIO_TransportType)transport;
     /* 1. Reset lookup counters and configure one known external PSK. */
     FRAME_Init();
     g_rfc9973ServerPskCbCalls = 0;
@@ -1673,12 +1824,10 @@ void UT_TLS_TLS13_RFC9973_SELECT_SECOND_EXTERNAL_PSK_FUNC_TC001(void)
     FRAME_LinkObj *client = NULL;
     FRAME_LinkObj *server = NULL;
     ASSERT_TRUE(config != NULL);
-    client = FRAME_CreateLink(config, BSL_UIO_TCP);
-    server = FRAME_CreateLink(config, BSL_UIO_TCP);
+    client = FRAME_CreateLink(config, g_rfc9973Transport);
+    server = FRAME_CreateLink(config, g_rfc9973Transport);
     ASSERT_TRUE(client != NULL && server != NULL);
-    RecWrapper wrapper = {
-        TRY_SEND_CLIENT_HELLO, REC_TYPE_HANDSHAKE, false, NULL, Rfc9973SelectSecondExternalPsk
-    };
+    RecWrapper wrapper = {TRY_SEND_CLIENT_HELLO, REC_TYPE_HANDSHAKE, false, NULL, Rfc9973SelectSecondExternalPsk};
     /* 2. Prepend an unknown identity, then inspect server selection and callback counts. */
     RegisterWrapper(wrapper);
     /* Stop after the server has consumed ClientHello. The frame mutation changes the wire list only;
@@ -1704,12 +1853,18 @@ EXIT:
 /** @
 * @test UT_TLS_TLS13_RFC9973_REJECT_TRAILING_RESUMPTION_FUNC_TC001
 * @spec RFC 9973 Section 5.1
-* @title Reject a resumption ticket before or after an external PSK and deliver illegal_parameter to the peer.
-* @expect The server scans the whole offered list and aborts with fatal illegal_parameter before selecting the first PSK.
+* @title Handle a resumption ticket according to the first usable PSK in the offered list.
+* @expect A leading ticket is rejected with illegal_parameter; a trailing ticket is not scanned after an external PSK.
 @ */
 /* BEGIN_CASE */
-void UT_TLS_TLS13_RFC9973_REJECT_TRAILING_RESUMPTION_FUNC_TC001(int ticketFirst)
+void UT_TLS_TLS13_RFC9973_REJECT_TRAILING_RESUMPTION_FUNC_TC001(int ticketFirst, int transport)
 {
+#ifndef HITLS_TLS_PROTO_DTLS13
+    if (transport == BSL_UIO_UDP) {
+        SKIP_TEST();
+    }
+#endif
+    g_rfc9973Transport = (BSL_UIO_TransportType)transport;
     /* 1. Obtain a real ticket from an initial certificate handshake. */
     FRAME_Init();
     HITLS_Config *config = Rfc9973NewConfig(TLS13_KE_MODE_PSK_WITH_DHE, false, false);
@@ -1719,8 +1874,8 @@ void UT_TLS_TLS13_RFC9973_REJECT_TRAILING_RESUMPTION_FUNC_TC001(int ticketFirst)
     uint8_t *ticket = NULL;
     uint32_t ticketLen = 0;
     ASSERT_TRUE(config != NULL);
-    client = FRAME_CreateLink(config, BSL_UIO_TCP);
-    server = FRAME_CreateLink(config, BSL_UIO_TCP);
+    client = FRAME_CreateLink(config, g_rfc9973Transport);
+    server = FRAME_CreateLink(config, g_rfc9973Transport);
     ASSERT_TRUE(client != NULL && server != NULL);
     ASSERT_EQ(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_SUCCESS);
     session = HITLS_GetDupSession(client->ssl);
@@ -1732,21 +1887,29 @@ void UT_TLS_TLS13_RFC9973_REJECT_TRAILING_RESUMPTION_FUNC_TC001(int ticketFirst)
     client = NULL;
     server = NULL;
 
-    ASSERT_EQ(HITLS_CFG_SetKeyExchMode(config, TLS13_CERT_AUTH_WITH_EXTERNAL_PSK), HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_CFG_SetKeyExchMode(config,
+        TLS13_KE_MODE_PSK_WITH_DHE | TLS13_CERT_AUTH_WITH_EXTERNAL_PSK), HITLS_SUCCESS);
     ASSERT_EQ(HITLS_CFG_SetPskClientCallback(config, Rfc9973ClientPskCb), HITLS_SUCCESS);
     ASSERT_EQ(HITLS_CFG_SetPskServerCallback(config, Rfc9973ServerPskCb), HITLS_SUCCESS);
     Rfc9973TicketMutation mutation = {ticket, ticketLen, ticketFirst != 0};
     RecWrapper wrapper = {TRY_SEND_CLIENT_HELLO, REC_TYPE_HANDSHAKE, false, &mutation, Rfc9973InsertTicketIdentity};
-    /* 2. Insert the ticket at either position; reject the list before any external PSK lookup. */
+    /* 2. Insert the ticket at either position and preserve the first-usable-PSK behavior. */
     RegisterWrapper(wrapper);
-    client = FRAME_CreateLink(config, BSL_UIO_TCP);
-    server = FRAME_CreateLink(config, BSL_UIO_TCP);
+    client = FRAME_CreateLink(config, g_rfc9973Transport);
+    server = FRAME_CreateLink(config, g_rfc9973Transport);
     ASSERT_TRUE(client != NULL && server != NULL);
     g_rfc9973ServerPskCbCalls = 0;
-    ASSERT_NE(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_SUCCESS);
-    ASSERT_EQ(g_rfc9973ServerPskCbCalls, 0);
-    Rfc9973AssertFatalAlert(server, ALERT_ILLEGAL_PARAMETER);
-    Rfc9973AssertPeerReceivesIllegalParameter(server, client);
+    int32_t ret = FRAME_CreateConnection(client, server, true, HS_STATE_BUTT);
+    if (ticketFirst) {
+        ASSERT_NE(ret, HITLS_SUCCESS);
+        ASSERT_EQ(g_rfc9973ServerPskCbCalls, 1);
+        Rfc9973AssertFatalAlert(server, ALERT_ILLEGAL_PARAMETER);
+        Rfc9973AssertPeerReceivesIllegalParameter(server, client);
+    } else {
+        ASSERT_EQ(ret, HITLS_SUCCESS);
+        ASSERT_EQ(g_rfc9973ServerPskCbCalls, 1);
+        ASSERT_EQ(server->ssl->negotiatedInfo.tls13BasicKeyExMode, TLS13_CERT_AUTH_WITH_EXTERNAL_PSK);
+    }
 EXIT:
     g_rfc9973ServerPskCbCalls = 0;
     ClearWrapper();
@@ -1764,8 +1927,14 @@ EXIT:
 * @expect Only eligible external PSKs advertise extension 33, without tickets; other paths remain usable.
 @ */
 /* BEGIN_CASE */
-void UT_TLS_TLS13_RFC9973_CLIENT_OFFER_FUNC_TC001(int pskLen, int mode, int withTicket)
+void UT_TLS_TLS13_RFC9973_CLIENT_OFFER_FUNC_TC001(int pskLen, int mode, int withTicket, int transport)
 {
+#ifndef HITLS_TLS_PROTO_DTLS13
+    if (transport == BSL_UIO_UDP) {
+        SKIP_TEST();
+    }
+#endif
+    g_rfc9973Transport = (BSL_UIO_TransportType)transport;
     /* 1. Optionally obtain a ticket, then configure the external PSK length and allowed modes. */
     FRAME_Init();
     HITLS_Config *config = Rfc9973NewConfig((uint32_t)mode, true, true);
@@ -1774,8 +1943,8 @@ void UT_TLS_TLS13_RFC9973_CLIENT_OFFER_FUNC_TC001(int pskLen, int mode, int with
     HITLS_Session *session = NULL;
     ASSERT_TRUE(config != NULL);
     if (withTicket) {
-        client = FRAME_CreateLink(config, BSL_UIO_TCP);
-        server = FRAME_CreateLink(config, BSL_UIO_TCP);
+        client = FRAME_CreateLink(config, g_rfc9973Transport);
+        server = FRAME_CreateLink(config, g_rfc9973Transport);
         ASSERT_TRUE(client != NULL && server != NULL);
         ASSERT_EQ(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_SUCCESS);
         session = HITLS_GetDupSession(client->ssl);
@@ -1786,19 +1955,18 @@ void UT_TLS_TLS13_RFC9973_CLIENT_OFFER_FUNC_TC001(int pskLen, int mode, int with
         server = NULL;
     }
     g_rfc9973PskLen = (uint32_t)pskLen;
-    client = FRAME_CreateLink(config, BSL_UIO_TCP);
-    server = FRAME_CreateLink(config, BSL_UIO_TCP);
+    client = FRAME_CreateLink(config, g_rfc9973Transport);
+    server = FRAME_CreateLink(config, g_rfc9973Transport);
     ASSERT_TRUE(client != NULL && server != NULL);
     if (session != NULL) {
         ASSERT_EQ(HITLS_SetSession(client->ssl, session), HITLS_SUCCESS);
     }
     /* 2. Derive expected offer contents and verify the selected mode or no-intersection failure. */
     bool eligible = pskLen > 0; /* A zero legacy callback result still means no PSK. */
-    bool allowOrdinaryPsk = ((uint32_t)mode & TLS13_KE_MODE_PSK_WITH_DHE) != 0;
-    uint32_t expected[] = {eligible, eligible ? 1u : (uint32_t)(withTicket + (pskLen > 0 && allowOrdinaryPsk))};
-    RecWrapper wrapper = {
-        TRY_SEND_CLIENT_HELLO, REC_TYPE_HANDSHAKE, false, expected, Rfc9973ObserveClientOffer
-    };
+    bool sendCertWithExternalPsk = eligible && !withTicket;
+    bool allowOrdinaryPsk = ((uint32_t)mode & (TLS13_KE_MODE_PSK_WITH_DHE | TLS13_CERT_AUTH_WITH_EXTERNAL_PSK)) != 0;
+    uint32_t expected[] = {sendCertWithExternalPsk, (uint32_t)(withTicket + eligible)};
+    RecWrapper wrapper = {TRY_SEND_CLIENT_HELLO, REC_TYPE_HANDSHAKE, false, expected, Rfc9973ObserveClientOffer};
     RegisterWrapper(wrapper);
     if (withTicket && !eligible && !allowOrdinaryPsk) {
         ASSERT_NE(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_SUCCESS);
@@ -1806,13 +1974,13 @@ void UT_TLS_TLS13_RFC9973_CLIENT_OFFER_FUNC_TC001(int pskLen, int mode, int with
         goto EXIT;
     }
     ASSERT_EQ(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_SUCCESS);
-    uint32_t selectedMode = eligible ? TLS13_CERT_AUTH_WITH_EXTERNAL_PSK :
+    uint32_t selectedMode = sendCertWithExternalPsk ? TLS13_CERT_AUTH_WITH_EXTERNAL_PSK :
                                        ((withTicket || (pskLen > 0 && allowOrdinaryPsk)) ? TLS13_KE_MODE_PSK_WITH_DHE :
                                                                                            TLS13_CERT_AUTH_WITH_DHE);
     ASSERT_EQ(client->ssl->negotiatedInfo.tls13BasicKeyExMode, selectedMode);
     ASSERT_EQ(server->ssl->negotiatedInfo.tls13BasicKeyExMode, selectedMode);
-    ASSERT_EQ(client->ssl->negotiatedInfo.isResume, withTicket && !eligible);
-    ASSERT_EQ(server->ssl->negotiatedInfo.isResume, withTicket && !eligible);
+    ASSERT_EQ(client->ssl->negotiatedInfo.isResume, withTicket);
+    ASSERT_EQ(server->ssl->negotiatedInfo.isResume, withTicket);
 EXIT:
     g_rfc9973PskLen = RFC9973_TEST_PSK_LEN;
     ClearWrapper();
@@ -1830,8 +1998,14 @@ EXIT:
 * @expect The client sends handshake_failure before ClientHello2; the server has no selected PSK.
 @ */
 /* BEGIN_CASE */
-void UT_TLS_TLS13_RFC9973_HRR_FALLBACK_FUNC_TC001(void)
+void UT_TLS_TLS13_RFC9973_HRR_FALLBACK_FUNC_TC001(int transport)
 {
+#ifndef HITLS_TLS_PROTO_DTLS13
+    if (transport == BSL_UIO_UDP) {
+        SKIP_TEST();
+    }
+#endif
+    g_rfc9973Transport = (BSL_UIO_TransportType)transport;
     FRAME_Init();
     HITLS_Config *cConfig = Rfc9973NewConfig(TLS13_CERT_AUTH_WITH_EXTERNAL_PSK, true, false);
     HITLS_Config *sConfig = Rfc9973NewConfig(TLS13_CERT_AUTH_WITH_EXTERNAL_PSK, false, true);
@@ -1843,8 +2017,8 @@ void UT_TLS_TLS13_RFC9973_HRR_FALLBACK_FUNC_TC001(void)
     uint16_t serverSuites[] = {HITLS_AES_256_GCM_SHA384};
     ASSERT_EQ(HITLS_CFG_SetCipherSuites(cConfig, clientSuites, sizeof(clientSuites) / sizeof(uint16_t)), HITLS_SUCCESS);
     ASSERT_EQ(HITLS_CFG_SetCipherSuites(sConfig, serverSuites, sizeof(serverSuites) / sizeof(uint16_t)), HITLS_SUCCESS);
-    client = FRAME_CreateLink(cConfig, BSL_UIO_TCP);
-    server = FRAME_CreateLink(sConfig, BSL_UIO_TCP);
+    client = FRAME_CreateLink(cConfig, g_rfc9973Transport);
+    server = FRAME_CreateLink(sConfig, g_rfc9973Transport);
     ASSERT_TRUE(client != NULL && server != NULL);
     /* 2. Observe the initial external PSK offer, then force an incompatible HRR. */
     uint32_t expected[] = {1, 1};
@@ -1873,8 +2047,15 @@ EXIT:
 * @expect Stable callbacks preserve extension 33; changed identities/hashes fail locally, changed keys fail binder checks.
 @ */
 /* BEGIN_CASE */
-void UT_TLS_TLS13_RFC9973_HRR_RECOMPUTE_FUNC_TC001(int sessionPsk, int incompatible, int change, int pskLen)
+void UT_TLS_TLS13_RFC9973_HRR_RECOMPUTE_FUNC_TC001(int sessionPsk, int incompatible, int change, int pskLen,
+                                                   int transport)
 {
+#ifndef HITLS_TLS_PROTO_DTLS13
+    if (transport == BSL_UIO_UDP) {
+        SKIP_TEST();
+    }
+#endif
+    g_rfc9973Transport = (BSL_UIO_TransportType)transport;
     /* 1. Configure stable or changing callbacks and a compatible or incompatible HRR cipher. */
     FRAME_Init();
     g_rfc9973PskLen = (uint32_t)pskLen;
@@ -1898,8 +2079,8 @@ void UT_TLS_TLS13_RFC9973_HRR_RECOMPUTE_FUNC_TC001(int sessionPsk, int incompati
     } else {
         ASSERT_EQ(HITLS_CFG_SetPskClientCallback(cConfig, Rfc9973RecomputeLegacyPsk), HITLS_SUCCESS);
     }
-    client = FRAME_CreateLink(cConfig, BSL_UIO_TCP);
-    server = FRAME_CreateLink(sConfig, BSL_UIO_TCP);
+    client = FRAME_CreateLink(cConfig, g_rfc9973Transport);
+    server = FRAME_CreateLink(sConfig, g_rfc9973Transport);
     ASSERT_TRUE(client != NULL && server != NULL);
     uint32_t expected[] = {1, 1};
     RecWrapper wrapper = {TRY_SEND_CLIENT_HELLO, REC_TYPE_HANDSHAKE, false, expected, Rfc9973ObserveClientOffer};
@@ -1950,8 +2131,14 @@ EXIT:
 * @expect A bad binder or absent mode intersection aborts; a matching mode selects the first identity once.
 @ */
 /* BEGIN_CASE */
-void UT_TLS_TLS13_RFC9973_RESUME_PSK_MODES_FUNC_TC001(int serverMode, int validBinder)
+void UT_TLS_TLS13_RFC9973_RESUME_PSK_MODES_FUNC_TC001(int serverMode, int validBinder, int transport)
 {
+#ifndef HITLS_TLS_PROTO_DTLS13
+    if (transport == BSL_UIO_UDP) {
+        SKIP_TEST();
+    }
+#endif
+    g_rfc9973Transport = (BSL_UIO_TransportType)transport;
     FRAME_Init();
     HITLS_Config *config = Rfc9973NewConfig(TLS13_CERT_AUTH_WITH_EXTERNAL_PSK, true, true);
     FRAME_LinkObj *client = NULL;
@@ -1960,8 +2147,8 @@ void UT_TLS_TLS13_RFC9973_RESUME_PSK_MODES_FUNC_TC001(int serverMode, int validB
     ASSERT_TRUE(config != NULL);
 
     /* 1. Complete a mode 8 handshake to obtain a resumption ticket. */
-    client = FRAME_CreateLink(config, BSL_UIO_TCP);
-    server = FRAME_CreateLink(config, BSL_UIO_TCP);
+    client = FRAME_CreateLink(config, g_rfc9973Transport);
+    server = FRAME_CreateLink(config, g_rfc9973Transport);
     ASSERT_TRUE(client != NULL && server != NULL);
     ASSERT_EQ(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_SUCCESS);
     session = HITLS_GetDupSession(client->ssl);
@@ -1981,25 +2168,27 @@ void UT_TLS_TLS13_RFC9973_RESUME_PSK_MODES_FUNC_TC001(int serverMode, int validB
     uint32_t pskCbCallsBefore = g_rfc9973ServerPskCbCalls;
     RecWrapper wrapper = {TRY_SEND_CLIENT_HELLO, REC_TYPE_HANDSHAKE, false, &mutation, Rfc9973PrependExternalIdentity};
     RegisterWrapper(wrapper);
-    client = FRAME_CreateLink(config, BSL_UIO_TCP);
+    client = FRAME_CreateLink(config, g_rfc9973Transport);
     ASSERT_EQ(HITLS_CFG_SetKeyExchMode(config, (uint32_t)serverMode), HITLS_SUCCESS);
-    server = FRAME_CreateLink(config, BSL_UIO_TCP);
+    server = FRAME_CreateLink(config, g_rfc9973Transport);
     ASSERT_TRUE(client != NULL && server != NULL);
     ASSERT_EQ(HITLS_SetSession(client->ssl, session), HITLS_SUCCESS);
     /* 3. Inspect server selection: reject a bad binder or disjoint modes, and perform one external lookup. */
     int32_t ret = FRAME_CreateConnection(client, server, false, TRY_RECV_SERVER_HELLO);
-    if (!validBinder) {
+    bool hasCommonDhe = ((uint32_t)serverMode & TLS13_KE_MODE_PSK_WITH_DHE) != 0;
+    if (!hasCommonDhe) {
+        ASSERT_EQ(ret, HITLS_SUCCESS);
+        ASSERT_EQ(server->ssl->negotiatedInfo.tls13BasicKeyExMode, TLS13_CERT_AUTH_WITH_DHE);
+    } else if (!validBinder) {
         ASSERT_NE(ret, HITLS_SUCCESS);
         Rfc9973AssertFatalAlert(server, ALERT_DECRYPT_ERROR);
-    } else if (((uint32_t)serverMode & TLS13_KE_MODE_PSK_WITH_DHE) == 0) {
-        ASSERT_NE(ret, HITLS_SUCCESS);
-        Rfc9973AssertFatalAlert(server, ALERT_HANDSHAKE_FAILURE);
     } else {
+        ASSERT_EQ(ret, HITLS_SUCCESS);
         ASSERT_EQ(server->ssl->negotiatedInfo.tls13BasicKeyExMode, TLS13_KE_MODE_PSK_WITH_DHE);
         ASSERT_EQ(server->ssl->negotiatedInfo.isResume, false);
         ASSERT_EQ(server->ssl->hsCtx->kxCtx->pskInfo13.selectIndex, 0);
     }
-    ASSERT_EQ(g_rfc9973ServerPskCbCalls, pskCbCallsBefore + 1);
+    ASSERT_EQ(g_rfc9973ServerPskCbCalls, hasCommonDhe ? pskCbCallsBefore + 1 : pskCbCallsBefore);
 EXIT:
     ClearWrapper();
     HITLS_SESS_Free(session);
@@ -2013,11 +2202,17 @@ EXIT:
 * @test UT_TLS_TLS13_PSK_MODE_INTERSECTION_FUNC_TC001
 * @spec RFC 8446 Sections 4.2.9 and 4.2.11
 * @title Enforce the mode intersection for a selected PSK while preserving certificate fallback without a match.
-* @expect Matching PSK modes succeed; disjoint modes fail; an unknown PSK permits certificate authentication.
+* @expect Matching PSK modes use the common mode; disjoint or unknown PSKs fall back to certificate authentication.
 @ */
 /* BEGIN_CASE */
-void UT_TLS_TLS13_PSK_MODE_INTERSECTION_FUNC_TC001(int clientMode, int serverMode, int matchPsk)
+void UT_TLS_TLS13_PSK_MODE_INTERSECTION_FUNC_TC001(int clientMode, int serverMode, int matchPsk, int transport)
 {
+#ifndef HITLS_TLS_PROTO_DTLS13
+    if (transport == BSL_UIO_UDP) {
+        SKIP_TEST();
+    }
+#endif
+    g_rfc9973Transport = (BSL_UIO_TransportType)transport;
     /* 1. Configure client/server PSK mode sets and whether the server knows the identity. */
     FRAME_Init();
     HITLS_Config *clientConfig = Rfc9973NewConfig((uint32_t)clientMode, true, false);
@@ -2025,20 +2220,17 @@ void UT_TLS_TLS13_PSK_MODE_INTERSECTION_FUNC_TC001(int clientMode, int serverMod
     FRAME_LinkObj *client = NULL;
     FRAME_LinkObj *server = NULL;
     ASSERT_TRUE(clientConfig != NULL && serverConfig != NULL);
-    client = FRAME_CreateLink(clientConfig, BSL_UIO_TCP);
-    server = FRAME_CreateLink(serverConfig, BSL_UIO_TCP);
+    client = FRAME_CreateLink(clientConfig, g_rfc9973Transport);
+    server = FRAME_CreateLink(serverConfig, g_rfc9973Transport);
     ASSERT_TRUE(client != NULL && server != NULL);
     int32_t ret = FRAME_CreateConnection(client, server, true, HS_STATE_BUTT);
-    /* 2. A known PSK with disjoint modes must fail; an unknown PSK may use certificate fallback. */
-    if (matchPsk && (clientMode & serverMode) == 0) {
-        ASSERT_NE(ret, HITLS_SUCCESS);
-        Rfc9973AssertFatalAlert(server, ALERT_HANDSHAKE_FAILURE);
-    } else {
-        ASSERT_EQ(ret, HITLS_SUCCESS);
-        uint32_t expectedMode = matchPsk ? (uint32_t)(clientMode & serverMode) : TLS13_CERT_AUTH_WITH_DHE;
-        ASSERT_EQ(client->ssl->negotiatedInfo.tls13BasicKeyExMode, expectedMode);
-        ASSERT_EQ(server->ssl->negotiatedInfo.tls13BasicKeyExMode, expectedMode);
-    }
+    /* 2. A PSK with disjoint modes is ignored and the handshake falls back to certificate authentication. */
+    ASSERT_EQ(ret, HITLS_SUCCESS);
+    uint32_t expectedMode =
+        (matchPsk && (clientMode & serverMode) != 0) ? (uint32_t)(clientMode & serverMode) :
+        TLS13_CERT_AUTH_WITH_DHE;
+    ASSERT_EQ(client->ssl->negotiatedInfo.tls13BasicKeyExMode, expectedMode);
+    ASSERT_EQ(server->ssl->negotiatedInfo.tls13BasicKeyExMode, expectedMode);
 EXIT:
     FRAME_FreeLink(client);
     FRAME_FreeLink(server);
@@ -2050,11 +2242,17 @@ EXIT:
 /** @
 * @test UT_TLS_TLS13_RFC9973_DUPLICATE_CIPHERS_FUNC_TC001
 * @title Repeated offered ciphers do not repeat the same external PSK lookup.
-* @expect The server keeps SHA-384 without calling the SHA-256 PSK callback; the client rejects the hash.
+* @expect The server keeps SHA-384 without calling the SHA-256 PSK callback; certificate fallback succeeds.
 @ */
 /* BEGIN_CASE */
-void UT_TLS_TLS13_RFC9973_DUPLICATE_CIPHERS_FUNC_TC001(void)
+void UT_TLS_TLS13_RFC9973_DUPLICATE_CIPHERS_FUNC_TC001(int transport)
 {
+#ifndef HITLS_TLS_PROTO_DTLS13
+    if (transport == BSL_UIO_UDP) {
+        SKIP_TEST();
+    }
+#endif
+    g_rfc9973Transport = (BSL_UIO_TransportType)transport;
     /* 1. Offer duplicate SHA-256 suites after SHA-384 and make the PSK lookup miss. */
     FRAME_Init();
     HITLS_Config *clientConfig = Rfc9973NewConfig(TLS13_CERT_AUTH_WITH_EXTERNAL_PSK, true, false);
@@ -2067,13 +2265,11 @@ void UT_TLS_TLS13_RFC9973_DUPLICATE_CIPHERS_FUNC_TC001(void)
     ASSERT_EQ(HITLS_CFG_SetCipherSuites(clientConfig, suites, 4), HITLS_SUCCESS);
     ASSERT_EQ(HITLS_CFG_SetCipherSuites(serverConfig, suites, 2), HITLS_SUCCESS);
     ASSERT_EQ(HITLS_CFG_SetPskServerCallback(serverConfig, Rfc9973UnknownPskCb), HITLS_SUCCESS);
-    client = FRAME_CreateLink(clientConfig, BSL_UIO_TCP);
-    server = FRAME_CreateLink(serverConfig, BSL_UIO_TCP);
+    client = FRAME_CreateLink(clientConfig, g_rfc9973Transport);
+    server = FRAME_CreateLink(serverConfig, g_rfc9973Transport);
     ASSERT_TRUE(client != NULL && server != NULL);
     g_rfc9973ServerPskCbCalls = 0;
-    ASSERT_NE(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_SUCCESS);
-    Rfc9973AssertFatalAlert(client, ALERT_HANDSHAKE_FAILURE);
-    ASSERT_EQ(server->ssl->negotiatedInfo.tls13BasicKeyExMode, TLS13_CERT_AUTH_WITH_DHE);
+    ASSERT_EQ(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_SUCCESS);
     ASSERT_EQ(server->ssl->negotiatedInfo.cipherSuiteInfo.cipherSuite, HITLS_AES_256_GCM_SHA384);
     /* 2. Keep SHA-384 and skip the SHA-256 callback, regardless of duplicate later suites. */
     ASSERT_EQ(g_rfc9973ServerPskCbCalls, 0u);
@@ -2093,8 +2289,14 @@ EXIT:
 * @expect Both peers use their shared PSK_WITH_DHE mode.
 @ */
 /* BEGIN_CASE */
-void UT_TLS_TLS13_RFC9973_SERVER_CERT_REQUIRED_FUNC_TC001(void)
+void UT_TLS_TLS13_RFC9973_SERVER_CERT_REQUIRED_FUNC_TC001(int transport)
 {
+#ifndef HITLS_TLS_PROTO_DTLS13
+    if (transport == BSL_UIO_UDP) {
+        SKIP_TEST();
+    }
+#endif
+    g_rfc9973Transport = (BSL_UIO_TransportType)transport;
     /* 1. Enable both modes, but load certificates only on the client. */
     FRAME_Init();
     uint32_t modes = TLS13_CERT_AUTH_WITH_EXTERNAL_PSK | TLS13_KE_MODE_PSK_WITH_DHE;
@@ -2103,7 +2305,7 @@ void UT_TLS_TLS13_RFC9973_SERVER_CERT_REQUIRED_FUNC_TC001(void)
     FRAME_LinkObj *client = NULL;
     FRAME_LinkObj *server = NULL;
     ASSERT_TRUE(clientConfig != NULL && serverConfig != NULL);
-    client = FRAME_CreateLink(clientConfig, BSL_UIO_TCP);
+    client = FRAME_CreateLink(clientConfig, g_rfc9973Transport);
     server = FRAME_CreateLinkBase(serverConfig, BSL_UIO_TCP, false);
     ASSERT_TRUE(client != NULL && server != NULL);
     /* 2. A signature-algorithm list alone must not make the server select certificate authentication. */

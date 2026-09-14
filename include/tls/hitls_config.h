@@ -1006,9 +1006,11 @@ void HITLS_CFG_ClearCAList(HITLS_Config *config);
  * @param   mode  [IN] TLS 1.3 handshake-profile bitmap. The supported bits are TLS13_KE_MODE_PSK_ONLY,
  * TLS13_KE_MODE_PSK_WITH_DHE, and, when RFC 9973 support is built in, TLS13_CERT_AUTH_WITH_EXTERNAL_PSK.
  * TLS13_CERT_AUTH_WITH_EXTERNAL_PSK maps to psk_dhe_ke on the wire; it is not a PskKeyExchangeMode value.
- * Unsupported bits are ignored when at least one supported bit is present.
- * @return  HITLS_SUCCESS, if successful.
- *          For details about other error codes, see hitls_error.h.
+ * Unsupported bits are ignored when at least one supported bit is present. The RFC 9973 mode must be combined
+ * with TLS13_KE_MODE_PSK_WITH_DHE; otherwise the configuration is rejected and remains unchanged.
+ * @return  HITLS_SUCCESS, if successful; HITLS_CONFIG_INVALID_SET if no supported mode is selected or if
+ *          TLS13_CERT_AUTH_WITH_EXTERNAL_PSK is used without TLS13_KE_MODE_PSK_WITH_DHE. For details about other
+ *          error codes, see hitls_error.h.
  */
 int32_t HITLS_CFG_SetKeyExchMode(HITLS_Config *config, uint32_t mode);
 

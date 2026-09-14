@@ -830,15 +830,8 @@ static int32_t PackClientCertWithExternalPsk(const TLS_Ctx *ctx, PackPacket *pkt
 
 static bool IsClientCertWithExternalPskOffer(const TLS_Ctx *ctx)
 {
-    /* 1. Require an eligible mode 8 candidate in TLS 1.3; exclude DTLS. */
-    bool isOffer = GET_VERSION_FROM_CTX(ctx) == HITLS_VERSION_TLS13 &&
-        HS_IsTls13CertWithExternalPskMode(ctx->negotiatedInfo.tls13BasicKeyExMode) &&
-        !IS_SUPPORT_DATAGRAM(ctx->config.tlsConfig.originVersionMask);
-#ifdef HITLS_TLS_FEATURE_QUIC_TLS
-    /* 2. Suppress extension 33 for QUIC, which does not negotiate TLS PSK exchange modes. */
-    isOffer = isOffer && !QUIC_TLS_IsMode(ctx);
-#endif
-    return isOffer;
+    return IS_TLS13_FAMILY_VERSION(GET_VERSION_FROM_CTX(ctx)) &&
+        HS_IsTls13CertWithExternalPskMode(ctx->negotiatedInfo.tls13BasicKeyExMode);
 }
 #endif
 
@@ -1115,15 +1108,6 @@ int32_t PackClientExtension(const TLS_Ctx *ctx, PackPacket *pkt)
 }
 #endif /* HITLS_TLS_HOST_CLIENT */
 #ifdef HITLS_TLS_HOST_SERVER
-#ifdef HITLS_TLS_FEATURE_CERT_WITH_EXTERNAL_PSK
-static int32_t PackServerCertWithExternalPsk(const TLS_Ctx *ctx, PackPacket *pkt)
-{
-    (void)ctx;
-    /* 1. Acknowledge certificate-with-external-PSK selection with an empty extension 33. */
-    return PackExtensionHeader(HS_EX_TYPE_CERT_WITH_EXTERNAL_PSK, 0, pkt);
-}
-#endif
-
 static bool IsServerNeedPackEcExtension(const TLS_Ctx *ctx)
 {
     const TLS_NegotiatedInfo *negotiatedInfo = &(ctx->negotiatedInfo);
@@ -1444,8 +1428,8 @@ static int32_t PackServerExtensions(const TLS_Ctx *ctx, PackPacket *pkt)
 #ifdef HITLS_TLS_FEATURE_CERT_WITH_EXTERNAL_PSK
         /* 1. Send extension 33 only when TLS 1.3 selected mode 8; certificate fallback omits it. */
         { EXTENSION_MSG(HS_EX_TYPE_CERT_WITH_EXTERNAL_PSK,
-            ctx->negotiatedInfo.version == HITLS_VERSION_TLS13 &&
-            HS_IsTls13CertWithExternalPskMode(negoInfo->tls13BasicKeyExMode), PackServerCertWithExternalPsk) },
+            isTls13 &&
+            HS_IsTls13CertWithExternalPskMode(negoInfo->tls13BasicKeyExMode), NULL) },
 #endif
 #endif /* HITLS_TLS_PROTO_TLS13_FAMILY */
 #if defined(HITLS_TLS_PROTO_TLS_BASIC) || defined(HITLS_TLS_PROTO_DTLS12)

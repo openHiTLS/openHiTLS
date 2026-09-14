@@ -45,7 +45,7 @@ static const uint8_t g_rfc9973DemoPsk[] = {0x01, 0x23, 0x45, 0x67, 0x89, 0xab, 0
                                            0xcd, 0xef, 0x01, 0x23, 0x45, 0x67, 0x89, 0xab, 0xcd, 0xef};
 
 static uint32_t Rfc9973ClientPskCallback(HITLS_Ctx *ctx, const uint8_t *hint, uint8_t *identity,
-    uint32_t maxIdentityLen, uint8_t *psk, uint32_t maxPskLen)
+                                         uint32_t maxIdentityLen, uint8_t *psk, uint32_t maxPskLen)
 {
     (void)ctx;
     (void)hint;
@@ -60,12 +60,12 @@ static uint32_t Rfc9973ClientPskCallback(HITLS_Ctx *ctx, const uint8_t *hint, ui
     return sizeof(g_rfc9973DemoPsk);
 }
 
-static int32_t ConfigureClient(HITLS_Config *config, const char *caFile,
-    const char *certFile, const char *keyFile)
+static int32_t ConfigureClient(HITLS_Config *config, const char *caFile, const char *certFile, const char *keyFile)
 {
-    /* 1. Enable mode 8, choose the SHA-256 suite, and install the external PSK callback. */
+    /* 1. Enable mode 8 with its required psk_dhe_ke mode, choose SHA-256, and install the external PSK callback. */
     uint16_t cipherSuite = HITLS_AES_128_GCM_SHA256;
-    int32_t ret = HITLS_CFG_SetKeyExchMode(config, TLS13_CERT_AUTH_WITH_EXTERNAL_PSK);
+    int32_t ret = HITLS_CFG_SetKeyExchMode(config,
+        TLS13_KE_MODE_PSK_WITH_DHE | TLS13_CERT_AUTH_WITH_EXTERNAL_PSK);
     if (ret == HITLS_SUCCESS) {
         ret = HITLS_CFG_SetCipherSuites(config, &cipherSuite, 1);
     }
@@ -147,8 +147,7 @@ int main(int argc, char **argv)
     /* 3. Bind the connected socket to the TLS context and run the handshake. */
     ctx = HITLS_New(config);
     uio = BSL_UIO_New(BSL_UIO_TcpMethod());
-    if (ctx == NULL || uio == NULL ||
-        BSL_UIO_Ctrl(uio, BSL_UIO_SET_FD, (int32_t)sizeof(fd), &fd) != HITLS_SUCCESS ||
+    if (ctx == NULL || uio == NULL || BSL_UIO_Ctrl(uio, BSL_UIO_SET_FD, (int32_t)sizeof(fd), &fd) != HITLS_SUCCESS ||
         HITLS_SetUio(ctx, uio) != HITLS_SUCCESS) {
         (void)fprintf(stderr, "failed to create TLS connection\n");
         goto EXIT;
@@ -179,8 +178,8 @@ int main(int argc, char **argv)
         (void)fprintf(stderr, "application read failed: 0x%x\n", ret);
         goto EXIT;
     }
-    (void)printf("RFC9973 handshake and application data succeeded (mode=%u); peer replied: %.*s\n",
-        mode, (int)replyLen, reply);
+    (void)printf("RFC9973 handshake and application data succeeded (mode=%u); peer replied: %.*s\n", mode,
+                 (int)replyLen, reply);
     exitCode = EXIT_SUCCESS;
 
 EXIT:
