@@ -277,6 +277,8 @@ static int32_t CRYPT_CompositeGetEcdsaPrvKey(const CRYPT_CompositeCtx *ctx, BSL_
     RETURN_RET_IF(pri == NULL, CRYPT_MEM_ALLOC_FAIL);
     BSL_Param param[2] = {{CRYPT_PARAM_EC_PRVKEY, BSL_PARAM_TYPE_OCTETS, pri, keyLen, 0}, BSL_PARAM_END};
     GOTO_ERR_IF(CRYPT_EAL_PkeyGetPrvEx(ctx->tradCtx, param), ret);
+    memmove(pri + (keyLen - param[0].useLen), pri, param[0].useLen);
+    memset(pri, 0, keyLen - param[0].useLen);
     uint8_t version = 1;
     BSL_ASN1_Buffer asn1[CRYPT_ECPRIKEY_PUBKEY_IDX + 1] = {
         {BSL_ASN1_TAG_INTEGER, sizeof(version), &version}, {0}, {0}, {0}};
@@ -286,7 +288,7 @@ static int32_t CRYPT_CompositeGetEcdsaPrvKey(const CRYPT_CompositeCtx *ctx, BSL_
     asn1[CRYPT_ECPRIKEY_PARAM_IDX].tag = BSL_ASN1_TAG_OBJECT_ID;
 
     asn1[CRYPT_ECPRIKEY_PRIKEY_IDX].tag = BSL_ASN1_TAG_OCTETSTRING;
-    asn1[CRYPT_ECPRIKEY_PRIKEY_IDX].len = param[0].useLen;
+    asn1[CRYPT_ECPRIKEY_PRIKEY_IDX].len = keyLen;
     asn1[CRYPT_ECPRIKEY_PRIKEY_IDX].buff = pri;
     BSL_ASN1_Template templ = {g_ecPriKeyTempl, sizeof(g_ecPriKeyTempl) / sizeof(g_ecPriKeyTempl[0])};
     GOTO_ERR_IF(BSL_ASN1_EncodeTemplate(&templ, asn1, CRYPT_ECPRIKEY_PUBKEY_IDX + 1, &encode->data, &encode->dataLen),

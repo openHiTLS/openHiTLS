@@ -125,10 +125,10 @@ EXIT:
  *    2. Set the valid private key, expected result 2
  *    3. Call the CRYPT_EAL_PkeyGetPrv method to get private key:
  *       (1) prv.data = NULL,  expected result 3
- *       (2) prv.len is invalid (fixed SM2 key length - 1),  expected result 4
+ *       (2) prv.len is invalid (prvKey.len - 1),  expected result 4
  *       (3) all parameters are valid, expected result 5
- *       (4) prv.len is larger than the fixed SM2 key length, expected result 6
- *    4. Compare the exported fixed-length key and vector, expected result 7
+ *       (4) prv.len = prvKey.len + 1, expected result 6
+ *    4. Compare the exported key and vector, expected result 7
  * @expect
  *    1. Success, and the context is not NULL.
  *    2. CRYPT_SUCCESS
@@ -143,34 +143,31 @@ void SDV_CRYPTO_SM2_GET_PRV_API_TC001(Hex *prvKey, int isProvider)
 {
     TestMemInit();
     ASSERT_EQ(TestRandInit(), CRYPT_SUCCESS);
-    uint8_t buf[SM2_PRVKEY_MAX_LEN + 1] = {0};
-    uint8_t expect[SM2_PRVKEY_MAX_LEN] = {0};
+    uint8_t buf[SM2_PRVKEY_MAX_LEN];
     CRYPT_EAL_PkeyCtx *ctx = TestPkeyNewCtx(NULL, CRYPT_PKEY_SM2,
         CRYPT_EAL_PKEY_SIGN_OPERATE, "provider=default", isProvider);
     ASSERT_TRUE(ctx != NULL);
     CRYPT_EAL_PkeyPrv prv, prvOut;
     SetSm2PrvKey(&prv, prvKey->x, prvKey->len);
-    SetSm2PrvKey(&prvOut, NULL, SM2_PRVKEY_MAX_LEN);
-    ASSERT_TRUE(prvKey->len <= SM2_PRVKEY_MAX_LEN);
-    memcpy(expect + SM2_PRVKEY_MAX_LEN - prvKey->len, prvKey->x, prvKey->len);
+    SetSm2PrvKey(&prvOut, NULL, prvKey->len);
 
     ASSERT_TRUE(CRYPT_EAL_PkeySetPrv(ctx, &prv) == CRYPT_SUCCESS);
     ASSERT_TRUE(CRYPT_EAL_PkeyGetPrv(ctx, &prvOut) == CRYPT_NULL_INPUT);
 
     prvOut.key.eccPrv.data = buf;
-    prvOut.key.eccPrv.len = SM2_PRVKEY_MAX_LEN - 1;
+    prvOut.key.eccPrv.len = prvKey->len - 1;
     ASSERT_TRUE(CRYPT_EAL_PkeyGetPrv(ctx, &prvOut) == CRYPT_BN_BUFF_LEN_NOT_ENOUGH);
 
     prvOut.key.eccPrv.data = buf;
-    prvOut.key.eccPrv.len = SM2_PRVKEY_MAX_LEN;
+    prvOut.key.eccPrv.len = prvKey->len;
     ASSERT_TRUE(CRYPT_EAL_PkeyGetPrv(ctx, &prvOut) == CRYPT_SUCCESS);
 
     prvOut.key.eccPrv.data = buf;
-    prvOut.key.eccPrv.len = sizeof(buf);
+    prvOut.key.eccPrv.len = prvKey->len + 1;
     ASSERT_TRUE(CRYPT_EAL_PkeyGetPrv(ctx, &prvOut) == CRYPT_SUCCESS);
 
-    ASSERT_TRUE(prvOut.key.eccPrv.len == SM2_PRVKEY_MAX_LEN);
-    ASSERT_TRUE(memcmp(buf, expect, SM2_PRVKEY_MAX_LEN) == 0);
+    ASSERT_TRUE(prvOut.key.eccPrv.len == prvKey->len);
+    ASSERT_TRUE(memcmp(buf, prvKey->x, prvKey->len) == 0);
 
 EXIT:
     CRYPT_EAL_PkeyFreeCtx(ctx);

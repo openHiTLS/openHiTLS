@@ -179,7 +179,7 @@ int32_t ECC_PkeySetPubKey(ECC_Pkey *ctx, const CRYPT_EccPub *pub)
 
 int32_t ECC_PkeyGetPrvKey(const ECC_Pkey *ctx, CRYPT_EccPrv *prv)
 {
-    if ((ctx == NULL) || (ctx->para == NULL) || (prv == NULL) || (prv->data == NULL) || (prv->len == 0)) {
+    if ((ctx == NULL) || (prv == NULL) || (prv->data == NULL) || (prv->len == 0)) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
@@ -189,19 +189,7 @@ int32_t ECC_PkeyGetPrvKey(const ECC_Pkey *ctx, CRYPT_EccPrv *prv)
         return CRYPT_ECC_PKEY_ERR_EMPTY_KEY;
     }
 
-    uint32_t keyLen = BN_Bytes(ctx->para->p);
-    if (prv->len < keyLen) {
-        BSL_ERR_PUSH_ERROR(CRYPT_BN_BUFF_LEN_NOT_ENOUGH);
-        return CRYPT_BN_BUFF_LEN_NOT_ENOUGH;
-    }
-
-    int32_t ret = BN_Bn2BinFixZero(ctx->prvkey, prv->data, keyLen);
-    if (ret != CRYPT_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
-        return ret;
-    }
-    prv->len = keyLen;
-    return CRYPT_SUCCESS;
+    return BN_Bn2Bin(ctx->prvkey, prv->data, &prv->len);
 }
 
 int32_t ECC_PkeyGetPubKey(const ECC_Pkey *ctx, CRYPT_EccPub *pub)
