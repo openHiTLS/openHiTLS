@@ -183,8 +183,6 @@ typedef void (*CRYPT_FreeDhKeyCallback)(HITLS_CRYPT_Key *key);
 /**
  * @ingroup hitls_crypt_reg
  * @brief   DH: Obtain p g plen glen by using the key handle.
- * @attention
- * If the p and g parameters are null pointers, only the lengths of p and g are obtained.
  *
  * @param   key [IN] Key handle
  * @param   p [OUT] p Parameter
