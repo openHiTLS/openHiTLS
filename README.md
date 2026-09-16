@@ -1,6 +1,9 @@
 [简体中文](./README-zh.md) | English
 
 # openHiTLS
+
+[![OpenSSF Best Practices](https://bestpractices.coreinfrastructure.org/projects/14666/badge)](https://bestpractices.coreinfrastructure.org/projects/14666)
+
 Welcome to visit the openHiTLS Code Repository, which is under the openHiTLS community: <https://openhitls.net>. openHiTLS aims to provide highly efficient and agile open-source SDKs for Cryptography and Transport Layer Security in all scenarios. openHiTLS is developing and supports some common standard cryptographic algorithms, (D)TLS, (D)TLCP protocols currently. More features are to be planned.
 
 ## Overview

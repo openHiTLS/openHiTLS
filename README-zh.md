@@ -1,6 +1,9 @@
 [English](./README.md) | 简体中文
 
 # openHiTLS
+
+[![OpenSSF Best Practices](https://bestpractices.coreinfrastructure.org/projects/14666/badge)](https://bestpractices.coreinfrastructure.org/projects/14666)
+
 欢迎访问openHiTLS代码仓，该代码仓的项目官网是openHiTLS社区<https://openhitls.net>，openHiTLS的目标是提供高效、敏捷的全场景开源密码学开发套件。openHiTLS已支持通用的标准密码算法、(D)TLS、(D)TLCP等安全通信协议，更多特性待规划。
 
 ## 概述
