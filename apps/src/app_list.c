@@ -14,22 +14,31 @@
  */
 
 #include <stdio.h>
+#include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stddef.h>
 #include "hitls_error.h"
 #include "bsl_errno.h"
 #include "bsl_uio.h"
+#include "bsl_sal.h"
+#include "bsl_obj_internal.h"
 #include "app_errno.h"
 #include "app_print.h"
 #include "app_opt.h"
 #include "crypt_algid.h"
+#include "crypt_errno.h"
 #include "crypt_eal_cipher.h"
 #include "crypt_eal_mac.h"
 #include "crypt_eal_pkey.h"
 #include "crypt_eal_md.h"
 #include "crypt_eal_rand.h"
 #include "crypt_eal_kdf.h"
+#include "crypt_eal_init.h"
+#include "hitls_config.h"
+#include "hitls_cert_init.h"
+#include "hitls_crypt_init.h"
+#include "tls_config.h"
 #include "app_list.h"
 
 static const HITLS_CmdOption g_listOpts[] = {
@@ -44,6 +53,9 @@ static const HITLS_CmdOption g_listOpts[] = {
     {"rand-algorithms", HITLS_APP_LIST_OPT_RAND_ALG, HITLS_APP_OPT_VALUETYPE_NO_VALUE, "List supported rand algorthms"},
     {"kdf-algorithms", HITLS_APP_LIST_OPT_KDF_ALG, HITLS_APP_OPT_VALUETYPE_NO_VALUE, "List supported kdf algorthms"},
     {"all-curves", HITLS_APP_LIST_OPT_CURVES, HITLS_APP_OPT_VALUETYPE_NO_VALUE, "List supported curves"},
+    {"ciphersuites", HITLS_APP_LIST_OPT_CIPHERSUITES, HITLS_APP_OPT_VALUETYPE_NO_VALUE, "List cipher suites"},
+    {"names-only", HITLS_APP_LIST_OPT_NAMES_ONLY, HITLS_APP_OPT_VALUETYPE_NO_VALUE,
+     "Print only name lists, separated by colons; omit the list title for a single list."},
     {NULL, 0, 0, NULL}
 };
 
@@ -51,6 +63,11 @@ typedef struct {
     int32_t cid;
     const char *name;
 } CidInfo;
+
+typedef struct {
+    bool namesOnly;
+    bool hideTitle;
+} PrintOptions;
 
 static const CidInfo g_allCipherAlgInfo [] = {
     {CRYPT_CIPHER_AES128_CBC, "aes128_cbc"},
@@ -251,27 +268,224 @@ static const CidInfo g_rsaIdList[] = {
 };
 #define RSA_ID_CNT (sizeof(g_rsaIdList) / sizeof(CidInfo))
 
-typedef void (*PrintAlgFunc)(void);
-PrintAlgFunc g_printAlgFuncList[] = {NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL};
-#define PRINT_ALG_FUNC_LIST_CNT (sizeof(g_printAlgFuncList) / sizeof(PrintAlgFunc))
+#define PRINT_ALG_FUNC_LIST_CNT 9
+typedef int32_t (*PrintAlgFunc)(const PrintOptions *options);
+static PrintAlgFunc g_printAlgFuncList[PRINT_ALG_FUNC_LIST_CNT] = {0};
+static BSL_UIO *g_stdout = NULL;
+
+
+static const char *CipherProtocolName(int32_t version)
+{
+    switch (version) {
+        case HITLS_VERSION_SSL30:
+            return "SSLv3";
+        case HITLS_VERSION_TLS10:
+            return "TLSv1";
+        case HITLS_VERSION_TLS11:
+            return "TLSv1.1";
+        case HITLS_VERSION_TLS12:
+            return "TLSv1.2";
+        case HITLS_VERSION_TLS13:
+            return "TLSv1.3";
+        case HITLS_VERSION_DTLS10:
+            return "DTLSv1";
+        case HITLS_VERSION_DTLS12:
+            return "DTLSv1.2";
+        case HITLS_VERSION_DTLS13:
+            return "DTLSv1.3";
+        case HITLS_VERSION_TLCP_DTLCP11:
+            return "(D)TLCP1.1";
+        default:
+            return "unknown";
+    }
+}
+
+static const char *CipherKeyExchangeName(HITLS_KeyExchAlgo kx, int32_t version)
+{
+    switch (kx) {
+        case HITLS_KEY_EXCH_NULL:
+            return version == HITLS_VERSION_TLS13 ? "any" : "None";
+        case HITLS_KEY_EXCH_ECDHE:
+            return "ECDHE";
+        case HITLS_KEY_EXCH_DHE:
+            return "DHE";
+        case HITLS_KEY_EXCH_ECDH:
+            return "ECDH";
+        case HITLS_KEY_EXCH_DH:
+            return "DH";
+        case HITLS_KEY_EXCH_RSA:
+            return "RSA";
+        case HITLS_KEY_EXCH_PSK:
+            return "PSK";
+        case HITLS_KEY_EXCH_DHE_PSK:
+            return "DHE-PSK";
+        case HITLS_KEY_EXCH_ECDHE_PSK:
+            return "ECDHE-PSK";
+        case HITLS_KEY_EXCH_RSA_PSK:
+            return "RSA-PSK";
+        case HITLS_KEY_EXCH_ECC:
+            return "ECC";
+        default:
+            return "unknown";
+    }
+}
+
+static const char *CipherAuthName(HITLS_AuthAlgo auth)
+{
+    switch (auth) {
+        case HITLS_AUTH_NULL:
+            return "None";
+        case HITLS_AUTH_ANY:
+            return "any";
+        case HITLS_AUTH_RSA:
+            return "RSA";
+        case HITLS_AUTH_ECDSA:
+            return "ECDSA";
+        case HITLS_AUTH_DSS:
+            return "DSS";
+        case HITLS_AUTH_PSK:
+            return "PSK";
+        case HITLS_AUTH_SM2:
+            return "SM2";
+        default:
+            return "unknown";
+    }
+}
+
+static const char *CipherSuiteAlgName(BslCid cid)
+{
+    /* AES-128-CCM8 and AES-256-CCM8 have no separate standard OIDs; define their display names here. */
+    if (cid == BSL_CID_AES128_CCM8) {
+        return "aes-128-ccm8";
+    }
+    if (cid == BSL_CID_AES256_CCM8) {
+        return "aes-256-ccm8";
+    }
+    const char *name = BSL_OBJ_GetOidNameFromCID(cid);
+    return name != NULL ? name : "unknown";
+}
+
+static int32_t PrintCipherSuiteNames(const uint16_t *ids, uint32_t count)
+{
+    bool first = true;
+    for (uint32_t i = 0; i < count; i++) {
+        const HITLS_Cipher *cipher = HITLS_CFG_GetCipherByID(ids[i]);
+        if (cipher == NULL) {
+            continue;
+        }
+        const char *name = (const char *)HITLS_CFG_GetCipherSuiteStdName(cipher);
+        int32_t ret = AppPrint(g_stdout, "%s%s", first ? "" : ":", name);
+        if (ret != HITLS_APP_SUCCESS) {
+            return ret;
+        }
+        first = false;
+    }
+    return AppPrint(g_stdout, "\n");
+}
+
+static int32_t PrintCipherSuiteDetails(const uint16_t *ids, uint32_t count)
+{
+    int32_t ret = HITLS_APP_SUCCESS;
+    for (uint32_t i = 0; ret == HITLS_APP_SUCCESS && i < count; i++) {
+        const HITLS_Cipher *cipher = HITLS_CFG_GetCipherByID(ids[i]);
+        if (cipher == NULL) {
+            continue;
+        }
+        int32_t version;
+        HITLS_KeyExchAlgo kx;
+        HITLS_AuthAlgo auth;
+        HITLS_CipherAlgo enc;
+        HITLS_HashAlgo hash;
+        HITLS_MacAlgo mac;
+        bool isAead;
+        if (HITLS_CFG_GetCipherVersion(cipher, &version) != HITLS_SUCCESS ||
+            HITLS_CFG_GetKeyExchId(cipher, &kx) != HITLS_SUCCESS ||
+            HITLS_CFG_GetAuthId(cipher, &auth) != HITLS_SUCCESS ||
+            HITLS_CFG_GetCipherId(cipher, &enc) != HITLS_SUCCESS ||
+            HITLS_CFG_GetHashId(cipher, &hash) != HITLS_SUCCESS ||
+            HITLS_CFG_GetMacId(cipher, &mac) != HITLS_SUCCESS ||
+            HITLS_CIPHER_IsAead(cipher, &isAead) != HITLS_SUCCESS) {
+            return HITLS_APP_INTERNAL_EXCEPTION;
+        }
+        const char *name = (const char *)HITLS_CFG_GetCipherSuiteStdName(cipher);
+        const char *encName = CipherSuiteAlgName((BslCid)enc);
+        const char *hashName = CipherSuiteAlgName((BslCid)hash);
+        const char *macName = isAead ? "AEAD" : CipherSuiteAlgName((BslCid)mac);
+        if (name == NULL || name[0] == '\0') {
+            AppPrintError("list: Cipher suite name is unavailable.\n");
+            return HITLS_APP_INTERNAL_EXCEPTION;
+        }
+        ret = AppPrint(g_stdout, "%-45s %-10s Kx=%-9s Au=%-5s Enc=%-17s Hash=%-7s Mac=%-11s\n",
+            name, CipherProtocolName(version), CipherKeyExchangeName(kx, version), CipherAuthName(auth),
+            encName, hashName, macName);
+    }
+    return ret;
+}
+
+static int32_t PrintCipherSuites(const PrintOptions *options)
+{
+    HITLS_Config *config = NULL;
+    int32_t ret = CRYPT_EAL_Init(CRYPT_EAL_INIT_ALL);
+    if (ret != CRYPT_SUCCESS) {
+        ret = HITLS_APP_CRYPTO_FAIL;
+        goto EXIT;
+    }
+    HITLS_CertMethodInit();
+    HITLS_CryptMethodInit();
+    config = HITLS_CFG_NewTLSConfig();
+    if (config == NULL) {
+        ret = HITLS_APP_ERR_CREATE_CTX;
+        goto EXIT;
+    }
+    uint16_t ids[HITLS_CFG_MAX_SIZE];
+    uint32_t count = 0;
+    ret = HITLS_CFG_GetCipherSuites(config, ids, sizeof(ids) / sizeof(ids[0]), &count);
+    if (ret != HITLS_SUCCESS) {
+        ret = HITLS_APP_INTERNAL_EXCEPTION;
+        goto EXIT;
+    }
+    if (!options->hideTitle) {
+        ret = AppPrint(g_stdout, "List Cipher Suites:\n");
+        if (ret != HITLS_APP_SUCCESS) {
+            goto EXIT;
+        }
+    }
+    if (options->namesOnly) {
+        ret = PrintCipherSuiteNames(ids, count);
+    } else {
+        ret = PrintCipherSuiteDetails(ids, count);
+    }
+EXIT:
+    HITLS_CFG_FreeConfig(config);
+    return ret;
+}
 
 static void AppPushPrintFunc(PrintAlgFunc func)
 {
     for (size_t i = 0; i < PRINT_ALG_FUNC_LIST_CNT; ++i) {
-        if ((g_printAlgFuncList[i] == NULL) || (g_printAlgFuncList[i] == func)) {
+        if (g_printAlgFuncList[i] == NULL || g_printAlgFuncList[i] == func) {
             g_printAlgFuncList[i] = func;
             return;
         }
     }
 }
 
-static void AppPrintList(void)
+static int32_t AppPrintList(const PrintOptions *options)
 {
+    int32_t ret = HITLS_APP_SUCCESS;
     for (size_t i = 0; i < PRINT_ALG_FUNC_LIST_CNT; ++i) {
-        if ((g_printAlgFuncList[i] != NULL)) {
-            g_printAlgFuncList[i]();
+        if (g_printAlgFuncList[i] != NULL) {
+            ret = g_printAlgFuncList[i](options);
+            if (ret != HITLS_APP_SUCCESS) {
+                break;
+            }
         }
     }
+    int32_t flushRet = BSL_UIO_Ctrl(g_stdout, BSL_UIO_FLUSH, 0, NULL);
+    if (ret != HITLS_APP_SUCCESS) {
+        return ret;
+    }
+    return flushRet == BSL_SUCCESS ? HITLS_APP_SUCCESS : HITLS_APP_UIO_FAIL;
 }
 
 static void ResetPrintAlgFuncList(void)
@@ -281,11 +495,12 @@ static void ResetPrintAlgFuncList(void)
     }
 }
 
-static BSL_UIO *g_stdout = NULL;
-
 int32_t HITLS_APP_PrintStdoutUioInit(void)
 {
     g_stdout = BSL_UIO_New(BSL_UIO_FileMethod());
+    if (g_stdout == NULL) {
+        return HITLS_APP_MEM_ALLOC_FAIL;
+    }
     if (BSL_UIO_Ctrl(g_stdout, BSL_UIO_FILE_PTR, 0, (void *)stdout) != BSL_SUCCESS) {
         AppPrintError("Failed to set stdout mode.\n");
         return HITLS_APP_UIO_FAIL;
@@ -296,19 +511,45 @@ int32_t HITLS_APP_PrintStdoutUioInit(void)
 void HITLS_APP_PrintStdoutUioUnInit(void)
 {
     BSL_UIO_Free(g_stdout);
+    g_stdout = NULL;
 }
 
-void HITLS_APP_PrintCipherAlg(void)
+static int32_t PrintCipherAlg(const PrintOptions *options)
 {
-    AppPrint(g_stdout, "List Cipher Algorithms:\n");
-    AppPrint(g_stdout, "%-20s\t%s\n", "NAME", "CID");
+    int32_t ret;
+    if (!options->hideTitle) {
+        ret = AppPrint(g_stdout, "List Cipher Algorithms:\n");
+        if (ret != HITLS_APP_SUCCESS) {
+            return ret;
+        }
+    }
+    if (!options->namesOnly) {
+        ret = AppPrint(g_stdout, "%-20s\t%s\n", "NAME", "CID");
+        if (ret != HITLS_APP_SUCCESS) {
+            return ret;
+        }
+    }
 
+    bool first = true;
     for (size_t i = 0; i < CIPHER_ALG_CNT; ++i) {
         if (!CRYPT_EAL_CipherIsValidAlgId(g_allCipherAlgInfo[i].cid)) {
             continue;
         }
-        AppPrint(g_stdout, "%-20s\t%3ld\n", g_allCipherAlgInfo[i].name, (long)g_allCipherAlgInfo[i].cid);
+        if (options->namesOnly) {
+            ret = AppPrint(g_stdout, "%s%s", first ? "" : ":", g_allCipherAlgInfo[i].name);
+            first = false;
+        } else {
+            ret = AppPrint(g_stdout, "%-20s\t%3ld\n", g_allCipherAlgInfo[i].name,
+                (long)g_allCipherAlgInfo[i].cid);
+        }
+        if (ret != HITLS_APP_SUCCESS) {
+            return ret;
+        }
     }
+    if (options->namesOnly) {
+        return AppPrint(g_stdout, "\n");
+    }
+    return HITLS_APP_SUCCESS;
 }
 
 void HITLS_APP_PrintPkcs12MacIdAlg(void)
@@ -332,96 +573,241 @@ void HITLS_APP_PrintPbeAlg(void)
     }
 }
 
-static void PrintMdAlg(void)
+static int32_t PrintMdAlg(const PrintOptions *options)
 {
-    AppPrint(g_stdout, "List Digest Algorithms:\n");
-    AppPrint(g_stdout, "%-20s\t%s\n", "NAME", "CID");
+    int32_t ret;
+    if (!options->hideTitle) {
+        ret = AppPrint(g_stdout, "List Digest Algorithms:\n");
+        if (ret != HITLS_APP_SUCCESS) {
+            return ret;
+        }
+    }
+    if (!options->namesOnly) {
+        ret = AppPrint(g_stdout, "%-20s\t%s\n", "NAME", "CID");
+        if (ret != HITLS_APP_SUCCESS) {
+            return ret;
+        }
+    }
+    bool first = true;
     for (size_t i = 0; i < MD_ALG_CNT; ++i) {
         if (!CRYPT_EAL_MdIsValidAlgId(g_allMdAlgInfo[i].cid)) {
             continue;
         }
-        AppPrint(g_stdout, "%-20s\t%3ld\n", g_allMdAlgInfo[i].name, (long)g_allMdAlgInfo[i].cid);
+        if (options->namesOnly) {
+            ret = AppPrint(g_stdout, "%s%s", first ? "" : ":", g_allMdAlgInfo[i].name);
+            first = false;
+        } else {
+            ret = AppPrint(g_stdout, "%-20s\t%3ld\n", g_allMdAlgInfo[i].name, (long)g_allMdAlgInfo[i].cid);
+        }
+        if (ret != HITLS_APP_SUCCESS) {
+            return ret;
+        }
     }
+    if (options->namesOnly) {
+        return AppPrint(g_stdout, "\n");
+    }
+    return HITLS_APP_SUCCESS;
 }
 
-static void PrintPkeyAlg(void)
+static int32_t PrintPkeyAlg(const PrintOptions *options)
 {
-    AppPrint(g_stdout, "List Asym Algorithms:\n");
-    AppPrint(g_stdout, "%-20s\t%s\n", "NAME", "CID");
+    int32_t ret;
+    if (!options->hideTitle) {
+        ret = AppPrint(g_stdout, "List Asym Algorithms:\n");
+        if (ret != HITLS_APP_SUCCESS) {
+            return ret;
+        }
+    }
+    if (!options->namesOnly) {
+        ret = AppPrint(g_stdout, "%-20s\t%s\n", "NAME", "CID");
+        if (ret != HITLS_APP_SUCCESS) {
+            return ret;
+        }
+    }
+    bool first = true;
     for (size_t i = 0; i < PKEY_ALG_CNT; ++i) {
         if (!CRYPT_EAL_PkeyIsValidAlgId(g_allPkeyAlgInfo[i].cid)) {
             continue;
         }
-        AppPrint(g_stdout, "%-20s\t%3ld\n", g_allPkeyAlgInfo[i].name, (long)g_allPkeyAlgInfo[i].cid);
+        if (options->namesOnly) {
+            ret = AppPrint(g_stdout, "%s%s", first ? "" : ":", g_allPkeyAlgInfo[i].name);
+            first = false;
+        } else {
+            ret = AppPrint(g_stdout, "%-20s\t%3ld\n", g_allPkeyAlgInfo[i].name, (long)g_allPkeyAlgInfo[i].cid);
+        }
+        if (ret != HITLS_APP_SUCCESS) {
+            return ret;
+        }
     }
+    if (options->namesOnly) {
+        return AppPrint(g_stdout, "\n");
+    }
+    return HITLS_APP_SUCCESS;
 }
 
-void PrintMacAlg(void)
+static int32_t PrintMacAlg(const PrintOptions *options)
 {
-    AppPrint(g_stdout, "List Mac Algorithms:\n");
-    AppPrint(g_stdout, "%-20s\t%s\n", "NAME", "CID");
+    int32_t ret;
+    if (!options->hideTitle) {
+        ret = AppPrint(g_stdout, "List Mac Algorithms:\n");
+        if (ret != HITLS_APP_SUCCESS) {
+            return ret;
+        }
+    }
+    if (!options->namesOnly) {
+        ret = AppPrint(g_stdout, "%-20s\t%s\n", "NAME", "CID");
+        if (ret != HITLS_APP_SUCCESS) {
+            return ret;
+        }
+    }
+    bool first = true;
     for (size_t i = 0; i < MAC_ALG_CNT; ++i) {
         if (!CRYPT_EAL_MacIsValidAlgId(g_allMacAlgInfo[i].cid)) {
             continue;
         }
-        AppPrint(g_stdout, "%-20s\t%3ld\n", g_allMacAlgInfo[i].name, (long)g_allMacAlgInfo[i].cid);
+        if (options->namesOnly) {
+            ret = AppPrint(g_stdout, "%s%s", first ? "" : ":", g_allMacAlgInfo[i].name);
+            first = false;
+        } else {
+            ret = AppPrint(g_stdout, "%-20s\t%3ld\n", g_allMacAlgInfo[i].name, (long)g_allMacAlgInfo[i].cid);
+        }
+        if (ret != HITLS_APP_SUCCESS) {
+            return ret;
+        }
     }
+    if (options->namesOnly) {
+        return AppPrint(g_stdout, "\n");
+    }
+    return HITLS_APP_SUCCESS;
 }
 
-static void PrintRandAlg(void)
+static int32_t PrintRandAlg(const PrintOptions *options)
 {
-    AppPrint(g_stdout, "List Rand Algorithms:\n");
-    AppPrint(g_stdout, "%-20s\t%s\n", "NAME", "CID");
+    int32_t ret;
+    if (!options->hideTitle) {
+        ret = AppPrint(g_stdout, "List Rand Algorithms:\n");
+        if (ret != HITLS_APP_SUCCESS) {
+            return ret;
+        }
+    }
+    if (!options->namesOnly) {
+        ret = AppPrint(g_stdout, "%-20s\t%s\n", "NAME", "CID");
+        if (ret != HITLS_APP_SUCCESS) {
+            return ret;
+        }
+    }
+    bool first = true;
     for (size_t i = 0; i < RAND_ALG_CNT; ++i) {
         if (!CRYPT_EAL_RandIsValidAlgId(g_allRandAlgInfo[i].cid)) {
             continue;
         }
-        AppPrint(g_stdout, "%-20s\t%3ld\n", g_allRandAlgInfo[i].name, (long)g_allRandAlgInfo[i].cid);
+        if (options->namesOnly) {
+            ret = AppPrint(g_stdout, "%s%s", first ? "" : ":", g_allRandAlgInfo[i].name);
+            first = false;
+        } else {
+            ret = AppPrint(g_stdout, "%-20s\t%3ld\n", g_allRandAlgInfo[i].name, (long)g_allRandAlgInfo[i].cid);
+        }
+        if (ret != HITLS_APP_SUCCESS) {
+            return ret;
+        }
     }
+    if (options->namesOnly) {
+        return AppPrint(g_stdout, "\n");
+    }
+    return HITLS_APP_SUCCESS;
 }
 
-static void PrintKdfAlg(void)
+static int32_t PrintKdfAlg(const PrintOptions *options)
 {
-    AppPrint(g_stdout, "List Kdf Algorithms:\n");
-    AppPrint(g_stdout, "%-20s\t%s\n", "NAME", "CID");
+    int32_t ret;
+    if (!options->hideTitle) {
+        ret = AppPrint(g_stdout, "List Kdf Algorithms:\n");
+        if (ret != HITLS_APP_SUCCESS) {
+            return ret;
+        }
+    }
+    if (!options->namesOnly) {
+        ret = AppPrint(g_stdout, "%-20s\t%s\n", "NAME", "CID");
+        if (ret != HITLS_APP_SUCCESS) {
+            return ret;
+        }
+    }
+    bool first = true;
     for (size_t i = 0; i < KDF_ALG_CNT; ++i) {
         if (!CRYPT_EAL_KdfIsValidAlgId(g_allKdfAlgInfo[i].cid)) {
             continue;
         }
-        AppPrint(g_stdout, "%-20s\t%3ld\n", g_allKdfAlgInfo[i].name, (long)g_allKdfAlgInfo[i].cid);
+        if (options->namesOnly) {
+            ret = AppPrint(g_stdout, "%s%s", first ? "" : ":", g_allKdfAlgInfo[i].name);
+            first = false;
+        } else {
+            ret = AppPrint(g_stdout, "%-20s\t%3ld\n", g_allKdfAlgInfo[i].name, (long)g_allKdfAlgInfo[i].cid);
+        }
+        if (ret != HITLS_APP_SUCCESS) {
+            return ret;
+        }
     }
+    if (options->namesOnly) {
+        return AppPrint(g_stdout, "\n");
+    }
+    return HITLS_APP_SUCCESS;
 }
 
-static void PrintAllAlg(void)
+static int32_t PrintAllAlg(const PrintOptions *options)
 {
-    HITLS_APP_PrintCipherAlg();
-    AppPrint(g_stdout, "\n");
-    PrintMdAlg();
-    AppPrint(g_stdout, "\n");
-    PrintPkeyAlg();
-    AppPrint(g_stdout, "\n");
-    PrintMacAlg();
-    AppPrint(g_stdout, "\n");
-    PrintRandAlg();
-    AppPrint(g_stdout, "\n");
-    PrintKdfAlg();
+    PrintAlgFunc funcs[] = {
+        PrintCipherAlg, PrintMdAlg, PrintPkeyAlg, PrintMacAlg, PrintRandAlg, PrintKdfAlg
+    };
+    for (size_t i = 0; i < sizeof(funcs) / sizeof(funcs[0]); i++) {
+        int32_t ret = funcs[i](options);
+        if (ret != HITLS_APP_SUCCESS) {
+            return ret;
+        }
+        if (i + 1 < sizeof(funcs) / sizeof(funcs[0])) {
+            ret = AppPrint(g_stdout, "\n");
+            if (ret != HITLS_APP_SUCCESS) {
+                return ret;
+            }
+        }
+    }
+    return HITLS_APP_SUCCESS;
 }
 
-static void PrintCurves(void)
+static int32_t PrintCurves(const PrintOptions *options)
 {
-    AppPrint(g_stdout, "List  Curves:\n");
-    AppPrint(g_stdout, "%-20s\t%s\n", "NAME", "CID");
+    int32_t ret;
+    if (!options->hideTitle) {
+        ret = AppPrint(g_stdout, "List  Curves:\n");
+        if (ret != HITLS_APP_SUCCESS) {
+            return ret;
+        }
+    }
+    if (!options->namesOnly) {
+        ret = AppPrint(g_stdout, "%-20s\t%s\n", "NAME", "CID");
+        if (ret != HITLS_APP_SUCCESS) {
+            return ret;
+        }
+    }
     for (size_t i = 0; i < CURVES_CNT; ++i) {
-        AppPrint(g_stdout, "%-20s\t%3ld\n", g_allCurves[i].name, (long)g_allCurves[i].cid);
+        if (options->namesOnly) {
+            ret = AppPrint(g_stdout, "%s%s", i == 0 ? "" : ":", g_allCurves[i].name);
+        } else {
+            ret = AppPrint(g_stdout, "%-20s\t%3ld\n", g_allCurves[i].name, (long)g_allCurves[i].cid);
+        }
+        if (ret != HITLS_APP_SUCCESS) {
+            return ret;
+        }
     }
+    if (options->namesOnly) {
+        return AppPrint(g_stdout, "\n");
+    }
+    return HITLS_APP_SUCCESS;
 }
 
-static int32_t ParseListOpt(void)
+static int32_t ParseListOpt(PrintOptions *options)
 {
-    bool isEmptyOpt = true;
     int optType = HITLS_APP_OPT_ERR;
     while ((optType = HITLS_APP_OptNext()) != HITLS_APP_OPT_EOF) {
-        isEmptyOpt = false;
         switch (optType) {
             case HITLS_APP_OPT_HELP:
                 HITLS_APP_OptHelpPrint(g_listOpts);
@@ -436,7 +822,7 @@ static int32_t ParseListOpt(void)
                 AppPushPrintFunc(PrintMdAlg);
                 break;
             case HITLS_APP_LIST_OPT_CIPHER_ALG:
-                AppPushPrintFunc(HITLS_APP_PrintCipherAlg);
+                AppPushPrintFunc(PrintCipherAlg);
                 break;
             case HITLS_APP_LIST_OPT_ASYM_ALG:
                 AppPushPrintFunc(PrintPkeyAlg);
@@ -453,16 +839,30 @@ static int32_t ParseListOpt(void)
             case HITLS_APP_LIST_OPT_CURVES:
                 AppPushPrintFunc(PrintCurves);
                 break;
+            case HITLS_APP_LIST_OPT_CIPHERSUITES:
+                AppPushPrintFunc(PrintCipherSuites);
+                break;
+            case HITLS_APP_LIST_OPT_NAMES_ONLY:
+                options->namesOnly = true;
+                break;
             default:
                 break;
         }
     }
     // Get the number of parameters that cannot be parsed in the current version
     // and print the error information and help list.
-    if ((HITLS_APP_GetRestOptNum() != 0) || isEmptyOpt) {
+    if (HITLS_APP_GetRestOptNum() != 0) {
         AppPrintError("Extra arguments given.\n");
         AppPrintError("list: Use -help for summary.\n");
         return HITLS_APP_OPT_UNKOWN;
+    }
+    if (g_printAlgFuncList[0] == NULL) {
+        AppPrintError("list: No query option specified.\n");
+        AppPrintError("list: Use -help for summary.\n");
+        return HITLS_APP_OPT_UNKOWN;
+    }
+    if (options->namesOnly && g_printAlgFuncList[1] == NULL && g_printAlgFuncList[0] != PrintAllAlg) {
+        options->hideTitle = true;
     }
     return HITLS_APP_SUCCESS;
 }
@@ -472,6 +872,7 @@ int32_t HITLS_ListMain(int argc, char *argv[])
 {
     ResetPrintAlgFuncList();
     int32_t ret = HITLS_APP_SUCCESS;
+    PrintOptions options = {0};
     do {
         ret = HITLS_APP_PrintStdoutUioInit();
         if (ret != HITLS_APP_SUCCESS) {
@@ -482,11 +883,14 @@ int32_t HITLS_ListMain(int argc, char *argv[])
             AppPrintError("error in opt begin.\n");
             break;
         }
-        ret = ParseListOpt();
+        ret = ParseListOpt(&options);
         if (ret != HITLS_APP_SUCCESS) {
             break;
         }
-        AppPrintList();
+        ret = AppPrintList(&options);
+        if (ret != HITLS_APP_SUCCESS) {
+            AppPrintError("list: Failed to print query result (0x%x).\n", ret);
+        }
     } while (false);
     HITLS_APP_OptEnd();
     HITLS_APP_PrintStdoutUioUnInit();

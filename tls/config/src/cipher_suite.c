@@ -14,7 +14,6 @@
  */
 
 #include "hitls_build.h"
-#include <stdio.h>
 #include <string.h>
 #include "tls_binlog_id.h"
 #include "bsl_log_internal.h"
@@ -44,10 +43,6 @@
     .maxVersion = (maxV), \
     .minDtlsVersion = (minDtlsV),    \
     .maxDtlsVersion = (maxDtlsV)
-
-#ifdef HITLS_TLS_CONFIG_CIPHER_SUITE
-#define CIPHERSUITE_DESCRIPTION_MAXLEN 128
-#endif
 
 /* If cipher suites need to be added in the future, you need to consider whether the cipher suites are suitable for DTLS
 in terms of design. If DTLS is not supported, perform related operations. For example, the RC4 stream encryption
@@ -1880,150 +1875,6 @@ uint8_t CFG_GetCertTypeByCipherSuite(uint16_t cipherSuite)
 }
 
 #ifdef HITLS_TLS_CONFIG_CIPHER_SUITE
-/* Convert the supported version number to the corresponding character string */
-static const uint8_t* ProtocolToString(uint16_t version)
-{
-    const char *ret = NULL;
-    switch (version) {
-        case HITLS_VERSION_TLS12:
-            ret = "TLSv1.2";
-            break;
-        case HITLS_VERSION_TLS13:
-            ret = "TLSv1.3";
-            break;
-        case HITLS_VERSION_DTLS10:
-            ret = "DTLSv1";
-            break;
-        case HITLS_VERSION_DTLS12:
-            ret = "DTLSv1.2";
-            break;
-        case HITLS_VERSION_TLCP_DTLCP11:
-            ret = "(D)TLCP1.1";
-            break;
-        default:
-            ret = "unknown";
-            break;
-    }
-    return (const uint8_t *)ret;
-}
-
-/* Convert the server authorization algorithm type to the corresponding character string */
-static const uint8_t* AuthAlgToString(HITLS_AuthAlgo authAlg)
-{
-    const char *ret = NULL;
-    switch (authAlg) {
-        case HITLS_AUTH_RSA:
-            ret = "RSA";
-            break;
-        case HITLS_AUTH_ECDSA:
-            ret = "ECDSA";
-            break;
-        case HITLS_AUTH_DSS:
-            ret = "DSS";
-            break;
-        case HITLS_AUTH_SM2:
-            ret = "SM2";
-            break;
-        default:
-            ret = "unknown";
-            break;
-    }
-    return (const uint8_t *)ret;
-}
-
-/* Convert the key exchange algorithm type to the corresponding character string */
-static const uint8_t* KeyExchAlgToString(HITLS_KeyExchAlgo kxAlg)
-{
-    const char *ret = NULL;
-    switch (kxAlg) {
-        case HITLS_KEY_EXCH_ECDHE:
-            ret = "ECDHE";
-            break;
-        case HITLS_KEY_EXCH_DHE:
-            ret = "DHE";
-            break;
-        case HITLS_KEY_EXCH_ECDH:
-            ret = "ECDH";
-            break;
-        case HITLS_KEY_EXCH_DH:
-            ret = "DH";
-            break;
-        case HITLS_KEY_EXCH_RSA:
-            ret = "RSA";
-            break;
-        case HITLS_KEY_EXCH_PSK:
-            ret = "PSK";
-            break;
-        case HITLS_KEY_EXCH_ECC:
-            ret = "ECC";
-            break;
-        default:
-            ret = "unknown";
-            break;
-    }
-    return (const uint8_t *)ret;
-}
-
-/* Convert the MAC algorithm type to the corresponding character string */
-static const uint8_t* MacAlgToString(HITLS_MacAlgo macAlg)
-{
-    const char *ret = NULL;
-    switch (macAlg) {
-        case HITLS_MAC_1:
-            ret = "SHA1";
-            break;
-        case HITLS_MAC_256:
-            ret = "SHA256";
-            break;
-        case HITLS_MAC_384:
-            ret = "SHA384";
-            break;
-        case HITLS_MAC_512:
-            ret = "SHA512";
-            break;
-        case HITLS_MAC_AEAD:
-            ret = "AEAD";
-            break;
-        case HITLS_MAC_SM3:
-            ret = "SM3";
-            break;
-        default:
-            ret = "unknown";
-            break;
-    }
-    return (const uint8_t *)ret;
-}
-
-/* Convert the hash algorithm type to the corresponding character string */
-static const uint8_t* HashAlgToString(HITLS_HashAlgo hashAlg)
-{
-    const char *ret = NULL;
-    switch (hashAlg) {
-        case HITLS_HASH_MD5:
-            ret = "MD5";
-            break;
-        case HITLS_HASH_SHA1:
-            ret = "SHA1";
-            break;
-        case HITLS_HASH_SHA_256:
-            ret = "SHA256";
-            break;
-        case HITLS_HASH_SHA_384:
-            ret = "SHA384";
-            break;
-        case HITLS_HASH_SHA_512:
-            ret = "SHA512";
-            break;
-        case HITLS_HASH_SM3:
-            ret = "SM3";
-            break;
-        default:
-            ret = "unknown";
-            break;
-    }
-    return (const uint8_t *)ret;
-}
-
 /* Search the corresponding index in the table based on the cipher suite. If the cipher suite is invalid,
  * CIPHER_SUITE_NOT_EXIST is returned */
 static int32_t FindCipherSuiteIndexByCipherSuite(const uint16_t cipherSuite)
@@ -2038,30 +1889,6 @@ static int32_t FindCipherSuiteIndexByCipherSuite(const uint16_t cipherSuite)
     return HITLS_CONFIG_UNSUPPORT_CIPHER_SUITE;
 }
 
-
-static int32_t GetCipherSuiteDescription(const CipherSuiteInfo *cipherSuiteInfo, uint8_t *buf, int len)
-{
-    if (cipherSuiteInfo == NULL || buf == NULL || len < CIPHERSUITE_DESCRIPTION_MAXLEN) {
-        BSL_ERR_PUSH_ERROR(HITLS_NULL_INPUT);
-        return HITLS_NULL_INPUT;
-    }
-
-    const uint8_t *ver, *kx, *au, *hash, *mac;
-    ver = ProtocolToString(cipherSuiteInfo->minVersion);
-    kx = KeyExchAlgToString(cipherSuiteInfo->kxAlg);
-    au = AuthAlgToString(cipherSuiteInfo->authAlg);
-    mac = MacAlgToString(cipherSuiteInfo->macAlg);
-    hash = HashAlgToString(cipherSuiteInfo->hashAlg);
-
-    int ret = snprintf((char *)buf, CIPHERSUITE_DESCRIPTION_MAXLEN, "%-30s %-7s Kx=%-8s Au=%-5s Hash=%-22s Mac=%-4s\n",
-        cipherSuiteInfo->name, ver, kx, au, hash, mac);
-    if (ret < 0 || ret > CIPHERSUITE_DESCRIPTION_MAXLEN - 1) {
-        BSL_ERR_PUSH_ERROR(HITLS_CONFIG_INVALID_LENGTH);
-        return HITLS_CONFIG_INVALID_LENGTH;
-    }
-
-    return HITLS_SUCCESS;
-}
 
 /**
  * @brief   Obtain the Symmetric-key algorithm type based on the cipher suite
@@ -2230,20 +2057,6 @@ int32_t HITLS_CFG_GetCipherVersion(const HITLS_Cipher *cipher, int32_t *version)
 
     *version = cipher->minVersion;
     return HITLS_SUCCESS;
-}
-
-/**
- * @brief   Output the description of the cipher suite as a character string.
- *
- * @param   cipherSuite [IN] Cipher suite
- * @param   buf [OUT] Output the description.
- * @param   len [IN] Description length
- * @retval  NULL Failed to obtain the description.
- * @retval  Description of the cipher suite
- */
-int32_t HITLS_CFG_GetDescription(const HITLS_Cipher *cipher, uint8_t *buf, int32_t len)
-{
-    return GetCipherSuiteDescription(cipher, buf, len);
 }
 
 const HITLS_Cipher *HITLS_CFG_GetCipherByID(uint16_t cipherSuite)

@@ -10,7 +10,7 @@ The openHiTLS command source code is located in the apps directory, and the comp
 |**Basic Commands**| | |
 ||help|Display help information and list of supported commands|
 ||version|Display the openHiTLS version string|
-||list|List supported algorithms and functions, including digest, symmetric, asymmetric, MAC, random number, KDF algorithms, etc.|
+||list|Query supported algorithms and related information|
 |**Encryption and Digest**|| |
 ||enc|Symmetric encryption and decryption operations, supporting multiple symmetric algorithms|
 ||mac|Message authentication code calculation and verification|
@@ -97,30 +97,68 @@ hitls version
 
 ### 3.1.3 list
 
-**Function**: List supported algorithms and functions, including digest, symmetric, asymmetric, MAC, random number, KDF algorithms, etc.
+**Function**: Query supported cryptographic algorithms, curves, TLS/TLCP cipher suites, and related information. Display details by category or output name lists only.
 
 **Usage**:
-```
-hitls list [-help] [-all-algorithms] [-digest-algorithms] [-cipher-algorithms] [-asym-algorithms] [-mac-algorithms] [-rand-algorithms] [-kdf-algorithms] [-all-curves]
+
+```text
+hitls list <query-option> [query-option ...] [-names-only]
+hitls list -help
 ```
 
 **Supported Options**:
-- `-help`: Display help information
-- `-all-algorithms`: List all supported algorithms
-- `-digest-algorithms`: List all supported digest algorithms
-- `-cipher-algorithms`: List all supported symmetric algorithms
-- `-asym-algorithms`: List all supported asymmetric algorithms
-- `-mac-algorithms`: List all supported MAC algorithms
-- `-rand-algorithms`: List all supported random number algorithms
-- `-kdf-algorithms`: List all supported KDF algorithms
-- `-all-curves`: List all supported curves
+
+- `-help`: Display help information.
+- `-all-algorithms`: List symmetric, digest, asymmetric, MAC, random number, and KDF algorithms. Excludes curves and cipher suites.
+- `-digest-algorithms`: List supported digest algorithms.
+- `-cipher-algorithms`: List supported symmetric algorithms.
+- `-asym-algorithms`: List supported asymmetric algorithms.
+- `-mac-algorithms`: List supported MAC algorithms.
+- `-rand-algorithms`: List supported random number algorithms.
+- `-kdf-algorithms`: List supported KDF algorithms.
+- `-all-curves`: List supported curves.
+- `-ciphersuites`: List the library's default cipher suites, including TLCP suites present in that list, using standard suite names.
+- `-names-only`: Print only colon-separated names, with one line per algorithm category. Omit the title when the final output contains one category; retain category titles when it contains multiple categories.
+
+**Detailed Cipher Suite Output**:
+
+By default, `-ciphersuites` prints one suite per line with these fields:
+
+| Field | Meaning |
+| --- | --- |
+| Name | Standard suite name, such as `TLS_AES_256_GCM_SHA384` |
+| Version | Minimum protocol version recorded in the suite metadata, not the minimum version actually enabled in the current build |
+| Kx | Key exchange mechanism, such as `ECDHE`, `RSA`, or `ECDHE-PSK` |
+| Au | Authentication mechanism, such as `RSA`, `ECDSA`, or `SM2` |
+| Enc | Symmetric cipher name, including key size and mode, such as `aes-256-gcm` |
+| Hash | Hash attribute recorded for the suite; not necessarily the Hash used by the actual PRF/HKDF |
+| Mac | Record authentication mechanism; `AEAD` for AEAD suites, otherwise the specific MAC name |
+
+`any` means the suite does not determine that mechanism; `Au=None` denotes anonymous authentication. Unrecognized attributes display `unknown`.
+
+Selected output from the current build:
+
+```text
+List Cipher Suites:
+TLS_AES_256_GCM_SHA384                        TLSv1.3    Kx=any       Au=any   Enc=aes-256-gcm       Hash=SHA384  Mac=AEAD
+TLS_ECDHE_SM4_CBC_SM3                         (D)TLCP1.1 Kx=ECDHE     Au=SM2   Enc=sm4-cbc           Hash=SM3     Mac=HMAC-SM3
+TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256         TLSv1.2    Kx=ECDHE     Au=RSA   Enc=aes-128-gcm       Hash=SHA256  Mac=AEAD
+```
 
 **Examples**:
+
 ```bash
 hitls list -all-algorithms
 hitls list -cipher-algorithms
 hitls list -all-curves
+hitls list -ciphersuites
+hitls list -ciphersuites -names-only
+hitls list -digest-algorithms -names-only
+hitls list -ciphersuites -digest-algorithms -names-only
+hitls list -ciphersuites -names-only > ciphersuites.txt
 ```
+
+When querying cipher suites alone, the name output uses the standard names and colon-separated format accepted by the `-cipher` option of `s_client` and `s_server`. Select suites compatible with the target protocol; the default list may contain both TLS and TLCP suites. Output from multiple lists includes category titles.
 
 ## 3.2 Encryption and Digest
 

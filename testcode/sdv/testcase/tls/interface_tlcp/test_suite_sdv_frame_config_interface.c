@@ -93,7 +93,6 @@
 #include "bsl_list.h"
 /* END_HEADER */
 
-#define DEFAULT_DESCRIPTION_LEN 128
 #define ERROR_HITLS_GROUP 1
 #define ERROR_HITLS_SIGNATURE 0xffffu
 typedef struct {
@@ -863,51 +862,6 @@ void UT_TLS_CFG_GET_CIPHERSUITESTDNAME_API_TC001(void)
     ASSERT_TRUE(strcmp((char *)HITLS_CFG_GetCipherSuiteStdName(cipher),"TLS_RSA_WITH_AES_128_CBC_SHA") == 0);
 EXIT:
     return;
-}
-/* END_CASE */
-
-/** @
-* @test  UT_TLS_CFG_GET_DESCRIPTION_API_TC001
-* @title Test the HITLS_CFG_GetDescription interface.
-* @precon nan
-* @brief
-* 1. Input an empty cipher suite. Expected result 1 is obtained.
-* 2. Input an empty buff. Expected result 1 is obtained.
-* 3. Transfer a buff whose length is less than the length of CIPHERSUITE_DESCRIPTION_MAXLEN. Expected result 1 is
-*    obtained.
-* 4. Transfer the abnormal algorithm name cipher suite. Expected result 2 is obtained.
-* 5. Import the HITLS_RSA_WITH_AES_128_CBC_SHA cipher suite whose buff size is DEFAULT_DESCRIPTION_LEN. Expected result
-*    3 is obtained.
-* @expect
-* 1. Returns HITLS_NULL_INPUT
-* 2. Returns HITLS_CONFIG_INVALID_LENGTH.
-* 3. Returns HITLS_SUCCESS, and buff is Description.
-@ */
-
-/* BEGIN_CASE */
-void UT_TLS_CFG_GET_DESCRIPTION_API_TC001(void)
-{
-    const HITLS_Cipher *cipher = NULL;
-    char buff[DEFAULT_DESCRIPTION_LEN] = {0};
-    ASSERT_TRUE(HITLS_CFG_GetDescription(cipher, (uint8_t *)buff, sizeof(buff)) == HITLS_NULL_INPUT);
-
-    const uint16_t cipherID = HITLS_RSA_WITH_AES_128_CBC_SHA;
-    cipher = HITLS_CFG_GetCipherByID(cipherID);
-
-    ASSERT_TRUE(HITLS_CFG_GetDescription(cipher, NULL, sizeof(buff)) == HITLS_NULL_INPUT);
-
-    ASSERT_TRUE(HITLS_CFG_GetDescription(cipher, (uint8_t *)buff, 0) == HITLS_NULL_INPUT);
-
-    ASSERT_TRUE(HITLS_CFG_GetDescription(cipher, (uint8_t *)buff, sizeof(buff)) == HITLS_SUCCESS);
-
-    HITLS_Cipher *newCipher = (HITLS_Cipher *)malloc(sizeof(HITLS_Cipher));
-    memcpy(newCipher, cipher, sizeof(HITLS_Cipher));
-    newCipher->name =
-        "************************************************************************************************************";
-
-    ASSERT_TRUE(HITLS_CFG_GetDescription(newCipher, (uint8_t *)buff, sizeof(buff)) == HITLS_CONFIG_INVALID_LENGTH);
-EXIT:
-    free(newCipher);
 }
 /* END_CASE */
 

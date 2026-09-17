@@ -51,7 +51,7 @@ int32_t AppUioVPrint(BSL_UIO *uio, const char *format, va_list args)
     }
     ret = BSL_UIO_Write(uio, buf, ret, &writeLen);
     BSL_SAL_FREE(buf);
-    return ret;
+    return ret == BSL_SUCCESS ? HITLS_APP_SUCCESS : HITLS_APP_UIO_FAIL;
 }
 
 int32_t AppPrint(BSL_UIO *uio, const char *format, ...)
@@ -89,9 +89,14 @@ int32_t AppPrintErrorUioInit(FILE *fp)
     }
     g_errorUIO = BSL_UIO_New(BSL_UIO_FileMethod());
     if (g_errorUIO == NULL) {
-        return BSL_UIO_MEM_ALLOC_FAIL;
+        return HITLS_APP_MEM_ALLOC_FAIL;
     }
-    return BSL_UIO_Ctrl(g_errorUIO, BSL_UIO_FILE_PTR, 0, (void *)fp);
+    if (BSL_UIO_Ctrl(g_errorUIO, BSL_UIO_FILE_PTR, 0, (void *)fp) != BSL_SUCCESS) {
+        BSL_UIO_Free(g_errorUIO);
+        g_errorUIO = NULL;
+        return HITLS_APP_UIO_FAIL;
+    }
+    return HITLS_APP_SUCCESS;
 }
 
 void AppPrintErrorUioUnInit(void)

@@ -2,3 +2,7 @@ UT_HITLS_APPPrint test1
 UT_HITLS_APPPrint_TC001:
 UT_HITLS_APPPrint test2
 UT_HITLS_APPPrint_TC002:
+UT_HITLS_APPPrint init allocation failure
+UT_HITLS_APPPrint_InitFailure_TC001:
+UT_HITLS_APPPrint init control failure
+UT_HITLS_APPPrint_InitFailure_TC002:

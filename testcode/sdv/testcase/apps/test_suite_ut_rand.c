@@ -181,9 +181,9 @@ EXIT:
 void UT_HITLS_APP_rand_TC002(void)
 {
     char *argv[][5] = {
-        {"rand", "-base64", "-out", "1.txt", "10"},
+        {"rand", "-base64", "-out", "rand_base64_out.txt", "10"},
         {"rand", "-hex", "-out", "rand_hex_out.txt", "10"},
-        {"rand", "-hex", "1.txt", "10"},
+        {"rand", "-hex", "rand_base64_out.txt", "10"},
         {"rand", "-out"}
     };
 
@@ -196,7 +196,7 @@ void UT_HITLS_APP_rand_TC002(void)
     };
 
     ASSERT_EQ(AppInit(), HITLS_APP_SUCCESS);
-    remove("1.txt");
+    remove("rand_base64_out.txt");
     remove("rand_hex_out.txt");
     for (int i = 0; i < (int)(sizeof(testData) / sizeof(OptTestData)); ++i) {
         int ret = HITLS_RandMain(testData[i].argc, testData[i].argv);
@@ -204,7 +204,7 @@ void UT_HITLS_APP_rand_TC002(void)
     }
 
 EXIT:
-    remove("1.txt");
+    remove("rand_base64_out.txt");
     remove("rand_hex_out.txt");
     AppUninit();
     return;

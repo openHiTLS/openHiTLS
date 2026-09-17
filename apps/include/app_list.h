@@ -33,7 +33,9 @@ typedef enum {
     HITLS_APP_LIST_OPT_PKCS12_MAC_ALG,
     HITLS_APP_LIST_OPT_PBE_ALG,
     HITLS_APP_LIST_OPT_KEY_MGMT_ALG,
-    HITLS_APP_LIST_OPT_RSA_ALG
+    HITLS_APP_LIST_OPT_RSA_ALG,
+    HITLS_APP_LIST_OPT_CIPHERSUITES,
+    HITLS_APP_LIST_OPT_NAMES_ONLY
 } HITLSListOptType;
 
 int HITLS_ListMain(int argc, char *argv[]);
@@ -41,8 +43,6 @@ int HITLS_ListMain(int argc, char *argv[]);
 int32_t HITLS_APP_PrintStdoutUioInit(void);
 
 void HITLS_APP_PrintStdoutUioUnInit(void);
-
-void HITLS_APP_PrintCipherAlg(void);
 
 void HITLS_APP_PrintPkcs12MacIdAlg(void);
 

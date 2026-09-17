@@ -1184,18 +1184,6 @@ const HITLS_Cipher* HITLS_CFG_GetCipherSuiteByStdName(const uint8_t* stdName);
 
 /**
  * @ingroup hitls_config
- * @brief   Outputs the description of the cipher suite as a string.
- *
- * @param   cipherSuite [IN] Cipher suite
- * @param   buf [OUT] Output the description.
- * @param   len [IN] Description length
- * @retval  NULL, Failed to obtain the description.
- * @retval  Description of the cipher suite
- */
-int32_t HITLS_CFG_GetDescription(const HITLS_Cipher *cipher, uint8_t *buf, int32_t len);
-
-/**
- * @ingroup hitls_config
  * @brief   Determine whether to use the AEAD algorithm based on the cipher suite information.
  *
  * @param   cipher [IN] Cipher suite information
