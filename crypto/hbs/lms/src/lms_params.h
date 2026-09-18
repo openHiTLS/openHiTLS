@@ -31,7 +31,6 @@ extern "C" {
 #define LMS_I_LEN            16
 #define LMS_SEED_LEN         32
 #define LMS_MAX_HASH         32
-#define LMS_MAX_MESSAGE_SIZE (16 * 1024 * 1024)
 
 #define LMS_D_PBLC 0x8080
 #define LMS_D_MESG 0x8181

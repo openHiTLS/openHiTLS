@@ -69,13 +69,7 @@ uint32_t LmOtsGetSigLen(uint32_t otsType)
 int32_t LmOtsComputeQ(uint8_t *Q, const LmsOtsCtx *ctx, const uint8_t *C, const uint8_t *message,
     uint32_t messageLen)
 {
-    if (messageLen > LMS_MAX_MESSAGE_SIZE) {
-        BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
-        return CRYPT_INVALID_ARG;
-    }
-
     LmsTreeCtx treeCtx = {.I = ctx->I, .n = ctx->n, .hashFuncs = ctx->hashFuncs};
-
     int32_t ret = ctx->hashFuncs->msgHash(&treeCtx, ctx->q, C, message, messageLen, Q);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);

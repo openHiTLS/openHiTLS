@@ -37,8 +37,25 @@
 /* H=5/W=8 LMS signature and child-key lengths used by the boundary vectors. */
 #define HSS_H5_W8_LMS_SIG_LEN 1292
 #define HSS_H5_W8_CHILD_PUBKEY_LEN HSS_SHA256_N32_PUBKEY_LEN
-/* The bottom signature starts after its 4-byte type/level prefix and child key. */
+/* The bottom signature starts after its 4-byte Nspk prefix and the signed child key. */
 #define HSS_H5_W8_BOTTOM_SIG_OFFSET (4 + HSS_H5_W8_LMS_SIG_LEN + HSS_H5_W8_CHILD_PUBKEY_LEN)
+/* LM-OTS signature is type(4) + C(n=32) + y(p=34) for SHA256_N32_W8. The two-level
+ * signature is Nspk(4) || top LMS signature || child LMS public key || bottom LMS signature;
+ * within an LMS signature the layout is q(4) || LM-OTS signature || lms_type(4) || path. */
+#define HSS_H5_W8_OTS_SIG_LEN 1124
+#define HSS_H5_W8_NSPK_OFFSET 0
+#define HSS_H5_W8_TOP_SIG_OFFSET 4
+#define HSS_H5_W8_TOP_OTS_TYPE_OFFSET (HSS_H5_W8_TOP_SIG_OFFSET + 4)
+#define HSS_H5_W8_TOP_LMS_TYPE_OFFSET (HSS_H5_W8_TOP_SIG_OFFSET + 4 + HSS_H5_W8_OTS_SIG_LEN)
+#define HSS_H5_W8_CHILD_PUBKEY_OFFSET (HSS_H5_W8_TOP_SIG_OFFSET + HSS_H5_W8_LMS_SIG_LEN)
+#define HSS_H5_W8_CHILD_LMS_TYPE_OFFSET HSS_H5_W8_CHILD_PUBKEY_OFFSET
+#define HSS_H5_W8_CHILD_OTS_TYPE_OFFSET (HSS_H5_W8_CHILD_PUBKEY_OFFSET + 4)
+#define HSS_H5_W8_BOTTOM_Q_OFFSET HSS_H5_W8_BOTTOM_SIG_OFFSET
+#define HSS_H5_W8_BOTTOM_OTS_TYPE_OFFSET (HSS_H5_W8_BOTTOM_SIG_OFFSET + 4)
+#define HSS_H5_W8_BOTTOM_LMS_TYPE_OFFSET (HSS_H5_W8_BOTTOM_SIG_OFFSET + 4 + HSS_H5_W8_OTS_SIG_LEN)
+#define HSS_H5_W8_SIG_LEN (HSS_H5_W8_BOTTOM_SIG_OFFSET + HSS_H5_W8_LMS_SIG_LEN)
+/* Number of leaves of the H=5 trees used by the boundary vectors. */
+#define HSS_H5_W8_NUM_LEAVES 32u
 
 STUB_DEFINE_RET1(void *, BSL_SAL_Malloc, uint32_t);
 
@@ -377,10 +394,217 @@ EXIT:
 }
 /* END_CASE */
 
-static void HssEalBoundaryVerify(Hex *pubKey, Hex *msg, Hex *sig)
+/* @
+* @test  SDV_CRYPTO_HSS_NSPK_BOUNDARY_TC001
+* @spec  RFC 8554
+* @title  Reject HSS signatures whose Nspk field is not levels - 1
+* @precon  nan
+* @brief  Verify a pristine two-level HSS signature, then overwrite its 4-byte Nspk
+*         prefix with 0, 2, 0xFF000001 and 0xFFFFFFFF. Nspk must equal levels - 1 (= 1).
+* @expect  The pristine signature verifies; every mutated Nspk is rejected
+* @prior  Level 1
+* @auto  TRUE
+@ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_HSS_NSPK_BOUNDARY_TC001(Hex *pubKey, Hex *msg, Hex *sig)
 {
     CRYPT_EAL_PkeyCtx *ctx = NULL;
     uint8_t *mutSig = NULL;
+    /* 0xFF000001 is the original first-byte flip of Nspk = 1. */
+    const uint32_t badNspk[] = {0, 2, 0xFF000001u, 0xFFFFFFFFu};
+    uint32_t i;
+
+    TestMemInit();
+    ctx = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_HSS_LMS);
+    ASSERT_TRUE(ctx != NULL);
+    ASSERT_EQ(HssEalSetPubKey(ctx, pubKey), CRYPT_SUCCESS);
+    /* The pristine signature must verify before the mutations below are tried. */
+    ASSERT_EQ(CRYPT_EAL_PkeyVerify(ctx, CRYPT_MD_SHA256, msg->x, msg->len, sig->x, sig->len), CRYPT_SUCCESS);
+    ASSERT_EQ(sig->len, HSS_H5_W8_SIG_LEN);
+
+    mutSig = malloc(sig->len + 1);
+    ASSERT_TRUE(mutSig != NULL);
+    /* Nspk must equal levels - 1, which is exactly 1 for the two-level vector. */
+    for (i = 0; i < sizeof(badNspk) / sizeof(badNspk[0]); i++) {
+        (void)memcpy(mutSig, sig->x, sig->len);
+        BSL_Uint32ToByte(badNspk[i], mutSig + HSS_H5_W8_NSPK_OFFSET);
+        ASSERT_NE(CRYPT_EAL_PkeyVerify(ctx, CRYPT_MD_SHA256, msg->x, msg->len, mutSig, sig->len), CRYPT_SUCCESS);
+    }
+
+EXIT:
+    free(mutSig);
+    CRYPT_EAL_PkeyFreeCtx(ctx);
+    return;
+}
+/* END_CASE */
+
+/* @
+* @test  SDV_CRYPTO_HSS_SIGNATURE_LENGTH_MATRIX_TC001
+* @spec  RFC 8554
+* @title  Reject truncated and extended HSS signatures at structural boundaries
+* @precon  nan
+* @brief  Verify a pristine signature, then truncate it at the Nspk, top-signature,
+*         child-public-key and bottom-signature boundaries, and append one extra byte.
+* @expect  The pristine signature verifies; every wrong signature length is rejected
+* @prior  Level 1
+* @auto  TRUE
+@ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_HSS_SIGNATURE_LENGTH_MATRIX_TC001(Hex *pubKey, Hex *msg, Hex *sig)
+{
+    CRYPT_EAL_PkeyCtx *ctx = NULL;
+    uint8_t *mutSig = NULL;
+    const uint32_t truncLens[] = {
+        0,
+        3,
+        HSS_H5_W8_TOP_SIG_OFFSET + HSS_H5_W8_LMS_SIG_LEN - 1,
+        HSS_H5_W8_BOTTOM_SIG_OFFSET - 1,
+        HSS_H5_W8_BOTTOM_SIG_OFFSET,
+        HSS_H5_W8_BOTTOM_SIG_OFFSET + 1,
+        HSS_H5_W8_SIG_LEN - 1,
+    };
+    uint32_t i;
+
+    TestMemInit();
+    ctx = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_HSS_LMS);
+    ASSERT_TRUE(ctx != NULL);
+    ASSERT_EQ(HssEalSetPubKey(ctx, pubKey), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyVerify(ctx, CRYPT_MD_SHA256, msg->x, msg->len, sig->x, sig->len), CRYPT_SUCCESS);
+    ASSERT_EQ(sig->len, HSS_H5_W8_SIG_LEN);
+
+    /* Truncation at each structural boundary must be rejected. */
+    for (i = 0; i < sizeof(truncLens) / sizeof(truncLens[0]); i++) {
+        ASSERT_NE(CRYPT_EAL_PkeyVerify(ctx, CRYPT_MD_SHA256, msg->x, msg->len, sig->x, truncLens[i]), CRYPT_SUCCESS);
+    }
+    /* One extra trailing byte must be rejected too. */
+    mutSig = malloc(sig->len + 1);
+    ASSERT_TRUE(mutSig != NULL);
+    (void)memcpy(mutSig, sig->x, sig->len);
+    mutSig[sig->len] = 0x00;
+    ASSERT_NE(CRYPT_EAL_PkeyVerify(ctx, CRYPT_MD_SHA256, msg->x, msg->len, mutSig, sig->len + 1), CRYPT_SUCCESS);
+
+EXIT:
+    free(mutSig);
+    CRYPT_EAL_PkeyFreeCtx(ctx);
+    return;
+}
+/* END_CASE */
+
+/* @
+* @test  SDV_CRYPTO_HSS_TYPE_CODE_MATRIX_TC001
+* @spec  RFC 8554
+* @title  Reject unknown and inconsistent LMS/OTS type codes in HSS signatures
+* @precon  nan
+* @brief  Verify a pristine signature, then overwrite the OTS/LMS type fields at the
+*         top, child and bottom levels with unknown codes (0xFFFFFFFF) and with
+*         valid-but-inconsistent codes (H10 / W4).
+* @expect  The pristine signature verifies; every mutated type code is rejected
+* @prior  Level 1
+* @auto  TRUE
+@ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_HSS_TYPE_CODE_MATRIX_TC001(Hex *pubKey, Hex *msg, Hex *sig)
+{
+    CRYPT_EAL_PkeyCtx *ctx = NULL;
+    uint8_t *mutSig = NULL;
+    /* Unknown type codes and valid-but-inconsistent type codes at each level. */
+    const uint32_t badTypes[][2] = {
+        {HSS_H5_W8_TOP_OTS_TYPE_OFFSET, 0xFFFFFFFFu},
+        {HSS_H5_W8_TOP_LMS_TYPE_OFFSET, 0xFFFFFFFFu},
+        {HSS_H5_W8_CHILD_LMS_TYPE_OFFSET, CRYPT_LMS_SHA256_M32_H10},
+        {HSS_H5_W8_CHILD_OTS_TYPE_OFFSET, CRYPT_LMOTS_SHA256_N32_W4},
+        {HSS_H5_W8_BOTTOM_OTS_TYPE_OFFSET, 0xFFFFFFFFu},
+        {HSS_H5_W8_BOTTOM_LMS_TYPE_OFFSET, CRYPT_LMS_SHA256_M32_H10},
+    };
+    uint32_t i;
+
+    TestMemInit();
+    ctx = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_HSS_LMS);
+    ASSERT_TRUE(ctx != NULL);
+    ASSERT_EQ(HssEalSetPubKey(ctx, pubKey), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyVerify(ctx, CRYPT_MD_SHA256, msg->x, msg->len, sig->x, sig->len), CRYPT_SUCCESS);
+    ASSERT_EQ(sig->len, HSS_H5_W8_SIG_LEN);
+
+    mutSig = malloc(sig->len + 1);
+    ASSERT_TRUE(mutSig != NULL);
+    for (i = 0; i < sizeof(badTypes) / sizeof(badTypes[0]); i++) {
+        (void)memcpy(mutSig, sig->x, sig->len);
+        BSL_Uint32ToByte(badTypes[i][1], mutSig + badTypes[i][0]);
+        ASSERT_NE(CRYPT_EAL_PkeyVerify(ctx, CRYPT_MD_SHA256, msg->x, msg->len, mutSig, sig->len), CRYPT_SUCCESS);
+    }
+
+EXIT:
+    free(mutSig);
+    CRYPT_EAL_PkeyFreeCtx(ctx);
+    return;
+}
+/* END_CASE */
+
+/* @
+* @test  SDV_CRYPTO_HSS_Q_BOUNDARY_TC001
+* @spec  RFC 8554
+* @title  Reject out-of-range q leaf indices in HSS signatures
+* @precon  nan
+* @brief  Verify a pristine signature, then overwrite the q field of the top and bottom
+*         tree signatures with values at and beyond 2^h (= 32) and with high-bit-set
+*         values. q must be a valid leaf index below 2^h.
+* @expect  The pristine signature verifies; every out-of-range q is rejected
+* @prior  Level 1
+* @auto  TRUE
+@ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_HSS_Q_BOUNDARY_TC001(Hex *pubKey, Hex *msg, Hex *sig)
+{
+    CRYPT_EAL_PkeyCtx *ctx = NULL;
+    uint8_t *mutSig = NULL;
+    /* q must be a leaf index below 2^h = 32, for both the top and bottom trees. */
+    const uint32_t badQ[][2] = {
+        {HSS_H5_W8_TOP_SIG_OFFSET, HSS_H5_W8_NUM_LEAVES},
+        {HSS_H5_W8_TOP_SIG_OFFSET, 0xFFFFFFFFu},
+        {HSS_H5_W8_BOTTOM_Q_OFFSET, HSS_H5_W8_NUM_LEAVES},
+        {HSS_H5_W8_BOTTOM_Q_OFFSET, 0x80000000u},
+        {HSS_H5_W8_BOTTOM_Q_OFFSET, 0xFFFFFFFFu},
+    };
+    uint32_t i;
+
+    TestMemInit();
+    ctx = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_HSS_LMS);
+    ASSERT_TRUE(ctx != NULL);
+    ASSERT_EQ(HssEalSetPubKey(ctx, pubKey), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyVerify(ctx, CRYPT_MD_SHA256, msg->x, msg->len, sig->x, sig->len), CRYPT_SUCCESS);
+    ASSERT_EQ(sig->len, HSS_H5_W8_SIG_LEN);
+
+    mutSig = malloc(sig->len + 1);
+    ASSERT_TRUE(mutSig != NULL);
+    for (i = 0; i < sizeof(badQ) / sizeof(badQ[0]); i++) {
+        (void)memcpy(mutSig, sig->x, sig->len);
+        BSL_Uint32ToByte(badQ[i][1], mutSig + badQ[i][0]);
+        ASSERT_NE(CRYPT_EAL_PkeyVerify(ctx, CRYPT_MD_SHA256, msg->x, msg->len, mutSig, sig->len), CRYPT_SUCCESS);
+    }
+
+EXIT:
+    free(mutSig);
+    CRYPT_EAL_PkeyFreeCtx(ctx);
+    return;
+}
+/* END_CASE */
+
+/* @
+* @test  SDV_CRYPTO_HSS_MESSAGE_BOUNDARY_TC001
+* @spec  RFC 8554
+* @title  Reject altered, truncated and extended HSS signed messages
+* @precon  nan
+* @brief  Verify a pristine signature, then flip the first message byte, drop the last
+*         byte and append one extra byte to the signed message.
+* @expect  The pristine signature verifies; every mutated message is rejected
+* @prior  Level 1
+* @auto  TRUE
+@ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_HSS_MESSAGE_BOUNDARY_TC001(Hex *pubKey, Hex *msg, Hex *sig)
+{
+    CRYPT_EAL_PkeyCtx *ctx = NULL;
+    uint8_t *mutMsg = NULL;
 
     TestMemInit();
     ctx = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_HSS_LMS);
@@ -388,50 +612,21 @@ static void HssEalBoundaryVerify(Hex *pubKey, Hex *msg, Hex *sig)
     ASSERT_EQ(HssEalSetPubKey(ctx, pubKey), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_PkeyVerify(ctx, CRYPT_MD_SHA256, msg->x, msg->len, sig->x, sig->len), CRYPT_SUCCESS);
 
-    mutSig = malloc(sig->len);
-    ASSERT_TRUE(mutSig != NULL);
-    (void)memcpy(mutSig, sig->x, sig->len);
-    mutSig[0] ^= 0xFF; // 0xFF flips every bit of the first signature byte.
-    ASSERT_NE(CRYPT_EAL_PkeyVerify(ctx, CRYPT_MD_SHA256, msg->x, msg->len, mutSig, sig->len), CRYPT_SUCCESS);
+    mutMsg = malloc(msg->len + 1);
+    ASSERT_TRUE(mutMsg != NULL);
+    /* Altered, truncated and extended messages must all be rejected. */
+    (void)memcpy(mutMsg, msg->x, msg->len);
+    mutMsg[0] ^= 0xFF;
+    ASSERT_NE(CRYPT_EAL_PkeyVerify(ctx, CRYPT_MD_SHA256, mutMsg, msg->len, sig->x, sig->len), CRYPT_SUCCESS);
+    ASSERT_NE(CRYPT_EAL_PkeyVerify(ctx, CRYPT_MD_SHA256, msg->x, msg->len - 1, sig->x, sig->len), CRYPT_SUCCESS);
+    (void)memcpy(mutMsg, msg->x, msg->len);
+    mutMsg[msg->len] = 0x00;
+    ASSERT_NE(CRYPT_EAL_PkeyVerify(ctx, CRYPT_MD_SHA256, mutMsg, msg->len + 1, sig->x, sig->len), CRYPT_SUCCESS);
 
 EXIT:
-    free(mutSig);
+    free(mutMsg);
     CRYPT_EAL_PkeyFreeCtx(ctx);
     return;
-}
-
-/* BEGIN_CASE */
-void SDV_CRYPTO_HSS_NSPK_BOUNDARY_TC001(Hex *pubKey, Hex *msg, Hex *sig)
-{
-    HssEalBoundaryVerify(pubKey, msg, sig);
-}
-/* END_CASE */
-
-/* BEGIN_CASE */
-void SDV_CRYPTO_HSS_SIGNATURE_LENGTH_MATRIX_TC001(Hex *pubKey, Hex *msg, Hex *sig)
-{
-    HssEalBoundaryVerify(pubKey, msg, sig);
-}
-/* END_CASE */
-
-/* BEGIN_CASE */
-void SDV_CRYPTO_HSS_TYPE_CODE_MATRIX_TC001(Hex *pubKey, Hex *msg, Hex *sig)
-{
-    HssEalBoundaryVerify(pubKey, msg, sig);
-}
-/* END_CASE */
-
-/* BEGIN_CASE */
-void SDV_CRYPTO_HSS_Q_BOUNDARY_TC001(Hex *pubKey, Hex *msg, Hex *sig)
-{
-    HssEalBoundaryVerify(pubKey, msg, sig);
-}
-/* END_CASE */
-
-/* BEGIN_CASE */
-void SDV_CRYPTO_HSS_MESSAGE_BOUNDARY_TC001(Hex *pubKey, Hex *msg, Hex *sig)
-{
-    HssEalBoundaryVerify(pubKey, msg, sig);
 }
 /* END_CASE */
 
