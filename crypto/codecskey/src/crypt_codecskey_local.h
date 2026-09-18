@@ -254,6 +254,8 @@ int32_t CRYPT_ENCODE_DsaKeyParamAsn1Buff(BSL_ASN1_Buffer *asn1, uint32_t asn1Num
 #endif
 
 #ifdef HITLS_CRYPTO_DSA
+int32_t CRYPT_DECODE_DsaPubkeyAsn1Buff(uint8_t *buff, uint32_t buffLen, BSL_ASN1_Buffer *pubkey);
+
 int32_t CRYPT_DECODE_DsaPrikeyAsn1Buff(uint8_t *buff, uint32_t buffLen, BSL_ASN1_Buffer *asn1, uint32_t arrNum);
 #endif
 

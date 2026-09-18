@@ -48,6 +48,8 @@ target_include_directories(_hitls_apps
         ${PROJECT_SOURCE_DIR}/pki/pkcs12/include
         ${PROJECT_SOURCE_DIR}/pki/x509_csr/include
         ${PROJECT_SOURCE_DIR}/pki/x509_common/include
+        ${PROJECT_SOURCE_DIR}/pki/x509_verify/include
+        ${PROJECT_SOURCE_DIR}/pki/print/include
         ${PROJECT_SOURCE_DIR}/include/pki
         ${PROJECT_SOURCE_DIR}/include/tls
         ${PROJECT_SOURCE_DIR}/include/crypto

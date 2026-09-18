@@ -21,6 +21,8 @@
 #include <stdint.h>
 #include "bsl_uio.h"
 #include "bsl_list.h"
+#include "bsl_obj.h"
+#include "hitls_pki_x509.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -33,6 +35,10 @@ int32_t HITLS_PKI_GetPrintFlag(void);
 #endif
 
 int32_t HITLS_PKI_PrintDnName(uint32_t layer, BslList *list, bool newLine, BSL_UIO *uio);
+
+#ifdef HITLS_PKI_INFO_CRT
+int32_t HITLS_X509_PrintCertExtension(HITLS_X509_Cert *cert, BslCid extCid, uint32_t layer, BSL_UIO *uio);
+#endif
 
 #ifdef __cplusplus
 }

@@ -1666,9 +1666,15 @@ static int32_t DsaKeyPairCheck(const CRYPT_DSA_Ctx *pub, const CRYPT_DSA_Ctx *pr
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
-    if (prv->para == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_DH_PARA_ERROR);
-        return CRYPT_DH_PARA_ERROR;
+    if (pub->para == NULL || prv->para == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_DSA_PARA_ERROR);
+        return CRYPT_DSA_PARA_ERROR;
+    }
+    if (BN_Cmp(pub->para->p, prv->para->p) != 0 ||
+        BN_Cmp(pub->para->q, prv->para->q) != 0 ||
+        BN_Cmp(pub->para->g, prv->para->g) != 0) {
+        BSL_ERR_PUSH_ERROR(CRYPT_DSA_PARA_NOT_EQUAL);
+        return CRYPT_DSA_PARA_NOT_EQUAL;
     }
     int32_t ret = CRYPT_FFC_KeyPairCheck(prv->x, pub->y, prv->para->p, prv->para->g);
     if (ret == CRYPT_PAIRWISE_CHECK_FAIL) {

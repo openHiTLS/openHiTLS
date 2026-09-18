@@ -380,9 +380,13 @@ ERR:
 static int32_t EccKeyPairCheck(const ECC_Pkey *pub, const ECC_Pkey *prv)
 {
     int32_t ret;
-    if (prv == NULL || pub == NULL || pub->para == NULL) {
+    if (prv == NULL || pub == NULL || pub->para == NULL || prv->para == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
+    }
+    if (pub->para->id != prv->para->id) {
+        BSL_ERR_PUSH_ERROR(CRYPT_ECC_POINT_ERR_CURVE_ID);
+        return CRYPT_ECC_POINT_ERR_CURVE_ID;
     }
     if (pub->pubkey == NULL || prv->prvkey == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_ECC_PKEY_ERR_EMPTY_KEY);

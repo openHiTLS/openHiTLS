@@ -1935,17 +1935,17 @@ EXIT:
 static int32_t PrintBuffTest(int cmd, BSL_Buffer *data, char *log, Hex *expect, bool isExpectFile)
 {
     int32_t ret = -1;
-    uint8_t dnBuf[MAX_BUFF_SIZE] = {};
+    uint8_t dnBuf[MAX_BUFF_SIZE * 2] = {};
     uint32_t dnBufLen = sizeof(dnBuf);
-    uint8_t expectBuf[MAX_BUFF_SIZE] = {};
+    uint8_t expectBuf[MAX_BUFF_SIZE * 2] = {};
     uint32_t expectBufLen = sizeof(expectBuf);
     BSL_UIO *uio = BSL_UIO_New(BSL_UIO_MemMethod());
     ASSERT_NE(uio, NULL);
     ASSERT_EQ(HITLS_PKI_PrintCtrl(cmd, data->data, data->dataLen, uio),
         HITLS_PKI_SUCCESS);
-    ASSERT_EQ(BSL_UIO_Read(uio, dnBuf, MAX_BUFF_SIZE, &dnBufLen), 0);
+    ASSERT_EQ(BSL_UIO_Read(uio, dnBuf, sizeof(dnBuf), &dnBufLen), 0);
     if (isExpectFile) {
-        ASSERT_EQ(ReadFile((char *)expect->x, expectBuf, MAX_BUFF_SIZE, &expectBufLen), 0);
+        ASSERT_EQ(ReadFile((char *)expect->x, expectBuf, sizeof(expectBuf), &expectBufLen), 0);
         ASSERT_COMPARE(log, expectBuf, expectBufLen, dnBuf, dnBufLen - 1); // Ignore line break differences
     } else {
         ASSERT_COMPARE(log, expect->x, expect->len, dnBuf, dnBufLen - 1);  // Ignore line break differences

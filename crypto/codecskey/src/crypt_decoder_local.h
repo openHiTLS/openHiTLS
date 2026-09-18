@@ -30,6 +30,9 @@
 #ifdef HITLS_CRYPTO_SM2
 #include "crypt_sm2.h"
 #endif
+#ifdef HITLS_CRYPTO_DSA
+#include "crypt_dsa.h"
+#endif
 #ifdef HITLS_CRYPTO_ED25519
 #include "crypt_curve25519.h"
 #endif
@@ -65,6 +68,11 @@ int32_t CRYPT_SM2_ParseSubPubkeyAsn1Buff(void *libCtx, uint8_t *buff, uint32_t b
 int32_t CRYPT_SM2_ParsePrikeyAsn1Buff(void *libCtx, uint8_t *buffer, uint32_t bufferLen, BSL_ASN1_Buffer *pk8AlgoParam,
     CRYPT_SM2_Ctx **sm2PriKey);
 int32_t CRYPT_SM2_ParsePkcs8Key(void *libCtx, uint8_t *buff, uint32_t buffLen, CRYPT_SM2_Ctx **sm2PriKey);
+#endif
+
+#ifdef HITLS_CRYPTO_DSA
+int32_t CRYPT_DSA_ParseSubPubkeyAsn1Buff(void *libCtx, uint8_t *buff, uint32_t buffLen, CRYPT_DSA_Ctx **pubKey,
+                                         bool isComplete);
 #endif
 
 #ifdef HITLS_CRYPTO_ED25519

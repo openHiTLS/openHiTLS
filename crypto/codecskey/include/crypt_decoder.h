@@ -70,6 +70,12 @@ int32_t DECODER_Sm2SubPubKeyWithOutSeqDer2KeyDecode(void *ctx, const BSL_Param *
 int32_t DECODER_Sm2Pkcs8Der2KeyDecode(void *ctx, const BSL_Param *inParam, BSL_Param **outParam);
 #endif
 
+#ifdef HITLS_CRYPTO_DSA
+void *DECODER_DsaDer2KeyNewCtx(void *provCtx);
+int32_t DECODER_DsaSubPubKeyDer2KeyDecode(void *ctx, const BSL_Param *inParam, BSL_Param **outParam);
+int32_t DECODER_DsaSubPubKeyWithOutSeqDer2KeyDecode(void *ctx, const BSL_Param *inParam, BSL_Param **outParam);
+#endif
+
 #ifdef HITLS_CRYPTO_ED25519
 void *DECODER_Ed25519Der2KeyNewCtx(void *provCtx);
 int32_t DECODER_Ed25519SubPubKeyDer2KeyDecode(void *ctx, const BSL_Param *inParam, BSL_Param **outParam);

@@ -133,6 +133,88 @@ static int32_t PrintRsaPubkey(uint32_t layer, CRYPT_EAL_PkeyCtx *pkey, BSL_UIO *
 }
 #endif // HITLS_CRYPTO_RSA
 
+#ifdef HITLS_CRYPTO_DSA
+static int32_t GetDsaPubKeyAndPara(const CRYPT_EAL_PkeyCtx *pkey, CRYPT_EAL_PkeyPub *pub, CRYPT_EAL_PkeyPara *para)
+{
+    uint32_t keyLen = CRYPT_EAL_PkeyGetKeyLen(pkey);
+    if (keyLen == 0) {
+        return CRYPT_DECODE_PRINT_NO_KEY;
+    }
+    uint8_t *buff = BSL_SAL_Malloc(keyLen * 4);
+    if (buff == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
+        return CRYPT_MEM_ALLOC_FAIL;
+    }
+
+    pub->id = CRYPT_PKEY_DSA;
+    pub->key.dsaPub.data = buff;
+    pub->key.dsaPub.len = keyLen;
+    para->id = CRYPT_PKEY_DSA;
+    para->para.dsaPara.p = buff + keyLen;
+    para->para.dsaPara.q = buff + keyLen * 2;
+    para->para.dsaPara.g = buff + keyLen * 3;
+    para->para.dsaPara.pLen = keyLen;
+    para->para.dsaPara.qLen = keyLen;
+    para->para.dsaPara.gLen = keyLen;
+
+    int32_t ret = CRYPT_EAL_PkeyGetPub(pkey, pub);
+    if (ret == CRYPT_SUCCESS) {
+        ret = CRYPT_EAL_PkeyGetPara(pkey, para);
+    }
+    if (ret != CRYPT_SUCCESS) {
+        BSL_SAL_Free(buff);
+        pub->key.dsaPub.data = NULL;
+    }
+    return ret;
+}
+
+static int32_t PrintDsaPubkey(uint32_t layer, CRYPT_EAL_PkeyCtx *pkey, BSL_UIO *uio)
+{
+    RETURN_RET_IF(PrintKeyBits(false, false, layer, pkey, uio) != 0, CRYPT_DECODE_PRINT_KEYBITS);
+
+    CRYPT_EAL_PkeyPub pub = {0};
+    CRYPT_EAL_PkeyPara para = {0};
+    int32_t ret = GetDsaPubKeyAndPara(pkey, &pub, &para);
+    if (ret != CRYPT_SUCCESS) {
+        return ret;
+    }
+
+    ret = BSL_PRINT_Fmt(layer, uio, "pub:\n");
+    if (ret != BSL_SUCCESS) {
+        goto EXIT;
+    }
+    ret = BSL_PRINT_Hex(layer + 1, false, pub.key.dsaPub.data, pub.key.dsaPub.len, uio);
+    if (ret != BSL_SUCCESS) {
+        goto EXIT;
+    }
+    ret = BSL_PRINT_Fmt(layer, uio, "P:\n");
+    if (ret != BSL_SUCCESS) {
+        goto EXIT;
+    }
+    ret = BSL_PRINT_Hex(layer + 1, false, para.para.dsaPara.p, para.para.dsaPara.pLen, uio);
+    if (ret != BSL_SUCCESS) {
+        goto EXIT;
+    }
+    ret = BSL_PRINT_Fmt(layer, uio, "Q:\n");
+    if (ret != BSL_SUCCESS) {
+        goto EXIT;
+    }
+    ret = BSL_PRINT_Hex(layer + 1, false, para.para.dsaPara.q, para.para.dsaPara.qLen, uio);
+    if (ret != BSL_SUCCESS) {
+        goto EXIT;
+    }
+    ret = BSL_PRINT_Fmt(layer, uio, "G:\n");
+    if (ret != BSL_SUCCESS) {
+        goto EXIT;
+    }
+    ret = BSL_PRINT_Hex(layer + 1, false, para.para.dsaPara.g, para.para.dsaPara.gLen, uio);
+
+EXIT:
+    BSL_SAL_Free(pub.key.dsaPub.data);
+    return ret;
+}
+#endif
+
 int32_t CRYPT_EAL_PrintPubkey(uint32_t layer, CRYPT_EAL_PkeyCtx *pkey, BSL_UIO *uio)
 {
     if (uio == NULL) {
@@ -144,6 +226,10 @@ int32_t CRYPT_EAL_PrintPubkey(uint32_t layer, CRYPT_EAL_PkeyCtx *pkey, BSL_UIO *
 #ifdef HITLS_CRYPTO_RSA
         case CRYPT_PKEY_RSA:
             return PrintRsaPubkey(layer, pkey, uio);
+#endif
+#ifdef HITLS_CRYPTO_DSA
+        case CRYPT_PKEY_DSA:
+            return PrintDsaPubkey(layer, pkey, uio);
 #endif
 #if defined(HITLS_CRYPTO_ECDSA) || defined(HITLS_CRYPTO_SM2)
         case CRYPT_PKEY_ECDSA:

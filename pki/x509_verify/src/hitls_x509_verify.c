@@ -2236,20 +2236,16 @@ static int32_t X509_VerifyExtKeyUsage(HITLS_X509_Cert *cert, uint16_t requiredKu
     return HITLS_PKI_SUCCESS;
 }
 
-/**
- * RFC 5280 4.2.1.3 (Key Usage) and 4.2.1.12 (Extended Key Usage)
- * The KU/EKU extensions jointly constrain how an end-entity certificate may be used.
- * If both are present, usage must satisfy *both* extensions.  Typical application
- * mappings (serverAuth, clientAuth, emailProtection, codeSigning, OCSPSigning)
- * follow the examples given in RFC 5280 4.2.1.12, Table 1 and text paragraphs.
- */
-static int32_t X509_VerifyUsageEE(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_Cert *ee)
+int32_t HITLS_X509_CheckCertPurpose(HITLS_X509_Cert *cert, int32_t purpose)
 {
+    if (cert == NULL) {
+        BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
+        return HITLS_X509_ERR_INVALID_PARAM;
+    }
+
     uint16_t requiredKu = 0;
     BslCid eku = 0;
-    int32_t purpose = storeCtx->verifyParam.purpose;
-    HITLS_X509_CertExt *ext = (HITLS_X509_CertExt *)ee->tbs.ext.extData;
-    if (ext == NULL || purpose == 0 || purpose == HITLS_X509_VFY_PURPOSE_ANY) {
+    if (purpose == 0 || purpose == HITLS_X509_VFY_PURPOSE_ANY) {
         return HITLS_PKI_SUCCESS;
     }
     switch (purpose) {
@@ -2318,7 +2314,24 @@ static int32_t X509_VerifyUsageEE(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_Cert
     }
 
     // Enforce both KU and EKU consistency as per RFC 5280 4.2.1.(12) final paragraph
-    return X509_VerifyExtKeyUsage(ee, requiredKu, eku);
+    return X509_VerifyExtKeyUsage(cert, requiredKu, eku);
+}
+
+/**
+ * RFC 5280 4.2.1.3 (Key Usage) and 4.2.1.12 (Extended Key Usage)
+ * The KU/EKU extensions jointly constrain how an end-entity certificate may be used.
+ * If both are present, usage must satisfy *both* extensions.  Typical application
+ * mappings (serverAuth, clientAuth, emailProtection, codeSigning, OCSPSigning)
+ * follow the examples given in RFC 5280 4.2.1.12, Table 1 and text paragraphs.
+ */
+static int32_t X509_VerifyUsageEE(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_Cert *ee)
+{
+    int32_t purpose = storeCtx->verifyParam.purpose;
+    HITLS_X509_CertExt *ext = (HITLS_X509_CertExt *)ee->tbs.ext.extData;
+    if (ext == NULL) {
+        return HITLS_PKI_SUCCESS;
+    }
+    return HITLS_X509_CheckCertPurpose(ee, purpose);
 }
 
 int32_t X509_VerifyChainCert(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_List *chain, int64_t *time)

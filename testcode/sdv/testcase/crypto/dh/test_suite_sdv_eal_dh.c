@@ -1731,6 +1731,62 @@ EXIT:
 /* END_CASE */
 
 /**
+ * @test   SDV_CRYPTO_DH_CHECK_KEYPAIR_FUNC_TC003
+ * @brief
+ *   The public and private keys declare different parameter groups, and the pair check fails.
+ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_DH_CHECK_KEYPAIR_FUNC_TC003(int id1, int id2, int isProvider)
+{
+#if !defined(HITLS_CRYPTO_DH_CHECK)
+    (void)id1;
+    (void)id2;
+    (void)isProvider;
+    SKIP_TEST();
+#else
+    TestMemInit();
+    uint8_t pubKey[1030];
+    uint32_t pubKeyLen = sizeof(pubKey);
+    uint8_t prvKey[1030];
+    uint32_t prvKeyLen = sizeof(prvKey);
+    CRYPT_EAL_PkeyPub pub = {0};
+    CRYPT_EAL_PkeyPrv prv = {0};
+    Set_DH_Pub(&pub, pubKey, pubKeyLen);
+    Set_DH_Prv(&prv, prvKey, prvKeyLen);
+
+    CRYPT_EAL_PkeyCtx *pkey = TestPkeyNewCtx(NULL, CRYPT_PKEY_DH,
+        CRYPT_EAL_PKEY_EXCH_OPERATE, "provider=default", isProvider);
+    CRYPT_EAL_PkeyCtx *pubCtx = TestPkeyNewCtx(NULL, CRYPT_PKEY_DH,
+        CRYPT_EAL_PKEY_EXCH_OPERATE, "provider=default", isProvider);
+    CRYPT_EAL_PkeyCtx *prvCtx = TestPkeyNewCtx(NULL, CRYPT_PKEY_DH,
+        CRYPT_EAL_PKEY_EXCH_OPERATE, "provider=default", isProvider);
+    ASSERT_TRUE(pkey != NULL);
+    ASSERT_TRUE(pubCtx != NULL);
+    ASSERT_TRUE(prvCtx != NULL);
+
+    ASSERT_EQ(TestRandInit(), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeySetParaById(pkey, id1), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyGen(pkey), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyGetPub(pkey, &pub), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyGetPrv(pkey, &prv), CRYPT_SUCCESS);
+
+    ASSERT_EQ(CRYPT_EAL_PkeySetParaById(pubCtx, id2), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeySetPub(pubCtx, &pub), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeySetParaById(prvCtx, id1), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeySetPrv(prvCtx, &prv), CRYPT_SUCCESS);
+
+    ASSERT_EQ(CRYPT_EAL_PkeyPairCheck(pubCtx, prvCtx), CRYPT_DH_PARA_NOT_EQUAL);
+
+EXIT:
+    TestRandDeInit();
+    CRYPT_EAL_PkeyFreeCtx(pkey);
+    CRYPT_EAL_PkeyFreeCtx(pubCtx);
+    CRYPT_EAL_PkeyFreeCtx(prvCtx);
+#endif
+}
+/* END_CASE */
+
+/**
  * @test   SDV_CRYPTO_DH_CHECK_KEYPAIR_INVALIED_TC001
  * @brief
  *   Create a dh key pairs to check the key pair consistency.

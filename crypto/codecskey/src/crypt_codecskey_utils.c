@@ -135,6 +135,10 @@ static BSL_ASN1_TemplateItem g_dsaKeyparamTempl[] = {
 #endif
 
 #ifdef HITLS_CRYPTO_DSA
+static BSL_ASN1_TemplateItem g_dsaKeyValueTempl[] = {
+    {BSL_ASN1_TAG_INTEGER, 0, 0}
+};
+
 /**
  * DSAPrivateKey ::= SEQUENCE {
  *     version      INTEGER,
@@ -631,6 +635,28 @@ int32_t CRYPT_ENCODE_DsaKeyParamAsn1Buff(BSL_ASN1_Buffer *asn1, uint32_t asn1Num
 #endif
 
 #ifdef HITLS_CRYPTO_DSA
+int32_t CRYPT_DECODE_DsaPubkeyAsn1Buff(uint8_t *buff, uint32_t buffLen, BSL_ASN1_Buffer *pubkey)
+{
+    if (buff == NULL || pubkey == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return CRYPT_NULL_INPUT;
+    }
+    uint8_t *tmpBuff = buff;
+    uint32_t tmpBuffLen = buffLen;
+    BSL_ASN1_Template templ = {g_dsaKeyValueTempl,
+        sizeof(g_dsaKeyValueTempl) / sizeof(g_dsaKeyValueTempl[0])};
+    int32_t ret = BSL_ASN1_DecodeTemplate(&templ, NULL, &tmpBuff, &tmpBuffLen, pubkey, 1);
+    if (ret != BSL_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        return ret;
+    }
+    if (tmpBuffLen != 0) {
+        BSL_ERR_PUSH_ERROR(CRYPT_DECODE_ASN1_BUFF_FAILED);
+        return CRYPT_DECODE_ASN1_BUFF_FAILED;
+    }
+    return ret;
+}
+
 int32_t CRYPT_DECODE_DsaPrikeyAsn1Buff(uint8_t *buff, uint32_t buffLen, BSL_ASN1_Buffer *asn1, uint32_t arrNum)
 {
     if (buff == NULL || asn1 == NULL) {

@@ -598,6 +598,12 @@ SDV_HITLS_X509_PrintCert_TC001:"../testdata/cert/asn1/print/secp384r1.ee.crt.der
 SDV_HITLS_X509_PrintCert_TC001
 SDV_HITLS_X509_PrintCert_TC001:"../testdata/cert/asn1/print/secp384r1.ee.crt.der":BSL_FORMAT_ASN1:HITLS_PKI_PRINT_DN_RFC2253:0:"../testdata/cert/asn1/print/secp384r1.ee.crt.txt"
 
+SDV_HITLS_X509_PrintCert_TC001 DSA public key certificate
+SDV_HITLS_X509_PrintCert_TC001:"../testdata/cert/asn1/dsa_cert/rsa_signed.crt.pem":BSL_FORMAT_PEM:HITLS_PKI_PRINT_DN_ONELINE:0:"../testdata/cert/asn1/print/dsa.crt.txt"
+
+SDV_HITLS_X509_PrintCert_TC001 DSA public key certificate DER
+SDV_HITLS_X509_PrintCert_TC001:"../testdata/cert/asn1/dsa_cert/rsa_signed.crt.der":BSL_FORMAT_ASN1:HITLS_PKI_PRINT_DN_ONELINE:0:"../testdata/cert/asn1/print/dsa.crt.txt"
+
 SDV_HITLS_MLDSA_PQCCert_TC001-CRYPT_PUBKEY_SUBKEY
 SDV_HITLS_MLDSA_PQCCert_TC001:BSL_FORMAT_ASN1:CRYPT_PUBKEY_SUBKEY:"../testdata/cert/asn1/mldsa_keys/mldsa87_publickey.der":CRYPT_ALGO_MLDSA_PRIV_FORMAT_PRIV_ONLY
 

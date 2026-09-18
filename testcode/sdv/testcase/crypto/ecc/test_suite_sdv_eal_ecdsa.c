@@ -1523,6 +1523,58 @@ EXIT:
 /* END_CASE */
 
 /**
+ * @test   SDV_CRYPTO_ECDSA_CHECK_KEYPAIR_FUNC_TC002
+ * @title  ECDSA CRYPT_EAL_PkeyPairCheck rejects a private key on a different curve.
+ * @brief  Derive the public point with the certificate curve only is insufficient: the same
+ *         scalar set on another curve must not pass the pair check.
+ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_ECDSA_CHECK_KEYPAIR_FUNC_TC002(int isProvider)
+{
+#if !defined(HITLS_CRYPTO_ECDSA_CHECK)
+    (void)isProvider;
+    SKIP_TEST();
+#else
+    TestMemInit();
+    CRYPT_EAL_PkeyPub ecdsaPubKey = {0};
+    CRYPT_EAL_PkeyPrv ecdsaPrvKey = {0};
+
+    KeyData pubKeyVector = {{0}, KEY_MAX_LEN};
+    KeyData prvKeyVector = {{0}, KEY_MAX_LEN};
+    CRYPT_EAL_PkeyCtx *pkey = TestPkeyNewCtx(NULL, CRYPT_PKEY_ECDSA,
+        CRYPT_EAL_PKEY_UNKNOWN_OPERATE, "provider=default", isProvider);
+    CRYPT_EAL_PkeyCtx *pubCtx = TestPkeyNewCtx(NULL, CRYPT_PKEY_ECDSA,
+        CRYPT_EAL_PKEY_UNKNOWN_OPERATE, "provider=default", isProvider);
+    CRYPT_EAL_PkeyCtx *prvCtx = TestPkeyNewCtx(NULL, CRYPT_PKEY_ECDSA,
+        CRYPT_EAL_PKEY_UNKNOWN_OPERATE, "provider=default", isProvider);
+    ASSERT_TRUE(pkey != NULL);
+    ASSERT_TRUE(pubCtx != NULL);
+    ASSERT_TRUE(prvCtx != NULL);
+    ASSERT_EQ(TestRandInit(), CRYPT_SUCCESS);
+
+    Ecc_SetPubKey(&ecdsaPubKey, CRYPT_PKEY_ECDSA, pubKeyVector.data, pubKeyVector.len);
+    Ecc_SetPrvKey(&ecdsaPrvKey, CRYPT_PKEY_ECDSA, prvKeyVector.data, prvKeyVector.len);
+    ASSERT_EQ(CRYPT_EAL_PkeySetParaById(pkey, CRYPT_ECC_NISTP256), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeySetParaById(pubCtx, CRYPT_ECC_NISTP256), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeySetParaById(prvCtx, CRYPT_ECC_NISTP384), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyGen(pkey), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyGetPub(pkey, &ecdsaPubKey), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyGetPrv(pkey, &ecdsaPrvKey), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeySetPub(pubCtx, &ecdsaPubKey), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeySetPrv(prvCtx, &ecdsaPrvKey), CRYPT_SUCCESS);
+
+    ASSERT_EQ(CRYPT_EAL_PkeyPairCheck(pubCtx, prvCtx), CRYPT_ECC_POINT_ERR_CURVE_ID);
+
+EXIT:
+    TestRandDeInit();
+    CRYPT_EAL_PkeyFreeCtx(pkey);
+    CRYPT_EAL_PkeyFreeCtx(pubCtx);
+    CRYPT_EAL_PkeyFreeCtx(prvCtx);
+#endif
+}
+/* END_CASE */
+
+/**
  * @test   SDV_CRYPTO_ECDSA_CHECK_PRVKEY_FUNC_TC001
  * @title  ECDSA CRYPT_EAL_PkeyPrvCheck test.
  */

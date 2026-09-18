@@ -593,6 +593,50 @@ static int32_t PrintUnknownExtName(HITLS_X509_ExtEntry *entry, uint32_t layer, B
     return HITLS_PKI_SUCCESS;
 }
 
+static int32_t PrintExtList(HITLS_X509_Ext *ext, BslCid extCid, uint32_t layer, BSL_UIO *uio, bool printAll)
+{
+    /* Initial ret is also the result when nothing is printed:
+     * printAll with an empty list succeeds; a filtered list without a match reports EXT_NOT_FOUND. */
+    int32_t ret = printAll ? HITLS_PKI_SUCCESS : HITLS_X509_ERR_EXT_NOT_FOUND;
+    const char *extName = NULL;
+#ifdef HITLS_PKI_INFO_DN_CONF
+    int32_t tmpNameFlag = g_nameFlag;
+    g_nameFlag = HITLS_PKI_PRINT_DN_RFC2253; /* The ext content must be printed in one line. Therefore, the format of
+                                                 dirname is RFC2253. */
+#endif
+    for (BslListNode *extNode = BSL_LIST_FirstNode(ext->extList); extNode != NULL;
+        extNode = BSL_LIST_GetNextNode(ext->extList, extNode)) {
+        HITLS_X509_ExtEntry *entry = (HITLS_X509_ExtEntry *)BSL_LIST_GetData(extNode);
+        if (!printAll && entry->cid != extCid) {
+            continue;
+        }
+        extName = BSL_OBJ_GetOidNameFromCID(entry->cid);
+        if (extName == NULL) {
+            ret = PrintUnknownExtName(entry, layer, uio);
+            if (ret != HITLS_PKI_SUCCESS) {
+                goto EXIT;
+            }
+            continue;
+        }
+        if (BSL_PRINT_Fmt(layer, uio, "%s:%s\n", extName, entry->critical ? " critical" : "") != 0) {
+            BSL_ERR_PUSH_ERROR(HITLS_PRINT_ERR_EXT_NAME);
+            ret = HITLS_PRINT_ERR_EXT_NAME;
+            goto EXIT;
+        }
+
+        ret = PrintExt(ext, entry, layer + 1, uio);
+        if (ret != HITLS_PKI_SUCCESS) {
+            BSL_ERR_PUSH_ERROR(ret);
+            goto EXIT;
+        }
+    }
+EXIT:
+#ifdef HITLS_PKI_INFO_DN_CONF
+    g_nameFlag = tmpNameFlag;
+#endif
+    return ret;
+}
+
 static int32_t PrintX509Ext(HITLS_X509_Ext *ext, bool isCertExt, uint32_t layer, BSL_UIO *uio)
 {
     int32_t count = BSL_LIST_COUNT(ext->extList);
@@ -606,42 +650,19 @@ static int32_t PrintX509Ext(HITLS_X509_Ext *ext, bool isCertExt, uint32_t layer,
         }
     }
 
-    const char *extName = NULL;
-    int32_t ret = HITLS_PRINT_ERR_EXT_NAME;
-#ifdef HITLS_PKI_INFO_DN_CONF
-    int32_t tmpNameFlag = g_nameFlag;
-    g_nameFlag = HITLS_PKI_PRINT_DN_RFC2253; /* The ext content must be printed in one line. Therefore, the format of
-                                                 dirname is RFC2253. */
-#endif
-    for (BslListNode *extNode = BSL_LIST_FirstNode(ext->extList); extNode != NULL;
-        extNode = BSL_LIST_GetNextNode(ext->extList, extNode)) {
-        HITLS_X509_ExtEntry *entry = (HITLS_X509_ExtEntry *)BSL_LIST_GetData(extNode);
-        extName = BSL_OBJ_GetOidNameFromCID(entry->cid);
-        if (extName == NULL) {
-            ret = PrintUnknownExtName(entry, layer + 1, uio);
-            if (ret != HITLS_PKI_SUCCESS) {
-                goto EXIT;
-            }
-            continue;
-        }
-        if (BSL_PRINT_Fmt(layer + 1, uio, "%s:%s\n", extName, entry->critical ? " critical" : "") != 0) {
-            BSL_ERR_PUSH_ERROR(HITLS_PRINT_ERR_EXT_NAME);
-            goto EXIT;
-        }
-
-        ret = PrintExt(ext, entry, layer + 1 + 1, uio);
-        if (ret != HITLS_PKI_SUCCESS) {
-            BSL_ERR_PUSH_ERROR(ret);
-            goto EXIT;
-        }
-    }
-    ret = HITLS_PKI_SUCCESS;
-EXIT:
-#ifdef HITLS_PKI_INFO_DN_CONF
-    g_nameFlag = tmpNameFlag;
-#endif
-    return ret;
+    return PrintExtList(ext, 0, layer + 1, uio, true);
 }
+
+#ifdef HITLS_PKI_INFO_CRT
+int32_t HITLS_X509_PrintCertExtension(HITLS_X509_Cert *cert, BslCid extCid, uint32_t layer, BSL_UIO *uio)
+{
+    if (cert == NULL || uio == NULL) {
+        BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
+        return HITLS_X509_ERR_INVALID_PARAM;
+    }
+    return PrintExtList(&cert->tbs.ext, extCid, layer, uio, false);
+}
+#endif
 
 #if defined(HITLS_PKI_INFO_CRT) || defined(HITLS_PKI_INFO_CSR)
 static const char *GetPkeyAlgName(CRYPT_EAL_PkeyCtx *pkey)
@@ -656,6 +677,10 @@ static const char *GetPkeyAlgName(CRYPT_EAL_PkeyCtx *pkey)
                 return HITLS_X509_UNSUPPORT;
             }
             const char *name = BSL_OBJ_GetOidNameFromCID(padType == CRYPT_EMSA_PSS ? BSL_CID_RSASSAPSS : BSL_CID_RSA);
+            return name == NULL ? HITLS_X509_UNSUPPORT : name;
+        }
+        case CRYPT_PKEY_DSA: {
+            const char *name = BSL_OBJ_GetOidNameFromCID(BSL_CID_DSA);
             return name == NULL ? HITLS_X509_UNSUPPORT : name;
         }
         case CRYPT_PKEY_ECDSA:

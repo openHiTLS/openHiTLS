@@ -776,7 +776,7 @@ hitls pkcs12 -in user.p12 -out output.pem -passin pass:test1234 -passout pass:ne
 **Usage**:
 
 ```
-hitls x509 [-help] [-in <file>] [-inform PEM|DER] [-out <file>] [-outform PEM|DER] [-noout] [-req] [-signkey <private key file>] [-CA <CA certificate> -CAkey <CA private key>] [-days <days>] [-set_serial <serial number>] [-md <algorithm>] [-extfile <extension config file>] [-extensions <section name>] [-passin <password source>] [-userid <SM2 user ID>] [-text] [-issuer] [-subject] [-hash] [-fingerprint] [-pubkey] [-nameopt oneline|multiline|rfc2253]
+hitls x509 [-help] [-in <file>] [-inform PEM|DER] [-out <file>] [-outform PEM|DER] [-noout] [-req] [-checkkey <private key file>] [-signkey <private key file>] [-CA <CA certificate> -CAkey <CA private key>] [-days <days>] [-set_serial <serial number>] [-md <algorithm>] [-extfile <extension config file>] [-extensions <section name>] [-copy_extensions none|copyall] [-passin <password source>] [-userid <SM2 user ID>] [-text] [-issuer] [-subject] [-hash] [-fingerprint] [-pubkey] [-nameopt oneline|multiline|rfc2253] [-serial] [-dates] [-startdate] [-enddate] [-purpose] [-ext <names>]
 ```
 
 **Supported Options**:
@@ -788,6 +788,7 @@ hitls x509 [-help] [-in <file>] [-inform PEM|DER] [-out <file>] [-outform PEM|DE
 - `-outform PEM|DER`: Output file format, choose from `PEM` or `DER`, defaults to PEM
 - `-noout`: Do not output certificate encoded data
 - `-req`: Indicates the input is a CSR; sign it and output a certificate
+- `-checkkey <file>`: Check whether the certificate public key and the specified PEM private key form a valid key pair. Success is silent; failure reports an error and stops subsequent output. This option cannot be used with `-req`
 - `-signkey <file>`: Requires `-req` option. Self-signing private key file (PEM format), cannot be used together with `-CA`
 - `-CA <file>`: Requires `-req` option. CA certificate file (PEM format), must be used with `-CAkey`
 - `-CAkey <file>`: Requires `-req` option. CA private key file (PEM format), must be used with `-CA`
@@ -796,15 +797,22 @@ hitls x509 [-help] [-in <file>] [-inform PEM|DER] [-out <file>] [-outform PEM|DE
 - `-md <algorithm>`: Digest algorithm for signing/fingerprint, signing defaults to `sha256`, fingerprint defaults to `sha1`
 - `-extfile <file>`: Requires `-req` option. X.509v3 extension configuration file; must be specified together with `-extensions`, otherwise the command exits with an error
 - `-extensions <section name>`: Requires `-req` option. Section name in the configuration file; must be specified together with `-extfile`, otherwise the command exits with an error
-- `-passin <password source>`: Requires `-req` option. Password source for private key/certificate file, defaults to interactive input
+- `-copy_extensions none|copyall`: Control whether CSR-requested extensions are copied to the issued certificate; defaults to `none`
+- `-passin <password source>`: Password source for a signing or `-checkkey` private key, defaults to interactive input when needed
   - `stdin`: Standard input
   - `pass:<password>`: Read password from command line
   - `file:<file path>`: Read password from file
   - `env:<variable>`: Read password from an environment variable
 - `-userid <ID>`: Requires `-req` option. User ID for SM2 signing
 - `-text`: Print full certificate information in text format
-- `-issuer`: Print issuer DN
-- `-subject`: Print subject DN
+- `-serial`: Print the certificate serial number as `serialNumber: <hex>`, using continuous lowercase hexadecimal without a `0x` prefix
+- `-dates`: Print both the certificate `notBefore` and `notAfter` values. Equivalent to requesting `-startdate` and `-enddate`
+- `-startdate`: Print the certificate validity start time as `notBefore: <time>`
+- `-enddate`: Print the certificate validity end time as `notAfter: <time>`
+- `-purpose`: Print `Yes` or `No` for seven openHiTLS certificate purposes, in order: TLS client, TLS server, Email signing, Email encryption, code signing, OCSP signing, and time stamp signing. The result checks KU/EKU compatibility, not certificate-chain validity or compliance with a code-signing or time-stamping certificate profile. Missing KU/EKU does not restrict a purpose; a `Yes` result alone does not establish that an application will accept the certificate
+- `-ext <names>`: Print selected certificate extensions. Separate multiple names with commas. See "Selective Extension Printing" below for supported names
+- `-issuer`: Print the issuer DN as `issuer: <DN>`; multiline format starts the DN on the next line
+- `-subject`: Print the subject DN as `subject: <DN>`; multiline format starts the DN on the next line
 - `-hash`: Print hash of the subject DN
 - `-fingerprint`: Print certificate fingerprint
 - `-pubkey`: Output the public key from the certificate (PEM format)
@@ -812,6 +820,25 @@ hitls x509 [-help] [-in <file>] [-inform PEM|DER] [-out <file>] [-outform PEM|DE
   - `oneline`: Single-line display
   - `multiline`: Multi-line indented display, one attribute per line
   - `rfc2253`: RFC 2253 format, reverse order display
+
+**Certificate Purpose Output**:
+
+`-purpose` starts with `Certificate purposes:` and prints the eight results in the order listed above. Each result uses `<purpose>: <Yes|No>`, with no space before the colon.
+
+**Selective Extension Printing**:
+
+`-ext` supports the following names:
+
+| Name | Extension |
+| ---- | --------- |
+| `authorityKeyIdentifier` | Authority Key Identifier |
+| `subjectKeyIdentifier` | Subject Key Identifier |
+| `basicConstraints` | Basic Constraints |
+| `keyUsage` | Key Usage |
+| `extendedKeyUsage` | Extended Key Usage |
+| `subjectAltName` | Subject Alternative Name |
+
+Names are case-sensitive and whitespace is not removed. Names in one `-ext` argument are processed in order, and duplicate names print the extension repeatedly. If `-ext` is specified more than once, only its first argument and output position take effect. If none of the selected extensions exists in the certificate, the command prints `No matching extensions in certificate` and succeeds. The option does not modify extensions or restrict `-text` output.
 
 **Supplementary Notes**: The extension file uses INI-style configuration format. Supported extension types include:
 
@@ -863,6 +890,27 @@ hitls x509 -in cert.pem -pubkey -noout
 
 # Print certificate fingerprint (using SHA-256)
 hitls x509 -in cert.pem -fingerprint -md sha256 -noout
+
+# Print both certificate validity dates
+hitls x509 -in cert.pem -dates -noout
+
+# Print the validity start and end dates explicitly
+hitls x509 -in cert.pem -startdate -enddate -noout
+
+# Print the certificate serial number
+hitls x509 -in cert.pem -serial -noout
+
+# Check whether a certificate and private key match
+hitls x509 -in cert.pem -checkkey private_key.pem -noout
+
+# Check against an encrypted private key
+hitls x509 -in cert.pem -checkkey encrypted_key.pem -passin pass:MyPassword123 -noout
+
+# Print openHiTLS certificate-purpose results
+hitls x509 -in cert.pem -purpose -noout
+
+# Print selected extensions
+hitls x509 -in cert.pem -ext basicConstraints,keyUsage,subjectAltName -noout
 
 # Issue a CA certificate with v3 extensions
 hitls x509 -req -in ca.csr -signkey ca_key.pem -days 3650 -extfile ext.cnf -extensions v3_ca -out ca_cert.pem

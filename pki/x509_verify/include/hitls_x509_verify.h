@@ -77,6 +77,8 @@ struct _HITLS_X509_StoreCtx {
 
 int32_t HITLS_X509_VerifyParamAndExt(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_List *chain);
 
+int32_t HITLS_X509_CheckCertPurpose(HITLS_X509_Cert *cert, int32_t purpose);
+
 /*
  * Verify the CRL, which is the default full certificate chain validation.
  * You can configure not to verify or only verify the terminal certificate

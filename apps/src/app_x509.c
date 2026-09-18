@@ -21,6 +21,7 @@
 #include <stddef.h>
 #include <limits.h>
 #include "bsl_list.h"
+#include "bsl_obj_internal.h"
 #include "bsl_print.h"
 #include "bsl_conf_def.h"
 #include "crypt_errno.h"
@@ -28,7 +29,10 @@
 #include "crypt_codecskey.h"
 #include "crypt_eal_codecs.h"
 #include "crypt_eal_md.h"
+#include "crypt_eal_pkey.h"
 #include "hitls_pki_errno.h"
+#include "hitls_x509_verify.h"
+#include "hitls_print_local.h"
 #include "app_errno.h"
 #include "app_print.h"
 #include "app_conf.h"
@@ -67,6 +71,13 @@ typedef enum {
     HITLS_APP_OPT_CA_KEY,
     HITLS_APP_OPT_USERID,
     HITLS_APP_OPT_COPY_EXTENSIONS,
+    HITLS_APP_OPT_DATES,
+    HITLS_APP_OPT_START_DATE,
+    HITLS_APP_OPT_END_DATE,
+    HITLS_APP_OPT_SERIAL,
+    HITLS_APP_OPT_CHECKKEY,
+    HITLS_APP_OPT_PURPOSE,
+    HITLS_APP_OPT_EXT,
 } HITLSOptType;
 
 static const HITLS_CmdOption g_x509Opts[] = {
@@ -81,8 +92,15 @@ static const HITLS_CmdOption g_x509Opts[] = {
     /* Print opts */
     {"nameopt", HITLS_APP_OPT_NAMEOPT, HITLS_APP_OPT_VALUETYPE_STRING,
         "Cert name options: oneline|multiline|rfc2253 - def oneline"},
+    {"serial", HITLS_APP_OPT_SERIAL, HITLS_APP_OPT_VALUETYPE_NO_VALUE, "Print certificate serial number"},
     {"issuer", HITLS_APP_OPT_ISSUER, HITLS_APP_OPT_VALUETYPE_NO_VALUE, "Print issuer DN"},
     {"subject", HITLS_APP_OPT_SUBJECT, HITLS_APP_OPT_VALUETYPE_NO_VALUE, "Print subject DN"},
+    {"dates", HITLS_APP_OPT_DATES, HITLS_APP_OPT_VALUETYPE_NO_VALUE, "Print both notBefore and notAfter"},
+    {"startdate", HITLS_APP_OPT_START_DATE, HITLS_APP_OPT_VALUETYPE_NO_VALUE, "Print notBefore field"},
+    {"enddate", HITLS_APP_OPT_END_DATE, HITLS_APP_OPT_VALUETYPE_NO_VALUE, "Print notAfter field"},
+    {"purpose", HITLS_APP_OPT_PURPOSE, HITLS_APP_OPT_VALUETYPE_NO_VALUE,
+        "Print seven openHiTLS certificate purposes"},
+    {"ext", HITLS_APP_OPT_EXT, HITLS_APP_OPT_VALUETYPE_STRING, "Print selected extensions"},
     {"hash", HITLS_APP_OPT_SUBJECT_HASH, HITLS_APP_OPT_VALUETYPE_NO_VALUE, "Print subject DN hash"},
     {"fingerprint", HITLS_APP_OPT_FINGERPRINT, HITLS_APP_OPT_VALUETYPE_NO_VALUE, "Print fingerprint"},
     {"pubkey", HITLS_APP_OPT_PUBKEY, HITLS_APP_OPT_VALUETYPE_NO_VALUE, "Output the pubkey"},
@@ -94,9 +112,11 @@ static const HITLS_CmdOption g_x509Opts[] = {
     {"extfile", HITLS_APP_OPT_EXT_FILE, HITLS_APP_OPT_VALUETYPE_IN_FILE, "File with x509v3 extension to add"},
     {"extensions", HITLS_APP_OPT_EXT_SECTION, HITLS_APP_OPT_VALUETYPE_STRING, "Section from config file to use"},
     {"md", HITLS_APP_OPT_MD_ALG, HITLS_APP_OPT_VALUETYPE_STRING, "Any supported digest algorithm."},
+    {"checkkey", HITLS_APP_OPT_CHECKKEY, HITLS_APP_OPT_VALUETYPE_IN_FILE,
+        "Check certificate public key against private key"},
     {"signkey", HITLS_APP_OPT_SIGN_KEY, HITLS_APP_OPT_VALUETYPE_IN_FILE,
         "Privkey file for self sign cert, must be PEM format"},
-    {"passin", HITLS_APP_OPT_PASSIN, HITLS_APP_OPT_VALUETYPE_STRING, "Private key and cert file pass-phrase source"},
+    {"passin", HITLS_APP_OPT_PASSIN, HITLS_APP_OPT_VALUETYPE_STRING, "Private key pass-phrase source"},
     {"CA", HITLS_APP_OPT_CA, HITLS_APP_OPT_VALUETYPE_IN_FILE, "CA certificate, must be PEM format"},
     {"CAkey", HITLS_APP_OPT_CA_KEY, HITLS_APP_OPT_VALUETYPE_IN_FILE, "CA key, must be PEM format"},
     {"userid", HITLS_APP_OPT_USERID, HITLS_APP_OPT_VALUETYPE_STRING, "User ID for SM2"},
@@ -119,11 +139,11 @@ typedef struct {
     int32_t nameOpt;
     bool issuer;
     bool subject;
-    bool subjectHash;
     bool text;
     int32_t mdId;
-    bool fingerprint;
     bool pubKey;
+    const char *checkKeyPath;
+    const char *extNames;
 } X509PrintOpts;
 
 typedef struct {
@@ -151,6 +171,7 @@ typedef struct {
     HITLS_X509_Csr *csr;
     HITLS_X509_Ext *certExt;
     CRYPT_EAL_PkeyCtx *privKey;
+    CRYPT_EAL_PkeyCtx *checkKey;
     char *passin; // pass of privkey
     BSL_Buffer encodeCert;
     char *userId;
@@ -178,15 +199,20 @@ typedef struct {
 typedef int32_t (*PrintX509Func)(const X509OptCtx *);
 
 /**
- * 6 types of data printing:
+ * 11 types of data printing:
  *    1. issuer
  *    2. subject
  *    3. hash
  *    4. fingerprint
  *    5. pubKey
  *    6. cert
+ *    7. notBefore
+ *    8. notAfter
+ *    9. serial number
+ *   10. purpose
+ *   11. extensions
  */
-PrintX509Func g_printX509FuncList[] = {NULL, NULL, NULL, NULL, NULL, NULL};
+PrintX509Func g_printX509FuncList[11] = {NULL};
 
 #define PRINT_X509_FUNC_LIST_CNT (sizeof(g_printX509FuncList) / sizeof(PrintX509Func))
 
@@ -229,9 +255,9 @@ static int32_t PrintIssuer(const X509OptCtx *optCtx)
         AppPrintError("x509: Get issuer name failed, errCode=%d.\n", ret);
         return HITLS_APP_X509_FAIL;
     }
-    ret = BSL_PRINT_Fmt(0, optCtx->outUio,
-                        optCtx->printOpts.nameOpt == HITLS_PKI_PRINT_DN_MULTILINE ? "Issuer=\n" : "Issuer=");
-    if (ret != 0) {
+    ret = AppPrint(optCtx->outUio,
+        optCtx->printOpts.nameOpt == HITLS_PKI_PRINT_DN_MULTILINE ? "issuer:\n" : "issuer: ");
+    if (ret != HITLS_APP_SUCCESS) {
         AppPrintError("x509: Print issuer name failed, errCode=%d.\n", ret);
         return HITLS_APP_BSL_FAIL;
     }
@@ -251,9 +277,9 @@ static int32_t PrintSubject(const X509OptCtx *optCtx)
         AppPrintError("x509: Get subject name failed, errCode=%d.\n", ret);
         return HITLS_APP_X509_FAIL;
     }
-    ret = BSL_PRINT_Fmt(0, optCtx->outUio,
-                        optCtx->printOpts.nameOpt == HITLS_PKI_PRINT_DN_MULTILINE ? "Subject=\n" : "Subject=");
-    if (ret != 0) {
+    ret = AppPrint(optCtx->outUio,
+        optCtx->printOpts.nameOpt == HITLS_PKI_PRINT_DN_MULTILINE ? "subject:\n" : "subject: ");
+    if (ret != HITLS_APP_SUCCESS) {
         AppPrintError("x509: Print subject name failed, errCode=%d.\n", ret);
         return HITLS_APP_BSL_FAIL;
     }
@@ -295,9 +321,9 @@ static int32_t PrintFingerPrint(const X509OptCtx *optCtx)
         AppPrintError("x509: Get cert digest failed, errCode=%d.\n", ret);
         return HITLS_APP_X509_FAIL;
     }
-    ret = BSL_PRINT_Fmt(0, optCtx->outUio, "%s Fingerprint=",
-                        HITLS_APP_GetNameByCid(optCtx->printOpts.mdId, HITLS_APP_LIST_OPT_DGST_ALG));
-    if (ret != 0) {
+    ret = AppPrint(optCtx->outUio, "%s Fingerprint=",
+        HITLS_APP_GetNameByCid(optCtx->printOpts.mdId, HITLS_APP_LIST_OPT_DGST_ALG));
+    if (ret != HITLS_APP_SUCCESS) {
         AppPrintError("x509: Print fingerprint failed, errCode=%d.\n", ret);
         return HITLS_APP_BSL_FAIL;
     }
@@ -315,6 +341,173 @@ static int32_t PrintCert(const X509OptCtx *optCtx)
     if (ret != 0) {
         AppPrintError("x509: Print cert failed, errCode=%d.\n", ret);
         return HITLS_APP_X509_FAIL;
+    }
+    return HITLS_APP_SUCCESS;
+}
+
+static int32_t PrintValidityTime(const X509OptCtx *optCtx, int32_t cmd, const char *title)
+{
+    BSL_Buffer timeStr = {0};
+    int32_t ret = HITLS_X509_CertCtrl(optCtx->cert, cmd, &timeStr, sizeof(timeStr));
+    if (ret != HITLS_PKI_SUCCESS) {
+        BSL_SAL_FREE(timeStr.data);
+        AppPrintError("x509: Get certificate validity time failed, errCode=%d.\n", ret);
+        return HITLS_APP_X509_FAIL;
+    }
+
+    ret = AppPrint(optCtx->outUio, "%s%.*s\n", title, (int)timeStr.dataLen, (char *)timeStr.data);
+    BSL_SAL_FREE(timeStr.data);
+    if (ret != HITLS_APP_SUCCESS) {
+        AppPrintError("x509: Print certificate validity time failed, errCode=%d.\n", ret);
+        return HITLS_APP_BSL_FAIL;
+    }
+    return HITLS_APP_SUCCESS;
+}
+
+static int32_t PrintStartDate(const X509OptCtx *optCtx)
+{
+    return PrintValidityTime(optCtx, HITLS_X509_GET_BEFORE_TIME_STR, "notBefore: ");
+}
+
+static int32_t PrintEndDate(const X509OptCtx *optCtx)
+{
+    return PrintValidityTime(optCtx, HITLS_X509_GET_AFTER_TIME_STR, "notAfter: ");
+}
+
+static int32_t PrintSerial(const X509OptCtx *optCtx)
+{
+    BSL_Buffer serial = {0};
+    int32_t ret = HITLS_X509_CertCtrl(optCtx->cert, HITLS_X509_GET_SERIALNUM, &serial, sizeof(serial));
+    if (ret != HITLS_PKI_SUCCESS || serial.data == NULL || serial.dataLen == 0) {
+        AppPrintError("x509: Get certificate serial number failed, errCode=%d.\n", ret);
+        return HITLS_APP_X509_FAIL;
+    }
+
+    while (serial.dataLen > 1 && serial.data[0] == 0) {
+        serial.data++;
+        serial.dataLen--;
+    }
+    size_t hexLen = (size_t)serial.dataLen * 2 + 1;
+    char *hex = BSL_SAL_Malloc(hexLen);
+    if (hex == NULL) {
+        return HITLS_APP_MEM_ALLOC_FAIL;
+    }
+    ret = HITLS_APP_BytesToHex(serial.data, serial.dataLen, hex, (uint32_t)hexLen);
+    if (ret == HITLS_APP_SUCCESS &&
+        (AppPrint(optCtx->outUio, "serialNumber: ") != HITLS_APP_SUCCESS ||
+        BSL_PRINT_Buff(0, optCtx->outUio, hex, (uint32_t)hexLen - 1) != BSL_SUCCESS ||
+        AppPrint(optCtx->outUio, "\n") != HITLS_APP_SUCCESS)) {
+        AppPrintError("x509: Print serial number failed.\n");
+        ret = HITLS_APP_BSL_FAIL;
+    }
+    BSL_SAL_FREE(hex);
+    return ret;
+}
+
+static int32_t CheckPrivateKeyPair(const X509OptCtx *optCtx)
+{
+    CRYPT_EAL_PkeyCtx *pubKey = NULL;
+    int32_t ret = HITLS_X509_CertCtrl(optCtx->cert, HITLS_X509_GET_PUBKEY, &pubKey, sizeof(CRYPT_EAL_PkeyCtx *));
+    if (ret != HITLS_PKI_SUCCESS || pubKey == NULL) {
+        AppPrintError("x509: Get certificate public key failed, errCode = %d.\n", ret);
+        CRYPT_EAL_PkeyFreeCtx(pubKey);
+        return HITLS_APP_X509_FAIL;
+    }
+
+    ret = CRYPT_EAL_PkeyPairCheck(pubKey, optCtx->checkKey);
+    CRYPT_EAL_PkeyFreeCtx(pubKey);
+    if (ret != CRYPT_SUCCESS) {
+        AppPrintError("x509: Certificate and private key pair check failed, errCode = %d.\n", ret);
+        return HITLS_APP_X509_FAIL;
+    }
+    return HITLS_APP_SUCCESS;
+}
+
+typedef struct {
+    const char *name;
+    int32_t purpose;
+} X509PurposeItem;
+
+static const X509PurposeItem g_purposeItems[] = {
+    {"TLS client", HITLS_X509_VFY_PURPOSE_TLS_CLIENT},
+    {"TLS server", HITLS_X509_VFY_PURPOSE_TLS_SERVER},
+    {"Email signing", HITLS_X509_VFY_PURPOSE_EMAIL_SIGN},
+    {"Email encryption", HITLS_X509_VFY_PURPOSE_EMAIL_ENCRYPT},
+    {"Code signing", HITLS_X509_VFY_PURPOSE_CODE_SIGN},
+    {"OCSP signing", HITLS_X509_VFY_PURPOSE_OCSP_SIGN},
+    {"Time Stamp signing", HITLS_X509_VFY_PURPOSE_TIMESTAMPING},
+};
+
+static int32_t PrintPurpose(const X509OptCtx *optCtx)
+{
+    bool matches[sizeof(g_purposeItems) / sizeof(g_purposeItems[0])] = {false};
+    for (size_t i = 0; i < sizeof(g_purposeItems) / sizeof(g_purposeItems[0]); i++) {
+        int32_t ret = HITLS_X509_CheckCertPurpose(optCtx->cert, g_purposeItems[i].purpose);
+        if (ret == HITLS_PKI_SUCCESS) {
+            matches[i] = true;
+        } else if (ret != HITLS_X509_ERR_VFY_PURPOSE_UNMATCH) {
+            AppPrintError("x509: Check certificate purpose failed, errCode=%d.\n", ret);
+            return HITLS_APP_X509_FAIL;
+        }
+    }
+    if (AppPrint(optCtx->outUio, "Certificate purposes:\n") != HITLS_APP_SUCCESS) {
+        return HITLS_APP_BSL_FAIL;
+    }
+    for (size_t i = 0; i < sizeof(g_purposeItems) / sizeof(g_purposeItems[0]); i++) {
+        if (AppPrint(optCtx->outUio, "%s: %s\n", g_purposeItems[i].name, matches[i] ? "Yes" : "No") !=
+            HITLS_APP_SUCCESS) {
+            return HITLS_APP_BSL_FAIL;
+        }
+    }
+    return HITLS_APP_SUCCESS;
+}
+
+static bool MatchExtensionName(const char *name, size_t nameLen, BslCid *cid)
+{
+    static const struct {
+        BslCid cid;
+        const char *name;
+    } extMap[] = {
+        {BSL_CID_CE_AUTHORITYKEYIDENTIFIER, HITLS_CFG_X509_EXT_AKI},
+        {BSL_CID_CE_SUBJECTKEYIDENTIFIER, HITLS_CFG_X509_EXT_SKI},
+        {BSL_CID_CE_BASICCONSTRAINTS, HITLS_CFG_X509_EXT_BCONS},
+        {BSL_CID_CE_KEYUSAGE, HITLS_CFG_X509_EXT_KU},
+        {BSL_CID_CE_EXTKEYUSAGE, HITLS_CFG_X509_EXT_EXKU},
+        {BSL_CID_CE_SUBJECTALTNAME, HITLS_CFG_X509_EXT_SAN},
+    };
+    for (size_t i = 0; i < sizeof(extMap) / sizeof(extMap[0]); i++) {
+        if (strlen(extMap[i].name) == nameLen && memcmp(extMap[i].name, name, nameLen) == 0) {
+            *cid = extMap[i].cid;
+            return true;
+        }
+    }
+    return false;
+}
+
+static int32_t PrintExtensions(const X509OptCtx *optCtx)
+{
+    bool matched = false;
+    const char *start = optCtx->printOpts.extNames;
+    for (;;) {
+        const char *end = strchr(start, ',');
+        size_t nameLen = end == NULL ? strlen(start) : (size_t)(end - start);
+        BslCid cid;
+        if (nameLen != 0 && MatchExtensionName(start, nameLen, &cid)) {
+            int32_t ret = HITLS_X509_PrintCertExtension(optCtx->cert, cid, 0, optCtx->outUio);
+            if (ret == HITLS_PKI_SUCCESS) {
+                matched = true;
+            } else if (ret != HITLS_X509_ERR_EXT_NOT_FOUND) {
+                AppPrintError("x509: Print certificate extension failed, errCode=%d.\n", ret);
+                return HITLS_APP_X509_FAIL;
+            }
+        }
+        if (end == NULL) {
+            break;
+        }
+        start = end + 1;
+    }
+    if (!matched && AppPrint(optCtx->outUio, "No matching extensions in certificate\n") != HITLS_APP_SUCCESS) {
+        return HITLS_APP_BSL_FAIL;
     }
     return HITLS_APP_SUCCESS;
 }
@@ -432,6 +625,62 @@ static int32_t X509OptText(X509OptCtx *optCtx)
     return HITLS_APP_SUCCESS;
 }
 
+static int32_t X509OptDates(X509OptCtx *optCtx)
+{
+    (void)optCtx;
+    AppPushPrintX509Func(PrintStartDate);
+    AppPushPrintX509Func(PrintEndDate);
+    return HITLS_APP_SUCCESS;
+}
+
+static int32_t X509OptStartDate(X509OptCtx *optCtx)
+{
+    (void)optCtx;
+    AppPushPrintX509Func(PrintStartDate);
+    return HITLS_APP_SUCCESS;
+}
+
+static int32_t X509OptEndDate(X509OptCtx *optCtx)
+{
+    (void)optCtx;
+    AppPushPrintX509Func(PrintEndDate);
+    return HITLS_APP_SUCCESS;
+}
+
+static int32_t X509OptSerial(X509OptCtx *optCtx)
+{
+    (void)optCtx;
+    AppPushPrintX509Func(PrintSerial);
+    return HITLS_APP_SUCCESS;
+}
+
+static int32_t X509OptCheckKey(X509OptCtx *optCtx)
+{
+    if (optCtx->printOpts.checkKeyPath != NULL) {
+        return HITLS_APP_SUCCESS;
+    }
+    optCtx->printOpts.checkKeyPath = HITLS_APP_OptGetValueStr();
+    return HITLS_APP_SUCCESS;
+}
+
+static int32_t X509OptPurpose(X509OptCtx *optCtx)
+{
+    (void)optCtx;
+    AppPushPrintX509Func(PrintPurpose);
+    return HITLS_APP_SUCCESS;
+}
+
+
+static int32_t X509OptExt(X509OptCtx *optCtx)
+{
+    if (optCtx->printOpts.extNames != NULL) {
+        return HITLS_APP_SUCCESS;
+    }
+    optCtx->printOpts.extNames = HITLS_APP_OptGetValueStr();
+    AppPushPrintX509Func(PrintExtensions);
+    return HITLS_APP_SUCCESS;
+}
+
 static int32_t X509OptPubkey(X509OptCtx *optCtx)
 {
     (void)optCtx;
@@ -543,6 +792,13 @@ static const X509OptHandleFuncMap g_x509OptHandleFuncMap[] = {
     {HITLS_APP_OPT_FINGERPRINT, X509OptFingerprint},
     {HITLS_APP_OPT_PUBKEY, X509OptPubkey},
     {HITLS_APP_OPT_TEXT, X509OptText},
+    {HITLS_APP_OPT_DATES, X509OptDates},
+    {HITLS_APP_OPT_START_DATE, X509OptStartDate},
+    {HITLS_APP_OPT_END_DATE, X509OptEndDate},
+    {HITLS_APP_OPT_SERIAL, X509OptSerial},
+    {HITLS_APP_OPT_CHECKKEY, X509OptCheckKey},
+    {HITLS_APP_OPT_PURPOSE, X509OptPurpose},
+    {HITLS_APP_OPT_EXT, X509OptExt},
     {HITLS_APP_OPT_MD_ALG, X509OptMdId},
     {HITLS_APP_OPT_DAYS, X509OptDays},
     {HITLS_APP_OPT_SET_SERIAL, X509OptSetSerial},
@@ -1163,6 +1419,19 @@ static int32_t LoadCert(X509OptCtx *optCtx)
     return HITLS_APP_SUCCESS;
 }
 
+static int32_t LoadCheckKey(X509OptCtx *optCtx)
+{
+    if (HITLS_APP_ParsePasswd(optCtx->generalOpts.passInArg, 0, &optCtx->passin) != HITLS_APP_SUCCESS) {
+        return HITLS_APP_PASSWD_FAIL;
+    }
+    optCtx->checkKey = HITLS_APP_LoadPrvKey(optCtx->printOpts.checkKeyPath, BSL_FORMAT_PEM, &optCtx->passin);
+    if (optCtx->checkKey == NULL) {
+        AppPrintError("x509: Load private key for pair check failed.\n");
+        return HITLS_APP_LOAD_KEY_FAIL;
+    }
+    return HITLS_APP_SUCCESS;
+}
+
 static int32_t OutputPubkey(X509OptCtx *optCtx)
 {
     if (!optCtx->printOpts.pubKey) {
@@ -1266,6 +1535,10 @@ static bool CheckGenCertOpt(X509OptCtx *optCtx)
 static bool CheckOpt(X509OptCtx *optCtx)
 {
     if (optCtx->generalOpts.req) {  // new cert
+        if (optCtx->printOpts.checkKeyPath != NULL) {
+            AppPrintError("x509: Cannot use -checkkey with -req.\n");
+            return false;
+        }
         return CheckGenCertOpt(optCtx);
     } else {
         if (optCtx->certOpts.signKeyPath != NULL || optCtx->certOpts.caKeyPath != NULL ||
@@ -1331,6 +1604,8 @@ static void UnInitX509OptCtx(X509OptCtx *optCtx)
     optCtx->csr = NULL;
     CRYPT_EAL_PkeyFreeCtx(optCtx->privKey);
     optCtx->privKey = NULL;
+    CRYPT_EAL_PkeyFreeCtx(optCtx->checkKey);
+    optCtx->checkKey = NULL;
     BSL_SAL_FREE(optCtx->certOpts.serial);
     BSL_SAL_FREE(optCtx->encodeCert.data);
     if (optCtx->passin != NULL) {
@@ -1361,6 +1636,17 @@ int32_t HITLS_X509Main(int argc, char *argv[])
             ret = GenCert(&optCtx);
         } else {
             ret = LoadCert(&optCtx);
+            if (ret == HITLS_APP_SUCCESS && optCtx.printOpts.checkKeyPath != NULL) {
+                if (CRYPT_EAL_ProviderRandInitCtx(NULL, CRYPT_RAND_AES128_CTR,
+                    "provider=default", NULL, 0, NULL) != CRYPT_SUCCESS) {
+                    ret = HITLS_APP_CRYPTO_FAIL;
+                    break;
+                }
+                ret = LoadCheckKey(&optCtx);
+                if (ret == HITLS_APP_SUCCESS) {
+                    ret = CheckPrivateKeyPair(&optCtx);
+                }
+            }
         }
         if (ret != HITLS_APP_SUCCESS) {
             break;

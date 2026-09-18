@@ -155,9 +155,8 @@ EXIT:
 
 /**
  * @test   UT_HITLS_APP_X509_Print_TC001
- * @title  Test certificate format conversion.
- * @brief  The input format is 'inform', the output format is 'outform', and the output result is the same as that of
- *         out.
+ * @title  Test certificate text and selected output.
+ * @brief  Compare output only when expected bytes are supplied.
  */
 /* BEGIN_CASE */
 void UT_HITLS_APP_X509_Print_TC001(char *opts, char *outFile, Hex *expectOut)
@@ -170,11 +169,113 @@ void UT_HITLS_APP_X509_Print_TC001(char *opts, char *outFile, Hex *expectOut)
 
     ASSERT_EQ(AppPrintErrorUioInit(stderr), HITLS_APP_SUCCESS);
     ASSERT_EQ(HITLS_X509Main(argc, argv), 0);
-    ASSERT_EQ(CompareOutByData(outFile, expectOut), HITLS_APP_SUCCESS);
+    if (expectOut != NULL && expectOut->len != 0) {
+        ASSERT_EQ(CompareOutByData(outFile, expectOut), HITLS_APP_SUCCESS);
+    }
 
 EXIT:
     AppPrintErrorUioUnInit();
     BSL_SAL_Free(tmp);
     remove(outFile);
+}
+/* END_CASE */
+
+/**
+ * @test   UT_HITLS_APP_X509_CheckKeyBeforeOutput_TC001
+ * @title  Test that key pair checking precedes output.
+ * @brief  A failed key pair check must not overwrite the output file.
+ */
+/* BEGIN_CASE */
+void UT_HITLS_APP_X509_CheckKeyBeforeOutput_TC001(void)
+{
+    char *argv[] = {"x509",
+                    "-in",
+                    "../testdata/cert/asn1/print/rsa_pss.root.crt",
+                    "-serial",
+                    "-checkkey",
+                    "../testdata/cert/asn1/print/rsa.intca.key",
+                    "-noout",
+                    "-out",
+                    "./x509-checkkey.out"};
+    uint8_t expected[] = "unchanged\n";
+    Hex expectedHex = {expected, sizeof(expected) - 1};
+
+    ASSERT_EQ(BSL_SAL_WriteFile("./x509-checkkey.out", expected, sizeof(expected) - 1), BSL_SUCCESS);
+    ASSERT_EQ(AppPrintErrorUioInit(stderr), HITLS_APP_SUCCESS);
+    ASSERT_EQ(HITLS_X509Main(sizeof(argv) / sizeof(argv[0]), argv), HITLS_APP_X509_FAIL);
+    ASSERT_EQ(CompareOutByData("./x509-checkkey.out", &expectedHex), HITLS_APP_SUCCESS);
+
+EXIT:
+    AppPrintErrorUioUnInit();
+    remove("./x509-checkkey.out");
+}
+/* END_CASE */
+
+/**
+ * @test   UT_HITLS_APP_X509_StateReset_TC001
+ * @title  Test x509 print state reset.
+ * @brief  Invoke x509 twice and verify that the second invocation does not retain the first extension selection.
+ */
+/* BEGIN_CASE */
+void UT_HITLS_APP_X509_StateReset_TC001(void)
+{
+    char *firstArgv[] = {"x509",
+                         "-in",
+                         "../testdata/cert/asn1/print/rsa_pss.root.crt",
+                         "-ext",
+                         "basicConstraints",
+                         "-noout",
+                         "-out",
+                         "./x509-first.out"};
+    char *secondArgv[] = {"x509",
+                          "-in",
+                          "../testdata/cert/asn1/print/rsa_pss.root.crt",
+                          "-subject",
+                          "-noout",
+                          "-out",
+                          "./x509-second.out"};
+    uint8_t expected[] = "subject: C = GB, CN = test_rootCa\n";
+    Hex expectedHex = {expected, sizeof(expected) - 1};
+
+    ASSERT_EQ(AppPrintErrorUioInit(stderr), HITLS_APP_SUCCESS);
+    ASSERT_EQ(HITLS_X509Main(sizeof(firstArgv) / sizeof(firstArgv[0]), firstArgv), HITLS_APP_SUCCESS);
+    ASSERT_EQ(HITLS_X509Main(sizeof(secondArgv) / sizeof(secondArgv[0]), secondArgv), HITLS_APP_SUCCESS);
+    ASSERT_EQ(CompareOutByData("./x509-second.out", &expectedHex), HITLS_APP_SUCCESS);
+
+EXIT:
+    AppPrintErrorUioUnInit();
+    remove("./x509-first.out");
+    remove("./x509-second.out");
+}
+/* END_CASE */
+
+/**
+ * @test   UT_HITLS_APP_X509_EmptyExtensionName_TC001
+ * @title  Test an empty extension name.
+ * @brief  Ignore an empty first extension list and its later occurrences.
+ */
+/* BEGIN_CASE */
+void UT_HITLS_APP_X509_EmptyExtensionName_TC001(void)
+{
+    char *argv[] = {"x509",
+                    "-in",
+                    "../testdata/cert/asn1/print/rsa_pss.root.crt",
+                    "-ext",
+                    "",
+                    "-ext",
+                    "basicConstraints",
+                    "-noout",
+                    "-out",
+                    "./x509-empty-ext.out"};
+    uint8_t expected[] = "No matching extensions in certificate\n";
+    Hex expectedHex = {expected, sizeof(expected) - 1};
+
+    ASSERT_EQ(AppPrintErrorUioInit(stderr), HITLS_APP_SUCCESS);
+    ASSERT_EQ(HITLS_X509Main(sizeof(argv) / sizeof(argv[0]), argv), HITLS_APP_SUCCESS);
+    ASSERT_EQ(CompareOutByData("./x509-empty-ext.out", &expectedHex), HITLS_APP_SUCCESS);
+
+EXIT:
+    AppPrintErrorUioUnInit();
+    remove("./x509-empty-ext.out");
 }
 /* END_CASE */

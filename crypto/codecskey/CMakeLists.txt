@@ -22,6 +22,7 @@ if(HITLS_CRYPTO_KEY_DECODE_CHAIN)
     list(APPEND _codecskey_sources
         ${CMAKE_CURRENT_SOURCE_DIR}/src/crypt_decoder_composite.c
         ${CMAKE_CURRENT_SOURCE_DIR}/src/crypt_decoder_der2key.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/crypt_decoder_dsa.c
         ${CMAKE_CURRENT_SOURCE_DIR}/src/crypt_decoder_ecc.c
         ${CMAKE_CURRENT_SOURCE_DIR}/src/crypt_decoder_epki2pki.c
         ${CMAKE_CURRENT_SOURCE_DIR}/src/crypt_decoder_lowkey2pkey.c
@@ -48,6 +49,7 @@ target_include_directories(_hitls_crypto_codecskey
         ${PROJECT_SOURCE_DIR}/crypto/eal/include
         ${PROJECT_SOURCE_DIR}/crypto/eal/src
         ${PROJECT_SOURCE_DIR}/crypto/ecc/include
+        ${PROJECT_SOURCE_DIR}/crypto/dsa/include
         ${PROJECT_SOURCE_DIR}/crypto/rsa/include
         ${PROJECT_SOURCE_DIR}/crypto/ecdsa/include
         ${PROJECT_SOURCE_DIR}/crypto/composite/include

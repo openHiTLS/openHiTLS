@@ -406,6 +406,12 @@ SDV_X509_CERT_PARSE_FUNC_TC001:BSL_FORMAT_PEM:"../testdata/cert/asn1/mlkem_keys/
 SDV_X509_CERT_PARSE_FUNC_TC001 parse slh-dsa cert pem
 SDV_X509_CERT_PARSE_FUNC_TC001:BSL_FORMAT_PEM:"../testdata/cert/asn1/slhdsa_keys/slhdsa_sha2_128s_cert.pem"
 
+SDV_X509_CERT_PARSE_FUNC_TC001 parse dsa cert pem
+SDV_X509_CERT_PARSE_FUNC_TC001:BSL_FORMAT_PEM:"../testdata/cert/asn1/dsa_cert/rsa_signed.crt.pem"
+
+SDV_X509_CERT_PARSE_FUNC_TC001 parse dsa cert der
+SDV_X509_CERT_PARSE_FUNC_TC001:BSL_FORMAT_ASN1:"../testdata/cert/asn1/dsa_cert/rsa_signed.crt.der"
+
 SDV_X509_CERT_PARSE_FUNC_TC001 parse slh-dsa-sha2-128s CA cert PEM
 SDV_X509_CERT_PARSE_FUNC_TC001:BSL_FORMAT_PEM:"../testdata/cert/asn1/slhdsa_cert/sha2_128s/ca.pem"
 SDV_X509_CERT_PARSE_FUNC_TC001 parse slh-dsa-sha2-128s CA cert DER

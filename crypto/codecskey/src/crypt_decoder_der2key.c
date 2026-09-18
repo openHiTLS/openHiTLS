@@ -33,6 +33,9 @@
 #ifdef HITLS_CRYPTO_SM2
 #include "crypt_sm2.h"
 #endif
+#ifdef HITLS_CRYPTO_DSA
+#include "crypt_dsa.h"
+#endif
 #if defined(HITLS_CRYPTO_ED25519) || defined(HITLS_CRYPTO_X25519)
 #include "crypt_curve25519.h"
 #endif
@@ -59,9 +62,9 @@
 #include "crypt_decoder.h"
 #define PKEY_MAX_PARAM_NUM 20
 
-#if defined(HITLS_CRYPTO_RSA) || defined(HITLS_CRYPTO_ECDSA) || defined(HITLS_CRYPTO_SM2) || \
+#if defined(HITLS_CRYPTO_RSA) || defined(HITLS_CRYPTO_ECDSA) || defined(HITLS_CRYPTO_SM2) ||      \
     defined(HITLS_CRYPTO_ED25519) || defined(HITLS_CRYPTO_MLDSA) || defined(HITLS_CRYPTO_XMSS) || \
-    defined(HITLS_CRYPTO_X25519)
+    defined(HITLS_CRYPTO_X25519) || defined(HITLS_CRYPTO_DSA)
 typedef struct {
     CRYPT_EAL_ProvMgrCtx *provMgrCtx;
     EAL_PkeyUnitaryMethod method;
@@ -346,6 +349,9 @@ DECODER_DEFINE_DER2KEY_NEW_CTX(Ecdsa, CRYPT_PKEY_ECDSA, g_defEalKeyMgmtEcdsa, NU
 DECODER_DEFINE_DER2KEY_NEW_CTX(Sm2, CRYPT_PKEY_SM2, g_defEalKeyMgmtSm2, g_defEalAsymCipherSm2, g_defEalExchSm2, \
     g_defEalSignSm2, NULL)
 #endif
+#ifdef HITLS_CRYPTO_DSA
+DECODER_DEFINE_DER2KEY_NEW_CTX(Dsa, CRYPT_PKEY_DSA, g_defEalKeyMgmtDsa, NULL, NULL, g_defEalSignDsa, NULL)
+#endif
 #ifdef HITLS_CRYPTO_ED25519
 DECODER_DEFINE_DER2KEY_NEW_CTX(Ed25519, CRYPT_PKEY_ED25519, g_defEalKeyMgmtEd25519, NULL, NULL, \
     g_defEalSignEd25519, NULL)
@@ -397,6 +403,11 @@ DECODER_DEFINE_PRVKEY_DER2KEY_DECODE(Sm2, CRYPT_SM2_Ctx, CRYPT_SM2_ParsePrikeyAs
 DECODER_DEFINE_SUBPUBKEY_DER2KEY_DECODE(Sm2, CRYPT_SM2_Ctx, CRYPT_SM2_ParseSubPubkeyAsn1Buff)
 DECODER_DEFINE_SUBPUBKEY_WITHOUT_SEQ_DER2KEY_DECODE(Sm2, CRYPT_SM2_Ctx, CRYPT_SM2_ParseSubPubkeyAsn1Buff)
 DECODER_DEFINE_PKCS8_DECODE(Sm2, CRYPT_SM2_Ctx, CRYPT_SM2_ParsePkcs8Key)
+#endif
+
+#ifdef HITLS_CRYPTO_DSA
+DECODER_DEFINE_SUBPUBKEY_DER2KEY_DECODE(Dsa, CRYPT_DSA_Ctx, CRYPT_DSA_ParseSubPubkeyAsn1Buff)
+DECODER_DEFINE_SUBPUBKEY_WITHOUT_SEQ_DER2KEY_DECODE(Dsa, CRYPT_DSA_Ctx, CRYPT_DSA_ParseSubPubkeyAsn1Buff)
 #endif
 
 #ifdef HITLS_CRYPTO_ED25519

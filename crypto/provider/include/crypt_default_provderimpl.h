@@ -342,6 +342,9 @@ extern const CRYPT_EAL_Func g_defEalSubPubKeyDer2EcdsaKey[];
 #ifdef HITLS_CRYPTO_SM2
 extern const CRYPT_EAL_Func g_defEalSubPubKeyDer2Sm2Key[];
 #endif
+#ifdef HITLS_CRYPTO_DSA
+extern const CRYPT_EAL_Func g_defEalSubPubKeyDer2DsaKey[];
+#endif
 #ifdef HITLS_CRYPTO_ED25519
 extern const CRYPT_EAL_Func g_defEalSubPubKeyDer2Ed25519Key[];
 #endif
@@ -368,6 +371,9 @@ extern const CRYPT_EAL_Func g_defEalSubPubKeyWithoutSeqDer2EcdsaKey[];
 #endif
 #ifdef HITLS_CRYPTO_SM2
 extern const CRYPT_EAL_Func g_defEalSubPubKeyWithoutSeqDer2Sm2Key[];
+#endif
+#ifdef HITLS_CRYPTO_DSA
+extern const CRYPT_EAL_Func g_defEalSubPubKeyWithoutSeqDer2DsaKey[];
 #endif
 #ifdef HITLS_CRYPTO_ED25519
 extern const CRYPT_EAL_Func g_defEalSubPubKeyWithoutSeqDer2Ed25519Key[];

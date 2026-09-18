@@ -1380,6 +1380,71 @@ EXIT:
 /* END_CASE */
 
 /**
+ * @test   SDV_CRYPTO_DSA_CHECK_KEYPAIR_FUNC_TC002
+ * @brief
+ *   The public and private keys declare different parameter groups, and the pair check fails.
+ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_DSA_CHECK_KEYPAIR_FUNC_TC002(
+    Hex *p1, Hex *g1, Hex *q1, Hex *p2, Hex *g2, Hex *q2, int isProvider)
+{
+#if !defined(HITLS_CRYPTO_DSA_CHECK)
+    (void)p1;
+    (void)g1;
+    (void)q1;
+    (void)p2;
+    (void)g2;
+    (void)q2;
+    (void)isProvider;
+    SKIP_TEST();
+#else
+    TestMemInit();
+    uint8_t pubKey[1030];
+    uint32_t pubKeyLen = sizeof(pubKey);
+    uint8_t prvKey[1030];
+    uint32_t prvKeyLen = sizeof(prvKey);
+    CRYPT_EAL_PkeyPub pub = {0};
+    CRYPT_EAL_PkeyPrv prv = {0};
+    Set_DSA_Pub(&pub, pubKey, pubKeyLen);
+    Set_DSA_Prv(&prv, prvKey, prvKeyLen);
+    CRYPT_EAL_PkeyPara para1 = {0};
+    CRYPT_EAL_PkeyPara para2 = {0};
+    Set_DSA_Para(&para1, NULL, NULL, p1, q1, g1, NULL, NULL);
+    Set_DSA_Para(&para2, NULL, NULL, p2, q2, g2, NULL, NULL);
+
+    CRYPT_EAL_PkeyCtx *pkey = TestPkeyNewCtx(NULL, CRYPT_PKEY_DSA, CRYPT_EAL_PKEY_UNKNOWN_OPERATE,
+        "provider=default", isProvider);
+    CRYPT_EAL_PkeyCtx *pubCtx = TestPkeyNewCtx(NULL, CRYPT_PKEY_DSA, CRYPT_EAL_PKEY_UNKNOWN_OPERATE,
+        "provider=default", isProvider);
+    CRYPT_EAL_PkeyCtx *prvCtx = TestPkeyNewCtx(NULL, CRYPT_PKEY_DSA, CRYPT_EAL_PKEY_UNKNOWN_OPERATE,
+        "provider=default", isProvider);
+    ASSERT_TRUE(pkey != NULL);
+    ASSERT_TRUE(pubCtx != NULL);
+    ASSERT_TRUE(prvCtx != NULL);
+
+    ASSERT_EQ(TestRandInit(), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeySetPara(pkey, &para1), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyGen(pkey), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyGetPub(pkey, &pub), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyGetPrv(pkey, &prv), CRYPT_SUCCESS);
+
+    ASSERT_EQ(CRYPT_EAL_PkeySetPara(pubCtx, &para2), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeySetPub(pubCtx, &pub), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeySetPara(prvCtx, &para1), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeySetPrv(prvCtx, &prv), CRYPT_SUCCESS);
+
+    ASSERT_EQ(CRYPT_EAL_PkeyPairCheck(pubCtx, prvCtx), CRYPT_DSA_PARA_NOT_EQUAL);
+
+EXIT:
+    TestRandDeInit();
+    CRYPT_EAL_PkeyFreeCtx(pkey);
+    CRYPT_EAL_PkeyFreeCtx(pubCtx);
+    CRYPT_EAL_PkeyFreeCtx(prvCtx);
+#endif
+}
+/* END_CASE */
+
+/**
  * @test   SDV_CRYPTO_DSA_CHECK_PRV_TC001
  * @brief
  *   Create a dsa key pairs to check the prv key.
