@@ -704,7 +704,7 @@ int32_t CheckRenegotiatedVersion(TLS_Ctx *ctx)
 }
 #endif
 
-#ifdef HITLS_TLS_CONFIG_VERSION
+#if defined(HITLS_TLS_CONFIG_VERSION) || defined(HITLS_TLS_PROTO_DTLS)
 void ChangeMinMaxVersion(uint32_t versionMask, uint32_t originVersionMask, uint16_t *minVersion, uint16_t *maxVersion)
 {
     uint32_t versionMaskBit = versionMask;
