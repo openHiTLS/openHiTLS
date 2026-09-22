@@ -74,6 +74,72 @@ EXIT:
 /* END_CASE */
 
 /* @
+* @test  SDV_CRYPTO_HYBRID_GET_DECAPS_KEY_FUNC_TC001
+* @spec  -
+* @title  Export a hybrid decapsulation key with a short ECC scalar.
+* @precon  nan
+* @brief
+* 1.Create and generate a NIST-curve hybrid KEM key.
+* 2.Replace its ECC private key with a scalar that has leading zero bytes.
+* 3.Export and import the decapsulation key.
+* 4.Compare the exported key with the original decapsulation key.
+* @expect  The exported key has its fixed length, matches the original key,
+*          and can be imported.
+* @prior  nan
+* @auto  FALSE
+@ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_HYBRID_GET_DECAPS_KEY_FUNC_TC001(int algid, int type, Hex *decapsKey)
+{
+    TestMemInit();
+    CRYPT_RandRegist(TestSimpleRand);
+    CRYPT_RandRegistEx(TestSimpleRandEx);
+
+    CRYPT_EAL_PkeyCtx *ctxA = NULL;
+    CRYPT_EAL_PkeyCtx *ctxB = NULL;
+    uint8_t *exportedKey = NULL;
+
+    ctxA = CRYPT_EAL_PkeyNewCtx(algid);
+    ASSERT_TRUE(ctxA != NULL);
+    ctxB = CRYPT_EAL_PkeyNewCtx(algid);
+    ASSERT_TRUE(ctxB != NULL);
+
+    ASSERT_EQ(CRYPT_EAL_PkeySetParaById(ctxA, type), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeySetParaById(ctxB, type), CRYPT_SUCCESS);
+
+    CRYPT_EAL_PkeyPrv dk = { 0 };
+    dk.id = algid;
+    dk.key.kemDk.len = decapsKey->len;
+    dk.key.kemDk.data = decapsKey->x;
+
+    ASSERT_EQ(CRYPT_EAL_PkeySetPrv(ctxA, &dk), CRYPT_SUCCESS);
+
+    exportedKey = BSL_SAL_Calloc(decapsKey->len, 1);
+    ASSERT_TRUE(exportedKey != NULL);
+
+    CRYPT_EAL_PkeyPrv exportDk = { 0 };
+    exportDk.id = algid;
+    exportDk.key.kemDk.len = decapsKey->len;
+    exportDk.key.kemDk.data = exportedKey;
+
+    ASSERT_EQ(CRYPT_EAL_PkeyGetPrv(ctxA, &exportDk), CRYPT_SUCCESS);
+    ASSERT_EQ(exportDk.key.kemDk.len, decapsKey->len);
+    ASSERT_COMPARE("export decapsKey cmp", exportedKey, exportDk.key.kemDk.len, decapsKey->x, decapsKey->len);
+
+    dk.key.kemDk.len = exportDk.key.kemDk.len;
+    dk.key.kemDk.data = exportedKey;
+    ASSERT_EQ(CRYPT_EAL_PkeySetPrv(ctxB, &dk), CRYPT_SUCCESS);
+
+EXIT:
+    BSL_SAL_Free(exportedKey);
+    CRYPT_EAL_PkeyFreeCtx(ctxA);
+    CRYPT_EAL_PkeyFreeCtx(ctxB);
+    CRYPT_RandRegist(NULL);
+    CRYPT_RandRegistEx(NULL);
+}
+/* END_CASE */
+
+/* @
 * @test  SDV_CRYPTO_HYBRID_ENCAPS_DECAPS_FUNC_TC001
 * @spec  -
 * @title  Generating key pairs and key exchange tests

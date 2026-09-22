@@ -16,6 +16,7 @@
 #include "hitls_build.h"
 #ifdef HITLS_CRYPTO_HYBRIDKEM
 
+#include <string.h>
 #include "bsl_sal.h"
 #include "sal_atomic.h"
 #include "bsl_params.h"
@@ -342,6 +343,12 @@ int32_t CRYPT_HYBRID_KEM_GetDecapsKey(const CRYPT_HybridKemCtx *ctx, CRYPT_KemDe
         prvKey[0].key = CRYPT_PARAM_CURVE25519_PRVKEY;
     }
     RETURN_RET_IF_ERR(ctx->pKeyMethod->getPrv(ctx->pkeyCtx, prvKey), ret);
+    if (prvKey[0].useLen < prvKey[0].valueLen) {
+        uint32_t paddingLen = prvKey[0].valueLen - prvKey[0].useLen;
+        memmove(prvKey[0].value + paddingLen, prvKey[0].value, prvKey[0].useLen);
+        memset(prvKey[0].value, 0, paddingLen);
+        prvKey[0].useLen = prvKey[0].valueLen;
+    }
     RETURN_RET_IF_ERR(ctx->kemMethod->getPrv(ctx->kemCtx, kemDK), ret);
     dk->len = prvKey[0].useLen + kemDK[0].useLen;
     return CRYPT_SUCCESS;
