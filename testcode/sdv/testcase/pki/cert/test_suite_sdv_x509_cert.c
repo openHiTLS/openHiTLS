@@ -1537,6 +1537,60 @@ EXIT:
 /* END_CASE */
 
 /* BEGIN_CASE */
+void SDV_X509_CERT_PUBKEY_NAME_DIGEST_FUNC_TC001(char *inCert, int inForm, int mdId, Hex *expectPubkey,
+    Hex *expectName)
+{
+    TestRandInit();
+    HITLS_X509_Cert *cert = NULL;
+    BslList *subjectName = NULL;
+    uint8_t md[64] = {0}; // 64 : max md len
+    uint32_t mdLen = sizeof(md);
+
+    ASSERT_EQ(HITLS_X509_CertParseFile(inForm, inCert, &cert), 0);
+    ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_GET_SUBJECT_DN, &subjectName, sizeof(BslList *)), 0);
+
+    ASSERT_EQ(HITLS_X509_PubkeyDigest(NULL, mdId, md, &mdLen), HITLS_X509_ERR_INVALID_PARAM);
+    ASSERT_EQ(HITLS_X509_PubkeyDigest(cert, mdId, NULL, &mdLen), HITLS_X509_ERR_INVALID_PARAM);
+    ASSERT_EQ(HITLS_X509_PubkeyDigest(cert, mdId, md, NULL), HITLS_X509_ERR_INVALID_PARAM);
+    ASSERT_EQ(HITLS_X509_NameDigest(NULL, mdId, md, &mdLen), HITLS_X509_ERR_INVALID_PARAM);
+    ASSERT_EQ(HITLS_X509_NameDigest(subjectName, mdId, NULL, &mdLen), HITLS_X509_ERR_INVALID_PARAM);
+    ASSERT_EQ(HITLS_X509_NameDigest(subjectName, mdId, md, NULL), HITLS_X509_ERR_INVALID_PARAM);
+    TestErrClear();
+
+    mdLen = sizeof(md);
+    ASSERT_EQ(HITLS_X509_PubkeyDigest(cert, mdId, md, &mdLen), HITLS_PKI_SUCCESS);
+    ASSERT_COMPARE("pubkey digest", expectPubkey->x, expectPubkey->len, md, mdLen);
+
+    mdLen = sizeof(md);
+    ASSERT_EQ(HITLS_X509_NameDigest(subjectName, mdId, md, &mdLen), HITLS_PKI_SUCCESS);
+    ASSERT_COMPARE("name digest", expectName->x, expectName->len, md, mdLen);
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
+EXIT:
+    HITLS_X509_CertFree(cert);
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_X509_NAME_DIGEST_EMPTY_LIST_FUNC_TC001(int mdId, Hex *expectName)
+{
+    TestRandInit();
+    BslList *emptyName = BSL_LIST_New(sizeof(HITLS_X509_NameNode));
+    uint8_t md[64] = {0}; // 64 : max md len
+    uint32_t mdLen = sizeof(md);
+
+    ASSERT_TRUE(emptyName != NULL);
+
+    ASSERT_EQ(HITLS_X509_NameDigest(emptyName, mdId, md, &mdLen), HITLS_PKI_SUCCESS);
+    ASSERT_COMPARE("empty name digest", expectName->x, expectName->len, md, mdLen);
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
+EXIT:
+    BSL_LIST_FREE(emptyName, (BSL_LIST_PFUNC_FREE)HITLS_X509_FreeNameNode);
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
 void SDV_X509_CERT_SET_CSR_EXT_FUNC_TC001(int inForm, char *inCsr, int ret, Hex *expect)
 {
     TestRandInit();

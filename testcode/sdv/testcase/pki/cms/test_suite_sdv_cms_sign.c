@@ -1339,7 +1339,7 @@ void SDV_CMS_STREAM_SIGN_DETACHED_TC001(char *capath, char *cert1Path, char *key
     };
     BSL_Buffer allMsgBuf = {(uint8_t *)msg, msgLen};
     // Verify signature with external message using one-shot API
-    ASSERT_EQ(HITLS_CMS_DataVerify(cms2, &allMsgBuf, NULL, NULL), HITLS_X509_ERR_ISSUE_CERT_NOT_FOUND);
+    ASSERT_EQ(HITLS_CMS_DataVerify(cms2, &allMsgBuf, NULL, NULL), HITLS_X509_ERR_VFY_ISSUE_CERT_NOT_FOUND_LOCALLY);
     ASSERT_EQ(HITLS_CMS_DataVerify(cms2, &allMsgBuf, verifyParams1, NULL), HITLS_PKI_SUCCESS);
 
     // Initialize streaming verification
@@ -1360,7 +1360,7 @@ void SDV_CMS_STREAM_SIGN_DETACHED_TC001(char *capath, char *cert1Path, char *key
         BSL_PARAM_END
     };
     ASSERT_EQ(HITLS_CMS_DataFinal(cms, params2), HITLS_PKI_SUCCESS);
-    ASSERT_EQ(HITLS_CMS_DataVerify(cms, &allMsgBuf, NULL, NULL), HITLS_X509_ERR_ISSUE_CERT_NOT_FOUND);
+    ASSERT_EQ(HITLS_CMS_DataVerify(cms, &allMsgBuf, NULL, NULL), HITLS_X509_ERR_VFY_ISSUE_CERT_NOT_FOUND_LOCALLY);
     BSL_Param verifyParams2[7] = {
         {HITLS_CMS_PARAM_CA_CERT_LISTS, BSL_PARAM_TYPE_CTX_PTR, caCertchain, sizeof(HITLS_X509_List *), 0},
         BSL_PARAM_END
@@ -1712,7 +1712,7 @@ void SDV_CMS_STREAM_NODETACHED_TEST_TC001(void)
         {HITLS_CMS_PARAM_UNTRUSTED_CERT_LISTS, BSL_PARAM_TYPE_CTX_PTR, certchain, sizeof(HITLS_X509_List *), 0},
         BSL_PARAM_END
     };
-    ASSERT_EQ(HITLS_CMS_DataFinal(cms2, verifyParams1), HITLS_X509_ERR_ISSUE_CERT_NOT_FOUND);
+    ASSERT_EQ(HITLS_CMS_DataFinal(cms2, verifyParams1), HITLS_X509_ERR_VFY_ISSUE_CERT_NOT_FOUND_LOCALLY);
     TestErrClear();
     BSL_Param verifyParams2[8] = {
         {HITLS_CMS_PARAM_UNTRUSTED_CERT_LISTS, BSL_PARAM_TYPE_CTX_PTR, certchain, sizeof(HITLS_X509_List *), 0},
@@ -1858,7 +1858,7 @@ void SDV_CMS_MIXED_SING_VERIFY_TC001(void)
     ASSERT_TRUE(TestIsErrStackEmpty());
 
     // Verify all SignerInfos using one-shot API first
-    ASSERT_EQ(HITLS_CMS_DataVerify(cms2, &initMsgBuf, NULL, NULL), HITLS_X509_ERR_ISSUE_CERT_NOT_FOUND);
+    ASSERT_EQ(HITLS_CMS_DataVerify(cms2, &initMsgBuf, NULL, NULL), HITLS_X509_ERR_VFY_ISSUE_CERT_NOT_FOUND_LOCALLY);
     TestErrClear();
     ASSERT_EQ(HITLS_CMS_DataVerify(cms2, &initMsgBuf, params, NULL), HITLS_PKI_SUCCESS);
 
@@ -2417,8 +2417,8 @@ void SDV_CMS_SIGN_VERIFY_WITH_CERT_CHAIN_CRL_TC001(char *basePath, char *msg)
     ASSERT_EQ(HITLS_CMS_ProviderParseBuff(NULL, NULL, NULL, &encode1, &cms2), HITLS_PKI_SUCCESS);
     ASSERT_NE(cms2, NULL);
     // no issuer
-    ASSERT_EQ(HITLS_CMS_DataVerify(cms, &msgBuf, NULL, NULL), HITLS_X509_ERR_ISSUE_CERT_NOT_FOUND);
-    ASSERT_EQ(HITLS_CMS_DataVerify(cms2, &msgBuf, NULL, NULL), HITLS_X509_ERR_ISSUE_CERT_NOT_FOUND);
+    ASSERT_EQ(HITLS_CMS_DataVerify(cms, &msgBuf, NULL, NULL), HITLS_X509_ERR_VFY_ISSUE_CERT_NOT_FOUND_LOCALLY);
+    ASSERT_EQ(HITLS_CMS_DataVerify(cms2, &msgBuf, NULL, NULL), HITLS_X509_ERR_VFY_ISSUE_CERT_NOT_FOUND_LOCALLY);
     ASSERT_EQ(HITLS_CMS_DataVerify(cms, &msgBuf, verifyParams, NULL), HITLS_X509_ERR_VFY_PURPOSE_UNMATCH);
     ASSERT_EQ(HITLS_CMS_DataVerify(cms2, &msgBuf, verifyParams, NULL), HITLS_X509_ERR_VFY_PURPOSE_UNMATCH);
 
@@ -2535,8 +2535,8 @@ void SDV_CMS_SIGN_VERIFY_WITH_CERT_CHAIN_CRL_TC002(char *basePath, char *msg)
     ASSERT_EQ(HITLS_CMS_ProviderParseBuff(NULL, NULL, NULL, &encode2, &cms2), HITLS_PKI_SUCCESS);
     ASSERT_NE(cms2, NULL);
     // Verify device2's signed CMS - should fail (device2 in CRL)
-    ASSERT_EQ(HITLS_CMS_DataVerify(cms, &msgBuf, NULL, NULL), HITLS_X509_ERR_ISSUE_CERT_NOT_FOUND);
-    ASSERT_EQ(HITLS_CMS_DataVerify(cms2, &msgBuf, NULL, NULL), HITLS_X509_ERR_ISSUE_CERT_NOT_FOUND);
+    ASSERT_EQ(HITLS_CMS_DataVerify(cms, &msgBuf, NULL, NULL), HITLS_X509_ERR_VFY_ISSUE_CERT_NOT_FOUND_LOCALLY);
+    ASSERT_EQ(HITLS_CMS_DataVerify(cms2, &msgBuf, NULL, NULL), HITLS_X509_ERR_VFY_ISSUE_CERT_NOT_FOUND_LOCALLY);
 
     ASSERT_EQ(HITLS_CMS_DataVerify(cms2, &msgBuf, params, NULL), HITLS_PKI_SUCCESS);
     storeFlag = HITLS_X509_VFY_FLAG_CRL_DEV | HITLS_X509_VFY_FLAG_CRL_LITE;
@@ -2627,8 +2627,8 @@ void SDV_CMS_SIGN_VERIFY_WITH_CERT_CHAIN_CRL_TC003(char *basePath, char *msg)
     };
 
     ASSERT_EQ(HITLS_CMS_DataVerify(cms, &msgBuf, params, NULL), HITLS_PKI_SUCCESS);
-    ASSERT_EQ(HITLS_CMS_DataVerify(cms, &msgBuf, verifyParams1, NULL), HITLS_X509_ERR_ISSUE_CERT_NOT_FOUND);
-    ASSERT_EQ(HITLS_CMS_DataVerify(cms, &msgBuf, verifyParams2, NULL), HITLS_X509_ERR_ISSUE_CERT_NOT_FOUND);
+    ASSERT_EQ(HITLS_CMS_DataVerify(cms, &msgBuf, verifyParams1, NULL), HITLS_X509_ERR_VFY_ISSUE_CERT_NOT_FOUND_LOCALLY);
+    ASSERT_EQ(HITLS_CMS_DataVerify(cms, &msgBuf, verifyParams2, NULL), HITLS_X509_ERR_VFY_ISSUE_CERT_NOT_FOUND_LOCALLY);
     ASSERT_EQ(HITLS_CMS_DataVerify(cms, &msgBuf, verifyParams3, NULL), HITLS_X509_ERR_ISSUE_CERT_NOT_FOUND);
 EXIT:
     BSL_SAL_FREE(encode1.data);

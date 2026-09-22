@@ -256,6 +256,21 @@ SDV_X509_BUILD_CERT_CHAIN_FUNC_TC008:"../testdata/cert/chain/rsa-v3/ca1.der":"..
 SDV_X509_BUILD_CERT_CHAIN_FUNC_TC009
 SDV_X509_BUILD_CERT_CHAIN_FUNC_TC009:
 
+SDV_X509_BUILD_CERT_CHAIN_FUNC_TC010 build certificate chain without root
+SDV_X509_BUILD_CERT_CHAIN_FUNC_TC010:
+
+SDV_X509_BUILD_CERT_CHAIN_FUNC_TC011 self-signed entity, empty store, without root
+SDV_X509_BUILD_CERT_CHAIN_FUNC_TC011:"../testdata/cert/chain/vfy_cbk_errors/root.pem":0:0:HITLS_PKI_SUCCESS:1
+
+SDV_X509_BUILD_CERT_CHAIN_FUNC_TC011 self-signed entity, same certificate in store, without root
+SDV_X509_BUILD_CERT_CHAIN_FUNC_TC011:"../testdata/cert/chain/vfy_cbk_errors/root.pem":1:0:HITLS_PKI_SUCCESS:1
+
+SDV_X509_BUILD_CERT_CHAIN_FUNC_TC011 self-signed entity, empty store, with root
+SDV_X509_BUILD_CERT_CHAIN_FUNC_TC011:"../testdata/cert/chain/vfy_cbk_errors/root.pem":0:1:HITLS_X509_ERR_VFY_SELF_ISSUED_CERT_IN_CHAIN:0
+
+SDV_X509_BUILD_CERT_CHAIN_FUNC_TC011 self-signed entity, same certificate in store, with root
+SDV_X509_BUILD_CERT_CHAIN_FUNC_TC011:"../testdata/cert/chain/vfy_cbk_errors/root.pem":1:1:HITLS_PKI_SUCCESS:1
+
 SDV_X509_BUILD_CERT_CHAIN_WITH_ROOT_FUNC_TC001
 SDV_X509_BUILD_CERT_CHAIN_WITH_ROOT_FUNC_TC001:
 
@@ -293,7 +308,7 @@ SDV_X509_BUILD_CERT_CHAIN_CBK_FUNC_TC001 check cert notafter error
 SDV_X509_BUILD_CERT_CHAIN_CBK_FUNC_TC001:HITLS_X509_ERR_VFY_NOTAFTER_EXPIRED:22
 
 SDV_X509_BUILD_CERT_CHAIN_CBK_FUNC_TC002
-SDV_X509_BUILD_CERT_CHAIN_CBK_FUNC_TC002:HITLS_X509_ERR_ISSUE_CERT_NOT_FOUND:HITLS_X509_ERR_ISSUE_CERT_NOT_FOUND
+SDV_X509_BUILD_CERT_CHAIN_CBK_FUNC_TC002:HITLS_X509_ERR_ISSUE_CERT_NOT_FOUND:HITLS_X509_ERR_VFY_ISSUE_CERT_NOT_FOUND_LOCALLY
 
 SDV_X509_VERIFY_CERT_CHAIN_FUNC_TC001
 SDV_X509_VERIFY_CERT_CHAIN_FUNC_TC001:
@@ -518,10 +533,10 @@ SDV_X509_CA_PATH_WITH_VARIOUS_CHARSET_FUNC_TC001 mix charset user cert with erro
 SDV_X509_CA_PATH_WITH_VARIOUS_CHARSET_FUNC_TC001:"../testdata/cert/chain/charset/convert_to_utf8":"../testdata/cert/chain/charset/convert_to_utf8/user_err_issuer.der":BSL_ASN1_ERR_INVALID_UTF8_CODE_POINT
 
 SDV_X509_CA_PATH_WITH_VARIOUS_CHARSET_FUNC_TC001 mix charset user cert with error aki
-SDV_X509_CA_PATH_WITH_VARIOUS_CHARSET_FUNC_TC001:"../testdata/cert/chain/charset/convert_to_utf8":"../testdata/cert/chain/charset/convert_to_utf8/user_err_aki.der":HITLS_X509_ERR_ISSUE_CERT_NOT_FOUND
+SDV_X509_CA_PATH_WITH_VARIOUS_CHARSET_FUNC_TC001:"../testdata/cert/chain/charset/convert_to_utf8":"../testdata/cert/chain/charset/convert_to_utf8/user_err_aki.der":HITLS_X509_ERR_VFY_ISSUE_CERT_NOT_FOUND_LOCALLY
 
 SDV_X509_CA_PATH_WITH_VARIOUS_CHARSET_FUNC_TC001 empty issuer DN
-SDV_X509_CA_PATH_WITH_VARIOUS_CHARSET_FUNC_TC001:"../testdata/cert/chain/charset/convert_to_utf8":"../testdata/cert/asn1/certcheck/certnodnname.der":HITLS_X509_ERR_ISSUE_CERT_NOT_FOUND
+SDV_X509_CA_PATH_WITH_VARIOUS_CHARSET_FUNC_TC001:"../testdata/cert/chain/charset/convert_to_utf8":"../testdata/cert/asn1/certcheck/certnodnname.der":HITLS_X509_ERR_VFY_ISSUE_CERT_NOT_FOUND_LOCALLY
 
 SDV_X509_CA_PATH_WITH_VARIOUS_CHARSET_FUNC_TC001 Standardization of content:CA paths
 SDV_X509_CA_PATH_WITH_VARIOUS_CHARSET_FUNC_TC001:"../testdata/cert/chain/charset/string_canon":"../testdata/cert/chain/charset/string_canon/user_string_canon.crt":HITLS_PKI_SUCCESS
@@ -542,7 +557,7 @@ SDV_X509_CERT_VERIFY_WITH_VARIOUS_CHARSET_FUNC_TC001 mix charset user cert with 
 SDV_X509_CERT_VERIFY_WITH_VARIOUS_CHARSET_FUNC_TC001:"../testdata/cert/chain/charset/convert_to_utf8/ca_utf8.crt":"../testdata/cert/chain/charset/convert_to_utf8/user_err_issuer.der":BSL_ASN1_ERR_INVALID_UTF8_CODE_POINT
 
 SDV_X509_CERT_VERIFY_WITH_VARIOUS_CHARSET_FUNC_TC001 mix charset user cert with error aki
-SDV_X509_CERT_VERIFY_WITH_VARIOUS_CHARSET_FUNC_TC001:"../testdata/cert/chain/charset/convert_to_utf8/ca_utf8.crt":"../testdata/cert/chain/charset/convert_to_utf8/user_err_aki.der":HITLS_X509_ERR_ISSUE_CERT_NOT_FOUND
+SDV_X509_CERT_VERIFY_WITH_VARIOUS_CHARSET_FUNC_TC001:"../testdata/cert/chain/charset/convert_to_utf8/ca_utf8.crt":"../testdata/cert/chain/charset/convert_to_utf8/user_err_aki.der":HITLS_X509_ERR_VFY_ISSUE_CERT_NOT_FOUND_LOCALLY
 
 SDV_X509_CERT_VERIFY_WITH_VARIOUS_CHARSET_FUNC_TC001 Standardization of content:store
 SDV_X509_CERT_VERIFY_WITH_VARIOUS_CHARSET_FUNC_TC001:"../testdata/cert/chain/charset/string_canon/ca_string_canon.crt":"../testdata/cert/chain/charset/string_canon/user_string_canon.crt":HITLS_PKI_SUCCESS
@@ -787,3 +802,24 @@ SDV_X509_VFY_PATHLEN_NO_INCREASE_FAIL_TC002:
 
 SDV_X509_BUILD_CHAIN_SELF_SIGNED_SIGALG_MISMATCH_TC001 CertVerify rejects inner outer sigalg mismatch as self-signed terminator
 SDV_X509_BUILD_CHAIN_SELF_SIGNED_SIGALG_MISMATCH_TC001:
+
+SDV_X509_BUILD_CERT_CHAIN_CBK_FUNC_TC003 callback ignores self-signed leaf cert
+SDV_X509_BUILD_CERT_CHAIN_CBK_FUNC_TC003:"../testdata/cert/chain/vfy_cbk_errors/self_leaf.pem":"":"":"":HITLS_X509_ERR_VFY_SELF_ISSUED_CERT_IN_CHAIN:HITLS_X509_ERR_VFY_SELF_ISSUED_CERT_IN_CHAIN
+
+SDV_X509_BUILD_CERT_CHAIN_CBK_FUNC_TC003 callback ignores self-signed cert in chain
+SDV_X509_BUILD_CERT_CHAIN_CBK_FUNC_TC003:"../testdata/cert/chain/vfy_cbk_errors/leaf_by_root.pem":"../testdata/cert/chain/vfy_cbk_errors/root.pem":"":"":HITLS_X509_ERR_VFY_SELF_SIGNED_CERT_IN_CHAIN:HITLS_X509_ERR_VFY_SELF_SIGNED_CERT_IN_CHAIN
+
+SDV_X509_BUILD_CERT_CHAIN_CBK_FUNC_TC003 callback ignores HITLS_X509_ERR_VFY_ISSUE_CERT_NOT_FOUND_LOCALLY
+SDV_X509_BUILD_CERT_CHAIN_CBK_FUNC_TC003:"../testdata/cert/chain/vfy_cbk_errors/leaf_by_inter.pem":"../testdata/cert/chain/vfy_cbk_errors/inter.pem":"":"":HITLS_X509_ERR_VFY_ISSUE_CERT_NOT_FOUND_LOCALLY:HITLS_X509_ERR_VFY_ISSUE_CERT_NOT_FOUND_LOCALLY
+
+SDV_X509_BUILD_CERT_CHAIN_CBK_FUNC_TC003 callback ignores HITLS_X509_ERR_ISSUE_CERT_NOT_FOUND
+SDV_X509_BUILD_CERT_CHAIN_CBK_FUNC_TC003:"../testdata/cert/chain/vfy_cbk_errors/leaf_by_inter.pem":"":"":"../testdata/cert/chain/vfy_cbk_errors/inter.pem":HITLS_X509_ERR_ISSUE_CERT_NOT_FOUND:HITLS_X509_ERR_ISSUE_CERT_NOT_FOUND
+
+SDV_X509_BUILD_CERT_CHAIN_CBK_FUNC_TC003 callback ignores HITLS_X509_ERR_VFY_ISSUE_CERT_NOT_FOUND_LOCALLY
+SDV_X509_BUILD_CERT_CHAIN_CBK_FUNC_TC003:"../testdata/cert/chain/vfy_cbk_errors/leaf_by_inter.pem":"":"":"":HITLS_X509_ERR_VFY_ISSUE_CERT_NOT_FOUND_LOCALLY:HITLS_X509_ERR_VFY_ISSUE_CERT_NOT_FOUND_LOCALLY
+
+SDV_X509_VERIFY_SELF_SIGNED_DEVICE_CERT_CBK_FUNC_TC001 callback accepts peer self-signed device certificate
+SDV_X509_VERIFY_SELF_SIGNED_DEVICE_CERT_CBK_FUNC_TC001:"../testdata/cert/chain/vfy_cbk_errors/self_leaf.pem"
+
+SDV_X509_VERIFY_EXPIRED_SELF_ISSUED_CERT_CBK_FUNC_TC001 expired self-issued device cert is rejected unless time check is disabled
+SDV_X509_VERIFY_EXPIRED_SELF_ISSUED_CERT_CBK_FUNC_TC001:"../testdata/cert/chain/vfy_cbk_errors/self_leaf.pem"

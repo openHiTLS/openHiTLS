@@ -1692,6 +1692,98 @@ EXIT:
 }
 /* END_CASE */
 
+/**
+ * @test SDV_X509_BUILD_CERT_CHAIN_FUNC_TC010
+ * @spec -
+ * @title Build a certificate chain without the root certificate.
+ * @precon The trust store contains the intermediate CA and root CA certificates.
+ * @brief
+ * 1.Load the intermediate CA and root CA certificates into the trust store.
+ * 2.Build the entity certificate chain with isWithRoot set to false.
+ * 3.Check that the returned chain contains only the entity and intermediate CA certificates.
+ * @expect
+ * 1.The chain is built successfully and excludes the root certificate.
+ * @prior nan
+ * @auto TRUE
+ */
+/* BEGIN_CASE */
+void SDV_X509_BUILD_CERT_CHAIN_FUNC_TC010(void)
+{
+    TestMemInit();
+    HITLS_X509_StoreCtx *store = HITLS_X509_StoreCtxNew();
+    ASSERT_TRUE(store != NULL);
+    HITLS_X509_Cert *root = NULL;
+    HITLS_X509_Cert *ca = NULL;
+    HITLS_X509_Cert *entity = NULL;
+    HITLS_X509_List *chain = NULL;
+
+    ASSERT_EQ(HITLS_AddCertToStoreTest("../testdata/cert/chain/rsa-v3/rootca.der", store, &root),
+        HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_AddCertToStoreTest("../testdata/cert/chain/rsa-v3/ca.der", store, &ca), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CertParseFile(
+        BSL_FORMAT_ASN1, "../testdata/cert/chain/rsa-v3/cert.der", &entity), HITLS_PKI_SUCCESS);
+
+    ASSERT_EQ(HITLS_X509_CertChainBuild(store, false, entity, &chain), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(BSL_LIST_COUNT(chain), 2);
+    ASSERT_EQ(HITLS_X509_CertCmp((HITLS_X509_Cert *)BSL_LIST_FirstNodeData(chain), entity), 0);
+    ASSERT_EQ(HITLS_X509_CertCmp(
+        (HITLS_X509_Cert *)BSL_LIST_GetData(BSL_LIST_LastNode(chain)), ca), 0);
+    ASSERT_NE(HITLS_X509_CertCmp(
+        (HITLS_X509_Cert *)BSL_LIST_GetData(BSL_LIST_LastNode(chain)), root), 0);
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
+EXIT:
+    HITLS_X509_StoreCtxFree(store);
+    HITLS_X509_CertFree(root);
+    HITLS_X509_CertFree(ca);
+    HITLS_X509_CertFree(entity);
+    BSL_LIST_FREE(chain, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);
+}
+/* END_CASE */
+
+/**
+ * @test SDV_X509_BUILD_CERT_CHAIN_FUNC_TC011
+ * @title Build a chain for a single self-signed entity certificate.
+ * @precon nan
+ * @brief Parse a self-signed entity certificate, optionally add the same certificate to the trust store, and build
+ *        the chain with or without the root certificate.
+ * @expect The return value and resulting chain reflect whether the self-signed entity is present in the trust store.
+ */
+/* BEGIN_CASE */
+void SDV_X509_BUILD_CERT_CHAIN_FUNC_TC011(char *certPath, int addToStore, int withRoot, int expectedRet,
+    int expectedCount)
+{
+    TestMemInit();
+    HITLS_X509_StoreCtx *store = HITLS_X509_StoreCtxNew();
+    HITLS_X509_Cert *entity = NULL;
+    HITLS_X509_List *chain = NULL;
+    ASSERT_TRUE(store != NULL);
+    ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_PEM, certPath, &entity), HITLS_PKI_SUCCESS);
+
+    if (addToStore != 0) {
+        ASSERT_EQ(HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_DEEP_COPY_SET_CA,
+            entity, sizeof(HITLS_X509_Cert)), HITLS_PKI_SUCCESS);
+        ASSERT_EQ(BSL_LIST_COUNT(store->store->certs), 1);
+    }
+
+    ASSERT_EQ(HITLS_X509_CertChainBuild(store, withRoot != 0, entity, &chain), expectedRet);
+    if (expectedRet == HITLS_PKI_SUCCESS) {
+        ASSERT_TRUE(chain != NULL);
+        ASSERT_EQ(BSL_LIST_COUNT(chain), expectedCount);
+        ASSERT_EQ(HITLS_X509_CertCmp((HITLS_X509_Cert *)BSL_LIST_FirstNodeData(chain), entity), 0);
+        ASSERT_TRUE(TestIsErrStackEmpty());
+    } else {
+        ASSERT_TRUE(chain == NULL);
+        TestErrClear();
+    }
+
+EXIT:
+    HITLS_X509_StoreCtxFree(store);
+    HITLS_X509_CertFree(entity);
+    BSL_LIST_FREE(chain, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);
+}
+/* END_CASE */
+
 /* BEGIN_CASE */
 void SDV_X509_BUILD_CERT_CHAIN_WITH_ROOT_FUNC_TC001(void)
 {
@@ -1849,7 +1941,7 @@ void SDV_X509_STORE_LOAD_CA_PATH_CHAIN_BUILD_TC002(void)
 
     // Build certificate chain with on-demand CA loading from multiple paths
     ret = HITLS_X509_CertChainBuild(storeCtx, true, cert, &chain);
-    ASSERT_EQ(ret, HITLS_X509_ERR_ISSUE_CERT_NOT_FOUND);
+    ASSERT_EQ(ret, HITLS_X509_ERR_VFY_ISSUE_CERT_NOT_FOUND_LOCALLY);
     ASSERT_EQ(chain, NULL);
 EXIT:
     HITLS_X509_CertFree(cert);
@@ -2192,6 +2284,37 @@ static int32_t X509StoreCtrlCbk3(HITLS_X509_StoreCtx *store, int cbkflag)
     X509_STORECTX_VerifyCb cbk = X509StoreCbk3;
     return HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_SET_VERIFY_CB, cbk, sizeof(X509_STORECTX_VerifyCb));
 }
+
+static int32_t g_x509VfyTrustErrCbkExpectedErr = HITLS_PKI_SUCCESS;
+static uint32_t g_x509VfyTrustErrCbkSeenExpected = 0;
+static uint32_t g_x509VfyTrustErrCbkSeenUnexpected = 0;
+
+static int32_t X509VfyTrustErrCbk(int32_t err, HITLS_X509_StoreCtx *ctx)
+{
+    (void)ctx;
+    if (err == HITLS_PKI_SUCCESS) {
+        return HITLS_PKI_SUCCESS;
+    }
+    TestErrClear();
+    if (err == g_x509VfyTrustErrCbkExpectedErr) {
+        g_x509VfyTrustErrCbkSeenExpected++;
+        return HITLS_PKI_SUCCESS;
+    }
+    g_x509VfyTrustErrCbkSeenUnexpected++;
+    return err;
+}
+
+static int32_t X509AddCertFileToChainTest(HITLS_X509_List *chain, char *path, HITLS_X509_Cert **cert)
+{
+    if (path == NULL || strlen(path) == 0) {
+        return HITLS_PKI_SUCCESS;
+    }
+    int32_t ret = HITLS_X509_CertParseFile(BSL_FORMAT_UNKNOWN, path, cert);
+    if (ret != HITLS_PKI_SUCCESS) {
+        return ret;
+    }
+    return X509_AddCertToChainTest(chain, *cert);
+}
 #endif
 
 /* BEGIN_CASE */
@@ -2236,6 +2359,178 @@ EXIT:
 #else
     (void)flag;
     (void)ecp;
+    SKIP_TEST();
+#endif
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_X509_BUILD_CERT_CHAIN_CBK_FUNC_TC003(char *leafPath, char *issuerPath, char *rootPath, char *trustPath,
+    int firstRet, int cbkErr)
+{
+#ifdef HITLS_PKI_X509_VFY_CB
+    HITLS_X509_StoreCtx *store = HITLS_X509_StoreCtxNew();
+    ASSERT_TRUE(store != NULL);
+    HITLS_X509_List *chain = BSL_LIST_New(sizeof(HITLS_X509_Cert *));
+    ASSERT_TRUE(chain != NULL);
+    HITLS_X509_Cert *leaf = NULL;
+    HITLS_X509_Cert *issuer = NULL;
+    HITLS_X509_Cert *root = NULL;
+    HITLS_X509_Cert *trust = NULL;
+
+    ASSERT_EQ(X509AddCertFileToChainTest(chain, leafPath, &leaf), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(X509AddCertFileToChainTest(chain, issuerPath, &issuer), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(X509AddCertFileToChainTest(chain, rootPath, &root), HITLS_PKI_SUCCESS);
+    if (trustPath != NULL && strlen(trustPath) > 0) {
+        ASSERT_EQ(HITLS_AddCertToStoreTest(trustPath, store, &trust), HITLS_PKI_SUCCESS);
+    }
+
+    uint64_t flag = HITLS_X509_VFY_FLAG_DISABLE_TIME_CHECK;
+    ASSERT_EQ(HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_SET_PARAM_FLAGS, &flag, sizeof(flag)),
+              HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CertVerify(store, chain), firstRet);
+    TestErrClear();
+
+    g_x509VfyTrustErrCbkExpectedErr = cbkErr;
+    g_x509VfyTrustErrCbkSeenExpected = 0;
+    g_x509VfyTrustErrCbkSeenUnexpected = 0;
+    X509_STORECTX_VerifyCb cbk = X509VfyTrustErrCbk;
+    ASSERT_EQ(HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_SET_VERIFY_CB, cbk, sizeof(cbk)),
+              HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CertVerify(store, chain), HITLS_PKI_SUCCESS);
+    ASSERT_TRUE(g_x509VfyTrustErrCbkSeenExpected > 0);
+    ASSERT_EQ(g_x509VfyTrustErrCbkSeenUnexpected, 0);
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
+EXIT:
+    HITLS_X509_StoreCtxFree(store);
+    HITLS_X509_CertFree(leaf);
+    HITLS_X509_CertFree(issuer);
+    HITLS_X509_CertFree(root);
+    HITLS_X509_CertFree(trust);
+    BSL_LIST_FREE(chain, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);
+    BSL_GLOBAL_DeInit();
+#else
+    (void)leafPath;
+    (void)issuerPath;
+    (void)rootPath;
+    (void)trustPath;
+    (void)firstRet;
+    (void)cbkErr;
+    SKIP_TEST();
+#endif
+}
+/* END_CASE */
+
+/**
+ * @test SDV_X509_VERIFY_SELF_SIGNED_DEVICE_CERT_CBK_FUNC_TC001
+ * @title Verify a peer-provided self-signed device certificate accepted by the verify callback.
+ * @precon nan
+ * @brief Build and verify a peer chain containing only a self-signed device certificate. Confirm that verification
+ *        first reports an untrusted self-issued certificate, then succeeds when the callback accepts that error.
+ * @expect The callback observes only the expected chain-building error and certificate verification succeeds.
+ */
+/* BEGIN_CASE */
+void SDV_X509_VERIFY_SELF_SIGNED_DEVICE_CERT_CBK_FUNC_TC001(char *certPath)
+{
+#ifdef HITLS_PKI_X509_VFY_CB
+    TestMemInit();
+    HITLS_X509_StoreCtx *store = HITLS_X509_StoreCtxNew();
+    HITLS_X509_List *chain = BSL_LIST_New(sizeof(HITLS_X509_Cert *));
+    HITLS_X509_Cert *deviceCert = NULL;
+    ASSERT_TRUE(store != NULL);
+    ASSERT_TRUE(chain != NULL);
+    ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_PEM, certPath, &deviceCert), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(X509_AddCertToChainTest(chain, deviceCert), HITLS_PKI_SUCCESS);
+
+    uint64_t flag = HITLS_X509_VFY_FLAG_DISABLE_TIME_CHECK;
+    ASSERT_EQ(HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_SET_PARAM_FLAGS, &flag, sizeof(flag)),
+        HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CertVerify(store, chain), HITLS_X509_ERR_VFY_SELF_ISSUED_CERT_IN_CHAIN);
+    TestErrClear();
+
+    g_x509VfyTrustErrCbkExpectedErr = HITLS_X509_ERR_VFY_SELF_ISSUED_CERT_IN_CHAIN;
+    g_x509VfyTrustErrCbkSeenExpected = 0;
+    g_x509VfyTrustErrCbkSeenUnexpected = 0;
+    X509_STORECTX_VerifyCb cbk = X509VfyTrustErrCbk;
+    ASSERT_EQ(HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_SET_VERIFY_CB, cbk, sizeof(cbk)),
+        HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CertVerify(store, chain), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(g_x509VfyTrustErrCbkSeenExpected, 1);
+    ASSERT_EQ(g_x509VfyTrustErrCbkSeenUnexpected, 0);
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
+EXIT:
+    HITLS_X509_StoreCtxFree(store);
+    HITLS_X509_CertFree(deviceCert);
+    BSL_LIST_FREE(chain, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);
+    BSL_GLOBAL_DeInit();
+#else
+    (void)certPath;
+    SKIP_TEST();
+#endif
+}
+/* END_CASE */
+
+/**
+ * @test SDV_X509_VERIFY_EXPIRED_SELF_ISSUED_CERT_CBK_FUNC_TC001
+ * @title Verify time checking for a callback-accepted self-issued device certificate.
+ * @precon nan
+ * @brief Set the verification time after the device certificate expires and confirm that time validation rejects it,
+ *        then disable time checking and verify the same single-certificate peer chain again.
+ * @expect Expiration is not bypassed by accepting the self-issued error, but verification succeeds when time checking
+ *         is explicitly disabled.
+ */
+/* BEGIN_CASE */
+void SDV_X509_VERIFY_EXPIRED_SELF_ISSUED_CERT_CBK_FUNC_TC001(char *certPath)
+{
+#ifdef HITLS_PKI_X509_VFY_CB
+    TestMemInit();
+    HITLS_X509_StoreCtx *store = HITLS_X509_StoreCtxNew();
+    HITLS_X509_List *chain = BSL_LIST_New(sizeof(HITLS_X509_Cert *));
+    HITLS_X509_Cert *deviceCert = NULL;
+    ASSERT_TRUE(store != NULL);
+    ASSERT_TRUE(chain != NULL);
+    ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_PEM, certPath, &deviceCert), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(X509_AddCertToChainTest(chain, deviceCert), HITLS_PKI_SUCCESS);
+
+    g_x509VfyTrustErrCbkExpectedErr = HITLS_X509_ERR_VFY_SELF_ISSUED_CERT_IN_CHAIN;
+    g_x509VfyTrustErrCbkSeenExpected = 0;
+    g_x509VfyTrustErrCbkSeenUnexpected = 0;
+    X509_STORECTX_VerifyCb cbk = X509VfyTrustErrCbk;
+    ASSERT_EQ(HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_SET_VERIFY_CB, cbk, sizeof(cbk)),
+        HITLS_PKI_SUCCESS);
+
+    int64_t expiredTime = 0;
+    ASSERT_EQ(BSL_SAL_DateToUtcTimeConvert(&deviceCert->tbs.validTime.end, &expiredTime), BSL_SUCCESS);
+    expiredTime++;
+    ASSERT_EQ(HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_SET_TIME, &expiredTime, sizeof(expiredTime)),
+        HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CertVerify(store, chain), HITLS_X509_ERR_VFY_NOTAFTER_EXPIRED);
+    ASSERT_EQ(g_x509VfyTrustErrCbkSeenExpected, 1);
+    ASSERT_EQ(g_x509VfyTrustErrCbkSeenUnexpected, 1);
+    TestErrClear();
+
+    uint64_t flag = HITLS_X509_VFY_FLAG_TIME;
+    ASSERT_EQ(HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_CLR_PARAM_FLAGS, &flag, sizeof(flag)),
+        HITLS_PKI_SUCCESS);
+    flag = HITLS_X509_VFY_FLAG_DISABLE_TIME_CHECK;
+    ASSERT_EQ(HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_SET_PARAM_FLAGS, &flag, sizeof(flag)),
+        HITLS_PKI_SUCCESS);
+    g_x509VfyTrustErrCbkSeenExpected = 0;
+    g_x509VfyTrustErrCbkSeenUnexpected = 0;
+    ASSERT_EQ(HITLS_X509_CertVerify(store, chain), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(g_x509VfyTrustErrCbkSeenExpected, 1);
+    ASSERT_EQ(g_x509VfyTrustErrCbkSeenUnexpected, 0);
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
+EXIT:
+    HITLS_X509_StoreCtxFree(store);
+    HITLS_X509_CertFree(deviceCert);
+    BSL_LIST_FREE(chain, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);
+    BSL_GLOBAL_DeInit();
+#else
+    (void)certPath;
     SKIP_TEST();
 #endif
 }
@@ -4128,7 +4423,7 @@ void SDV_X509_VFY_AKI_SKI_KEYID_FAIL_TC002(void)
     ASSERT_TRUE(TestIsErrStackEmpty());
 
     int32_t ret = HITLS_X509_CertVerify(store, chain);
-    ASSERT_EQ(ret, HITLS_X509_ERR_ISSUE_CERT_NOT_FOUND);
+    ASSERT_EQ(ret, HITLS_X509_ERR_VFY_ISSUE_CERT_NOT_FOUND_LOCALLY);
 
 EXIT:
     HITLS_X509_StoreCtxFree(store);
@@ -4263,7 +4558,7 @@ void SDV_X509_VFY_AKI_SKI_ISSUER_SERIAL_FAIL_TC006(void)
     ASSERT_TRUE(TestIsErrStackEmpty());
 
     int32_t ret = HITLS_X509_CertVerify(store, chain);
-    ASSERT_EQ(ret, HITLS_X509_ERR_ISSUE_CERT_NOT_FOUND);
+    ASSERT_EQ(ret, HITLS_X509_ERR_VFY_ISSUE_CERT_NOT_FOUND_LOCALLY);
 
 EXIT:
     HITLS_X509_StoreCtxFree(store);
@@ -5072,7 +5367,7 @@ void SDV_X509_VFY_CHAIN_SUBJECT_ISSUER_MISMATCH_FAIL_TC001(void)
     ASSERT_TRUE(TestIsErrStackEmpty());
 
     int32_t ret = HITLS_X509_CertVerify(store, chain);
-    ASSERT_EQ(ret, HITLS_X509_ERR_ISSUE_CERT_NOT_FOUND);
+    ASSERT_EQ(ret, HITLS_X509_ERR_VFY_ISSUE_CERT_NOT_FOUND_LOCALLY);
 
 EXIT:
     HITLS_X509_StoreCtxFree(store);
@@ -5123,7 +5418,7 @@ void SDV_X509_VFY_TRUST_ANCHOR_NOT_FOUND_FAIL_TC002(void)
     ASSERT_TRUE(TestIsErrStackEmpty());
 
     int32_t ret = HITLS_X509_CertVerify(store, chain);
-    ASSERT_EQ(ret, HITLS_X509_ERR_ROOT_CERT_NOT_FOUND);
+    ASSERT_EQ(ret, HITLS_X509_ERR_VFY_SELF_SIGNED_CERT_IN_CHAIN);
 
 EXIT:
     HITLS_X509_StoreCtxFree(store);
@@ -5223,7 +5518,7 @@ void SDV_X509_PARTIAL_CERT_VFY_FUNC_TC003(char *caCertPath, char *interCertPath,
     ASSERT_TRUE(TestIsErrStackEmpty());
 
     ret = HITLS_X509_CertVerify(store, chain);
-    ASSERT_EQ(ret, HITLS_X509_ERR_ROOT_CERT_NOT_FOUND);
+    ASSERT_EQ(ret, HITLS_X509_ERR_VFY_SELF_SIGNED_CERT_IN_CHAIN);
 
     int64_t setFlag = HITLS_X509_VFY_FLAG_PARTIAL_CHAIN;
     ret = HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_SET_PARAM_FLAGS, &setFlag, sizeof(setFlag));
@@ -5339,7 +5634,7 @@ void SDV_X509_PARTIAL_CERT_VFY_FUNC_TC005(void)
     ASSERT_EQ(HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_SET_VERIFY_CB,
         testCallback, sizeof(testCallback)), HITLS_PKI_SUCCESS);
 
-    ASSERT_EQ(HITLS_X509_CertVerify(store, chain), HITLS_X509_ERR_ROOT_CERT_NOT_FOUND);
+    ASSERT_EQ(HITLS_X509_CertVerify(store, chain), HITLS_X509_ERR_VFY_ISSUE_CERT_NOT_FOUND_LOCALLY);
 
 EXIT:
     HITLS_X509_StoreCtxFree(store);
@@ -7310,7 +7605,7 @@ void SDV_X509_BUILD_CHAIN_SELF_SIGNED_SIGALG_MISMATCH_TC001(void)
     ASSERT_EQ(X509_AddCertToChainTest(chain, leaf), HITLS_PKI_SUCCESS);
     ASSERT_EQ(X509_AddCertToChainTest(chain, ca), HITLS_PKI_SUCCESS);
 
-    ASSERT_EQ(HITLS_X509_CertVerify(store, chain), HITLS_X509_ERR_ISSUE_CERT_NOT_FOUND);
+    ASSERT_EQ(HITLS_X509_CertVerify(store, chain), HITLS_X509_ERR_VFY_SELF_ISSUED_CERT_IN_CHAIN);
     ASSERT_EQ(BSL_LIST_COUNT(chain), 2);
 
 EXIT:

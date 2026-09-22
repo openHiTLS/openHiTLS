@@ -54,7 +54,8 @@ typedef enum {
     HITLS_X509_ERR_VFY_GET_SIGNID,
     HITLS_X509_ERR_VFY_DUP_PUBKEY,
     HITLS_X509_ERR_CERT_CHAIN_COUNT_IS0,
-    HITLS_X509_ERR_ISSUE_CERT_NOT_FOUND,
+    HITLS_X509_ERR_ISSUE_CERT_NOT_FOUND, /**< The chain is incomplete: its last certificate is trusted, but the
+                                          *   issuer of that certificate cannot be found. */
     HITLS_X509_ERR_ROOT_CERT_NOT_FOUND,
     HITLS_X509_ERR_CHAIN_DEPTH_UP_LIMIT,
     HITLS_X509_ERR_VFY_AKI_SKI_NOT_MATCH,
@@ -86,6 +87,15 @@ typedef enum {
     HITLS_X509_ERR_VFY_CRL_TIME_ERROR,
     HITLS_X509_ERR_VFY_URI_ID_FAIL,
     HITLS_X509_ERR_VFY_SRV_ID_FAIL,
+    HITLS_X509_ERR_VFY_SELF_SIGNED_CERT_IN_CHAIN, /**< Chain building reached a self-signed certificate that is not
+                                                   *   trusted. */
+    HITLS_X509_ERR_VFY_SELF_ISSUED_CERT_IN_CHAIN, /**< The chain ends at an untrusted self-issued certificate; its
+                                                   *   subject and issuer names match, but it is not necessarily
+                                                   *   self-signed. */
+    HITLS_X509_ERR_VFY_ISSUE_CERT_NOT_FOUND_LOCALLY, /**< The chain is incomplete: its last certificate is not trusted,
+                                                      *   and its issuer cannot be found in the trust store or the
+                                                      *   supplied certificate chain. */
+    HITLS_X509_ERR_VFY_UNABLE_TO_VERIFY_LEAF_SIGNATURE,
 
     HITLS_X509_ERR_CERT_NOT_CA = 0x04010001,
     HITLS_X509_ERR_CERT_EXIST,

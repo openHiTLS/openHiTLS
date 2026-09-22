@@ -103,6 +103,34 @@ int32_t HITLS_X509_CertDigest(HITLS_X509_Cert *cert, CRYPT_MD_AlgId mdId, uint8_
 
 /**
  * @ingroup pki
+ * @brief Compute the digest of the subjectPublicKey BIT STRING in the certificate SubjectPublicKeyInfo.
+ *
+ * @attention This function must be called after generating or parsing a certificate.
+ *
+ * @param cert    [IN] The certificate.
+ * @param mdId    [IN] Digest algorithm.
+ * @param data    [OUT] The digest result buffer.
+ * @param dataLen [IN/OUT] Input buffer length and output digest length.
+ * @retval #HITLS_PKI_SUCCESS, success.
+ *         Error codes can be found in hitls_pki_errno.h
+ */
+int32_t HITLS_X509_PubkeyDigest(HITLS_X509_Cert *cert, CRYPT_MD_AlgId mdId, uint8_t *data, uint32_t *dataLen);
+
+/**
+ * @ingroup pki
+ * @brief Compute the digest of the DER encoded X.509 distinguished name.
+ *
+ * @param name    [IN] X.509 distinguished name list.
+ * @param mdId    [IN] Digest algorithm.
+ * @param data    [OUT] The digest result buffer.
+ * @param dataLen [IN/OUT] Input buffer length and output digest length.
+ * @retval #HITLS_PKI_SUCCESS, success.
+ *         Error codes can be found in hitls_pki_errno.h
+ */
+int32_t HITLS_X509_NameDigest(BslList *name, CRYPT_MD_AlgId mdId, uint8_t *data, uint32_t *dataLen);
+
+/**
+ * @ingroup pki
  * @brief Generic function to process certificate.
  *
  * @param cert   [IN] The certificate.

@@ -1161,6 +1161,98 @@ EXIT:
         : CRYPT_EAL_Md(mdId, cert->rawData, cert->rawDataLen, data, dataLen);
 }
 
+#ifdef HITLS_CRYPTO_KEY_DECODE
+static int32_t X509_DecodeSubPubkeyInfoFromRaw(HITLS_X509_Cert *cert, CRYPT_DECODE_SubPubkeyInfo *subPubkeyInfo)
+{
+    BSL_ASN1_Buffer asnArr[HITLS_X509_CERT_MAX_IDX] = {0};
+    BSL_ASN1_Template templ = {g_certTempl, sizeof(g_certTempl) / sizeof(g_certTempl[0])};
+    uint8_t *temp = cert->rawData;
+    uint32_t tempLen = cert->rawDataLen;
+    int32_t ret = BSL_ASN1_DecodeTemplate(&templ, HITLS_X509_CertTagGetOrCheck,
+        &temp, &tempLen, asnArr, HITLS_X509_CERT_MAX_IDX);
+    if (ret != BSL_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        return ret;
+    }
+    return CRYPT_DECODE_SubPubkey(asnArr[HITLS_X509_CERT_SUBKEYINFO_IDX].buff,
+        asnArr[HITLS_X509_CERT_SUBKEYINFO_IDX].len, NULL, subPubkeyInfo, false);
+
+}
+#endif
+
+int32_t HITLS_X509_PubkeyDigest(HITLS_X509_Cert *cert, CRYPT_MD_AlgId mdId, uint8_t *data, uint32_t *dataLen)
+{
+#ifdef HITLS_CRYPTO_KEY_DECODE
+    if (cert == NULL || data == NULL || dataLen == NULL) {
+        BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
+        return HITLS_X509_ERR_INVALID_PARAM;
+    }
+    CRYPT_DECODE_SubPubkeyInfo subPubkeyInfo = { 0 };
+    int32_t ret = X509_DecodeSubPubkeyInfoFromRaw(cert, &subPubkeyInfo);
+    if (ret != HITLS_PKI_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        return ret;
+    }
+    ret = cert->isProvider == true ?
+              CRYPT_EAL_ProviderMd(cert->libCtx, mdId, cert->attrName, subPubkeyInfo.pubKey.buff,
+                                   subPubkeyInfo.pubKey.len, data, dataLen) :
+              CRYPT_EAL_Md(mdId, subPubkeyInfo.pubKey.buff, subPubkeyInfo.pubKey.len, data, dataLen);
+    if (ret != HITLS_PKI_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+    }
+    return ret;
+#else
+    (void)cert;
+    (void)mdId;
+    (void)data;
+    (void)dataLen;
+    BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_FUNC_UNSUPPORT);
+    return HITLS_X509_ERR_FUNC_UNSUPPORT;
+#endif
+}
+
+int32_t HITLS_X509_NameDigest(BslList *name, CRYPT_MD_AlgId mdId, uint8_t *data, uint32_t *dataLen)
+{
+    if (name == NULL || data == NULL || dataLen == NULL) {
+        BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
+        return HITLS_X509_ERR_INVALID_PARAM;
+    }
+// HITLS_X509_EncodeNameList api require these macros to be defined
+#if defined(HITLS_PKI_X509_CSR_GEN) || defined(HITLS_PKI_X509_CRT_GEN) || defined(HITLS_PKI_X509_CRL_GEN) || \
+    defined(HITLS_PKI_X509_VFY_LOCATION) || defined(HITLS_PKI_X509_CRT_AUTH) || defined(HITLS_PKI_INFO)
+    BSL_ASN1_Buffer encode = {BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE, 0, NULL};
+    int32_t ret = HITLS_PKI_SUCCESS;
+    if (BSL_LIST_COUNT(name) != 0) {
+        ret = HITLS_X509_EncodeNameList(name, &encode);
+        if (ret != HITLS_PKI_SUCCESS) {
+            BSL_ERR_PUSH_ERROR(ret);
+            return ret;
+        }
+    }
+    BSL_Buffer buff = {0};
+    BSL_ASN1_TemplateItem nameTempl = {BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE,
+                                       BSL_ASN1_FLAG_HEADERONLY | BSL_ASN1_FLAG_SAME, 0};
+    BSL_ASN1_Template templ = {&nameTempl, 1};
+    ret = BSL_ASN1_EncodeTemplate(&templ, &encode, 1, &buff.data, &buff.dataLen);
+    if (ret != HITLS_PKI_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        goto EXIT;
+    }
+    ret = CRYPT_EAL_Md(mdId, buff.data, buff.dataLen, data, dataLen);
+    if (ret != HITLS_PKI_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+    }
+EXIT:
+    BSL_SAL_FREE(buff.data);
+    BSL_SAL_FREE(encode.buff);
+    return ret;
+#else
+    (void)mdId;
+    BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_FUNC_UNSUPPORT);
+    return HITLS_X509_ERR_FUNC_UNSUPPORT;
+#endif
+}
+
 #ifdef HITLS_PKI_X509_CRT_GEN
 static int32_t CertSignCb(int32_t mdId, CRYPT_EAL_PkeyCtx *pivKey, HITLS_X509_Asn1AlgId *signAlgId,
     HITLS_X509_Cert *cert)
