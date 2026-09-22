@@ -18,6 +18,7 @@
 #include "bsl_bytes.h"
 #include "hitls_session.h"
 #include "alert.h"
+#include "hs_ctx.h"
 #include "hs_extensions.h"
 #include "hs_msg.h"
 #include "rec_wrapper.h"
@@ -29,20 +30,37 @@ static const uint16_t g_quicTestP256P384[] = {
     HITLS_EC_GROUP_SECP256R1, HITLS_EC_GROUP_SECP384R1
 };
 
+/* Step budget for the manual Accept/Connect drive used by the non-QUIC rejection tests; the
+ * simulated FRAME links drain one record per transfer, so a flight may need several rounds. */
+#define QUIC_TEST_TP_DRIVE_ROUNDS 64u
+
 #define QUIC_TEST_HELLO_SESSION_ID_LEN_OFFSET (HS_MSG_HEADER_SIZE + sizeof(uint16_t) + HS_RANDOM_SIZE)
 #define QUIC_TEST_TICKET_KEY_LEN 80u
 
-/* Parse and repack ClientHello with a QUIC transport parameters extension containing one 0x00 byte. */
+/* Injection target selector for the client-side QUIC transport-parameters wrapper. The wrapper
+ * matches every ClientHello write, so injectAfterHrr selects the message: false injects into the
+ * first ClientHello and true injects into the ClientHello re-sent after a HelloRetryRequest
+ * (the client raises hsCtx->haveHrr before re-sending). */
+typedef struct {
+    bool injectAfterHrr;
+    bool done;
+} QuicTlsTestClientTpInject;
+
+/* Parse and repack the selected ClientHello (first or post-HRR) with a QUIC transport parameters
+ * extension containing one 0x00 byte. */
 static void QuicTlsTestAddClientTransportParameters(HITLS_Ctx *ctx, uint8_t *data, uint32_t *len,
     uint32_t bufSize, void *userData)
 {
     static const uint8_t transportParamsData[] = {0x00u};
-    bool *injected = (bool *)userData;
+    QuicTlsTestClientTpInject *inject = (QuicTlsTestClientTpInject *)userData;
+    TLS_Ctx *tlsCtx = (TLS_Ctx *)ctx;
     FRAME_Type frameType = {0};
     FRAME_Msg frameMsg = {0};
     uint32_t parseLen = 0u;
-    (void)ctx;
-    if (injected == NULL || *injected) {
+    if (inject == NULL || inject->done || tlsCtx == NULL || tlsCtx->hsCtx == NULL) {
+        return;
+    }
+    if ((bool)tlsCtx->hsCtx->haveHrr != inject->injectAfterHrr) {
         return;
     }
 
@@ -61,7 +79,7 @@ static void QuicTlsTestAddClientTransportParameters(HITLS_Ctx *ctx, uint8_t *dat
     ASSERT_EQ(FRAME_ModifyMsgArray8(transportParamsData, sizeof(transportParamsData),
         &transportParams->exData, &transportParams->exDataLen), HITLS_SUCCESS);
     ASSERT_EQ(FRAME_PackRecordBody(&frameType, &frameMsg, data, bufSize, len), HITLS_SUCCESS);
-    *injected = true;
+    inject->done = true;
 
 EXIT:
     FRAME_CleanMsg(&frameType, &frameMsg);
@@ -94,6 +112,54 @@ static void QuicTlsTestAddEncryptedExtensionsTransportParameters(HITLS_Ctx *ctx,
     (void)memcpy(&data[*len], transportParams, sizeof(transportParams));
     *len += sizeof(transportParams);
     BSL_Uint16ToByte((uint16_t)(extensionsLen + sizeof(transportParams)), &data[HS_MSG_HEADER_SIZE]);
+    BSL_Uint24ToByte(handshakeLen + sizeof(transportParams), &data[1]);
+    *injected = true;
+}
+
+/* Append a one-byte QUIC transport parameters extension to a ServerHello-format message
+ * (ServerHello or HelloRetryRequest) and repair both enclosing lengths. */
+static void QuicTlsTestAddServerHelloTransportParameters(HITLS_Ctx *ctx, uint8_t *data, uint32_t *len,
+    uint32_t bufSize, void *userData)
+{
+    static const uint8_t transportParams[] = {0x00u, 0x39u, 0x00u, 0x01u, 0x00u};
+    bool *injected = (bool *)userData;
+    uint32_t handshakeLen;
+    uint32_t msgEnd;
+    uint16_t extensionsLen;
+    size_t extensionsLenOffset;
+    size_t offset;
+    uint8_t sessionIdLen;
+    (void)ctx;
+    if (injected == NULL || *injected || data == NULL || len == NULL ||
+        *len <= QUIC_TEST_HELLO_SESSION_ID_LEN_OFFSET || data[0] != SERVER_HELLO ||
+        *len > bufSize || sizeof(transportParams) > bufSize - *len) {
+        return;
+    }
+
+    handshakeLen = BSL_ByteToUint24(&data[1]);
+    if (handshakeLen != *len - HS_MSG_HEADER_SIZE ||
+        handshakeLen > 0xffffffu - sizeof(transportParams)) {
+        return;
+    }
+    msgEnd = HS_MSG_HEADER_SIZE + handshakeLen;
+    offset = QUIC_TEST_HELLO_SESSION_ID_LEN_OFFSET;
+    sessionIdLen = data[offset++];
+    if ((size_t)sessionIdLen > msgEnd - offset || msgEnd - offset - sessionIdLen < 5u) {
+        return;
+    }
+
+    offset += sessionIdLen + 3u; /* skip session ID, cipher suite, and compression method */
+    extensionsLenOffset = offset;
+    extensionsLen = BSL_ByteToUint16(&data[offset]);
+    offset += 2u;
+    if ((size_t)extensionsLen != msgEnd - offset ||
+        extensionsLen > UINT16_MAX - sizeof(transportParams)) {
+        return;
+    }
+
+    (void)memcpy(&data[*len], transportParams, sizeof(transportParams));
+    *len += sizeof(transportParams);
+    BSL_Uint16ToByte((uint16_t)(extensionsLen + sizeof(transportParams)), &data[extensionsLenOffset]);
     BSL_Uint24ToByte(handshakeLen + sizeof(transportParams), &data[1]);
     *injected = true;
 }
@@ -1656,36 +1722,72 @@ EXIT:
 
 /**
  * @test SDV_TLS_QUIC_INTERACTION_NON_QUIC_SERVER_TP_FUNC_TC001
- * @title A regular TLS server rejects QUIC transport parameters in ClientHello
- * @precon Neither endpoint enables QUIC-TLS mode
- * @brief Add a one-byte QUIC transport-parameters extension to the regular TLS client's ClientHello through FRAME.
- * @expect The server returns unsupported-extension and sends a fatal unsupported_extension alert as required by
- *         RFC 9001 Section 8.2.
+ * @title A regular TLS server rejects QUIC transport parameters in a ClientHello
+ * @precon Neither endpoint enables QUIC-TLS mode; helloIndex selects the first ClientHello (0)
+ *         or the ClientHello re-sent after HelloRetryRequest (1)
+ * @brief Carry a one-byte QUIC transport-parameters extension in the selected ClientHello; helloIndex 1
+ *        forces HelloRetryRequest via disjoint key-share groups before the tampered ClientHello.
+ * @expect The server returns unsupported-extension and sends a fatal unsupported_extension alert for both
+ *         the first ClientHello and the post-HelloRetryRequest ClientHello as required by RFC 9001 Section 8.2.
  */
 /* BEGIN_CASE */
-void SDV_TLS_QUIC_INTERACTION_NON_QUIC_SERVER_TP_FUNC_TC001(void)
+void SDV_TLS_QUIC_INTERACTION_NON_QUIC_SERVER_TP_FUNC_TC001(int helloIndex)
 {
-    HITLS_Config *tlsConfig = NULL;
+    HITLS_Config *clientConfig = NULL;
+    HITLS_Config *serverConfig = NULL;
     FRAME_LinkObj *client = NULL;
     FRAME_LinkObj *server = NULL;
-    bool injected = false;
-    RecWrapper wrapper = {
-        TRY_SEND_CLIENT_HELLO, REC_TYPE_HANDSHAKE, false, &injected, QuicTlsTestAddClientTransportParameters};
+    QuicTlsTestClientTpInject inject = {0};
     ALERT_Info alert = {0};
 
     FRAME_Init();
-    tlsConfig = HITLS_CFG_NewTLS13Config();
-    ASSERT_TRUE(tlsConfig != NULL);
-    client = FRAME_CreateLink(tlsConfig, BSL_UIO_TCP);
-    server = FRAME_CreateLink(tlsConfig, BSL_UIO_TCP);
+    ASSERT_TRUE(helloIndex == 0 || helloIndex == 1);
+    inject.injectAfterHrr = helloIndex == 1;
+    clientConfig = HITLS_CFG_NewTLS13Config();
+    serverConfig = HITLS_CFG_NewTLS13Config();
+    ASSERT_TRUE(clientConfig != NULL);
+    ASSERT_TRUE(serverConfig != NULL);
+    if (helloIndex == 1) {
+        /* Only P-384 is acceptable to the server, so the first ClientHello (P-256 key share) triggers HRR. */
+        static const uint16_t clientGroups[] = {HITLS_EC_GROUP_SECP256R1, HITLS_EC_GROUP_SECP384R1};
+        static const uint16_t serverGroups[] = {HITLS_EC_GROUP_SECP384R1};
+        ASSERT_EQ(HITLS_CFG_SetGroups(clientConfig, clientGroups,
+            sizeof(clientGroups) / sizeof(clientGroups[0])), HITLS_SUCCESS);
+        ASSERT_EQ(HITLS_CFG_SetGroups(serverConfig, serverGroups,
+            sizeof(serverGroups) / sizeof(serverGroups[0])), HITLS_SUCCESS);
+    }
+    client = FRAME_CreateLink(clientConfig, BSL_UIO_TCP);
+    server = FRAME_CreateLink(serverConfig, BSL_UIO_TCP);
     ASSERT_TRUE(client != NULL);
     ASSERT_TRUE(server != NULL);
+    RecWrapper wrapper = {TRY_SEND_CLIENT_HELLO, REC_TYPE_HANDSHAKE, false, &inject,
+        QuicTlsTestAddClientTransportParameters};
     RegisterWrapper(wrapper);
 
-    ASSERT_TRUE(QuicTlsTestIsProgressResult(HITLS_Connect(client->ssl)));
-    ASSERT_TRUE(injected);
-    ASSERT_EQ(FRAME_TrasferMsgBetweenLink(client, server), HITLS_SUCCESS);
-    ASSERT_EQ(HITLS_Accept(server->ssl), HITLS_PARSE_UNSUPPORTED_EXTENSION);
+    /* Drive both endpoints, draining the single-slot FRAME buffers between handshake steps, until the
+     * server either rejects the tampered ClientHello or the step budget runs out. The simulated links
+     * report IO_BUSY while a flight still holds undrained records, so the loop is required even for
+     * the helloIndex 0 variant. */
+    int32_t acceptRet = HITLS_SUCCESS;
+    int32_t connectRet = HITLS_SUCCESS;
+    for (uint32_t round = 0; round < QUIC_TEST_TP_DRIVE_ROUNDS; round++) {
+        acceptRet = HITLS_Accept(server->ssl);
+        if (!QuicTlsTestIsProgressResult(acceptRet)) {
+            break; /* the server rejected the tampered ClientHello */
+        }
+        ASSERT_EQ(FRAME_TrasferMsgBetweenLink(server, client), HITLS_SUCCESS);
+        connectRet = HITLS_Connect(client->ssl);
+        if (!QuicTlsTestIsProgressResult(connectRet)) {
+            break; /* unexpected client-side hard failure; caught by the assertions below */
+        }
+        ASSERT_EQ(FRAME_TrasferMsgBetweenLink(client, server), HITLS_SUCCESS);
+    }
+    ASSERT_TRUE(inject.done);
+    if (helloIndex == 1) {
+        /* Prove the rejected ClientHello is the re-sent one: the server issued HelloRetryRequest. */
+        ASSERT_TRUE(((TLS_Ctx *)server->ssl)->hsCtx->haveHrr);
+    }
+    ASSERT_EQ(acceptRet, HITLS_PARSE_UNSUPPORTED_EXTENSION);
     ASSERT_EQ(server->ssl->state, CM_STATE_ALERTED);
     ALERT_GetInfo(server->ssl, &alert);
     ASSERT_EQ(alert.flag, ALERT_FLAG_SEND);
@@ -1694,7 +1796,8 @@ void SDV_TLS_QUIC_INTERACTION_NON_QUIC_SERVER_TP_FUNC_TC001(void)
 
 EXIT:
     ClearWrapper();
-    HITLS_CFG_FreeConfig(tlsConfig);
+    HITLS_CFG_FreeConfig(clientConfig);
+    HITLS_CFG_FreeConfig(serverConfig);
     FRAME_FreeLink(client);
     FRAME_FreeLink(server);
 }
@@ -1702,30 +1805,56 @@ EXIT:
 
 /**
  * @test SDV_TLS_QUIC_INTERACTION_NON_QUIC_CLIENT_TP_FUNC_TC001
- * @title A regular TLS client rejects QUIC transport parameters in EncryptedExtensions
- * @precon Neither endpoint enables QUIC-TLS mode
- * @brief Inject a one-byte QUIC transport-parameters extension into the regular TLS server's EncryptedExtensions.
- * @expect The client rejects the unsolicited extension and sends a fatal unsupported_extension alert as required by
- *         RFC 9001 Section 8.2.
+ * @title A regular TLS client rejects QUIC transport parameters in a server flight message
+ * @precon Neither endpoint enables QUIC-TLS mode; injectPoint selects HelloRetryRequest (0),
+ *         ServerHello (1) or EncryptedExtensions (2); point 0 forces HelloRetryRequest via
+ *         disjoint key-share groups
+ * @brief Carry a one-byte QUIC transport-parameters extension in the selected server flight message.
+ * @expect The client rejects the message and sends a fatal unsupported_extension alert for HelloRetryRequest,
+ *         ServerHello and EncryptedExtensions alike as required by RFC 9001 Section 8.2.
  */
 /* BEGIN_CASE */
-void SDV_TLS_QUIC_INTERACTION_NON_QUIC_CLIENT_TP_FUNC_TC001(void)
+void SDV_TLS_QUIC_INTERACTION_NON_QUIC_CLIENT_TP_FUNC_TC001(int injectPoint)
 {
-    HITLS_Config *tlsConfig = NULL;
+    HITLS_Config *clientConfig = NULL;
+    HITLS_Config *serverConfig = NULL;
     FRAME_LinkObj *client = NULL;
     FRAME_LinkObj *server = NULL;
     bool injected = false;
-    RecWrapper wrapper = {TRY_SEND_ENCRYPTED_EXTENSIONS, REC_TYPE_HANDSHAKE, false, &injected,
-        QuicTlsTestAddEncryptedExtensionsTransportParameters};
+    HITLS_HandshakeState wrapperState = TRY_SEND_ENCRYPTED_EXTENSIONS;
+    RecWrapper wrapper;
     ALERT_Info alert = {0};
 
     FRAME_Init();
-    tlsConfig = HITLS_CFG_NewTLS13Config();
-    ASSERT_TRUE(tlsConfig != NULL);
-    client = FRAME_CreateLink(tlsConfig, BSL_UIO_TCP);
-    server = FRAME_CreateLink(tlsConfig, BSL_UIO_TCP);
+    ASSERT_TRUE(injectPoint >= 0 && injectPoint <= 2);
+    if (injectPoint == 0) {
+        wrapperState = TRY_SEND_HELLO_RETRY_REQUEST;
+    } else if (injectPoint == 1) {
+        wrapperState = TRY_SEND_SERVER_HELLO;
+    }
+    clientConfig = HITLS_CFG_NewTLS13Config();
+    serverConfig = HITLS_CFG_NewTLS13Config();
+    ASSERT_TRUE(clientConfig != NULL);
+    ASSERT_TRUE(serverConfig != NULL);
+    if (injectPoint == 0) {
+        /* Only P-384 is acceptable to the server, so the first ClientHello (P-256 key share) triggers HRR. */
+        static const uint16_t clientGroups[] = {HITLS_EC_GROUP_SECP256R1, HITLS_EC_GROUP_SECP384R1};
+        static const uint16_t serverGroups[] = {HITLS_EC_GROUP_SECP384R1};
+        ASSERT_EQ(HITLS_CFG_SetGroups(clientConfig, clientGroups,
+            sizeof(clientGroups) / sizeof(clientGroups[0])), HITLS_SUCCESS);
+        ASSERT_EQ(HITLS_CFG_SetGroups(serverConfig, serverGroups,
+            sizeof(serverGroups) / sizeof(serverGroups[0])), HITLS_SUCCESS);
+    }
+    client = FRAME_CreateLink(clientConfig, BSL_UIO_TCP);
+    server = FRAME_CreateLink(serverConfig, BSL_UIO_TCP);
     ASSERT_TRUE(client != NULL);
     ASSERT_TRUE(server != NULL);
+    wrapper.ctrlState = wrapperState;
+    wrapper.recordType = REC_TYPE_HANDSHAKE;
+    wrapper.isRecRead = false;
+    wrapper.userData = &injected;
+    wrapper.func = injectPoint == 2 ? QuicTlsTestAddEncryptedExtensionsTransportParameters :
+        QuicTlsTestAddServerHelloTransportParameters;
     RegisterWrapper(wrapper);
 
     ASSERT_EQ(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT),
@@ -1739,8 +1868,56 @@ void SDV_TLS_QUIC_INTERACTION_NON_QUIC_CLIENT_TP_FUNC_TC001(void)
 
 EXIT:
     ClearWrapper();
-    HITLS_CFG_FreeConfig(tlsConfig);
+    HITLS_CFG_FreeConfig(clientConfig);
+    HITLS_CFG_FreeConfig(serverConfig);
     FRAME_FreeLink(client);
     FRAME_FreeLink(server);
+}
+/* END_CASE */
+
+/**
+ * @test SDV_TLS_QUIC_INTERACTION_CCM_NEGOTIATE_FUNC_TC001
+ * @title QUIC mode negotiates TLS_AES_128_CCM_SHA256 while AES_128_CCM_8_SHA256 is also offered
+ * @precon The library build compiles both TLS 1.3 AES-128-CCM suites
+ * @brief Configure the client with CCM_SHA256 and CCM_8 and the server with CCM_SHA256, then complete a
+ *        QUIC handshake. CCM_8 defines no QUIC header-protection scheme, so the QUIC whitelist drops it.
+ * @expect The handshake succeeds and both endpoints negotiate TLS_AES_128_CCM_SHA256 with matching traffic secrets.
+ */
+/* BEGIN_CASE */
+void SDV_TLS_QUIC_INTERACTION_CCM_NEGOTIATE_FUNC_TC001(void)
+{
+#if !defined(HITLS_TLS_SUITE_AES_128_CCM_SHA256) || !defined(HITLS_TLS_SUITE_AES_128_CCM_8_SHA256)
+    SKIP_TEST();
+    return;
+#else
+    /* CCM_8 is offered first on purpose: if either endpoint failed to drop the suite (it defines
+     * no QUIC header-protection scheme), negotiation would select it and the assertion below fires. */
+    static const uint16_t ccmSuites[] = {HITLS_AES_128_CCM_8_SHA256, HITLS_AES_128_CCM_SHA256};
+    static const uint16_t serverSuite = HITLS_AES_128_CCM_SHA256;
+    QuicTlsTestPair pair = {0};
+    uint32_t failedSide = QUIC_TEST_SIDE_NONE;
+
+    FRAME_Init();
+    ASSERT_EQ(QuicTlsTestPairNew(&pair, g_quicTestP256, 1u, g_quicTestP256, 1u, true, true),
+        HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_SetCipherSuites(pair.clientLink->ssl, ccmSuites,
+        sizeof(ccmSuites) / sizeof(ccmSuites[0])), HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_SetCipherSuites(pair.serverLink->ssl, &serverSuite, 1u), HITLS_SUCCESS);
+
+    ASSERT_EQ(QuicTlsTestRunHandshake(&pair, SIZE_MAX, &failedSide), HITLS_SUCCESS);
+    ASSERT_EQ(failedSide, QUIC_TEST_SIDE_NONE);
+    ASSERT_TRUE(QuicTlsTestIsDone(pair.clientLink->ssl));
+    ASSERT_TRUE(QuicTlsTestIsDone(pair.serverLink->ssl));
+    ASSERT_EQ(pair.clientLink->ssl->negotiatedInfo.cipherSuiteInfo.cipherSuite, HITLS_AES_128_CCM_SHA256);
+    ASSERT_EQ(pair.serverLink->ssl->negotiatedInfo.cipherSuiteInfo.cipherSuite, HITLS_AES_128_CCM_SHA256);
+    ASSERT_TRUE(pair.clientEndpoint.writeSecretLen[HITLS_QUIC_TLS_ENCRYPTION_LEVEL_APPLICATION] != 0u);
+    ASSERT_TRUE(QuicTlsTestSecretsMatch(&pair.clientEndpoint, &pair.serverEndpoint,
+        HITLS_QUIC_TLS_ENCRYPTION_LEVEL_HANDSHAKE));
+    ASSERT_TRUE(QuicTlsTestSecretsMatch(&pair.clientEndpoint, &pair.serverEndpoint,
+        HITLS_QUIC_TLS_ENCRYPTION_LEVEL_APPLICATION));
+
+EXIT:
+    QuicTlsTestPairFree(&pair);
+#endif
 }
 /* END_CASE */
