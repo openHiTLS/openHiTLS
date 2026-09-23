@@ -110,12 +110,17 @@ int32_t CRYPT_PAILLIER_SetPara(CRYPT_PAILLIER_Ctx *ctx, const CRYPT_PaillierPara
 
 /**
  * @ingroup paillier
- * @brief Obtain the valid length of the key.
+ * @brief Obtain the bit length of the modulus n.
+ *
+ * When a key pair exists the value is taken from the actual modulus (BN_Bits(n));
+ * before key generation the value implied by the parameters (2 * para->bits) is
+ * returned, so the reported scale is always the modulus size and never that of a
+ * single prime factor.
  *
  * @param ctx [IN] Structure from which the key length is expected to be obtained
  *
  * @retval 0: The input is incorrect or the corresponding key structure does not have a valid key length.
- * @retval uint32_t: Valid key length
+ * @retval uint32_t: Modulus bit length (|n|)
  */
 uint32_t CRYPT_PAILLIER_GetBits(const CRYPT_PAILLIER_Ctx *ctx);
 

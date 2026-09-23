@@ -1258,3 +1258,99 @@ EXIT:
     TestRandDeInit();
 }
 /* END_CASE */
+
+/**
+ * @test   SDV_CRYPTO_PAILLIER_GENERATED_KEY_ROUNDTRIP_TC001
+ * @title  PAILLIER generated key export/import and roundtrip.
+ * @precon Register the deterministic test RNG (RandFunc/RandFuncEx).
+ * @brief
+ *    1. Set para and check CRYPT_EAL_PkeyGetKeyLen reports the modulus scale (2 * bits)
+ *       before and after CRYPT_EAL_PkeyGen, expected result 1.
+ *    2. Encrypt/decrypt a 1-byte plaintext on the generated context and compare, expected result 2.
+ *    3. Export pub/prv keys via the EAL interface, import them into independent contexts,
+ *       and repeat the encrypt/decrypt roundtrip, expected result 2.
+ * @expect
+ *    1. The reported key length equals 2 * BN_BITS_TO_BYTES(bits) and the exported nLen.
+ *    2. CRYPT_SUCCESS and the decrypted plaintext equals the original.
+ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_PAILLIER_GENERATED_KEY_ROUNDTRIP_TC001(Hex *p, Hex *q, int bits, int isProvider)
+{
+    CRYPT_EAL_PkeyPara para = {0};
+    CRYPT_EAL_PkeyCtx *pkey = NULL;
+    CRYPT_EAL_PkeyCtx *pubCtx = NULL;
+    CRYPT_EAL_PkeyCtx *prvCtx = NULL;
+    CRYPT_EAL_PkeyPub pubKey = {0};
+    CRYPT_EAL_PkeyPrv prvKey = {0};
+    uint8_t pubG[1200];
+    uint8_t pubN[1200];
+    uint8_t pubN2[2400];
+    uint8_t prvLambda[1200];
+    uint8_t prvMu[1200];
+    uint8_t plain[1] = {1};
+    uint8_t cipher[2400];
+    uint8_t decrypted[1200];
+    uint32_t cipherLen = sizeof(cipher);
+    uint32_t decryptedLen = sizeof(decrypted);
+    uint32_t keyLen;
+
+    /* Set the generation parameters and prepare the EAL export buffers. */
+    SetPaillierPara(&para, p, q, bits);
+    SetPaillierPubKey(&pubKey, pubG, sizeof(pubG), pubN, sizeof(pubN), pubN2, sizeof(pubN2));
+    SetPaillierPrvKey(&prvKey, prvLambda, sizeof(prvLambda), prvMu, sizeof(prvMu));
+
+    /* Register the test RNG and create the contexts used for generation and import. */
+    TestMemInit();
+    CRYPT_RandRegist(RandFunc);
+    CRYPT_RandRegistEx(RandFuncEx);
+    pkey = TestPkeyNewCtx(NULL, CRYPT_PKEY_PAILLIER, CRYPT_EAL_PKEY_CIPHER_OPERATE,
+        "provider=default", isProvider);
+    pubCtx = TestPkeyNewCtx(NULL, CRYPT_PKEY_PAILLIER, CRYPT_EAL_PKEY_CIPHER_OPERATE,
+        "provider=default", isProvider);
+    prvCtx = TestPkeyNewCtx(NULL, CRYPT_PKEY_PAILLIER, CRYPT_EAL_PKEY_CIPHER_OPERATE,
+        "provider=default", isProvider);
+    ASSERT_TRUE(pkey != NULL && pubCtx != NULL && prvCtx != NULL);
+    /* Generate the key pair and check encryption/decryption on the generated context. */
+    ASSERT_EQ(CRYPT_EAL_PkeySetPara(pkey, &para), CRYPT_SUCCESS);
+    /* Before generation the interface must already report the modulus scale (2 * bits). */
+    ASSERT_EQ(CRYPT_EAL_PkeyGetKeyLen(pkey), 2u * ((uint32_t)bits / 8u));
+    ASSERT_EQ(CRYPT_EAL_PkeyGen(pkey), CRYPT_SUCCESS);
+
+    keyLen = CRYPT_EAL_PkeyGetKeyLen(pkey);
+    /* The reported length scale must stay consistent across generation. */
+    ASSERT_EQ(keyLen, 2u * ((uint32_t)bits / 8u));
+    ASSERT_TRUE(keyLen > 0 && keyLen <= sizeof(pubN));
+    ASSERT_EQ(CRYPT_EAL_PkeyEncrypt(pkey, plain, sizeof(plain), cipher, &cipherLen), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyDecrypt(pkey, cipher, cipherLen, decrypted, &decryptedLen), CRYPT_SUCCESS);
+    ASSERT_EQ(decryptedLen, sizeof(plain));
+    ASSERT_COMPARE("generated Paillier roundtrip", plain, sizeof(plain), decrypted, decryptedLen);
+
+    /* Export the public and private keys through the EAL interface, not via context internals. */
+    ASSERT_EQ(CRYPT_EAL_PkeyGetPub(pkey, &pubKey), CRYPT_SUCCESS);
+    /* Check that the EAL keyLen matches the exported public-key nLen. */
+    ASSERT_TRUE(pubKey.key.paillierPub.nLen > 0);
+    ASSERT_EQ(keyLen, pubKey.key.paillierPub.nLen);
+    ASSERT_EQ(CRYPT_EAL_PkeyGetPrv(pkey, &prvKey), CRYPT_SUCCESS);
+    prvKey.key.paillierPrv.n = pubN;
+    prvKey.key.paillierPrv.nLen = pubKey.key.paillierPub.nLen;
+    prvKey.key.paillierPrv.n2 = pubN2;
+    prvKey.key.paillierPrv.n2Len = pubKey.key.paillierPub.n2Len;
+    /* Import the exported keys into independent contexts. */
+    ASSERT_EQ(CRYPT_EAL_PkeySetPub(pubCtx, &pubKey), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeySetPrv(prvCtx, &prvKey), CRYPT_SUCCESS);
+
+    cipherLen = sizeof(cipher);
+    decryptedLen = sizeof(decrypted);
+    /* Encrypt with the imported public key, decrypt with the imported private key and compare. */
+    ASSERT_EQ(CRYPT_EAL_PkeyEncrypt(pubCtx, plain, sizeof(plain), cipher, &cipherLen), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyDecrypt(prvCtx, cipher, cipherLen, decrypted, &decryptedLen), CRYPT_SUCCESS);
+    ASSERT_EQ(decryptedLen, sizeof(plain));
+    ASSERT_COMPARE("imported Paillier roundtrip", plain, sizeof(plain), decrypted, decryptedLen);
+
+EXIT:
+    CRYPT_EAL_PkeyFreeCtx(pkey);
+    CRYPT_EAL_PkeyFreeCtx(pubCtx);
+    CRYPT_EAL_PkeyFreeCtx(prvCtx);
+    TestRandDeInit();
+}
+/* END_CASE */
