@@ -165,12 +165,12 @@ ERR:
 int32_t ECP_NistPointAddAffine(const ECC_Para *para, ECC_Point *r, const ECC_Point *a,
     const ECC_Point *b)
 {
-    if (BN_IsZero(&a->z)) {
-        // If point a is an infinity point, r = b
-        return ECC_CopyPoint(r, b);
-    }
     int32_t ret;
     uint32_t bits = BN_Bits(para->p);
+    // Whether a is the point at infinity, kept as a plain flag. The full-width
+    // BN_UINT mask required by BN_CopyWithMask() is built at the point of use so
+    // that the timing does not depend on whether a is the infinity point.
+    uint32_t aIsInfinity = (uint32_t)BN_IsZero(&a->z);
 
     BN_Optimizer *op = BN_OptimizerCreate();
     BN_BigNum *t1 = NULL, *t2 = NULL, *t3 = NULL, *t4 = NULL;
@@ -188,16 +188,24 @@ int32_t ECP_NistPointAddAffine(const ECC_Para *para, ECC_Point *r, const ECC_Poi
     GOTO_ERR_IF(BN_ModSubQuick(t1, t1, &a->x, para->p, op), ret);
     GOTO_ERR_IF(BN_ModSubQuick(t2, t2, &a->y, para->p, op), ret);
 
-    if (BN_IsZero(t1)) {
-        if (BN_IsZero(t2)) {
-            // If two points are equal, use double the point for calculation.
-            GOTO_ERR_IF(ECP_NistPointDouble(para, r, b), ret);
-            goto ERR;
-        } else {
-            // Obtain the infinity point.
-            GOTO_ERR_IF(BN_SetLimb(&r->z, 0), ret);
-            goto ERR;
-        }
+    /* t1 == 0 and t2 == 0 means the two finite points are equal: the formulas
+     * below are not valid for that input, so double the point instead. The
+     * opposite-point case (t1 == 0, t2 != 0) needs no special handling because
+     * the formulas below already yield the point at infinity (z = a->z * t1 == 0).
+     * The bitwise AND keeps both BN_IsZero calls unconditional.
+     */
+    uint32_t t1IsZero = (uint32_t)0 - (uint32_t)BN_IsZero(t1);
+    uint32_t t2IsZero = (uint32_t)0 - (uint32_t)BN_IsZero(t2);
+    uint32_t equal = t1IsZero & t2IsZero & ~((uint32_t)0 - aIsInfinity);
+    if (equal != 0) {
+        /* This exceptional case is not constant-time. Inside a scalar
+         * multiplication ladder it cannot occur (the running point is never
+         * equal to the fixed affine base). The SPAKE2+ callers do pass
+         * secret-derived points, but the equality condition then holds only
+         * with probability ~2^-ord(curve), so no usable information leaks.
+         */
+        GOTO_ERR_IF(ECP_NistPointDouble(para, r, b), ret);
+        goto ERR;
     }
     GOTO_ERR_IF(para->method->bnModNistEccMul(&r->z, &a->z, t1, para->p, op), ret);
 
@@ -212,6 +220,13 @@ int32_t ECP_NistPointAddAffine(const ECC_Para *para, ECC_Point *r, const ECC_Poi
     GOTO_ERR_IF(para->method->bnModNistEccMul(t3, t3, t2, para->p, op), ret);
     GOTO_ERR_IF(para->method->bnModNistEccMul(t4, t4, &a->y, para->p, op), ret);
     GOTO_ERR_IF(BN_ModSubQuick(&r->y, t3, t4, para->p, op), ret);
+
+    // If a is the point at infinity, r = b. Select b with a full-width BN_UINT
+    // mask instead of an early return so that the timing does not depend on a->z.
+    BN_UINT aIsInfinityMask = (BN_UINT)0 - (BN_UINT)aIsInfinity;
+    GOTO_ERR_IF_EX(BN_CopyWithMask(&r->x, &r->x, &b->x, aIsInfinityMask), ret);
+    GOTO_ERR_IF_EX(BN_CopyWithMask(&r->y, &r->y, &b->y, aIsInfinityMask), ret);
+    GOTO_ERR_IF_EX(BN_CopyWithMask(&r->z, &r->z, &b->z, aIsInfinityMask), ret);
 ERR:
     DestroyTmpBn(t1, t2, t3, t4);
     BN_OptimizerDestroy(op);

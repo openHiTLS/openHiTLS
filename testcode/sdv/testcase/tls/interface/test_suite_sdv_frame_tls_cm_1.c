@@ -4931,6 +4931,7 @@ void UT_TLS_PROCESS_SERVER_KX_NAMED_CURVE_TC001(void)
 
 EXIT:
     STUB_RESTORE(ConfigGetGroupInfo);
+    ClearWrapper();
     HITLS_CFG_FreeConfig(c_config);
     HITLS_CFG_FreeConfig(s_config);
     FRAME_FreeLink(client);

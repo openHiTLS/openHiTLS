@@ -547,6 +547,45 @@ ERR:
     return ret;
 }
 
+// Constant-time computation of r = k1*G + k2*pt.
+// The wNAF based ECC_PointMulAdd is variable-time and must not be used with secret
+// scalars, so the shares are computed with the constant-time ECC_PointMul.
+static int32_t Spake2PlusPointMulAdd(ECC_Para *para, ECC_Point *r,
+    const BN_BigNum *k1, const BN_BigNum *k2, const ECC_Point *pt)
+{
+    int32_t ret;
+    /* Degenerate zero scalars (probability < 2^-256 for the random/HKDF-derived
+     * x0 and w0) take a different, shorter path: a zero scalar yields the point
+     * at infinity, which ECC_PointAddAffine rejects as its second operand.
+     * This branch is not expected to be observable for valid credentials.
+     */
+    if (BN_IsZero(k2)) {
+        return ECC_PointMul(para, r, k1, NULL);
+    }
+    if (BN_IsZero(k1)) {
+        return ECC_PointMul(para, r, k2, pt);
+    }
+
+    ECC_Point *t = ECC_NewPoint(para);
+    if (t == NULL) {
+        BSL_ERR_PUSH_ERROR(HITLS_AUTH_PAKE_MEMORY_ALLOC_FAIL);
+        return HITLS_AUTH_PAKE_MEMORY_ALLOC_FAIL;
+    }
+    ret = ECC_PointMul(para, r, k1, NULL); // r = k1 * G
+    if (ret != HITLS_AUTH_SUCCESS) {
+        ECC_FreePoint(t);
+        return ret;
+    }
+    ret = ECC_PointMul(para, t, k2, pt); // t = k2 * pt
+    if (ret != HITLS_AUTH_SUCCESS) {
+        ECC_FreePoint(t);
+        return ret;
+    }
+    ret = ECC_PointAddAffine(para, r, r, t); // r = k1*G + k2*pt
+    ECC_FreePoint(t);
+    return ret;
+}
+
 static int32_t Spake2PlusProverComputeX(Spake2plusCtx* ctx, uint8_t *x, uint32_t xLen,
     uint8_t *shareP, uint32_t *sharePLen)
 {
@@ -578,7 +617,7 @@ static int32_t Spake2PlusProverComputeX(Spake2plusCtx* ctx, uint8_t *x, uint32_t
     }
 
     // shareP(X)=x*G+w0*m
-    ret = ECC_PointMulAdd(para, X, x0, w0, m);
+    ret = Spake2PlusPointMulAdd(para, X, x0, w0, m);
     if (ret != HITLS_AUTH_SUCCESS) {
         goto EXIT;
     }
@@ -627,7 +666,7 @@ static int32_t Spake2PlusVerifierComputeY(Spake2plusCtx* ctx, uint8_t *y, uint32
     }
     
     // shareV(Y)=y*G+w0*n
-    ret = ECC_PointMulAdd(para, Y, y0, w0, n);
+    ret = Spake2PlusPointMulAdd(para, Y, y0, w0, n);
     if (ret != HITLS_AUTH_SUCCESS) {
         goto EXIT;
     }

@@ -2615,6 +2615,9 @@ void SDV_X509_BUILD_MLDSA_CERT_CHAIN_FUNC_TC001(void)
     ASSERT_EQ(HITLS_AddCertToStoreTest("../testdata/cert/chain/mldsa-v3/root.crt", store, &root), HITLS_PKI_SUCCESS);
     ASSERT_EQ(HITLS_X509_CertChainBuild(store, false, entity, &chain), HITLS_PKI_SUCCESS);
 
+    uint64_t verifyTime = 1767225600; /* 2026-01-01 00:00:00 UTC */
+    ASSERT_EQ(HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_SET_TIME, &verifyTime, sizeof(verifyTime)),
+        HITLS_PKI_SUCCESS);
     ASSERT_EQ(HITLS_X509_CertVerify(store, chain), HITLS_PKI_SUCCESS);
     BSL_LIST_FREE(chain, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);
 
