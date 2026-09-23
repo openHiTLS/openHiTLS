@@ -530,9 +530,9 @@ typedef struct {
 typedef struct {
     uint8_t *p; /**< Parameter p. */
     uint8_t *q; /**< Parameter q. */
-    uint32_t pLen; /**< Length of parameter p. */
-    uint32_t qLen; /**< Length of parameter q. */
-    uint32_t bits; /**< Bits of para. */
+    uint32_t pLen; /**< Length of parameter p, must equal (bits + 7) / 8. */
+    uint32_t qLen; /**< Length of parameter q, must equal (bits + 7) / 8. */
+    uint32_t bits; /**< Bit length of each prime factor p and q; the modulus n = p*q is about 2*bits bits. */
 } CRYPT_PaillierPara;
 
 /**

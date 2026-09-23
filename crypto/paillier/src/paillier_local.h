@@ -44,7 +44,7 @@ typedef struct {
 struct PAILLIER_Para {
     BN_BigNum *p;   // prime factor p
     BN_BigNum *q;   // prime factor q
-    uint32_t bits;  // length in bits of modulus
+    uint32_t bits;  // bit length of each prime factor p and q; the modulus n = p*q is about 2*bits bits
 };
 
 struct PAILLIER_Ctx {

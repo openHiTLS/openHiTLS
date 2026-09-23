@@ -317,14 +317,20 @@ uint32_t CRYPT_PAILLIER_GetBits(const CRYPT_PAILLIER_Ctx *ctx)
     if (ctx == NULL) {
         return 0;
     }
-    if (ctx->para != NULL) {
-        return ctx->para->bits;
-    }
+    /* The key length used by encryption/decryption and by all length interfaces
+     * is the modulus size |n|, never the size of a single prime. When both keys
+     * are present the private key takes precedence over the public key (as in
+     * RSA) so that decryption is sized from the private modulus; before
+     * generation the value implied by the parameters (2 * bits) is reported. */
     if (ctx->prvKey != NULL) {
-        return BN_Bits(ctx->prvKey->lambda);
+        return BN_Bits(ctx->prvKey->n);
     }
     if (ctx->pubKey != NULL) {
         return BN_Bits(ctx->pubKey->n);
+    }
+    if (ctx->para != NULL) {
+        /* No key yet: report the modulus scale (2 * bits) implied by the parameters. */
+        return 2 * ctx->para->bits;
     }
     return 0;
 }

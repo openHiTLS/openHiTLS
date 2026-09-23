@@ -111,10 +111,15 @@ static int32_t CRYPT_PAILLIER_PubEnc(const CRYPT_PAILLIER_Ctx *ctx, const uint8_
         goto EXIT;
     }
 
-    ret = BN_Bn2Bin(result, out, outLen);
+    /* Export a fixed n^2-sized ciphertext so that the strict length check in
+     * DecryptInputCheck also holds when the ciphertext has leading zero bytes. */
+    uint32_t n2Bytes = 2 * BN_BITS_TO_BYTES(bits);
+    ret = BN_Bn2BinFixZero(result, out, n2Bytes);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
+        goto EXIT;
     }
+    *outLen = n2Bytes;
 EXIT:
     BN_Destroy(m);
     BN_Destroy(r);
@@ -201,9 +206,10 @@ static int32_t EncryptInputCheck(const CRYPT_PAILLIER_Ctx *ctx, const uint8_t *i
         BSL_ERR_PUSH_ERROR(CRYPT_PAILLIER_NO_KEY_INFO);
         return CRYPT_PAILLIER_NO_KEY_INFO;
     }
-    // Check whether the length of the out is sufficient to place the encryption information.
+    // The ciphertext lives in Z_{n^2}, so 2 * |n| bytes are required; the
+    // plaintext has to fit into Z_n.
     uint32_t bits = CRYPT_PAILLIER_GetBits(ctx);
-    if ((*outLen) < BN_BITS_TO_BYTES(bits)) {
+    if ((*outLen) < 2 * BN_BITS_TO_BYTES(bits)) {
         BSL_ERR_PUSH_ERROR(CRYPT_PAILLIER_BUFF_LEN_NOT_ENOUGH);
         return CRYPT_PAILLIER_BUFF_LEN_NOT_ENOUGH;
     }
