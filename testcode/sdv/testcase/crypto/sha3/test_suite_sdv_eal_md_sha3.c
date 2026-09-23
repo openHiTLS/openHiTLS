@@ -150,6 +150,37 @@ EXIT:
 /* END_CASE */
 
 /**
+ * @test   SDV_CRYPT_EAL_SHA3_ZERO_LEN_FINAL_TC001
+ * @title  SHAKE final zero-length output bounds test.
+ */
+/* BEGIN_CASE */
+void SDV_CRYPT_EAL_SHA3_ZERO_LEN_FINAL_TC001(void)
+{
+    CRYPT_EAL_MdCtx *ctx = NULL;
+    struct {
+        uint8_t out[1];
+        uint8_t guard[7];
+    } guardedOut;
+    uint8_t canary[7];
+    uint32_t outLen = 0;
+
+    for (uint32_t i = 0; i < sizeof(guardedOut.guard); i++) {
+        guardedOut.guard[i] = 0xA5;
+        canary[i] = 0xA5;
+    }
+    ctx = CRYPT_EAL_MdNewCtx(CRYPT_MD_SHAKE128);
+    ASSERT_TRUE(ctx != NULL);
+    ASSERT_EQ(CRYPT_EAL_MdInit(ctx), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_MdFinal(ctx, guardedOut.out, &outLen), CRYPT_SUCCESS);
+    ASSERT_EQ(outLen, 0);
+    ASSERT_EQ(memcmp(guardedOut.guard, canary, sizeof(canary)), 0);
+
+EXIT:
+    CRYPT_EAL_MdFreeCtx(ctx);
+}
+/* END_CASE */
+
+/**
  * @test   SDV_CRYPT_EAL_SHA3_FUNC_TC001
  * @title  Split the data and update test.
  * @precon nan
