@@ -714,6 +714,7 @@ AARCH64_PACIASP
     mov x27, x2
     mov x28, x3
     str x4, [sp, #96]
+    cbz x27, .Lsqueeze_end
 
     /* Cyclically squeezing message summaries from the State Matrix */
 .Loop_squeeze:
