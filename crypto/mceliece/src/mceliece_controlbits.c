@@ -418,20 +418,18 @@ static void SetBitInVec(uint8_t *vec, const int64_t idx, const uint32_t bit)
 static void LayerBits(uint8_t *bitvec, const uint8_t *layerCBits, const int32_t s, const int64_t nBits)
 {
     // Mask to keep shift amount within 5-bit range (prevents UB for s >= 32)
-    int64_t stride = 1LL << (unsigned)(s & 31);
-    int64_t index = 0;
-    for (int64_t i = 0; i < nBits; i += stride * 2) {
-        for (int64_t j = 0; j < stride; j++) {
-            int32_t ctrl = (layerCBits[(uint32_t)(index >> 3)] >> (index & 7)) & 1;
-            if (ctrl != 0) {
-                int64_t a = i + j;
-                int64_t b = i + j + stride;
-                uint32_t ba =
-                    GetBitFromVec(bitvec, a); // Unit bit value – represent Boolean 0/1 state in bit-vector operations
-                uint32_t bb = GetBitFromVec(bitvec, b);
-                SetBitInVec(bitvec, a, bb); // Unit bit value – represent Boolean 0/1 state in bit-vector operations
-                SetBitInVec(bitvec, b, ba);
-            }
+    uint32_t stride = 1ULL << s;
+    uint32_t index = 0;
+    for (uint32_t i = 0; i < nBits; i += stride * 2) {
+        for (uint32_t j = 0; j < stride; j++) {
+            uint32_t ctrl = (uint32_t)(layerCBits[index >> 3] >> (index & 7)) & 1;
+            uint32_t a = i + j;
+            uint32_t b = i + j + stride;
+            uint32_t ba = GetBitFromVec(bitvec, a);
+            uint32_t bb = GetBitFromVec(bitvec, b);
+            uint8_t swap = (uint8_t)((ba ^ bb) & ctrl);
+            bitvec[a >> 3] ^= (uint8_t)(swap << (a & 7));
+            bitvec[b >> 3] ^= (uint8_t)(swap << (b & 7));
             index++;
         }
     }
