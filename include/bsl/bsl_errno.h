@@ -188,6 +188,14 @@ enum BSL_ERROR {
     BSL_CONF_BUFF_OVERFLOW,
     BSL_CONF_INVALID_NAME,
 
+    /* The return value of the ASYNC submodule starts from 0x030e0001. */
+    BSL_ASYNC_ERR_STATE_CONFLICT = 0x030e0001, /**< Calling environment or lifecycle conflict. */
+    BSL_ASYNC_ERR_NOT_FOUND,                   /**< The notify source is not registered. */
+    BSL_ASYNC_ERR_KEY_BUSY,                    /**< The notify source key is being deleted, retry later. */
+    BSL_ASYNC_ERR_CAPACITY_EXCEEDED,           /**< The output capacity is insufficient for the required count. */
+    BSL_ASYNC_ERR_NOT_INITIALIZED,             /**< The execution domain is not initialized. */
+    BSL_ASYNC_ERR_COROUTINE_SWITCH,            /**< The context switch primitive failed, the current context keeps running. */
+
     BSL_PARAMS_INVALID_KEY = 0x030f0001,
     BSL_PARAMS_INVALID_TYPE,
     BSL_PARAMS_LEN_NOT_ENOUGH,

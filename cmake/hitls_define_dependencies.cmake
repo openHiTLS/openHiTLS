@@ -40,7 +40,7 @@ hitls_define_dependency(HITLS_BSL
         HITLS_BSL_INIT       HITLS_BSL_LIST       HITLS_BSL_LOG
         HITLS_BSL_OBJ        HITLS_BSL_PARAMS     HITLS_BSL_PEM
         HITLS_BSL_PRINT      HITLS_BSL_TLV        HITLS_BSL_UI
-        HITLS_BSL_UIO
+        HITLS_BSL_UIO        HITLS_BSL_ASYNC
 )
 
 # BSL Dependencies
@@ -55,6 +55,7 @@ hitls_define_dependency(HITLS_BSL_SAL_STR           DEPS HITLS_BSL)
 hitls_define_dependency(HITLS_BSL_SAL_MEM           DEPS HITLS_BSL)
 hitls_define_dependency(HITLS_BSL_SAL_PID           DEPS HITLS_BSL)
 hitls_define_dependency(HITLS_BSL_SAL_IP            DEPS HITLS_BSL)
+hitls_define_dependency(HITLS_BSL_ASYNC             DEPS HITLS_BSL HITLS_BSL_SAL)
 hitls_define_dependency(HITLS_BSL_ASN1              DEPS HITLS_BSL HITLS_BSL_SAL HITLS_BSL_SAL_TIME)
 hitls_define_dependency(HITLS_BSL_BASE64            DEPS HITLS_BSL HITLS_BSL_SAL)
 hitls_define_dependency(HITLS_BSL_BUFFER            DEPS HITLS_BSL HITLS_BSL_SAL)

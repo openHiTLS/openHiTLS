@@ -81,6 +81,7 @@
 #cmakedefine HITLS_BSL_SAL_LINUX
 #cmakedefine HITLS_BSL_SAL_DARWIN
 #cmakedefine HITLS_ATOMIC_THREAD_LOCK
+#cmakedefine HITLS_BSL_ASYNC
 #cmakedefine HITLS_BSL_ASN1
 #cmakedefine HITLS_BSL_BASE64
 #cmakedefine HITLS_BSL_BUFFER

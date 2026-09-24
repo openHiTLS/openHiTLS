@@ -54,6 +54,14 @@ if(HITLS_BSL_SAL_IP)
     list(APPEND _sal_sources ${CMAKE_CURRENT_SOURCE_DIR}/src/sal_ip_util.c)
 endif()
 
+# Async thread local storage and coroutine backend dispatch
+if(HITLS_BSL_ASYNC)
+    list(APPEND _sal_sources
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/sal_threadlocal.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/sal_coroutine.c
+    )
+endif()
+
 # Platform-specific implementations
 if(HITLS_BSL_SAL_LINUX OR HITLS_BSL_SAL_DARWIN)
     # POSIX implementations for Unix/Linux/macOS

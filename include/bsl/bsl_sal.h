@@ -2060,6 +2060,196 @@ typedef int32_t (*BslSalUnLoadLib)(void *handle);
  */
 typedef int32_t (*BslSalGetFunc)(void *handle, const char *funcName, void **func);
 
+/**
+ * @ingroup bsl_sal
+ *
+ * Coroutine object defined by the bsl async module; the layout belongs to the
+ * selected coroutine backend and is opaque to the SAL dispatch layer.
+ */
+typedef struct BSL_ASYNC_CoroutineStruct BSL_ASYNC_Coroutine;
+
+/**
+ * @ingroup bsl_sal
+ * @brief Thread local cleanup callback.
+ *
+ * Invoked once per thread for the value still bound when the thread exits.
+ *
+ * @param arg [IN] Value bound to the key.
+ */
+typedef void (*BSL_SAL_ThreadLocalCleanup)(void *arg);
+
+/**
+ * @ingroup bsl_sal
+ * @brief Thread local storage key.
+ *
+ * Pointer-width so every platform key representation (pthread_key_t, RTOS
+ * task slot index, handle table entry) converts without truncation.
+ */
+typedef uintptr_t BSL_SAL_ThreadLocalKey;
+
+/**
+* @ingroup bsl_sal
+* @brief Create a thread local storage key.
+*
+* @param key [OUT] Created key.
+* @param cleanup [IN] Cleanup callback invoked at thread exit; NULL is allowed.
+* @retval #BSL_SUCCESS, success.
+* @retval #BSL_NULL_INPUT, key is NULL.
+* @retval #BSL_SAL_ERR_NO_MEMORY, the platform storage allocation failed.
+* @attention
+* Thread safe     : Thread-safe function.
+* Blocking risk   : No blocking.
+* Time consuming  : Not time-consuming.
+*/
+int32_t BSL_SAL_ThreadLocalKeyCreate(BSL_SAL_ThreadLocalKey *key, BSL_SAL_ThreadLocalCleanup cleanup);
+
+/**
+* @ingroup bsl_sal
+* @brief Delete a thread local storage key.
+*
+* @param key [IN] Key to delete.
+* @retval #BSL_SUCCESS, success.
+* @retval #BSL_INVALID_ARG, key is invalid.
+* @attention
+* Thread safe     : Thread-safe function.
+* Blocking risk   : No blocking.
+* Time consuming  : Not time-consuming.
+* Deleting does not retrospectively invoke the cleanup callback.
+*/
+int32_t BSL_SAL_ThreadLocalKeyDelete(BSL_SAL_ThreadLocalKey key);
+
+/**
+* @ingroup bsl_sal
+* @brief Read the value bound to a key on the current thread.
+*
+* @param key [IN] Key to read.
+* @retval  Non-NULL, the bound pointer.
+* @retval  NULL, nothing is bound or the key is invalid.
+* @attention
+* Thread safe     : Thread-safe function.
+* Blocking risk   : No blocking.
+* Time consuming  : Not time-consuming.
+*/
+void *BSL_SAL_ThreadLocalGet(BSL_SAL_ThreadLocalKey key);
+
+/**
+* @ingroup bsl_sal
+* @brief Bind a value to a key on the current thread.
+*
+* @param key [IN] Key to write.
+* @param value [IN] Pointer to bind; NULL clears the binding.
+* @retval #BSL_SUCCESS, success.
+* @retval #BSL_INVALID_ARG, key is invalid.
+* @retval #BSL_SAL_ERR_NO_MEMORY, the platform storage allocation failed.
+* @attention
+* Thread safe     : Thread-safe function.
+* Blocking risk   : No blocking.
+* Time consuming  : Not time-consuming.
+*/
+int32_t BSL_SAL_ThreadLocalSet(BSL_SAL_ThreadLocalKey key, void *value);
+
+/**
+ * @ingroup bsl_sal
+ * @brief Resident coroutine entry provided by the bsl async core.
+ *
+ * The entry must never return; a backend treats a return as an implementation error.
+ *
+ * @param arg [IN] Argument bound at creation.
+ */
+typedef void (*BSL_SAL_CoroutineEntry)(void *arg);
+
+/**
+* @ingroup bsl_sal
+* @brief Report whether a resumable execution context backend is available.
+*
+* @retval  1  A backend is available.
+* @retval  0  No backend is available.
+* @attention
+* Thread safe     : Thread-safe function.
+* Blocking risk   : No blocking.
+* Time consuming  : Not time-consuming.
+* The probe has no side effect.
+*/
+int32_t BSL_SAL_CoroutineIsSupported(void);
+
+/**
+* @ingroup bsl_sal
+* @brief Create the host context object of the current call stack.
+*
+* @param co [OUT] Created host context.
+* @retval #BSL_SUCCESS, success.
+* @retval #BSL_NULL_INPUT, co is NULL.
+* @retval #BSL_ASYNC_ERR_STATE_CONFLICT, the execution domain already has a host context.
+* @retval #BSL_MALLOC_FAIL, the wrapper allocation failed.
+* @retval #BSL_SAL_ERR_NO_MEMORY, the platform conversion failed.
+* @attention
+* Thread safe     : Not thread-safe function.
+* Blocking risk   : No blocking.
+* Time consuming  : Not time-consuming.
+* Called once per execution domain on the host call stack; no worker stack is created.
+*/
+int32_t BSL_SAL_CoroutineInitCurrent(BSL_ASYNC_Coroutine **co);
+
+/**
+* @ingroup bsl_sal
+* @brief Create a task coroutine with its own worker stack.
+*
+* @param co [OUT] Created coroutine.
+* @param stackSize [IN] Expected stack size in bytes; the framework passes the
+* concrete value of its execution domain (the caller's BSL_ASYNC_InitThread
+* parameter, with 0 already resolved to the framework default), and 0 lets the
+* backend choose a default size.
+* @param entry [IN] Resident entry of the bsl async core.
+* @param arg [IN] Argument passed to the entry.
+* @retval #BSL_SUCCESS, success.
+* @retval #BSL_NULL_INPUT, co or entry is NULL.
+* @retval #BSL_ASYNC_ERR_STATE_CONFLICT, called on a task coroutine.
+* @retval #BSL_INVALID_ARG, stackSize is out of the backend limits.
+* @retval #BSL_MALLOC_FAIL, the wrapper allocation failed.
+* @retval #BSL_SAL_ERR_NO_MEMORY, the platform stack creation failed.
+* @attention
+* Thread safe     : Not thread-safe function.
+* Blocking risk   : No blocking.
+* Time consuming  : Time-consuming (maps a stack).
+* Called on the host call stack; a failure leaves no mapped stack behind.
+*/
+int32_t BSL_SAL_CoroutineCreate(BSL_ASYNC_Coroutine **co,
+    size_t stackSize, BSL_SAL_CoroutineEntry entry, void *arg);
+
+/**
+* @ingroup bsl_sal
+* @brief Exchange the running context: save from and resume to.
+*
+* @param from [IN] Currently running context.
+* @param to [IN] Context to resume.
+* @retval #BSL_SUCCESS, from was resumed by a later switch back.
+* @retval #BSL_NULL_INPUT, from or to is NULL.
+* @retval #BSL_ASYNC_ERR_STATE_CONFLICT, from is not the running context or equals to.
+* @retval #BSL_ASYNC_ERR_COROUTINE_SWITCH, the platform switch primitive failed.
+* @attention
+* Thread safe     : Not thread-safe function.
+* Blocking risk   : No blocking.
+* Time consuming  : Depends on the resumed coroutine.
+* Only used between the host call stack and a task; the call returns when
+* another switch resumes from.
+*/
+int32_t BSL_SAL_CoroutineSwitch(BSL_ASYNC_Coroutine *from, BSL_ASYNC_Coroutine *to);
+
+/**
+* @ingroup bsl_sal
+* @brief Destroy a non-running coroutine object.
+*
+* @param co [IN] Coroutine to destroy; NULL is an idempotent success.
+* @retval #BSL_SUCCESS, success.
+* @retval #BSL_ASYNC_ERR_STATE_CONFLICT, co is the running context or belongs to another thread.
+* @attention
+* Thread safe     : Not thread-safe function.
+* Blocking risk   : No blocking.
+* Time consuming  : Not time-consuming.
+* The host context can be destroyed only after every task has been reclaimed.
+*/
+int32_t BSL_SAL_CoroutineDestroy(BSL_ASYNC_Coroutine *co);
+
 #ifdef __cplusplus
 }
 #endif

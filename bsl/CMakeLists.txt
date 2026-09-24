@@ -44,6 +44,11 @@ add_subdirectory(version)
 # Add BSL sub-modules in dependency order
 # ==============================================================================
 
+# ASYNC - Generic asynchronous task framework
+if(HITLS_BSL_ASYNC)
+    add_subdirectory(async)
+endif()
+
 # ASN1 - ASN.1 encoding/decoding
 if(HITLS_BSL_ASN1)
     add_subdirectory(asn1)
