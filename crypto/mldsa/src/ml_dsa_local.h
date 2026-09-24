@@ -115,7 +115,7 @@ int32_t MLDSA_RejBoundedPolyEta2Pair(int32_t *a0, int32_t *a1, const uint8_t *s0
 int32_t MLDSA_RejBoundedPolyEta4Pair(int32_t *a0, int32_t *a1, const uint8_t *s0, const uint8_t *s1);
 #endif /* HITLS_CRYPTO_MLDSA_X2 */
 
-bool MLDSA_ValidityChecks(const int32_t *z, uint32_t t);
+uint8_t MLDSA_ValidityChecks(const int32_t *z, uint32_t t);
 void MLDSA_VectorsAdd(int32_t *t, int32_t *a, int32_t *b);
 void MLDSA_VectorsAddQ(int32_t *t, int32_t *a, int32_t *b);
 void MLDSA_VectorsSub(int32_t *t, int32_t *a, int32_t *b);

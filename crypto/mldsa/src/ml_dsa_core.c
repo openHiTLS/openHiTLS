@@ -719,20 +719,20 @@ static void ComputesZ(const CRYPT_ML_DSA_Ctx *ctx, int32_t *y[MLDSA_L_MAX], cons
 
 static bool ValidityChecksL(const CRYPT_ML_DSA_Ctx *ctx, int32_t *const z[MLDSA_L_MAX], uint32_t t)
 {
-    bool valid = true;
+    uint8_t valid = 1;
     for (uint8_t i = 0; i < ctx->info->l; i++) {
-        valid = valid && MLDSA_ValidityChecks(z[i], t);
+        valid &= MLDSA_ValidityChecks(z[i], t);
     }
-    return valid;
+    return (valid == 1);
 }
 
 static bool ValidityChecksK(const CRYPT_ML_DSA_Ctx *ctx, int32_t *const z[MLDSA_K_MAX], uint32_t t)
 {
-    bool valid = true;
+    uint8_t valid = 1;
     for (uint8_t i = 0; i < ctx->info->k; i++) {
-        valid = valid && MLDSA_ValidityChecks(z[i], t);
+        valid &= MLDSA_ValidityChecks(z[i], t);
     }
-    return valid;
+    return (valid == 1);
 }
 
 static void ComputesR(const CRYPT_ML_DSA_Ctx *ctx, const int32_t *c, MLDSA_SignMatrixSt *st)

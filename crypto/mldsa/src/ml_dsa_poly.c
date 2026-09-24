@@ -275,7 +275,7 @@ ERR:
     return ret;
 }
 
-bool MLDSA_ValidityChecks(const int32_t *z, uint32_t t)
+uint8_t MLDSA_ValidityChecks(const int32_t *z, uint32_t t)
 {
     uint32_t n;
     uint32_t result = 0;
@@ -285,7 +285,7 @@ bool MLDSA_ValidityChecks(const int32_t *z, uint32_t t)
         // If |z[j]| >= t, (t - 1 - n) is negative and its highest bit (sign bit) is 1.
         result |= ((t - 1 - n) >> 31) & 1;
     }
-    return (result == 0);
+    return (uint8_t )(result == 0);
 }
 
 void MLDSA_VectorsAdd(int32_t *t, int32_t *a, int32_t *b)
