@@ -336,14 +336,13 @@ static void LayerBits(uint8_t *bitvec, const uint8_t *layerCBits, uint32_t s, ui
     for (uint32_t i = 0; i < nBits; i += stride * 2) {
         for (uint32_t j = 0; j < stride; j++) {
             uint32_t ctrl = (uint32_t)(layerCBits[index >> 3] >> (index & 7)) & 1;
-            if (ctrl != 0) {
-                uint32_t a = i + j;
-                uint32_t b = i + j + stride;
-                uint32_t ba = GetBitFromVec(bitvec, a);
-                uint32_t bb = GetBitFromVec(bitvec, b);
-                SetBitInVec(bitvec, a, bb);
-                SetBitInVec(bitvec, b, ba);
-            }
+            uint32_t a = i + j;
+            uint32_t b = i + j + stride;
+            uint32_t ba = GetBitFromVec(bitvec, a);
+            uint32_t bb = GetBitFromVec(bitvec, b);
+            uint8_t swap = (uint8_t)((ba ^ bb) & ctrl);
+            bitvec[a >> 3] ^= (uint8_t)(swap << (a & 7));
+            bitvec[b >> 3] ^= (uint8_t)(swap << (b & 7));
             index++;
         }
     }
