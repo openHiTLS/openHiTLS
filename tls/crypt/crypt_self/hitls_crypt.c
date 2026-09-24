@@ -479,28 +479,35 @@ static int32_t AeadDecrypt(CRYPT_EAL_CipherCtx *ctx, const HITLS_CipherParameter
     }
     uint32_t cipherLen = inLen - tagLen;
     uint32_t plainLen = *outLen;
+    uint8_t tag[16u] = {0};
 
     ret = CRYPT_EAL_CipherUpdate(ctx, in, cipherLen, out, &plainLen);
     if (ret != CRYPT_SUCCESS) {
-        return RETURN_ERROR_NUMBER_PROCESS(ret, BINLOG_ID16645, "CipherUpdate fail");
+        ret = RETURN_ERROR_NUMBER_PROCESS(ret, BINLOG_ID16645, "CipherUpdate fail");
+        goto ERR;
     }
 
     if (plainLen != cipherLen) {
-        return RETURN_ERROR_NUMBER_PROCESS(HITLS_CRYPT_ERR_DECRYPT, BINLOG_ID16646, "decrypt err");
+        ret = RETURN_ERROR_NUMBER_PROCESS(HITLS_CRYPT_ERR_DECRYPT, BINLOG_ID16646, "decrypt err");
+        goto ERR;
     }
 
-    uint8_t tag[16u] = {0};
     ret = CRYPT_EAL_CipherCtrl(ctx, CRYPT_CTRL_GET_TAG, tag, tagLen);
     if (ret != HITLS_SUCCESS) {
-        return RETURN_ERROR_NUMBER_PROCESS(ret, BINLOG_ID16647, "GET_TAG err");
+        ret = RETURN_ERROR_NUMBER_PROCESS(ret, BINLOG_ID16647, "GET_TAG err");
+        goto ERR;
     }
 
     if (ConstTimeMemcmp(tag, in + cipherLen, tagLen) == 0) {
-        return RETURN_ERROR_NUMBER_PROCESS(HITLS_CRYPT_ERR_DECRYPT, BINLOG_ID16648, "memcmp tag fail");
+        ret = RETURN_ERROR_NUMBER_PROCESS(HITLS_CRYPT_ERR_DECRYPT, BINLOG_ID16648, "memcmp tag fail");
+        goto ERR;
     }
 
     *outLen = plainLen;
     return HITLS_SUCCESS;
+ERR:
+    BSL_SAL_CleanseData(out, plainLen);
+    return ret;
 #else // HITLS_CRYPTO_CIPHER
     (void)cipher;
     (void)out;

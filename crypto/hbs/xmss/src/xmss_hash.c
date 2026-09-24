@@ -139,6 +139,7 @@ static int32_t XmssChainHash(const void *vctx, const void *vadrs, const uint8_t 
     PUT_UINT32_BE(PADDING_F, padding, paddingLen - 4);
     ret = CalcMultiMsgHash(mdId, hashData1, sizeof(hashData1) / sizeof(hashData1[0]), out, n);
     BSL_SAL_CleanseData(key, n);
+    BSL_SAL_CleanseData(bitmask, sizeof(bitmask));
     return ret;
 }
 

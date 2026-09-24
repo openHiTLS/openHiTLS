@@ -140,6 +140,7 @@ int32_t BSL_PEM_EncodeAsn1ToPem(uint8_t *asn1Encode, uint32_t asn1Len, BSL_PEM_S
         return BSL_INVALID_ARG;
     }
     uint32_t len = (uint32_t)needLen;
+    uint32_t buffSize = len;
     char *buff = BSL_SAL_Malloc(len);
     if (buff == NULL) {
         BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
@@ -177,10 +178,10 @@ int32_t BSL_PEM_EncodeAsn1ToPem(uint8_t *asn1Encode, uint32_t asn1Len, BSL_PEM_S
         *resTmp++ = '\0';
         *encode = res;
         *encodeLen = sumLen - 1;
-        BSL_SAL_FREE(buff);
+        BSL_SAL_ClearFree(buff, buffSize);
         return BSL_SUCCESS;
     } while (0);
-    BSL_SAL_FREE(buff);
+    BSL_SAL_ClearFree(buff, buffSize);
     BSL_SAL_FREE(res);
     return ret;
 }

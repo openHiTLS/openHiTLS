@@ -303,11 +303,21 @@ static int32_t RSA_BlindProcess(CRYPT_RSA_Ctx *ctx, BN_BigNum *message, BN_Optim
     if (ctx->scBlind == NULL) {
         ret = RSA_InitBlind(ctx, opt);
         if (ret != CRYPT_SUCCESS) {
-            return ret;
+            goto ERR;
         }
     }
 
-    return RSA_BlindCovert(ctx->scBlind, message, ctx->prvKey->n, opt);
+    ret = RSA_BlindCovert(ctx->scBlind, message, ctx->prvKey->n, opt);
+    if (ret != CRYPT_SUCCESS) {
+        goto ERR;
+    }
+    return ret;
+ERR:
+    /* A failed update can leave mismatched blinding factors. Discard them;
+       the next call creates fresh parameters. */
+    RSA_BlindFreeCtx(ctx->scBlind);
+    ctx->scBlind = NULL;
+    return ret;
 }
 #endif
 
@@ -527,7 +537,6 @@ static int32_t BssaBlind(CRYPT_RSA_Ctx *ctx, const uint8_t *input, uint32_t inpu
     RSA_BlindParam *param = NULL;
     BN_BigNum *e = ctx->pubKey->e;
     BN_BigNum *n = ctx->pubKey->n;
-    RSA_Blind *blind = NULL;
     uint8_t *pad = BSL_SAL_Malloc(padLen);
     BN_Optimizer *opt = BN_OptimizerCreate();
     BN_BigNum *enMsg = BN_Create(bits);
@@ -537,7 +546,7 @@ static int32_t BssaBlind(CRYPT_RSA_Ctx *ctx, const uint8_t *input, uint32_t inpu
         ret = CRYPT_MEM_ALLOC_FAIL;
         goto ERR;
     }
-   // encoded_msg = EMSA-PSS-ENCODE(msg, bit_len(n))
+    // encoded_msg = EMSA-PSS-ENCODE(msg, bit_len(n))
     GOTO_ERR_IF(PssPad(ctx, input, inputLen, pad, padLen), ret);
     GOTO_ERR_IF(BN_Bin2Bn(enMsg, pad, padLen), ret);
 
@@ -560,8 +569,7 @@ static int32_t BssaBlind(CRYPT_RSA_Ctx *ctx, const uint8_t *input, uint32_t inpu
         }
         GOTO_ERR_IF(RSA_BlindCreateParam(LIBCTX_FROM_RSA_CTX(ctx), param->para.bssa, e, n, bits, opt), ret);
     }
-    blind = param->para.bssa;
-    GOTO_ERR_IF(BN_ModMul(enMsg, enMsg, blind->r, n, opt), ret);
+    GOTO_ERR_IF(BN_ModMul(enMsg, enMsg, param->para.bssa->r, n, opt), ret);
     GOTO_ERR_IF(BN_Bn2BinFixZero(enMsg, out, BN_BITS_TO_BYTES(bits)), ret);
     *outLen = BN_BITS_TO_BYTES(bits);
     ctx->blindParam = param;
@@ -1154,14 +1162,10 @@ int32_t CRYPT_RSA_Decrypt(CRYPT_RSA_Ctx *ctx, const uint8_t *data, uint32_t data
                 out, outLen);
             break;
 #endif
-#ifdef HITLS_CRYPTO_RSAES_PKCSV15
+#if defined(HITLS_CRYPTO_RSAES_PKCSV15) || defined(HITLS_CRYPTO_RSAES_PKCSV15_TLS)
         case RSAES_PKCSV15:
-            ret = CRYPT_RSA_VerifyPkcsV15Type2(pad, padLen, out, outLen);
-            break;
-#endif
-#ifdef HITLS_CRYPTO_RSAES_PKCSV15_TLS
         case RSAES_PKCSV15_TLS:
-            ret = CRYPT_RSA_VerifyPkcsV15Type2TLS(pad, padLen, out, outLen);
+            ret = CRYPT_RSA_VerifyPkcsV15Type2(pad, padLen, out, outLen);
             break;
 #endif
 #ifdef HITLS_CRYPTO_RSA_NO_PAD

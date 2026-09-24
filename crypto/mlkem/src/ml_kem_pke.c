@@ -313,6 +313,9 @@ static int32_t PkeKeyGen(CRYPT_ML_KEM_Ctx *ctx, uint8_t *pk, uint8_t *dk, uint8_
     GOTO_ERR_IF(MLKEM_PKEGen(ctx, digest, pk, dk), ret);
 
 ERR:
+    /* seed (d||k) and digest (rho||sigma) carry keygen secret material */
+    BSL_SAL_CleanseData(seed, sizeof(seed));
+    BSL_SAL_CleanseData(digest, sizeof(digest));
     return ret;
 }
 
@@ -505,10 +508,11 @@ int32_t MLKEM_EncapsInternal(CRYPT_ML_KEM_Ctx *ctx, uint8_t *ct, uint32_t *ctLen
     CRYPT_SHA3_256(mhek + MLKEM_SEED_LEN, ctx->ek, ctx->ekLen);
     CRYPT_SHA3_512(kr, mhek, MLKEM_SEED_LEN + CRYPT_SHA3_256_DIGESTSIZE);
 
-    memcpy(sk, kr, MLKEM_SHARED_KEY_LEN);
-
     // 𝑐 ← K-PKE.Encrypt(ek,𝑚,𝑟)
     ret = PkeEncrypt(ctx, ct, m, kr + MLKEM_SHARED_KEY_LEN);
+    if (ret == CRYPT_SUCCESS) {
+        memcpy(sk, kr, MLKEM_SHARED_KEY_LEN);
+    }
     BSL_SAL_CleanseData(kr, CRYPT_SHA3_512_DIGESTSIZE);
     BSL_SAL_CleanseData(mhek, sizeof(mhek));
     RETURN_RET_IF(ret != CRYPT_SUCCESS, ret);
@@ -571,7 +575,7 @@ int32_t MLKEM_DecapsInternal(CRYPT_ML_KEM_Ctx *ctx, uint8_t *ct, uint32_t ctLen,
 ERR:
     BSL_SAL_CleanseData(mh, sizeof(mh));
     BSL_SAL_CleanseData(kr, CRYPT_SHA3_512_DIGESTSIZE);
-    BSL_SAL_Free(newCt);
+    BSL_SAL_ClearFree(newCt, ctLen + MLKEM_SEED_LEN);
     return ret;
 }
 

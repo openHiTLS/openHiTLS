@@ -130,6 +130,8 @@ uint32_t BinRshift(BN_UINT *r, const BN_UINT *a, uint32_t n, uint32_t bits);
 
 BN_UINT BinSubMul(BN_UINT *r, const BN_UINT *a, BN_UINT aSize, BN_UINT m);
 
+/* r = a << bits. The output needs n + bits / BN_UINT_BITS limbs, plus one
+ * for a partial-word shift. */
 uint32_t BinLshift(BN_UINT *r, const BN_UINT *a, uint32_t n, uint32_t bits);
 
 BN_UINT BinMulAcc(BN_UINT *r, const BN_UINT *a, uint32_t aSize, BN_UINT b);

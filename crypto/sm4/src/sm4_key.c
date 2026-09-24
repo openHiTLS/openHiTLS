@@ -22,6 +22,15 @@
 #include "bsl_err_internal.h"
 #include "crypt_sm4.h"
 
+/*
+ * SECURITY NOTE: this key schedule is NOT constant-time. KROUND() indexes
+ * KBOX_0..KBOX_3 by t = k1 ^ k2 ^ k3 ^ ck, which is key-derived, so cache-timing
+ * during expansion leaks key material. It runs once per key (a lower-frequency
+ * surface than crypt_sm4.c); portable fallback only -- use the hardware SM4
+ * assembly path for
+ * constant-time operation.
+ */
+
 /* System parameter FK (originating GB/T 32907-2016 7.3 b or GM/T 0002-2012 7.3 2) */
 static const uint32_t FK[] = {0xa3b1bac6, 0x56aa3350, 0x677d9197, 0xb27022dc};
 

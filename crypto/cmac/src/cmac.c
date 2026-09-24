@@ -20,6 +20,7 @@
 #include "bsl_sal.h"
 #include "crypt_errno.h"
 #include "crypt_utils.h"
+#include "bsl_bytes.h"
 #include "bsl_err_internal.h"
 #include "cipher_mac_common.h"
 #include "crypt_cmac.h"
@@ -78,19 +79,25 @@ static inline void LeftShiftOneBit(const uint8_t *in, uint32_t len, uint8_t *out
     } while (i != 0);
 }
 
+static inline uint8_t CmacMsbMask(uint8_t value)
+{
+    return (uint8_t)Uint32ConstTimeMsb((uint32_t)value << 24);
+}
+
 static int32_t CMAC_Final(CRYPT_CMAC_Ctx *ctx)
 {
     const uint8_t z[CIPHER_MAC_MAXBLOCKSIZE] = {0};
     uint8_t rb;
     uint8_t l[CIPHER_MAC_MAXBLOCKSIZE];
     uint8_t k1[CIPHER_MAC_MAXBLOCKSIZE];
+    uint8_t k2[CIPHER_MAC_MAXBLOCKSIZE];
     const EAL_SymMethod *method = ctx->method;
     uint32_t blockSize = method->blockSize;
 
     int32_t ret = method->encryptBlock(ctx->key, z, l, blockSize);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        return ret;
+        goto ERR;
     }
     LeftShiftOneBit(l, blockSize, k1);
 
@@ -99,9 +106,7 @@ static int32_t CMAC_Final(CRYPT_CMAC_Ctx *ctx)
     } else {
         rb = 0x1B; /* When the DES and TDES algorithms are used and blocksize is 64 bits, rb uses 0x1B. */
     }
-    if ((l[0] & 0x80) != 0) {
-        k1[blockSize - 1] ^= rb;
-    }
+    k1[blockSize - 1] ^= rb & CmacMsbMask(l[0]);
     uint32_t length = ctx->len;
     if (length == blockSize) {  // When the message length is an integer multiple of blockSize, use K1
         DATA_XOR(ctx->left, k1, ctx->left, blockSize);
@@ -112,15 +117,17 @@ static int32_t CMAC_Final(CRYPT_CMAC_Ctx *ctx)
             ctx->left[length++] = 0;
         }
 
-        uint8_t k2[CIPHER_MAC_MAXBLOCKSIZE];
         LeftShiftOneBit(k1, blockSize, k2);
-        if ((k1[0] & 0x80) != 0) {
-            k2[blockSize - 1] ^= rb;
-        }
+        k2[blockSize - 1] ^= rb & CmacMsbMask(k1[0]);
         DATA_XOR(ctx->left, k2, ctx->left, blockSize);
         ctx->len = blockSize;
     }
-    return CRYPT_SUCCESS;
+    ret = CRYPT_SUCCESS;
+ERR:
+    BSL_SAL_CleanseData(l, sizeof(l));
+    BSL_SAL_CleanseData(k1, sizeof(k1));
+    BSL_SAL_CleanseData(k2, sizeof(k2));
+    return ret;
 }
 
 int32_t CRYPT_CMAC_Final(CRYPT_CMAC_Ctx *ctx, uint8_t *out, uint32_t *len)

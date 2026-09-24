@@ -928,6 +928,8 @@ int32_t McElieceDecapsInternal(const uint8_t *ciphertext, const CMPrivateKey *sk
     uint8_t *e = memPool;
     uint16_t *decodeSyndrome = (uint16_t *)(memPool + params->nBytes);
     uint16_t *verifySyndrome = (uint16_t *)(memPool + params->nBytes + 2U * params->t * sizeof(uint16_t));
+    uint8_t hashIn[1 + MCELIECE_NBYTES_MAX];
+    uint8_t c1Prime[MCELIECE_L_BYTES];
     GOTO_ERR_IF(BuildVectorAndDecoding(c0, sk, params, e, decodeSyndrome), ret);
     // Recompute syndrome from e
     GOTO_ERR_IF_EX(ComputeSyndrome(e, sk->g, sk->alpha, params, verifySyndrome, true), ret);
@@ -938,10 +940,8 @@ int32_t McElieceDecapsInternal(const uint8_t *ciphertext, const CMPrivateKey *sk
     mask &= (uint8_t)Uint32ConstTimeEqual(VectorWeight(e, params->nBytes), params->t);
     if (isPc) {
         // PC only: verify C1
-        uint8_t hashIn[1 + MCELIECE_NBYTES_MAX];
         hashIn[0] = 2;
         memcpy(hashIn + 1, e, params->nBytes);
-        uint8_t c1Prime[MCELIECE_L_BYTES];
         GOTO_ERR_IF(McElieceShake256(c1Prime, MCELIECE_L_BYTES, hashIn, 1 + params->nBytes), ret);
         mask &= (uint8_t)ConstTimeMemcmp(c1Prime, c1, MCELIECE_L_BYTES); // If C' != C1, set b <- 0
     }
@@ -954,6 +954,8 @@ int32_t McElieceDecapsInternal(const uint8_t *ciphertext, const CMPrivateKey *sk
     ret = ComputeSessionKeyWithPrefix(sessionKey, b, e, ciphertext, params);
 ERR:
     BSL_SAL_ClearFree(memPool, memPoolBytes);
+    BSL_SAL_CleanseData(hashIn, sizeof(hashIn));
+    BSL_SAL_CleanseData(c1Prime, sizeof(c1Prime));
     return ret;
 }
 

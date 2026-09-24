@@ -70,7 +70,6 @@ static int32_t TEST_RandomEx(void *libCtx, uint8_t *r, uint32_t randLen)
     return 0;
 }
 
-
 uint32_t TEST_GetMax(uint32_t num1, uint32_t num2, uint32_t num3)
 {
     uint32_t res = num1;
@@ -1987,7 +1986,6 @@ EXIT:
 }
 /* END_CASE */
 
-
 /* BEGIN_CASE */
 void SDV_CRYPTO_BN_Mul_API_TC001(void)
 {
@@ -2007,7 +2005,6 @@ EXIT:
     return;
 }
 /* END_CASE */
-
 
 /* BEGIN_CASE */
 void SDV_CRYPTO_BN_Div_API_TC001(void)
@@ -2088,6 +2085,44 @@ EXIT:
 }
 /* END_CASE */
 
+/**
+ * @test SDV_CRYPTO_BN_LSHIFT_API_TC001
+ * @title BN_Lshift: exact capacity for aligned shifts.
+ * @precon nan
+ * @brief Test zero and whole-word shifts with static buffers, then test a partial-word carry.
+ * @expect Shifts succeed and produce the expected value.
+ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_BN_LSHIFT_API_TC001(void)
+{
+    TEST_BnTestCaseInit();
+    BN_BigNum noShift = {0};
+    BN_BigNum wordShift = {0};
+    BN_UINT noShiftData[1] = {0};
+    BN_UINT wordShiftData[2] = {0};
+    BN_BigNum *carry = BN_Create(BN_UINT_BITS + 1);
+
+    BN_Init(&noShift, noShiftData, 1, 1);
+    BN_Init(&wordShift, wordShiftData, 2, 1);
+    ASSERT_TRUE(carry != NULL);
+    ASSERT_TRUE(BN_SetLimb(&noShift, 1) == CRYPT_SUCCESS);
+    ASSERT_TRUE(BN_Lshift(&noShift, &noShift, 0) == CRYPT_SUCCESS);
+    ASSERT_TRUE(BN_GetLimb(&noShift) == 1);
+
+    ASSERT_TRUE(BN_SetLimb(&wordShift, 1) == CRYPT_SUCCESS);
+    ASSERT_TRUE(BN_Lshift(&wordShift, &wordShift, BN_UINT_BITS) == CRYPT_SUCCESS);
+    ASSERT_TRUE(wordShift.size == 2 && wordShift.data[0] == 0 && wordShift.data[1] == 1);
+
+    ASSERT_TRUE(BN_SetBit(carry, BN_UINT_BITS - 1) == CRYPT_SUCCESS);
+    ASSERT_TRUE(BN_Lshift(carry, carry, 1) == CRYPT_SUCCESS);
+    ASSERT_TRUE(BN_GetBit(carry, BN_UINT_BITS));
+EXIT:
+    BN_Destroy(&noShift);
+    BN_Destroy(&wordShift);
+    BN_Destroy(carry);
+}
+/* END_CASE */
+
 /* BEGIN_CASE */
 void SDV_CRYPTO_BN_ModExp_API_TC001(void)
 {
@@ -2127,7 +2162,7 @@ void SDV_CRYPTO_BN_GETLIMB_API_TC001(void)
 
     BN_BigNum *a = BN_Create(LONG_BN_BITS_256);
     ASSERT_TRUE(a != NULL);
-    
+
     ASSERT_TRUE(BN_GetLimb(NULL) == 0);
 
     ret = BN_SetLimb(a, 0);

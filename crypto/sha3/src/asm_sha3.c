@@ -20,6 +20,7 @@
 #include "asm_sha3.h"
 #include <stddef.h>
 #include <string.h>
+#include "bsl_sal.h"
 #include "crypt_sha3.h"
 
 void Shake256x2(uint8_t *dgst0, uint8_t *dgst1, size_t dgstLen, const uint8_t *in0, const uint8_t *in1, size_t inlen)
@@ -46,7 +47,10 @@ void Shake256x2(uint8_t *dgst0, uint8_t *dgst1, size_t dgstLen, const uint8_t *i
         Keccakx2Squeeze(tmp0, tmp1, 1, CRYPT_SHAKE256_BLOCKSIZE, state);
         memcpy(dgst0, tmp0, dgstLen);
         memcpy(dgst1, tmp1, dgstLen);
+        BSL_SAL_CleanseData(tmp0, sizeof(tmp0));
+        BSL_SAL_CleanseData(tmp1, sizeof(tmp1));
     }
+    BSL_SAL_CleanseData(state, sizeof(state));
 }
 
 void Keccakx4Absorb(Keccakx4State state, size_t rate, const uint8_t *in0, const uint8_t *in1,

@@ -180,14 +180,13 @@ static int32_t EcdsaSignCore(const CRYPT_ECDSA_Ctx *ctx, const BN_BigNum *paraN,
 {
     uint32_t keyBits = CRYPT_ECDSA_GetBits(ctx);    // input parameter has been checked externally.
     BN_BigNum *k = BN_Create(keyBits);
-    BN_BigNum *k2 = BN_Create(keyBits);
     ECC_Point *pt = ECC_NewPoint(ctx->para);
     BN_BigNum *ptX = BN_Create(keyBits);
     BN_Optimizer *opt = BN_OptimizerCreate();
     int32_t ret;
     int32_t i;
 
-    if ((k == NULL) || (k2 == NULL) || (pt == NULL) || (opt == NULL) || (ptX == NULL)) {
+    if ((k == NULL) || (pt == NULL) || (opt == NULL) || (ptX == NULL)) {
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         ret = CRYPT_MEM_ALLOC_FAIL;
         goto ERR;
@@ -218,10 +217,10 @@ static int32_t EcdsaSignCore(const CRYPT_ECDSA_Ctx *ctx, const BN_BigNum *paraN,
         GOTO_ERR_IF(BN_ModAddQuick(s, d, s, paraN, opt), ret);
 
         // 1/k mod n
-        GOTO_ERR_IF(ECC_ModOrderInv(ctx->para, k2, k), ret);
+        GOTO_ERR_IF_EX(ECC_ModOrderInv(ctx->para, k, k), ret);
 
         // s = (1/k) * (hash + prvkey * r) mod n
-        GOTO_ERR_IF(BN_ModMul(s, k2, s, paraN, opt), ret);
+        GOTO_ERR_IF(BN_ModMul(s, k, s, paraN, opt), ret);
 
         // if s == 0, then restart
         if (BN_IsZero(s) != true) {
@@ -236,7 +235,6 @@ static int32_t EcdsaSignCore(const CRYPT_ECDSA_Ctx *ctx, const BN_BigNum *paraN,
 
 ERR:
     BN_Destroy(k);
-    BN_Destroy(k2);
     BN_Destroy(ptX);
     ECC_FreePoint(pt);
     BN_OptimizerDestroy(opt);

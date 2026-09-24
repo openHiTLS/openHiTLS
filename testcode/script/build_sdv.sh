@@ -32,6 +32,7 @@ usage()
     printf "%-50s %-30s\n" "* verbose      : Show detailse."                   "bash ${BASH_SOURCE[0]} verbose"
     printf "%-50s %-30s\n" "* gcov         : Enable the coverage capability."  "bash ${BASH_SOURCE[0]} gcov"
     printf "%-50s %-30s\n" "* asan         : Enabling the ASAN capability."    "bash ${BASH_SOURCE[0]} asan"
+    printf "%-50s %-30s\n" "* ctvalgrind   : Constant-time validation build."  "bash ${BASH_SOURCE[0]} ctvalgrind"
     printf "%-50s %-30s\n" "* big-endian   : Specify the platform endianness." "bash ${BASH_SOURCE[0]} big-endian"
     printf "%-50s %-30s\n" "* include-path : Specify the config file path."    "bash ${BASH_SOURCE[0]} include-path=-Ixxx"
     printf "%-50s %-30s\n\n" "* run-tests  : Creating a custom test suite."    "bash ${BASH_SOURCE[0]} run-tests=xxx1|xxx2|xxx3"
@@ -63,6 +64,11 @@ export_env()
     ENABLE_VERBOSE=${ENABLE_VERBOSE:=''}
     RUN_TESTS=${RUN_TESTS:=''}
     DEBUG=${DEBUG:=ON}
+    # ctvalgrind: when ON, the main library and the SDV tests are built with
+    # HITLS_CT_VALIDATION so that HITLS_CT_SECRET_MARK/HITLS_CT_SECRET_UNMARK annotations
+    # are live (otherwise they are no-ops). It also forces -O0 -g so the optimiser
+    # does not fold away the constant-time work we want Valgrind to observe.
+    ENABLE_CTVALGRIND=${ENABLE_CTVALGRIND:=OFF}
 
     if [ -f ${HITLS_ROOT_DIR}/build/macros.txt ];then
         CUSTOM_CFLAGS=$(cat ${HITLS_ROOT_DIR}/build/macros.txt | tr '\n' ' ')
@@ -98,6 +104,7 @@ export_env()
     fi
     # Test framework has optional RPC code; avoid unused-function errors on Linux too
     CUSTOM_CFLAGS="$CUSTOM_CFLAGS -Wno-unused-function -Wno-error=unused-function"
+
     if [[ ! -e "${HITLS_ROOT_DIR}/testcode/output/log" ]]; then
         mkdir -p ${HITLS_ROOT_DIR}/testcode/output/log
     fi
@@ -301,6 +308,12 @@ options()
             asan)
                 ENABLE_ASAN=ON
                 ;;
+            ctvalgrind)
+                # Build with constant-time validation annotations enabled (see ENABLE_CTVALGRIND).
+                # Also disables optimisation. Requires <valgrind/memcheck.h>; run the suite via
+                # execute_sdv.sh ctvalgrind so each test binary is executed under valgrind memcheck.
+                ENABLE_CTVALGRIND=ON
+                ;;
             no-print)
                 ENABLE_PRINT=OFF
                 ;;
@@ -361,6 +374,11 @@ options()
 
 export_env
 options "$@"
+# ctvalgrind: enable constant-time validation annotations and disable
+# optimisation so Valgrind observes the intended constant-time control flow.
+if [[ ${ENABLE_CTVALGRIND} == "ON" ]]; then
+    CUSTOM_CFLAGS="$CUSTOM_CFLAGS -DHITLS_CT_VALIDATION -O0 -g"
+fi
 clean
 find_test_suite
 process_custom_cases

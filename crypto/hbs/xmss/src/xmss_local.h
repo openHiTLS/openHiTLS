@@ -115,6 +115,8 @@ XmssCtxCommon *XmssCommonNew(void);
 
 void XmssCommonFree(XmssCtxCommon *ctx);
 
+void XmssClearKeyMaterial(XmssCtxCommon *ctx);
+
 int32_t XmssCheckGenReady(const XmssCtxCommon *ctx, bool hasParams);
 
 int32_t XmssGenerateKeyMaterial(XmssCtxCommon *ctx, uint32_t n);

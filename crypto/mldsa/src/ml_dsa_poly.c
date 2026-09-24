@@ -21,6 +21,7 @@
 #include "eal_md_local.h"
 #include "bsl_err_internal.h"
 #include "crypt_utils.h"
+#include "bsl_sal.h"
 #include "ml_dsa_local.h"
 
 void MLDSA_VectorsMul(int32_t *t, const int32_t *matrix, const int32_t *s)
@@ -230,6 +231,7 @@ int32_t MLDSA_RejBoundedPolyEta2(int32_t *a, const uint8_t *s)
         }
     }
 ERR:
+    BSL_SAL_CleanseData(buf, sizeof(buf));
     hashMethod->freeCtx(mdCtx);
     return ret;
 }
@@ -271,6 +273,7 @@ int32_t MLDSA_RejBoundedPolyEta4(int32_t *a, const uint8_t *s)
         }
     }
 ERR:
+    BSL_SAL_CleanseData(buf, sizeof(buf));
     hashMethod->freeCtx(mdCtx);
     return ret;
 }

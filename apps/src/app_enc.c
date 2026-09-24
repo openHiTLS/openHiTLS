@@ -1077,7 +1077,8 @@ static int32_t UpdateEncStdin(EncCmdOpt *encOpt)
         if (cacheLen > MAX_BUFSIZE + BUF_READABLE_BLOCK || readLen > UINT32_MAX - cacheLen ||
             readLen > MAX_BUFSIZE + BUF_READABLE_BLOCK - cacheLen) {
             AppPrintError("enc: Buffer overflow detected\n");
-            return HITLS_APP_COPY_ARGS_FAILED;
+            ret = HITLS_APP_COPY_ARGS_FAILED;
+            break;
         }
         memcpy(cacheArea + cacheLen, readBuf, readLen);
         cacheLen += readLen;
@@ -1101,8 +1102,8 @@ static int32_t UpdateEncStdin(EncCmdOpt *encOpt)
         memcpy(cacheArea, cacheArea + readableLen, BUF_SAFE_BLOCK);
         cacheLen = BUF_SAFE_BLOCK;
     }
-    BSL_SAL_FREE(cacheArea);
-    BSL_SAL_FREE(readBuf);
+    BSL_SAL_ClearFree(cacheArea, MAX_BUFSIZE + BUF_READABLE_BLOCK);
+    BSL_SAL_ClearFree(readBuf, MAX_BUFSIZE);
     BSL_SAL_FREE(resBuf);
     return ret;
 }
@@ -1153,7 +1154,7 @@ static int32_t UpdateEncFile(EncCmdOpt *encOpt, uint64_t readFileLen)
             break;
         }
     }
-    BSL_SAL_FREE(readBuf);
+    BSL_SAL_ClearFree(readBuf, MAX_BUFSIZE * REC_DOUBLE);
     BSL_SAL_FREE(resBuf);
     return ret;
 }
@@ -1191,18 +1192,18 @@ static int32_t DoCipherUpdateDec(EncCmdOpt *encOpt, uint64_t readFileLen)
     uint32_t updateLen = outLen;
     if (CRYPT_EAL_CipherUpdate(encOpt->keySet->ctx, encOpt->cipherBuf, encOpt->cipherBufLen, resBuf, &updateLen)
         != CRYPT_SUCCESS) {
-        BSL_SAL_FREE(resBuf);
+        BSL_SAL_ClearFree(resBuf, outLen);
         AppPrintError("enc: Failed to update the cipher.\n");
         return HITLS_APP_CRYPTO_FAIL;
     }
     uint32_t writeLen = 0;
     if (updateLen != 0 &&
         (BSL_UIO_Write(encOpt->encUio->wUio, resBuf, updateLen, &writeLen) != BSL_SUCCESS || writeLen != updateLen)) {
-        BSL_SAL_FREE(resBuf);
+        BSL_SAL_ClearFree(resBuf, outLen);
         AppPrintError("enc: Failed to write the cipher text.\n");
         return HITLS_APP_UIO_FAIL;
     }
-    BSL_SAL_FREE(resBuf);
+    BSL_SAL_ClearFree(resBuf, outLen);
     (void)readFileLen;
     return HITLS_APP_SUCCESS;
 }
@@ -1235,26 +1236,33 @@ static int32_t DoCipherUpdate(EncCmdOpt *encOpt)
     }
     uint32_t finLen = HITLS_APP_ENC_BLOCK_SIZE;
     uint8_t resBuf[MAX_BUFSIZE] = {0};
+    int32_t ret = HITLS_APP_SUCCESS;
     // Fill the data whose size is less than the block size and output the crypted data.
     if (CRYPT_EAL_CipherFinal(encOpt->keySet->ctx, resBuf, &finLen) != CRYPT_SUCCESS) {
         AppPrintError("enc: Failed to final the cipher.\n");
-        return HITLS_APP_CRYPTO_FAIL;
+        ret = HITLS_APP_CRYPTO_FAIL;
+        goto EXIT;
     }
     if (encOpt->encTag == HITLS_APP_ENC_TAG_ENC) {
         if (finLen != 0 && (EncWriteEncoded(encOpt, resBuf, finLen) != HITLS_APP_SUCCESS)) {
-            return HITLS_APP_UIO_FAIL;
+            ret = HITLS_APP_UIO_FAIL;
+            goto EXIT;
         }
         if (EncWriteEncodedFinal(encOpt) != HITLS_APP_SUCCESS) {
-            return HITLS_APP_UIO_FAIL;
+            ret = HITLS_APP_UIO_FAIL;
+            goto EXIT;
         }
     } else {
         uint32_t writeLen = 0;
         if (finLen != 0 && (BSL_UIO_Write(encOpt->encUio->wUio, resBuf, finLen, &writeLen) != BSL_SUCCESS ||
             writeLen != finLen)) {
-            return HITLS_APP_UIO_FAIL;
+            ret = HITLS_APP_UIO_FAIL;
+            goto EXIT;
         }
     }
-    return HITLS_APP_SUCCESS;
+EXIT:
+    BSL_SAL_CleanseData(resBuf, sizeof(resBuf));
+    return ret;
 }
 
 // Enc encryption or decryption process

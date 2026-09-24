@@ -48,24 +48,24 @@ typedef struct {
 // This function performs the ctx->V += xxx operation.
 static void DRBG_HashAddV(uint8_t *v, uint32_t vLen, uint8_t *src, uint32_t srcLen)
 {
-    uint8_t *d = v + vLen - 1;
-    uint8_t *s = src + srcLen - 1;
     uint8_t c = 0;
     uint32_t r;
+    uint32_t d = vLen;
+    uint32_t s = srcLen;
 
-    while (s >= src) {
-        r = (uint32_t)(*d) + (*s) + c;
-        *d = (uint8_t)(r & 0xff);
-        c = (r > 0xff) ? 1 : 0;
+    while (s > 0) {
         d--;
         s--;
+        r = (uint32_t)v[d] + src[s] + c;
+        v[d] = (uint8_t)(r & 0xff);
+        c = (uint8_t)(r >> 8); /* carry: r <= 0x1ff, so r >> 8 is 0/1 (branchless) */
     }
 
-    while (d >= v && c > 0) {
-        r = (uint32_t)(*d) + c;
-        *d = (uint8_t)(r & 0xff);
-        c = (r > 0xff) ? 1 : 0;
+    while (d > 0) {
         d--;
+        r = (uint32_t)v[d] + c;
+        v[d] = (uint8_t)(r & 0xff);
+        c = (uint8_t)(r >> 8);
     }
 }
 
@@ -163,6 +163,8 @@ static int32_t DRBG_HashDf(DRBG_HashCtx *ctx, uint8_t *out, uint32_t outLen,  co
         if (len < mdSize) {
             if ((ret = meth->final(mdCtx, tmpOut, &tmpOutLen)) != CRYPT_SUCCESS) {
                 BSL_ERR_PUSH_ERROR(ret);
+                /* final() may have partially written tmpOut before failing. */
+                BSL_SAL_CleanseData(tmpOut, sizeof(tmpOut));
                 goto EXIT;
             }
             // tmpOutLen is the maximum supported MD length,

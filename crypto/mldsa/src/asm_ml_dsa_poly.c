@@ -21,6 +21,7 @@
 #include "eal_md_local.h"
 #include "bsl_err_internal.h"
 #include "crypt_utils.h"
+#include "bsl_sal.h"
 #include "ml_dsa_local.h"
 #ifdef HITLS_CRYPTO_MLDSA_X2
 #include "asm_sha3.h"
@@ -417,6 +418,8 @@ int32_t MLDSA_RejBoundedPolyEta2(int32_t *a, const uint8_t *s)
         }
     }
 
+    BSL_SAL_CleanseData(buf, sizeof(buf));
+    BSL_SAL_CleanseData(state, sizeof(state));
     return ret;
 }
 
@@ -451,6 +454,8 @@ int32_t MLDSA_RejBoundedPolyEta4(int32_t *a, const uint8_t *s)
         }
     }
 
+    BSL_SAL_CleanseData(buf, sizeof(buf));
+    BSL_SAL_CleanseData(state, sizeof(state));
     return ret;
 }
 
@@ -541,8 +546,12 @@ int32_t MLDSA_RejBoundedPolyEta2Pair(int32_t *a0, int32_t *a1, const uint8_t *s0
     const uint32_t INIT_BLOCKS = 2;
     const uint32_t INIT_LEN = INIT_BLOCKS * CRYPT_SHAKE256_BLOCKSIZE;
 
-    uint8_t buf0[2 * CRYPT_SHAKE256_BLOCKSIZE];
-    uint8_t buf1[2 * CRYPT_SHAKE256_BLOCKSIZE];
+    /* Two initial blocks plus one reusable fallback block per lane. */
+    uint8_t buf[6 * CRYPT_SHAKE256_BLOCKSIZE];
+    uint8_t *buf0 = buf;
+    uint8_t *buf1 = buf + INIT_LEN;
+    uint8_t *fb0 = buf1 + INIT_LEN;
+    uint8_t *fb1 = fb0 + CRYPT_SHAKE256_BLOCKSIZE;
     Keccakx2State state;
 
     Keccakx2Absorb(state, CRYPT_SHAKE256_BLOCKSIZE, s0, s1, MLDSA_PRIVATE_SEED_LEN + 2, 0x1F);
@@ -550,9 +559,6 @@ int32_t MLDSA_RejBoundedPolyEta2Pair(int32_t *a0, int32_t *a1, const uint8_t *s0
 
     uint32_t i0 = (uint32_t)MldRejUniformEta2Asm(a0, buf0, INIT_LEN, MLD_REJ_UNIFORM_ETA_TABLE);
     uint32_t i1 = (uint32_t)MldRejUniformEta2Asm(a1, buf1, INIT_LEN, MLD_REJ_UNIFORM_ETA_TABLE);
-
-    uint8_t fb0[CRYPT_SHAKE256_BLOCKSIZE];
-    uint8_t fb1[CRYPT_SHAKE256_BLOCKSIZE];
 
     while (i0 < MLDSA_N || i1 < MLDSA_N) {
         Keccakx2Squeeze(fb0, fb1, 1, CRYPT_SHAKE256_BLOCKSIZE, state);
@@ -588,6 +594,8 @@ int32_t MLDSA_RejBoundedPolyEta2Pair(int32_t *a0, int32_t *a1, const uint8_t *s0
             }
         }
     }
+    BSL_SAL_CleanseData(buf, sizeof(buf));
+    BSL_SAL_CleanseData(state, sizeof(state));
     return CRYPT_SUCCESS;
 }
 
@@ -602,8 +610,12 @@ int32_t MLDSA_RejBoundedPolyEta4Pair(int32_t *a0, int32_t *a1, const uint8_t *s0
     const uint32_t INIT_BLOCKS = 2;
     const uint32_t INIT_LEN = INIT_BLOCKS * CRYPT_SHAKE256_BLOCKSIZE;
 
-    uint8_t buf0[2 * CRYPT_SHAKE256_BLOCKSIZE];
-    uint8_t buf1[2 * CRYPT_SHAKE256_BLOCKSIZE];
+    /* Two initial blocks plus one reusable fallback block per lane. */
+    uint8_t buf[6 * CRYPT_SHAKE256_BLOCKSIZE];
+    uint8_t *buf0 = buf;
+    uint8_t *buf1 = buf + INIT_LEN;
+    uint8_t *fb0 = buf1 + INIT_LEN;
+    uint8_t *fb1 = fb0 + CRYPT_SHAKE256_BLOCKSIZE;
     Keccakx2State state;
 
     Keccakx2Absorb(state, CRYPT_SHAKE256_BLOCKSIZE, s0, s1, MLDSA_PRIVATE_SEED_LEN + 2, 0x1F);
@@ -611,9 +623,6 @@ int32_t MLDSA_RejBoundedPolyEta4Pair(int32_t *a0, int32_t *a1, const uint8_t *s0
 
     uint32_t i0 = (uint32_t)MldRejUniformEta4Asm(a0, buf0, INIT_LEN, MLD_REJ_UNIFORM_ETA_TABLE);
     uint32_t i1 = (uint32_t)MldRejUniformEta4Asm(a1, buf1, INIT_LEN, MLD_REJ_UNIFORM_ETA_TABLE);
-
-    uint8_t fb0[CRYPT_SHAKE256_BLOCKSIZE];
-    uint8_t fb1[CRYPT_SHAKE256_BLOCKSIZE];
 
     while (i0 < MLDSA_N || i1 < MLDSA_N) {
         Keccakx2Squeeze(fb0, fb1, 1, CRYPT_SHAKE256_BLOCKSIZE, state);
@@ -645,6 +654,8 @@ int32_t MLDSA_RejBoundedPolyEta4Pair(int32_t *a0, int32_t *a1, const uint8_t *s0
             }
         }
     }
+    BSL_SAL_CleanseData(buf, sizeof(buf));
+    BSL_SAL_CleanseData(state, sizeof(state));
     return CRYPT_SUCCESS;
 }
 

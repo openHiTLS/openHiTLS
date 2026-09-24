@@ -41,6 +41,15 @@ void XmssCommonFree(XmssCtxCommon *ctx)
     BSL_SAL_ClearFree(ctx, sizeof(XmssCtxCommon));
 }
 
+void XmssClearKeyMaterial(XmssCtxCommon *ctx)
+{
+    if (ctx == NULL) {
+        return;
+    }
+    ctx->hasPrivateKey = false;
+    BSL_SAL_CleanseData(&ctx->key, sizeof(ctx->key));
+}
+
 int32_t XmssInitInternal(XmssCtxCommon *ctx, uint32_t n, CRYPT_MD_AlgId mdId, uint32_t paddingLen)
 {
     ctx->n = n;
@@ -66,25 +75,29 @@ int32_t XmssInitInternal(XmssCtxCommon *ctx, uint32_t n, CRYPT_MD_AlgId mdId, ui
 int32_t XmssGenerateKeyMaterial(XmssCtxCommon *ctx, uint32_t n)
 {
     int32_t ret;
-    ctx->hasPrivateKey = false;
+    XmssClearKeyMaterial(ctx);
 
     ret = CRYPT_RandEx(ctx->libCtx, ctx->key.seed, n);
     if (ret != CRYPT_SUCCESS) {
-        return ret;
+        goto ERR;
     }
 
     ret = CRYPT_RandEx(ctx->libCtx, ctx->key.prf, n);
     if (ret != CRYPT_SUCCESS) {
-        return ret;
+        goto ERR;
     }
 
     ret = CRYPT_RandEx(ctx->libCtx, ctx->key.pubSeed, n);
     if (ret != CRYPT_SUCCESS) {
-        return ret;
+        goto ERR;
     }
 
     ctx->key.idx = 0;
     return CRYPT_SUCCESS;
+
+ERR:
+    XmssClearKeyMaterial(ctx);
+    return ret;
 }
 
 int32_t XmssCheckSignReady(const XmssCtxCommon *ctx, const uint8_t *data, const uint8_t *sign,

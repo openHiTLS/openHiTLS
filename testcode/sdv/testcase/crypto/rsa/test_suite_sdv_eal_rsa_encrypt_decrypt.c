@@ -16,6 +16,7 @@
 
 /* BEGIN_HEADER */
 #include <stdint.h>
+#include "bsl_err.h"
 #include "bsl_params.h"
 #include "crypt_params_key.h"
 #include "crypt_local_types.h"
@@ -934,7 +935,8 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_CRYPTO_RSA_VERIFY_PKCSV15_TYPE2_TLS_BOUNDARY_TC001(void)
 {
-#if !defined(HITLS_CRYPTO_RSA_DECRYPT) || !defined(HITLS_CRYPTO_RSAES_PKCSV15_TLS)
+#if !defined(HITLS_CRYPTO_RSA_DECRYPT) || \
+    (!defined(HITLS_CRYPTO_RSAES_PKCSV15) && !defined(HITLS_CRYPTO_RSAES_PKCSV15_TLS))
     SKIP_TEST();
 #else
     uint8_t validIn[59] = {0};
@@ -958,7 +960,7 @@ void SDV_CRYPTO_RSA_VERIFY_PKCSV15_TYPE2_TLS_BOUNDARY_TC001(void)
 
     outLen = sizeof(out);
     memset(out, 0xa5, sizeof(out));
-    ASSERT_EQ(CRYPT_RSA_VerifyPkcsV15Type2TLS(validIn, sizeof(validIn), out, &outLen), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_RSA_VerifyPkcsV15Type2(validIn, sizeof(validIn), out, &outLen), CRYPT_SUCCESS);
     ASSERT_EQ(outLen, sizeof(expected));
     ASSERT_EQ(memcmp(out, expected, sizeof(expected)), 0);
     for (uint32_t i = outLen; i < sizeof(out); i++) {
@@ -967,12 +969,79 @@ void SDV_CRYPTO_RSA_VERIFY_PKCSV15_TYPE2_TLS_BOUNDARY_TC001(void)
 
     outLen = sizeof(expected);
     memset(out, 0xa5, sizeof(out));
-    ASSERT_EQ(CRYPT_RSA_VerifyPkcsV15Type2TLS(tooLongIn, sizeof(tooLongIn), out, &outLen),
+    ASSERT_EQ(CRYPT_RSA_VerifyPkcsV15Type2(tooLongIn, sizeof(tooLongIn), out, &outLen),
         CRYPT_RSA_NOR_VERIFY_FAIL);
     ASSERT_EQ(outLen, sizeof(expected));
     for (uint32_t i = 0; i < outLen; i++) {
         ASSERT_EQ(out[i], 0);
     }
+
+    /* Short input must not cause an out-of-bounds read of the header bytes. */
+    uint8_t shortIn[1] = {0};
+    outLen = sizeof(out);
+    memset(out, 0xa5, sizeof(out));
+    ASSERT_EQ(CRYPT_RSA_VerifyPkcsV15Type2(shortIn, 0, out, &outLen), CRYPT_RSA_NOR_VERIFY_FAIL);
+    ASSERT_EQ(CRYPT_RSA_VerifyPkcsV15Type2(shortIn, 1, out, &outLen), CRYPT_RSA_NOR_VERIFY_FAIL);
+EXIT:
+    return;
+#endif
+}
+/* END_CASE */
+
+/**
+ * @test   SDV_CRYPTO_RSA_VERIFY_PKCSV15_TYPE2_BOUNDARY_TC001
+ * @title  PKCS#1 v1.5 type 2 decoding handles valid and invalid boundaries.
+ * @precon nan
+ * @brief
+ *    Decode a valid block whose separator follows the minimum padding string,
+ *    then reject a block whose message exceeds the output capacity.
+ * @expect
+ *    The valid message is returned; the invalid block is rejected and the error is recorded once.
+ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_RSA_VERIFY_PKCSV15_TYPE2_BOUNDARY_TC001(void)
+{
+#if !defined(HITLS_CRYPTO_RSA_DECRYPT) || \
+    (!defined(HITLS_CRYPTO_RSAES_PKCSV15) && !defined(HITLS_CRYPTO_RSAES_PKCSV15_TLS))
+    SKIP_TEST();
+#else
+    uint8_t validIn[16] = {0};
+    uint8_t tooLongIn[17] = {0};
+    uint8_t expected[] = {1, 2, 3, 4, 5};
+    uint8_t out[32] = {0};
+    uint32_t outLen;
+
+    validIn[1] = 0x02;
+    tooLongIn[1] = 0x02;
+    for (uint32_t i = 2; i < 10; i++) {
+        validIn[i] = 0xff;
+        tooLongIn[i] = 0xff;
+    }
+    memcpy(validIn + 11, expected, sizeof(expected));
+    memcpy(tooLongIn + 11, expected, sizeof(expected));
+    tooLongIn[16] = 6;
+
+    /* The decoder zero-fills the whole covered output range (the caller's
+     * input capacity), so the sentinel survives only past that range. */
+    outLen = sizeof(out);
+    memset(out, 0xa5, sizeof(out));
+    ASSERT_EQ(CRYPT_RSA_VerifyPkcsV15Type2(validIn, sizeof(validIn), out, &outLen), CRYPT_SUCCESS);
+    ASSERT_EQ(outLen, sizeof(expected));
+    ASSERT_EQ(memcmp(out, expected, sizeof(expected)), 0);
+    for (uint32_t i = outLen; i < sizeof(out); i++) {
+        ASSERT_EQ(out[i], 0);
+    }
+
+    /* On failure the capacity is preserved and the covered range is zeroed. */
+    outLen = sizeof(expected);
+    memset(out, 0xa5, sizeof(out));
+    ASSERT_EQ(CRYPT_RSA_VerifyPkcsV15Type2(tooLongIn, sizeof(tooLongIn), out, &outLen), CRYPT_RSA_NOR_VERIFY_FAIL);
+    ASSERT_EQ(outLen, sizeof(expected));
+    for (uint32_t i = 0; i < outLen; i++) {
+        ASSERT_EQ(out[i], 0);
+    }
+    BSL_ERR_ClearError();
+    ASSERT_TRUE(TestIsErrStackEmpty());
 EXIT:
     return;
 #endif

@@ -358,6 +358,7 @@ int32_t ECP_Sm2PointMul(ECC_Para *para, ECC_Point *r, const BN_BigNum *scalar, c
     // SM2_point 2 ECC_Point
     GOTO_ERR_IF_EX(ECP_Sm2Array2Point(r, &re), ret);
 ERR:
+    BSL_SAL_CleanseData(k, sizeof(k));
     return ret;
 }
 

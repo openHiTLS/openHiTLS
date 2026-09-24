@@ -58,7 +58,7 @@ void BN_OptimizerDestroy(BN_Optimizer *opt)
 
     while (nextChunk != NULL) {
         for (uint32_t i = 0; i < HITLS_CRYPT_OPTIMIZER_BN_NUM; i++) {
-            BSL_SAL_ClearFree((void *)(nextChunk->bigNums[i].data), nextChunk->bigNums[i].size * sizeof(BN_UINT));
+            BSL_SAL_ClearFree((void *)(nextChunk->bigNums[i].data), nextChunk->bigNums[i].room * sizeof(BN_UINT));
         }
         Chunk *tmp = nextChunk->next;
         BSL_SAL_Free(nextChunk);
@@ -67,7 +67,7 @@ void BN_OptimizerDestroy(BN_Optimizer *opt)
 
     while (prevChunk != NULL) {
         for (uint32_t i = 0; i < HITLS_CRYPT_OPTIMIZER_BN_NUM; i++) {
-            BSL_SAL_ClearFree((void *)(prevChunk->bigNums[i].data), prevChunk->bigNums[i].size * sizeof(BN_UINT));
+            BSL_SAL_ClearFree((void *)(prevChunk->bigNums[i].data), prevChunk->bigNums[i].room * sizeof(BN_UINT));
         }
         Chunk *tmp = prevChunk->prev;
         BSL_SAL_Free(prevChunk);
@@ -75,7 +75,7 @@ void BN_OptimizerDestroy(BN_Optimizer *opt)
     }
     // curChunk != NULL
     for (uint32_t i = 0; i < HITLS_CRYPT_OPTIMIZER_BN_NUM; i++) {
-        BSL_SAL_ClearFree((void *)(curChunk->bigNums[i].data), curChunk->bigNums[i].size * sizeof(BN_UINT));
+        BSL_SAL_ClearFree((void *)(curChunk->bigNums[i].data), curChunk->bigNums[i].room * sizeof(BN_UINT));
     }
     BSL_SAL_Free(curChunk);
     BSL_SAL_Free(opt);
@@ -126,14 +126,12 @@ static int32_t BnMake(BN_BigNum *r, uint32_t room)
             BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
             return CRYPT_MEM_ALLOC_FAIL;
         }
-        if (r->size > 0) {
-            BSL_SAL_CleanseData(r->data, r->size * sizeof(BN_UINT));
-        }
-        BSL_SAL_FREE(r->data);
+        BSL_SAL_CleanseData(r->data, r->room * sizeof(BN_UINT));
+        BSL_SAL_Free(r->data);
         r->data = tmp;
         r->room = room;
     } else {
-        memset(r->data, 0, r->room * sizeof(BN_UINT));
+        BSL_SAL_CleanseData(r->data, r->room * sizeof(BN_UINT));
     }
     r->size = 0;
     r->sign = false;

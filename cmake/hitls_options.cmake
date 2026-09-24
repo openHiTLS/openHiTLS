@@ -311,6 +311,11 @@ option(HITLS_CRYPTO_PKEY                                       "Public Key Crypt
   option(HITLS_CRYPTO_COMPOSITE                                  "Composite signatures" OFF)
     option(HITLS_CRYPTO_COMPOSITE_CHECK                            "Composite Check" OFF)
   option(HITLS_CRYPTO_ACVP_TESTS                                 "ACVP Tests" OFF)
+## Validation / test instrumentation
+# Valgrind-based constant-time validation: enables HITLS_CT_SECRET_MARK/HITLS_CT_SECRET_UNMARK
+# annotations (no-ops otherwise) and requires <valgrind/memcheck.h> at build time.
+# Intended for use with the ctvalgrind SDV build mode, not shipped in release builds.
+option(HITLS_CT_VALIDATION                                     "Enable Valgrind constant-time validation instrumentation" OFF)
   option(HITLS_SM2_PRECOMPUTE_512K_TBL                           "SM2 512K Precomputation Table" OFF)
 ## Provider
 option(HITLS_CRYPTO_PROVIDER                                   "Provider" OFF)

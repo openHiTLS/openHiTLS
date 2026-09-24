@@ -529,6 +529,7 @@ void ScalarMultiPoint(uint8_t out[32], const uint8_t scalar[32], const uint8_t p
     FpInvert(t1, z2);
     FpMul(t2, x2, t1);
     PolynomialToData(out, t2);
+    BSL_SAL_CleanseData(k, sizeof(k));
 }
 #endif // uint128
 #endif /* HITLS_CRYPTO_X25519 */

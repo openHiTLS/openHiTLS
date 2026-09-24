@@ -2098,7 +2098,7 @@ static int32_t EncodeCompositePrvKeyAsn1Buff(CRYPT_EAL_PkeyCtx *ealPriKey,
     CRYPT_EAL_PkeyPrv prvKey = {.id = CRYPT_PKEY_COMPOSITE, .key.compositePrv = {.data = prv, .len = prvKeyLen}};
     ret = CRYPT_EAL_PkeyGetPrv(ealPriKey, &prvKey);
     if (ret != CRYPT_SUCCESS) {
-        BSL_SAL_Free(prv);
+        BSL_SAL_ClearFree(prv, prvKeyLen);
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }

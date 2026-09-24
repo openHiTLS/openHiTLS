@@ -640,12 +640,8 @@ int32_t CRYPT_RSA_SetPkcsV15Type2(void *libCtx, const uint8_t *in, uint32_t inLe
 #endif
 
 #ifdef HITLS_CRYPTO_RSA_DECRYPT
-#ifdef HITLS_CRYPTO_RSAES_PKCSV15
+#if defined(HITLS_CRYPTO_RSAES_PKCSV15) || defined(HITLS_CRYPTO_RSAES_PKCSV15_TLS)
 int32_t CRYPT_RSA_VerifyPkcsV15Type2(const uint8_t *in, uint32_t inLen, uint8_t *out, uint32_t *outLen);
-#endif
-
-#ifdef HITLS_CRYPTO_RSAES_PKCSV15_TLS
-int32_t CRYPT_RSA_VerifyPkcsV15Type2TLS(const uint8_t *in, uint32_t inLen, uint8_t *out, uint32_t *outLen);
 #endif
 #endif // HITLS_CRYPTO_RSA_DECRYPT
 

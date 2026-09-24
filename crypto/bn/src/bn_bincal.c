@@ -23,15 +23,9 @@
 /* r = a + w, the length of r and a array is 'size'. The return value is the carry. */
 BN_UINT BinInc(BN_UINT *r, const BN_UINT *a, uint32_t size, BN_UINT w)
 {
-    uint32_t i;
     BN_UINT carry = w;
-    for (i = 0; i < size && carry != 0; i++) {
+    for (uint32_t i = 0; i < size; i++) {
         ADD_AB(carry, r[i], a[i], carry);
-    }
-    if (r != a) {
-        for (; i < size; i++) {
-            r[i] = a[i];
-        }
     }
 
     return carry;
@@ -39,15 +33,9 @@ BN_UINT BinInc(BN_UINT *r, const BN_UINT *a, uint32_t size, BN_UINT w)
 /* r = a - w, the length of r and a array is 'size'. The return value is the borrow-digit. */
 BN_UINT BinDec(BN_UINT *r, const BN_UINT *a, uint32_t n, BN_UINT w)
 {
-    uint32_t i;
     BN_UINT borrow = w;
-    for (i = 0; (i < n) && (borrow > 0); i++) {
+    for (uint32_t i = 0; i < n; i++) {
         SUB_AB(borrow, r[i], a[i], borrow);
-    }
-    if (r != a) {
-        for (; i < n; i++) {
-            r[i] = a[i];
-        }
     }
     return borrow;
 }
@@ -84,9 +72,7 @@ uint32_t BinRshift(BN_UINT *r, const BN_UINT *a, uint32_t n, uint32_t bits)
     }
     return rsize;
 }
-/* r = a << bits. The return value is the valid length of r after the shift.
- * The array length of a is n. The length of the r array must meet the requirements of the accepted calculation result,
- * which is guaranteed by the input parameter.
+/* r = a << bits. The output needs n + nw limbs, plus one for a partial-word shift.
  */
 uint32_t BinLshift(BN_UINT *r, const BN_UINT *a, uint32_t n, uint32_t bits)
 {
@@ -103,11 +89,8 @@ uint32_t BinLshift(BN_UINT *r, const BN_UINT *a, uint32_t n, uint32_t bits)
     BN_UINT lo;
     /* When nb == 0, discard the value of (hi << na) with the all-zero mask. */
     BN_UINT mask = ~BN_IsZeroUintConsttime(nb);
-    lo = (hi >> na) & mask;
-    /* Assign a value to the most significant bit. */
-    if (lo != 0) {
-        r[rsize++] = lo;
-    }
+    BN_UINT top = (hi >> na) & mask;
+    uint32_t extra = (uint32_t)(~BN_IsZeroUintConsttime(top) & 1u);
     /* Assign a value from the most significant bits. */
     for (i = n - 1; i > 0; i--) {
         lo = a[i - 1];
@@ -119,8 +102,11 @@ uint32_t BinLshift(BN_UINT *r, const BN_UINT *a, uint32_t n, uint32_t bits)
     if (nw != 0) {
         memset(r, 0, nw * sizeof(BN_UINT));
     }
+    if (nb != 0) {
+        r[rsize] = top;
+    }
 
-    return rsize;
+    return rsize + extra;
 }
 /* r = a * b + r. The return value is a carry. */
 BN_UINT BinMulAcc(BN_UINT *r, const BN_UINT *a, uint32_t aSize, BN_UINT b)
@@ -162,9 +148,7 @@ uint32_t BinMul(BN_UINT *r, uint32_t rRoom, const BN_UINT *a, uint32_t aSize, co
         for (; j < aSize; j++) {
             MULADC_AB(r[i + j], a[j], t, carry);
         }
-        if (carry != 0) {
             r[i + j] = carry;
-        }
     }
     return aSize + bSize - (carry == 0);
 }

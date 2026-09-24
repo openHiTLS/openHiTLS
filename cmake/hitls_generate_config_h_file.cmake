@@ -16,6 +16,24 @@
 set(CONFIG_H_OUTPUT_DIR "${CMAKE_BINARY_DIR}/config")
 set(CONFIG_H_OUTPUT_PATH "${CONFIG_H_OUTPUT_DIR}/hitls_build_config.h")
 
+# When constant-time validation is requested, probe for <valgrind/memcheck.h>.
+# HITLS_CT_SECRET_MARK/HITLS_CT_SECRET_UNMARK would expand to a real Valgrind client
+# request, so a missing header must abort with a clear install hint rather than a
+# cryptic compile failure. We do not need a separate "header present" macro: the
+# cmake check fails the build here, so HITLS_CT_VALIDATION being defined already
+# implies the header is available.
+if(HITLS_CT_VALIDATION)
+    include(CheckIncludeFile)
+    check_include_file("valgrind/memcheck.h" _hitls_have_valgrind_hdr)
+    if(NOT _hitls_have_valgrind_hdr)
+        message(FATAL_ERROR
+            "HITLS_CT_VALIDATION=ON requires the Valgrind development headers "
+            "(<valgrind/memcheck.h>). On Debian/Ubuntu: apt-get install valgrind; "
+            "on RHEL/Fedora: dnf install valgrind-devel.")
+    endif()
+    unset(_hitls_have_valgrind_hdr)
+endif()
+
 file(MAKE_DIRECTORY "${CONFIG_H_OUTPUT_DIR}")
 configure_file(
     "${PROJECT_SOURCE_DIR}/cmake/config.h.in"

@@ -204,7 +204,7 @@ void VERIFY_FreeMsgCache(VerifyCtx *ctx)
     HsMsgCache *dataBuf = ctx->dataBuf;
     while (dataBuf != NULL) {
         nextBuf = dataBuf->next;
-        BSL_SAL_FREE(dataBuf->data);
+        BSL_SAL_ClearFree(dataBuf->data, dataBuf->dataSize);
         BSL_SAL_FREE(dataBuf);
         dataBuf = nextBuf;
     }

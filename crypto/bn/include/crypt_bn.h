@@ -460,6 +460,7 @@ int32_t BN_Gcd(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *b, BN_Optimize
  * @retval CRYPT_BN_ERR_NO_INVERSE      Cannot calculate the module inverse.
  */
 int32_t BN_ModInv(BN_BigNum *r, const BN_BigNum *x, const BN_BigNum *m, BN_Optimizer *opt);
+
 /**
  * @ingroup bn
  * @brief BigNum comparison
@@ -1098,7 +1099,7 @@ int32_t BN_MontExp(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *e, BN_Mont
  * @brief Constant time BigNum Montgomery modular exponentiation
  *
  * @param r    [OUT] Modular exponentiation result
- * @param a    [IN] base
+ * @param a    [IN] base, whose absolute value is less than the Montgomery modulus
  * @param e    [IN] exponent
  * @param mont [IN] Montgomery context
  * @param opt  [IN] Optimizer

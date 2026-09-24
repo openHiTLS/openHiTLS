@@ -21,6 +21,31 @@
 #include "modes_local.h"
 #include "crypt_modes_gcm.h"
 
+/*
+ * SECURITY NOTE (side-channel / constant-time):
+ *
+ * This is the Shoup 4-bit lookup-table implementation of GHASH. Both
+ * GcmTableGen4bit() and GcmHashMultiBlock() perform data-dependent table
+ * lookups whose indices are derived from the GHASH accumulator and the input
+ * data, i.e. from secret-derived values (the hash subkey H and the running
+ * tag state).
+ *
+ * Such data-dependent memory accesses are NOT constant-time: cache-timing
+ * observations can reveal the intermediate hash value and, since the
+ * ciphertext is known to an attacker, can in turn be used to recover the
+ * secret hash subkey H. Recovering H breaks GCM authentication (tag forgery)
+ * and, because GCM confidentiality is plain CTR mode, also breaks
+ * confidentiality.
+ *
+ * Therefore this pure-C implementation is provided only as a portable fallback
+ * for platforms without dedicated GHASH assembly (e.g. RISC-V, MIPS, and other
+ * non-x86_64/non-armv8 architectures). It MUST NOT be relied upon where
+ * constant-time execution is required.
+ *
+ * For constant-time operation, use the hardware-accelerated assembly paths
+ * on the target platform.
+ */
+
 /* table[i] = (P^4)*i, P = 0x4000000000000000, i = 0...16 */
 static const uint64_t TABLE_P4_BITS[16] = {
     0x0000000000000000, 0x1c20000000000000, 0x3840000000000000, 0x2460000000000000,

@@ -343,6 +343,7 @@ static void ECP256_WindowMul(P256_Point *r, const BN_BigNum *k, const ECC_Point 
     // If the least significant bit of the code is 1, plus -(wCode >> 1) times point.
     ECP256_CondNeg(&(temp.y), wCode & 1);
     ECP256_PointAdd(r, r, &temp);
+    BSL_SAL_CleanseData(kOctets, sizeof(kOctets));
 }
 
 static void ComputeK1G(P256_Point *k1G, const BN_BigNum *k1)
@@ -382,6 +383,8 @@ static void ComputeK1G(P256_Point *k1G, const BN_BigNum *k1)
         ECP256_CondNeg(&(k1GAffine.y), wCode & 1);
         ECP256_AddAffine(k1G, k1G, &k1GAffine);
     }
+
+    BSL_SAL_CleanseData(kOctets, sizeof(kOctets));
 }
 
 // if pt == NULL, r = k * G, otherwise r = k * pt

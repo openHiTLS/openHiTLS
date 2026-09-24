@@ -406,16 +406,18 @@ int32_t CRYPT_XMSSMT_Gen(CryptXmssmtCtx *ctx)
     }
     ret = XmssGenerateKeyMaterial(common, ctx->params->n);
     if (ret != CRYPT_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
-        return ret;
+        goto ERR;
     }
     ret = XmssmtInitBds(ctx);
     if (ret != CRYPT_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
-        return ret;
+        goto ERR;
     }
     common->hasPrivateKey = true;
     return CRYPT_SUCCESS;
+
+ERR:
+    XmssClearKeyMaterial(common);
+    return ret;
 }
 
 int32_t CRYPT_XMSSMT_Sign(CryptXmssmtCtx *ctx, int32_t algId, const uint8_t *data, uint32_t dataLen,

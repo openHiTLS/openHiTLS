@@ -509,8 +509,8 @@ EXIT:
     CRYPT_EAL_MdFreeCtx(ctx);
     BSL_SAL_Free(D);
     BSL_SAL_ClearFree(I, k);
-    BSL_SAL_Free(B);
-    BSL_SAL_Free(A);
+    BSL_SAL_ClearFree(B, param->v);
+    BSL_SAL_ClearFree(A, param->u);
     return ret;
 }
 

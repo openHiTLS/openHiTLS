@@ -110,7 +110,9 @@ int32_t SM9_EncryptCtx(const SM9_Ctx *ctx, const uint8_t *user_id, uint32_t id_l
     if (ret != CRYPT_SUCCESS) {
         return CRYPT_SM9_ERR_ENCRYPT_FAILED;
     }
-    return SM9_Alg_Enc(msg, mlen, user_id, id_len, randBuf, g_ptr, ctx->enc_mpk, cipher, clen);
+    ret = SM9_Alg_Enc(msg, mlen, user_id, id_len, randBuf, g_ptr, ctx->enc_mpk, cipher, clen);
+    BSL_SAL_CleanseData(randBuf, sizeof(randBuf));
+    return ret;
 }
 
 int32_t SM9_DecryptCtx(const SM9_Ctx *ctx, const uint8_t *cipher, uint32_t clen, uint8_t *msg, uint32_t *mlen)

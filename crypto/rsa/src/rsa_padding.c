@@ -955,45 +955,8 @@ int32_t CRYPT_RSA_SetPkcsV15Type2(void *libCtx, const uint8_t *in, uint32_t inLe
 #endif // HITLS_CRYPTO_RSA_ENCRYPT && (EC_PKCSV15_TLS || EC_PKCSV15)
 
 #ifdef HITLS_CRYPTO_RSA_DECRYPT
-#ifdef HITLS_CRYPTO_RSAES_PKCSV15
+#if defined(HITLS_CRYPTO_RSAES_PKCSV15) || defined(HITLS_CRYPTO_RSAES_PKCSV15_TLS)
 int32_t CRYPT_RSA_VerifyPkcsV15Type2(const uint8_t *in, uint32_t inLen, uint8_t *out, uint32_t *outLen)
-{
-    uint32_t zeroIndex = 0;
-    uint32_t index = ~(0);
-    uint32_t firstZero = Uint32ConstTimeEqual(in[0], 0x00);
-    uint32_t firstTwo = Uint32ConstTimeEqual(in[1], 0x02);
-    // Check the ps starting from subscript 2.
-    for (uint32_t i = 2; i < inLen; i++) {
-        uint32_t equals0 = Uint32ConstTimeIsZero(in[i]);
-        zeroIndex = Uint32ConstTimeSelect(index & equals0, i, zeroIndex);
-        index = Uint32ConstTimeSelect(equals0, 0, index);
-    }
-
-    uint32_t valid = firstZero & firstTwo & (~index);
-    // Pad output format: EM = 00 || 02 || PS || 00 || M; where M is a message, and PS must be >= 8.
-    // Therefore, the subscript of the second 0 must be greater than or equal to 10.
-    valid &= Uint32ConstTimeGe(zeroIndex, 10);
-
-    zeroIndex++;
-    if (valid == 0) {
-        BSL_ERR_PUSH_ERROR(CRYPT_RSA_NOR_VERIFY_FAIL);
-        return CRYPT_RSA_NOR_VERIFY_FAIL;
-    }
-
-    if (inLen - zeroIndex > *outLen) {
-        BSL_ERR_PUSH_ERROR(CRYPT_RSA_NOR_VERIFY_FAIL);
-        return CRYPT_RSA_NOR_VERIFY_FAIL;
-    }
-
-    memcpy(out, in + zeroIndex, inLen - zeroIndex);
-    *outLen = inLen - zeroIndex;
-
-    return CRYPT_SUCCESS;
-}
-#endif // HITLS_CRYPTO_RSAES_PKCSV15
-
-#ifdef HITLS_CRYPTO_RSAES_PKCSV15_TLS
-int32_t CRYPT_RSA_VerifyPkcsV15Type2TLS(const uint8_t *in, uint32_t inLen, uint8_t *out, uint32_t *outLen)
 {
     if (inLen < 2) {
         BSL_ERR_PUSH_ERROR(CRYPT_RSA_NOR_VERIFY_FAIL);
@@ -1027,7 +990,7 @@ int32_t CRYPT_RSA_VerifyPkcsV15Type2TLS(const uint8_t *in, uint32_t inLen, uint8
     // if the 'plaintext' is PKCS15 , the valid should be 0xffffffff, else should be 0
     return Uint32ConstTimeIsZero(valid) & CRYPT_RSA_NOR_VERIFY_FAIL;
 }
-#endif // HITLS_CRYPTO_RSAES_PKCSV15_TLS
+#endif // HITLS_CRYPTO_RSAES_PKCSV15 || HITLS_CRYPTO_RSAES_PKCSV15_TLS
 #endif // HITLS_CRYPTO_RSA_DECRYPT
 
 #endif /* HITLS_CRYPTO_RSA */

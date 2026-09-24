@@ -698,7 +698,7 @@ typedef enum {
     CRYPT_CTRL_GET_RSA_MD,              /**< Obtain the MD algorithm of the RSA algorithm. */
     CRYPT_CTRL_GET_RSA_MGF,             /**< Obtain the mgf algorithm when the RSA algorithm padding mode is PSS. */
     CRYPT_CTRL_CLR_RSA_FLAG,            /**< RSA clear the flag. */
-    CRYPT_CTRL_SET_RSA_BSSA_FACTOR_R,   /**< Set the random bytes for RSA-BSSA. */
+    CRYPT_CTRL_SET_RSA_BSSA_FACTOR_R,   /**< @deprecated Setting the RSA-BSSA blinding factor is not supported. */
     CRYPT_CTRL_SET_RSA_EMSA_ISO9796_2,    /**< RSA set the signature padding mode to ISO/IEC 9796-2. */
 
     // ecc

@@ -296,6 +296,8 @@
 #cmakedefine HITLS_CRYPTO_MLDSA_ARMV8
 #cmakedefine HITLS_CRYPTO_ACVP_TESTS
 #cmakedefine HITLS_SM2_PRECOMPUTE_512K_TBL
+// Validation / test instrumentation
+#cmakedefine HITLS_CT_VALIDATION
 // Provider
 #cmakedefine HITLS_CRYPTO_PROVIDER
 #cmakedefine HITLS_CRYPTO_CMVP

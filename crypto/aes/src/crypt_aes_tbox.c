@@ -23,6 +23,14 @@
 #include "crypt_aes.h"
 #include "crypt_aes_tbox.h"
 
+/*
+ * SECURITY NOTE: this T-box AES is NOT constant-time. AES_ENC/DEC_ROUND and key
+ * expansion index TE0..TE3/TD0..TD3 (4x 1 KB) by the post-AddRoundKey state
+ * (the secret round keys), so cache-timing can recover the AES key; the 1 KB
+ * tables widen the surface versus the S-box variant. Portable fallback only --
+ * use the hardware AES assembly path for constant-time operation.
+ */
+
 static const uint8_t INV_S[256] = {
     0x52U, 0x09U, 0x6aU, 0xd5U, 0x30U, 0x36U, 0xa5U, 0x38U, 0xbfU, 0x40U, 0xa3U, 0x9eU, 0x81U, 0xf3U, 0xd7U, 0xfbU,
     0x7cU, 0xe3U, 0x39U, 0x82U, 0x9bU, 0x2fU, 0xffU, 0x87U, 0x34U, 0x8eU, 0x43U, 0x44U, 0xc4U, 0xdeU, 0xe9U, 0xcbU,

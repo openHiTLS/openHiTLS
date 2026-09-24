@@ -153,6 +153,7 @@ static int32_t HITLS_AUTH_PakeRespRegister(HITLS_AUTH_PakeCtx *ctx, CRYPT_EAL_Kd
     BSL_Buffer in0, BSL_Buffer in1, BSL_Buffer in2)
 {
     (void)kdfctx;
+    (void)in1;
     if (ctx == NULL) {
         BSL_ERR_PUSH_ERROR(HITLS_AUTH_NULL_INPUT);
         return HITLS_AUTH_NULL_INPUT;
@@ -166,7 +167,7 @@ static int32_t HITLS_AUTH_PakeRespRegister(HITLS_AUTH_PakeCtx *ctx, CRYPT_EAL_Kd
     int32_t ret = HITLS_AUTH_SUCCESS;
     switch (ctx->type) {
         case HITLS_AUTH_PAKE_SPAKE2PLUS:
-            ret = HITLS_AUTH_Spake2plusRespRegister(ctx, in0, in1, in2);
+            ret = HITLS_AUTH_Spake2plusRespRegister(ctx, in0, in2);
             break;
         default:
             ret=HITLS_AUTH_INVALID_ARG;

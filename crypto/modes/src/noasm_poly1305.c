@@ -146,12 +146,11 @@ void Poly1305Last(Poly1305Ctx *ctx, uint8_t mac[POLY1305_TAGSIZE])
     b[3] = a[3] + (b[2] >> 32);
     b[4] = a[4] + (b[3] >> 32);
     /* Obtain the mask. If there is a carry, the number is greater than p. */
-    if ((b[4] & 0x4) == 0) {    // b[4] & 0x4 is bit131.
-        b[0] = a[0];
-        b[1] = a[1];
-        b[2] = a[2];
-        b[3] = a[3];
-    }
+    uint64_t mask = (uint64_t)(0 - ((b[4] >> 2) & 1));
+    b[0] = (b[0] & mask) | ((uint64_t)a[0] & ~mask);
+    b[1] = (b[1] & mask) | ((uint64_t)a[1] & ~mask);
+    b[2] = (b[2] & mask) | ((uint64_t)a[2] & ~mask);
+    b[3] = (b[3] & mask) | ((uint64_t)a[3] & ~mask);
     // Adding s at the end does not require modulo processing.
     b[0] = ctx->s[0] + (b[0] & 0xffffffff);
     b[1] = ctx->s[1] + (b[1] & 0xffffffff) + (b[0] >> 32);

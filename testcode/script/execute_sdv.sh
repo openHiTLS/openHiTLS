@@ -21,6 +21,12 @@ paramList=$@
 paramNum=$#
 is_concurrent=1
 need_run_all=1
+# CTVALGRIND: when non-empty, each test binary is executed under
+# valgrind --tool=memcheck so that any constant-time violation (a control-flow
+# branch or memory index depending on bytes marked HITLS_CT_SECRET_MARK) is reported
+# as an error and fails the suite. Requires the main library and tests to have
+# been built with build_hitls.sh ctvalgrind / build_sdv.sh ctvalgrind.
+CTVALGRIND=${CTVALGRIND:=''}
 # Cross-platform CPU count detection
 if [[ "$(uname)" == "Darwin" ]]; then
     threadsNum=$(sysctl -n hw.ncpu)
@@ -73,6 +79,16 @@ else
     echo "[INFO] Final LD_LIBRARY_PATH: ${LD_LIBRARY_PATH}"
 fi
 
+# Return the valgrind invocation prefix when CTVALGRIND is enabled, else empty.
+# Tests are run under memcheck with --track-origins=yes so the origin of any
+# secret-tainted value (a HITLS_CT_SECRET_MARK site) is reported, and --error-exitcode=1
+# turns any constant-time violation into a non-zero exit that fails the suite.
+valgrind_prefix() {
+    if [ -n "${CTVALGRIND}" ]; then
+        echo "valgrind --tool=memcheck --track-origins=yes --error-exitcode=1"
+    fi
+}
+
 # Check whether an ASAN alarm is generated.
 generate_asan_log() {
     ASAN_LOG=$(find "${HITLS_ROOT_DIR}/testcode/output" "${HITLS_ROOT_DIR}/testcode/demo/build" \
@@ -116,10 +132,10 @@ run_test() {
             if [ "${i}" = "test_suite_sdv_eal_provider_load" ]; then
                 # Set custom LD_LIBRARY_PATH for provider load test suite
                 echo "Running ${i} with LD_LIBRARY_PATH set to ../testdata/provider/path1"
-                env LD_LIBRARY_PATH="../testdata/provider/path1:${LD_LIBRARY_PATH}" DYLD_INSERT_LIBRARIES="${DYLD_INSERT_LIBRARIES}" ./${i} NO_DETAIL
+                env LD_LIBRARY_PATH="../testdata/provider/path1:${LD_LIBRARY_PATH}" DYLD_INSERT_LIBRARIES="${DYLD_INSERT_LIBRARIES}" $(valgrind_prefix) ./${i} NO_DETAIL
             else
                 # Run other test suites normally
-                env DYLD_INSERT_LIBRARIES="${DYLD_INSERT_LIBRARIES}" ./${i} NO_DETAIL
+                env DYLD_INSERT_LIBRARIES="${DYLD_INSERT_LIBRARIES}" $(valgrind_prefix) ./${i} NO_DETAIL
             fi
         done
     fi
@@ -129,7 +145,7 @@ run_test() {
         num=0
         for i in ${testcase_array[@]}
         do
-            env DYLD_INSERT_LIBRARIES="${DYLD_INSERT_LIBRARIES}" ./${testsuite_array[num]} ${i}
+            env DYLD_INSERT_LIBRARIES="${DYLD_INSERT_LIBRARIES}" $(valgrind_prefix) ./${testsuite_array[num]} ${i}
             let num+=1
         done
     fi
@@ -200,9 +216,9 @@ run_all() {
             {
                 if [ "${i}" = "test_suite_sdv_eal_provider_load" ]; then
                     echo "Running ${i} with LD_LIBRARY_PATH set to ../testdata/provider/path1"
-                    env LD_LIBRARY_PATH="../testdata/provider/path1:${LD_LIBRARY_PATH}" DYLD_INSERT_LIBRARIES="${DYLD_INSERT_LIBRARIES}" ./${i} NO_DETAIL || (read -u8 && echo "1 $i" >&8)
+                    env LD_LIBRARY_PATH="../testdata/provider/path1:${LD_LIBRARY_PATH}" DYLD_INSERT_LIBRARIES="${DYLD_INSERT_LIBRARIES}" $(valgrind_prefix) ./${i} NO_DETAIL || (read -u8 && echo "1 $i" >&8)
                 else
-                    env DYLD_INSERT_LIBRARIES="${DYLD_INSERT_LIBRARIES}" ./${i} NO_DETAIL || (read -u8 && echo "1 $i" >&8)
+                    env DYLD_INSERT_LIBRARIES="${DYLD_INSERT_LIBRARIES}" $(valgrind_prefix) ./${i} NO_DETAIL || (read -u8 && echo "1 $i" >&8)
                 fi
                 echo >&5
             } &
@@ -224,9 +240,9 @@ run_all() {
         do
             if [ "${i}" = "test_suite_sdv_eal_provider_load" ]; then
                 echo "Running ${i} with LD_LIBRARY_PATH set to ../testdata/provider/path1"
-                env LD_LIBRARY_PATH="../testdata/provider/path1:${LD_LIBRARY_PATH}" DYLD_INSERT_LIBRARIES="${DYLD_INSERT_LIBRARIES}" ./${i} NO_DETAIL
+                env LD_LIBRARY_PATH="../testdata/provider/path1:${LD_LIBRARY_PATH}" DYLD_INSERT_LIBRARIES="${DYLD_INSERT_LIBRARIES}" $(valgrind_prefix) ./${i} NO_DETAIL
             else
-                env DYLD_INSERT_LIBRARIES="${DYLD_INSERT_LIBRARIES}" ./${i} NO_DETAIL
+                env DYLD_INSERT_LIBRARIES="${DYLD_INSERT_LIBRARIES}" $(valgrind_prefix) ./${i} NO_DETAIL
             fi
         done
     fi
@@ -285,6 +301,11 @@ parse_option()
             "threads"*)
                 threads_num=${i#*=}
                 threadsNum=$threads_num
+                ;;
+            "ctvalgrind")
+                # Run every test binary under valgrind memcheck to catch constant-time
+                # violations (branches/indexes depending on HITLS_CT_SECRET_MARK-marked bytes).
+                CTVALGRIND=1
                 ;;
             *)
                 parse_testsuite_testcase $i

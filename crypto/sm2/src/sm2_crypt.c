@@ -34,14 +34,12 @@
 #define SM2_POINT_SINGLE_COORDINATE_LEN 32
 #define SM2_POINT_COORDINATE_LEN 65
 
-static void EncryptMemFree(ECC_Point *c1, ECC_Point *tmp, BN_BigNum *k, bool isInternal, uint8_t *c2)
+static void EncryptMemFree(ECC_Point *c1, ECC_Point *tmp, BN_BigNum *k, uint8_t *c2, uint32_t c2Len)
 {
     ECC_FreePoint(c1);
     ECC_FreePoint(tmp);
-    if (isInternal) {
-        BN_Destroy(k);
-    }
-    BSL_SAL_FREE(c2);
+    BN_Destroy(k);
+    BSL_SAL_ClearFree(c2, c2Len);
 }
 
 static int32_t ParaCheckAndCalculate(CRYPT_SM2_Ctx *ctx, ECC_Point *tmp, BN_BigNum *k)
@@ -181,13 +179,16 @@ int32_t CRYPT_SM2_Encrypt(CRYPT_SM2_Ctx *ctx, const uint8_t *data, uint32_t data
     }
     uint32_t i;
     BN_BigNum *k = NULL;
-    bool isInternal = false;
 #ifdef HITLS_CRYPTO_ACVP_TESTS
+    bool isInternal = false;
     k = ctx->paraEx.k;
+    ctx->paraEx.k = NULL; /* consume-on-use: take ownership so k is never reused across encryptions */
 #endif
     if (k == NULL) {
         k = BN_Create(CRYPT_SM2_GetBits(ctx));
+#ifdef HITLS_CRYPTO_ACVP_TESTS
         isInternal = true;
+#endif
     }
     BN_BigNum *order = ECC_GetParaRawN(ctx->pkey->para);
     ECC_Point *c1 = ECC_NewPoint(ctx->pkey->para);
@@ -241,7 +242,8 @@ int32_t CRYPT_SM2_Encrypt(CRYPT_SM2_Ctx *ctx, const uint8_t *data, uint32_t data
 
     GOTO_ERR_IF(CRYPT_EAL_EncodeSm2EncryptData(&encData, out, outlen), ret);
 ERR:
-    EncryptMemFree(c1, tmp, k, isInternal, c2);
+    BSL_SAL_CleanseData(tmpBuf, sizeof(tmpBuf));
+    EncryptMemFree(c1, tmp, k, c2, datalen);
     return ret;
 }
 
@@ -371,6 +373,8 @@ ERR:
     ECC_FreePoint(c1);
     ECC_FreePoint(tmp);
     BSL_SAL_ClearFree((void*)t, cipherLen);
+    BSL_SAL_CleanseData(tmpBuf, sizeof(tmpBuf));
+    BSL_SAL_CleanseData(sm3Buf, sizeof(sm3Buf));
     return ret;
 }
 #endif // HITLS_CRYPTO_SM2_CRYPT

@@ -65,6 +65,7 @@ usage()
     printf "%-50s %-30s\n" "Build openHiTLS Code With Gcov"            "sh build_hitls.sh gcov"
     printf "%-50s %-30s\n" "Build openHiTLS Code With Debug"           "sh build_hitls.sh debug"
     printf "%-50s %-30s\n" "Build openHiTLS Code With Asan"            "sh build_hitls.sh asan"
+    printf "%-50s %-30s\n" "Build openHiTLS Code For CT Valgrind"      "sh build_hitls.sh ctvalgrind"
     printf "%-50s %-30s\n" "Build openHiTLS Code With Pure C"           "sh build_hitls.sh pure_c"
     printf "%-50s %-30s\n" "Build openHiTLS Code With X86_64"            "sh build_hitls.sh x86_64"
     printf "%-50s %-30s\n" "Build openHiTLS Code With Armv8_be"          "sh build_hitls.sh armv8_be"
@@ -280,6 +281,17 @@ parse_option()
                 debug_mode=true
                 add_options="${add_options} -fsanitize=address -fsanitize-address-use-after-scope -O0 -g3 -fno-stack-protector -fno-omit-frame-pointer -fgnu89-inline"
                 del_options="${del_options} -fstack-protector-strong -fomit-frame-pointer -O2 -O3 -D_FORTIFY_SOURCE=2"
+                ;;
+            "ctvalgrind")
+                # Build the main library with constant-time validation annotations enabled.
+                # HITLS_CT_SECRET_MARK/HITLS_CT_SECRET_UNMARK are live only with HITLS_CT_VALIDATION;
+                # -O0 -g keeps the optimiser from folding away the CT control flow Valgrind must observe.
+                # Requires the Valgrind headers (<valgrind/memcheck.h>); pair with build_sdv.sh ctvalgrind
+                # and execute_sdv.sh ctvalgrind to run each test binary under valgrind memcheck.
+                debug_mode=true
+                feature_options="${feature_options} -DHITLS_CT_VALIDATION=ON"
+                add_options="${add_options} -O0 -g3"
+                del_options="${del_options} -O2 -O3"
                 ;;
             "x86_64")
                 get_arch="x86_64"

@@ -22,6 +22,14 @@
 #include "crypt_aes.h"
 #include "crypt_aes_sbox.h"
 
+/*
+ * SECURITY NOTE: this S-box AES is NOT constant-time. SubBytes/InvSubBytes and
+ * key expansion index AES_S[]/INV_S[] by the post-AddRoundKey state (the secret
+ * round keys), so cache-timing can recover the AES key. (MixColumns and the
+ * other linear layers are table free.) Portable fallback only -- use the
+ * hardware AES assembly path for constant-time operation.
+ */
+
 #define BYTE_BITS 8
 
 static const uint8_t AES_S[256] = {

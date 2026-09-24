@@ -17,6 +17,7 @@
 #define BSL_BYTES_H
 
 #include <stdint.h>
+#include "hitls_build.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -265,6 +266,20 @@ static inline uint32_t ConstTimeMemcmp(const uint8_t *a, const uint8_t *b, uint3
     }
     return Uint32ConstTimeIsZero(r);
 }
+
+// Constant-time validation requires HITLS_CT_VALIDATION and explicit marks.
+// MARK makes the selected bytes undefined to Valgrind Memcheck, which can then
+// report branches and memory addresses that depend on them. UNMARK ends tracking.
+// Unmarked secrets and microarchitectural timing leaks are outside its scope.
+#if defined(HITLS_CT_VALIDATION)
+#include <valgrind/memcheck.h>
+#define HITLS_CT_SECRET_MARK(ptr, len) VALGRIND_MAKE_MEM_UNDEFINED((ptr), (len))
+#define HITLS_CT_SECRET_UNMARK(ptr, len) VALGRIND_MAKE_MEM_DEFINED((ptr), (len))
+#else
+// Without validation, both macros are no-ops.
+#define HITLS_CT_SECRET_MARK(ptr, len) ((void)0)
+#define HITLS_CT_SECRET_UNMARK(ptr, len) ((void)0)
+#endif
 
 #ifdef __cplusplus
 }

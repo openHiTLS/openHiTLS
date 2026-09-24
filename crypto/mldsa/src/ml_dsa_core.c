@@ -235,7 +235,7 @@ static int32_t ExpandA(const CRYPT_ML_DSA_Ctx *ctx, const uint8_t *pubSeed, int3
 static int32_t ExpandS(const CRYPT_ML_DSA_Ctx *ctx, const uint8_t *prvSeed, int32_t *s1[MLDSA_L_MAX],
     int32_t *s2[MLDSA_K_MAX])
 {
-    int32_t ret;
+    int32_t ret = CRYPT_SUCCESS;
     uint8_t k = ctx->info->k;
     uint8_t l = ctx->info->l;
     uint8_t seed[MLDSA_PRIVATE_SEED_LEN + 2]; // 2 bytes are reserved.
@@ -259,40 +259,41 @@ static int32_t ExpandS(const CRYPT_ML_DSA_Ctx *ctx, const uint8_t *prvSeed, int3
     for (; i + 1 < l; i += 2) {
         seed[MLDSA_PRIVATE_SEED_LEN] = i;
         seed1[MLDSA_PRIVATE_SEED_LEN] = i + 1;
-        ret = rejBoundedPolyPair(s1[i], s1[i + 1], seed, seed1);
-        RETURN_RET_IF(ret != CRYPT_SUCCESS, ret);
+        /* rejBoundedPolyPair already pushes on error, so use _EX to avoid double push */
+        GOTO_ERR_IF_EX(rejBoundedPolyPair(s1[i], s1[i + 1], seed, seed1), ret);
     }
     for (; i < l; i++) {
         seed[MLDSA_PRIVATE_SEED_LEN] = i;
-        ret = rejBoundedPoly(s1[i], seed);
-        RETURN_RET_IF(ret != CRYPT_SUCCESS, ret);
+        GOTO_ERR_IF_EX(rejBoundedPoly(s1[i], seed), ret);
     }
     /* s2 – nonces l … l+k-1 */
     uint8_t j = 0;
     for (; j + 1 < k; j += 2) {
         seed[MLDSA_PRIVATE_SEED_LEN] = l + j;
         seed1[MLDSA_PRIVATE_SEED_LEN] = l + j + 1;
-        ret = rejBoundedPolyPair(s2[j], s2[j + 1], seed, seed1);
-        RETURN_RET_IF(ret != CRYPT_SUCCESS, ret);
+        GOTO_ERR_IF_EX(rejBoundedPolyPair(s2[j], s2[j + 1], seed, seed1), ret);
     }
     for (; j < k; j++) {
         seed[MLDSA_PRIVATE_SEED_LEN] = l + j;
-        ret = rejBoundedPoly(s2[j], seed);
-        RETURN_RET_IF(ret != CRYPT_SUCCESS, ret);
+        GOTO_ERR_IF_EX(rejBoundedPoly(s2[j], seed), ret);
     }
 #else
     for (uint8_t i = 0; i < l; i++) {
         seed[MLDSA_PRIVATE_SEED_LEN] = i;
-        ret = rejBoundedPoly(s1[i], seed);
-        RETURN_RET_IF(ret != CRYPT_SUCCESS, ret);
+        GOTO_ERR_IF_EX(rejBoundedPoly(s1[i], seed), ret);
     }
     for (uint8_t i = 0; i < k; i++) {
         seed[MLDSA_PRIVATE_SEED_LEN] = l + i;
-        ret = rejBoundedPoly(s2[i], seed);
-        RETURN_RET_IF(ret != CRYPT_SUCCESS, ret);
+        GOTO_ERR_IF_EX(rejBoundedPoly(s2[i], seed), ret);
     }
 #endif /* HITLS_CRYPTO_MLDSA_X2 */
-    return CRYPT_SUCCESS;
+ERR:
+    /* seed/seed1 carry the private seed ρ', cleanse before return */
+    BSL_SAL_CleanseData(seed, sizeof(seed));
+#ifdef HITLS_CRYPTO_MLDSA_X2
+    BSL_SAL_CleanseData(seed1, sizeof(seed1));
+#endif
+    return ret;
 }
 
 static void ComputesNTT(const CRYPT_ML_DSA_Ctx *ctx, int32_t *const s[MLDSA_L_MAX], int32_t *sOut[MLDSA_L_MAX])

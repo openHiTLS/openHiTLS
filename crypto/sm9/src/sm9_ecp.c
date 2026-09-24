@@ -17,8 +17,26 @@
 #ifdef HITLS_CRYPTO_SM9
 
 #include "bsl_sal.h"
+#include "bsl_bytes.h"
 #include "sm9_ecp.h"
 #include "sm9_fp.h"
+
+static void SM9_Ecp_J_Select(SM9_ECP_J *r, const SM9_ECP_J *a, const SM9_ECP_J *b, uint32_t mask)
+{
+    for (int32_t i = 0; i < BNWordLen; i++) {
+        r->X[i] = Uint32ConstTimeSelect(mask, a->X[i], b->X[i]);
+        r->Y[i] = Uint32ConstTimeSelect(mask, a->Y[i], b->Y[i]);
+        r->Z[i] = Uint32ConstTimeSelect(mask, a->Z[i], b->Z[i]);
+    }
+}
+
+static void SM9_Ecp_A_SelectNonZero(SM9_ECP_A *r, uint32_t mask)
+{
+    for (int32_t i = 0; i < BNWordLen; i++) {
+        r->X[i] = Uint32ConstTimeSelect(mask, r->X[i], 0);
+        r->Y[i] = Uint32ConstTimeSelect(mask, r->Y[i], 0);
+    }
+}
 
 void SM9_Ecp_A_Reset(SM9_ECP_A *pECP_A)
 {
@@ -150,29 +168,35 @@ void SM9_Ecp_J_DoubleJ(SM9_ECP_J *pJp_Result, SM9_ECP_J *pJp)
 void SM9_Ecp_KP(SM9_ECP_A *pKP, SM9_ECP_A *pAp, uint32_t *pwK)
 {
     /***********************************/
-    int32_t bitlen;
     int32_t i;
+    uint32_t bit;
+    uint32_t bitMask;
+    uint32_t started = 0;
     SM9_ECP_J Ecp_T0;
+    SM9_ECP_J Ecp_Base;
+    SM9_ECP_J Ecp_Double;
+    SM9_ECP_J Ecp_Add;
+    SM9_ECP_J Ecp_Select;
     /***********************************/
 
-    bitlen = bn_get_bitlen(pwK, sm9_sys_para.wsize);
-    if (bitlen == 0) {
-        SM9_Ecp_A_Reset(pKP);
-        return;
-    }
-    if (bitlen == 1) {
-        SM9_Ecp_A_Assign(pKP, pAp);
-        return;
-    }
-
-    SM9_Ecp_A_ToJ(&Ecp_T0, pAp);
-    for (i = bitlen - 2; i >= 0; i--) {
-        SM9_Ecp_J_DoubleJ(&Ecp_T0, &Ecp_T0);
-        if (pwK[i / WordLen] & (1 << (i % WordLen)))
-            SM9_Ecp_J_AddA(&Ecp_T0, &Ecp_T0, pAp);
+    SM9_Ecp_A_ToJ(&Ecp_Base, pAp);
+    SM9_Ecp_J_Select(&Ecp_T0, &Ecp_Base, &Ecp_Base, 0);
+    for (i = BNBitLen - 1; i >= 0; i--) {
+        SM9_Ecp_J_DoubleJ(&Ecp_Double, &Ecp_T0);
+        SM9_Ecp_J_AddA(&Ecp_Add, &Ecp_Double, pAp);
+        bit = BN_BIT(pwK, i);
+        bitMask = 0u - bit;
+        SM9_Ecp_J_Select(&Ecp_Select, &Ecp_Add, &Ecp_Double, bitMask);
+        SM9_Ecp_J_Select(&Ecp_T0, &Ecp_Select, &Ecp_Base, 0u - started);
+        started |= bit;
     }
     SM9_Ecp_J_ToA(pKP, &Ecp_T0);
-    return;
+    SM9_Ecp_A_SelectNonZero(pKP, 0u - started);
+    BSL_SAL_CleanseData(&Ecp_T0, sizeof(Ecp_T0));
+    BSL_SAL_CleanseData(&Ecp_Base, sizeof(Ecp_Base));
+    BSL_SAL_CleanseData(&Ecp_Double, sizeof(Ecp_Double));
+    BSL_SAL_CleanseData(&Ecp_Add, sizeof(Ecp_Add));
+    BSL_SAL_CleanseData(&Ecp_Select, sizeof(Ecp_Select));
 }
 
 void SM9_Fp_ECP_KPAddAToA(SM9_ECP_A *pKP, SM9_ECP_A *pAp, uint32_t *pwK, SM9_ECP_A *pBp, SM9_Sys_Para *pSysPara)
