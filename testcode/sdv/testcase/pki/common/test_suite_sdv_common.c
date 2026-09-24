@@ -1091,6 +1091,67 @@ EXIT:
 }
 /* END_CASE */
 
+/**
+ * @test SDV_X509_GetNameByCid_TC001
+ * @brief Test getting the first matching distinguished name for several CIDs and invalid inputs.
+ * @expect The first matching value and its length are returned, and invalid inputs produce errors.
+ * @precon nan
+ */
+/* BEGIN_CASE */
+void SDV_X509_GetNameByCid_TC001(void)
+{
+    TestMemInit();
+    BSL_GLOBAL_Init();
+    uint8_t country[] = "CN";
+    uint8_t organization[] = "openHiTLS";
+    uint8_t firstCommonName[] = "first-name";
+    uint8_t secondCommonName[] = "second-name";
+    HITLS_X509_DN names[] = {
+        {BSL_CID_AT_COUNTRYNAME, country, sizeof(country) - 1},
+        {BSL_CID_AT_ORGANIZATIONNAME, organization, sizeof(organization) - 1},
+        {BSL_CID_AT_COMMONNAME, firstCommonName, sizeof(firstCommonName) - 1},
+        {BSL_CID_AT_COMMONNAME, secondCommonName, sizeof(secondCommonName) - 1},
+    };
+    uint8_t *buf = NULL;
+    uint32_t len = 0;
+    BslList *list = HITLS_X509_DnListNew();
+    ASSERT_TRUE(list != NULL);
+    ASSERT_EQ(HITLS_X509_AddDnName(list, names, sizeof(names) / sizeof(names[0])), HITLS_PKI_SUCCESS);
+
+    ASSERT_EQ(HITLS_X509_GetNameByCid(list, BSL_CID_AT_COUNTRYNAME, &buf, &len), HITLS_PKI_SUCCESS);
+    ASSERT_TRUE(buf != NULL);
+    ASSERT_EQ(len, sizeof(country) - 1);
+    ASSERT_COMPARE("country name", buf, len, country, sizeof(country) - 1);
+    BSL_SAL_FREE(buf);
+
+    ASSERT_EQ(HITLS_X509_GetNameByCid(list, BSL_CID_AT_ORGANIZATIONNAME, &buf, &len), HITLS_PKI_SUCCESS);
+    ASSERT_TRUE(buf != NULL);
+    ASSERT_EQ(len, sizeof(organization) - 1);
+    ASSERT_COMPARE("organization name", buf, len, organization, sizeof(organization) - 1);
+    BSL_SAL_FREE(buf);
+
+    ASSERT_EQ(HITLS_X509_GetNameByCid(list, BSL_CID_AT_COMMONNAME, &buf, &len), HITLS_PKI_SUCCESS);
+    ASSERT_TRUE(buf != NULL);
+    ASSERT_EQ(len, sizeof(firstCommonName) - 1);
+    ASSERT_COMPARE("first common name", buf, len, firstCommonName, sizeof(firstCommonName) - 1);
+    BSL_SAL_FREE(buf);
+
+    ASSERT_EQ(HITLS_X509_GetNameByCid(list, BSL_CID_AT_LOCALITYNAME, &buf, &len),
+        HITLS_X509_ERR_ATTR_NOT_FOUND);
+    ASSERT_EQ(buf, NULL);
+    ASSERT_EQ(HITLS_X509_GetNameByCid(NULL, BSL_CID_AT_COMMONNAME, &buf, &len),
+        HITLS_X509_ERR_INVALID_PARAM);
+    ASSERT_EQ(HITLS_X509_GetNameByCid(list, BSL_CID_AT_COMMONNAME, NULL, &len), HITLS_X509_ERR_INVALID_PARAM);
+    ASSERT_EQ(HITLS_X509_GetNameByCid(list, BSL_CID_AT_COMMONNAME, &buf, NULL), HITLS_X509_ERR_INVALID_PARAM);
+    ASSERT_EQ(HITLS_X509_GetNameByCid(list, BSL_CID_UNKNOWN, &buf, &len), HITLS_X509_ERR_ATTR_NOT_FOUND);
+
+EXIT:
+    BSL_SAL_FREE(buf);
+    HITLS_X509_DnListFree(list);
+    BSL_GLOBAL_DeInit();
+}
+/* END_CASE */
+
 /* BEGIN_CASE */
 void SDV_X509_EXT_EncodeSan_TC001(int critical, int type1, int type2, int type3, int type4, int dirCid1,
     int dirCid2, Hex *value, Hex *expect)

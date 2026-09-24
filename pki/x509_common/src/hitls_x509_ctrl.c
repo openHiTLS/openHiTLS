@@ -425,6 +425,34 @@ void HITLS_X509_DnListFree(BslList *dnList)
     BSL_LIST_FREE(dnList, (BSL_LIST_PFUNC_FREE)HITLS_X509_FreeNameNode);
 }
 
+int32_t HITLS_X509_GetNameByCid(const BslList *name, BslCid cid, uint8_t **buf, uint32_t *len)
+{
+    if (name == NULL || len == NULL || buf == NULL) {
+        BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
+        return HITLS_X509_ERR_INVALID_PARAM;
+    }
+
+    for (BslListNode *item = BSL_LIST_FirstNode(name); item != NULL; item = BSL_LIST_GetNextNode(name, item)) {
+        HITLS_X509_NameNode *nameNode = (HITLS_X509_NameNode *)BSL_LIST_GetData(item);
+        if (nameNode->layer != 2 ||
+            BSL_OBJ_GetCidFromOidBuff(nameNode->nameType.buff, nameNode->nameType.len) != cid) {
+            continue;
+        }
+        uint8_t *tmpBuf = BSL_SAL_Malloc(nameNode->nameValue.len);
+        if (tmpBuf == NULL) {
+            BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
+            return BSL_MALLOC_FAIL;
+        }
+        (void)memcpy(tmpBuf, nameNode->nameValue.buff, nameNode->nameValue.len);
+        *buf = tmpBuf;
+        *len = nameNode->nameValue.len;
+        return HITLS_PKI_SUCCESS;
+    }
+
+    BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_ATTR_NOT_FOUND);
+    return HITLS_X509_ERR_ATTR_NOT_FOUND;
+}
+
 int32_t HITLS_X509_AddDnName(BslList *list, HITLS_X509_DN *dnNames, uint32_t size)
 {
     if (list == NULL || dnNames == NULL || size == 0) {

@@ -906,3 +906,6 @@ SDV_X509_EXT_ParseCrlNumber_TC001:HITLS_X509_EXT_GET_CRLNUMBER:BSL_CID_CE_CRLNUM
 
 SDV_X509_AKI_CERT_CHAIN_TC001: sanitized certificates normalize AKI serials and verify chain
 SDV_X509_AKI_CERT_CHAIN_TC001:"../testdata/cert/chain/aki_serial_padding/ca.pem":"../testdata/cert/chain/aki_serial_padding/server.pem"
+
+SDV_X509_GetNameByCid_TC001: get several name values and check invalid inputs
+SDV_X509_GetNameByCid_TC001
