@@ -1095,3 +1095,6 @@ SDV_PKI_VERIFY_URI_AUTHORITY_TC001:"sip:voice.example.edu":"sip://voice.example.
 
 SDV_PKI_VERIFY_URI_AUTHORITY_TC001: SIP reference without authority
 SDV_PKI_VERIFY_URI_AUTHORITY_TC001:"sip://voice.example.edu":"sip:voice.example.edu":HITLS_X509_ERR_INVALID_PARAM
+
+SDV_X509_GetNameByCid_TC001: get several name values and check invalid inputs
+SDV_X509_GetNameByCid_TC001

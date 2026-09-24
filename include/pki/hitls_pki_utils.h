@@ -163,6 +163,19 @@ int32_t HITLS_X509_AddDnName(BslList *list, HITLS_X509_DN *dnNames, uint32_t siz
 
 /**
  * @ingroup pki
+ * @brief Get the text of the first distinguished name entry matching the specified CID.
+ *
+ * @param name [IN] The distinguished name list.
+ * @param cid [IN] The CID of the name entry.
+ * @param buf [OUT] The output buffer.
+ * @param len [OUT] The buffer size the output text length on output.
+ * @retval #HITLS_PKI_SUCCESS, success.
+ *         Error codes can be found in hitls_pki_errno.h.
+ */
+int32_t HITLS_X509_GetNameByCid(const BslList *name, BslCid cid, uint8_t **buf, uint32_t *len);
+
+/**
+ * @ingroup pki
  * @brief Generic function to process attribute function
  *
  * @param attributes [IN] The attribute list
