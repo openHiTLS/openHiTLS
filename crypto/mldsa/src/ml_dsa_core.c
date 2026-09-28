@@ -872,7 +872,7 @@ static void ComputesZ(const CRYPT_ML_DSA_Ctx *ctx, int32_t *y[MLDSA_L_MAX], cons
     }
 }
 
-static bool ValidityChecks(const int32_t *z, uint32_t t)
+static uint8_t ValidityChecks(const int32_t *z, uint32_t t)
 {
     uint32_t n;
     uint32_t result = 0;
@@ -882,25 +882,25 @@ static bool ValidityChecks(const int32_t *z, uint32_t t)
         // If |z[j]| >= t, (t - 1 - n) is negative and its highest bit (sign bit) is 1.
         result |= ((t - 1 - n) >> 31) & 1;
     }
-    return (result == 0);
+    return (uint8_t)(result == 0);
 }
 
 static bool ValidityChecksL(const CRYPT_ML_DSA_Ctx *ctx, int32_t *const z[MLDSA_L_MAX], uint32_t t)
 {
-    bool valid = true;
+    uint8_t valid = 1;
     for (uint8_t i = 0; i < ctx->info->l; i++) {
         valid &= ValidityChecks(z[i], t);
     }
-    return valid;
+    return (valid == 1);
 }
 
 static bool ValidityChecksK(const CRYPT_ML_DSA_Ctx *ctx, int32_t *const z[MLDSA_K_MAX], uint32_t t)
 {
-    bool valid = true;
+    uint8_t valid = 1;
     for (uint8_t i = 0; i < ctx->info->k; i++) {
         valid &= ValidityChecks(z[i], t);
     }
-    return valid;
+    return (valid == 1);
 }
 
 static void ComputesR(const CRYPT_ML_DSA_Ctx *ctx, const int32_t *c, MLDSA_SignMatrixSt *st)
