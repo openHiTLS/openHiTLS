@@ -150,6 +150,9 @@ void PolyGetNoiseEtaX2(uint32_t eta, int16_t vec1[MLKEM_N], int16_t vec2[MLKEM_N
     Keccakx2Squeeze(buf1, buf2, nBlocks, CRYPT_SHAKE256_BLOCKSIZE, state);
     MLKEMPolyCBDEta(eta, vec1, buf1);
     MLKEMPolyCBDEta(eta, vec2, buf2);
+    BSL_SAL_CleanseData(&state, sizeof(state));
+    BSL_SAL_CleanseData(buf1, sizeof(buf1));
+    BSL_SAL_CleanseData(buf2, sizeof(buf2));
     BSL_SAL_CleanseData(extkey1, sizeof(extkey1));
     BSL_SAL_CleanseData(extkey2, sizeof(extkey2));
 }
@@ -168,6 +171,8 @@ static void PolyGetNoiseEtaSingle(uint32_t eta, int16_t vec[MLKEM_N], const uint
     KeccakAbsorb(state.s, CRYPT_SHAKE256_BLOCKSIZE, extkey, sizeof(extkey), 0x1F);
     KeccakSqueeze(buf, nBlocks, state.s, CRYPT_SHAKE256_BLOCKSIZE);
     MLKEMPolyCBDEta(eta, vec, buf);
+    BSL_SAL_CleanseData(&state, sizeof(state));
+    BSL_SAL_CleanseData(buf, sizeof(buf));
     BSL_SAL_CleanseData(extkey, sizeof(extkey));
 }
 
@@ -193,6 +198,8 @@ static void PolyGetNoiseEtaX4(uint32_t eta, int16_t *vec0, int16_t *vec1, int16_
     for (uint32_t i = 0; i < 4; i++) {
         MLKEMPolyCBDEta(eta, vec[i], buf[i]);
     }
+    BSL_SAL_CleanseData(&state, sizeof(state));
+    BSL_SAL_CleanseData(buf, sizeof(buf));
     BSL_SAL_CleanseData(extkey, sizeof(extkey));
 }
 
@@ -454,10 +461,10 @@ int32_t MLKEM_PKEGen(CRYPT_ML_KEM_Ctx *ctx, uint8_t *digest, uint8_t *pk, uint8_
     int16_t **vectorS = ctx->keyData.vectorS;
     int16_t **vectorE = ctx->keyData.vectorE;
     int16_t **vectorT = ctx->keyData.vectorT;
+    int16_t s_asym[MLKEM_K_MAX][MLKEM_N >> 1];
 
     GOTO_ERR_IF(SampleEta1(ctx, q, vectorS, vectorE), ret); // Step 8 - 15
 
-    int16_t s_asym[MLKEM_K_MAX][MLKEM_N >> 1];
     for (uint32_t i = 0; i < k; i++) {
         MLKEMPointMulExtended(s_asym[i], vectorS[i], MLKEM_BASEMUL_TWIDDLE_TABLE);
     }
@@ -477,6 +484,7 @@ int32_t MLKEM_PKEGen(CRYPT_ML_KEM_Ctx *ctx, uint8_t *digest, uint8_t *pk, uint8_
     MLKEMPolyVecReduceToBytes(k, dk, vectorS);
     memcpy(pk + k * MLKEM_CIPHER_LEN, p, MLKEM_SEED_LEN);
 ERR:
+    BSL_SAL_CleanseData(s_asym, sizeof(s_asym));
     return ret;
 }
 
@@ -510,6 +518,8 @@ int32_t MLKEM_PKEEnc(uint32_t k, MLKEM_MatrixSt *mat, uint8_t du, uint8_t dv, ui
     MLKEMPolyAddReduce(k, at, e1);
     MLKEMAdd2Reduce(c2, e2, mu);
     PackCipherText(k, MLKEM_ENCODE_BLOCKSIZE * k * du, ct, at, c2);
+    BSL_SAL_CleanseData(s_asym, sizeof(s_asym));
+    BSL_SAL_CleanseData(t, sizeof(t));
 
     return CRYPT_SUCCESS;
 }

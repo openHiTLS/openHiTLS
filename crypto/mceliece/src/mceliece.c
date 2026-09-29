@@ -444,7 +444,9 @@ int32_t CRYPT_MCELIECE_Gen(CRYPT_MCELIECE_Ctx *ctx)
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
-    return SeededKeyGenInternal(delta, ctx->publicKey, ctx->privateKey, ctx->para, ctx->para->semi != 0);
+    ret = SeededKeyGenInternal(delta, ctx->publicKey, ctx->privateKey, ctx->para, ctx->para->semi != 0);
+    BSL_SAL_CleanseData(delta, MCELIECE_L_BYTES);
+    return ret;
 }
 
 static int32_t McelieceParsePrvKey(uint8_t *prvKeyBuf, CMPrivateKey *sk, const McelieceParams *params)
