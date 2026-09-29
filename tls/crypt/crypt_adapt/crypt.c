@@ -843,13 +843,15 @@ static int32_t SAL_CRYPT_EncodeHkdfLabel(HkdfLabel *hkdfLabel, uint8_t *buf, uin
     size_t labelPrefixLen = strlen(labelPrefix);
     uint32_t offset = 0;
 
+    if (hkdfLabel->labelLen > TLS13_MAX_LABEL_LEN - labelPrefixLen) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15315, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+            "Encode HkdfLabel error: label length exceeds limit", 0, 0, 0, 0);
+        BSL_ERR_PUSH_ERROR(HITLS_INVALID_INPUT);
+        return HITLS_INVALID_INPUT;
+    }
+
     BSL_Uint16ToByte(hkdfLabel->length, buf);
     offset += sizeof(uint16_t);
-    /* The truncation won't happen, as the label length will not be greater than 64, all possible labels are as follows:
-     * "ext binder", "res binder", "finished", "c e traffic", "e exp master", "derived", "c hs traffic", "s hs traffic"
-     * "finished", "derived", "c ap traffic", "s ap traffic", "exp master", "finished", "res master",
-     * "TLS 1.3,serverCertificateVerify", "TLS 1.3,clientCertificateVerify".
-     */
     buf[offset] = (uint8_t)(hkdfLabel->labelLen + labelPrefixLen);
     offset += sizeof(uint8_t);
 

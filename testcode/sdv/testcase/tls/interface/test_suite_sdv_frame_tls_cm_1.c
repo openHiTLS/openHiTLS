@@ -4265,3 +4265,52 @@ EXIT:
     FRAME_FreeLink(server);
 }
 /* END_CASE */
+
+/* @
+* @test  SDV_HITLS_EXPORT_KEY_MATERIAL_LABEL_LEN_TC001
+* @spec  -
+* @title  HITLS_ExportKeyingMaterial label length validation for TLS1.2 and TLS1.3
+* @precon  nan
+* @brief  1.Establish a connection with the given version, expected result 1
+         2.Call HITLS_ExportKeyingMaterial, with the given labelLen, with expected result 2
+* @expect  1. Connection established successfully
+           2. TLS1.3: labelLen <= 249, return success, labelLen > 249, return HITLS_INVALID_INPUT
+              TLS1.2: always return success (no label length limit in PRF)
+* @prior  Level 1
+* @auto  TRUE
+@ */
+/* BEGIN_CASE */
+void SDV_HITLS_EXPORT_KEY_MATERIAL_LABEL_LEN_TC001(int version, int labelLen)
+{
+    FRAME_Init();
+    HITLS_Config *config = GetHitlsConfigViaVersion(version);
+    ASSERT_TRUE(config != NULL);
+    FRAME_LinkObj *server = NULL;
+    FRAME_LinkObj *client = NULL;
+    client = FRAME_CreateLink(config, BSL_UIO_TCP);
+    ASSERT_TRUE(client != NULL);
+    server = FRAME_CreateLink(config, BSL_UIO_TCP);
+    ASSERT_TRUE(server != NULL);
+    ASSERT_EQ(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_SUCCESS);
+
+    uint8_t out[20] = {0};
+    size_t outLen = 20;
+    char label[65539] = {0};
+    memset(label, 'A', sizeof(label));
+    const uint8_t *context = (uint8_t *)"12345";
+    size_t contextLen = 5;
+    int useContext = 1;
+
+    int32_t expected = HITLS_SUCCESS;
+    if (version == HITLS_VERSION_TLS13 && labelLen > 249) {
+        expected = HITLS_INVALID_INPUT;
+    }
+    ASSERT_EQ(HITLS_ExportKeyingMaterial(client->ssl, out, outLen,
+        (const char *)label, (size_t)labelLen, context, contextLen, useContext), expected);
+
+EXIT:
+    HITLS_CFG_FreeConfig(config);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+}
+/* END_CASE */
