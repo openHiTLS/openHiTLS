@@ -89,10 +89,8 @@ static int32_t AllocResultAndInputBN(uint32_t bits, BN_BigNum **result, BN_BigNu
     return BN_Bin2Bn(*inputBN, input, inputLen);
 }
 
-static int32_t CalcMontExp(CRYPT_RSA_PrvKey *prvKey,
-    BN_BigNum *result, const BN_BigNum *input, BN_Optimizer *opt, bool consttime)
+static int32_t CalcMontExp(CRYPT_RSA_PrvKey *prvKey, BN_BigNum *result, const BN_BigNum *input, BN_Optimizer *opt)
 {
-    int32_t ret;
     BN_Mont *mont = NULL;
     if (BN_IsZero(prvKey->n) || BN_IsZero(prvKey->d)) {
         BSL_ERR_PUSH_ERROR(CRYPT_RSA_NO_KEY_INFO);
@@ -103,12 +101,8 @@ static int32_t CalcMontExp(CRYPT_RSA_PrvKey *prvKey,
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         return CRYPT_MEM_ALLOC_FAIL;
     }
-    if (consttime) {
-        ret = BN_MontExpConsttime(result, input, prvKey->d, mont, opt);
-    } else {
-        ret = BN_MontExp(result, input, prvKey->d, mont, opt);
-    }
-
+    (void)BN_SetFlag(prvKey->d, CRYPT_BN_FLAG_CONSTTIME);
+    int32_t ret = BN_MontExp(result, input, prvKey->d, mont, opt);
     BN_MontDestroy(mont);
     return ret;
 }
@@ -198,6 +192,8 @@ static int32_t NormalDecProcedure(const CRYPT_RSA_Ctx *ctx, const BN_BigNum *mes
     if (ret != CRYPT_SUCCESS) {
         return ret;
     }
+    (void)BN_SetFlag(priKey->dP, CRYPT_BN_FLAG_CONSTTIME);
+    (void)BN_SetFlag(priKey->dQ, CRYPT_BN_FLAG_CONSTTIME);
     /* cP = M mod P where inp = M = Message */
     ret = BN_Mod(procedure.cP, message, priKey->p, opt);
     if (ret != CRYPT_SUCCESS) {
@@ -209,12 +205,12 @@ static int32_t NormalDecProcedure(const CRYPT_RSA_Ctx *ctx, const BN_BigNum *mes
         goto EXIT;
     }
     /* mP = cP^dP mod p */
-    ret = BN_MontExpConsttime(procedure.mP, procedure.cP, priKey->dP, procedure.montP, opt);
+    ret = BN_MontExp(procedure.mP, procedure.cP, priKey->dP, procedure.montP, opt);
     if (ret != CRYPT_SUCCESS) {
         goto EXIT;
     }
     /* mQ = cQ^dQ mod q */
-    ret = BN_MontExpConsttime(procedure.mQ, procedure.cQ, priKey->dQ, procedure.montQ, opt);
+    ret = BN_MontExp(procedure.mQ, procedure.cQ, priKey->dQ, procedure.montQ, opt);
     if (ret != CRYPT_SUCCESS) {
         goto EXIT;
     }
@@ -385,12 +381,26 @@ ERR:
     return ret;
 }
 
+static void RSA_SetPrvCalcConsttime(CRYPT_RSA_PrvKey *prvKey)
+{
+    (void)BN_SetFlag(prvKey->d, CRYPT_BN_FLAG_CONSTTIME);
+    if (BN_IsZero(prvKey->p)) {
+        return;
+    }
+    (void)BN_SetFlag(prvKey->p, CRYPT_BN_FLAG_CONSTTIME);
+    (void)BN_SetFlag(prvKey->q, CRYPT_BN_FLAG_CONSTTIME);
+    (void)BN_SetFlag(prvKey->dP, CRYPT_BN_FLAG_CONSTTIME);
+    (void)BN_SetFlag(prvKey->dQ, CRYPT_BN_FLAG_CONSTTIME);
+    (void)BN_SetFlag(prvKey->qInv, CRYPT_BN_FLAG_CONSTTIME);
+}
+
 static int32_t RSA_PrvProcess(const CRYPT_RSA_Ctx *ctx, BN_BigNum *message, BN_BigNum *result, BN_Optimizer *opt)
 {
 #ifndef HITLS_CRYPTO_RSA_BLINDING
     (void)opt;
 #endif
     int32_t ret;
+    RSA_SetPrvCalcConsttime(ctx->prvKey);
 #ifdef HITLS_CRYPTO_RSA_BLINDING
     // blinding
     if ((ctx->flags & CRYPT_RSA_BLINDING) != 0) {
@@ -404,7 +414,7 @@ static int32_t RSA_PrvProcess(const CRYPT_RSA_Ctx *ctx, BN_BigNum *message, BN_B
     /* If ctx->prvKey->p is set to 0, the standard mode is used for RSA decryption.
        Otherwise, the CRT mode is used for RSA decryption. */
     if (BN_IsZero(ctx->prvKey->p)) {
-        ret = CalcMontExp(ctx->prvKey, result, message, opt, true);
+        ret = CalcMontExp(ctx->prvKey, result, message, opt);
     } else {
         ret = NormalDecProcedure(ctx, message, result, opt);
     }

@@ -934,7 +934,6 @@ EXIT:
 }
 /* END_CASE */
 
-
 /**
  * @test   SDV_CRYPTO_ECC_ADD_CAL_TEST_FUNC_TC001
  * @title  ECDH SDV_CRYPTO_ECC_ADD_CAL_TEST_FUNC_TC001 test.
@@ -1084,6 +1083,111 @@ EXIT:
     BN_Destroy(N);
     BN_Destroy(r);
     TestRandDeInit();
+}
+/* END_CASE */
+
+/**
+ * @test   SDV_CRYPTO_ECC_SM2_MODINV_BOUNDARY_TC001
+ * @brief  Convert scaled SM2 generators to affine coordinates and check order inverses at boundary values.
+ * @expect Affine conversion recovers the generator; zero scale returns infinity; order inverses match BN_ModInv.
+ * @precon nan
+ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_ECC_SM2_MODINV_BOUNDARY_TC001(Hex *value)
+{
+    ECC_Para *para = NULL;
+    ECC_Point *scaled = NULL;
+    ECC_Point *affine = NULL;
+    BN_BigNum *input = NULL;
+    BN_BigNum *inverse = NULL;
+    BN_BigNum *reference = NULL;
+    BN_Optimizer *opt = NULL;
+    int32_t ret;
+
+    TestMemInit();
+    para = ECC_NewPara(CRYPT_ECC_SM2);
+    input = BN_Create(256);
+    inverse = BN_Create(256);
+    reference = BN_Create(256);
+    opt = BN_OptimizerCreate();
+    ASSERT_TRUE(para != NULL && input != NULL && inverse != NULL && reference != NULL && opt != NULL);
+    scaled = ECC_NewPoint(para);
+    affine = ECC_NewPoint(para);
+    ASSERT_TRUE(scaled != NULL && affine != NULL);
+    ASSERT_EQ(BN_Bin2Bn(input, value->x, value->len), CRYPT_SUCCESS);
+
+    ASSERT_EQ(BN_Mod(&scaled->z, input, para->p, opt), CRYPT_SUCCESS);
+    ASSERT_EQ(BN_ModSqr(inverse, &scaled->z, para->p, opt), CRYPT_SUCCESS);
+    ASSERT_EQ(BN_ModMul(reference, inverse, &scaled->z, para->p, opt), CRYPT_SUCCESS);
+    ASSERT_EQ(BN_ModMul(&scaled->x, para->x, inverse, para->p, opt), CRYPT_SUCCESS);
+    ASSERT_EQ(BN_ModMul(&scaled->y, para->y, reference, para->p, opt), CRYPT_SUCCESS);
+    if (BN_IsZero(&scaled->z)) {
+        ASSERT_EQ(ECC_GetPoint2Bn(para, scaled, inverse, reference), CRYPT_ECC_POINT_AT_INFINITY);
+        TestErrClear();
+    } else {
+        ASSERT_EQ(para->method->point2Affine(para, affine, scaled), CRYPT_SUCCESS);
+        ASSERT_EQ(BN_Cmp(&affine->x, para->x), 0);
+        ASSERT_EQ(BN_Cmp(&affine->y, para->y), 0);
+        ASSERT_TRUE(BN_IsOne(&affine->z));
+        ASSERT_EQ(para->method->point2Affine(para, scaled, scaled), CRYPT_SUCCESS);
+        ASSERT_EQ(BN_Cmp(&scaled->x, para->x), 0);
+        ASSERT_EQ(BN_Cmp(&scaled->y, para->y), 0);
+        ASSERT_TRUE(BN_IsOne(&scaled->z));
+    }
+    ret = BN_ModInv(reference, input, para->n, opt);
+    ASSERT_EQ(para->method->modOrdInv(para, inverse, input) == CRYPT_SUCCESS, ret == CRYPT_SUCCESS);
+    if (ret == CRYPT_SUCCESS) {
+        ASSERT_EQ(BN_Cmp(inverse, reference), 0);
+    }
+EXIT:
+    ECC_FreePoint(affine);
+    ECC_FreePoint(scaled);
+    BN_OptimizerDestroy(opt);
+    BN_Destroy(reference);
+    BN_Destroy(inverse);
+    BN_Destroy(input);
+    ECC_FreePara(para);
+}
+/* END_CASE */
+
+/**
+ * @test   SDV_CRYPTO_ECC_SM2_MODINV_BUFFER_TC001
+ * @brief  Check minimal input capacity, output expansion, and input/output aliasing.
+ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_ECC_SM2_MODINV_BUFFER_TC001(int bits, int alias)
+{
+    ECC_Para *para = NULL;
+    BN_BigNum *input = NULL;
+    BN_BigNum *result = NULL;
+    BN_BigNum *reference = NULL;
+    BN_Optimizer *opt = NULL;
+
+    TestMemInit();
+    para = ECC_NewPara(CRYPT_ECC_SM2);
+    input = BN_Create(bits);
+    result = BN_Create(0);
+    reference = BN_Create(256);
+    opt = BN_OptimizerCreate();
+    ASSERT_TRUE(para != NULL && input != NULL && result != NULL && reference != NULL && opt != NULL);
+    ASSERT_EQ(BN_SetBit(input, bits - 1), CRYPT_SUCCESS);
+    ASSERT_EQ(BN_ModInv(reference, input, para->n, opt), CRYPT_SUCCESS);
+    BN_BigNum *out = alias ? input : result;
+    ASSERT_EQ(ECC_ModOrderInv(para, out, input), CRYPT_SUCCESS);
+    ASSERT_EQ(BN_Cmp(out, reference), 0);
+    ASSERT_TRUE(!BN_IsNegative(out) && !BN_IsZero(out) && BN_Cmp(out, para->n) < 0);
+    if (!alias) {
+        ASSERT_EQ(BN_Zeroize(reference), CRYPT_SUCCESS);
+        ASSERT_EQ(BN_SetBit(reference, bits - 1), CRYPT_SUCCESS);
+        ASSERT_EQ(BN_Cmp(input, reference), 0);
+    }
+
+EXIT:
+    BN_OptimizerDestroy(opt);
+    BN_Destroy(reference);
+    BN_Destroy(result);
+    BN_Destroy(input);
+    ECC_FreePara(para);
 }
 /* END_CASE */
 

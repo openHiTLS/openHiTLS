@@ -142,7 +142,8 @@ int32_t CRYPT_FFC_KeyPairCheck(const void *x, const void *y, const void *p, cons
         BSL_ERR_PUSH_ERROR(ret);
         goto ERR;
     }
-    ret = BN_MontExpConsttime(yTmp, g, x, mont, NULL);
+    (void)BN_SetFlag((BN_BigNum *)(uintptr_t)x, CRYPT_BN_FLAG_CONSTTIME);
+    ret = BN_MontExp(yTmp, g, x, mont, NULL);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         goto ERR;

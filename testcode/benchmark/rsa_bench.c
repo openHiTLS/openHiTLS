@@ -23,13 +23,22 @@
 
 static int32_t RsaSetUp(void **ctx, BenchCtx *bench, const CtxOps *ops, int32_t paraId)
 {
-    (void)paraId;
     CRYPT_EAL_PkeyCtx *pkeyCtx = CRYPT_EAL_PkeyNewCtx(ops->algId);
     if (pkeyCtx == NULL) {
         printf("Failed to create pkey context\n");
         return CRYPT_MEM_ALLOC_FAIL;
     }
-    int32_t ret = CRYPT_EAL_PkeyGen(pkeyCtx);
+    uint8_t e[] = {0x01, 0x00, 0x01};
+    CRYPT_EAL_PkeyPara para = {.id = CRYPT_PKEY_RSA};
+    para.para.rsaPara.e = e;
+    para.para.rsaPara.eLen = sizeof(e);
+    para.para.rsaPara.bits = paraId;
+    int32_t ret = CRYPT_EAL_PkeySetPara(pkeyCtx, &para);
+    if (ret != CRYPT_SUCCESS) {
+        CRYPT_EAL_PkeyFreeCtx(pkeyCtx);
+        return ret;
+    }
+    ret = CRYPT_EAL_PkeyGen(pkeyCtx);
     if (ret != CRYPT_SUCCESS) {
         printf("Failed to gen rsa key.\n");
         return ret;
@@ -130,5 +139,7 @@ static int32_t RsaVerify(void *ctx, BenchCtx *bench, BenchOptions *opts)
     return rc;
 }
 
-DEFINE_OPS(Rsa, CRYPT_PKEY_RSA, CRYPT_MD_SHA256);
-DEFINE_BENCH_CTX_FIXLEN(Rsa);
+static int32_t g_paraIds[] = {1024, 2048, 3072, 4096};
+
+DEFINE_OPS_PKEY(Rsa, CRYPT_PKEY_RSA, CRYPT_MD_SHA256);
+DEFINE_BENCH_CTX_PARA_TIMES_FIXLEN(Rsa, g_paraIds, SIZEOF(g_paraIds), 100);

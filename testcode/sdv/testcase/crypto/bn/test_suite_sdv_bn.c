@@ -2337,3 +2337,172 @@ EXIT:
     BN_Destroy(a);
 }
 /* END_CASE */
+
+
+/**
+ * @test SDV_CRYPTO_BN_CONSTTIME_ARITH_FUNC_TC001
+ * @brief Check multiplication, squaring and input/output aliasing with signed vectors and constant-time flags.
+ * @expect Results match the vectors.
+ * @precon Positive modulus.
+ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_BN_CONSTTIME_ARITH_FUNC_TC001(int signA, int signB, int constA, int constB, Hex *valueA, Hex *valueB,
+                                              Hex *modulus, Hex *product, Hex *square, Hex *modSquare)
+{
+    TestMemInit();
+    BN_BigNum *a = TEST_VectorToBN(signA, valueA->x, valueA->len);
+    BN_BigNum *b = TEST_VectorToBN(signB, valueB->x, valueB->len);
+    BN_BigNum *m = TEST_VectorToBN(0, modulus->x, modulus->len);
+    BN_BigNum *mulExpected = TEST_VectorToBN(0, product->x, product->len);
+    BN_BigNum *sqrExpected = TEST_VectorToBN(0, square->x, square->len);
+    BN_BigNum *modSqrExpected = TEST_VectorToBN(0, modSquare->x, modSquare->len);
+    BN_BigNum *r = BN_Create(0);
+    BN_Optimizer *opt = BN_OptimizerCreate();
+    ASSERT_TRUE(a != NULL && b != NULL && m != NULL && mulExpected != NULL && sqrExpected != NULL &&
+                modSqrExpected != NULL && r != NULL && opt != NULL);
+    if (constA) {
+        ASSERT_EQ(BN_SetFlag(a, CRYPT_BN_FLAG_CONSTTIME), CRYPT_SUCCESS);
+    }
+    if (constB) {
+        ASSERT_EQ(BN_SetFlag(b, CRYPT_BN_FLAG_CONSTTIME), CRYPT_SUCCESS);
+    }
+    ASSERT_EQ(BN_ModMul(r, a, b, m, opt), CRYPT_SUCCESS);
+    ASSERT_EQ(BN_Cmp(r, mulExpected), 0);
+    ASSERT_EQ(BN_Sqr(r, a, opt), CRYPT_SUCCESS);
+    ASSERT_EQ(BN_Cmp(r, sqrExpected), 0);
+    ASSERT_EQ(BN_ModSqr(r, a, m, opt), CRYPT_SUCCESS);
+    ASSERT_EQ(BN_Cmp(r, modSqrExpected), 0);
+
+    ASSERT_EQ(BN_Copy(r, a), CRYPT_SUCCESS);
+    ASSERT_EQ(BN_SetFlag(r, CRYPT_BN_FLAG_CONSTTIME), CRYPT_SUCCESS);
+    ASSERT_EQ(BN_ModMul(r, r, b, m, opt), CRYPT_SUCCESS);
+    ASSERT_EQ(BN_Cmp(r, mulExpected), 0);
+    ASSERT_EQ(BN_Copy(r, b), CRYPT_SUCCESS);
+    ASSERT_EQ(BN_ModMul(r, a, r, m, opt), CRYPT_SUCCESS);
+    ASSERT_EQ(BN_Cmp(r, mulExpected), 0);
+    ASSERT_EQ(BN_Copy(r, a), CRYPT_SUCCESS);
+    ASSERT_EQ(BN_ModSqr(r, r, m, opt), CRYPT_SUCCESS);
+    ASSERT_EQ(BN_Cmp(r, modSqrExpected), 0);
+    ASSERT_TRUE(TestIsErrStackEmpty());
+EXIT:
+    BN_Destroy(a);
+    BN_Destroy(b);
+    BN_Destroy(m);
+    BN_Destroy(mulExpected);
+    BN_Destroy(sqrExpected);
+    BN_Destroy(modSqrExpected);
+    BN_Destroy(r);
+    BN_OptimizerDestroy(opt);
+}
+/* END_CASE */
+
+/**
+ * @test SDV_CRYPTO_BN_CONSTTIME_ARITH_FUNC_TC002
+ * @brief Check Montgomery multiplication and squaring with boundary vectors and constant-time flags.
+ * @expect Decoded results match the vectors.
+ * @precon Nonnegative operands below an odd modulus.
+ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_BN_CONSTTIME_ARITH_FUNC_TC002(int constA, int constB, Hex *valueA, Hex *valueB, Hex *modulus,
+                                              Hex *product, Hex *square)
+{
+#if !defined(HITLS_CRYPTO_RSA) || !defined(HITLS_CRYPTO_BN_PRIME) || !defined(HITLS_CRYPTO_CURVE_MONT)
+    SKIP_TEST();
+#else
+    TestMemInit();
+    BN_BigNum *a = TEST_VectorToBN(0, valueA->x, valueA->len);
+    BN_BigNum *b = TEST_VectorToBN(0, valueB->x, valueB->len);
+    BN_BigNum *m = TEST_VectorToBN(0, modulus->x, modulus->len);
+    BN_BigNum *mulExpected = TEST_VectorToBN(0, product->x, product->len);
+    BN_BigNum *sqrExpected = TEST_VectorToBN(0, square->x, square->len);
+    BN_BigNum *r = BN_Create(modulus->len * 8);
+    BN_BigNum *aMont = BN_Create(modulus->len * 8);
+    BN_BigNum *bMont = BN_Create(modulus->len * 8);
+    BN_Optimizer *opt = BN_OptimizerCreate();
+    BN_Mont *mont = NULL;
+    ASSERT_TRUE(a != NULL && b != NULL && m != NULL && mulExpected != NULL && sqrExpected != NULL && r != NULL &&
+                aMont != NULL && bMont != NULL && opt != NULL);
+    mont = BN_MontCreate(m);
+    ASSERT_TRUE(mont != NULL);
+    if (constA) {
+        ASSERT_EQ(BN_SetFlag(a, CRYPT_BN_FLAG_CONSTTIME), CRYPT_SUCCESS);
+        ASSERT_EQ(BN_SetFlag(aMont, CRYPT_BN_FLAG_CONSTTIME), CRYPT_SUCCESS);
+    }
+    if (constB) {
+        ASSERT_EQ(BN_SetFlag(b, CRYPT_BN_FLAG_CONSTTIME), CRYPT_SUCCESS);
+        ASSERT_EQ(BN_SetFlag(bMont, CRYPT_BN_FLAG_CONSTTIME), CRYPT_SUCCESS);
+    }
+    ASSERT_EQ(OptimizerStart(opt), CRYPT_SUCCESS);
+    int32_t ret = MontMulCore(r, a, b, mont, opt);
+    OptimizerEnd(opt);
+    ASSERT_EQ(ret, CRYPT_SUCCESS);
+    ASSERT_EQ(BN_Cmp(r, mulExpected), 0);
+    ASSERT_EQ(MontSqrCore(r, a, mont, opt), CRYPT_SUCCESS);
+    ASSERT_EQ(BN_Cmp(r, sqrExpected), 0);
+
+    ASSERT_EQ(BN_Copy(aMont, a), CRYPT_SUCCESS);
+    ASSERT_EQ(BN_Copy(bMont, b), CRYPT_SUCCESS);
+    ASSERT_EQ(BnMontEnc(aMont, mont, opt, constA != 0), CRYPT_SUCCESS);
+    ASSERT_EQ(BnMontEnc(bMont, mont, opt, constB != 0), CRYPT_SUCCESS);
+    ASSERT_EQ(BN_EcPrimeMontSqr(r, aMont, mont, opt), CRYPT_SUCCESS);
+    BnMontDec(r, mont);
+    ASSERT_EQ(BN_Cmp(r, sqrExpected), 0);
+    ASSERT_EQ(BN_EcPrimeMontMul(r, aMont, bMont, mont, opt), CRYPT_SUCCESS);
+    BnMontDec(r, mont);
+    ASSERT_EQ(BN_Cmp(r, mulExpected), 0);
+    ASSERT_TRUE(TestIsErrStackEmpty());
+EXIT:
+    BN_MontDestroy(mont);
+    BN_Destroy(a);
+    BN_Destroy(b);
+    BN_Destroy(m);
+    BN_Destroy(mulExpected);
+    BN_Destroy(sqrExpected);
+    BN_Destroy(r);
+    BN_Destroy(aMont);
+    BN_Destroy(bMont);
+    BN_OptimizerDestroy(opt);
+#endif
+}
+/* END_CASE */
+
+/**
+ * @test SDV_CRYPTO_BN_MONT_EXP_FLAGS_FUNC_TC001
+ * @brief Check modular exponentiation with parameterized signs and constant-time flags.
+ * @expect The result matches the vector.
+ * @precon Odd, positive modulus.
+ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_BN_MONT_EXP_FLAGS_FUNC_TC001(int sign, int baseConst, int exponentConst, Hex *base, Hex *exponent,
+                                             Hex *modulus, Hex *result)
+{
+    TestMemInit();
+    BN_BigNum *a = TEST_VectorToBN(sign, base->x, base->len);
+    BN_BigNum *e = TEST_VectorToBN(0, exponent->x, exponent->len);
+    BN_BigNum *m = TEST_VectorToBN(0, modulus->x, modulus->len);
+    BN_BigNum *expected = TEST_VectorToBN(0, result->x, result->len);
+    BN_BigNum *r = BN_Create(modulus->len * 8);
+    BN_Optimizer *opt = BN_OptimizerCreate();
+    BN_Mont *mont = NULL;
+    ASSERT_TRUE(a != NULL && e != NULL && m != NULL && expected != NULL && r != NULL && opt != NULL);
+    mont = BN_MontCreate(m);
+    ASSERT_TRUE(mont != NULL);
+    if (baseConst) {
+        ASSERT_EQ(BN_SetFlag(a, CRYPT_BN_FLAG_CONSTTIME), CRYPT_SUCCESS);
+    }
+    if (exponentConst) {
+        ASSERT_EQ(BN_SetFlag(e, CRYPT_BN_FLAG_CONSTTIME), CRYPT_SUCCESS);
+    }
+    ASSERT_EQ(BN_MontExp(r, a, e, mont, opt), CRYPT_SUCCESS);
+    ASSERT_EQ(BN_Cmp(r, expected), 0);
+    ASSERT_TRUE(TestIsErrStackEmpty());
+EXIT:
+    BN_MontDestroy(mont);
+    BN_OptimizerDestroy(opt);
+    BN_Destroy(a);
+    BN_Destroy(e);
+    BN_Destroy(m);
+    BN_Destroy(expected);
+    BN_Destroy(r);
+}
+/* END_CASE */

@@ -157,6 +157,12 @@ extern "c" {
         (r) = (r) % macroTmpD;                                        \
     } while (0)
 
+int32_t MontSqrBinCore(BN_UINT *r, BN_Mont *mont, BN_Optimizer *opt, bool consttime);
+
+int32_t MontMulBinCore(BN_UINT *r, const BN_UINT *a, const BN_UINT *b, BN_Mont *mont, BN_Optimizer *opt,
+                       bool consttime);
+void ReduceCore(BN_UINT *r, BN_UINT *x, const BN_UINT *one, const BN_UINT *m, uint32_t mSize, BN_UINT m0);
+
 #ifdef __cplusplus
 }
 #endif

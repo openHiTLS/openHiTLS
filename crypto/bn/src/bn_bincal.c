@@ -162,9 +162,7 @@ uint32_t BinMul(BN_UINT *r, uint32_t rRoom, const BN_UINT *a, uint32_t aSize, co
         for (; j < aSize; j++) {
             MULADC_AB(r[i + j], a[j], t, carry);
         }
-        if (carry != 0) {
-            r[i + j] = carry;
-        }
+        r[i + j] = carry;
     }
     return aSize + bSize - (carry == 0);
 }

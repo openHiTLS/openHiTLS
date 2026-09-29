@@ -493,6 +493,7 @@ static int32_t DH_GenSp80056ATestCandidates(CRYPT_DH_Ctx *ctx)
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         goto ERR;
     }
+    (void)BN_SetFlag(x, CRYPT_BN_FLAG_CONSTTIME);
     GOTO_ERR_IF(BN_SetLimb(twoPowN, 1), ret);
     GOTO_ERR_IF(BN_Lshift(twoPowN, twoPowN, n), ret);
     /* Set M = min(2^N, q), the minimum of 2^N and q */
@@ -508,7 +509,7 @@ static int32_t DH_GenSp80056ATestCandidates(CRYPT_DH_Ctx *ctx)
         if (BN_Cmp(x, m) >= 0) {
             continue;
         }
-        GOTO_ERR_IF(BN_MontExpConsttime(y, ctx->para->g, x, mont, opt), ret);
+        GOTO_ERR_IF(BN_MontExp(y, ctx->para->g, x, mont, opt), ret);
         goto ERR; // The function exits successfully.
     }
     ret = CRYPT_DH_RAND_GENERATE_ERROR;
@@ -538,12 +539,13 @@ static int32_t DH_GenSp80056ASafePrime(CRYPT_DH_Ctx *ctx)
     }
     GOTO_ERR_IF(BN_SubLimb(minP, ctx->para->p, 1), ret);
     GOTO_ERR_IF(GetXLimb(xLimb, ctx->para->p, ctx->para->q), ret);
+    (void)BN_SetFlag(x, CRYPT_BN_FLAG_CONSTTIME);
     for (int32_t cnt = 0; cnt < CRYPT_DH_TRY_CNT_MAX; cnt++) {
         /*  Generate private key x for [1, q-1] or [1, p-2] */
         GOTO_ERR_IF(BN_RandRangeEx(ctx->libCtx, x, xLimb), ret);
         GOTO_ERR_IF(BN_AddLimb(x, x, 1), ret);
         /* Calculate the public key y. */
-        GOTO_ERR_IF(BN_MontExpConsttime(y, ctx->para->g, x, mont, opt), ret);
+        GOTO_ERR_IF(BN_MontExp(y, ctx->para->g, x, mont, opt), ret);
         /* Check whether the public key meets the requirements. If not, try to generate the key again. */
         // y != 0, y != 1, y < p - 1
         if (BN_IsZero(y) || BN_IsOne(y) || BN_Cmp(y, minP) >= 0) {
@@ -630,6 +632,7 @@ int32_t CRYPT_DH_ComputeShareKey(const CRYPT_DH_Ctx *ctx, const CRYPT_DH_Ctx *pu
         BSL_ERR_PUSH_ERROR(ret);
         goto EXIT;
     }
+    (void)BN_SetFlag(ctx->x, CRYPT_BN_FLAG_CONSTTIME);
     ret = BN_SubLimb(tmp, ctx->para->p, 1);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
@@ -644,7 +647,7 @@ int32_t CRYPT_DH_ComputeShareKey(const CRYPT_DH_Ctx *ctx, const CRYPT_DH_Ctx *pu
     if (ret != CRYPT_SUCCESS) {
         goto EXIT;
     }
-    ret = BN_MontExpConsttime(tmp, pubKey->y, ctx->x, mont, opt);
+    ret = BN_MontExp(tmp, pubKey->y, ctx->x, mont, opt);
     if (ret != CRYPT_SUCCESS) {
         goto EXIT;
     }

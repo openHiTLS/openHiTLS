@@ -434,6 +434,7 @@ static int32_t Sm2SignCore(const CRYPT_SM2_Ctx *ctx, BN_BigNum *e, BN_BigNum *r,
         ret = CRYPT_MEM_ALLOC_FAIL;
         goto ERR;
     }
+    (void)BN_SetFlag(ctx->pkey->prvkey, CRYPT_BN_FLAG_CONSTTIME);
     for (i = 0; i < CRYPT_ECC_TRY_MAX_CNT; i++) {
         GOTO_ERR_IF(BN_RandRangeEx(ctx->pkey->libCtx, k, paraN), ret);
         if (BN_IsZero(k)) {
@@ -456,6 +457,7 @@ static int32_t Sm2SignCore(const CRYPT_SM2_Ctx *ctx, BN_BigNum *e, BN_BigNum *r,
         // 1/(1 + d) mod n, tmp stores 1/(1 + d)
         GOTO_ERR_IF(BN_AddLimb(t, ctx->pkey->prvkey, 1), ret);
         GOTO_ERR_IF(ECC_ModOrderInv(ctx->pkey->para, tmp, t), ret);
+        (void)BN_SetFlag(tmp, CRYPT_BN_FLAG_CONSTTIME);
         // s = (1/(1+d)) * (k - prvkey * r) mod n
         GOTO_ERR_IF(BN_ModMul(s, tmp, s, paraN, opt), ret);
         // if s == 0, then restart

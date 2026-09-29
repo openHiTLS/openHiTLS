@@ -18,11 +18,13 @@
 
 #include "securec.h"
 #include "bsl_sal.h"
+#include "bsl_bytes.h"
 #include "bsl_err_internal.h"
 #include "crypt_errno.h"
 #include "crypt_utils.h"
 #include "bn_basic.h"
 #include "bn_bincal.h"
+#include "bn_montbin.h"
 #include "bn_ucal.h"
 #include "bn_optimizer.h"
 
@@ -196,17 +198,18 @@ int32_t BN_SubLimb(BN_BigNum *r, const BN_BigNum *a, BN_UINT w)
 }
 
 #ifdef HITLS_CRYPTO_BN_COMBA
-static int32_t BnMulConquer(BN_BigNum *t, const BN_BigNum *a, const BN_BigNum *b, BN_Optimizer *opt)
+static int32_t BnMulConquer(BN_BigNum *t, const BN_BigNum *a, const BN_BigNum *b, BN_Optimizer *opt,
+    bool consttime)
 {
     if (a->size <= SMALL_CONQUER_SIZE && a->size % 2 == 0) { // 2 is to check if a->size is even
-        MulConquer(t->data, a->data, b->data, a->size, NULL, false);
+        MulConquer(t->data, a->data, b->data, a->size, NULL, consttime);
     } else {
         BN_BigNum *tmpBn = OptimizerGetBn(opt, SpaceSize(a->size));
         if (tmpBn == NULL) {
             BSL_ERR_PUSH_ERROR(CRYPT_BN_OPTIMIZER_GET_FAIL);
             return CRYPT_BN_OPTIMIZER_GET_FAIL;
         }
-        MulConquer(t->data, a->data, b->data, a->size, tmpBn->data, false);
+        MulConquer(t->data, a->data, b->data, a->size, tmpBn->data, consttime);
     }
     t->size = a->size + b->size;
     return CRYPT_SUCCESS;
@@ -223,6 +226,7 @@ int32_t BN_Mul(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *b, BN_Optimize
     if (a->size == 0 || b->size == 0) {
         return BN_Zeroize(r);
     }
+    bool consttime = BN_IsFlag(a, CRYPT_BN_FLAG_CONSTTIME) || BN_IsFlag(b, CRYPT_BN_FLAG_CONSTTIME);
     uint32_t size = a->size + b->size;
     int32_t ret = BnExtend(r, size);
     if (ret != CRYPT_SUCCESS) {
@@ -248,7 +252,7 @@ int32_t BN_Mul(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *b, BN_Optimize
     t->sign = a->sign != b->sign;
 #ifdef HITLS_CRYPTO_BN_COMBA
     if (a->size == b->size) {
-        ret = BnMulConquer(t, a, b, opt);
+        ret = BnMulConquer(t, a, b, opt, consttime);
         if (ret != CRYPT_SUCCESS) {
             OptimizerEnd(opt);
             return ret;
@@ -268,7 +272,7 @@ int32_t BN_Mul(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *b, BN_Optimize
             return ret;
         }
     }
-    r->size = BinFixSize(r->data, size);
+    r->size = consttime ? BinFixSizeConsttime(r->data, size) : BinFixSize(r->data, size);
     OptimizerEnd(opt);
     return CRYPT_SUCCESS;
 }
@@ -324,9 +328,10 @@ int32_t BN_Sqr(BN_BigNum *r, const BN_BigNum *a, BN_Optimizer *opt)
         return ret;
     }
 
+    bool consttime = BN_IsFlag(a, CRYPT_BN_FLAG_CONSTTIME);
 #ifdef HITLS_CRYPTO_BN_COMBA
     if (a->size <= SMALL_CONQUER_SIZE && a->size % 2 == 0) { // 2 is to check if a->size is even.
-        SqrConquer(r->data, a->data, a->size, NULL, false);
+        SqrConquer(r->data, a->data, a->size, NULL, consttime);
     } else {
         BN_BigNum *tmpBn = OptimizerGetBn(opt, SpaceSize(a->size));
         if (tmpBn == NULL) {
@@ -334,13 +339,13 @@ int32_t BN_Sqr(BN_BigNum *r, const BN_BigNum *a, BN_Optimizer *opt)
             BSL_ERR_PUSH_ERROR(CRYPT_BN_OPTIMIZER_GET_FAIL);
             return CRYPT_BN_OPTIMIZER_GET_FAIL;
         }
-        SqrConquer(r->data, a->data, a->size, tmpBn->data, false);
+        SqrConquer(r->data, a->data, a->size, tmpBn->data, consttime);
     }
 #else
     BinSqr(r->data, a->size << 1, a->data, a->size);
 #endif
 
-    r->size = BinFixSize(r->data, a->size * 2); // The r->data size is a->size * 2.
+    r->size = consttime ? BinFixSizeConsttime(r->data, a->size * 2) : BinFixSize(r->data, a->size * 2);
     r->sign = false; // The square must be positive.
     OptimizerEnd(opt);
     return CRYPT_SUCCESS;
@@ -934,16 +939,10 @@ int32_t BN_CopyWithMask(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *b,
         BSL_ERR_PUSH_ERROR(CRYPT_BN_ERR_MASKCOPY_LEN);
         return CRYPT_BN_ERR_MASKCOPY_LEN;
     }
-    BN_UINT rmask = ~mask;
-    uint32_t len = r->room;
-    BN_UINT *dst = r->data;
-    BN_UINT *srcA = a->data;
-    BN_UINT *srcB = b->data;
-    for (uint32_t i = 0; i < len; i++) {
-        dst[i] = (srcA[i] & rmask) ^ (srcB[i] & mask);
-    }
-    r->sign = (mask != 0) ? (a->sign) : (b->sign);
-    r->size = (a->size & (uint32_t)rmask) ^ (b->size & (uint32_t)mask);
+    BinSelectByMaskConsttime(r->data, b->data, a->data, r->room, mask);
+    uint32_t mask32 = (uint32_t)mask;
+    r->sign = (bool)Uint32ConstTimeSelect(mask32, (uint32_t)b->sign, (uint32_t)a->sign);
+    r->size = Uint32ConstTimeSelect(mask32, b->size, a->size);
     return CRYPT_SUCCESS;
 }
 #endif
@@ -964,18 +963,9 @@ int32_t BN_SwapWithMask(BN_BigNum *a, BN_BigNum *b, BN_UINT mask)
         return CRYPT_BN_ERR_SWAP_LEN;
     }
     BN_UINT rmask = ~mask;
-    BN_UINT *srcA = a->data;
-    BN_UINT *srcB = b->data;
-    BN_UINT tmp1;
-    BN_UINT tmp2;
     uint32_t tmp3;
     uint32_t tmp4;
-    for (uint32_t i = 0; i < a->room; i++) {
-        tmp1 = srcA[i];
-        tmp2 = srcB[i];
-        srcA[i] = (tmp1 & rmask) | (tmp2 & mask);
-        srcB[i] = (tmp2 & rmask) | (tmp1 & mask);
-    }
+    BinSwapMaskedConsttime(a->data, b->data, a->room, mask);
     tmp3 = a->size;
     tmp4 = b->size;
     a->size = (tmp3 & (uint32_t)rmask) | (tmp4 & (uint32_t)mask);

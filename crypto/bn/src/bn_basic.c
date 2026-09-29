@@ -35,13 +35,9 @@ BN_BigNum *BN_Create(uint32_t bits)
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         return NULL;
     }
-    if (room != 0) {
-        r->room = room;
-        r->data = (BN_UINT *)BSL_SAL_Calloc(1u, room * sizeof(BN_UINT));
-        if (r->data == NULL) {
-            BSL_SAL_FREE(r);
-            return NULL;
-        }
+    if (BnExtend(r, room) != CRYPT_SUCCESS) {
+        BSL_SAL_Free(r);
+        return NULL;
     }
 
     return r;
@@ -424,10 +420,9 @@ int32_t BnExtend(BN_BigNum *a, uint32_t words)
         return CRYPT_MEM_ALLOC_FAIL;
     }
     if (a->size > 0) {
-        (void)memcpy_s(tmp, a->size * sizeof(BN_UINT), a->data, a->size * sizeof(BN_UINT));
-        BSL_SAL_CleanseData(a->data, a->size * sizeof(BN_UINT));
+        memcpy(tmp, a->data, a->size * sizeof(BN_UINT));
     }
-    BSL_SAL_FREE(a->data);
+    BSL_SAL_ClearFree(a->data, a->size * sizeof(BN_UINT));
     a->data = tmp;
     a->room = words;
     return CRYPT_SUCCESS;

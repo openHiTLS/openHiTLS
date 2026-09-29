@@ -1177,8 +1177,9 @@ static int32_t RSA_KeyValidationCheck(CRYPT_RSA_Ctx *ctx, uint32_t bits)
     }
     // for performance reasons, we choose test num = 2.
     (void)BN_SetLimb(val, 2); // val is not null, and the val-memory must be sufficient.
+    (void)BN_SetFlag(ctx->prvKey->d, CRYPT_BN_FLAG_CONSTTIME);
     GOTO_ERR_IF(BN_MontExp(expect, val, ctx->prvKey->e, ctx->pubKey->mont, NULL), ret);
-    GOTO_ERR_IF(BN_MontExpConsttime(expect, expect, ctx->prvKey->d, ctx->pubKey->mont, NULL), ret);
+    GOTO_ERR_IF(BN_MontExp(expect, expect, ctx->prvKey->d, ctx->pubKey->mont, NULL), ret);
     if (BN_Cmp(val, expect) != 0) {
         ret = CRYPT_RSA_KEYPAIRWISE_CONSISTENCY_FAILURE;
         BSL_ERR_PUSH_ERROR(CRYPT_RSA_KEYPAIRWISE_CONSISTENCY_FAILURE);
