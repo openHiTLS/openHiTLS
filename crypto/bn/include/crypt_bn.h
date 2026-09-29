@@ -686,8 +686,7 @@ int32_t BN_ModMul(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *b,
  * @retval CRYPT_BN_OPTIMIZER_GET_FAIL  Failed to apply for space from the optimizer.
  * @retval CRYPT_BN_ERR_DIVISOR_ZERO    module cannot be 0.
  */
-int32_t BN_ModSqr(
-    BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *mod, BN_Optimizer *opt);
+int32_t BN_ModSqr(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *mod, BN_Optimizer *opt);
 
 /**
  * @ingroup bn
@@ -1093,27 +1092,6 @@ BN_Mont *BN_MontCreate(const BN_BigNum *m);
  */
 int32_t BN_MontExp(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *e, BN_Mont *mont,
     BN_Optimizer *opt);
-
-/**
- * @ingroup bn
- * @brief Constant time BigNum Montgomery modular exponentiation
- *
- * @param r    [OUT] Modular exponentiation result
- * @param a    [IN] base, whose absolute value is less than the Montgomery modulus
- * @param e    [IN] exponent
- * @param mont [IN] Montgomery context
- * @param opt  [IN] Optimizer
- *
- * @retval CRYPT_SUCCESS                    calculated successfully.
- * @retval CRYPT_NULL_INPUT                 Invalid null pointer
- * @retval CRYPT_MEM_ALLOC_FAIL             Memory allocation failure
- * @retval CRYPT_BN_OPTIMIZER_GET_FAIL      Failed to apply for space from the optimizer.
- * @retval CRYPT_BN_MONT_BASE_TOO_MAX       Montgomery Modular exponentiation base is too large
- * @retval CRYPT_BN_OPTIMIZER_STACK_FULL    The optimizer stack is full.
- * @retval CRYPT_BN_ERR_EXP_NO_NEGATE       exponent cannot be a negative number
- */
-int32_t BN_MontExpConsttime(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *e,
-    BN_Mont *mont, BN_Optimizer *opt);
 
 /**
  * @ingroup mont

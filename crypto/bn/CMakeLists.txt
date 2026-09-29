@@ -57,7 +57,6 @@ elseif(HITLS_CRYPTO_BN_ARMV8)
 else()
     list(APPEND _bn_sources
         ${CMAKE_CURRENT_SOURCE_DIR}/src/noasm_bn_bincal.c
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/noasm_bn_mont.c
     )
 endif()
 

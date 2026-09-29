@@ -85,6 +85,43 @@ extern "c" {
         for (; macroTmpI < (dstlen); macroTmpI++) { (dst)[macroTmpI] = 0; }                   \
     } while (0)
 
+/*
+ * mask = 0: dst[i] = b[i].
+ * mask = fff..f: dst[i] = a[i].
+ */
+static inline void BinSelectByMaskConsttime(BN_UINT *dst, const BN_UINT *a,
+    const BN_UINT *b, uint32_t size, BN_UINT mask)
+{
+    BN_UINT inverseMask = ~mask;
+    for (uint32_t i = 0; i < size; i++) {
+        dst[i] = (a[i] & mask) | (b[i] & inverseMask);
+    }
+}
+
+/*
+ * mask = 0: a[i] and b[i] remain unchanged.
+ * mask = (BN_UINT)~0: a[i] = old b[i], b[i] = old a[i].
+ */
+static inline void BinSwapMaskedConsttime(BN_UINT *a, BN_UINT *b, uint32_t size, BN_UINT mask)
+{
+    for (uint32_t i = 0; i < size; i++) {
+        BN_UINT difference = (a[i] ^ b[i]) & mask;
+        a[i] ^= difference;
+        b[i] ^= difference;
+    }
+}
+
+/* Determine the significant limb count while scanning every fixed-width limb. */
+static inline uint32_t BinFixSizeConsttime(const BN_UINT *data, uint32_t size)
+{
+    uint32_t result = 0;
+    for (uint32_t i = 0; i < size; i++) {
+        uint32_t mask = (uint32_t)~BN_IsZeroUintConsttime(data[i]);
+        result = ((i + 1) & mask) | (result & ~mask);
+    }
+    return result;
+}
+
 /* r = a * b + r + c, where c is refreshed as the new carry value */
 #define MULADD_ABC(c, r, a, b)                  \
 do {                                            \
@@ -171,15 +208,6 @@ void MulConquer(BN_UINT *r, const BN_UINT *a, const BN_UINT *b, uint32_t size, B
 
 void SqrConquer(BN_UINT *r, const BN_UINT *a, uint32_t size, BN_UINT *space, bool consttime);
 #endif
-
-int32_t MontSqrBinCore(BN_UINT *r, BN_Mont *mont, BN_Optimizer *opt, bool consttime);
-
-int32_t MontMulBinCore(BN_UINT *r, const BN_UINT *a, const BN_UINT *b, BN_Mont *mont,
-    BN_Optimizer *opt, bool consttime);
-
-int32_t MontEncBinCore(BN_UINT *r, BN_Mont *mont, BN_Optimizer *opt, bool consttime);
-
-void ReduceCore(BN_UINT *r, BN_UINT *x, const BN_UINT *m, uint32_t mSize, BN_UINT m0);
 
 #ifdef __cplusplus
 }

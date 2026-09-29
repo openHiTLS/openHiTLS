@@ -553,7 +553,7 @@ static int32_t Sm2SignCore(const CRYPT_SM2_Ctx *ctx, BN_BigNum *e, BN_BigNum *r,
     // An extra bit is allocated to prevent the number of bits in the result of adding BNs from exceeding the keybits.
     BN_BigNum *t = BN_Create(keyBits + 1);
     BN_BigNum *invLocal = NULL;
-    const BN_BigNum *inv = ctx->prvInv;
+    BN_BigNum *inv = ctx->prvInv;
     BN_BigNum *paraN = ECC_GetParaRawN(ctx->pkey->para);
     ECC_Point *pt = ECC_NewPoint(ctx->pkey->para);
     BN_Optimizer *opt = BN_OptimizerCreate();
@@ -566,6 +566,7 @@ static int32_t Sm2SignCore(const CRYPT_SM2_Ctx *ctx, BN_BigNum *e, BN_BigNum *r,
         goto ERR;
     }
 
+    (void)BN_SetFlag(ctx->pkey->prvkey, CRYPT_BN_FLAG_CONSTTIME);
     if (inv == NULL) {
         invLocal = BN_Create(keyBits);
         if (invLocal == NULL) {
@@ -577,6 +578,7 @@ static int32_t Sm2SignCore(const CRYPT_SM2_Ctx *ctx, BN_BigNum *e, BN_BigNum *r,
         inv = invLocal;
     }
 
+    (void)BN_SetFlag(inv, CRYPT_BN_FLAG_CONSTTIME);
     for (i = 0; i < CRYPT_ECC_TRY_MAX_CNT; i++) {
         GOTO_ERR_IF(BN_RandRangeEx(ctx->pkey->libCtx, k, paraN), ret);
         if (BN_IsZero(k)) {

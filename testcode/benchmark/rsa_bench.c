@@ -188,5 +188,7 @@ static int32_t RsaVerify(void *ctx, const BenchExecOptions *opts)
     return rc;
 }
 
+static int32_t g_paraIds[] = {1024, 2048, 3072, 4096};
+
 DEFINE_OPS_CRYPT_SIGN(Rsa, CRYPT_PKEY_RSA, CRYPT_MD_SHA256);
-DEFINE_BENCH_CTX_FIXLEN(Rsa);
+DEFINE_BENCH_CTX_PARA_TIMES_FIXLEN(Rsa, g_paraIds, SIZEOF(g_paraIds), 100);

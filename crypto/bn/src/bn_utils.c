@@ -24,16 +24,6 @@
 #include "bsl_sal.h"
 #include "bsl_bytes.h"
 
-static uint32_t BinFixSizeConsttime(const BN_UINT *data, uint32_t size)
-{
-    uint32_t fixedSize = 0;
-    for (uint32_t i = 0; i < size; i++) {
-        uint32_t mask = (uint32_t)~BN_IsZeroUintConsttime(data[i]);
-        fixedSize = (fixedSize & ~mask) | ((i + 1) & mask);
-    }
-    return fixedSize;
-}
-
 int32_t BN_Bin2Bn(BN_BigNum *r, const uint8_t *bin, uint32_t binLen)
 {
     if (r == NULL || bin == NULL) {

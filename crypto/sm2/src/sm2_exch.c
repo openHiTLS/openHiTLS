@@ -298,19 +298,18 @@ static int32_t SM2_PKGComputeKey(const CRYPT_SM2_Ctx *selfCtx, const CRYPT_SM2_C
     uint8_t sharePointCode[65] = {0};
     uint32_t codeLen = sizeof(sharePointCode);
     const ECC_Pkey *eccPkey = selfCtx->pkey;
-    BN_BigNum *tmpPrvkey = BN_Dup(eccPkey->prvkey);
     ECC_Point *sharePoint = ECC_NewPoint(eccPkey->para);
-    if ((tmpPrvkey == NULL) || (sharePoint == NULL)) {
+    if (sharePoint == NULL) {
         ret = CRYPT_MEM_ALLOC_FAIL;
         BSL_ERR_PUSH_ERROR(ret);
         goto ERR;
     }
+    (void)BN_SetFlag(eccPkey->prvkey, CRYPT_BN_FLAG_CONSTTIME);
     GOTO_ERR_IF(ECC_PointMul(eccPkey->para, sharePoint, eccPkey->prvkey, peerCtx->pkey->pubkey), ret);
     GOTO_ERR_IF(ECC_PointCheck(sharePoint), ret);
     GOTO_ERR_IF_EX(ECC_EncodePoint(eccPkey->para, sharePoint, sharePointCode, &codeLen, CRYPT_POINT_UNCOMPRESSED), ret);
     GOTO_ERR_IF_EX(SM2_PKG_Kdf(selfCtx, sharePointCode + 1, codeLen - 1, out, outlen), ret);
 ERR:
-    BN_Destroy(tmpPrvkey);
     ECC_FreePoint(sharePoint);
     return ret;
 }

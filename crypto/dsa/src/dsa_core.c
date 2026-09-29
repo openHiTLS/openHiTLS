@@ -770,6 +770,7 @@ int32_t CRYPT_DSA_Gen(CRYPT_DSA_Ctx *ctx)
         BSL_ERR_PUSH_ERROR(ret);
         goto ERR;
     }
+    (void)BN_SetFlag(x, CRYPT_BN_FLAG_CONSTTIME);
     for (cnt = 0; cnt < CRYPT_DSA_TRY_MAX_CNT; cnt++) {
         /* Generate the private key x of [1, q-1], see RFC6979-2.2. */
         if ((ctx->flag & CRYPT_ENABLE_SP800_KEYGEN_FLAG) != 0) {
@@ -782,7 +783,7 @@ int32_t CRYPT_DSA_Gen(CRYPT_DSA_Ctx *ctx)
             goto ERR;
         }
         /* Calculate the public key y. */
-        ret = BN_MontExpConsttime(y, ctx->para->g, x, mont, opt);
+        ret = BN_MontExp(y, ctx->para->g, x, mont, opt);
         if (ret != CRYPT_SUCCESS) {
             BSL_ERR_PUSH_ERROR(ret);
             goto ERR;
@@ -866,6 +867,7 @@ static int32_t SignCore(const CRYPT_DSA_Ctx *ctx, BN_BigNum *d, BN_BigNum *r,
         BSL_ERR_PUSH_ERROR(ret);
         goto EXIT;
     }
+    (void)BN_SetFlag(k, CRYPT_BN_FLAG_CONSTTIME);
     for (cnt = 0; cnt < CRYPT_DSA_TRY_MAX_CNT; cnt++) {
         // Generate random number k of [1, q-1], see RFC6979-2.4.2 */
         ret = RandRangeQ(ctx->libCtx, k, ctx->para->q);
@@ -874,7 +876,7 @@ static int32_t SignCore(const CRYPT_DSA_Ctx *ctx, BN_BigNum *d, BN_BigNum *r,
             goto EXIT;
         }
         // Compute r = g^k mod p mod q, see RFC6979-2.4.3 */
-        ret = BN_MontExpConsttime(r, ctx->para->g, k, montP, opt);
+        ret = BN_MontExp(r, ctx->para->g, k, montP, opt);
         if (ret != CRYPT_SUCCESS) {
             BSL_ERR_PUSH_ERROR(ret);
             goto EXIT;

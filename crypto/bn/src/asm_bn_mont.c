@@ -18,6 +18,7 @@
 #include <stdint.h>
 #include "crypt_errno.h"
 #include "bn_bincal.h"
+#include "bn_montbin.h"
 #include "bn_asm.h"
 #if defined(HITLS_CRYPTO_BN_X8664) && defined(__x86_64__)
 #include "crypt_utils.h"
@@ -54,25 +55,10 @@ int32_t MontMulBin(BN_UINT *r, const BN_UINT *a, const BN_UINT *b, BN_Mont *mont
     return MontMulBinCore(r, a, b, mont, opt, consttime);
 }
 
-int32_t MontEncBin(BN_UINT *r, BN_Mont *mont, BN_Optimizer *opt, bool consttime)
-{
-    if (mont->mSize > 1) {
-#if defined(HITLS_CRYPTO_BN_X8664) && defined(__x86_64__)
-        if (IsSupportBMI2() && IsSupportADX()) {
-            MontMulx_Asm(r, r, mont->montRR, mont->mod, mont->k0, mont->mSize);
-            return CRYPT_SUCCESS;
-        }
-#endif
-        MontMul_Asm(r, r, mont->montRR, mont->mod, mont->k0, mont->mSize);
-        return CRYPT_SUCCESS;
-    }
-    return MontEncBinCore(r, mont, opt, consttime);
-}
-
 void Reduce(BN_UINT *r, BN_UINT *x, const BN_UINT *one, const BN_UINT *m, uint32_t mSize, BN_UINT m0)
 {
     if (mSize <= 1) {
-        ReduceCore(r, x, m, mSize, m0);
+        ReduceCore(r, x, one, m, mSize, m0);
         return;
     }
 #if defined(HITLS_CRYPTO_BN_X8664) && defined(__x86_64__)

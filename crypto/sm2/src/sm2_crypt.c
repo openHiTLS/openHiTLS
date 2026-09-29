@@ -342,6 +342,7 @@ int32_t CRYPT_SM2_Decrypt(CRYPT_SM2_Ctx *ctx, const uint8_t *data, uint32_t data
     }
 
     GOTO_ERR_IF(ECC_DecodePoint(ctx->pkey->para, c1, decode, SM2_POINT_COORDINATE_LEN), ret);
+    (void)BN_SetFlag(ctx->pkey->prvkey, CRYPT_BN_FLAG_CONSTTIME);
     // Calculate [dB]C1 = (x2, y2) and save it to the point tmp.
     GOTO_ERR_IF(ECC_PointMul(ctx->pkey->para, tmp, ctx->pkey->prvkey, c1), ret);
     // Extract x and y of the point tmp and save them to tmpbuf.

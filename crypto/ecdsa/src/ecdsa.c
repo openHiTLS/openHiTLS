@@ -192,12 +192,13 @@ static int32_t EcdsaSignCore(const CRYPT_ECDSA_Ctx *ctx, const BN_BigNum *paraN,
         goto ERR;
     }
 
+    (void)BN_SetFlag(ctx->prvkey, CRYPT_BN_FLAG_CONSTTIME);
+    (void)BN_SetFlag(k, CRYPT_BN_FLAG_CONSTTIME);
     for (i = 0; i < CRYPT_ECC_TRY_MAX_CNT; i++) {
         GOTO_ERR_IF(BN_RandRangeEx(ctx->libCtx, k, paraN), ret);
         if (BN_IsZero(k)) {
             continue;
         }
-
         // pt = k * G
         GOTO_ERR_IF(ECC_PointMul(ctx->para, pt, k, NULL), ret);
 

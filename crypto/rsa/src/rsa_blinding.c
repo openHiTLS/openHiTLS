@@ -99,6 +99,8 @@ int32_t RSA_CreateBlind(RSA_Blind *b, uint32_t bits)
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         return CRYPT_MEM_ALLOC_FAIL;
     }
+    (void)BN_SetFlag(b->r, CRYPT_BN_FLAG_CONSTTIME);
+    (void)BN_SetFlag(b->rInv, CRYPT_BN_FLAG_CONSTTIME);
     return CRYPT_SUCCESS;
 }
 

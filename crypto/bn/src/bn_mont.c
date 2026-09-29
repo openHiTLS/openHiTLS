@@ -30,14 +30,6 @@
 // The mont contains 4 BN_UINT* fields and 2 common fields.
 #define MAX_MONT_SIZE ((BITS_TO_BN_UNIT(BN_MAX_BITS) * 4 + 2) * sizeof(BN_UINT))
 
-static void CopyConsttime(BN_UINT *dst, const BN_UINT *a, const BN_UINT *b, uint32_t len, BN_UINT mask)
-{
-    BN_UINT rmask = ~mask;
-    for (uint32_t i = 0; i < len; i++) {
-        dst[i] = (a[i] & mask) ^ (b[i] & rmask);
-    }
-}
-
 /* reduce(r) */
 static void MontDecBin(BN_UINT *r, BN_Mont *mont)
 {
@@ -128,7 +120,7 @@ static uint32_t GetReadySize(uint32_t bits)
 
 /* r = r ^ e mod mont */
 static int32_t MontExpBin(BN_UINT *r, const BN_UINT *e, uint32_t eSize, BN_Mont *mont,
-    BN_Optimizer *opt, bool consttime)
+    BN_Optimizer *opt, bool eConst, bool rConst)
 {
     BN_BigNum *table[64] = { 0 }; /* 0 -- 2^6 that is 0 -- 64 */
     int32_t ret = OptimizerStart(opt);
@@ -139,7 +131,7 @@ static int32_t MontExpBin(BN_UINT *r, const BN_UINT *e, uint32_t eSize, BN_Mont 
     uint32_t base = BinBits(e, eSize) - 1;
     uint32_t perSize = GetReadySize(base);
     const uint32_t readySize = 1 << perSize;
-    ret = MontExpReady(table, readySize, mont, opt, consttime);
+    ret = MontExpReady(table, readySize, mont, opt, rConst);
     if (ret != CRYPT_SUCCESS) {
         OptimizerEnd(opt);
         return ret;
@@ -148,23 +140,23 @@ static int32_t MontExpBin(BN_UINT *r, const BN_UINT *e, uint32_t eSize, BN_Mont 
         BN_UINT eLimb;
         uint32_t bit = GetELimb(e, &eLimb, base, perSize);
         for (uint32_t i = 0; i < bit; i++) {
-            ret = MontSqrBin(r, mont, opt, consttime);
+            ret = MontSqrBin(r, mont, opt, rConst);
             if (ret != CRYPT_SUCCESS) {
                 OptimizerEnd(opt);
                 return ret;
             }
         }
-        if (consttime == true) {
+        if (eConst) {
             BN_UINT *x = mont->t;
             BN_UINT mask = ~BN_IsZeroUintConsttime(eLimb);
-            ret = MontMulBin(x, r, table[eLimb]->data, mont, opt, consttime);
+            ret = MontMulBin(x, r, table[eLimb]->data, mont, opt, rConst);
             if (ret != CRYPT_SUCCESS) {
                 OptimizerEnd(opt);
                 return ret;
             }
-            CopyConsttime(r, x, r, mont->mSize, mask);
+            BinSelectByMaskConsttime(r, x, r, mont->mSize, mask);
         } else if (eLimb != 0) {
-            ret = MontMulBin(r, r, table[eLimb]->data, mont, opt, consttime);
+            ret = MontMulBin(r, r, table[eLimb]->data, mont, opt, rConst);
             if (ret != CRYPT_SUCCESS) {
                 OptimizerEnd(opt);
                 return ret;
@@ -231,9 +223,9 @@ static const BN_UINT *TmpValueHandle(BN_BigNum *r, const BN_BigNum *e, const BN_
 
 /* must satisfy the absolute value x < mod */
 static int32_t MontExpCore(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *e,
-    BN_Mont *mont, BN_Optimizer *opt, bool consttime)
+    BN_Mont *mont, BN_Optimizer *opt, bool eConst, bool rConst)
 {
-    if ((BinBits(e->data, e->size) == 0)) {
+    if (BinBits(e->data, e->size) == 0) {
         if (mont->mSize != 1) {
             return BN_SetLimb(r, 1);
         }
@@ -260,13 +252,13 @@ static int32_t MontExpCore(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *e,
         return CRYPT_BN_OPTIMIZER_GET_FAIL;
     }
     /* field conversion */
-    ret = MontEncBin(r->data, mont, opt, consttime);
+    ret = MontEncBin(r->data, mont, opt, rConst);
     if (ret != CRYPT_SUCCESS) {
         OptimizerEnd(opt);
         return ret;
     }
     /* modular exponentiation */
-    ret = MontExpBin(r->data, te, e->size, mont, opt, consttime);
+    ret = MontExpBin(r->data, te, e->size, mont, opt, eConst, rConst);
     if (ret != CRYPT_SUCCESS) {
         OptimizerEnd(opt);
         return ret;
@@ -275,37 +267,35 @@ static int32_t MontExpCore(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *e,
     MontDecBin(r->data, mont);
 
     /* negative number processing */
-    r->size = BinFixSize(r->data, mont->mSize);
-    if (aTmp->sign && ((te[0] & 0x1) == 1) && r->size != 0) {
-        BinSub(r->data, mont->mod, r->data, mont->mSize);
+    if (eConst) {
+        BN_UINT mask = (BN_UINT)0 - (BN_UINT)aTmp->sign;
+        mask &= (BN_UINT)0 - (te[0] & 1);
+        mask &= ~BN_IsZeroUintConsttime(BinFixSizeConsttime(r->data, mont->mSize));
+        BinSub(mont->t, mont->mod, r->data, mont->mSize);
+        BinSelectByMaskConsttime(r->data, mont->t, r->data, mont->mSize, mask);
+        r->size = BinFixSizeConsttime(r->data, mont->mSize);
+    } else {
         r->size = BinFixSize(r->data, mont->mSize);
+        if (aTmp->sign && ((te[0] & 0x1) == 1) && r->size != 0) {
+            BinSub(r->data, mont->mod, r->data, mont->mSize);
+            r->size = BinFixSize(r->data, mont->mSize);
+        }
     }
     r->sign = false;
     OptimizerEnd(opt);
     return CRYPT_SUCCESS;
 }
 
-static int32_t MontExp(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *e, BN_Mont *mont,
-    BN_Optimizer *opt, bool consttime)
+int32_t BN_MontExp(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *e, BN_Mont *mont, BN_Optimizer *opt)
 {
     int32_t ret = MontParaCheck(r, a, e, mont, opt);
     if (ret != CRYPT_SUCCESS) {
         return ret;
     }
 
-    return MontExpCore(r, a, e, mont, opt, consttime);
-}
-
-int32_t BN_MontExp(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *e, BN_Mont *mont, BN_Optimizer *opt)
-{
-    bool consttime = (BN_IsFlag(a, CRYPT_BN_FLAG_CONSTTIME) || BN_IsFlag(e, CRYPT_BN_FLAG_CONSTTIME));
-    return MontExp(r, a, e, mont, opt, consttime);
-}
-
-/* must satisfy the absolute value x < mod */
-int32_t BN_MontExpConsttime(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *e, BN_Mont *mont, BN_Optimizer *opt)
-{
-    return MontExp(r, a, e, mont, opt, true);
+    bool eConst = BN_IsFlag(e, CRYPT_BN_FLAG_CONSTTIME);
+    bool rConst = BN_IsFlag(a, CRYPT_BN_FLAG_CONSTTIME);
+    return MontExpCore(r, a, e, mont, opt, eConst, rConst);
 }
 
 static uint32_t MontSize(uint32_t room)
@@ -403,8 +393,9 @@ int32_t MontSqrBinCore(BN_UINT *r, BN_Mont *mont, BN_Optimizer *opt, bool constt
 }
 
 /* reduce（a）= (a * R') mod N) */
-void ReduceCore(BN_UINT *r, BN_UINT *x, const BN_UINT *m, uint32_t mSize, BN_UINT m0)
+void ReduceCore(BN_UINT *r, BN_UINT *x, const BN_UINT *one, const BN_UINT *m, uint32_t mSize, BN_UINT m0)
 {
+    (void)one;
     BN_UINT carry = 0;
     uint32_t n = 0;
     /* Cyclic shift, obtain r = (x / R) mod N  */
@@ -424,36 +415,13 @@ void ReduceCore(BN_UINT *r, BN_UINT *x, const BN_UINT *m, uint32_t mSize, BN_UIN
     } while (true);
     /* If x < 2m, the carry value is 0 or -1. */
     carry -= BinSub(r, x + mSize, m, mSize);
-    CopyConsttime(r, x + mSize, r, mSize, carry);
+    BinSelectByMaskConsttime(r, x + mSize, r, mSize, carry);
 }
 
 /* reduce(r * RR) */
-int32_t MontEncBinCore(BN_UINT *r, BN_Mont *mont, BN_Optimizer *opt, bool consttime)
+int32_t MontEncBin(BN_UINT *r, BN_Mont *mont, BN_Optimizer *opt, bool consttime)
 {
-    int32_t ret = OptimizerStart(opt);
-    if (ret != CRYPT_SUCCESS) {
-        return ret;
-    }
-    uint32_t mSize = mont->mSize;
-    BN_UINT *x = mont->t;
-#ifdef HITLS_CRYPTO_BN_COMBA
-    BN_BigNum *bnSpace = OptimizerGetBn(opt, SpaceSize(mSize));
-    if (bnSpace == NULL) {
-        OptimizerEnd(opt);
-        BSL_ERR_PUSH_ERROR(CRYPT_BN_OPTIMIZER_GET_FAIL);
-        return CRYPT_BN_OPTIMIZER_GET_FAIL;
-    }
-
-    MulConquer(x, r, mont->montRR, mSize, bnSpace->data, consttime);
-#else
-    (void)consttime;
-    BinMul(x, mSize << 1, r, mSize, mont->montRR, mSize);
-#endif
-
-    Reduce(r, x, mont->one, mont->mod, mSize, mont->k0);
-
-    OptimizerEnd(opt);
-    return CRYPT_SUCCESS;
+    return MontMulBin(r, r, mont->montRR, mont, opt, consttime);
 }
 
 /* reduce(r * b) */
@@ -707,10 +675,10 @@ int32_t BN_MontExpMul(BN_BigNum *r, const BN_BigNum *a1, const BN_BigNum *e1,
         return BN_Zeroize(r);
     }
     if (BN_IsZero(e1)) {
-        return MontExpCore(r, a2, e2, mont, opt, false);
+        return MontExpCore(r, a2, e2, mont, opt, false, false);
     }
     if (BN_IsZero(e2)) {
-        return MontExpCore(r, a1, e1, mont, opt, false);
+        return MontExpCore(r, a1, e1, mont, opt, false, false);
     }
     ret = OptimizerStart(opt);
     if (ret != CRYPT_SUCCESS) {
@@ -741,6 +709,7 @@ ERR:
 int32_t MontMulCore(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *b, BN_Mont *mont, BN_Optimizer *opt)
 {
     int32_t ret;
+    bool consttime = BN_IsFlag(a, CRYPT_BN_FLAG_CONSTTIME) || BN_IsFlag(b, CRYPT_BN_FLAG_CONSTTIME);
     BN_BigNum *t1 = OptimizerGetBn(opt, mont->mSize);
     if (t1 == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_BN_OPTIMIZER_GET_FAIL);
@@ -748,11 +717,11 @@ int32_t MontMulCore(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *b, BN_Mon
     }
     BN_COPY_BYTES(t1->data, mont->mSize, a->data, a->size);
     BN_COPY_BYTES(r->data, mont->mSize, b->data, b->size);
-    GOTO_ERR_IF(MontEncBin(t1->data, mont, opt, false), ret);
-    GOTO_ERR_IF(MontEncBin(r->data, mont, opt, false), ret);
-    GOTO_ERR_IF(MontMulBin(r->data, t1->data, r->data, mont, opt, false), ret);
+    GOTO_ERR_IF(MontEncBin(t1->data, mont, opt, consttime), ret);
+    GOTO_ERR_IF(MontEncBin(r->data, mont, opt, consttime), ret);
+    GOTO_ERR_IF(MontMulBin(r->data, t1->data, r->data, mont, opt, consttime), ret);
     MontDecBin(r->data, mont);
-    r->size = BinFixSize(r->data, mont->mSize);
+    r->size = consttime ? BinFixSizeConsttime(r->data, mont->mSize) : BinFixSize(r->data, mont->mSize);
 ERR:
     return ret;
 }
@@ -764,11 +733,12 @@ ERR:
 int32_t MontSqrCore(BN_BigNum *r, const BN_BigNum *a, BN_Mont *mont, BN_Optimizer *opt)
 {
     int32_t ret;
+    bool consttime = BN_IsFlag(a, CRYPT_BN_FLAG_CONSTTIME);
     BN_COPY_BYTES(r->data, mont->mSize, a->data, a->size);
-    GOTO_ERR_IF(MontEncBin(r->data, mont, opt, false), ret);
-    GOTO_ERR_IF(MontSqrBin(r->data, mont, opt, false), ret);
+    GOTO_ERR_IF(MontEncBin(r->data, mont, opt, consttime), ret);
+    GOTO_ERR_IF(MontSqrBin(r->data, mont, opt, consttime), ret);
     MontDecBin(r->data, mont);
-    r->size = BinFixSize(r->data, mont->mSize);
+    r->size = consttime ? BinFixSizeConsttime(r->data, mont->mSize) : BinFixSize(r->data, mont->mSize);
 ERR:
     return ret;
 }
@@ -795,10 +765,11 @@ void BnMontDec(BN_BigNum *r, BN_Mont *mont)
 int32_t BN_EcPrimeMontSqr(BN_BigNum *r, const BN_BigNum *a, void *data, BN_Optimizer *opt)
 {
     int32_t ret;
+    bool consttime = BN_IsFlag(a, CRYPT_BN_FLAG_CONSTTIME);
     BN_Mont *mont = (BN_Mont *)data;
     BN_COPY_BYTES(r->data, mont->mSize, a->data, a->size);
-    GOTO_ERR_IF(MontSqrBin(r->data, mont, opt, false), ret);
-    r->size = BinFixSize(r->data, mont->mSize);
+    GOTO_ERR_IF(MontSqrBin(r->data, mont, opt, consttime), ret);
+    r->size = consttime ? BinFixSizeConsttime(r->data, mont->mSize) : BinFixSize(r->data, mont->mSize);
 ERR:
     return ret;
 }
@@ -806,9 +777,10 @@ ERR:
 int32_t BN_EcPrimeMontMul(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *b, void *data, BN_Optimizer *opt)
 {
     int32_t ret;
+    bool consttime = BN_IsFlag(a, CRYPT_BN_FLAG_CONSTTIME) || BN_IsFlag(b, CRYPT_BN_FLAG_CONSTTIME);
     BN_Mont *mont = (BN_Mont *)data;
-    GOTO_ERR_IF(MontMulBin(r->data, a->data, b->data, mont, opt, false), ret);
-    r->size = BinFixSize(r->data, mont->mSize);
+    GOTO_ERR_IF(MontMulBin(r->data, a->data, b->data, mont, opt, consttime), ret);
+    r->size = consttime ? BinFixSizeConsttime(r->data, mont->mSize) : BinFixSize(r->data, mont->mSize);
 ERR:
     return ret;
 }

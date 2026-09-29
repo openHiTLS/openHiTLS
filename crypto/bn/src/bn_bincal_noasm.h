@@ -81,7 +81,7 @@ extern "c" {
                                                               \
         macroTmpX1 += BN_UINT_HI(macroTmpX0);                             \
         macroTmpX1 += macroTmpX2;                                         \
-        if (macroTmpX1 < macroTmpX2) { macroTmpX3 += BN_UINT_HC; }              \
+        macroTmpX3 += ((BN_UINT)(macroTmpX1 < macroTmpX2)) << BN_UINT_HALF_BITS; \
                                                               \
         (wh) = macroTmpX3 + BN_UINT_HI(macroTmpX1);                       \
         (wl) = (macroTmpX1 << (BN_UINT_BITS >> 1)) | BN_UINT_LO(macroTmpX0); \
@@ -98,7 +98,7 @@ extern "c" {
                                                \
         BN_UINT macroTmpT = macroTmpX1 << 1;               \
         macroTmpT += BN_UINT_HI(macroTmpX0);                                \
-        if (macroTmpT < macroTmpX1) { macroTmpX2 += BN_UINT_HC; }                 \
+        macroTmpX2 += ((BN_UINT)(macroTmpT < macroTmpX1)) << BN_UINT_HALF_BITS; \
                                                                 \
         (wh) = macroTmpX2 + BN_UINT_HI(macroTmpT);                          \
         (wl) = (macroTmpT << (BN_UINT_BITS >> 1)) | BN_UINT_LO(macroTmpX0); \
@@ -189,6 +189,12 @@ do { \
         (r) = ((r) << BN_UINT_HALF_BITS) | BN_UINT_LO((nl));  \
         (r) = (r) % macroTmpD;                                        \
     } while (0)
+
+#define MontSqrBinCore MontSqrBin
+
+#define MontMulBinCore MontMulBin
+
+#define ReduceCore Reduce
 
 #ifdef __cplusplus
 }
