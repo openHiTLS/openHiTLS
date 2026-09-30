@@ -335,7 +335,7 @@ HITLS_Session *SESSMGR_Find(TLS_Ctx *ctx, uint8_t *sessionId, uint8_t sessionIdS
             if (copy != 0) {
                 sess = HITLS_SESS_Dup(sess);
             }
-            if (!HITLS_SESS_IsResumable(sess)) {
+            if (!HITLS_SESS_IsResumable(sess) || !SESS_CheckValidity(sess, (uint64_t)BSL_SAL_CurrentSysTimeGet())) {
                 HITLS_SESS_Free(sess);
                 return NULL;
             }

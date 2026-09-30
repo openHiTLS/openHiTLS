@@ -21,6 +21,8 @@
 #include "hitls_config.h"
 #include "hitls_crypt_init.h"
 #include "session_type.h"
+#include "session_mgr.h"
+#include "bsl_sal.h"
 #include "hitls_session.h"
 /* END_HEADER */
 
@@ -2186,5 +2188,57 @@ EXIT:
     FRAME_FreeLink(server);
     HITLS_SESS_Free(session);
     ClearSessionMgmtState();
+}
+/* END_CASE */
+
+/** @
+ * @test UT_EXTERNAL_CACHE_GET_CB_VALIDITY_TC006
+ * @precon nan
+ * @brief Look up valid and expired external sessions with both callback ownership modes.
+ * @expect Only valid sessions are returned and stored internally.
+ @ */
+/* BEGIN_CASE */
+void UT_EXTERNAL_CACHE_GET_CB_VALIDITY_TC006(int expired, int copy, int noStore)
+{
+#if defined(HITLS_TLS_FEATURE_SESSION_CACHE_CB) && defined(HITLS_TLS_FEATURE_SESSION_ID)
+    HITLS_Config *config = NULL;
+    HITLS_Ctx *ctx = NULL;
+    HITLS_Session *session = NULL;
+    HITLS_Session *found = NULL;
+    uint8_t id[32] = {1};
+
+    FRAME_Init();
+    ClearExternalCache();
+    config = HITLS_CFG_NewTLS12Config();
+    ASSERT_TRUE(config != NULL);
+    ASSERT_EQ(HITLS_CFG_SetSessionCacheMode(config, HITLS_SESS_CACHE_SERVER |
+                                                        (noStore ? HITLS_SESS_DISABLE_INTERNAL_STORE : 0)),
+              HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_CFG_SetSessionGetCb(config, TestSessionGetCb), HITLS_SUCCESS);
+    ctx = HITLS_New(config);
+    session = HITLS_SESS_New();
+    ASSERT_TRUE(ctx != NULL && session != NULL);
+    ASSERT_EQ(HITLS_SESS_SetSessionId(session, id, sizeof(id)), HITLS_SUCCESS);
+    ASSERT_EQ(SESS_SetStartTime(session, expired ? 1 : (uint64_t)BSL_SAL_CurrentSysTimeGet()), HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_SESS_SetTimeout(session, expired ? 1 : 3600), HITLS_SUCCESS);
+    ASSERT_TRUE(HITLS_SESS_IsResumable(session));
+    StoreSessionInExternalCache(session);
+    g_copyParamValue = copy;
+    found = SESSMGR_Find(ctx, id, sizeof(id));
+    ASSERT_TRUE(g_sessionGetCbCalled);
+    ASSERT_EQ(found != NULL, !expired);
+    ASSERT_EQ(SESSMGR_HasMacthSessionId(ctx->globalConfig->sessMgr, id, sizeof(id)), !expired && !noStore);
+EXIT:
+    HITLS_SESS_Free(found);
+    HITLS_SESS_Free(session);
+    HITLS_Free(ctx);
+    HITLS_CFG_FreeConfig(config);
+    ClearExternalCache();
+#else
+    (void)expired;
+    (void)copy;
+    (void)noStore;
+    SKIP_TEST();
+#endif
 }
 /* END_CASE */

@@ -115,11 +115,14 @@ static void CaListNodeDestroy(void *data)
 static void CleanPeerInfo(PeerInfo *peerInfo)
 {
     BSL_SAL_FREE(peerInfo->groups);
+    peerInfo->groupsSize = 0;
     BSL_SAL_FREE(peerInfo->cipherSuites);
+    peerInfo->cipherSuitesSize = 0;
 #ifdef HITLS_TLS_FEATURE_CERTIFICATE_AUTHORITIES
     BSL_LIST_FREE(peerInfo->caList, (BSL_LIST_PFUNC_FREE)CaListNodeDestroy);
 #endif /* HITLS_TLS_FEATURE_CERTIFICATE_AUTHORITIES */
     BSL_SAL_FREE(peerInfo->signatureAlgorithms);
+    peerInfo->signatureAlgorithmsSize = 0;
 }
 
 #if defined(HITLS_TLS_EXTENSION_COOKIE) || defined(HITLS_TLS_FEATURE_ALPN) || defined(HITLS_TLS_FEATURE_SNI)
