@@ -96,9 +96,10 @@ static int32_t SetPkeySignParam(HITLS_Ctx *hitlsCtx, CRYPT_EAL_PkeyCtx *ctx, HIT
 int32_t HITLS_X509_Adapt_CreateSign(HITLS_Ctx *ctx, HITLS_CERT_Key *key, HITLS_SignAlgo signAlgo,
     HITLS_HashAlgo hashAlgo, const uint8_t *data, uint32_t dataLen, uint8_t *sign, uint32_t *signLen)
 {
-    /* The private key is a connection-private copy deep-copied by HITLS_New (via CertMgrDeepCopy ->
-       SAL_CERT_KeyDup), no other holder can observe it, so setting the signature parameters in place
-       is safe and no temporary copy is needed. */
+    /* The key is either a connection-private deep copy (CertMgrDeepCopy -> SAL_CERT_KeyDup in
+       HITLS_New) or an object whose ownership was fully transferred by HITLS_SetPrivateKey with
+       isClone == false (the caller must not use or share it afterwards). No external holder can
+       observe it, so setting the signature parameters in place is safe. */
     if (SetPkeySignParam(ctx, key, signAlgo, hashAlgo, ATTRIBUTE_FROM_CTX(ctx)) != HITLS_SUCCESS) {
         return HITLS_CERT_SELF_ADAPT_ERR;
     }
@@ -167,9 +168,10 @@ int32_t HITLS_X509_Adapt_Decrypt(HITLS_Ctx *ctx, HITLS_CERT_Key *key, const uint
     uint8_t *out, uint32_t *outLen)
 {
     (void)ctx;
-    /* The private key is a connection-private copy deep-copied by HITLS_New (via CertMgrDeepCopy ->
-       SAL_CERT_KeyDup), no other holder can observe it, so setting the decryption parameters in place
-       is safe and no temporary copy is needed. */
+    /* The key is either a connection-private deep copy (CertMgrDeepCopy -> SAL_CERT_KeyDup in
+       HITLS_New) or an object whose ownership was fully transferred by HITLS_SetPrivateKey with
+       isClone == false (the caller must not use or share it afterwards). No external holder can
+       observe it, so setting the decryption parameters in place is safe. */
 #ifdef HITLS_TLS_FEATURE_PROVIDER
     if (SetMdAttr(key, ATTRIBUTE_FROM_CTX(ctx)) != HITLS_SUCCESS) {
         return HITLS_CERT_SELF_ADAPT_ERR;

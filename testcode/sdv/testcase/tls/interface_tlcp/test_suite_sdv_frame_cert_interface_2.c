@@ -267,11 +267,11 @@ void UT_TLS_CERT_SetGetAndCheckPrivateKey_API_TC001(int version, char *keyFile)
     HITLS_Config *tlsConfig = NULL;
     HITLS_Ctx *ctx = NULL;
 #ifdef HITLS_TLS_FEATURE_PROVIDER
-    HITLS_CERT_Key *privatekey = HITLS_X509_Adapt_ProviderKeyParse(tlsConfig, (const uint8_t *)keyFile, sizeof(keyFile),
-        TLS_PARSE_TYPE_FILE, "ASN1", NULL);
+    HITLS_CERT_Key *privatekey = HITLS_X509_Adapt_ProviderKeyParse(tlsConfig, (const uint8_t *)keyFile,
+        (uint32_t)strlen(keyFile) + 1, TLS_PARSE_TYPE_FILE, "ASN1", NULL);
 #else
-    HITLS_CERT_Key *privatekey = HITLS_X509_Adapt_KeyParse(tlsConfig, (const uint8_t *)keyFile, sizeof(keyFile),
-        TLS_PARSE_TYPE_FILE, TLS_PARSE_FORMAT_ASN1);
+    HITLS_CERT_Key *privatekey = HITLS_X509_Adapt_KeyParse(tlsConfig, (const uint8_t *)keyFile,
+        (uint32_t)strlen(keyFile) + 1, TLS_PARSE_TYPE_FILE, TLS_PARSE_FORMAT_ASN1);
 #endif
 
     tlsConfig = HitlsNewCtx(version);
@@ -494,10 +494,10 @@ void UT_TLS_CERT_ADAPT_VERIFY_SIGN_KEEP_CERT_PUBKEY_TC001(int version)
     cert = HiTLS_X509_LoadCertFile(tlsConfig, certPath);
     ASSERT_TRUE(cert != NULL);
 #ifdef HITLS_TLS_FEATURE_PROVIDER
-    priKey = HITLS_X509_Adapt_ProviderKeyParse(tlsConfig, (const uint8_t *)keyPath, sizeof(keyPath),
-        TLS_PARSE_TYPE_FILE, "ASN1", NULL);
+    priKey = HITLS_X509_Adapt_ProviderKeyParse(tlsConfig, (const uint8_t *)keyPath,
+        (uint32_t)strlen(keyPath) + 1, TLS_PARSE_TYPE_FILE, "ASN1", NULL);
 #else
-    priKey = HITLS_X509_Adapt_KeyParse(tlsConfig, (const uint8_t *)keyPath, sizeof(keyPath),
+    priKey = HITLS_X509_Adapt_KeyParse(tlsConfig, (const uint8_t *)keyPath, (uint32_t)strlen(keyPath) + 1,
         TLS_PARSE_TYPE_FILE, TLS_PARSE_FORMAT_ASN1);
 #endif
     ASSERT_TRUE(priKey != NULL);
@@ -554,7 +554,9 @@ EXIT:
 /* BEGIN_CASE */
 void UT_TLS_CERT_ADAPT_ENCRYPT_KEEP_CERT_PUBKEY_TC001(int version)
 {
-#if !defined(HITLS_TLS_SUITE_KX_RSA) && !defined(HITLS_TLS_PROTO_TLCP11)
+#if (!defined(HITLS_TLS_SUITE_KX_RSA) && !defined(HITLS_TLS_PROTO_TLCP11)) || !defined(HITLS_CRYPTO_RSA) || \
+    !defined(HITLS_CRYPTO_RSA_ENCRYPT) || !defined(HITLS_CRYPTO_RSA_DECRYPT) ||                             \
+    (!defined(HITLS_CRYPTO_RSAES_PKCSV15_TLS) && !defined(HITLS_CRYPTO_RSAES_PKCSV15))
     (void)version;
     SKIP_TEST();
 #else
@@ -582,10 +584,10 @@ void UT_TLS_CERT_ADAPT_ENCRYPT_KEEP_CERT_PUBKEY_TC001(int version)
     cert = HiTLS_X509_LoadCertFile(tlsConfig, certPath);
     ASSERT_TRUE(cert != NULL);
 #ifdef HITLS_TLS_FEATURE_PROVIDER
-    priKey = HITLS_X509_Adapt_ProviderKeyParse(tlsConfig, (const uint8_t *)keyPath, sizeof(keyPath),
-        TLS_PARSE_TYPE_FILE, "ASN1", NULL);
+    priKey = HITLS_X509_Adapt_ProviderKeyParse(tlsConfig, (const uint8_t *)keyPath,
+        (uint32_t)strlen(keyPath) + 1, TLS_PARSE_TYPE_FILE, "ASN1", NULL);
 #else
-    priKey = HITLS_X509_Adapt_KeyParse(tlsConfig, (const uint8_t *)keyPath, sizeof(keyPath),
+    priKey = HITLS_X509_Adapt_KeyParse(tlsConfig, (const uint8_t *)keyPath, (uint32_t)strlen(keyPath) + 1,
         TLS_PARSE_TYPE_FILE, TLS_PARSE_FORMAT_ASN1);
 #endif
     ASSERT_TRUE(priKey != NULL);
