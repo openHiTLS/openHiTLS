@@ -520,6 +520,7 @@ option(HITLS_TLS_FEATURE                                       "TLS Feature" OFF
     option(HITLS_TLS_FEATURE_MODE_AUTO_RETRY                       "TLS Feature Mode Auto Retry" OFF)
     option(HITLS_TLS_FEATURE_MODE_ACCEPT_MOVING_WRITE_BUFFER       "TLS Feature Mode Accept Moving Write Buffer" OFF)
     option(HITLS_TLS_FEATURE_MODE_RELEASE_BUFFERS                  "TLS Feature Mode Release Buffers" OFF)
+    option(HITLS_TLS_FEATURE_MODE_ASYNC                            "TLS Feature Mode Async (protocol transparent async)" OFF)
   option(HITLS_TLS_FEATURE_KEY_UPDATE                            "TLS Feature Key Update" OFF)
   option(HITLS_TLS_FEATURE_FLIGHT                                "TLS Feature Flight" OFF)
   option(HITLS_TLS_FEATURE_CERT_MODE                             "TLS Feature Cert Mode" OFF)

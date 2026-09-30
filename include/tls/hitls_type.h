@@ -24,6 +24,7 @@
 
 #include <stdint.h>
 #include <stdbool.h>
+#include "bsl_async.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -217,6 +218,18 @@ typedef enum {
 #define HITLS_X509_LOOKUP          7u
 #define HITLS_CC_READ  0x001u       /* Read state */
 #define HITLS_CC_WRITE 0x002u       /* Write status */
+
+/**
+ * @ingroup hitls_type
+ * @brief   Application completion callback of the transparent async mode.
+ *
+ * Unlike BSL_ASYNC_NotifyCallback, this callback receives the connection
+ * handle; the protocol layer installs an internal bridge that adapts the two
+ * conventions. The callback only posts the connection to the application
+ * queue; it must be short and non-blocking, must not resume the task nor call
+ * any HITLS API.
+ */
+typedef int32_t (*HITLS_AsyncCallback)(HITLS_Ctx *ctx, void *arg);
 
 #ifdef __cplusplus
 }

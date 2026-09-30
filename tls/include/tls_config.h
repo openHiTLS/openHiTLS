@@ -286,6 +286,10 @@ typedef struct TlsConfig {
 
     HITLS_CustomExts *customExts;
     bool isSupportConnectionId;         /* DTLS 1.3 Connection ID support. for server and client */
+#ifdef HITLS_TLS_FEATURE_MODE_ASYNC
+    HITLS_AsyncCallback asyncCallback; /* async completion callback, NULL means the handle mode */
+    void *asyncCallbackArg; /* argument passed to the async completion callback */
+#endif
 } TLS_Config;
 
 #define LIBCTX_FROM_CONFIG(config) (((config) == NULL) ? NULL : (config)->libCtx)

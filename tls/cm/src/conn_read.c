@@ -33,6 +33,7 @@
 #include "hs_dtls_timer.h"
 #include "hs_state_recv.h"
 #include "bsl_bytes.h"
+#include "conn_async.h"
 #include "dtls_cid.h"
 #ifdef HITLS_TLS_FEATURE_QUIC_TLS
 #include "quic_tls_internal.h"
@@ -570,7 +571,7 @@ int32_t HITLS_QUIC_TLS_ProcessPostHandshake(HITLS_Ctx *ctx)
 }
 #endif
 
-int32_t HITLS_Read(HITLS_Ctx *ctx, uint8_t *data, uint32_t bufSize, uint32_t *readLen)
+int32_t HITLS_ReadInternal(HITLS_Ctx *ctx, uint8_t *data, uint32_t bufSize, uint32_t *readLen)
 {
     int32_t ret;
     if (ctx == NULL || data == NULL || readLen == NULL) {
@@ -612,15 +613,52 @@ int32_t HITLS_Read(HITLS_Ctx *ctx, uint8_t *data, uint32_t bufSize, uint32_t *re
     return ret;
 }
 
-int32_t HITLS_Peek(HITLS_Ctx *ctx, uint8_t *data, uint32_t bufSize, uint32_t *readLen)
+int32_t HITLS_Read(HITLS_Ctx *ctx, uint8_t *data, uint32_t bufSize, uint32_t *readLen)
+{
+    if (ctx == NULL || data == NULL || readLen == NULL) {
+        return HITLS_NULL_INPUT;
+    }
+#ifdef HITLS_TLS_FEATURE_MODE_ASYNC
+    HITLS_ASYNC_ARGS args = {0};
+    args.ctx = ctx;
+    args.op = HITLS_ASYNC_OP_READ;
+    args.param.read.data = data;
+    args.param.read.bufSize = bufSize;
+    args.param.read.readLen = readLen;
+    return HITLS_AsyncRun(&args);
+#else
+    return HITLS_ReadInternal(ctx, data, bufSize, readLen);
+#endif
+}
+
+int32_t HITLS_PeekInternal(HITLS_Ctx *ctx, uint8_t *data, uint32_t bufSize, uint32_t *readLen)
 {
     if (ctx == NULL) {
         return HITLS_NULL_INPUT;
     }
+    int32_t ret;
     ctx->peekFlag = 1;
-    int32_t ret = HITLS_Read(ctx, data, bufSize, readLen);
+    ret = HITLS_ReadInternal(ctx, data, bufSize, readLen);
     ctx->peekFlag = 0;
     return ret;
+}
+
+int32_t HITLS_Peek(HITLS_Ctx *ctx, uint8_t *data, uint32_t bufSize, uint32_t *readLen)
+{
+    if (ctx == NULL || data == NULL || readLen == NULL) {
+        return HITLS_NULL_INPUT;
+    }
+#ifdef HITLS_TLS_FEATURE_MODE_ASYNC
+    HITLS_ASYNC_ARGS args = {0};
+    args.ctx = ctx;
+    args.op = HITLS_ASYNC_OP_PEEK;
+    args.param.read.data = data;
+    args.param.read.bufSize = bufSize;
+    args.param.read.readLen = readLen;
+    return HITLS_AsyncRun(&args);
+#else
+    return HITLS_PeekInternal(ctx, data, bufSize, readLen);
+#endif
 }
 
 int32_t HITLS_ReadHasPending(const HITLS_Ctx *ctx, bool *isPending)

@@ -26,6 +26,7 @@
 #include "hs.h"
 #include "hs_ctx.h"
 #include "record.h"
+#include "conn_async.h"
 #ifdef HITLS_TLS_FEATURE_QUIC_TLS
 #include "quic_tls_internal.h"
 #endif
@@ -228,8 +229,9 @@ static int32_t HITLS_WritePreporcess(HITLS_Ctx *ctx)
     return ret;
 }
 
-int32_t HITLS_Write(HITLS_Ctx *ctx, const uint8_t *data, uint32_t dataLen, uint32_t *writeLen)
+int32_t HITLS_WriteInternal(HITLS_Ctx *ctx, const uint8_t *data, uint32_t dataLen, uint32_t *writeLen)
 {
+    int32_t ret;
     if (ctx == NULL || data == NULL || dataLen == 0 || writeLen == NULL) {
         return HITLS_NULL_INPUT;
     }
@@ -240,7 +242,7 @@ int32_t HITLS_Write(HITLS_Ctx *ctx, const uint8_t *data, uint32_t dataLen, uint3
 #endif
     ctx->allowAppOut = false;
 
-    int32_t ret = HITLS_WritePreporcess(ctx);
+    ret = HITLS_WritePreporcess(ctx);
     if (ret != HITLS_SUCCESS) {
         return ret;
     }
@@ -278,6 +280,24 @@ int32_t HITLS_Write(HITLS_Ctx *ctx, const uint8_t *data, uint32_t dataLen, uint3
     }
 #endif
     return ret;
+}
+
+int32_t HITLS_Write(HITLS_Ctx *ctx, const uint8_t *data, uint32_t dataLen, uint32_t *writeLen)
+{
+    if (ctx == NULL || data == NULL || dataLen == 0 || writeLen == NULL) {
+        return HITLS_NULL_INPUT;
+    }
+#ifdef HITLS_TLS_FEATURE_MODE_ASYNC
+    HITLS_ASYNC_ARGS args = {0};
+    args.ctx = ctx;
+    args.op = HITLS_ASYNC_OP_WRITE;
+    args.param.write.data = data;
+    args.param.write.dataLen = dataLen;
+    args.param.write.writeLen = writeLen;
+    return HITLS_AsyncRun(&args);
+#else
+    return HITLS_WriteInternal(ctx, data, dataLen, writeLen);
+#endif
 }
 
 #ifdef HITLS_TLS_FEATURE_CUSTOM_REC_TYPE

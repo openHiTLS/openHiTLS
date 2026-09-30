@@ -202,6 +202,18 @@ void HITLS_Free(HITLS_Ctx *ctx)
     QUIC_TLS_CtxFree(ctx->quicTlsCtx);
     ctx->quicTlsCtx = NULL;
 #endif
+#ifdef HITLS_TLS_FEATURE_MODE_ASYNC
+    if (ctx->asyncTask != NULL) {
+        /* Severe usage error: the precondition of HITLS_Free is no outstanding
+         * task; the coroutine stack still references this connection. */
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17432, BSL_LOG_LEVEL_FATAL, BSL_LOG_BINLOG_TYPE_RUN,
+                              "free with outstanding async task", 0, 0, 0, 0);
+    }
+    if (ctx->asyncNotifyCtx != NULL) {
+        BSL_ASYNC_NotifyCtxFree(ctx->asyncNotifyCtx);
+        ctx->asyncNotifyCtx = NULL;
+    }
+#endif
     ConnCleanSensitiveData(ctx);
     BSL_SAL_Free(ctx);
 }
@@ -233,6 +245,13 @@ int32_t HITLS_Clear(HITLS_Ctx *ctx)
     if (ctx == NULL) {
         return HITLS_NULL_INPUT;
     }
+#ifdef HITLS_TLS_FEATURE_MODE_ASYNC
+    if (ctx->asyncTask != NULL) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17431, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+                              "clear rejected while async task outstanding", 0, 0, 0, 0);
+        return HITLS_ASYNC_ERR_OPERATION_BUSY;
+    }
+#endif
     ctx->rwstate = HITLS_NOTHING;
 #ifdef HITLS_TLS_FEATURE_SESSION
     if (HITLS_ClearBadSession(ctx) != HITLS_SUCCESS) {

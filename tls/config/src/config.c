@@ -173,6 +173,10 @@ static void ShallowCopy(HITLS_Ctx *ctx, const HITLS_Config *srcConfig)
 #ifdef HITLS_TLS_FEATURE_MODE
     destConfig->modeSupport = srcConfig->modeSupport;
 #endif
+#ifdef HITLS_TLS_FEATURE_MODE_ASYNC
+    destConfig->asyncCallback = srcConfig->asyncCallback;
+    destConfig->asyncCallbackArg = srcConfig->asyncCallbackArg;
+#endif
     destConfig->readAhead = srcConfig->readAhead;
     destConfig->isAutoKeyUpdateEnabled = srcConfig->isAutoKeyUpdateEnabled;
     destConfig->recordPaddingCb = srcConfig->recordPaddingCb;

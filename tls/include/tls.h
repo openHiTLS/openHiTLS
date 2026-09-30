@@ -22,6 +22,9 @@
 #include "cipher_suite.h"
 #include "tls_config.h"
 #include "hitls_error.h"
+#ifdef HITLS_TLS_FEATURE_MODE_ASYNC
+#include "bsl_async.h"
+#endif
 #include "hitls.h"
 
 #ifdef __cplusplus
@@ -338,6 +341,48 @@ typedef struct {
     HITLS_TrustedCAList *caList;        /* peer trusted ca list */
 } PeerInfo;
 
+#ifdef HITLS_TLS_FEATURE_MODE_ASYNC
+
+/* Operation kinds entering the async task. CONNECT and ACCEPT must stay
+ * distinct ops: SetConnState decides the endpoint from the called API when
+ * the config leaves it undefined, and the two entries have exclusive
+ * pre-checks (TLCP version pruning vs post-handshake auth). */
+typedef enum {
+    HITLS_ASYNC_OP_NONE = 0,
+    HITLS_ASYNC_OP_CONNECT,
+    HITLS_ASYNC_OP_ACCEPT,
+    HITLS_ASYNC_OP_DO_HANDSHAKE,
+    HITLS_ASYNC_OP_READ,
+    HITLS_ASYNC_OP_PEEK,
+    HITLS_ASYNC_OP_WRITE
+} HITLS_ASYNC_OP_KIND;
+
+typedef struct {
+    uint8_t *data;
+    uint32_t bufSize;
+    uint32_t *readLen;
+} HITLS_ASYNC_READ_PARAM;
+
+typedef struct {
+    const uint8_t *data;
+    uint32_t dataLen;
+    uint32_t *writeLen;
+} HITLS_ASYNC_WRITE_PARAM;
+
+typedef union {
+    HITLS_ASYNC_READ_PARAM read; /* READ / PEEK share param.read, the op distinguishes them */
+    HITLS_ASYNC_WRITE_PARAM write;
+} HITLS_ASYNC_OP_PARAM;
+
+/* Unified operation parameters of the protocol async task: copies of pointers
+ * and integers only, no buffer ownership transfer. */
+typedef struct {
+    HITLS_Ctx *ctx;
+    HITLS_ASYNC_OP_KIND op;
+    HITLS_ASYNC_OP_PARAM param;
+} HITLS_ASYNC_ARGS;
+#endif /* HITLS_TLS_FEATURE_MODE_ASYNC */
+
 struct TlsCtx {
     bool isClient;                          /* is Client */
     bool userShutDown;                      /* record whether the local end invokes the HITLS_Close */
@@ -423,6 +468,11 @@ struct TlsCtx {
 #endif
 #ifdef HITLS_TLS_FEATURE_QUIC_TLS
     struct QuicTlsCtx *quicTlsCtx;                /* QUIC TLS push-mode state */
+#endif
+#ifdef HITLS_TLS_FEATURE_MODE_ASYNC
+    BSL_ASYNC_Task *asyncTask; /* outstanding async task; NULL when none */
+    BSL_ASYNC_NotifyCtx *asyncNotifyCtx; /* connection-private notify context, lazily created */
+    HITLS_ASYNC_ARGS asyncArgs; /* first-call args copy, valid only while asyncTask != NULL */
 #endif
 };
 

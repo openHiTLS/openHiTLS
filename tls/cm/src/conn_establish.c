@@ -35,6 +35,7 @@
 #include "hs_state_send.h"
 #include "hs_common.h"
 #include "sal_net.h"
+#include "conn_async.h"
 #ifdef HITLS_TLS_FEATURE_QUIC_TLS
 #include "quic_tls_internal.h"
 #endif
@@ -364,7 +365,7 @@ static int32_t SetConnState(HITLS_Ctx *ctx, bool isClient)
     return HITLS_SetEndPoint(ctx, true);
 }
 
-int32_t HITLS_Connect(HITLS_Ctx *ctx)
+int32_t HITLS_ConnectInternal(HITLS_Ctx *ctx)
 {
     int32_t ret = ProcessCtxState(ctx);
     // Process the alerting state
@@ -401,7 +402,22 @@ int32_t HITLS_Connect(HITLS_Ctx *ctx)
     return ProcessEvent(ctx, proc);
 }
 
-int32_t HITLS_Accept(HITLS_Ctx *ctx)
+int32_t HITLS_Connect(HITLS_Ctx *ctx)
+{
+    if (ctx == NULL) {
+        return HITLS_NULL_INPUT;
+    }
+#ifdef HITLS_TLS_FEATURE_MODE_ASYNC
+    HITLS_ASYNC_ARGS args = {0};
+    args.ctx = ctx;
+    args.op = HITLS_ASYNC_OP_CONNECT;
+    return HITLS_AsyncRun(&args);
+#else
+    return HITLS_ConnectInternal(ctx);
+#endif
+}
+
+int32_t HITLS_AcceptInternal(HITLS_Ctx *ctx)
 {
     int32_t ret = ProcessCtxState(ctx);
     if (ret != HITLS_SUCCESS) {
@@ -441,6 +457,21 @@ int32_t HITLS_Accept(HITLS_Ctx *ctx)
 
     ManageEventProcess proc = acceptEventProcess[GetConnState(ctx)];
     return ProcessEvent(ctx, proc);
+}
+
+int32_t HITLS_Accept(HITLS_Ctx *ctx)
+{
+    if (ctx == NULL) {
+        return HITLS_NULL_INPUT;
+    }
+#ifdef HITLS_TLS_FEATURE_MODE_ASYNC
+    HITLS_ASYNC_ARGS args = {0};
+    args.ctx = ctx;
+    args.op = HITLS_ASYNC_OP_ACCEPT;
+    return HITLS_AsyncRun(&args);
+#else
+    return HITLS_AcceptInternal(ctx);
+#endif
 }
 
 #if defined(HITLS_TLS_PROTO_DTLS12) && defined(HITLS_BSL_UIO_UDP) && defined(HITLS_BSL_SAL_NET)
@@ -510,6 +541,13 @@ int32_t HITLS_Close(HITLS_Ctx *ctx)
         return HITLS_CONFIG_UNSUPPORT;
     }
 #endif
+#ifdef HITLS_TLS_FEATURE_MODE_ASYNC
+    if (ctx->asyncTask != NULL) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17428, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+                              "close rejected while async task outstanding", 0, 0, 0, 0);
+        return HITLS_ASYNC_ERR_OPERATION_BUSY;
+    }
+#endif
 
     ctx->userShutDown = 1;
 
@@ -559,6 +597,13 @@ int32_t HITLS_Close(HITLS_Ctx *ctx)
         return HITLS_CONFIG_UNSUPPORT;
     }
 #endif
+#ifdef HITLS_TLS_FEATURE_MODE_ASYNC
+    if (ctx->asyncTask != NULL) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17428, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+                              "close rejected while async task outstanding", 0, 0, 0, 0);
+        return HITLS_ASYNC_ERR_OPERATION_BUSY;
+    }
+#endif
 
     if (ctx->recCtx == NULL || ctx->alertCtx == NULL) {
         return HITLS_SUCCESS;
@@ -588,6 +633,17 @@ int32_t HITLS_GetError(const HITLS_Ctx *ctx, int32_t ret)
         return RETURN_ERROR_NUMBER_PROCESS(HITLS_WANT_X509_LOOKUP, BINLOG_ID16503,
             "Certificate callback needs to be retried");
     }
+
+#ifdef HITLS_TLS_FEATURE_MODE_ASYNC
+    if (ret == HITLS_ASYNC_ERR_PAUSED && ctx->rwstate == HITLS_ASYNC_PAUSED) {
+        return RETURN_ERROR_NUMBER_PROCESS(HITLS_WANT_ASYNC, BINLOG_ID17429,
+            "async paused, call the same api again after notification");
+    }
+    if (ret == HITLS_ASYNC_ERR_NO_JOB && ctx->rwstate == HITLS_ASYNC_NO_JOBS) {
+        return RETURN_ERROR_NUMBER_PROCESS(HITLS_WANT_ASYNC_JOB, BINLOG_ID17430,
+            "no free async job, retry after other tasks released");
+    }
+#endif /* HITLS_TLS_FEATURE_MODE_ASYNC */
 
     if (ret == HITLS_REC_NORMAL_IO_BUSY) {
         return RETURN_ERROR_NUMBER_PROCESS(HITLS_WANT_WRITE, BINLOG_ID16501, "write processes need to be retried");
@@ -776,17 +832,33 @@ const char *HITLS_GetStateString(uint32_t state)
 }
 #endif
 
-int32_t HITLS_DoHandShake(HITLS_Ctx *ctx)
+int32_t HITLS_DoHandShakeInternal(HITLS_Ctx *ctx)
 {
     if (ctx == NULL) {
         return HITLS_NULL_INPUT;
     }
 
     if (ctx->isClient) {
-        return HITLS_Connect(ctx);
+        return HITLS_ConnectInternal(ctx);
     } else {
-        return HITLS_Accept(ctx);
+        return HITLS_AcceptInternal(ctx);
     }
+}
+
+int32_t HITLS_DoHandShake(HITLS_Ctx *ctx)
+{
+    if (ctx == NULL) {
+        return HITLS_NULL_INPUT;
+    }
+
+#ifdef HITLS_TLS_FEATURE_MODE_ASYNC
+    HITLS_ASYNC_ARGS args = {0};
+    args.ctx = ctx;
+    args.op = HITLS_ASYNC_OP_DO_HANDSHAKE;
+    return HITLS_AsyncRun(&args);
+#else
+    return HITLS_DoHandShakeInternal(ctx);
+#endif
 }
 
 #ifdef HITLS_TLS_FEATURE_KEY_UPDATE

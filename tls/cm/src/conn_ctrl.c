@@ -29,6 +29,10 @@
 #ifdef HITLS_TLS_FEATURE_QUIC_TLS
 #include "quic_tls_internal.h"
 #endif
+#ifdef HITLS_TLS_FEATURE_MODE_ASYNC
+#include "bsl_async.h"
+#include "conn_async.h"
+#endif
 
 #ifdef HITLS_TLS_CONNECTION_INFO_NEGOTIATION
 int32_t HITLS_GetNegotiatedVersion(const HITLS_Ctx *ctx, uint16_t *version)
@@ -349,6 +353,11 @@ int32_t HITLS_SetModeSupport(HITLS_Ctx *ctx, uint32_t mode)
     if (ctx == NULL) {
         return HITLS_NULL_INPUT;
     }
+#ifdef HITLS_TLS_FEATURE_MODE_ASYNC
+    if (ctx->asyncTask != NULL) {
+        return HITLS_ASYNC_ERR_OPERATION_BUSY;
+    }
+#endif
 
     return HITLS_CFG_SetModeSupport(&(ctx->config.tlsConfig), mode);
 }
@@ -358,6 +367,11 @@ int32_t HITLS_ClearModeSupport(HITLS_Ctx *ctx, uint32_t mode)
     if (ctx == NULL) {
         return HITLS_NULL_INPUT;
     }
+#ifdef HITLS_TLS_FEATURE_MODE_ASYNC
+    if (ctx->asyncTask != NULL) {
+        return HITLS_ASYNC_ERR_OPERATION_BUSY;
+    }
+#endif
     return HITLS_CFG_ClearModeSupport(&(ctx->config.tlsConfig), mode);
 }
 
@@ -840,3 +854,92 @@ int32_t HITLS_SetSessionTicketExtData(HITLS_Ctx *ctx, uint8_t *data, uint32_t da
     return HITLS_SUCCESS;
 }
 #endif /* HITLS_TLS_FEATURE_SESSION_CUSTOM_TICKET */
+
+#ifdef HITLS_TLS_FEATURE_MODE_ASYNC
+int32_t HITLS_SetAsyncCallback(HITLS_Ctx *ctx, HITLS_AsyncCallback callback, void *arg)
+{
+    if (ctx == NULL) {
+        return HITLS_NULL_INPUT;
+    }
+    if (callback == NULL && arg != NULL) {
+        return HITLS_INVALID_INPUT;
+    }
+    if (ctx->asyncTask != NULL) {
+        return HITLS_ASYNC_ERR_OPERATION_BUSY;
+    }
+    /* Update the bridge first so that a failure leaves the configuration untouched. */
+    if (ctx->asyncNotifyCtx != NULL) {
+        BSL_ASYNC_NotifyCallback bridge = (callback != NULL) ? HITLS_AsyncNotifyBridge : NULL;
+        if (BSL_ASYNC_NotifyCtxSetCallback(ctx->asyncNotifyCtx, bridge, (callback != NULL) ? (void *)ctx : NULL) !=
+            BSL_SUCCESS) {
+            return HITLS_ASYNC_ERR_FRAMEWORK;
+        }
+    }
+    ctx->config.tlsConfig.asyncCallback = callback;
+    ctx->config.tlsConfig.asyncCallbackArg = arg;
+    return HITLS_SUCCESS;
+}
+
+int32_t HITLS_GetAsyncCallback(const HITLS_Ctx *ctx, HITLS_AsyncCallback *callback, void **arg)
+{
+    if (ctx == NULL || callback == NULL || arg == NULL) {
+        return HITLS_NULL_INPUT;
+    }
+    *callback = ctx->config.tlsConfig.asyncCallback;
+    *arg = ctx->config.tlsConfig.asyncCallbackArg;
+    return HITLS_SUCCESS;
+}
+
+int32_t HITLS_GetAsyncStatus(const HITLS_Ctx *ctx, int32_t *status)
+{
+    if (ctx == NULL || status == NULL) {
+        return HITLS_NULL_INPUT;
+    }
+    if (ctx->asyncTask == NULL) {
+        return HITLS_ASYNC_ERR_NOT_PAUSED;
+    }
+    /* The output uses the unified BSL submit-status macros directly. */
+    if (BSL_ASYNC_NotifyCtxGetStatus(ctx->asyncNotifyCtx, status) != BSL_SUCCESS) {
+        return HITLS_ASYNC_ERR_FRAMEWORK;
+    }
+    return HITLS_SUCCESS;
+}
+
+int32_t HITLS_GetAllAsyncNotifyHandles(const HITLS_Ctx *ctx, BSL_ASYNC_NotifyHandleList *handleList)
+{
+    if (ctx == NULL || handleList == NULL) {
+        return HITLS_NULL_INPUT;
+    }
+    if (handleList->handles == NULL && handleList->capacity != 0) {
+        return HITLS_INVALID_INPUT;
+    }
+    if (ctx->asyncTask == NULL) {
+        return HITLS_ASYNC_ERR_NOT_PAUSED;
+    }
+    int32_t ret = BSL_ASYNC_NotifyCtxGetAllNotifySources(ctx->asyncNotifyCtx, handleList);
+    if (ret == BSL_ASYNC_ERR_CAPACITY_EXCEEDED) {
+        return HITLS_ASYNC_ERR_SMALL_BUFFER;
+    }
+    return (ret == BSL_SUCCESS) ? HITLS_SUCCESS : HITLS_ASYNC_ERR_FRAMEWORK;
+}
+
+int32_t HITLS_GetChangedAsyncNotifyHandles(const HITLS_Ctx *ctx, BSL_ASYNC_NotifyHandleList *addList,
+                                           BSL_ASYNC_NotifyHandleList *delList)
+{
+    if (ctx == NULL || addList == NULL || delList == NULL) {
+        return HITLS_NULL_INPUT;
+    }
+    if ((addList->handles == NULL && addList->capacity != 0) ||
+        (delList->handles == NULL && delList->capacity != 0)) {
+        return HITLS_INVALID_INPUT;
+    }
+    if (ctx->asyncTask == NULL) {
+        return HITLS_ASYNC_ERR_NOT_PAUSED;
+    }
+    int32_t ret = BSL_ASYNC_NotifyCtxGetChangedNotifySources(ctx->asyncNotifyCtx, addList, delList);
+    if (ret == BSL_ASYNC_ERR_CAPACITY_EXCEEDED) {
+        return HITLS_ASYNC_ERR_SMALL_BUFFER;
+    }
+    return (ret == BSL_SUCCESS) ? HITLS_SUCCESS : HITLS_ASYNC_ERR_FRAMEWORK;
+}
+#endif /* HITLS_TLS_FEATURE_MODE_ASYNC */

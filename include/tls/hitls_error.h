@@ -94,6 +94,20 @@ extern "C" {
 
 /**
  * @ingroup tls_error
+ * @brief   The operation paused on a crypto async point; call the same API
+ * again on the owning thread after the notification.
+ */
+#define HITLS_WANT_ASYNC 10
+
+/**
+ * @ingroup tls_error
+ * @brief   The async task pool is exhausted; advance other connections first
+ * and retry, without waiting for any device source.
+ */
+#define HITLS_WANT_ASYNC_JOB 11
+
+/**
+ * @ingroup tls_error
  *
  * Error code returned by the TLS module
  */
@@ -437,6 +451,15 @@ typedef enum {
     HITLS_CALLBACK_CLIENT_HELLO_EXTENSION_NOT_FOUND,   /**< Extension not found. */
 
     HITLS_QUIC_TLS_PROTOCOL_VIOLATION = 0x02150001,        /**< QUIC transport PROTOCOL_VIOLATION; close the connection. */
+
+    HITLS_ASYNC_ERR_PAUSED = 0x02160001, /**< The async task paused; retry the same API after the notification. */
+    HITLS_ASYNC_ERR_NO_JOB, /**< The async task pool is exhausted; this call started no task. */
+    HITLS_ASYNC_ERR_OPERATION_BUSY, /**< Resume mismatch with the first call, or Clear/Close during a pause. */
+    HITLS_ASYNC_ERR_WRONG_THREAD, /**< Resume from a thread other than the owner; the task is unchanged. */
+    HITLS_ASYNC_ERR_UNSUPPORTED, /**< No transparent-async backend on this build or platform. */
+    HITLS_ASYNC_ERR_FRAMEWORK, /**< Internal error of the BSL async framework. */
+    HITLS_ASYNC_ERR_NOT_PAUSED, /**< The query is called while no async task is paused. */
+    HITLS_ASYNC_ERR_SMALL_BUFFER, /**< The handle list capacity is insufficient; numHandles carries the need. */
 } HITLS_ERROR;
 
 

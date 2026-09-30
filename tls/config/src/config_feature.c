@@ -671,6 +671,31 @@ int32_t HITLS_CFG_GetModeSupport(const HITLS_Config *config, uint32_t *mode)
 }
 #endif /* HITLS_TLS_FEATURE_MODE */
 
+#ifdef HITLS_TLS_FEATURE_MODE_ASYNC
+int32_t HITLS_CFG_SetAsyncCallback(HITLS_Config *config, HITLS_AsyncCallback callback, void *arg)
+{
+    if (config == NULL) {
+        return HITLS_NULL_INPUT;
+    }
+    if (callback == NULL && arg != NULL) {
+        return HITLS_INVALID_INPUT;
+    }
+    config->asyncCallback = callback;
+    config->asyncCallbackArg = arg;
+    return HITLS_SUCCESS;
+}
+
+int32_t HITLS_CFG_GetAsyncCallback(const HITLS_Config *config, HITLS_AsyncCallback *callback, void **arg)
+{
+    if (config == NULL || callback == NULL || arg == NULL) {
+        return HITLS_NULL_INPUT;
+    }
+    *callback = config->asyncCallback;
+    *arg = config->asyncCallbackArg;
+    return HITLS_SUCCESS;
+}
+#endif /* HITLS_TLS_FEATURE_MODE_ASYNC */
+
 #ifdef HITLS_TLS_FEATURE_CLIENT_HELLO_CB
 int32_t HITLS_CFG_SetClientHelloCb(HITLS_Config *config, HITLS_ClientHelloCb callback, void *arg)
 {

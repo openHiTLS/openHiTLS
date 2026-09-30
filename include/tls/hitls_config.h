@@ -1278,6 +1278,29 @@ int32_t HITLS_CFG_SetModeSupport(HITLS_Config *config, uint32_t mode);
 
 /**
  * @ingroup hitls_config
+ * @brief   Set the async completion callback inherited by connections created from this config.
+ * @param   config  [IN] Config handle.
+ * @param   callback  [IN] Callback to install; NULL clears it together with arg.
+ * @param   arg  [IN] Argument passed through to the callback; must be NULL when callback is NULL.
+ * @retval  HITLS_SUCCESS, if successful.
+ * @retval  HITLS_NULL_INPUT, config is null.
+ * @retval  HITLS_INVALID_INPUT, callback is NULL while arg is not.
+ */
+int32_t HITLS_CFG_SetAsyncCallback(HITLS_Config *config, HITLS_AsyncCallback callback, void *arg);
+
+/**
+ * @ingroup hitls_config
+ * @brief   Query the async completion callback of the config.
+ * @param   config  [IN] Config handle.
+ * @param   callback  [OUT] Current callback; NULL when not configured.
+ * @param   arg  [OUT] Current callback argument; NULL when not configured.
+ * @retval  HITLS_SUCCESS, if successful.
+ * @retval  HITLS_NULL_INPUT, a mandatory parameter is null.
+ */
+int32_t HITLS_CFG_GetAsyncCallback(const HITLS_Config *config, HITLS_AsyncCallback *callback, void **arg);
+
+/**
+ * @ingroup hitls_config
  * @brief   Disable the specified feature.
  * @param   config  [OUT] Config handle.
  * @param   mode  [IN] Mode features to be disabled.
