@@ -283,11 +283,12 @@ EXIT:
 /**
  * @test SDV_TLS_ASYNC_ENTRY_VALIDATE_TC007
  * @brief
- *   1. Call the six protocol entries with NULL or invalid parameters while the
- *      async mode is on.
+ *   1. Call the six protocol entries with a NULL ctx while the async mode is on.
+ *   2. Call Read/Peek/Write with invalid parameters while the async mode is off
+ *      (the entry validation lives in the internal workers).
  * @expect
- *   1. Parameter errors return HITLS_NULL_INPUT synchronously without touching
- *      the async controller.
+ *   1. A NULL ctx returns HITLS_NULL_INPUT from the async controller entry.
+ *   2. Parameter errors return HITLS_NULL_INPUT from the internal workers.
  @ */
 /* BEGIN_CASE */
 void SDV_TLS_ASYNC_ENTRY_VALIDATE_TC007(void)
@@ -297,29 +298,39 @@ void SDV_TLS_ASYNC_ENTRY_VALIDATE_TC007(void)
 #else
     FRAME_Init();
     HITLS_Config *config = HITLS_CFG_NewTLS13Config();
+    HITLS_Config *plainConfig = HITLS_CFG_NewTLS13Config();
     HITLS_Ctx *ctx = NULL;
+    HITLS_Ctx *plainCtx = NULL;
     ASSERT_TRUE(config != NULL);
+    ASSERT_TRUE(plainConfig != NULL);
     ASSERT_EQ(HITLS_CFG_SetModeSupport(config, HITLS_MODE_ASYNC), HITLS_SUCCESS);
     ctx = HITLS_New(config);
     ASSERT_TRUE(ctx != NULL);
+    plainCtx = HITLS_New(plainConfig);
+    ASSERT_TRUE(plainCtx != NULL);
     uint8_t buf[8] = {0};
     uint32_t len = 0;
+    /* NULL ctx: guarded by the async controller entry in the async mode. */
     ASSERT_EQ(HITLS_Connect(NULL), HITLS_NULL_INPUT);
     ASSERT_EQ(HITLS_Accept(NULL), HITLS_NULL_INPUT);
     ASSERT_EQ(HITLS_DoHandShake(NULL), HITLS_NULL_INPUT);
     ASSERT_EQ(HITLS_Read(NULL, buf, sizeof(buf), &len), HITLS_NULL_INPUT);
-    ASSERT_EQ(HITLS_Read(ctx, NULL, sizeof(buf), &len), HITLS_NULL_INPUT);
-    ASSERT_EQ(HITLS_Read(ctx, buf, sizeof(buf), NULL), HITLS_NULL_INPUT);
     ASSERT_EQ(HITLS_Peek(NULL, buf, sizeof(buf), &len), HITLS_NULL_INPUT);
-    ASSERT_EQ(HITLS_Peek(ctx, NULL, sizeof(buf), &len), HITLS_NULL_INPUT);
-    ASSERT_EQ(HITLS_Peek(ctx, buf, sizeof(buf), NULL), HITLS_NULL_INPUT);
     ASSERT_EQ(HITLS_Write(NULL, buf, sizeof(buf), &len), HITLS_NULL_INPUT);
-    ASSERT_EQ(HITLS_Write(ctx, NULL, sizeof(buf), &len), HITLS_NULL_INPUT);
-    ASSERT_EQ(HITLS_Write(ctx, buf, 0, &len), HITLS_NULL_INPUT);
-    ASSERT_EQ(HITLS_Write(ctx, buf, sizeof(buf), NULL), HITLS_NULL_INPUT);
+    /* Parameter errors: validated by the internal workers on the direct path. */
+    ASSERT_EQ(HITLS_Read(plainCtx, NULL, sizeof(buf), &len), HITLS_NULL_INPUT);
+    ASSERT_EQ(HITLS_Read(plainCtx, buf, sizeof(buf), NULL), HITLS_NULL_INPUT);
+    ASSERT_EQ(HITLS_Peek(plainCtx, NULL, sizeof(buf), &len), HITLS_NULL_INPUT);
+    ASSERT_EQ(HITLS_Peek(plainCtx, buf, sizeof(buf), NULL), HITLS_NULL_INPUT);
+    ASSERT_EQ(HITLS_Write(plainCtx, NULL, sizeof(buf), &len), HITLS_NULL_INPUT);
+    ASSERT_EQ(HITLS_Write(plainCtx, buf, 0, &len), HITLS_NULL_INPUT);
+    ASSERT_EQ(HITLS_Write(plainCtx, buf, sizeof(buf), NULL), HITLS_NULL_INPUT);
+    (void)ctx;
 EXIT:
     HITLS_Free(ctx);
+    HITLS_Free(plainCtx);
     HITLS_CFG_FreeConfig(config);
+    HITLS_CFG_FreeConfig(plainConfig);
 #endif
 }
 /* END_CASE */

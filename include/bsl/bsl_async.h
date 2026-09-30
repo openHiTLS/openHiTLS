@@ -140,9 +140,9 @@ typedef struct {
  *
  * @param task [IN/OUT] NULL means a first start; non-NULL resumes the paused task.
  * @param ret [OUT] Business return value, defined only when BSL_ASYNC_FINISH is returned.
- * @param param [IN] Aggregated input for a first start; must be NULL when resuming.
+ * @param param [IN] Aggregated input for a first start; ignored when resuming.
  *
- * @retval #BSL_ASYNC_FINISH The logical task finished and *ret was delivered.
+ * @retval #BSL_ASYNC_FINISH The logical task finished, *ret was delivered and *task was reset to NULL.
  * @retval #BSL_ASYNC_PAUSE The task is paused and *task refers to it.
  * @retval #BSL_ASYNC_NO_JOB The pool is full; *task stays NULL.
  * @retval #BSL_ASYNC_WRONG_EXEC_CTX Non-destructive rejection; the task belongs to its owner domain.

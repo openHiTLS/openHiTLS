@@ -284,9 +284,6 @@ int32_t HITLS_WriteInternal(HITLS_Ctx *ctx, const uint8_t *data, uint32_t dataLe
 
 int32_t HITLS_Write(HITLS_Ctx *ctx, const uint8_t *data, uint32_t dataLen, uint32_t *writeLen)
 {
-    if (ctx == NULL || data == NULL || dataLen == 0 || writeLen == NULL) {
-        return HITLS_NULL_INPUT;
-    }
 #ifdef HITLS_TLS_FEATURE_MODE_ASYNC
     HITLS_ASYNC_ARGS args = {0};
     args.ctx = ctx;

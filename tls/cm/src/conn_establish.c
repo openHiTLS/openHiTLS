@@ -404,9 +404,6 @@ int32_t HITLS_ConnectInternal(HITLS_Ctx *ctx)
 
 int32_t HITLS_Connect(HITLS_Ctx *ctx)
 {
-    if (ctx == NULL) {
-        return HITLS_NULL_INPUT;
-    }
 #ifdef HITLS_TLS_FEATURE_MODE_ASYNC
     HITLS_ASYNC_ARGS args = {0};
     args.ctx = ctx;
@@ -461,9 +458,6 @@ int32_t HITLS_AcceptInternal(HITLS_Ctx *ctx)
 
 int32_t HITLS_Accept(HITLS_Ctx *ctx)
 {
-    if (ctx == NULL) {
-        return HITLS_NULL_INPUT;
-    }
 #ifdef HITLS_TLS_FEATURE_MODE_ASYNC
     HITLS_ASYNC_ARGS args = {0};
     args.ctx = ctx;
@@ -637,11 +631,11 @@ int32_t HITLS_GetError(const HITLS_Ctx *ctx, int32_t ret)
 #ifdef HITLS_TLS_FEATURE_MODE_ASYNC
     if (ret == HITLS_ASYNC_ERR_PAUSED && ctx->rwstate == HITLS_ASYNC_PAUSED) {
         return RETURN_ERROR_NUMBER_PROCESS(HITLS_WANT_ASYNC, BINLOG_ID17429,
-            "async paused, call the same api again after notification");
+                                           "async paused, call the same api again after notification");
     }
     if (ret == HITLS_ASYNC_ERR_NO_JOB && ctx->rwstate == HITLS_ASYNC_NO_JOBS) {
         return RETURN_ERROR_NUMBER_PROCESS(HITLS_WANT_ASYNC_JOB, BINLOG_ID17430,
-            "no free async job, retry after other tasks released");
+                                           "no free async job, retry after other tasks released");
     }
 #endif /* HITLS_TLS_FEATURE_MODE_ASYNC */
 
@@ -847,10 +841,6 @@ int32_t HITLS_DoHandShakeInternal(HITLS_Ctx *ctx)
 
 int32_t HITLS_DoHandShake(HITLS_Ctx *ctx)
 {
-    if (ctx == NULL) {
-        return HITLS_NULL_INPUT;
-    }
-
 #ifdef HITLS_TLS_FEATURE_MODE_ASYNC
     HITLS_ASYNC_ARGS args = {0};
     args.ctx = ctx;

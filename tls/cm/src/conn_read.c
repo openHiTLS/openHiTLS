@@ -615,9 +615,6 @@ int32_t HITLS_ReadInternal(HITLS_Ctx *ctx, uint8_t *data, uint32_t bufSize, uint
 
 int32_t HITLS_Read(HITLS_Ctx *ctx, uint8_t *data, uint32_t bufSize, uint32_t *readLen)
 {
-    if (ctx == NULL || data == NULL || readLen == NULL) {
-        return HITLS_NULL_INPUT;
-    }
 #ifdef HITLS_TLS_FEATURE_MODE_ASYNC
     HITLS_ASYNC_ARGS args = {0};
     args.ctx = ctx;
@@ -645,9 +642,6 @@ int32_t HITLS_PeekInternal(HITLS_Ctx *ctx, uint8_t *data, uint32_t bufSize, uint
 
 int32_t HITLS_Peek(HITLS_Ctx *ctx, uint8_t *data, uint32_t bufSize, uint32_t *readLen)
 {
-    if (ctx == NULL || data == NULL || readLen == NULL) {
-        return HITLS_NULL_INPUT;
-    }
 #ifdef HITLS_TLS_FEATURE_MODE_ASYNC
     HITLS_ASYNC_ARGS args = {0};
     args.ctx = ctx;
