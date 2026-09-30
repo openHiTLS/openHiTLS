@@ -64,6 +64,7 @@
 #include "hitls_x509_adapt.h"
 #include "hitls_pki_x509.h"
 #include "hitls_pki_errno.h"
+#include "crypt_eal_pkey.h"
 /* END_HEADER */
 
 #define BUF_MAX_SIZE 4096
@@ -443,5 +444,178 @@ EXIT:
     HITLS_CFG_FreeConfig(tlsConfig);
     FRAME_FreeLink(client);
     FRAME_FreeLink(server);
+}
+/* END_CASE */
+
+/* @
+* @test    UT_TLS_CERT_ADAPT_VERIFY_SIGN_KEEP_CERT_PUBKEY_TC001
+* @title   VerifySign with different schemes must not modify the public key inside the certificate handle
+* @precon  nan
+* @brief   1. Load an RSA certificate and its private key, and obtain the public key from the certificate
+*            handle through CERT_CTRL_GET_PUB_KEY (shared object, only reference counted).
+*          2. Record the RSA padding of the certificate public key, sign a message with the private key
+*            using RSA-PSS and verify it with the certificate public key, then query the padding
+*            immediately after the verification.
+*          3. Repeat the sign-and-verify with RSA-PKCS1v15 and query the padding again right after
+*            the second verification. Each verification re-sets the padding on the key it uses, so the
+*            behavioral success of the second verification alone cannot expose the pollution; the padding
+*            query after every single verification is the actual detection point.
+* @expect  1. Both verifications succeed.
+*          2. The padding of the certificate public key equals the recorded initial value after each
+*            verification. Before the fix, the PSS parameters set for the first verification remained in
+*            the shared public key, which is detected by the padding query right after that verification.
+@ */
+/* BEGIN_CASE */
+void UT_TLS_CERT_ADAPT_VERIFY_SIGN_KEEP_CERT_PUBKEY_TC001(int version)
+{
+#if !defined(HITLS_CRYPTO_RSA_EMSA_PSS) || !defined(HITLS_CRYPTO_RSA_EMSA_PKCSV15)
+    (void)version;
+    SKIP_TEST();
+#else
+    const char *certPath = "../testdata/tls/certificate/der/rsa_sha256/server.der";
+    const char *keyPath = "../testdata/tls/certificate/der/rsa_sha256/server.key.der";
+    const uint8_t data[] = "openhitls cert adapt verify sign test data";
+    uint8_t sign[512] = {0};
+    HITLS_Config *tlsConfig = NULL;
+    HITLS_Ctx *ctx = NULL;
+    HITLS_CERT_X509 *cert = NULL;
+    HITLS_CERT_Key *priKey = NULL;
+    HITLS_CERT_Key *pubkey = NULL;
+    int32_t padBefore = 0;
+    int32_t padAfter = 0;
+    uint32_t signLen = sizeof(sign);
+
+    HitlsInit();
+    tlsConfig = HitlsNewCtx(version);
+    ASSERT_TRUE(tlsConfig != NULL);
+    ctx = HITLS_New(tlsConfig);
+    ASSERT_TRUE(ctx != NULL);
+
+    cert = HiTLS_X509_LoadCertFile(tlsConfig, certPath);
+    ASSERT_TRUE(cert != NULL);
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+    priKey = HITLS_X509_Adapt_ProviderKeyParse(tlsConfig, (const uint8_t *)keyPath, sizeof(keyPath),
+        TLS_PARSE_TYPE_FILE, "ASN1", NULL);
+#else
+    priKey = HITLS_X509_Adapt_KeyParse(tlsConfig, (const uint8_t *)keyPath, sizeof(keyPath),
+        TLS_PARSE_TYPE_FILE, TLS_PARSE_FORMAT_ASN1);
+#endif
+    ASSERT_TRUE(priKey != NULL);
+
+    ASSERT_EQ(SAL_CERT_X509Ctrl(&ctx->config.tlsConfig, cert, CERT_CTRL_GET_PUB_KEY, NULL, (void *)&pubkey),
+        HITLS_SUCCESS);
+    ASSERT_TRUE(pubkey != NULL);
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(pubkey, CRYPT_CTRL_GET_RSA_PADDING, &padBefore, sizeof(padBefore)),
+        HITLS_SUCCESS);
+
+    signLen = sizeof(sign);
+    ASSERT_EQ(HITLS_X509_Adapt_CreateSign(ctx, priKey, HITLS_SIGN_RSA_PSS, HITLS_HASH_SHA_256,
+        data, sizeof(data) - 1, sign, &signLen), HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_X509_Adapt_VerifySign(ctx, pubkey, HITLS_SIGN_RSA_PSS, HITLS_HASH_SHA_256,
+        data, sizeof(data) - 1, sign, signLen), HITLS_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(pubkey, CRYPT_CTRL_GET_RSA_PADDING, &padAfter, sizeof(padAfter)),
+        HITLS_SUCCESS);
+    ASSERT_EQ(padAfter, padBefore);
+
+    signLen = sizeof(sign);
+    ASSERT_EQ(HITLS_X509_Adapt_CreateSign(ctx, priKey, HITLS_SIGN_RSA_PKCS1_V15, HITLS_HASH_SHA_256,
+        data, sizeof(data) - 1, sign, &signLen), HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_X509_Adapt_VerifySign(ctx, pubkey, HITLS_SIGN_RSA_PKCS1_V15, HITLS_HASH_SHA_256,
+        data, sizeof(data) - 1, sign, signLen), HITLS_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(pubkey, CRYPT_CTRL_GET_RSA_PADDING, &padAfter, sizeof(padAfter)),
+        HITLS_SUCCESS);
+    ASSERT_EQ(padAfter, padBefore);
+
+EXIT:
+    SAL_CERT_KeyFree(ctx != NULL ? ctx->config.tlsConfig.certMgrCtx : NULL, pubkey);
+    HITLS_X509_Adapt_KeyFree(priKey);
+    HITLS_X509_Adapt_CertFree(cert);
+    HITLS_Free(ctx);
+    HITLS_CFG_FreeConfig(tlsConfig);
+#endif
+}
+/* END_CASE */
+
+/* @
+* @test    UT_TLS_CERT_ADAPT_ENCRYPT_KEEP_CERT_PUBKEY_TC001
+* @title   Encrypt must not modify the public key inside the certificate handle
+* @precon  nan
+* @brief   1. Load an RSA certificate and its private key, and obtain the public key from the certificate
+*            handle through CERT_CTRL_GET_PUB_KEY (shared object, only reference counted).
+*          2. Record the RSA padding of the certificate public key, encrypt a plaintext with the certificate
+*            public key, then query the padding immediately after the encryption.
+*          3. Decrypt the ciphertext with the private key, compare it with the original plaintext, and query
+*            the certificate public key padding once more after the whole flow.
+* @expect  1. The encryption succeeds and the padding of the certificate public key equals the recorded
+*            initial value right after the encryption. Before the fix, the RSAES padding set inside Encrypt
+*            remained in the shared public key.
+*          2. The decrypted plaintext matches the original one and the padding is still unchanged.
+@ */
+/* BEGIN_CASE */
+void UT_TLS_CERT_ADAPT_ENCRYPT_KEEP_CERT_PUBKEY_TC001(int version)
+{
+#if !defined(HITLS_TLS_SUITE_KX_RSA) && !defined(HITLS_TLS_PROTO_TLCP11)
+    (void)version;
+    SKIP_TEST();
+#else
+    const char *certPath = "../testdata/tls/certificate/der/rsa_sha256/server.der";
+    const char *keyPath = "../testdata/tls/certificate/der/rsa_sha256/server.key.der";
+    const uint8_t plain[] = "openhitls cert adapt encrypt test plaintext";
+    uint8_t cipher[512] = {0};
+    uint8_t decryptOut[512] = {0};
+    HITLS_Config *tlsConfig = NULL;
+    HITLS_Ctx *ctx = NULL;
+    HITLS_CERT_X509 *cert = NULL;
+    HITLS_CERT_Key *priKey = NULL;
+    HITLS_CERT_Key *pubkey = NULL;
+    int32_t padBefore = 0;
+    int32_t padAfter = 0;
+    uint32_t cipherLen = sizeof(cipher);
+    uint32_t decryptLen = sizeof(decryptOut);
+
+    HitlsInit();
+    tlsConfig = HitlsNewCtx(version);
+    ASSERT_TRUE(tlsConfig != NULL);
+    ctx = HITLS_New(tlsConfig);
+    ASSERT_TRUE(ctx != NULL);
+
+    cert = HiTLS_X509_LoadCertFile(tlsConfig, certPath);
+    ASSERT_TRUE(cert != NULL);
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+    priKey = HITLS_X509_Adapt_ProviderKeyParse(tlsConfig, (const uint8_t *)keyPath, sizeof(keyPath),
+        TLS_PARSE_TYPE_FILE, "ASN1", NULL);
+#else
+    priKey = HITLS_X509_Adapt_KeyParse(tlsConfig, (const uint8_t *)keyPath, sizeof(keyPath),
+        TLS_PARSE_TYPE_FILE, TLS_PARSE_FORMAT_ASN1);
+#endif
+    ASSERT_TRUE(priKey != NULL);
+
+    ASSERT_EQ(SAL_CERT_X509Ctrl(&ctx->config.tlsConfig, cert, CERT_CTRL_GET_PUB_KEY, NULL, (void *)&pubkey),
+        HITLS_SUCCESS);
+    ASSERT_TRUE(pubkey != NULL);
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(pubkey, CRYPT_CTRL_GET_RSA_PADDING, &padBefore, sizeof(padBefore)),
+        HITLS_SUCCESS);
+
+    ASSERT_EQ(HITLS_X509_Adapt_Encrypt(ctx, pubkey, plain, sizeof(plain) - 1, cipher, &cipherLen),
+        HITLS_SUCCESS);
+
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(pubkey, CRYPT_CTRL_GET_RSA_PADDING, &padAfter, sizeof(padAfter)),
+        HITLS_SUCCESS);
+    ASSERT_EQ(padAfter, padBefore);
+
+    ASSERT_EQ(HITLS_X509_Adapt_Decrypt(ctx, priKey, cipher, cipherLen, decryptOut, &decryptLen),
+        HITLS_SUCCESS);
+    ASSERT_COMPARE("decrypt compare", decryptOut, decryptLen, plain, sizeof(plain) - 1);
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(pubkey, CRYPT_CTRL_GET_RSA_PADDING, &padAfter, sizeof(padAfter)),
+        HITLS_SUCCESS);
+    ASSERT_EQ(padAfter, padBefore);
+
+EXIT:
+    SAL_CERT_KeyFree(ctx != NULL ? ctx->config.tlsConfig.certMgrCtx : NULL, pubkey);
+    HITLS_X509_Adapt_KeyFree(priKey);
+    HITLS_X509_Adapt_CertFree(cert);
+    HITLS_Free(ctx);
+    HITLS_CFG_FreeConfig(tlsConfig);
+#endif
 }
 /* END_CASE */

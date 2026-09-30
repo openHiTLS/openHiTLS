@@ -96,6 +96,9 @@ static int32_t SetPkeySignParam(HITLS_Ctx *hitlsCtx, CRYPT_EAL_PkeyCtx *ctx, HIT
 int32_t HITLS_X509_Adapt_CreateSign(HITLS_Ctx *ctx, HITLS_CERT_Key *key, HITLS_SignAlgo signAlgo,
     HITLS_HashAlgo hashAlgo, const uint8_t *data, uint32_t dataLen, uint8_t *sign, uint32_t *signLen)
 {
+    /* The private key is a connection-private copy deep-copied by HITLS_New (via CertMgrDeepCopy ->
+       SAL_CERT_KeyDup), no other holder can observe it, so setting the signature parameters in place
+       is safe and no temporary copy is needed. */
     if (SetPkeySignParam(ctx, key, signAlgo, hashAlgo, ATTRIBUTE_FROM_CTX(ctx)) != HITLS_SUCCESS) {
         return HITLS_CERT_SELF_ADAPT_ERR;
     }
@@ -105,10 +108,20 @@ int32_t HITLS_X509_Adapt_CreateSign(HITLS_Ctx *ctx, HITLS_CERT_Key *key, HITLS_S
 int32_t HITLS_X509_Adapt_VerifySign(HITLS_Ctx *ctx, HITLS_CERT_Key *key, HITLS_SignAlgo signAlgo,
     HITLS_HashAlgo hashAlgo, const uint8_t *data, uint32_t dataLen, const uint8_t *sign, uint32_t signLen)
 {
-    if (SetPkeySignParam(ctx, key, signAlgo, hashAlgo, ATTRIBUTE_FROM_CTX(ctx)) != HITLS_SUCCESS) {
+    /* The key may be the public key inside the certificate handle (shared object), the signature parameters
+       must be set on a temporary copy to avoid modifying it. */
+    CRYPT_EAL_PkeyCtx *tmpKey = CRYPT_EAL_PkeyDupCtx((const CRYPT_EAL_PkeyCtx *)key);
+    if (tmpKey == NULL) {
         return HITLS_CERT_SELF_ADAPT_ERR;
     }
-    return CRYPT_EAL_PkeyVerify(key, (CRYPT_MD_AlgId)hashAlgo, data, dataLen, sign, signLen);
+    int32_t ret = SetPkeySignParam(ctx, tmpKey, signAlgo, hashAlgo, ATTRIBUTE_FROM_CTX(ctx));
+    if (ret != HITLS_SUCCESS) {
+        CRYPT_EAL_PkeyFreeCtx(tmpKey);
+        return HITLS_CERT_SELF_ADAPT_ERR;
+    }
+    ret = CRYPT_EAL_PkeyVerify(tmpKey, (CRYPT_MD_AlgId)hashAlgo, data, dataLen, sign, signLen);
+    CRYPT_EAL_PkeyFreeCtx(tmpKey);
+    return ret;
 }
 
 #if defined(HITLS_TLS_SUITE_KX_RSA) || defined(HITLS_TLS_PROTO_TLCP11)
@@ -127,16 +140,26 @@ int32_t HITLS_X509_Adapt_Encrypt(HITLS_Ctx *ctx, HITLS_CERT_Key *key, const uint
     uint8_t *out, uint32_t *outLen)
 {
     (void)ctx;
+    /* The key is the public key inside the peer certificate handle (shared object), the encryption
+       parameters must be set on a temporary copy to avoid modifying it. */
+    CRYPT_EAL_PkeyCtx *tmpKey = CRYPT_EAL_PkeyDupCtx((const CRYPT_EAL_PkeyCtx *)key);
+    if (tmpKey == NULL) {
+        return HITLS_CERT_SELF_ADAPT_ERR;
+    }
 #ifdef HITLS_TLS_FEATURE_PROVIDER
-    if (SetMdAttr(key, ATTRIBUTE_FROM_CTX(ctx)) != HITLS_SUCCESS) {
+    if (SetMdAttr(tmpKey, ATTRIBUTE_FROM_CTX(ctx)) != HITLS_SUCCESS) {
+        CRYPT_EAL_PkeyFreeCtx(tmpKey);
         return HITLS_CERT_SELF_ADAPT_ERR;
     }
 #endif
-    if (CRYPT_EAL_PkeyGetId(key) == CRYPT_PKEY_RSA && CertSetRsaEncryptionScheme(key) != HITLS_SUCCESS) {
+    if (CRYPT_EAL_PkeyGetId(tmpKey) == CRYPT_PKEY_RSA && CertSetRsaEncryptionScheme(tmpKey) != HITLS_SUCCESS) {
+        CRYPT_EAL_PkeyFreeCtx(tmpKey);
         return HITLS_CERT_SELF_ADAPT_ERR;
     }
 
-    return CRYPT_EAL_PkeyEncrypt(key, in, inLen, out, outLen);
+    int32_t ret = CRYPT_EAL_PkeyEncrypt(tmpKey, in, inLen, out, outLen);
+    CRYPT_EAL_PkeyFreeCtx(tmpKey);
+    return ret;
 }
 
 
@@ -144,6 +167,9 @@ int32_t HITLS_X509_Adapt_Decrypt(HITLS_Ctx *ctx, HITLS_CERT_Key *key, const uint
     uint8_t *out, uint32_t *outLen)
 {
     (void)ctx;
+    /* The private key is a connection-private copy deep-copied by HITLS_New (via CertMgrDeepCopy ->
+       SAL_CERT_KeyDup), no other holder can observe it, so setting the decryption parameters in place
+       is safe and no temporary copy is needed. */
 #ifdef HITLS_TLS_FEATURE_PROVIDER
     if (SetMdAttr(key, ATTRIBUTE_FROM_CTX(ctx)) != HITLS_SUCCESS) {
         return HITLS_CERT_SELF_ADAPT_ERR;
