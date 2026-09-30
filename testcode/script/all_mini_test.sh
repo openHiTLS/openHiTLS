@@ -403,6 +403,7 @@ test_tls()
         add-feature-options=-DHITLS_CRYPTO_EALINIT=ON \
         add-feature-options=-DHITLS_CRYPTO_ENTROPY=ON \
         add-feature-options=-DHITLS_CRYPTO_DRBG_HASH=ON \
+        add-feature-options=-DHITLS_SEED_DRBG_INIT_RAND_ALG=CRYPT_RAND_SHA256 \
         add-feature-options=-DHITLS_CRYPTO_SHA1=ON \
         add-feature-options=-DHITLS_CRYPTO_SHA2=ON \
         add-feature-options=-DHITLS_CRYPTO_HKDF=ON \
