@@ -3056,3 +3056,43 @@ EXIT:
     FRAME_FreeLink(server);
 }
 /* END_CASE */
+
+/** @
+ * @test SDV_TLS_DTLS13_UNIFIED_HEADER_DISPATCH_TC040
+ * @precon nan
+ * @brief Inject a unified epoch-zero record into DTLS 1.2 and 1.3 contexts.
+ * @expect The record is discarded without a fatal alert.
+ @ */
+/* BEGIN_CASE */
+void SDV_TLS_DTLS13_UNIFIED_HEADER_DISPATCH_TC040(int version)
+{
+    HITLS_Config *config = NULL;
+    FRAME_LinkObj *client = NULL;
+    FRAME_LinkObj *server = NULL;
+    uint8_t record[14] = {REC_DTLS13_UNI_HEADER_FIX_BITS, 0xfe, 0xfd};
+    uint8_t buf[32] = {0};
+    uint32_t readLen = 0;
+    ALERT_Info alert = {0};
+
+    FRAME_Init();
+    config = version == HITLS_VERSION_DTLS12 ? HITLS_CFG_NewDTLS12Config() : HITLS_CFG_NewDTLS13Config();
+    ASSERT_TRUE(config != NULL);
+    client = FRAME_CreateLink(config, BSL_UIO_UDP);
+    server = FRAME_CreateLink(config, BSL_UIO_UDP);
+    ASSERT_TRUE(client != NULL && server != NULL);
+    ASSERT_EQ(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_SUCCESS);
+    Dtls13ClearFrameIo(server);
+    Dtls13SetReadEpoch(server->ssl, 0);
+    record[12] = 1;
+    ASSERT_EQ(FRAME_TransportRecMsg(server->io, record, sizeof(record)), HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_Read(server->ssl, buf, sizeof(buf), &readLen), HITLS_REC_NORMAL_RECV_BUF_EMPTY);
+    ASSERT_EQ(readLen, 0);
+    ASSERT_TRUE(TestIsErrStackEmpty());
+    ALERT_GetInfo(server->ssl, &alert);
+    ASSERT_TRUE(alert.flag != ALERT_FLAG_SEND);
+EXIT:
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+    HITLS_CFG_FreeConfig(config);
+}
+/* END_CASE */

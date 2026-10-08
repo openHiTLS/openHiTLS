@@ -2257,7 +2257,7 @@ Both success
 /* BEGIN_CASE */
 void SDV_PKCS8_ENCODE_DHKEY_DSAKEY_TC001(char *path, int fileType, Hex *asn1)
 {
-#if defined(HITLS_CRYPTO_PROVIDER) && (defined(HITLS_CRYPTO_DSA) && defined(HITLS_CRYPTO_DSA))
+#if defined(HITLS_CRYPTO_PROVIDER) && (defined(HITLS_CRYPTO_DSA) && defined(HITLS_CRYPTO_DH))
     CRYPT_EAL_Init(CRYPT_EAL_INIT_CPU|CRYPT_EAL_INIT_PROVIDER|CRYPT_EAL_INIT_PROVIDER_RAND);
     CRYPT_RandRegist(RandFunc);
     CRYPT_RandRegistEx(RandFuncEx);
@@ -2300,7 +2300,7 @@ Both success
 /* BEGIN_CASE */
 void SDV_PKCS8_DECODE_DHKEY_DSAKEY_TC001(char *path, int fileType,  Hex *asn1)
 {
-#if defined(HITLS_CRYPTO_PROVIDER) && (defined(HITLS_CRYPTO_DSA) && defined(HITLS_CRYPTO_DSA))
+#if defined(HITLS_CRYPTO_PROVIDER) && (defined(HITLS_CRYPTO_DSA) && defined(HITLS_CRYPTO_DH))
     CRYPT_EAL_Init(CRYPT_EAL_INIT_CPU|CRYPT_EAL_INIT_PROVIDER|CRYPT_EAL_INIT_PROVIDER_RAND);
     CRYPT_RandRegist(RandFunc);
     CRYPT_RandRegistEx(RandFuncEx);
@@ -2354,7 +2354,7 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_PKCS8_ENCDEC_DHKEY_DSAKEY_TC001(char *path, int fileType,  Hex *asn1)
 {
-#if defined(HITLS_CRYPTO_PROVIDER) && (defined(HITLS_CRYPTO_DSA) && defined(HITLS_CRYPTO_DSA))
+#if defined(HITLS_CRYPTO_PROVIDER) && (defined(HITLS_CRYPTO_DSA) && defined(HITLS_CRYPTO_DH))
     CRYPT_EAL_Init(CRYPT_EAL_INIT_CPU|CRYPT_EAL_INIT_PROVIDER|CRYPT_EAL_INIT_PROVIDER_RAND);
     CRYPT_RandRegist(RandFunc);
     CRYPT_RandRegistEx(RandFuncEx);
@@ -2421,7 +2421,7 @@ EXIT:
 }
 /* END_CASE */
 
-#if defined(HITLS_CRYPTO_PROVIDER) && (defined(HITLS_CRYPTO_DSA) && defined(HITLS_CRYPTO_DSA))
+#if defined(HITLS_CRYPTO_PROVIDER) && (defined(HITLS_CRYPTO_DSA) && defined(HITLS_CRYPTO_DH))
 static void Set_DSA_Pub(CRYPT_EAL_PkeyPub *pub, uint8_t *key, uint32_t keyLen)
 {
     pub->id = CRYPT_PKEY_DSA;
@@ -2464,7 +2464,7 @@ static void Set_DH_Pub(CRYPT_EAL_PkeyPub *pub, uint8_t *key, uint32_t keyLen)
 /* BEGIN_CASE */
 void SDV_PKCS8_ERROR_ENCDEC_TC001()
 {
-#if defined(HITLS_CRYPTO_PROVIDER) && (defined(HITLS_CRYPTO_DSA) && defined(HITLS_CRYPTO_DSA))
+#if defined(HITLS_CRYPTO_PROVIDER) && (defined(HITLS_CRYPTO_DSA) && defined(HITLS_CRYPTO_DH))
     CRYPT_EAL_Init(CRYPT_EAL_INIT_CPU|CRYPT_EAL_INIT_PROVIDER|CRYPT_EAL_INIT_PROVIDER_RAND);
     CRYPT_RandRegist(RandFunc);
     CRYPT_RandRegistEx(RandFuncEx);
@@ -2562,7 +2562,7 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_PKCS8_ERROR_ENCDEC_TC002(char *path, int fileType,  Hex *asn1)
 {
-#if defined(HITLS_CRYPTO_PROVIDER) && (defined(HITLS_CRYPTO_DSA) && defined(HITLS_CRYPTO_DSA))
+#if defined(HITLS_CRYPTO_PROVIDER) && (defined(HITLS_CRYPTO_DSA) && defined(HITLS_CRYPTO_DH))
     CRYPT_EAL_Init(CRYPT_EAL_INIT_CPU|CRYPT_EAL_INIT_PROVIDER|CRYPT_EAL_INIT_PROVIDER_RAND);
     CRYPT_RandRegist(RandFunc);
     CRYPT_RandRegistEx(RandFuncEx);

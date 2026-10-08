@@ -985,13 +985,17 @@ static int32_t DtlsGetRecordHeader(TLS_Ctx *ctx, const uint8_t *msg, uint32_t le
     }
     hdr->headerLen = headerLen;
 #ifdef HITLS_TLS_PROTO_DTLS13
-    if (IS_DTLS13_CTX(ctx) &&
-        msg[0] != REC_TYPE_ALERT && msg[0] != REC_TYPE_HANDSHAKE &&
-        msg[0] != REC_TYPE_ACK && msg[0] != REC_TYPE_CHANGE_CIPHER_SPEC) {
-        if (!REC_DTLS13_UNI_HEADER_FIX_BITS_TYPE(msg[0])) {
+    if (REC_DTLS13_UNI_HEADER_FIX_BITS_TYPE(msg[0])) {
+        if (!IS_DTLS13_CTX(ctx)) {
+            BSL_ERR_PUSH_ERROR(HITLS_REC_DECODE_ERROR);
             return HITLS_REC_DECODE_ERROR;
         }
         return Dtls13GetRecordUnifiedHeader(ctx, msg, len, hdr);
+    }
+    if (IS_DTLS13_CTX(ctx) &&
+        msg[0] != REC_TYPE_ALERT && msg[0] != REC_TYPE_HANDSHAKE && msg[0] != REC_TYPE_ACK) {
+        BSL_ERR_PUSH_ERROR(HITLS_REC_DECODE_ERROR);
+        return HITLS_REC_DECODE_ERROR;
     }
 #endif
     /* Parse the record header */

@@ -782,3 +782,49 @@ EXIT:
     FRAME_FreeLink(server1);
 }
 /* END_CASE */
+/** @
+ * @test HITLS_clear_SDV_23_1_0_007
+ * @precon nan
+ * @brief Clear a connected server twice and check peer lists and cipher suite queries.
+ * @expect Both clears reset peer group, cipher suite and signature algorithm lists.
+ @ */
+/* BEGIN_CASE */
+void HITLS_clear_SDV_23_1_0_007(void)
+{
+    HITLS_Config *config = NULL;
+    FRAME_LinkObj *client = NULL;
+    FRAME_LinkObj *server = NULL;
+    uint16_t suites[256] = {0};
+    uint32_t count = 0;
+
+    FRAME_Init();
+    config = HITLS_CFG_NewTLS12Config();
+    ASSERT_TRUE(config != NULL);
+    client = FRAME_CreateLink(config, BSL_UIO_TCP);
+    server = FRAME_CreateLink(config, BSL_UIO_TCP);
+    ASSERT_TRUE(client != NULL && server != NULL);
+    ASSERT_EQ(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_GetClientCipherSuites(server->ssl, suites, 256, &count), HITLS_SUCCESS);
+    ASSERT_TRUE(count > 0);
+    ASSERT_TRUE(server->ssl->peerInfo.groups != NULL);
+    ASSERT_TRUE(server->ssl->peerInfo.groupsSize > 0);
+    ASSERT_TRUE(server->ssl->peerInfo.signatureAlgorithms != NULL);
+    ASSERT_TRUE(server->ssl->peerInfo.signatureAlgorithmsSize > 0);
+    for (uint32_t i = 0; i < 2; i++) {
+        ASSERT_EQ(HITLS_Clear(server->ssl), HITLS_SUCCESS);
+        ASSERT_TRUE(server->ssl->peerInfo.groups == NULL);
+        ASSERT_EQ(server->ssl->peerInfo.groupsSize, 0);
+        ASSERT_TRUE(server->ssl->peerInfo.signatureAlgorithms == NULL);
+        ASSERT_EQ(server->ssl->peerInfo.signatureAlgorithmsSize, 0);
+        ASSERT_TRUE(server->ssl->peerInfo.cipherSuites == NULL);
+        ASSERT_EQ(server->ssl->peerInfo.cipherSuitesSize, 0);
+        count = 1;
+        ASSERT_EQ(HITLS_GetClientCipherSuites(server->ssl, suites, 0, &count), HITLS_SUCCESS);
+        ASSERT_EQ(count, 0);
+    }
+EXIT:
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+    HITLS_CFG_FreeConfig(config);
+}
+/* END_CASE */
