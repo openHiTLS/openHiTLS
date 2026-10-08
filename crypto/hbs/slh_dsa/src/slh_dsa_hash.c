@@ -78,7 +78,7 @@ static int32_t CalcMultiMsgHashByCtx(CRYPT_MD_AlgId mdId, void *mdCtxIn, const C
     return CRYPT_SUCCESS;
 }
 
-static int32_t CreateMdCtxAndUpdata(void **out, const EAL_MdMethod *hashMethod, const CRYPT_ConstData *hashData,
+static int32_t CreateMdCtxAndUpdate(void **out, const EAL_MdMethod *hashMethod, const CRYPT_ConstData *hashData,
                                     uint32_t size)
 {
     if (hashMethod == NULL || hashData == NULL || out == NULL) {
@@ -121,13 +121,13 @@ int32_t InitMdCtx(CryptSlhDsaCtx *ctx, const uint8_t *pubSeed)
     const EAL_MdMethod *hashMethod512 = EAL_MdFindDefaultMethod(CRYPT_MD_SHA512);
     void *newSha256MdCtx = NULL;
     void *newSha512MdCtx = NULL;
-    int ret = CreateMdCtxAndUpdata(&newSha256MdCtx, hashMethod256, hashData256,
+    int32_t ret = CreateMdCtxAndUpdate(&newSha256MdCtx, hashMethod256, hashData256,
         sizeof(hashData256) / sizeof(hashData256[0]));
     if (ret != CRYPT_SUCCESS) {
         return ret;
     }
     const CRYPT_ConstData hashData512[] = {{pubSeed, n}, {padding, SHA512_PADDING_LEN - n}};
-    ret = CreateMdCtxAndUpdata(&newSha512MdCtx, hashMethod512, hashData512,
+    ret = CreateMdCtxAndUpdate(&newSha512MdCtx, hashMethod512, hashData512,
         sizeof(hashData512) / sizeof(hashData512[0]));
     if (ret != CRYPT_SUCCESS) {
         hashMethod256->freeCtx(newSha256MdCtx);
@@ -431,7 +431,6 @@ EXIT:
 static int32_t ChainShake256(const uint8_t *x, uint32_t xLen, uint32_t start, uint32_t steps, const uint8_t *pubSeed,
                              void *adrs, const void *ctx, uint8_t *output)
 {
-    (void)pubSeed; // Parameter kept for API compatibility
     if (steps == 0) {
         memcpy(output, x, xLen);
         return CRYPT_SUCCESS;

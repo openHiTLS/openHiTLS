@@ -302,6 +302,7 @@ int32_t SlhDsaSignInternal(const CryptSlhDsaCtx *ctx, const uint8_t *msg, uint32
         return ret;
     }
     offset += n;
+    left -= n;
 
     uint8_t digest[SLH_DSA_MAX_M] = {0};
     ret = ctx->hashFuncs->msgHash(ctx, sig, msg, msgLen, NULL, digest);

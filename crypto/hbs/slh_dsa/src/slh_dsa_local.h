@@ -35,8 +35,6 @@ extern "C" {
 #define SLH_DSA_ADRS_COMPRESSED_LEN 22
 #define SLH_DSA_MAX_N               32 // Security parameter (hash output length)
 #define SLH_DSA_MAX_M               49
-#define SLH_DSA_LGW                 4
-#define SLH_DSA_W                   16 // 2^SLH_DSA_LGW
 
 #define SLH_DSA_PRVKEY 0x1
 #define SLH_DSA_PUBKEY 0x10
