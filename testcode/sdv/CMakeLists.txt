@@ -131,6 +131,7 @@ set(TEST_INTF_INCLUDE_DIRS
     ${openHiTLS_SRC}/crypto/siphash/include
     ${openHiTLS_SRC}/crypto/aes/include
     ${openHiTLS_SRC}/crypto/sm4/include
+    ${openHiTLS_SRC}/crypto/tdes/include
     ${openHiTLS_SRC}/crypto/drbg/include
     ${openHiTLS_SRC}/crypto/drbg/src
     ${openHiTLS_SRC}/crypto/include

@@ -56,6 +56,9 @@
 #ifdef HITLS_CRYPTO_SM4
 #include "crypt_sm4.h"
 #endif
+#if defined(HITLS_CRYPTO_TDES) || defined(HITLS_CRYPTO_DES)
+#include "crypt_tdes.h"
+#endif
 #ifdef HITLS_CRYPTO_CFB
 #include "crypt_modes_cfb.h"
 #endif
@@ -359,6 +362,34 @@ static const EAL_SymAlgMap SYM_ID_MAP[] = {
     {.id = CRYPT_CIPHER_SM4_HCTR, .modeId = HCRYPT_MODE_HCTR },
 #endif
 #endif // sm4
+#ifdef HITLS_CRYPTO_DES
+#ifdef HITLS_CRYPTO_ECB
+    {.id = CRYPT_CIPHER_DES_ECB, .modeId = HCRYPT_MODE_ECB},
+#endif
+#ifdef HITLS_CRYPTO_CBC
+    {.id = CRYPT_CIPHER_DES_CBC, .modeId = HCRYPT_MODE_CBC},
+#endif
+#ifdef HITLS_CRYPTO_OFB
+    {.id = CRYPT_CIPHER_DES_OFB, .modeId = HCRYPT_MODE_OFB},
+#endif
+#ifdef HITLS_CRYPTO_CFB
+    {.id = CRYPT_CIPHER_DES_CFB, .modeId = HCRYPT_MODE_CFB},
+#endif
+#endif // des
+#ifdef HITLS_CRYPTO_TDES
+#ifdef HITLS_CRYPTO_ECB
+    {.id = CRYPT_CIPHER_TDES_ECB, .modeId = HCRYPT_MODE_ECB},
+#endif
+#ifdef HITLS_CRYPTO_CBC
+    {.id = CRYPT_CIPHER_TDES_CBC, .modeId = HCRYPT_MODE_CBC},
+#endif
+#ifdef HITLS_CRYPTO_OFB
+    {.id = CRYPT_CIPHER_TDES_OFB, .modeId = HCRYPT_MODE_OFB},
+#endif
+#ifdef HITLS_CRYPTO_CFB
+    {.id = CRYPT_CIPHER_TDES_CFB, .modeId = HCRYPT_MODE_CFB},
+#endif
+#endif // tdes
 };
 
 #ifdef HITLS_CRYPTO_AES
@@ -427,6 +458,34 @@ static const EAL_SymMethod SM4_METHOD = {
 };
 #endif
 
+#ifdef HITLS_CRYPTO_DES
+static const EAL_SymMethod DES_METHOD = {
+    (SetEncryptKey)CRYPT_DES_SetCryptKey,
+    (SetDecryptKey)CRYPT_DES_SetCryptKey,
+    (EncryptBlock)CRYPT_DES_Encrypt,
+    (DecryptBlock)CRYPT_DES_Decrypt,
+    (DeInitBlockCtx)CRYPT_DES_Clean,
+    (CipherCtrl)CRYPT_DES_Ctrl,
+    8,
+    sizeof(CRYPT_DES_Key),
+    CRYPT_SYM_DES
+};
+#endif // HITLS_CRYPTO_DES
+
+#ifdef HITLS_CRYPTO_TDES
+static const EAL_SymMethod TDES_METHOD = {
+    (SetEncryptKey)CRYPT_TDES_SetCryptKey,
+    (SetDecryptKey)CRYPT_TDES_SetCryptKey,
+    (EncryptBlock)CRYPT_TDES_Encrypt,
+    (DecryptBlock)CRYPT_TDES_Decrypt,
+    (DeInitBlockCtx)CRYPT_TDES_Clean,
+    (CipherCtrl)CRYPT_TDES_Ctrl,
+    8,
+    sizeof(CRYPT_TDES_Key),
+    CRYPT_SYM_TDES
+};
+#endif  // HITLS_CRYPTO_TDES
+
 const EAL_SymMethod *EAL_GetSymMethod(int32_t algId)
 {
     switch (algId) {
@@ -479,6 +538,20 @@ const EAL_SymMethod *EAL_GetSymMethod(int32_t algId)
 #ifdef HITLS_CRYPTO_CHACHA20
         case CRYPT_CIPHER_CHACHA20_POLY1305:
             return &CHACHA20_METHOD;
+#endif
+#ifdef HITLS_CRYPTO_DES
+        case CRYPT_CIPHER_DES_ECB:
+        case CRYPT_CIPHER_DES_CBC:
+        case CRYPT_CIPHER_DES_OFB:
+        case CRYPT_CIPHER_DES_CFB:
+            return &DES_METHOD;
+#endif
+#ifdef HITLS_CRYPTO_TDES
+        case CRYPT_CIPHER_TDES_ECB:
+        case CRYPT_CIPHER_TDES_CBC:
+        case CRYPT_CIPHER_TDES_OFB:
+        case CRYPT_CIPHER_TDES_CFB:
+            return &TDES_METHOD;
 #endif
         default:
             return NULL;
@@ -567,6 +640,34 @@ static CRYPT_CipherInfo g_cipherInfo[] = {
     {.id = CRYPT_CIPHER_SM4_HCTR, .blockSize = 1, .keyLen = 32, .ivLen = 16},
 #endif
 #endif
+#ifdef HITLS_CRYPTO_DES
+#ifdef HITLS_CRYPTO_ECB
+    {.id = CRYPT_CIPHER_DES_ECB, .blockSize = 8, .keyLen = 8, .ivLen = 0},
+#endif
+#ifdef HITLS_CRYPTO_CBC
+    {.id = CRYPT_CIPHER_DES_CBC, .blockSize = 8, .keyLen = 8, .ivLen = 8},
+#endif
+#ifdef HITLS_CRYPTO_OFB
+    {.id = CRYPT_CIPHER_DES_OFB, .blockSize = 1, .keyLen = 8, .ivLen = 8},
+#endif
+#ifdef HITLS_CRYPTO_CFB
+    {.id = CRYPT_CIPHER_DES_CFB, .blockSize = 1, .keyLen = 8, .ivLen = 8},
+#endif
+#endif // HITLS_CRYPTO_DES
+#ifdef HITLS_CRYPTO_TDES
+#ifdef HITLS_CRYPTO_ECB
+    {.id = CRYPT_CIPHER_TDES_ECB, .blockSize = 8, .keyLen = 24, .ivLen = 0},
+#endif
+#ifdef HITLS_CRYPTO_CBC
+    {.id = CRYPT_CIPHER_TDES_CBC, .blockSize = 8, .keyLen = 24, .ivLen = 8},
+#endif
+#ifdef HITLS_CRYPTO_OFB
+    {.id = CRYPT_CIPHER_TDES_OFB, .blockSize = 1, .keyLen = 24, .ivLen = 8},
+#endif
+#ifdef HITLS_CRYPTO_CFB
+    {.id = CRYPT_CIPHER_TDES_CFB, .blockSize = 1, .keyLen = 24, .ivLen = 8},
+#endif
+#endif // HITLS_CRYPTO_TDES
 };
 
 /**

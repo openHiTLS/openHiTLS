@@ -79,6 +79,9 @@ extern const CRYPT_EAL_Func g_defEalMacGmac[];
 #ifdef HITLS_CRYPTO_SIPHASH
 extern const CRYPT_EAL_Func g_defEalMacSiphash[];
 #endif
+#ifdef HITLS_CRYPTO_RETAIL_MAC
+extern const CRYPT_EAL_Func g_defEalMacRetailMac[];
+#endif
 #endif // HITLS_CRYPTO_MAC
 
 #ifdef HITLS_CRYPTO_KDF

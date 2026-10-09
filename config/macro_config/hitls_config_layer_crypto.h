@@ -194,10 +194,17 @@
     #ifndef HITLS_CRYPTO_CBC_MAC
         #define HITLS_CRYPTO_CBC_MAC
     #endif
+    #ifndef HITLS_CRYPTO_RETAIL_MAC
+        #define HITLS_CRYPTO_RETAIL_MAC
+    #endif
 #endif
 
 #if defined(HITLS_CRYPTO_CBC_MAC) && !defined(HITLS_CRYPTO_SM4)
     #define HITLS_CRYPTO_SM4
+#endif
+
+#if defined(HITLS_CRYPTO_RETAIL_MAC) && !defined(HITLS_CRYPTO_DES)
+    #define HITLS_CRYPTO_DES
 #endif
 
 #ifdef HITLS_CRYPTO_GMAC
@@ -233,7 +240,7 @@
 #endif
 
 #if defined(HITLS_CRYPTO_HMAC) || defined(HITLS_CRYPTO_CMAC) || defined(HITLS_CRYPTO_GMAC) || \
-    defined(HITLS_CRYPTO_SIPHASH) || defined(HITLS_CRYPTO_CBC_MAC)
+    defined(HITLS_CRYPTO_SIPHASH) || defined(HITLS_CRYPTO_CBC_MAC) || defined(HITLS_CRYPTO_RETAIL_MAC)
     #ifndef HITLS_CRYPTO_MAC
         #define HITLS_CRYPTO_MAC
     #endif
@@ -250,13 +257,20 @@
     #ifndef HITLS_CRYPTO_CHACHA20
         #define HITLS_CRYPTO_CHACHA20
     #endif
+    #ifndef HITLS_CRYPTO_TDES
+        #define HITLS_CRYPTO_TDES
+    #endif
+    #ifndef HITLS_CRYPTO_DES
+        #define HITLS_CRYPTO_DES
+    #endif
 #endif
  
 #if defined(HITLS_CRYPTO_CHACHA20) && !defined(HITLS_CRYPTO_CHACHA20POLY1305)
     #define HITLS_CRYPTO_CHACHA20POLY1305
 #endif
  
-#if defined(HITLS_CRYPTO_AES) || defined(HITLS_CRYPTO_SM4) || defined(HITLS_CRYPTO_CHACHA20)
+#if defined(HITLS_CRYPTO_AES) || defined(HITLS_CRYPTO_SM4) || defined(HITLS_CRYPTO_CHACHA20) || \
+    defined(HITLS_CRYPTO_DES) || defined(HITLS_CRYPTO_TDES)
     #ifndef HITLS_CRYPTO_CIPHER
         #define HITLS_CRYPTO_CIPHER
     #endif

@@ -287,6 +287,9 @@ int32_t CRYPT_EAL_CipherFinal(CRYPT_EAL_CipherCtx *ctx, uint8_t *out, uint32_t *
 
 static bool CipherCtrlIsCanSet(const CRYPT_EAL_CipherCtx *ctx, int32_t type)
 {
+    if (type == CRYPT_CTRL_DES_NOKEYCHECK) {
+        return true;
+    }
     if (ctx->states == EAL_CIPHER_STATE_NEW) {
         return false;
     }

@@ -25,8 +25,6 @@
 #include "bsl_base64_internal.h"
 #include "bsl_base64.h"
 
-#define BSL_BASE64_ENC_ENOUGH_LEN(len) (((len) + 2) / 3 * 4 + 1)
-#define BSL_BASE64_DEC_ENOUGH_LEN(len) (((len) + 3) / 4 * 3)
 
 /* BASE64 mapping table */
 static const uint8_t BASE64_DECODE_MAP_TABLE[] = {

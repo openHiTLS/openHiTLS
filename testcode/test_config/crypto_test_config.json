@@ -44,6 +44,7 @@
         "cmac_sm4": ["test_suite_sdv_eal_mac_cmac"],
         "cbc_mac": ["test_suite_sdv_eal_mac_cbc_mac"],
         "siphash": ["test_suite_sdv_eal_mac_siphash"],
+        "retail_mac": ["test_suite_sdv_eal_mac_retail_mac"],
 
         "hpke": ["test_suite_sdv_eal_hpke"],
         
@@ -181,6 +182,9 @@
         ],
         "test_suite_sdv_eal_mac_cbc_mac":[
             "SDV_CRYPT_EAL_CBC_MAC_FUN_TC004"
+        ],
+        "test_suite_sdv_eal_mac_retail_mac":[
+            "SDV_CRYPT_EAL_RETAIL_MAC_FUNC_TC001"
         ],
         "test_suite_sdv_eal_hpke": [],
         "test_suite_sdv_eal_kdf_pbkdf2":[

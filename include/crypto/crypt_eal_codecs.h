@@ -358,6 +358,26 @@ int32_t CRYPT_EAL_EncodeFileKey(CRYPT_EAL_PkeyCtx *ealPKey, const CRYPT_EncodePa
 int32_t CRYPT_EAL_ProviderEncodeFileKey(CRYPT_EAL_LibCtx *libCtx, const char *attrName, CRYPT_EAL_PkeyCtx *ealPKey,
     const CRYPT_EncodeParam *encodeParam, const char *format, const char *type, const char *path);
 
+
+/**
+ * @brief Derive encryption key and IV from password data
+ *
+ * @param   cipherId [IN] Cipher algorithm ID, see CRYPT_CIPHER_AlgId
+ * @param   mdId [IN] Message digest algorithm ID, see CRYPT_MD_AlgId
+ * @param   count [IN] Iteration count for key derivation (must be > 0)
+ * @param   salt [IN] Salt value for key derivation (salt == NULL || salt->data == NULL means no salt)
+ * @param   data [IN] Input data (password or other key derivation data)
+ * @param   iv [IN/OUT] Output buffer for derived IV (iv->dataLen will be set to actual output length)
+ * @param   key [IN/OUT] Output buffer for derived key (key->dataLen will be set to actual output length)
+ *
+ * @retval #CRYPT_SUCCESS, if success.
+ * @retval #CRYPT_NULL_INPUT, if key->data or iv->data is NULL
+ * @retval #CRYPT_INVALID_ARG, if count is 0, data is invalid, or buffer is too small
+ *         Other error codes see the crypt_errno.h
+ */
+int32_t CRYPT_EAL_BytesToKey(int32_t cipherId, int32_t mdId, int32_t count,
+    BSL_Buffer *salt, BSL_Buffer *data, BSL_Buffer *iv, BSL_Buffer *key);
+
 #ifdef __cplusplus
 }
 #endif // __cplusplus

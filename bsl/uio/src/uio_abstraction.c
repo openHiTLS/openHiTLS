@@ -544,6 +544,16 @@ int32_t BSL_UIO_SockShouldRetry(int32_t result)
     return BSL_UIO_FAIL;
 }
 
+int32_t BSL_UIO_SetFlagsFromNext(BSL_UIO *uio)
+{
+    if (uio == NULL || uio->next == NULL) {
+        BSL_ERR_PUSH_ERROR(BSL_NULL_INPUT);
+        return BSL_NULL_INPUT;
+    }
+    uio->flags |= (uio->next->flags & (BSL_UIO_FLAGS_RWS | BSL_UIO_FLAGS_SHOULD_RETRY));
+    return BSL_SUCCESS;
+}
+
 /**
  * @brief   Checking for Fatal I/O Errors
  *

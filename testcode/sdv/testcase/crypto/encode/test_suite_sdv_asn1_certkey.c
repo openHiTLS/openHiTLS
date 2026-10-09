@@ -2847,3 +2847,66 @@ EXIT:
 #endif
 }
 /* END_CASE */
+/* BEGIN_CASE */
+void SDV_CRYPTO_BSL_PEM_BYTESTOKEY_CROSS_TC001(int cipherId, int mdId, int count, Hex *salt, Hex *pwd, Hex *oKey, Hex *oIv)
+{
+#ifndef HITLS_BSL_PEM_ENCRYPTED
+    (void)cipherId;
+    (void)mdId;
+    (void)count;
+    (void)salt;
+    (void)pwd;
+    (void)oKey;
+    (void)oIv;
+    SKIP_TEST();
+#endif
+    uint8_t key[64] = {0};
+    uint8_t iv[16] = {0};
+    int32_t ret = 0;
+
+    TestMemInit();
+
+    /* Call CRYPT_EAL_BytesToKey to generate the key and IV. */
+    BSL_Buffer saltBuf = {salt->x, salt->len};
+    BSL_Buffer dataBuf = {pwd->x, pwd->len};
+    BSL_Buffer ivBuf = {iv, sizeof(iv)};
+    BSL_Buffer keyBuf = {key, sizeof(key)};
+    ret = CRYPT_EAL_BytesToKey(cipherId, mdId, count, &saltBuf, &dataBuf, &ivBuf, &keyBuf);
+    ASSERT_EQ(ret, CRYPT_SUCCESS);
+
+    // Cross-check with OpenSSL test vectors
+    ASSERT_TRUE(keyBuf.dataLen == oKey->len);
+    ASSERT_TRUE(ivBuf.dataLen == oIv->len);
+    ASSERT_TRUE(memcmp(key, oKey->x, keyBuf.dataLen) == 0);
+    ASSERT_TRUE(memcmp(iv, oIv->x, ivBuf.dataLen) == 0);
+
+    ASSERT_TRUE(TestIsErrStackEmpty());
+EXIT:
+    return;
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_BSL_ASN1_PARSE_ECCPRIKEY_FILE_TC003(char *path, int fileType, Hex *pwd, Hex *asn1)
+{
+#ifndef HITLS_BSL_PEM_ENCRYPTED
+    (void)path;
+    (void)fileType;
+    (void)pwd;
+    (void)asn1;
+    SKIP_TEST();
+#endif
+    CRYPT_RandRegist(RandFunc);
+    CRYPT_RandRegistEx(RandFuncEx);
+    BSL_Buffer encodeAsn1 = {0};
+    CRYPT_EAL_PkeyCtx *pkeyCtx = NULL;
+    ASSERT_EQ(CRYPT_EAL_DecodeFileKey(BSL_FORMAT_UNKNOWN, fileType, path, pwd->x, pwd->len, &pkeyCtx), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_EncodeBuffKey(pkeyCtx, NULL, BSL_FORMAT_ASN1, fileType, &encodeAsn1), CRYPT_SUCCESS);
+    ASSERT_COMPARE("asn1 compare.", encodeAsn1.data, encodeAsn1.dataLen, asn1->x, asn1->len);
+    ASSERT_TRUE(TestIsErrStackEmpty());
+EXIT:
+    CRYPT_EAL_PkeyFreeCtx(pkeyCtx);
+    BSL_SAL_FREE(encodeAsn1.data);
+    BSL_GLOBAL_DeInit();
+}
+/* END_CASE */

@@ -220,6 +220,8 @@ typedef enum {
     CRYPT_SYM_AES256,
     CRYPT_SYM_CHACHA20,
     CRYPT_SYM_SM4,
+    CRYPT_SYM_DES = 7,
+    CRYPT_SYM_TDES = 8,
     CRYPT_SYM_MAX
 } CRYPT_SYM_AlgId;
 

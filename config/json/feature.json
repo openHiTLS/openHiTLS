@@ -34,7 +34,8 @@
                         "uio_tcp": {"deps": ["uio_plt", "sal_net"]},
                         "uio_udp": {"deps": ["uio_plt", "sal_net"]},
                         "uio_file": {"deps": ["uio_plt", "sal_file"]},
-                        "uio_mem": {"deps": ["uio_plt", "sal_mem", "buffer"]}
+                        "uio_mem": {"deps": ["uio_plt", "sal_mem", "buffer"]},
+                        "uio_base64": {"deps": ["uio_plt", "base64"]}
                     },
                     "params": {"deps": ["list"]},
                     "print":null,
@@ -77,6 +78,7 @@
                             }
                         },
                         "cbc_mac": {"deps": ["sm4"]},
+                        "retail_mac": {"deps": ["des"]},
                         "siphash": null
                     },
                     "hpke": {
@@ -115,6 +117,8 @@
                     "cipher": {
                         "aes": null,
                         "sm4": null,
+                        "des": null,
+                        "tdes": null,
                         "chacha20": {"deps": ["chacha20poly1305"]}
                     },
                     "pkey": {
@@ -824,6 +828,7 @@
                     "crypto/modes/include",
                     "crypto/aes/include",
                     "crypto/sm4/include",
+                    "crypto/tdes/include",
                     "crypto/chacha20/include",
                     "crypto/bn/include",
                     "crypto/codecsdata/include",
@@ -919,7 +924,7 @@
                 ".include": ["crypto/eal/src"]
             },
             "cmac": {
-                ".features": ["cmac_aes", "cmac_sm4", "cbc_mac"],
+                ".features": ["cmac_aes", "cmac_sm4", "cbc_mac", "retail_mac"],
                 ".srcs": "crypto/cmac/src/*.c",
                 ".deps": ["platform::Secure_C"],
                 ".include": [
@@ -1059,6 +1064,7 @@
                     "crypto/aes/include",
                     "crypto/sm4/include",
                     "crypto/chacha20/include",
+                    "crypto/tdes/include",
                     "crypto/eal/src",
                     "crypto/modes/include"
                 ]
@@ -1145,6 +1151,11 @@
                     }
                 },
                 ".deps": ["bsl::sal"]
+            },
+            "tdes": {
+                ".features": ["tdes", "des"],
+                ".srcs": "crypto/tdes/src/*.c",
+                ".deps": ["platform::Secure_C"]
             },
             "entropy":{
                 ".features": ["entropy"],
@@ -1304,7 +1315,8 @@
                     "crypto/mldsa/include",
                     "crypto/slh_dsa/include",
                     "crypto/mlkem/include",
-                    "crypto/xmss/include"
+                    "crypto/xmss/include",
+                    "crypto/md5/include"
                 ]
             },
             "util": {
@@ -1517,12 +1529,14 @@
             },
             "uio": {
                 ".features": [
-                    "uio_plt", "uio", "uio_buffer", "uio_sctp", "uio_tcp","uio_udp" , "uio_file", "uio_mem"
+                    "uio_plt", "uio", "uio_buffer", "uio_sctp", "uio_tcp","uio_udp" , "uio_file", "uio_mem",
+                    "uio_base64"
                 ],
                 ".srcs": "bsl/uio/src/*.c",
                 ".deps": ["platform::Secure_C", "bsl::sal"],
                 ".include": [
-                    "bsl/buffer/include"
+                    "bsl/buffer/include",
+                    "bsl/base64/include"
                 ]
             },
             "asn1": {

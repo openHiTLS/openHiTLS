@@ -431,6 +431,16 @@ enum CRYPT_ERROR {
                                                            output result is insufficient. */
     CRYPT_MD_ERR_NEWCTX,                              /**< create md ctx failed. */
 
+    CRYPT_TDES_ERR_KEYLEN = 0x11E0001,                /**< Incorrect tdes key length. */
+    CRYPT_TDES_ERR_KEY,                               /**< Incorrect tdes key. */
+    CRYPT_TDES_ERR_LEN,                               /**< Tdes incorrect length of the encryption/decryption. */
+    CRYPT_TDES_CTRLTYPE_ERROR,                        /**< When the tdes uses the ctrl interface, the input
+                                                           type is not supported. */
+    CRYPT_DES_ERR_KEYLEN,                             /**< The length of the des key is incorrect. */
+    CRYPT_DES_ERR_KEY,                                /**< The des key is incorrect. */
+    CRYPT_DES_ERR_LEN,                                /**< The des encryption/decryption length is incorrect. */
+    CRYPT_DES_CTRLTYPE_ERROR,                         /**< Unsupport input type when Des use the ctrl interface. */
+
     CRYPT_SM2_BUFF_LEN_NOT_ENOUGH = 0x01200001,       /**< Insufficient buffer length. */
     CRYPT_SM2_NO_PUBKEY,                              /**< SM2 the public key is not set. */
     CRYPT_SM2_NO_PRVKEY,                              /**< SM2 The private key is not set. */
@@ -471,6 +481,10 @@ enum CRYPT_ERROR {
     CRYPT_CBC_MAC_PADDING_NOT_SET,
     CRYPT_CBC_MAC_PADDING_NOT_SUPPORT,
     CRYPT_CBC_MAC_OUT_BUFF_LEN_NOT_ENOUGH,
+
+    CRYPT_RETAIL_MAC_ERR_KEYLEN = 0x01250001,
+    CRYPT_RETAIL_MAC_ERR_UNSUPPORTED_CTRL_OPTION,
+    CRYPT_RETAIL_MAC_OUT_BUFF_LEN_NOT_ENOUGH,
 
     CRYPT_SEED_POOL_NEW_ERROR = 0x01290001,             /**< The length of the key input is
                                                              incorrect when setting the key. */

@@ -42,7 +42,7 @@
 #include "hitls_config.h"
 #include "bsl_uio.h"
 #include "hitls_func.h"
-
+#include "bsl_base64.h"
 /* END_HEADER */
 
 #define MAX_BUF_SIZE 255
@@ -1504,5 +1504,239 @@ EXIT:
 #else
     SKIP_TEST();
 #endif
+}
+/* END_CASE */
+
+/* @
+* @test  SDV_BSL_UIO_SET_FLAGS_FROM_NEXT_FUNC_TC001
+@ */
+/* BEGIN_CASE */
+void SDV_BSL_UIO_SET_FLAGS_FROM_NEXT_FUNC_TC001(void)
+{
+#if !defined(HITLS_BSL_UIO_BASE64) || !defined(HITLS_BSL_UIO_MEM)
+    SKIP_TEST();
+#else
+    BSL_UIO *uio = BSL_UIO_New(BSL_UIO_Base64Method());
+    ASSERT_TRUE(uio != NULL);
+    BSL_UIO *mem = BSL_UIO_New(BSL_UIO_MemMethod());
+    ASSERT_TRUE(mem != NULL);
+    ASSERT_TRUE(BSL_UIO_Append(uio, mem) == BSL_SUCCESS);
+    ASSERT_TRUE(BSL_UIO_Next(uio) == mem);
+    ASSERT_TRUE(BSL_UIO_Next(mem) == NULL);
+
+    ASSERT_TRUE(BSL_UIO_SetFlags(mem, BSL_UIO_FLAGS_READ) == BSL_SUCCESS);
+    ASSERT_TRUE(BSL_UIO_SetFlagsFromNext(uio) == BSL_SUCCESS);
+    ASSERT_TRUE(uio->flags == BSL_UIO_FLAGS_READ);
+EXIT:
+    BSL_UIO_FreeChain(uio);
+#endif
+}
+/* END_CASE */
+
+/* @
+* @test  SDV_BSL_UIO_SET_FLAGS_FROM_NEXT_FUNC_TC002
+* @spec  -
+@ */
+/* BEGIN_CASE */
+void SDV_BSL_UIO_SET_FLAGS_FROM_NEXT_FUNC_TC002(void)
+{
+#if !defined(HITLS_BSL_UIO_BASE64) || !defined(HITLS_BSL_UIO_MEM)
+    SKIP_TEST();
+#else
+    // uio is NULL
+    BSL_UIO *uio = NULL;
+    ASSERT_TRUE(BSL_UIO_SetFlagsFromNext(uio) == BSL_NULL_INPUT);
+
+    uio = BSL_UIO_New(BSL_UIO_Base64Method());
+    ASSERT_TRUE(uio != NULL);
+    BSL_UIO *mem = BSL_UIO_New(BSL_UIO_MemMethod());
+    ASSERT_TRUE(mem != NULL);
+    ASSERT_TRUE(BSL_UIO_Append(uio, mem) == BSL_SUCCESS);
+    ASSERT_TRUE(BSL_UIO_Next(uio) == mem);
+    ASSERT_TRUE(BSL_UIO_Next(mem) == NULL);
+    uio->next = NULL;
+    ASSERT_TRUE(BSL_UIO_SetFlagsFromNext(uio) == BSL_NULL_INPUT);
+EXIT:
+    BSL_UIO_Free(uio);
+    BSL_UIO_Free(mem);
+#endif
+}
+/* END_CASE */
+
+/* @
+* @test  SDV_BSL_UIO_BASE64_FUN_TC001
+* @spec  -
+@ */
+/* BEGIN_CASE */
+void SDV_BSL_UIO_BASE64_FUN_TC001(void)
+{
+#if !defined(HITLS_BSL_UIO_BASE64) || !defined(HITLS_BSL_UIO_MEM)
+    SKIP_TEST();
+#else
+    const char *w = "fu3ye8GHE713264ENDQIYHR89hh89TF73UHFDIUH3298YfNE318hd283ej304Hfe5h";
+    uint32_t wLen = strlen(w);
+    uint8_t *r = malloc(wLen);
+    // uio: base64 filter
+    BSL_UIO *uio = BSL_UIO_New(BSL_UIO_Base64Method());
+    ASSERT_TRUE(uio != NULL);
+    // mem: source
+    BSL_UIO *mem = BSL_UIO_New(BSL_UIO_MemMethod());
+    ASSERT_TRUE(mem != NULL);
+    int32_t eof = 0;
+    ASSERT_EQ(BSL_UIO_Ctrl(mem, BSL_UIO_MEM_SET_EOF, sizeof(eof), &eof), BSL_SUCCESS);
+
+    // append to obatin uio-base64 chain: base64-mem
+    int32_t ret = BSL_UIO_Append(uio, mem);
+    ASSERT_TRUE(ret == BSL_SUCCESS);
+    ASSERT_TRUE(BSL_UIO_Next(uio) == mem);
+    ASSERT_TRUE(BSL_UIO_Next(mem) == NULL);
+
+    ret = BSL_UIO_SetFlags(uio, BSL_UIO_FLAGS_BASE64_NO_NEWLINE);
+    ASSERT_TRUE(ret == BSL_SUCCESS);
+
+    uint32_t writeLen = 0;
+    ret = BSL_UIO_Write(uio, (const void *)w, wLen, &writeLen);
+    ASSERT_EQ(ret, BSL_SUCCESS);
+    ret = BSL_UIO_Ctrl(uio, BSL_UIO_FLUSH, 0, NULL);
+    ASSERT_TRUE(ret == BSL_SUCCESS);
+    ASSERT_TRUE(writeLen == wLen);
+
+    uint32_t readLen = 0;
+    ret = BSL_UIO_Read(uio, (void *)r, HITLS_BASE64_ENCODE_LENGTH(wLen), &readLen);
+    ASSERT_EQ(ret, BSL_SUCCESS);
+    ASSERT_EQ(readLen, wLen);
+EXIT:
+    free(r);
+    BSL_UIO_FreeChain(uio);
+#endif
+}
+/* END_CASE */
+
+/* @
+* @test  SDV_BSL_UIO_BASE64_FUN_TC002
+* @spec  -
+@ */
+/* BEGIN_CASE */
+void SDV_BSL_UIO_BASE64_FUN_TC002(void)
+{
+#if !defined(HITLS_BSL_UIO_BASE64) || !defined(HITLS_BSL_UIO_MEM)
+    SKIP_TEST();
+#else
+    const char *w = "fu3ye8\nGHE713\n264ENDQIYH\nR89hh89TF73UHFDI\nUH3298YfNE318hd28\n3ej304Hfe5h";
+    uint32_t wLen = strlen(w);
+    uint8_t *r = malloc(wLen);
+    BSL_UIO *uio = BSL_UIO_New(BSL_UIO_Base64Method());
+    ASSERT_TRUE(uio != NULL);
+    BSL_UIO *mem = BSL_UIO_New(BSL_UIO_MemMethod());
+    ASSERT_TRUE(mem != NULL);
+    int32_t eof = 0;
+    ASSERT_EQ(BSL_UIO_Ctrl(mem, BSL_UIO_MEM_SET_EOF, sizeof(eof), &eof), BSL_SUCCESS);
+
+    int32_t ret = BSL_UIO_Append(uio, mem);
+    ASSERT_TRUE(ret == BSL_SUCCESS);
+    ASSERT_TRUE(BSL_UIO_Next(uio) == mem);
+    ASSERT_TRUE(BSL_UIO_Next(mem) == NULL);
+
+    uint32_t writeLen = 0;
+    ret = BSL_UIO_Write(uio, (const void *)w, wLen, &writeLen);
+    ASSERT_TRUE(ret == BSL_SUCCESS);
+    ret = BSL_UIO_Ctrl(uio, BSL_UIO_FLUSH, 0, NULL);
+    ASSERT_TRUE(ret == BSL_SUCCESS);
+    ASSERT_TRUE(writeLen == wLen);
+
+    uint32_t readLen = 0;
+    ret = BSL_UIO_Read(uio, (void *)r, HITLS_BASE64_ENCODE_LENGTH(wLen), &readLen);
+    ASSERT_TRUE(ret == BSL_SUCCESS);
+    ASSERT_TRUE(readLen == wLen);
+
+    ASSERT_EQ(BSL_UIO_Ctrl(uio, BSL_UIO_RESET, 0, NULL), BSL_SUCCESS);
+    readLen = 0;
+    ret = BSL_UIO_Read(uio, (void *)r, HITLS_BASE64_ENCODE_LENGTH(wLen), &readLen);
+    ASSERT_TRUE(ret == BSL_SUCCESS);
+    ASSERT_EQ(readLen, 0);
+
+EXIT:
+    free(r);
+    BSL_UIO_FreeChain(uio);
+#endif
+}
+/* END_CASE */
+
+/* @test
+* @test  SDV_BSL_UIO_BASE64_PEM_FUN_TC001
+* @title  base64 uio reads PEM file and decodes to expected DER (72-byte block)
+* @brief  1. Open PEM file via BSL_UIO_FileMethod
+          2. Append base64 UIO and set BSL_UIO_FLAGS_BASE64_PEM
+          3. Read 72 bytes first, then read remaining in a loop
+          4. Compare decoded output with expected DER
+* @expect BSL_SUCCESS, decoded output matches expected DER
+* @prior  Level 1
+* @auto  TRUE
+*/
+/* BEGIN_CASE */
+void SDV_BSL_UIO_BASE64_PEM_FUN_TC001(char *path, Hex *expect)
+{
+    uint8_t hitlsBin[2049] = {0};
+    char inbuf[1024];
+    uint32_t inlen = 0;
+    int binlen = 0;
+    BSL_UIO *hitls_b64 = BSL_UIO_New(BSL_UIO_Base64Method());
+    BSL_UIO *hitls_file = BSL_UIO_New(BSL_UIO_FileMethod());
+    ASSERT_EQ(BSL_UIO_Ctrl(hitls_file, BSL_UIO_FILE_OPEN, BSL_UIO_FILE_READ, path), BSL_SUCCESS);
+    ASSERT_EQ(BSL_UIO_Append(hitls_b64, hitls_file), BSL_SUCCESS);
+    ASSERT_EQ(BSL_UIO_SetFlags(hitls_b64, BSL_UIO_FLAGS_BASE64_PEM), BSL_SUCCESS);
+    ASSERT_EQ(BSL_UIO_Read(hitls_b64, inbuf, 72, &inlen), BSL_SUCCESS);
+    ASSERT_TRUE(inlen == 72);
+    ASSERT_EQ(memcpy_s(hitlsBin + binlen, sizeof(hitlsBin) - binlen, inbuf, inlen), EOK);
+    binlen += inlen;
+    do {
+        ASSERT_EQ(BSL_UIO_Read(hitls_b64, inbuf, sizeof(inbuf), &inlen), BSL_SUCCESS);
+        ASSERT_TRUE(binlen + (int)inlen <= (int)sizeof(hitlsBin));
+        ASSERT_EQ(memcpy_s(hitlsBin + binlen, sizeof(hitlsBin) - binlen, inbuf, inlen), EOK);
+        binlen += inlen;
+    } while (inlen > 0);
+    ASSERT_COMPARE("binlen", hitlsBin, (uint32_t)binlen, expect->x, expect->len);
+EXIT:
+    BSL_UIO_Free(hitls_b64);
+    BSL_UIO_Free(hitls_file);
+}
+/* END_CASE */
+
+/* @test
+* @test  SDV_BSL_UIO_BASE64_PEM_FUN_TC002
+* @title  base64 uio reads PEM file and decodes to expected DER (71-byte misaligned block)
+* @brief  1. Open PEM file via BSL_UIO_FileMethod
+          2. Append base64 UIO and set BSL_UIO_FLAGS_BASE64_PEM
+          3. Read 71 bytes first (misaligned), then read remaining in a loop
+          4. Compare decoded output with expected DER
+* @expect BSL_SUCCESS, decoded output matches expected DER
+* @prior  Level 1
+* @auto  TRUE
+*/
+/* BEGIN_CASE */
+void SDV_BSL_UIO_BASE64_PEM_FUN_TC002(char *path, Hex *expect)
+{
+    uint8_t hitlsBin[2049] = {0};
+    char inbuf[1024];
+    uint32_t inlen = 0;
+    int binlen = 0;
+    BSL_UIO *hitls_b64 = BSL_UIO_New(BSL_UIO_Base64Method());
+    BSL_UIO *hitls_file = BSL_UIO_New(BSL_UIO_FileMethod());
+    ASSERT_EQ(BSL_UIO_Ctrl(hitls_file, BSL_UIO_FILE_OPEN, BSL_UIO_FILE_READ, path), BSL_SUCCESS);
+    ASSERT_EQ(BSL_UIO_Append(hitls_b64, hitls_file), BSL_SUCCESS);
+    ASSERT_EQ(BSL_UIO_Read(hitls_b64, inbuf, 71, &inlen), BSL_SUCCESS);
+    ASSERT_TRUE(inlen == 71);
+    ASSERT_EQ(memcpy_s(hitlsBin + binlen, sizeof(hitlsBin) - binlen, inbuf, inlen), EOK);
+    binlen += inlen;
+    do {
+        ASSERT_EQ(BSL_UIO_Read(hitls_b64, inbuf, sizeof(inbuf), &inlen), BSL_SUCCESS);
+        ASSERT_TRUE(binlen + (int)inlen <= (int)sizeof(hitlsBin));
+        ASSERT_EQ(memcpy_s(hitlsBin + binlen, sizeof(hitlsBin) - binlen, inbuf, inlen), EOK);
+        binlen += inlen;
+    } while (inlen > 0);
+    ASSERT_COMPARE("binlen", hitlsBin, (uint32_t)binlen, expect->x, expect->len);
+EXIT:
+    BSL_UIO_Free(hitls_b64);
+    BSL_UIO_Free(hitls_file);
 }
 /* END_CASE */

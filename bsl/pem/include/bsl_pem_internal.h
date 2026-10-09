@@ -69,6 +69,16 @@ int32_t BSL_PEM_EncodeAsn1ToPem(uint8_t *asn1Encode, uint32_t asn1Len, BSL_PEM_S
 int32_t BSL_PEM_DecodePemToAsn1(char **encode, uint32_t *encodeLen, BSL_PEM_Symbol *symbol, uint8_t **asn1Encode,
     uint32_t *asn1Len);
 
+#ifdef HITLS_BSL_PEM_ENCRYPTED
+typedef int32_t (*EncryptedPemCb)(char *header, uint32_t headerLen, const uint8_t *pwd, uint32_t pwdLen, BSL_Buffer *asn1Encode);
+
+int32_t BSL_PEM_DecodeEncryptedPemToAsn1(char **encode, uint32_t *encodeLen, BSL_PEM_Symbol *symbol,
+    uint8_t **asn1Encode, uint32_t *asn1Len, const uint8_t *pwd, uint32_t pwdLen, EncryptedPemCb cb);
+
+uint32_t BSL_PEM_SkipMatching(const char *s, uint32_t max_len, const char *accept);
+char *BSL_PEM_SkipUntil(const char *s, uint32_t max_len, const char *reject);
+#endif
+
 int32_t BSL_PEM_GetPemRealEncode(char **encode, uint32_t *encodeLen, BSL_PEM_Symbol *symbol, char **realEncode,
     uint32_t *realLen);
 

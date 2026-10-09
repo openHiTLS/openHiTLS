@@ -17,7 +17,7 @@
 #define CIPHER_MAC_COMMON_H
 
 #include "hitls_build.h"
-#if defined(HITLS_CRYPTO_CBC_MAC) || defined(HITLS_CRYPTO_CMAC)
+#if defined(HITLS_CRYPTO_CBC_MAC) || defined(HITLS_CRYPTO_CMAC) || defined(HITLS_CRYPTO_RETAIL_MAC)
 #include <stdint.h>
 #include "crypt_local_types.h"
 #include "crypt_cmac.h"
@@ -46,6 +46,13 @@ struct CBC_MAC_Ctx {
 };
 #endif
 
+#ifdef HITLS_CRYPTO_RETAIL_MAC
+struct RETAIL_MAC_Ctx {
+    Cipher_MAC_Common_Ctx common;
+    void *key2;
+};
+#endif
+
 int32_t CipherMacInitCtx(Cipher_MAC_Common_Ctx *ctx, const EAL_SymMethod *method);
 
 void CipherMacDeinitCtx(Cipher_MAC_Common_Ctx *ctx);
@@ -64,6 +71,6 @@ int32_t CipherMacGetMacLen(const Cipher_MAC_Common_Ctx *ctx, void *val, uint32_t
 }
 #endif /* __cpluscplus */
 
-#endif // #if defined(HITLS_CRYPTO_CBC_MAC) || defined(HITLS_CRYPTO_CMAC)
+#endif // #if defined(HITLS_CRYPTO_CBC_MAC) || defined(HITLS_CRYPTO_CMAC) || defined(HITLS_CRYPTO_RETAIL_MAC)
 
 #endif // CIPHER_MAC_COMMON_H

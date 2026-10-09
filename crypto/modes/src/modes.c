@@ -477,6 +477,9 @@ void MODES_Clean(MODES_CipherCommonCtx *ctx)
     BSL_SAL_CleanseData((void *)(ctx->iv), MODES_MAX_IV_LENGTH);
     ctx->ciphMeth->cipherDeInitCtx(ctx->ciphCtx);
     ctx->offset = 0;
+#ifdef HITLS_CRYPTO_TDES
+    ctx->flag3Iv = 0;
+#endif
     ctx->ivIndex = 0;
 }
 
@@ -511,6 +514,20 @@ int32_t MODES_SetIv(MODES_CipherCommonCtx *ctx, const uint8_t *val, uint32_t len
         return CRYPT_NULL_INPUT;
     }
 
+#ifdef HITLS_CRYPTO_TDES
+    if (ctx->ciphMeth->algId == CRYPT_SYM_TDES) {
+        if (len != ctx->blockSize && len != 3 * ctx->blockSize) {   // maybe it has 3 IVs
+            BSL_ERR_PUSH_ERROR(CRYPT_MODES_IVLEN_ERROR);
+            return CRYPT_MODES_IVLEN_ERROR;
+        }
+
+        if (len == 3 * ctx->blockSize) {   // maybe it has 3 IVs
+            ctx->flag3Iv = 1;
+        } else {
+            ctx->flag3Iv = 0;
+        }
+    } else
+#endif
     if (len != ctx->blockSize) {
         BSL_ERR_PUSH_ERROR(CRYPT_MODES_IVLEN_ERROR);
         return CRYPT_MODES_IVLEN_ERROR;
@@ -533,6 +550,11 @@ int32_t MODES_GetIv(MODES_CipherCommonCtx *ctx, uint8_t *val, uint32_t len)
     }
 
     uint32_t ivLen = ctx->blockSize;
+#ifdef HITLS_CRYPTO_TDES
+    if (ctx->ciphMeth->algId == CRYPT_SYM_TDES && ctx->flag3Iv == 1) {
+        ivLen = ctx->blockSize * 3;    // 3 iv
+    }
+#endif
 
     if (len != ivLen) {
         BSL_ERR_PUSH_ERROR(CRYPT_MODE_ERR_INPUT_LEN);

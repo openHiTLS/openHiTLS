@@ -282,6 +282,24 @@ typedef enum {
     CRYPT_PKCS_ENC_DERPARAM_MAX
 } CRYPT_PKCS_ENC_DERIVEPARAM_IDX;
 
+static void CRYPT_SetDesNoKeyCheck(CRYPT_EAL_CipherCtx *ctx, int32_t alg)
+{
+    switch (alg) {
+        case CRYPT_CIPHER_DES_ECB:
+        case CRYPT_CIPHER_DES_CBC:
+        case CRYPT_CIPHER_DES_OFB:
+        case CRYPT_CIPHER_DES_CFB:
+        case CRYPT_CIPHER_TDES_ECB:
+        case CRYPT_CIPHER_TDES_CBC:
+        case CRYPT_CIPHER_TDES_OFB:
+        case CRYPT_CIPHER_TDES_CFB:
+            (void)CRYPT_EAL_CipherCtrl(ctx, CRYPT_CTRL_DES_NOKEYCHECK, NULL, 0);
+            break;
+        default:
+            break;
+    }
+}
+
 static int32_t CRYPT_ENCODE_DECODE_DecryptEncData(CRYPT_EAL_LibCtx *libctx, const char *attrName, BSL_Buffer *ivData,
     BSL_Buffer *enData, int32_t alg, bool isEnc, BSL_Buffer *key, uint8_t *output, uint32_t *dataLen)
 {
@@ -291,7 +309,7 @@ static int32_t CRYPT_ENCODE_DECODE_DecryptEncData(CRYPT_EAL_LibCtx *libctx, cons
         BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
         return BSL_MALLOC_FAIL;
     }
-
+    CRYPT_SetDesNoKeyCheck(ctx, alg);
     int32_t ret = CRYPT_EAL_CipherInit(ctx, key->data, key->dataLen, ivData->data, ivData->dataLen, isEnc);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);

@@ -136,6 +136,7 @@ build_hitls_code()
     # Compile openHiTLS
     cd ${HITLS_ROOT_DIR}/build
     add_options="${add_options} -DHITLS_CRYPTO_RAND_CB" # HITLS_CRYPTO_RAND_CB: add rand callback
+    add_options="${add_options} -DHITLS_BSL_PEM_ENCRYPTED"
     add_options="${add_options} -DHITLS_EAL_INIT_OPTS=9 -DHITLS_CRYPTO_ASM_CHECK" # Get CPU capability
     add_options="${add_options} -DHITLS_CRYPTO_ENTROPY -DHITLS_CRYPTO_ENTROPY_DEVRANDOM -DHITLS_CRYPTO_ENTROPY_GETENTROPY -DHITLS_CRYPTO_ENTROPY_SYS -DHITLS_CRYPTO_ENTROPY_HARDWARE" # add default entropy
     add_options="${add_options} -DHITLS_CRYPTO_DRBG_GM" # enable GM DRBG

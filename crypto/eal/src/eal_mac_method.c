@@ -42,6 +42,9 @@
 #ifdef HITLS_CRYPTO_SIPHASH
 #include "crypt_siphash.h"
 #endif
+#ifdef HITLS_CRYPTO_RETAIL_MAC
+#include "crypt_retail_mac.h"
+#endif
 #include "bsl_err_internal.h"
 #include "eal_common.h"
 
@@ -89,12 +92,16 @@ EAL_SiphashMethod g_siphash128Meth = {.hashSize = SIPHASH_MAX_DIGEST_SIZE,
     .finalizationRounds = DEFAULT_FINALIZATION_ROUND};
 #endif
 
+#ifdef HITLS_CRYPTO_RETAIL_MAC
+CRYPT_MAC_IMPL_METHOD_DECLARE(RETAIL_MAC);
+#endif
 typedef enum {
     CRYPT_MAC_HMAC = 0,
     CRYPT_MAC_CMAC,
     CRYPT_MAC_CBC_MAC,
     CRYPT_MAC_SIPHASH,
     CRYPT_MAC_GMAC,
+    CRYPT_MAC_RETAIL,
     CRYPT_MAC_INVALID
 } CRYPT_MAC_ID;
 
@@ -121,6 +128,11 @@ static const EAL_MacMethod *g_macMethods[] = {
 #endif
 #ifdef HITLS_CRYPTO_GMAC
     &g_macMethod_GMAC,   // GMAC
+#else
+    NULL,
+#endif
+#ifdef HITLS_CRYPTO_RETAIL_MAC
+    &g_macMethod_RETAIL_MAC,   // Retail MAC
 #else
     NULL,
 #endif
@@ -167,7 +179,10 @@ static const EAL_MacAlgMap CID_MAC_ALG_MAP[] = {
 #endif
 #ifdef HITLS_CRYPTO_SIPHASH
     {.id = CRYPT_MAC_SIPHASH64,     .macId = CRYPT_MAC_SIPHASH},
-    {.id = CRYPT_MAC_SIPHASH128,    .macId = CRYPT_MAC_SIPHASH}
+    {.id = CRYPT_MAC_SIPHASH128,    .macId = CRYPT_MAC_SIPHASH},
+#endif
+#ifdef HITLS_CRYPTO_RETAIL_MAC
+    {.id = CRYPT_MAC_RETAIL_MAC_DES,    .macId = CRYPT_MAC_RETAIL, .symId = CRYPT_SYM_DES}
 #endif
 };
 
@@ -197,6 +212,10 @@ static int32_t ConvertSymId2CipherId(CRYPT_SYM_AlgId algId)
             return CRYPT_CIPHER_AES256_ECB;
         case CRYPT_SYM_SM4:
             return CRYPT_CIPHER_SM4_XTS;
+        case CRYPT_SYM_DES:
+            return CRYPT_CIPHER_DES_ECB;
+        case CRYPT_SYM_TDES:
+            return CRYPT_CIPHER_TDES_ECB;
         default:
             return CRYPT_CIPHER_MAX;
     }
@@ -358,6 +377,7 @@ int32_t EAL_MacFindDepMethod(CRYPT_MAC_AlgId macId, void *libCtx, const char *at
         case CRYPT_MAC_CMAC:
         case CRYPT_MAC_CBC_MAC:
         case CRYPT_MAC_GMAC:
+        case CRYPT_MAC_RETAIL:
             depMeth->id.symId = macAlgMap->symId;
             // sym method is get from global, so no need to free it.
             depMeth->method.sym = EAL_GetSymMethod(ConvertSymId2CipherId(macAlgMap->symId));

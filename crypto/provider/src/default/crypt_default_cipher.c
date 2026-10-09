@@ -37,7 +37,8 @@
 static void *GetNewCtxFunc(int32_t algId)
 {
     switch (algId) {
-#if defined(HITLS_CRYPTO_CBC) && (defined(HITLS_CRYPTO_AES) || defined(HITLS_CRYPTO_SM4))
+#if defined(HITLS_CRYPTO_CBC) && (defined(HITLS_CRYPTO_AES) || defined(HITLS_CRYPTO_SM4) || \
+    defined(HITLS_CRYPTO_DES) || defined(HITLS_CRYPTO_TDES))
 #ifdef HITLS_CRYPTO_AES
         case CRYPT_CIPHER_AES128_CBC:
         case CRYPT_CIPHER_AES192_CBC:
@@ -45,6 +46,12 @@ static void *GetNewCtxFunc(int32_t algId)
 #endif
 #ifdef HITLS_CRYPTO_SM4
         case CRYPT_CIPHER_SM4_CBC:
+#endif
+#ifdef HITLS_CRYPTO_DES
+        case CRYPT_CIPHER_DES_CBC:
+#endif
+#ifdef HITLS_CRYPTO_TDES
+        case CRYPT_CIPHER_TDES_CBC:
 #endif
             return MODES_CBC_NewCtxEx;
 #endif
@@ -59,7 +66,8 @@ static void *GetNewCtxFunc(int32_t algId)
 #endif
             return MODES_CTR_NewCtxEx;
 #endif
-#if defined(HITLS_CRYPTO_ECB) && (defined(HITLS_CRYPTO_AES) || defined(HITLS_CRYPTO_SM4))
+#if defined(HITLS_CRYPTO_ECB) && (defined(HITLS_CRYPTO_AES) || defined(HITLS_CRYPTO_SM4) || \
+    defined(HITLS_CRYPTO_DES) || defined(HITLS_CRYPTO_TDES))
 #ifdef HITLS_CRYPTO_AES
         case CRYPT_CIPHER_AES128_ECB:
         case CRYPT_CIPHER_AES192_ECB:
@@ -67,6 +75,12 @@ static void *GetNewCtxFunc(int32_t algId)
 #endif
 #ifdef HITLS_CRYPTO_SM4
         case CRYPT_CIPHER_SM4_ECB:
+#endif
+#ifdef HITLS_CRYPTO_DES
+        case CRYPT_CIPHER_DES_ECB:
+#endif
+#ifdef HITLS_CRYPTO_TDES
+        case CRYPT_CIPHER_TDES_ECB:
 #endif
             return MODES_ECB_NewCtxEx;
 #endif
@@ -92,7 +106,8 @@ static void *GetNewCtxFunc(int32_t algId)
 #endif
             return MODES_GCM_NewCtxEx;
 #endif
-#if defined(HITLS_CRYPTO_CFB) && (defined(HITLS_CRYPTO_AES) || defined(HITLS_CRYPTO_SM4))
+#if defined(HITLS_CRYPTO_CFB) && (defined(HITLS_CRYPTO_AES) || defined(HITLS_CRYPTO_SM4) || \
+    defined(HITLS_CRYPTO_DES) || defined(HITLS_CRYPTO_TDES))
 #ifdef HITLS_CRYPTO_AES
         case CRYPT_CIPHER_AES128_CFB:
         case CRYPT_CIPHER_AES192_CFB:
@@ -101,9 +116,16 @@ static void *GetNewCtxFunc(int32_t algId)
 #ifdef HITLS_CRYPTO_SM4
         case CRYPT_CIPHER_SM4_CFB:
 #endif
+#ifdef HITLS_CRYPTO_DES
+        case CRYPT_CIPHER_DES_CFB:
+#endif
+#ifdef HITLS_CRYPTO_TDES
+        case CRYPT_CIPHER_TDES_CFB:
+#endif
             return MODES_CFB_NewCtxEx;
 #endif
-#if defined(HITLS_CRYPTO_OFB) && (defined(HITLS_CRYPTO_AES) || defined(HITLS_CRYPTO_SM4))
+#if defined(HITLS_CRYPTO_OFB) && (defined(HITLS_CRYPTO_AES) || defined(HITLS_CRYPTO_SM4) || \
+    defined(HITLS_CRYPTO_DES) || defined(HITLS_CRYPTO_TDES))
 #ifdef HITLS_CRYPTO_AES
         case CRYPT_CIPHER_AES128_OFB:
         case CRYPT_CIPHER_AES192_OFB:
@@ -111,6 +133,12 @@ static void *GetNewCtxFunc(int32_t algId)
 #endif
 #ifdef HITLS_CRYPTO_SM4
         case CRYPT_CIPHER_SM4_OFB:
+#endif
+#ifdef HITLS_CRYPTO_DES
+        case CRYPT_CIPHER_DES_OFB:
+#endif
+#ifdef HITLS_CRYPTO_TDES
+        case CRYPT_CIPHER_TDES_OFB:
 #endif
             return MODES_OFB_NewCtxEx;
 #endif
@@ -160,7 +188,6 @@ static void *CRYPT_EAL_DefCipherNewCtx(CRYPT_EAL_DefProvCtx *provCtx, int32_t al
     if (newCtxFunc != NULL) {
         return ((CipherNewCtx)newCtxFunc)(libCtx, algId);
     }
-
     return NULL;
 }
 

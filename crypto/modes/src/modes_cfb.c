@@ -30,7 +30,11 @@
 
 #define CFB_MAX_FEEDBACK_BITS 128U
 
-/* 8-bit | 64-bit | 128-bit CFB encryption. Here, len indicates the number of bytes to be processed. */
+#ifdef HITLS_CRYPTO_TDES
+static int32_t Cfb1PipeCrypt(MODES_CipherCFBCtx *ctx, const uint8_t *in, uint8_t *out, bool enc);
+#endif
+
+/* 8-bit | 64-bit CFB encryption. Here, len indicates the number of bytes to be processed. */
 static int32_t MODES_CFB_BytesEncrypt(MODES_CipherCFBCtx *ctx, const uint8_t *in, uint8_t *out, uint32_t len)
 {
     const uint8_t *input = in;
@@ -263,6 +267,12 @@ static int32_t MODES_CFB128_BytesDecrypt(MODES_CipherCFBCtx *ctx, const uint8_t 
 
 static int32_t Cfb1Crypt(MODES_CipherCFBCtx *ctx, const uint8_t *in, uint8_t *out, bool enc)
 {
+#ifdef HITLS_CRYPTO_TDES
+    if (ctx->modeCtx.flag3Iv == 1) {
+        return Cfb1PipeCrypt(ctx, in, out, enc);
+    }
+#endif
+
     int32_t ret;
     uint8_t *tmp = ctx->modeCtx.buf;
     uint32_t blockSize = ctx->modeCtx.blockSize;
@@ -321,9 +331,207 @@ int32_t MODES_CFB_BitCrypt(MODES_CipherCFBCtx *ctx, const uint8_t *in, uint8_t *
     return CRYPT_SUCCESS;
 }
 
+#ifdef HITLS_CRYPTO_TDES
+static uint8_t *UpdateIv(MODES_CipherCFBCtx *ctx)
+{
+    uint8_t *iv;
+    uint8_t blockSize = ctx->modeCtx.blockSize;
+    uint32_t feedbackBytes = ctx->feedbackBits >> 3;    // right shifting by 3 to obtain the number of bytes.
+    if (ctx->modeCtx.ivIndex <= 2) {                   // ivIndex does not exceed 2, use the original input iv.
+        iv = ctx->modeCtx.iv + blockSize * ctx->modeCtx.ivIndex;
+    } else {
+        iv = ctx->modeCtx.iv + blockSize * 2;       // ivIndex exceeds 2, only the last block is used.
+        if (blockSize - feedbackBytes > 0) {
+            (void)memmove_s(&iv[0], blockSize, &iv[feedbackBytes], blockSize - feedbackBytes);
+        }
+        (void)memmove_s(&iv[blockSize - feedbackBytes], feedbackBytes, ctx->cipherCache[ctx->cacheIndex],
+                        feedbackBytes);
+    }
+    return iv;
+}
+
+/* TDES 3IV version 8-bit | 64-bit encryption. Here, len indicates the number of bytes to be processed. */
+static int32_t MODES_TCFB_P_BytesEncrypt(MODES_CipherCFBCtx *ctx, const uint8_t *in, uint8_t *out, uint32_t len)
+{
+    const uint8_t *input = in;
+    uint8_t *output = out;
+    uint8_t *tmp = ctx->modeCtx.buf;
+    uint32_t blockSize = ctx->modeCtx.blockSize;
+    uint32_t feedbackBytes = ctx->feedbackBits >> 3;    // right shifting by 3 to obtain the number of bytes.
+    uint32_t left = len;
+    uint32_t i, k;
+    uint32_t tmpOffset = ctx->modeCtx.offset;
+
+    // If the remaining encryption iv is not used up last time, use that part to perform XOR.
+    while (left > 0 && ctx->modeCtx.offset > 0) {
+        ctx->cipherCache[ctx->cacheIndex][ctx->modeCtx.offset] ^= *(input++);
+        *(output++) = ctx->cipherCache[ctx->cacheIndex][ctx->modeCtx.offset];
+        left--;
+        ctx->modeCtx.offset = (ctx->modeCtx.offset + 1) % blockSize;
+    }
+
+    // Indicates that the previous IV cache is used up.
+    if (tmpOffset > 0 && ctx->modeCtx.offset == 0) {
+        ctx->modeCtx.ivIndex = ctx->modeCtx.ivIndex + 1;
+        ctx->cacheIndex = (ctx->cacheIndex + 1) % 3;    // Alternating use the 3 ciphertext caches
+    }
+
+    while (left > 0) {
+        uint8_t *iv = UpdateIv(ctx);
+
+        // Encrypt the IV.
+        int32_t ret = ctx->modeCtx.ciphMeth->encryptBlock(ctx->modeCtx.ciphCtx, iv, tmp, blockSize);
+        if (ret != CRYPT_SUCCESS) {
+            BSL_ERR_PUSH_ERROR(ret);
+            return ret;
+        }
+
+        i = 0;
+
+        // The input data is XORed with the encrypted IV, and the current ciphertext is sent to the next IV.
+        if (left >= feedbackBytes) {
+            // Enter the last feedbackBytes in ciphertext.
+            for (k = 0; i < feedbackBytes; i++, k++) {
+                output[k] = input[k] ^ tmp[k];
+                ctx->cipherCache[ctx->cacheIndex][k] = output[k];
+            }
+            UPDATE_VALUES(left, input, output, feedbackBytes);
+            ctx->modeCtx.ivIndex = ctx->modeCtx.ivIndex + 1;
+            ctx->cacheIndex = (ctx->cacheIndex + 1) % 3;       // Alternating use the 3 ciphertext caches
+        } else {
+            // Enter the last feedbackBytes in ciphertext.
+            // The cache with insufficient feedbackBytes is used to encrypt the IV.
+            for (k = 0; k < left; k++) {
+                output[k] = input[k] ^ tmp[k];
+                ctx->cipherCache[ctx->cacheIndex][i++] = output[k];
+            }
+
+            while (i < blockSize) {
+                ctx->cipherCache[ctx->cacheIndex][i++] = tmp[k++];
+            }
+            ctx->modeCtx.offset = (uint8_t)(blockSize - feedbackBytes + left);
+            left = 0;
+        }
+    }
+
+    return CRYPT_SUCCESS;
+}
+
+/* TDES 3IV version 8-bit | 64-bit decryption. Here, len indicates the number of bytes to be processed. */
+static int32_t MODES_TCFB_P_BytesDecrypt(MODES_CipherCFBCtx *ctx, const uint8_t *in, uint8_t *out, uint32_t len)
+{
+    const uint8_t *input = in;
+    uint8_t *output = out;
+    uint8_t *tmp = ctx->modeCtx.buf;
+    uint32_t blockSize = ctx->modeCtx.blockSize;
+    uint32_t feedbackBytes = ctx->feedbackBits >> 3;    // right shifting by 3 to obtain the number of bytes.
+    uint32_t left = len;
+    uint32_t i, k;
+    uint32_t tmpOffset = ctx->modeCtx.offset;
+
+    // If the remaining encryption iv is not used up last time, use that part to perform XOR.
+    while (left > 0 && ctx->modeCtx.offset > 0) {
+        uint8_t tmpInput = *input;      // To support the same address in and out
+        *(output++) = ctx->cipherCache[ctx->cacheIndex][ctx->modeCtx.offset] ^ *(input++);
+        ctx->cipherCache[ctx->cacheIndex][ctx->modeCtx.offset] = tmpInput;
+        left--;
+        ctx->modeCtx.offset = (ctx->modeCtx.offset + 1) % blockSize;
+    }
+
+    // Indicates that the previous IV cache is used up.
+    if (tmpOffset > 0 && ctx->modeCtx.offset == 0) {
+        ctx->modeCtx.ivIndex = ctx->modeCtx.ivIndex + 1;
+        ctx->cacheIndex = (ctx->cacheIndex + 1) % 3;   // Alternating use the 3 ciphertext caches
+    }
+
+    while (left > 0) {
+        uint8_t *iv = UpdateIv(ctx);
+
+        // Encrypt the IV.
+        int32_t ret = ctx->modeCtx.ciphMeth->encryptBlock(ctx->modeCtx.ciphCtx, iv, tmp, blockSize);
+        if (ret != CRYPT_SUCCESS) {
+            BSL_ERR_PUSH_ERROR(ret);
+            return ret;
+        }
+
+        i = 0;
+
+        // The input data is XORed with the encrypted IV, and the current ciphertext is sent to the next IV.
+        if (left >= feedbackBytes) {
+            // Enter the last feedbackBytes in ciphertext.
+            for (k = 0; i < feedbackBytes; i++, k++) {
+                ctx->cipherCache[ctx->cacheIndex][k] = input[k];
+                output[k] = input[k] ^ tmp[k];
+            }
+            UPDATE_VALUES(left, input, output, feedbackBytes);
+            ctx->modeCtx.ivIndex = ctx->modeCtx.ivIndex + 1;
+            ctx->cacheIndex = (ctx->cacheIndex + 1) % 3;       // Alternating use the 3 ciphertext caches
+        } else {
+            // Enter the last feedbackBytes in ciphertext.
+            // The cache with insufficient feedbackBytes is used to encrypt the IV.
+            for (k = 0; k < left; k++) {
+                ctx->cipherCache[ctx->cacheIndex][i++] = input[k];
+                output[k] = input[k] ^ tmp[k];
+            }
+
+            while (i < blockSize) {
+                ctx->cipherCache[ctx->cacheIndex][i++] = tmp[k++];
+            }
+            ctx->modeCtx.offset = (uint8_t)(blockSize - feedbackBytes + left);
+            left = 0;
+        }
+    }
+
+    return CRYPT_SUCCESS;
+}
+
+static int32_t Cfb1PipeCrypt(MODES_CipherCFBCtx *ctx, const uint8_t *in, uint8_t *out, bool enc)
+{
+    int32_t ret;
+    uint8_t *tmp = ctx->modeCtx.buf;
+    uint32_t blockSize = ctx->modeCtx.blockSize;
+    uint32_t i;
+    uint8_t *iv;
+
+    if (ctx->modeCtx.ivIndex <= 2) {            // ivIndex does not exceed 2, use the original input iv.
+        iv = ctx->modeCtx.iv + blockSize * ctx->modeCtx.ivIndex;
+    } else {
+        iv = ctx->modeCtx.iv + blockSize * 2;   // ivIndex exceeds 2, only the last block is used.
+        for (i = 0; i < blockSize - 1; i++) {
+            // All bytes are shifted left by one bit,
+            // and the least significant bits are obtained by shifting right by 7 bits from the next byte.
+            iv[i] = (iv[i] << 1) | (iv[i + 1] >> 7);
+        }
+        // The last byte is shifted to the left by one bit and then filled in the ciphertext.
+        // Shifted to the right by 7 bits to obtain the first bit of the byte.
+        iv[i] = (iv[i] << 1) | (ctx->cipherCache[ctx->cacheIndex][0] >> 7);
+    }
+
+    // Encrypt the IV.
+    ret = ctx->modeCtx.ciphMeth->encryptBlock(ctx->modeCtx.ciphCtx, iv, tmp, blockSize);
+    if (ret != CRYPT_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        return ret;
+    }
+
+    // uint8_t tmpIn = *in;    To support the same address in and out
+    *out = tmp[0] ^ *in;
+
+    if (enc) {
+        ctx->cipherCache[ctx->cacheIndex][0] = *out;
+    } else {
+        ctx->cipherCache[ctx->cacheIndex][0] = *in;
+    }
+    ctx->cacheIndex = (ctx->cacheIndex + 1) % 3;       // Alternating use the 3 ciphertext caches
+    ctx->modeCtx.ivIndex = ctx->modeCtx.ivIndex + 1;
+
+    return CRYPT_SUCCESS;
+}
+#endif // HITLS_CRYPTO_TDES
+
 int32_t MODES_CFB_Encrypt(MODES_CipherCFBCtx *ctx, const uint8_t *in, uint8_t *out, uint32_t len)
 {
-    if (ctx == NULL || in == NULL || out == NULL || len == 0) {
+    if (ctx == NULL || ctx->modeCtx.ciphCtx == NULL || in == NULL || out == NULL || len == 0) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
@@ -335,10 +543,17 @@ int32_t MODES_CFB_Encrypt(MODES_CipherCFBCtx *ctx, const uint8_t *in, uint8_t *o
                 return CRYPT_MODE_ERR_INPUT_LEN;
             }
             return MODES_CFB_BitCrypt(ctx, in, out, len * 8, true); // Each byte occupies 8 bits.
-        case 8:
-        case 64:
-            return MODES_CFB_BytesEncrypt(ctx, in, out, len);
-        case 128:
+        case 8:     // 8-bit cfb
+        case 64:    // 64-bit cfb
+#ifdef HITLS_CRYPTO_TDES
+            if (ctx->modeCtx.flag3Iv == 1) {
+                return MODES_TCFB_P_BytesEncrypt(ctx, in, out, len);
+            } else
+#endif
+            {
+                return MODES_CFB_BytesEncrypt(ctx, in, out, len);
+            }
+        case 128:   // 128-bit cfb
             return MODES_CFB128_BytesEncrypt(ctx, in, out, len);
         default:
             BSL_ERR_PUSH_ERROR(CRYPT_MODES_ERR_FEEDBACKSIZE);
@@ -348,7 +563,7 @@ int32_t MODES_CFB_Encrypt(MODES_CipherCFBCtx *ctx, const uint8_t *in, uint8_t *o
 
 int32_t MODES_CFB_Decrypt(MODES_CipherCFBCtx *ctx, const uint8_t *in, uint8_t *out, uint32_t len)
 {
-    if (ctx == NULL || in == NULL || out == NULL || len == 0) {
+    if (ctx == NULL || ctx->modeCtx.ciphCtx == NULL || in == NULL || out == NULL || len == 0) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
@@ -361,7 +576,14 @@ int32_t MODES_CFB_Decrypt(MODES_CipherCFBCtx *ctx, const uint8_t *in, uint8_t *o
             return MODES_CFB_BitCrypt(ctx, in, out, len * 8, false); // Each byte occupies 8 bits.
         case 8:     // 8-bit cfb
         case 64:    // 64-bit cfb
-            return MODES_CFB_BytesDecrypt(ctx, in, out, len);
+#ifdef HITLS_CRYPTO_TDES
+            if (ctx->modeCtx.flag3Iv == 1) {
+                return MODES_TCFB_P_BytesDecrypt(ctx, in, out, len);
+            } else
+#endif
+            {
+                return MODES_CFB_BytesDecrypt(ctx, in, out, len);
+            }
         case 128:   // 128-bit cfb
             return MODES_CFB128_BytesDecrypt(ctx, in, out, len);
         default:
@@ -497,6 +719,10 @@ int32_t MODES_CFB_Update(MODES_CFB_Ctx *modeCtx, const uint8_t *in, uint32_t inL
 
 int32_t MODES_CFB_Final(MODES_CFB_Ctx *modeCtx, uint8_t *out, uint32_t *outLen)
 {
+    if (outLen == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return CRYPT_NULL_INPUT;
+    }
     (void) modeCtx;
     (void) out;
     *outLen = 0;
@@ -533,9 +759,24 @@ int32_t MODES_CFB_InitCtxEx(MODES_CFB_Ctx *modeCtx, const uint8_t *key, uint32_t
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
-    if (ivLen != modeCtx->cfbCtx.modeCtx.blockSize) {
-        BSL_ERR_PUSH_ERROR(CRYPT_MODES_IVLEN_ERROR);
-        return CRYPT_MODES_IVLEN_ERROR;
+
+#ifdef HITLS_CRYPTO_TDES
+    if (modeCtx->algId == CRYPT_CIPHER_TDES_CFB) {
+        if (ivLen == 3 * modeCtx->cfbCtx.modeCtx.blockSize) {   // maybe it has 3 IVs
+            modeCtx->cfbCtx.modeCtx.flag3Iv = 1;
+        } else if (ivLen == modeCtx->cfbCtx.modeCtx.blockSize) {
+            modeCtx->cfbCtx.modeCtx.flag3Iv = 0;
+        } else {
+            BSL_ERR_PUSH_ERROR(CRYPT_MODES_IVLEN_ERROR);
+            return CRYPT_MODES_IVLEN_ERROR;
+        }
+    } else
+#endif
+    {
+        if (ivLen != modeCtx->cfbCtx.modeCtx.blockSize) {
+            BSL_ERR_PUSH_ERROR(CRYPT_MODES_IVLEN_ERROR);
+            return CRYPT_MODES_IVLEN_ERROR;
+        }
     }
     switch (modeCtx->algId) {
         case CRYPT_CIPHER_SM4_CFB:

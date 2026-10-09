@@ -26,6 +26,8 @@
 #include "bsl_base64_internal.h"
 #include "bsl_uio.h"
 #include "bsl_base64.h"
+#include "bsl_base64_internal.h"
+#include "crypto_test_util.h"
 
 /* END_HEADER */
 static const uint8_t src_01[] = "123";
@@ -969,7 +971,6 @@ void SDV_BSL_BASE64_FUNC_TC014(void)
     uint8_t dec[4] = {0};
     uint32_t len = sizeof(dec);
     ASSERT_TRUE(ctx != NULL);
-
     /*
      * Cover DecodeFinal residual-block validation:
      * DecodeUpdate keeps only non-padding base64 characters in ctx->buf, so ctx->num % 4 is remain.
@@ -1148,5 +1149,18 @@ EXIT:
     BSL_SAL_Free(buf2);
     BSL_BASE64_CtxFree(ctx1);
     BSL_BASE64_CtxFree(ctx2);
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_BSL_BASE64_FUNC_TC018(void)
+{
+    BSL_Base64Ctx ctx = {0};
+    uint32_t num = 0;
+    ASSERT_EQ(BSL_Base64GetNum(NULL, NULL), BSL_NULL_INPUT);
+    ASSERT_EQ(BSL_Base64GetNum(&ctx, NULL), BSL_NULL_INPUT);
+    ASSERT_EQ(BSL_Base64GetNum(&ctx, &num), BSL_SUCCESS);
+EXIT:
+    return;
 }
 /* END_CASE */

@@ -71,6 +71,13 @@
     #ifndef HITLS_BSL_UIO_FILE
         #define HITLS_BSL_UIO_FILE
     #endif
+    #ifndef HITLS_BSL_UIO_BASE64
+        #define HITLS_BSL_UIO_BASE64
+    #endif
+#endif
+
+#if defined(HITLS_BSL_UIO_BASE64) && !defined(HITLS_BSL_BASE64)
+    #define HITLS_BSL_BASE64
 #endif
 
 #if defined(HITLS_BSL_UIO_FILE) && !defined(HITLS_BSL_SAL_FILE)
@@ -96,7 +103,7 @@
 
 /* Derive parent feature from child features. */
 #if defined(HITLS_BSL_UIO_BUFFER) || defined(HITLS_BSL_UIO_SCTP) || defined(HITLS_BSL_UIO_TCP) || \
-    defined(HITLS_BSL_UIO_MEM) || defined(HITLS_BSL_UIO_FILE)
+    defined(HITLS_BSL_UIO_MEM) || defined(HITLS_BSL_UIO_FILE) || defined(HITLS_BSL_UIO_BASE64)
     #ifndef HITLS_BSL_UIO_PLT
         #define HITLS_BSL_UIO_PLT
     #endif

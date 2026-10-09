@@ -61,6 +61,7 @@ typedef enum {
     BSL_UIO_MEM,
     BSL_UIO_FILE,
     BSL_UIO_BUFFER,
+    BSL_UIO_BASE64,
     BSL_UIO_UNKNOWN, /* Unknown protocol should not appear */
 
     BSL_UIO_EXTEND = 10000, /* extension value */
@@ -334,6 +335,18 @@ const BSL_UIO_Method *BSL_UIO_UdpMethod(void);
  * @retval  pointer to the Buffer UIO method
  */
 const BSL_UIO_Method *BSL_UIO_BufferMethod(void);
+
+/**
+ * @ingroup bsl_uio
+ *
+ * @brief   obtain the default BASE64 UIO method.
+ * @attention
+ * Thread safe     : Thread-safe function.
+ * Blocking risk   : No blocking.
+ * Time consuming  : Not time-consuming.
+ * @return  pointer to the BASE64 UIO method
+ */
+const BSL_UIO_Method *BSL_UIO_Base64Method(void);
 
 /**
  * @ingroup bsl_uio
@@ -686,6 +699,20 @@ void BSL_UIO_FreeChain(BSL_UIO *uio);
  * @retval Next UIO object in the chain.
  */
 BSL_UIO *BSL_UIO_Next(BSL_UIO *uio);
+
+/**
+ * @ingroup bsl_uio
+ * @brief   Obtain the flags of the next UIO object in the chain and set the flags to the current UIO object.
+ * @attention
+ * Thread safe     : Not thread-safe function.
+ * Blocking risk   : No blocking.
+ * Time consuming  : Not time-consuming.
+ *
+ * @param   uio [IN] UIO object
+ *
+ * @return Return value of BSL_UIO_SetFlags
+ */
+int32_t BSL_UIO_SetFlagsFromNext(BSL_UIO *uio);
 
 #ifdef __cplusplus
 }

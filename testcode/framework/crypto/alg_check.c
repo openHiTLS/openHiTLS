@@ -451,6 +451,64 @@ bool IsSm4AlgDisabled(int id)
 #endif
 }
 
+bool IsDesAlgDisabled(int id)
+{
+#ifdef HITLS_CRYPTO_DES
+    switch (id) {
+#ifndef HITLS_CRYPTO_CBC
+        case CRYPT_CIPHER_DES_CBC:
+            return true;
+#endif
+#ifndef HITLS_CRYPTO_ECB
+        case CRYPT_CIPHER_DES_ECB:
+            return true;
+#endif
+#ifndef HITLS_CRYPTO_CFB
+        case CRYPT_CIPHER_DES_CFB:
+            return true;
+#endif
+#ifndef HITLS_CRYPTO_OFB
+        case CRYPT_CIPHER_DES_OFB:
+            return true;
+#endif
+        default:
+            return false;  // Unsupported algorithm ID
+    }
+#else
+    (void)id;
+    return true;
+#endif
+}
+
+bool IsTdesAlgDisabled(int id)
+{
+#ifdef HITLS_CRYPTO_TDES
+    switch (id) {
+#ifndef HITLS_CRYPTO_CBC
+        case CRYPT_CIPHER_TDES_CBC:
+            return true;
+#endif
+#ifndef HITLS_CRYPTO_ECB
+        case CRYPT_CIPHER_TDES_ECB:
+            return true;
+#endif
+#ifndef HITLS_CRYPTO_CFB
+        case CRYPT_CIPHER_TDES_CFB:
+            return true;
+#endif
+#ifndef HITLS_CRYPTO_OFB
+        case CRYPT_CIPHER_TDES_OFB:
+            return true;
+#endif
+        default:
+            return false;  // Unsupported algorithm ID
+    }
+#else
+    (void)id;
+    return true;
+#endif
+}
+
 bool IsCipherAlgDisabled(int id)
 {
     switch (id) {
@@ -487,6 +545,16 @@ bool IsCipherAlgDisabled(int id)
         case CRYPT_CIPHER_SM4_OFB:
         case CRYPT_CIPHER_SM4_HCTR:
             return IsSm4AlgDisabled(id);
+        case CRYPT_CIPHER_DES_CBC:
+        case CRYPT_CIPHER_DES_ECB:
+        case CRYPT_CIPHER_DES_OFB:
+        case CRYPT_CIPHER_DES_CFB:
+            return IsDesAlgDisabled(id);
+        case CRYPT_CIPHER_TDES_CBC:
+        case CRYPT_CIPHER_TDES_ECB:
+        case CRYPT_CIPHER_TDES_OFB:
+        case CRYPT_CIPHER_TDES_CFB:
+            return IsTdesAlgDisabled(id);
         default:
             return false;
     }

@@ -14,7 +14,7 @@
  */
 
 #include "hitls_build.h"
-#if defined(HITLS_CRYPTO_CBC_MAC) || defined(HITLS_CRYPTO_CMAC)
+#if defined(HITLS_CRYPTO_CBC_MAC) || defined(HITLS_CRYPTO_CMAC) || defined(HITLS_CRYPTO_RETAIL_MAC)
 #include <stdlib.h>
 #include "securec.h"
 #include "bsl_sal.h"
@@ -120,10 +120,9 @@ int32_t CipherMacUpdate(Cipher_MAC_Common_Ctx *ctx, const uint8_t *in, uint32_t 
         lenTmp -= blockSize;
         inTmp += blockSize;
     }
-    uint8_t *left = ctx->left;
     for (uint32_t i = 0; i < lenTmp; i++) {
- 	    left[i] = inTmp[i];
- 	}
+        ctx->left[i] = inTmp[i];
+    }
     ctx->len = lenTmp;
     return CRYPT_SUCCESS;
 }
@@ -163,4 +162,4 @@ int32_t CipherMacGetMacLen(const Cipher_MAC_Common_Ctx *ctx, void *val, uint32_t
     *(uint32_t *)val = ctx->method->blockSize;
     return CRYPT_SUCCESS;
 }
-#endif // #if defined(HITLS_CRYPTO_CBC_MAC) || defined(HITLS_CRYPTO_CMAC)
+#endif // #if defined(HITLS_CRYPTO_CBC_MAC) || defined(HITLS_CRYPTO_CMAC) || defined(HITLS_CRYPTO_RETAIL_MAC)

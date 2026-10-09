@@ -23,12 +23,22 @@
 #include "modes_local.h"
 #include "crypt_modes_ofb.h"
 
+#ifdef HITLS_CRYPTO_TDES
+static int32_t MODE_TOFB_I_Crypt(MODES_CipherCommonCtx *ctx, const uint8_t *in, uint8_t *out, uint32_t len);
+#endif
+
 int32_t MODES_OFB_Crypt(MODES_CipherCommonCtx *ctx, const uint8_t *in, uint8_t *out, uint32_t len)
 {
-    if (ctx == NULL || in == NULL || out == NULL) {
+    if (ctx == NULL || ctx->ciphCtx == NULL || in == NULL || out == NULL || len == 0) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
+
+#ifdef HITLS_CRYPTO_TDES
+    if (ctx->flag3Iv == 1) {
+        return MODE_TOFB_I_Crypt(ctx, in, out, len);
+    }
+#endif
 
     int32_t ret;
     const uint8_t *input = in;
@@ -65,6 +75,68 @@ int32_t MODES_OFB_Crypt(MODES_CipherCommonCtx *ctx, const uint8_t *in, uint8_t *
 
     return CRYPT_SUCCESS;
 }
+
+#ifdef HITLS_CRYPTO_TDES
+/* TEDS 3IVs version */
+static int32_t MODE_TOFB_I_Crypt(MODES_CipherCommonCtx *ctx, const uint8_t *in, uint8_t *out, uint32_t len)
+{
+    int32_t ret;
+    const uint8_t *input = in;
+    uint8_t *tmp = ctx->buf;
+    uint32_t blockSize = ctx->blockSize;
+    uint32_t left = len;
+    uint8_t *output = out;
+    uint32_t i;
+    uint32_t ivIndex = ctx->ivIndex;
+    uint32_t tmpOffset = ctx->offset;
+    uint8_t *iv = ctx->iv + blockSize * ivIndex;
+
+    // If the remaining encrypted iv is not used up last time, use that part to perform XOR.
+    while (left > 0 && ctx->offset > 0) {
+        *(output++) = iv[ctx->offset] ^ *(input++);
+        left--;
+        ctx->offset = (ctx->offset + 1) % blockSize;
+    }
+
+    // Indicates that the previous IV is used up.
+    if (tmpOffset > 0 && ctx->offset == 0) {
+        ivIndex = (ivIndex + 1) % 3;    // Alternating use 3 IVs
+    }
+
+    while (left > 0) {
+        iv = ctx->iv + blockSize * ivIndex;
+
+        // Encrypt the IV.
+        ret = ctx->ciphMeth->encryptBlock(ctx->ciphCtx, iv, tmp, blockSize);
+        if (ret != CRYPT_SUCCESS) {
+            BSL_ERR_PUSH_ERROR(ret);
+            return ret;
+        }
+
+        // Update the IV.
+        if (memcpy_s(iv, MODES_MAX_IV_LENGTH, tmp, blockSize) != EOK) {
+            BSL_ERR_PUSH_ERROR(CRYPT_SECUREC_FAIL);
+            return CRYPT_SECUREC_FAIL;
+        }
+
+        if (left >= blockSize) {
+            /* Plaintext XOR IV. BlockSize must be an integer multiple of 4 bytes. */
+            DATA32_XOR(input, tmp, output, blockSize);
+            UPDATE_VALUES(left, input, output, blockSize);
+            ivIndex = (ivIndex + 1) % 3;    // Alternating use 3 IVs
+        } else {
+            for (i = 0; i < left; i++) {
+                output[i] = input[i] ^ tmp[i];
+            }
+            ctx->offset = (uint8_t)left;
+            left = 0;
+        }
+    }
+    ctx->ivIndex = ivIndex;
+
+    return CRYPT_SUCCESS;
+}
+#endif
 
 int32_t MODES_OFB_InitCtx(MODES_CipherCtx *modeCtx, const uint8_t *key, uint32_t keyLen, const uint8_t *iv,
     uint32_t ivLen, bool enc)

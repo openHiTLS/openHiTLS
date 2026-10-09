@@ -30,9 +30,120 @@
         (o) += (len); \
     } while (false)
 
+#ifdef HITLS_CRYPTO_TDES
+static int32_t MODE_TCBC_I_Encrypt(MODES_CipherCommonCtx *ctx, const uint8_t *in, uint8_t *out, uint32_t len)
+{
+    uint8_t *tmp = ctx->buf;
+    uint32_t blockSize = ctx->blockSize;
+    uint32_t ivIndex = ctx->ivIndex;
+    uint32_t left = len;
+    int32_t ret;
+    const uint8_t *input = in;
+    uint8_t *output = out;
+    // The ctx, in, and out pointers have been determined at the EAL layer and are not determined again.
+    if ((left % blockSize) != 0) {
+        BSL_ERR_PUSH_ERROR(CRYPT_MODE_ERR_INPUT_LEN);
+        return CRYPT_MODE_ERR_INPUT_LEN;
+    }
+
+    while (left >= blockSize) {
+        uint8_t *iv = ctx->iv + blockSize * ivIndex;    // Obtains different IVs by offset.
+
+        /* Plaintext XOR IV. BlockSize must be an integer multiple of 4 bytes. */
+        DATA32_XOR(input, iv, tmp, blockSize);
+
+        ret = ctx->ciphMeth->encryptBlock(ctx->ciphCtx, tmp, output, blockSize);
+        if (ret != CRYPT_SUCCESS) {
+            BSL_ERR_PUSH_ERROR(ret);
+            return ret;
+        }
+
+        /* The current encryption result is used as the next IV value. */
+        if (memcpy_s(iv, MODES_MAX_IV_LENGTH - (blockSize * ctx->ivIndex), output, blockSize) != EOK) {
+            BSL_ERR_PUSH_ERROR(CRYPT_SECUREC_FAIL);
+            return CRYPT_SECUREC_FAIL;
+        }
+        ivIndex = (ivIndex + 1) % 3;    // Alternating use 3 IVs
+
+        /* Offset length is the size of integer multiple blocks */
+        CBC_UPDATE_VALUES(left, input, output, blockSize);
+    }
+    ctx->ivIndex = ivIndex;
+
+    return CRYPT_SUCCESS;
+}
+
+static int32_t MODE_TCBC_I_Decrypt(MODES_CipherCommonCtx *ctx, const uint8_t *in, uint8_t *out, uint32_t len)
+{
+    uint8_t *tmp = ctx->buf;
+    uint32_t blockSize = ctx->blockSize;
+    uint32_t left = len;
+    uint8_t *output = out;
+    const uint8_t *input = in;
+
+    // The ctx, in, and out pointers have been determined at the EAL layer and are not determined again.
+    if ((left % blockSize) != 0) {
+        BSL_ERR_PUSH_ERROR(CRYPT_MODE_ERR_INPUT_LEN);
+        return CRYPT_MODE_ERR_INPUT_LEN;
+    }
+
+    if (in != out) {
+        while (left >= blockSize) {
+            uint8_t *iv = ctx->iv + blockSize * ctx->ivIndex;    // Obtains different IVs by offset.
+
+            int32_t ret = ctx->ciphMeth->decryptBlock(ctx->ciphCtx, input, tmp, blockSize);
+            if (ret != CRYPT_SUCCESS) {
+                BSL_ERR_PUSH_ERROR(ret);
+                return ret;
+            }
+            /* The ciphertext is used as the next IV value. BlockSize must be an integer multiple of 4 bytes. */
+            DATA32_XOR(iv, tmp, output, blockSize);
+
+            /* The current ciphertext is used as the next IV value. */
+            if (memcpy_s(iv, MODES_MAX_IV_LENGTH - (blockSize * ctx->ivIndex), input, blockSize) != EOK) {
+                BSL_ERR_PUSH_ERROR(CRYPT_SECUREC_FAIL);
+                return CRYPT_SECUREC_FAIL;
+            }
+            ctx->ivIndex = (ctx->ivIndex + 1) % 3;    // Alternating use 3 IVs
+
+            CBC_UPDATE_VALUES(left, input, output, blockSize);
+        }
+    } else {
+        while (left >= blockSize) {
+            uint8_t *iv = ctx->iv + blockSize * ctx->ivIndex;    // Obtains different IVs by offset.
+
+            int32_t ret = ctx->ciphMeth->decryptBlock(ctx->ciphCtx, input, tmp, blockSize);
+            if (ret != CRYPT_SUCCESS) {
+                BSL_ERR_PUSH_ERROR(ret);
+                return ret;
+            }
+
+            for (uint32_t i = 0; i < blockSize; i++) {
+                uint8_t tmpChar = input[i];
+                output[i] = tmp[i] ^ iv[i];
+                iv[i] = tmpChar;
+            }
+            ctx->ivIndex = (ctx->ivIndex + 1) % 3;    // Alternating use 3 IVs
+
+            CBC_UPDATE_VALUES(left, input, output, blockSize);
+        }
+    }
+
+    return CRYPT_SUCCESS;
+}
+#endif
 
 int32_t MODES_CBC_Encrypt(MODES_CipherCommonCtx *ctx, const uint8_t *in, uint8_t *out, uint32_t len)
 {
+    if (ctx == NULL || ctx->ciphCtx == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return CRYPT_NULL_INPUT;
+    }
+#ifdef HITLS_CRYPTO_TDES
+    if (ctx->flag3Iv == 1) {
+        return MODE_TCBC_I_Encrypt(ctx, in, out, len);
+    }
+#endif
     uint32_t blockSize = ctx->blockSize;
     int32_t ret;
     uint8_t *iv = ctx->iv;
@@ -72,10 +183,15 @@ int32_t MODES_CBC_Encrypt(MODES_CipherCommonCtx *ctx, const uint8_t *in, uint8_t
 
 int32_t MODES_CBC_Decrypt(MODES_CipherCommonCtx *ctx, const uint8_t *in, uint8_t *out, uint32_t len)
 {
-    if (ctx->ciphCtx == NULL) {
+    if (ctx == NULL || ctx->ciphCtx == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
+#ifdef HITLS_CRYPTO_TDES
+    if (ctx->flag3Iv == 1) {
+        return MODE_TCBC_I_Decrypt(ctx, in, out, len);
+    }
+#endif
     const uint8_t *iv = ctx->iv;
     uint8_t *tmp = ctx->buf;
     uint32_t blockSize = ctx->blockSize;
