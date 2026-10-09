@@ -921,6 +921,7 @@ uint32_t HS_GetExtensionTypeId(uint32_t hsExtensionsType)
         case HS_EX_TYPE_CERTIFICATE_AUTHORITIES: return HS_EX_TYPE_ID_CERTIFICATE_AUTHORITIES;
         case HS_EX_TYPE_POST_HS_AUTH: return HS_EX_TYPE_ID_POST_HS_AUTH;
         case HS_EX_TYPE_KEY_SHARE: return HS_EX_TYPE_ID_KEY_SHARE;
+        case HS_EX_TYPE_EARLY_DATA: return HS_EX_TYPE_ID_EARLY_DATA;
         case HS_EX_TYPE_RENEGOTIATION_INFO: return HS_EX_TYPE_ID_RENEGOTIATION_INFO;
         default: break;
     }
