@@ -170,8 +170,12 @@ int32_t ECP_NistPointAddAffine(const ECC_Para *para, ECC_Point *r, const ECC_Poi
     // Whether a is the point at infinity, kept as a plain flag. The full-width
     // BN_UINT mask required by BN_CopyWithMask() is built at the point of use so
     // that the timing does not depend on whether a is the infinity point.
-    uint32_t aIsInfinity = (uint32_t)BN_IsZero(&a->z);
-
+    bool bnIsZero = BN_IsZero(&a->z);
+    uint32_t aIsInfinity = (uint32_t)bnIsZero;
+    uint32_t t1IsZero = 0;
+    uint32_t t2IsZero = 0;
+    uint32_t equal = 0;
+    BN_UINT aIsInfinityMask = 0;
     BN_Optimizer *op = BN_OptimizerCreate();
     BN_BigNum *t1 = NULL, *t2 = NULL, *t3 = NULL, *t4 = NULL;
     GOTO_ERR_IF_EX(CreatTmpBn(&t1, &t2, &t3, &t4, bits), ret);
@@ -194,9 +198,11 @@ int32_t ECP_NistPointAddAffine(const ECC_Para *para, ECC_Point *r, const ECC_Poi
      * the formulas below already yield the point at infinity (z = a->z * t1 == 0).
      * The bitwise AND keeps both BN_IsZero calls unconditional.
      */
-    uint32_t t1IsZero = (uint32_t)0 - (uint32_t)BN_IsZero(t1);
-    uint32_t t2IsZero = (uint32_t)0 - (uint32_t)BN_IsZero(t2);
-    uint32_t equal = t1IsZero & t2IsZero & ~((uint32_t)0 - aIsInfinity);
+    bnIsZero = BN_IsZero(t1);
+    t1IsZero = (uint32_t)0 - (uint32_t)bnIsZero;
+    bnIsZero = BN_IsZero(t2);
+    t2IsZero = (uint32_t)0 - (uint32_t)bnIsZero;
+    equal = t1IsZero & t2IsZero & ~((uint32_t)0 - aIsInfinity);
     if (equal != 0) {
         /* This exceptional case is not constant-time. Inside a scalar
          * multiplication ladder it cannot occur (the running point is never
@@ -223,7 +229,7 @@ int32_t ECP_NistPointAddAffine(const ECC_Para *para, ECC_Point *r, const ECC_Poi
 
     // If a is the point at infinity, r = b. Select b with a full-width BN_UINT
     // mask instead of an early return so that the timing does not depend on a->z.
-    BN_UINT aIsInfinityMask = (BN_UINT)0 - (BN_UINT)aIsInfinity;
+    aIsInfinityMask = (BN_UINT)0 - (BN_UINT)aIsInfinity;
     GOTO_ERR_IF_EX(BN_CopyWithMask(&r->x, &r->x, &b->x, aIsInfinityMask), ret);
     GOTO_ERR_IF_EX(BN_CopyWithMask(&r->y, &r->y, &b->y, aIsInfinityMask), ret);
     GOTO_ERR_IF_EX(BN_CopyWithMask(&r->z, &r->z, &b->z, aIsInfinityMask), ret);
