@@ -413,8 +413,6 @@ typedef enum {
     BSL_CID_SM3WITHRSAENCRYPTION = 348,  /* identifies signature using SM3 and RSA */
     BSL_CID_HARDWAREMODULENAME = 349,
     BSL_CID_AT_DESCRIPTION = 350,
-    /* RFC 6211 Section 2: id-aa-CMSAlgorithmProtection is 1.2.840.113549.1.9.52. */
-    BSL_CID_PKCS9_AT_ALGORITHM_PROTECTION = 351,
 
     BSL_CID_DECODE_UNKNOWN = 1000,
     BSL_CID_NULL = 1001,
@@ -750,6 +748,8 @@ typedef enum {
     BSL_CID_SMIMECAP = 5306,
     BSL_CID_ON_DNSSRV = 5307, /* identifies id-on-dnsSRV */
     BSL_CID_CHACHA20 = 5308,  /* identifies ChaCha20 algorithm */
+    /* RFC 6211 Section 2: id-aa-CMSAlgorithmProtection is 1.2.840.113549.1.9.52. */
+    BSL_CID_PKCS9_AT_ALGORITHM_PROTECTION = 5400,
 
     BSL_CID_MAX,
     BSL_CID_EXTEND = 0x60000000,

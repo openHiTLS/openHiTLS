@@ -2691,14 +2691,16 @@ EXIT:
 
 /*
 @test SDV_CRYPT_DECODE_RSAPSS_MGF1_VALIDATE_TC001
-@title Test CRYPT_EAL_ParseRsaPssAlgParam rejects non-MGF1 mask generation algorithm
+@title Test RSA-PSS default parameters and MGF1 validation
 @precon None
 @step
 1. Call CRYPT_EAL_ParseRsaPssAlgParam with valid RSA-PSS params (MGF1 OID), expect success
-2. Call CRYPT_EAL_ParseRsaPssAlgParam with invalid RSA-PSS params (non-MGF1 OID), expect CRYPT_DECODE_ERR_RSSPSS
+2. Parse an empty SEQUENCE after explicit parameters and check restored defaults
+3. Call CRYPT_EAL_ParseRsaPssAlgParam with invalid RSA-PSS params (non-MGF1 OID), expect CRYPT_DECODE_ERR_RSSPSS
 @expect
 1. Valid params parse successfully with correct mdId, mgfId, and saltLen
-2. Invalid params return CRYPT_DECODE_ERR_RSSPSS
+2. Empty parameters restore SHA-1, MGF1-SHA1, and salt length 20 without errors
+3. Invalid params return CRYPT_DECODE_ERR_RSSPSS
 */
 /* BEGIN_CASE */
 void SDV_CRYPT_DECODE_RSAPSS_MGF1_VALIDATE_TC001(void)
@@ -2729,6 +2731,7 @@ void SDV_CRYPT_DECODE_RSAPSS_MGF1_VALIDATE_TC001(void)
         sizeof(validPssParams), validPssParams};
     BSL_ASN1_Buffer invalidParam = {BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE,
         sizeof(invalidPssParams), invalidPssParams};
+    BSL_ASN1_Buffer emptyParam = {BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE, 0, NULL};
     CRYPT_RSA_PssPara para = {0};
 
     ASSERT_EQ(CRYPT_EAL_ParseRsaPssAlgParam(&validParam, &para), CRYPT_SUCCESS);
@@ -2736,10 +2739,17 @@ void SDV_CRYPT_DECODE_RSAPSS_MGF1_VALIDATE_TC001(void)
     ASSERT_EQ(para.mgfId, CRYPT_MD_SHA256);
     ASSERT_EQ(para.saltLen, 32);
 
+    ASSERT_EQ(CRYPT_EAL_ParseRsaPssAlgParam(&emptyParam, &para), CRYPT_SUCCESS);
+    ASSERT_EQ(para.mdId, CRYPT_MD_SHA1);
+    ASSERT_EQ(para.mgfId, CRYPT_MD_SHA1);
+    ASSERT_EQ(para.saltLen, 20);
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
     memset(&para, 0, sizeof(para));
     ASSERT_EQ(CRYPT_EAL_ParseRsaPssAlgParam(&invalidParam, &para), CRYPT_DECODE_ERR_RSSPSS);
 
 EXIT:
+    TestErrClear();
     return;
 #else
     SKIP_TEST();

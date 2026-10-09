@@ -118,6 +118,28 @@ static bool IsSlhDsaAlg(BslCid algId)
     return algId >= BSL_CID_SLH_DSA_SHA2_128S && algId <= BSL_CID_SLH_DSA_SHAKE_256F;
 }
 
+static bool IsCmsDigestAlg(BslCid algId)
+{
+    switch (algId) {
+        case BSL_CID_MD5:
+        case BSL_CID_SHA1:
+        case BSL_CID_SHA224:
+        case BSL_CID_SHA256:
+        case BSL_CID_SHA384:
+        case BSL_CID_SHA512:
+        case BSL_CID_SHA3_224:
+        case BSL_CID_SHA3_256:
+        case BSL_CID_SHA3_384:
+        case BSL_CID_SHA3_512:
+        case BSL_CID_SHAKE128:
+        case BSL_CID_SHAKE256:
+        case BSL_CID_SM3:
+            return true;
+        default:
+            return false;
+    }
+}
+
 static bool IsHashSlhDsaAlg(BslCid algId)
 {
     return algId >= BSL_CID_HASH_SLH_DSA_SHA2_128S_WITH_SHA256 &&
@@ -264,6 +286,10 @@ static int32_t CheckOrGetMdForSlhDsa(BslCid algId, bool hasSignedAttr, int32_t *
     if (hasSignedAttr) {
         return CMS_ValidateSlhDsaDigestAlg(algId, (BslCid)*mdId);
     }
+    if (!IsCmsDigestAlg((BslCid)*mdId)) {
+        BSL_ERR_PUSH_ERROR(HITLS_CMS_ERR_INVALID_ALGO);
+        return HITLS_CMS_ERR_INVALID_ALGO;
+    }
     return HITLS_PKI_SUCCESS;
 }
 
@@ -356,6 +382,10 @@ int32_t HITLS_CMS_CheckPqcSignAlgAndDigest(const CMS_SignerInfo *si, bool isStre
         }
         if (hasSignedAttr) {
             return CMS_ValidateSlhDsaDigestAlg(signAlgId, digestAlg);
+        }
+        if (!IsCmsDigestAlg(digestAlg)) {
+            BSL_ERR_PUSH_ERROR(HITLS_CMS_ERR_INVALID_ALGO);
+            return HITLS_CMS_ERR_INVALID_ALGO;
         }
         return HITLS_PKI_SUCCESS;
     }

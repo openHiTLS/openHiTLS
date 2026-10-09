@@ -5093,6 +5093,33 @@ EXIT:
 /* END_CASE */
 
 /**
+ * @test   SDV_X509_HSS_PREPARE_VERIFY_KEY_TC001
+ * @title  Reject a signature algorithm that does not match an HSS key
+ * @brief  Prepare an HSS public key for an ECDSA signature.
+ * @expect Preparation fails with HITLS_X509_ERR_VFY_SIGNALG_NOT_MATCH.
+ */
+/* BEGIN_CASE */
+void SDV_X509_HSS_PREPARE_VERIFY_KEY_TC001(char *certPath)
+{
+#if !defined(HITLS_CRYPTO_HSS_LMS) || !defined(HITLS_BSL_SAL_FILE)
+    (void)certPath;
+    SKIP_TEST();
+#else
+    HITLS_X509_Cert *cert = NULL;
+    CRYPT_EAL_PkeyCtx *pubKey = NULL;
+    HITLS_X509_Asn1AlgId alg = {.algId = BSL_CID_ECDSAWITHSHA256};
+    ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_PEM, certPath, &cert), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_GET_PUBKEY, &pubKey, 0), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_PrepareVerifyKey(pubKey, BSL_CID_SHA256, &alg), HITLS_X509_ERR_VFY_SIGNALG_NOT_MATCH);
+
+EXIT:
+    CRYPT_EAL_PkeyFreeCtx(pubKey);
+    HITLS_X509_CertFree(cert);
+#endif
+}
+/* END_CASE */
+
+/**
  * @test   SDV_X509_SIGNATURE_UNUSED_BITS_CHECK_TC001
  * @title  Reject a signatureValue BIT STRING with non-zero unused bits.
  * @brief  Call the common signature verification entry with a malformed

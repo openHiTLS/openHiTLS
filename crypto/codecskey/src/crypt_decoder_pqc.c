@@ -413,42 +413,33 @@ int32_t CRYPT_MLKEM_ParsePkcs8key(void *libCtx, uint8_t *buffer, uint32_t buffer
 #endif // HITLS_CRYPTO_MLKEM
 
 #ifdef HITLS_CRYPTO_HSS_LMS
-static int32_t DecodeHssLmsSubPubkeyPreCheck(uint8_t *buff, uint32_t buffLen, bool isComplete,
-    CRYPT_DECODE_SubPubkeyInfo *info)
-{
-    int32_t ret = CRYPT_DECODE_SubPubkey(buff, buffLen, NULL, info, isComplete);
-    if (ret != CRYPT_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
-        return ret;
-    }
-    if (info->keyType != BSL_CID_HSS_LMS) {
-        BSL_ERR_PUSH_ERROR(CRYPT_DECODE_ERR_KEY_TYPE_NOT_MATCH);
-        return CRYPT_DECODE_ERR_KEY_TYPE_NOT_MATCH;
-    }
-    if (info->pubKey.unusedBits != 0) {
-        BSL_ERR_PUSH_ERROR(CRYPT_DECODE_NO_SUPPORT_FORMAT);
-        return CRYPT_DECODE_NO_SUPPORT_FORMAT;
-    }
-    return CRYPT_SUCCESS;
-}
-
-
 int32_t CRYPT_HSS_ParseSubPubkeyAsn1Buff(void *libCtx, uint8_t *buff, uint32_t buffLen,
     CRYPT_HSS_Ctx **pubKey, bool isComplete)
 {
     CRYPT_DECODE_SubPubkeyInfo subPubkeyInfo = {0};
-    int32_t ret = DecodeHssLmsSubPubkeyPreCheck(buff, buffLen, isComplete, &subPubkeyInfo);
+    int32_t ret = CRYPT_DECODE_SubPubkey(buff, buffLen, NULL, &subPubkeyInfo, isComplete);
     if (ret != CRYPT_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
         return ret;
+    }
+    if (subPubkeyInfo.keyType != BSL_CID_HSS_LMS) {
+        BSL_ERR_PUSH_ERROR(CRYPT_DECODE_ERR_KEY_TYPE_NOT_MATCH);
+        return CRYPT_DECODE_ERR_KEY_TYPE_NOT_MATCH;
+    }
+    if (subPubkeyInfo.pubKey.len <= sizeof(uint32_t)) {
+        BSL_ERR_PUSH_ERROR(CRYPT_HSS_INVALID_KEY_LEN);
+        return CRYPT_HSS_INVALID_KEY_LEN;
     }
     CRYPT_HSS_Ctx *pctx = CRYPT_HSS_NewCtxEx(libCtx);
     if (pctx == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         return CRYPT_MEM_ALLOC_FAIL;
     }
-    BSL_Param pubParam[2] = {
-        {(int32_t)CRYPT_PARAM_HSS_PUBKEY, BSL_PARAM_TYPE_OCTETS, subPubkeyInfo.pubKey.buff,
-            subPubkeyInfo.pubKey.len, 0},
+    uint32_t levels = BSL_ByteToUint32(subPubkeyInfo.pubKey.buff);
+    BSL_Param pubParam[3] = {
+        {CRYPT_PARAM_HSS_LEVEL, BSL_PARAM_TYPE_UINT32, &levels, sizeof(levels), 0},
+        {CRYPT_PARAM_HSS_PUBKEY, BSL_PARAM_TYPE_OCTETS, subPubkeyInfo.pubKey.buff + sizeof(uint32_t),
+            subPubkeyInfo.pubKey.len - sizeof(uint32_t), 0},
         BSL_PARAM_END
     };
     ret = CRYPT_HSS_SetPubKey(pctx, pubParam);

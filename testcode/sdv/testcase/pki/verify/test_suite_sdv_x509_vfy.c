@@ -2579,12 +2579,12 @@ void SDV_X509_BUILD_MLDSA_CERT_CHAIN_FUNC_TC001(void)
     static const uint32_t validKeyUsage[] = {
         HITLS_X509_EXT_KU_DIGITAL_SIGN,
         HITLS_X509_EXT_KU_NON_REPUDIATION,
-        HITLS_X509_EXT_KU_KEY_CERT_SIGN,
         HITLS_X509_EXT_KU_CRL_SIGN,
         HITLS_X509_EXT_KU_DIGITAL_SIGN | HITLS_X509_EXT_KU_NON_REPUDIATION,
     };
     static const uint32_t invalidKeyUsage[] = {
         0,
+        HITLS_X509_EXT_KU_KEY_CERT_SIGN,
         HITLS_X509_EXT_KU_KEY_ENCIPHERMENT,
         HITLS_X509_EXT_KU_DATA_ENCIPHERMENT,
         HITLS_X509_EXT_KU_KEY_AGREEMENT,
@@ -2594,6 +2594,10 @@ void SDV_X509_BUILD_MLDSA_CERT_CHAIN_FUNC_TC001(void)
     };
     HITLS_X509_StoreCtx *store = HITLS_X509_StoreCtxNew();
     ASSERT_TRUE(store != NULL);
+    int64_t initialVerifyTime = 1781481600;
+    ASSERT_EQ(
+        HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_SET_TIME, &initialVerifyTime, sizeof(initialVerifyTime)),
+        HITLS_PKI_SUCCESS);
     HITLS_X509_Cert *ca = NULL;
     int32_t ret = HITLS_AddCertToStoreTest("../testdata/cert/chain/mldsa-v3/inter.crt", store, &ca);
     ASSERT_EQ(ret, HITLS_PKI_SUCCESS);
@@ -2957,6 +2961,64 @@ EXIT:
     HITLS_X509_FreeStoreCtxMock(storeCtx);
     BSL_LIST_FREE(chain, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);
     HITLS_X509_CertFree(cert);
+#endif
+}
+/* END_CASE */
+
+/**
+ * @test SDV_X509_VFY_KEYCERTSIGN_BCONS_TC001
+ * @brief Reject keyCertSign when basicConstraints.cA is absent or false.
+ * @precon nan
+ * @expect The extension check fails for either invalid combination.
+ */
+/* BEGIN_CASE */
+void SDV_X509_VFY_KEYCERTSIGN_BCONS_TC001(void)
+{
+#ifndef HITLS_CRYPTO_RSA
+    SKIP_TEST();
+#else
+    HITLS_X509_Cert *root = NULL;
+    HITLS_X509_Cert *inter = NULL;
+    HITLS_X509_Cert *leaf = NULL;
+    HITLS_X509_List *chain = NULL;
+    HITLS_X509_StoreCtx *storeCtx = NULL;
+    ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_ASN1, "../testdata/cert/chain/ku_noeku_suite/rootca.der", &root),
+              HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_ASN1, "../testdata/cert/chain/ku_noeku_suite/ca.der", &inter),
+              HITLS_PKI_SUCCESS);
+    ASSERT_EQ(
+        HITLS_X509_CertParseFile(BSL_FORMAT_ASN1, "../testdata/cert/chain/ku_noeku_suite/ku_good_noeku.der", &leaf),
+        HITLS_PKI_SUCCESS);
+    HITLS_X509_CertExt *ext = (HITLS_X509_CertExt *)leaf->tbs.ext.extData;
+    ASSERT_NE(ext, NULL);
+    storeCtx = HITLS_X509_StoreCtxNew();
+    ASSERT_NE(storeCtx, NULL);
+    ASSERT_EQ(HITLS_X509_StoreCtxCtrl(storeCtx, HITLS_X509_STORECTX_DEEP_COPY_SET_CA, root, sizeof(HITLS_X509_Cert)),
+              HITLS_PKI_SUCCESS);
+    chain = BSL_LIST_New(sizeof(HITLS_X509_Cert *));
+    ASSERT_NE(chain, NULL);
+    ASSERT_EQ(BSL_LIST_AddElement(chain, leaf, BSL_LIST_POS_END), BSL_SUCCESS);
+    leaf = NULL;
+    ASSERT_EQ(BSL_LIST_AddElement(chain, inter, BSL_LIST_POS_END), BSL_SUCCESS);
+    inter = NULL;
+    ASSERT_EQ(BSL_LIST_AddElement(chain, root, BSL_LIST_POS_END), BSL_SUCCESS);
+    root = NULL;
+
+    ext->extFlags |= HITLS_X509_EXT_FLAG_KUSAGE;
+    ext->keyUsage = HITLS_X509_EXT_KU_KEY_CERT_SIGN;
+    ext->extFlags &= ~HITLS_X509_EXT_FLAG_BCONS;
+    ASSERT_EQ(HITLS_X509_CertVerify(storeCtx, chain), HITLS_X509_ERR_EXT_KU);
+    TestErrClear();
+    ext->extFlags |= HITLS_X509_EXT_FLAG_BCONS;
+    ext->isCa = false;
+    ASSERT_EQ(HITLS_X509_CertVerify(storeCtx, chain), HITLS_X509_ERR_EXT_KU);
+    TestErrClear();
+EXIT:
+    HITLS_X509_StoreCtxFree(storeCtx);
+    BSL_LIST_FREE(chain, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);
+    HITLS_X509_CertFree(root);
+    HITLS_X509_CertFree(inter);
+    HITLS_X509_CertFree(leaf);
 #endif
 }
 /* END_CASE */

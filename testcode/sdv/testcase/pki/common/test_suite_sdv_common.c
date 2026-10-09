@@ -16,6 +16,7 @@
 /* BEGIN_HEADER */
 #include <pthread.h>
 #include <stdio.h>
+#include <string.h>
 #include "bsl_sal.h"
 #include "stub_utils.h"
 #include "hitls_error.h"
@@ -42,6 +43,20 @@
 #define MAX_BUFF_SIZE 4096
 #define PATH_MAX_LEN 4096
 #define PWD_MAX_LEN 4096
+
+STUB_DEFINE_RET3(int, memcmp, const void *, const void *, size_t);
+
+static uint32_t g_zeroLenMemcmpCalls = 0;
+
+static int StubMemcmp(const void *left, const void *right, size_t len)
+{
+    (void)left;
+    (void)right;
+    if (len == 0) {
+        g_zeroLenMemcmpCalls++;
+    }
+    return 0;
+}
 
 /* END_HEADER */
 
@@ -3478,6 +3493,42 @@ void SDV_X509_PARSE_NAME_LIST_UTF8_CACHE_TC001(Hex *nameAHex, Hex *nameBHex, Hex
 EXIT:
     BSL_LIST_FREE(listA, (BSL_LIST_PFUNC_FREE)HITLS_X509_FreeParsedNameNode);
     BSL_LIST_FREE(listB, (BSL_LIST_PFUNC_FREE)HITLS_X509_FreeParsedNameNode);
+}
+/* END_CASE */
+
+/**
+ * @test SDV_X509_CMP_EMPTY_NAME_NODE_TC001
+ * @title Compare empty name nodes
+ * @brief Compare equal zero-length name fields without calling memcmp.
+ * @expect Comparison succeeds and memcmp is not called.
+ */
+/* BEGIN_CASE */
+void SDV_X509_CMP_EMPTY_NAME_NODE_TC001(void)
+{
+    HITLS_X509_NameNode nodeA = {
+        .nameType.tag = BSL_ASN1_TAG_OBJECT_ID,
+        .nameValue.tag = BSL_ASN1_TAG_UTF8STRING,
+        .layer = 2,
+    };
+    HITLS_X509_NameNode nodeB = nodeA;
+    BslList *listA = BSL_LIST_New(sizeof(HITLS_X509_NameNode));
+    BslList *listB = BSL_LIST_New(sizeof(HITLS_X509_NameNode));
+    ASSERT_TRUE(listA != NULL);
+    ASSERT_TRUE(listB != NULL);
+    ASSERT_EQ(BSL_LIST_AddElement(listA, &nodeA, BSL_LIST_POS_END), BSL_SUCCESS);
+    ASSERT_EQ(BSL_LIST_AddElement(listB, &nodeB, BSL_LIST_POS_END), BSL_SUCCESS);
+
+    g_zeroLenMemcmpCalls = 0;
+    STUB_REPLACE(memcmp, StubMemcmp);
+    int32_t ret = HITLS_X509_CmpNameNode(listA, listB);
+    STUB_RESTORE(memcmp);
+    ASSERT_EQ(ret, HITLS_PKI_SUCCESS);
+    ASSERT_EQ(g_zeroLenMemcmpCalls, 0);
+
+EXIT:
+    STUB_RESTORE(memcmp);
+    BSL_LIST_FreeWithoutData(listA);
+    BSL_LIST_FreeWithoutData(listB);
 }
 /* END_CASE */
 

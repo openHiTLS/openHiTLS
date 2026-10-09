@@ -1235,48 +1235,17 @@ static int32_t HITLS_X509_CheckCrlExtNode(void *ctx, HITLS_X509_ExtEntry *extNod
     defined(HITLS_CRYPTO_XMSS) || defined(HITLS_CRYPTO_XMSSMT) || defined(HITLS_CRYPTO_HSS_LMS)
 static int32_t CheckPqcSigKeyUsage(HITLS_X509_Cert *cert)
 {
-    // Check if the certificate's PUBLIC KEY is a PQC signature algorithm
-    // (ML-DSA, SLH-DSA, or a composite ML-DSA SubjectPublicKeyInfo OID).
-    // Note: We check the public key type, not the signature algorithm used to sign this certificate
-    // This is because keyUsage applies to what the certificate holder's public key can do
+
+
+    /* keyUsage applies to the subject public key, not the certificate's signature algorithm. */
     CRYPT_PKEY_AlgId pubKeyAlgId = CRYPT_EAL_PkeyGetId(cert->tbs.ealPubKey);
-    bool isPqcSignaturePubKey = false;
-#ifdef HITLS_CRYPTO_MLDSA
-    if (pubKeyAlgId == CRYPT_PKEY_ML_DSA) {
-        isPqcSignaturePubKey = true;
-    }
-#endif
-#ifdef HITLS_CRYPTO_SLH_DSA
-    if (pubKeyAlgId == CRYPT_PKEY_SLH_DSA) {
-        isPqcSignaturePubKey = true;
-    }
-#endif
-#ifdef HITLS_CRYPTO_COMPOSITE
-    if (pubKeyAlgId == CRYPT_PKEY_COMPOSITE) {
-        isPqcSignaturePubKey = true;
-    }
-#endif
-#ifdef HITLS_CRYPTO_XMSS
-    if (pubKeyAlgId == CRYPT_PKEY_XMSS) {
-        isPqcSignaturePubKey = true;
-    }
-#endif
-#ifdef HITLS_CRYPTO_XMSSMT
-    if (pubKeyAlgId == CRYPT_PKEY_XMSSMT) {
-        isPqcSignaturePubKey = true;
-    }
-#endif
-#ifdef HITLS_CRYPTO_HSS_LMS
-    if (pubKeyAlgId == CRYPT_PKEY_HSS_LMS) {
-        isPqcSignaturePubKey = true;
-    }
-#endif
-    if (!isPqcSignaturePubKey) {
+    if (!((pubKeyAlgId == CRYPT_PKEY_ML_DSA) || (pubKeyAlgId == CRYPT_PKEY_SLH_DSA) ||
+        (pubKeyAlgId == CRYPT_PKEY_COMPOSITE) || (pubKeyAlgId == CRYPT_PKEY_XMSS) ||
+        (pubKeyAlgId == CRYPT_PKEY_XMSSMT) || (pubKeyAlgId == CRYPT_PKEY_HSS_LMS))) {
         return HITLS_PKI_SUCCESS;
     }
 
     HITLS_X509_CertExt *tmpExt = (HITLS_X509_CertExt *)cert->tbs.ext.extData;
-    // keyUsage extension is OPTIONAL, if the extension is not present, no key usage restrictions apply.
     if (tmpExt == NULL || (tmpExt->extFlags & HITLS_X509_EXT_FLAG_KUSAGE) == 0) {
         return HITLS_PKI_SUCCESS;
     }
@@ -2513,6 +2482,11 @@ int32_t X509_CheckExt(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_List *chain)
         } else {
             int32_t ret = X509_VerifyUsageEE(storeCtx, cur);
             VFYCBK_FAIL_IF(ret != HITLS_PKI_SUCCESS, storeCtx, cur, curDepth, ret);
+            /* RFC 5280 Section 4.2.1.3: keyCertSign requires basicConstraints.cA. */
+            VFYCBK_FAIL_IF(curExt != NULL && (curExt->extFlags & HITLS_X509_EXT_FLAG_KUSAGE) != 0 &&
+                               (curExt->keyUsage & HITLS_X509_EXT_KU_KEY_CERT_SIGN) != 0 &&
+                               ((curExt->extFlags & HITLS_X509_EXT_FLAG_BCONS) == 0 || !curExt->isCa),
+                           storeCtx, cur, curDepth, HITLS_X509_ERR_EXT_KU);
         }
         curNode = BSL_LIST_GetPrevNode(curNode);
         curDepth--;

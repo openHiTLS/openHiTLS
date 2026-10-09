@@ -157,9 +157,6 @@ BslOidInfo g_oidTable[] = {
     {{9, "\52\206\110\206\367\15\1\1\10", BSL_OID_GLOBAL}, "MGF1", BSL_CID_MGF1},
     {{8, "\52\201\34\317\125\1\150\2", BSL_OID_GLOBAL}, "sm4-cbc", BSL_CID_SM4_CBC},
     {{8, "\52\201\34\317\125\1\203\170", BSL_OID_GLOBAL}, "sm3WithRSAEncryption", BSL_CID_SM3WITHRSAENCRYPTION},
-    /* RFC 6211 Section 2: id-aa-CMSAlgorithmProtection ::= { 1 2 840 113549 1 9 52 }. */
-    {{9, "\52\206\110\206\367\15\1\11\64", BSL_OID_GLOBAL}, "algorithmProtection",
-        BSL_CID_PKCS9_AT_ALGORITHM_PROTECTION},
     {{9, "\140\206\110\1\145\3\4\3\2", BSL_OID_GLOBAL}, "dsa-with-SHA256", BSL_CID_DSAWITHSHA256},
     {{9, "\140\206\110\1\145\3\4\3\1", BSL_OID_GLOBAL}, "dsa-with-SHA224", BSL_CID_DSAWITHSHA224},
     {{9, "\140\206\110\1\145\3\4\3\3", BSL_OID_GLOBAL}, "dsa-with-SHA384", BSL_CID_DSAWITHSHA384},
@@ -259,6 +256,10 @@ BslOidInfo g_oidTable[] = {
     {{10, "\52\206\110\206\367\15\1\11\27\1", BSL_OID_GLOBAL}, "x509crl", BSL_CID_X509CRL},
     {{9, "\52\206\110\206\367\15\1\11\17", BSL_OID_GLOBAL}, "smimeCapabilities", BSL_CID_SMIMECAP},
     {{8, "\53\6\1\5\5\7\10\7", BSL_OID_GLOBAL}, "id-on-dnsSRV", BSL_CID_ON_DNSSRV},
+    /* RFC 6211 Section 2: id-aa-CMSAlgorithmProtection ::= { 1 2 840 113549 1 9 52 }. */
+    {{9, "\52\206\110\206\367\15\1\11\64", BSL_OID_GLOBAL},
+     "algorithmProtection",
+     BSL_CID_PKCS9_AT_ALGORITHM_PROTECTION},
 };
 
 uint32_t g_tableSize = (uint32_t)sizeof(g_oidTable) / sizeof(g_oidTable[0]);

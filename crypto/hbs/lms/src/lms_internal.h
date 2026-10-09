@@ -54,7 +54,7 @@ extern "C" {
 #define LMS_PUBKEY_OTS_TYPE_OFFSET 4
 #define LMS_PUBKEY_I_OFFSET        8
 #define LMS_PUBKEY_ROOT_OFFSET     24
-#define LMS_PUBKEY_MAX_LEN         (24 + LMS_SHA256_N)
+#define LMS_PUBKEY_MAX_LEN         (LMS_PUBKEY_ROOT_OFFSET + LMS_MAX_HASH)
 
 /* Full struct definitions */
 struct LmsOtsCtx {

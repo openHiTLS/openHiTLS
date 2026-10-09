@@ -177,7 +177,7 @@ static int32_t ParseEncapContentInfo(BSL_ASN1_Buffer *encode, CMS_SignedData *si
     /* RFC 5652 Section 5.2: eContent is optional; its presence means that the
      * content is encapsulated, independently of the eContentType value.
      */
-    if (encapCont->content.data != NULL && encapCont->content.dataLen != 0) {
+    if (asn1[HITLS_CMS_ECI_ECONTENT_BUFF_IDX].tag != 0) {
         signedData->detached = false;
     }
     return HITLS_PKI_SUCCESS;
@@ -552,8 +552,13 @@ static int32_t EncodeListToSet(BslList *list, EncodeItemToAsnFunc encodeFunc, BS
     return HITLS_PKI_SUCCESS;
 }
 
-static int32_t EncodeEncapContentInfo(CMS_EncapContentInfo encap, BSL_ASN1_Buffer *encode)
+static int32_t EncodeEncapContentInfo(CMS_EncapContentInfo encap, bool detached, BSL_ASN1_Buffer *encode)
 {
+    BSL_ASN1_TemplateItem templItems[] = {
+        {BSL_ASN1_TAG_OBJECT_ID, 0, 0},
+        {BSL_ASN1_CLASS_CTX_SPECIFIC | BSL_ASN1_TAG_CONSTRUCTED, detached ? BSL_ASN1_FLAG_OPTIONAL : 0, 0},
+        {BSL_ASN1_TAG_OCTETSTRING, 0, 1},
+    };
     BSL_ASN1_Buffer items[HITLS_CMS_ECI_MAX_IDX] = {0};
     int32_t ret = HITLS_X509_EncodeObjIdentity(encap.contentType, &items[HITLS_CMS_ECI_CONTENT_TYPE_IDX]);
     if (ret != HITLS_PKI_SUCCESS) {
@@ -564,7 +569,7 @@ static int32_t EncodeEncapContentInfo(CMS_EncapContentInfo encap, BSL_ASN1_Buffe
     items[HITLS_CMS_ECI_ECONTENT_BUFF_IDX].buff = encap.content.data;
     items[HITLS_CMS_ECI_ECONTENT_BUFF_IDX].len = encap.content.dataLen;
 
-    BSL_ASN1_Template templ = {g_encapContInfoTempl, sizeof(g_encapContInfoTempl) / sizeof(g_encapContInfoTempl[0])};
+    BSL_ASN1_Template templ = {templItems, sizeof(templItems) / sizeof(templItems[0])};
     BSL_ASN1_Buffer outAsn = {0};
     ret = BSL_ASN1_EncodeTemplate(&templ, items, HITLS_CMS_ECI_MAX_IDX, &outAsn.buff, &outAsn.len);
     if (ret != HITLS_PKI_SUCCESS) {
@@ -820,7 +825,7 @@ static int32_t CMS_GenSignedDataBuffAsn1(HITLS_CMS *cms, BSL_Buffer *encode)
     if (ret != HITLS_PKI_SUCCESS) {
         goto ERR;
     }
-    ret = EncodeEncapContentInfo(sigData->encapCont, &asnbuff[2]); // 2: encapContent
+    ret = EncodeEncapContentInfo(sigData->encapCont, sigData->detached, &asnbuff[2]); // 2: encapContent
     if (ret != HITLS_PKI_SUCCESS) {
         goto ERR;
     }
@@ -1051,22 +1056,22 @@ static void SetContentType(CMS_SignedData *signedData)
 // Helper function: Handle non-detached content
 static int32_t HandleNonDetachedContent(CMS_SignedData *signedData, BSL_Buffer *msg)
 {
-    if (signedData->encapCont.content.data != NULL) {
+    if (signedData->encapCont.content.data != NULL || BSL_LIST_COUNT(signedData->signerInfos) > 0) {
         // Verify content matches
         if (signedData->encapCont.content.dataLen != msg->dataLen ||
-            memcmp(signedData->encapCont.content.data, msg->data, msg->dataLen) != 0) {
+            (msg->dataLen != 0 && memcmp(signedData->encapCont.content.data, msg->data, msg->dataLen) != 0)) {
             BSL_ERR_PUSH_ERROR(HITLS_CMS_ERR_SIGNEDDATA_CONTENT_MISMATCH);
             return HITLS_CMS_ERR_SIGNEDDATA_CONTENT_MISMATCH;
         }
-    } else {
+    } else if (msg->dataLen != 0) {
         // Copy content
         signedData->encapCont.content.data = BSL_SAL_Dump(msg->data, msg->dataLen);
         if (signedData->encapCont.content.data == NULL) {
             BSL_ERR_PUSH_ERROR(BSL_DUMP_FAIL);
             return BSL_DUMP_FAIL;
         }
-        signedData->encapCont.content.dataLen = msg->dataLen;
     }
+    signedData->encapCont.content.dataLen = msg->dataLen;
     return HITLS_PKI_SUCCESS;
 }
 
@@ -1720,6 +1725,10 @@ static int32_t CMS_AttrDecodeMessageDigest(HITLS_X509_AttrEntry *attr, void *out
         BSL_ERR_PUSH_ERROR(HITLS_CMS_ERR_SIGNEDDATA_INVALID_ATTR);
         return HITLS_CMS_ERR_SIGNEDDATA_INVALID_ATTR;
     }
+    if (tempLen != buff->dataLen) {
+        BSL_ERR_PUSH_ERROR(HITLS_CMS_ERR_SIGNEDDATA_INVALID_ATTR);
+        return HITLS_CMS_ERR_SIGNEDDATA_INVALID_ATTR;
+    }
     return HITLS_PKI_SUCCESS;
 }
 
@@ -1733,6 +1742,10 @@ static int32_t CMS_AttrDecodeContentType(HITLS_X509_AttrEntry *attr, void *out)
     if (ret != BSL_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
+    }
+    if (tempLen != buffLen) {
+        BSL_ERR_PUSH_ERROR(HITLS_CMS_ERR_SIGNEDDATA_INVALID_ATTR);
+        return HITLS_CMS_ERR_SIGNEDDATA_INVALID_ATTR;
     }
     BslCid cid = BSL_OBJ_GetCidFromOidBuff(buff, buffLen);
     if (cid == BSL_CID_UNKNOWN) {
@@ -2019,13 +2032,17 @@ static int32_t VerifySignerInfo(CMS_SignedData *sigData, CMS_SignerInfo *si, BSL
 // Validate and get message content for verification
 static int32_t GetVerifyMsgContent(CMS_SignedData *sigData, const BSL_Buffer *msg, BSL_Buffer *finalDataBuff)
 {
-    if ((msg == NULL || msg->data == NULL || msg->dataLen == 0) && sigData->detached) {
+    if (msg != NULL && msg->data == NULL && msg->dataLen != 0) {
+        BSL_ERR_PUSH_ERROR(HITLS_CMS_ERR_INVALID_PARAM);
+        return HITLS_CMS_ERR_INVALID_PARAM;
+    }
+    if (msg == NULL && sigData->detached) {
         BSL_ERR_PUSH_ERROR(HITLS_CMS_ERR_SIGNEDDATA_NO_CONTENT);
         return HITLS_CMS_ERR_SIGNEDDATA_NO_CONTENT;
     }
-    if (msg != NULL && msg->data != NULL && msg->dataLen != 0 && !sigData->detached) {
+    if (msg != NULL && !sigData->detached) {
         if (msg->dataLen != sigData->encapCont.content.dataLen ||
-            memcmp(msg->data, sigData->encapCont.content.data, msg->dataLen) != 0) {
+            (msg->dataLen != 0 && memcmp(msg->data, sigData->encapCont.content.data, msg->dataLen) != 0)) {
             BSL_ERR_PUSH_ERROR(HITLS_CMS_ERR_SIGNEDDATA_CONTENT_MISMATCH);
             return HITLS_CMS_ERR_SIGNEDDATA_CONTENT_MISMATCH;
         }
@@ -2142,10 +2159,12 @@ int32_t HITLS_CMS_DataVerify(HITLS_CMS *cms, BSL_Buffer *msg, const BSL_Param *i
             BSL_ERR_PUSH_ERROR(HITLS_CMS_ERR_INVALID_DATA);
             return HITLS_CMS_ERR_INVALID_DATA;
         }
-        output->data = BSL_SAL_Dump(finalDataBuff.data, finalDataBuff.dataLen);
-        if (output->data == NULL) {
-            BSL_ERR_PUSH_ERROR(BSL_DUMP_FAIL);
-            return BSL_DUMP_FAIL;
+        if (finalDataBuff.dataLen != 0) {
+            output->data = BSL_SAL_Dump(finalDataBuff.data, finalDataBuff.dataLen);
+            if (output->data == NULL) {
+                BSL_ERR_PUSH_ERROR(BSL_DUMP_FAIL);
+                return BSL_DUMP_FAIL;
+            }
         }
         output->dataLen = finalDataBuff.dataLen;
     }

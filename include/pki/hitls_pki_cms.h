@@ -101,7 +101,8 @@ int32_t HITLS_CMS_ProviderParseFile(HITLS_PKI_LibCtx *libCtx, const char *attrNa
  * @param prvKey          [IN] Private key used for signing
  * @param cert            [IN] Signer certificate used to derive identifier fields
  * @param msg             [IN] Message buffer to sign
- * @param optionalParam   [IN] Optional parameters (can be NULL). it may contains untrusted cert-list, ca-cert list,
+ * @param optionalParam   [IN] Optional parameters (can be NULL), including
+ *                             HITLS_CMS_PARAM_SET_ALG_PROTECTION for signed attributes.
  * @retval #HITLS_PKI_SUCCESS on success.
  *         Error codes can be found in hitls_pki_errno.h
  */
@@ -131,9 +132,10 @@ int32_t HITLS_CMS_DataVerify(HITLS_CMS *cms, BSL_Buffer *msg, const BSL_Param *i
  * @brief Initialize streaming operation for CMS SignedData (unified interface)
  * @par Description: Unified interface for initializing streaming operations.
  *
- * Useful for to deal sign or verify large input data.
+ * Streams detached SignedData through DataUpdate and DataFinal. ML-DSA, SLH-DSA,
+ * and HSS/LMS require signed attributes in streaming mode.
  *
- * @attention State must be HITLS_CMS_UNINIT.
+ * @attention A repeated initialization resets the streaming digest state.
  * @param cms             [IN/OUT] CMS structure to initialize
  * @param option           [IN] Operation option，ref hitls_pki_types.h
  * @param param            [IN] Optional parameters (can be NULL).
@@ -145,7 +147,7 @@ int32_t HITLS_CMS_DataInit(int32_t option, HITLS_CMS *cms, const BSL_Param *para
 /**
  * @ingroup cms
  * @brief Update streaming operation with input data chunk (unified interface)
- * @par Description: deal with a chunk of input data. This function can be
+ * @par Description: Deal with a chunk of detached input data. This function can be
  * called multiple times to process the input data in chunks.
  *
  * Works for both sign and verify.
@@ -168,7 +170,7 @@ int32_t HITLS_CMS_DataUpdate(HITLS_CMS *cms, const BSL_Buffer *input);
  *
  * The function determines the operation type based on the option set in HITLS_CMS_DataInit.
  *
- * @attention Call HITLS_CMS_DataInit and at least one HITLS_CMS_DataUpdate before calling this function.
+ * @attention Call HITLS_CMS_DataInit before calling this function.
  * @param cms             [IN/OUT] CMS structure
  * @param param            [IN] Parameters:
  *                            - For signing: Optional parameters (can be NULL) for signature

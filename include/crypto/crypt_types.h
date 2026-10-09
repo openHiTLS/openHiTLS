@@ -748,12 +748,6 @@ typedef enum {
     CRYPT_CTRL_GET_XMSS_XDR_ALG_TYPE = 800,     /**< Get the XMSS xdr algId. */
     CRYPT_CTRL_SET_XMSS_XDR_ALG_TYPE = 801,     /**< Set the XMSS xdr algId. */
 
-    // hss
-    CRYPT_CTRL_HSS_SET_PARAM = 850,              /**< Set HSS parameters via BSL_Param */
-    CRYPT_CTRL_HSS_GET_PUBKEY_LEN,               /**< Get public key length */
-    CRYPT_CTRL_HSS_GET_SIG_LEN,                  /**< Get signature length */
-    CRYPT_CTRL_HSS_GET_LEVELS,                   /**< Get number of levels */
-
     // sm9
     CRYPT_CTRL_SET_SM9_USER_ID = 900,   /**< SM9 set the user ID. */
 } CRYPT_PkeyCtrl;

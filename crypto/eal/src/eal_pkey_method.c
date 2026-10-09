@@ -868,7 +868,7 @@ static const EAL_PkeyMethod METHODS[] = {
         NULL, // setPara
         NULL, // getPara
         NULL, // gen
-        CRYPT_HSS_Ctrl,
+        NULL, // ctrl
         CRYPT_HSS_SetPubKey,
         NULL,
         CRYPT_HSS_GetPubKey,

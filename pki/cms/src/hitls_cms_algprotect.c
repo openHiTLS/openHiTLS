@@ -222,11 +222,10 @@ int32_t CMS_GetAlgorithmProtection(const BSL_Param *params, CRYPT_PKEY_AlgId key
      * CMSAlgorithmProtection for these PQC signatures. The optional parameter
      * overrides this default.
      */
-    bool result =( keyAlgId == CRYPT_PKEY_ML_DSA || keyAlgId == CRYPT_PKEY_SLH_DSA ||
-        keyAlgId == CRYPT_PKEY_COMPOSITE);
+    bool result = (keyAlgId == CRYPT_PKEY_ML_DSA || keyAlgId == CRYPT_PKEY_SLH_DSA || keyAlgId == CRYPT_PKEY_COMPOSITE);
     const BSL_Param *param = BSL_PARAM_FindConstParam(params, HITLS_CMS_PARAM_SET_ALG_PROTECTION);
     if (param != NULL) {
-        if (param->valueType != BSL_PARAM_TYPE_BOOL || param->valueLen != sizeof(bool)) {
+        if (param->valueType != BSL_PARAM_TYPE_BOOL || param->value == NULL || param->valueLen != sizeof(bool)) {
             BSL_ERR_PUSH_ERROR(HITLS_CMS_ERR_INVALID_PARAM);
             return HITLS_CMS_ERR_INVALID_PARAM;
         }

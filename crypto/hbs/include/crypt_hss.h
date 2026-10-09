@@ -37,6 +37,8 @@ extern "C" {
 
 typedef struct HssCtx CRYPT_HSS_Ctx;
 
+#define CRYPT_HSS_PUBKEY_LEN 56
+
 /**
  * @ingroup hss
  * @brief hss Allocates context memory space.
@@ -92,24 +94,11 @@ int32_t CRYPT_HSS_Cmp(CRYPT_HSS_Ctx *ctx1, CRYPT_HSS_Ctx *ctx2);
 
 /**
  * @ingroup hss
- * @brief HSS control interface.
- *
- * @param ctx [IN] HSS context structure
- * @param cmd [IN] Control command
- * @param val [IN/OUT] Parameter value
- * @param valLen [IN] Length of val
- *
- * @retval CRYPT_NULL_INPUT  Invalid null pointer input.
- * @retval CRYPT_SUCCESS     Operation successful.
- */
-int32_t CRYPT_HSS_Ctrl(CRYPT_HSS_Ctx *ctx, int32_t cmd, void *val, uint32_t valLen);
-
-/**
- * @ingroup hss
  * @brief Set the public key data for the HSS.
  *
  * @param ctx [IN] HSS context structure
- * @param param [IN] External public key data
+ * @param param [IN] Parameter list containing the top-level LMS public key.
+ * CRYPT_PARAM_HSS_LEVEL is optional and defaults to 1.
  *
  * @retval CRYPT_NULL_INPUT      Invalid null pointer input.
  * @retval CRYPT_MEM_ALLOC_FAIL  Memory allocation failure.
@@ -122,7 +111,8 @@ int32_t CRYPT_HSS_SetPubKey(CRYPT_HSS_Ctx *ctx, BSL_Param *param);
  * @brief Obtain the public key data of the HSS.
  *
  * @param ctx [IN] HSS context structure
- * @param param [OUT] External public key data
+ * @param param [OUT] Parameter list containing the top-level LMS public key.
+ * CRYPT_PARAM_HSS_LEVEL is optional.
  *
  * @retval CRYPT_NULL_INPUT      Invalid null pointer input.
  * @retval CRYPT_SUCCESS         Obtained successfully.

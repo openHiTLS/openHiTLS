@@ -577,9 +577,6 @@ int32_t CRYPT_COMPOSITE_SetPubKeyEx(CRYPT_CompositeCtx *ctx, const BSL_Param *pa
 static int32_t CompositeGetPreHashLen(CRYPT_MD_AlgId hashId, uint32_t *digestLen)
 {
     uint32_t len = CRYPT_EAL_MdGetDigestSize(hashId);
-    if (hashId == CRYPT_MD_SHAKE256) {
-        len = 64;
-    }
     RETURN_RET_IF(len == 0, CRYPT_EAL_ALG_NOT_SUPPORT);
     *digestLen = len;
     return CRYPT_SUCCESS;

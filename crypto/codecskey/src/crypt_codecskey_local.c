@@ -19,6 +19,7 @@
 #include <string.h>
 
 #include "bsl_asn1_internal.h"
+#include "bsl_bytes.h"
 #include "bsl_params.h"
 #include "bsl_err_internal.h"
 #include "bsl_obj_internal.h"
@@ -31,6 +32,7 @@
 #include "crypt_params_key.h"
 #include "crypt_codecskey.h"
 #include "crypt_mlkem.h"
+#include "crypt_hss.h"
 #include "eal_pkey_local.h"
 #include "crypt_codecskey_local.h"
 
@@ -1043,23 +1045,24 @@ static int32_t ParseMlKemPrikeyAsn1Buff(CRYPT_EAL_LibCtx *libctx, const char *at
 #endif
 
 #ifdef HITLS_CRYPTO_HSS_LMS
-static int32_t ParseHbsPubkeyAsn1Buff(CRYPT_EAL_LibCtx *libctx, const char *attrName,
-    BSL_ASN1_BitString *bitPubkey, CRYPT_EAL_PkeyCtx **ealPubKey,
-    CRYPT_PKEY_AlgId pkeyId, BslCid paramId, uint32_t dataOffset)
+static int32_t ParseHssPubkeyAsn1Buff(CRYPT_EAL_LibCtx *libctx, const char *attrName,
+    BSL_ASN1_BitString *bitPubkey, CRYPT_EAL_PkeyCtx **ealPubKey)
 {
-    if (bitPubkey->unusedBits != 0) {
-        BSL_ERR_PUSH_ERROR(CRYPT_DECODE_NO_SUPPORT_FORMAT);
-        return CRYPT_DECODE_NO_SUPPORT_FORMAT;
+    if (bitPubkey->len <= sizeof(uint32_t)) {
+        BSL_ERR_PUSH_ERROR(CRYPT_HSS_INVALID_KEY_LEN);
+        return CRYPT_HSS_INVALID_KEY_LEN;
     }
-    CRYPT_EAL_PkeyCtx *pctx = CRYPT_EAL_ProviderPkeyNewCtx(libctx, pkeyId,
+    CRYPT_EAL_PkeyCtx *pctx = CRYPT_EAL_ProviderPkeyNewCtx(libctx, CRYPT_PKEY_HSS_LMS,
         CRYPT_EAL_PKEY_UNKNOWN_OPERATE, attrName);
     if (pctx == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         return CRYPT_MEM_ALLOC_FAIL;
     }
-    BSL_Param pubParam[2] = {
-        {(int32_t)paramId, BSL_PARAM_TYPE_OCTETS, bitPubkey->buff + dataOffset,
-            bitPubkey->len - dataOffset, 0},
+    uint32_t levels = BSL_ByteToUint32(bitPubkey->buff);
+    BSL_Param pubParam[3] = {
+        {CRYPT_PARAM_HSS_LEVEL, BSL_PARAM_TYPE_UINT32, &levels, sizeof(levels), 0},
+        {CRYPT_PARAM_HSS_PUBKEY, BSL_PARAM_TYPE_OCTETS, bitPubkey->buff + sizeof(uint32_t),
+            bitPubkey->len - sizeof(uint32_t), 0},
         BSL_PARAM_END
     };
     int32_t ret = CRYPT_EAL_PkeySetPubEx(pctx, pubParam);
@@ -1072,12 +1075,6 @@ static int32_t ParseHbsPubkeyAsn1Buff(CRYPT_EAL_LibCtx *libctx, const char *attr
     return CRYPT_SUCCESS;
 }
 
-static int32_t ParseHssOrLmsPubkeyAsn1Buff(CRYPT_EAL_LibCtx *libctx, const char *attrName,
-    BSL_ASN1_BitString *bitPubkey, CRYPT_EAL_PkeyCtx **ealPubKey)
-{
-    return ParseHbsPubkeyAsn1Buff(libctx, attrName, bitPubkey, ealPubKey,
-        CRYPT_PKEY_HSS_LMS, CRYPT_PARAM_HSS_PUBKEY, 0);
-}
 #endif
 
 #if defined(HITLS_CRYPTO_XMSS) || defined(HITLS_CRYPTO_XMSSMT)
@@ -1497,7 +1494,6 @@ static int32_t ParseSubPubkeyAsn1(CRYPT_EAL_LibCtx *libctx, const char *attrName
         case BSL_CID_ML_KEM_1024:
             return ParseMlKemPubkeyAsn1Buff(libctx, attrName, bitPubkey->buff, bitPubkey->len, cid, ealPubKey);
 #endif
-#if defined(HITLS_CRYPTO_XMSS) || defined(HITLS_CRYPTO_XMSSMT)
 #ifdef HITLS_CRYPTO_XMSS
         case BSL_CID_XMSS:
             return ParseXmssPubKeyAsn1Buff(libctx, attrName, bitPubkey, ealPubKey, true);
@@ -1506,10 +1502,9 @@ static int32_t ParseSubPubkeyAsn1(CRYPT_EAL_LibCtx *libctx, const char *attrName
         case BSL_CID_XMSSMT:
             return ParseXmssPubKeyAsn1Buff(libctx, attrName, bitPubkey, ealPubKey, false);
 #endif
-#endif
 #ifdef HITLS_CRYPTO_HSS_LMS
         case BSL_CID_HSS_LMS:
-            return ParseHssOrLmsPubkeyAsn1Buff(libctx, attrName, bitPubkey, ealPubKey);
+            return ParseHssPubkeyAsn1Buff(libctx, attrName, bitPubkey, ealPubKey);
 #endif
         default:
             BSL_ERR_PUSH_ERROR(CRYPT_DECODE_UNKNOWN_OID);
@@ -2469,33 +2464,29 @@ static int32_t EncodeMlKemPrikeyAsn1Buff(CRYPT_EAL_PkeyCtx *ealPriKey, const BSL
 #endif // HITLS_CRYPTO_MLKEM
 
 #ifdef HITLS_CRYPTO_HSS_LMS
-static int32_t EncodeHbsPubkeyAsn1Buff(CRYPT_EAL_PkeyCtx *ealPubKey, BSL_Buffer *bitStr,
-    int32_t ctrlId, BslCid paramId)
+static int32_t EncodeHssPubkeyAsn1Buff(CRYPT_EAL_PkeyCtx *ealPubKey, BSL_Buffer *bitStr)
 {
-    uint32_t pubLen = 0;
-    int32_t ret = CRYPT_EAL_PkeyCtrl(ealPubKey, ctrlId, &pubLen, sizeof(uint32_t));
-    if (ret != CRYPT_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
-        return ret;
-    }
-    uint32_t allocLen = pubLen;
+    uint32_t levels = 0;
+    uint32_t allocLen = sizeof(levels) + CRYPT_HSS_PUBKEY_LEN;
     uint8_t *pub = (uint8_t *)BSL_SAL_Malloc(allocLen);
     if (pub == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         return CRYPT_MEM_ALLOC_FAIL;
     }
-    BSL_Param pubParam[2] = {
-        {(int32_t)paramId, BSL_PARAM_TYPE_OCTETS, pub, pubLen, 0},
+    BSL_Param pubParam[3] = {
+        {CRYPT_PARAM_HSS_LEVEL, BSL_PARAM_TYPE_UINT32, &levels, sizeof(levels), 0},
+        {CRYPT_PARAM_HSS_PUBKEY, BSL_PARAM_TYPE_OCTETS, pub + sizeof(levels), CRYPT_HSS_PUBKEY_LEN, 0},
         BSL_PARAM_END
     };
-    ret = CRYPT_EAL_PkeyGetPubEx(ealPubKey, pubParam);
+    int32_t ret = CRYPT_EAL_PkeyGetPubEx(ealPubKey, pubParam);
     if (ret != CRYPT_SUCCESS) {
         BSL_SAL_Free(pub);
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
+    BSL_Uint32ToByte(levels, pub);
     bitStr->data = pub;
-    bitStr->dataLen = pubParam[0].useLen;
+    bitStr->dataLen = sizeof(levels) + pubParam[1].useLen;
     return CRYPT_SUCCESS;
 }
 #endif
@@ -2611,8 +2602,7 @@ static int32_t CRYPT_EAL_SubPubkeyGetInfo(CRYPT_EAL_PkeyCtx *ealPubKey, BSL_ASN1
 #endif
 #ifdef HITLS_CRYPTO_HSS_LMS
         case CRYPT_PKEY_HSS_LMS:
-            ret = EncodeHbsPubkeyAsn1Buff(ealPubKey, &bitTmp, CRYPT_CTRL_HSS_GET_PUBKEY_LEN,
-                CRYPT_PARAM_HSS_PUBKEY);
+            ret = EncodeHssPubkeyAsn1Buff(ealPubKey, &bitTmp);
             break;
 #endif
         default:

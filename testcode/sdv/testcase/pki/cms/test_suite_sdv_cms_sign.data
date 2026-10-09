@@ -4,6 +4,12 @@ SDV_CMS_SIGNEDDATA_MALLOC_TC001:
 SDV_CMS_ALG_PROTECTION_INVALID_TC001
 SDV_CMS_ALG_PROTECTION_INVALID_TC001:
 
+SDV_CMS_ALG_ID_RAW_PARAM_TC001 Preserve raw AlgorithmIdentifier parameters
+SDV_CMS_ALG_ID_RAW_PARAM_TC001:
+
+SDV_CMS_ALG_PROTECTION_PARAM_TC001 Reject null algorithm-protection value
+SDV_CMS_ALG_PROTECTION_PARAM_TC001:
+
 SDV_CMS_PARSE_SIGNEDDATA_VERIFY_TEST_TC001 mldsa44 with attach
 SDV_CMS_PARSE_SIGNEDDATA_VERIFY_TEST_TC001:"../testdata/cert/asn1/cms/signeddata/mldsa/mldsa44/mldsa44_attached.cms":"../testdata/cert/asn1/cms/signeddata/msg.txt":0:"../testdata/cert/asn1/cms/signeddata/mldsa/mldsa44/ca_cert.pem":0
 
@@ -394,6 +400,18 @@ SDV_CMS_VERIFY_DIGEST_ALG_NOT_IN_LIST_TC001:"308205BD06092A864886F70D010702A0820
 SDV_CMS_SIGNEDDATA_ROUNDTRIP_TC001 Generate detached SignedData with RSA PKCS#1 v1.5, has signedAttrs
 SDV_CMS_SIGNEDDATA_ROUNDTRIP_TC001:BSL_CID_RSA:"../testdata/cert/asn1/cms/signeddata/ca_cert.pem":"../testdata/cert/asn1/cms/signeddata/rsa-pkcsv5/cert.pem":"../testdata/cert/asn1/cms/signeddata/rsa-pkcsv5/key.pem":"../testdata/cert/asn1/cms/signeddata/msg.txt":1
 
+SDV_CMS_SIGNEDDATA_SINGLE_ATTR_VALUE_TC001 Reject multi-value content-type
+SDV_CMS_SIGNEDDATA_SINGLE_ATTR_VALUE_TC001:BSL_CID_PKCS9_AT_CONTENTTYPE:"../testdata/cert/asn1/cms/signeddata/ca_cert.pem":"../testdata/cert/asn1/cms/signeddata/rsa-pkcsv5/cert.pem":"../testdata/cert/asn1/cms/signeddata/rsa-pkcsv5/key.pem":"../testdata/cert/asn1/cms/signeddata/msg.txt"
+
+SDV_CMS_SIGNEDDATA_SINGLE_ATTR_VALUE_TC001 Reject multi-value message-digest
+SDV_CMS_SIGNEDDATA_SINGLE_ATTR_VALUE_TC001:BSL_CID_PKCS9_AT_MESSAGEDIGEST:"../testdata/cert/asn1/cms/signeddata/ca_cert.pem":"../testdata/cert/asn1/cms/signeddata/rsa-pkcsv5/cert.pem":"../testdata/cert/asn1/cms/signeddata/rsa-pkcsv5/key.pem":"../testdata/cert/asn1/cms/signeddata/msg.txt"
+
+SDV_CMS_SIGNEDDATA_EMPTY_CONTENT_TC001 Verify attached empty content
+SDV_CMS_SIGNEDDATA_EMPTY_CONTENT_TC001:0:"../testdata/cert/asn1/cms/signeddata/ca_cert.pem":"../testdata/cert/asn1/cms/signeddata/rsa-pkcsv5/cert.pem":"../testdata/cert/asn1/cms/signeddata/rsa-pkcsv5/key.pem":"../testdata/cert/asn1/cms/signeddata/msg.txt"
+
+SDV_CMS_SIGNEDDATA_EMPTY_CONTENT_TC001 Verify detached empty content
+SDV_CMS_SIGNEDDATA_EMPTY_CONTENT_TC001:1:"../testdata/cert/asn1/cms/signeddata/ca_cert.pem":"../testdata/cert/asn1/cms/signeddata/rsa-pkcsv5/cert.pem":"../testdata/cert/asn1/cms/signeddata/rsa-pkcsv5/key.pem":"../testdata/cert/asn1/cms/signeddata/msg.txt"
+
 SDV_CMS_SIGNEDDATA_ROUNDTRIP_TC001 Generate detached SignedData with RSA PKCS#1 v1.5, no signedAttrs
 SDV_CMS_SIGNEDDATA_ROUNDTRIP_TC001:BSL_CID_RSA:"../testdata/cert/asn1/cms/signeddata/ca_cert.pem":"../testdata/cert/asn1/cms/signeddata/rsa-pkcsv5/cert.pem":"../testdata/cert/asn1/cms/signeddata/rsa-pkcsv5/key.pem":"../testdata/cert/asn1/cms/signeddata/msg.txt":0
 
@@ -525,7 +543,7 @@ SDV_CMS_ALG_PROTECTION_REJECT_TC001:BSL_CID_RSA:"../testdata/cert/asn1/cms/signe
 SDV_CMS_ALG_PROTECTION_REJECT_TC001 Reject inconsistent RSA-PSS algorithm protection
 SDV_CMS_ALG_PROTECTION_REJECT_TC001:BSL_CID_RSASSAPSS:"../testdata/cert/asn1/cms/signeddata/ca_cert.pem":"../testdata/cert/asn1/cms/signeddata/rsa-pss/cert.pem":"../testdata/cert/asn1/cms/signeddata/rsa-pss/key.pem":"../testdata/cert/asn1/cms/signeddata/msg.txt"
 
-SDV_CMS_PQC_POLICY_TC001 Ignore digestAlgorithm for pure SLH-DSA
+SDV_CMS_PQC_POLICY_TC001 Reject non-digest digestAlgorithm for pure SLH-DSA
 SDV_CMS_PQC_POLICY_TC001:BSL_CID_SLH_DSA:"../testdata/cert/asn1/slhdsa_cert/slh_dsa_sha2_128s.ca.pem":"../testdata/cert/asn1/slhdsa_cert/slh_dsa_sha2_128s.ca.pem":"../testdata/cert/asn1/slhdsa_cert/slh_dsa_sha2_128s.key.pem":"../testdata/cert/asn1/cms/signeddata/msg.txt":0
 
 SDV_CMS_ATTACHED_MULTI_SIGNER_TC001 Add two RSA signers
@@ -599,6 +617,24 @@ SDV_CMS_HASH_SLH_SIGN_REJECT_TC001:"../testdata/cert/asn1/slhdsa_cert/slh_dsa_sh
 
 SDV_CMS_HSS_POLICY_TC001 Validate HSS CMS digest policy
 SDV_CMS_HSS_POLICY_TC001:
+
+SDV_CMS_PARSE_SIGNEDDATA_VERIFY_TEST_TC001 BC 1.84 LMS attached signedAttrs
+SDV_CMS_PARSE_SIGNEDDATA_VERIFY_TEST_TC001:"../testdata/cert/asn1/cms/signeddata/standards/bouncycastle-1.84/lms_l1_attached_signedattrs.der":"../testdata/cert/asn1/cms/signeddata/standards/bouncycastle-1.84/message.txt":0:"../testdata/cert/asn1/hss_cert/bouncycastle-1.84/lms_l1.pem":0
+
+SDV_CMS_PARSE_SIGNEDDATA_VERIFY_TEST_TC001 BC 1.84 LMS detached without signedAttrs
+SDV_CMS_PARSE_SIGNEDDATA_VERIFY_TEST_TC001:"../testdata/cert/asn1/cms/signeddata/standards/bouncycastle-1.84/lms_l1_detached_noattrs.der":"../testdata/cert/asn1/cms/signeddata/standards/bouncycastle-1.84/message.txt":1:"../testdata/cert/asn1/hss_cert/bouncycastle-1.84/lms_l1.pem":0
+
+SDV_CMS_PARSE_SIGNEDDATA_VERIFY_TEST_TC001 BC 1.84 two-level HSS attached signedAttrs
+SDV_CMS_PARSE_SIGNEDDATA_VERIFY_TEST_TC001:"../testdata/cert/asn1/cms/signeddata/standards/bouncycastle-1.84/hss_l2_attached_signedattrs.der":"../testdata/cert/asn1/cms/signeddata/standards/bouncycastle-1.84/message.txt":0:"../testdata/cert/asn1/hss_cert/bouncycastle-1.84/hss_l2.pem":0
+
+SDV_CMS_PARSE_SIGNEDDATA_VERIFY_TEST_TC001 BC 1.84 three-level HSS detached signedAttrs
+SDV_CMS_PARSE_SIGNEDDATA_VERIFY_TEST_TC001:"../testdata/cert/asn1/cms/signeddata/standards/bouncycastle-1.84/hss_l3_detached_signedattrs.der":"../testdata/cert/asn1/cms/signeddata/standards/bouncycastle-1.84/message.txt":1:"../testdata/cert/asn1/hss_cert/bouncycastle-1.84/hss_l3.pem":0
+
+SDV_CMS_PARSE_SIGNEDDATA_STREAM_VERIFY_TC001 Stream-verify HSS with signedAttrs
+SDV_CMS_PARSE_SIGNEDDATA_STREAM_VERIFY_TC001:"../testdata/cert/asn1/cms/signeddata/standards/bouncycastle-1.84/hss_l3_detached_signedattrs.der":"../testdata/cert/asn1/cms/signeddata/standards/bouncycastle-1.84/message.txt":"../testdata/cert/asn1/hss_cert/bouncycastle-1.84/hss_l3.pem"
+
+SDV_CMS_PARSE_SIGNEDDATA_VERIFY_FAIL_TC001 Reject HSS certificate with keyEncipherment
+SDV_CMS_PARSE_SIGNEDDATA_VERIFY_FAIL_TC001:"../testdata/cert/asn1/cms/signeddata/standards/bouncycastle-1.84/hss_l2_bad_ku_attached.der":"../testdata/cert/asn1/hss_cert/bouncycastle-1.84/hss_l2_bad_ku.pem":HITLS_X509_ERR_EXT_KU
 
 SDV_CMS_SIGNINGTIME_GENERALIZEDTIME_TC001 test encode time in 2055
 SDV_CMS_SIGNINGTIME_GENERALIZEDTIME_TC001:"../testdata/cert/asn1/cms/signeddata/ecc-p256/cert.pem":"../testdata/cert/asn1/cms/signeddata/ecc-p256/key.pem":"../testdata/cert/asn1/cms/signeddata/msg.txt"
@@ -683,8 +719,11 @@ SDV_CMS_GEN_SIGNEDDATA_INVALID_HASH_TC001:"../testdata/cert/asn1/cms/signeddata/
 SDV_CMS_GEN_SIGNEDDATA_INVALID_HASH_TC001 SLH-DSA pure mode accepts a different digest algorithm
 SDV_CMS_GEN_SIGNEDDATA_INVALID_HASH_TC001:"../testdata/cert/asn1/slhdsa_cert/slh_dsa_sha2_128s.ca.pem":"../testdata/cert/asn1/slhdsa_cert/slh_dsa_sha2_128s.ca.pem":"../testdata/cert/asn1/slhdsa_cert/slh_dsa_sha2_128s.key.pem":"../testdata/cert/asn1/cms/signeddata/msg.txt":0:0:BSL_CID_SHA384:HITLS_PKI_SUCCESS
 
-SDV_CMS_GEN_SIGNEDDATA_INVALID_HASH_TC001 SLH-DSA pure mode ignores a non-digest algorithm
-SDV_CMS_GEN_SIGNEDDATA_INVALID_HASH_TC001:"../testdata/cert/asn1/slhdsa_cert/slh_dsa_sha2_128s.ca.pem":"../testdata/cert/asn1/slhdsa_cert/slh_dsa_sha2_128s.ca.pem":"../testdata/cert/asn1/slhdsa_cert/slh_dsa_sha2_128s.key.pem":"../testdata/cert/asn1/cms/signeddata/msg.txt":0:0:BSL_CID_AES128_CBC:HITLS_PKI_SUCCESS
+SDV_CMS_GEN_SIGNEDDATA_INVALID_HASH_TC001 SLH-DSA pure mode rejects a non-digest algorithm
+SDV_CMS_GEN_SIGNEDDATA_INVALID_HASH_TC001:"../testdata/cert/asn1/slhdsa_cert/slh_dsa_sha2_128s.ca.pem":"../testdata/cert/asn1/slhdsa_cert/slh_dsa_sha2_128s.ca.pem":"../testdata/cert/asn1/slhdsa_cert/slh_dsa_sha2_128s.key.pem":"../testdata/cert/asn1/cms/signeddata/msg.txt":0:0:BSL_CID_AES128_CBC:HITLS_CMS_ERR_INVALID_ALGO
+
+SDV_CMS_GEN_SIGNEDDATA_INVALID_HASH_TC001 SLH-DSA pure mode rejects a digest without CMS OID
+SDV_CMS_GEN_SIGNEDDATA_INVALID_HASH_TC001:"../testdata/cert/asn1/slhdsa_cert/slh_dsa_sha2_128s.ca.pem":"../testdata/cert/asn1/slhdsa_cert/slh_dsa_sha2_128s.ca.pem":"../testdata/cert/asn1/slhdsa_cert/slh_dsa_sha2_128s.key.pem":"../testdata/cert/asn1/cms/signeddata/msg.txt":0:0:BSL_CID_BLAKE2S256:HITLS_CMS_ERR_INVALID_ALGO
 
 SDV_CMS_GEN_SIGNEDDATA_INVALID_HASH_TC001 RFC9814 SLH-DSA SHA2-128s allows SHA256
 SDV_CMS_GEN_SIGNEDDATA_INVALID_HASH_TC001:"../testdata/cert/asn1/slhdsa_cert/slh_dsa_sha2_128s.ca.pem":"../testdata/cert/asn1/slhdsa_cert/slh_dsa_sha2_128s.ca.pem":"../testdata/cert/asn1/slhdsa_cert/slh_dsa_sha2_128s.key.pem":"../testdata/cert/asn1/cms/signeddata/msg.txt":1:1:BSL_CID_SHA256:HITLS_PKI_SUCCESS

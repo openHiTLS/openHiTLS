@@ -154,6 +154,11 @@ int32_t HITLS_X509_ParseSignAlgInfo(BSL_ASN1_Buffer *algId, BSL_ASN1_Buffer *par
         BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_SIGN_PARAM);
         return HITLS_X509_ERR_SIGN_PARAM;
     }
+    if (cid != BSL_CID_RSASSAPSS && param != NULL && param->tag != 0 &&
+        (param->tag != BSL_ASN1_TAG_NULL || param->len != 0)) {
+        BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_SIGN_PARAM);
+        return HITLS_X509_ERR_SIGN_PARAM;
+    }
     if (cid == BSL_CID_RSASSAPSS) {
 #ifdef HITLS_CRYPTO_RSA
         ret = CRYPT_EAL_ParseRsaPssAlgParam(param, &x509Alg->rsaPssParam);
@@ -692,6 +697,9 @@ static int32_t X509_NodeNameCompare(BSL_ASN1_Buffer *src, BSL_ASN1_Buffer *dest)
     if (src->len != dest->len) {
         return 1;
     }
+    if (src->len == 0) {
+        return 0;
+    }
     return memcmp(src->buff, dest->buff, dest->len);
 }
 
@@ -757,6 +765,9 @@ static int32_t X509_NodeCompare(BSL_ASN1_Buffer *buffOri, BSL_ASN1_Buffer *buff)
     }
     if (buffOri->len != buff->len) {
         return 1;
+    }
+    if (buffOri->len == 0) {
+        return 0;
     }
     return memcmp(buffOri->buff, buff->buff, buff->len);
 }
@@ -1066,13 +1077,19 @@ int32_t X509_NormalizePqcOperationState(CRYPT_EAL_PkeyCtx *key, CRYPT_PKEY_AlgId
 int32_t HITLS_X509_PrepareVerifyKey(CRYPT_EAL_PkeyCtx *verifyKey, int32_t hashId,
     const HITLS_X509_Asn1AlgId *alg)
 {
-    int32_t ret;
-    CRYPT_PKEY_AlgId keyAlgId = CRYPT_EAL_PkeyGetId(verifyKey);
-
+#ifdef HITLS_CRYPTO_HSS_LMS
+    if (CRYPT_EAL_PkeyGetId(verifyKey) == CRYPT_PKEY_HSS_LMS) {
+        int32_t ret = HITLS_X509_CheckAlg(verifyKey, alg);
+        if (ret != HITLS_PKI_SUCCESS) {
+            return ret;
+        }
+    }
+#endif
 #if defined(HITLS_CRYPTO_MLDSA) || defined(HITLS_CRYPTO_SLH_DSA) || defined(HITLS_CRYPTO_COMPOSITE)
+    CRYPT_PKEY_AlgId keyAlgId = CRYPT_EAL_PkeyGetId(verifyKey);
     if (keyAlgId == CRYPT_PKEY_ML_DSA || keyAlgId == CRYPT_PKEY_SLH_DSA ||
         keyAlgId == CRYPT_PKEY_COMPOSITE) {
-        ret = HITLS_X509_CheckAlg(verifyKey, alg);
+        int32_t ret = HITLS_X509_CheckAlg(verifyKey, alg);
         if (ret != HITLS_PKI_SUCCESS) {
             return ret;
         }
@@ -1084,12 +1101,14 @@ int32_t HITLS_X509_PrepareVerifyKey(CRYPT_EAL_PkeyCtx *verifyKey, int32_t hashId
 #endif
 
 #if defined(HITLS_CRYPTO_RSA) || defined(HITLS_CRYPTO_SM2)
-    ret = HITLS_X509_CtrlAlgInfo(verifyKey, hashId, alg);
+    int32_t ret = HITLS_X509_CtrlAlgInfo(verifyKey, hashId, alg);
     if (ret != HITLS_PKI_SUCCESS) {
         return ret;
     }
 #else
+    (void)verifyKey;
     (void)hashId;
+    (void)alg;
 #endif
     return HITLS_PKI_SUCCESS;
 }

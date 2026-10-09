@@ -330,8 +330,21 @@ int32_t CMS_EncodeAlgIdInfo(const CMS_AlgId *alg, BSL_ASN1_Buffer *asn)
         alg->param,
     };
     /* Preserve the ASN.1 type and contents of AlgorithmIdentifier parameters. */
+    BSL_ASN1_BitString bitString = {0};
+    bool hasParam = alg->param.tag != 0 && alg->param.tag != BSL_ASN1_TAG_ANY;
+    if (alg->param.tag == BSL_ASN1_TAG_BITSTRING) {
+        if (alg->param.len == 0 || alg->param.buff == NULL) {
+            BSL_ERR_PUSH_ERROR(BSL_ASN1_ERR_ENCODE_BIT_STRING);
+            return BSL_ASN1_ERR_ENCODE_BIT_STRING;
+        }
+        bitString.buff = alg->param.buff + 1;
+        bitString.len = alg->param.len - 1;
+        bitString.unusedBits = alg->param.buff[0];
+        items[HITLS_CMS_ALGORITHM_IDENTIFIER_PARAMS_IDX].buff = (uint8_t *)&bitString;
+        items[HITLS_CMS_ALGORITHM_IDENTIFIER_PARAMS_IDX].len = sizeof(bitString);
+    }
     BSL_ASN1_TemplateItem algIdTempl[] = {g_algIdTempl[0], g_algIdTempl[1]};
-    if (alg->param.tag != 0 && alg->param.tag != BSL_ASN1_TAG_ANY) {
+    if (hasParam) {
         /* An explicitly present parameter can have empty contents, such as
          * RSASSA-PSS-params with every DEFAULT component omitted.
          */

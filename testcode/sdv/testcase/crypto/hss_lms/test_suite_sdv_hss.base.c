@@ -57,7 +57,6 @@
 #define HSS_PRVKEY_PARAMS_LEN 8
 #define HSS_PRVKEY_SEED_OFFSET 16
 #define HSS_PRVKEY_SEED_LEN 32
-#define HSS_PUBKEY_I_OFFSET 12
 #define HSS_SEED_ROOT_I 0x00
 #define HSS_SEED_ROOT_SEED 0x01
 #define HSS_SEED_CHILD_SUFFIX 0x01
@@ -1110,11 +1109,10 @@ static int32_t HssGenerateKeys(void *libCtx, uint8_t rootI[LMS_I_LEN], uint8_t r
 static int32_t HssFormatPublicKey(uint8_t *publicKey, const HSS_Para *para, const uint8_t *rootI,
     const uint8_t *rootHash)
 {
-    BSL_Uint32ToByte(para->levels, publicKey + HSS_PUBKEY_LEVELS_OFFSET);
-    BSL_Uint32ToByte(para->lmsType[0], publicKey + HSS_PUBKEY_LMS_TYPE_OFFSET);
-    BSL_Uint32ToByte(para->otsType[0], publicKey + HSS_PUBKEY_OTS_TYPE_OFFSET);
-    memcpy(publicKey + HSS_PUBKEY_I_OFFSET, rootI, LMS_I_LEN);
-    memcpy(publicKey + HSS_PUBKEY_ROOT_OFFSET, rootHash, LMS_SHA256_N);
+    BSL_Uint32ToByte(para->lmsType[0], publicKey + LMS_PUBKEY_LMS_TYPE_OFFSET);
+    BSL_Uint32ToByte(para->otsType[0], publicKey + LMS_PUBKEY_OTS_TYPE_OFFSET);
+    memcpy(publicKey + LMS_PUBKEY_I_OFFSET, rootI, LMS_I_LEN);
+    memcpy(publicKey + LMS_PUBKEY_ROOT_OFFSET, rootHash, LMS_SHA256_N);
     return CRYPT_SUCCESS;
 }
 
@@ -1548,14 +1546,13 @@ int32_t CRYPT_HSS_Sign(CRYPT_HSS_Ctx *ctx, int32_t algId, const uint8_t *msg, ui
 
 static int32_t HSSCheckBasicParams(const CRYPT_HSS_Ctx *pubKey, const CRYPT_HSS_Ctx *prvKey)
 {
-    uint32_t pubLevels = BSL_ByteToUint32(pubKey->publicKey + HSS_PUBKEY_LEVELS_OFFSET);
-    if (pubLevels != prvKey->para.levels) {
+    if (pubKey->para.levels != prvKey->para.levels) {
         BSL_ERR_PUSH_ERROR(CRYPT_HSS_PAIRWISE_CHECK_FAIL);
         return CRYPT_HSS_PAIRWISE_CHECK_FAIL;
     }
 
-    uint32_t pubLmsType = BSL_ByteToUint32(pubKey->publicKey + HSS_PUBKEY_LMS_TYPE_OFFSET);
-    uint32_t pubOtsType = BSL_ByteToUint32(pubKey->publicKey + HSS_PUBKEY_OTS_TYPE_OFFSET);
+    uint32_t pubLmsType = BSL_ByteToUint32(pubKey->publicKey + LMS_PUBKEY_LMS_TYPE_OFFSET);
+    uint32_t pubOtsType = BSL_ByteToUint32(pubKey->publicKey + LMS_PUBKEY_OTS_TYPE_OFFSET);
     if (pubLmsType != prvKey->para.lmsType[0] || pubOtsType != prvKey->para.otsType[0]) {
         BSL_ERR_PUSH_ERROR(CRYPT_HSS_PAIRWISE_CHECK_FAIL);
         return CRYPT_HSS_PAIRWISE_CHECK_FAIL;
@@ -1567,7 +1564,7 @@ static int32_t HSSCheckBasicParams(const CRYPT_HSS_Ctx *pubKey, const CRYPT_HSS_
 static int32_t HSSVerifyRootHash(const CRYPT_HSS_Ctx *pubKey, const CRYPT_HSS_Ctx *prvKey, const uint8_t *rootI,
                                  const uint8_t *rootSeed)
 {
-    if (ConstTimeMemcmp(rootI, pubKey->publicKey + HSS_PUBKEY_I_OFFSET, LMS_I_LEN) == 0) {
+    if (ConstTimeMemcmp(rootI, pubKey->publicKey + LMS_PUBKEY_I_OFFSET, LMS_I_LEN) == 0) {
         BSL_ERR_PUSH_ERROR(CRYPT_HSS_PAIRWISE_CHECK_FAIL);
         return CRYPT_HSS_PAIRWISE_CHECK_FAIL;
     }
@@ -1586,7 +1583,7 @@ static int32_t HSSVerifyRootHash(const CRYPT_HSS_Ctx *pubKey, const CRYPT_HSS_Ct
         return ret;
     }
 
-    int32_t cmpRet = ConstTimeMemcmp(computedRoot, pubKey->publicKey + HSS_PUBKEY_ROOT_OFFSET, LMS_SHA256_N);
+    int32_t cmpRet = ConstTimeMemcmp(computedRoot, pubKey->publicKey + LMS_PUBKEY_ROOT_OFFSET, LMS_SHA256_N);
     BSL_SAL_CleanseData(computedRoot, sizeof(computedRoot));
     if (cmpRet == 0) {
         BSL_ERR_PUSH_ERROR(CRYPT_HSS_PAIRWISE_CHECK_FAIL);

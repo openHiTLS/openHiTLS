@@ -172,6 +172,9 @@ SDV_X509_BUILD_CERT_CHAIN_FUNC_TC001:"../testdata/cert/chain/ecdsa-v3/ca.der":".
 SDV_X509_BUILD_CERT_CHAIN_FUNC_TC001 sm2-nocrl
 SDV_X509_BUILD_CERT_CHAIN_FUNC_TC001:"../testdata/cert/chain/sm2-v3/ca.der":"../testdata/cert/chain/sm2-v3/inter.der":"../testdata/cert/chain/sm2-v3/end.der":"../testdata/cert/asn1/ca-empty-rsa-sha256-v2.der":0
 
+SDV_X509_BUILD_CERT_CHAIN_FUNC_TC001 BC 1.84 HSS root and LMS leaf
+SDV_X509_BUILD_CERT_CHAIN_FUNC_TC001:"../testdata/cert/asn1/hss_cert/bouncycastle-1.84/chain_root_l2.pem":"":"../testdata/cert/asn1/hss_cert/bouncycastle-1.84/chain_leaf_l1.pem":"../testdata/cert/asn1/ca-empty-rsa-sha256-v2.der":0
+
 SDV_X509_BUILD_CERT_CHAIN_FUNC_TC001 rsa-sha256-nocrl-aki-authorityCertIssuer
 SDV_X509_BUILD_CERT_CHAIN_FUNC_TC001:"../testdata/cert/chain/rsa-v3-aki-certissuer/rootca.der":"../testdata/cert/chain/rsa-v3-aki-certissuer/ca.der":"../testdata/cert/chain/rsa-v3-aki-certissuer/cert.der":"../testdata/cert/asn1/ca-empty-rsa-sha256-v2.der":0
 
@@ -336,6 +339,9 @@ SDV_X509_VFY_MLKEM_KEYUSAGE_TC001:
 
 SDV_X509_VFY_COMPOSITE_MLDSA_KEYUSAGE_TC001: Composite ML-DSA keyUsage validation
 SDV_X509_VFY_COMPOSITE_MLDSA_KEYUSAGE_TC001:
+
+Reject keyCertSign without basicConstraints.cA for RSA
+SDV_X509_VFY_KEYCERTSIGN_BCONS_TC001:
 
 SDV_X509_VFY_PATHLEN_FAIL_TC001
 SDV_X509_VFY_PATHLEN_FAIL_TC001:
@@ -522,6 +528,9 @@ SDV_X509_CERT_VERIFY_BY_PUBKEY_FUNC_TC001:"../testdata/cert/chain/verify/ed25519
 
 SDV_X509_CERT_VERIFY_BY_PUBKEY_FUNC_TC001 RSA
 SDV_X509_CERT_VERIFY_BY_PUBKEY_FUNC_TC001:"../testdata/cert/chain/verify/rsa_cert_test.pem":"../testdata/cert/chain/verify/rsa_cert_verify.pem":"../testdata/cert/chain/rsa-pss-v3/ca.der"
+
+SDV_X509_CERT_VERIFY_BY_PUBKEY_FUNC_TC001 BC 1.84 HSS root and LMS leaf
+SDV_X509_CERT_VERIFY_BY_PUBKEY_FUNC_TC001:"../testdata/cert/asn1/hss_cert/bouncycastle-1.84/chain_leaf_l1.pem":"../testdata/cert/asn1/hss_cert/bouncycastle-1.84/chain_root_l2.pem":"../testdata/cert/asn1/hss_cert/bouncycastle-1.84/hss_l2.pem"
 
 SDV_X509_CA_PATH_WITH_VARIOUS_CHARSET_FUNC_TC001 mix charset user cert
 SDV_X509_CA_PATH_WITH_VARIOUS_CHARSET_FUNC_TC001:"../testdata/cert/chain/charset/convert_to_utf8":"../testdata/cert/chain/charset/convert_to_utf8/user_mix.crt":HITLS_PKI_SUCCESS

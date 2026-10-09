@@ -29,30 +29,15 @@ extern "C" {
 
 /* HSS Constants and Definitions */
 
-/* HSS hierarchy constraints */
-/* HSS_MAX_LEVELS is the maximum number of levels that the serialized private-key
- * format (and all public API entry points) actually support.  It matches the
- * compressed-parameter encoding limit so that callers never encounter a value
- * that is accepted by the parameter-setting interface but rejected later.
- *
- * HSS_LEVELS_ARRAY_SIZE is used exclusively for compile-time array sizing.
- * It is kept at 8 (the RFC 8554 theoretical maximum) so that internal buffers
- * are large enough if the limit is ever raised without requiring a struct-layout
- * change.  It must NOT be used as a runtime upper-bound in API validation.
- */
-#define HSS_LEVELS_ARRAY_SIZE 8 /* Internal array dimension — do NOT use for API validation */
-#define HSS_MAX_LEVELS        3 /* Maximum externally-supported levels (serialization limit) */
+/* HSS hierarchy constraints: private keys support 3 levels; verification supports 8. */
+#define HSS_LEVELS_ARRAY_SIZE 8 /* Internal array dimension */
+#define HSS_MAX_LEVELS        3 /* Private-key serialization limit */
+#define HSS_MAX_VERIFY_LEVELS HSS_LEVELS_ARRAY_SIZE /* RFC 8554 verification limit */
 #define HSS_MIN_LEVELS        1 /* Minimum hierarchy levels (1 = equivalent to LMS) */
 
 /* HSS private key length (fixed, independent of hash output size):
  *   counter(8) + compressed_params(8) + seed(32) = 48 */
 #define HSS_PRVKEY_LEN 48
-
-/* HSS public key offsets */
-#define HSS_PUBKEY_LEVELS_OFFSET   0 // Number of levels (4 bytes, big-endian)
-#define HSS_PUBKEY_LMS_TYPE_OFFSET 4 // Top-level LMS type (4 bytes, big-endian)
-#define HSS_PUBKEY_OTS_TYPE_OFFSET 8 // Top-level OTS type (4 bytes, big-endian)
-#define HSS_PUBKEY_ROOT_OFFSET     28 // Top-level root hash (32 bytes)
 
 /* HSS signature offsets */
 #define HSS_SIG_NSPK_LEN    4
@@ -62,12 +47,12 @@ extern "C" {
  * @brief HSS parameter structure
  */
 typedef struct HssPara {
-    uint32_t levels; /**< Number of HSS levels (1-3) */
+    uint32_t levels; /**< Number of HSS levels */
     uint32_t lmsType[HSS_LEVELS_ARRAY_SIZE]; /**< LMS type for each level */
     uint32_t otsType[HSS_LEVELS_ARRAY_SIZE]; /**< OTS type for each level */
 
     /* Computed parameters */
-    uint32_t pubKeyLen; /**< Public key length (always 60) */
+    uint32_t pubKeyLen; /**< Top-level LMS public key length */
     uint32_t prvKeyLen; /**< Private key length (always 48) */
     uint32_t sigLen; /**< Maximum signature length */
     uint64_t maxSignatures; /**< Total signature capacity */

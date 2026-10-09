@@ -339,8 +339,8 @@ int32_t LmsParaInit(LMS_Para *para, uint32_t lmsType, uint32_t otsType)
     para->lmsType = lmsType;
     para->otsType = otsType;
 
-    /* Public key = type(4) || ots_type(4) || I(16) || root(n)  = 24 + n */
-    para->pubKeyLen = 24 + para->n;
+    /* Public key = type(4) || ots_type(4) || I(16) || root(n). */
+    para->pubKeyLen = LMS_PUBKEY_ROOT_OFFSET + para->n;
     /* Private key = index(8) || lmsType(4) || otsType(4) || I(16) || seed(32) = 32 + 32 */
     para->prvKeyLen = 32 + LMS_SEED_LEN;
 
