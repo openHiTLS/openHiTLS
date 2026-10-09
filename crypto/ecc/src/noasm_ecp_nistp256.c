@@ -18,6 +18,7 @@
 #include <stdbool.h>
 #include "securec.h"
 #include "bsl_err_internal.h"
+#include "bsl_sal.h"
 #include "bsl_util_internal.h"
 #include "crypt_errno.h"
 #include "crypt_utils.h"
@@ -287,16 +288,12 @@ static int32_t BN2Felem(Felem *out, const BN_BigNum *in)
 {
     int32_t ret;
     uint8_t bin[FELEM_BYTES];
-    uint32_t len = FELEM_BYTES;
 
-    GOTO_ERR_IF(BN_Bn2Bin(in, bin, &len), ret);
-
-    for (uint32_t i = 0; i < FELEM_BYTES; ++i) {
-        bin[FELEM_BYTES - 1 - i] = i < len ? bin[len - 1 - i] : 0;
-    }
+    GOTO_ERR_IF_EX(BN_Bn2BinFixZero(in, bin, FELEM_BYTES), ret);
 
     Bin2Felem(out, bin);
 ERR:
+    BSL_SAL_CleanseData(bin, sizeof(bin));
     return ret;
 }
 
@@ -312,8 +309,9 @@ static int32_t Felem2BN(BN_BigNum *out, const Felem *in)
 
     Felem2Bin(bin, in);
 
-    GOTO_ERR_IF(BN_Bin2Bn(out, bin, FELEM_BYTES), ret);
+    GOTO_ERR_IF_EX(BN_Bin2Bn(out, bin, FELEM_BYTES), ret);
 ERR:
+    BSL_SAL_CleanseData(bin, sizeof(bin));
     return ret;
 }
 

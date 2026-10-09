@@ -609,7 +609,6 @@ void SDV_CRYPTO_RSA_GEN_SIGN_VERIFY_PSS_FUNC_TC001(int bits, int isProvider)
     }
 #endif
     ASSERT_EQ(CRYPT_EAL_PkeyGen(pkey), CRYPT_SUCCESS);
-
     ASSERT_TRUE_AND_LOG("Malloc Sign Buffer", sign != NULL);
     ASSERT_EQ(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_SET_RSA_EMSA_PSS, pssParam, 0), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_SET_RSA_SALT, (uint8_t *)salt, 32), CRYPT_SUCCESS);
@@ -1405,6 +1404,7 @@ void SDV_CRYPTO_RSA_RSABSSA_BLINDING_FUNC_TC002(Hex *e, Hex *nBuff, Hex *d, Hex 
     SKIP_TEST();
 #endif
     (void)sigBuf;
+    (void)isStub;
     TestMemInit();
     uint32_t ret;
     uint8_t sign[MAX_CIPHERTEXT_LEN] = {0};
@@ -1457,12 +1457,8 @@ void SDV_CRYPTO_RSA_RSABSSA_BLINDING_FUNC_TC002(Hex *e, Hex *nBuff, Hex *d, Hex 
     ASSERT_EQ(CRYPT_EAL_PkeySetPub(pkey, &pubKey), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_PkeySetPrv(pkey, &priKey), CRYPT_SUCCESS);
 #ifdef HITLS_CRYPTO_DRBG
-    if (isStub) {
-        CRYPT_RandRegist(STUB_ReplaceRandom);
-        CRYPT_RandRegistEx(STUB_ReplaceRandomEx);
-    } else {
-        ASSERT_EQ(TestRandInit(), CRYPT_SUCCESS);
-    }
+    CRYPT_RandRegist(STUB_ReplaceRandom);
+    CRYPT_RandRegistEx(STUB_ReplaceRandomEx);
 #endif
     // set pss param.
     ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_SET_RSA_EMSA_PSS, &pssParam, 0)
@@ -1470,11 +1466,10 @@ void SDV_CRYPTO_RSA_RSABSSA_BLINDING_FUNC_TC002(Hex *e, Hex *nBuff, Hex *d, Hex 
     if (salt->len != 0) {
         ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_SET_RSA_SALT, salt->x, salt->len) == CRYPT_SUCCESS);
     }
-    if (isStub) {
-        memcpy_s(g_RandBuf, TMP_BUFF_LEN, rBuf, rBufLen);
-    } else {
-        ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_SET_RSA_BSSA_FACTOR_R, rBuf, rBufLen) == CRYPT_SUCCESS);
-    }
+    ASSERT_TRUE(rBufLen <= nBuff->len && nBuff->len <= TMP_BUFF_LEN);
+    (void)memset_s(g_RandBuf, TMP_BUFF_LEN, 0, nBuff->len);
+    ASSERT_TRUE(memcpy_s(g_RandBuf + nBuff->len - rBufLen, TMP_BUFF_LEN - nBuff->len + rBufLen,
+        rBuf, rBufLen) == EOK);
 
     uint32_t flag = CRYPT_RSA_BSSA;
     ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_SET_RSA_FLAG, (void *)&flag, sizeof(uint32_t)) == CRYPT_SUCCESS);
@@ -1531,8 +1526,8 @@ EXIT:
  *    5. Test padding configuration:
  *       - Test blind operations without setting padding
  *       - Test with mismatched hash algorithm (SHA256 vs SHA384)
- *    6. Test blind parameter controls:
- *       - Test NULL and invalid parameters for BSSA controls
+ *    6. Test the deprecated blind parameter control:
+ *       - Test that setting the RSA-BSSA factor is not supported
  *       - Test getting blind factor inverse without setting output buffer.
  * @expect
  *    - CRYPT_NULL_INPUT for null pointer parameters
@@ -1541,7 +1536,7 @@ EXIT:
  *    - CRYPT_RSA_BUFF_LEN_NOT_ENOUGH for small buffers
  *    - CRYPT_RSA_PADDING_NOT_SUPPORTED for invalid padding
  *    - CRYPT_RSA_ERR_MD_ALGID for mismatched hash
- *    - CRYPT_INVALID_ARG for invalid blind parameters
+ *    - CRYPT_RSA_CTRL_NOT_SUPPORT_ERROR for the deprecated blind parameter control
  *    - CRYPT_RSA_ERR_NO_BLIND_INFO when blind factor not set
  */
 /* BEGIN_CASE */
@@ -1623,14 +1618,8 @@ void SDV_CRYPTO_RSA_RSABSSA_BLINDING_INVALID_PARAM_TC001(void)
         == CRYPT_RSA_ERR_MD_ALGID);
 
     uint8_t rBufTest[128] = {1}; // due to key bits = 1024
-    uint8_t rBufTest1[128] = {0}; // due to key bits = 1024
-    uint32_t rBufTestLen = 128;
-    ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_SET_RSA_BSSA_FACTOR_R, NULL, 0) == CRYPT_NULL_INPUT);
-    ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_SET_RSA_BSSA_FACTOR_R, rBufTest, rBufTestLen) == CRYPT_SUCCESS);
-    // repeated set
-    ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_SET_RSA_BSSA_FACTOR_R, rBufTest, rBufTestLen) == CRYPT_SUCCESS);
-    ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_SET_RSA_BSSA_FACTOR_R, rBufTest1, rBufTestLen)
-        == CRYPT_RSA_ERR_BSSA_PARAM);
+    ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_SET_RSA_BSSA_FACTOR_R, rBufTest, sizeof(rBufTest))
+        == CRYPT_RSA_CTRL_NOT_SUPPORT_ERROR);
 EXIT:
     CRYPT_EAL_PkeyFreeCtx(pkey);
 }

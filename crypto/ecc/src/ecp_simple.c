@@ -162,7 +162,7 @@ ERR:
     return ret;
 }
 
-int32_t ECP_PointMul(ECC_Para *para,  ECC_Point *r, const BN_BigNum *k, const ECC_Point *pt)
+int32_t ECP_PointMul(ECC_Para *para, ECC_Point *r, const BN_BigNum *k, const ECC_Point *pt)
 {
     if (para == NULL || r == NULL || k == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
@@ -185,14 +185,15 @@ int32_t ECP_PointMul(ECC_Para *para,  ECC_Point *r, const BN_BigNum *k, const EC
         // for checking whether the public key information is valid.
         return ECP_PointMulFast(para, r, para->n, pt);
     }
-    uint32_t i;
     int32_t ret;
-    BN_UINT mask;
     uint32_t bits;
+    BN_UINT mask;
+    BN_UINT started = 0;
     ECC_Point *base = (pt != NULL) ? ECC_DupPoint(pt) : ECC_GetGFromPara(para);
     ECC_Point *t = ECC_NewPoint(para);
+    ECC_Point *doubleR = ECC_NewPoint(para);
     BN_Optimizer *opt = BN_OptimizerCreate();
-    if (base == NULL || t == NULL || opt == NULL) {
+    if (base == NULL || t == NULL || doubleR == NULL || opt == NULL) {
         ret = CRYPT_MEM_ALLOC_FAIL;
         BSL_ERR_PUSH_ERROR(ret);
         goto ERR;
@@ -203,16 +204,18 @@ int32_t ECP_PointMul(ECC_Para *para,  ECC_Point *r, const BN_BigNum *k, const EC
     GOTO_ERR_IF(ECC_PointToMont(para, base, opt), ret);
     GOTO_ERR_IF(ECC_CopyPoint(r, base), ret);
     GOTO_ERR_IF(ECC_PointBlind(para, r), ret);
-    bits = BN_Bits(k);
-    for (i = bits - 1; i > 0; i--) {
-        GOTO_ERR_IF(para->method->pointDouble(para, r, r), ret);
-        GOTO_ERR_IF(para->method->pointAddAffine(para, t, r, base), ret);
+    bits = BN_Bits(para->n);
+    for (uint32_t i = bits; i > 0; i--) {
+        GOTO_ERR_IF(para->method->pointDouble(para, doubleR, r), ret);
+        GOTO_ERR_IF(para->method->pointAddAffine(para, t, doubleR, base), ret);
         mask = (BN_UINT)BN_GetBit(k, i - 1) - 1;
-        // The last bit must be 1, and r must be updated to the latest data.
-        GOTO_ERR_IF(ECP_PointCopyWithMask(r, t, r, mask), ret);
+        GOTO_ERR_IF(ECP_PointCopyWithMask(t, t, doubleR, mask), ret);
+        GOTO_ERR_IF(ECP_PointCopyWithMask(r, t, r, ~started), ret);
+        started |= ~mask;
     }
     ECC_PointFromMont(para, r);
 ERR:
+    ECC_FreePoint(doubleR);
     ECC_FreePoint(t);
     ECC_FreePoint(base);
     BN_OptimizerDestroy(opt);

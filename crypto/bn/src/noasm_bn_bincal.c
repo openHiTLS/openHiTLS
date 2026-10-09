@@ -74,16 +74,14 @@ BN_UINT BinSub(BN_UINT *r, const BN_UINT *a, const BN_UINT *b, uint32_t n)
 /* Obtains the number of 0s in the first x most significant bits of data. */
 uint32_t GetZeroBitsUint(BN_UINT x)
 {
-    BN_UINT iter;
     BN_UINT tmp = x;
     uint32_t bits = BN_UNIT_BITS;
     uint32_t base = BN_UNIT_BITS >> 1;
     do {
-        iter = tmp >> base;
-        if (iter != 0) {
-            tmp = iter;
-            bits -= base;
-        }
+        BN_UINT iter = tmp >> base;
+        BN_UINT mask = ~BN_IsZeroUintConsttime(iter);
+        tmp = (iter & mask) | (tmp & ~mask);
+        bits -= base & (uint32_t)mask;
         base = base >> 1;
     } while (base != 0);
 

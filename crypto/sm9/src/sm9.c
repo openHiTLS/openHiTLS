@@ -305,6 +305,7 @@ static int32_t _sm9_alg_sign(
     uint8_t pbW[12 * BNByteLen];
     SM9_Fp12 Fp12_g;
     SM9_ECP2_A Ecp2_P;
+    int32_t ret = CRYPT_SUCCESS;
 
     // Read Random number r(in NormMode), ensure r in [1, N-1]
     SM9_Bn_ReadBytes(BN_r, r);
@@ -335,14 +336,21 @@ static int32_t _sm9_alg_sign(
 
     // l = (r-h) mod N (l should not be zero)
     SM9_Fn_Sub(BN_r, BN_r, BN_h);
-    if (SM9_Bn_IsZero(BN_r))
-        return CRYPT_SM9_ERR_SIGN_FAILED;
+    if (SM9_Bn_IsZero(BN_r)) {
+        ret = CRYPT_SM9_ERR_SIGN_FAILED;
+        goto ERR;
+    }
     // Read User Prikey and convert to MontMode
     SM9_Ecp_A_ReadBytes(Ecp_s, ds);
     // S = l * dsA
     SM9_Ecp_KP(Ecp_s, Ecp_s, BN_r);
 
-    return CRYPT_SUCCESS;
+    ret = CRYPT_SUCCESS;
+ERR:
+    BSL_SAL_CleanseData(BN_r, sizeof(BN_r));
+    BSL_SAL_CleanseData(pbW, sizeof(pbW));
+    BSL_SAL_CleanseData(&Fp12_g, sizeof(Fp12_g));
+    return ret;
 }
 #endif /* SM9_SIG_USR_ENABLE */
 
@@ -631,6 +639,9 @@ static void _sm9_enc_init(SM9_CTX *ctx, const uint8_t *id, uint32_t ilen, uint8_
 
     SM9_Hash_KDF_Init(ctx, C1, pbW, id, ilen);
     ctx->enc.bytes = 0;
+    BSL_SAL_CleanseData(BN_r, sizeof(BN_r));
+    BSL_SAL_CleanseData(pbW, sizeof(pbW));
+    BSL_SAL_CleanseData(&Fp12_g, sizeof(Fp12_g));
 }
 
 // Key derivation function for public key encryption

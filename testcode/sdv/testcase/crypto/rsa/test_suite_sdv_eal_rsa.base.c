@@ -38,10 +38,10 @@
  * ============================================================================ */
 STUB_DEFINE_RET1(void *, BSL_SAL_Malloc, uint32_t);
 STUB_DEFINE_RET4(int32_t, BN_Gcd, BN_BigNum *, const BN_BigNum *, const BN_BigNum *, BN_Optimizer *);
+STUB_DEFINE_RET4(int32_t, BN_ModInv, BN_BigNum *, const BN_BigNum *, const BN_BigNum *, BN_Optimizer *);
 
 #define SUCCESS 0
 #define FAIL (-1)
-
 
 #define RSA_MAX_KEYLEN 2048
 #define RSA_MIN_KEYLEN 128

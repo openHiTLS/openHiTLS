@@ -69,6 +69,8 @@ typedef struct {
 
 typedef enum {
     HITLS_AUTH_PAKE_REQ_REGISTER = 0x1001,
+    /* RFC 9383 stores w0 and L at the responder; input in1 is ignored.
+     * https://www.rfc-editor.org/rfc/rfc9383 */
     HITLS_AUTH_PAKE_RESP_REGISTER = 0x1002,
 } HITLS_AUTH_PAKE_CtrlCmd;
 

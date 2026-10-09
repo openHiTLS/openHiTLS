@@ -539,7 +539,7 @@ int32_t CRYPT_ML_KEM_SetDecapsKeyEx(CRYPT_ML_KEM_Ctx *ctx, const BSL_Param *para
         }
         // Bytewise comparison: recomputed dk vs provided dk
         // This check validates ALL components: dkPKE || ek || H(ek) || z
-        if (memcmp(ctx->dk, prv.data, ctx->dkLen) != 0) {
+        if (ConstTimeMemcmp(ctx->dk, prv.data, ctx->dkLen) == 0) {
             BSL_ERR_PUSH_ERROR(CRYPT_MLKEM_SEED_EXPANDED_KEY_INCONSISTENT);
             MLKEM_KeyReset(ctx);
             return CRYPT_MLKEM_SEED_EXPANDED_KEY_INCONSISTENT;
@@ -820,7 +820,7 @@ static int32_t MlKemKeyPairCheck(CRYPT_ML_KEM_Ctx *pubKey, CRYPT_ML_KEM_Ctx *prv
     uint8_t sharedKey2[MLKEM_SHARED_KEY_LEN] = {0};
     GOTO_ERR_IF(CRYPT_ML_KEM_Encaps(pubKey, ciphertext, &cipherLen, sharedKey1, &sharedLen1), ret);
     GOTO_ERR_IF(CRYPT_ML_KEM_Decaps(prvKey, ciphertext, cipherLen, sharedKey2, &sharedLen2), ret);
-    if (sharedLen1 != sharedLen2 || memcmp(sharedKey1, sharedKey2, sharedLen1) != 0) {
+    if (sharedLen1 != sharedLen2 || ConstTimeMemcmp(sharedKey1, sharedKey2, sharedLen1) == 0) {
         ret = CRYPT_MLKEM_PAIRWISE_CHECK_FAIL;
         BSL_ERR_PUSH_ERROR(CRYPT_MLKEM_PAIRWISE_CHECK_FAIL);
     }

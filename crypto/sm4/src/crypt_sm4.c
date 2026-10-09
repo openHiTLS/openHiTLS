@@ -25,6 +25,14 @@
 #include "crypt_utils.h"
 #include "crypt_sm4.h"
 
+/*
+ * SECURITY NOTE: this SM4 is NOT constant-time. All 32 rounds index
+ * XBOX_0..XBOX_3 (4x 1 KB) by t = x1 ^ x2 ^ x3 ^ rk (the secret round keys),
+ * so cache-timing can recover the SM4 key. (The linear L transform is table
+ * free.) Portable fallback only -- use the hardware SM4 assembly path for
+ * constant-time operation.
+ */
+
 /**
  * <<<: Cyclic shift to the left
  * ⊕: XOR
@@ -214,25 +222,25 @@ static const uint32_t XBOX_3[] = {
     }
 
 /* enc is true: encrypt, enc is false: decrypt */
-static void SM4_Crypt(uint8_t *out, const uint8_t *in, const uint32_t *rk, uint32_t x[5], bool enc)
+static void SM4_Crypt(uint8_t *out, const uint8_t *in, const uint32_t *rk, bool enc)
 {
-    x[0] = GET_UINT32_BE(in, 0);  // x[0]: 4 bytes starting from index 0 of the in
-    x[1] = GET_UINT32_BE(in, 4);  // x[1]: 4 bytes starting from index 4 of the in
-    x[2] = GET_UINT32_BE(in, 8);  // x[2]: 4 bytes starting from index 8 of the in
-    x[3] = GET_UINT32_BE(in, 12); // x[3]: 4 bytes starting from index 12 of the in
+    uint32_t x0 = GET_UINT32_BE(in, 0);
+    uint32_t x1 = GET_UINT32_BE(in, 4);
+    uint32_t x2 = GET_UINT32_BE(in, 8);
+    uint32_t x3 = GET_UINT32_BE(in, 12);
+    uint32_t x4;
 
-    /* Round function */
     if (enc) {
-        ENC_ROUND_FUNCTION(x[4], x[0], x[1], x[2], x[3], rk, XBOX);  // Encryption
+        ENC_ROUND_FUNCTION(x4, x0, x1, x2, x3, rk, XBOX);
     } else {
-        DEC_ROUND_FUNCTION(x[4], x[0], x[1], x[2], x[3], rk, XBOX);  // Decryption
+        DEC_ROUND_FUNCTION(x4, x0, x1, x2, x3, rk, XBOX);
     }
 
     /* Reverse R(X32 X33 X34 X35) = (X35 X34 X33 X32) */
-    PUT_UINT32_BE(x[3], out, 0);  // x[3] put into the 4 bytes starting from index 0 of the out
-    PUT_UINT32_BE(x[2], out, 4);  // x[2] put into the 4 bytes starting from index 4 of the out
-    PUT_UINT32_BE(x[1], out, 8);  // x[1] put into the 4 bytes starting from index 8 of the out
-    PUT_UINT32_BE(x[0], out, 12); // x[0] put into the 4 bytes starting from index 12 of the out
+    PUT_UINT32_BE(x3, out, 0);
+    PUT_UINT32_BE(x2, out, 4);
+    PUT_UINT32_BE(x1, out, 8);
+    PUT_UINT32_BE(x0, out, 12);
 }
 
 static int32_t CRYPT_SM4_Crypt(CRYPT_SM4_Ctx *ctx, const uint8_t *in, uint8_t *out, uint32_t length, bool enc)
@@ -247,14 +255,9 @@ static int32_t CRYPT_SM4_Crypt(CRYPT_SM4_Ctx *ctx, const uint8_t *in, uint8_t *o
         return CRYPT_SM4_ERR_MSG_LEN;
     }
 
-    uint32_t x[5];          // Used as a temporary variable.
     uint32_t blocks = length / CRYPT_SM4_BLOCKSIZE;
     for (uint32_t i = 0; i < blocks; i++) {
-        SM4_Crypt(out + i * CRYPT_SM4_BLOCKSIZE, in + i * CRYPT_SM4_BLOCKSIZE, ctx->rk, x, enc);
-    }
-
-    if (!enc) {
-        (void)memset_s(x, sizeof(x), 0, sizeof(x));
+        SM4_Crypt(out + i * CRYPT_SM4_BLOCKSIZE, in + i * CRYPT_SM4_BLOCKSIZE, ctx->rk, enc);
     }
 
     return CRYPT_SUCCESS;

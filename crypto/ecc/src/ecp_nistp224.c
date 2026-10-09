@@ -19,6 +19,7 @@
 #include <stdbool.h>
 #include "securec.h"
 #include "bsl_err_internal.h"
+#include "bsl_sal.h"
 #include "bsl_util_internal.h"
 #include "crypt_utils.h"
 #include "crypt_errno.h"
@@ -302,16 +303,12 @@ static int32_t BN2Felem(Felem *out, const BN_BigNum *in)
 {
     int32_t retVal;
     uint8_t bin[FELEM_BYTES];
-    uint32_t len = FELEM_BYTES;
 
-    GOTO_ERR_IF(BN_Bn2Bin(in, bin, &len), retVal);
-
-    for (uint32_t i = 0; i < FELEM_BYTES; ++i) {
-        bin[FELEM_BYTES - 1 - i] = i < len ? bin[len - 1 - i] : 0;
-    }
+    GOTO_ERR_IF_EX(BN_Bn2BinFixZero(in, bin, FELEM_BYTES), retVal);
 
     Bin2Felem(out, bin);
 ERR:
+    BSL_SAL_CleanseData(bin, sizeof(bin));
     return retVal;
 }
 
@@ -327,8 +324,9 @@ static int32_t Felem2BN(BN_BigNum *out, const Felem *in)
 
     Felem2Bin(bin, in);
 
-    GOTO_ERR_IF(BN_Bin2Bn(out, bin, FELEM_BYTES), retVal);
+    GOTO_ERR_IF_EX(BN_Bin2Bn(out, bin, FELEM_BYTES), retVal);
 ERR:
+    BSL_SAL_CleanseData(bin, sizeof(bin));
     return retVal;
 }
 
@@ -1528,6 +1526,5 @@ int32_t ECP224_Point2Affine(const ECC_Para *para, ECC_Point *r, const ECC_Point 
 ERR:
     return retVal;
 }
-
 
 #endif /* defined(HITLS_CRYPTO_CURVE_NISTP224) && defined(HITLS_CRYPTO_NIST_USE_ACCEL) */

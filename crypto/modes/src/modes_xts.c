@@ -17,6 +17,7 @@
 #ifdef HITLS_CRYPTO_XTS
 
 #include "securec.h"
+#include "bsl_bytes.h"
 #include "bsl_err_internal.h"
 #include "bsl_sal.h"
 #include "crypt_utils.h"
@@ -24,7 +25,6 @@
 #include "crypt_modes_xts.h"
 #include "modes_local.h"
 #include "crypt_modes.h"
-
 
 #define MODES_XTS_BLOCKSIZE 16
 #define MODES_XTS_MAX_BLOCKS_PER_DATA_UNIT (1u << 20)
@@ -55,7 +55,7 @@ int32_t MODES_XTS_SetEncryptKey(MODES_CipherXTSCtx *ctx, const uint8_t *key, uin
 {
     int32_t ret;
     uint32_t keyLen = len >> 1;
-    if (memcmp(key, key + keyLen, keyLen) == 0) {
+    if (ConstTimeMemcmp(key, key + keyLen, keyLen) != 0) {
         BSL_ERR_PUSH_ERROR(CRYPT_MODES_ERR_KEY);
         return CRYPT_MODES_ERR_KEY;
     }
@@ -75,7 +75,7 @@ int32_t MODES_XTS_SetDecryptKey(MODES_CipherXTSCtx *ctx, const uint8_t *key, uin
 {
     int32_t ret;
     uint32_t keyLen = len >> 1;
-    if (memcmp(key + keyLen, key, keyLen) == 0) {
+    if (ConstTimeMemcmp(key + keyLen, key, keyLen) != 0) {
         BSL_ERR_PUSH_ERROR(CRYPT_MODES_ERR_KEY);
         return CRYPT_MODES_ERR_KEY;
     }
@@ -442,7 +442,7 @@ int32_t MODES_XTS_InitCtx(MODES_XTS_Ctx *modeCtx, const uint8_t *key, uint32_t k
         (void)MODES_XTS_DeInitCtx(modeCtx);
         return ret;
     }
-    
+
     modeCtx->enc = enc;
     modeCtx->totalLen = 0;
     return ret;
@@ -476,7 +476,6 @@ int32_t MODES_XTS_DeInitCtx(MODES_XTS_Ctx *modeCtx)
     return CRYPT_SUCCESS;
 }
 
-
 void MODES_XTS_FreeCtx(MODES_XTS_Ctx *modeCtx)
 {
     if (modeCtx == NULL) {
@@ -486,7 +485,6 @@ void MODES_XTS_FreeCtx(MODES_XTS_Ctx *modeCtx)
     BSL_SAL_FREE(modeCtx->xtsCtx.ciphCtx);
     BSL_SAL_FREE(modeCtx);
 }
-
 
 int32_t MODES_XTS_InitCtxEx(MODES_XTS_Ctx *modeCtx, const uint8_t *key, uint32_t keyLen, const uint8_t *iv,
     uint32_t ivLen, void *param, bool enc)

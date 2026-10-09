@@ -564,12 +564,14 @@ static int32_t PkeKeyGen(CRYPT_ML_KEM_Ctx *ctx, uint8_t *pk, uint8_t *dk, uint8_
     (void)memcpy_s(seed, MLKEM_SEED_LEN + 1, d, MLKEM_SEED_LEN);
     seed[MLKEM_SEED_LEN] = k;
     int32_t ret = HashFuncG(ctx->libCtx, seed, MLKEM_SEED_LEN + 1, digest, CRYPT_SHA3_512_DIGESTSIZE);  // Step 1
-    RETURN_RET_IF(ret != CRYPT_SUCCESS, ret);
+    if (ret != CRYPT_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        goto ERR;
+    }
 
     // expand 32+1 bytes to two pseudorandom 32-byte seeds
     uint8_t *p = digest;
     uint8_t *q = digest + CRYPT_SHA3_512_DIGESTSIZE / 2;
-    RETURN_RET_IF(ret != CRYPT_SUCCESS, ret);
 
     GOTO_ERR_IF(GenMatrix(ctx, p, ctx->keyData.matrix, false), ret);  // Step 3 - 7
     GOTO_ERR_IF(SampleEta1(ctx, q, ctx->keyData.vectorS, &nonce), ret);  // Step 8 - 11
@@ -595,6 +597,8 @@ static int32_t PkeKeyGen(CRYPT_ML_KEM_Ctx *ctx, uint8_t *pk, uint8_t *dk, uint8_
     (void)memcpy_s(pk + MLKEM_SEED_LEN * MLKEM_BITS_OF_Q * k, MLKEM_SEED_LEN, p, MLKEM_SEED_LEN);
 
 ERR:
+    BSL_SAL_CleanseData(seed, sizeof(seed));
+    BSL_SAL_CleanseData(digest, sizeof(digest));
     return ret;
 }
 
@@ -816,10 +820,11 @@ int32_t MLKEM_EncapsInternal(CRYPT_ML_KEM_Ctx *ctx, uint8_t *ct, uint32_t *ctLen
     ret = HashFuncG(ctx->libCtx, mhek, MLKEM_SEED_LEN + CRYPT_SHA3_256_DIGESTSIZE, kr, CRYPT_SHA3_512_DIGESTSIZE);
     RETURN_RET_IF(ret != CRYPT_SUCCESS, ret);
 
-    (void)memcpy_s(sk, *skLen, kr, MLKEM_SHARED_KEY_LEN);
-
     // 𝑐 ← K-PKE.Encrypt(ek,𝑚,𝑟)
     ret = PkeEncrypt(ctx, ct, m, kr + MLKEM_SHARED_KEY_LEN);
+    if (ret == CRYPT_SUCCESS) {
+        (void)memcpy_s(sk, *skLen, kr, MLKEM_SHARED_KEY_LEN);
+    }
     BSL_SAL_CleanseData(kr, CRYPT_SHA3_512_DIGESTSIZE);
     BSL_SAL_CleanseData(mhek, sizeof(mhek));
     RETURN_RET_IF(ret != CRYPT_SUCCESS, ret);
@@ -854,7 +859,10 @@ int32_t MLKEM_DecapsInternal(CRYPT_ML_KEM_Ctx *ctx, uint8_t *ct, uint32_t ctLen,
     // Step 6: (K′,r′) ← G(m′ || h)
     (void)memcpy_s(mh + MLKEM_SEED_LEN, CRYPT_SHA3_256_DIGESTSIZE, h, CRYPT_SHA3_256_DIGESTSIZE);
     ret = HashFuncG(ctx->libCtx, mh, MLKEM_SEED_LEN + CRYPT_SHA3_256_DIGESTSIZE, kr, CRYPT_SHA3_512_DIGESTSIZE);
-    GOTO_ERR_IF(ret != CRYPT_SUCCESS, ret);
+    if (ret != CRYPT_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        goto ERR;
+    }
     // Step 8: 𝑐′ ← K-PKE.Encrypt(ekPKE,𝑚′,𝑟′)
     uint8_t *r = kr + MLKEM_SHARED_KEY_LEN;
     newCt = BSL_SAL_Malloc(ctLen + MLKEM_SEED_LEN);
@@ -883,7 +891,7 @@ int32_t MLKEM_DecapsInternal(CRYPT_ML_KEM_Ctx *ctx, uint8_t *ct, uint32_t ctLen,
 ERR:
     BSL_SAL_CleanseData(mh, sizeof(mh));
     BSL_SAL_CleanseData(kr, CRYPT_SHA3_512_DIGESTSIZE);
-    BSL_SAL_Free(newCt);
+    BSL_SAL_ClearFree(newCt, ctLen + MLKEM_SEED_LEN);
     return ret;
 }
 

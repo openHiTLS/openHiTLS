@@ -1494,14 +1494,14 @@ static int32_t EncodeShroudedKeyAddList(HITLS_PKCS12 *p12, const CRYPT_EncodePar
 
     ret = HITLS_PKCS12_EncodeContentInfo(p12->libCtx, p12->attrName, &keyEncode, BSL_CID_PKCS7_SIMPLEDATA,
         NULL, &contentInfoEncode);
-    BSL_SAL_FREE(keyEncode.data);
+    BSL_SAL_ClearFree(keyEncode.data, keyEncode.dataLen);
     if (ret != HITLS_PKI_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
     ret = HITLS_X509_AddListItemDefault(&contentInfoEncode, sizeof(BSL_Buffer), list);
     if (ret != HITLS_PKI_SUCCESS) {
-        BSL_SAL_FREE(contentInfoEncode.data);
+        BSL_SAL_ClearFree(contentInfoEncode.data, contentInfoEncode.dataLen);
         BSL_ERR_PUSH_ERROR(ret);
     }
     return ret;

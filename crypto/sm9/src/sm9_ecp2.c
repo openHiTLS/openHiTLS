@@ -17,10 +17,34 @@
 #ifdef HITLS_CRYPTO_SM9
 
 #include "bsl_sal.h"
+#include "bsl_bytes.h"
 #include "sm9_ecp2.h"
 #include "sm9_fp.h"
 #include "sm9_fp2.h"
 #include <string.h>
+
+static void SM9_Fp2_Select(SM9_Fp2 *r, const SM9_Fp2 *a, const SM9_Fp2 *b, uint32_t mask)
+{
+    for (int32_t i = 0; i < BNWordLen; i++) {
+        r->Coef_0[i] = Uint32ConstTimeSelect(mask, a->Coef_0[i], b->Coef_0[i]);
+        r->Coef_1[i] = Uint32ConstTimeSelect(mask, a->Coef_1[i], b->Coef_1[i]);
+    }
+}
+
+static void SM9_Ecp2_J_Select(SM9_ECP2_J *r, const SM9_ECP2_J *a, const SM9_ECP2_J *b, uint32_t mask)
+{
+    SM9_Fp2_Select(&r->X, &a->X, &b->X, mask);
+    SM9_Fp2_Select(&r->Y, &a->Y, &b->Y, mask);
+    SM9_Fp2_Select(&r->Z, &a->Z, &b->Z, mask);
+}
+
+static void SM9_Ecp2_A_SelectNonZero(SM9_ECP2_A *r, uint32_t mask)
+{
+    SM9_Fp2 zero = {0};
+
+    SM9_Fp2_Select(&r->X, &r->X, &zero, mask);
+    SM9_Fp2_Select(&r->Y, &r->Y, &zero, mask);
+}
 
 void SM9_Ecp2_A_ReadBytes(SM9_ECP2_A *dst, const uint8_t *src)
 {
@@ -151,30 +175,35 @@ void SM9_Ecp2_J_DoubleJ(SM9_ECP2_J *pJr, SM9_ECP2_J *pJp)
 void SM9_Ecp2_KP(SM9_ECP2_A *pKP, SM9_ECP2_A *pAp, uint32_t *pwK)
 {
     /***********************************/
-    int32_t bitlen;
     int32_t i;
-    SM9_ECP2_J Jt;
+    uint32_t bit;
+    uint32_t bitMask;
+    uint32_t started = 0;
+    SM9_ECP2_J Ecp_T0;
+    SM9_ECP2_J Ecp_Base;
+    SM9_ECP2_J Ecp_Double;
+    SM9_ECP2_J Ecp_Add;
+    SM9_ECP2_J Ecp_Select;
     /***********************************/
 
-    bitlen = bn_get_bitlen(pwK, sm9_sys_para.wsize);
-    if (bitlen == 0) {
-        SM9_Ecp2_A_Reset(pKP);
-        return;
+    SM9_Ecp2_A_ToJ(&Ecp_Base, pAp);
+    SM9_Ecp2_J_Select(&Ecp_T0, &Ecp_Base, &Ecp_Base, 0);
+    for (i = BNBitLen - 1; i >= 0; i--) {
+        SM9_Ecp2_J_DoubleJ(&Ecp_Double, &Ecp_T0);
+        SM9_Ecp2_J_AddA(&Ecp_Add, &Ecp_Double, pAp);
+        bit = BN_BIT(pwK, i);
+        bitMask = 0u - bit;
+        SM9_Ecp2_J_Select(&Ecp_Select, &Ecp_Add, &Ecp_Double, bitMask);
+        SM9_Ecp2_J_Select(&Ecp_T0, &Ecp_Select, &Ecp_Base, 0u - started);
+        started |= bit;
     }
-    if (bitlen == 1) {
-        SM9_Ecp2_A_Assign(pKP, pAp);
-        return;
-    }
-
-    SM9_Ecp2_A_ToJ(&Jt, pAp);
-    for (i = bitlen - 2; i >= 0; i--) {
-        SM9_Ecp2_J_DoubleJ(&Jt, &Jt);
-        if (BN_BIT(pwK, i))
-            SM9_Ecp2_J_AddA(&Jt, &Jt, pAp);
-    }
-    SM9_Ecp2_J_ToA(pKP, &Jt);
-
-    return;
+    SM9_Ecp2_J_ToA(pKP, &Ecp_T0);
+    SM9_Ecp2_A_SelectNonZero(pKP, 0u - started);
+    BSL_SAL_CleanseData(&Ecp_T0, sizeof(Ecp_T0));
+    BSL_SAL_CleanseData(&Ecp_Base, sizeof(Ecp_Base));
+    BSL_SAL_CleanseData(&Ecp_Double, sizeof(Ecp_Double));
+    BSL_SAL_CleanseData(&Ecp_Add, sizeof(Ecp_Add));
+    BSL_SAL_CleanseData(&Ecp_Select, sizeof(Ecp_Select));
 }
 
 // Check if G2 point is on the curve: y^2 = x^3 + a*x + b (over Fp2)

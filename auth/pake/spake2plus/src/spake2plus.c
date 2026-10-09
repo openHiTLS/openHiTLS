@@ -390,7 +390,7 @@ ERR:
 }
 
 int32_t HITLS_AUTH_Spake2plusRespRegister(HITLS_AUTH_PakeCtx* ctx, BSL_Buffer exist_w0,
-    BSL_Buffer exist_w1, BSL_Buffer exist_l)
+    BSL_Buffer exist_l)
 {
     Spake2plusCtx *spakeCtx = (Spake2plusCtx *)HITLS_AUTH_PakeGetInternalCtx(ctx);
     if (spakeCtx == NULL) {
@@ -398,18 +398,16 @@ int32_t HITLS_AUTH_Spake2plusRespRegister(HITLS_AUTH_PakeCtx* ctx, BSL_Buffer ex
         return HITLS_AUTH_INVALID_ARG;
     }
 
-    if (exist_w0.data != NULL && exist_w1.data != NULL && exist_l.data != NULL) {
-        if (exist_w0.dataLen > MAX_ECC_PARAM_LEN || exist_w1.dataLen > MAX_ECC_PARAM_LEN ||
-            exist_l.dataLen > MAX_ECC_KEY_LEN) {
+    if (exist_w0.data != NULL && exist_l.data != NULL) {
+        if (exist_w0.dataLen > MAX_ECC_PARAM_LEN || exist_l.dataLen > MAX_ECC_KEY_LEN) {
             BSL_ERR_PUSH_ERROR(HITLS_AUTH_INVALID_ARG);
             return HITLS_AUTH_INVALID_ARG;
         }
         spakeCtx->w0.dataLen = exist_w0.dataLen;
-        spakeCtx->w1.dataLen = exist_w1.dataLen;
         spakeCtx->l.dataLen = exist_l.dataLen;
         (void)memcpy_s(spakeCtx->w0.data, exist_w0.dataLen, exist_w0.data, exist_w0.dataLen);
-        (void)memcpy_s(spakeCtx->w1.data, exist_w1.dataLen, exist_w1.data, exist_w1.dataLen);
         (void)memcpy_s(spakeCtx->l.data, exist_l.dataLen, exist_l.data, exist_l.dataLen);
+        spakeCtx->w1.dataLen = 0;
         return HITLS_AUTH_SUCCESS;
     }
     return HITLS_AUTH_PAKE_INVALID_PARAM;

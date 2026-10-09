@@ -65,11 +65,11 @@ int32_t KdfGmt0032012(uint8_t *out, const uint32_t *outlen, const uint8_t *z, ui
             tmplen -= mdlen;
         } else {
             (void)memcpy_s(tmp, tmplen, dgst, tmplen);
-            (void)memset_s(dgst, mdlen, 0, mdlen);
             break;
         }
     }
 ERR:
+    BSL_SAL_CleanseData(dgst, sizeof(dgst));
     hashMethod->freeCtx(mdCtx);
     return ret;
 }

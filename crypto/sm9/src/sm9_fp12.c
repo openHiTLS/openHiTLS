@@ -17,8 +17,30 @@
 #ifdef HITLS_CRYPTO_SM9
 
 #include "bsl_sal.h"
+#include "bsl_bytes.h"
 #include "sm9_fp12.h"
 #include "sm9_fp.h"
+
+static void SM9_Fp2_Select(SM9_Fp2 *r, const SM9_Fp2 *a, const SM9_Fp2 *b, uint32_t mask)
+{
+    for (int32_t i = 0; i < BNWordLen; i++) {
+        r->Coef_0[i] = Uint32ConstTimeSelect(mask, a->Coef_0[i], b->Coef_0[i]);
+        r->Coef_1[i] = Uint32ConstTimeSelect(mask, a->Coef_1[i], b->Coef_1[i]);
+    }
+}
+
+static void SM9_Fp4_Select(SM9_Fp4 *r, const SM9_Fp4 *a, const SM9_Fp4 *b, uint32_t mask)
+{
+    SM9_Fp2_Select(&r->Coef_0, &a->Coef_0, &b->Coef_0, mask);
+    SM9_Fp2_Select(&r->Coef_1, &a->Coef_1, &b->Coef_1, mask);
+}
+
+static void SM9_Fp12_Select(SM9_Fp12 *r, const SM9_Fp12 *a, const SM9_Fp12 *b, uint32_t mask)
+{
+    SM9_Fp4_Select(&r->Coef_0, &a->Coef_0, &b->Coef_0, mask);
+    SM9_Fp4_Select(&r->Coef_1, &a->Coef_1, &b->Coef_1, mask);
+    SM9_Fp4_Select(&r->Coef_2, &a->Coef_2, &b->Coef_2, mask);
+}
 
 // read fp12 element and convert to MontMode
 void SM9_Fp12_ReadBytes(SM9_Fp12 *dst, const uint8_t *src)
@@ -259,25 +281,24 @@ void SM9_Fp12_GetConj(SM9_Fp12 *pFp12_R, SM9_Fp12 *pFp12_A)
 void SM9_Fp12_Exp(SM9_Fp12 *pFp12_R, SM9_Fp12 *pFp12_X, uint32_t *pBn_E)
 {
     /***********************************/
-    int32_t bitlen;
     int32_t i;
-    SM9_Fp12 Fp12_T0;
+    uint32_t bitMask;
+    SM9_Fp12 Fp12_Base;
+    SM9_Fp12 Fp12_Square;
+    SM9_Fp12 Fp12_Product;
     /***********************************/
 
-    bitlen = bn_get_bitlen(pBn_E, BNWordLen);
-    if (bitlen == 0) {
-        SM9_Fp12_SetOne(pFp12_R);
-        return;
+    SM9_Fp12_Assign(&Fp12_Base, pFp12_X);
+    SM9_Fp12_SetOne(pFp12_R);
+    for (i = BNBitLen - 1; i >= 0; i--) {
+        SM9_Fp12_Squ(&Fp12_Square, pFp12_R);
+        SM9_Fp12_Mul(&Fp12_Product, &Fp12_Square, &Fp12_Base);
+        bitMask = 0u - BN_BIT(pBn_E, i);
+        SM9_Fp12_Select(pFp12_R, &Fp12_Product, &Fp12_Square, bitMask);
     }
-    SM9_Fp12_Assign(pFp12_R, pFp12_X);
-    if (bitlen == 1)
-        return;
-    SM9_Fp12_Assign(&Fp12_T0, pFp12_X);
-    for (i = bitlen - 2; i >= 0; i--) {
-        SM9_Fp12_Squ(pFp12_R, pFp12_R);
-        if (BN_BIT(pBn_E, i))
-            SM9_Fp12_Mul(pFp12_R, pFp12_R, &Fp12_T0);
-    }
+    BSL_SAL_CleanseData(&Fp12_Base, sizeof(Fp12_Base));
+    BSL_SAL_CleanseData(&Fp12_Square, sizeof(Fp12_Square));
+    BSL_SAL_CleanseData(&Fp12_Product, sizeof(Fp12_Product));
 }
 
 #undef Fp4_a0

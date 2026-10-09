@@ -58,15 +58,14 @@ static void DRBG_CtrXor(CRYPT_Data *dst, const CRYPT_Data *src)
     DATA_XOR(dst->data, src->data, dst->data, xorlen);
 }
 
-static void DRBG_CtrInc(uint8_t *v, uint32_t len)
+static void DRBG_CtrInc(uint8_t *v)
 {
-    uint32_t i;
-    uint8_t *p = v + len - 1;
-    for (i = 0; i < len; i++, p--) {
-        (*p)++;
-        if (*p != 0) {
-            break;
-        }
+    uint32_t carry = 1;
+
+    for (uint32_t i = AES_BLOCK_LEN; i > 0; i--) {
+        carry += v[i - 1];
+        v[i - 1] = (uint8_t)carry;
+        carry >>= 8;
     }
 }
 
@@ -94,7 +93,7 @@ int32_t DRBG_CtrUpdate(DRBG_Ctx *drbg, const CRYPT_Data *in1, const CRYPT_Data *
         temp = temp || output_block.
     */
     for (offset = 0; offset < ctx->seedLen; offset += AES_BLOCK_LEN) {
-        DRBG_CtrInc(ctx->v, AES_BLOCK_LEN);
+        DRBG_CtrInc(ctx->v);
         if ((ret = ciphMeth->encryptBlock(ctx->ctrCtx, ctx->v, tempData + offset, AES_BLOCK_LEN)) != CRYPT_SUCCESS) {
             BSL_ERR_PUSH_ERROR(ret);
             goto EXIT;
@@ -442,7 +441,7 @@ static int32_t DRBG_CtrGenerateBlock(DRBG_Ctx *drbg, uint8_t *out, uint32_t outL
     DRBG_CtrCtx *ctx = (DRBG_CtrCtx *)drbg->ctx;
     int32_t ret;
 
-    DRBG_CtrInc(ctx->v, outLen);
+    DRBG_CtrInc(ctx->v);
 
     if ((ret = ctx->ciphMeth->encryptBlock(ctx->ctrCtx, ctx->v, out, outLen)) != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);

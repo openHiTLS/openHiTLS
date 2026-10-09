@@ -54,21 +54,18 @@ static void HctrGf128Mul(const uint8_t a[HCTR_BLOCK_SIZE], const uint8_t b[HCTR_
     (void)memcpy_s(z, HCTR_BLOCK_SIZE, a, HCTR_BLOCK_SIZE);
 
     for (i = 0; i < 128; i++) {
-        // Process multiplier 'b' from MSB (bit 7 of b[0])
-        if ((b[i / 8] >> (7 - (i % 8))) & 1) {
-            DATA64_XOR(res, z, res, HCTR_BLOCK_SIZE);
+        uint8_t mask = (uint8_t)(0 - ((b[i / 8] >> (7 - (i % 8))) & 1));
+        for (uint32_t k = 0; k < HCTR_BLOCK_SIZE; k++) {
+            res[k] ^= z[k] & mask;
         }
-
-        // Update z (right-shift and reduce)
-        uint8_t lsbSet = (z[15] & 0x01);
+        uint8_t lsbSet = z[15] & 0x01;
         for (uint32_t j = HCTR_BLOCK_SIZE - 1; j > 0; j--) {
             z[j] = (z[j] >> 1) | (z[j - 1] << 7);
         }
         z[0] >>= 1;
-        if (lsbSet) {
-            z[0] ^= 0xE1; // Reduction for x^128 + x^7 + x^2 + x + 1
-        }
+        z[0] ^= 0xE1 & (uint8_t)(0 - lsbSet);
     }
+    BSL_SAL_CleanseData(z, sizeof(z));
 }
 
 static int32_t HctrUniversalHash(const uint8_t *k, const uint8_t *data, uint32_t dataLen,

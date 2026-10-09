@@ -87,14 +87,13 @@ int32_t HITLS_AUTH_Spake2plusReqRegister(HITLS_AUTH_PakeCtx* ctx, CRYPT_EAL_KdfC
  *
  * @param ctx [IN] PAKE context
  * @param exist_w0 [IN] Pre-computed w0 parameter
- * @param exist_w1 [IN] Pre-computed w1 parameter
  * @param exist_l [IN] Pre-computed L point
  *
  * @retval #HITLS_AUTH_SUCCESS if successful
  *          Other error codes defined in hitls_errno.h if an error occurs
  */
 int32_t HITLS_AUTH_Spake2plusRespRegister(HITLS_AUTH_PakeCtx* ctx,
-    BSL_Buffer exist_w0, BSL_Buffer exist_w1, BSL_Buffer exist_l);
+    BSL_Buffer exist_w0, BSL_Buffer exist_l);
 
  /**
  * @ingroup spake2plus

@@ -20,6 +20,7 @@
 #include "bsl_sal.h"
 #include "bsl_bytes.h"
 #include "bsl_err_internal.h"
+#include "bsl_bytes.h"
 #include "crypt_errno.h"
 #include "crypt_utils.h"
 #include "bn_basic.h"
@@ -911,7 +912,7 @@ int32_t BN_Lshift(BN_BigNum *r, const BN_BigNum *a, uint32_t n)
         return CRYPT_NULL_INPUT;
     }
 
-    uint32_t incUnit = n % BN_UINT_BITS == 0 ? (n / BN_UINT_BITS) : ((n / BN_UINT_BITS) + 1);
+    uint32_t incUnit = n / BN_UINT_BITS + (n % BN_UINT_BITS != 0);
     int32_t ret = BnExtend(r, a->size + incUnit);
     if (ret != CRYPT_SUCCESS) {
         return ret;

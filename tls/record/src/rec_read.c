@@ -183,6 +183,14 @@ bool RecCanDiscardEarlyData(const TLS_Ctx *ctx)
         ctx->recCtx != NULL && ctx->recCtx->discardEarlyData;
 }
 
+static void FreeHeldRecordBuf(RecBuf *decryptBuf)
+{
+    if (decryptBuf->isHoldBuffer) {
+        BSL_SAL_ClearFree(decryptBuf->buf, decryptBuf->bufSize);
+        decryptBuf->buf = NULL;
+    }
+}
+
 static int32_t RecordDecrypt(TLS_Ctx *ctx, RecBuf *decryptBuf, REC_TextInput *encryptedMsg)
 {
     bool discardEarlyData = RecCanDiscardEarlyData(ctx);
@@ -248,9 +256,7 @@ static int32_t RecordDecrypt(TLS_Ctx *ctx, RecBuf *decryptBuf, REC_TextInput *en
     }
     return HITLS_SUCCESS;
 ERR:
-    if (decryptBuf->isHoldBuffer) {
-        BSL_SAL_FREE(decryptBuf->buf);
-    }
+    FreeHeldRecordBuf(decryptBuf);
     return ret;
 }
 
@@ -268,15 +274,11 @@ static int32_t RecordUnexpectedMsg(TLS_Ctx *ctx, RecBuf *decryptBuf, REC_Type re
         default:
             ret = ctx->method.unexpectedMsgProcessCb(ctx, recordType,
                 decryptBuf->buf, decryptBuf->end, false);
-            if (decryptBuf->isHoldBuffer) {
-                BSL_SAL_FREE(decryptBuf->buf);
-            }
+            FreeHeldRecordBuf(decryptBuf);
             return ret;
     }
     if (ret != HITLS_SUCCESS) {
-        if (decryptBuf->isHoldBuffer) {
-            BSL_SAL_FREE(decryptBuf->buf);
-        }
+        FreeHeldRecordBuf(decryptBuf);
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17258, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "process recordType fail", 0, 0, 0, 0);
         return ret;
@@ -696,9 +698,7 @@ static int32_t DtlsProcessBufList(TLS_Ctx *ctx, REC_Type recordType, RecBufList 
     (void)recordType;
     int32_t ret = RecBufListAddBuffer(bufList, decryptBuf);
     if (ret != HITLS_SUCCESS) {
-        if (decryptBuf->isHoldBuffer) {
-            BSL_SAL_FREE(decryptBuf->buf);
-        }
+        FreeHeldRecordBuf(decryptBuf);
         return ret;
     }
     ret = RecDerefBufList(ctx);
@@ -1176,9 +1176,7 @@ int32_t TlsRecordRead(TLS_Ctx *ctx, REC_Type recordType, uint8_t *data, uint32_t
     }
     ret = RecBufListAddBuffer(bufList, &decryptBuf);
     if (ret != HITLS_SUCCESS) {
-        if (decryptBuf.isHoldBuffer) {
-            BSL_SAL_FREE(decryptBuf.buf);
-        }
+        FreeHeldRecordBuf(&decryptBuf);
         return ret;
     }
     return RecBufListGetBuffer(bufList, data, num, readLen, (ctx->peekFlag != 0 && (recordType == REC_TYPE_APP)));

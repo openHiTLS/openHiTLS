@@ -311,6 +311,7 @@ static int32_t RejBoundedPolyEta2(int32_t *a, const uint8_t *s)
         }
     }
 ERR:
+    BSL_SAL_CleanseData(buf, sizeof(buf));
     hashMethod->freeCtx(mdCtx);
     return ret;
 }
@@ -352,6 +353,7 @@ static int32_t RejBoundedPolyEta4(int32_t *a, const uint8_t *s)
         }
     }
 ERR:
+    BSL_SAL_CleanseData(buf, sizeof(buf));
     hashMethod->freeCtx(mdCtx);
     return ret;
 }

@@ -108,6 +108,7 @@ int32_t SM9_SetSignUserKey(SM9_Ctx *ctx, uint8_t *user_id, uint32_t id_len, uint
 int32_t SM9_SignCtx(const SM9_Ctx *ctx, const uint8_t *msg, uint32_t mlen, uint8_t *rand, uint8_t *sign)
 {
     uint8_t randBuf[32];
+    int32_t ret;
 
     if (!ctx || !msg || !sign) {
         return CRYPT_SM9_ERR_BAD_INPUT;
@@ -118,7 +119,7 @@ int32_t SM9_SignCtx(const SM9_Ctx *ctx, const uint8_t *msg, uint32_t mlen, uint8
     }
 
     if (!rand) {
-        int32_t ret = sm9_rand(randBuf, sizeof(randBuf));
+        ret = sm9_rand(randBuf, sizeof(randBuf));
         if (ret != CRYPT_SUCCESS) {
             return CRYPT_SM9_ERR_SIGN_FAILED;
         }
@@ -128,7 +129,9 @@ int32_t SM9_SignCtx(const SM9_Ctx *ctx, const uint8_t *msg, uint32_t mlen, uint8
     const uint8_t *g_ptr = ctx->has_sig_g ? ctx->sig_g : NULL;
     const uint8_t *mpk_ptr = ctx->has_sig_sys ? ctx->sig_mpk : NULL;
 
-    return SM9_Alg_Sign(msg, mlen, ctx->sig_dsk, rand, g_ptr, mpk_ptr, sign);
+    ret = SM9_Alg_Sign(msg, mlen, ctx->sig_dsk, rand, g_ptr, mpk_ptr, sign);
+    BSL_SAL_CleanseData(randBuf, sizeof(randBuf));
+    return ret;
 }
 
 int32_t SM9_VerifyCtx(const SM9_Ctx *ctx, const uint8_t *user_id, uint32_t id_len,

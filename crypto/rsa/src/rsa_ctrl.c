@@ -541,73 +541,6 @@ static int32_t RsaCommonCtrl(CRYPT_RSA_Ctx *ctx, int32_t opt, void *val, uint32_
     }
 }
 
-#ifdef HITLS_CRYPTO_RSA_BSSA
-static int32_t SetBssaParamCheck(CRYPT_RSA_Ctx *ctx, const void *val, uint32_t len)
-{
-    if (val == NULL || len == 0) {
-        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
-        return CRYPT_NULL_INPUT;
-    }
-    if (ctx->pubKey == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_RSA_ERR_NO_PUBKEY_INFO);
-        return CRYPT_RSA_ERR_NO_PUBKEY_INFO;
-    }
-    return CRYPT_SUCCESS;
-}
-
-static int32_t RsaSetBssa(CRYPT_RSA_Ctx *ctx, const void *val, uint32_t len)
-{
-    int32_t ret = SetBssaParamCheck(ctx, val, len);
-    if (ret != CRYPT_SUCCESS) {
-        return ret;
-    }
-    const uint8_t *r = (const uint8_t *)val;
-    BN_Optimizer *opt = BN_OptimizerCreate();
-    if (opt == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
-        return CRYPT_MEM_ALLOC_FAIL;
-    }
-    RSA_Blind *blind = NULL;
-    RSA_BlindParam *param = ctx->blindParam;
-    if (param == NULL) {
-        param = BSL_SAL_Calloc(1u, sizeof(RSA_BlindParam));
-        if (param == NULL) {
-            ret = CRYPT_MEM_ALLOC_FAIL;
-            BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
-            goto ERR;
-        }
-        param->type = RSABSSA;
-    }
-    if (param->para.bssa != NULL) {
-        RSA_BlindFreeCtx(param->para.bssa);
-        param->para.bssa = NULL;
-    }
-    param->para.bssa = RSA_BlindNewCtx();
-    if (param->para.bssa == NULL) {
-        ret = CRYPT_MEM_ALLOC_FAIL;
-        goto ERR;
-    }
-    blind = param->para.bssa;
-    GOTO_ERR_IF(RSA_CreateBlind(blind, 0), ret);
-    GOTO_ERR_IF(BN_Bin2Bn(blind->r, r, len), ret);
-    if (BN_IsZero(blind->r) || (BN_Cmp(blind->r, ctx->pubKey->n) >= 0)) { // 1 <= r < n
-        ret = CRYPT_RSA_ERR_BSSA_PARAM;
-        BSL_ERR_PUSH_ERROR(CRYPT_RSA_ERR_BSSA_PARAM);
-        goto ERR;
-    }
-    GOTO_ERR_IF(BN_ModInv(blind->rInv, blind->r, ctx->pubKey->n, opt), ret);
-    GOTO_ERR_IF(BN_ModExp(blind->r, blind->r, ctx->pubKey->e, ctx->pubKey->n, opt), ret);
-    ctx->blindParam = param;
-ERR:
-    if (ret != CRYPT_SUCCESS && ctx->blindParam == NULL && param != NULL) {
-        RSA_BlindFreeCtx(param->para.bssa);
-        BSL_SAL_FREE(param);
-    }
-    BN_OptimizerDestroy(opt);
-    return ret;
-}
-
-#endif
 
 int32_t CRYPT_RSA_Ctrl(CRYPT_RSA_Ctx *ctx, int32_t opt, void *val, uint32_t len)
 {
@@ -662,10 +595,6 @@ int32_t CRYPT_RSA_Ctrl(CRYPT_RSA_Ctx *ctx, int32_t opt, void *val, uint32_t len)
 #if defined(HITLS_CRYPTO_RSA_SIGN) || defined(HITLS_CRYPTO_RSA_VERIFY)
         case CRYPT_CTRL_GET_SIGNLEN:
             return CRYPT_CTRL_GET_NUM32_EX(CRYPT_RSA_GetSignLen, ctx, val, len);
-#endif
-#ifdef HITLS_CRYPTO_RSA_BSSA
-        case CRYPT_CTRL_SET_RSA_BSSA_FACTOR_R:
-            return RsaSetBssa(ctx, val, len);
 #endif
         default:
             return RsaCommonCtrl(ctx, opt, val, len);

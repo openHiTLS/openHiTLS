@@ -22,6 +22,7 @@
 #include "bn_basic.h"
 #include "bn_bincal.h"
 #include "bsl_sal.h"
+#include "bsl_bytes.h"
 
 int32_t BN_Bin2Bn(BN_BigNum *r, const uint8_t *bin, uint32_t binLen)
 {
@@ -43,7 +44,7 @@ int32_t BN_Bin2Bn(BN_BigNum *r, const uint8_t *bin, uint32_t binLen)
     const uint8_t *base = bin + zeroNum;
     uint32_t left = binLen - zeroNum;
     uint32_t needRooms = (left % sizeof(BN_UINT) == 0) ? left / sizeof(BN_UINT)
-                                                    : (left / sizeof(BN_UINT)) + 1;
+                                                : (left / sizeof(BN_UINT)) + 1;
     int32_t ret = BnExtend(r, needRooms);
     if (ret != CRYPT_SUCCESS) {
         return ret;
@@ -59,7 +60,7 @@ int32_t BN_Bin2Bn(BN_BigNum *r, const uint8_t *bin, uint32_t binLen)
         r->data[offset++] = num;
         left -= m;
     }
-    r->size = BinFixSize(r->data, offset);
+    r->size = BinFixSizeConsttime(r->data, offset);
     return CRYPT_SUCCESS;
 }
 
@@ -223,7 +224,7 @@ int32_t BN_U64Array2Bn(BN_BigNum *r, const uint64_t *array, uint32_t len)
         }
     }
     // can be forcibly converted to 32 bits because needRoom <= r->room
-    r->size = BinFixSize(r->data, (uint32_t)needRoom);
+    r->size = BinFixSizeConsttime(r->data, (uint32_t)needRoom);
     return CRYPT_SUCCESS;
 }
 #endif
@@ -255,7 +256,7 @@ int32_t BN_Array2BN(BN_BigNum *dst, const BN_UINT *src, const uint32_t size)
     for (uint32_t i = 0; i < size; i++) {
         dst->data[i] = src[i];
     }
-    dst->size = BinFixSize(dst->data, size);
+    dst->size = BinFixSizeConsttime(dst->data, size);
     return CRYPT_SUCCESS;
 }
 #endif

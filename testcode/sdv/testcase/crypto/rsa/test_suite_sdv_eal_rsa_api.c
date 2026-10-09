@@ -72,7 +72,8 @@ void SDV_CRYPTO_RSA_NEW_API_TC002(int isProvider)
     ASSERT_TRUE(pkey == NULL);
 
 EXIT:
-    STUB_RESTORE(BSL_SAL_Malloc); STUB_RESTORE(BN_Gcd);
+    STUB_RESTORE(BSL_SAL_Malloc);
+    STUB_RESTORE(BN_Gcd);
     CRYPT_EAL_PkeyFreeCtx(pkey);
 }
 /* END_CASE */
@@ -1025,7 +1026,6 @@ EXIT:
 }
 /* END_CASE */
 
-
 int Compare_PubKey(CRYPT_EAL_PkeyPub *pubKey1, CRYPT_EAL_PkeyPub *pubKey2)
 {
     if (pubKey1->key.rsaPub.nLen != pubKey2->key.rsaPub.nLen || pubKey1->key.rsaPub.eLen != pubKey2->key.rsaPub.eLen) {
@@ -1574,12 +1574,14 @@ void SDV_CRYPTO_RSA_NOR_KEYGEN_FAIL_TC001(int isProvider)
     ASSERT_EQ(CRYPT_EAL_PkeySetPara(pkey, &para), CRYPT_SUCCESS);
     STUB_REPLACE(BN_Gcd, STUB_Gcd);
     ASSERT_EQ(CRYPT_EAL_PkeyGen(pkey), CRYPT_RSA_NOR_KEYGEN_FAIL);
-    STUB_RESTORE(BSL_SAL_Malloc); STUB_RESTORE(BN_Gcd);
+    STUB_RESTORE(BSL_SAL_Malloc);
+    STUB_RESTORE(BN_Gcd);
     ASSERT_EQ(CRYPT_EAL_PkeyGen(pkey), CRYPT_SUCCESS);
 
 EXIT:
     CRYPT_EAL_PkeyFreeCtx(pkey);
-    STUB_RESTORE(BSL_SAL_Malloc); STUB_RESTORE(BN_Gcd);
+    STUB_RESTORE(BSL_SAL_Malloc);
+    STUB_RESTORE(BN_Gcd);
 }
 /* END_CASE */
 
