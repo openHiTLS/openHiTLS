@@ -1092,8 +1092,13 @@ EXIT:
  * @precon nan
  */
 /* BEGIN_CASE */
-void SDV_CRYPTO_ECC_SM2_MODINV_BOUNDARY_TC001(Hex *value)
+void SDV_CRYPTO_ECC_SM2_MODINV_BOUNDARY_TC001(Hex *value, int expectedRet)
 {
+#ifndef HITLS_CRYPTO_CURVE_SM2_ASM
+    if (expectedRet == CRYPT_BN_SPACE_NOT_ENOUGH) {
+        SKIP_TEST();
+    }
+#endif
     ECC_Para *para = NULL;
     ECC_Point *scaled = NULL;
     ECC_Point *affine = NULL;
@@ -1101,7 +1106,6 @@ void SDV_CRYPTO_ECC_SM2_MODINV_BOUNDARY_TC001(Hex *value)
     BN_BigNum *inverse = NULL;
     BN_BigNum *reference = NULL;
     BN_Optimizer *opt = NULL;
-    int32_t ret;
 
     TestMemInit();
     para = ECC_NewPara(CRYPT_ECC_SM2);
@@ -1133,9 +1137,9 @@ void SDV_CRYPTO_ECC_SM2_MODINV_BOUNDARY_TC001(Hex *value)
         ASSERT_EQ(BN_Cmp(&scaled->y, para->y), 0);
         ASSERT_TRUE(BN_IsOne(&scaled->z));
     }
-    ret = BN_ModInv(reference, input, para->n, opt);
-    ASSERT_EQ(para->method->modOrdInv(para, inverse, input) == CRYPT_SUCCESS, ret == CRYPT_SUCCESS);
-    if (ret == CRYPT_SUCCESS) {
+    ASSERT_EQ(ECC_ModOrderInv(para, inverse, input), expectedRet);
+    if (expectedRet == CRYPT_SUCCESS) {
+        ASSERT_EQ(BN_ModInv(reference, input, para->n, opt), CRYPT_SUCCESS);
         ASSERT_EQ(BN_Cmp(inverse, reference), 0);
     }
 EXIT:
