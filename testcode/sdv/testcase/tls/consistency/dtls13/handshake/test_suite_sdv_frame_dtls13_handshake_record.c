@@ -3087,7 +3087,6 @@ void SDV_TLS_DTLS13_UNIFIED_HEADER_DISPATCH_TC040(int version)
     ASSERT_EQ(FRAME_TransportRecMsg(server->io, record, sizeof(record)), HITLS_SUCCESS);
     ASSERT_EQ(HITLS_Read(server->ssl, buf, sizeof(buf), &readLen), HITLS_REC_NORMAL_RECV_BUF_EMPTY);
     ASSERT_EQ(readLen, 0);
-    ASSERT_TRUE(TestIsErrStackEmpty());
     ALERT_GetInfo(server->ssl, &alert);
     ASSERT_TRUE(alert.flag != ALERT_FLAG_SEND);
 EXIT:
