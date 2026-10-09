@@ -655,11 +655,11 @@ int32_t HITLS_X509_ParseX509(CRYPT_EAL_LibCtx *libCtx, const char *attrName, int
         isUnknown = true;
         isPem = BSL_PEM_IsPemFormat((char *)(encode->data), encode->dataLen);
     }
-    if (isPem == true || format == BSL_FORMAT_PEM) {
+    if (isPem || format == BSL_FORMAT_PEM) {
         return HITLS_X509_ParsePem(libCtx, attrName, encode, isCert, parseFun, list);
     }
 #endif
-    if (isUnknown == true || format == BSL_FORMAT_ASN1) {
+    if (isUnknown || format == BSL_FORMAT_ASN1) {
         return HITLS_X509_ParseAsn1(libCtx, attrName, encode, parseFun, list);
     }
     BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_FORMAT_UNSUPPORT);

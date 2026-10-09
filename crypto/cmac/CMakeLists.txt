@@ -19,6 +19,9 @@ endif()
 if(HITLS_CRYPTO_CBC_MAC)
     list(APPEND _cmac_sources ${CMAKE_CURRENT_SOURCE_DIR}/src/cbc_mac.c)
 endif()
+if(HITLS_CRYPTO_RETAIL_MAC)
+    list(APPEND _cmac_sources ${CMAKE_CURRENT_SOURCE_DIR}/src/retail_mac.c)
+endif()
 
 add_library(_hitls_crypto_cmac OBJECT ${_cmac_sources})
 

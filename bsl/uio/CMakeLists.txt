@@ -49,6 +49,10 @@ if(HITLS_BSL_UIO_MEM)
     list(APPEND _uio_sources ${CMAKE_CURRENT_SOURCE_DIR}/src/uio_mem.c)
 endif()
 
+if(HITLS_BSL_UIO_BASE64)
+    list(APPEND _uio_sources ${CMAKE_CURRENT_SOURCE_DIR}/src/uio_base64.c)
+endif()
+
 if(NOT _uio_sources)
     message(WARNING "[BSL] No UIO sources enabled. The _hitls_bsl_uio target will not be created.")
     return()
@@ -67,6 +71,7 @@ target_include_directories(_hitls_bsl_uio
     PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}/src
         ${PROJECT_SOURCE_DIR}/bsl/buffer/include
+        ${PROJECT_SOURCE_DIR}/bsl/base64/include
 )
 
 hitls_register_objects(BSL _hitls_bsl_uio)

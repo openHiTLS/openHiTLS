@@ -28,6 +28,7 @@
 #include "bsl_log_internal.h"
 #include "bsl_err_internal.h"
 #include "crypt_default_provider.h"
+#include "crypt_retail_mac.h"
 
 void *CRYPT_EAL_DefMacNewCtx(CRYPT_EAL_DefProvCtx *provCtx, int32_t algId)
 {
@@ -60,6 +61,10 @@ void *CRYPT_EAL_DefMacNewCtx(CRYPT_EAL_DefProvCtx *provCtx, int32_t algId)
         case CRYPT_MAC_CMAC_AES256:
         case CRYPT_MAC_CMAC_SM4:
             return CRYPT_CMAC_NewCtxEx(libCtx, algId);
+#endif
+#ifdef HITLS_CRYPTO_RETAIL_MAC
+        case CRYPT_MAC_RETAIL_MAC_DES:
+            return CRYPT_RETAIL_MAC_NewCtxEx(libCtx, algId);
 #endif
 #ifdef HITLS_CRYPTO_CBC_MAC
         case CRYPT_MAC_CBC_MAC_SM4:
@@ -124,6 +129,21 @@ const CRYPT_EAL_Func g_defEalMacCbcMac[] = {
     {CRYPT_EAL_IMPLMAC_CTRL, (CRYPT_EAL_ImplMacCtrl)CRYPT_CBC_MAC_Ctrl},
     {CRYPT_EAL_IMPLMAC_FREECTX, (CRYPT_EAL_ImplMacFreeCtx)CRYPT_CBC_MAC_FreeCtx},
     {CRYPT_EAL_IMPLMAC_DUPCTX, (CRYPT_EAL_ImplMacDupCtx)CRYPT_CBC_MAC_DupCtx},
+    CRYPT_EAL_FUNC_END,
+};
+#endif
+
+#ifdef HITLS_CRYPTO_RETAIL_MAC
+const CRYPT_EAL_Func g_defEalMacRetailMac[] = {
+    {CRYPT_EAL_IMPLMAC_NEWCTX, (CRYPT_EAL_ImplMacNewCtx)CRYPT_EAL_DefMacNewCtx},
+    {CRYPT_EAL_IMPLMAC_INIT, (CRYPT_EAL_ImplMacInit)CRYPT_RETAIL_MAC_InitEx},
+    {CRYPT_EAL_IMPLMAC_UPDATE, (CRYPT_EAL_ImplMacUpdate)CRYPT_RETAIL_MAC_Update},
+    {CRYPT_EAL_IMPLMAC_FINAL, (CRYPT_EAL_ImplMacFinal)CRYPT_RETAIL_MAC_Final},
+    {CRYPT_EAL_IMPLMAC_DEINITCTX, (CRYPT_EAL_ImplMacDeInitCtx)CRYPT_RETAIL_MAC_Deinit},
+    {CRYPT_EAL_IMPLMAC_REINITCTX, (CRYPT_EAL_ImplMacReInitCtx)CRYPT_RETAIL_MAC_Reinit},
+    {CRYPT_EAL_IMPLMAC_CTRL, (CRYPT_EAL_ImplMacCtrl)CRYPT_RETAIL_MAC_Ctrl},
+    {CRYPT_EAL_IMPLMAC_FREECTX, (CRYPT_EAL_ImplMacFreeCtx)CRYPT_RETAIL_MAC_FreeCtx},
+    {CRYPT_EAL_IMPLMAC_DUPCTX, (CRYPT_EAL_ImplMacDupCtx)CRYPT_RETAIL_MAC_DupCtx},
     CRYPT_EAL_FUNC_END,
 };
 #endif

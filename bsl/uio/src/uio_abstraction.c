@@ -669,4 +669,13 @@ BSL_UIO *BSL_UIO_Next(BSL_UIO *uio)
     return uio->next;
 }
 
+int32_t BSL_UIO_SetFlagsFromNext(BSL_UIO *uio)
+{
+    if (uio == NULL || uio->next == NULL) {
+        BSL_ERR_PUSH_ERROR(BSL_NULL_INPUT);
+        return BSL_NULL_INPUT;
+    }
+    uio->flags |= (uio->next->flags & (BSL_UIO_FLAGS_RWS | BSL_UIO_FLAGS_SHOULD_RETRY));
+    return BSL_SUCCESS;
+}
 #endif /* HITLS_BSL_UIO_PLT */

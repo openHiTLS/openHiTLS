@@ -110,6 +110,7 @@
 #cmakedefine HITLS_BSL_UIO_TCP
 #cmakedefine HITLS_BSL_UIO_UDP
 #cmakedefine HITLS_BSL_UIO_MTU_QUERY
+#cmakedefine HITLS_BSL_UIO_BASE64
 
 /* ==============================================================================
  * CRYPTO Features
@@ -158,6 +159,7 @@
 #cmakedefine HITLS_CRYPTO_CMAC_SM4
 #cmakedefine HITLS_CRYPTO_CBC_MAC
 #cmakedefine HITLS_CRYPTO_SIPHASH
+#cmakedefine HITLS_CRYPTO_RETAIL_MAC
 // Hpke
 #cmakedefine HITLS_CRYPTO_HPKE
 // Kdf
@@ -201,6 +203,8 @@
 #cmakedefine HITLS_CRYPTO_AES_PRECALC_TABLES
 #cmakedefine HITLS_CRYPTO_SM4
 #cmakedefine HITLS_CRYPTO_CHACHA20
+#cmakedefine HITLS_CRYPTO_DES
+#cmakedefine HITLS_CRYPTO_TDES
 // Pkey
 #cmakedefine HITLS_CRYPTO_PKEY
 #cmakedefine HITLS_CRYPTO_PKEY_CMP

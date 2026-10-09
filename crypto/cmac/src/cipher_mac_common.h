@@ -17,7 +17,7 @@
 #define CIPHER_MAC_COMMON_H
 
 #include "hitls_build.h"
-#if defined(HITLS_CRYPTO_CBC_MAC) || defined(HITLS_CRYPTO_CMAC)
+#if defined(HITLS_CRYPTO_CBC_MAC) || defined(HITLS_CRYPTO_CMAC) || defined(HITLS_CRYPTO_RETAIL_MAC)
 #include <stdint.h>
 #include "crypt_local_types.h"
 #include "crypt_cmac.h"
@@ -43,6 +43,13 @@ typedef struct Cipher_MAC_Ctx Cipher_MAC_Common_Ctx;
 struct CBC_MAC_Ctx {
     Cipher_MAC_Common_Ctx common;
     CRYPT_PaddingType paddingType;
+};
+#endif
+
+#ifdef HITLS_CRYPTO_RETAIL_MAC
+struct RETAIL_MAC_Ctx {
+    Cipher_MAC_Common_Ctx common;
+    void *key2;
 };
 #endif
 

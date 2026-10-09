@@ -114,6 +114,7 @@ option(HITLS_BSL_OBJ_DEFAULT                                   "OBJ DEFAULT" OFF
 option(HITLS_BSL_OBJ_CUSTOM                                    "OBJ CUSTOM" OFF)
 option(HITLS_BSL_PARAMS                                        "PARAMS" OFF)
 option(HITLS_BSL_PEM                                           "PEM" OFF)
+option(HITLS_BSL_PEM_ENCRYPTED                                 "PEM_ENCRYPTED")
 option(HITLS_BSL_PRINT                                         "PRINT" OFF)
 option(HITLS_BSL_TLV                                           "TLV" OFF)
 option(HITLS_BSL_UI                                            "UI" OFF)
@@ -126,6 +127,7 @@ option(HITLS_BSL_UIO                                           "UIO" OFF)
   option(HITLS_BSL_UIO_TCP                                       "UIO TCP" OFF)
   option(HITLS_BSL_UIO_UDP                                       "UIO UDP" OFF)
   option(HITLS_BSL_UIO_MTU_QUERY                                 "UIO MTU QUERY" OFF)
+  option(HITLS_BSL_UIO_BASE64                                    "UIO BASE64" OFF)
 
 # --- CRYPTO Features ---
 ## Eal
@@ -170,6 +172,7 @@ option(HITLS_CRYPTO_MAC                                        "MAC" OFF)
     option(HITLS_CRYPTO_CMAC_SM4                                   "CMAC SM4" OFF)
   option(HITLS_CRYPTO_CBC_MAC                                    "CBC-MAC" OFF)
   option(HITLS_CRYPTO_SIPHASH                                    "SIPHASH" OFF)
+  option(HITLS_CRYPTO_RETAIL_MAC                                 "RETAIL MAC" OFF)
 
 ## Hpke
 option(HITLS_CRYPTO_HPKE                                       "HPKE" OFF)
@@ -218,6 +221,8 @@ option(HITLS_CRYPTO_CIPHER                                     "Cipher" OFF)
     option(HITLS_CRYPTO_AES_PRECALC_TABLES                         "AES Precalculated Tables" ON)
   option(HITLS_CRYPTO_SM4                                        "SM4" OFF)
   option(HITLS_CRYPTO_CHACHA20                                   "CHACHA20" OFF)
+  option(HITLS_CRYPTO_DES                                         "DES" OFF)
+  option(HITLS_CRYPTO_TDES                                        "TDES" OFF)
 
 ## Pkey
 option(HITLS_CRYPTO_PKEY                                       "Public Key Cryptography" OFF)

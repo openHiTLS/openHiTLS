@@ -95,8 +95,19 @@ int32_t DECODER_Pem2DerDecode(void *ctx, const BSL_Param *inParam, BSL_Param **o
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
-
+#ifdef HITLS_BSL_PEM_ENCRYPTED
+    const BSL_Param *pwdParam = BSL_PARAM_FindConstParam(inParam, CRYPT_PARAM_DECODE_PASSWORD);
+    uint8_t *pwdData = NULL;
+    uint32_t pwdLen = 0;
+    if (pwdParam != NULL) {
+        pwdData = (uint8_t *)(uintptr_t)pwdParam->value;
+        pwdLen = pwdParam->valueLen;
+    }
+    ret = BSL_PEM_DecodeEncryptedPemToAsn1((char **)&encode.data, &encode.dataLen,
+        &symbol, &asn1Encode, &asn1Len, pwdData, pwdLen, CRYPT_EAL_ParseEncryptedPem);
+#else
     ret = BSL_PEM_DecodePemToAsn1((char **)&encode.data, &encode.dataLen, &symbol, &asn1Encode, &asn1Len);
+#endif
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;

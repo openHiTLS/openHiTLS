@@ -14,7 +14,7 @@
  */
 
 #include "hitls_build.h"
-#if defined(HITLS_CRYPTO_CBC_MAC) || defined(HITLS_CRYPTO_CMAC)
+#if defined(HITLS_CRYPTO_CBC_MAC) || defined(HITLS_CRYPTO_CMAC) || defined(HITLS_CRYPTO_RETAIL_MAC)
 #include <stdlib.h>
 #include <string.h>
 #include "bsl_sal.h"
@@ -159,4 +159,4 @@ int32_t CipherMacGetMacLen(const Cipher_MAC_Common_Ctx *ctx, void *val, uint32_t
     *(uint32_t *)val = ctx->method->blockSize;
     return CRYPT_SUCCESS;
 }
-#endif // #if defined(HITLS_CRYPTO_CBC_MAC) || defined(HITLS_CRYPTO_CMAC)
+#endif // #if defined(HITLS_CRYPTO_CBC_MAC) || defined(HITLS_CRYPTO_CMAC) || defined(HITLS_CRYPTO_RETAIL_MAC)

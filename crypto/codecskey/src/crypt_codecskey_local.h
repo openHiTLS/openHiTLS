@@ -363,6 +363,9 @@ int32_t GetRsaPubKey(const CRYPT_EAL_PkeyCtx *pkey, CRYPT_EAL_PkeyPub *pub);
     defined(HITLS_CRYPTO_X25519)
 int32_t GetCommonPubKey(const CRYPT_EAL_PkeyCtx *pkey, CRYPT_EAL_PkeyPub *pub);
 #endif
+#ifdef HITLS_BSL_PEM_ENCRYPTED
+int32_t CRYPT_EAL_ParseEncryptedPem(char *data, uint32_t dataLen, const uint8_t *pwd, uint32_t pwdLen, BSL_Buffer *asn1Encode);
+#endif
 
 #ifdef __cplusplus
 }

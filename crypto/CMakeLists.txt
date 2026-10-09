@@ -72,6 +72,10 @@ if(HITLS_CRYPTO_SM4)
     add_subdirectory(sm4)
 endif()
 
+if(HITLS_CRYPTO_DES OR HITLS_CRYPTO_TDES)
+    add_subdirectory(tdes)
+endif()
+
 # ==============================================================================
 # Cipher Modes (depends on block ciphers)
 # ==============================================================================
@@ -124,7 +128,7 @@ if(HITLS_CRYPTO_HMAC)
 endif()
 
 # CMAC module is needed if umbrella or any specific variant is enabled
-if(HITLS_CRYPTO_CMAC OR HITLS_CRYPTO_CBC_MAC)
+if(HITLS_CRYPTO_CMAC OR HITLS_CRYPTO_CBC_MAC OR HITLS_CRYPTO_RETAIL_MAC)
     add_subdirectory(cmac)
 endif()
 
