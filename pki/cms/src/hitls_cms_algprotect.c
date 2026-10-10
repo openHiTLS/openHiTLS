@@ -79,12 +79,7 @@ static int32_t ParseSignAlgorithmIdentifier(BSL_ASN1_Buffer *asn, HITLS_X509_Asn
             return HITLS_CMS_ERR_INVALID_DATA;
         }
     }
-    ret = HITLS_X509_ParseSignAlgInfo(&algOid, &param, algId);
-    if (ret != HITLS_PKI_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
-        return ret;
-    }
-    return HITLS_PKI_SUCCESS;
+    return HITLS_X509_ParseSignAlgInfo(&algOid, &param, algId);
 }
 
 int32_t CMS_ParseAlgorithmProtection(const BSL_Buffer *attrValue, CMS_AlgorithmProtection *algProtect)
@@ -109,7 +104,7 @@ int32_t CMS_ParseAlgorithmProtection(const BSL_Buffer *attrValue, CMS_AlgorithmP
         BSL_ERR_PUSH_ERROR(HITLS_CMS_ERR_INVALID_DATA);
         return HITLS_CMS_ERR_INVALID_DATA;
     }
-    ret = CMS_ParseAlgIdInfo(&asn1[HITLS_CMS_ALGORITHM_PROTECTION_DIGESTALG_IDX], false,
+    ret = CMS_ParseAlgIdInfo(&asn1[HITLS_CMS_ALGORITHM_PROTECTION_DIGESTALG_IDX], false, false,
         &algProtect->digestAlgorithm);
     if (ret != HITLS_PKI_SUCCESS) {
         return ret;
@@ -126,7 +121,7 @@ int32_t CMS_ParseAlgorithmProtection(const BSL_Buffer *attrValue, CMS_AlgorithmP
         return ParseSignAlgorithmIdentifier(&asn1[HITLS_CMS_ALGORITHM_PROTECTION_SIGNALG_IDX],
             &algProtect->signatureAlgorithm);
     } else {
-        return CMS_ParseAlgIdInfo(&asn1[HITLS_CMS_ALGORITHM_PROTECTION_MACALG_IDX], false,
+        return CMS_ParseAlgIdInfo(&asn1[HITLS_CMS_ALGORITHM_PROTECTION_MACALG_IDX], false, false,
             &algProtect->macAlgorithm);
     }
 }

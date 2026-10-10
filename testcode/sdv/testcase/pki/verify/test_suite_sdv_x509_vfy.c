@@ -41,6 +41,7 @@
 #include "bsl_obj.h"
 #include "stub_utils.h"
 #include "bsl_err_internal.h"
+#include "bsl_err.h"
 
 /* END_HEADER */
 
@@ -2951,7 +2952,8 @@ void SDV_X509_VFY_COMPOSITE_MLDSA_KEYUSAGE_TC001(void)
     for (i = 0; i < invalidCaseCnt; i++) {
         certExt->keyUsage = invalidKeyUsageCases[i];
         ASSERT_EQ(HITLS_X509_VerifyParamAndExt(storeCtx, chain), HITLS_X509_ERR_EXT_KU);
-        TestErrClear();
+        ASSERT_EQ(BSL_ERR_GetLastError(), HITLS_X509_ERR_EXT_KU);
+        ASSERT_TRUE(TestIsErrStackEmpty());
     }
     certExt->extFlags &= ~HITLS_X509_EXT_FLAG_KUSAGE;
     ASSERT_EQ(HITLS_X509_VerifyParamAndExt(storeCtx, chain), HITLS_PKI_SUCCESS);

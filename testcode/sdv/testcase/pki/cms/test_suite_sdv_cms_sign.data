@@ -46,167 +46,179 @@ SDV_CMS_PARSE_SIGNEDDATA_VERIFY_TEST_TC001:"../testdata/cert/asn1/cms/signeddata
 SDV_CMS_PARSE_SIGNEDDATA_VERIFY_TEST_TC001 composite draft05 Appendix B MLDSA65 ECDSA-P256 signedAttrs
 SDV_CMS_PARSE_SIGNEDDATA_VERIFY_TEST_TC001:"../testdata/cert/asn1/cms/signeddata/standards/composite-draft05/mldsa65-ecdsa-p256-signedattrs.der":"../testdata/cert/asn1/cms/signeddata/standards/composite-draft05/message.txt":0:"../testdata/cert/asn1/cms/signeddata/standards/composite-draft05/mldsa65-ecdsa-p256-cert.pem":0
 
-SDV_CMS_PARSE_SIGNEDDATA_VERIFY_TEST_TC001 BC 1.84 ML-DSA-44
-SDV_CMS_PARSE_SIGNEDDATA_VERIFY_TEST_TC001:"../testdata/cert/asn1/cms/signeddata/standards/bouncycastle-1.84/ml_dsa_44.der":"../testdata/cert/asn1/cms/signeddata/standards/bouncycastle-1.84/message.txt":0:"../testdata/cert/asn1/cms/signeddata/standards/bouncycastle-1.84/ca_cert.pem":0
+SDV_CMS_PARSE_SIGNEDDATA_VERIFY_TEST_TC001 ML-DSA-44
+SDV_CMS_PARSE_SIGNEDDATA_VERIFY_TEST_TC001:"../testdata/cert/asn1/cms/signeddata/standards/interop/ml_dsa_44.der":"../testdata/cert/asn1/cms/signeddata/standards/interop/message.txt":0:"../testdata/cert/asn1/cms/signeddata/standards/interop/ca_cert.pem":0
 
-SDV_CMS_PARSE_SIGNEDDATA_VERIFY_TEST_TC001 BC 1.84 ML-DSA-65
-SDV_CMS_PARSE_SIGNEDDATA_VERIFY_TEST_TC001:"../testdata/cert/asn1/cms/signeddata/standards/bouncycastle-1.84/ml_dsa_65.der":"../testdata/cert/asn1/cms/signeddata/standards/bouncycastle-1.84/message.txt":0:"../testdata/cert/asn1/cms/signeddata/standards/bouncycastle-1.84/ca_cert.pem":0
+SDV_CMS_PARSE_SIGNEDDATA_VERIFY_TEST_TC001 ML-DSA-65
+SDV_CMS_PARSE_SIGNEDDATA_VERIFY_TEST_TC001:"../testdata/cert/asn1/cms/signeddata/standards/interop/ml_dsa_65.der":"../testdata/cert/asn1/cms/signeddata/standards/interop/message.txt":0:"../testdata/cert/asn1/cms/signeddata/standards/interop/ca_cert.pem":0
 
-SDV_CMS_PARSE_SIGNEDDATA_VERIFY_TEST_TC001 BC 1.84 ML-DSA-87
-SDV_CMS_PARSE_SIGNEDDATA_VERIFY_TEST_TC001:"../testdata/cert/asn1/cms/signeddata/standards/bouncycastle-1.84/ml_dsa_87.der":"../testdata/cert/asn1/cms/signeddata/standards/bouncycastle-1.84/message.txt":0:"../testdata/cert/asn1/cms/signeddata/standards/bouncycastle-1.84/ca_cert.pem":0
+SDV_CMS_PARSE_SIGNEDDATA_VERIFY_TEST_TC001 ML-DSA-87
+SDV_CMS_PARSE_SIGNEDDATA_VERIFY_TEST_TC001:"../testdata/cert/asn1/cms/signeddata/standards/interop/ml_dsa_87.der":"../testdata/cert/asn1/cms/signeddata/standards/interop/message.txt":0:"../testdata/cert/asn1/cms/signeddata/standards/interop/ca_cert.pem":0
 
-SDV_CMS_PARSE_SIGNEDDATA_VERIFY_TEST_TC001 BC 1.84 SLH-DSA-SHA2-128s
-SDV_CMS_PARSE_SIGNEDDATA_VERIFY_TEST_TC001:"../testdata/cert/asn1/cms/signeddata/standards/bouncycastle-1.84/slh_dsa_sha2_128s.der":"../testdata/cert/asn1/cms/signeddata/standards/bouncycastle-1.84/message.txt":0:"../testdata/cert/asn1/cms/signeddata/standards/bouncycastle-1.84/ca_cert.pem":0
+SDV_CMS_PARSE_SIGNEDDATA_VERIFY_TEST_TC001 SLH-DSA-SHA2-128s
+SDV_CMS_PARSE_SIGNEDDATA_VERIFY_TEST_TC001:"../testdata/cert/asn1/cms/signeddata/standards/interop/slh_dsa_sha2_128s.der":"../testdata/cert/asn1/cms/signeddata/standards/interop/message.txt":0:"../testdata/cert/asn1/cms/signeddata/standards/interop/ca_cert.pem":0
 
-SDV_CMS_PARSE_SIGNEDDATA_VERIFY_TEST_TC001 BC 1.84 SLH-DSA-SHA2-128f
-SDV_CMS_PARSE_SIGNEDDATA_VERIFY_TEST_TC001:"../testdata/cert/asn1/cms/signeddata/standards/bouncycastle-1.84/slh_dsa_sha2_128f.der":"../testdata/cert/asn1/cms/signeddata/standards/bouncycastle-1.84/message.txt":0:"../testdata/cert/asn1/cms/signeddata/standards/bouncycastle-1.84/ca_cert.pem":0
+SDV_CMS_PARSE_SIGNEDDATA_VERIFY_TEST_TC001 SLH-DSA-SHA2-128f
+SDV_CMS_PARSE_SIGNEDDATA_VERIFY_TEST_TC001:"../testdata/cert/asn1/cms/signeddata/standards/interop/slh_dsa_sha2_128f.der":"../testdata/cert/asn1/cms/signeddata/standards/interop/message.txt":0:"../testdata/cert/asn1/cms/signeddata/standards/interop/ca_cert.pem":0
 
-SDV_CMS_PARSE_SIGNEDDATA_VERIFY_TEST_TC001 BC 1.84 SLH-DSA-SHAKE-128s
-SDV_CMS_PARSE_SIGNEDDATA_VERIFY_TEST_TC001:"../testdata/cert/asn1/cms/signeddata/standards/bouncycastle-1.84/slh_dsa_shake_128s.der":"../testdata/cert/asn1/cms/signeddata/standards/bouncycastle-1.84/message.txt":0:"../testdata/cert/asn1/cms/signeddata/standards/bouncycastle-1.84/ca_cert.pem":0
+SDV_CMS_PARSE_SIGNEDDATA_VERIFY_TEST_TC001 SLH-DSA-SHAKE-128s
+SDV_CMS_PARSE_SIGNEDDATA_VERIFY_TEST_TC001:"../testdata/cert/asn1/cms/signeddata/standards/interop/slh_dsa_shake_128s.der":"../testdata/cert/asn1/cms/signeddata/standards/interop/message.txt":0:"../testdata/cert/asn1/cms/signeddata/standards/interop/ca_cert.pem":0
 
-SDV_CMS_PARSE_SIGNEDDATA_VERIFY_TEST_TC001 BC 1.84 SLH-DSA-SHAKE-128f
-SDV_CMS_PARSE_SIGNEDDATA_VERIFY_TEST_TC001:"../testdata/cert/asn1/cms/signeddata/standards/bouncycastle-1.84/slh_dsa_shake_128f.der":"../testdata/cert/asn1/cms/signeddata/standards/bouncycastle-1.84/message.txt":0:"../testdata/cert/asn1/cms/signeddata/standards/bouncycastle-1.84/ca_cert.pem":0
+SDV_CMS_PARSE_SIGNEDDATA_VERIFY_TEST_TC001 SLH-DSA-SHAKE-128f
+SDV_CMS_PARSE_SIGNEDDATA_VERIFY_TEST_TC001:"../testdata/cert/asn1/cms/signeddata/standards/interop/slh_dsa_shake_128f.der":"../testdata/cert/asn1/cms/signeddata/standards/interop/message.txt":0:"../testdata/cert/asn1/cms/signeddata/standards/interop/ca_cert.pem":0
 
-SDV_CMS_PARSE_SIGNEDDATA_VERIFY_TEST_TC001 BC 1.84 SLH-DSA-SHA2-192s
-SDV_CMS_PARSE_SIGNEDDATA_VERIFY_TEST_TC001:"../testdata/cert/asn1/cms/signeddata/standards/bouncycastle-1.84/slh_dsa_sha2_192s.der":"../testdata/cert/asn1/cms/signeddata/standards/bouncycastle-1.84/message.txt":0:"../testdata/cert/asn1/cms/signeddata/standards/bouncycastle-1.84/ca_cert.pem":0
+SDV_CMS_PARSE_SIGNEDDATA_VERIFY_TEST_TC001 SLH-DSA-SHA2-192s
+SDV_CMS_PARSE_SIGNEDDATA_VERIFY_TEST_TC001:"../testdata/cert/asn1/cms/signeddata/standards/interop/slh_dsa_sha2_192s.der":"../testdata/cert/asn1/cms/signeddata/standards/interop/message.txt":0:"../testdata/cert/asn1/cms/signeddata/standards/interop/ca_cert.pem":0
 
-SDV_CMS_PARSE_SIGNEDDATA_VERIFY_TEST_TC001 BC 1.84 SLH-DSA-SHA2-192f
-SDV_CMS_PARSE_SIGNEDDATA_VERIFY_TEST_TC001:"../testdata/cert/asn1/cms/signeddata/standards/bouncycastle-1.84/slh_dsa_sha2_192f.der":"../testdata/cert/asn1/cms/signeddata/standards/bouncycastle-1.84/message.txt":0:"../testdata/cert/asn1/cms/signeddata/standards/bouncycastle-1.84/ca_cert.pem":0
+SDV_CMS_PARSE_SIGNEDDATA_VERIFY_TEST_TC001 SLH-DSA-SHA2-192f
+SDV_CMS_PARSE_SIGNEDDATA_VERIFY_TEST_TC001:"../testdata/cert/asn1/cms/signeddata/standards/interop/slh_dsa_sha2_192f.der":"../testdata/cert/asn1/cms/signeddata/standards/interop/message.txt":0:"../testdata/cert/asn1/cms/signeddata/standards/interop/ca_cert.pem":0
 
-SDV_CMS_PARSE_SIGNEDDATA_VERIFY_TEST_TC001 BC 1.84 SLH-DSA-SHAKE-192s
-SDV_CMS_PARSE_SIGNEDDATA_VERIFY_TEST_TC001:"../testdata/cert/asn1/cms/signeddata/standards/bouncycastle-1.84/slh_dsa_shake_192s.der":"../testdata/cert/asn1/cms/signeddata/standards/bouncycastle-1.84/message.txt":0:"../testdata/cert/asn1/cms/signeddata/standards/bouncycastle-1.84/ca_cert.pem":0
+SDV_CMS_PARSE_SIGNEDDATA_VERIFY_TEST_TC001 SLH-DSA-SHAKE-192s
+SDV_CMS_PARSE_SIGNEDDATA_VERIFY_TEST_TC001:"../testdata/cert/asn1/cms/signeddata/standards/interop/slh_dsa_shake_192s.der":"../testdata/cert/asn1/cms/signeddata/standards/interop/message.txt":0:"../testdata/cert/asn1/cms/signeddata/standards/interop/ca_cert.pem":0
 
-SDV_CMS_PARSE_SIGNEDDATA_VERIFY_TEST_TC001 BC 1.84 SLH-DSA-SHAKE-192f
-SDV_CMS_PARSE_SIGNEDDATA_VERIFY_TEST_TC001:"../testdata/cert/asn1/cms/signeddata/standards/bouncycastle-1.84/slh_dsa_shake_192f.der":"../testdata/cert/asn1/cms/signeddata/standards/bouncycastle-1.84/message.txt":0:"../testdata/cert/asn1/cms/signeddata/standards/bouncycastle-1.84/ca_cert.pem":0
+SDV_CMS_PARSE_SIGNEDDATA_VERIFY_TEST_TC001 SLH-DSA-SHAKE-192f
+SDV_CMS_PARSE_SIGNEDDATA_VERIFY_TEST_TC001:"../testdata/cert/asn1/cms/signeddata/standards/interop/slh_dsa_shake_192f.der":"../testdata/cert/asn1/cms/signeddata/standards/interop/message.txt":0:"../testdata/cert/asn1/cms/signeddata/standards/interop/ca_cert.pem":0
 
-SDV_CMS_PARSE_SIGNEDDATA_VERIFY_TEST_TC001 BC 1.84 SLH-DSA-SHA2-256s
-SDV_CMS_PARSE_SIGNEDDATA_VERIFY_TEST_TC001:"../testdata/cert/asn1/cms/signeddata/standards/bouncycastle-1.84/slh_dsa_sha2_256s.der":"../testdata/cert/asn1/cms/signeddata/standards/bouncycastle-1.84/message.txt":0:"../testdata/cert/asn1/cms/signeddata/standards/bouncycastle-1.84/ca_cert.pem":0
+SDV_CMS_PARSE_SIGNEDDATA_VERIFY_TEST_TC001 SLH-DSA-SHA2-256s
+SDV_CMS_PARSE_SIGNEDDATA_VERIFY_TEST_TC001:"../testdata/cert/asn1/cms/signeddata/standards/interop/slh_dsa_sha2_256s.der":"../testdata/cert/asn1/cms/signeddata/standards/interop/message.txt":0:"../testdata/cert/asn1/cms/signeddata/standards/interop/ca_cert.pem":0
 
-SDV_CMS_PARSE_SIGNEDDATA_VERIFY_TEST_TC001 BC 1.84 SLH-DSA-SHA2-256f
-SDV_CMS_PARSE_SIGNEDDATA_VERIFY_TEST_TC001:"../testdata/cert/asn1/cms/signeddata/standards/bouncycastle-1.84/slh_dsa_sha2_256f.der":"../testdata/cert/asn1/cms/signeddata/standards/bouncycastle-1.84/message.txt":0:"../testdata/cert/asn1/cms/signeddata/standards/bouncycastle-1.84/ca_cert.pem":0
+SDV_CMS_PARSE_SIGNEDDATA_VERIFY_TEST_TC001 SLH-DSA-SHA2-256f
+SDV_CMS_PARSE_SIGNEDDATA_VERIFY_TEST_TC001:"../testdata/cert/asn1/cms/signeddata/standards/interop/slh_dsa_sha2_256f.der":"../testdata/cert/asn1/cms/signeddata/standards/interop/message.txt":0:"../testdata/cert/asn1/cms/signeddata/standards/interop/ca_cert.pem":0
 
-SDV_CMS_PARSE_SIGNEDDATA_VERIFY_TEST_TC001 BC 1.84 SLH-DSA-SHAKE-256s
-SDV_CMS_PARSE_SIGNEDDATA_VERIFY_TEST_TC001:"../testdata/cert/asn1/cms/signeddata/standards/bouncycastle-1.84/slh_dsa_shake_256s.der":"../testdata/cert/asn1/cms/signeddata/standards/bouncycastle-1.84/message.txt":0:"../testdata/cert/asn1/cms/signeddata/standards/bouncycastle-1.84/ca_cert.pem":0
+SDV_CMS_PARSE_SIGNEDDATA_VERIFY_TEST_TC001 SLH-DSA-SHAKE-256s
+SDV_CMS_PARSE_SIGNEDDATA_VERIFY_TEST_TC001:"../testdata/cert/asn1/cms/signeddata/standards/interop/slh_dsa_shake_256s.der":"../testdata/cert/asn1/cms/signeddata/standards/interop/message.txt":0:"../testdata/cert/asn1/cms/signeddata/standards/interop/ca_cert.pem":0
 
-SDV_CMS_PARSE_SIGNEDDATA_VERIFY_TEST_TC001 BC 1.84 SLH-DSA-SHAKE-256f
-SDV_CMS_PARSE_SIGNEDDATA_VERIFY_TEST_TC001:"../testdata/cert/asn1/cms/signeddata/standards/bouncycastle-1.84/slh_dsa_shake_256f.der":"../testdata/cert/asn1/cms/signeddata/standards/bouncycastle-1.84/message.txt":0:"../testdata/cert/asn1/cms/signeddata/standards/bouncycastle-1.84/ca_cert.pem":0
+SDV_CMS_PARSE_SIGNEDDATA_VERIFY_TEST_TC001 SLH-DSA-SHAKE-256f
+SDV_CMS_PARSE_SIGNEDDATA_VERIFY_TEST_TC001:"../testdata/cert/asn1/cms/signeddata/standards/interop/slh_dsa_shake_256f.der":"../testdata/cert/asn1/cms/signeddata/standards/interop/message.txt":0:"../testdata/cert/asn1/cms/signeddata/standards/interop/ca_cert.pem":0
 
-SDV_CMS_PARSE_SIGNEDDATA_VERIFY_TEST_TC001 BC 1.84 MLDSA44-RSA2048-PSS-SHA256
-SDV_CMS_PARSE_SIGNEDDATA_VERIFY_TEST_TC001:"../testdata/cert/asn1/cms/signeddata/standards/bouncycastle-1.84/mldsa44_rsa2048_pss_sha256.der":"../testdata/cert/asn1/cms/signeddata/standards/bouncycastle-1.84/message.txt":0:"../testdata/cert/asn1/cms/signeddata/standards/bouncycastle-1.84/ca_cert.pem":0
+SDV_CMS_PARSE_SIGNEDDATA_VERIFY_TEST_TC001 MLDSA44-RSA2048-PSS-SHA256
+SDV_CMS_PARSE_SIGNEDDATA_VERIFY_TEST_TC001:"../testdata/cert/asn1/cms/signeddata/standards/interop/mldsa44_rsa2048_pss_sha256.der":"../testdata/cert/asn1/cms/signeddata/standards/interop/message.txt":0:"../testdata/cert/asn1/cms/signeddata/standards/interop/ca_cert.pem":0
 
-SDV_CMS_PARSE_SIGNEDDATA_VERIFY_TEST_TC001 BC 1.84 MLDSA44-RSA2048-PKCS15-SHA256
-SDV_CMS_PARSE_SIGNEDDATA_VERIFY_TEST_TC001:"../testdata/cert/asn1/cms/signeddata/standards/bouncycastle-1.84/mldsa44_rsa2048_pkcs15_sha256.der":"../testdata/cert/asn1/cms/signeddata/standards/bouncycastle-1.84/message.txt":0:"../testdata/cert/asn1/cms/signeddata/standards/bouncycastle-1.84/ca_cert.pem":0
+SDV_CMS_PARSE_SIGNEDDATA_VERIFY_TEST_TC001 MLDSA44-RSA2048-PKCS15-SHA256
+SDV_CMS_PARSE_SIGNEDDATA_VERIFY_TEST_TC001:"../testdata/cert/asn1/cms/signeddata/standards/interop/mldsa44_rsa2048_pkcs15_sha256.der":"../testdata/cert/asn1/cms/signeddata/standards/interop/message.txt":0:"../testdata/cert/asn1/cms/signeddata/standards/interop/ca_cert.pem":0
 
-SDV_CMS_PARSE_SIGNEDDATA_VERIFY_TEST_TC001 BC 1.84 MLDSA44-Ed25519-SHA512
-SDV_CMS_PARSE_SIGNEDDATA_VERIFY_TEST_TC001:"../testdata/cert/asn1/cms/signeddata/standards/bouncycastle-1.84/mldsa44_ed25519_sha512.der":"../testdata/cert/asn1/cms/signeddata/standards/bouncycastle-1.84/message.txt":0:"../testdata/cert/asn1/cms/signeddata/standards/bouncycastle-1.84/ca_cert.pem":0
+SDV_CMS_PARSE_SIGNEDDATA_VERIFY_TEST_TC001 MLDSA44-Ed25519-SHA512
+SDV_CMS_PARSE_SIGNEDDATA_VERIFY_TEST_TC001:"../testdata/cert/asn1/cms/signeddata/standards/interop/mldsa44_ed25519_sha512.der":"../testdata/cert/asn1/cms/signeddata/standards/interop/message.txt":0:"../testdata/cert/asn1/cms/signeddata/standards/interop/ca_cert.pem":0
 
-SDV_CMS_PARSE_SIGNEDDATA_VERIFY_TEST_TC001 BC 1.84 MLDSA44-ECDSA-P256-SHA256
-SDV_CMS_PARSE_SIGNEDDATA_VERIFY_TEST_TC001:"../testdata/cert/asn1/cms/signeddata/standards/bouncycastle-1.84/mldsa44_ecdsa_p256_sha256.der":"../testdata/cert/asn1/cms/signeddata/standards/bouncycastle-1.84/message.txt":0:"../testdata/cert/asn1/cms/signeddata/standards/bouncycastle-1.84/ca_cert.pem":0
+SDV_CMS_PARSE_SIGNEDDATA_VERIFY_TEST_TC001 MLDSA44-ECDSA-P256-SHA256
+SDV_CMS_PARSE_SIGNEDDATA_VERIFY_TEST_TC001:"../testdata/cert/asn1/cms/signeddata/standards/interop/mldsa44_ecdsa_p256_sha256.der":"../testdata/cert/asn1/cms/signeddata/standards/interop/message.txt":0:"../testdata/cert/asn1/cms/signeddata/standards/interop/ca_cert.pem":0
 
-SDV_CMS_PARSE_SIGNEDDATA_VERIFY_TEST_TC001 BC 1.84 MLDSA65-RSA3072-PSS-SHA512
-SDV_CMS_PARSE_SIGNEDDATA_VERIFY_TEST_TC001:"../testdata/cert/asn1/cms/signeddata/standards/bouncycastle-1.84/mldsa65_rsa3072_pss_sha512.der":"../testdata/cert/asn1/cms/signeddata/standards/bouncycastle-1.84/message.txt":0:"../testdata/cert/asn1/cms/signeddata/standards/bouncycastle-1.84/ca_cert.pem":0
+SDV_CMS_PARSE_SIGNEDDATA_VERIFY_TEST_TC001 MLDSA65-RSA3072-PSS-SHA512
+SDV_CMS_PARSE_SIGNEDDATA_VERIFY_TEST_TC001:"../testdata/cert/asn1/cms/signeddata/standards/interop/mldsa65_rsa3072_pss_sha512.der":"../testdata/cert/asn1/cms/signeddata/standards/interop/message.txt":0:"../testdata/cert/asn1/cms/signeddata/standards/interop/ca_cert.pem":0
 
-SDV_CMS_PARSE_SIGNEDDATA_VERIFY_TEST_TC001 BC 1.84 MLDSA65-RSA3072-PKCS15-SHA512
-SDV_CMS_PARSE_SIGNEDDATA_VERIFY_TEST_TC001:"../testdata/cert/asn1/cms/signeddata/standards/bouncycastle-1.84/mldsa65_rsa3072_pkcs15_sha512.der":"../testdata/cert/asn1/cms/signeddata/standards/bouncycastle-1.84/message.txt":0:"../testdata/cert/asn1/cms/signeddata/standards/bouncycastle-1.84/ca_cert.pem":0
+SDV_CMS_PARSE_SIGNEDDATA_VERIFY_TEST_TC001 MLDSA65-RSA3072-PKCS15-SHA512
+SDV_CMS_PARSE_SIGNEDDATA_VERIFY_TEST_TC001:"../testdata/cert/asn1/cms/signeddata/standards/interop/mldsa65_rsa3072_pkcs15_sha512.der":"../testdata/cert/asn1/cms/signeddata/standards/interop/message.txt":0:"../testdata/cert/asn1/cms/signeddata/standards/interop/ca_cert.pem":0
 
-SDV_CMS_PARSE_SIGNEDDATA_VERIFY_TEST_TC001 BC 1.84 MLDSA65-RSA4096-PSS-SHA512
-SDV_CMS_PARSE_SIGNEDDATA_VERIFY_TEST_TC001:"../testdata/cert/asn1/cms/signeddata/standards/bouncycastle-1.84/mldsa65_rsa4096_pss_sha512.der":"../testdata/cert/asn1/cms/signeddata/standards/bouncycastle-1.84/message.txt":0:"../testdata/cert/asn1/cms/signeddata/standards/bouncycastle-1.84/ca_cert.pem":0
+SDV_CMS_PARSE_SIGNEDDATA_VERIFY_TEST_TC001 MLDSA65-RSA4096-PSS-SHA512
+SDV_CMS_PARSE_SIGNEDDATA_VERIFY_TEST_TC001:"../testdata/cert/asn1/cms/signeddata/standards/interop/mldsa65_rsa4096_pss_sha512.der":"../testdata/cert/asn1/cms/signeddata/standards/interop/message.txt":0:"../testdata/cert/asn1/cms/signeddata/standards/interop/ca_cert.pem":0
 
-SDV_CMS_PARSE_SIGNEDDATA_VERIFY_TEST_TC001 BC 1.84 MLDSA65-RSA4096-PKCS15-SHA512
-SDV_CMS_PARSE_SIGNEDDATA_VERIFY_TEST_TC001:"../testdata/cert/asn1/cms/signeddata/standards/bouncycastle-1.84/mldsa65_rsa4096_pkcs15_sha512.der":"../testdata/cert/asn1/cms/signeddata/standards/bouncycastle-1.84/message.txt":0:"../testdata/cert/asn1/cms/signeddata/standards/bouncycastle-1.84/ca_cert.pem":0
+SDV_CMS_PARSE_SIGNEDDATA_VERIFY_TEST_TC001 MLDSA65-RSA4096-PKCS15-SHA512
+SDV_CMS_PARSE_SIGNEDDATA_VERIFY_TEST_TC001:"../testdata/cert/asn1/cms/signeddata/standards/interop/mldsa65_rsa4096_pkcs15_sha512.der":"../testdata/cert/asn1/cms/signeddata/standards/interop/message.txt":0:"../testdata/cert/asn1/cms/signeddata/standards/interop/ca_cert.pem":0
 
-SDV_CMS_PARSE_SIGNEDDATA_VERIFY_TEST_TC001 BC 1.84 MLDSA65-ECDSA-P256-SHA512
-SDV_CMS_PARSE_SIGNEDDATA_VERIFY_TEST_TC001:"../testdata/cert/asn1/cms/signeddata/standards/bouncycastle-1.84/mldsa65_ecdsa_p256_sha512.der":"../testdata/cert/asn1/cms/signeddata/standards/bouncycastle-1.84/message.txt":0:"../testdata/cert/asn1/cms/signeddata/standards/bouncycastle-1.84/ca_cert.pem":0
+SDV_CMS_PARSE_SIGNEDDATA_VERIFY_TEST_TC001 MLDSA65-ECDSA-P256-SHA512
+SDV_CMS_PARSE_SIGNEDDATA_VERIFY_TEST_TC001:"../testdata/cert/asn1/cms/signeddata/standards/interop/mldsa65_ecdsa_p256_sha512.der":"../testdata/cert/asn1/cms/signeddata/standards/interop/message.txt":0:"../testdata/cert/asn1/cms/signeddata/standards/interop/ca_cert.pem":0
 
-SDV_CMS_PARSE_SIGNEDDATA_VERIFY_TEST_TC001 BC 1.84 MLDSA65-ECDSA-P384-SHA512
-SDV_CMS_PARSE_SIGNEDDATA_VERIFY_TEST_TC001:"../testdata/cert/asn1/cms/signeddata/standards/bouncycastle-1.84/mldsa65_ecdsa_p384_sha512.der":"../testdata/cert/asn1/cms/signeddata/standards/bouncycastle-1.84/message.txt":0:"../testdata/cert/asn1/cms/signeddata/standards/bouncycastle-1.84/ca_cert.pem":0
+SDV_CMS_PARSE_SIGNEDDATA_VERIFY_TEST_TC001 MLDSA65-ECDSA-P384-SHA512
+SDV_CMS_PARSE_SIGNEDDATA_VERIFY_TEST_TC001:"../testdata/cert/asn1/cms/signeddata/standards/interop/mldsa65_ecdsa_p384_sha512.der":"../testdata/cert/asn1/cms/signeddata/standards/interop/message.txt":0:"../testdata/cert/asn1/cms/signeddata/standards/interop/ca_cert.pem":0
 
-SDV_CMS_PARSE_SIGNEDDATA_VERIFY_TEST_TC001 BC 1.84 MLDSA65-ECDSA-brainpoolP256r1-SHA512
-SDV_CMS_PARSE_SIGNEDDATA_VERIFY_TEST_TC001:"../testdata/cert/asn1/cms/signeddata/standards/bouncycastle-1.84/mldsa65_ecdsa_brainpoolp256r1_sha512.der":"../testdata/cert/asn1/cms/signeddata/standards/bouncycastle-1.84/message.txt":0:"../testdata/cert/asn1/cms/signeddata/standards/bouncycastle-1.84/ca_cert.pem":0
+SDV_CMS_PARSE_SIGNEDDATA_VERIFY_TEST_TC001 MLDSA65-ECDSA-brainpoolP256r1-SHA512
+SDV_CMS_PARSE_SIGNEDDATA_VERIFY_TEST_TC001:"../testdata/cert/asn1/cms/signeddata/standards/interop/mldsa65_ecdsa_brainpoolp256r1_sha512.der":"../testdata/cert/asn1/cms/signeddata/standards/interop/message.txt":0:"../testdata/cert/asn1/cms/signeddata/standards/interop/ca_cert.pem":0
 
-SDV_CMS_PARSE_SIGNEDDATA_VERIFY_TEST_TC001 BC 1.84 MLDSA65-Ed25519-SHA512
-SDV_CMS_PARSE_SIGNEDDATA_VERIFY_TEST_TC001:"../testdata/cert/asn1/cms/signeddata/standards/bouncycastle-1.84/mldsa65_ed25519_sha512.der":"../testdata/cert/asn1/cms/signeddata/standards/bouncycastle-1.84/message.txt":0:"../testdata/cert/asn1/cms/signeddata/standards/bouncycastle-1.84/ca_cert.pem":0
+SDV_CMS_PARSE_SIGNEDDATA_VERIFY_TEST_TC001 MLDSA65-Ed25519-SHA512
+SDV_CMS_PARSE_SIGNEDDATA_VERIFY_TEST_TC001:"../testdata/cert/asn1/cms/signeddata/standards/interop/mldsa65_ed25519_sha512.der":"../testdata/cert/asn1/cms/signeddata/standards/interop/message.txt":0:"../testdata/cert/asn1/cms/signeddata/standards/interop/ca_cert.pem":0
 
-SDV_CMS_PARSE_SIGNEDDATA_VERIFY_TEST_TC001 BC 1.84 MLDSA87-ECDSA-P384-SHA512
-SDV_CMS_PARSE_SIGNEDDATA_VERIFY_TEST_TC001:"../testdata/cert/asn1/cms/signeddata/standards/bouncycastle-1.84/mldsa87_ecdsa_p384_sha512.der":"../testdata/cert/asn1/cms/signeddata/standards/bouncycastle-1.84/message.txt":0:"../testdata/cert/asn1/cms/signeddata/standards/bouncycastle-1.84/ca_cert.pem":0
+SDV_CMS_PARSE_SIGNEDDATA_VERIFY_TEST_TC001 MLDSA87-ECDSA-P384-SHA512
+SDV_CMS_PARSE_SIGNEDDATA_VERIFY_TEST_TC001:"../testdata/cert/asn1/cms/signeddata/standards/interop/mldsa87_ecdsa_p384_sha512.der":"../testdata/cert/asn1/cms/signeddata/standards/interop/message.txt":0:"../testdata/cert/asn1/cms/signeddata/standards/interop/ca_cert.pem":0
 
-SDV_CMS_PARSE_SIGNEDDATA_VERIFY_TEST_TC001 BC 1.84 MLDSA87-ECDSA-brainpoolP384r1-SHA512
-SDV_CMS_PARSE_SIGNEDDATA_VERIFY_TEST_TC001:"../testdata/cert/asn1/cms/signeddata/standards/bouncycastle-1.84/mldsa87_ecdsa_brainpoolp384r1_sha512.der":"../testdata/cert/asn1/cms/signeddata/standards/bouncycastle-1.84/message.txt":0:"../testdata/cert/asn1/cms/signeddata/standards/bouncycastle-1.84/ca_cert.pem":0
+SDV_CMS_PARSE_SIGNEDDATA_VERIFY_TEST_TC001 MLDSA87-ECDSA-brainpoolP384r1-SHA512
+SDV_CMS_PARSE_SIGNEDDATA_VERIFY_TEST_TC001:"../testdata/cert/asn1/cms/signeddata/standards/interop/mldsa87_ecdsa_brainpoolp384r1_sha512.der":"../testdata/cert/asn1/cms/signeddata/standards/interop/message.txt":0:"../testdata/cert/asn1/cms/signeddata/standards/interop/ca_cert.pem":0
 
-SDV_CMS_PARSE_SIGNEDDATA_VERIFY_TEST_TC001 BC 1.84 MLDSA87-RSA3072-PSS-SHA512
-SDV_CMS_PARSE_SIGNEDDATA_VERIFY_TEST_TC001:"../testdata/cert/asn1/cms/signeddata/standards/bouncycastle-1.84/mldsa87_rsa3072_pss_sha512.der":"../testdata/cert/asn1/cms/signeddata/standards/bouncycastle-1.84/message.txt":0:"../testdata/cert/asn1/cms/signeddata/standards/bouncycastle-1.84/ca_cert.pem":0
+SDV_CMS_PARSE_SIGNEDDATA_VERIFY_TEST_TC001 MLDSA87-RSA3072-PSS-SHA512
+SDV_CMS_PARSE_SIGNEDDATA_VERIFY_TEST_TC001:"../testdata/cert/asn1/cms/signeddata/standards/interop/mldsa87_rsa3072_pss_sha512.der":"../testdata/cert/asn1/cms/signeddata/standards/interop/message.txt":0:"../testdata/cert/asn1/cms/signeddata/standards/interop/ca_cert.pem":0
 
-SDV_CMS_PARSE_SIGNEDDATA_VERIFY_TEST_TC001 BC 1.84 MLDSA87-RSA4096-PSS-SHA512
-SDV_CMS_PARSE_SIGNEDDATA_VERIFY_TEST_TC001:"../testdata/cert/asn1/cms/signeddata/standards/bouncycastle-1.84/mldsa87_rsa4096_pss_sha512.der":"../testdata/cert/asn1/cms/signeddata/standards/bouncycastle-1.84/message.txt":0:"../testdata/cert/asn1/cms/signeddata/standards/bouncycastle-1.84/ca_cert.pem":0
+SDV_CMS_PARSE_SIGNEDDATA_VERIFY_TEST_TC001 MLDSA87-RSA4096-PSS-SHA512
+SDV_CMS_PARSE_SIGNEDDATA_VERIFY_TEST_TC001:"../testdata/cert/asn1/cms/signeddata/standards/interop/mldsa87_rsa4096_pss_sha512.der":"../testdata/cert/asn1/cms/signeddata/standards/interop/message.txt":0:"../testdata/cert/asn1/cms/signeddata/standards/interop/ca_cert.pem":0
 
-SDV_CMS_PARSE_SIGNEDDATA_VERIFY_TEST_TC001 BC 1.84 MLDSA87-ECDSA-P521-SHA512
-SDV_CMS_PARSE_SIGNEDDATA_VERIFY_TEST_TC001:"../testdata/cert/asn1/cms/signeddata/standards/bouncycastle-1.84/mldsa87_ecdsa_p521_sha512.der":"../testdata/cert/asn1/cms/signeddata/standards/bouncycastle-1.84/message.txt":0:"../testdata/cert/asn1/cms/signeddata/standards/bouncycastle-1.84/ca_cert.pem":0
+SDV_CMS_PARSE_SIGNEDDATA_VERIFY_TEST_TC001 MLDSA87-ECDSA-P521-SHA512
+SDV_CMS_PARSE_SIGNEDDATA_VERIFY_TEST_TC001:"../testdata/cert/asn1/cms/signeddata/standards/interop/mldsa87_ecdsa_p521_sha512.der":"../testdata/cert/asn1/cms/signeddata/standards/interop/message.txt":0:"../testdata/cert/asn1/cms/signeddata/standards/interop/ca_cert.pem":0
 
-SDV_CMS_PARSE_SIGNEDDATA_VERIFY_TEST_TC001 BC 1.84 ML-DSA detached
-SDV_CMS_PARSE_SIGNEDDATA_VERIFY_TEST_TC001:"../testdata/cert/asn1/cms/signeddata/standards/bouncycastle-1.84/ml_dsa_44_detached.der":"../testdata/cert/asn1/cms/signeddata/standards/bouncycastle-1.84/message.txt":1:"../testdata/cert/asn1/cms/signeddata/standards/bouncycastle-1.84/ca_cert.pem":0
+SDV_CMS_PARSE_SIGNEDDATA_VERIFY_TEST_TC001 ML-DSA detached
+SDV_CMS_PARSE_SIGNEDDATA_VERIFY_TEST_TC001:"../testdata/cert/asn1/cms/signeddata/standards/interop/ml_dsa_44_detached.der":"../testdata/cert/asn1/cms/signeddata/standards/interop/message.txt":1:"../testdata/cert/asn1/cms/signeddata/standards/interop/ca_cert.pem":0
 
-SDV_CMS_PARSE_SIGNEDDATA_VERIFY_TEST_TC001 BC 1.84 SLH-DSA detached
-SDV_CMS_PARSE_SIGNEDDATA_VERIFY_TEST_TC001:"../testdata/cert/asn1/cms/signeddata/standards/bouncycastle-1.84/slh_dsa_sha2_128s_detached.der":"../testdata/cert/asn1/cms/signeddata/standards/bouncycastle-1.84/message.txt":1:"../testdata/cert/asn1/cms/signeddata/standards/bouncycastle-1.84/ca_cert.pem":0
+SDV_CMS_PARSE_SIGNEDDATA_VERIFY_TEST_TC001 SLH-DSA detached
+SDV_CMS_PARSE_SIGNEDDATA_VERIFY_TEST_TC001:"../testdata/cert/asn1/cms/signeddata/standards/interop/slh_dsa_sha2_128s_detached.der":"../testdata/cert/asn1/cms/signeddata/standards/interop/message.txt":1:"../testdata/cert/asn1/cms/signeddata/standards/interop/ca_cert.pem":0
 
-SDV_CMS_PARSE_SIGNEDDATA_VERIFY_TEST_TC001 BC 1.84 Composite detached
-SDV_CMS_PARSE_SIGNEDDATA_VERIFY_TEST_TC001:"../testdata/cert/asn1/cms/signeddata/standards/bouncycastle-1.84/mldsa44_rsa2048_pss_sha256_detached.der":"../testdata/cert/asn1/cms/signeddata/standards/bouncycastle-1.84/message.txt":1:"../testdata/cert/asn1/cms/signeddata/standards/bouncycastle-1.84/ca_cert.pem":0
+SDV_CMS_PARSE_SIGNEDDATA_VERIFY_TEST_TC001 Composite detached
+SDV_CMS_PARSE_SIGNEDDATA_VERIFY_TEST_TC001:"../testdata/cert/asn1/cms/signeddata/standards/interop/mldsa44_rsa2048_pss_sha256_detached.der":"../testdata/cert/asn1/cms/signeddata/standards/interop/message.txt":1:"../testdata/cert/asn1/cms/signeddata/standards/interop/ca_cert.pem":0
 
-SDV_CMS_PARSE_SIGNEDDATA_VERIFY_TEST_TC001 BC 1.84 SLH-DSA signedAttrs
-SDV_CMS_PARSE_SIGNEDDATA_VERIFY_TEST_TC001:"../testdata/cert/asn1/cms/signeddata/standards/bouncycastle-1.84/slh_dsa_sha2_128s_signedattrs.der":"../testdata/cert/asn1/cms/signeddata/standards/bouncycastle-1.84/message.txt":0:"../testdata/cert/asn1/cms/signeddata/standards/bouncycastle-1.84/ca_cert.pem":0
+SDV_CMS_PARSE_SIGNEDDATA_VERIFY_TEST_TC001 SLH-DSA signedAttrs
+SDV_CMS_PARSE_SIGNEDDATA_VERIFY_TEST_TC001:"../testdata/cert/asn1/cms/signeddata/standards/interop/slh_dsa_sha2_128s_signedattrs.der":"../testdata/cert/asn1/cms/signeddata/standards/interop/message.txt":0:"../testdata/cert/asn1/cms/signeddata/standards/interop/ca_cert.pem":0
 
-SDV_CMS_PARSE_SIGNEDDATA_VERIFY_TEST_TC001 BC 1.84 Composite signedAttrs
-SDV_CMS_PARSE_SIGNEDDATA_VERIFY_TEST_TC001:"../testdata/cert/asn1/cms/signeddata/standards/bouncycastle-1.84/mldsa44_rsa2048_pss_sha256_signedattrs.der":"../testdata/cert/asn1/cms/signeddata/standards/bouncycastle-1.84/message.txt":0:"../testdata/cert/asn1/cms/signeddata/standards/bouncycastle-1.84/ca_cert.pem":0
+SDV_CMS_PARSE_SIGNEDDATA_VERIFY_TEST_TC001 Composite signedAttrs
+SDV_CMS_PARSE_SIGNEDDATA_VERIFY_TEST_TC001:"../testdata/cert/asn1/cms/signeddata/standards/interop/mldsa44_rsa2048_pss_sha256_signedattrs.der":"../testdata/cert/asn1/cms/signeddata/standards/interop/message.txt":0:"../testdata/cert/asn1/cms/signeddata/standards/interop/ca_cert.pem":0
 
-SDV_CMS_PARSE_SIGNEDDATA_VERIFY_TEST_TC001 BC 1.84 mixed PQC signers
-SDV_CMS_PARSE_SIGNEDDATA_VERIFY_TEST_TC001:"../testdata/cert/asn1/cms/signeddata/standards/bouncycastle-1.84/pqc_multi_signedattrs.der":"../testdata/cert/asn1/cms/signeddata/standards/bouncycastle-1.84/message.txt":0:"../testdata/cert/asn1/cms/signeddata/standards/bouncycastle-1.84/ca_cert.pem":1
+SDV_CMS_PARSE_SIGNEDDATA_VERIFY_TEST_TC001 mixed PQC signers
+SDV_CMS_PARSE_SIGNEDDATA_VERIFY_TEST_TC001:"../testdata/cert/asn1/cms/signeddata/standards/interop/pqc_multi_signedattrs.der":"../testdata/cert/asn1/cms/signeddata/standards/interop/message.txt":0:"../testdata/cert/asn1/cms/signeddata/standards/interop/ca_cert.pem":1
 
-SDV_CMS_PARSE_SIGNEDDATA_VERIFY_TEST_TC001 openHiTLS ML-DSA verified by BC 1.84
-SDV_CMS_PARSE_SIGNEDDATA_VERIFY_TEST_TC001:"../testdata/cert/asn1/cms/signeddata/standards/openhitls-bc-1.84/openhitls_mldsa44.der":"../testdata/cert/asn1/cms/signeddata/standards/bouncycastle-1.84/message.txt":0:"../testdata/cert/asn1/cms/signeddata/mldsa/mldsa44/ca_cert.pem":0
+SDV_CMS_PARSE_SIGNEDDATA_VERIFY_TEST_TC001 openHiTLS ML-DSA interoperability
+SDV_CMS_PARSE_SIGNEDDATA_VERIFY_TEST_TC001:"../testdata/cert/asn1/cms/signeddata/standards/roundtrip/openhitls_mldsa44.der":"../testdata/cert/asn1/cms/signeddata/standards/interop/message.txt":0:"../testdata/cert/asn1/cms/signeddata/mldsa/mldsa44/ca_cert.pem":0
 
-SDV_CMS_PARSE_SIGNEDDATA_VERIFY_TEST_TC001 openHiTLS SLH-DSA verified by BC 1.84
-SDV_CMS_PARSE_SIGNEDDATA_VERIFY_TEST_TC001:"../testdata/cert/asn1/cms/signeddata/standards/openhitls-bc-1.84/openhitls_slhdsa128s.der":"../testdata/cert/asn1/cms/signeddata/standards/bouncycastle-1.84/message.txt":0:"../testdata/cert/asn1/slhdsa_cert/slh_dsa_sha2_128s.ca.pem":0
+SDV_CMS_PARSE_SIGNEDDATA_VERIFY_TEST_TC001 openHiTLS SLH-DSA interoperability
+SDV_CMS_PARSE_SIGNEDDATA_VERIFY_TEST_TC001:"../testdata/cert/asn1/cms/signeddata/standards/roundtrip/openhitls_slhdsa128s.der":"../testdata/cert/asn1/cms/signeddata/standards/interop/message.txt":0:"../testdata/cert/asn1/slhdsa_cert/slh_dsa_sha2_128s.ca.pem":0
 
-SDV_CMS_PARSE_SIGNEDDATA_VERIFY_TEST_TC001 openHiTLS Composite verified by BC 1.84
-SDV_CMS_PARSE_SIGNEDDATA_VERIFY_TEST_TC001:"../testdata/cert/asn1/cms/signeddata/standards/openhitls-bc-1.84/openhitls_composite44.der":"../testdata/cert/asn1/cms/signeddata/standards/bouncycastle-1.84/message.txt":0:"../testdata/cert/asn1/cms/signeddata/composite/mldsa44_rsa_pss_ca.pem":0
+SDV_CMS_PARSE_SIGNEDDATA_VERIFY_TEST_TC001 openHiTLS Composite interoperability
+SDV_CMS_PARSE_SIGNEDDATA_VERIFY_TEST_TC001:"../testdata/cert/asn1/cms/signeddata/standards/roundtrip/openhitls_composite44.der":"../testdata/cert/asn1/cms/signeddata/standards/interop/message.txt":0:"../testdata/cert/asn1/cms/signeddata/composite/mldsa44_rsa_pss_ca.pem":0
 
-SDV_CMS_PARSE_SIGNEDDATA_VERIFY_FAIL_TC001 BC 1.84 Composite wrong digest
-SDV_CMS_PARSE_SIGNEDDATA_VERIFY_FAIL_TC001:"../testdata/cert/asn1/cms/signeddata/standards/bouncycastle-1.84/mldsa44_rsa2048_pss_sha256_wrong_digest.der":"../testdata/cert/asn1/cms/signeddata/standards/bouncycastle-1.84/ca_cert.pem":HITLS_CMS_ERR_INVALID_ALGO
+SDV_CMS_PARSE_SIGNEDDATA_VERIFY_FAIL_TC001 RSA reordered signedAttrs invalidate DER signature
+SDV_CMS_PARSE_SIGNEDDATA_VERIFY_FAIL_TC001:"../testdata/cert/asn1/cms/signeddata/standards/interop/rsa_signedattrs_reordered.der":"../testdata/cert/asn1/cms/signeddata/standards/interop/signedattrs_order_ca.pem":CRYPT_RSA_NOR_VERIFY_FAIL:""
 
-SDV_CMS_PARSE_SIGNEDDATA_VERIFY_FAIL_TC001 BC 1.84 ML-DSA bad signature
-SDV_CMS_PARSE_SIGNEDDATA_VERIFY_FAIL_TC001:"../testdata/cert/asn1/cms/signeddata/standards/bouncycastle-1.84/ml_dsa_44_bad_signature.der":"../testdata/cert/asn1/cms/signeddata/standards/bouncycastle-1.84/ca_cert.pem":CRYPT_MLDSA_SIGN_DATA_ERROR
+SDV_CMS_PARSE_SIGNEDDATA_VERIFY_FAIL_TC001 RSA signature over received signedAttrs succeeds
+SDV_CMS_PARSE_SIGNEDDATA_VERIFY_FAIL_TC001:"../testdata/cert/asn1/cms/signeddata/standards/interop/rsa_signedattrs_reordered_resigned.der":"../testdata/cert/asn1/cms/signeddata/standards/interop/signedattrs_order_ca.pem":HITLS_PKI_SUCCESS:""
 
-SDV_CMS_PARSE_SIGNEDDATA_VERIFY_FAIL_TC001 BC 1.84 ML-DSA bad content
-SDV_CMS_PARSE_SIGNEDDATA_VERIFY_FAIL_TC001:"../testdata/cert/asn1/cms/signeddata/standards/bouncycastle-1.84/ml_dsa_44_bad_content.der":"../testdata/cert/asn1/cms/signeddata/standards/bouncycastle-1.84/ca_cert.pem":CRYPT_MLDSA_VERIFY_FAIL
+SDV_CMS_PARSE_SIGNEDDATA_VERIFY_FAIL_TC001 HSS L2 signature over received signedAttrs succeeds
+SDV_CMS_PARSE_SIGNEDDATA_VERIFY_FAIL_TC001:"../testdata/cert/asn1/cms/signeddata/standards/interop/hss_l2_signedattrs_reordered_resigned.der":"../testdata/cert/asn1/cms/signeddata/standards/interop/signedattrs_order_ca.pem":HITLS_PKI_SUCCESS:""
 
-SDV_CMS_PARSE_SIGNEDDATA_VERIFY_FAIL_TC001 BC 1.84 one bad signer
-SDV_CMS_PARSE_SIGNEDDATA_VERIFY_FAIL_TC001:"../testdata/cert/asn1/cms/signeddata/standards/bouncycastle-1.84/pqc_multi_bad_signer.der":"../testdata/cert/asn1/cms/signeddata/standards/bouncycastle-1.84/ca_cert.pem":CRYPT_MLDSA_SIGN_DATA_ERROR
+SDV_CMS_PARSE_SIGNEDDATA_VERIFY_FAIL_TC001 HSS L2 reordered signedAttrs invalidate original signature
+SDV_CMS_PARSE_SIGNEDDATA_VERIFY_FAIL_TC001:"../testdata/cert/asn1/cms/signeddata/standards/interop/hss_l2_signedattrs_reordered_detached.der":"../testdata/cert/asn1/cms/signeddata/standards/interop/signedattrs_order_ca.pem":CRYPT_HSS_VERIFY_FAIL:"../testdata/cert/asn1/cms/signeddata/standards/interop/message.txt"
 
-SDV_CMS_PARSE_SIGNEDDATA_VERIFY_FAIL_TC001 BC 1.84 wrong messageDigest
-SDV_CMS_PARSE_SIGNEDDATA_VERIFY_FAIL_TC001:"../testdata/cert/asn1/cms/signeddata/standards/bouncycastle-1.84/slh_dsa_sha2_128s_bad_message_digest.der":"../testdata/cert/asn1/cms/signeddata/standards/bouncycastle-1.84/ca_cert.pem":HITLS_CMS_ERR_SIGNEDDATA_MSG_HASH_MISMATCH
+SDV_CMS_PARSE_SIGNEDDATA_VERIFY_FAIL_TC001 Composite wrong digest
+SDV_CMS_PARSE_SIGNEDDATA_VERIFY_FAIL_TC001:"../testdata/cert/asn1/cms/signeddata/standards/interop/mldsa44_rsa2048_pss_sha256_wrong_digest.der":"../testdata/cert/asn1/cms/signeddata/standards/interop/ca_cert.pem":HITLS_CMS_ERR_INVALID_ALGO:""
 
-SDV_CMS_PARSE_SIGNEDDATA_VERIFY_FAIL_TC001 BC 1.84 wrong contentType attribute
-SDV_CMS_PARSE_SIGNEDDATA_VERIFY_FAIL_TC001:"../testdata/cert/asn1/cms/signeddata/standards/bouncycastle-1.84/slh_dsa_sha2_128s_bad_content_type.der":"../testdata/cert/asn1/cms/signeddata/standards/bouncycastle-1.84/ca_cert.pem":HITLS_CMS_ERR_ENCAPCONT_TYPE
+SDV_CMS_PARSE_SIGNEDDATA_VERIFY_FAIL_TC001 ML-DSA bad signature
+SDV_CMS_PARSE_SIGNEDDATA_VERIFY_FAIL_TC001:"../testdata/cert/asn1/cms/signeddata/standards/interop/ml_dsa_44_bad_signature.der":"../testdata/cert/asn1/cms/signeddata/standards/interop/ca_cert.pem":CRYPT_MLDSA_SIGN_DATA_ERROR:""
 
-SDV_CMS_PARSE_SIGNEDDATA_VERIFY_FAIL_TC001 BC 1.84 AlgorithmProtection mismatch
-SDV_CMS_PARSE_SIGNEDDATA_VERIFY_FAIL_TC001:"../testdata/cert/asn1/cms/signeddata/standards/bouncycastle-1.84/mldsa44_rsa2048_pss_sha256_bad_alg_protection.der":"../testdata/cert/asn1/cms/signeddata/standards/bouncycastle-1.84/ca_cert.pem":HITLS_CMS_ERR_ALG_PROTECTION_MISMATCH
+SDV_CMS_PARSE_SIGNEDDATA_VERIFY_FAIL_TC001 ML-DSA bad content
+SDV_CMS_PARSE_SIGNEDDATA_VERIFY_FAIL_TC001:"../testdata/cert/asn1/cms/signeddata/standards/interop/ml_dsa_44_bad_content.der":"../testdata/cert/asn1/cms/signeddata/standards/interop/ca_cert.pem":CRYPT_MLDSA_VERIFY_FAIL:""
 
-SDV_CMS_PARSE_SIGNEDDATA_STREAM_VERIFY_TC001 BC 1.84 ML-DSA detached stream
-SDV_CMS_PARSE_SIGNEDDATA_STREAM_VERIFY_TC001:"../testdata/cert/asn1/cms/signeddata/standards/bouncycastle-1.84/ml_dsa_44_detached.der":"../testdata/cert/asn1/cms/signeddata/standards/bouncycastle-1.84/message.txt":"../testdata/cert/asn1/cms/signeddata/standards/bouncycastle-1.84/ca_cert.pem"
+SDV_CMS_PARSE_SIGNEDDATA_VERIFY_FAIL_TC001 one bad signer
+SDV_CMS_PARSE_SIGNEDDATA_VERIFY_FAIL_TC001:"../testdata/cert/asn1/cms/signeddata/standards/interop/pqc_multi_bad_signer.der":"../testdata/cert/asn1/cms/signeddata/standards/interop/ca_cert.pem":CRYPT_MLDSA_SIGN_DATA_ERROR:""
 
-SDV_CMS_PARSE_SIGNEDDATA_STREAM_VERIFY_TC001 BC 1.84 SLH-DSA detached stream
-SDV_CMS_PARSE_SIGNEDDATA_STREAM_VERIFY_TC001:"../testdata/cert/asn1/cms/signeddata/standards/bouncycastle-1.84/slh_dsa_sha2_128s_detached.der":"../testdata/cert/asn1/cms/signeddata/standards/bouncycastle-1.84/message.txt":"../testdata/cert/asn1/cms/signeddata/standards/bouncycastle-1.84/ca_cert.pem"
+SDV_CMS_PARSE_SIGNEDDATA_VERIFY_FAIL_TC001 wrong messageDigest
+SDV_CMS_PARSE_SIGNEDDATA_VERIFY_FAIL_TC001:"../testdata/cert/asn1/cms/signeddata/standards/interop/slh_dsa_sha2_128s_bad_message_digest.der":"../testdata/cert/asn1/cms/signeddata/standards/interop/ca_cert.pem":HITLS_CMS_ERR_SIGNEDDATA_MSG_HASH_MISMATCH:""
 
-SDV_CMS_PARSE_SIGNEDDATA_STREAM_VERIFY_TC001 BC 1.84 Composite detached stream
-SDV_CMS_PARSE_SIGNEDDATA_STREAM_VERIFY_TC001:"../testdata/cert/asn1/cms/signeddata/standards/bouncycastle-1.84/mldsa44_rsa2048_pss_sha256_detached.der":"../testdata/cert/asn1/cms/signeddata/standards/bouncycastle-1.84/message.txt":"../testdata/cert/asn1/cms/signeddata/standards/bouncycastle-1.84/ca_cert.pem"
+SDV_CMS_PARSE_SIGNEDDATA_VERIFY_FAIL_TC001 wrong contentType attribute
+SDV_CMS_PARSE_SIGNEDDATA_VERIFY_FAIL_TC001:"../testdata/cert/asn1/cms/signeddata/standards/interop/slh_dsa_sha2_128s_bad_content_type.der":"../testdata/cert/asn1/cms/signeddata/standards/interop/ca_cert.pem":HITLS_CMS_ERR_ENCAPCONT_TYPE:""
 
-SDV_CMS_PARSE_SIGNEDDATA_ASN1_BOUNDARY_TC001 BC 1.84 SLH-DSA truncated
-SDV_CMS_PARSE_SIGNEDDATA_ASN1_BOUNDARY_TC001:"../testdata/cert/asn1/cms/signeddata/standards/bouncycastle-1.84/slh_dsa_sha2_128s_signedattrs.der":0
+SDV_CMS_PARSE_SIGNEDDATA_VERIFY_FAIL_TC001 AlgorithmProtection mismatch
+SDV_CMS_PARSE_SIGNEDDATA_VERIFY_FAIL_TC001:"../testdata/cert/asn1/cms/signeddata/standards/interop/mldsa44_rsa2048_pss_sha256_bad_alg_protection.der":"../testdata/cert/asn1/cms/signeddata/standards/interop/ca_cert.pem":HITLS_CMS_ERR_ALG_PROTECTION_MISMATCH:""
 
-SDV_CMS_PARSE_SIGNEDDATA_ASN1_BOUNDARY_TC001 BC 1.84 SLH-DSA length mismatch
-SDV_CMS_PARSE_SIGNEDDATA_ASN1_BOUNDARY_TC001:"../testdata/cert/asn1/cms/signeddata/standards/bouncycastle-1.84/slh_dsa_sha2_128s_signedattrs.der":1
+SDV_CMS_PARSE_SIGNEDDATA_STREAM_VERIFY_TC001 ML-DSA detached stream
+SDV_CMS_PARSE_SIGNEDDATA_STREAM_VERIFY_TC001:"../testdata/cert/asn1/cms/signeddata/standards/interop/ml_dsa_44_detached.der":"../testdata/cert/asn1/cms/signeddata/standards/interop/message.txt":"../testdata/cert/asn1/cms/signeddata/standards/interop/ca_cert.pem"
 
-SDV_CMS_PARSE_SIGNEDDATA_ASN1_BOUNDARY_TC001 BC 1.84 SLH-DSA excessive length
-SDV_CMS_PARSE_SIGNEDDATA_ASN1_BOUNDARY_TC001:"../testdata/cert/asn1/cms/signeddata/standards/bouncycastle-1.84/slh_dsa_sha2_128s_signedattrs.der":2
+SDV_CMS_PARSE_SIGNEDDATA_STREAM_VERIFY_TC001 SLH-DSA detached stream
+SDV_CMS_PARSE_SIGNEDDATA_STREAM_VERIFY_TC001:"../testdata/cert/asn1/cms/signeddata/standards/interop/slh_dsa_sha2_128s_detached.der":"../testdata/cert/asn1/cms/signeddata/standards/interop/message.txt":"../testdata/cert/asn1/cms/signeddata/standards/interop/ca_cert.pem"
+
+SDV_CMS_PARSE_SIGNEDDATA_STREAM_VERIFY_TC001 Composite detached stream
+SDV_CMS_PARSE_SIGNEDDATA_STREAM_VERIFY_TC001:"../testdata/cert/asn1/cms/signeddata/standards/interop/mldsa44_rsa2048_pss_sha256_detached.der":"../testdata/cert/asn1/cms/signeddata/standards/interop/message.txt":"../testdata/cert/asn1/cms/signeddata/standards/interop/ca_cert.pem"
+
+SDV_CMS_PARSE_SIGNEDDATA_ASN1_BOUNDARY_TC001 SLH-DSA truncated
+SDV_CMS_PARSE_SIGNEDDATA_ASN1_BOUNDARY_TC001:"../testdata/cert/asn1/cms/signeddata/standards/interop/slh_dsa_sha2_128s_signedattrs.der":0
+
+SDV_CMS_PARSE_SIGNEDDATA_ASN1_BOUNDARY_TC001 SLH-DSA length mismatch
+SDV_CMS_PARSE_SIGNEDDATA_ASN1_BOUNDARY_TC001:"../testdata/cert/asn1/cms/signeddata/standards/interop/slh_dsa_sha2_128s_signedattrs.der":1
+
+SDV_CMS_PARSE_SIGNEDDATA_ASN1_BOUNDARY_TC001 SLH-DSA excessive length
+SDV_CMS_PARSE_SIGNEDDATA_ASN1_BOUNDARY_TC001:"../testdata/cert/asn1/cms/signeddata/standards/interop/slh_dsa_sha2_128s_signedattrs.der":2
 
 SDV_CMS_PARSE_SIGNEDDATA_VERIFY_TEST_TC001 p256 with atttach
 SDV_CMS_PARSE_SIGNEDDATA_VERIFY_TEST_TC001:"../testdata/cert/asn1/cms/signeddata/p256_attached.cms":"../testdata/cert/asn1/cms/signeddata/msg.txt":0:"../testdata/cert/asn1/cms/signeddata/ca_cert.pem":0
@@ -433,6 +445,132 @@ SDV_CMS_SIGNEDDATA_ROUNDTRIP_TC001:BSL_CID_ML_DSA:"../testdata/cert/asn1/cms/sig
 SDV_CMS_PQC_POLICY_TC001 Generate detached SignedData with MLDSA, no signedAttrs
 SDV_CMS_PQC_POLICY_TC001:BSL_CID_ML_DSA:"../testdata/cert/asn1/cms/signeddata/mldsa/mldsa44/ca_cert.pem":"../testdata/cert/asn1/cms/signeddata/mldsa/mldsa44/entity_cert.pem":"../testdata/cert/asn1/cms/signeddata/mldsa/mldsa44/entity_key.pem":"../testdata/cert/asn1/cms/signeddata/msg.txt":0
 
+SDV_CMS_MLDSA_DIGEST_PARSE_TC001 ML-DSA-44 without signedAttrs attached, unknown OID
+SDV_CMS_MLDSA_DIGEST_PARSE_TC001:"../testdata/cert/asn1/cms/signeddata/mldsa/mldsa44/ca_cert.pem":"../testdata/cert/asn1/cms/signeddata/mldsa/mldsa44/entity_cert.pem":"../testdata/cert/asn1/cms/signeddata/mldsa/mldsa44/entity_key.pem":"../testdata/cert/asn1/cms/signeddata/msg.txt":0:0:"60864801650304027f":HITLS_PKI_SUCCESS
+
+SDV_CMS_MLDSA_DIGEST_PARSE_TC001 ML-DSA-44 without signedAttrs attached, SHA-256 OID
+SDV_CMS_MLDSA_DIGEST_PARSE_TC001:"../testdata/cert/asn1/cms/signeddata/mldsa/mldsa44/ca_cert.pem":"../testdata/cert/asn1/cms/signeddata/mldsa/mldsa44/entity_cert.pem":"../testdata/cert/asn1/cms/signeddata/mldsa/mldsa44/entity_key.pem":"../testdata/cert/asn1/cms/signeddata/msg.txt":0:0:"608648016503040201":HITLS_PKI_SUCCESS
+
+SDV_CMS_MLDSA_DIGEST_PARSE_TC001 ML-DSA-44 without signedAttrs attached, unterminated OID
+SDV_CMS_MLDSA_DIGEST_PARSE_TC001:"../testdata/cert/asn1/cms/signeddata/mldsa/mldsa44/ca_cert.pem":"../testdata/cert/asn1/cms/signeddata/mldsa/mldsa44/entity_cert.pem":"../testdata/cert/asn1/cms/signeddata/mldsa/mldsa44/entity_key.pem":"../testdata/cert/asn1/cms/signeddata/msg.txt":0:0:"608648016503040280":BSL_ASN1_ERR_DECODE_OID
+
+SDV_CMS_MLDSA_DIGEST_PARSE_TC001 ML-DSA-44 without signedAttrs attached, nonminimal OID
+SDV_CMS_MLDSA_DIGEST_PARSE_TC001:"../testdata/cert/asn1/cms/signeddata/mldsa/mldsa44/ca_cert.pem":"../testdata/cert/asn1/cms/signeddata/mldsa/mldsa44/entity_cert.pem":"../testdata/cert/asn1/cms/signeddata/mldsa/mldsa44/entity_key.pem":"../testdata/cert/asn1/cms/signeddata/msg.txt":0:0:"80864801650304027f":BSL_ASN1_ERR_DECODE_OID
+
+SDV_CMS_MLDSA_DIGEST_PARSE_TC001 ML-DSA-44 without signedAttrs detached, unknown OID
+SDV_CMS_MLDSA_DIGEST_PARSE_TC001:"../testdata/cert/asn1/cms/signeddata/mldsa/mldsa44/ca_cert.pem":"../testdata/cert/asn1/cms/signeddata/mldsa/mldsa44/entity_cert.pem":"../testdata/cert/asn1/cms/signeddata/mldsa/mldsa44/entity_key.pem":"../testdata/cert/asn1/cms/signeddata/msg.txt":0:1:"60864801650304027f":HITLS_PKI_SUCCESS
+
+SDV_CMS_MLDSA_DIGEST_PARSE_TC001 ML-DSA-44 without signedAttrs detached, SHA-256 OID
+SDV_CMS_MLDSA_DIGEST_PARSE_TC001:"../testdata/cert/asn1/cms/signeddata/mldsa/mldsa44/ca_cert.pem":"../testdata/cert/asn1/cms/signeddata/mldsa/mldsa44/entity_cert.pem":"../testdata/cert/asn1/cms/signeddata/mldsa/mldsa44/entity_key.pem":"../testdata/cert/asn1/cms/signeddata/msg.txt":0:1:"608648016503040201":HITLS_PKI_SUCCESS
+
+SDV_CMS_MLDSA_DIGEST_PARSE_TC001 ML-DSA-44 without signedAttrs detached, unterminated OID
+SDV_CMS_MLDSA_DIGEST_PARSE_TC001:"../testdata/cert/asn1/cms/signeddata/mldsa/mldsa44/ca_cert.pem":"../testdata/cert/asn1/cms/signeddata/mldsa/mldsa44/entity_cert.pem":"../testdata/cert/asn1/cms/signeddata/mldsa/mldsa44/entity_key.pem":"../testdata/cert/asn1/cms/signeddata/msg.txt":0:1:"608648016503040280":BSL_ASN1_ERR_DECODE_OID
+
+SDV_CMS_MLDSA_DIGEST_PARSE_TC001 ML-DSA-44 without signedAttrs detached, nonminimal OID
+SDV_CMS_MLDSA_DIGEST_PARSE_TC001:"../testdata/cert/asn1/cms/signeddata/mldsa/mldsa44/ca_cert.pem":"../testdata/cert/asn1/cms/signeddata/mldsa/mldsa44/entity_cert.pem":"../testdata/cert/asn1/cms/signeddata/mldsa/mldsa44/entity_key.pem":"../testdata/cert/asn1/cms/signeddata/msg.txt":0:1:"80864801650304027f":BSL_ASN1_ERR_DECODE_OID
+
+SDV_CMS_MLDSA_DIGEST_PARSE_TC001 ML-DSA-44 with signedAttrs attached, unknown OID
+SDV_CMS_MLDSA_DIGEST_PARSE_TC001:"../testdata/cert/asn1/cms/signeddata/mldsa/mldsa44/ca_cert.pem":"../testdata/cert/asn1/cms/signeddata/mldsa/mldsa44/entity_cert.pem":"../testdata/cert/asn1/cms/signeddata/mldsa/mldsa44/entity_key.pem":"../testdata/cert/asn1/cms/signeddata/msg.txt":1:0:"60864801650304027f":HITLS_CMS_ERR_PARSE_TYPE
+
+SDV_CMS_MLDSA_DIGEST_PARSE_TC001 ML-DSA-44 with signedAttrs attached, unterminated OID
+SDV_CMS_MLDSA_DIGEST_PARSE_TC001:"../testdata/cert/asn1/cms/signeddata/mldsa/mldsa44/ca_cert.pem":"../testdata/cert/asn1/cms/signeddata/mldsa/mldsa44/entity_cert.pem":"../testdata/cert/asn1/cms/signeddata/mldsa/mldsa44/entity_key.pem":"../testdata/cert/asn1/cms/signeddata/msg.txt":1:0:"608648016503040280":BSL_ASN1_ERR_DECODE_OID
+
+SDV_CMS_MLDSA_DIGEST_PARSE_TC001 ML-DSA-44 with signedAttrs attached, nonminimal OID
+SDV_CMS_MLDSA_DIGEST_PARSE_TC001:"../testdata/cert/asn1/cms/signeddata/mldsa/mldsa44/ca_cert.pem":"../testdata/cert/asn1/cms/signeddata/mldsa/mldsa44/entity_cert.pem":"../testdata/cert/asn1/cms/signeddata/mldsa/mldsa44/entity_key.pem":"../testdata/cert/asn1/cms/signeddata/msg.txt":1:0:"80864801650304027f":BSL_ASN1_ERR_DECODE_OID
+
+SDV_CMS_MLDSA_DIGEST_PARSE_TC001 ML-DSA-44 with signedAttrs detached, unknown OID
+SDV_CMS_MLDSA_DIGEST_PARSE_TC001:"../testdata/cert/asn1/cms/signeddata/mldsa/mldsa44/ca_cert.pem":"../testdata/cert/asn1/cms/signeddata/mldsa/mldsa44/entity_cert.pem":"../testdata/cert/asn1/cms/signeddata/mldsa/mldsa44/entity_key.pem":"../testdata/cert/asn1/cms/signeddata/msg.txt":1:1:"60864801650304027f":HITLS_CMS_ERR_PARSE_TYPE
+
+SDV_CMS_MLDSA_DIGEST_PARSE_TC001 ML-DSA-44 with signedAttrs detached, unterminated OID
+SDV_CMS_MLDSA_DIGEST_PARSE_TC001:"../testdata/cert/asn1/cms/signeddata/mldsa/mldsa44/ca_cert.pem":"../testdata/cert/asn1/cms/signeddata/mldsa/mldsa44/entity_cert.pem":"../testdata/cert/asn1/cms/signeddata/mldsa/mldsa44/entity_key.pem":"../testdata/cert/asn1/cms/signeddata/msg.txt":1:1:"608648016503040280":BSL_ASN1_ERR_DECODE_OID
+
+SDV_CMS_MLDSA_DIGEST_PARSE_TC001 ML-DSA-44 with signedAttrs detached, nonminimal OID
+SDV_CMS_MLDSA_DIGEST_PARSE_TC001:"../testdata/cert/asn1/cms/signeddata/mldsa/mldsa44/ca_cert.pem":"../testdata/cert/asn1/cms/signeddata/mldsa/mldsa44/entity_cert.pem":"../testdata/cert/asn1/cms/signeddata/mldsa/mldsa44/entity_key.pem":"../testdata/cert/asn1/cms/signeddata/msg.txt":1:1:"80864801650304027f":BSL_ASN1_ERR_DECODE_OID
+
+SDV_CMS_MLDSA_DIGEST_PARSE_TC001 ML-DSA-65 without signedAttrs attached, unknown OID
+SDV_CMS_MLDSA_DIGEST_PARSE_TC001:"../testdata/cert/asn1/cms/signeddata/mldsa/mldsa65/ca_cert.pem":"../testdata/cert/asn1/cms/signeddata/mldsa/mldsa65/entity_cert.pem":"../testdata/cert/asn1/cms/signeddata/mldsa/mldsa65/entity_key.pem":"../testdata/cert/asn1/cms/signeddata/msg.txt":0:0:"60864801650304027f":HITLS_PKI_SUCCESS
+
+SDV_CMS_MLDSA_DIGEST_PARSE_TC001 ML-DSA-65 without signedAttrs attached, SHA-256 OID
+SDV_CMS_MLDSA_DIGEST_PARSE_TC001:"../testdata/cert/asn1/cms/signeddata/mldsa/mldsa65/ca_cert.pem":"../testdata/cert/asn1/cms/signeddata/mldsa/mldsa65/entity_cert.pem":"../testdata/cert/asn1/cms/signeddata/mldsa/mldsa65/entity_key.pem":"../testdata/cert/asn1/cms/signeddata/msg.txt":0:0:"608648016503040201":HITLS_PKI_SUCCESS
+
+SDV_CMS_MLDSA_DIGEST_PARSE_TC001 ML-DSA-65 without signedAttrs attached, unterminated OID
+SDV_CMS_MLDSA_DIGEST_PARSE_TC001:"../testdata/cert/asn1/cms/signeddata/mldsa/mldsa65/ca_cert.pem":"../testdata/cert/asn1/cms/signeddata/mldsa/mldsa65/entity_cert.pem":"../testdata/cert/asn1/cms/signeddata/mldsa/mldsa65/entity_key.pem":"../testdata/cert/asn1/cms/signeddata/msg.txt":0:0:"608648016503040280":BSL_ASN1_ERR_DECODE_OID
+
+SDV_CMS_MLDSA_DIGEST_PARSE_TC001 ML-DSA-65 without signedAttrs attached, nonminimal OID
+SDV_CMS_MLDSA_DIGEST_PARSE_TC001:"../testdata/cert/asn1/cms/signeddata/mldsa/mldsa65/ca_cert.pem":"../testdata/cert/asn1/cms/signeddata/mldsa/mldsa65/entity_cert.pem":"../testdata/cert/asn1/cms/signeddata/mldsa/mldsa65/entity_key.pem":"../testdata/cert/asn1/cms/signeddata/msg.txt":0:0:"80864801650304027f":BSL_ASN1_ERR_DECODE_OID
+
+SDV_CMS_MLDSA_DIGEST_PARSE_TC001 ML-DSA-65 without signedAttrs detached, unknown OID
+SDV_CMS_MLDSA_DIGEST_PARSE_TC001:"../testdata/cert/asn1/cms/signeddata/mldsa/mldsa65/ca_cert.pem":"../testdata/cert/asn1/cms/signeddata/mldsa/mldsa65/entity_cert.pem":"../testdata/cert/asn1/cms/signeddata/mldsa/mldsa65/entity_key.pem":"../testdata/cert/asn1/cms/signeddata/msg.txt":0:1:"60864801650304027f":HITLS_PKI_SUCCESS
+
+SDV_CMS_MLDSA_DIGEST_PARSE_TC001 ML-DSA-65 without signedAttrs detached, SHA-256 OID
+SDV_CMS_MLDSA_DIGEST_PARSE_TC001:"../testdata/cert/asn1/cms/signeddata/mldsa/mldsa65/ca_cert.pem":"../testdata/cert/asn1/cms/signeddata/mldsa/mldsa65/entity_cert.pem":"../testdata/cert/asn1/cms/signeddata/mldsa/mldsa65/entity_key.pem":"../testdata/cert/asn1/cms/signeddata/msg.txt":0:1:"608648016503040201":HITLS_PKI_SUCCESS
+
+SDV_CMS_MLDSA_DIGEST_PARSE_TC001 ML-DSA-65 without signedAttrs detached, unterminated OID
+SDV_CMS_MLDSA_DIGEST_PARSE_TC001:"../testdata/cert/asn1/cms/signeddata/mldsa/mldsa65/ca_cert.pem":"../testdata/cert/asn1/cms/signeddata/mldsa/mldsa65/entity_cert.pem":"../testdata/cert/asn1/cms/signeddata/mldsa/mldsa65/entity_key.pem":"../testdata/cert/asn1/cms/signeddata/msg.txt":0:1:"608648016503040280":BSL_ASN1_ERR_DECODE_OID
+
+SDV_CMS_MLDSA_DIGEST_PARSE_TC001 ML-DSA-65 without signedAttrs detached, nonminimal OID
+SDV_CMS_MLDSA_DIGEST_PARSE_TC001:"../testdata/cert/asn1/cms/signeddata/mldsa/mldsa65/ca_cert.pem":"../testdata/cert/asn1/cms/signeddata/mldsa/mldsa65/entity_cert.pem":"../testdata/cert/asn1/cms/signeddata/mldsa/mldsa65/entity_key.pem":"../testdata/cert/asn1/cms/signeddata/msg.txt":0:1:"80864801650304027f":BSL_ASN1_ERR_DECODE_OID
+
+SDV_CMS_MLDSA_DIGEST_PARSE_TC001 ML-DSA-65 with signedAttrs attached, unknown OID
+SDV_CMS_MLDSA_DIGEST_PARSE_TC001:"../testdata/cert/asn1/cms/signeddata/mldsa/mldsa65/ca_cert.pem":"../testdata/cert/asn1/cms/signeddata/mldsa/mldsa65/entity_cert.pem":"../testdata/cert/asn1/cms/signeddata/mldsa/mldsa65/entity_key.pem":"../testdata/cert/asn1/cms/signeddata/msg.txt":1:0:"60864801650304027f":HITLS_CMS_ERR_PARSE_TYPE
+
+SDV_CMS_MLDSA_DIGEST_PARSE_TC001 ML-DSA-65 with signedAttrs attached, unterminated OID
+SDV_CMS_MLDSA_DIGEST_PARSE_TC001:"../testdata/cert/asn1/cms/signeddata/mldsa/mldsa65/ca_cert.pem":"../testdata/cert/asn1/cms/signeddata/mldsa/mldsa65/entity_cert.pem":"../testdata/cert/asn1/cms/signeddata/mldsa/mldsa65/entity_key.pem":"../testdata/cert/asn1/cms/signeddata/msg.txt":1:0:"608648016503040280":BSL_ASN1_ERR_DECODE_OID
+
+SDV_CMS_MLDSA_DIGEST_PARSE_TC001 ML-DSA-65 with signedAttrs attached, nonminimal OID
+SDV_CMS_MLDSA_DIGEST_PARSE_TC001:"../testdata/cert/asn1/cms/signeddata/mldsa/mldsa65/ca_cert.pem":"../testdata/cert/asn1/cms/signeddata/mldsa/mldsa65/entity_cert.pem":"../testdata/cert/asn1/cms/signeddata/mldsa/mldsa65/entity_key.pem":"../testdata/cert/asn1/cms/signeddata/msg.txt":1:0:"80864801650304027f":BSL_ASN1_ERR_DECODE_OID
+
+SDV_CMS_MLDSA_DIGEST_PARSE_TC001 ML-DSA-65 with signedAttrs detached, unknown OID
+SDV_CMS_MLDSA_DIGEST_PARSE_TC001:"../testdata/cert/asn1/cms/signeddata/mldsa/mldsa65/ca_cert.pem":"../testdata/cert/asn1/cms/signeddata/mldsa/mldsa65/entity_cert.pem":"../testdata/cert/asn1/cms/signeddata/mldsa/mldsa65/entity_key.pem":"../testdata/cert/asn1/cms/signeddata/msg.txt":1:1:"60864801650304027f":HITLS_CMS_ERR_PARSE_TYPE
+
+SDV_CMS_MLDSA_DIGEST_PARSE_TC001 ML-DSA-65 with signedAttrs detached, unterminated OID
+SDV_CMS_MLDSA_DIGEST_PARSE_TC001:"../testdata/cert/asn1/cms/signeddata/mldsa/mldsa65/ca_cert.pem":"../testdata/cert/asn1/cms/signeddata/mldsa/mldsa65/entity_cert.pem":"../testdata/cert/asn1/cms/signeddata/mldsa/mldsa65/entity_key.pem":"../testdata/cert/asn1/cms/signeddata/msg.txt":1:1:"608648016503040280":BSL_ASN1_ERR_DECODE_OID
+
+SDV_CMS_MLDSA_DIGEST_PARSE_TC001 ML-DSA-65 with signedAttrs detached, nonminimal OID
+SDV_CMS_MLDSA_DIGEST_PARSE_TC001:"../testdata/cert/asn1/cms/signeddata/mldsa/mldsa65/ca_cert.pem":"../testdata/cert/asn1/cms/signeddata/mldsa/mldsa65/entity_cert.pem":"../testdata/cert/asn1/cms/signeddata/mldsa/mldsa65/entity_key.pem":"../testdata/cert/asn1/cms/signeddata/msg.txt":1:1:"80864801650304027f":BSL_ASN1_ERR_DECODE_OID
+
+SDV_CMS_MLDSA_DIGEST_PARSE_TC001 ML-DSA-87 without signedAttrs attached, unknown OID
+SDV_CMS_MLDSA_DIGEST_PARSE_TC001:"../testdata/cert/asn1/cms/signeddata/mldsa/mldsa87/ca_cert.pem":"../testdata/cert/asn1/cms/signeddata/mldsa/mldsa87/entity_cert.pem":"../testdata/cert/asn1/cms/signeddata/mldsa/mldsa87/entity_key.pem":"../testdata/cert/asn1/cms/signeddata/msg.txt":0:0:"60864801650304027f":HITLS_PKI_SUCCESS
+
+SDV_CMS_MLDSA_DIGEST_PARSE_TC001 ML-DSA-87 without signedAttrs attached, SHA-256 OID
+SDV_CMS_MLDSA_DIGEST_PARSE_TC001:"../testdata/cert/asn1/cms/signeddata/mldsa/mldsa87/ca_cert.pem":"../testdata/cert/asn1/cms/signeddata/mldsa/mldsa87/entity_cert.pem":"../testdata/cert/asn1/cms/signeddata/mldsa/mldsa87/entity_key.pem":"../testdata/cert/asn1/cms/signeddata/msg.txt":0:0:"608648016503040201":HITLS_PKI_SUCCESS
+
+SDV_CMS_MLDSA_DIGEST_PARSE_TC001 ML-DSA-87 without signedAttrs attached, unterminated OID
+SDV_CMS_MLDSA_DIGEST_PARSE_TC001:"../testdata/cert/asn1/cms/signeddata/mldsa/mldsa87/ca_cert.pem":"../testdata/cert/asn1/cms/signeddata/mldsa/mldsa87/entity_cert.pem":"../testdata/cert/asn1/cms/signeddata/mldsa/mldsa87/entity_key.pem":"../testdata/cert/asn1/cms/signeddata/msg.txt":0:0:"608648016503040280":BSL_ASN1_ERR_DECODE_OID
+
+SDV_CMS_MLDSA_DIGEST_PARSE_TC001 ML-DSA-87 without signedAttrs attached, nonminimal OID
+SDV_CMS_MLDSA_DIGEST_PARSE_TC001:"../testdata/cert/asn1/cms/signeddata/mldsa/mldsa87/ca_cert.pem":"../testdata/cert/asn1/cms/signeddata/mldsa/mldsa87/entity_cert.pem":"../testdata/cert/asn1/cms/signeddata/mldsa/mldsa87/entity_key.pem":"../testdata/cert/asn1/cms/signeddata/msg.txt":0:0:"80864801650304027f":BSL_ASN1_ERR_DECODE_OID
+
+SDV_CMS_MLDSA_DIGEST_PARSE_TC001 ML-DSA-87 without signedAttrs detached, unknown OID
+SDV_CMS_MLDSA_DIGEST_PARSE_TC001:"../testdata/cert/asn1/cms/signeddata/mldsa/mldsa87/ca_cert.pem":"../testdata/cert/asn1/cms/signeddata/mldsa/mldsa87/entity_cert.pem":"../testdata/cert/asn1/cms/signeddata/mldsa/mldsa87/entity_key.pem":"../testdata/cert/asn1/cms/signeddata/msg.txt":0:1:"60864801650304027f":HITLS_PKI_SUCCESS
+
+SDV_CMS_MLDSA_DIGEST_PARSE_TC001 ML-DSA-87 without signedAttrs detached, SHA-256 OID
+SDV_CMS_MLDSA_DIGEST_PARSE_TC001:"../testdata/cert/asn1/cms/signeddata/mldsa/mldsa87/ca_cert.pem":"../testdata/cert/asn1/cms/signeddata/mldsa/mldsa87/entity_cert.pem":"../testdata/cert/asn1/cms/signeddata/mldsa/mldsa87/entity_key.pem":"../testdata/cert/asn1/cms/signeddata/msg.txt":0:1:"608648016503040201":HITLS_PKI_SUCCESS
+
+SDV_CMS_MLDSA_DIGEST_PARSE_TC001 ML-DSA-87 without signedAttrs detached, unterminated OID
+SDV_CMS_MLDSA_DIGEST_PARSE_TC001:"../testdata/cert/asn1/cms/signeddata/mldsa/mldsa87/ca_cert.pem":"../testdata/cert/asn1/cms/signeddata/mldsa/mldsa87/entity_cert.pem":"../testdata/cert/asn1/cms/signeddata/mldsa/mldsa87/entity_key.pem":"../testdata/cert/asn1/cms/signeddata/msg.txt":0:1:"608648016503040280":BSL_ASN1_ERR_DECODE_OID
+
+SDV_CMS_MLDSA_DIGEST_PARSE_TC001 ML-DSA-87 without signedAttrs detached, nonminimal OID
+SDV_CMS_MLDSA_DIGEST_PARSE_TC001:"../testdata/cert/asn1/cms/signeddata/mldsa/mldsa87/ca_cert.pem":"../testdata/cert/asn1/cms/signeddata/mldsa/mldsa87/entity_cert.pem":"../testdata/cert/asn1/cms/signeddata/mldsa/mldsa87/entity_key.pem":"../testdata/cert/asn1/cms/signeddata/msg.txt":0:1:"80864801650304027f":BSL_ASN1_ERR_DECODE_OID
+
+SDV_CMS_MLDSA_DIGEST_PARSE_TC001 ML-DSA-87 with signedAttrs attached, unknown OID
+SDV_CMS_MLDSA_DIGEST_PARSE_TC001:"../testdata/cert/asn1/cms/signeddata/mldsa/mldsa87/ca_cert.pem":"../testdata/cert/asn1/cms/signeddata/mldsa/mldsa87/entity_cert.pem":"../testdata/cert/asn1/cms/signeddata/mldsa/mldsa87/entity_key.pem":"../testdata/cert/asn1/cms/signeddata/msg.txt":1:0:"60864801650304027f":HITLS_CMS_ERR_PARSE_TYPE
+
+SDV_CMS_MLDSA_DIGEST_PARSE_TC001 ML-DSA-87 with signedAttrs attached, unterminated OID
+SDV_CMS_MLDSA_DIGEST_PARSE_TC001:"../testdata/cert/asn1/cms/signeddata/mldsa/mldsa87/ca_cert.pem":"../testdata/cert/asn1/cms/signeddata/mldsa/mldsa87/entity_cert.pem":"../testdata/cert/asn1/cms/signeddata/mldsa/mldsa87/entity_key.pem":"../testdata/cert/asn1/cms/signeddata/msg.txt":1:0:"608648016503040280":BSL_ASN1_ERR_DECODE_OID
+
+SDV_CMS_MLDSA_DIGEST_PARSE_TC001 ML-DSA-87 with signedAttrs attached, nonminimal OID
+SDV_CMS_MLDSA_DIGEST_PARSE_TC001:"../testdata/cert/asn1/cms/signeddata/mldsa/mldsa87/ca_cert.pem":"../testdata/cert/asn1/cms/signeddata/mldsa/mldsa87/entity_cert.pem":"../testdata/cert/asn1/cms/signeddata/mldsa/mldsa87/entity_key.pem":"../testdata/cert/asn1/cms/signeddata/msg.txt":1:0:"80864801650304027f":BSL_ASN1_ERR_DECODE_OID
+
+SDV_CMS_MLDSA_DIGEST_PARSE_TC001 ML-DSA-87 with signedAttrs detached, unknown OID
+SDV_CMS_MLDSA_DIGEST_PARSE_TC001:"../testdata/cert/asn1/cms/signeddata/mldsa/mldsa87/ca_cert.pem":"../testdata/cert/asn1/cms/signeddata/mldsa/mldsa87/entity_cert.pem":"../testdata/cert/asn1/cms/signeddata/mldsa/mldsa87/entity_key.pem":"../testdata/cert/asn1/cms/signeddata/msg.txt":1:1:"60864801650304027f":HITLS_CMS_ERR_PARSE_TYPE
+
+SDV_CMS_MLDSA_DIGEST_PARSE_TC001 ML-DSA-87 with signedAttrs detached, unterminated OID
+SDV_CMS_MLDSA_DIGEST_PARSE_TC001:"../testdata/cert/asn1/cms/signeddata/mldsa/mldsa87/ca_cert.pem":"../testdata/cert/asn1/cms/signeddata/mldsa/mldsa87/entity_cert.pem":"../testdata/cert/asn1/cms/signeddata/mldsa/mldsa87/entity_key.pem":"../testdata/cert/asn1/cms/signeddata/msg.txt":1:1:"608648016503040280":BSL_ASN1_ERR_DECODE_OID
+
+SDV_CMS_MLDSA_DIGEST_PARSE_TC001 ML-DSA-87 with signedAttrs detached, nonminimal OID
+SDV_CMS_MLDSA_DIGEST_PARSE_TC001:"../testdata/cert/asn1/cms/signeddata/mldsa/mldsa87/ca_cert.pem":"../testdata/cert/asn1/cms/signeddata/mldsa/mldsa87/entity_cert.pem":"../testdata/cert/asn1/cms/signeddata/mldsa/mldsa87/entity_key.pem":"../testdata/cert/asn1/cms/signeddata/msg.txt":1:1:"80864801650304027f":BSL_ASN1_ERR_DECODE_OID
+
 SDV_CMS_SIGNEDDATA_ROUNDTRIP_TC001 RFC6211 auto-add for MLDSA65
 SDV_CMS_SIGNEDDATA_ROUNDTRIP_TC001:BSL_CID_ML_DSA:"../testdata/cert/asn1/cms/signeddata/mldsa/mldsa65/ca_cert.pem":"../testdata/cert/asn1/cms/signeddata/mldsa/mldsa65/entity_cert.pem":"../testdata/cert/asn1/cms/signeddata/mldsa/mldsa65/entity_key.pem":"../testdata/cert/asn1/cms/signeddata/msg.txt":1
 
@@ -615,26 +753,38 @@ SDV_CMS_SIGN_VERIFY_STUB_TC001:"../testdata/cert/asn1/cms/signeddata/chain":"I a
 SDV_CMS_HASH_SLH_SIGN_REJECT_TC001
 SDV_CMS_HASH_SLH_SIGN_REJECT_TC001:"../testdata/cert/asn1/slhdsa_cert/slh_dsa_sha2_128s.ca.pem"
 
+SDV_CMS_PARSE_SIGNEDDATA_VERIFY_TEST_TC001 lms_l1 attached empty content, no signedAttrs
+SDV_CMS_PARSE_SIGNEDDATA_VERIFY_TEST_TC001:"../testdata/cert/asn1/cms/signeddata/standards/interop/lms_l1_empty_attached_noattrs.der":"../testdata/cert/asn1/cms/signeddata/standards/interop/empty_message.txt":0:"../testdata/cert/asn1/cms/signeddata/standards/interop/lms_l1_empty.pem":0
+
+SDV_CMS_PARSE_SIGNEDDATA_VERIFY_TEST_TC001 lms_l1 detached empty content, no signedAttrs
+SDV_CMS_PARSE_SIGNEDDATA_VERIFY_TEST_TC001:"../testdata/cert/asn1/cms/signeddata/standards/interop/lms_l1_empty_detached_noattrs.der":"../testdata/cert/asn1/cms/signeddata/standards/interop/empty_message.txt":1:"../testdata/cert/asn1/cms/signeddata/standards/interop/lms_l1_empty.pem":0
+
+SDV_CMS_PARSE_SIGNEDDATA_VERIFY_TEST_TC001 hss_l2 attached empty content, no signedAttrs
+SDV_CMS_PARSE_SIGNEDDATA_VERIFY_TEST_TC001:"../testdata/cert/asn1/cms/signeddata/standards/interop/hss_l2_empty_attached_noattrs.der":"../testdata/cert/asn1/cms/signeddata/standards/interop/empty_message.txt":0:"../testdata/cert/asn1/cms/signeddata/standards/interop/hss_l2_empty.pem":0
+
+SDV_CMS_PARSE_SIGNEDDATA_VERIFY_TEST_TC001 hss_l2 detached empty content, no signedAttrs
+SDV_CMS_PARSE_SIGNEDDATA_VERIFY_TEST_TC001:"../testdata/cert/asn1/cms/signeddata/standards/interop/hss_l2_empty_detached_noattrs.der":"../testdata/cert/asn1/cms/signeddata/standards/interop/empty_message.txt":1:"../testdata/cert/asn1/cms/signeddata/standards/interop/hss_l2_empty.pem":0
+
 SDV_CMS_HSS_POLICY_TC001 Validate HSS CMS digest policy
 SDV_CMS_HSS_POLICY_TC001:
 
-SDV_CMS_PARSE_SIGNEDDATA_VERIFY_TEST_TC001 BC 1.84 LMS attached signedAttrs
-SDV_CMS_PARSE_SIGNEDDATA_VERIFY_TEST_TC001:"../testdata/cert/asn1/cms/signeddata/standards/bouncycastle-1.84/lms_l1_attached_signedattrs.der":"../testdata/cert/asn1/cms/signeddata/standards/bouncycastle-1.84/message.txt":0:"../testdata/cert/asn1/hss_cert/bouncycastle-1.84/lms_l1.pem":0
+SDV_CMS_PARSE_SIGNEDDATA_VERIFY_TEST_TC001 LMS attached signedAttrs
+SDV_CMS_PARSE_SIGNEDDATA_VERIFY_TEST_TC001:"../testdata/cert/asn1/cms/signeddata/standards/interop/lms_l1_attached_signedattrs.der":"../testdata/cert/asn1/cms/signeddata/standards/interop/message.txt":0:"../testdata/cert/asn1/hss_cert/interop/lms_l1.pem":0
 
-SDV_CMS_PARSE_SIGNEDDATA_VERIFY_TEST_TC001 BC 1.84 LMS detached without signedAttrs
-SDV_CMS_PARSE_SIGNEDDATA_VERIFY_TEST_TC001:"../testdata/cert/asn1/cms/signeddata/standards/bouncycastle-1.84/lms_l1_detached_noattrs.der":"../testdata/cert/asn1/cms/signeddata/standards/bouncycastle-1.84/message.txt":1:"../testdata/cert/asn1/hss_cert/bouncycastle-1.84/lms_l1.pem":0
+SDV_CMS_PARSE_SIGNEDDATA_VERIFY_TEST_TC001 LMS detached without signedAttrs
+SDV_CMS_PARSE_SIGNEDDATA_VERIFY_TEST_TC001:"../testdata/cert/asn1/cms/signeddata/standards/interop/lms_l1_detached_noattrs.der":"../testdata/cert/asn1/cms/signeddata/standards/interop/message.txt":1:"../testdata/cert/asn1/hss_cert/interop/lms_l1.pem":0
 
-SDV_CMS_PARSE_SIGNEDDATA_VERIFY_TEST_TC001 BC 1.84 two-level HSS attached signedAttrs
-SDV_CMS_PARSE_SIGNEDDATA_VERIFY_TEST_TC001:"../testdata/cert/asn1/cms/signeddata/standards/bouncycastle-1.84/hss_l2_attached_signedattrs.der":"../testdata/cert/asn1/cms/signeddata/standards/bouncycastle-1.84/message.txt":0:"../testdata/cert/asn1/hss_cert/bouncycastle-1.84/hss_l2.pem":0
+SDV_CMS_PARSE_SIGNEDDATA_VERIFY_TEST_TC001 two-level HSS attached signedAttrs
+SDV_CMS_PARSE_SIGNEDDATA_VERIFY_TEST_TC001:"../testdata/cert/asn1/cms/signeddata/standards/interop/hss_l2_attached_signedattrs.der":"../testdata/cert/asn1/cms/signeddata/standards/interop/message.txt":0:"../testdata/cert/asn1/hss_cert/interop/hss_l2.pem":0
 
-SDV_CMS_PARSE_SIGNEDDATA_VERIFY_TEST_TC001 BC 1.84 three-level HSS detached signedAttrs
-SDV_CMS_PARSE_SIGNEDDATA_VERIFY_TEST_TC001:"../testdata/cert/asn1/cms/signeddata/standards/bouncycastle-1.84/hss_l3_detached_signedattrs.der":"../testdata/cert/asn1/cms/signeddata/standards/bouncycastle-1.84/message.txt":1:"../testdata/cert/asn1/hss_cert/bouncycastle-1.84/hss_l3.pem":0
+SDV_CMS_PARSE_SIGNEDDATA_VERIFY_TEST_TC001 three-level HSS detached signedAttrs
+SDV_CMS_PARSE_SIGNEDDATA_VERIFY_TEST_TC001:"../testdata/cert/asn1/cms/signeddata/standards/interop/hss_l3_detached_signedattrs.der":"../testdata/cert/asn1/cms/signeddata/standards/interop/message.txt":1:"../testdata/cert/asn1/hss_cert/interop/hss_l3.pem":0
 
 SDV_CMS_PARSE_SIGNEDDATA_STREAM_VERIFY_TC001 Stream-verify HSS with signedAttrs
-SDV_CMS_PARSE_SIGNEDDATA_STREAM_VERIFY_TC001:"../testdata/cert/asn1/cms/signeddata/standards/bouncycastle-1.84/hss_l3_detached_signedattrs.der":"../testdata/cert/asn1/cms/signeddata/standards/bouncycastle-1.84/message.txt":"../testdata/cert/asn1/hss_cert/bouncycastle-1.84/hss_l3.pem"
+SDV_CMS_PARSE_SIGNEDDATA_STREAM_VERIFY_TC001:"../testdata/cert/asn1/cms/signeddata/standards/interop/hss_l3_detached_signedattrs.der":"../testdata/cert/asn1/cms/signeddata/standards/interop/message.txt":"../testdata/cert/asn1/hss_cert/interop/hss_l3.pem"
 
 SDV_CMS_PARSE_SIGNEDDATA_VERIFY_FAIL_TC001 Reject HSS certificate with keyEncipherment
-SDV_CMS_PARSE_SIGNEDDATA_VERIFY_FAIL_TC001:"../testdata/cert/asn1/cms/signeddata/standards/bouncycastle-1.84/hss_l2_bad_ku_attached.der":"../testdata/cert/asn1/hss_cert/bouncycastle-1.84/hss_l2_bad_ku.pem":HITLS_X509_ERR_EXT_KU
+SDV_CMS_PARSE_SIGNEDDATA_VERIFY_FAIL_TC001:"../testdata/cert/asn1/cms/signeddata/standards/interop/hss_l2_bad_ku_attached.der":"../testdata/cert/asn1/hss_cert/interop/hss_l2_bad_ku.pem":HITLS_X509_ERR_EXT_KU:""
 
 SDV_CMS_SIGNINGTIME_GENERALIZEDTIME_TC001 test encode time in 2055
 SDV_CMS_SIGNINGTIME_GENERALIZEDTIME_TC001:"../testdata/cert/asn1/cms/signeddata/ecc-p256/cert.pem":"../testdata/cert/asn1/cms/signeddata/ecc-p256/key.pem":"../testdata/cert/asn1/cms/signeddata/msg.txt"

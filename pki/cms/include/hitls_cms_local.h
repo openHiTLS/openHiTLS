@@ -153,7 +153,7 @@ CMS_SignerInfo *CMS_SignerInfoNew(uint32_t flag);
 
 void CMS_AlgIdFree(void *algId);
 
-int32_t CMS_ParseAlgIdInfo(BSL_ASN1_Buffer *asn, bool copyParam, CMS_AlgId *algId);
+int32_t CMS_ParseAlgIdInfo(BSL_ASN1_Buffer *asn, bool copyParam, bool allowUnknown, CMS_AlgId *algId);
 
 int32_t CMS_EncodeAlgIdInfo(const CMS_AlgId *alg, BSL_ASN1_Buffer *asn);
 

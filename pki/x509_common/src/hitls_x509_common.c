@@ -1448,8 +1448,8 @@ static int32_t X509_SetPqcSignParam(CRYPT_EAL_PkeyCtx *signKey, int32_t mdId,
     (void)mdId;
     (void)algParam;
     CRYPT_PKEY_AlgId keyAlgId = CRYPT_EAL_PkeyGetId(signKey);
-#ifdef HITLS_CRYPTO_MLDSA
-    if (keyAlgId == CRYPT_PKEY_ML_DSA) {
+#if defined(HITLS_CRYPTO_MLDSA) || defined(HITLS_CRYPTO_COMPOSITE)
+    if (keyAlgId == CRYPT_PKEY_ML_DSA || keyAlgId == CRYPT_PKEY_COMPOSITE) {
         int32_t ret = CRYPT_EAL_PkeyCtrl(signKey, CRYPT_CTRL_GET_PARAID, &signAlgId->algId,
             sizeof(signAlgId->algId));
         if (ret != CRYPT_SUCCESS) {
@@ -1514,20 +1514,13 @@ int32_t HITLS_X509_Sign(int32_t mdId, const CRYPT_EAL_PkeyCtx *prvKey, const HIT
 #ifdef HITLS_CRYPTO_SLH_DSA
         case CRYPT_PKEY_SLH_DSA:
 #endif
-#if defined(HITLS_CRYPTO_MLDSA) || defined(HITLS_CRYPTO_SLH_DSA)
-            ret = X509_PrepareSignKey(prvKey, &signKey, mdId, algParam, &signAlgId, &freeSignKey,
-                X509_SetPqcSignParam);
-            if (ret != HITLS_PKI_SUCCESS) {
-                return ret;
-            }
-            break;
-#endif
 #ifdef HITLS_CRYPTO_COMPOSITE
         case CRYPT_PKEY_COMPOSITE:
-            if (CRYPT_EAL_PkeyCtrl(signKey, CRYPT_CTRL_GET_PARAID, &signAlgId.algId, sizeof(int32_t)) !=
-                CRYPT_SUCCESS) {
-                BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_CERT_SIGN_ALG);
-                return HITLS_X509_ERR_CERT_SIGN_ALG;
+#endif
+#if defined(HITLS_CRYPTO_MLDSA) || defined(HITLS_CRYPTO_SLH_DSA) || defined(HITLS_CRYPTO_COMPOSITE)
+            ret = X509_PrepareSignKey(prvKey, &signKey, mdId, algParam, &signAlgId, &freeSignKey, X509_SetPqcSignParam);
+            if (ret != HITLS_PKI_SUCCESS) {
+                return ret;
             }
             break;
 #endif

@@ -1853,7 +1853,7 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_X509_SIGN_PQC_STATE_ISOLATION_TC001(int algId, int paraId, int mdId, int isProvider)
 {
-#if !defined(HITLS_CRYPTO_MLDSA) && !defined(HITLS_CRYPTO_SLH_DSA)
+#if !defined(HITLS_CRYPTO_MLDSA) && !defined(HITLS_CRYPTO_SLH_DSA) && !defined(HITLS_CRYPTO_COMPOSITE)
     (void)algId;
     (void)paraId;
     (void)mdId;
@@ -1867,6 +1867,11 @@ void SDV_X509_SIGN_PQC_STATE_ISOLATION_TC001(int algId, int paraId, int mdId, in
 #endif
 #if !defined(HITLS_CRYPTO_SLH_DSA)
     if (algId == CRYPT_PKEY_SLH_DSA) {
+        SKIP_TEST();
+    }
+#endif
+#if !defined(HITLS_CRYPTO_COMPOSITE) || !defined(HITLS_CRYPTO_ECDSA)
+    if (algId == CRYPT_PKEY_COMPOSITE) {
         SKIP_TEST();
     }
 #endif

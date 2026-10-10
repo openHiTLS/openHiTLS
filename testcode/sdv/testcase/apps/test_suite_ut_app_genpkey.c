@@ -32,7 +32,7 @@
 
 /* END_HEADER */
 
-#define GENPKEY_TEST_FILE_PATH "out_test.pem"
+#define GENPKEY_TEST_FILE_PATH "app_genpkey_test.pem"
 #define GENPKEY_TEST_DIR_PATH "./genpkey_dir"
 
 typedef struct {
@@ -85,7 +85,7 @@ void UT_HITLS_APP_GENPKEY_TC001()
         {"genpkey", "-algorithm", "RSA", "-pkeyopt", "rsa_keygen_bits:2048"},
         {"genpkey", "-algorithm", "RSA", "-pkeyopt", "rsa_keygen_bits:3072"},
         {"genpkey", "-algorithm", "RSA", "-pkeyopt", "rsa_keygen_bits:4096"},
-        {"genpkey", "-algorithm", "RSA", "-pkeyopt", "rsa_keygen_bits:4096", "-out", "out_test.pem"},
+        {"genpkey", "-algorithm", "RSA", "-pkeyopt", "rsa_keygen_bits:4096", "-out", GENPKEY_TEST_FILE_PATH},
         {"genpkey", "-algorithm", "RSA", "-pkeyopt", "rsa_keygen_bits:4096", "-aes256_cbc", "-pass", "pass:123456"},
         {"genpkey", "-algorithm", "RSA", "-pkeyopt", "rsa_keygen_bits:4096", "-aes256_cbc", "-pass", "pass:123456", "-out", GENPKEY_TEST_FILE_PATH},
     };

@@ -694,13 +694,11 @@ int32_t CRYPT_DECODE_DsaPrikeyAsn1Buff(uint8_t *buff, uint32_t buffLen, BSL_ASN1
 
 static bool ParamOmitAlg(BslCid cid)
 {
-    return cid == BSL_CID_ED25519 || cid == BSL_CID_X25519 ||
-           (cid >= BSL_CID_ML_DSA_44 && cid <= BSL_CID_ML_DSA_87) ||
-           (cid >= BSL_CID_ML_KEM_512 && cid <= BSL_CID_ML_KEM_1024) ||
-           cid == BSL_CID_XMSS || cid == BSL_CID_XMSSMT ||
-           (cid >= BSL_CID_SLH_DSA_SHA2_128S && cid <= BSL_CID_SLH_DSA_SHAKE_256F) ||
+    return cid == BSL_CID_ED25519 || cid == BSL_CID_X25519 || (cid >= BSL_CID_ML_DSA_44 && cid <= BSL_CID_ML_DSA_87) ||
+           (cid >= BSL_CID_ML_KEM_512 && cid <= BSL_CID_ML_KEM_1024) || cid == BSL_CID_XMSS || cid == BSL_CID_XMSSMT ||
+           cid == BSL_CID_HSS_LMS || (cid >= BSL_CID_SLH_DSA_SHA2_128S && cid <= BSL_CID_SLH_DSA_SHAKE_256F) ||
            (cid >= BSL_CID_HASH_SLH_DSA_SHA2_128S_WITH_SHA256 &&
-               cid <= BSL_CID_HASH_SLH_DSA_SHAKE_256F_WITH_SHAKE256) ||
+            cid <= BSL_CID_HASH_SLH_DSA_SHAKE_256F_WITH_SHAKE256) ||
            (cid >= BSL_CID_MLDSA44_RSA2048_PSS_SHA256 && cid <= BSL_CID_MLDSA87_ECDSA_P521_SHA512);
 }
 

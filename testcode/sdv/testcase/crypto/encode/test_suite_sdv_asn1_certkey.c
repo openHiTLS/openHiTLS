@@ -1309,9 +1309,9 @@ void SDV_BSL_ASN1_PARSE_BUFF_TC001(int isProvider, char *typeStr, int type, Hex 
     CRYPT_EAL_PkeyCtx *pkeyCtx = NULL;
     int32_t ret;
 #ifdef HITLS_CRYPTO_PROVIDER
-    ret = isProvider ? CRYPT_DECODE_ERR_NO_USABLE_DECODER : CRYPT_NULL_INPUT;
+    ret = isProvider ? CRYPT_DECODE_ERR_NO_USABLE_DECODER : BSL_ASN1_ERR_DECODE_OID;
 #else
-    ret = CRYPT_NULL_INPUT;
+    ret = BSL_ASN1_ERR_DECODE_OID;
 #endif
     ASSERT_EQ(DecodeKeyBuff(isProvider, &encode, BSL_FORMAT_ASN1, "ASN1", type, typeStr, pass->x, pass->len, &pkeyCtx),
         ret);
@@ -2973,11 +2973,9 @@ EXIT:
 
 /**
  * @test   SDV_CRYPT_PQC_KEY_ALG_PARAM_ABSENT_TC001
- * @title  Reject ML-DSA and SLH-DSA SPKI/PKCS#8 AlgorithmIdentifier parameters.
- * @brief  Decode a fixed malformed DER object through both the local codec and
- *         provider decoder.
- * @expect Both decoders fail because RFC 9881 and RFC 9909 require parameters
- *         to be absent; NULL and every other encoded value are non-conforming.
+ * @title  Reject PQC SPKI/PKCS#8 AlgorithmIdentifier parameters.
+ * @brief  Decode DER through the local and provider codecs.
+ * @expect Parameters must be absent, including for HSS under RFC 9802 Section 4.
  */
 /* BEGIN_CASE */
 void SDV_CRYPT_PQC_KEY_ALG_PARAM_ABSENT_TC001(int keyType, int expectRet, Hex *der)
@@ -2997,10 +2995,25 @@ void SDV_CRYPT_PQC_KEY_ALG_PARAM_ABSENT_TC001(int keyType, int expectRet, Hex *d
     TestErrClear();
 #ifdef HITLS_CRYPTO_PROVIDER
     const char *keyTypeStr = keyType == CRYPT_PUBKEY_SUBKEY ? "PUBKEY_SUBKEY" : "PRIKEY_PKCS8_UNENCRYPT";
-    ASSERT_NE(CRYPT_EAL_ProviderDecodeBuffKey(NULL, NULL, BSL_CID_UNKNOWN, "ASN1", keyTypeStr, &encoded, NULL,
-        &decodedKey), CRYPT_SUCCESS);
+    ASSERT_NE(
+        CRYPT_EAL_ProviderDecodeBuffKey(NULL, NULL, BSL_CID_UNKNOWN, "ASN1", keyTypeStr, &encoded, NULL, &decodedKey),
+        CRYPT_SUCCESS);
     ASSERT_TRUE(decodedKey == NULL);
     TestErrClear();
+    if (keyType == CRYPT_PUBKEY_SUBKEY) {
+        uint8_t *inner = encoded.data;
+        uint32_t remaining = encoded.dataLen;
+        uint32_t innerLen = 0;
+        ASSERT_EQ(
+            BSL_ASN1_DecodeTagLen(BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE, &inner, &remaining, &innerLen),
+            BSL_SUCCESS);
+        BSL_Buffer innerEncoded = {inner, innerLen};
+        ASSERT_NE(CRYPT_EAL_ProviderDecodeBuffKey(NULL, NULL, BSL_CID_UNKNOWN, "ASN1", "PUBKEY_SUBKEY_WITHOUT_SEQ",
+                                                  &innerEncoded, NULL, &decodedKey),
+                  CRYPT_SUCCESS);
+        ASSERT_TRUE(decodedKey == NULL);
+        TestErrClear();
+    }
 #endif
 
 EXIT:

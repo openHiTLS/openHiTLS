@@ -2816,13 +2816,13 @@ EXIT:
 /* @
  * @test SDV_CRYPT_EAL_COMPOSITE_CERT_ROUNDTRIP_TC001
  * @spec -
- * @title Test Composite BC certificate samples support parse/encode/parse roundtrip.
- * @precon BC Composite root/leaf certificate samples are available in PEM.
+ * @title Test Composite certificate samples support parse/encode/parse roundtrip.
+ * @precon Composite root/leaf certificate samples are available in PEM.
  * @brief
- * 1.Parse BC Composite root and leaf certificates.
+ * 1.Parse Composite root and leaf certificates.
  * 2.Check Composite key/signature algorithm fields and key usage expectations.
  * 3.Verify root self-signature and leaf issuer signature.
- * 4.Re-encode PEM, compare with the original BC files, and parse again.
+ * 4.Re-encode PEM, compare with the original files, and parse again.
  * 5.Repeat the field and signature checks on the reparsed certificates.
  * @expect
  * 1.Root/leaf certificate parse and PEM roundtrip succeed.
@@ -2902,13 +2902,13 @@ EXIT:
 /* @
  * @test SDV_CRYPT_EAL_COMPOSITE_CSR_CRL_ROUNDTRIP_TC001
  * @spec -
- * @title Test Composite BC CSR and CRL samples support parse/encode/parse roundtrip.
- * @precon BC Composite root certificate, CSR, and CRL PEM samples are available.
+ * @title Test Composite CSR and CRL samples support parse/encode/parse roundtrip.
+ * @precon Composite root certificate, CSR, and CRL PEM samples are available.
  * @brief
  * 1.Parse the issuer root certificate, leaf CSR, and issuer CRL.
  * 2.Check Composite key/signature algorithm fields on CSR and CRL.
  * 3.Verify the CSR signature with its embedded public key and the CRL signature with the issuer public key.
- * 4.Re-encode CSR/CRL PEM, compare with the original BC files, and parse again.
+ * 4.Re-encode CSR/CRL PEM, compare with the original files, and parse again.
  * 5.Repeat the field and signature checks on the reparsed CSR/CRL.
  * @expect
  * 1.CSR/CRL parse and PEM roundtrip succeed.

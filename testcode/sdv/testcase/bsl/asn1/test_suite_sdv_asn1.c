@@ -2115,6 +2115,46 @@ EXIT:
 /* END_CASE */
 
 /**
+ * @test   SDV_BSL_ASN1_OID_VALIDATION_TC001
+ * @brief  Check OID values separately from tag-length decoding.
+ * @expect Header parsing succeeds; item and template parsing reject malformed OIDs.
+ * @precon nan
+ */
+/* BEGIN_CASE */
+void SDV_BSL_ASN1_OID_VALIDATION_TC001(Hex *val, int expectedRet)
+{
+    BSL_ASN1_Buffer asnItem = {0};
+    uint8_t *tmp = val->x;
+    uint32_t tmpLen = val->len;
+    ASSERT_EQ(BSL_ASN1_DecodeItem(&tmp, &tmpLen, &asnItem), expectedRet);
+    if (expectedRet != BSL_SUCCESS) {
+        ASSERT_TRUE(tmp == val->x);
+        ASSERT_EQ(tmpLen, val->len);
+    }
+
+    tmp = val->x;
+    tmpLen = val->len;
+    uint32_t valueLen = 0;
+    ASSERT_EQ(BSL_ASN1_DecodeTagLen(val->x[0], &tmp, &tmpLen, &valueLen), BSL_SUCCESS);
+    ASSERT_EQ(tmpLen, valueLen);
+    ASSERT_TRUE(tmp + valueLen == val->x + val->len);
+
+    tmp = val->x;
+    tmpLen = val->len;
+    BSL_ASN1_TemplateItem item = {val->x[0], 0, 0};
+    BSL_ASN1_Template templ = {&item, 1};
+    ASSERT_EQ(BSL_ASN1_DecodeTemplate(&templ, NULL, &tmp, &tmpLen, &asnItem, 1), expectedRet);
+    if (expectedRet == BSL_SUCCESS) {
+        ASSERT_EQ(asnItem.tag, val->x[0]);
+        ASSERT_EQ(asnItem.len, valueLen);
+        ASSERT_TRUE(asnItem.buff == val->x + val->len - valueLen);
+    }
+EXIT:
+    return;
+}
+/* END_CASE */
+
+/**
  * @test   SDV_BSL_ASN1_PROCESS_INTEGER_ERR_FUNC_TC001
  * @title  Test ProcessIntegerType error paths via DecodeTemplate
  * @brief  Test ProcessIntegerType error paths with negative integer (high bit set) and leading zero with second byte high bit not set

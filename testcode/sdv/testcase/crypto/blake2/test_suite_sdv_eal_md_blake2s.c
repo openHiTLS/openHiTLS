@@ -472,7 +472,7 @@ EXIT:
 
 /*
  * @test   SDV_CRYPTO_BLAKE2S_CONCURRENCY_CONTEXT_TC001
- * @brief  Four threads each hash 100 deterministic messages against fixed OpenSSL digests.
+ * @brief  Four threads each hash 100 deterministic messages against fixed digests.
  */
 /* BEGIN_CASE */
 void SDV_CRYPTO_BLAKE2S_CONCURRENCY_CONTEXT_TC001(int provider, Hex *hash0, Hex *hash1, Hex *hash2, Hex *hash3)

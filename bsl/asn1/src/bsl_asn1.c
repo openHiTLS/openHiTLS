@@ -136,6 +136,19 @@ int32_t BSL_ASN1_DecodeTagLen(uint8_t tag, uint8_t **encode, uint32_t *encLen, u
     return BSL_SUCCESS;
 }
 
+static int32_t CheckOidEncoding(const uint8_t *buff, uint32_t len)
+{
+    if (len == 0 || (buff[len - 1] & 0x80) != 0) {
+        return BSL_ASN1_ERR_DECODE_OID;
+    }
+    for (uint32_t i = 0; i < len; i++) {
+        if (buff[i] == 0x80 && (i == 0 || (buff[i - 1] & 0x80) == 0)) {
+            return BSL_ASN1_ERR_DECODE_OID;
+        }
+    }
+    return BSL_SUCCESS;
+}
+
 int32_t BSL_ASN1_DecodeItem(uint8_t **encode, uint32_t *encLen, BSL_ASN1_Buffer *asnItem)
 {
     if (encode == NULL || *encode == NULL || encLen == NULL || asnItem == NULL) {
@@ -154,6 +167,12 @@ int32_t BSL_ASN1_DecodeItem(uint8_t **encode, uint32_t *encLen, BSL_ASN1_Buffer 
     int32_t ret = BSL_ASN1_DecodeLen(&temp, &tempLen, false, &len);
     if (ret != BSL_SUCCESS) {
         return ret;
+    }
+    if (tag == BSL_ASN1_TAG_OBJECT_ID) {
+        ret = CheckOidEncoding(temp, len);
+        if (ret != BSL_SUCCESS) {
+            return ret;
+        }
     }
     asnItem->tag = tag;
     asnItem->len = len;
@@ -575,6 +594,13 @@ static int32_t BSL_ASN1_ProcessNormal(BSL_ASN1_AnyOrChoiceParam *tagCbinfo,
         if (ret != BSL_SUCCESS) {
             return ret;
         }
+    } else if (tag == BSL_ASN1_TAG_OBJECT_ID) {
+        ret = CheckOidEncoding(temp, len);
+        if (ret != BSL_SUCCESS) {
+            return ret;
+        }
+        asn->len = len;
+        asn->buff = temp;
     } else {
         asn->len = len;
         asn->buff = (tag == BSL_ASN1_TAG_NULL) ? NULL : temp;

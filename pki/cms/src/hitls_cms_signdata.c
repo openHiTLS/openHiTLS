@@ -91,7 +91,7 @@ static int32_t ParseAlgId(uint32_t layer, BSL_ASN1_Buffer *asn, void *param,
         BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
         return BSL_MALLOC_FAIL;
     }
-    int32_t ret = CMS_ParseAlgIdInfo(asn, true, algId);
+    int32_t ret = CMS_ParseAlgIdInfo(asn, true, false, algId);
     if (ret != HITLS_PKI_SUCCESS) {
         CMS_AlgIdFree(algId);
         return ret;
@@ -353,7 +353,17 @@ static int32_t FillSignerInfoFields(CMS_SignerInfo *si, BSL_ASN1_Buffer *a)
     if (ret != HITLS_PKI_SUCCESS) {
         return ret;
     }
-    ret = CMS_ParseAlgIdInfo(&a[HITLS_CMS_SIGNERINFO_DIGESTALG_IDX], true, &si->digestAlg);
+    ret = HITLS_X509_ParseSignAlgInfo(&a[HITLS_CMS_SIGNERINFO_SIGALG_ALG_IDX],
+                                      &a[HITLS_CMS_SIGNERINFO_SIGALG_PARAMS_IDX], &si->sigAlg);
+    if (ret != HITLS_PKI_SUCCESS) {
+        return ret;
+    }
+    /* RFC 9882 Section 3.3: without signedAttrs, implementations MUST ignore
+     * the content of the digestAlgorithm field.
+     */
+    bool ignoreDigest = si->sigAlg.algId >= BSL_CID_ML_DSA_44 && si->sigAlg.algId <= BSL_CID_ML_DSA_87 &&
+                        a[HITLS_CMS_SIGNERINFO_SIGNEDATTRS_IDX].tag == 0;
+    ret = CMS_ParseAlgIdInfo(&a[HITLS_CMS_SIGNERINFO_DIGESTALG_IDX], true, ignoreDigest, &si->digestAlg);
     if (ret != HITLS_PKI_SUCCESS) {
         return ret;
     }
@@ -365,11 +375,6 @@ static int32_t FillSignerInfoFields(CMS_SignerInfo *si, BSL_ASN1_Buffer *a)
     }
     si->sigValue.data = a[HITLS_CMS_SIGNERINFO_SIGNATURE_IDX].buff;
     si->sigValue.dataLen = a[HITLS_CMS_SIGNERINFO_SIGNATURE_IDX].len;
-    ret = HITLS_X509_ParseSignAlgInfo(&a[HITLS_CMS_SIGNERINFO_SIGALG_ALG_IDX],
-        &a[HITLS_CMS_SIGNERINFO_SIGALG_PARAMS_IDX], &si->sigAlg);
-    if (ret != HITLS_PKI_SUCCESS) {
-        return ret;
-    }
     ret = HITLS_X509_ParseAttrList(&a[HITLS_CMS_SIGNERINFO_UNSIGNEDATTRS_IDX], si->unsignedAttrs, NULL, NULL);
     if (ret != HITLS_PKI_SUCCESS) {
         return ret;
@@ -1011,6 +1016,8 @@ static int32_t ConfigureSignAlg(const CRYPT_EAL_PkeyCtx *prvKey, int32_t mdId, H
             return HITLS_CMS_ERR_INVALID_ALGO;
         }
         sigAlg->algId = (BslCid)paraId;
+    } else if (asymAlg == CRYPT_PKEY_HSS_LMS) {
+        sigAlg->algId = BSL_CID_HSS_LMS;
     } else {
         if (asymAlg == CRYPT_PKEY_RSA) {
             return ConfigureRsaSignAlg(signKey, sigAlg);
@@ -1221,41 +1228,28 @@ static int32_t AddRequiredAttr(HITLS_X509_Attrs *signedAttrs, HITLS_X509_AttrEnt
     return HITLS_PKI_SUCCESS;
 }
 
-// Helper function: Encode signedAttrs and prepare data for signing
-static int32_t EncodeSignedAttrsForSigning(CMS_SignerInfo *signerInfo,
-                                           uint8_t **signData, uint32_t *signDataLen)
+static int32_t EncodeSignedAttrsForSigning(CMS_SignerInfo *signerInfo, uint8_t **signData, uint32_t *signDataLen)
 {
-    // Encode signedAttrs
     BSL_ASN1_Buffer encAttr = {0};
-    int32_t ret = HITLS_X509_EncodeAttrList(BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SET,
-        signerInfo->signedAttrs, NULL, &encAttr);
+    int32_t ret = HITLS_X509_EncodeAttrList(BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SET, signerInfo->signedAttrs,
+        NULL, &encAttr);
     if (ret != HITLS_PKI_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
 
-    // Store the content (SET OF Attributes without [0] tag)
-    // if the signer want to sign, they can use the value directly
-    signerInfo->signData.data = encAttr.buff;
-
-    signerInfo->signData.dataLen = encAttr.len;
-    // ref RFC 5652 Section 5.4.
-    // in the message digest calculation. we need to encode the SET OF Attributes
-    // with EXPLICIT SET OF tag rather than of the IMPLICIT [0] tag,
-    BSL_ASN1_Buffer asnArr = {
-        .tag = BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SET,
-        .buff = signerInfo->signData.data,
-        .len = signerInfo->signData.dataLen
-    };
+    /* RFC 5652 Section 5.4: use the SET OF tag for the signature input. */
     BSL_ASN1_TemplateItem setTemplItem = {BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SET, 0, 0};
     BSL_ASN1_Template setTempl = {&setTemplItem, 1};
     uint8_t *data = NULL;
     uint32_t dataLen = 0;
-    ret = BSL_ASN1_EncodeTemplate(&setTempl, &asnArr, 1, &data, &dataLen);
+    ret = BSL_ASN1_EncodeTemplate(&setTempl, &encAttr, 1, &data, &dataLen);
     if (ret != HITLS_PKI_SUCCESS) {
+        BSL_SAL_FREE(encAttr.buff);
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
+    signerInfo->signData.data = encAttr.buff;
+    signerInfo->signData.dataLen = encAttr.len;
     *signData = data;
     *signDataLen = dataLen;
     return HITLS_PKI_SUCCESS;
@@ -1686,14 +1680,12 @@ static int32_t CheckSignerCert(HITLS_X509_Cert *cert, uint8_t *msg, uint32_t msg
     if (signerInfo->signData.data != NULL && signerInfo->signData.dataLen > 0) {
         uint8_t *data = NULL;
         uint32_t dataLen = 0;
-        BSL_ASN1_Buffer asnArr = {
-            .tag = BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SET,
-            .buff = signerInfo->signData.data,
-            .len = signerInfo->signData.dataLen
-        };
-        BSL_ASN1_TemplateItem nameTemplItem = { BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SET, 0, 0};
-        BSL_ASN1_Template nameTempl = {&nameTemplItem, 1};
-        ret = BSL_ASN1_EncodeTemplate(&nameTempl, &asnArr, 1, &data, &dataLen);
+        BSL_ASN1_Buffer asnArr = {.tag = BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SET,
+                                  .buff = signerInfo->signData.data,
+                                  .len = signerInfo->signData.dataLen};
+        BSL_ASN1_TemplateItem setTemplItem = {BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SET, 0, 0};
+        BSL_ASN1_Template setTempl = {&setTemplItem, 1};
+        ret = BSL_ASN1_EncodeTemplate(&setTempl, &asnArr, 1, &data, &dataLen);
         if (ret != HITLS_PKI_SUCCESS) {
             BSL_ERR_PUSH_ERROR(ret);
             CRYPT_EAL_PkeyFreeCtx(pubKey);
@@ -2032,6 +2024,7 @@ static int32_t VerifySignerInfo(CMS_SignedData *sigData, CMS_SignerInfo *si, BSL
 // Validate and get message content for verification
 static int32_t GetVerifyMsgContent(CMS_SignedData *sigData, const BSL_Buffer *msg, BSL_Buffer *finalDataBuff)
 {
+    static uint8_t emptyContent;
     if (msg != NULL && msg->data == NULL && msg->dataLen != 0) {
         BSL_ERR_PUSH_ERROR(HITLS_CMS_ERR_INVALID_PARAM);
         return HITLS_CMS_ERR_INVALID_PARAM;
@@ -2049,6 +2042,9 @@ static int32_t GetVerifyMsgContent(CMS_SignedData *sigData, const BSL_Buffer *ms
     }
     finalDataBuff->data = sigData->detached ? msg->data : sigData->encapCont.content.data;
     finalDataBuff->dataLen = sigData->detached ? msg->dataLen : sigData->encapCont.content.dataLen;
+    if (finalDataBuff->dataLen == 0 && finalDataBuff->data == NULL) {
+        finalDataBuff->data = &emptyContent;
+    }
     return HITLS_PKI_SUCCESS;
 }
 

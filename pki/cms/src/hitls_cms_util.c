@@ -266,7 +266,7 @@ typedef enum {
     HITLS_CMS_ALGORITHM_IDENTIFIER_MAX_IDX,
 } HITLS_CMS_ALGORITHM_IDENTIFIER_IDX;
 
-int32_t CMS_ParseAlgIdInfo(BSL_ASN1_Buffer *asn, bool copyParam, CMS_AlgId *algId)
+int32_t CMS_ParseAlgIdInfo(BSL_ASN1_Buffer *asn, bool copyParam, bool allowUnknown, CMS_AlgId *algId)
 {
     BSL_ASN1_Buffer asn1[HITLS_CMS_ALGORITHM_IDENTIFIER_MAX_IDX] = {0};
     uint8_t *temp = asn->buff;
@@ -295,7 +295,7 @@ int32_t CMS_ParseAlgIdInfo(BSL_ASN1_Buffer *asn, bool copyParam, CMS_AlgId *algI
     }
     algId->id = BSL_OBJ_GetCidFromOidBuff(asn1[HITLS_CMS_ALGORITHM_IDENTIFIER_ALG_IDX].buff,
         asn1[HITLS_CMS_ALGORITHM_IDENTIFIER_ALG_IDX].len);
-    if (algId->id == BSL_CID_UNKNOWN) {
+    if (algId->id == BSL_CID_UNKNOWN && !allowUnknown) {
         BSL_ERR_PUSH_ERROR(HITLS_CMS_ERR_PARSE_TYPE);
         return HITLS_CMS_ERR_PARSE_TYPE;
     }

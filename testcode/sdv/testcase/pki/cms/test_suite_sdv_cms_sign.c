@@ -16,6 +16,7 @@
 /* BEGIN_HEADER */
 
 #include "bsl_sal.h"
+#include "bsl_err.h"
 #include <string.h>
 #include "bsl_types.h"
 #include "bsl_log.h"
@@ -511,6 +512,10 @@ void SDV_CMS_ALG_PROTECTION_INVALID_TC001(void)
     ASSERT_EQ(encoded.data[encoded.dataLen - 2], BSL_ASN1_TAG_NULL);
     encoded.data[encoded.dataLen - 2] = BSL_ASN1_TAG_OCTETSTRING;
     ASSERT_EQ(CMS_ParseAlgorithmProtection(&encoded, &algProtect), HITLS_X509_ERR_SIGN_PARAM);
+#ifdef HITLS_BSL_ERR
+    ASSERT_EQ(BSL_ERR_GetError(), HITLS_X509_ERR_SIGN_PARAM);
+    ASSERT_TRUE(TestIsErrStackEmpty());
+#endif
     encoded.data[encoded.dataLen - 2] = BSL_ASN1_TAG_NULL;
     TestErrClear();
 
@@ -579,6 +584,10 @@ void SDV_CMS_ALG_PROTECTION_INVALID_TC001(void)
         invalidPqc.data[encoded.dataLen] = BSL_ASN1_TAG_NULL;
         invalidPqc.data[encoded.dataLen + 1] = 0;
         ASSERT_EQ(CMS_ParseAlgorithmProtection(&invalidPqc, &decoded), HITLS_X509_ERR_SIGN_PARAM);
+#ifdef HITLS_BSL_ERR
+        ASSERT_EQ(BSL_ERR_GetError(), HITLS_X509_ERR_SIGN_PARAM);
+        ASSERT_TRUE(TestIsErrStackEmpty());
+#endif
         BSL_SAL_FREE(invalidPqc.data);
         TestErrClear();
     }
@@ -650,7 +659,7 @@ EXIT:
  * @title  Verify CMS SignedData (detached/attached) with re-encode and negative cases
  * @brief
  *    1. Parse CMS SignedData from file and re-encode; compare with original
- *    2. For detached: NULL returns NO_CONTENT; empty input fails verification
+ *    2. For detached: NULL returns NO_CONTENT; empty input verifies only empty content
  *    3. For attached: verify succeeds with NULL message; wrong external message returns CONTENT_MISMATCH
  *    4. Re-verify same output buffer returns INVALID_DATA to avoid reuse
  *    5. Tamper contentType then verify; returns VERSION_INVALID
@@ -712,12 +721,26 @@ void SDV_CMS_PARSE_SIGNEDDATA_VERIFY_TEST_TC001(char *p7path, char *msgpath, int
     BSL_Buffer msgBuff = {NULL, 0};
     BSL_Buffer emptyMsgBuf = {NULL, 0};
     ASSERT_EQ(BSL_SAL_ReadFile(msgpath, &msgBuff.data, &msgBuff.dataLen), BSL_SUCCESS);
-    BSL_Buffer wrongMsgBuf = {msgBuff.data + 1, msgBuff.dataLen - 1};
+    uint8_t wrongByte = 0;
+    BSL_Buffer wrongMsgBuf = {&wrongByte, 1};
+    if (msgBuff.dataLen != 0) {
+        wrongMsgBuf = (BSL_Buffer){msgBuff.data + 1, msgBuff.dataLen - 1};
+    }
     ASSERT_TRUE(TestIsErrStackEmpty());
+    if (msgBuff.dataLen == 0) {
+        ASSERT_EQ(HITLS_CMS_DataVerify(cms, &emptyMsgBuf, params, NULL), HITLS_PKI_SUCCESS);
+        ASSERT_EQ(HITLS_CMS_DataVerify(cms, &emptyMsgBuf, params, &output), HITLS_PKI_SUCCESS);
+        ASSERT_EQ(output.dataLen, 0);
+        ASSERT_TRUE(output.data == NULL);
+        BSL_Buffer invalidMsgBuf = {NULL, 1};
+        ASSERT_EQ(HITLS_CMS_DataVerify(cms, &invalidMsgBuf, params, NULL), HITLS_CMS_ERR_INVALID_PARAM);
+    }
     if (isDetached) {
         ASSERT_EQ(HITLS_CMS_DataVerify(cms, &msgBuff, params, NULL), HITLS_PKI_SUCCESS);
         ASSERT_EQ(HITLS_CMS_DataVerify(cms, NULL, NULL, NULL), HITLS_CMS_ERR_SIGNEDDATA_NO_CONTENT);
-        ASSERT_NE(HITLS_CMS_DataVerify(cms, &emptyMsgBuf, params, NULL), HITLS_PKI_SUCCESS);
+        if (msgBuff.dataLen != 0) {
+            ASSERT_NE(HITLS_CMS_DataVerify(cms, &emptyMsgBuf, params, NULL), HITLS_PKI_SUCCESS);
+        }
         ASSERT_NE(HITLS_CMS_DataVerify(cms, &wrongMsgBuf, params, NULL), HITLS_PKI_SUCCESS);
         cms->ctx.signedData->encapCont.contentType = BSL_CID_PKCS7_ENVELOPEDDATA;
         if (version3 == 1) {
@@ -731,7 +754,9 @@ void SDV_CMS_PARSE_SIGNEDDATA_VERIFY_TEST_TC001(char *p7path, char *msgpath, int
         ASSERT_EQ(HITLS_CMS_DataVerify(cms, &wrongMsgBuf, params, &output), HITLS_CMS_ERR_SIGNEDDATA_CONTENT_MISMATCH);
         ASSERT_EQ(HITLS_CMS_DataVerify(cms, &msgBuff, params, &output), HITLS_PKI_SUCCESS);
         ASSERT_COMPARE("verifyed data", output.data, output.dataLen, msgBuff.data, msgBuff.dataLen);
-        ASSERT_EQ(HITLS_CMS_DataVerify(cms, &msgBuff, params, &output), HITLS_CMS_ERR_INVALID_DATA);
+        if (msgBuff.dataLen != 0) {
+            ASSERT_EQ(HITLS_CMS_DataVerify(cms, &msgBuff, params, &output), HITLS_CMS_ERR_INVALID_DATA);
+        }
         cms->ctx.signedData->encapCont.contentType = BSL_CID_PKCS7_ENVELOPEDDATA;
         if (version3 == 1) {
             ASSERT_EQ(HITLS_CMS_DataVerify(cms, &msgBuff, params, &output), HITLS_CMS_ERR_ENCAPCONT_TYPE);
@@ -754,22 +779,27 @@ EXIT:
 
 /**
  * @test   SDV_CMS_PARSE_SIGNEDDATA_VERIFY_FAIL_TC001
- * @title  Reject invalid external CMS SignedData
+ * @title  Check external CMS SignedData verification result
  */
 /* BEGIN_CASE */
-void SDV_CMS_PARSE_SIGNEDDATA_VERIFY_FAIL_TC001(char *p7path, char *caPath, int expectedRet)
+void SDV_CMS_PARSE_SIGNEDDATA_VERIFY_FAIL_TC001(char *p7path, char *caPath, int expectedRet, char *msgpath)
 {
 #if !defined(HITLS_PKI_CMS_SIGNEDDATA)
     (void)p7path;
     (void)caPath;
     (void)expectedRet;
+    (void)msgpath;
     SKIP_TEST();
 #else
     HITLS_CMS *cms = NULL;
     HITLS_X509_Cert *caCert = NULL;
     HITLS_X509_List *caCertList = NULL;
+    BSL_Buffer msg = {0};
 
     ASSERT_EQ(HITLS_CMS_ProviderParseFile(NULL, NULL, NULL, p7path, &cms), HITLS_PKI_SUCCESS);
+    if (msgpath[0] != '\0') {
+        ASSERT_EQ(BSL_SAL_ReadFile(msgpath, &msg.data, &msg.dataLen), BSL_SUCCESS);
+    }
     ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_PEM, caPath, &caCert), HITLS_PKI_SUCCESS);
     caCertList = BSL_LIST_New(sizeof(HITLS_X509_Cert *));
     ASSERT_NE(caCertList, NULL);
@@ -778,11 +808,12 @@ void SDV_CMS_PARSE_SIGNEDDATA_VERIFY_FAIL_TC001(char *p7path, char *caPath, int 
         {HITLS_CMS_PARAM_CA_CERT_LISTS, BSL_PARAM_TYPE_CTX_PTR, caCertList, 0, 0},
         BSL_PARAM_END
     };
-    ASSERT_EQ(HITLS_CMS_DataVerify(cms, NULL, params, NULL), expectedRet);
+    ASSERT_EQ(HITLS_CMS_DataVerify(cms, msgpath[0] != '\0' ? &msg : NULL, params, NULL), expectedRet);
     TestErrClear();
 EXIT:
     HITLS_CMS_Free(cms);
     BSL_LIST_FREE(caCertList, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);
+    BSL_SAL_FREE(msg.data);
     return;
 #endif
 }
@@ -2031,6 +2062,77 @@ void SDV_CMS_PQC_POLICY_TC001(int algId, char *caPath, char *certPath, char *key
 EXIT:
     TestCmsFixtureClear(&fixture);
     return;
+#endif
+}
+/* END_CASE */
+
+/**
+ * @test   SDV_CMS_MLDSA_DIGEST_PARSE_TC001
+ * @brief  Replace the encoded SignerInfo digest OID, then parse and verify the CMS message.
+ * @expect Unknown OIDs are ignored only without signedAttrs; malformed OIDs and invalid signatures are rejected.
+ * @precon nan
+ */
+/* BEGIN_CASE */
+void SDV_CMS_MLDSA_DIGEST_PARSE_TC001(char *caPath, char *certPath, char *keyPath, char *msgPath, int hasSignedAttrs,
+                                      int detached, Hex *digestOid, int expectedRet)
+{
+#if !defined(HITLS_PKI_CMS_SIGNEDDATA) || !defined(HITLS_BSL_SAL_FILE) || !defined(HITLS_CRYPTO_MLDSA)
+    (void)caPath;
+    (void)certPath;
+    (void)keyPath;
+    (void)msgPath;
+    (void)hasSignedAttrs;
+    (void)detached;
+    (void)digestOid;
+    (void)expectedRet;
+    SKIP_TEST();
+#else
+    TestCmsSignFixture fixture = {0};
+    TestCmsSignOptions options = {
+        .hasSignedAttrs = (bool)hasSignedAttrs,
+        .digestMode = TEST_CMS_DIGEST_EXPLICIT,
+        .algProtectMode = TEST_CMS_ALG_PROTECT_DISABLE,
+        .contentType = BSL_CID_UNKNOWN,
+    };
+    ASSERT_EQ(TestCmsFixtureInit(&fixture, BSL_CID_ML_DSA, caPath, certPath, keyPath, msgPath), HITLS_PKI_SUCCESS);
+    fixture.detached = (bool)detached;
+    ASSERT_EQ(TestCmsSignAndParse(&fixture, &options), HITLS_PKI_SUCCESS);
+    CMS_SignerInfo *signer = BSL_LIST_GET_FIRST(fixture.parsed->ctx.signedData->signerInfos);
+    if (!hasSignedAttrs) {
+        ASSERT_EQ(signer->digestAlg.id, BSL_CID_SHA512);
+        ASSERT_EQ(signer->digestAlg.param.tag, 0);
+    }
+    BslOidString *oid = BSL_OBJ_GetOID(signer->digestAlg.id);
+    ASSERT_NE(oid, NULL);
+    ASSERT_EQ(digestOid->len, oid->octetLen);
+    uint8_t *target = NULL;
+    uint32_t matches = 0;
+    /* The outer digest OID precedes the SignerInfo digest OID in this fixture. */
+    for (uint32_t i = 2; i + oid->octetLen <= fixture.encoded.dataLen; i++) {
+        if (fixture.encoded.data[i - 2] == BSL_ASN1_TAG_OBJECT_ID && fixture.encoded.data[i - 1] == oid->octetLen &&
+            memcmp(fixture.encoded.data + i, oid->octs, oid->octetLen) == 0 && ++matches == 2) {
+            target = fixture.encoded.data + i;
+            break;
+        }
+    }
+    ASSERT_NE(target, NULL);
+    (void)memcpy(target, digestOid->x, digestOid->len);
+    HITLS_CMS_Free(fixture.parsed);
+    fixture.parsed = NULL;
+    ASSERT_EQ(HITLS_CMS_ProviderParseBuff(NULL, NULL, NULL, &fixture.encoded, &fixture.parsed), expectedRet);
+    if (expectedRet == HITLS_PKI_SUCCESS) {
+        CMS_AlgId *outerDigest = BSL_LIST_GET_FIRST(fixture.parsed->ctx.signedData->digestAlg);
+        ASSERT_EQ(outerDigest->id, BSL_CID_SHA512);
+        ASSERT_EQ(HITLS_CMS_DataVerify(fixture.parsed, &fixture.message, fixture.params, NULL), HITLS_PKI_SUCCESS);
+        signer = BSL_LIST_GET_FIRST(fixture.parsed->ctx.signedData->signerInfos);
+        signer->sigValue.data[0] ^= 1;
+        ASSERT_EQ(HITLS_CMS_DataVerify(fixture.parsed, &fixture.message, fixture.params, NULL),
+                  CRYPT_MLDSA_VERIFY_FAIL);
+    }
+    TestErrClear();
+    ASSERT_TRUE(TestIsErrStackEmpty());
+EXIT:
+    TestCmsFixtureClear(&fixture);
 #endif
 }
 /* END_CASE */
@@ -3750,6 +3852,11 @@ void SDV_CMS_HSS_POLICY_TC001(void)
     SKIP_TEST();
 #else
     CMS_SignerInfo signerInfo = {0};
+    int32_t mdId = BSL_CID_SHA256;
+
+    ASSERT_EQ(OBJ_GetHashIdFromSignId(BSL_CID_HSS_LMS, &mdId), BSL_SUCCESS);
+    ASSERT_EQ(mdId, BSL_CID_UNKNOWN);
+    ASSERT_EQ(BSL_OBJ_GetAsymAlgIdFromSignId(BSL_CID_HSS_LMS), BSL_CID_HSS_LMS);
 
     signerInfo.sigAlg.algId = BSL_CID_HSS_LMS;
     signerInfo.digestAlg.id = BSL_CID_SHA256;

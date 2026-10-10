@@ -1260,9 +1260,11 @@ static int32_t CheckPqcSigKeyUsage(HITLS_X509_Cert *cert)
                           HITLS_X509_EXT_KU_ENCIPHER_ONLY |
                           HITLS_X509_EXT_KU_DECIPHER_ONLY);
     if ((tmpExt->keyUsage & mustOneOf) == 0) {
+        BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_EXT_KU);
         return HITLS_X509_ERR_EXT_KU;
     }
     if ((tmpExt->keyUsage & forbidden) != 0) {
+        BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_EXT_KU);
         return HITLS_X509_ERR_EXT_KU;
     }
     return HITLS_PKI_SUCCESS;
@@ -2484,9 +2486,9 @@ int32_t X509_CheckExt(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_List *chain)
             VFYCBK_FAIL_IF(ret != HITLS_PKI_SUCCESS, storeCtx, cur, curDepth, ret);
             /* RFC 5280 Section 4.2.1.3: keyCertSign requires basicConstraints.cA. */
             VFYCBK_FAIL_IF(curExt != NULL && (curExt->extFlags & HITLS_X509_EXT_FLAG_KUSAGE) != 0 &&
-                               (curExt->keyUsage & HITLS_X509_EXT_KU_KEY_CERT_SIGN) != 0 &&
-                               ((curExt->extFlags & HITLS_X509_EXT_FLAG_BCONS) == 0 || !curExt->isCa),
-                           storeCtx, cur, curDepth, HITLS_X509_ERR_EXT_KU);
+                (curExt->keyUsage & HITLS_X509_EXT_KU_KEY_CERT_SIGN) != 0 &&
+                ((curExt->extFlags & HITLS_X509_EXT_FLAG_BCONS) == 0 || !curExt->isCa),
+                storeCtx, cur, curDepth, HITLS_X509_ERR_EXT_KU);
         }
         curNode = BSL_LIST_GetPrevNode(curNode);
         curDepth--;

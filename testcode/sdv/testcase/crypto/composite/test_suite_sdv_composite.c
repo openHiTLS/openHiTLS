@@ -2805,16 +2805,16 @@ EXIT:
 /* @
  * @test SDV_CRYPT_EAL_COMPOSITE_KEY_ROUNDTRIP_TC001
  * @spec -
- * @title Test Composite BC key samples support decode/encode/decode roundtrip.
- * @precon BC Composite public/private key samples are available.
+ * @title Test Composite key samples support decode/encode/decode roundtrip.
+ * @precon Composite public/private key samples are available.
  * @brief
- * 1.Decode BC Composite public/private key files.
+ * 1.Decode Composite public/private key files.
  * 2.Check decoded key type, paraId, and raw key SHA-256 expectations.
- * 3.Re-encode the decoded keys and compare them with the original BC files.
+ * 3.Re-encode the decoded keys and compare them with the original files.
  * 4.Decode the re-encoded keys and repeat the checks.
  * @expect
  * 1.Public/private key decode and re-encode succeed.
- * 2.Re-encoded bytes match the BC source files.
+ * 2.Re-encoded bytes match the source files.
  * 3.Decoded roundtrip keys preserve the expected Composite paraId and raw-key digests.
  * @prior nan
  * @auto FALSE
@@ -2858,7 +2858,7 @@ void SDV_CRYPT_EAL_COMPOSITE_KEY_ROUNDTRIP_TC001(char *sampleDir, int expectPara
 
     ASSERT_EQ(CRYPT_EAL_EncodeBuffKey(pubCtx, NULL, BSL_FORMAT_ASN1, CRYPT_PUBKEY_SUBKEY, &pubEncode),
         CRYPT_SUCCESS);
-    ASSERT_COMPARE("bc composite publickey roundtrip", pubEncode.data, pubEncode.dataLen, pubFile.data, pubFile.dataLen);
+    ASSERT_COMPARE("composite publickey roundtrip", pubEncode.data, pubEncode.dataLen, pubFile.data, pubFile.dataLen);
     ASSERT_EQ(CRYPT_EAL_DecodeBuffKey(BSL_FORMAT_ASN1, CRYPT_PUBKEY_SUBKEY, &pubEncode, NULL, 0, &pubRoundtrip),
         CRYPT_SUCCESS);
     ASSERT_EQ(CheckCompositeDecodedKey(pubRoundtrip, expectParaId), CRYPT_SUCCESS);
@@ -2866,7 +2866,7 @@ void SDV_CRYPT_EAL_COMPOSITE_KEY_ROUNDTRIP_TC001(char *sampleDir, int expectPara
 
     ASSERT_EQ(CRYPT_EAL_EncodeBuffKey(prvCtx, NULL, BSL_FORMAT_ASN1, CRYPT_PRIKEY_PKCS8_UNENCRYPT, &prvEncode),
         CRYPT_SUCCESS);
-    ASSERT_COMPARE("bc composite privatekey roundtrip", prvEncode.data, prvEncode.dataLen, prvFile.data, prvFile.dataLen);
+    ASSERT_COMPARE("composite privatekey roundtrip", prvEncode.data, prvEncode.dataLen, prvFile.data, prvFile.dataLen);
     ASSERT_EQ(CRYPT_EAL_DecodeBuffKey(BSL_FORMAT_ASN1, CRYPT_PRIKEY_PKCS8_UNENCRYPT, &prvEncode, NULL, 0,
         &prvRoundtrip), CRYPT_SUCCESS);
     ASSERT_EQ(CheckCompositeDecodedKey(prvRoundtrip, expectParaId), CRYPT_SUCCESS);
@@ -2888,15 +2888,15 @@ EXIT:
 /* @
  * @test SDV_CRYPT_EAL_COMPOSITE_SIGN_VERIFY_ROUNDTRIP_TC001
  * @spec -
- * @title Test Composite BC sign/verify samples support positive cross verification.
- * @precon BC Composite key files, message, and signature samples are available.
+ * @title Test Composite sign/verify samples support positive cross verification.
+ * @precon Composite key files, message, and signature samples are available.
  * @brief
- * 1.Decode BC Composite public/private key files.
- * 2.Verify the BC signature with the BC public key in openHiTLS.
- * 3.Sign the same message with the BC private key in openHiTLS.
- * 4.Verify the generated signature with the BC public key.
+ * 1.Decode Composite public/private key files.
+ * 2.Verify the signature with the public key in openHiTLS.
+ * 3.Sign the same message with the private key in openHiTLS.
+ * 4.Verify the generated signature with the public key.
  * @expect
- * 1.BC signature verification succeeds.
+ * 1.Signature verification succeeds.
  * 2.openHiTLS signature generation succeeds.
  * 3.Generated signature verification succeeds.
  * @prior nan
@@ -2961,27 +2961,28 @@ EXIT:
 /* END_CASE */
 
 /* @
- * @test SDV_CRYPT_EAL_COMPOSITE_SIGN_COMPARE_BC_DETRAND_TC001
+ * @test SDV_CRYPT_EAL_COMPOSITE_SIGN_COMPARE_VECTOR_DETRAND_TC001
  * @spec -
- * @title Test Composite deterministic signatures match BC bytes with and without ctxInfo.
- * @precon BC Composite key files, message, ctxInfo, and signature samples are available.
+ * @title Test Composite deterministic signatures match reference bytes with and without ctxInfo.
+ * @precon Composite key files, message, ctxInfo, and signature samples are available.
  * @brief
- * 1.Decode BC Composite public/private key files.
+ * 1.Decode Composite public/private key files.
  * 2.Register deterministic random callbacks for Composite signing.
- * 3.Verify the BC no-context signature with the BC public key in openHiTLS.
- * 4.Reset deterministic randomness, sign the same message without ctxInfo, and compare bytes with the BC signature.
+ * 3.Verify the no-context signature with the public key in openHiTLS.
+ * 4.Reset deterministic randomness, sign the same message without ctxInfo, and compare bytes with the signature.
  * 5.Set the same ctxInfo on both verify/sign contexts.
- * 6.Verify the BC with-context signature, reset deterministic randomness, sign again, and compare bytes with the BC signature.
+ * 6.Verify the with-context signature, reset deterministic randomness, sign again, and compare bytes with the signature.
  * @expect
- * 1.Both BC signatures verify successfully.
- * 2.openHiTLS deterministic no-context and with-context signatures match the BC bytes exactly.
+ * 1.Both signatures verify successfully.
+ * 2.openHiTLS deterministic no-context and with-context signatures match the reference bytes exactly.
  * 3.Generated signatures verify successfully.
  * @prior nan
  * @auto FALSE
  @ */
 /* BEGIN_CASE */
-void SDV_CRYPT_EAL_COMPOSITE_SIGN_COMPARE_BC_DETRAND_TC001(char *sampleDir, int expectParaId, Hex *ctxText,
-    Hex *msg, Hex *expectSignature, Hex *expectSignatureWithCtx)
+void SDV_CRYPT_EAL_COMPOSITE_SIGN_COMPARE_VECTOR_DETRAND_TC001(char *sampleDir, int expectParaId, Hex *ctxText,
+                                                               Hex *msg, Hex *expectSignature,
+                                                               Hex *expectSignatureWithCtx)
 {
 #if !defined(HITLS_CRYPTO_CODECSKEY) || !defined(HITLS_BSL_SAL_FILE) || !defined(HITLS_CRYPTO_KEY_DECODE)
     (void)sampleDir;
