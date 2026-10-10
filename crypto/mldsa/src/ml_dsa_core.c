@@ -746,19 +746,19 @@ static int32_t ExpandMask(const CRYPT_ML_DSA_Ctx *ctx, int32_t *y[MLDSA_L_MAX], 
 {
     uint16_t n = 0;
     uint8_t v[640];  // The maximum length is 20 * 32 == 640 byte.
+    int32_t ret =  CRYPT_SUCCESS;
     uint32_t bits = (ctx->info->k == K_VALUE_OF_MLDSA_44) ? GAMMA_BITS_OF_MLDSA_44 : GAMMA_BITS_OF_MLDSA_65_87;
     for (uint16_t i = 0; i < ctx->info->l; i++) {
         n = u + i;
         p[MLDSA_PRIVATE_SEED_LEN] = (uint8_t)n;
         p[MLDSA_PRIVATE_SEED_LEN + 1] = (uint8_t)(n >> BITS_OF_BYTE);
         // 𝑣 ← H(ρ′, 32𝑐)
-        int32_t ret = HashFuncH(p, MLDSA_PRIVATE_SEED_LEN + 2, NULL, 0, v, 32 * bits);
-        if (ret != CRYPT_SUCCESS) {
-            return ret;
-        }
+        GOTO_ERR_IF_EX(HashFuncH(p, MLDSA_PRIVATE_SEED_LEN + 2, NULL, 0, v, 32 * bits), ret);
         SignBitUnPack(v, (uint32_t *)y[i], bits, ctx->info->gamma1);
     }
-    return CRYPT_SUCCESS;
+ERR:
+    BSL_SAL_CleanseData(v, sizeof(v));
+    return ret;
 }
 
 // Algorithm 36 Decompose(r)
@@ -1126,12 +1126,12 @@ int32_t MLDSA_SignInternal(const CRYPT_ML_DSA_Ctx *ctx, const CRYPT_Data *msg, u
     uint8_t uBuf[MLDSA_XOF_MSG_LEN];
     uint8_t tr[MLDSA_TR_MSG_LEN];
     uint8_t signSeed[MLDSA_SIGNING_SEED_LEN + MLDSA_SEED_BYTES_LEN];
-    (void)memcpy_s(signSeed + MLDSA_SIGNING_SEED_LEN, MLDSA_SEED_BYTES_LEN, rand, MLDSA_SEED_BYTES_LEN);
 
     // The w1Len length of MLDSA44 and MLDSA65 is 768, and the w1Len length of MLDSA87 is 1024.
     uint32_t w1Len = (ctx->info->k == 4 || ctx->info->k == 6) ? 768 : 1024;
     uint8_t *w1Buf = BSL_SAL_Malloc(w1Len);
     RETURN_RET_IF(w1Buf == NULL, CRYPT_MEM_ALLOC_FAIL);
+    (void)memcpy_s(signSeed + MLDSA_SIGNING_SEED_LEN, MLDSA_SEED_BYTES_LEN, rand, MLDSA_SEED_BYTES_LEN);
 
     MLDSA_SignMatrixSt st = { 0 };
     GOTO_ERR_IF(MLDSASignCreateMatrix(ctx->info->k, ctx->info->l, &st), ret);
@@ -1326,6 +1326,8 @@ int32_t MLDSA_CalPub(const CRYPT_ML_DSA_Ctx *ctx, uint8_t *pub, uint32_t pubLen)
         ByteEncode(pub + MLDSA_PUBLIC_SEED_LEN + i * MLDSA_PUBKEY_POLYT_PACKEDBYTES, (uint32_t *)t1[i], 10);
     }
 ERR:
+    BSL_SAL_CleanseData(tmp0, sizeof(tmp0));
+    BSL_SAL_CleanseData(tmp2, sizeof(tmp2));
     BSL_SAL_ClearFree(st.bufAddr, st.bufSize);
     BSL_SAL_CleanseData(kValue, sizeof(kValue));
     BSL_SAL_CleanseData(pubSeed, sizeof(pubSeed));

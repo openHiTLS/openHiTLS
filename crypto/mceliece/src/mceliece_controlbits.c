@@ -473,10 +473,10 @@ static int32_t AllocBitPlanes(uint8_t ***planes, const int64_t w, const int64_t 
     return CRYPT_SUCCESS;
 }
 
-static void FreeBitPlanes(uint8_t **planes, int64_t w)
+static void FreeBitPlanes(uint8_t **planes, int64_t w, uint32_t planeBytes)
 {
     for (int64_t b = 0; b < w; b++) {
-        BSL_SAL_FREE(planes[b]);
+        BSL_SAL_ClearFree(planes[b], planeBytes);
     }
     BSL_SAL_FREE(planes);
 }
@@ -541,7 +541,7 @@ int32_t SupportSetFromControlbits(uint16_t *gfL, const uint8_t *cbits, const int
     InitPlanesWithBitrev(planes, w, n);
     ApplyBenesLayers(planes, cbits, w, n, layerBytes);
     ReconstructSupport(gfL, planes, lenN, w);
-    FreeBitPlanes(planes, w);
+    FreeBitPlanes(planes, w, planeBytes);
     return CRYPT_SUCCESS;
 }
 

@@ -524,16 +524,19 @@ static int32_t SampleEta1(const CRYPT_ML_KEM_Ctx *ctx, uint8_t *digest, int16_t 
     uint8_t q[MLKEM_SEED_LEN + 1] = { 0 };  // Reserved lengths of nonce is 1 byte.
     uint8_t prfOut[MLKEM_PRF_BLOCKSIZE * MLKEM_ETA1_MAX] = { 0 };
     (void)memcpy_s(q, MLKEM_SEED_LEN, digest, MLKEM_SEED_LEN);
+    int32_t ret = CRYPT_SUCCESS;
 
     for (uint8_t i = 0; i < ctx->info->k; i++) {
         q[MLKEM_SEED_LEN] = *nonce;
-        int32_t ret = PRF(ctx->libCtx, q, MLKEM_SEED_LEN + 1, prfOut, MLKEM_PRF_BLOCKSIZE * MLKEM_ETA1_MAX);
-        RETURN_RET_IF(ret != CRYPT_SUCCESS, ret);
+        GOTO_ERR_IF(PRF(ctx->libCtx, q, MLKEM_SEED_LEN + 1, prfOut, MLKEM_PRF_BLOCKSIZE * MLKEM_ETA1_MAX), ret);
         MLKEM_SamplePolyCBD(polyS[i], prfOut, ctx->info->eta1);
         *nonce = *nonce + 1;
         MLKEM_ComputNTT(polyS[i], CONST_ZETA_POWER_1);
     }
-    return CRYPT_SUCCESS;
+ERR:
+    BSL_SAL_CleanseData(q, sizeof(q));
+    BSL_SAL_CleanseData(prfOut, sizeof(prfOut));
+    return ret;
 }
 
 static int32_t SampleEta2(const CRYPT_ML_KEM_Ctx *ctx, uint8_t *digest, int16_t *polyS[], uint8_t *nonce)
@@ -541,15 +544,18 @@ static int32_t SampleEta2(const CRYPT_ML_KEM_Ctx *ctx, uint8_t *digest, int16_t 
     uint8_t q[MLKEM_SEED_LEN + 1] = { 0 };  // Reserved lengths of nonce is 1 byte.
     uint8_t prfOut[MLKEM_PRF_BLOCKSIZE * MLKEM_ETA2_MAX] = { 0 };
     (void)memcpy_s(q, MLKEM_SEED_LEN, digest, MLKEM_SEED_LEN);
+    int32_t ret = CRYPT_SUCCESS;
 
     for (uint8_t i = 0; i < ctx->info->k; i++) {
         q[MLKEM_SEED_LEN] = *nonce;
-        int32_t ret = PRF(ctx->libCtx, q, MLKEM_SEED_LEN + 1, prfOut, MLKEM_PRF_BLOCKSIZE * MLKEM_ETA2_MAX);
-        RETURN_RET_IF(ret != CRYPT_SUCCESS, ret);
+        GOTO_ERR_IF(PRF(ctx->libCtx, q, MLKEM_SEED_LEN + 1, prfOut, MLKEM_PRF_BLOCKSIZE * MLKEM_ETA2_MAX), ret);
         MLKEM_SamplePolyCBD(polyS[i], prfOut, ctx->info->eta2);
         *nonce = *nonce + 1;
     }
-    return CRYPT_SUCCESS;
+ERR:
+    BSL_SAL_CleanseData(q, sizeof(q));
+    BSL_SAL_CleanseData(prfOut, sizeof(prfOut));
+    return ret;
 }
 
 // NIST.FIPS.203 Algorithm 13 K-PKE.KeyGen(𝑑)
@@ -559,6 +565,7 @@ static int32_t PkeKeyGen(CRYPT_ML_KEM_Ctx *ctx, uint8_t *pk, uint8_t *dk, uint8_
     uint8_t nonce = 0;
     uint8_t seed[MLKEM_SEED_LEN + 1] = { 0 };  // Reserved lengths of k is 1 byte.
     uint8_t digest[CRYPT_SHA3_512_DIGESTSIZE] = { 0 };
+    int16_t mulCache[MLKEM_K_MAX][MLKEM_N_HALF];
 
     // (p,q) = G(d || k)
     (void)memcpy_s(seed, MLKEM_SEED_LEN + 1, d, MLKEM_SEED_LEN);
@@ -582,7 +589,6 @@ static int32_t PkeKeyGen(CRYPT_ML_KEM_Ctx *ctx, uint8_t *pk, uint8_t *dk, uint8_
     }
     GOTO_ERR_IF(SampleEta1(ctx, q, ctx->keyData.vectorT, &nonce), ret);  // Step 12 - 15
 
-    int16_t mulCache[MLKEM_K_MAX][MLKEM_N_HALF];
     MLKEM_ComputeMulCache(k, ctx->keyData.vectorS, mulCache, CONST_ZETA_POWER_2);
     MLKEM_MatrixMulAdd(k, (int16_t **)ctx->keyData.matrix, ctx->keyData.vectorS, ctx->keyData.vectorT,
                        mulCache);
@@ -595,8 +601,8 @@ static int32_t PkeKeyGen(CRYPT_ML_KEM_Ctx *ctx, uint8_t *pk, uint8_t *dk, uint8_
     }
     // The buffer of pk is sufficient, check it before calling this function.
     (void)memcpy_s(pk + MLKEM_SEED_LEN * MLKEM_BITS_OF_Q * k, MLKEM_SEED_LEN, p, MLKEM_SEED_LEN);
-
 ERR:
+    BSL_SAL_CleanseData(mulCache, sizeof(mulCache));
     BSL_SAL_CleanseData(seed, sizeof(seed));
     BSL_SAL_CleanseData(digest, sizeof(digest));
     return ret;
@@ -665,6 +671,7 @@ static int32_t PkeEncrypt(CRYPT_ML_KEM_Ctx *ctx, uint8_t *ct, uint8_t *m, uint8_
     uint8_t k = ctx->info->k;
     uint8_t nonce = 0; // Step 1
     uint8_t seedE[MLKEM_SEED_LEN + 1];
+    int16_t mulCache[MLKEM_K_MAX][MLKEM_N_HALF];
     ALIGN32 uint8_t encBuf[MLKEM_PRF_BLOCKSIZE * MLKEM_ETA1_MAX +
         MLKEM_N * sizeof(int16_t) * 3];
     uint8_t *bufEncE = encBuf;
@@ -695,7 +702,6 @@ static int32_t PkeEncrypt(CRYPT_ML_KEM_Ctx *ctx, uint8_t *ct, uint8_t *m, uint8_
     GOTO_ERR_IF(PRF(ctx->libCtx, seedE, MLKEM_SEED_LEN + 1, bufEncE, MLKEM_PRF_BLOCKSIZE * ctx->info->eta2), ret);
     MLKEM_SamplePolyCBD(polyE2, bufEncE, ctx->info->eta2);
     // Step 18
-    int16_t mulCache[MLKEM_K_MAX][MLKEM_N_HALF];
     MLKEM_ComputeMulCache(k, polyVecY, mulCache, CONST_ZETA_POWER_2);
     MLKEM_TransposeMatrixMulAdd(k, (int16_t **)ctx->keyData.matrix, polyVecY, polyVecU, mulCache);
     // Step 19
@@ -723,6 +729,8 @@ static int32_t PkeEncrypt(CRYPT_ML_KEM_Ctx *ctx, uint8_t *ct, uint8_t *m, uint8_
     // Step 23
     ByteEncode(ct + MLKEM_ENCODE_BLOCKSIZE * ctx->info->du * k, polyC2, ctx->info->dv);
 ERR:
+    BSL_SAL_CleanseData(mulCache, sizeof(mulCache));
+    BSL_SAL_CleanseData(seedE, sizeof(seedE));
     BSL_SAL_CleanseData(encBuf, sizeof(encBuf));
     BSL_SAL_ClearFree(tmpPolyVec, MLKEM_N * k * 3 * sizeof(int16_t));
     return ret;
@@ -811,27 +819,23 @@ int32_t MLKEM_EncapsInternal(CRYPT_ML_KEM_Ctx *ctx, uint8_t *ct, uint32_t *ctLen
 {
     uint8_t mhek[MLKEM_SEED_LEN + CRYPT_SHA3_256_DIGESTSIZE];  // m and H(ek)
     uint8_t kr[CRYPT_SHA3_512_DIGESTSIZE];    // K and r
+    int32_t ret = CRYPT_SUCCESS;
 
     //  (K,r) = G(m || H(ek))
     (void)memcpy_s(mhek, MLKEM_SEED_LEN, m, MLKEM_SEED_LEN);
-    int32_t ret = HashFuncH(ctx->libCtx, ctx->ek, ctx->ekLen, mhek + MLKEM_SEED_LEN, CRYPT_SHA3_256_DIGESTSIZE);
-    RETURN_RET_IF(ret != CRYPT_SUCCESS, ret);
-
-    ret = HashFuncG(ctx->libCtx, mhek, MLKEM_SEED_LEN + CRYPT_SHA3_256_DIGESTSIZE, kr, CRYPT_SHA3_512_DIGESTSIZE);
-    RETURN_RET_IF(ret != CRYPT_SUCCESS, ret);
+    GOTO_ERR_IF(HashFuncH(ctx->libCtx, ctx->ek, ctx->ekLen, mhek + MLKEM_SEED_LEN, CRYPT_SHA3_256_DIGESTSIZE), ret);
+    GOTO_ERR_IF(HashFuncG(ctx->libCtx, mhek, MLKEM_SEED_LEN + CRYPT_SHA3_256_DIGESTSIZE, kr, CRYPT_SHA3_512_DIGESTSIZE), ret);
 
     // 𝑐 ← K-PKE.Encrypt(ek,𝑚,𝑟)
-    ret = PkeEncrypt(ctx, ct, m, kr + MLKEM_SHARED_KEY_LEN);
-    if (ret == CRYPT_SUCCESS) {
-        (void)memcpy_s(sk, *skLen, kr, MLKEM_SHARED_KEY_LEN);
-    }
-    BSL_SAL_CleanseData(kr, CRYPT_SHA3_512_DIGESTSIZE);
-    BSL_SAL_CleanseData(mhek, sizeof(mhek));
-    RETURN_RET_IF(ret != CRYPT_SUCCESS, ret);
+    GOTO_ERR_IF(PkeEncrypt(ctx, ct, m, kr + MLKEM_SHARED_KEY_LEN), ret);
+    (void)memcpy_s(sk, *skLen, kr, MLKEM_SHARED_KEY_LEN);
 
     *ctLen = ctx->info->cipherLen;
     *skLen = ctx->info->sharedLen;
-    return CRYPT_SUCCESS;
+ERR:
+    BSL_SAL_CleanseData(mhek, sizeof(mhek));
+    BSL_SAL_CleanseData(kr, sizeof(kr));
+    return ret;
 }
 
 // NIST.FIPS.203 Algorithm 18 ML-KEM.Decaps_internal(dk, 𝑐)
