@@ -39,57 +39,57 @@ extern "C" {
  */
 enum BSL_ERROR {
     /* Common return value start from 0x03000001. */
-    BSL_NULL_INPUT = 0x03000000,            /**< NULL input. */
-    BSL_INTERNAL_EXCEPTION,                 /**< Error occurs when calling internal BSL functions */
-    BSL_MALLOC_FAIL,                        /**< Error occurs when allocating memory */
-    BSL_MEMCPY_FAIL,                        /**< Error occurs when calling memcpy. */
-    BSL_MEMMOVE_FAIL,                       /**< Error occurs when calling memmove. */
-    BSL_INVALID_ARG,                        /**< Invalid arguments. */
-    BSL_DUMP_FAIL,                          /**< Error occurs when duplicating memory */
+    BSL_NULL_INPUT = 0x03000000, /**< NULL input. */
+    BSL_INTERNAL_EXCEPTION, /**< Error occurs when calling internal BSL functions */
+    BSL_MALLOC_FAIL, /**< Error occurs when allocating memory */
+    BSL_MEMCPY_FAIL, /**< Error occurs when calling memcpy. */
+    BSL_MEMMOVE_FAIL, /**< Error occurs when calling memmove. */
+    BSL_INVALID_ARG, /**< Invalid arguments. */
+    BSL_DUMP_FAIL, /**< Error occurs when duplicating memory */
 
     /* The return value of the SAL submodule starts from 0x03010001. */
     /* The return value of the SAL submodule starts from 0x03010001. */
-    BSL_SAL_ERR_UNKNOWN = 0x03010001,        /**< Unknown error. */
-    BSL_SAL_ERR_BAD_PARAM,                   /**< Parameter incorrect. */
-    BSL_SAL_ERR_FILE_OPEN,                   /**< Open file error. */
-    BSL_SAL_ERR_FILE_READ,                   /**< File reading error. */
-    BSL_SAL_ERR_FILE_WRITE,                  /**< File writing error. */
-    BSL_SAL_ERR_FILE_LENGTH,                 /**< Obtaining the file length error. */
-    BSL_SAL_ERR_FILE_TELL,                   /**< Error in obtaining the file pointer offset. */
-    BSL_SAL_ERR_FILE_SEEK,                   /**< Failed to set pointer position of file. */
-    BSL_SAL_ERR_FILE_SET_ATTR,               /**< Setting file attribute is incorrect. */
-    BSL_SAL_ERR_FILE_GET_ATTR,               /**< Error in obtaining file attributes. */
+    BSL_SAL_ERR_UNKNOWN = 0x03010001, /**< Unknown error. */
+    BSL_SAL_ERR_BAD_PARAM, /**< Parameter incorrect. */
+    BSL_SAL_ERR_FILE_OPEN, /**< Open file error. */
+    BSL_SAL_ERR_FILE_READ, /**< File reading error. */
+    BSL_SAL_ERR_FILE_WRITE, /**< File writing error. */
+    BSL_SAL_ERR_FILE_LENGTH, /**< Obtaining the file length error. */
+    BSL_SAL_ERR_FILE_TELL, /**< Error in obtaining the file pointer offset. */
+    BSL_SAL_ERR_FILE_SEEK, /**< Failed to set pointer position of file. */
+    BSL_SAL_ERR_FILE_SET_ATTR, /**< Setting file attribute is incorrect. */
+    BSL_SAL_ERR_FILE_GET_ATTR, /**< Error in obtaining file attributes. */
     BSL_SAL_FILE_NO_REG_FUNC,
-    BSL_SAL_ERR_DL_NOT_FOUND,                  /**< dl not found. */
-    BSL_SAL_ERR_DL_LOAD_FAIL,                  /**< Error occured when loading dynamic library. */
-    BSL_SAL_ERR_DL_UNLOAAD_FAIL,               /**< Error occured when unloading dynamic library. */
-    BSL_SAL_ERR_DL_NON_FUNCTION,               /**< dl doesn't find function. */
-    BSL_SAL_ERR_DL_LOOKUP_METHOD,              /**< Error occurred when looking up dl method. */
-    BSL_SAL_ERR_DL_PATH_EXCEED,                /**< Path exceeds the maximum length. */
-    BSL_SAL_DL_NO_REG_FUNC,                    /**< The dl-related function is not registered. */
+    BSL_SAL_ERR_DL_NOT_FOUND, /**< dl not found. */
+    BSL_SAL_ERR_DL_LOAD_FAIL, /**< Error occured when loading dynamic library. */
+    BSL_SAL_ERR_DL_UNLOAAD_FAIL, /**< Error occured when unloading dynamic library. */
+    BSL_SAL_ERR_DL_NON_FUNCTION, /**< dl doesn't find function. */
+    BSL_SAL_ERR_DL_LOOKUP_METHOD, /**< Error occurred when looking up dl method. */
+    BSL_SAL_ERR_DL_PATH_EXCEED, /**< Path exceeds the maximum length. */
+    BSL_SAL_DL_NO_REG_FUNC, /**< The dl-related function is not registered. */
     BSL_SAL_NOT_FILE_EOF,
     BSL_SAL_THREAD_LOCK_NO_REG_FUNC,
     BSL_SAL_ERR_NO_MEMORY,
 
     /* The return value of the LOG submodule starts from 0x03020001. */
-    BSL_LOG_ERR_BAD_PARAM = 0x03020001,      /**< Bad parameter. */
-    BSL_LOG_ERR_MEMCPY_FAIL,                 /**< Memory Copy Failure. */
+    BSL_LOG_ERR_BAD_PARAM = 0x03020001, /**< Bad parameter. */
+    BSL_LOG_ERR_MEMCPY_FAIL, /**< Memory Copy Failure. */
 
     /* The return value of the TLV submodule starts from 0x03030001. */
-    BSL_TLV_ERR_BAD_PARAM = 0x03030001,      /**< Bad parameter. */
-    BSL_TLV_ERR_NO_WANT_TYPE,                /**< No TLV found. */
-    BSL_TLV_ERR_MEMCPY_FAIL,                 /**< Memory Copy Failure. */
+    BSL_TLV_ERR_BAD_PARAM = 0x03030001, /**< Bad parameter. */
+    BSL_TLV_ERR_NO_WANT_TYPE, /**< No TLV found. */
+    BSL_TLV_ERR_MEMCPY_FAIL, /**< Memory Copy Failure. */
 
     /* The return value of the ERR submodule starts from 0x03040001. */
-    BSL_ERR_ERR_ACQUIRE_READ_LOCK_FAIL = 0x03040001,  /**< Failed to obtain the read lock. */
-    BSL_ERR_ERR_ACQUIRE_WRITE_LOCK_FAIL,              /**< Failed to obtain the write lock. */
-    BSL_ERR_ERR_NO_STACK,                             /**< Error stack is empty. */
-    BSL_ERR_ERR_NO_ERROR,                             /**< Error stack is NULL.  */
-    BSL_ERR_ERR_NO_MARK,                              /**< Error stack has no mark. */
+    BSL_ERR_ERR_ACQUIRE_READ_LOCK_FAIL = 0x03040001, /**< Failed to obtain the read lock. */
+    BSL_ERR_ERR_ACQUIRE_WRITE_LOCK_FAIL, /**< Failed to obtain the write lock. */
+    BSL_ERR_ERR_NO_STACK, /**< Error stack is empty. */
+    BSL_ERR_ERR_NO_ERROR, /**< Error stack is NULL.  */
+    BSL_ERR_ERR_NO_MARK, /**< Error stack has no mark. */
 
     BSL_SAL_TIME_BAD_PARAM = 0x03050001,
-    BSL_SAL_TIME_NO_REG_FUNC,                /** The time-related function is not registered. */
-    BSL_SAL_TIME_SYS_ERROR,                  /** Function gettimeofday failed */
+    BSL_SAL_TIME_NO_REG_FUNC, /** The time-related function is not registered. */
+    BSL_SAL_TIME_SYS_ERROR, /** Function gettimeofday failed */
 
     /* The return value of the UIO submodule starts from 0x03060001. */
     BSL_UIO_FAIL = 0x03060001,
@@ -120,9 +120,9 @@ enum BSL_ERROR {
     /* The return value of the LIST submodule starts from 0x03070001. */
     BSL_LIST_INVALID_LIST_CURRENT = 0x03070001, /**< Current node pointer is NULL */
     BSL_LIST_MALLOC_FAIL,
-    BSL_LIST_DATA_NOT_AVAILABLE,                /**< Data of current node is NULL */
-    BSL_LIST_FULL,                              /**< Number of nodes has reached its limit */
-    
+    BSL_LIST_DATA_NOT_AVAILABLE, /**< Data of current node is NULL */
+    BSL_LIST_FULL, /**< Number of nodes has reached its limit */
+
     /* The return value of the UI submodule starts from 0x03080001. */
     BSL_UI_WRITE_ERROR = 0x03080001,
     BSL_UI_FGETS_ERROR,
@@ -162,13 +162,13 @@ enum BSL_ERROR {
     BSL_BASE64_INVALID_ENCODE,
 
     BSL_SAL_ERR_NET_NOBLOCK = 0x030b0001,
-    BSL_SAL_ERR_NET_SOCKCLOSE,               /**< Error occured when closing a socket. */
-    BSL_SAL_ERR_NET_SETSOCKOPT,              /**< Error occured when setting a socket option. */
-    BSL_SAL_ERR_NET_GETSOCKOPT,              /**< Error occured when getting a socket option. */
-    BSL_SAL_ERR_NET_LISTEN,                  /**< Error occured when listening a socket. */
-    BSL_SAL_ERR_NET_BIND,                    /**< Error occured when binding a socket */
-    BSL_SAL_ERR_NET_CONNECT,                 /**< Error occured when building a connection. */
-    BSL_SAL_ERR_NET_IOCTL,                   /**< Error occured when calling ioctl. */
+    BSL_SAL_ERR_NET_SOCKCLOSE, /**< Error occured when closing a socket. */
+    BSL_SAL_ERR_NET_SETSOCKOPT, /**< Error occured when setting a socket option. */
+    BSL_SAL_ERR_NET_GETSOCKOPT, /**< Error occured when getting a socket option. */
+    BSL_SAL_ERR_NET_LISTEN, /**< Error occured when listening a socket. */
+    BSL_SAL_ERR_NET_BIND, /**< Error occured when binding a socket */
+    BSL_SAL_ERR_NET_CONNECT, /**< Error occured when building a connection. */
+    BSL_SAL_ERR_NET_IOCTL, /**< Error occured when calling ioctl. */
     BSL_SAL_NET_NO_REG_FUNC,
     BSL_SAL_ERR_NET_ACCEPT,
     BSL_SAL_ERR_NET_GETSOCKNAME,
@@ -190,11 +190,10 @@ enum BSL_ERROR {
 
     /* The return value of the ASYNC submodule starts from 0x030e0001. */
     BSL_ASYNC_ERR_STATE_CONFLICT = 0x030e0001, /**< Calling environment or lifecycle conflict. */
-    BSL_ASYNC_ERR_NOT_FOUND,                   /**< The notify source is not registered. */
-    BSL_ASYNC_ERR_KEY_BUSY,                    /**< The notify source key is being deleted, retry later. */
-    BSL_ASYNC_ERR_CAPACITY_EXCEEDED,           /**< The output capacity is insufficient for the required count. */
-    BSL_ASYNC_ERR_NOT_INITIALIZED,             /**< The execution domain is not initialized. */
-    BSL_ASYNC_ERR_COROUTINE_SWITCH,            /**< The context switch primitive failed, the current context keeps running. */
+    BSL_ASYNC_ERR_NOT_FOUND, /**< The notify source is not registered. */
+    BSL_ASYNC_ERR_CAPACITY_EXCEEDED, /**< The output capacity is insufficient for the required count. */
+    BSL_ASYNC_ERR_NOT_INITIALIZED, /**< The execution domain is not initialized. */
+    BSL_ASYNC_ERR_COROUTINE_SWITCH, /**< The context switch primitive failed, the current context keeps running. */
 
     BSL_PARAMS_INVALID_KEY = 0x030f0001,
     BSL_PARAMS_INVALID_TYPE,

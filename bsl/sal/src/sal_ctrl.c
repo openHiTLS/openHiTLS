@@ -30,6 +30,10 @@
 #include "sal_dlimpl.h"
 #endif
 
+#ifdef HITLS_BSL_ASYNC
+#include "sal_coroutineimpl.h"
+#endif
+
 #include "sal_lockimpl.h"
 #include "sal_memimpl.h"
 
@@ -55,6 +59,10 @@
 
 #ifdef HITLS_BSL_SAL_PID
 #define BSL_SAL_PID_CB      0x0800
+#endif
+
+#ifdef HITLS_BSL_ASYNC
+#define BSL_SAL_COROUTINE_CB 0x0900
 #endif
 
 int32_t BSL_SAL_CallBack_Ctrl(BSL_SAL_CB_FUNC_TYPE funcType, void *funcCb)
@@ -84,6 +92,10 @@ int32_t BSL_SAL_CallBack_Ctrl(BSL_SAL_CB_FUNC_TYPE funcType, void *funcCb)
 #ifdef HITLS_BSL_SAL_DL
         case BSL_SAL_DL_CB:
             return SAL_DlCallBack_Ctrl(funcType, funcCb);
+#endif
+#ifdef HITLS_BSL_ASYNC
+        case BSL_SAL_COROUTINE_CB:
+            return SAL_CoroutineCallBack_Ctrl(funcType, funcCb);
 #endif
         default:
             return BSL_SAL_ERR_BAD_PARAM;

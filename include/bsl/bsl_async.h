@@ -68,23 +68,39 @@ bool BSL_ASYNC_IsSupported(void);
  * @ingroup bsl_async
  * @brief   Establish the execution domain and the task pool of the current thread
  *
- * @param maxTasks [IN] Task pool limit; must be greater than 0.
- * @param initialTasks [IN] Number of tasks to pre-create; 0 pre-creates none; must not exceed maxTasks.
+ * @param maxTasks [IN] Task pool limit; 0 means no limit (the pool grows on demand and never reports full).
+ * @param initialTasks [IN] Number of tasks to pre-create; 0 pre-creates none; must not exceed maxTasks
+ *         (therefore it must also be 0 when maxTasks is 0). On a re-entering call the pool is resized
+ *         to this count: idle tasks beyond it are released, and a value below the outstanding
+ *         (bound, not yet finished) task count is rejected.
  * @param stackSize [IN] Expected task coroutine stack size in bytes for this execution domain;
- *         0 uses the framework default; a non-zero value below the accepted minimum or above
- *         the accepted maximum is rejected.
+ *         0 uses the framework default; a non-zero value is used as given, the framework
+ *         sets no lower or upper bound (out-of-range values are rejected by the SAL backend).
+ *         Effective only on the first initialization of the thread.
  *
  * @retval #BSL_SUCCESS success.
- * @retval #BSL_INVALID_ARG maxTasks is 0, initialTasks is greater than maxTasks, or stackSize
- *         is non-zero and outside the accepted range.
- * @retval #BSL_ASYNC_ERR_STATE_CONFLICT The execution domain is already initialized or the call is made on a task stack.
- * @retval #BSL_MALLOC_FAIL Allocation of the execution domain or the pool failed.
- * @retval #BSL_SAL_ERR_NO_MEMORY The thread local key could not be created.
+ * @retval #BSL_INVALID_ARG Invalid task counts, a rejected scale-down (initialTasks below the
+ *         outstanding task count), or a stack size rejected while pre-creating tasks.
+ * @retval #BSL_ASYNC_ERR_STATE_CONFLICT Called on a task stack, no coroutine backend is built,
+ *         or a re-entering stackSize resolves to a value different from the domain's.
+ * @retval #BSL_MALLOC_FAIL Allocation of the execution domain, pool, task or coroutine wrapper failed.
+ * @retval #BSL_SAL_ERR_NO_MEMORY Process lock, thread local storage or platform coroutine creation failed.
  * @attention
  * Thread safe     : Thread-safe function.
  * Blocking risk   : No blocking.
  * Time consuming  : Time-consuming (pre-creates coroutines when initialTasks is not 0).
- * Must be called on the host call stack.
+ * Must be called on the host call stack. Calling this function again on a thread that
+ * already has an execution domain is legal and resizes the pool in place: the execution
+ * domain itself (host context, resolved stack size, thread local reservation) and every
+ * outstanding task survive, so paused handles stay resumable across the call. The pool
+ * limit is replaced with maxTasks and the task population is adjusted to initialTasks:
+ * a scale-down releases the idle tasks beyond the target, while a target below the
+ * outstanding task count is rejected with BSL_INVALID_ARG (outstanding tasks are never
+ * destroyed here, so a re-entry with initialTasks == 0 requires that no task is
+ * outstanding).
+ * With initialTasks == 0, stack size validation is deferred until a task is created.
+ * Creation failure releases partially built resources and returns the original error
+ * without pushing it again; a failed re-entry leaves the previous pool untouched.
  */
 int32_t BSL_ASYNC_InitThread(uint32_t maxTasks, uint32_t initialTasks, uint32_t stackSize);
 
@@ -92,16 +108,17 @@ int32_t BSL_ASYNC_InitThread(uint32_t maxTasks, uint32_t initialTasks, uint32_t 
  * @ingroup bsl_async
  * @brief   Release the execution domain of the current thread
  *
- * @retval #BSL_SUCCESS success.
- * @retval #BSL_ASYNC_ERR_NOT_INITIALIZED The execution domain is not initialized.
- * @retval #BSL_ASYNC_ERR_STATE_CONFLICT Outstanding tasks exist or the call is made on a task stack.
  * @attention
  * Thread safe     : Thread-safe function.
  * Blocking risk   : No blocking.
  * Time consuming  : Not time-consuming.
- * Must be called on the host call stack with no outstanding task.
+ * Must be called on the host call stack. An uninitialized domain is a no-op.
+ * Complete outstanding tasks before cleanup. Otherwise they are abandoned with
+ * a diagnostic: their coroutine stacks and argument copies remain allocated,
+ * and they cannot be resumed. This function has no return value.
+
  */
-int32_t BSL_ASYNC_CleanupThread(void);
+void BSL_ASYNC_CleanupThread(void);
 
 /**
  * @ingroup bsl_async
@@ -128,10 +145,17 @@ typedef int32_t (*BSL_ASYNC_Func)(void *args);
  * @brief   Aggregated input of BSL_ASYNC_StartTask for a first start
  */
 typedef struct {
-    BSL_ASYNC_NotifyCtx *notifyCtx;  /**< Notify context of the logical task; NULL when unused. */
-    BSL_ASYNC_Func func;             /**< Business entry, mandatory on a first start. */
-    void *args;                      /**< Argument buffer; argsSize bytes are copied. */
-    uint32_t argsSize;               /**< Size of the argument buffer in bytes. */
+    BSL_ASYNC_NotifyCtx *notifyCtx; /**< Notify context of the logical task; NULL when unused. */
+    BSL_ASYNC_Func func; /**< Business entry, mandatory on a first start. */
+    void *args; /**< Argument buffer; argsSize bytes are copied once into task-owned
+                                          storage at the first start and the entry runs on that copy
+                                          (one-way snapshot, never written back). Inline (non-pointer)
+                                          fields therefore flow caller-to-task only; communicate
+                                          results through pointers embedded in the buffer, the task
+                                          return value, or shared external state. Indirect references
+                                          are copied as pointer values and remain the caller's
+                                          responsibility. */
+    uint32_t argsSize; /**< Size of the argument buffer in bytes; must be 0 when args is NULL. */
 } BSL_ASYNC_TaskParam;
 
 /**
@@ -140,7 +164,12 @@ typedef struct {
  *
  * @param task [IN/OUT] NULL means a first start; non-NULL resumes the paused task.
  * @param ret [OUT] Business return value, defined only when BSL_ASYNC_FINISH is returned.
- * @param param [IN] Aggregated input for a first start; ignored when resuming.
+ * @param param [IN] Aggregated input for a first start; not read and not validated when
+ *        resuming (NULL or a reused param are both accepted). On a first start with a
+ *        non-NULL args, argsSize must be non-zero: the buffer is copied once before the entry
+ *        runs and never written back, so outputs must flow through pointers embedded in the
+ *        buffer, the task return value, or shared external state (args NULL with argsSize 0 is
+ *        the no-argument form; any other combination is rejected with BSL_INVALID_ARG).
  *
  * @retval #BSL_ASYNC_FINISH The logical task finished, *ret was delivered and *task was reset to NULL.
  * @retval #BSL_ASYNC_PAUSE The task is paused and *task refers to it.
@@ -154,8 +183,7 @@ typedef struct {
  * Time consuming  : Depends on the business entry.
  * Must be called on the host call stack of the execution domain owning the task.
  */
-int32_t BSL_ASYNC_StartTask(BSL_ASYNC_Task **task, int32_t *ret,
-    const BSL_ASYNC_TaskParam *param);
+int32_t BSL_ASYNC_StartTask(BSL_ASYNC_Task **task, int32_t *ret, const BSL_ASYNC_TaskParam *param);
 
 /**
  * @ingroup bsl_async
@@ -193,11 +221,14 @@ BSL_ASYNC_NotifyCtx *BSL_ASYNC_TaskGetNotifyCtx(const BSL_ASYNC_Task *task);
  * @retval #BSL_SUCCESS The task was paused and later resumed at this call site.
  * @retval #BSL_ASYNC_ERR_NOT_INITIALIZED No execution domain is initialized.
  * @retval #BSL_ASYNC_ERR_STATE_CONFLICT Called on the host call stack.
+ * @retval #BSL_ASYNC_ERR_COROUTINE_SWITCH The platform context switch failed.
  * @attention
  * Thread safe     : Not thread-safe function.
  * Blocking risk   : No blocking.
  * Time consuming  : Not time-consuming.
  * Can only be called inside a task; becomes a successful no-op while pause is blocked.
+ * A failed switch keeps the current task running, preserves notification changes and
+ * submit status, and returns the SAL error without pushing it again.
  */
 int32_t BSL_ASYNC_PauseTask(void);
 
@@ -271,15 +302,15 @@ typedef int32_t (*BSL_ASYNC_NotifyCallback)(void *callbackArg);
  *
  * @retval #BSL_SUCCESS success.
  * @retval #BSL_NULL_INPUT ctx is NULL.
- * @retval #BSL_ASYNC_ERR_STATE_CONFLICT An outstanding task exists.
  * @attention
  * Thread safe     : Not thread-safe function.
  * Blocking risk   : No blocking.
  * Time consuming  : Not time-consuming.
- * Must be called before starting a task with this context.
+ * The framework does not track outstanding tasks (a notify context can be bound by
+ * several tasks), so replacing or clearing the callback while a task may still use
+ * it is a caller guarantee, not a framework check.
  */
-int32_t BSL_ASYNC_NotifyCtxSetCallback(BSL_ASYNC_NotifyCtx *ctx,
-    BSL_ASYNC_NotifyCallback callback, void *callbackArg);
+int32_t BSL_ASYNC_NotifyCtxSetCallback(BSL_ASYNC_NotifyCtx *ctx, BSL_ASYNC_NotifyCallback callback, void *callbackArg);
 
 /**
  * @ingroup bsl_async
@@ -296,8 +327,8 @@ int32_t BSL_ASYNC_NotifyCtxSetCallback(BSL_ASYNC_NotifyCtx *ctx,
  * Blocking risk   : No blocking.
  * Time consuming  : Not time-consuming.
  */
-int32_t BSL_ASYNC_NotifyCtxGetCallback(const BSL_ASYNC_NotifyCtx *ctx,
-    BSL_ASYNC_NotifyCallback *callback, void **callbackArg);
+int32_t BSL_ASYNC_NotifyCtxGetCallback(const BSL_ASYNC_NotifyCtx *ctx, BSL_ASYNC_NotifyCallback *callback,
+                                       void **callbackArg);
 
 /**
  * @ingroup bsl_async
@@ -321,7 +352,6 @@ int32_t BSL_ASYNC_NotifyCtxGetCallback(const BSL_ASYNC_NotifyCtx *ctx,
  * @retval #BSL_SUCCESS success.
  * @retval #BSL_NULL_INPUT ctx is NULL.
  * @retval #BSL_INVALID_ARG status is not a defined value.
- * @retval #BSL_ASYNC_ERR_STATE_CONFLICT No task is bound to the context.
  * @attention
  * Thread safe     : Not thread-safe function.
  * Blocking risk   : No blocking.
@@ -351,32 +381,33 @@ int32_t BSL_ASYNC_NotifyCtxGetStatus(const BSL_ASYNC_NotifyCtx *ctx, int32_t *st
  * @ingroup bsl_async
  * @brief   Cleanup callback of a notify source, invoked when the node is reclaimed
  */
-typedef void (*BSL_ASYNC_NotifySourceCleanup)(BSL_ASYNC_NotifyCtx *ctx,
-    const void *key, BSL_ASYNC_NotifyHandle handle, void *customData);
+typedef void (*BSL_ASYNC_NotifySourceCleanup)(BSL_ASYNC_NotifyCtx *ctx, const void *key, BSL_ASYNC_NotifyHandle handle,
+                                              void *userData);
 
 /**
  * @ingroup bsl_async
- * @brief   Register or update a notify source
+ * @brief   Register a notify source
  *
  * @param ctx [IN] Notify context.
  * @param key [IN] Stable pointer identifying the source.
  * @param handle [IN] Platform wait object value.
- * @param customData [IN] Private data of the crypto implementation; NULL is allowed.
+ * @param userData [IN] Private data of the crypto implementation; NULL is allowed.
  * @param cleanup [IN] Cleanup callback invoked when the node is reclaimed; NULL is allowed.
  *
  * @retval #BSL_SUCCESS success.
  * @retval #BSL_NULL_INPUT ctx or key is NULL.
- * @retval #BSL_INVALID_ARG status transition is not legal (e.g. update during deletion).
- * @retval #BSL_ASYNC_ERR_KEY_BUSY The key is being deleted; retry later.
  * @retval #BSL_MALLOC_FAIL Node allocation failed.
  * @attention
  * Thread safe     : Not thread-safe function.
  * Blocking risk   : No blocking.
  * Time consuming  : Not time-consuming.
- * (notifyCtx, key) is unique; registering an existing key updates it.
+ * Every call registers a new node: an existing key is neither updated nor deduplicated, so
+ * repeated registrations under one key coexist until cleared or reclaimed, and queries and
+ * clears resolve to the newest registration. To reuse a registered source, query it with
+ * BSL_ASYNC_NotifyCtxGetNotifySource first and only register when it is absent.
  */
-int32_t BSL_ASYNC_NotifyCtxSetNotifySource(BSL_ASYNC_NotifyCtx *ctx, const void *key,
-    BSL_ASYNC_NotifyHandle handle, void *customData, BSL_ASYNC_NotifySourceCleanup cleanup);
+int32_t BSL_ASYNC_NotifyCtxSetNotifySource(BSL_ASYNC_NotifyCtx *ctx, const void *key, BSL_ASYNC_NotifyHandle handle,
+                                           void *userData, BSL_ASYNC_NotifySourceCleanup cleanup);
 
 /**
  * @ingroup bsl_async
@@ -385,27 +416,28 @@ int32_t BSL_ASYNC_NotifyCtxSetNotifySource(BSL_ASYNC_NotifyCtx *ctx, const void 
  * @param ctx [IN] Notify context.
  * @param key [IN] Stable pointer identifying the source.
  * @param handle [OUT] Current wait object value; NULL skips it.
- * @param customData [OUT] Current private data; NULL skips it.
+ * @param userData [OUT] Current private data; NULL skips it.
  *
  * @retval #BSL_SUCCESS success.
- * @retval #BSL_NULL_INPUT ctx or key is NULL.
+ * @retval #BSL_NULL_INPUT ctx, key or handle is NULL.
  * @retval #BSL_ASYNC_ERR_NOT_FOUND No entry is registered under key.
  * @attention
  * Thread safe     : Not thread-safe function.
  * Blocking risk   : No blocking.
  * Time consuming  : Not time-consuming.
+ * When a key holds several registrations, the most recent one is returned.
  */
 int32_t BSL_ASYNC_NotifyCtxGetNotifySource(const BSL_ASYNC_NotifyCtx *ctx, const void *key,
-    BSL_ASYNC_NotifyHandle *handle, void **customData);
+                                           BSL_ASYNC_NotifyHandle *handle, void **userData);
 
 /**
  * @ingroup bsl_async
  * @brief   Output list of notify handles, supporting the two-phase query
  */
 typedef struct {
-    BSL_ASYNC_NotifyHandle *handles;  /**< Caller-provided array; NULL only counts the required number. */
-    uint32_t capacity;                /**< Capacity of the array. */
-    uint32_t numHandles;              /**< Output: actual number, or the required number on overflow. */
+    BSL_ASYNC_NotifyHandle *handles; /**< Caller-provided array; NULL only counts the required number. */
+    uint32_t capacity; /**< Capacity of the array. */
+    uint32_t numHandles; /**< Output: actual number, or the required number on overflow. */
 } BSL_ASYNC_NotifyHandleList;
 
 /**
@@ -423,9 +455,9 @@ typedef struct {
  * Thread safe     : Not thread-safe function.
  * Blocking risk   : No blocking.
  * Time consuming  : Not time-consuming.
+ * Handles are listed from the most recently registered source to the oldest.
  */
-int32_t BSL_ASYNC_NotifyCtxGetAllNotifySources(const BSL_ASYNC_NotifyCtx *ctx,
-    BSL_ASYNC_NotifyHandleList *list);
+int32_t BSL_ASYNC_NotifyCtxGetAllNotifySources(const BSL_ASYNC_NotifyCtx *ctx, BSL_ASYNC_NotifyHandleList *list);
 
 /**
  * @ingroup bsl_async
@@ -441,8 +473,9 @@ int32_t BSL_ASYNC_NotifyCtxGetAllNotifySources(const BSL_ASYNC_NotifyCtx *ctx,
  * Thread safe     : Not thread-safe function.
  * Blocking risk   : No blocking.
  * Time consuming  : Not time-consuming.
- * The handle itself is not released; the application deregisters it from its
- * waiter before resuming the task.
+ * When a key holds several registrations, the most recent one is cleared and the
+ * older nodes remain registered. The handle itself is not released; the application
+ * deregisters it from its waiter before resuming the task.
  */
 int32_t BSL_ASYNC_NotifyCtxClearNotifySource(BSL_ASYNC_NotifyCtx *ctx, const void *key);
 
@@ -462,10 +495,12 @@ int32_t BSL_ASYNC_NotifyCtxClearNotifySource(BSL_ASYNC_NotifyCtx *ctx, const voi
  * Thread safe     : Not thread-safe function.
  * Blocking risk   : No blocking.
  * Time consuming  : Not time-consuming.
- * Only reads the change; the framework consumes it at the resume point.
+ * Only reads the change; the framework consumes it at the resume point. Both sets are
+ * listed from the most recently registered source to the oldest. Passing handles == NULL
+ * for both lists reports only the required numbers.
  */
-int32_t BSL_ASYNC_NotifyCtxGetChangedNotifySources(const BSL_ASYNC_NotifyCtx *ctx,
-    BSL_ASYNC_NotifyHandleList *addList, BSL_ASYNC_NotifyHandleList *delList);
+int32_t BSL_ASYNC_NotifyCtxGetChangedNotifySources(const BSL_ASYNC_NotifyCtx *ctx, BSL_ASYNC_NotifyHandleList *addList,
+                                                   BSL_ASYNC_NotifyHandleList *delList);
 
 #ifdef __cplusplus
 }

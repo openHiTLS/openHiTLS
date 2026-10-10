@@ -181,10 +181,14 @@ int32_t HITLS_AsyncRun(const HITLS_ASYNC_ARGS *args)
             return HITLS_ASYNC_ERR_UNSUPPORTED;
         default:
             /* BSL_ASYNC_ERR: no task was established, or the framework converged it safely. */
-            ctx->rwstate = HITLS_NOTHING;
-            (void)memset(&ctx->asyncArgs, 0, sizeof(ctx->asyncArgs));
+            if (ctx->asyncTask != NULL) {
+                ctx->rwstate = HITLS_ASYNC_PAUSED;
+            } else {
+                ctx->rwstate = HITLS_NOTHING;
+                (void)memset(&ctx->asyncArgs, 0, sizeof(ctx->asyncArgs));
+            }
             BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17427, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN, "async framework error",
-                                  0, 0, 0, 0);
+                                0, 0, 0, 0);
             return HITLS_ASYNC_ERR_FRAMEWORK;
     }
 }

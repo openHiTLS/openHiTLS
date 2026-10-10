@@ -25,6 +25,16 @@ elseif(CMAKE_SYSTEM_NAME STREQUAL "Darwin")
     set(HITLS_CRYPTO_AUXVAL     OFF CACHE BOOL "")
 endif()
 
+# Coroutine backend defaults for the bsl async framework (bsl_async_dev_plan.md M2):
+# Linux and macOS default to the POSIX ucontext backend. Selecting no backend
+# is a supported build: BSL_ASYNC_IsSupported() then reports false.
+if(DEFINED HITLS_BSL_ASYNC AND NOT HITLS_BSL_ASYNC)
+    set(HITLS_BSL_ASYNC_UCONTEXT OFF)
+elseif((HITLS_BSL_ASYNC OR HITLS_BSL) AND
+       (CMAKE_SYSTEM_NAME STREQUAL "Linux" OR CMAKE_SYSTEM_NAME STREQUAL "Darwin"))
+    set(HITLS_BSL_ASYNC_UCONTEXT ON CACHE BOOL "")
+endif()
+
 # Endianness(little/big)
 if(NOT HITLS_PLATFORM_ENDIAN)
     # Auto-detect endianness if HITLS_PLATFORM_ENDIAN is not explicitly set

@@ -111,6 +111,25 @@ typedef struct {
     BslDeleteCondVar pfDeleteCondVar;
 } BSL_SAL_ThreadCondCallback;
 
+#ifdef HITLS_BSL_ASYNC
+/*
+ * Callback backend of the thread local dispatch layer: a platform registers
+ * this set through BSL_SAL_CallBack_Ctrl to replace the built-in backend
+ * (for example RTOS task slots where no pthread key backend is built). The
+ * set is one backend and takes effect only when complete: while any callback
+ * is unregistered the built-in backend keeps serving, and keys belong to
+ * the backend that created them and cannot be mixed across backends.
+ */
+typedef struct {
+    BslThreadLocalKeyCreate pfThreadLocalKeyCreate;
+    BslThreadLocalKeyDelete pfThreadLocalKeyDelete;
+    BslThreadLocalGet pfThreadLocalGet;
+    BslThreadLocalSet pfThreadLocalSet;
+} BSL_SAL_ThreadLocalCallback;
+
+int32_t SAL_ThreadLocalCallBack_Ctrl(BSL_SAL_CB_FUNC_TYPE type, void *funcCb);
+#endif
+
 typedef struct PidCallback {
     /**
      * @ingroup bsl_sal

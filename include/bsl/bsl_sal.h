@@ -1006,6 +1006,10 @@ typedef enum {
     BSL_SAL_THREAD_CONDVAR_SIGNAL_CB_FUNC,
     BSL_SAL_THREAD_CONDVAR_WAIT_CB_FUNC,
     BSL_SAL_THREAD_CONDVAR_DELETE_CB_FUNC,
+    BSL_SAL_THREAD_LOCAL_KEY_CREATE_CB_FUNC, /* BslThreadLocalKeyCreate */
+    BSL_SAL_THREAD_LOCAL_KEY_DELETE_CB_FUNC, /* BslThreadLocalKeyDelete */
+    BSL_SAL_THREAD_LOCAL_GET_CB_FUNC,        /* BslThreadLocalGet */
+    BSL_SAL_THREAD_LOCAL_SET_CB_FUNC,        /* BslThreadLocalSet */
 
     BSL_SAL_NET_WRITE_CB_FUNC = 0x0300,                 /* BslSalNetWrite */
     BSL_SAL_NET_READ_CB_FUNC,                           /* BslSalNetRead */
@@ -1057,6 +1061,12 @@ typedef enum {
     BSL_SAL_DL_SYM_CB_FUNC,
 
     BSL_SAL_PID_GET_ID_CB_FUNC = 0x0800,
+
+    BSL_SAL_COROUTINE_IS_SUPPORTED_CB_FUNC = 0x0900, /* BslSalCoroutineIsSupported */
+    BSL_SAL_COROUTINE_INIT_CURRENT_CB_FUNC, /* BslSalCoroutineInitCurrent */
+    BSL_SAL_COROUTINE_CREATE_CB_FUNC, /* BslSalCoroutineCreate */
+    BSL_SAL_COROUTINE_SWITCH_CB_FUNC, /* BslSalCoroutineSwitch */
+    BSL_SAL_COROUTINE_DESTROY_CB_FUNC, /* BslSalCoroutineDestroy */
 
     BSL_SAL_MAX_FUNC_CB = 0xffff
 } BSL_SAL_CB_FUNC_TYPE;
@@ -1843,6 +1853,20 @@ typedef int32_t (*BslDlSym)(void *handle, const char *funcName, void **func);
  *
  * @attention For memory callbacks (BSL_SAL_MEM_MALLOC/BSL_SAL_MEM_FREE),
  * both malloc and free must be registered together.
+ * @attention Coroutine callbacks (BSL_SAL_COROUTINE_IS_SUPPORTED_CB_FUNC ..
+ * BSL_SAL_COROUTINE_DESTROY_CB_FUNC) form one backend set that takes effect
+ * only when all five callbacks are registered: while the set is incomplete
+ * the built-in backend keeps serving, and registering NULL for any one
+ * callback deactivates the whole set. Register the complete set before the
+ * first coroutine object is created, because contexts of different backends
+ * cannot be mixed.
+ * @attention Thread local callbacks (BSL_SAL_THREAD_LOCAL_KEY_CREATE_CB_FUNC ..
+ * BSL_SAL_THREAD_LOCAL_SET_CB_FUNC) form one backend set that takes effect
+ * only when all four callbacks are registered: while the set is incomplete
+ * the built-in backend keeps serving, and registering NULL for any one
+ * callback deactivates the whole set. Register the complete set before the
+ * first thread local key is created (in particular before
+ * BSL_ASYNC_InitThread), because keys of different backends cannot be mixed.
  * @param funcType [IN] Type of the callback function to be controlled
  * @param funcCb [IN] Pointer to the callback function
  * @retval #BSL_SUCCESS Callback function controlled successfully
@@ -2084,8 +2108,46 @@ typedef void (*BSL_SAL_ThreadLocalCleanup)(void *arg);
  *
  * Pointer-width so every platform key representation (pthread_key_t, RTOS
  * task slot index, handle table entry) converts without truncation.
+ * Delete/Get/Set require a created, undeleted key; callers coordinate deletion
+ * with other users. The POSIX backend uses pthread keys without a registry.
  */
 typedef uintptr_t BSL_SAL_ThreadLocalKey;
+
+/**
+ * @ingroup bsl_sal
+ * @brief Thread local key creation callback of a TLS backend.
+ *
+ * Same contract as BSL_SAL_ThreadLocalKeyCreate without the key NULL check
+ * (the dispatch layer owns it); the callback must not push errors (the
+ * dispatch layer owns the error stack).
+ */
+typedef int32_t (*BslThreadLocalKeyCreate)(BSL_SAL_ThreadLocalKey *key, BSL_SAL_ThreadLocalCleanup cleanup);
+
+/**
+ * @ingroup bsl_sal
+ * @brief Thread local key deletion callback of a TLS backend.
+ *
+ * Same contract as BSL_SAL_ThreadLocalKeyDelete; the callback must not push
+ * errors (the dispatch layer owns the error stack).
+ */
+typedef int32_t (*BslThreadLocalKeyDelete)(BSL_SAL_ThreadLocalKey key);
+
+/**
+ * @ingroup bsl_sal
+ * @brief Thread local value read callback of a TLS backend.
+ *
+ * Same contract as BSL_SAL_ThreadLocalGet.
+ */
+typedef void *(*BslThreadLocalGet)(BSL_SAL_ThreadLocalKey key);
+
+/**
+ * @ingroup bsl_sal
+ * @brief Thread local value bind callback of a TLS backend.
+ *
+ * Same contract as BSL_SAL_ThreadLocalSet; the callback must not push
+ * errors (the dispatch layer owns the error stack).
+ */
+typedef int32_t (*BslThreadLocalSet)(BSL_SAL_ThreadLocalKey key, void *value);
 
 /**
 * @ingroup bsl_sal
@@ -2100,6 +2162,9 @@ typedef uintptr_t BSL_SAL_ThreadLocalKey;
 * Thread safe     : Thread-safe function.
 * Blocking risk   : No blocking.
 * Time consuming  : Not time-consuming.
+* A complete thread local callback set (all four callbacks) registered
+* through BSL_SAL_CallBack_Ctrl takes precedence over the built-in backend;
+* a partial set is not used.
 */
 int32_t BSL_SAL_ThreadLocalKeyCreate(BSL_SAL_ThreadLocalKey *key, BSL_SAL_ThreadLocalCleanup cleanup);
 
@@ -2109,12 +2174,15 @@ int32_t BSL_SAL_ThreadLocalKeyCreate(BSL_SAL_ThreadLocalKey *key, BSL_SAL_Thread
 *
 * @param key [IN] Key to delete.
 * @retval #BSL_SUCCESS, success.
-* @retval #BSL_INVALID_ARG, key is invalid.
+* @retval #BSL_INVALID_ARG, the platform rejected the key.
 * @attention
 * Thread safe     : Thread-safe function.
 * Blocking risk   : No blocking.
 * Time consuming  : Not time-consuming.
 * Deleting does not retrospectively invoke the cleanup callback.
+* A complete thread local callback set (all four callbacks) registered
+* through BSL_SAL_CallBack_Ctrl takes precedence over the built-in backend;
+* a partial set is not used.
 */
 int32_t BSL_SAL_ThreadLocalKeyDelete(BSL_SAL_ThreadLocalKey key);
 
@@ -2124,11 +2192,14 @@ int32_t BSL_SAL_ThreadLocalKeyDelete(BSL_SAL_ThreadLocalKey key);
 *
 * @param key [IN] Key to read.
 * @retval  Non-NULL, the bound pointer.
-* @retval  NULL, nothing is bound or the key is invalid.
+* @retval  NULL, nothing is bound.
 * @attention
 * Thread safe     : Thread-safe function.
 * Blocking risk   : No blocking.
 * Time consuming  : Not time-consuming.
+* A complete thread local callback set (all four callbacks) registered
+* through BSL_SAL_CallBack_Ctrl takes precedence over the built-in backend;
+* a partial set is not used.
 */
 void *BSL_SAL_ThreadLocalGet(BSL_SAL_ThreadLocalKey key);
 
@@ -2139,12 +2210,15 @@ void *BSL_SAL_ThreadLocalGet(BSL_SAL_ThreadLocalKey key);
 * @param key [IN] Key to write.
 * @param value [IN] Pointer to bind; NULL clears the binding.
 * @retval #BSL_SUCCESS, success.
-* @retval #BSL_INVALID_ARG, key is invalid.
+* @retval #BSL_INVALID_ARG, the platform rejected the key.
 * @retval #BSL_SAL_ERR_NO_MEMORY, the platform storage allocation failed.
 * @attention
 * Thread safe     : Thread-safe function.
 * Blocking risk   : No blocking.
 * Time consuming  : Not time-consuming.
+* A complete thread local callback set (all four callbacks) registered
+* through BSL_SAL_CallBack_Ctrl takes precedence over the built-in backend;
+* a partial set is not used.
 */
 int32_t BSL_SAL_ThreadLocalSet(BSL_SAL_ThreadLocalKey key, void *value);
 
@@ -2159,18 +2233,70 @@ int32_t BSL_SAL_ThreadLocalSet(BSL_SAL_ThreadLocalKey key, void *value);
 typedef void (*BSL_SAL_CoroutineEntry)(void *arg);
 
 /**
+ * @ingroup bsl_sal
+ * @brief Coroutine backend capability probe callback.
+ *
+ * Same contract as BSL_SAL_CoroutineIsSupported; part of the callback set
+ * that replaces the built-in backend once the complete set is registered
+ * through BSL_SAL_CallBack_Ctrl.
+ *
+ * @retval  true   The callback backend is available.
+ * @retval  false  The callback backend is not available.
+ */
+typedef bool (*BslSalCoroutineIsSupported)(void);
+
+/**
+ * @ingroup bsl_sal
+ * @brief Host context creation callback of a coroutine backend.
+ *
+ * Same contract as BSL_SAL_CoroutineInitCurrent; the callback must not push
+ * errors (the dispatch layer owns the error stack).
+ */
+typedef int32_t (*BslSalCoroutineInitCurrent)(BSL_ASYNC_Coroutine **co);
+
+/**
+ * @ingroup bsl_sal
+ * @brief Task coroutine creation callback of a coroutine backend.
+ *
+ * Same contract as BSL_SAL_CoroutineCreate; the callback must not push
+ * errors (the dispatch layer owns the error stack).
+ */
+typedef int32_t (*BslSalCoroutineCreate)(BSL_ASYNC_Coroutine **co, uint32_t stackSize, BSL_SAL_CoroutineEntry entry,
+                                         void *arg);
+
+/**
+ * @ingroup bsl_sal
+ * @brief Context switch callback of a coroutine backend.
+ *
+ * Same contract as BSL_SAL_CoroutineSwitch; the callback must not push
+ * errors (the dispatch layer owns the error stack).
+ */
+typedef int32_t (*BslSalCoroutineSwitch)(BSL_ASYNC_Coroutine *from, BSL_ASYNC_Coroutine *to);
+
+/**
+ * @ingroup bsl_sal
+ * @brief Coroutine destruction callback of a coroutine backend.
+ *
+ * Same contract as BSL_SAL_CoroutineDestroy; NULL is an idempotent no-op.
+ */
+typedef void (*BslSalCoroutineDestroy)(BSL_ASYNC_Coroutine *co);
+
+/**
 * @ingroup bsl_sal
 * @brief Report whether a resumable execution context backend is available.
 *
-* @retval  1  A backend is available.
-* @retval  0  No backend is available.
+* @retval  true   A backend is available.
+* @retval  false  No backend is available.
 * @attention
 * Thread safe     : Thread-safe function.
 * Blocking risk   : No blocking.
 * Time consuming  : Not time-consuming.
 * The probe has no side effect.
+* A complete coroutine callback set (all five callbacks) registered
+* through BSL_SAL_CallBack_Ctrl takes precedence over the built-in
+* backend; a partial set is not used.
 */
-int32_t BSL_SAL_CoroutineIsSupported(void);
+bool BSL_SAL_CoroutineIsSupported(void);
 
 /**
 * @ingroup bsl_sal
@@ -2179,14 +2305,18 @@ int32_t BSL_SAL_CoroutineIsSupported(void);
 * @param co [OUT] Created host context.
 * @retval #BSL_SUCCESS, success.
 * @retval #BSL_NULL_INPUT, co is NULL.
-* @retval #BSL_ASYNC_ERR_STATE_CONFLICT, the execution domain already has a host context.
+* @retval #BSL_ASYNC_ERR_STATE_CONFLICT, no coroutine backend is built.
 * @retval #BSL_MALLOC_FAIL, the wrapper allocation failed.
 * @retval #BSL_SAL_ERR_NO_MEMORY, the platform conversion failed.
 * @attention
 * Thread safe     : Not thread-safe function.
 * Blocking risk   : No blocking.
 * Time consuming  : Not time-consuming.
-* Called once per execution domain on the host call stack; no worker stack is created.
+* Called once per execution domain on the host call stack (guaranteed by the
+* bsl async core); no worker stack is created.
+* A complete coroutine callback set (all five callbacks) registered
+* through BSL_SAL_CallBack_Ctrl takes precedence over the built-in
+* backend; a partial set is not used.
 */
 int32_t BSL_SAL_CoroutineInitCurrent(BSL_ASYNC_Coroutine **co);
 
@@ -2203,18 +2333,21 @@ int32_t BSL_SAL_CoroutineInitCurrent(BSL_ASYNC_Coroutine **co);
 * @param arg [IN] Argument passed to the entry.
 * @retval #BSL_SUCCESS, success.
 * @retval #BSL_NULL_INPUT, co or entry is NULL.
-* @retval #BSL_ASYNC_ERR_STATE_CONFLICT, called on a task coroutine.
 * @retval #BSL_INVALID_ARG, stackSize is out of the backend limits.
+* @retval #BSL_ASYNC_ERR_STATE_CONFLICT, no coroutine backend is built.
 * @retval #BSL_MALLOC_FAIL, the wrapper allocation failed.
 * @retval #BSL_SAL_ERR_NO_MEMORY, the platform stack creation failed.
 * @attention
 * Thread safe     : Not thread-safe function.
 * Blocking risk   : No blocking.
 * Time consuming  : Time-consuming (maps a stack).
-* Called on the host call stack; a failure leaves no mapped stack behind.
+* Called on the host call stack (guaranteed by the bsl async core); a failure
+* leaves no mapped stack behind.
+* A complete coroutine callback set (all five callbacks) registered
+* through BSL_SAL_CallBack_Ctrl takes precedence over the built-in
+* backend; a partial set is not used.
 */
-int32_t BSL_SAL_CoroutineCreate(BSL_ASYNC_Coroutine **co,
-    size_t stackSize, BSL_SAL_CoroutineEntry entry, void *arg);
+int32_t BSL_SAL_CoroutineCreate(BSL_ASYNC_Coroutine **co, uint32_t stackSize, BSL_SAL_CoroutineEntry entry, void *arg);
 
 /**
 * @ingroup bsl_sal
@@ -2224,14 +2357,18 @@ int32_t BSL_SAL_CoroutineCreate(BSL_ASYNC_Coroutine **co,
 * @param to [IN] Context to resume.
 * @retval #BSL_SUCCESS, from was resumed by a later switch back.
 * @retval #BSL_NULL_INPUT, from or to is NULL.
-* @retval #BSL_ASYNC_ERR_STATE_CONFLICT, from is not the running context or equals to.
+* @retval #BSL_ASYNC_ERR_STATE_CONFLICT, from equals to or no coroutine backend is built.
 * @retval #BSL_ASYNC_ERR_COROUTINE_SWITCH, the platform switch primitive failed.
 * @attention
 * Thread safe     : Not thread-safe function.
 * Blocking risk   : No blocking.
 * Time consuming  : Depends on the resumed coroutine.
 * Only used between the host call stack and a task; the call returns when
-* another switch resumes from.
+* another switch resumes from. The caller runs on from (guaranteed by the
+* bsl async core).
+* A complete coroutine callback set (all five callbacks) registered
+* through BSL_SAL_CallBack_Ctrl takes precedence over the built-in
+* backend; a partial set is not used.
 */
 int32_t BSL_SAL_CoroutineSwitch(BSL_ASYNC_Coroutine *from, BSL_ASYNC_Coroutine *to);
 
@@ -2239,16 +2376,21 @@ int32_t BSL_SAL_CoroutineSwitch(BSL_ASYNC_Coroutine *from, BSL_ASYNC_Coroutine *
 * @ingroup bsl_sal
 * @brief Destroy a non-running coroutine object.
 *
-* @param co [IN] Coroutine to destroy; NULL is an idempotent success.
-* @retval #BSL_SUCCESS, success.
-* @retval #BSL_ASYNC_ERR_STATE_CONFLICT, co is the running context or belongs to another thread.
+* @param co [IN] Coroutine to destroy; NULL is an idempotent no-op.
+* @retval none Destruction cannot fail: the interface has no return value. On
+* a build without a coroutine backend it is a no-op (no coroutine object can
+* exist there).
 * @attention
 * Thread safe     : Not thread-safe function.
 * Blocking risk   : No blocking.
 * Time consuming  : Not time-consuming.
-* The host context can be destroyed only after every task has been reclaimed.
+* The host context can be destroyed only after every task has been reclaimed;
+* the destroy order is guaranteed by the bsl async core.
+* A complete coroutine callback set (all five callbacks) registered
+* through BSL_SAL_CallBack_Ctrl takes precedence over the built-in
+* backend; a partial set is not used.
 */
-int32_t BSL_SAL_CoroutineDestroy(BSL_ASYNC_Coroutine *co);
+void BSL_SAL_CoroutineDestroy(BSL_ASYNC_Coroutine *co);
 
 #ifdef __cplusplus
 }

@@ -224,6 +224,11 @@ int32_t SAL_ThreadCallBack_Ctrl(BSL_SAL_CB_FUNC_TYPE type, void *funcCb)
         ((void **)&g_threadCondCallback)[offset] = funcCb;
         return BSL_SUCCESS;
     }
+#ifdef HITLS_BSL_ASYNC
+    if (type >= BSL_SAL_THREAD_LOCAL_KEY_CREATE_CB_FUNC && type <= BSL_SAL_THREAD_LOCAL_SET_CB_FUNC) {
+        return SAL_ThreadLocalCallBack_Ctrl(type, funcCb);
+    }
+#endif
     return BSL_SAL_THREAD_LOCK_NO_REG_FUNC;
 }
 
