@@ -29,6 +29,15 @@ if(APPLE)
     # Fix linker warning: "reducing alignment of section __DATA,__common from 0x8000 to 0x4000"
     # Apple Clang still defaults to -fcommon (unlike GCC 10+ and LLVM Clang 11+)
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fno-common")
+    # The SDK locks in a reduced ucontext_t (no embedded __mcontext_data, 56
+    # bytes instead of 880) unless _XOPEN_SOURCE is defined before the first
+    # system include. The generated suites start with the framework headers,
+    # whose <signal.h> pulls in that definition first, so any suite embedding
+    # ucontext_t by value would have getcontext/swapcontext write the 824-byte
+    # machine context past the allocation. Defining it here (before every
+    # include) does not change __DARWIN_C_LEVEL, so Darwin extensions stay
+    # visible.
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -D_XOPEN_SOURCE")
 else()
     # Linux/Unix: Enable GNU extensions for RTLD_NEXT and other POSIX features
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -D_GNU_SOURCE")

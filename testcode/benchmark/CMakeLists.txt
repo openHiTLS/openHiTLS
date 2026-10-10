@@ -80,3 +80,7 @@ target_include_directories(openhitls_benchmark PRIVATE
     ${PROJECT_SOURCE_DIR}/crypto/include
     ${PROJECT_SOURCE_DIR}/config/macro_config)
 target_link_libraries(openhitls_benchmark PRIVATE ${_benchmark_link_libs})
+
+# Async handshake benchmark consuming the simulation provider; guarded by
+# the provider switches inside its own CMakeLists (rule: no silent degrade).
+add_subdirectory(async_perf)
