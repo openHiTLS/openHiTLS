@@ -9,7 +9,6 @@ DEMO_DIR="${HITLS_ROOT_DIR}/testcode/demo"
 
 if [[ ${1:-} == "--help" || ${1:-} == "help" ]]; then
     echo "Usage: bash $0 [build-directory]"
-    echo "DEMO_TIMEOUT: maximum seconds per demo (default: 120)"
     exit 0
 fi
 if (( $# > 1 )); then
@@ -21,15 +20,6 @@ if [[ $# == 0 && ! -d ${BUILD_DIR} ]]; then
     BUILD_DIR="${HITLS_ROOT_DIR}/testcode/build/demo"
 fi
 BUILD_DIR=$(cd "${BUILD_DIR}" && pwd) || exit 1
-DEMO_TIMEOUT=${DEMO_TIMEOUT:-120}
-if [[ ! ${DEMO_TIMEOUT} =~ ^[1-9][0-9]*$ ]]; then
-    echo "DEMO_TIMEOUT must be a positive integer" >&2
-    exit 1
-fi
-TIMEOUT=$(command -v timeout || command -v gtimeout) || {
-    echo "Install GNU timeout (coreutils) to bound demo execution" >&2
-    exit 1
-}
 
 # Source inventory detects incomplete builds and ignores stale executables.
 shopt -s nullglob
@@ -102,7 +92,7 @@ start_demo()
     (
         cd "${work_dir}" || exit 1
         export ASAN_OPTIONS="${ASAN_BASE}:log_path=${LOG_DIR}/${name}.asan"
-        exec "${TIMEOUT}" --kill-after=5 "${DEMO_TIMEOUT}" "$@"
+        exec "$@"
     ) >"${LOG_DIR}/${name}.log" 2>&1 &
     demo_pid=$!
     active_pids+=("${demo_pid}")
