@@ -1,0 +1,11 @@
+EAGAIN handle inline handshake
+SDV_ASYNC_SIM_FIX_TC002:0:SIM_PROV_EXEC_INLINE
+
+EAGAIN callback inline handshake
+SDV_ASYNC_SIM_FIX_TC002:1:SIM_PROV_EXEC_INLINE
+
+EAGAIN handle handshake with worker signing
+SDV_ASYNC_SIM_FIX_TC002:0:SIM_PROV_EXEC_WORKER
+
+EAGAIN callback handshake with worker signing
+SDV_ASYNC_SIM_FIX_TC002:1:SIM_PROV_EXEC_WORKER

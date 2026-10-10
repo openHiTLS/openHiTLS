@@ -1,0 +1,47 @@
+F01: completion retries without repeating business entry
+SDV_BSL_ASYNC_REGRESS_FUNC_TC001:1
+
+F02: process key creation failure preserves foreign binding and remains an error
+SDV_BSL_ASYNC_REGRESS_FUNC_TC001:2
+
+F03: concurrent execution-domain initialization and cleanup
+SDV_BSL_ASYNC_REGRESS_FUNC_TC001:3
+
+F05: update then clear the current source before the next pause
+SDV_BSL_ASYNC_REGRESS_FUNC_TC001:5
+
+F06: nested resume preserves both tasks and output
+SDV_BSL_ASYNC_REGRESS_FUNC_TC001:6
+
+F07: thread exit releases idle coroutine mappings
+SDV_BSL_ASYNC_REGRESS_FUNC_TC001:7
+
+F08: retain first lock allocation failure without using an invalid lock
+SDV_BSL_ASYNC_REGRESS_FUNC_TC001:8
+
+F09: re-entry resizes the pool in place; failed scale-up keeps the domain, scale-down releases idle stacks
+SDV_BSL_ASYNC_REGRESS_FUNC_TC001:9
+
+F10: task allocation failure pushes exactly one error
+SDV_BSL_ASYNC_REGRESS_FUNC_TC001:10
+
+F11: invalid stack size keeps the backend error
+SDV_BSL_ASYNC_REGRESS_FUNC_TC001:11
+
+F11: public key creation failure pushes once
+SDV_BSL_ASYNC_REGRESS_FUNC_TC001:12
+
+F11: stack mapping failure preserves its error
+SDV_BSL_ASYNC_REGRESS_FUNC_TC001:13
+
+F11: execution-domain TLS binding failure pushes once
+SDV_BSL_ASYNC_REGRESS_FUNC_TC001:14
+
+F07: thread exit releases paused coroutine mappings
+SDV_BSL_ASYNC_REGRESS_FUNC_TC001:15
+
+F11: re-entry keeps the thread local slot bound, the domain stays usable
+SDV_BSL_ASYNC_REGRESS_FUNC_TC001:16
+
+Run-once failure is checked before using the process lock
+SDV_BSL_ASYNC_REGRESS_FUNC_TC001:17

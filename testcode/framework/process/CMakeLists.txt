@@ -44,7 +44,13 @@ target_link_directories(process
 
 set(PROCESS_LIBS tls_hlt tls_frame hitls_tls)
 
-if(ENABLE_PKI AND ${BUILD_PKI} GREATER -1)
+# tls_hlt references HITLS_X509_* symbols through its cert callbacks, so the
+# PKI library must be linked whenever it was built, mirroring TEST_INTF in
+# sdv/CMakeLists.txt; ENABLE_PKI only controls testcase suite generation.
+set(HITLS_PKI_LIB_BASE "${openHiTLS_SRC}/build/libhitls_pki")
+if(${BUILD_PKI} GREATER -1 AND
+   (EXISTS "${HITLS_PKI_LIB_BASE}${CMAKE_SHARED_LIBRARY_SUFFIX}" OR
+    EXISTS "${HITLS_PKI_LIB_BASE}${CMAKE_STATIC_LIBRARY_SUFFIX}"))
     list(APPEND PROCESS_LIBS hitls_pki)
 endif()
 

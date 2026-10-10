@@ -142,3 +142,8 @@ if(ENABLE_TLS AND ${BUILD_TLS} GREATER -1)
     add_subdirectory(${openHiTLS_SRC}/testcode/framework/process)
     add_dependencies(gen_testcase process)
 endif()
+
+# Async simulation provider test framework (frame_async static library).
+# Consumed by the async SDV suites; the provider .so is built by
+# testcode/script/build_sdv.sh from the standalone project in framework/async/provider.
+add_subdirectory(${openHiTLS_SRC}/testcode/framework/async)

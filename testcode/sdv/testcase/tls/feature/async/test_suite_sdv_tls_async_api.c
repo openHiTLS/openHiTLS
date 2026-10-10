@@ -16,7 +16,19 @@
 /* BEGIN_HEADER */
 /* INCLUDE_BASE test_suite_sdv_tls_async */
 #include "hitls_build.h"
+#include "stub_utils.h"
 /* END_HEADER */
+
+#ifdef HITLS_TLS_FEATURE_MODE_ASYNC
+/* Interposes the library capability probe so the "no async backend" contract
+ * can be forced deterministically regardless of the platform coroutine backend. */
+static bool MockAsyncBackendUnsupported(void)
+{
+    return false;
+}
+
+STUB_DEFINE_RET0(bool, BSL_ASYNC_IsSupported);
+#endif
 
 /**
  * @test SDV_TLS_ASYNC_MODE_CFG_TC001
@@ -238,8 +250,10 @@ EXIT:
 /**
  * @test SDV_TLS_ASYNC_BACKEND_UNSUPPORTED_TC006
  * @brief
- *   1. Enable the async mode and drive the six protocol entries on a backend that
- *      reports no support.
+ *   1. Enable the async mode, mock BSL_ASYNC_IsSupported to report that no
+ *      backend exists, and drive the six protocol entries. The mock makes the
+ *      unsupported path deterministic on every platform instead of relying on
+ *      the build-time coroutine backend.
  * @expect
  *   1. Every entry returns HITLS_ASYNC_ERR_UNSUPPORTED with rwstate HITLS_NOTHING,
  *      no outstanding task is left, and Clear/Close are not rejected.
@@ -257,6 +271,7 @@ void SDV_TLS_ASYNC_BACKEND_UNSUPPORTED_TC006(void)
     ASSERT_EQ(HITLS_CFG_SetModeSupport(config, HITLS_MODE_ASYNC), HITLS_SUCCESS);
     ctx = HITLS_New(config);
     ASSERT_TRUE(ctx != NULL);
+    STUB_REPLACE(BSL_ASYNC_IsSupported, MockAsyncBackendUnsupported);
     uint8_t buf[8] = {0};
     uint32_t len = 0;
     ASSERT_EQ(HITLS_Connect(ctx), HITLS_ASYNC_ERR_UNSUPPORTED);
@@ -274,6 +289,7 @@ void SDV_TLS_ASYNC_BACKEND_UNSUPPORTED_TC006(void)
     ASSERT_EQ(HITLS_Clear(ctx), HITLS_SUCCESS);
     ASSERT_NE(HITLS_Close(ctx), HITLS_ASYNC_ERR_OPERATION_BUSY);
 EXIT:
+    STUB_RESTORE(BSL_ASYNC_IsSupported);
     HITLS_Free(ctx);
     HITLS_CFG_FreeConfig(config);
 #endif

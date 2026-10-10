@@ -67,9 +67,15 @@ if [[ "$(uname)" == "Darwin" ]]; then
     export DYLD_LIBRARY_PATH="${LIB_PATHS}"
     export LD_LIBRARY_PATH="${LIB_PATHS}"  # Also set for compatibility
     echo "[INFO] Final DYLD_LIBRARY_PATH: ${DYLD_LIBRARY_PATH}"
-    # Enable Guard Malloc for memory debugging on macOS
-    export DYLD_INSERT_LIBRARIES=/usr/lib/libgmalloc.dylib
-    echo "[INFO] Guard Malloc enabled: DYLD_INSERT_LIBRARIES=/usr/lib/libgmalloc.dylib"
+    # Enable Guard Malloc for memory debugging on macOS, except for
+    # ASan-instrumented test builds: the two allocators cannot be
+    # interposed at the same time.
+    if grep -E "ENABLE_ASAN:(BOOL|UNINITIALIZED)=ON" ${HITLS_ROOT_DIR}/testcode/build/CMakeCache.txt >/dev/null 2>&1; then
+        echo "[INFO] ASan test build detected: Guard Malloc disabled"
+    else
+        export DYLD_INSERT_LIBRARIES=/usr/lib/libgmalloc.dylib
+        echo "[INFO] Guard Malloc enabled: DYLD_INSERT_LIBRARIES=/usr/lib/libgmalloc.dylib"
+    fi
 else
     # Linux uses LD_LIBRARY_PATH
     if [ -n "${LD_LIBRARY_PATH}" ]; then
@@ -118,7 +124,13 @@ generate_asan_log() {
 # Run the specified test suites or test cases in the output directory.
 run_test() {
     cd ${HITLS_ROOT_DIR}/testcode/output
-    export ASAN_OPTIONS=detect_stack_use_after_return=1:strict_string_checks=1:detect_leaks=1:halt_on_error=0:detect_odr_violation=0:log_path=asan.log
+    # LeakSanitizer is unavailable on macOS: ASan aborts at startup when
+    # detect_leaks is forced there, so enable it only where supported.
+    if [[ "$(uname)" == "Darwin" ]]; then
+        export ASAN_OPTIONS=detect_stack_use_after_return=1:strict_string_checks=1:detect_leaks=0:halt_on_error=0:detect_odr_violation=0:log_path=asan.log
+    else
+        export ASAN_OPTIONS=detect_stack_use_after_return=1:strict_string_checks=1:detect_leaks=1:halt_on_error=0:detect_odr_violation=0:log_path=asan.log
+    fi
 
     echo ""
     echo "Begin Test"
@@ -190,7 +202,12 @@ run_all() {
 
     cd ${HITLS_ROOT_DIR}/testcode/output
     SUITES=$(ls ./ | grep .datax | sed -e "s/.datax//")
-    export ASAN_OPTIONS=detect_stack_use_after_return=1:strict_string_checks=1:detect_leaks=1:halt_on_error=0:detect_odr_violation=0:log_path=asan.log
+    # LeakSanitizer is unavailable on macOS (see run_test).
+    if [[ "$(uname)" == "Darwin" ]]; then
+        export ASAN_OPTIONS=detect_stack_use_after_return=1:strict_string_checks=1:detect_leaks=0:halt_on_error=0:detect_odr_violation=0:log_path=asan.log
+    else
+        export ASAN_OPTIONS=detect_stack_use_after_return=1:strict_string_checks=1:detect_leaks=1:halt_on_error=0:detect_odr_violation=0:log_path=asan.log
+    fi
 
     echo ""
     echo "Begin Test"

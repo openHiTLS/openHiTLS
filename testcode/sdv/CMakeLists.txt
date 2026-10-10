@@ -46,9 +46,17 @@ set(TEST_INTF_LIBS "")
 
 if(ENABLE_TLS AND ${BUILD_TLS} GREATER -1)
     list(APPEND TEST_INTF_LIBS tls_hlt tls_frame hitls_tls rec_wrapper)
+    set(TLS_TEST_LIBS_ON ON)
 endif()
 
-if(ENABLE_PKI AND ${BUILD_PKI} GREATER -1)
+# tls_hlt (linked whenever the TLS test component is on) references
+# HITLS_X509_* symbols through its cert callbacks, so the PKI library must be
+# linked whenever it was built; ENABLE_PKI only controls which built-in
+# testcase suites are generated (same policy as hitls_crypto below).
+set(HITLS_PKI_LIB_BASE "${openHiTLS_SRC}/build/libhitls_pki")
+if(${BUILD_PKI} GREATER -1 AND
+   (EXISTS "${HITLS_PKI_LIB_BASE}${CMAKE_SHARED_LIBRARY_SUFFIX}" OR
+    EXISTS "${HITLS_PKI_LIB_BASE}${CMAKE_STATIC_LIBRARY_SUFFIX}"))
     list(APPEND TEST_INTF_LIBS hitls_pki)
 endif()
 
@@ -76,9 +84,10 @@ target_link_libraries(TEST_INTF INTERFACE ${TEST_INTF_LIBS})
 add_library(TEST_INTF_SHARED INTERFACE)
 target_link_libraries(TEST_INTF_SHARED INTERFACE TEST_INTF)
 
-set(TEST_INTF_INCLUDE_DIRS 
+set(TEST_INTF_INCLUDE_DIRS
     ${openHiTLS_SRC}/include
     ${openHiTLS_SRC}/testcode/framework/include
+    ${openHiTLS_SRC}/testcode/framework/async/include
     ${openHiTLS_SRC}/testcode/framework/crypto
     ${openHiTLS_SRC}/testcode/framework/stub
     ${openHiTLS_SRC}/testcode/framework/tls/func_wrapper/include
@@ -319,6 +328,18 @@ endif()
 if(GEN_TEST_FILES)
     # test1 test2 ...
     string(REPLACE " " ";" GEN_TEST_FILES ${GEN_TEST_FILES})
+    # The async simulation suites drive real TLS connections through
+    # frame_async / tls_frame and the HITLS_* API. Without the TLS test
+    # libraries those references cannot be linked, so drop the suites instead
+    # of failing the build; the plain bsl async suites only use BSL_ASYNC_*
+    # and stay. tls_hlt is also unavailable then, which the suites link
+    # through TEST_INTF.
+    if(NOT CUSTOM_CFLAGS MATCHES "(^|[ \t])-DHITLS_BSL_ASYNC(=|[ \t]|$)")
+        list(FILTER GEN_TEST_FILES EXCLUDE REGEX "test_suite_sdv_async")
+    elseif(NOT TLS_TEST_LIBS_ON)
+        list(FILTER GEN_TEST_FILES EXCLUDE REGEX "test_suite_sdv_async_sim")
+        message(STATUS "async sim suites skipped: TLS test libraries not linked")
+    endif()
     foreach(gen_test_suite ${GEN_TEST_FILES})
         get_filename_component(suite ${gen_test_suite} NAME)
         execute_process(COMMAND touch ${openHiTLS_SRC}/testcode/output/${suite}.c
@@ -350,6 +371,10 @@ foreach(test_suite ${TEST_FILES})
 
     # Use shared libraries for STUB framework (dlsym RTLD_NEXT) compatibility
     target_link_libraries(${sdv_exe} PRIVATE TEST_INTF_SHARED TESTCASE_PRE)
+
+    if(TLS_TEST_LIBS_ON AND ${sdv_exe} MATCHES "test_suite_sdv_async_sim")
+        target_link_libraries(${sdv_exe} PRIVATE frame_async)
+    endif()
 
     # Link apps test suites against hitls_apps shared library
     # Matches all 23 apps tests: 18 with "app" in name + dgst, enc, opt, print, rand

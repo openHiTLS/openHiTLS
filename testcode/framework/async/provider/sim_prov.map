@@ -1,0 +1,6 @@
+{
+  global:
+    CRYPT_EAL_ProviderInit;  # Only export the provider init function
+  local:
+    *;  # Hide all other symbols
+};

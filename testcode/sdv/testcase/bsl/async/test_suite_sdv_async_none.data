@@ -1,0 +1,14 @@
+No backend rejects host context creation
+SDV_BSL_ASYNC_NONE_TC001:0
+
+No backend rejects task context creation
+SDV_BSL_ASYNC_NONE_TC001:1
+
+No backend rejects domain initialization without preallocated tasks
+SDV_BSL_ASYNC_NONE_TC002:0
+
+No backend rejects domain initialization with preallocated tasks
+SDV_BSL_ASYNC_NONE_TC002:1
+
+No backend validates arguments and rejects non-null context destruction
+SDV_BSL_ASYNC_NONE_TC003:

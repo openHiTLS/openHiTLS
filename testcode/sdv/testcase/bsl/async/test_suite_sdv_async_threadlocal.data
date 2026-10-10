@@ -1,0 +1,14 @@
+Create and reuse 128 independent thread-local keys
+SDV_BSL_ASYNC_THREADLOCAL_TC001:
+
+SAL key lifecycle succeeds when the BSL allocator fails
+SDV_BSL_ASYNC_THREADLOCAL_TC002:0
+
+Native pthread key works through SAL without registration
+SDV_BSL_ASYNC_THREADLOCAL_TC002:1
+
+Platform key quota failure preserves output and supports retry
+SDV_BSL_ASYNC_THREADLOCAL_TC003:EAGAIN
+
+Platform key allocation failure preserves output and supports retry
+SDV_BSL_ASYNC_THREADLOCAL_TC003:ENOMEM

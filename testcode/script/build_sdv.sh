@@ -151,6 +151,7 @@ find_test_suite()
 build_test_suite()
 {
     build_provider_so
+    build_async_sim_provider_so
 
     [[ -n ${CASES} ]] && RUN_TEST_SUITES=${CASES}
     cd ${HITLS_ROOT_DIR}/testcode && rm -rf ./build && mkdir build && cd build
@@ -241,6 +242,58 @@ build_provider_so()
     return 0
 }
 
+# Function: Compile the async simulation provider .so (testcode/framework/async/provider)
+build_async_sim_provider_so()
+{
+    # Only build when the provider framework is enabled in the main library
+    if [ -f ${HITLS_ROOT_DIR}/build/macros.txt ]; then
+        if ! grep -q "HITLS_CRYPTO_PROVIDER" ${HITLS_ROOT_DIR}/build/macros.txt 2>/dev/null; then
+            echo "[INFO] Provider support not enabled, skipping async sim provider build"
+            return 0
+        fi
+    else
+        echo "[WARNING] macros.txt not found, skipping async sim provider build"
+        return 0
+    fi
+
+    echo "======================================================================"
+    echo "Building async simulation provider library..."
+    echo "======================================================================"
+
+    local prov_dir="${HITLS_ROOT_DIR}/testcode/framework/async/provider"
+    if [ ! -d "$prov_dir" ]; then
+        echo "[ERROR] Async sim provider directory not found: $prov_dir"
+        return 1
+    fi
+
+    cd "$prov_dir"
+    rm -rf build
+    mkdir build
+    cd build
+
+    # The provider's async pause path follows the main library's HITLS_BSL_ASYNC
+    # (D3: OFF builds do not export BSL_ASYNC_* symbols, so the .so must match)
+    local sim_async="ON"
+    if ! grep -q "HITLS_BSL_ASYNC" ${HITLS_ROOT_DIR}/build/macros.txt 2>/dev/null; then
+        sim_async="OFF"
+    fi
+
+    echo "[INFO] Running cmake for async sim provider (SIM_PROV_ASYNC=${sim_async})..."
+    if ! cmake -DSIM_PROV_ASYNC=${sim_async} ..; then
+        echo "[ERROR] CMake configuration failed for async sim provider"
+        return 1
+    fi
+
+    echo "[INFO] Building async sim provider library..."
+    if ! make -j; then
+        echo "[ERROR] Async sim provider build failed"
+        return 1
+    fi
+
+    echo "[SUCCESS] Async sim provider built: ${HITLS_ROOT_DIR}/testcode/output/async_sim_provider/"
+    return 0
+}
+
 process_custom_cases()
 {
     if [[ -n "${RUN_TESTS}" ]];then
@@ -285,6 +338,8 @@ clean()
     rm -rf ${HITLS_ROOT_DIR}/testcode/testdata/provider/build
     rm -rf ${HITLS_ROOT_DIR}/testcode/testdata/provider/path1
     rm -rf ${HITLS_ROOT_DIR}/testcode/testdata/provider/path2
+    rm -rf ${HITLS_ROOT_DIR}/testcode/framework/async/provider/build
+    rm -rf ${HITLS_ROOT_DIR}/testcode/output/async_sim_provider
     mkdir -p ${HITLS_ROOT_DIR}/testcode/output/log
 }
 
