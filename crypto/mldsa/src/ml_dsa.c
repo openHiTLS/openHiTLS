@@ -374,6 +374,7 @@ int32_t CRYPT_ML_DSA_Ctrl(CRYPT_ML_DSA_Ctx *ctx, int32_t opt, void *val, uint32_
 
 static int32_t MLDSACreateKeyBuf(CRYPT_ML_DSA_Ctx *ctx)
 {
+    bool newPubKey = false;
     if (ctx->pubKey == NULL) {
         ctx->pubKey = BSL_SAL_Malloc(ctx->info->publicKeyLen);
         if (ctx->pubKey == NULL) {
@@ -381,11 +382,16 @@ static int32_t MLDSACreateKeyBuf(CRYPT_ML_DSA_Ctx *ctx)
             return CRYPT_MEM_ALLOC_FAIL;
         }
         ctx->pubLen = ctx->info->publicKeyLen;
+        newPubKey = true;
     }
     if (ctx->prvKey == NULL) {
         ctx->prvKey = BSL_SAL_Malloc(ctx->info->privateKeyLen);
         if (ctx->prvKey == NULL) {
-            BSL_SAL_FREE(ctx->pubKey);
+            // Only roll back the public key allocated by this call.
+            if (newPubKey) {
+                BSL_SAL_FREE(ctx->pubKey);
+                ctx->pubLen = 0;
+            }
             BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
             return CRYPT_MEM_ALLOC_FAIL;
         }

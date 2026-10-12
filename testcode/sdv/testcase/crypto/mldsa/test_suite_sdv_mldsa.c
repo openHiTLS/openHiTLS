@@ -27,8 +27,12 @@
 #include "crypt_eal_rand.h"
 #include "crypt_eal_md.h"
 #include "crypt_util_rand.h"
+#include "crypt_mldsa.h"
 #include "ml_dsa_local.h"
+#include "stub_utils.h"
 /* END_HEADER */
+
+STUB_DEFINE_RET1(void *, BSL_SAL_Malloc, uint32_t);
 
 static uint8_t gMlDsaRandBuf[3][32] = { 0 };
 uint32_t gMlDsaRandNum = 0;
@@ -690,5 +694,67 @@ EXIT:
     CRYPT_EAL_PkeyFreeCtx(ctx3);
     BSL_SAL_Free(out);
     TestRandDeInit();
+}
+/* END_CASE */
+
+/* @
+* @test  SDV_CRYPTO_MLDSA_FUNC_KEYBUF_ROLLBACK_TC001
+* @spec  -
+* @title  GenKey preserves a preset public key when allocation fails
+* @precon  nan
+* @brief  Fail the private key allocation and verify both key states.
+* @expect  The preset public key survives and a fresh context stays empty.
+* @prior  nan
+* @auto  FALSE
+@ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_MLDSA_FUNC_KEYBUF_ROLLBACK_TC001(int type)
+{
+    TestMemInit();
+    CRYPT_ML_DSA_Ctx *pubCtx = NULL;
+    CRYPT_ML_DSA_Ctx *freshCtx = NULL;
+    CRYPT_MlDsaPub pub = {0};
+    CRYPT_MlDsaPub pubOut = {0};
+    uint32_t pubLen = 0;
+
+    pubCtx = CRYPT_ML_DSA_NewCtx();
+    ASSERT_TRUE(pubCtx != NULL);
+    ASSERT_EQ(CRYPT_ML_DSA_Ctrl(pubCtx, CRYPT_CTRL_SET_PARA_BY_ID, &type, sizeof(type)), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_ML_DSA_Ctrl(pubCtx, CRYPT_CTRL_GET_PUBKEY_LEN, &pubLen, sizeof(pubLen)), CRYPT_SUCCESS);
+    pub.data = BSL_SAL_Malloc(pubLen);
+    pubOut.data = BSL_SAL_Malloc(pubLen);
+    ASSERT_TRUE(pub.data != NULL && pubOut.data != NULL);
+    pub.len = pubLen;
+    pubOut.len = pubLen;
+    memset(pub.data, 0x5A, pubLen);
+    ASSERT_EQ(CRYPT_ML_DSA_SetPubKey(pubCtx, &pub), CRYPT_SUCCESS);
+
+    STUB_REPLACE(BSL_SAL_Malloc, STUB_BSL_SAL_Malloc);
+    STUB_EnableMallocFail(false);
+    STUB_ResetMallocCount();
+    STUB_SetMallocFailIndex(0);
+    STUB_EnableMallocFail(true);
+    ASSERT_EQ(CRYPT_ML_DSA_GenKey(pubCtx), CRYPT_MEM_ALLOC_FAIL);
+    STUB_EnableMallocFail(false);
+    ASSERT_EQ(CRYPT_ML_DSA_GetPubKey(pubCtx, &pubOut), CRYPT_SUCCESS);
+    ASSERT_COMPARE("compare preset pubkey", pubOut.data, pubOut.len, pub.data, pub.len);
+
+    freshCtx = CRYPT_ML_DSA_NewCtx();
+    ASSERT_TRUE(freshCtx != NULL);
+    ASSERT_EQ(CRYPT_ML_DSA_Ctrl(freshCtx, CRYPT_CTRL_SET_PARA_BY_ID, &type, sizeof(type)), CRYPT_SUCCESS);
+    STUB_ResetMallocCount();
+    STUB_SetMallocFailIndex(1);
+    STUB_EnableMallocFail(true);
+    ASSERT_EQ(CRYPT_ML_DSA_GenKey(freshCtx), CRYPT_MEM_ALLOC_FAIL);
+    STUB_EnableMallocFail(false);
+    ASSERT_TRUE(freshCtx->pubKey == NULL);
+    ASSERT_EQ(freshCtx->pubLen, 0);
+EXIT:
+    STUB_EnableMallocFail(false);
+    STUB_RESTORE(BSL_SAL_Malloc);
+    CRYPT_ML_DSA_FreeCtx(pubCtx);
+    CRYPT_ML_DSA_FreeCtx(freshCtx);
+    BSL_SAL_FREE(pub.data);
+    BSL_SAL_FREE(pubOut.data);
 }
 /* END_CASE */
