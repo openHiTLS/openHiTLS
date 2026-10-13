@@ -99,7 +99,7 @@ static const HITLS_CmdOption g_x509Opts[] = {
     {"startdate", HITLS_APP_OPT_START_DATE, HITLS_APP_OPT_VALUETYPE_NO_VALUE, "Print notBefore field"},
     {"enddate", HITLS_APP_OPT_END_DATE, HITLS_APP_OPT_VALUETYPE_NO_VALUE, "Print notAfter field"},
     {"purpose", HITLS_APP_OPT_PURPOSE, HITLS_APP_OPT_VALUETYPE_NO_VALUE,
-        "Print seven openHiTLS certificate purposes"},
+        "Print seven openHiTLS certificate purposes (cannot be used with -req)"},
     {"ext", HITLS_APP_OPT_EXT, HITLS_APP_OPT_VALUETYPE_STRING, "Print selected extensions"},
     {"hash", HITLS_APP_OPT_SUBJECT_HASH, HITLS_APP_OPT_VALUETYPE_NO_VALUE, "Print subject DN hash"},
     {"fingerprint", HITLS_APP_OPT_FINGERPRINT, HITLS_APP_OPT_VALUETYPE_NO_VALUE, "Print fingerprint"},
@@ -139,6 +139,7 @@ typedef struct {
     int32_t nameOpt;
     bool issuer;
     bool subject;
+    bool purpose;
     bool text;
     int32_t mdId;
     bool pubKey;
@@ -665,7 +666,7 @@ static int32_t X509OptCheckKey(X509OptCtx *optCtx)
 
 static int32_t X509OptPurpose(X509OptCtx *optCtx)
 {
-    (void)optCtx;
+    optCtx->printOpts.purpose = true;
     AppPushPrintX509Func(PrintPurpose);
     return HITLS_APP_SUCCESS;
 }
@@ -1537,6 +1538,10 @@ static bool CheckOpt(X509OptCtx *optCtx)
     if (optCtx->generalOpts.req) {  // new cert
         if (optCtx->printOpts.checkKeyPath != NULL) {
             AppPrintError("x509: Cannot use -checkkey with -req.\n");
+            return false;
+        }
+        if (optCtx->printOpts.purpose) {
+            AppPrintError("x509: Cannot use -purpose with -req.\n");
             return false;
         }
         return CheckGenCertOpt(optCtx);

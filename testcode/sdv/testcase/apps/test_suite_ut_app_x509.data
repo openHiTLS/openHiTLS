@@ -40,6 +40,9 @@ UT_HITLS_APP_X509_InvalidOpt_TC001:"x509 -checkkey":HITLS_APP_OPT_UNKOWN
 "-checkkey": cannot be used with -req
 UT_HITLS_APP_X509_InvalidOpt_TC001:"x509 -req -in ../testdata/cert/asn1/print/rsa_pss.root.csr -signkey ../testdata/cert/asn1/print/rsa_pss.root.key -checkkey ../testdata/cert/asn1/print/rsa_pss.root.key":HITLS_APP_OPT_TYPE_INVALID
 
+"-purpose": cannot be used with -req
+UT_HITLS_APP_X509_InvalidOpt_TC001:"x509 -req -in ../testdata/cert/asn1/print/rsa_pss.root.csr -signkey ../testdata/cert/asn1/print/rsa_pss.root.key -purpose -noout":HITLS_APP_OPT_TYPE_INVALID
+
 "-checkkey": private key does not match certificate
 UT_HITLS_APP_X509_InvalidOpt_TC001:"x509 -in ../testdata/cert/asn1/print/rsa_pss.root.crt -checkkey ../testdata/cert/asn1/print/rsa.intca.key -noout":HITLS_APP_X509_FAIL
 

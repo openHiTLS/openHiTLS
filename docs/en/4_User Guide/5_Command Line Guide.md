@@ -809,7 +809,7 @@ hitls x509 [-help] [-in <file>] [-inform PEM|DER] [-out <file>] [-outform PEM|DE
 - `-dates`: Print both the certificate `notBefore` and `notAfter` values. Equivalent to requesting `-startdate` and `-enddate`
 - `-startdate`: Print the certificate validity start time as `notBefore: <time>`
 - `-enddate`: Print the certificate validity end time as `notAfter: <time>`
-- `-purpose`: Print `Yes` or `No` for seven openHiTLS certificate purposes, in order: TLS client, TLS server, Email signing, Email encryption, code signing, OCSP signing, and time stamp signing. The result checks KU/EKU compatibility, not certificate-chain validity or compliance with a code-signing or time-stamping certificate profile. Missing KU/EKU does not restrict a purpose; a `Yes` result alone does not establish that an application will accept the certificate
+- `-purpose`: Cannot be used with `-req`. Print `Yes` or `No` for seven openHiTLS certificate purposes, in order: TLS client, TLS server, Email signing, Email encryption, code signing, OCSP signing, and time stamp signing. The result checks KU/EKU compatibility, not certificate-chain validity or compliance with a code-signing or time-stamping certificate profile. Missing KU/EKU does not restrict a purpose; a `Yes` result alone does not establish that an application will accept the certificate
 - `-ext <names>`: Print selected certificate extensions. Separate multiple names with commas. See "Selective Extension Printing" below for supported names
 - `-issuer`: Print the issuer DN as `issuer: <DN>`; multiline format starts the DN on the next line
 - `-subject`: Print the subject DN as `subject: <DN>`; multiline format starts the DN on the next line
@@ -823,7 +823,7 @@ hitls x509 [-help] [-in <file>] [-inform PEM|DER] [-out <file>] [-outform PEM|DE
 
 **Certificate Purpose Output**:
 
-`-purpose` starts with `Certificate purposes:` and prints the eight results in the order listed above. Each result uses `<purpose>: <Yes|No>`, with no space before the colon.
+`-purpose` starts with `Certificate purposes:` and prints the seven results in the order listed above. Each result uses `<purpose>: <Yes|No>`, with no space before the colon.
 
 **Selective Extension Printing**:
 
