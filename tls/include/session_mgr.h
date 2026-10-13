@@ -65,7 +65,7 @@ HITLS_Session *SESSMGR_Find(TLS_Ctx *ctx, uint8_t *sessionId, uint8_t sessionIdS
 bool SESSMGR_HasMacthSessionId(TLS_SessionMgr *mgr, uint8_t *sessionId, uint8_t sessionIdSize);
 
 /* Clear timeout sessions */
-void SESSMGR_ClearTimeout(HITLS_Config *config, uint64_t time);
+int32_t SESSMGR_ClearTimeout(HITLS_Config *config, uint64_t time);
 
 int32_t SESSMGR_RemoveSession(HITLS_Config *config, HITLS_Session *sess);
 

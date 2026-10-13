@@ -107,6 +107,36 @@ UT_CUSTOM_SESSION_TICKET_MEMORY_MGMT_TC016
 UT_CUSTOM_SESSION_TICKET_MEMORY_MGMT_TC016:
 
 # Session Management Interface Test Cases
+Timeout clearing calls back after all expired sessions are removed
+UT_SESSION_MGMT_REMOVE_CALLBACK_REENTRY_TC020:10
+
+Full clearing calls back after all sessions are removed
+UT_SESSION_MGMT_REMOVE_CALLBACK_REENTRY_TC020:0
+
+Explicit removal preserves the cache after write lock failure without a callback
+UT_SESSION_MGMT_REMOVE_LOCK_FAILURE_TC021:0:0
+
+Explicit removal preserves the cache after write lock failure with a callback
+UT_SESSION_MGMT_REMOVE_LOCK_FAILURE_TC021:0:1
+
+Timeout clearing preserves the cache after write lock failure without a callback
+UT_SESSION_MGMT_REMOVE_LOCK_FAILURE_TC021:1:0
+
+Timeout clearing preserves the cache after write lock failure with a callback
+UT_SESSION_MGMT_REMOVE_LOCK_FAILURE_TC021:1:1
+
+Full clearing preserves the cache after write lock failure without a callback
+UT_SESSION_MGMT_REMOVE_LOCK_FAILURE_TC021:2:0
+
+Full clearing preserves the cache after write lock failure with a callback
+UT_SESSION_MGMT_REMOVE_LOCK_FAILURE_TC021:2:1
+
+Timeout clearing uses pointer-sized removal list elements
+UT_SESSION_MGMT_REMOVE_LIST_SIZE_TC022:10
+
+Full clearing uses pointer-sized removal list elements
+UT_SESSION_MGMT_REMOVE_LIST_SIZE_TC022:0
+
 UT_SESSION_MGMT_CLEAR_TIMEOUT_BASIC_TC001
 UT_SESSION_MGMT_CLEAR_TIMEOUT_BASIC_TC001:
 

@@ -365,8 +365,7 @@ int32_t HITLS_CFG_ClearTimeoutSession(HITLS_Config *config, uint64_t nowTime)
     if (config == NULL || config->sessMgr == NULL) {
         return HITLS_NULL_INPUT;
     }
-    SESSMGR_ClearTimeout(config, nowTime);
-    return HITLS_SUCCESS;
+    return SESSMGR_ClearTimeout(config, nowTime);
 }
 
 int32_t HITLS_CFG_RemoveSession(HITLS_Config *config, HITLS_Session *sess)

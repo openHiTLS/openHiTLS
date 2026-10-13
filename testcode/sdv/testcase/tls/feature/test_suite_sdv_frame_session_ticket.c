@@ -28,7 +28,10 @@
 #include "session_type.h"
 #include "session_mgr.h"
 #include "bsl_sal.h"
+#include "bsl_err.h"
+#include "bsl_list.h"
 #include "hitls_session.h"
+#include "stub_utils.h"
 /* END_HEADER */
 
 static int32_t ServernameCbErrOK(HITLS_Ctx *ctx, int *alert, void *arg)
@@ -2096,10 +2099,212 @@ static void TestSessionMgmtRemoveCb(HITLS_Config *config, HITLS_Session *sess)
 
     g_sessionMgmtRemoveCbCalled = true;
     g_sessionMgmtLastRemovedSession = sess;
-    g_sessionMgmtRemoveCbCanQueryCache = (HITLS_CFG_GetSessionCacheSize(config, &cacheSize) == HITLS_SUCCESS);
+    g_sessionMgmtRemoveCbCanQueryCache = (BSL_SAL_ThreadReadLock(config->sessMgr->lock) == BSL_SUCCESS);
+    if (g_sessionMgmtRemoveCbCanQueryCache) {
+        BSL_SAL_ThreadUnlock(config->sessMgr->lock);
+        g_sessionMgmtRemoveCbCanQueryCache = (HITLS_CFG_GetSessionCacheSize(config, &cacheSize) == HITLS_SUCCESS);
+    }
     g_sessionMgmtRemoveCbHasValidSession =
-        (sess != NULL && HITLS_SESS_GetSessionId(sess, sessionId, &sessionIdSize) == HITLS_SUCCESS && sessionIdSize > 0);
+        (sess != NULL && HITLS_SESS_GetSessionId(sess, sessionId, &sessionIdSize) == HITLS_SUCCESS &&
+         sessionIdSize > 0);
 }
+
+#if defined(HITLS_TLS_FEATURE_SESSION_CACHE_CB) && defined(HITLS_TLS_FEATURE_SESSION_ID)
+static uint32_t g_removeCbCount;
+static uint32_t g_removeExpectedSize;
+static bool g_removeCbCacheSizeOk;
+static BSL_SAL_ThreadLockHandle g_removeFailedLock;
+static int32_t g_removeListDataSize;
+
+STUB_DEFINE_RET1(int32_t, BSL_SAL_ThreadWriteLock, BSL_SAL_ThreadLockHandle);
+STUB_DEFINE_RET1(BslList *, BSL_LIST_New, int32_t);
+
+static BslList *SessionMgmtListNew(int32_t dataSize)
+{
+    g_removeListDataSize = dataSize;
+    return get_real_BSL_LIST_New()(dataSize);
+}
+
+static int32_t SessionMgmtWriteLockFail(BSL_SAL_ThreadLockHandle lock)
+{
+    if (lock == g_removeFailedLock) {
+        return BSL_SAL_ERR_UNKNOWN;
+    }
+    return get_real_BSL_SAL_ThreadWriteLock()(lock);
+}
+
+static void TestSessionMgmtRemoveAfterLoopCb(HITLS_Config *config, HITLS_Session *sess)
+{
+    (void)sess;
+    g_removeCbCount++;
+    g_removeCbCacheSizeOk &= (BSL_HASH_Size(config->sessMgr->hash) == g_removeExpectedSize);
+}
+
+static HITLS_Session *SessionMgmtNewSession(uint8_t id, bool expired)
+{
+    HITLS_Session *sess = HITLS_SESS_New();
+    if (sess == NULL) {
+        return NULL;
+    }
+    if (HITLS_SESS_SetSessionId(sess, &id, sizeof(id)) != HITLS_SUCCESS ||
+        SESS_SetStartTime(sess, expired ? 1 : 10) != HITLS_SUCCESS ||
+        HITLS_SESS_SetTimeout(sess, expired ? 1 : 3600) != HITLS_SUCCESS) {
+        HITLS_SESS_Free(sess);
+        return NULL;
+    }
+    return sess;
+}
+#endif
+
+/** @
+ * @test UT_SESSION_MGMT_REMOVE_CALLBACK_REENTRY_TC020
+ * @precon nan
+ * @brief Clear a cache with two expired sessions and one valid session; check its size in every removal callback.
+ * @expect Timeout clearing calls back twice with hash size 1; full clearing calls back three times with hash size 0.
+ @ */
+/* BEGIN_CASE */
+void UT_SESSION_MGMT_REMOVE_CALLBACK_REENTRY_TC020(int clearTime)
+{
+#if defined(HITLS_TLS_FEATURE_SESSION_CACHE_CB) && defined(HITLS_TLS_FEATURE_SESSION_ID)
+    HITLS_Config *config = NULL;
+    HITLS_Session *sessions[3] = {0};
+
+    FRAME_Init();
+    g_removeCbCount = 0;
+    g_removeExpectedSize = clearTime == 0 ? 0 : 1;
+    g_removeCbCacheSizeOk = true;
+    config = HITLS_CFG_NewTLS12Config();
+    ASSERT_TRUE(config != NULL);
+    ASSERT_EQ(HITLS_CFG_SetSessionRemoveCb(config, TestSessionMgmtRemoveAfterLoopCb), HITLS_SUCCESS);
+    for (uint8_t i = 0; i < 3; i++) {
+        sessions[i] = SessionMgmtNewSession(i + 1, i < 2);
+        ASSERT_TRUE(sessions[i] != NULL);
+        SESSMGR_InsertSession(config->sessMgr, sessions[i], true);
+    }
+    ASSERT_EQ(BSL_HASH_Size(config->sessMgr->hash), 3);
+    ASSERT_EQ(HITLS_CFG_ClearTimeoutSession(config, clearTime), HITLS_SUCCESS);
+    ASSERT_TRUE(g_removeCbCacheSizeOk);
+    ASSERT_EQ(g_removeCbCount, 3 - g_removeExpectedSize);
+    ASSERT_EQ(BSL_HASH_Size(config->sessMgr->hash), g_removeExpectedSize);
+    ASSERT_TRUE(TestIsErrStackEmpty());
+EXIT:
+    for (uint32_t i = 0; i < 3; i++) {
+        HITLS_SESS_Free(sessions[i]);
+    }
+    HITLS_CFG_FreeConfig(config);
+#else
+    (void)clearTime;
+    SKIP_TEST();
+#endif
+}
+/* END_CASE */
+
+/** @
+ * @test UT_SESSION_MGMT_REMOVE_LOCK_FAILURE_TC021
+ * @precon nan
+ * @brief Cache one expired session and make its cache write lock return BSL_SAL_ERR_UNKNOWN.
+ *        Exercise removal and clearing with the removal callback disabled and enabled.
+ * @expect Return BSL_SAL_ERR_UNKNOWN; cache size 1, resumable session, 2 references, no callback, one error entry.
+ *
+ * Matrix (local debug run, 2026-10-15; callback: 0 = unset, 1 = TestSessionMgmtRemoveCb):
+ * operation | callback | API under test                           | Result
+ * 0         | 0        | HITLS_CFG_RemoveSession(config, sess)    | PASS
+ * 0         | 1        | HITLS_CFG_RemoveSession(config, sess)    | PASS
+ * 1         | 0        | HITLS_CFG_ClearTimeoutSession(config, 10) | PASS
+ * 1         | 1        | HITLS_CFG_ClearTimeoutSession(config, 10) | PASS
+ * 2         | 0        | HITLS_CFG_ClearTimeoutSession(config, 0) | PASS
+ * 2         | 1        | HITLS_CFG_ClearTimeoutSession(config, 0) | PASS
+ @ */
+/* BEGIN_CASE */
+void UT_SESSION_MGMT_REMOVE_LOCK_FAILURE_TC021(int operation, int callback)
+{
+#if defined(HITLS_TLS_FEATURE_SESSION_CACHE_CB) && defined(HITLS_TLS_FEATURE_SESSION_ID)
+    HITLS_Config *config = NULL;
+    HITLS_Session *sess = NULL;
+
+    FRAME_Init();
+    ClearSessionMgmtState();
+    config = HITLS_CFG_NewTLS12Config();
+    sess = SessionMgmtNewSession(1, true);
+    ASSERT_TRUE(config != NULL && sess != NULL);
+    SESSMGR_InsertSession(config->sessMgr, sess, true);
+    ASSERT_EQ(BSL_HASH_Size(config->sessMgr->hash), 1);
+    if (callback) {
+        ASSERT_EQ(HITLS_CFG_SetSessionRemoveCb(config, TestSessionMgmtRemoveCb), HITLS_SUCCESS);
+    }
+    g_removeFailedLock = config->sessMgr->lock;
+    STUB_REPLACE(BSL_SAL_ThreadWriteLock, SessionMgmtWriteLockFail);
+    if (operation == 0) {
+        ASSERT_EQ(HITLS_CFG_RemoveSession(config, sess), BSL_SAL_ERR_UNKNOWN);
+    } else {
+        ASSERT_EQ(HITLS_CFG_ClearTimeoutSession(config, operation == 2 ? 0 : 10), BSL_SAL_ERR_UNKNOWN);
+    }
+    STUB_RESTORE(BSL_SAL_ThreadWriteLock);
+    ASSERT_EQ(BSL_HASH_Size(config->sessMgr->hash), 1);
+    ASSERT_TRUE(HITLS_SESS_IsResumable(sess));
+    ASSERT_EQ(sess->references, 2);
+    ASSERT_TRUE(!g_sessionMgmtRemoveCbCalled);
+    ASSERT_EQ(BSL_ERR_GetLastError(), BSL_SAL_ERR_UNKNOWN);
+    ASSERT_TRUE(TestIsErrStackEmpty());
+EXIT:
+    STUB_RESTORE(BSL_SAL_ThreadWriteLock);
+    g_removeFailedLock = NULL;
+    HITLS_SESS_Free(sess);
+    HITLS_CFG_FreeConfig(config);
+    ClearSessionMgmtState();
+#else
+    (void)operation;
+    (void)callback;
+    SKIP_TEST();
+#endif
+}
+/* END_CASE */
+
+/** @
+ * @test UT_SESSION_MGMT_REMOVE_LIST_SIZE_TC022
+ * @precon nan
+ * @brief Check the removal list element size during timeout and full cache clearing.
+ * @expect The list uses pointer-sized elements and the callback receives a valid session.
+ @ */
+/* BEGIN_CASE */
+void UT_SESSION_MGMT_REMOVE_LIST_SIZE_TC022(int clearTime)
+{
+#if defined(HITLS_TLS_FEATURE_SESSION_CACHE_CB) && defined(HITLS_TLS_FEATURE_SESSION_ID)
+    HITLS_Config *config = NULL;
+    HITLS_Session *sess = NULL;
+
+    FRAME_Init();
+    ClearSessionMgmtState();
+    g_removeListDataSize = -1;
+    config = HITLS_CFG_NewTLS12Config();
+    sess = SessionMgmtNewSession(1, true);
+    ASSERT_TRUE(config != NULL && sess != NULL);
+    ASSERT_EQ(HITLS_CFG_SetSessionRemoveCb(config, TestSessionMgmtRemoveCb), HITLS_SUCCESS);
+    SESSMGR_InsertSession(config->sessMgr, sess, true);
+    ASSERT_EQ(BSL_HASH_Size(config->sessMgr->hash), 1);
+
+    STUB_REPLACE(BSL_LIST_New, SessionMgmtListNew);
+    ASSERT_EQ(HITLS_CFG_ClearTimeoutSession(config, clearTime), HITLS_SUCCESS);
+    STUB_RESTORE(BSL_LIST_New);
+    ASSERT_EQ(g_removeListDataSize, sizeof(HITLS_Session *));
+    ASSERT_EQ(BSL_HASH_Size(config->sessMgr->hash), 0);
+    ASSERT_TRUE(g_sessionMgmtRemoveCbCalled);
+    ASSERT_TRUE(g_sessionMgmtRemoveCbCanQueryCache);
+    ASSERT_TRUE(g_sessionMgmtRemoveCbHasValidSession);
+    ASSERT_TRUE(g_sessionMgmtLastRemovedSession == sess);
+    ASSERT_EQ(sess->references, 1);
+    ASSERT_TRUE(TestIsErrStackEmpty());
+EXIT:
+    STUB_RESTORE(BSL_LIST_New);
+    HITLS_SESS_Free(sess);
+    HITLS_CFG_FreeConfig(config);
+    ClearSessionMgmtState();
+#else
+    (void)clearTime;
+    SKIP_TEST();
+#endif
+}
+/* END_CASE */
 
 /** @
 * @test     UT_SESSION_MGMT_CLEAR_TIMEOUT_BASIC_TC001

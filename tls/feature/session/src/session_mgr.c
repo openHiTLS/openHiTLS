@@ -20,6 +20,7 @@
 #include "sal_time.h"
 #include "bsl_hash.h"
 #include "hitls_error.h"
+#include "bsl_list.h"
 #include "hitls_type.h"
 #include "tls_config.h"
 #include "session.h"
@@ -372,34 +373,79 @@ bool SESSMGR_HasMacthSessionId(TLS_SessionMgr *mgr, uint8_t *sessionId, uint8_t 
     return (sess == NULL) ? false : true;
 }
 
+static int32_t ClearTimeoutEraseExpired(TLS_SessionMgr *mgr, uint64_t time, BslList *removed)
+{
+#ifndef HITLS_TLS_FEATURE_SESSION_CACHE_CB
+    (void)removed;
+#endif
+    BSL_HASH_Iterator it = BSL_HASH_IterBegin(mgr->hash);
+    while (it != BSL_HASH_IterEnd(mgr->hash)) {
+        uintptr_t ptr = BSL_HASH_IterValue(mgr->hash, it);
+        HITLS_Session *sess = (HITLS_Session *)ptr;
+        if (time != 0 && SESS_CheckValidity(sess, time)) {
+            it = BSL_HASH_IterNext(mgr->hash, it);
+            continue;
+        }
+#ifdef HITLS_TLS_FEATURE_SESSION_CACHE_CB
+        if (removed != NULL) {
+            HITLS_Session *dup = HITLS_SESS_Dup(sess);
+            int32_t ret = BSL_LIST_AddElement(removed, dup, BSL_LIST_POS_AFTER);
+            if (ret != BSL_SUCCESS) {
+                BSL_ERR_PUSH_ERROR(ret);
+                HITLS_SESS_Free(dup);
+                return ret;
+            }
+        }
+#endif
+        SESS_Disable(sess);
+        uintptr_t tmpKey = BSL_HASH_HashIterKey(mgr->hash, it);
+        it = BSL_HASH_Erase(mgr->hash, tmpKey);
+    }
+    return HITLS_SUCCESS;
+}
+
 /* Clear timeout sessions */
-void SESSMGR_ClearTimeout(HITLS_Config *config, uint64_t time)
+int32_t SESSMGR_ClearTimeout(HITLS_Config *config, uint64_t time)
 {
     if (config == NULL || config->sessMgr == NULL) {
-        return;
+        return HITLS_NULL_INPUT;
     }
-    BSL_SAL_ThreadWriteLock(config->sessMgr->lock);
-    BSL_HASH_Iterator it = BSL_HASH_IterBegin(config->sessMgr->hash);
-    while (it != BSL_HASH_IterEnd(config->sessMgr->hash)) {
-        uintptr_t ptr = BSL_HASH_IterValue(config->sessMgr->hash, it);
-        HITLS_Session *sess = (HITLS_Session *)ptr;
-        if (time == 0 || SESS_CheckValidity(sess, time) == false) {
-            SESS_Disable(sess);
-#ifdef HITLS_TLS_FEATURE_SESSION_CACHE_CB 
-            if (config->sessionRemoveCb != NULL) { 
-                config->sessionRemoveCb(config, sess); 
-            } 
-#endif /* HITLS_TLS_FEATURE_SESSION_CACHE_CB */
-            /* Delete the node if it is invalid */
-            uintptr_t tmpKey = BSL_HASH_HashIterKey(config->sessMgr->hash, it);
-            // Returns the next iterator of the iterator where the key resides
-            it = BSL_HASH_Erase(config->sessMgr->hash, tmpKey);
-        } else {
-            it = BSL_HASH_IterNext(config->sessMgr->hash, it);
+    BslList *removed = NULL;
+#ifdef HITLS_TLS_FEATURE_SESSION_CACHE_CB
+    HITLS_SessionRemoveCb removeCb = config->sessionRemoveCb;
+    if (removeCb != NULL) {
+        removed = BSL_LIST_New(sizeof(HITLS_Session *));
+        if (removed == NULL) {
+            BSL_ERR_PUSH_ERROR(HITLS_MEMALLOC_FAIL);
+            return HITLS_MEMALLOC_FAIL;
         }
     }
+#endif
 
+    int32_t ret = BSL_SAL_ThreadWriteLock(config->sessMgr->lock);
+    if (ret != BSL_SUCCESS) {
+#ifdef HITLS_TLS_FEATURE_SESSION_CACHE_CB
+        BSL_LIST_FreeWithoutData(removed);
+#endif
+        BSL_ERR_PUSH_ERROR(ret);
+        return ret;
+    }
+    ret = ClearTimeoutEraseExpired(config->sessMgr, time, removed);
     BSL_SAL_ThreadUnlock(config->sessMgr->lock);
+#ifdef HITLS_TLS_FEATURE_SESSION_CACHE_CB
+    if (removeCb != NULL) {
+        HITLS_Session *removedSess = NULL;
+        BSL_LIST_GET_FIRST(removed);
+        while (!BSL_LIST_IS_END(removed)) {
+            removedSess = *(HITLS_Session **)BSL_LIST_Curr(removed);
+            removeCb(config, removedSess);
+            HITLS_SESS_Free(removedSess);
+            BSL_LIST_GET_NEXT(removed);
+        }
+        BSL_LIST_FreeWithoutData(removed);
+    }
+#endif
+    return ret;
 }
 
 int32_t SESSMGR_RemoveSession(HITLS_Config *config, HITLS_Session *sess)
@@ -407,7 +453,11 @@ int32_t SESSMGR_RemoveSession(HITLS_Config *config, HITLS_Session *sess)
     if (config == NULL || sess == NULL || config->sessMgr == NULL) {
         return HITLS_NULL_INPUT;
     }
-    BSL_SAL_ThreadWriteLock(config->sessMgr->lock);
+    int32_t ret = BSL_SAL_ThreadWriteLock(config->sessMgr->lock);
+    if (ret != BSL_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        return ret;
+    }
     SessionKey key = {0};
     key.sessionIdSize = sizeof(key.sessionId);
     if (HITLS_SESS_GetSessionId(sess, key.sessionId, &(key.sessionIdSize)) != HITLS_SUCCESS) {
@@ -420,12 +470,20 @@ int32_t SESSMGR_RemoveSession(HITLS_Config *config, HITLS_Session *sess)
     }
 
 #ifdef HITLS_TLS_FEATURE_SESSION_CACHE_CB
-    if (config->sessionRemoveCb != NULL) {
-        config->sessionRemoveCb(config, sess);
+    HITLS_SessionRemoveCb removeCb = config->sessionRemoveCb;
+    HITLS_Session *dup = NULL;
+    if (removeCb != NULL) {
+        dup = HITLS_SESS_Dup(sess);
     }
 #endif /* HITLS_TLS_FEATURE_SESSION_CACHE_CB */
     BSL_HASH_Erase(config->sessMgr->hash, (uintptr_t)&key);
     BSL_SAL_ThreadUnlock(config->sessMgr->lock);
+#ifdef HITLS_TLS_FEATURE_SESSION_CACHE_CB
+    if (dup != NULL) {
+        removeCb(config, dup);
+        HITLS_SESS_Free(dup);
+    }
+#endif
     return HITLS_SUCCESS;
 }
 

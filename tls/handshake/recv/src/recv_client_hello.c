@@ -2403,6 +2403,14 @@ static int32_t Tls13ServerBasicCheckClientHello(TLS_Ctx *ctx, ClientHelloMsg *cl
     /* Set the negotiated version number */
     ctx->negotiatedInfo.version = clientHello->version;
 
+#ifdef HITLS_TLS_CONFIG_VERSION
+    /* TLS 1.3 path does not go through ServerSelectNegoVersion, so the TLCP bits
+     * are not cleared. Clear them here so that TLCP-only record dispatch checks
+     * do not apply on a non-TLCP connection. */
+    ctx->config.tlsConfig.version &= ~TLCP_VERSION_BITS;
+    ctx->config.tlsConfig.originVersionMask &= ~TLCP_VERSION_BITS;
+#endif
+
     ret = Dtls13ServerCheckLegacyCookie(ctx, clientHello);
     if (ret != HITLS_SUCCESS) {
         return ret;
