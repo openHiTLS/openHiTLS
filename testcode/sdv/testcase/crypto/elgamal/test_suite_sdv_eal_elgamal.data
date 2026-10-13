@@ -96,3 +96,9 @@ SDV_CRYPTO_ELGAMAL_GET_SECURITY_BITS_FUNC_TC001:"e6fa5be8dfd1a200fd699a9ff4b0276
 
 CRYPT_EAL_PkeyEncrypt/Decrypt functional test
 SDV_CRYPTO_ELGAMAL_ENC_DEC_FUNC_TC001:"e6fa5be8dfd1a200fd699a9ff4b02761f05fca69":"48656c6c6f20456c47616d616c":160:1024:0
+
+ElGamal prime parameters and round-trip
+SDV_CRYPTO_ELGAMAL_GEN_PRIME_FUNC_TC001:"e6fa5be8dfd1a200fd699a9ff4b02761f05fca69":0
+
+ElGamal provider prime parameters and round-trip
+SDV_CRYPTO_ELGAMAL_GEN_PRIME_FUNC_TC001:"e6fa5be8dfd1a200fd699a9ff4b02761f05fca69":1

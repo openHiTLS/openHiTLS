@@ -596,6 +596,7 @@ enum CRYPT_ERROR {
     CRYPT_ELGAMAL_ERR_DEC_KBITS,             /**< Incorrect length of the decrypted ciphertext of the private key. */
     CRYPT_ELGAMAL_ERR_INPUT_VALUE,          /**< Some special values, which are used as input errors. */
     CRYPT_ELGAMAL_CTRL_NOT_SUPPORT_ERROR,   /**< The Ctrl type is not supported When elgamal is used for Ctrl. */
+    CRYPT_ELGAMAL_ERR_GEN_PARA,             /**< Parameter generation failed. */
 
     CRYPT_SLHDSA_ERR_INVALID_ALGID = 0x01380001,         /**< The algorithm id is invalid. */
     CRYPT_SLHDSA_ERR_INVALID_SIG_LEN,                    /**< The signature length is invalid. */

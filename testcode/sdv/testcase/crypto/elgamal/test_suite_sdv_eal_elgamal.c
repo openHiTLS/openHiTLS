@@ -121,6 +121,56 @@ EXIT:
 }
 /* END_CASE */
 
+/**
+ * @test SDV_CRYPTO_ELGAMAL_GEN_PRIME_FUNC_TC001
+ * @precon nan
+ * @brief Generate keys, check prime parameters and verify encryption round-trip.
+ * @expect Prime parameters and successful encryption and decryption.
+ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_ELGAMAL_GEN_PRIME_FUNC_TC001(Hex *q, int isProvider)
+{
+    CRYPT_EAL_PkeyCtx *pkey = NULL;
+    CRYPT_EAL_PkeyPara para = {0};
+    BN_Optimizer *opt = NULL;
+    BN_BigNum *tmp = NULL;
+    uint8_t plaintext[] = {1, 2, 3};
+    uint8_t ciphertext[512];
+    uint8_t decrypted[128];
+    uint32_t cipherLen = sizeof(ciphertext);
+    uint32_t decryptedLen = sizeof(decrypted);
+
+    TestMemInit();
+    srand(1);
+    CRYPT_RandRegist(RandFunc);
+    CRYPT_RandRegistEx(RandFuncEx);
+    SetElGamalPara(&para, q, 1024, 160);
+    pkey = TestPkeyNewCtx(NULL, CRYPT_PKEY_ELGAMAL, CRYPT_EAL_PKEY_CIPHER_OPERATE, "provider=default", isProvider);
+    opt = BN_OptimizerCreate();
+    tmp = BN_Create(1024);
+    ASSERT_TRUE(pkey != NULL && opt != NULL && tmp != NULL);
+    ASSERT_EQ(CRYPT_EAL_PkeySetPara(pkey, &para), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyGen(pkey), CRYPT_SUCCESS);
+
+    CRYPT_ELGAMAL_Ctx *ctx = pkey->key;
+    ASSERT_TRUE(BN_IsOdd(ctx->pubKey->p));
+    ASSERT_EQ(BN_PrimeCheck(ctx->pubKey->p, 0, opt, NULL), CRYPT_SUCCESS);
+    ASSERT_EQ(BN_PrimeCheck(ctx->pubKey->q, 0, opt, NULL), CRYPT_SUCCESS);
+    ASSERT_EQ(BN_SubLimb(tmp, ctx->pubKey->p, 1), CRYPT_SUCCESS);
+    ASSERT_EQ(BN_Mod(tmp, tmp, ctx->pubKey->q, opt), CRYPT_SUCCESS);
+    ASSERT_TRUE(BN_IsZero(tmp));
+    ASSERT_EQ(CRYPT_EAL_PkeyEncrypt(pkey, plaintext, sizeof(plaintext), ciphertext, &cipherLen), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyDecrypt(pkey, ciphertext, cipherLen, decrypted, &decryptedLen), CRYPT_SUCCESS);
+    ASSERT_EQ(decryptedLen, sizeof(plaintext));
+    ASSERT_EQ(memcmp(plaintext, decrypted, sizeof(plaintext)), 0);
+
+EXIT:
+    BN_Destroy(tmp);
+    BN_OptimizerDestroy(opt);
+    CRYPT_EAL_PkeyFreeCtx(pkey);
+    TestRandDeInit();
+}
+/* END_CASE */
 
 /**
  * @test   SDV_CRYPTO_ELGAMAL_NEW_API_TC002
