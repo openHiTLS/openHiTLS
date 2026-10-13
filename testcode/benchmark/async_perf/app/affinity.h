@@ -18,7 +18,7 @@
 #include <stdio.h>
 #include "sim_prov_ctrl.h"
 
-int PerfAffinityInit(int cpu, uint32_t workers);
+int PerfAffinityInit(int cpu, uint32_t workers, uint32_t concurrency);
 void PerfAffinityConfigure(SIM_PROV_CTRL_REQ *req);
 void PerfAffinityRestore(void);
 #endif

@@ -14,6 +14,7 @@
  */
 
 #include "sim_link.h"
+#include "hitls_async.h"
 #include "hitls_error.h"
 #include "bsl_uio.h"
 #include "bsl_err.h"
@@ -32,7 +33,11 @@
 #include <netinet/tcp.h>
 #include <sys/epoll.h>
 
-enum { PERF_HANDSHAKE, PERF_READ, PERF_WRITE, PERF_DONE };
+/* epoll data is a tag, not a pointer. Connection sockets use the index.
+ * A connection's notify fd uses the same index with PERF_TAG_NOTIFY set. */
+#define PERF_TAG_NOTIFY (1ull << 32)
+#define PERF_TAG_LISTEN (1ull << 33)
+#define PERF_TAG_WAKE   (1ull << 34)
 
 static uint64_t PerfNowNs(void)
 {
@@ -139,6 +144,7 @@ int32_t PerfBatchCreate(HITLS_Config *serverCfg, uint32_t n, PerfForm form, int 
     batch->form = form;
     batch->listener = listener;
     batch->serverCfg = serverCfg;
+    batch->epollFd = -1;
     batch->wakeFds[0] = batch->wakeFds[1] = -1;
     if (form != PERF_FORM_SYNC && !PerfAsyncSupported()) {
         return HITLS_ASYNC_ERR_UNSUPPORTED;
@@ -166,6 +172,7 @@ int32_t PerfBatchCreate(HITLS_Config *serverCfg, uint32_t n, PerfForm form, int 
     }
     for (uint32_t i = 0; i < n; i++) {
         atomic_init(&batch->servers[i].posted, false);
+        batch->servers[i].notifyFd = -1;
         batch->servers[i].batch = batch;
     }
     return HITLS_SUCCESS;
@@ -176,8 +183,6 @@ static bool PerfIsPaused(const PerfEndpoint *end)
     return end->ret == HITLS_ASYNC_ERR_PAUSED;
 }
 
-static int32_t PerfStep(PerfEndpoint *end);
-
 static void PerfDrainTasks(PerfBatch *batch)
 {
     uint64_t deadline = PerfNowNs() + 5000000000ull;
@@ -186,7 +191,7 @@ static void PerfDrainTasks(PerfBatch *batch)
         for (uint32_t i = 0; i < batch->n; i++) {
             PerfEndpoint *end = &batch->servers[i];
             if (PerfIsPaused(end)) {
-                (void)PerfStep(end);
+                end->ret = HITLS_Accept(end->ctx);
                 pending = pending || PerfIsPaused(end);
             }
         }
@@ -245,38 +250,90 @@ static void PerfDrainFd(int fd)
     }
 }
 
-static int32_t PerfStep(PerfEndpoint *end)
+static int32_t PerfEpollAdd(PerfBatch *batch, int fd, uint32_t events, uint64_t tag)
 {
-    switch (end->phase) {
-        case PERF_HANDSHAKE:
-            end->ret = HITLS_Accept(end->ctx);
-            break;
-        case PERF_READ:
-            end->ret = HITLS_Read(end->ctx, &end->byte, 1, &end->ioLen);
-            break;
-        case PERF_WRITE:
-            end->ret = HITLS_Write(end->ctx, &end->byte, 1, &end->ioLen);
-            break;
-        default:
-            return HITLS_INTERNAL_EXCEPTION;
+    struct epoll_event event = {.events = events, .data.u64 = tag};
+    return epoll_ctl(batch->epollFd, EPOLL_CTL_ADD, fd, &event) == 0 ? HITLS_SUCCESS : HITLS_INTERNAL_EXCEPTION;
+}
+
+static int32_t PerfEpollDel(PerfBatch *batch, int fd)
+{
+    return epoll_ctl(batch->epollFd, EPOLL_CTL_DEL, fd, NULL) == 0 ? HITLS_SUCCESS : HITLS_INTERNAL_EXCEPTION;
+}
+
+#ifdef HITLS_TLS_FEATURE_MODE_ASYNC
+/* One connection waits on one fd. A finished operation clears its registration, so the next
+ * pause reports that deletion together with the new operation's fd. Further pauses of the
+ * same operation find an empty change window. */
+static int32_t PerfWatchNotify(PerfBatch *batch, PerfEndpoint *end)
+{
+    BSL_ASYNC_NotifyHandle added[2];
+    BSL_ASYNC_NotifyHandle removed[2];
+    BSL_ASYNC_NotifyHandleList addList = {added, 2, 0};
+    BSL_ASYNC_NotifyHandleList delList = {removed, 2, 0};
+    if (HITLS_GetChangedAsyncNotifyHandles(end->ctx, &addList, &delList) != HITLS_SUCCESS) {
+        return HITLS_INTERNAL_EXCEPTION;
     }
-    if (end->ret == HITLS_SUCCESS) {
-        if (end->phase != PERF_HANDSHAKE && end->ioLen != 1) {
+    for (uint32_t i = 0; i < delList.numHandles; i++) {
+        if (end->notifyFd < 0 || removed[i] != (BSL_ASYNC_NotifyHandle)end->notifyFd) {
             return HITLS_INTERNAL_EXCEPTION;
         }
-        end->phase++;
+        if (PerfEpollDel(batch, end->notifyFd) != HITLS_SUCCESS) {
+            return HITLS_INTERNAL_EXCEPTION;
+        }
+        end->notifyFd = -1;
+    }
+    uint32_t index = (uint32_t)(end - batch->servers);
+    for (uint32_t i = 0; i < addList.numHandles; i++) {
+        if (end->notifyFd >= 0 || added[i] > (BSL_ASYNC_NotifyHandle)INT_MAX) {
+            return HITLS_INTERNAL_EXCEPTION;
+        }
+        int fd = (int)added[i];
+        if (PerfEpollAdd(batch, fd, EPOLLIN, (uint64_t)index | PERF_TAG_NOTIFY) != HITLS_SUCCESS) {
+            return HITLS_INTERNAL_EXCEPTION;
+        }
+        end->notifyFd = fd;
+    }
+    return end->notifyFd >= 0 ? HITLS_SUCCESS : HITLS_INTERNAL_EXCEPTION;
+}
+#endif
+
+static int32_t PerfDrive(PerfBatch *batch, PerfEndpoint *end)
+{
+    end->ret = HITLS_Accept(end->ctx);
+    if (end->ret == HITLS_SUCCESS) {
+        end->done = true;
+        batch->doneServers++;
+        batch->doneNs = PerfNowNs();
+        if (end->notifyFd >= 0) {
+            if (PerfEpollDel(batch, end->notifyFd) != HITLS_SUCCESS) {
+                return HITLS_INTERNAL_EXCEPTION;
+            }
+            end->notifyFd = -1;
+        }
         return HITLS_SUCCESS;
     }
-    if (PerfWantIo(end) || PerfIsPaused(end)) {
+    if (end->ret == HITLS_ASYNC_ERR_PAUSED) {
+#ifdef HITLS_TLS_FEATURE_MODE_ASYNC
+        if (batch->form == PERF_FORM_ON_FD) {
+            return PerfWatchNotify(batch, end);
+        }
+        if (batch->form == PERF_FORM_ON_CB) {
+            return HITLS_SUCCESS;
+        }
+#endif
+        return HITLS_INTERNAL_EXCEPTION;
+    }
+    if (PerfWantIo(end)) {
         return HITLS_SUCCESS;
     }
     fprintf(stderr, "server TLS failed: ret=0x%x bsl=0x%x\n", end->ret, BSL_ERR_GetLastError());
     return HITLS_INTERNAL_EXCEPTION;
 }
 
-static int32_t PerfAccept(PerfBatch *batch, uint32_t *accepted)
+static int32_t PerfOnAccept(PerfBatch *batch)
 {
-    while (*accepted < batch->n) {
+    while (batch->accepted < batch->n) {
         int fd = accept(batch->listener, NULL, NULL);
         if (fd < 0) {
             if (errno == EINTR) {
@@ -288,134 +345,48 @@ static int32_t PerfAccept(PerfBatch *batch, uint32_t *accepted)
             batch->startNs = PerfNowNs();
             batch->doneNs = batch->startNs;
         }
-        PerfEndpoint *end = &batch->servers[(*accepted)++];
+        uint32_t index = batch->accepted;
+        PerfEndpoint *end = &batch->servers[index];
+        batch->accepted++;
+        uint32_t inflight = batch->accepted - batch->doneServers;
+        if (inflight > batch->peakInflight) {
+            batch->peakInflight = inflight;
+        }
         int32_t ret = PerfEndSetup(end, batch->serverCfg, fd);
         if (ret != HITLS_SUCCESS) {
             return ret;
         }
-        end->phase = PERF_HANDSHAKE;
+        /* WANT_READ/WANT_WRITE means the kernel buffer is empty or full, so edge trigger is safe. */
+        if (PerfEpollAdd(batch, end->fd, EPOLLIN | EPOLLOUT | EPOLLET, index) != HITLS_SUCCESS) {
+            return HITLS_INTERNAL_EXCEPTION;
+        }
 #ifdef HITLS_TLS_FEATURE_MODE_ASYNC
         if (batch->form == PERF_FORM_ON_CB && HITLS_SetAsyncCallback(end->ctx, PerfOnDone, end) != HITLS_SUCCESS) {
             return HITLS_INTERNAL_EXCEPTION;
         }
 #endif
+        if (PerfDrive(batch, end) != HITLS_SUCCESS) {
+            return HITLS_INTERNAL_EXCEPTION;
+        }
+    }
+    return PerfEpollDel(batch, batch->listener);
+}
+
+static int32_t PerfOnNotify(PerfBatch *batch, uint32_t index)
+{
+    PerfEndpoint *end = &batch->servers[index];
+    if (end->notifyFd < 0) {
+        return HITLS_INTERNAL_EXCEPTION;
+    }
+    PerfDrainFd(end->notifyFd);
+    if (!end->done && PerfIsPaused(end)) {
+        return PerfDrive(batch, end);
     }
     return HITLS_SUCCESS;
 }
 
-typedef enum {
-    PERF_EVENT_LISTEN,
-    PERF_EVENT_SOCKET,
-    PERF_EVENT_ASYNC,
-    PERF_EVENT_CALLBACK,
-} PerfEventKind;
-
-typedef struct PerfEpollWatch {
-    int fd;
-    PerfEventKind kind;
-    bool added;
-    bool armed;
-    PerfEndpoint *end;
-    PerfEndpoint *waiters;
-} PerfEpollWatch;
-
-typedef struct {
-    PerfBatch *batch;
-    int fd;
-    PerfEpollWatch listener;
-    PerfEpollWatch callback;
-    PerfEpollWatch *sockets;
-    PerfEpollWatch notify;
-    uint32_t accepted;
-    uint32_t echoed;
-} PerfServerLoop;
-
-static int32_t PerfEpollArm(PerfServerLoop *loop, PerfEpollWatch *watch, uint32_t events)
+static int32_t PerfOnWake(PerfBatch *batch)
 {
-    struct epoll_event event = {.events = events | EPOLLONESHOT, .data.ptr = watch};
-    if (epoll_ctl(loop->fd, watch->added ? EPOLL_CTL_MOD : EPOLL_CTL_ADD, watch->fd, &event) != 0) {
-        return HITLS_INTERNAL_EXCEPTION;
-    }
-    watch->added = true;
-    watch->armed = true;
-    return HITLS_SUCCESS;
-}
-
-static int32_t PerfServerArm(PerfServerLoop *loop, PerfEndpoint *end)
-{
-    if (PerfIsPaused(end)) {
-#ifdef HITLS_TLS_FEATURE_MODE_ASYNC
-        if (loop->batch->form == PERF_FORM_ON_CB) {
-            return HITLS_SUCCESS;
-        }
-        BSL_ASYNC_NotifyHandle handle;
-        BSL_ASYNC_NotifyHandleList list = {&handle, 1, 0};
-        if (HITLS_GetAllAsyncNotifyHandles(end->ctx, &list) != HITLS_SUCCESS || list.numHandles != 1 ||
-            handle > INT_MAX) {
-            return HITLS_INTERNAL_EXCEPTION;
-        }
-        PerfEpollWatch *watch = &loop->notify;
-        if (watch->added && watch->fd != (int)handle) {
-            return HITLS_INTERNAL_EXCEPTION;
-        }
-        watch->fd = (int)handle;
-        end->waitNext = watch->waiters;
-        watch->waiters = end;
-        return watch->armed ? HITLS_SUCCESS : PerfEpollArm(loop, watch, EPOLLIN);
-#else
-        return HITLS_INTERNAL_EXCEPTION;
-#endif
-    }
-    PerfEpollWatch *watch = &loop->sockets[end - loop->batch->servers];
-    watch->fd = end->fd;
-    watch->kind = PERF_EVENT_SOCKET;
-    watch->end = end;
-    return PerfEpollArm(loop, watch, HITLS_GetError(end->ctx, end->ret) == HITLS_WANT_WRITE ? EPOLLOUT : EPOLLIN);
-}
-
-static int32_t PerfServerDrive(PerfServerLoop *loop, PerfEndpoint *end)
-{
-    while (end->phase != PERF_DONE) {
-        uint32_t phase = end->phase;
-        if (PerfStep(end) != HITLS_SUCCESS) {
-            return HITLS_INTERNAL_EXCEPTION;
-        }
-        if (phase == end->phase) {
-            return PerfServerArm(loop, end);
-        }
-        if (phase == PERF_HANDSHAKE) {
-            loop->batch->doneNs = PerfNowNs();
-            loop->batch->doneServers++;
-            return HITLS_SUCCESS;
-        }
-        if (end->phase == PERF_DONE) {
-            loop->echoed++;
-        }
-    }
-    return HITLS_SUCCESS;
-}
-
-static int32_t PerfServerAccept(PerfServerLoop *loop)
-{
-    uint32_t first = loop->accepted;
-    if (PerfAccept(loop->batch, &loop->accepted) != HITLS_SUCCESS) {
-        return HITLS_INTERNAL_EXCEPTION;
-    }
-    for (uint32_t i = first; i < loop->accepted; i++) {
-        if (PerfServerDrive(loop, &loop->batch->servers[i]) != HITLS_SUCCESS) {
-            return HITLS_INTERNAL_EXCEPTION;
-        }
-    }
-    if (loop->accepted == loop->batch->n) {
-        return epoll_ctl(loop->fd, EPOLL_CTL_DEL, loop->listener.fd, NULL) == 0 ? HITLS_SUCCESS :
-                                                                                  HITLS_INTERNAL_EXCEPTION;
-    }
-    return PerfEpollArm(loop, &loop->listener, EPOLLIN);
-}
-
-static int32_t PerfServerCallbacks(PerfServerLoop *loop)
-{
-    PerfBatch *batch = loop->batch;
     PerfDrainFd(batch->wakeFds[0]);
     pthread_mutex_lock(&batch->notifyMutex);
     PerfEndpoint *end = batch->notified;
@@ -424,23 +395,7 @@ static int32_t PerfServerCallbacks(PerfServerLoop *loop)
     while (end != NULL) {
         PerfEndpoint *next = end->notifyNext;
         atomic_store(&end->posted, false);
-        if (PerfIsPaused(end) && PerfServerDrive(loop, end) != HITLS_SUCCESS) {
-            return HITLS_INTERNAL_EXCEPTION;
-        }
-        end = next;
-    }
-    return PerfEpollArm(loop, &loop->callback, EPOLLIN);
-}
-
-static int32_t PerfServerNotify(PerfServerLoop *loop, PerfEpollWatch *watch)
-{
-    /* One provider fd can represent multiple paused connections. Detach before resuming. */
-    PerfEndpoint *end = watch->waiters;
-    watch->waiters = NULL;
-    PerfDrainFd(watch->fd);
-    while (end != NULL) {
-        PerfEndpoint *next = end->waitNext;
-        if (PerfServerDrive(loop, end) != HITLS_SUCCESS) {
+        if (PerfIsPaused(end) && PerfDrive(batch, end) != HITLS_SUCCESS) {
             return HITLS_INTERNAL_EXCEPTION;
         }
         end = next;
@@ -448,82 +403,86 @@ static int32_t PerfServerNotify(PerfServerLoop *loop, PerfEpollWatch *watch)
     return HITLS_SUCCESS;
 }
 
-static int32_t PerfServerEvent(PerfServerLoop *loop, PerfEpollWatch *watch)
+static int32_t PerfOnSocket(PerfBatch *batch, uint32_t index)
 {
-    watch->armed = false;
-    switch (watch->kind) {
-        case PERF_EVENT_LISTEN:
-            return PerfServerAccept(loop);
-        case PERF_EVENT_SOCKET:
-            return PerfServerDrive(loop, watch->end);
-        case PERF_EVENT_ASYNC:
-            return PerfServerNotify(loop, watch);
-        case PERF_EVENT_CALLBACK:
-            return PerfServerCallbacks(loop);
-        default:
-            return HITLS_INTERNAL_EXCEPTION;
+    PerfEndpoint *end = &batch->servers[index];
+    if (end->done || PerfIsPaused(end)) {
+        return HITLS_SUCCESS;
     }
+    return PerfDrive(batch, end);
 }
 
-static int32_t PerfServerEvents(PerfServerLoop *loop, uint64_t deadline)
+static int32_t PerfDispatch(PerfBatch *batch, const struct epoll_event *event)
 {
-    bool echoStarted = false;
-    for (;;) {
-        if (!echoStarted && loop->batch->doneServers == loop->batch->n) {
-            echoStarted = true;
-            deadline = PerfNowNs() + (uint64_t)PERF_TIMEOUT_MS * 1000000ull;
-            for (uint32_t i = 0; i < loop->batch->n; i++) {
-                if (PerfServerDrive(loop, &loop->batch->servers[i]) != HITLS_SUCCESS) {
-                    return HITLS_INTERNAL_EXCEPTION;
-                }
-            }
-        }
-        if (loop->echoed == loop->batch->n) {
-            return HITLS_SUCCESS;
-        }
-        uint64_t now = PerfNowNs();
-        if (now >= deadline) {
-            break;
-        }
-        uint64_t remaining = (deadline - now + 999999ull) / 1000000ull;
-        struct epoll_event events[64];
-        int count = epoll_wait(loop->fd, events, sizeof(events) / sizeof(events[0]),
-                               remaining > INT_MAX ? INT_MAX : (int)remaining);
-        if (count < 0) {
-            if (errno == EINTR) {
-                continue;
-            }
+    uint64_t tag = event->data.u64;
+    bool hangup = (event->events & (EPOLLERR | EPOLLHUP)) != 0;
+    if (tag == PERF_TAG_LISTEN || tag == PERF_TAG_WAKE) {
+        if (hangup) {
             return HITLS_INTERNAL_EXCEPTION;
         }
-        for (int i = 0; i < count; i++) {
-            if ((events[i].events & (EPOLLERR | EPOLLHUP)) ||
-                PerfServerEvent(loop, events[i].data.ptr) != HITLS_SUCCESS) {
-                return HITLS_INTERNAL_EXCEPTION;
-            }
-        }
+        return tag == PERF_TAG_LISTEN ? PerfOnAccept(batch) : PerfOnWake(batch);
     }
-    return HITLS_INTERNAL_EXCEPTION;
+    uint32_t index = (uint32_t)tag;
+    if (index >= batch->n) {
+        return HITLS_INTERNAL_EXCEPTION;
+    }
+    /* A finished connection is only kept open until the batch ends, so its peer closing does not matter. */
+    if (batch->servers[index].done) {
+        return HITLS_SUCCESS;
+    }
+    if (hangup) {
+        return HITLS_INTERNAL_EXCEPTION;
+    }
+    if ((tag & PERF_TAG_NOTIFY) != 0) {
+        return PerfOnNotify(batch, index);
+    }
+    return PerfOnSocket(batch, index);
 }
 
 int32_t PerfRunServer(PerfBatch *batch)
 {
     uint64_t deadline = PerfNowNs() + (uint64_t)PERF_TIMEOUT_MS * 1000000ull;
-    PerfServerLoop loop = {.batch = batch,
-                           .fd = epoll_create1(EPOLL_CLOEXEC),
-                           .listener = {.fd = batch->listener, .kind = PERF_EVENT_LISTEN},
-                           .callback = {.fd = batch->wakeFds[0], .kind = PERF_EVENT_CALLBACK},
-                           .notify = {.fd = -1, .kind = PERF_EVENT_ASYNC}};
+    batch->epollFd = epoll_create1(EPOLL_CLOEXEC);
     int32_t ret = HITLS_INTERNAL_EXCEPTION;
-    loop.sockets = calloc(batch->n, sizeof(*loop.sockets));
-    if (loop.fd >= 0 && loop.sockets != NULL && PerfEpollArm(&loop, &loop.listener, EPOLLIN) == HITLS_SUCCESS &&
-        (batch->form != PERF_FORM_ON_CB || PerfEpollArm(&loop, &loop.callback, EPOLLIN) == HITLS_SUCCESS)) {
+    if (batch->epollFd >= 0 && PerfEpollAdd(batch, batch->listener, EPOLLIN, PERF_TAG_LISTEN) == HITLS_SUCCESS &&
+        (batch->form != PERF_FORM_ON_CB ||
+         PerfEpollAdd(batch, batch->wakeFds[0], EPOLLIN, PERF_TAG_WAKE) == HITLS_SUCCESS)) {
         puts("LISTENING");
         fflush(stdout);
-        ret = PerfServerEvents(&loop, deadline);
+        bool failed = false;
+        while (!failed && batch->doneServers < batch->n) {
+            uint64_t now = PerfNowNs();
+            if (now >= deadline) {
+                break;
+            }
+            uint64_t remaining = (deadline - now + 999999ull) / 1000000ull;
+            struct epoll_event events[64];
+            int count = epoll_wait(batch->epollFd, events, (int)(sizeof(events) / sizeof(events[0])),
+                                   remaining > INT_MAX ? INT_MAX : (int)remaining);
+            if (count < 0) {
+                if (errno == EINTR) {
+                    continue;
+                }
+                failed = true;
+                break;
+            }
+            for (int i = 0; i < count; i++) {
+                if (batch->doneServers == batch->n) {
+                    break;
+                }
+                if (PerfDispatch(batch, &events[i]) != HITLS_SUCCESS) {
+                    failed = true;
+                    break;
+                }
+            }
+        }
+        if (!failed && batch->doneServers == batch->n) {
+            ret = HITLS_SUCCESS;
+        }
     }
-    if (loop.fd >= 0) {
-        close(loop.fd);
+    if (batch->epollFd >= 0) {
+        close(batch->epollFd);
+        batch->epollFd = -1;
     }
-    free(loop.sockets);
     return ret;
 }

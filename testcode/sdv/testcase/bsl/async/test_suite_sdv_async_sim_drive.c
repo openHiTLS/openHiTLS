@@ -18,6 +18,7 @@
 /* BEGIN_HEADER */
 #include "hitls.h"
 #include "hitls_config.h"
+#include "hitls_async.h"
 #include "frame_tls.h"
 #include "frame_link.h"
 #include "crypt_eal_pkey.h"
@@ -229,7 +230,7 @@ void SDV_ASYNC_SIM_DRIVE_TC002(void)
     ASSERT_EQ(FRAME_ASYNC_AttachLink(serverLink, &server), FRAME_ASYNC_SUCCESS);
 
     /* no completion callback anywhere: the producer selects the notify-handle
-     * path and the pump waits on the shared eventfd */
+     * path and the pump waits on each connection's eventfd */
     sc.operaId = CRYPT_EAL_OPERAID_KEYEXCH;
     sc.hitIndex = 0;
     sc.action = SIM_PROV_ACTION_PAUSE;

@@ -30,6 +30,9 @@
 #include "hitls_cookie.h"
 #include "hitls_alpn.h"
 #include "hitls_status_request.h"
+#ifdef HITLS_TLS_FEATURE_MODE_ASYNC
+#include "hitls_async.h"
+#endif
 #include "sal_atomic.h"
 #ifdef HITLS_TLS_FEATURE_PROVIDER
 #include "crypt_eal_provider.h"

@@ -29,6 +29,7 @@
 
 #ifdef HITLS_TLS_FEATURE_MODE_ASYNC
 #include "hitls.h"
+#include "hitls_async.h"
 #endif
 
 #ifdef __cplusplus

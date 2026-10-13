@@ -18,6 +18,7 @@
 /* BEGIN_HEADER */
 #include "hitls.h"
 #include "hitls_config.h"
+#include "hitls_async.h"
 #include "frame_tls.h"
 #include "frame_link.h"
 #include "crypt_eal_implprovider.h"

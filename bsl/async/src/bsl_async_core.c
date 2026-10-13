@@ -105,7 +105,7 @@ static void BSL_ASYNC_TaskEntryLoop(void *arg)
         task->state = BSL_ASYNC_TASK_STATE_STOPPING;
         while (BSL_SAL_CoroutineSwitch(task->coroutine, ctx->hostCtx) != BSL_SUCCESS) {
             BSL_LOG_BINLOG_FIXLEN(BINLOG_ID05157, BSL_LOG_LEVEL_FATAL, BSL_LOG_BINLOG_TYPE_RUN,
-                        "task completion switch failed", 0, 0, 0, 0);
+                                  "task completion switch failed", 0, 0, 0, 0);
             /* Completion must reach the host without re-running the entry. */
         }
         /* Resumed only after this physical task is bound to a new logical
@@ -291,50 +291,36 @@ bool BSL_ASYNC_IsSupported(void)
     return BSL_SAL_CoroutineIsSupported();
 }
 
-int32_t BSL_ASYNC_InitThread(uint32_t maxTasks, uint32_t initialTasks, uint32_t stackSize)
+static int32_t ExecCtxReinit(BSL_ASYNC_ExecCtx *ctx, uint32_t maxTasks, uint32_t initialTasks, uint32_t stackSize)
 {
-    BSL_ASYNC_ExecCtx *ctx = NULL;
-    int32_t ret;
-
-    /* maxTasks == 0 means no pool limit. */
-    if (initialTasks > maxTasks) {
+    if (ctx->currentTask != NULL) {
+        BSL_ERR_PUSH_ERROR(BSL_ASYNC_ERR_STATE_CONFLICT);
+        return BSL_ASYNC_ERR_STATE_CONFLICT;
+    }
+    /* Resize in place so outstanding tasks keep their execution domain. */
+    if ((stackSize == 0 ? BSL_ASYNC_DEFAULT_STACK_SIZE : stackSize) != ctx->taskStackSize) {
+        BSL_ERR_PUSH_ERROR(BSL_ASYNC_ERR_STATE_CONFLICT);
+        return BSL_ASYNC_ERR_STATE_CONFLICT;
+    }
+    if (initialTasks < ctx->pool->outstandingCount) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID05153, BSL_LOG_LEVEL_WARN, BSL_LOG_BINLOG_TYPE_RUN,
+            "pool scale-down rejected: %u outstanding task(s) exceed the requested %u",
+            ctx->pool->outstandingCount, initialTasks, 0, 0);
         BSL_ERR_PUSH_ERROR(BSL_INVALID_ARG);
         return BSL_INVALID_ARG;
     }
-    ctx = GetExecCtx();
-    if (ctx != NULL) {
-        if (ctx->currentTask != NULL) {
-            BSL_ERR_PUSH_ERROR(BSL_ASYNC_ERR_STATE_CONFLICT);
-            return BSL_ASYNC_ERR_STATE_CONFLICT;
-        }
-        /* Re-initialization resizes the pool in place: the execution domain
-         * (host context, resolved stack size, thread local slot, live
-         * reservation) and every outstanding task survive, so paused handles
-         * stay resumable. The pool limit is committed only after the
-         * resize succeeded. */
-        if ((stackSize == 0 ? BSL_ASYNC_DEFAULT_STACK_SIZE : stackSize) != ctx->taskStackSize) {
-            BSL_ERR_PUSH_ERROR(BSL_ASYNC_ERR_STATE_CONFLICT);
-            return BSL_ASYNC_ERR_STATE_CONFLICT;
-        }
-        if (initialTasks < ctx->pool->outstandingCount) {
-            BSL_LOG_BINLOG_FIXLEN(BINLOG_ID05153, BSL_LOG_LEVEL_WARN, BSL_LOG_BINLOG_TYPE_RUN,
-                                  "pool scale-down rejected: %u outstanding task(s) exceed the requested %u",
-                                  ctx->pool->outstandingCount, initialTasks, 0, 0);
-            BSL_ERR_PUSH_ERROR(BSL_INVALID_ARG);
-            return BSL_INVALID_ARG;
-        }
-        ret = PoolResize(ctx, initialTasks);
-        if (ret != BSL_SUCCESS) {
-            /* PoolResize restored the pool and pushed the error. */
-            return ret;
-        }
-        ctx->pool->maxTasks = maxTasks;
-        return BSL_SUCCESS;
+    int32_t ret = PoolResize(ctx, initialTasks);
+    if (ret != BSL_SUCCESS) {
+        /* PoolResize restored the pool and pushed the error. */
+        return ret;
     }
+    ctx->pool->maxTasks = maxTasks;
+    return BSL_SUCCESS;
+}
 
-    /* First initialization on this thread: create the process key once
-     * and count the new live domain. */
-    ret = AsyncProcLock();
+static int32_t AsyncProcLiveUp(void)
+{
+    int32_t ret = AsyncProcLock();
     if (ret != BSL_SUCCESS) {
         BSL_ERR_PUSH_ERROR(BSL_SAL_ERR_NO_MEMORY);
         return BSL_SAL_ERR_NO_MEMORY;
@@ -349,8 +335,13 @@ int32_t BSL_ASYNC_InitThread(uint32_t maxTasks, uint32_t initialTasks, uint32_t 
     }
     g_liveExecCtxCount++;
     AsyncProcUnlock();
+    return BSL_SUCCESS;
+}
 
-    ctx = BSL_SAL_Calloc(1, sizeof(BSL_ASYNC_ExecCtx));
+static int32_t ExecCtxNew(uint32_t maxTasks, uint32_t initialTasks, uint32_t stackSize)
+{
+    int32_t ret;
+    BSL_ASYNC_ExecCtx *ctx = BSL_SAL_Calloc(1, sizeof(BSL_ASYNC_ExecCtx));
     if (ctx == NULL) {
         ret = BSL_MALLOC_FAIL;
         BSL_ERR_PUSH_ERROR(ret);
@@ -368,8 +359,6 @@ int32_t BSL_ASYNC_InitThread(uint32_t maxTasks, uint32_t initialTasks, uint32_t 
     if (ret != BSL_SUCCESS) {
         goto ERR;
     }
-    /* Pre-created tasks are idle only: curr_tasks grows, no outstanding
-     * task is produced. */
     ret = PoolResize(ctx, initialTasks);
     if (ret != BSL_SUCCESS) {
         goto ERR;
@@ -381,14 +370,30 @@ int32_t BSL_ASYNC_InitThread(uint32_t maxTasks, uint32_t initialTasks, uint32_t 
     return BSL_SUCCESS;
 
 ERR:
-    /* First initialization failed: the reservation and the partially built
-     * domain are released together. */
-    (void) ExecCtxDestroy(ctx);
+    /* Release the partially built domain and its live reservation together. */
+    (void)ExecCtxDestroy(ctx);
     if (AsyncProcLock() == BSL_SUCCESS) {
         AsyncProcLiveDown();
         AsyncProcUnlock();
     }
     return ret;
+}
+
+int32_t BSL_ASYNC_InitThread(uint32_t maxTasks, uint32_t initialTasks, uint32_t stackSize)
+{
+    if (initialTasks > maxTasks) {
+        BSL_ERR_PUSH_ERROR(BSL_INVALID_ARG);
+        return BSL_INVALID_ARG;
+    }
+    BSL_ASYNC_ExecCtx *ctx = GetExecCtx();
+    if (ctx != NULL) {
+        return ExecCtxReinit(ctx, maxTasks, initialTasks, stackSize);
+    }
+    int32_t ret = AsyncProcLiveUp();
+    if (ret != BSL_SUCCESS) {
+        return ret;
+    }
+    return ExecCtxNew(maxTasks, initialTasks, stackSize);
 }
 
 void BSL_ASYNC_CleanupThread(void)
@@ -399,154 +404,147 @@ void BSL_ASYNC_CleanupThread(void)
 /* -------------------------------------------------------------------------- */
 /* public API: task scheduling */
 
-int32_t BSL_ASYNC_StartTask(BSL_ASYNC_Task **task, int32_t *ret, const BSL_ASYNC_TaskParam *param)
+static int32_t TaskPrepareExecCtx(BSL_ASYNC_ExecCtx **out, const BSL_ASYNC_TaskParam *param)
 {
-    BSL_ASYNC_ExecCtx *ctx = NULL;
-    BSL_ASYNC_Task *cur = NULL;
-    int32_t retCode;
-
-    if (task == NULL || ret == NULL) {
-        /* The caller's handle, when present, stays untouched. */
+    BSL_ASYNC_ExecCtx *ctx = GetExecCtx();
+    if (ctx != NULL && ctx->currentTask != NULL) {
+        BSL_ERR_PUSH_ERROR(BSL_ASYNC_ERR_STATE_CONFLICT);
+        return BSL_ASYNC_ERR;
+    }
+    if (param == NULL || param->func == NULL) {
         BSL_ERR_PUSH_ERROR(BSL_NULL_INPUT);
         return BSL_ASYNC_ERR;
     }
-    /* Resume input: the owner pointer comparison is the only check for the
-     * domain; param is neither read nor validated. */
-    if (*task != NULL) {
-        ctx = GetExecCtx();
-        if (ctx == NULL || (*task)->ownerExecCtx != ctx) {
-            return BSL_ASYNC_WRONG_EXEC_CTX;
-        }
-        cur = *task;
+    if ((param->args == NULL && param->argsSize != 0) || (param->args != NULL && param->argsSize == 0)) {
+        BSL_ERR_PUSH_ERROR(BSL_INVALID_ARG);
+        return BSL_ASYNC_ERR;
     }
-    /* State dispatch loop: every coroutine switch lands here with the task
-     * in a transient state it set before switching back; collapse it and
-     * deliver the scheduling result, or resume a paused task. PAUSE still
-     * escapes to the caller - the loop never waits for the completion event. */
-    while (true) {
-        if (cur != NULL) {
-            switch (cur->state) {
-                case BSL_ASYNC_TASK_STATE_STOPPING:
-                    /* The entry returned: deliver the result, release the
-                     * argument copy and recycle the physical task; the handle
-                     * is invalidated. The copy is discarded, not written
-                     * back - outputs leave through pointers embedded in the
-                     * buffer or through the return value. */
-                    ctx->currentTask = NULL;
-                    *ret = cur->ret;
-                    if (ctx->blockedPauseDepth != 0) {
-                        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID05152, BSL_LOG_LEVEL_WARN, BSL_LOG_BINLOG_TYPE_RUN,
-                                              "task finished with block-pause depth %u; clearing before recycle",
-                                              ctx->blockedPauseDepth, 0, 0, 0);
-                        ctx->blockedPauseDepth = 0;
-                    }
-                    PoolTaskRecycle(cur);
-                    *task = NULL;
-                    return BSL_ASYNC_FINISH;
-                case BSL_ASYNC_TASK_STATE_PAUSING:
-                    /* Collapse the transient state; the handle stays with the
-                     * caller for a later resume. Nothing is copied
-                     * out: the entry keeps running on its own copy after the
-                     * resume, the caller's buffer is untouched. */
-                    ctx->currentTask = NULL;
-                    *task = cur;
-                    cur->state = BSL_ASYNC_TASK_STATE_PAUSED;
-                    return BSL_ASYNC_PAUSE;
-                case BSL_ASYNC_TASK_STATE_PAUSED:
-                    if (ctx->currentTask != NULL) {
-                        BSL_ERR_PUSH_ERROR(BSL_ASYNC_ERR_STATE_CONFLICT);
-                        return BSL_ASYNC_ERR;
-                    }
-                    ctx->currentTask = cur;
-                    cur->state = BSL_ASYNC_TASK_STATE_RUNNING;
-                    retCode = BSL_SAL_CoroutineSwitch(ctx->hostCtx, cur->coroutine);
-                    if (retCode != BSL_SUCCESS) {
-                        /* Not switched: the handle stays with the caller. */
-                        ctx->currentTask = NULL;
-                        cur->state = BSL_ASYNC_TASK_STATE_PAUSED;
-                        return BSL_ASYNC_ERR;
-                    }
-                    continue; /* Dispatch on the state set before the switch back. */
-                default:
-                    /* IDLE or RUNNING: a stale or in-flight handle. */
-                    BSL_ERR_PUSH_ERROR(BSL_ASYNC_ERR_STATE_CONFLICT);
-                    return BSL_ASYNC_ERR;
-            }
+    /* Probe before implicit initialization: unsupported backends allocate nothing. */
+    if (!BSL_ASYNC_IsSupported()) {
+        return BSL_ASYNC_UNSUPPORTED;
+    }
+    if (ctx == NULL) {
+        if (BSL_ASYNC_InitThread(0, 0, 0) != BSL_SUCCESS) {
+            return BSL_ASYNC_ERR;
         }
-
-        /* First start. */
         ctx = GetExecCtx();
-        if (ctx != NULL && ctx->currentTask != NULL) {
-            BSL_ERR_PUSH_ERROR(BSL_ASYNC_ERR_STATE_CONFLICT);
-            return BSL_ASYNC_ERR;
-        }
-        if (param == NULL || param->func == NULL) {
-            BSL_ERR_PUSH_ERROR(BSL_NULL_INPUT);
-            return BSL_ASYNC_ERR;
-        }
-        /* Argument contract: a non-NULL buffer must declare its size, a
-         * NULL buffer none (the one-way snapshot semantics of the TaskParam,
-         * see include/bsl/bsl_async.h). Checked before the allocation: an
-         * invalid param creates no task. */
-        if ((param->args == NULL && param->argsSize != 0) || (param->args != NULL && param->argsSize == 0)) {
-            BSL_ERR_PUSH_ERROR(BSL_INVALID_ARG);
-            return BSL_ASYNC_ERR;
-        }
-        /* Capability probe precedes the implicit default initialization: on a
-         * no-backend build nothing is created. */
-        if (!BSL_ASYNC_IsSupported()) {
-            return BSL_ASYNC_UNSUPPORTED;
-        }
         if (ctx == NULL) {
-            /* Defaults: no pool limit, no pre-created tasks. */
-            retCode = BSL_ASYNC_InitThread(0, 0, 0);
-            if (retCode != BSL_SUCCESS) {
-                /* InitThread already pushed its reason. */
-                return BSL_ASYNC_ERR;
-            }
-            ctx = GetExecCtx();
-            if (ctx == NULL) {
-                BSL_ERR_PUSH_ERROR(BSL_ASYNC_ERR_NOT_INITIALIZED);
-                return BSL_ASYNC_ERR;
-            }
-        }
-        retCode = PoolTaskAlloc(ctx, &cur);
-        if (retCode == BSL_ASYNC_NO_JOB) {
-            return BSL_ASYNC_NO_JOB;
-        }
-        if (retCode != BSL_SUCCESS) {
-            /* PoolTaskNew already recorded the allocation or backend failure. */
+            BSL_ERR_PUSH_ERROR(BSL_ASYNC_ERR_NOT_INITIALIZED);
             return BSL_ASYNC_ERR;
         }
-        /* Counted from here: the argument-copy failure path below recycles
-         * through PoolTaskRecycle, which decrements the counter. */
-        ctx->pool->outstandingCount++;
-        if (param->argsSize != 0) {
-            cur->argsCopy = BSL_SAL_Dump(param->args, param->argsSize);
-            if (cur->argsCopy == NULL) {
-                BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
+    }
+    *out = ctx;
+    return BSL_SUCCESS;
+}
+
+static int32_t TaskResume(BSL_ASYNC_ExecCtx *ctx, BSL_ASYNC_Task *cur)
+{
+    if (ctx->currentTask != NULL) {
+        BSL_ERR_PUSH_ERROR(BSL_ASYNC_ERR_STATE_CONFLICT);
+        return BSL_ASYNC_ERR;
+    }
+    ctx->currentTask = cur;
+    cur->state = BSL_ASYNC_TASK_STATE_RUNNING;
+    if (BSL_SAL_CoroutineSwitch(ctx->hostCtx, cur->coroutine) != BSL_SUCCESS) {
+        /* Not switched: the handle stays with the caller. */
+        ctx->currentTask = NULL;
+        cur->state = BSL_ASYNC_TASK_STATE_PAUSED;
+        return BSL_ASYNC_ERR;
+    }
+    return BSL_SUCCESS;
+}
+
+static int32_t TaskDispatch(BSL_ASYNC_ExecCtx *ctx, BSL_ASYNC_Task *cur, BSL_ASYNC_Task **task, int32_t *ret)
+{
+    while (true) {
+        switch (cur->state) {
+            case BSL_ASYNC_TASK_STATE_STOPPING:
+                ctx->currentTask = NULL;
+                *ret = cur->ret;
+                if (ctx->blockedPauseDepth != 0) {
+                    BSL_LOG_BINLOG_FIXLEN(BINLOG_ID05152, BSL_LOG_LEVEL_WARN, BSL_LOG_BINLOG_TYPE_RUN,
+                        "task finished with block-pause depth %u; clearing before recycle",
+                        ctx->blockedPauseDepth, 0, 0, 0);
+                    ctx->blockedPauseDepth = 0;
+                }
+                /* Discard the argument snapshot; outputs use embedded pointers or ret. */
                 PoolTaskRecycle(cur);
                 *task = NULL;
+                return BSL_ASYNC_FINISH;
+            case BSL_ASYNC_TASK_STATE_PAUSING:
+                ctx->currentTask = NULL;
+                *task = cur;
+                cur->state = BSL_ASYNC_TASK_STATE_PAUSED;
+                return BSL_ASYNC_PAUSE;
+            case BSL_ASYNC_TASK_STATE_PAUSED:
+                if (TaskResume(ctx, cur) != BSL_SUCCESS) {
+                    return BSL_ASYNC_ERR;
+                }
+                continue; /* Dispatch on the state set before the switch back. */
+            default:
+                /* IDLE or RUNNING: a stale or in-flight handle. */
+                BSL_ERR_PUSH_ERROR(BSL_ASYNC_ERR_STATE_CONFLICT);
                 return BSL_ASYNC_ERR;
-            }
         }
-        /* Bind the logical task. */
-        cur->notifyCtx = param->notifyCtx;
-        cur->entry = param->func;
-        cur->ret = 0;
-        cur->state = BSL_ASYNC_TASK_STATE_RUNNING;
-        *task = cur;
-        ctx->currentTask = cur;
-        retCode = BSL_SAL_CoroutineSwitch(ctx->hostCtx, cur->coroutine);
-        if (retCode != BSL_SUCCESS) {
-            /* Never entered: collapse safely and report the handle as gone. */
-            ctx->currentTask = NULL;
+    }
+}
+
+static int32_t TaskStartNew(BSL_ASYNC_ExecCtx *ctx, BSL_ASYNC_Task **task, int32_t *taskRet,
+                            const BSL_ASYNC_TaskParam *param)
+{
+    BSL_ASYNC_Task *cur = NULL;
+    int32_t ret = PoolTaskAlloc(ctx, &cur);
+    if (ret != BSL_SUCCESS) {
+        return ret == BSL_ASYNC_NO_JOB ? BSL_ASYNC_NO_JOB : BSL_ASYNC_ERR;
+    }
+    /* Count before copying so every failure can use PoolTaskRecycle. */
+    ctx->pool->outstandingCount++;
+    if (param->argsSize != 0) {
+        cur->argsCopy = BSL_SAL_Dump(param->args, param->argsSize);
+        if (cur->argsCopy == NULL) {
+            BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
             PoolTaskRecycle(cur);
             *task = NULL;
             return BSL_ASYNC_ERR;
         }
-        /* Loop: dispatch on the state the task set before switching back. */
     }
+    cur->notifyCtx = param->notifyCtx;
+    cur->entry = param->func;
+    cur->ret = 0;
+    cur->state = BSL_ASYNC_TASK_STATE_RUNNING;
+    *task = cur;
+    ctx->currentTask = cur;
+    ret = BSL_SAL_CoroutineSwitch(ctx->hostCtx, cur->coroutine);
+    if (ret != BSL_SUCCESS) {
+        /* Never entered: collapse safely and report the handle as gone. */
+        ctx->currentTask = NULL;
+        PoolTaskRecycle(cur);
+        *task = NULL;
+        return BSL_ASYNC_ERR;
+    }
+    return TaskDispatch(ctx, cur, task, taskRet);
+}
+
+int32_t BSL_ASYNC_StartTask(BSL_ASYNC_Task **task, int32_t *ret, const BSL_ASYNC_TaskParam *param)
+{
+    if (task == NULL || ret == NULL) {
+        BSL_ERR_PUSH_ERROR(BSL_NULL_INPUT);
+        return BSL_ASYNC_ERR;
+    }
+    BSL_ASYNC_ExecCtx *ctx = NULL;
+    if (*task != NULL) {
+        /* Resume validates ownership without reading param. */
+        ctx = GetExecCtx();
+        if (ctx == NULL || (*task)->ownerExecCtx != ctx) {
+            return BSL_ASYNC_WRONG_EXEC_CTX;
+        }
+        return TaskDispatch(ctx, *task, task, ret);
+    }
+    int32_t retCode = TaskPrepareExecCtx(&ctx, param);
+    if (retCode != BSL_SUCCESS) {
+        return retCode;
+    }
+    return TaskStartNew(ctx, task, ret, param);
 }
 
 BSL_ASYNC_Task *BSL_ASYNC_GetCurrentTask(void)

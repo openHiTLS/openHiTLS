@@ -36,8 +36,6 @@ SimEngine *SimEngineGet(void)
         e->execMode = SIM_PROV_EXEC_INLINE;
         e->workers = 0;
         e->waitNs = 0;
-        e->notifyFd.fd = -1;
-        e->notifyFd.write = -1;
         g_simEngine = e;
     }
     return g_simEngine;
@@ -55,10 +53,6 @@ void SimEngineFree(void)
     }
     if (e->disarmed != NULL) {
         BSL_SAL_Free(e->disarmed);
-    }
-    if (e->notifyFdOpen) {
-        SimNotifyFdDestroy(&e->notifyFd);
-        e->notifyFdOpen = false;
     }
     if (e->lock != NULL) {
         BSL_SAL_ThreadLockFree(e->lock);

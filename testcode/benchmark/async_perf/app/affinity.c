@@ -23,6 +23,8 @@
 
 #include <sched.h>
 
+#define PERF_CLIENT_CPUS 10
+
 typedef struct {
     uint64_t total;
     uint64_t idle;
@@ -106,14 +108,16 @@ static bool PerfCpuAvailable(int cpu)
     return true;
 }
 
-int PerfAffinityInit(int cpu, uint32_t workers)
+int PerfAffinityInit(int cpu, uint32_t workers, uint32_t concurrency)
 {
     if (cpu == -1) {
         return 0;
     }
+    /* One client process per core; the dispatcher must stay off the cores the clients will use. */
+    uint32_t clientCpus = concurrency < PERF_CLIENT_CPUS ? concurrency : PERF_CLIENT_CPUS;
     PerfCpu before[CPU_SETSIZE] = {0};
     struct timespec delay = {0, 500000000};
-    if (workers >= CPU_SETSIZE - 1 || sched_getaffinity(0, sizeof(g_original), &g_original) != 0 ||
+    if (workers >= CPU_SETSIZE - 1 - clientCpus || sched_getaffinity(0, sizeof(g_original), &g_original) != 0 ||
         !PerfReadCpuTimes(before)) {
         goto FAIL;
     }
@@ -137,7 +141,7 @@ int PerfAffinityInit(int cpu, uint32_t workers)
             before[i].present && total > 0 && idle <= total ? 100.0 * (double)(total - idle) / (double)total : 100.0;
     }
     g_selectedCount = 0;
-    for (uint32_t slot = 0; slot < workers + 2; slot++) {
+    for (uint32_t slot = 0; slot < workers + 1 + clientCpus; slot++) {
         int best = -1;
         for (int i = 0; i < CPU_SETSIZE; i++) {
             if (slot == 0 && cpu >= 0 && cpu != i) {
@@ -152,11 +156,6 @@ int PerfAffinityInit(int cpu, uint32_t workers)
         }
         g_selected[g_selectedCount++] = best;
     }
-    for (int i = 0; i < CPU_SETSIZE; i++) {
-        if (PerfCpuAvailable(i)) {
-            g_selected[g_selectedCount++] = i;
-        }
-    }
     cpu_set_t set;
     CPU_ZERO(&set);
     CPU_SET(g_selected[0], &set);
@@ -169,14 +168,15 @@ int PerfAffinityInit(int cpu, uint32_t workers)
         printf("%s%d", i == 1 ? "" : ",", g_selected[i]);
     }
     printf(" clients=");
-    for (uint32_t i = workers + 1; i < g_selectedCount; i++) {
-        printf("%s%d", i == workers + 1 ? "" : ",", g_selected[i]);
+    for (uint32_t i = 0; i < clientCpus; i++) {
+        printf("%s%d", i == 0 ? "" : ",", g_selected[workers + 1 + i]);
     }
     printf(" (distinct physical cores, sampled busy <= 10%%)\n");
     return 0;
 FAIL:
-    fprintf(stderr, "cannot bind idle physical cores: need dispatcher + %u workers + client (Linux, busy <= 10%%)\n",
-            workers);
+    fprintf(stderr,
+            "cannot bind idle physical cores: need dispatcher + %u workers + %u client cores (Linux, busy <= 10%%)\n",
+            workers, clientCpus);
     return -1;
 }
 

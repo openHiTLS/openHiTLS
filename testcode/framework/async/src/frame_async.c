@@ -445,14 +445,11 @@ static void FrameAsyncReinvoke(FRAME_ASYNC_Link *link)
     link->lastRet = ret;
 }
 
-/* Rebuild the wait set from the CURRENT sources of every paused link.
+/* Rebuild the wait set from the current sources of every paused link.
  *
- * The design's incremental maintenance (GetChanged + add/del)
- * breaks on the shared engine notify object: the provider registers ONE
- * eventfd under one key, but each connection has its own notify context, so
- * one connection's deletion window can drop the handle another paused
- * connection still needs. Rebuilding from GetAll is O(links * handles) over
- * the whole table and is self-healing. */
+ * Each connection has its own eventfd. This driver still rebuilds the set
+ * with GetAll on every pump and, when any fd is readable, resumes every
+ * paused link. That resume is legal: an unfinished request pauses again. */
 static bool FrameAsyncCollectHandles(BSL_ASYNC_NotifyHandle *handles, uint32_t cap, uint32_t *count)
 {
     *count = 0;
@@ -567,7 +564,7 @@ int32_t FRAME_ASYNC_Pump(uint32_t timeoutMs)
             return FRAME_ASYNC_ERR_STATE;
         }
         if (count > 0) {
-            /* handle path: wait for the shared eventfd */
+            /* handle path: wait on each connection's eventfd */
             struct pollfd *pfds = g_waitPfds;
             for (uint32_t i = 0; i < count; i++) {
                 pfds[i].fd = (int)(uintptr_t)g_waitHandles[i];

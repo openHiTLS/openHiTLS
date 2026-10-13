@@ -14,7 +14,7 @@
 cmake_minimum_required(VERSION 3.16 FATAL_ERROR)
 project(openHiTLS_ASYNC_SIM_PROVIDER)
 
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fPIC -Werror")
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -g -fPIC -Werror")
 if(APPLE)
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-unused-command-line-argument -Wno-pointer-sign -Wno-tautological-pointer-compare")
 endif()

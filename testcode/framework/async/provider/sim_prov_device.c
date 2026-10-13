@@ -378,8 +378,8 @@ void SimDeviceNotifyLocked(SimEngine *e, const SimOpCtx *op)
         if (op->useCallback && op->cb != NULL) {
             (void)op->cb(op->cbArg);
             e->stats.notifications++;
-        } else if (e->notifyFdOpen) {
-            SimNotifyFdSignal(&e->notifyFd);
+        } else if (op->nfd != NULL) {
+            SimNotifyFdSignal(op->nfd);
             e->stats.notifications++;
         } else {
             /* No notify channel (OFF build sync fallback): nothing to post. */

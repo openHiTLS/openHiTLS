@@ -334,7 +334,8 @@ int32_t BSL_ASYNC_NotifyCtxGetChangedNotifySources(const BSL_ASYNC_NotifyCtx *ct
         }
         listNode = listNode->next;
     }
-    /* Read-only by contract: node states and both counters are unchanged; the framework consumes the window at the resume point. */
+    /* Read-only by contract: node states and both counters are unchanged;
+     * the framework consumes the window at the resume point. */
     return BSL_SUCCESS;
 }
 

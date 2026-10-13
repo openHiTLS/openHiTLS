@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 # This file is part of the openHiTLS project.
 # Licensed under the Mulan PSL v2: http://license.coscl.org.cn/MulanPSL2
-"""Start one server, then N independent single-connection client demos."""
+"""Start one server, then ten client processes sharing N connection threads."""
 
 import argparse
 import csv
-import os
 from pathlib import Path
 import re
+from shutil import which
 import subprocess
 import tempfile
 import time
@@ -51,13 +51,13 @@ def server_command(args):
 
 def wait_ready(server, log):
     deadline = time.monotonic() + 30
-    client_cpus = []
+    client_cpus = ""
     while time.monotonic() < deadline:
         line = log.readline()
         if line:
-            binding = re.search(r" clients=([0-9,]+)", line)
+            binding = re.search(r" clients=([\d,]+)\s", line)
             if binding:
-                client_cpus = [int(cpu) for cpu in binding[1].split(",")]
+                client_cpus = binding[1]
                 print(line.strip(), flush=True)
             if line.strip() == "LISTENING":
                 return client_cpus
@@ -95,14 +95,16 @@ def run_batch(args, scenario):
                 cpus = wait_ready(server, reader)
                 if cpus is not None:
                     protocol = "tls12" if "-tls12-" in scenario else "tls13"
-                    for index in range(args.concurrency):
-                        pin = None
-                        if cpus:
-                            cpu = cpus[index % len(cpus)]
-                            pin = lambda cpu=cpu: os.sched_setaffinity(0, {cpu})
-                        processes.append(subprocess.Popen([str(args.client.resolve()), str(args.port), protocol],
-                                                          stdout=subprocess.DEVNULL, stderr=client_log,
-                                                          preexec_fn=pin))
+                    client_cpus = cpus.split(",") if cpus else []
+                    count, remainder = divmod(args.concurrency, 10)
+                    for index in range(10):
+                        connections = count + (index < remainder)
+                        if connections == 0:
+                            continue
+                        command = [str(args.client.resolve()), str(args.port), protocol, str(connections)]
+                        if client_cpus:
+                            command = [which("taskset") or "taskset", "-c", client_cpus[index], *command]
+                        processes.append(subprocess.Popen(command, stdout=subprocess.DEVNULL, stderr=client_log))
                 deadline = time.monotonic() + 60
                 while True:
                     codes = [process.poll() for process in processes]
@@ -121,12 +123,12 @@ def run_batch(args, scenario):
         output = server_log.read()
         client_log.seek(0)
         client_errors = client_log.read()
-    result = ["0", "0", "INVALID"]
+    result = ["0", "0", "0", "INVALID"]
     for line in output.splitlines():
         if line.startswith("RESULT,"):
             result = line.split(",")[1:]
-    if error or result[2] == "INVALID":
-        result[2] = "INVALID"
+    if error or result[3] == "INVALID":
+        result[3] = "INVALID"
         print(f"{error or 'server failed'}\n{output}{client_errors}", flush=True)
     return result
 
@@ -148,16 +150,18 @@ def main():
     result_file = Path(tempfile.mkdtemp(prefix="run_", dir=args.out)) / "results.csv"
     with result_file.open("w", newline="") as stream:
         writer = csv.writer(stream)
-        writer.writerow(["scenario", "repeat", "concurrency", "workers", "exec_mode", "handshakes", "batch_ns", "status"])
+        writer.writerow(["scenario", "repeat", "concurrency", "workers", "exec_mode", "handshakes", "batch_ns",
+                         "peak_inflight", "status"])
         print(f"results: {result_file}", flush=True)
         for scenario in scenarios:
             for repeat in range(args.repeat):
-                count, elapsed, status = run_batch(args, scenario)
+                count, elapsed, peak, status = run_batch(args, scenario)
                 writer.writerow([scenario, repeat, args.concurrency,
                                  args.workers if args.device_mode == "worker" else 0,
-                                 args.device_mode, count, elapsed, status])
+                                 args.device_mode, count, elapsed, peak, status])
                 stream.flush()
-                print(f"{scenario} r{repeat} {status} handshakes={count} batch={int(elapsed) / 1e6:.3f}ms", flush=True)
+                print(f"{scenario} r{repeat} {status} handshakes={count} "
+                      f"batch={int(elapsed) / 1e6:.3f}ms peak_inflight={peak}", flush=True)
                 if status == "INVALID":
                     return 1
                 if status == "UNSUPPORTED":

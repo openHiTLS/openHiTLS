@@ -30,6 +30,12 @@
 #include <netinet/in.h>
 #include <netinet/tcp.h>
 #include <sys/socket.h>
+#include <pthread.h>
+
+typedef struct {
+    uint16_t port;
+    bool tls12;
+} ClientArgs;
 
 static bool ClientWantIo(HITLS_Ctx *ctx, int32_t ret)
 {
@@ -40,44 +46,26 @@ static bool ClientWantIo(HITLS_Ctx *ctx, int32_t ret)
 static int ClientExchange(HITLS_Ctx *ctx)
 {
     int32_t ret;
+    uint8_t byte = 0;
+    uint32_t len = 0;
     do {
         ret = HITLS_Connect(ctx);
     } while (ClientWantIo(ctx, ret));
     if (ret != HITLS_SUCCESS) {
         return -1;
     }
-    const uint8_t request = 42;
-    uint8_t response = 0;
-    uint32_t len = 0;
+    /* TLS 1.3 session tickets are consumed here. The read then blocks until the server closes. */
     do {
-        ret = HITLS_Write(ctx, &request, 1, &len);
+        ret = HITLS_Read(ctx, &byte, 1, &len);
     } while (ClientWantIo(ctx, ret));
-    if (ret != HITLS_SUCCESS || len != 1) {
-        return -1;
-    }
-    do {
-        ret = HITLS_Read(ctx, &response, 1, &len);
-    } while (ClientWantIo(ctx, ret));
-    return ret == HITLS_SUCCESS && len == 1 && response == request ? 0 : -1;
+    (void)ret;
+    return 0;
 }
 
-int main(int argc, char **argv)
+static void *ClientConnect(void *arg)
 {
-    char *end = NULL;
-    errno = 0;
-    unsigned long port = argc > 1 ? strtoul(argv[1], &end, 10) : 44330;
-    if (argc > 3 || errno != 0 || port == 0 || port > UINT16_MAX || (argc > 1 && (end == argv[1] || *end != '\0')) ||
-        (argc > 2 && strcmp(argv[2], "tls12") != 0 && strcmp(argv[2], "tls13") != 0)) {
-        fprintf(stderr, "usage: %s [port=44330] [tls12|tls13]\n", argv[0]);
-        return 2;
-    }
-    signal(SIGPIPE, SIG_IGN);
-    alarm(30);
-    if (CRYPT_EAL_Init(CRYPT_EAL_INIT_ALL) != CRYPT_SUCCESS) {
-        return 1;
-    }
-    HITLS_Config *cfg =
-        argc > 2 && strcmp(argv[2], "tls12") == 0 ? HITLS_CFG_NewTLS12Config() : HITLS_CFG_NewTLS13Config();
+    const ClientArgs *args = arg;
+    HITLS_Config *cfg = args->tls12 ? HITLS_CFG_NewTLS12Config() : HITLS_CFG_NewTLS13Config();
     HITLS_Ctx *ctx = NULL;
     BSL_UIO *uio = NULL;
     int fd = -1;
@@ -92,6 +80,9 @@ int main(int argc, char **argv)
         goto EXIT;
     }
     fd = socket(AF_INET, SOCK_STREAM, 0);
+    struct sockaddr_in addr = {
+        .sin_family = AF_INET, .sin_port = htons(args->port), .sin_addr.s_addr = htonl(INADDR_LOOPBACK)};
+    int enabled = 1;
     if (fd < 0 || setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, &enabled, sizeof(enabled)) != 0 ||
         connect(fd, (struct sockaddr *)&addr, sizeof(addr)) != 0) {
         goto EXIT;
@@ -114,6 +105,54 @@ EXIT:
     if (fd >= 0) {
         close(fd);
     }
+    BSL_ERR_RemoveErrorStack(false);
+    if (ret != 0) {
+        _Exit(1);
+    }
+    return NULL;
+}
+
+int main(int argc, char **argv)
+{
+    char *end = NULL;
+    errno = 0;
+    unsigned long port = argc > 1 ? strtoul(argv[1], &end, 10) : 44330;
+    if (argc > 4 || errno != 0 || port == 0 || port > UINT16_MAX || (argc > 1 && (end == argv[1] || *end != '\0')) ||
+        (argc > 2 && strcmp(argv[2], "tls12") != 0 && strcmp(argv[2], "tls13") != 0)) {
+        goto USAGE;
+    }
+    errno = 0;
+    unsigned long count = argc > 3 ? strtoul(argv[3], &end, 10) : 1;
+    if (errno != 0 || count == 0 || count > UINT32_MAX || (argc > 3 && (end == argv[3] || *end != '\0'))) {
+        goto USAGE;
+    }
+    signal(SIGPIPE, SIG_IGN);
+    alarm(30);
+    pthread_t *threads = calloc(count, sizeof(*threads));
+    if (threads == NULL) {
+        return 1;
+    }
+    if (CRYPT_EAL_Init(CRYPT_EAL_INIT_ALL) != CRYPT_SUCCESS) {
+        free(threads);
+        return 1;
+    }
+    ClientArgs args = {.port = (uint16_t)port, .tls12 = argc > 2 && strcmp(argv[2], "tls12") == 0};
+    for (unsigned long i = 0; i < count; i++) {
+        int ret = pthread_create(&threads[i], NULL, ClientConnect, &args);
+        if (ret != 0) {
+            fprintf(stderr, "client pthread_create failed: %s\n", strerror(ret));
+            _Exit(1);
+        }
+    }
+    for (unsigned long i = 0; i < count; i++) {
+        if (pthread_join(threads[i], NULL) != 0) {
+            _Exit(1);
+        }
+    }
     CRYPT_EAL_Cleanup(CRYPT_EAL_INIT_ALL);
-    return ret == 0 ? 0 : 1;
+    free(threads);
+    return 0;
+USAGE:
+    fprintf(stderr, "usage: %s [port=44330] [tls12|tls13] [connections=1]\n", argv[0]);
+    return 2;
 }

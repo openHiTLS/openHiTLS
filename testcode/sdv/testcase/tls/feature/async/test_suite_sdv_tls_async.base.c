@@ -23,6 +23,7 @@
 #include "bsl_async.h"
 #include "hitls.h"
 #include "hitls_config.h"
+#include "hitls_async.h"
 #include "hitls_error.h"
 #include "bsl_sal.h"
 #include "frame_tls.h"

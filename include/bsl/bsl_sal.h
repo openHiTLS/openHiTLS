@@ -1006,10 +1006,10 @@ typedef enum {
     BSL_SAL_THREAD_CONDVAR_SIGNAL_CB_FUNC,
     BSL_SAL_THREAD_CONDVAR_WAIT_CB_FUNC,
     BSL_SAL_THREAD_CONDVAR_DELETE_CB_FUNC,
-    BSL_SAL_THREAD_LOCAL_KEY_CREATE_CB_FUNC, /* BslThreadLocalKeyCreate */
-    BSL_SAL_THREAD_LOCAL_KEY_DELETE_CB_FUNC, /* BslThreadLocalKeyDelete */
-    BSL_SAL_THREAD_LOCAL_GET_CB_FUNC,        /* BslThreadLocalGet */
-    BSL_SAL_THREAD_LOCAL_SET_CB_FUNC,        /* BslThreadLocalSet */
+    BSL_SAL_THREAD_LOCAL_KEY_CREATE_CB_FUNC,            /* BslThreadLocalKeyCreate */
+    BSL_SAL_THREAD_LOCAL_KEY_DELETE_CB_FUNC,            /* BslThreadLocalKeyDelete */
+    BSL_SAL_THREAD_LOCAL_GET_CB_FUNC,                   /* BslThreadLocalGet */
+    BSL_SAL_THREAD_LOCAL_SET_CB_FUNC,                   /* BslThreadLocalSet */
 
     BSL_SAL_NET_WRITE_CB_FUNC = 0x0300,                 /* BslSalNetWrite */
     BSL_SAL_NET_READ_CB_FUNC,                           /* BslSalNetRead */
@@ -1056,17 +1056,17 @@ typedef enum {
     BSL_SAL_FILE_SET_ATTR_FUNC,                         /* BslSalFSetAttr */
     BSL_SAL_FILE_GET_ATTR_FUNC,                         /* BslSalFGetAttr */
 
+    BSL_SAL_COROUTINE_IS_SUPPORTED_CB_FUNC = 0x0600,    /* BslSalCoroutineIsSupported */
+    BSL_SAL_COROUTINE_INIT_CURRENT_CB_FUNC,             /* BslSalCoroutineInitCurrent */
+    BSL_SAL_COROUTINE_CREATE_CB_FUNC,                   /* BslSalCoroutineCreate */
+    BSL_SAL_COROUTINE_SWITCH_CB_FUNC,                   /* BslSalCoroutineSwitch */
+    BSL_SAL_COROUTINE_DESTROY_CB_FUNC,                  /* BslSalCoroutineDestroy */
+
     BSL_SAL_DL_OPEN_CB_FUNC = 0x0700,
     BSL_SAL_DL_CLOSE_CB_FUNC,
     BSL_SAL_DL_SYM_CB_FUNC,
 
     BSL_SAL_PID_GET_ID_CB_FUNC = 0x0800,
-
-    BSL_SAL_COROUTINE_IS_SUPPORTED_CB_FUNC = 0x0900, /* BslSalCoroutineIsSupported */
-    BSL_SAL_COROUTINE_INIT_CURRENT_CB_FUNC, /* BslSalCoroutineInitCurrent */
-    BSL_SAL_COROUTINE_CREATE_CB_FUNC, /* BslSalCoroutineCreate */
-    BSL_SAL_COROUTINE_SWITCH_CB_FUNC, /* BslSalCoroutineSwitch */
-    BSL_SAL_COROUTINE_DESTROY_CB_FUNC, /* BslSalCoroutineDestroy */
 
     BSL_SAL_MAX_FUNC_CB = 0xffff
 } BSL_SAL_CB_FUNC_TYPE;

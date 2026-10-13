@@ -106,47 +106,50 @@ int32_t SAL_UC_CoroutineInitCurrent(BSL_ASYNC_Coroutine **co)
     return BSL_SUCCESS;
 }
 
+static int32_t SAL_UC_StackAlloc(SAL_UC_Coroutine *impl, size_t body, size_t pageSize)
+{
+    size_t total = body + 2 * pageSize;
+    impl->mapBase = mmap(NULL, total, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+    if (impl->mapBase == MAP_FAILED) {
+        impl->mapBase = NULL;
+        return BSL_SAL_ERR_NO_MEMORY;
+    }
+    if (mprotect(impl->mapBase, pageSize, PROT_NONE) != 0 ||
+        mprotect(impl->mapBase + total - pageSize, pageSize, PROT_NONE) != 0) {
+        (void)munmap(impl->mapBase, total);
+        return BSL_SAL_ERR_NO_MEMORY;
+    }
+    impl->mapSize = total;
+    return BSL_SUCCESS;
+}
+
 int32_t SAL_UC_CoroutineCreate(BSL_ASYNC_Coroutine **co, uint32_t stackSize, BSL_SAL_CoroutineEntry entry, void *arg)
 {
-    SAL_UC_Coroutine *impl = NULL;
-    long pageSize;
-    size_t body;
-    size_t total;
-    uintptr_t ptr;
-
+    uint32_t finalStackSize = stackSize;
     if (stackSize == 0) {
-        stackSize = BSL_SAL_COROUTINE_DEFAULT_STACK_SIZE;
+        finalStackSize = BSL_SAL_COROUTINE_DEFAULT_STACK_SIZE;
     }
-    if (stackSize < BSL_SAL_COROUTINE_MIN_STACK_SIZE || stackSize > BSL_SAL_COROUTINE_MAX_STACK_SIZE) {
+    if (finalStackSize < BSL_SAL_COROUTINE_MIN_STACK_SIZE || finalStackSize > BSL_SAL_COROUTINE_MAX_STACK_SIZE) {
         return BSL_INVALID_ARG;
     }
-    pageSize = sysconf(_SC_PAGESIZE);
+    long pageSize = sysconf(_SC_PAGESIZE);
     if (pageSize <= 0) {
         return BSL_SAL_ERR_NO_MEMORY;
     }
     /* Round the requested size up to whole pages and add one PROT_NONE guard
      * page at each end: stacks grow downward, so the low page
      * turns an overflow into a signal instead of silent corruption. */
-    body = ((stackSize + (size_t)pageSize - 1) / (size_t)pageSize) * (size_t)pageSize;
-    total = body + 2 * (size_t)pageSize;
+    size_t body = ((finalStackSize + (size_t)pageSize - 1) / (size_t)pageSize) * (size_t)pageSize;
 
-    impl = BSL_SAL_Calloc(1, sizeof(SAL_UC_Coroutine));
+    SAL_UC_Coroutine *impl = BSL_SAL_Calloc(1, sizeof(SAL_UC_Coroutine));
     if (impl == NULL) {
         return BSL_MALLOC_FAIL;
     }
-    impl->mapBase = mmap(NULL, total, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
-    if (impl->mapBase == MAP_FAILED) {
-        impl->mapBase = NULL;
+    int32_t ret = SAL_UC_StackAlloc(impl, body, (size_t)pageSize);
+    if (ret != BSL_SUCCESS) {
         BSL_SAL_FREE(impl);
-        return BSL_SAL_ERR_NO_MEMORY;
+        return ret;
     }
-    if (mprotect(impl->mapBase, (size_t)pageSize, PROT_NONE) != 0 ||
-        mprotect(impl->mapBase + total - (size_t)pageSize, (size_t)pageSize, PROT_NONE) != 0) {
-        (void)munmap(impl->mapBase, total);
-        BSL_SAL_FREE(impl);
-        return BSL_SAL_ERR_NO_MEMORY;
-    }
-    impl->mapSize = total;
     impl->entry = entry;
     impl->arg = arg;
     if (getcontext(&impl->uc) != 0) {
@@ -158,7 +161,7 @@ int32_t SAL_UC_CoroutineCreate(BSL_ASYNC_Coroutine **co, uint32_t stackSize, BSL
     impl->uc.uc_stack.ss_sp = impl->mapBase + (size_t)pageSize;
     impl->uc.uc_stack.ss_size = body;
     impl->uc.uc_link = NULL;
-    ptr = (uintptr_t)impl;
+    uintptr_t ptr = (uintptr_t)impl;
 #if UINTPTR_MAX > UINT32_MAX
     makecontext(&impl->uc, (void (*)(void))SAL_UC_EntryShim, 2, (uint32_t)ptr, (uint32_t)(ptr >> 32));
 #else

@@ -86,7 +86,8 @@ struct BSL_ASYNC_TaskStruct {
 };
 
 /** Notify context (the source registration part lands with M4). */
-/** Notify source state machine (the only authoritative definition: a key with no node is the no-entry state, not a state). */
+/** Notify source state machine (the only authoritative definition:
+ * a key with no node is the no-entry state, not a state). */
 typedef enum {
     BSL_ASYNC_SOURCE_STATE_PENDING_ADD = 0, /**< registered, waiting for the app's waiter */
     BSL_ASYNC_SOURCE_STATE_REGISTERED, /**< visible in the app's waiter */

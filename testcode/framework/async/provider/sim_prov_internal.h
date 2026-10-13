@@ -117,6 +117,7 @@ typedef struct SimOpCtx {
     bool submitted; /* entered the device queue at least once */
     bool notifyReg; /* callback cached or fd registered */
     bool useCallback; /* completion-callback path selected */
+    SimNotifyFd *nfd; /* fd written when this operation completes; NULL on the callback path */
     int32_t (*cb)(void *arg); /* cached completion callback */
     void *cbArg;
 
@@ -149,10 +150,6 @@ typedef struct {
     BSL_SAL_ThreadLockHandle lock;
     SimDevice *device;
     uint32_t outstanding; /* requests in the device or paused */
-
-    /* notify handle path (single shared source, engine address is the key) */
-    SimNotifyFd notifyFd;
-    bool notifyFdOpen;
 } SimEngine;
 
 /* Global engine singleton: one simulation provider instance per process */

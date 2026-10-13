@@ -41,14 +41,6 @@
  * errors itself.
  */
 
-#if defined(HITLS_BSL_ASYNC_UCONTEXT) && (defined(HITLS_BSL_SAL_LINUX) || defined(HITLS_BSL_SAL_DARWIN))
-bool SAL_UC_CoroutineIsSupported(void);
-int32_t SAL_UC_CoroutineInitCurrent(BSL_ASYNC_Coroutine **co);
-int32_t SAL_UC_CoroutineCreate(BSL_ASYNC_Coroutine **co, uint32_t stackSize, BSL_SAL_CoroutineEntry entry, void *arg);
-int32_t SAL_UC_CoroutineSwitch(BSL_ASYNC_Coroutine *from, BSL_ASYNC_Coroutine *to);
-void SAL_UC_CoroutineDestroy(BSL_ASYNC_Coroutine *co);
-#endif
-
 static BSL_SAL_CoroutineCallback g_coroutineCallback = {NULL, NULL, NULL, NULL, NULL};
 
 /*

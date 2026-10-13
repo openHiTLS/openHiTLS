@@ -17,11 +17,21 @@
  * async submit/pause/notify/resume path) */
 
 #include "sim_prov_internal.h"
+#include "bsl_err.h"
 #include <sched.h>
 
 #ifdef HITLS_CRYPTO_PROVIDER
 
 #ifdef HITLS_BSL_ASYNC
+static void SimNotifyFdCleanup(BSL_ASYNC_NotifyCtx *ctx, const void *key, BSL_ASYNC_NotifyHandle handle, void *userData)
+{
+    (void)ctx;
+    (void)key;
+    (void)handle;
+    SimNotifyFdDestroy((SimNotifyFd *)userData);
+    BSL_SAL_Free(userData);
+}
+
 static int32_t SimPrepareNotify(SimEngine *e, SimOpCtx *op, BSL_ASYNC_Task *task)
 {
     BSL_ASYNC_NotifyCtx *nc = BSL_ASYNC_TaskGetNotifyCtx(task);
@@ -38,21 +48,51 @@ static int32_t SimPrepareNotify(SimEngine *e, SimOpCtx *op, BSL_ASYNC_Task *task
     if (ret != BSL_SUCCESS || op->useCallback) {
         return ret;
     }
-    if (!e->notifyFdOpen) {
-        if (SimNotifyFdCreate(&e->notifyFd) != SIM_PROV_SUCCESS) {
-            return CRYPT_MEM_ALLOC_FAIL;
-        }
-        e->notifyFdOpen = true;
+    /* GetNotifySource pushes NOT_FOUND. Keep that off the caller-visible stack. */
+    BSL_ASYNC_NotifyHandle handle = 0;
+    void *userData = NULL;
+    (void)BSL_ERR_SetMark();
+    ret = BSL_ASYNC_NotifyCtxGetNotifySource(nc, e, &handle, &userData);
+    (void)BSL_ERR_PopToMark();
+    if (ret == BSL_SUCCESS) {
+        op->nfd = userData;
+        return BSL_SUCCESS;
     }
-    return BSL_ASYNC_NotifyCtxSetNotifySource(nc, e, (BSL_ASYNC_NotifyHandle)(uintptr_t)e->notifyFd.fd, NULL, NULL);
+    if (ret != BSL_ASYNC_ERR_NOT_FOUND) {
+        return ret;
+    }
+    /* The previous operation's node is PENDING_DEL and invisible here, so this operation opens its own fd. */
+    SimNotifyFd *nfd = BSL_SAL_Calloc(1, sizeof(*nfd));
+    if (nfd == NULL) {
+        return CRYPT_MEM_ALLOC_FAIL;
+    }
+    if (SimNotifyFdCreate(nfd) != SIM_PROV_SUCCESS) {
+        BSL_SAL_Free(nfd);
+        return CRYPT_MEM_ALLOC_FAIL;
+    }
+    ret =
+        BSL_ASYNC_NotifyCtxSetNotifySource(nc, e, (BSL_ASYNC_NotifyHandle)(uintptr_t)nfd->fd, nfd, SimNotifyFdCleanup);
+    if (ret != BSL_SUCCESS) {
+        SimNotifyFdDestroy(nfd);
+        BSL_SAL_Free(nfd);
+        return ret;
+    }
+    op->nfd = nfd;
+    return BSL_SUCCESS;
 }
 
+/* Drop the registration when this operation leaves. ConsumeChanges has already
+ * run at the resume point, so a consumed node becomes PENDING_DEL and the next
+ * pause reports the deletion; the fd stays open until that next resume.
+ * A node the application never observed is still PENDING_ADD and is released here. */
 static void SimClearNotify(SimEngine *e, SimOpCtx *op, BSL_ASYNC_Task *task)
 {
+    BSL_ASYNC_NotifyCtx *nc = NULL;
+
     if (op->useCallback) {
         return;
     }
-    BSL_ASYNC_NotifyCtx *nc = BSL_ASYNC_TaskGetNotifyCtx(task);
+    nc = BSL_ASYNC_TaskGetNotifyCtx(task);
     if (nc == NULL) {
         return;
     }
@@ -122,8 +162,8 @@ int32_t SimCryptoEntry(SimOpCtx *op)
     } else {
         int32_t sret = SimDeviceSubmit(e, op);
         if (sret != CRYPT_SUCCESS) {
-            SimClearNotify(e, op, task);
-            return sret;
+            ret = sret;
+            goto EXIT;
         }
         BSL_SAL_ThreadWriteLock(e->lock);
         e->stats.submits++;
@@ -142,13 +182,13 @@ int32_t SimCryptoEntry(SimOpCtx *op)
         while (op->submitted && !SimDeviceIsDone(e, op)) {
             sched_yield();
         }
-        SimClearNotify(e, op, task);
         BSL_SAL_ThreadWriteLock(e->lock);
         if (e->outstanding > 0) {
             e->outstanding--;
         }
         BSL_SAL_ThreadUnlock(e->lock);
-        return pret;
+        ret = pret;
+        goto EXIT;
     }
 
     /* Resume loop: query completion; re-submit only for EAGAIN; pause again
@@ -164,13 +204,13 @@ int32_t SimCryptoEntry(SimOpCtx *op)
                                                                      BSL_ASYNC_NOTIFY_STATUS_UNSUPPORTED);
             int32_t sret = SimDeviceSubmit(e, op);
             if (sret != CRYPT_SUCCESS) {
-                SimClearNotify(e, op, task);
                 BSL_SAL_ThreadWriteLock(e->lock);
                 if (e->outstanding > 0) {
                     e->outstanding--;
                 }
                 BSL_SAL_ThreadUnlock(e->lock);
-                return sret;
+                ret = sret;
+                goto EXIT;
             }
             BSL_SAL_ThreadWriteLock(e->lock);
             e->stats.resubmits++;
@@ -211,14 +251,14 @@ int32_t SimCryptoEntry(SimOpCtx *op)
     while (op->submitted && !SimDeviceIsDone(e, op)) {
         sched_yield();
     }
-    SimClearNotify(e, op, task);
     BSL_SAL_ThreadWriteLock(e->lock);
     if (e->outstanding > 0) {
         e->outstanding--;
     }
     if (pret != BSL_SUCCESS) {
         BSL_SAL_ThreadUnlock(e->lock);
-        return pret;
+        ret = pret;
+        goto EXIT;
     }
     if (action == SIM_PROV_ACTION_FAIL) {
         /* injected failure (failures counts injected ones too);
@@ -226,10 +266,14 @@ int32_t SimCryptoEntry(SimOpCtx *op)
          * discarded in favour of the scenario error code */
         e->stats.failures++;
         BSL_SAL_ThreadUnlock(e->lock);
-        return op->scenario.errCode;
+        ret = op->scenario.errCode;
+        goto EXIT;
     }
     BSL_SAL_ThreadUnlock(e->lock);
-    return op->ret;
+    ret = op->ret;
+EXIT:
+    SimClearNotify(e, op, task);
+    return ret;
 #endif
 }
 

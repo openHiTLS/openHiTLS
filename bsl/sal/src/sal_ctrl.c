@@ -53,16 +53,16 @@
 #define BSL_SAL_FILE_CB     0x0500
 #endif
 
+#ifdef HITLS_BSL_ASYNC
+#define BSL_SAL_COROUTINE_CB 0x0600
+#endif
+
 #ifdef HITLS_BSL_SAL_DL
 #define BSL_SAL_DL_CB       0x0700
 #endif
 
 #ifdef HITLS_BSL_SAL_PID
 #define BSL_SAL_PID_CB      0x0800
-#endif
-
-#ifdef HITLS_BSL_ASYNC
-#define BSL_SAL_COROUTINE_CB 0x0900
 #endif
 
 int32_t BSL_SAL_CallBack_Ctrl(BSL_SAL_CB_FUNC_TYPE funcType, void *funcCb)

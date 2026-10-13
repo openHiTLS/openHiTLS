@@ -27,25 +27,26 @@
 typedef struct PerfEndpoint {
     HITLS_Ctx *ctx;
     int fd;
+    int notifyFd; /* -1 when this connection is not waiting on an eventfd */
     int32_t ret;
-    uint8_t byte;
-    uint32_t ioLen;
     atomic_bool posted;
-    uint32_t phase;
+    bool done;
     struct PerfBatch *batch;
     struct PerfEndpoint *notifyNext;
-    struct PerfEndpoint *waitNext;
 } PerfEndpoint;
 
 typedef struct PerfBatch {
     PerfEndpoint *servers;
     HITLS_Config *serverCfg;
     uint32_t n;
+    uint32_t accepted;
     uint32_t doneServers;
+    uint32_t peakInflight;
     uint64_t startNs;
     uint64_t doneNs;
     PerfForm form;
     int listener;
+    int epollFd;
     int wakeFds[2];
     pthread_mutex_t notifyMutex;
     bool notifyMutexInit;

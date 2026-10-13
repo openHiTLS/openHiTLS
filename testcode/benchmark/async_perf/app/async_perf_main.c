@@ -86,7 +86,7 @@ int main(int argc, char **argv)
         goto EXIT;
     }
 #endif
-    if (PerfAffinityInit(opt.pinCpu, opt.execMode == PERF_EXEC_WORKER ? opt.workers : 0) != 0) {
+    if (PerfAffinityInit(opt.pinCpu, opt.execMode == PERF_EXEC_WORKER ? opt.workers : 0, opt.concurrency) != 0) {
         goto EXIT;
     }
     ret = PerfBenchHandshake(&opt, &scenarios[0], libCtx, mgr) == 0 ? 0 : 1;

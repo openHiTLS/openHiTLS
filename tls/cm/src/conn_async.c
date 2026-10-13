@@ -113,6 +113,42 @@ static int32_t HITLS_AsyncEnsureNotifyCtx(HITLS_Ctx *ctx)
     return HITLS_SUCCESS;
 }
 
+static int32_t HITLS_AsyncHandleResult(HITLS_Ctx *ctx, int32_t asyncRet, int32_t taskRet)
+{
+    switch (asyncRet) {
+        case BSL_ASYNC_FINISH:
+            /* The physical task was reclaimed by the framework and *task is NULL. */
+            (void)memset(&ctx->asyncArgs, 0, sizeof(ctx->asyncArgs));
+            return taskRet;
+        case BSL_ASYNC_PAUSE:
+            ctx->rwstate = HITLS_ASYNC_PAUSED;
+            return HITLS_ASYNC_ERR_PAUSED;
+        case BSL_ASYNC_NO_JOB:
+            ctx->rwstate = HITLS_ASYNC_NO_JOBS;
+            (void)memset(&ctx->asyncArgs, 0, sizeof(ctx->asyncArgs));
+            return HITLS_ASYNC_ERR_NO_JOB;
+        case BSL_ASYNC_WRONG_EXEC_CTX:
+            /* Non-destructive rejection: the task still belongs to its owner thread. */
+            ctx->rwstate = HITLS_ASYNC_PAUSED;
+            return HITLS_ASYNC_ERR_WRONG_THREAD;
+        case BSL_ASYNC_UNSUPPORTED:
+            ctx->rwstate = HITLS_NOTHING;
+            (void)memset(&ctx->asyncArgs, 0, sizeof(ctx->asyncArgs));
+            return HITLS_ASYNC_ERR_UNSUPPORTED;
+        default:
+            /* BSL_ASYNC_ERR: no task was established, or the framework converged it safely. */
+            if (ctx->asyncTask != NULL) {
+                ctx->rwstate = HITLS_ASYNC_PAUSED;
+            } else {
+                ctx->rwstate = HITLS_NOTHING;
+                (void)memset(&ctx->asyncArgs, 0, sizeof(ctx->asyncArgs));
+            }
+            BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17427, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN, "async framework error",
+                                  0, 0, 0, 0);
+            return HITLS_ASYNC_ERR_FRAMEWORK;
+    }
+}
+
 int32_t HITLS_AsyncRun(const HITLS_ASYNC_ARGS *args)
 {
     if (args == NULL || args->ctx == NULL) {
@@ -159,38 +195,7 @@ int32_t HITLS_AsyncRun(const HITLS_ASYNC_ARGS *args)
     param.argsSize = sizeof(ctx->asyncArgs);
     int32_t asyncRet = BSL_ASYNC_StartTask(&ctx->asyncTask, &taskRet, &param);
 
-    switch (asyncRet) {
-        case BSL_ASYNC_FINISH:
-            /* The physical task was reclaimed by the framework and *task is NULL. */
-            (void)memset(&ctx->asyncArgs, 0, sizeof(ctx->asyncArgs));
-            return taskRet;
-        case BSL_ASYNC_PAUSE:
-            ctx->rwstate = HITLS_ASYNC_PAUSED;
-            return HITLS_ASYNC_ERR_PAUSED;
-        case BSL_ASYNC_NO_JOB:
-            ctx->rwstate = HITLS_ASYNC_NO_JOBS;
-            (void)memset(&ctx->asyncArgs, 0, sizeof(ctx->asyncArgs));
-            return HITLS_ASYNC_ERR_NO_JOB;
-        case BSL_ASYNC_WRONG_EXEC_CTX:
-            /* Non-destructive rejection: the task still belongs to its owner thread. */
-            ctx->rwstate = HITLS_ASYNC_PAUSED;
-            return HITLS_ASYNC_ERR_WRONG_THREAD;
-        case BSL_ASYNC_UNSUPPORTED:
-            ctx->rwstate = HITLS_NOTHING;
-            (void)memset(&ctx->asyncArgs, 0, sizeof(ctx->asyncArgs));
-            return HITLS_ASYNC_ERR_UNSUPPORTED;
-        default:
-            /* BSL_ASYNC_ERR: no task was established, or the framework converged it safely. */
-            if (ctx->asyncTask != NULL) {
-                ctx->rwstate = HITLS_ASYNC_PAUSED;
-            } else {
-                ctx->rwstate = HITLS_NOTHING;
-                (void)memset(&ctx->asyncArgs, 0, sizeof(ctx->asyncArgs));
-            }
-            BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17427, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN, "async framework error",
-                                0, 0, 0, 0);
-            return HITLS_ASYNC_ERR_FRAMEWORK;
-    }
+    return HITLS_AsyncHandleResult(ctx, asyncRet, taskRet);
 }
 
 #endif /* HITLS_TLS_FEATURE_MODE_ASYNC */

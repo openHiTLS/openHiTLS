@@ -125,7 +125,7 @@ int PerfBenchHandshake(const PerfOptions *opt, const PerfScenario *s, CRYPT_EAL_
     PerfBatch batch = {0};
     int32_t ret = HITLS_INTERNAL_EXCEPTION;
     if (s->form != PERF_FORM_SYNC && !PerfAsyncSupported()) {
-        puts("RESULT,0,0,UNSUPPORTED");
+        puts("RESULT,0,0,0,UNSUPPORTED");
         return 0;
     }
     SIM_PROV_SCENARIO pause = {.action = SIM_PROV_ACTION_PAUSE, .resumeCount = 1};
@@ -157,8 +157,8 @@ int PerfBenchHandshake(const PerfOptions *opt, const PerfScenario *s, CRYPT_EAL_
         ret = PerfRunServer(&batch);
     }
 EXIT:
-    printf("RESULT,%u,%llu,%s\n", batch.doneServers, (unsigned long long)(batch.doneNs - batch.startNs),
-           ret == HITLS_SUCCESS ? "OK" : "INVALID");
+    printf("RESULT,%u,%llu,%u,%s\n", batch.doneServers, (unsigned long long)(batch.doneNs - batch.startNs),
+           batch.peakInflight, ret == HITLS_SUCCESS ? "OK" : "INVALID");
     PerfBatchDestroy(&batch);
     HITLS_CFG_FreeConfig(serverCfg);
     if (listener >= 0) {
