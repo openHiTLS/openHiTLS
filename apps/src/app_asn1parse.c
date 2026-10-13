@@ -761,13 +761,13 @@ static int ParseSingleNode(const uint8_t *buf, size_t bufLen, size_t p, ParseNod
 
 static int ValidateNodeBounds(size_t p, size_t headerLen, size_t contentLen, size_t bufLen, size_t end)
 {
-    if (p + headerLen + contentLen > bufLen) {
+    if (p > bufLen || headerLen > bufLen - p || contentLen > bufLen - p - headerLen) {
         AppPrintError("Out of bounds at %lu (need %lu bytes, buffer has %lu)\n",
             (unsigned long)p, (unsigned long)(headerLen + contentLen), (unsigned long)bufLen);
         return HITLS_APP_DECODE_FAIL;
     }
-    
-    if (p + headerLen + contentLen > end) {
+
+    if (p > end || headerLen > end - p || contentLen > end - p - headerLen) {
         AppPrintError("Exceeds available length at %lu\n", (unsigned long)p);
         return HITLS_APP_DECODE_FAIL;
     }

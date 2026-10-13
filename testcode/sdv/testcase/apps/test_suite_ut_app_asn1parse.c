@@ -18,9 +18,14 @@
  */
 
 /* BEGIN_HEADER */
+#include <errno.h>
+#include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/types.h>
+#include <sys/wait.h>
+#include <unistd.h>
 #include "bsl_uio.h"
 #include "bsl_sal.h"
 #include "bsl_errno.h"
@@ -47,6 +52,7 @@
 #define ASN1_SHORT_HEADER_LEN (2)   /* Tag(1) + Length(1) */
 #define ASN1_LONG_FORM_HEADER_LEN (4)  /* Tag(1) + Length header(3) */
 #define TEST_BUFFER_SIZE (10)
+#define ASN1_LENGTH_WRAP_TIMEOUT_SECONDS (2u)
 #define EMPTY_OID_FILE "../testdata/apps/asn1parse/empty_oid.pem"
 
 typedef struct {
@@ -489,6 +495,59 @@ void UT_HITLS_APP_ASN1PARSE_NEGATIVE_STRPARSE_TC001(void)
 EXIT:
     AppPrintErrorUioUnInit();
     BSL_SAL_Free(tmp);
+    return;
+}
+/* END_CASE */
+
+/**
+ * @test UT_HITLS_APP_ASN1PARSE_LENGTH_WRAP_TC001
+ * @title Reject ASN.1 long-form lengths that wrap the traversal cursor
+ * @brief A malformed length must be rejected rather than causing an infinite loop.
+ */
+/* BEGIN_CASE */
+void UT_HITLS_APP_ASN1PARSE_LENGTH_WRAP_TC001(void)
+{
+    pid_t pid = -1;
+    pid_t waitRet = -1;
+    int status = 0;
+    /* Offset 2 plus the second node's declared size (SIZE_MAX - 1) wraps to 0. */
+    uint8_t buf[4 + sizeof(size_t)] = {0x05, 0x00, 0x04, (uint8_t)(0x80 | sizeof(size_t))};
+    size_t contentLen = SIZE_MAX - (sizeof(buf) - 1);
+    for (size_t i = 0; i < sizeof(size_t); i++) {
+        buf[sizeof(buf) - 1 - i] = (uint8_t)contentLen;
+        contentLen >>= 8;
+    }
+
+    ASSERT_EQ(AppPrintErrorUioInit(stderr), HITLS_APP_SUCCESS);
+
+    /*
+     * Run the parser in a child process so a regression causing an infinite
+     * loop fails this case without terminating the entire test suite.
+     */
+    pid = fork();
+    ASSERT_TRUE(pid >= 0);
+    if (pid == 0) {
+        (void)close(STDOUT_FILENO);
+        (void)signal(SIGALRM, SIG_DFL);
+        alarm(ASN1_LENGTH_WRAP_TIMEOUT_SECONDS);
+        int ret = AppAsn1ParseBuffer(buf, sizeof(buf), 0, 0);
+        _exit(ret == HITLS_APP_DECODE_FAIL ? EXIT_SUCCESS : EXIT_FAILURE);
+    }
+
+    do {
+        waitRet = waitpid(pid, &status, 0);
+    } while (waitRet < 0 && errno == EINTR);
+    ASSERT_EQ(waitRet, pid);
+    ASSERT_TRUE(WIFEXITED(status));
+    ASSERT_EQ(WEXITSTATUS(status), EXIT_SUCCESS);
+
+EXIT:
+    if (pid > 0 && waitRet != pid) {
+        (void)kill(pid, SIGKILL);
+        while (waitpid(pid, &status, 0) < 0 && errno == EINTR) {
+        }
+    }
+    AppPrintErrorUioUnInit();
     return;
 }
 /* END_CASE */
