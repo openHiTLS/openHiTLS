@@ -406,32 +406,29 @@ static int32_t ElGamal_GenP(void *libCtx, BN_BigNum *p, CRYPT_ELGAMAL_Para *para
     int32_t ret = CRYPT_MEM_ALLOC_FAIL;
     if (kq == NULL || k == NULL) {
         BSL_ERR_PUSH_ERROR(ret);
-        goto EXIT;
+        goto ERR;
     }
 
-    ret = BN_GenPrime(para->q, NULL, k_bits, false, optimizer, NULL);
-    if (ret != CRYPT_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
-        goto EXIT;
+    /*
+     * ElGamal (1985), "A Public Key Cryptosystem and a Signature Scheme Based on Discrete Logarithms", Sec. II:
+     * p must be prime and p - 1 must have a large prime factor q.
+     * For p = k*q + 1 with odd q, even k is necessary but does not guarantee primality.
+     */
+    GOTO_ERR_IF(BN_GenPrime(para->q, NULL, k_bits, false, optimizer, NULL), ret);
+    for (uint32_t i = 0; i < 100 * bits; i++) {
+        GOTO_ERR_IF(BN_RandEx(libCtx, k, bits - k_bits, BN_RAND_TOP_ONEBIT, BN_RAND_BOTTOM_NOBIT), ret);
+        GOTO_ERR_IF(BN_ClrBit(k, 0), ret);
+        GOTO_ERR_IF(BN_Mul(kq, k, para->q, optimizer), ret);
+        GOTO_ERR_IF(BN_AddLimb(p, kq, 1), ret);
+        ret = BN_PrimeCheck(p, 0, optimizer, NULL);
+        if (ret != CRYPT_BN_NOR_CHECK_PRIME) {
+            goto ERR;
+        }
     }
 
-    ret = BN_RandEx(libCtx, k, (bits - k_bits), 1, 0);
-    if (ret != CRYPT_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
-        goto EXIT;
-    }
-
-    ret = BN_Mul(kq, k, para->q, optimizer);
-    if (ret != CRYPT_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
-        goto EXIT;
-    }
-
-    ret = BN_AddLimb(p, kq, 1);
-    if (ret != CRYPT_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
-    }
-EXIT:
+    ret = CRYPT_ELGAMAL_ERR_GEN_PARA;
+    BSL_ERR_PUSH_ERROR(ret);
+ERR:
     BN_Destroy(k);
     BN_Destroy(kq);
     return ret;
@@ -528,11 +525,6 @@ int32_t CRYPT_ELGAMAL_Gen(CRYPT_ELGAMAL_Ctx *ctx)
         goto ERR;
     }
     BN_OptimizerSetLibCtx(ctx->libCtx, optimizer);
-    ret = ElGamal_GenP(ctx->libCtx, newCtx->prvKey->p, newCtx->para, optimizer);
-    if (ret != CRYPT_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
-        goto ERR;
-    }
 
     ret = ElGamal_CalcPrvKey(ctx->libCtx, newCtx->prvKey, newCtx->para, optimizer);
     if (ret != CRYPT_SUCCESS) {
