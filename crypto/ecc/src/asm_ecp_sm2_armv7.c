@@ -834,6 +834,10 @@ ERR:
 int32_t ECP_Sm2PointMul(ECC_Para *para, ECC_Point *r, const BN_BigNum *scalar, const ECC_Point *pt)
 {
     (void)para;
+    if (BN_Bits(scalar) > SM2_BITS) {
+        BSL_ERR_PUSH_ERROR(CRYPT_ECC_POINT_MUL_ERR_K_LEN);
+        return CRYPT_ECC_POINT_MUL_ERR_K_LEN;
+    }
     int32_t ret = CRYPT_SUCCESS;
     Sm2Fp k;
     Sm2Point p;

@@ -889,7 +889,7 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_CRYPTO_ECC_MUL_CAL_TEST_FUNC_TC001(int paraId)
 {
-    if (IsCurveDisabled(paraId) && paraId != CRYPT_ECC_SM2) {
+    if (IsCurveDisabled(paraId)) {
         SKIP_TEST();
     }
     TestMemInit();
@@ -941,7 +941,7 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_CRYPTO_ECC_ADD_CAL_TEST_FUNC_TC001(int paraId, Hex *bk1, Hex *bk2, Hex *bk3)
 {
-    if (IsCurveDisabled(paraId) && paraId != CRYPT_ECC_SM2) {
+    if (IsCurveDisabled(paraId)) {
         SKIP_TEST();
     }
     TestMemInit();
@@ -1002,7 +1002,7 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_CRYPTO_ECC_POINTMUL_ZERO_K_TC001(int paraId)
 {
-    if (IsCurveDisabled(paraId) && paraId != CRYPT_ECC_SM2) {
+    if (IsCurveDisabled(paraId)) {
         SKIP_TEST();
     }
     TestMemInit();
@@ -1061,7 +1061,7 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_CRYPTO_ECC_MODORDERINV_EQUAL_ORDER_TC001(int paraId)
 {
-    if (IsCurveDisabled(paraId) && paraId != CRYPT_ECC_SM2) {
+    if (IsCurveDisabled(paraId)) {
         SKIP_TEST();
     }
     TestMemInit();
@@ -1202,7 +1202,7 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_CRYPTO_ECC_MUL_INFINITY_POINT_TC001(int paraId)
 {
-    if (IsCurveDisabled(paraId) && paraId != CRYPT_ECC_SM2) {
+    if (IsCurveDisabled(paraId)) {
         SKIP_TEST();
     }
     TestMemInit();
@@ -1243,7 +1243,7 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_CRYPTO_ECC_MULADD_INFINITY_POINT_TC001(int paraId)
 {
-    if (IsCurveDisabled(paraId) && paraId != CRYPT_ECC_SM2) {
+    if (IsCurveDisabled(paraId)) {
         SKIP_TEST();
     }
     TestMemInit();
@@ -1294,7 +1294,7 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_CRYPTO_ECC_POINTADD_INFINITY_POINT_TC001(int paraId)
 {
-    if (IsCurveDisabled(paraId) && paraId != CRYPT_ECC_SM2) {
+    if (IsCurveDisabled(paraId)) {
         SKIP_TEST();
     }
     TestMemInit();
@@ -1339,7 +1339,7 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_CRYPTO_ECC_MULADD_INFINITY_RESULT_TC001(int paraId)
 {
-    if (IsCurveDisabled(paraId) && paraId != CRYPT_ECC_SM2) {
+    if (IsCurveDisabled(paraId)) {
         SKIP_TEST();
     }
     TestMemInit();

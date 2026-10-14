@@ -558,6 +558,10 @@ bool IsCurveDisabled(int eccId)
         case CRYPT_ECC_192WAPI:
             return false;
 #endif
+#ifdef HITLS_CRYPTO_CURVE_SM2
+        case CRYPT_ECC_SM2:
+            return false;
+#endif
         default:
             return true;
     }
