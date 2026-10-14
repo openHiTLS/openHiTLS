@@ -15,6 +15,7 @@
 /* INCLUDE_BASE test_suite_sdv_eal_ecc */
 
 /* BEGIN_HEADER */
+#include "ecc_local.h"
 
 int SignEncode(Hex *R, Hex *S, uint8_t *vectorSign, uint32_t *vectorSignLen)
 {
@@ -1635,5 +1636,83 @@ EXIT:
     CRYPT_ECDSA_FreeCtx(srcEcdsaCtx);
     CRYPT_ECDSA_FreeCtx(dstEcdsaCtx);
 #endif
+}
+/* END_CASE */
+
+/**
+ * @test   SDV_CRYPTO_ECDSA_POINT_MUL_LEN_TC001
+ * @title  Check the scalar-length bound of ECC point multiplication across all curve implementations.
+ * @precon nan
+ * @brief
+ *    1. Build 2n (bit length = BN_Bits(n)+1, beyond the curve order width) and call ECC_PointMul with both
+ *       pt==NULL and pt!=NULL. It must reject the oversized scalar with CRYPT_ECC_POINT_MUL_ERR_K_LEN instead
+ *       of silently truncating the high bits. ECC_PointMul dispatches through para->method and therefore covers
+ *       the generic P-192/P-384 path, the P-224/P-256(asm)/P-521 paths, the BP Montgomery path and the SM2(asm) path.
+ *    2. para->method->pointMulFast must reject the oversized scalar as well.
+ *    3. ECC_PointMulAdd must reject an oversized k1 or k2 with CRYPT_ECC_POINT_MUL_ERR_K_LEN.
+ *    4. For a valid scalar k=n the computation still succeeds ([n]G==O) and ECC_PointMulAdd(1,1,G) succeeds,
+ *       so the length bound does not affect the normal path.
+ * @expect
+ *    1. Oversized scalars are rejected; valid scalars still fulfill the curve order property.
+ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_ECDSA_POINT_MUL_LEN_TC001(int paraId)
+{
+    if (IsCurveDisabled(paraId)) {
+        SKIP_TEST();
+    }
+    TestMemInit();
+    ASSERT_TRUE(TestRandInit() == CRYPT_SUCCESS);
+
+    ECC_Para *para = ECC_NewPara(paraId);
+    ASSERT_TRUE(para != NULL);
+    ECC_Point *r = ECC_NewPoint(para);
+    ECC_Point *g = ECC_NewPoint(para);
+    BN_BigNum *n = ECC_GetParaN(para);
+    BN_BigNum *n2 = BN_Create(BN_Bits(para->n) + 64);
+    BN_BigNum *one = BN_Create(8);
+    ASSERT_TRUE(r != NULL && g != NULL && n != NULL && n2 != NULL && one != NULL);
+    ASSERT_TRUE(BN_SetLimb(one, 1) == CRYPT_SUCCESS);
+
+    /* pt = [1]G (affine), used by the pt != NULL and muladd paths */
+    ASSERT_TRUE(ECC_PointMul(para, g, one, NULL) == CRYPT_SUCCESS);
+    if (!BN_IsOne(&g->z)) {
+        ASSERT_TRUE(para->method->point2Affine(para, g, g) == CRYPT_SUCCESS);
+    }
+
+    /* 2n is beyond the curve order width */
+    ASSERT_TRUE(BN_Add(n2, n, n) == CRYPT_SUCCESS);
+    ASSERT_TRUE(BN_Bits(n2) == BN_Bits(para->n) + 1);
+
+    /* pointMul (dispatched through method, covering each curve implementation and asm branch): reject both paths */
+    ASSERT_TRUE(ECC_PointMul(para, r, n2, NULL) == CRYPT_ECC_POINT_MUL_ERR_K_LEN);
+    TestErrClear();
+    ASSERT_TRUE(ECC_PointMul(para, r, n2, g) == CRYPT_ECC_POINT_MUL_ERR_K_LEN);
+    TestErrClear();
+
+    /* pointMulFast dispatch path */
+    ASSERT_TRUE(para->method->pointMulFast(para, r, n2, NULL) == CRYPT_ECC_POINT_MUL_ERR_K_LEN);
+    TestErrClear();
+
+    /* pointMulAdd: reject an oversized k1 and an oversized k2 separately */
+    ASSERT_TRUE(ECC_PointMulAdd(para, r, n2, one, g) == CRYPT_ECC_POINT_MUL_ERR_K_LEN);
+    TestErrClear();
+    ASSERT_TRUE(ECC_PointMulAdd(para, r, one, n2, g) == CRYPT_ECC_POINT_MUL_ERR_K_LEN);
+    TestErrClear();
+
+    /* valid scalars: the length bound must not affect the normal path */
+    ASSERT_TRUE(ECC_PointMul(para, r, n, NULL) == CRYPT_SUCCESS);
+    ASSERT_TRUE(BN_IsZero(&r->z));
+    ASSERT_TRUE(ECC_PointMulAdd(para, r, one, one, g) == CRYPT_SUCCESS);
+    ASSERT_TRUE(BN_IsZero(&r->z) == false);
+
+EXIT:
+    BN_Destroy(n);
+    BN_Destroy(n2);
+    BN_Destroy(one);
+    ECC_FreePoint(r);
+    ECC_FreePoint(g);
+    ECC_FreePara(para);
+    TestRandDeInit();
 }
 /* END_CASE */

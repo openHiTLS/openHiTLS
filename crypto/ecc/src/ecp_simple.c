@@ -205,6 +205,11 @@ int32_t ECP_PointMul(ECC_Para *para, ECC_Point *r, const BN_BigNum *k, const ECC
     GOTO_ERR_IF(ECC_CopyPoint(r, base), ret);
     GOTO_ERR_IF(ECC_PointBlind(para, r), ret);
     bits = BN_Bits(para->n);
+    if (BN_Bits(k) > bits) {
+        ret = CRYPT_ECC_POINT_MUL_ERR_K_LEN;
+        BSL_ERR_PUSH_ERROR(ret);
+        goto ERR;
+    }
     for (uint32_t i = bits; i > 0; i--) {
         GOTO_ERR_IF(para->method->pointDouble(para, doubleR, r), ret);
         GOTO_ERR_IF(para->method->pointAddAffine(para, t, doubleR, base), ret);
@@ -635,6 +640,10 @@ int32_t ECP_PointMulFast(ECC_Para *para, ECC_Point *r, const BN_BigNum *k, const
         (void)BN_Zeroize(&r->z);
         return CRYPT_SUCCESS;
     }
+    if (BN_Bits(k) > BN_Bits(para->n)) {
+        BSL_ERR_PUSH_ERROR(CRYPT_ECC_POINT_MUL_ERR_K_LEN);
+        return CRYPT_ECC_POINT_MUL_ERR_K_LEN;
+    }
     int32_t ret;
     ReCodeData *codeK = NULL;
     int8_t offset;
@@ -695,6 +704,10 @@ int32_t ECP_PointMulAdd(ECC_Para *para, ECC_Point *r, const BN_BigNum *k1,
     int32_t ret = ECP_PointMulAddParaCheck(para, r, k1, k2, pt);
     if (ret != CRYPT_SUCCESS) {
         return ret;
+    }
+    if (BN_Bits(k1) > BN_Bits(para->n) || BN_Bits(k2) > BN_Bits(para->n)) {
+        BSL_ERR_PUSH_ERROR(CRYPT_ECC_POINT_MUL_ERR_K_LEN);
+        return CRYPT_ECC_POINT_MUL_ERR_K_LEN;
     }
     if (BN_IsZero(k1) || BN_IsZero(k2)) {
         return KZeroHandle(para, r, k1, k2, pt);

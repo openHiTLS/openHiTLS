@@ -431,6 +431,10 @@ int32_t ECP_Sm2PointMul(ECC_Para *para, ECC_Point *r, const BN_BigNum *scalar, c
     if (BN_IsZero(scalar)) {
         return BN_Zeroize(&r->z);
     }
+    if (BN_Bits(scalar) > SM2_BITS) {
+        BSL_ERR_PUSH_ERROR(CRYPT_ECC_POINT_MUL_ERR_K_LEN);
+        return CRYPT_ECC_POINT_MUL_ERR_K_LEN;
+    }
     int32_t ret;
     BN_UINT k[SM2_LIMBS] = {0};
     uint32_t klen = SM2_LIMBS;

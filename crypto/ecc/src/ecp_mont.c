@@ -818,7 +818,11 @@ int32_t ECP_PointMulMont(ECC_Para *para,  ECC_Point *r, const BN_BigNum *k, cons
     BN_UINT mask1 = 0;
     BN_UINT mask2 = 0;
     BN_UINT tmp;
-    uint32_t bits;
+    uint32_t bits = BN_Bits(k);
+    if (bits > BN_Bits(para->n)) {
+        BSL_ERR_PUSH_ERROR(CRYPT_ECC_POINT_MUL_ERR_K_LEN);
+        return CRYPT_ECC_POINT_MUL_ERR_K_LEN;
+    }
     ECC_Point *base = (pt != NULL) ? ECC_DupPoint(pt) : ECC_GetGFromPara(para);
     ECC_Point *r1 = ECC_NewPoint(para);
     BN_Optimizer *opt = BN_OptimizerCreate();
@@ -832,7 +836,6 @@ int32_t ECP_PointMulMont(ECC_Para *para,  ECC_Point *r, const BN_BigNum *k, cons
     GOTO_ERR_IF(ECC_PointToMont(para, base, opt), ret);
     GOTO_ERR_IF(ECC_CopyPoint(r, base), ret); // r = base
     GOTO_ERR_IF(MontLadderDouble(para, r1, r, opt), ret);
-    bits = BN_Bits(k);
     for (uint32_t i = bits - 1; i > 0; i--) {
         tmp = BN_GetBit(k, i - 1);
         mask2 = (-tmp) & BN_MASK;
