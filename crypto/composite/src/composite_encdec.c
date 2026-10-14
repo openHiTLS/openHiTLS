@@ -13,7 +13,7 @@
  * See the Mulan PSL v2 for more details.
  */
 #include "hitls_build.h"
-#ifdef HITLS_CRYPTO_COMPOSITE
+#if defined(HITLS_CRYPTO_COMPOSITE_SIGN) || defined(HITLS_CRYPTO_COMPOSITE_KEM)
 #include <string.h>
 #include "bsl_asn1.h"
 #include "crypt_eal_pkey.h"
@@ -86,13 +86,14 @@ static BSL_ASN1_TemplateItem g_ecPriKeyTempl[] = {
     {BSL_ASN1_TAG_BITSTRING, 0, 2},
 };
 
-static int32_t CRYPT_CompositeGetMldsaPrvKey(const CRYPT_CompositeCtx *ctx, BSL_Buffer *encode)
+static int32_t CRYPT_CompositeGetPqcPrvKeyInner(const CRYPT_CompositeCtx *ctx, BSL_Buffer *encode)
 {
     int32_t ret;
     uint32_t prvLen = ctx->info->pqcPrvkeyLen;
     uint8_t *prv = (uint8_t *)BSL_SAL_Malloc(prvLen);
     RETURN_RET_IF(prv == NULL, CRYPT_MEM_ALLOC_FAIL);
-    GOTO_ERR_IF(CRYPT_EAL_PkeyCtrl(ctx->pqcCtx, CRYPT_CTRL_GET_MLDSA_SEED, prv, prvLen), ret);
+    int32_t opt = ctx->info->pqcAlg == CRYPT_PKEY_ML_KEM ? CRYPT_CTRL_GET_MLKEM_SEED : CRYPT_CTRL_GET_MLDSA_SEED;
+    GOTO_ERR_IF(CRYPT_EAL_PkeyCtrl(ctx->pqcCtx, opt, prv, prvLen), ret);
     encode->data = prv;
     encode->dataLen = prvLen;
     return CRYPT_SUCCESS;
@@ -101,13 +102,14 @@ ERR:
     return ret;
 }
 
-static int32_t CRYPT_CompositeGetMldsaPubKey(const CRYPT_CompositeCtx *ctx, BSL_Buffer *encode)
+static int32_t CRYPT_CompositeGetPqcPubKeyInner(const CRYPT_CompositeCtx *ctx, BSL_Buffer *encode)
 {
     int32_t ret;
     uint32_t pubLen = ctx->info->pqcPubkeyLen;
     uint8_t *pub = (uint8_t *)BSL_SAL_Malloc(pubLen);
     RETURN_RET_IF(pub == NULL, CRYPT_MEM_ALLOC_FAIL);
-    BSL_Param param[2] = {{CRYPT_PARAM_ML_DSA_PUBKEY, BSL_PARAM_TYPE_OCTETS, pub, pubLen, 0}, BSL_PARAM_END};
+    int32_t keyId = ctx->info->pqcAlg == CRYPT_PKEY_ML_KEM ? CRYPT_PARAM_ML_KEM_PUBKEY : CRYPT_PARAM_ML_DSA_PUBKEY;
+    BSL_Param param[2] = {{keyId, BSL_PARAM_TYPE_OCTETS, pub, pubLen, 0}, BSL_PARAM_END};
     GOTO_ERR_IF(CRYPT_EAL_PkeyGetPubEx(ctx->pqcCtx, param), ret);
     encode->data = pub;
     encode->dataLen = pubLen;
@@ -120,8 +122,9 @@ ERR:
 int32_t CRYPT_CompositeGetPqcPrvKey(const CRYPT_CompositeCtx *ctx, BSL_Buffer *encode)
 {
     switch (ctx->info->pqcAlg) {
+        case CRYPT_PKEY_ML_KEM:
         case CRYPT_PKEY_ML_DSA:
-            return CRYPT_CompositeGetMldsaPrvKey(ctx, encode);
+            return CRYPT_CompositeGetPqcPrvKeyInner(ctx, encode);
         default:
             BSL_ERR_PUSH_ERROR(CRYPT_NOT_SUPPORT);
             return CRYPT_NOT_SUPPORT;
@@ -131,32 +134,13 @@ int32_t CRYPT_CompositeGetPqcPrvKey(const CRYPT_CompositeCtx *ctx, BSL_Buffer *e
 int32_t CRYPT_CompositeGetPqcPubKey(const CRYPT_CompositeCtx *ctx, BSL_Buffer *encode)
 {
     switch (ctx->info->pqcAlg) {
+        case CRYPT_PKEY_ML_KEM:
         case CRYPT_PKEY_ML_DSA:
-            return CRYPT_CompositeGetMldsaPubKey(ctx, encode);
+            return CRYPT_CompositeGetPqcPubKeyInner(ctx, encode);
         default:
             BSL_ERR_PUSH_ERROR(CRYPT_NOT_SUPPORT);
             return CRYPT_NOT_SUPPORT;
     }
-}
-
-int32_t CRYPT_CompositeSetRsaPadding(CRYPT_CompositeCtx *ctx)
-{
-    int32_t ret;
-    if (ctx->info->tradParam == BSL_CID_RSASSAPSS) {
-        CRYPT_MD_AlgId mdId = ctx->info->tradHashId;
-        CRYPT_MD_AlgId mgfId = ctx->info->tradHashId;
-        int32_t saltLen = ctx->info->bits == 4096 ? 48 : 32;
-        BSL_Param param[4] = {{CRYPT_PARAM_RSA_MD_ID, BSL_PARAM_TYPE_INT32, &mdId, sizeof(mdId), 0},
-                              {CRYPT_PARAM_RSA_MGF1_ID, BSL_PARAM_TYPE_INT32, &mgfId, sizeof(mgfId), 0},
-                              {CRYPT_PARAM_RSA_SALTLEN, BSL_PARAM_TYPE_INT32, &saltLen, sizeof(saltLen), 0},
-                              BSL_PARAM_END};
-        RETURN_RET_IF_ERR(CRYPT_EAL_PkeyCtrl(ctx->tradCtx, CRYPT_CTRL_SET_RSA_EMSA_PSS, param, 0), ret);
-    } else {
-        int32_t pkcsv15 = ctx->info->tradHashId;
-        RETURN_RET_IF_ERR(
-            CRYPT_EAL_PkeyCtrl(ctx->tradCtx, CRYPT_CTRL_SET_RSA_EMSA_PKCSV15, &pkcsv15, sizeof(pkcsv15)), ret);
-    }
-    return CRYPT_SUCCESS;
 }
 
 static int32_t CRYPT_CompositeCheckRsaBits(const CRYPT_CompositeCtx *ctx, const BSL_ASN1_Buffer *n)
@@ -265,7 +249,7 @@ ERR:
     return ret;
 }
 
-static int32_t CRYPT_CompositeGetEcdsaPrvKey(const CRYPT_CompositeCtx *ctx, BSL_Buffer *encode)
+static int32_t CRYPT_CompositeGetEcPrvKey(const CRYPT_CompositeCtx *ctx, BSL_Buffer *encode)
 {
     int32_t ret;
     uint32_t keyLen = 0;
@@ -300,7 +284,7 @@ ERR:
     return ret;
 }
 
-static int32_t CRYPT_CompositeGetEcdsaPubKey(const CRYPT_CompositeCtx *ctx, BSL_Buffer *encode)
+static int32_t CRYPT_CompositeGetEcPubKey(const CRYPT_CompositeCtx *ctx, BSL_Buffer *encode)
 {
     int32_t ret;
     uint32_t pubLen = 0;
@@ -318,7 +302,7 @@ ERR:
     return ret;
 }
 
-static int32_t CRYPT_CompositeGetEd25519PrvKey(const CRYPT_CompositeCtx *ctx, BSL_Buffer *encode)
+static int32_t CRYPT_CompositeGetCurve25519PrvKey(const CRYPT_CompositeCtx *ctx, BSL_Buffer *encode)
 {
     int32_t ret;
     uint32_t prvLen = 0;
@@ -335,7 +319,7 @@ ERR:
     return ret;
 }
 
-static int32_t CRYPT_CompositeGetEd25519PubKey(const CRYPT_CompositeCtx *ctx, BSL_Buffer *encode)
+static int32_t CRYPT_CompositeGetCurve25519PubKey(const CRYPT_CompositeCtx *ctx, BSL_Buffer *encode)
 {
     int32_t ret;
     uint32_t pubLen = 0;
@@ -358,10 +342,12 @@ int32_t CRYPT_CompositeGetTradPrvKey(const CRYPT_CompositeCtx *ctx, BSL_Buffer *
     switch (ctx->info->tradAlg) {
         case CRYPT_PKEY_RSA:
             return CRYPT_CompositeGetRsaPrvKey(ctx, encode);
+        case CRYPT_PKEY_ECDH:
         case CRYPT_PKEY_ECDSA:
-            return CRYPT_CompositeGetEcdsaPrvKey(ctx, encode);
+            return CRYPT_CompositeGetEcPrvKey(ctx, encode);
+        case CRYPT_PKEY_X25519:
         case CRYPT_PKEY_ED25519:
-            return CRYPT_CompositeGetEd25519PrvKey(ctx, encode);
+            return CRYPT_CompositeGetCurve25519PrvKey(ctx, encode);
         default:
             BSL_ERR_PUSH_ERROR(CRYPT_NOT_SUPPORT);
             return CRYPT_NOT_SUPPORT;
@@ -373,41 +359,47 @@ int32_t CRYPT_CompositeGetTradPubKey(const CRYPT_CompositeCtx *ctx, BSL_Buffer *
     switch (ctx->info->tradAlg) {
         case CRYPT_PKEY_RSA:
             return CRYPT_CompositeGetRsaPubKey(ctx, encode);
+        case CRYPT_PKEY_ECDH:
         case CRYPT_PKEY_ECDSA:
-            return CRYPT_CompositeGetEcdsaPubKey(ctx, encode);
+            return CRYPT_CompositeGetEcPubKey(ctx, encode);
+        case CRYPT_PKEY_X25519:
         case CRYPT_PKEY_ED25519:
-            return CRYPT_CompositeGetEd25519PubKey(ctx, encode);
+            return CRYPT_CompositeGetCurve25519PubKey(ctx, encode);
         default:
             BSL_ERR_PUSH_ERROR(CRYPT_NOT_SUPPORT);
             return CRYPT_NOT_SUPPORT;
     }
 }
 
-static int32_t CRYPT_CompositeSetMldsaPrvKey(CRYPT_CompositeCtx *ctx, BSL_Buffer *encode)
+static int32_t CRYPT_CompositeSetPqcPrvKeyInner(CRYPT_CompositeCtx *ctx, BSL_Buffer *encode)
 {
     int32_t ret;
+    int32_t keyId =
+        ctx->info->pqcAlg == CRYPT_PKEY_ML_KEM ? CRYPT_PARAM_ML_KEM_PRVKEY_SEED : CRYPT_PARAM_ML_DSA_PRVKEY_SEED;
     BSL_Param param[2] = {
-        {CRYPT_PARAM_ML_DSA_PRVKEY_SEED, BSL_PARAM_TYPE_OCTETS, encode->data, encode->dataLen, 0},
+        {keyId, BSL_PARAM_TYPE_OCTETS, encode->data, encode->dataLen, 0},
         BSL_PARAM_END};
-    RETURN_RET_IF_ERR(CRYPT_EAL_PkeySetPrvEx(ctx->pqcCtx, param), ret);
+    RETURN_RET_IF_ERR_EX(CRYPT_EAL_PkeySetPrvEx(ctx->pqcCtx, param), ret);
     return CRYPT_SUCCESS;
 }
 
-static int32_t CRYPT_CompositeSetMldsaPubKey(CRYPT_CompositeCtx *ctx, BSL_Buffer *encode)
+static int32_t CRYPT_CompositeSetPqcPubKeyInner(CRYPT_CompositeCtx *ctx, BSL_Buffer *encode)
 {
     int32_t ret;
+    int32_t keyId = ctx->info->pqcAlg == CRYPT_PKEY_ML_KEM ? CRYPT_PARAM_ML_KEM_PUBKEY : CRYPT_PARAM_ML_DSA_PUBKEY;
     BSL_Param param[2] = {
-        {CRYPT_PARAM_ML_DSA_PUBKEY, BSL_PARAM_TYPE_OCTETS, encode->data, encode->dataLen, 0},
+        {keyId, BSL_PARAM_TYPE_OCTETS, encode->data, encode->dataLen, 0},
         BSL_PARAM_END};
-    RETURN_RET_IF_ERR(CRYPT_EAL_PkeySetPubEx(ctx->pqcCtx, param), ret);
+    RETURN_RET_IF_ERR_EX(CRYPT_EAL_PkeySetPubEx(ctx->pqcCtx, param), ret);
     return CRYPT_SUCCESS;
 }
 
 int32_t CRYPT_CompositeSetPqcPrvKey(CRYPT_CompositeCtx *ctx, BSL_Buffer *encode)
 {
     switch (ctx->info->pqcAlg) {
+        case CRYPT_PKEY_ML_KEM:
         case CRYPT_PKEY_ML_DSA:
-            return CRYPT_CompositeSetMldsaPrvKey(ctx, encode);
+            return CRYPT_CompositeSetPqcPrvKeyInner(ctx, encode);
         default:
             BSL_ERR_PUSH_ERROR(CRYPT_NOT_SUPPORT);
             return CRYPT_NOT_SUPPORT;
@@ -417,8 +409,9 @@ int32_t CRYPT_CompositeSetPqcPrvKey(CRYPT_CompositeCtx *ctx, BSL_Buffer *encode)
 int32_t CRYPT_CompositeSetPqcPubKey(CRYPT_CompositeCtx *ctx, BSL_Buffer *encode)
 {
     switch (ctx->info->pqcAlg) {
+        case CRYPT_PKEY_ML_KEM:
         case CRYPT_PKEY_ML_DSA:
-            return CRYPT_CompositeSetMldsaPubKey(ctx, encode);
+            return CRYPT_CompositeSetPqcPubKeyInner(ctx, encode);
         default:
             BSL_ERR_PUSH_ERROR(CRYPT_NOT_SUPPORT);
             return CRYPT_NOT_SUPPORT;
@@ -434,6 +427,8 @@ static int32_t CRYPT_CompositeSetRsaPrvKey(CRYPT_CompositeCtx *ctx, BSL_Buffer *
         BSL_ASN1_DecodeTemplate(&templ, NULL, &encode->data, &encode->dataLen, asn1, CRYPT_RSA_PRV_OTHER_PRIME_IDX + 1),
         ret);
     RETURN_RET_IF(encode->dataLen != 0, CRYPT_COMPOSITE_KEYLEN_ERROR);
+    RETURN_RET_IF(asn1[CRYPT_RSA_PRV_VERSION_IDX].len != 1 || asn1[CRYPT_RSA_PRV_VERSION_IDX].buff[0] > 1,
+                  CRYPT_DECODE_ASN1_BUFF_FAILED);
     BSL_Param rsaParam[] = {
         {CRYPT_PARAM_RSA_D, BSL_PARAM_TYPE_OCTETS, asn1[CRYPT_RSA_PRV_D_IDX].buff, asn1[CRYPT_RSA_PRV_D_IDX].len, 0},
         {CRYPT_PARAM_RSA_N, BSL_PARAM_TYPE_OCTETS, asn1[CRYPT_RSA_PRV_N_IDX].buff, asn1[CRYPT_RSA_PRV_N_IDX].len, 0},
@@ -445,10 +440,10 @@ static int32_t CRYPT_CompositeSetRsaPrvKey(CRYPT_CompositeCtx *ctx, BSL_Buffer *
          asn1[CRYPT_RSA_PRV_QINV_IDX].len, 0},
         {CRYPT_PARAM_RSA_E, BSL_PARAM_TYPE_OCTETS, asn1[CRYPT_RSA_PRV_E_IDX].buff, asn1[CRYPT_RSA_PRV_E_IDX].len, 0},
         BSL_PARAM_END};
-    RETURN_RET_IF_ERR(CRYPT_CompositeCheckRsaBits(ctx, &asn1[CRYPT_RSA_PRV_N_IDX]), ret);
-    RETURN_RET_IF_ERR(CRYPT_EAL_PkeySetPrvEx(ctx->tradCtx, rsaParam), ret);
-    RETURN_RET_IF_ERR(CRYPT_EAL_PkeySetPubEx(ctx->tradCtx, rsaParam), ret);
-    RETURN_RET_IF_ERR(CRYPT_CompositeSetRsaPadding(ctx), ret);
+    RETURN_RET_IF_ERR_EX(CRYPT_CompositeCheckRsaBits(ctx, &asn1[CRYPT_RSA_PRV_N_IDX]), ret);
+    RETURN_RET_IF_ERR_EX(CRYPT_EAL_PkeySetPrvEx(ctx->tradCtx, rsaParam), ret);
+    RETURN_RET_IF_ERR_EX(CRYPT_EAL_PkeySetPubEx(ctx->tradCtx, rsaParam), ret);
+    RETURN_RET_IF_ERR_EX(CRYPT_CompositeSetRsaPadding(ctx), ret);
     return CRYPT_SUCCESS;
 }
 
@@ -464,13 +459,13 @@ static int32_t CRYPT_CompositeSetRsaPubKey(CRYPT_CompositeCtx *ctx, BSL_Buffer *
         {CRYPT_PARAM_RSA_E, BSL_PARAM_TYPE_OCTETS, asn1[CRYPT_RSA_PUB_E_IDX].buff, asn1[CRYPT_RSA_PUB_E_IDX].len, 0},
         {CRYPT_PARAM_RSA_N, BSL_PARAM_TYPE_OCTETS, asn1[CRYPT_RSA_PUB_N_IDX].buff, asn1[CRYPT_RSA_PUB_N_IDX].len, 0},
         BSL_PARAM_END};
-    RETURN_RET_IF_ERR(CRYPT_CompositeCheckRsaBits(ctx, &asn1[CRYPT_RSA_PUB_N_IDX]), ret);
-    RETURN_RET_IF_ERR(CRYPT_EAL_PkeySetPubEx(ctx->tradCtx, rsaParam), ret);
-    RETURN_RET_IF_ERR(CRYPT_CompositeSetRsaPadding(ctx), ret);
+    RETURN_RET_IF_ERR_EX(CRYPT_CompositeCheckRsaBits(ctx, &asn1[CRYPT_RSA_PUB_N_IDX]), ret);
+    RETURN_RET_IF_ERR_EX(CRYPT_EAL_PkeySetPubEx(ctx->tradCtx, rsaParam), ret);
+    RETURN_RET_IF_ERR_EX(CRYPT_CompositeSetRsaPadding(ctx), ret);
     return CRYPT_SUCCESS;
 }
 
-static int32_t CRYPT_CompositeSetEcdsaPrvKey(CRYPT_CompositeCtx *ctx, BSL_Buffer *encode)
+static int32_t CRYPT_CompositeSetEcPrvKey(CRYPT_CompositeCtx *ctx, BSL_Buffer *encode)
 {
     int32_t ret;
     BSL_ASN1_Buffer asn1[CRYPT_ECPRIKEY_PUBKEY_IDX + 1] = {0};
@@ -478,37 +473,38 @@ static int32_t CRYPT_CompositeSetEcdsaPrvKey(CRYPT_CompositeCtx *ctx, BSL_Buffer
     RETURN_RET_IF_ERR(
         BSL_ASN1_DecodeTemplate(&templ, NULL, &encode->data, &encode->dataLen, asn1, CRYPT_ECPRIKEY_PUBKEY_IDX + 1),
         ret);
+    RETURN_RET_IF(encode->dataLen != 0, CRYPT_COMPOSITE_KEYLEN_ERROR);
     BSL_Param ecParam[2] = {{CRYPT_PARAM_EC_PRVKEY, BSL_PARAM_TYPE_OCTETS, asn1[CRYPT_ECPRIKEY_PRIKEY_IDX].buff,
                              asn1[CRYPT_ECPRIKEY_PRIKEY_IDX].len, 0},
                             BSL_PARAM_END};
-    RETURN_RET_IF_ERR(CRYPT_EAL_PkeySetPrvEx(ctx->tradCtx, ecParam), ret);
+    RETURN_RET_IF_ERR_EX(CRYPT_EAL_PkeySetPrvEx(ctx->tradCtx, ecParam), ret);
     return CRYPT_SUCCESS;
 }
 
-static int32_t CRYPT_CompositeSetEcdsaPubKey(CRYPT_CompositeCtx *ctx, BSL_Buffer *encode)
+static int32_t CRYPT_CompositeSetEcPubKey(CRYPT_CompositeCtx *ctx, BSL_Buffer *encode)
 {
     int32_t ret;
     BSL_Param param[2] = {{CRYPT_PARAM_EC_PUBKEY, BSL_PARAM_TYPE_OCTETS, encode->data, encode->dataLen, 0},
                           BSL_PARAM_END};
-    RETURN_RET_IF_ERR(CRYPT_EAL_PkeySetPubEx(ctx->tradCtx, param), ret);
+    RETURN_RET_IF_ERR_EX(CRYPT_EAL_PkeySetPubEx(ctx->tradCtx, param), ret);
     return CRYPT_SUCCESS;
 }
 
-static int32_t CRYPT_CompositeSetEd25519PrvKey(CRYPT_CompositeCtx *ctx, BSL_Buffer *encode)
+static int32_t CRYPT_CompositeSetCurve25519PrvKey(CRYPT_CompositeCtx *ctx, BSL_Buffer *encode)
 {
     int32_t ret;
     BSL_Param para[2] = {{CRYPT_PARAM_CURVE25519_PRVKEY, BSL_PARAM_TYPE_OCTETS, encode->data, encode->dataLen, 0},
                          BSL_PARAM_END};
-    RETURN_RET_IF_ERR(CRYPT_EAL_PkeySetPrvEx(ctx->tradCtx, para), ret);
+    RETURN_RET_IF_ERR_EX(CRYPT_EAL_PkeySetPrvEx(ctx->tradCtx, para), ret);
     return CRYPT_SUCCESS;
 }
 
-static int32_t CRYPT_CompositeSetEd25519PubKey(CRYPT_CompositeCtx *ctx, BSL_Buffer *encode)
+static int32_t CRYPT_CompositeSetCurve25519PubKey(CRYPT_CompositeCtx *ctx, BSL_Buffer *encode)
 {
     int32_t ret;
     BSL_Param param[2] = {{CRYPT_PARAM_CURVE25519_PUBKEY, BSL_PARAM_TYPE_OCTETS, encode->data, encode->dataLen, 0},
                           BSL_PARAM_END};
-    RETURN_RET_IF_ERR(CRYPT_EAL_PkeySetPubEx(ctx->tradCtx, param), ret);
+    RETURN_RET_IF_ERR_EX(CRYPT_EAL_PkeySetPubEx(ctx->tradCtx, param), ret);
     return CRYPT_SUCCESS;
 }
 
@@ -517,10 +513,12 @@ int32_t CRYPT_CompositeSetTradPrvKey(CRYPT_CompositeCtx *ctx, BSL_Buffer *encode
     switch (ctx->info->tradAlg) {
         case CRYPT_PKEY_RSA:
             return CRYPT_CompositeSetRsaPrvKey(ctx, encode);
+        case CRYPT_PKEY_ECDH:
         case CRYPT_PKEY_ECDSA:
-            return CRYPT_CompositeSetEcdsaPrvKey(ctx, encode);
+            return CRYPT_CompositeSetEcPrvKey(ctx, encode);
+        case CRYPT_PKEY_X25519:
         case CRYPT_PKEY_ED25519:
-            return CRYPT_CompositeSetEd25519PrvKey(ctx, encode);
+            return CRYPT_CompositeSetCurve25519PrvKey(ctx, encode);
         default:
             BSL_ERR_PUSH_ERROR(CRYPT_NOT_SUPPORT);
             return CRYPT_NOT_SUPPORT;
@@ -532,13 +530,15 @@ int32_t CRYPT_CompositeSetTradPubKey(CRYPT_CompositeCtx *ctx, BSL_Buffer *encode
     switch (ctx->info->tradAlg) {
         case CRYPT_PKEY_RSA:
             return CRYPT_CompositeSetRsaPubKey(ctx, encode);
+        case CRYPT_PKEY_ECDH:
         case CRYPT_PKEY_ECDSA:
-            return CRYPT_CompositeSetEcdsaPubKey(ctx, encode);
+            return CRYPT_CompositeSetEcPubKey(ctx, encode);
+        case CRYPT_PKEY_X25519:
         case CRYPT_PKEY_ED25519:
-            return CRYPT_CompositeSetEd25519PubKey(ctx, encode);
+            return CRYPT_CompositeSetCurve25519PubKey(ctx, encode);
         default:
             BSL_ERR_PUSH_ERROR(CRYPT_NOT_SUPPORT);
             return CRYPT_NOT_SUPPORT;
     }
 }
-#endif /* HITLS_CRYPTO_COMPOSITE */
+#endif /* HITLS_CRYPTO_COMPOSITE_SIGN || HITLS_CRYPTO_COMPOSITE_KEM */

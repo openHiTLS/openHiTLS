@@ -42,7 +42,7 @@
 #ifdef HITLS_CRYPTO_MLDSA
 #include "crypt_mldsa.h"
 #endif
-#ifdef HITLS_CRYPTO_COMPOSITE
+#if defined(HITLS_CRYPTO_COMPOSITE_SIGN) || defined(HITLS_CRYPTO_COMPOSITE_KEM)
 #include "crypt_composite.h"
 #endif
 #ifdef HITLS_CRYPTO_XMSS
@@ -68,7 +68,7 @@
 #if defined(HITLS_CRYPTO_RSA) || defined(HITLS_CRYPTO_ECDSA) || defined(HITLS_CRYPTO_SM2) ||      \
     defined(HITLS_CRYPTO_ED25519) || defined(HITLS_CRYPTO_MLDSA) || defined(HITLS_CRYPTO_XMSS) || \
     defined(HITLS_CRYPTO_XMSSMT) || defined(HITLS_CRYPTO_X25519) || defined(HITLS_CRYPTO_DSA) ||  \
-    defined(HITLS_CRYPTO_HSS_LMS)
+    defined(HITLS_CRYPTO_HSS_LMS) || defined(HITLS_CRYPTO_MLKEM)
 typedef struct {
     CRYPT_EAL_ProvMgrCtx *provMgrCtx;
     EAL_PkeyUnitaryMethod method;
@@ -367,7 +367,13 @@ DECODER_DEFINE_DER2KEY_NEW_CTX(X25519, CRYPT_PKEY_X25519, g_defEalKeyMgmtX25519,
 #ifdef HITLS_CRYPTO_MLDSA
 DECODER_DEFINE_DER2KEY_NEW_CTX(Mldsa, CRYPT_PKEY_ML_DSA, g_defEalKeyMgmtMlDsa, NULL, NULL, g_defEalSignMlDsa, NULL)
 #endif
-#ifdef HITLS_CRYPTO_COMPOSITE
+#if defined(HITLS_CRYPTO_COMPOSITE_SIGN) && defined(HITLS_CRYPTO_COMPOSITE_KEM)
+DECODER_DEFINE_DER2KEY_NEW_CTX(Composite, CRYPT_PKEY_COMPOSITE, g_defEalKeyMgmtComposite, \
+    NULL, NULL, g_defEalSignComposite, g_defEalKemComposite)
+#elif defined(HITLS_CRYPTO_COMPOSITE_KEM)
+DECODER_DEFINE_DER2KEY_NEW_CTX(Composite, CRYPT_PKEY_COMPOSITE, g_defEalKeyMgmtComposite, \
+    NULL, NULL, NULL, g_defEalKemComposite)
+#elif defined(HITLS_CRYPTO_COMPOSITE_SIGN)
 DECODER_DEFINE_DER2KEY_NEW_CTX(Composite, CRYPT_PKEY_COMPOSITE, g_defEalKeyMgmtComposite, \
     NULL, NULL, g_defEalSignComposite, NULL)
 #endif
@@ -436,7 +442,7 @@ DECODER_DEFINE_SUBPUBKEY_WITHOUT_SEQ_DER2KEY_DECODE(Mldsa, CRYPT_ML_DSA_Ctx, CRY
 DECODER_DEFINE_PKCS8_DECODE(Mldsa, CRYPT_ML_DSA_Ctx, CRYPT_MLDSA_ParsePkcs8key)
 #endif
 
-#ifdef HITLS_CRYPTO_COMPOSITE
+#if defined(HITLS_CRYPTO_COMPOSITE_SIGN) || defined(HITLS_CRYPTO_COMPOSITE_KEM)
 DECODER_DEFINE_SUBPUBKEY_DER2KEY_DECODE(Composite, CRYPT_CompositeCtx, \
                                         CRYPT_COMPOSITE_ParseSubPubkeyAsn1Buff)
 DECODER_DEFINE_SUBPUBKEY_WITHOUT_SEQ_DER2KEY_DECODE(Composite, CRYPT_CompositeCtx, \

@@ -12,7 +12,16 @@
 # See the Mulan PSL v2 for more details.
 
 
-file(GLOB _composite_sources ${CMAKE_CURRENT_SOURCE_DIR}/src/*.c)
+set(_composite_sources
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/composite.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/composite_encdec.c
+)
+if(HITLS_CRYPTO_COMPOSITE_SIGN)
+    list(APPEND _composite_sources ${CMAKE_CURRENT_SOURCE_DIR}/src/composite_sign.c)
+endif()
+if(HITLS_CRYPTO_COMPOSITE_KEM)
+    list(APPEND _composite_sources ${CMAKE_CURRENT_SOURCE_DIR}/src/composite_kem.c)
+endif()
 
 add_library(_hitls_crypto_composite OBJECT ${_composite_sources})
 

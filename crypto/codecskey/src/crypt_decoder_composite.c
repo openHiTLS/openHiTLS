@@ -14,7 +14,8 @@
  */
 
 #include "hitls_build.h"
-#if defined(HITLS_CRYPTO_COMPOSITE) && defined(HITLS_CRYPTO_KEY_DECODE)
+#if (defined(HITLS_CRYPTO_COMPOSITE_SIGN) || defined(HITLS_CRYPTO_COMPOSITE_KEM)) && \
+    defined(HITLS_CRYPTO_KEY_DECODE)
 #include "crypt_composite.h"
 #include "crypt_params_key.h"
 #include "bsl_asn1_internal.h"
@@ -25,24 +26,36 @@
 #include "crypt_codecskey_local.h"
 #include "crypt_codecskey.h"
 
+static bool IsCompositeKey(BslCid cid)
+{
+#ifdef HITLS_CRYPTO_COMPOSITE_SIGN
+    if (cid >= BSL_CID_MLDSA44_RSA2048_PSS_SHA256 && cid <= BSL_CID_MLDSA87_ECDSA_P521_SHA512) {
+        return true;
+    }
+#endif
+#ifdef HITLS_CRYPTO_COMPOSITE_KEM
+    if (cid >= BSL_CID_MLKEM768_RSA2048_SHA3_256 && cid <= BSL_CID_MLKEM1024_ECDH_P521_SHA3_256) {
+        return true;
+    }
+#endif
+    return false;
+}
+
 int32_t CRYPT_COMPOSITE_ParseSubPubkeyAsn1Buff(void *libCtx, uint8_t *buff, uint32_t buffLen,
                                                CRYPT_CompositeCtx **pubKey, bool isComplete)
 {
     CRYPT_DECODE_SubPubkeyInfo subPubkeyInfo = {0};
     int32_t ret = CRYPT_DECODE_SubPubkey(buff, buffLen, NULL, &subPubkeyInfo, isComplete);
     if (ret != CRYPT_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
-    bool isCompositePubkey = (subPubkeyInfo.keyType >= BSL_CID_MLDSA44_RSA2048_PSS_SHA256 &&
-                                   subPubkeyInfo.keyType <= BSL_CID_MLDSA87_ECDSA_P521_SHA512);
+    bool isCompositePubkey = IsCompositeKey(subPubkeyInfo.keyType);
     if (!isCompositePubkey) {
         BSL_ERR_PUSH_ERROR(CRYPT_DECODE_ERR_KEY_TYPE_NOT_MATCH);
         return CRYPT_DECODE_ERR_KEY_TYPE_NOT_MATCH;
     }
     CRYPT_CompositeCtx *pctx = CRYPT_COMPOSITE_NewCtxEx(libCtx);
     if (pctx == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         return CRYPT_MEM_ALLOC_FAIL;
     }
     BSL_Param pubParam[2] = {{CRYPT_PARAM_COMPOSITE_PUBKEY, BSL_PARAM_TYPE_OCTETS, subPubkeyInfo.pubKey.buff,
@@ -56,7 +69,6 @@ int32_t CRYPT_COMPOSITE_ParseSubPubkeyAsn1Buff(void *libCtx, uint8_t *buff, uint
     }
     ret = CRYPT_COMPOSITE_SetPubKeyEx(pctx, pubParam);
     if (ret != CRYPT_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
         CRYPT_COMPOSITE_FreeCtx(pctx);
         return ret;
     }
@@ -70,18 +82,15 @@ int32_t CRYPT_COMPOSITE_ParsePkcs8key(void *libCtx, uint8_t *buffer, uint32_t bu
     CRYPT_ENCODE_DECODE_Pk8PrikeyInfo pk8PrikeyInfo = {0};
     int32_t ret = CRYPT_DECODE_Pkcs8Info(buffer, bufferLen, NULL, &pk8PrikeyInfo);
     if (ret != CRYPT_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
-    bool isCompositeKey = (pk8PrikeyInfo.keyType >= BSL_CID_MLDSA44_RSA2048_PSS_SHA256 &&
-                                pk8PrikeyInfo.keyType <= BSL_CID_MLDSA87_ECDSA_P521_SHA512);
+    bool isCompositeKey = IsCompositeKey(pk8PrikeyInfo.keyType);
     if (!isCompositeKey) {
         BSL_ERR_PUSH_ERROR(CRYPT_DECODE_ERR_KEY_TYPE_NOT_MATCH);
         return CRYPT_DECODE_ERR_KEY_TYPE_NOT_MATCH;
     }
     CRYPT_CompositeCtx *pctx = CRYPT_COMPOSITE_NewCtxEx(libCtx);
     if (pctx == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         return CRYPT_MEM_ALLOC_FAIL;
     }
     ret = CRYPT_COMPOSITE_Ctrl(pctx, CRYPT_CTRL_SET_PARA_BY_ID, (void *)&pk8PrikeyInfo.keyType,

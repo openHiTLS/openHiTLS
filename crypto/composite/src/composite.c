@@ -14,102 +14,204 @@
  */
 
 #include "hitls_build.h"
-#ifdef HITLS_CRYPTO_COMPOSITE
+#if defined(HITLS_CRYPTO_COMPOSITE_SIGN) || defined(HITLS_CRYPTO_COMPOSITE_KEM)
 
 #include <string.h>
 
 #include "composite_local.h"
-#include "bsl_asn1.h"
-#include "eal_pkey_local.h"
-#include "eal_md_local.h"
 #include "crypt_utils.h"
 #include "crypt_algid.h"
 #include "crypt_types.h"
-#include "crypt_eal_md.h"
-#include "crypt_mldsa.h"
 #include "crypt_eal_pkey.h"
 
-static const uint8_t PREFIX[] = {0x43, 0x6F, 0x6D, 0x70, 0x6F, 0x73, 0x69, 0x74, 0x65, 0x41, 0x6C,
-                                 0x67, 0x6F, 0x72, 0x69, 0x74, 0x68, 0x6D, 0x53, 0x69, 0x67, 0x6E,
-                                 0x61, 0x74, 0x75, 0x72, 0x65, 0x73, 0x32, 0x30, 0x32, 0x35};
 static const uint8_t COMPOSITE_RSA_F4[] = {0x01, 0x00, 0x01};
 
 static const COMPOSITE_ALG_INFO g_composite_info[] = {
+#ifdef HITLS_CRYPTO_COMPOSITE_SIGN
 #ifdef HITLS_CRYPTO_RSA
-    {CRYPT_COMPOSITE_MLDSA44_RSA2048_PSS_SHA256, "COMPSIG-MLDSA44-RSA2048-PSS-SHA256",
+#ifdef HITLS_CRYPTO_RSA_EMSA_PSS
+    {CRYPT_COMPOSITE_MLDSA44_RSA2048_PSS_SHA256, CRYPT_COMPOSITE_KIND_SIGN,
+     "COMPSIG-MLDSA44-RSA2048-PSS-SHA256",
      CRYPT_PKEY_ML_DSA, CRYPT_MLDSA_TYPE_MLDSA_44, CRYPT_PKEY_RSA, BSL_CID_RSASSAPSS,
-     CRYPT_MD_SHA256, CRYPT_MD_SHA256, 2048, 1582, 1226, 1312, 32, 2420},
-    {CRYPT_COMPOSITE_MLDSA44_RSA2048_PKCS15_SHA256, "COMPSIG-MLDSA44-RSA2048-PKCS15-SHA256",
+     2048, 1582, 1226, 1312, 32,
+     {.sign = {CRYPT_MD_SHA256, CRYPT_MD_SHA256, 2420}}},
+    {CRYPT_COMPOSITE_MLDSA65_RSA3072_PSS_SHA512, CRYPT_COMPOSITE_KIND_SIGN,
+     "COMPSIG-MLDSA65-RSA3072-PSS-SHA512",
+     CRYPT_PKEY_ML_DSA, CRYPT_MLDSA_TYPE_MLDSA_65, CRYPT_PKEY_RSA, BSL_CID_RSASSAPSS,
+     3072, 2350, 1802, 1952, 32,
+     {.sign = {CRYPT_MD_SHA512, CRYPT_MD_SHA256, 3309}}},
+    {CRYPT_COMPOSITE_MLDSA65_RSA4096_PSS_SHA512, CRYPT_COMPOSITE_KIND_SIGN,
+     "COMPSIG-MLDSA65-RSA4096-PSS-SHA512",
+     CRYPT_PKEY_ML_DSA, CRYPT_MLDSA_TYPE_MLDSA_65, CRYPT_PKEY_RSA, BSL_CID_RSASSAPSS,
+     4096, 2478, 2383, 1952, 32,
+     {.sign = {CRYPT_MD_SHA512, CRYPT_MD_SHA384, 3309}}},
+    {CRYPT_COMPOSITE_MLDSA87_RSA3072_PSS_SHA512, CRYPT_COMPOSITE_KIND_SIGN,
+     "COMPSIG-MLDSA87-RSA3072-PSS-SHA512",
+     CRYPT_PKEY_ML_DSA, CRYPT_MLDSA_TYPE_MLDSA_87, CRYPT_PKEY_RSA, BSL_CID_RSASSAPSS,
+     3072, 2990, 1802, 2592, 32,
+     {.sign = {CRYPT_MD_SHA512, CRYPT_MD_SHA256, 4627}}},
+    {CRYPT_COMPOSITE_MLDSA87_RSA4096_PSS_SHA512, CRYPT_COMPOSITE_KIND_SIGN,
+     "COMPSIG-MLDSA87-RSA4096-PSS-SHA512",
+     CRYPT_PKEY_ML_DSA, CRYPT_MLDSA_TYPE_MLDSA_87, CRYPT_PKEY_RSA, BSL_CID_RSASSAPSS,
+     4096, 3118, 2383, 2592, 32,
+     {.sign = {CRYPT_MD_SHA512, CRYPT_MD_SHA384, 4627}}},
+#endif
+#ifdef HITLS_CRYPTO_RSA_EMSA_PKCSV15
+    {CRYPT_COMPOSITE_MLDSA44_RSA2048_PKCS15_SHA256, CRYPT_COMPOSITE_KIND_SIGN,
+     "COMPSIG-MLDSA44-RSA2048-PKCS15-SHA256",
      CRYPT_PKEY_ML_DSA, CRYPT_MLDSA_TYPE_MLDSA_44, CRYPT_PKEY_RSA, BSL_CID_RSA,
-     CRYPT_MD_SHA256, CRYPT_MD_SHA256, 2048, 1582, 1226, 1312, 32, 2420},
+     2048, 1582, 1226, 1312, 32,
+     {.sign = {CRYPT_MD_SHA256, CRYPT_MD_SHA256, 2420}}},
+    {CRYPT_COMPOSITE_MLDSA65_RSA3072_PKCS15_SHA512, CRYPT_COMPOSITE_KIND_SIGN,
+     "COMPSIG-MLDSA65-RSA3072-PKCS15-SHA512",
+     CRYPT_PKEY_ML_DSA, CRYPT_MLDSA_TYPE_MLDSA_65, CRYPT_PKEY_RSA, BSL_CID_RSA,
+     3072, 2350, 1802, 1952, 32,
+     {.sign = {CRYPT_MD_SHA512, CRYPT_MD_SHA256, 3309}}},
+    {CRYPT_COMPOSITE_MLDSA65_RSA4096_PKCS15_SHA512, CRYPT_COMPOSITE_KIND_SIGN,
+     "COMPSIG-MLDSA65-RSA4096-PKCS15-SHA512",
+     CRYPT_PKEY_ML_DSA, CRYPT_MLDSA_TYPE_MLDSA_65, CRYPT_PKEY_RSA, BSL_CID_RSA,
+     4096, 2478, 2383, 1952, 32,
+     {.sign = {CRYPT_MD_SHA512, CRYPT_MD_SHA384, 3309}}},
+#endif
 #endif
 #ifdef HITLS_CRYPTO_ED25519
-    {CRYPT_COMPOSITE_MLDSA44_ED25519_SHA512, "COMPSIG-MLDSA44-Ed25519-SHA512",
+    {CRYPT_COMPOSITE_MLDSA44_ED25519_SHA512, CRYPT_COMPOSITE_KIND_SIGN,
+     "COMPSIG-MLDSA44-Ed25519-SHA512",
      CRYPT_PKEY_ML_DSA, CRYPT_MLDSA_TYPE_MLDSA_44, CRYPT_PKEY_ED25519, CRYPT_PKEY_PARAID_MAX,
-     CRYPT_MD_SHA512, CRYPT_MD_SHA512, 0, 1344, 64, 1312, 32, 2420},
-#endif
-#ifdef HITLS_CRYPTO_ECDSA
-    {CRYPT_COMPOSITE_MLDSA44_ECDSA_P256_SHA256, "COMPSIG-MLDSA44-ECDSA-P256-SHA256",
-     CRYPT_PKEY_ML_DSA, CRYPT_MLDSA_TYPE_MLDSA_44, CRYPT_PKEY_ECDSA, CRYPT_ECC_NISTP256,
-     CRYPT_MD_SHA256, CRYPT_MD_SHA256, 0, 1377, 83, 1312, 32, 2420},
-#endif
-#ifdef HITLS_CRYPTO_RSA
-    {CRYPT_COMPOSITE_MLDSA65_RSA3072_PSS_SHA512, "COMPSIG-MLDSA65-RSA3072-PSS-SHA512",
-     CRYPT_PKEY_ML_DSA, CRYPT_MLDSA_TYPE_MLDSA_65, CRYPT_PKEY_RSA, BSL_CID_RSASSAPSS,
-     CRYPT_MD_SHA512, CRYPT_MD_SHA256, 3072, 2350, 1802, 1952, 32, 3309},
-    {CRYPT_COMPOSITE_MLDSA65_RSA3072_PKCS15_SHA512, "COMPSIG-MLDSA65-RSA3072-PKCS15-SHA512",
-     CRYPT_PKEY_ML_DSA, CRYPT_MLDSA_TYPE_MLDSA_65, CRYPT_PKEY_RSA, BSL_CID_RSA,
-     CRYPT_MD_SHA512, CRYPT_MD_SHA256, 3072, 2350, 1802, 1952, 32, 3309},
-    {CRYPT_COMPOSITE_MLDSA65_RSA4096_PSS_SHA512, "COMPSIG-MLDSA65-RSA4096-PSS-SHA512",
-     CRYPT_PKEY_ML_DSA, CRYPT_MLDSA_TYPE_MLDSA_65, CRYPT_PKEY_RSA, BSL_CID_RSASSAPSS,
-     CRYPT_MD_SHA512, CRYPT_MD_SHA384, 4096, 2478, 2383, 1952, 32, 3309},
-    {CRYPT_COMPOSITE_MLDSA65_RSA4096_PKCS15_SHA512, "COMPSIG-MLDSA65-RSA4096-PKCS15-SHA512",
-     CRYPT_PKEY_ML_DSA, CRYPT_MLDSA_TYPE_MLDSA_65, CRYPT_PKEY_RSA, BSL_CID_RSA,
-     CRYPT_MD_SHA512, CRYPT_MD_SHA384, 4096, 2478, 2383, 1952, 32, 3309},
-#endif
-#ifdef HITLS_CRYPTO_ECDSA
-    {CRYPT_COMPOSITE_MLDSA65_ECDSA_P256_SHA512, "COMPSIG-MLDSA65-ECDSA-P256-SHA512",
-     CRYPT_PKEY_ML_DSA, CRYPT_MLDSA_TYPE_MLDSA_65, CRYPT_PKEY_ECDSA, CRYPT_ECC_NISTP256,
-     CRYPT_MD_SHA512, CRYPT_MD_SHA256, 0, 2017, 83, 1952, 32, 3309},
-    {CRYPT_COMPOSITE_MLDSA65_ECDSA_P384_SHA512, "COMPSIG-MLDSA65-ECDSA-P384-SHA512",
-     CRYPT_PKEY_ML_DSA, CRYPT_MLDSA_TYPE_MLDSA_65, CRYPT_PKEY_ECDSA, CRYPT_ECC_NISTP384,
-     CRYPT_MD_SHA512, CRYPT_MD_SHA384, 0, 2049, 96, 1952, 32, 3309},
-    {CRYPT_COMPOSITE_MLDSA65_ECDSA_BRAINPOOLP256R1_SHA512, "COMPSIG-MLDSA65-ECDSA-BP256-SHA512",
-     CRYPT_PKEY_ML_DSA, CRYPT_MLDSA_TYPE_MLDSA_65, CRYPT_PKEY_ECDSA, CRYPT_ECC_BRAINPOOLP256R1,
-     CRYPT_MD_SHA512, CRYPT_MD_SHA256, 0, 2017, 84, 1952, 32, 3309},
-#endif
-#ifdef HITLS_CRYPTO_ED25519
-    {CRYPT_COMPOSITE_MLDSA65_ED25519_SHA512, "COMPSIG-MLDSA65-Ed25519-SHA512",
+     0, 1344, 64, 1312, 32,
+     {.sign = {CRYPT_MD_SHA512, CRYPT_MD_SHA512, 2420}}},
+    {CRYPT_COMPOSITE_MLDSA65_ED25519_SHA512, CRYPT_COMPOSITE_KIND_SIGN,
+     "COMPSIG-MLDSA65-Ed25519-SHA512",
      CRYPT_PKEY_ML_DSA, CRYPT_MLDSA_TYPE_MLDSA_65, CRYPT_PKEY_ED25519, CRYPT_PKEY_PARAID_MAX,
-     CRYPT_MD_SHA512, CRYPT_MD_SHA512, 0, 1984, 64, 1952, 32, 3309},
+     0, 1984, 64, 1952, 32,
+     {.sign = {CRYPT_MD_SHA512, CRYPT_MD_SHA512, 3309}}},
 #endif
 #ifdef HITLS_CRYPTO_ECDSA
-    {CRYPT_COMPOSITE_MLDSA87_ECDSA_P384_SHA512, "COMPSIG-MLDSA87-ECDSA-P384-SHA512",
+#ifdef HITLS_CRYPTO_CURVE_NISTP256
+    {CRYPT_COMPOSITE_MLDSA44_ECDSA_P256_SHA256, CRYPT_COMPOSITE_KIND_SIGN,
+     "COMPSIG-MLDSA44-ECDSA-P256-SHA256",
+     CRYPT_PKEY_ML_DSA, CRYPT_MLDSA_TYPE_MLDSA_44, CRYPT_PKEY_ECDSA, CRYPT_ECC_NISTP256,
+     0, 1377, 83, 1312, 32,
+     {.sign = {CRYPT_MD_SHA256, CRYPT_MD_SHA256, 2420}}},
+    {CRYPT_COMPOSITE_MLDSA65_ECDSA_P256_SHA512, CRYPT_COMPOSITE_KIND_SIGN,
+     "COMPSIG-MLDSA65-ECDSA-P256-SHA512",
+     CRYPT_PKEY_ML_DSA, CRYPT_MLDSA_TYPE_MLDSA_65, CRYPT_PKEY_ECDSA, CRYPT_ECC_NISTP256,
+     0, 2017, 83, 1952, 32,
+     {.sign = {CRYPT_MD_SHA512, CRYPT_MD_SHA256, 3309}}},
+#endif
+#ifdef HITLS_CRYPTO_CURVE_NISTP384
+    {CRYPT_COMPOSITE_MLDSA65_ECDSA_P384_SHA512, CRYPT_COMPOSITE_KIND_SIGN,
+     "COMPSIG-MLDSA65-ECDSA-P384-SHA512",
+     CRYPT_PKEY_ML_DSA, CRYPT_MLDSA_TYPE_MLDSA_65, CRYPT_PKEY_ECDSA, CRYPT_ECC_NISTP384,
+     0, 2049, 96, 1952, 32,
+     {.sign = {CRYPT_MD_SHA512, CRYPT_MD_SHA384, 3309}}},
+    {CRYPT_COMPOSITE_MLDSA87_ECDSA_P384_SHA512, CRYPT_COMPOSITE_KIND_SIGN,
+     "COMPSIG-MLDSA87-ECDSA-P384-SHA512",
      CRYPT_PKEY_ML_DSA, CRYPT_MLDSA_TYPE_MLDSA_87, CRYPT_PKEY_ECDSA, CRYPT_ECC_NISTP384,
-     CRYPT_MD_SHA512, CRYPT_MD_SHA384, 0, 2689, 96, 2592, 32, 4627},
-    {CRYPT_COMPOSITE_MLDSA87_ECDSA_BRAINPOOLP384R1_SHA512, "COMPSIG-MLDSA87-ECDSA-BP384-SHA512",
+     0, 2689, 96, 2592, 32,
+     {.sign = {CRYPT_MD_SHA512, CRYPT_MD_SHA384, 4627}}},
+#endif
+#ifdef HITLS_CRYPTO_CURVE_BP256R1
+    {CRYPT_COMPOSITE_MLDSA65_ECDSA_BRAINPOOLP256R1_SHA512, CRYPT_COMPOSITE_KIND_SIGN,
+     "COMPSIG-MLDSA65-ECDSA-BP256-SHA512",
+     CRYPT_PKEY_ML_DSA, CRYPT_MLDSA_TYPE_MLDSA_65, CRYPT_PKEY_ECDSA, CRYPT_ECC_BRAINPOOLP256R1,
+     0, 2017, 84, 1952, 32,
+     {.sign = {CRYPT_MD_SHA512, CRYPT_MD_SHA256, 3309}}},
+#endif
+#ifdef HITLS_CRYPTO_CURVE_BP384R1
+    {CRYPT_COMPOSITE_MLDSA87_ECDSA_BRAINPOOLP384R1_SHA512, CRYPT_COMPOSITE_KIND_SIGN,
+     "COMPSIG-MLDSA87-ECDSA-BP384-SHA512",
      CRYPT_PKEY_ML_DSA, CRYPT_MLDSA_TYPE_MLDSA_87, CRYPT_PKEY_ECDSA, CRYPT_ECC_BRAINPOOLP384R1,
-     CRYPT_MD_SHA512, CRYPT_MD_SHA384, 0, 2689,	100, 2592, 32, 4627},
+     0, 2689, 100, 2592, 32,
+     {.sign = {CRYPT_MD_SHA512, CRYPT_MD_SHA384, 4627}}},
 #endif
-#ifdef HITLS_CRYPTO_RSA
-    {CRYPT_COMPOSITE_MLDSA87_RSA3072_PSS_SHA512, "COMPSIG-MLDSA87-RSA3072-PSS-SHA512",
-     CRYPT_PKEY_ML_DSA, CRYPT_MLDSA_TYPE_MLDSA_87, CRYPT_PKEY_RSA, BSL_CID_RSASSAPSS,
-     CRYPT_MD_SHA512, CRYPT_MD_SHA256, 3072, 2990, 1802, 2592, 32, 4627},
-    {CRYPT_COMPOSITE_MLDSA87_RSA4096_PSS_SHA512, "COMPSIG-MLDSA87-RSA4096-PSS-SHA512",
-     CRYPT_PKEY_ML_DSA, CRYPT_MLDSA_TYPE_MLDSA_87, CRYPT_PKEY_RSA, BSL_CID_RSASSAPSS,
-     CRYPT_MD_SHA512, CRYPT_MD_SHA384, 4096, 3118,	2383, 2592, 32, 4627},
-#endif
-#ifdef HITLS_CRYPTO_ECDSA
-    {CRYPT_COMPOSITE_MLDSA87_ECDSA_P521_SHA512, "COMPSIG-MLDSA87-ECDSA-P521-SHA512",
+#ifdef HITLS_CRYPTO_CURVE_NISTP521
+    {CRYPT_COMPOSITE_MLDSA87_ECDSA_P521_SHA512, CRYPT_COMPOSITE_KIND_SIGN,
+     "COMPSIG-MLDSA87-ECDSA-P521-SHA512",
      CRYPT_PKEY_ML_DSA, CRYPT_MLDSA_TYPE_MLDSA_87, CRYPT_PKEY_ECDSA, CRYPT_ECC_NISTP521,
-     CRYPT_MD_SHA512, CRYPT_MD_SHA512, 0, 2725,	114, 2592, 32, 4627},
+     0, 2725, 114, 2592, 32,
+     {.sign = {CRYPT_MD_SHA512, CRYPT_MD_SHA512, 4627}}},
 #endif
+#endif
+#endif
+#ifdef HITLS_CRYPTO_COMPOSITE_KEM
+#if defined(HITLS_CRYPTO_RSA) && defined(HITLS_CRYPTO_RSAES_OAEP) && defined(HITLS_CRYPTO_SHA256)
+    {CRYPT_COMPOSITE_MLKEM768_RSA2048_SHA3_256, CRYPT_COMPOSITE_KIND_KEM,
+     "MLKEM768-RSAOAEP2048",
+     CRYPT_PKEY_ML_KEM, CRYPT_KEM_TYPE_MLKEM_768, CRYPT_PKEY_RSA, BSL_CID_RSAES_OAEP,
+     2048, 1454, 1258, 1184, 64,
+     {.kem = {1088, 256, 32, 32, CRYPT_MD_SHA3_256}}},
+    {CRYPT_COMPOSITE_MLKEM768_RSA3072_SHA3_256, CRYPT_COMPOSITE_KIND_KEM,
+     "MLKEM768-RSAOAEP3072",
+     CRYPT_PKEY_ML_KEM, CRYPT_KEM_TYPE_MLKEM_768, CRYPT_PKEY_RSA, BSL_CID_RSAES_OAEP,
+     3072, 1582, 1834, 1184, 64,
+     {.kem = {1088, 384, 32, 32, CRYPT_MD_SHA3_256}}},
+    {CRYPT_COMPOSITE_MLKEM768_RSA4096_SHA3_256, CRYPT_COMPOSITE_KIND_KEM,
+     "MLKEM768-RSAOAEP4096",
+     CRYPT_PKEY_ML_KEM, CRYPT_KEM_TYPE_MLKEM_768, CRYPT_PKEY_RSA, BSL_CID_RSAES_OAEP,
+     4096, 1710, 2415, 1184, 64,
+     {.kem = {1088, 512, 32, 32, CRYPT_MD_SHA3_256}}},
+    {CRYPT_COMPOSITE_MLKEM1024_RSA3072_SHA3_256, CRYPT_COMPOSITE_KIND_KEM,
+     "MLKEM1024-RSAOAEP3072",
+     CRYPT_PKEY_ML_KEM, CRYPT_KEM_TYPE_MLKEM_1024, CRYPT_PKEY_RSA, BSL_CID_RSAES_OAEP,
+     3072, 1966, 1834, 1568, 64,
+     {.kem = {1568, 384, 32, 32, CRYPT_MD_SHA3_256}}},
+#endif
+#if defined(HITLS_CRYPTO_X25519)
+    {CRYPT_COMPOSITE_MLKEM768_X25519_SHA3_256, CRYPT_COMPOSITE_KIND_KEM,
+     "\\.//^\\",
+     CRYPT_PKEY_ML_KEM, CRYPT_KEM_TYPE_MLKEM_768, CRYPT_PKEY_X25519, CRYPT_PKEY_PARAID_MAX,
+     0, 1216, 96, 1184, 64,
+     {.kem = {1088, 32, 32, 32, CRYPT_MD_SHA3_256}}},
+#endif
+#if defined(HITLS_CRYPTO_ECDH) && defined(HITLS_CRYPTO_CURVE_NISTP256)
+    {CRYPT_COMPOSITE_MLKEM768_ECDH_P256_SHA3_256, CRYPT_COMPOSITE_KIND_KEM,
+     "MLKEM768-P256",
+     CRYPT_PKEY_ML_KEM, CRYPT_KEM_TYPE_MLKEM_768, CRYPT_PKEY_ECDH, CRYPT_ECC_NISTP256,
+     0, 1249, 115, 1184, 64,
+     {.kem = {1088, 65, 32, 32, CRYPT_MD_SHA3_256}}},
+#endif
+#if defined(HITLS_CRYPTO_ECDH) && defined(HITLS_CRYPTO_CURVE_NISTP384)
+    {CRYPT_COMPOSITE_MLKEM768_ECDH_P384_SHA3_256, CRYPT_COMPOSITE_KIND_KEM,
+     "MLKEM768-P384",
+     CRYPT_PKEY_ML_KEM, CRYPT_KEM_TYPE_MLKEM_768, CRYPT_PKEY_ECDH, CRYPT_ECC_NISTP384,
+     0, 1281, 128, 1184, 64,
+     {.kem = {1088, 97, 48, 32, CRYPT_MD_SHA3_256}}},
+    {CRYPT_COMPOSITE_MLKEM1024_ECDH_P384_SHA3_256, CRYPT_COMPOSITE_KIND_KEM,
+     "MLKEM1024-P384",
+     CRYPT_PKEY_ML_KEM, CRYPT_KEM_TYPE_MLKEM_1024, CRYPT_PKEY_ECDH, CRYPT_ECC_NISTP384,
+     0, 1665, 128, 1568, 64,
+     {.kem = {1568, 97, 48, 32, CRYPT_MD_SHA3_256}}},
+#endif
+#if defined(HITLS_CRYPTO_ECDH) && defined(HITLS_CRYPTO_CURVE_BP256R1)
+    {CRYPT_COMPOSITE_MLKEM768_ECDH_BRAINPOOLP256R1_SHA3_256, CRYPT_COMPOSITE_KIND_KEM,
+     "MLKEM768-BP256",
+     CRYPT_PKEY_ML_KEM, CRYPT_KEM_TYPE_MLKEM_768, CRYPT_PKEY_ECDH, CRYPT_ECC_BRAINPOOLP256R1,
+     0, 1249, 116, 1184, 64,
+     {.kem = {1088, 65, 32, 32, CRYPT_MD_SHA3_256}}},
+#endif
+#if defined(HITLS_CRYPTO_ECDH) && defined(HITLS_CRYPTO_CURVE_BP384R1)
+    {CRYPT_COMPOSITE_MLKEM1024_ECDH_BRAINPOOLP384R1_SHA3_256, CRYPT_COMPOSITE_KIND_KEM,
+     "MLKEM1024-BP384",
+     CRYPT_PKEY_ML_KEM, CRYPT_KEM_TYPE_MLKEM_1024, CRYPT_PKEY_ECDH, CRYPT_ECC_BRAINPOOLP384R1,
+     0, 1665, 132, 1568, 64,
+     {.kem = {1568, 97, 48, 32, CRYPT_MD_SHA3_256}}},
+#endif
+#if defined(HITLS_CRYPTO_ECDH) && defined(HITLS_CRYPTO_CURVE_NISTP521)
+    {CRYPT_COMPOSITE_MLKEM1024_ECDH_P521_SHA3_256, CRYPT_COMPOSITE_KIND_KEM,
+     "MLKEM1024-P521",
+     CRYPT_PKEY_ML_KEM, CRYPT_KEM_TYPE_MLKEM_1024, CRYPT_PKEY_ECDH, CRYPT_ECC_NISTP521,
+     0, 1701, 146, 1568, 64,
+     {.kem = {1568, 133, 66, 32, CRYPT_MD_SHA3_256}}},
+#endif
+#endif
+    {0},
 };
 
 static const COMPOSITE_ALG_INFO *CRYPT_COMPOSITE_GetInfo(int32_t paramId)
 {
     const COMPOSITE_ALG_INFO *info = NULL;
-    for (size_t i = 0; i < sizeof(g_composite_info) / sizeof(g_composite_info[0]); i++) {
+    for (size_t i = 0; g_composite_info[i].paramId != 0; i++) {
         if (g_composite_info[i].paramId == paramId) {
             info = &g_composite_info[i];
             return info;
@@ -200,28 +302,6 @@ ERR:
     return NULL;
 }
 
-static int32_t CompositeGetRequiredSignLen(CRYPT_CompositeCtx *ctx, uint32_t *signLen)
-{
-    uint32_t tradSigLen = 0;
-    int32_t ret;
-
-    RETURN_RET_IF(ctx->info == NULL, CRYPT_COMPOSITE_KEYINFO_NOT_SET);
-    RETURN_RET_IF_ERR(CRYPT_EAL_PkeyCtrl(ctx->tradCtx, CRYPT_CTRL_GET_SIGNLEN, &tradSigLen, sizeof(tradSigLen)), ret);
-    *signLen = ctx->info->pqcSigLen + tradSigLen;
-    return CRYPT_SUCCESS;
-}
-
-static int32_t CRYPT_CompositeGetSignLen(CRYPT_CompositeCtx *ctx, void *val, uint32_t len)
-{
-    uint32_t signLen = 0;
-    int32_t ret;
-
-    RETURN_RET_IF(val == NULL || len != sizeof(int32_t), CRYPT_INVALID_ARG);
-    RETURN_RET_IF_ERR_EX(CompositeGetRequiredSignLen(ctx, &signLen), ret);
-    *(int32_t *)val = (int32_t)signLen;
-    return CRYPT_SUCCESS;
-}
-
 static int32_t CRYPT_CompositeSetRsaPara(CRYPT_CompositeCtx *ctx)
 {
     uint32_t bits = ctx->info->bits;
@@ -254,7 +334,7 @@ static int32_t CRYPT_CompositeSetAlgInfo(CRYPT_CompositeCtx *ctx, void *val, uin
     if (ctx->info->tradAlg == CRYPT_PKEY_RSA) {
         GOTO_ERR_IF_EX(CRYPT_CompositeSetRsaPara(ctx), ret);
     }
-    if (ctx->info->tradAlg == CRYPT_PKEY_ECDSA) {
+    if (ctx->info->tradAlg == CRYPT_PKEY_ECDSA || ctx->info->tradAlg == CRYPT_PKEY_ECDH) {
         int32_t curve = ctx->info->tradParam;
         GOTO_ERR_IF_EX(CRYPT_EAL_PkeyCtrl(ctx->tradCtx, CRYPT_CTRL_SET_PARA_BY_ID, &curve, sizeof(curve)), ret);
     }
@@ -263,25 +343,6 @@ ERR:
     CompositeFreeInnerCtx(ctx);
     BSL_ERR_PUSH_ERROR(ret);
     return ret;
-}
-
-static int32_t CRYPT_CompositeSetctxInfo(CRYPT_CompositeCtx *ctx, void *val, uint32_t len)
-{
-    uint8_t *ctxInfo = NULL;
-
-    RETURN_RET_IF(len > COMPOSITE_MAX_CTX_BYTES, CRYPT_COMPOSITE_KEYLEN_ERROR);
-    if (len == 0) {
-        BSL_SAL_FREE(ctx->ctxInfo);
-        ctx->ctxLen = 0;
-        return CRYPT_SUCCESS;
-    }
-    RETURN_RET_IF(val == NULL, CRYPT_INVALID_ARG);
-    ctxInfo = BSL_SAL_Dump((uint8_t *)val, len);
-    RETURN_RET_IF(ctxInfo == NULL, CRYPT_MEM_ALLOC_FAIL);
-    BSL_SAL_FREE(ctx->ctxInfo);
-    ctx->ctxInfo = ctxInfo;
-    ctx->ctxLen = len;
-    return CRYPT_SUCCESS;
 }
 
 static int32_t CRYPT_CompositeGetParaId(CRYPT_CompositeCtx *ctx, void *val, uint32_t len)
@@ -327,6 +388,61 @@ static int32_t CRYPT_CompositeGetPrvKeyLen(CRYPT_CompositeCtx *ctx, void *val, u
     return CRYPT_SUCCESS;
 }
 
+#ifdef HITLS_CRYPTO_COMPOSITE_SIGN
+static int32_t CRYPT_CompositeGetSignLen(CRYPT_CompositeCtx *ctx, void *val, uint32_t len)
+{
+    uint32_t tradSigLen = 0;
+    int32_t ret;
+
+    RETURN_RET_IF(ctx->info != NULL && ctx->info->kind != CRYPT_COMPOSITE_KIND_SIGN, CRYPT_NOT_SUPPORT);
+    RETURN_RET_IF(val == NULL || len != sizeof(int32_t), CRYPT_INVALID_ARG);
+    RETURN_RET_IF(ctx->info == NULL, CRYPT_COMPOSITE_KEYINFO_NOT_SET);
+    RETURN_RET_IF_ERR(CRYPT_EAL_PkeyCtrl(ctx->tradCtx, CRYPT_CTRL_GET_SIGNLEN, &tradSigLen, sizeof(tradSigLen)), ret);
+    *(int32_t *)val = (int32_t)(ctx->info->alg.sign.pqcSigLen + tradSigLen);
+    return CRYPT_SUCCESS;
+}
+
+static int32_t CRYPT_CompositeSetctxInfo(CRYPT_CompositeCtx *ctx, void *val, uint32_t len)
+{
+    uint8_t *ctxInfo = NULL;
+
+    RETURN_RET_IF(ctx->info != NULL && ctx->info->kind != CRYPT_COMPOSITE_KIND_SIGN, CRYPT_NOT_SUPPORT);
+    RETURN_RET_IF(len > COMPOSITE_MAX_CTX_BYTES, CRYPT_COMPOSITE_KEYLEN_ERROR);
+    if (len == 0) {
+        BSL_SAL_FREE(ctx->ctxInfo);
+        ctx->ctxLen = 0;
+        return CRYPT_SUCCESS;
+    }
+    RETURN_RET_IF(val == NULL, CRYPT_INVALID_ARG);
+    ctxInfo = BSL_SAL_Dump((uint8_t *)val, len);
+    RETURN_RET_IF(ctxInfo == NULL, CRYPT_MEM_ALLOC_FAIL);
+    BSL_SAL_FREE(ctx->ctxInfo);
+    ctx->ctxInfo = ctxInfo;
+    ctx->ctxLen = len;
+    return CRYPT_SUCCESS;
+}
+#endif
+
+#ifdef HITLS_CRYPTO_COMPOSITE_KEM
+static int32_t CRYPT_CompositeGetCiphertextLen(CRYPT_CompositeCtx *ctx, void *val, uint32_t len)
+{
+    RETURN_RET_IF(ctx->info == NULL, CRYPT_COMPOSITE_KEYINFO_NOT_SET);
+    RETURN_RET_IF(ctx->info->kind != CRYPT_COMPOSITE_KIND_KEM, CRYPT_NOT_SUPPORT);
+    RETURN_RET_IF(val == NULL || len != sizeof(uint32_t), CRYPT_INVALID_ARG);
+    *(uint32_t *)val = ctx->info->alg.kem.pqcCipherLen + ctx->info->alg.kem.tradCipherLen;
+    return CRYPT_SUCCESS;
+}
+
+static int32_t CRYPT_CompositeGetSharedKeyLen(CRYPT_CompositeCtx *ctx, void *val, uint32_t len)
+{
+    RETURN_RET_IF(ctx->info == NULL, CRYPT_COMPOSITE_KEYINFO_NOT_SET);
+    RETURN_RET_IF(ctx->info->kind != CRYPT_COMPOSITE_KIND_KEM, CRYPT_NOT_SUPPORT);
+    RETURN_RET_IF(val == NULL || len != sizeof(uint32_t), CRYPT_INVALID_ARG);
+    *(uint32_t *)val = ctx->info->alg.kem.sharedLen;
+    return CRYPT_SUCCESS;
+}
+#endif
+
 int32_t CRYPT_COMPOSITE_Ctrl(CRYPT_CompositeCtx *ctx, int32_t opt, void *val, uint32_t len)
 {
     RETURN_RET_IF(ctx == NULL, CRYPT_NULL_INPUT);
@@ -335,16 +451,24 @@ int32_t CRYPT_COMPOSITE_Ctrl(CRYPT_CompositeCtx *ctx, int32_t opt, void *val, ui
             return CRYPT_CompositeSetAlgInfo(ctx, val, len);
         case CRYPT_CTRL_GET_PARAID:
             return CRYPT_CompositeGetParaId(ctx, val, len);
-        case CRYPT_CTRL_GET_SIGNLEN:
-            return CRYPT_CompositeGetSignLen(ctx, val, len);
         case CRYPT_CTRL_GET_SECBITS:
             return CRYPT_CompositeGetSecBits(ctx, val, len);
         case CRYPT_CTRL_GET_PUBKEY_LEN:
             return CRYPT_CompositeGetPubKeyLen(ctx, val, len);
         case CRYPT_CTRL_GET_PRVKEY_LEN:
             return CRYPT_CompositeGetPrvKeyLen(ctx, val, len);
+#ifdef HITLS_CRYPTO_COMPOSITE_SIGN
+        case CRYPT_CTRL_GET_SIGNLEN:
+            return CRYPT_CompositeGetSignLen(ctx, val, len);
         case CRYPT_CTRL_SET_CTX_INFO:
             return CRYPT_CompositeSetctxInfo(ctx, val, len);
+#endif
+#ifdef HITLS_CRYPTO_COMPOSITE_KEM
+        case CRYPT_CTRL_GET_CIPHERTEXT_LEN:
+            return CRYPT_CompositeGetCiphertextLen(ctx, val, len);
+        case CRYPT_CTRL_GET_SHARED_KEY_LEN:
+            return CRYPT_CompositeGetSharedKeyLen(ctx, val, len);
+#endif
         default:
             BSL_ERR_PUSH_ERROR(CRYPT_NOT_SUPPORT);
             return CRYPT_NOT_SUPPORT;
@@ -403,7 +527,8 @@ static int32_t CompositeUpdatePrvKeyLen(CRYPT_CompositeCtx *ctx)
     BSL_Buffer tradPrv = {0};
 
     pqcPrvLen = ctx->info->pqcPrvkeyLen;
-    if (ctx->info->tradAlg == CRYPT_PKEY_RSA || ctx->info->tradAlg == CRYPT_PKEY_ECDSA) {
+    if (ctx->info->tradAlg == CRYPT_PKEY_RSA || ctx->info->tradAlg == CRYPT_PKEY_ECDSA ||
+        ctx->info->tradAlg == CRYPT_PKEY_ECDH) {
         GOTO_ERR_IF(CRYPT_CompositeGetTradPrvKey(ctx, &tradPrv), ret);
         tradPrvLen = tradPrv.dataLen;
     } else {
@@ -438,6 +563,46 @@ ERR:
     return ret;
 }
 
+int32_t CRYPT_CompositeSetRsaPadding(CRYPT_CompositeCtx *ctx)
+{
+    int32_t ret;
+#ifdef HITLS_CRYPTO_COMPOSITE_KEM
+    if (ctx->info->kind == CRYPT_COMPOSITE_KIND_KEM) {
+        /* draft-ietf-lamps-pq-composite-kem-23, Section 6.1, Table 2:
+         * RSA-OAEP uses SHA-256, MGF1 with SHA-256, and an empty label (pSpecifiedEmpty).
+         */
+        CRYPT_MD_AlgId mdId = CRYPT_MD_SHA256;
+        BSL_Param params[] = {{CRYPT_PARAM_RSA_MD_ID, BSL_PARAM_TYPE_INT32, &mdId, sizeof(mdId), 0},
+                              {CRYPT_PARAM_RSA_MGF1_ID, BSL_PARAM_TYPE_INT32, &mdId, sizeof(mdId), 0},
+                              BSL_PARAM_END};
+        RETURN_RET_IF_ERR_EX(CRYPT_EAL_PkeyCtrl(ctx->tradCtx, CRYPT_CTRL_SET_RSA_RSAES_OAEP, params, 0), ret);
+        RETURN_RET_IF_ERR_EX(CRYPT_EAL_PkeyCtrl(ctx->tradCtx, CRYPT_CTRL_SET_RSA_OAEP_LABEL, NULL, 0), ret);
+        return CRYPT_SUCCESS;
+    }
+#endif
+#ifdef HITLS_CRYPTO_COMPOSITE_SIGN
+    if (ctx->info->kind == CRYPT_COMPOSITE_KIND_SIGN) {
+        if (ctx->info->tradParam == BSL_CID_RSASSAPSS) {
+            CRYPT_MD_AlgId mdId = ctx->info->alg.sign.tradHashId;
+            CRYPT_MD_AlgId mgfId = ctx->info->alg.sign.tradHashId;
+            int32_t saltLen = ctx->info->bits == 4096 ? 48 : 32;
+            BSL_Param param[4] = {{CRYPT_PARAM_RSA_MD_ID, BSL_PARAM_TYPE_INT32, &mdId, sizeof(mdId), 0},
+                                  {CRYPT_PARAM_RSA_MGF1_ID, BSL_PARAM_TYPE_INT32, &mgfId, sizeof(mgfId), 0},
+                                  {CRYPT_PARAM_RSA_SALTLEN, BSL_PARAM_TYPE_INT32, &saltLen, sizeof(saltLen), 0},
+                                  BSL_PARAM_END};
+            RETURN_RET_IF_ERR_EX(CRYPT_EAL_PkeyCtrl(ctx->tradCtx, CRYPT_CTRL_SET_RSA_EMSA_PSS, param, 0), ret);
+        } else {
+            int32_t pkcsv15 = ctx->info->alg.sign.tradHashId;
+            RETURN_RET_IF_ERR_EX(
+                CRYPT_EAL_PkeyCtrl(ctx->tradCtx, CRYPT_CTRL_SET_RSA_EMSA_PKCSV15, &pkcsv15, sizeof(pkcsv15)), ret);
+        }
+        return CRYPT_SUCCESS;
+    }
+#endif
+    BSL_ERR_PUSH_ERROR(CRYPT_NOT_SUPPORT);
+    return CRYPT_NOT_SUPPORT;
+}
+
 int32_t CRYPT_COMPOSITE_GenKey(CRYPT_CompositeCtx *ctx)
 {
     int32_t ret;
@@ -446,12 +611,15 @@ int32_t CRYPT_COMPOSITE_GenKey(CRYPT_CompositeCtx *ctx)
     GOTO_ERR_IF(CRYPT_EAL_PkeyGen(ctx->pqcCtx), ret);
     GOTO_ERR_IF(CRYPT_EAL_PkeyGen(ctx->tradCtx), ret);
     if (ctx->info->tradAlg == CRYPT_PKEY_RSA) {
-        GOTO_ERR_IF(CRYPT_CompositeSetRsaPadding(ctx), ret);
+        GOTO_ERR_IF_EX(CRYPT_CompositeSetRsaPadding(ctx), ret);
     }
     GOTO_ERR_IF(CompositeUpdatePrvKeyLen(ctx), ret);
     GOTO_ERR_IF(CompositeUpdatePubKeyLen(ctx), ret);
     return CRYPT_SUCCESS;
 ERR:
+    CompositeFreeInnerCtx(ctx);
+    ctx->pubLen = 0;
+    ctx->prvLen = 0;
     return ret;
 }
 
@@ -505,16 +673,26 @@ int32_t CRYPT_COMPOSITE_SetPrvKey(CRYPT_CompositeCtx *ctx, const CRYPT_Composite
     int32_t ret;
     RETURN_RET_IF((ctx == NULL || prv == NULL || prv->data == NULL), CRYPT_NULL_INPUT);
     RETURN_RET_IF(ctx->info == NULL, CRYPT_COMPOSITE_KEYINFO_NOT_SET);
-    RETURN_RET_IF(ctx->prvLen != 0, CRYPT_COMPOSITE_KEY_REPEATED_SET);
+    RETURN_RET_IF(ctx->prvLen != 0 || (ctx->info->kind == CRYPT_COMPOSITE_KIND_KEM && ctx->pubLen != 0),
+        CRYPT_COMPOSITE_KEY_REPEATED_SET);
     RETURN_RET_IF(prv->len <= ctx->info->pqcPrvkeyLen, CRYPT_COMPOSITE_KEYLEN_ERROR);
     RETURN_RET_IF(prv->len > CompositeGetImportMaxKeyLen(ctx, ctx->info->prvKeyLen), CRYPT_COMPOSITE_KEYLEN_ERROR);
     BSL_Buffer pqcPrv = {prv->data, ctx->info->pqcPrvkeyLen};
     BSL_Buffer tradPrv = {prv->data + ctx->info->pqcPrvkeyLen, prv->len - ctx->info->pqcPrvkeyLen};
-    GOTO_ERR_IF(CRYPT_CompositeSetPqcPrvKey(ctx, &pqcPrv), ret);
-    GOTO_ERR_IF(CRYPT_CompositeSetTradPrvKey(ctx, &tradPrv), ret);
+    GOTO_ERR_IF_EX(CRYPT_CompositeSetPqcPrvKey(ctx, &pqcPrv), ret);
+    GOTO_ERR_IF_EX(CRYPT_CompositeSetTradPrvKey(ctx, &tradPrv), ret);
+#ifdef HITLS_CRYPTO_COMPOSITE_KEM
+    if (ctx->info->kind == CRYPT_COMPOSITE_KIND_KEM) {
+        GOTO_ERR_IF_EX(CRYPT_CompositePrepareTradPubKey(ctx), ret);
+        GOTO_ERR_IF(CompositeUpdatePubKeyLen(ctx), ret);
+    }
+#endif
     GOTO_ERR_IF(CompositeUpdatePrvKeyLen(ctx), ret);
     return CRYPT_SUCCESS;
 ERR:
+    CompositeFreeInnerCtx(ctx);
+    ctx->pubLen = 0;
+    ctx->prvLen = 0;
     return ret;
 }
 
@@ -523,16 +701,20 @@ int32_t CRYPT_COMPOSITE_SetPubKey(CRYPT_CompositeCtx *ctx, const CRYPT_Composite
     int32_t ret;
     RETURN_RET_IF((ctx == NULL || pub == NULL || pub->data == NULL), CRYPT_NULL_INPUT);
     RETURN_RET_IF(ctx->info == NULL, CRYPT_COMPOSITE_KEYINFO_NOT_SET);
-    RETURN_RET_IF(ctx->pubLen != 0, CRYPT_COMPOSITE_KEY_REPEATED_SET);
+    RETURN_RET_IF(ctx->pubLen != 0 || (ctx->info->kind == CRYPT_COMPOSITE_KIND_KEM && ctx->prvLen != 0),
+        CRYPT_COMPOSITE_KEY_REPEATED_SET);
     RETURN_RET_IF(pub->len <= ctx->info->pqcPubkeyLen, CRYPT_COMPOSITE_KEYLEN_ERROR);
     RETURN_RET_IF(pub->len > CompositeGetImportMaxKeyLen(ctx, ctx->info->pubKeyLen), CRYPT_COMPOSITE_KEYLEN_ERROR);
     BSL_Buffer pqcPub = {pub->data, ctx->info->pqcPubkeyLen};
     BSL_Buffer tradPub = {pub->data + ctx->info->pqcPubkeyLen, pub->len - ctx->info->pqcPubkeyLen};
-    GOTO_ERR_IF(CRYPT_CompositeSetPqcPubKey(ctx, &pqcPub), ret);
-    GOTO_ERR_IF(CRYPT_CompositeSetTradPubKey(ctx, &tradPub), ret);
+    GOTO_ERR_IF_EX(CRYPT_CompositeSetPqcPubKey(ctx, &pqcPub), ret);
+    GOTO_ERR_IF_EX(CRYPT_CompositeSetTradPubKey(ctx, &tradPub), ret);
     GOTO_ERR_IF(CompositeUpdatePubKeyLen(ctx), ret);
     return CRYPT_SUCCESS;
 ERR:
+    CompositeFreeInnerCtx(ctx);
+    ctx->pubLen = 0;
+    ctx->prvLen = 0;
     return ret;
 }
 
@@ -572,131 +754,6 @@ int32_t CRYPT_COMPOSITE_SetPubKeyEx(CRYPT_CompositeCtx *ctx, const BSL_Param *pa
     CRYPT_CompositePub pub = {0};
     (void)GetConstParamValue(para, CRYPT_PARAM_COMPOSITE_PUBKEY, &pub.data, &pub.len);
     return CRYPT_COMPOSITE_SetPubKey(ctx, &pub);
-}
-
-static int32_t CompositeGetPreHashLen(CRYPT_MD_AlgId hashId, uint32_t *digestLen)
-{
-    uint32_t len = CRYPT_EAL_MdGetDigestSize(hashId);
-    RETURN_RET_IF(len == 0, CRYPT_EAL_ALG_NOT_SUPPORT);
-    *digestLen = len;
-    return CRYPT_SUCCESS;
-}
-
-static int32_t CompositeMsgEncodeDigest(CRYPT_CompositeCtx *ctx, const uint8_t *digest, uint32_t digestLen,
-                                        CRYPT_Data *msg)
-{
-    const char *label = ctx->info->label;
-    uint32_t prefixLen = COMPOSITE_SIGNATURE_PREFIX_LEN;
-    uint32_t labelLen = (uint32_t)strlen(label);
-    msg->len = prefixLen + labelLen + 1 + ctx->ctxLen + digestLen;
-    msg->data = (uint8_t *)BSL_SAL_Malloc(msg->len);
-    RETURN_RET_IF(msg->data == NULL, CRYPT_MEM_ALLOC_FAIL);
-    uint8_t *ptr = msg->data;
-    memcpy(ptr, PREFIX, prefixLen);
-    ptr += prefixLen;
-    memcpy(ptr, label, labelLen);
-    ptr += labelLen;
-    *ptr = ctx->ctxLen;
-    ptr++;
-    if (ctx->ctxInfo != NULL && ctx->ctxLen > 0) {
-        memcpy(ptr, ctx->ctxInfo, ctx->ctxLen);
-        ptr += ctx->ctxLen;
-    }
-    memcpy(ptr, digest, digestLen);
-    return CRYPT_SUCCESS;
-}
-
-int32_t CRYPT_COMPOSITE_SignData(CRYPT_CompositeCtx *ctx, const uint8_t *data, uint32_t dataLen,
-                                 uint8_t *sign, uint32_t *signLen)
-{
-    uint32_t expectedDigestLen = 0;
-    uint32_t requiredSignLen = 0;
-    int32_t ret;
-
-    RETURN_RET_IF(ctx == NULL || sign == NULL || signLen == NULL || (data == NULL && dataLen != 0), CRYPT_NULL_INPUT);
-    RETURN_RET_IF(ctx->info == NULL, CRYPT_COMPOSITE_KEYINFO_NOT_SET);
-    RETURN_RET_IF_ERR(CompositeGetPreHashLen(ctx->info->hashId, &expectedDigestLen), ret);
-    RETURN_RET_IF(dataLen != expectedDigestLen, CRYPT_INVALID_ARG);
-    RETURN_RET_IF_ERR_EX(CompositeGetRequiredSignLen(ctx, &requiredSignLen), ret);
-    RETURN_RET_IF(*signLen < requiredSignLen, CRYPT_COMPOSITE_INVALID_SIG_LEN);
-
-    CRYPT_Data msg = {0};
-    uint8_t *tmpSign = NULL;
-    uint32_t pqcSigLen = ctx->info->pqcSigLen;
-    uint32_t tradSigLen = requiredSignLen - pqcSigLen;
-    RETURN_RET_IF_ERR(CompositeMsgEncodeDigest(ctx, data, dataLen, &msg), ret);
-    tmpSign = (uint8_t *)BSL_SAL_Malloc(requiredSignLen);
-    ret = CRYPT_MEM_ALLOC_FAIL;
-    GOTO_ERR_IF_TRUE(tmpSign == NULL, ret);
-    GOTO_ERR_IF(CRYPT_EAL_PkeyCtrl(ctx->pqcCtx, CRYPT_CTRL_SET_CTX_INFO, (void *)(uintptr_t)ctx->info->label,
-        (uint32_t)strlen(ctx->info->label)), ret);
-    GOTO_ERR_IF(CRYPT_EAL_PkeySign(ctx->pqcCtx, CRYPT_MD_MAX, msg.data, msg.len, tmpSign, &pqcSigLen), ret);
-    GOTO_ERR_IF(CRYPT_EAL_PkeySign(ctx->tradCtx, ctx->info->tradHashId, msg.data, msg.len, tmpSign + pqcSigLen,
-        &tradSigLen), ret);
-    memcpy(sign, tmpSign, pqcSigLen + tradSigLen);
-    *signLen = pqcSigLen + tradSigLen;
-    ret = CRYPT_SUCCESS;
-ERR:
-    BSL_SAL_ClearFree(tmpSign, requiredSignLen);
-    BSL_SAL_ClearFree(msg.data, msg.len);
-    return ret;
-}
-
-int32_t CRYPT_COMPOSITE_Sign(CRYPT_CompositeCtx *ctx, int32_t algId, const uint8_t *data, uint32_t dataLen,
-                             uint8_t *sign, uint32_t *signLen)
-{
-    int32_t ret;
-    uint8_t digest[64];
-    uint32_t digestLen = sizeof(digest);
-
-    RETURN_RET_IF(ctx == NULL, CRYPT_NULL_INPUT);
-    RETURN_RET_IF(ctx->info == NULL, CRYPT_COMPOSITE_KEYINFO_NOT_SET);
-    RETURN_RET_IF((CRYPT_MD_AlgId)algId != ctx->info->hashId, CRYPT_INVALID_ARG);
-    RETURN_RET_IF_ERR(CRYPT_EAL_ProviderMd(ctx->libCtx, ctx->info->hashId, NULL, data, dataLen, digest, &digestLen),
-        ret);
-    return CRYPT_COMPOSITE_SignData(ctx, digest, digestLen, sign, signLen);
-}
-
-int32_t CRYPT_COMPOSITE_VerifyData(CRYPT_CompositeCtx *ctx, const uint8_t *data, uint32_t dataLen,
-                                   const uint8_t *sign, uint32_t signLen)
-{
-    int32_t ret;
-    uint32_t expectedDigestLen = 0;
-
-    RETURN_RET_IF(ctx == NULL || sign == NULL || (data == NULL && dataLen != 0), CRYPT_NULL_INPUT);
-    RETURN_RET_IF(ctx->info == NULL, CRYPT_COMPOSITE_KEYINFO_NOT_SET);
-    RETURN_RET_IF(signLen < ctx->info->pqcSigLen, CRYPT_COMPOSITE_INVALID_SIG_LEN);
-    RETURN_RET_IF_ERR(CompositeGetPreHashLen(ctx->info->hashId, &expectedDigestLen), ret);
-    RETURN_RET_IF(dataLen != expectedDigestLen, CRYPT_INVALID_ARG);
-
-    CRYPT_Data msg = {0};
-    uint32_t pqcSigLen = ctx->info->pqcSigLen;
-    uint32_t tradSigLen = signLen - pqcSigLen;
-    RETURN_RET_IF_ERR(CompositeMsgEncodeDigest(ctx, data, dataLen, &msg), ret);
-    GOTO_ERR_IF(CRYPT_EAL_PkeyCtrl(ctx->pqcCtx, CRYPT_CTRL_SET_CTX_INFO, (void *)(uintptr_t)ctx->info->label,
-        (uint32_t)strlen(ctx->info->label)), ret);
-    GOTO_ERR_IF(CRYPT_EAL_PkeyVerify(ctx->pqcCtx, CRYPT_MD_MAX, msg.data, msg.len, sign, pqcSigLen), ret);
-    GOTO_ERR_IF(CRYPT_EAL_PkeyVerify(ctx->tradCtx, ctx->info->tradHashId, msg.data, msg.len, sign + pqcSigLen,
-        tradSigLen), ret);
-    ret = CRYPT_SUCCESS;
-ERR:
-    BSL_SAL_ClearFree(msg.data, msg.len);
-    return ret;
-}
-
-int32_t CRYPT_COMPOSITE_Verify(CRYPT_CompositeCtx *ctx, int32_t algId, const uint8_t *data, uint32_t dataLen,
-                               const uint8_t *sign, uint32_t signLen)
-{
-    int32_t ret;
-    uint8_t digest[64];
-    uint32_t digestLen = sizeof(digest);
-
-    RETURN_RET_IF(ctx == NULL, CRYPT_NULL_INPUT);
-    RETURN_RET_IF(ctx->info == NULL, CRYPT_COMPOSITE_KEYINFO_NOT_SET);
-    RETURN_RET_IF((CRYPT_MD_AlgId)algId != ctx->info->hashId, CRYPT_INVALID_ARG);
-    RETURN_RET_IF_ERR(CRYPT_EAL_ProviderMd(ctx->libCtx, ctx->info->hashId, NULL, data, dataLen, digest, &digestLen),
-        ret);
-    return CRYPT_COMPOSITE_VerifyData(ctx, digest, digestLen, sign, signLen);
 }
 
 #ifdef HITLS_CRYPTO_COMPOSITE_CHECK

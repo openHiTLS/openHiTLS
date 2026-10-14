@@ -2600,6 +2600,9 @@ void SDV_X509_BUILD_MLDSA_CERT_CHAIN_FUNC_TC001(void)
         HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_SET_TIME, &initialVerifyTime, sizeof(initialVerifyTime)),
         HITLS_PKI_SUCCESS);
     HITLS_X509_Cert *ca = NULL;
+    int64_t verifyTime = 1780272000; /* 2026-06-01 UTC, inside the fixed ML-DSA chain's validity. */
+    ASSERT_EQ(HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_SET_TIME, &verifyTime, sizeof(verifyTime)),
+              HITLS_PKI_SUCCESS);
     int32_t ret = HITLS_AddCertToStoreTest("../testdata/cert/chain/mldsa-v3/inter.crt", store, &ca);
     ASSERT_EQ(ret, HITLS_PKI_SUCCESS);
 
@@ -2620,9 +2623,6 @@ void SDV_X509_BUILD_MLDSA_CERT_CHAIN_FUNC_TC001(void)
     ASSERT_EQ(HITLS_AddCertToStoreTest("../testdata/cert/chain/mldsa-v3/root.crt", store, &root), HITLS_PKI_SUCCESS);
     ASSERT_EQ(HITLS_X509_CertChainBuild(store, false, entity, &chain), HITLS_PKI_SUCCESS);
 
-    uint64_t verifyTime = 1767225600; /* 2026-01-01 00:00:00 UTC */
-    ASSERT_EQ(HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_SET_TIME, &verifyTime, sizeof(verifyTime)),
-        HITLS_PKI_SUCCESS);
     ASSERT_EQ(HITLS_X509_CertVerify(store, chain), HITLS_PKI_SUCCESS);
     BSL_LIST_FREE(chain, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);
 
@@ -2896,7 +2896,7 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_X509_VFY_COMPOSITE_MLDSA_KEYUSAGE_TC001(void)
 {
-#ifndef HITLS_CRYPTO_COMPOSITE
+#ifndef HITLS_CRYPTO_COMPOSITE_SIGN
     SKIP_TEST();
 #else
     const char *certPath = NULL;

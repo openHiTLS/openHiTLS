@@ -163,7 +163,7 @@ const CRYPT_EAL_Func g_defEalP8Der2MldsaKey[] = {
 };
 #endif
 
-#ifdef HITLS_CRYPTO_COMPOSITE
+#if defined(HITLS_CRYPTO_COMPOSITE_SIGN) || defined(HITLS_CRYPTO_COMPOSITE_KEM)
 const CRYPT_EAL_Func g_defEalP8Der2CompositeKey[] = {
     {CRYPT_DECODER_IMPL_NEWCTX, (CRYPT_DECODER_IMPL_NewCtx)DECODER_CompositeDer2KeyNewCtx},
     {CRYPT_DECODER_IMPL_GETPARAM, (CRYPT_DECODER_IMPL_GetParam)DECODER_DER2KEY_GetParam},
@@ -283,7 +283,7 @@ const CRYPT_EAL_Func g_defEalSubPubKeyDer2MldsaKey[] = {
 };
 #endif
 
-#ifdef HITLS_CRYPTO_COMPOSITE
+#if defined(HITLS_CRYPTO_COMPOSITE_SIGN) || defined(HITLS_CRYPTO_COMPOSITE_KEM)
 const CRYPT_EAL_Func g_defEalSubPubKeyDer2CompositeKey[] = {
     {CRYPT_DECODER_IMPL_NEWCTX, (CRYPT_DECODER_IMPL_NewCtx)DECODER_CompositeDer2KeyNewCtx},
     {CRYPT_DECODER_IMPL_GETPARAM, (CRYPT_DECODER_IMPL_GetParam)DECODER_DER2KEY_GetParam},
@@ -439,7 +439,7 @@ const CRYPT_EAL_Func g_defEalSubPubKeyWithoutSeqDer2MldsaKey[] = {
 };
 #endif
 
-#ifdef HITLS_CRYPTO_COMPOSITE
+#if defined(HITLS_CRYPTO_COMPOSITE_SIGN) || defined(HITLS_CRYPTO_COMPOSITE_KEM)
 const CRYPT_EAL_Func g_defEalSubPubKeyWithoutSeqDer2CompositeKey[] = {
     {CRYPT_DECODER_IMPL_NEWCTX, (CRYPT_DECODER_IMPL_NewCtx)DECODER_CompositeDer2KeyNewCtx},
     {CRYPT_DECODER_IMPL_GETPARAM, (CRYPT_DECODER_IMPL_GetParam)DECODER_DER2KEY_GetParam},

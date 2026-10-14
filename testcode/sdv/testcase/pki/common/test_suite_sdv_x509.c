@@ -118,7 +118,7 @@ static bool PkiSkipTest(int32_t algId, int32_t format)
         case CRYPT_PKEY_SLH_DSA:
             return false;   // slhdsa is not supported in this version
 #endif
-#ifdef HITLS_CRYPTO_COMPOSITE
+#ifdef HITLS_CRYPTO_COMPOSITE_SIGN
         case CRYPT_PKEY_COMPOSITE:
             return false;
 #endif
@@ -129,7 +129,7 @@ static bool PkiSkipTest(int32_t algId, int32_t format)
 
 static bool PkiSkipCompositeParaTest(int32_t paraId)
 {
-#ifndef HITLS_CRYPTO_COMPOSITE
+#ifndef HITLS_CRYPTO_COMPOSITE_SIGN
     (void)paraId;
     return true;
 #else
@@ -690,7 +690,7 @@ static CRYPT_EAL_PkeyCtx *GenKey(int32_t algId, int32_t algParam)
         ASSERT_EQ(CRYPT_EAL_PkeySetParaById(pkey, algParam), CRYPT_SUCCESS);
     }
 #endif
-#ifdef HITLS_CRYPTO_COMPOSITE
+#ifdef HITLS_CRYPTO_COMPOSITE_SIGN
     if (algId == CRYPT_PKEY_COMPOSITE) {
         ASSERT_EQ(CRYPT_EAL_PkeySetParaById(pkey, algParam), CRYPT_SUCCESS);
     }
@@ -2648,7 +2648,7 @@ EXIT:
 /* END_CASE */
 
 #if (defined(HITLS_CRYPTO_XMSS) || defined(HITLS_CRYPTO_XMSSMT) || defined(HITLS_CRYPTO_MLDSA) || \
-    defined(HITLS_CRYPTO_SLH_DSA) || defined(HITLS_CRYPTO_COMPOSITE)) && \
+    defined(HITLS_CRYPTO_SLH_DSA) || defined(HITLS_CRYPTO_COMPOSITE_SIGN)) && \
     (defined(HITLS_PKI_X509_CSR_GEN) && defined(HITLS_PKI_X509_CRT_GEN) && defined(HITLS_PKI_X509_CRL_GEN))
 static int32_t GenKeyAndSelfCert(int32_t algId, int paraId, int mdId, CRYPT_EAL_PkeyCtx **key, HITLS_X509_Cert **cert)
 {
@@ -2997,7 +2997,7 @@ EXIT:
 void SDV_X509_PQ_CERT_GEN_PKI_TC001(int algId, int paraId, int mdId, char *root, char *crl, char *csr)
 {
 #if (defined(HITLS_CRYPTO_XMSS) || defined(HITLS_CRYPTO_XMSSMT) || defined(HITLS_CRYPTO_MLDSA) || \
-    defined(HITLS_CRYPTO_SLH_DSA) || defined(HITLS_CRYPTO_COMPOSITE)) && \
+    defined(HITLS_CRYPTO_SLH_DSA) || defined(HITLS_CRYPTO_COMPOSITE_SIGN)) && \
     (defined(HITLS_PKI_X509_CSR_GEN) && defined(HITLS_PKI_X509_CRT_GEN) && defined(HITLS_PKI_X509_CRL_GEN))
     if (PkiSkipTestByParaId(algId, paraId, BSL_FORMAT_ASN1)) {
         SKIP_TEST();

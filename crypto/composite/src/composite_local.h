@@ -16,7 +16,7 @@
 #ifndef CRYPT_COMPOSITE_LOCAL_H
 #define CRYPT_COMPOSITE_LOCAL_H
 
-#ifdef HITLS_CRYPTO_COMPOSITE
+#if defined(HITLS_CRYPTO_COMPOSITE_SIGN) || defined(HITLS_CRYPTO_COMPOSITE_KEM)
 #include "crypt_composite.h"
 #include "sal_atomic.h"
 #include "bsl_types.h"
@@ -31,21 +31,39 @@ extern "C" {
 #define BITS_TO_BYTES(x) (((x) + 7) >> 3)
 
 
+typedef enum { CRYPT_COMPOSITE_KIND_SIGN = 1, CRYPT_COMPOSITE_KIND_KEM = 2 } CRYPT_COMPOSITE_Kind;
+
+typedef struct {
+    CRYPT_MD_AlgId hashId;
+    CRYPT_MD_AlgId tradHashId;
+    uint32_t pqcSigLen;
+} COMPOSITE_SIGN_INFO;
+
+typedef struct {
+    uint32_t pqcCipherLen;
+    uint32_t tradCipherLen;
+    uint32_t tradSharedLen;
+    uint32_t sharedLen;
+    CRYPT_MD_AlgId combinerHashId;
+} COMPOSITE_KEM_INFO;
+
 typedef struct {
     int32_t paramId;
+    CRYPT_COMPOSITE_Kind kind;
     const char *label;
     int32_t pqcAlg;
     int32_t pqcParam;
     int32_t tradAlg;
     int32_t tradParam;
-    CRYPT_MD_AlgId hashId;
-    CRYPT_MD_AlgId tradHashId;
     uint32_t bits;
     uint32_t pubKeyLen;
     uint32_t prvKeyLen;
     uint32_t pqcPubkeyLen;
     uint32_t pqcPrvkeyLen;
-    uint32_t pqcSigLen;
+    union {
+        COMPOSITE_SIGN_INFO sign;
+        COMPOSITE_KEM_INFO kem;
+    } alg;
 } COMPOSITE_ALG_INFO;
 
 struct CompositeCtx {
@@ -61,6 +79,10 @@ struct CompositeCtx {
 };
 
 int32_t CRYPT_CompositeSetRsaPadding(CRYPT_CompositeCtx *ctx);
+#ifdef HITLS_CRYPTO_COMPOSITE_KEM
+int32_t CRYPT_CompositePrepareTradPubKey(CRYPT_CompositeCtx *ctx);
+#endif
+
 int32_t CRYPT_CompositeGetPqcPrvKey(const CRYPT_CompositeCtx *ctx, BSL_Buffer *encode);
 int32_t CRYPT_CompositeGetPqcPubKey(const CRYPT_CompositeCtx *ctx, BSL_Buffer *encode);
 int32_t CRYPT_CompositeSetPqcPrvKey(CRYPT_CompositeCtx *ctx, BSL_Buffer *encode);
@@ -74,5 +96,5 @@ int32_t CRYPT_CompositeSetTradPubKey(CRYPT_CompositeCtx *ctx, BSL_Buffer *encode
 }
 #endif
 
-#endif // HITLS_CRYPTO_COMPOSITE
+#endif // HITLS_CRYPTO_COMPOSITE_SIGN || HITLS_CRYPTO_COMPOSITE_KEM
 #endif // CRYPT_COMPOSITE_LOCAL_H

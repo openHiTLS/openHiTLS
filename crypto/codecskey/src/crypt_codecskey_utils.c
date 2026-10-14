@@ -717,6 +717,7 @@ static bool ParamOmitAlg(BslCid cid)
            cid == BSL_CID_HSS_LMS || (cid >= BSL_CID_SLH_DSA_SHA2_128S && cid <= BSL_CID_SLH_DSA_SHAKE_256F) ||
            (cid >= BSL_CID_HASH_SLH_DSA_SHA2_128S_WITH_SHA256 &&
             cid <= BSL_CID_HASH_SLH_DSA_SHAKE_256F_WITH_SHAKE256) ||
+           (cid >= BSL_CID_MLKEM768_RSA2048_SHA3_256 && cid <= BSL_CID_MLKEM1024_ECDH_P521_SHA3_256) ||
            (cid >= BSL_CID_MLDSA44_RSA2048_PSS_SHA256 && cid <= BSL_CID_MLDSA87_ECDSA_P521_SHA512);
 }
 

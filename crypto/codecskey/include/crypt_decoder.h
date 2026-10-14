@@ -97,7 +97,7 @@ int32_t DECODER_MldsaSubPubKeyDer2KeyDecode(void *ctx, const BSL_Param *inParam,
 int32_t DECODER_MldsaPkcs8Der2KeyDecode(void *ctx, const BSL_Param *inParam, BSL_Param **outParam);
 #endif
 
-#ifdef HITLS_CRYPTO_COMPOSITE
+#if defined(HITLS_CRYPTO_COMPOSITE_SIGN) || defined(HITLS_CRYPTO_COMPOSITE_KEM)
 void *DECODER_CompositeDer2KeyNewCtx(void *provCtx);
 int32_t DECODER_CompositeSubPubKeyWithOutSeqDer2KeyDecode(void *ctx, const BSL_Param *inParam, BSL_Param **outParam);
 int32_t DECODER_CompositeSubPubKeyDer2KeyDecode(void *ctx, const BSL_Param *inParam, BSL_Param **outParam);

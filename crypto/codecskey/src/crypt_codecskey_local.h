@@ -37,7 +37,7 @@
 #include "crypt_mldsa.h"
 #define MLDSA_SEED_BYTES_LEN 32
 #endif
-#ifdef HITLS_CRYPTO_COMPOSITE
+#if defined(HITLS_CRYPTO_COMPOSITE_SIGN) || defined(HITLS_CRYPTO_COMPOSITE_KEM)
 #include "crypt_composite.h"
 #endif
 #ifdef HITLS_CRYPTO_MLKEM
@@ -269,7 +269,7 @@ int32_t CRYPT_DECODE_MldsaPrikeyAsn1Buff(uint8_t *buffer, uint32_t bufferLen, BS
 int32_t CRYPT_MLDSA_ParsePkcs8key(void *libCtx, uint8_t *buffer, uint32_t bufferLen, CRYPT_ML_DSA_Ctx **mldsaPriKey);
 #endif
 
-#ifdef HITLS_CRYPTO_COMPOSITE
+#if defined(HITLS_CRYPTO_COMPOSITE_SIGN) || defined(HITLS_CRYPTO_COMPOSITE_KEM)
 int32_t CRYPT_COMPOSITE_ParseSubPubkeyAsn1Buff(void *libCtx, uint8_t *buff, uint32_t buffLen,
     CRYPT_CompositeCtx **pubKey, bool isComplete);
 int32_t CRYPT_COMPOSITE_ParsePkcs8key(void *libCtx, uint8_t *buffer, uint32_t bufferLen,

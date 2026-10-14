@@ -387,7 +387,7 @@ int32_t PkeyProviderSetPrv(CRYPT_EAL_PkeyCtx *pkey, const CRYPT_EAL_PkeyPrv *key
             return pkey->method.setPrv(pkey->key, &paParam);
         }
 #endif
-#ifdef HITLS_CRYPTO_COMPOSITE
+#if defined(HITLS_CRYPTO_COMPOSITE_SIGN) || defined(HITLS_CRYPTO_COMPOSITE_KEM)
         case CRYPT_PKEY_COMPOSITE: {
             BSL_Param compositeParam[2] = {
                 {CRYPT_PARAM_COMPOSITE_PRVKEY, BSL_PARAM_TYPE_OCTETS, key->key.compositePrv.data,
@@ -566,7 +566,7 @@ static int32_t GetHybridkemPrv(const CRYPT_EAL_PkeyCtx *pkey, CRYPT_KemDecapsKey
 }
 #endif
 
-#ifdef HITLS_CRYPTO_COMPOSITE
+#if defined(HITLS_CRYPTO_COMPOSITE_SIGN) || defined(HITLS_CRYPTO_COMPOSITE_KEM)
 static int32_t GetCompositePrv(const CRYPT_EAL_PkeyCtx *pkey, CRYPT_CompositePrv *prv)
 {
     BSL_Param param[2] = {
@@ -686,7 +686,7 @@ int32_t PkeyProviderGetPrv(const CRYPT_EAL_PkeyCtx *pkey, CRYPT_EAL_PkeyPrv *key
         case CRYPT_PKEY_HYBRID_KEM:
             return GetHybridkemPrv(pkey, &key->key.kemDk);
 #endif
-#ifdef HITLS_CRYPTO_COMPOSITE
+#if defined(HITLS_CRYPTO_COMPOSITE_SIGN) || defined(HITLS_CRYPTO_COMPOSITE_KEM)
         case CRYPT_PKEY_COMPOSITE:
             return GetCompositePrv(pkey, &key->key.compositePrv);
 #endif
@@ -834,7 +834,7 @@ int32_t PkeyProviderSetPub(CRYPT_EAL_PkeyCtx *pkey, const CRYPT_EAL_PkeyPub *key
             return pkey->method.setPub(pkey->key, &paParam);
         }
 #endif
-#ifdef HITLS_CRYPTO_COMPOSITE
+#if defined(HITLS_CRYPTO_COMPOSITE_SIGN) || defined(HITLS_CRYPTO_COMPOSITE_KEM)
         case CRYPT_PKEY_COMPOSITE: {
             BSL_Param compositeParam[2] = {
                 {CRYPT_PARAM_COMPOSITE_PUBKEY, BSL_PARAM_TYPE_OCTETS,
@@ -1031,7 +1031,7 @@ static int32_t GetXmssPub(const CRYPT_EAL_PkeyCtx *pkey, CRYPT_XmssPub *pub)
 }
 #endif
 
-#ifdef HITLS_CRYPTO_COMPOSITE
+#if defined(HITLS_CRYPTO_COMPOSITE_SIGN) || defined(HITLS_CRYPTO_COMPOSITE_KEM)
 static int32_t GetCompositePub(const CRYPT_EAL_PkeyCtx *pkey, CRYPT_CompositePub *pub)
 {
     BSL_Param param[2] = {
@@ -1113,7 +1113,7 @@ int32_t PkeyProviderGetPub(const CRYPT_EAL_PkeyCtx *pkey, CRYPT_EAL_PkeyPub *key
 #endif
             return GetXmssPub(pkey, &key->key.xmssPub);
 #endif
-#ifdef HITLS_CRYPTO_COMPOSITE
+#if defined(HITLS_CRYPTO_COMPOSITE_SIGN) || defined(HITLS_CRYPTO_COMPOSITE_KEM)
         case CRYPT_PKEY_COMPOSITE:
             return GetCompositePub(pkey, &key->key.compositePub);
 #endif

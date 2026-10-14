@@ -17,6 +17,7 @@
 #include <stdio.h>
 #include <string.h>
 #include "bsl_sal.h"
+#include "bsl_bytes.h"
 #include "sal_file.h"
 #include "bsl_err.h"
 #include "bsl_init.h"
@@ -34,6 +35,26 @@
 /* END_HEADER */
 
 STUB_DEFINE_RET1(void *, BSL_SAL_Malloc, uint32_t);
+STUB_DEFINE_RET1(int32_t, CRYPT_EAL_MdInit, CRYPT_EAL_MdCtx *);
+STUB_DEFINE_RET3(int32_t, CRYPT_EAL_MdUpdate, CRYPT_EAL_MdCtx *, const uint8_t *, uint32_t);
+STUB_DEFINE_RET3(int32_t, CRYPT_EAL_MdFinal, CRYPT_EAL_MdCtx *, uint8_t *, uint32_t *);
+
+static int32_t CompositeKemFailMdInit(CRYPT_EAL_MdCtx *ctx)
+{
+    return CRYPT_EAL_MdGetId(ctx) == CRYPT_MD_SHA3_256 ? CRYPT_INVALID_ARG : get_real_CRYPT_EAL_MdInit()(ctx);
+}
+
+static int32_t CompositeKemFailMdUpdate(CRYPT_EAL_MdCtx *ctx, const uint8_t *data, uint32_t len)
+{
+    return CRYPT_EAL_MdGetId(ctx) == CRYPT_MD_SHA3_256 ? CRYPT_INVALID_ARG :
+                                                         get_real_CRYPT_EAL_MdUpdate()(ctx, data, len);
+}
+
+static int32_t CompositeKemFailMdFinal(CRYPT_EAL_MdCtx *ctx, uint8_t *out, uint32_t *len)
+{
+    return CRYPT_EAL_MdGetId(ctx) == CRYPT_MD_SHA3_256 ? CRYPT_INVALID_ARG :
+                                                         get_real_CRYPT_EAL_MdFinal()(ctx, out, len);
+}
 
 #define COMPOSITE_SAMPLE_PATH_MAX 512U
 #define COMPOSITE_SHA256_LEN 32U
@@ -339,9 +360,15 @@ EXIT:
 }
 #endif
 
+static bool CompositeKemDisabled(int type);
+
 static bool PkiSkipCompositeParaTest(int32_t paraId)
 {
-#ifndef HITLS_CRYPTO_COMPOSITE
+    if (paraId >= CRYPT_COMPOSITE_MLKEM768_RSA2048_SHA3_256 &&
+        paraId <= CRYPT_COMPOSITE_MLKEM1024_ECDH_P521_SHA3_256) {
+        return CompositeKemDisabled(paraId);
+    }
+#ifndef HITLS_CRYPTO_COMPOSITE_SIGN
     (void)paraId;
     return true;
 #else
@@ -475,6 +502,9 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_CRYPTO_COMPOSITE_EMPTY_MESSAGE_TC001(int type)
 {
+    if (PkiSkipCompositeParaTest(type)) {
+        SKIP_TEST();
+    }
     static const uint8_t emptyMessage = 0;
     static const uint8_t oneByteMessage[] = {0x00};
     CRYPT_EAL_PkeyCtx *ctx = NULL;
@@ -534,6 +564,9 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_CRYPTO_COMPOSITE_REFCOUNT_TC001(int type)
 {
+    if (PkiSkipCompositeParaTest(type)) {
+        SKIP_TEST();
+    }
     static const uint8_t message[] = "composite reference count";
     CRYPT_EAL_PkeyCtx *ctx = NULL;
     CRYPT_EAL_PkeyCtx *aliasA = NULL;
@@ -586,6 +619,9 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_CRYPTO_COMPOSITE_API_NULL_TC001(int type)
 {
+    if (PkiSkipCompositeParaTest(type)) {
+        SKIP_TEST();
+    }
     static const uint8_t message[] = "null-api";
     CRYPT_EAL_PkeyPub pub = {0};
     CRYPT_EAL_PkeyPrv prv = {0};
@@ -640,6 +676,9 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_CRYPTO_COMPOSITE_PARAM_COMBO_TC001(int type)
 {
+    if (PkiSkipCompositeParaTest(type)) {
+        SKIP_TEST();
+    }
     static const uint8_t message[] = {0x00};
     CRYPT_EAL_PkeyCtx *ctx = NULL;
     CRYPT_EAL_PkeyCtx *invalidCtx = NULL;
@@ -698,6 +737,9 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_CRYPTO_COMPOSITE_TRIM_MATRIX_TC001(int type)
 {
+    if (PkiSkipCompositeParaTest(type)) {
+        SKIP_TEST();
+    }
     CRYPT_EAL_PkeyCtx *ctx = NULL;
     int32_t paraId = 0;
     int32_t invalidType = CRYPT_PKEY_PARAID_MAX;
@@ -723,6 +765,9 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_CRYPTO_COMPOSITE_ALGID_TC001(int type)
 {
+    if (PkiSkipCompositeParaTest(type)) {
+        SKIP_TEST();
+    }
     static const uint8_t message[] = "composite algid binding";
     CRYPT_EAL_PkeyCtx *ctx = NULL;
     CRYPT_MD_AlgId mdId = GetCompositeHashAlgId(type);
@@ -765,6 +810,9 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_CRYPTO_COMPOSITE_GENKEY_REPLACE_TC001(int type)
 {
+    if (PkiSkipCompositeParaTest(type)) {
+        SKIP_TEST();
+    }
     static const uint8_t oldMessage[] = "composite old key";
     static const uint8_t newMessage[] = "composite new key";
     CRYPT_EAL_PkeyCtx *ctx = NULL;
@@ -838,6 +886,9 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_CRYPTO_COMPOSITE_SIGN_VERIFY_MUTATION_TC001(int type)
 {
+    if (PkiSkipCompositeParaTest(type)) {
+        SKIP_TEST();
+    }
     static const uint8_t emptyMessage = 0;
     static const uint8_t oneByteMessage[] = {0x00};
     CRYPT_EAL_PkeyCtx *ctx = NULL;
@@ -872,7 +923,7 @@ void SDV_CRYPTO_COMPOSITE_SIGN_VERIFY_MUTATION_TC001(int type)
     composite = (CRYPT_CompositeCtx *)ctx->key;
     ASSERT_TRUE(composite != NULL);
     ASSERT_TRUE(composite->info != NULL);
-    pqcSigLen = composite->info->pqcSigLen;
+    pqcSigLen = composite->info->alg.sign.pqcSigLen;
     ASSERT_TRUE(pqcSigLen > 1);
     ASSERT_TRUE(pqcSigLen < signLen);
     sign = BSL_SAL_Malloc(signLen);
@@ -928,6 +979,9 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_CRYPTO_COMPOSITE_RAW_PREHASH_MATRIX_TC001(int type)
 {
+    if (PkiSkipCompositeParaTest(type)) {
+        SKIP_TEST();
+    }
     CRYPT_EAL_PkeyCtx *ctx = NULL;
     CRYPT_MD_AlgId mdId = CRYPT_MD_MAX;
     const uint8_t *messages[4] = {NULL};
@@ -1006,6 +1060,9 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_CRYPTO_COMPOSITE_CTX_MATRIX_TC001(int type)
 {
+    if (PkiSkipCompositeParaTest(type)) {
+        SKIP_TEST();
+    }
     static const uint8_t message[] = "composite context matrix";
     CRYPT_EAL_PkeyCtx *signCtx = NULL;
     CRYPT_EAL_PkeyCtx *verifyCtx = NULL;
@@ -1079,6 +1136,9 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_CRYPTO_COMPOSITE_OUTPUT_BOUNDARY_TC001(int type)
 {
+    if (PkiSkipCompositeParaTest(type)) {
+        SKIP_TEST();
+    }
     static const uint8_t message[] = "composite output boundary";
     CRYPT_EAL_PkeyCtx *ctx = NULL;
     uint8_t *sign = NULL;
@@ -1144,6 +1204,7 @@ EXIT:
  * 4.Discard the failed context directly instead of reusing it.
  * @expect
  * 1.Every injected malloc failure makes the current GenKey attempt fail.
+ * 2.Failed generation clears both component contexts, parameter information, and key lengths.
  * @prior nan
  * @auto FALSE
  @ */
@@ -1185,6 +1246,10 @@ void SDV_CRYPTO_COMPOSITE_GENKEY_ATOMIC_TC001(int type)
         STUB_EnableMallocFail(true);
         ASSERT_NE(CRYPT_EAL_PkeyGen(ctx), CRYPT_SUCCESS);
         STUB_EnableMallocFail(false);
+        const CRYPT_CompositeCtx *inner = ctx->key;
+        ASSERT_TRUE(inner->pqcCtx == NULL && inner->tradCtx == NULL && inner->info == NULL);
+        ASSERT_EQ(inner->pubLen, 0);
+        ASSERT_EQ(inner->prvLen, 0);
         CRYPT_EAL_PkeyFreeCtx(ctx);
         ctx = NULL;
     }
@@ -1563,6 +1628,9 @@ EXIT:
 void SDV_CRYPTO_COMPOSITE_IMPORT_ASN1_NEGATIVE_TC001(int type, char *pubKeyPath, char *prvKeyPath,
     int expectedPubRet, int expectedPrvRet)
 {
+    if (PkiSkipCompositeParaTest(type)) {
+        SKIP_TEST();
+    }
 #if !defined(HITLS_CRYPTO_CODECSKEY) || !defined(HITLS_BSL_SAL_FILE) || !defined(HITLS_CRYPTO_KEY_DECODE)
     (void)type;
     (void)pubKeyPath;
@@ -1607,6 +1675,9 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_CRYPTO_COMPOSITE_IMPORT_ASN1_NON_F4_TC001(int type, char *pubKeyPath, char *prvKeyPath)
 {
+    if (PkiSkipCompositeParaTest(type)) {
+        SKIP_TEST();
+    }
 #if !defined(HITLS_CRYPTO_CODECSKEY) || !defined(HITLS_BSL_SAL_FILE) || !defined(HITLS_CRYPTO_KEY_DECODE)
     (void)type;
     (void)pubKeyPath;
@@ -1656,6 +1727,7 @@ EXIT:
  * 2.Export their Composite public/private keys.
  * 3.Import the real RSA4096 keys into RSA4096 Composite contexts.
  * 4.Import the RSA3072 keys into RSA4096 Composite contexts.
+ * 5.Check RSA private-key versions 2 and -1 are rejected while version 1 is accepted.
  * @expect
  * 1.RSA4096 imports succeed.
  * 2.RSA3072 imports are rejected with CRYPT_COMPOSITE_ERR_BITS_MISMATCH.
@@ -1665,10 +1737,14 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_CRYPTO_COMPOSITE_IMPORT_RSA_BITS_TC001(int type4096, int type3072)
 {
+    if (PkiSkipCompositeParaTest(type4096) || PkiSkipCompositeParaTest(type3072)) {
+        SKIP_TEST();
+    }
     TestMemInit();
     TestRandInit();
     CRYPT_EAL_PkeyCtx *ctx4096Src = NULL;
     CRYPT_EAL_PkeyCtx *ctx4096Dst = NULL;
+    CRYPT_EAL_PkeyCtx *ctxGoodPrv = NULL;
     CRYPT_EAL_PkeyCtx *ctx3072Src = NULL;
     CRYPT_EAL_PkeyCtx *ctx4096BadPub = NULL;
     CRYPT_EAL_PkeyCtx *ctx4096BadPrv = NULL;
@@ -1679,17 +1755,20 @@ void SDV_CRYPTO_COMPOSITE_IMPORT_RSA_BITS_TC001(int type4096, int type3072)
 
     ctx4096Src = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_COMPOSITE);
     ctx4096Dst = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_COMPOSITE);
+    ctxGoodPrv = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_COMPOSITE);
     ctx3072Src = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_COMPOSITE);
     ctx4096BadPub = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_COMPOSITE);
     ctx4096BadPrv = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_COMPOSITE);
     ASSERT_TRUE(ctx4096Src != NULL);
     ASSERT_TRUE(ctx4096Dst != NULL);
+    ASSERT_TRUE(ctxGoodPrv != NULL);
     ASSERT_TRUE(ctx3072Src != NULL);
     ASSERT_TRUE(ctx4096BadPub != NULL);
     ASSERT_TRUE(ctx4096BadPrv != NULL);
 
     ASSERT_EQ(CRYPT_EAL_PkeySetParaById(ctx4096Src, type4096), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_PkeySetParaById(ctx4096Dst, type4096), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeySetParaById(ctxGoodPrv, type4096), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_PkeySetParaById(ctx3072Src, type3072), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_PkeySetParaById(ctx4096BadPub, type4096), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_PkeySetParaById(ctx4096BadPrv, type4096), CRYPT_SUCCESS);
@@ -1703,9 +1782,27 @@ void SDV_CRYPTO_COMPOSITE_IMPORT_RSA_BITS_TC001(int type4096, int type3072)
     ASSERT_EQ(ExportCompositePrvKey(ctx3072Src, &badPrv), CRYPT_SUCCESS);
 
     ASSERT_EQ(CRYPT_EAL_PkeySetPub(ctx4096Dst, &goodPub), CRYPT_SUCCESS);
-    ASSERT_EQ(CRYPT_EAL_PkeySetPrv(ctx4096Dst, &goodPrv), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeySetPrv(ctxGoodPrv, &goodPrv), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_PkeySetPub(ctx4096BadPub, &badPub), CRYPT_COMPOSITE_ERR_BITS_MISMATCH);
     ASSERT_EQ(CRYPT_EAL_PkeySetPrv(ctx4096BadPrv, &badPrv), CRYPT_COMPOSITE_ERR_BITS_MISMATCH);
+
+    uint32_t pqcLen = ((const CRYPT_CompositeCtx *)ctx4096Src->key)->info->pqcPrvkeyLen;
+    uint8_t *rsa = goodPrv.key.compositePrv.data + pqcLen;
+    uint32_t versionOffset = 2 + ((rsa[1] & 0x80U) != 0 ? (rsa[1] & 0x7fU) : 0);
+    ASSERT_TRUE(goodPrv.key.compositePrv.len > pqcLen + versionOffset + 2);
+    ASSERT_EQ(rsa[versionOffset], 0x02);
+    ASSERT_EQ(rsa[versionOffset + 1], 1);
+    uint8_t invalidVersions[] = {2, 0xff};
+    int32_t versionErrors[] = {CRYPT_DECODE_ASN1_BUFF_FAILED, BSL_ASN1_ERR_DECODE_INT};
+    for (uint32_t i = 0; i < sizeof(invalidVersions); i++) {
+        rsa[versionOffset + 2] = invalidVersions[i];
+        ASSERT_EQ(CRYPT_EAL_PkeySetParaById(ctx4096BadPrv, type4096), CRYPT_SUCCESS);
+        ASSERT_EQ(CRYPT_EAL_PkeySetPrv(ctx4096BadPrv, &goodPrv), versionErrors[i]);
+    }
+    rsa[versionOffset + 2] = 1;
+    ASSERT_EQ(CRYPT_EAL_PkeySetParaById(ctx4096BadPrv, type4096), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeySetPrv(ctx4096BadPrv, &goodPrv), CRYPT_SUCCESS);
+    rsa[versionOffset + 2] = 0;
 
 EXIT:
     BSL_SAL_Free(badPrv.key.compositePrv.data);
@@ -1716,6 +1813,7 @@ EXIT:
     CRYPT_EAL_PkeyFreeCtx(ctx4096BadPub);
     CRYPT_EAL_PkeyFreeCtx(ctx3072Src);
     CRYPT_EAL_PkeyFreeCtx(ctx4096Dst);
+    CRYPT_EAL_PkeyFreeCtx(ctxGoodPrv);
     CRYPT_EAL_PkeyFreeCtx(ctx4096Src);
     TestRandDeInit();
 }
@@ -1740,6 +1838,9 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_CRYPTO_COMPOSITE_IMPORT_RSA_EMPTY_N_TC001(int type)
 {
+    if (PkiSkipCompositeParaTest(type)) {
+        SKIP_TEST();
+    }
     TestMemInit();
     TestRandInit();
     CRYPT_EAL_PkeyCtx *ctxSrc = NULL;
@@ -1802,6 +1903,9 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_CRYPTO_COMPOSITE_CHECK_KEYPAIR_TC001(int type)
 {
+    if (PkiSkipCompositeParaTest(type)) {
+        SKIP_TEST();
+    }
 #if !defined(HITLS_CRYPTO_COMPOSITE_CHECK)
     (void)type;
     SKIP_TEST();
@@ -1879,27 +1983,47 @@ EXIT:
 /* END_CASE */
 
 /* @
- * @test SDV_CRYPTO_COMPOSITE_ED448_REJECT_TC001
+ * @test SDV_CRYPTO_COMPOSITE_UNSUPPORTED_PARAM_TC001
  * @spec -
- * @title Test Composite rejects unsupported Ed448 paraId during SetParaById.
+ * @title Test Composite rejects unsupported parameter IDs during SetParaById.
  * @precon nan
  * @brief
- * 1.Create one Composite context.
- * 2.Call SetParaById with MLDSA87_ED448_SHAKE256.
+ * 1.Create direct and Provider Composite contexts.
+ * 2.Call SetParaById with an unsupported parameter ID.
  * @expect
- * 1.SetParaById returns CRYPT_INVALID_ARG.
+ * 1.SetParaById returns the expected error without installing parameters or component contexts.
  * @prior nan
  * @auto FALSE
  @ */
 /* BEGIN_CASE */
-void SDV_CRYPTO_COMPOSITE_ED448_REJECT_TC001(void)
+void SDV_CRYPTO_COMPOSITE_UNSUPPORTED_PARAM_TC001(int type, int expected)
 {
     TestMemInit();
-    CRYPT_EAL_PkeyCtx *ctx = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_COMPOSITE);
-    int32_t type = CRYPT_COMPOSITE_MLDSA87_ED448_SHAKE256;
-
-    ASSERT_TRUE(ctx != NULL);
-    ASSERT_EQ(CRYPT_EAL_PkeySetParaById(ctx, type), CRYPT_INVALID_ARG);
+    CRYPT_EAL_PkeyCtx *ctx = NULL;
+    BslOidString *oid = BSL_OBJ_GetOID(type);
+    ASSERT_TRUE(oid != NULL);
+    ASSERT_EQ(BSL_OBJ_GetCID(oid), type);
+    if (type == CRYPT_COMPOSITE_MLKEM1024_X448_SHA3_256) {
+        const uint8_t expectedOid[] = {0x2b, 0x06, 0x01, 0x05, 0x05, 0x07, 0x06, 0x41};
+        ASSERT_COMPARE("X448 OID", oid->octs, oid->octetLen, expectedOid, sizeof(expectedOid));
+    }
+    for (int provider = 0; provider < 2; provider++) {
+#ifdef HITLS_CRYPTO_PROVIDER
+        ctx = provider ? CRYPT_EAL_ProviderPkeyNewCtx(NULL, CRYPT_PKEY_COMPOSITE,
+            CRYPT_EAL_PKEY_UNKNOWN_OPERATE, NULL) : CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_COMPOSITE);
+#else
+        if (provider != 0) {
+            break;
+        }
+        ctx = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_COMPOSITE);
+#endif
+        ASSERT_TRUE(ctx != NULL);
+        ASSERT_EQ(CRYPT_EAL_PkeySetParaById(ctx, type), expected);
+        const CRYPT_CompositeCtx *inner = ctx->key;
+        ASSERT_TRUE(inner->info == NULL && inner->pqcCtx == NULL && inner->tradCtx == NULL);
+        CRYPT_EAL_PkeyFreeCtx(ctx);
+        ctx = NULL;
+    }
 
 EXIT:
     CRYPT_EAL_PkeyFreeCtx(ctx);
@@ -1925,6 +2049,9 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_CRYPTO_COMPOSITE_CTRL_REPEATED_TC001(int firstType, int secondType)
 {
+    if (PkiSkipCompositeParaTest(firstType) || PkiSkipCompositeParaTest(secondType)) {
+        SKIP_TEST();
+    }
     TestMemInit();
     CRYPT_EAL_PkeyCtx *ctx = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_COMPOSITE);
     int32_t paraId = 0;
@@ -2079,6 +2206,9 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_CRYPTO_COMPOSITE_EXPORT_BOUNDARY_TC001(int type)
 {
+    if (PkiSkipCompositeParaTest(type)) {
+        SKIP_TEST();
+    }
 #ifndef HITLS_BSL_PARAMS
     (void)type;
     SKIP_TEST();
@@ -2239,7 +2369,6 @@ void SDV_CRYPTO_COMPOSITE_VERIFY_NEGATIVE_TC001(int type, int altType, int expec
     wrongMsg[0] ^= 0x01U;
     ASSERT_NE(CRYPT_EAL_PkeyVerify(verifyCtx, mdId, wrongMsg, sizeof(wrongMsg) - 1, sign, signLen),
         CRYPT_SUCCESS);
-
     ASSERT_EQ(CRYPT_EAL_PkeyCtrl(verifyCtx, CRYPT_CTRL_SET_CTX_INFO, (void *)(uintptr_t)ctxInfoB,
         (uint32_t)(sizeof(ctxInfoB) - 1)), CRYPT_SUCCESS);
     ASSERT_NE(CRYPT_EAL_PkeyVerify(verifyCtx, mdId, msg, sizeof(msg) - 1, sign, signLen), CRYPT_SUCCESS);
@@ -2313,7 +2442,7 @@ void SDV_CRYPTO_COMPOSITE_SIGNATURE_FORMAT_TC001(int type)
     ASSERT_EQ(CRYPT_EAL_PkeySetPub(verifyCtx, &pubKey), CRYPT_SUCCESS);
 
     signLen = CRYPT_EAL_PkeyGetSignLen(signCtx);
-    pqcSigLen = ((const CRYPT_CompositeCtx *)signCtx->key)->info->pqcSigLen;
+    pqcSigLen = ((const CRYPT_CompositeCtx *)signCtx->key)->info->alg.sign.pqcSigLen;
     ASSERT_TRUE(signLen > pqcSigLen);
     ASSERT_TRUE(pqcSigLen > 0);
 
@@ -2577,20 +2706,31 @@ EXIT:
 /* @
  * @test SDV_CRYPTO_COMPOSITE_IMPORT_TRAD_PROFILE_TC001
  * @spec -
- * @title Test Composite import rejects malformed ECDSA traditional key components.
+ * @title Test Composite import rejects malformed EC components without duplicate Composite error entries.
  * @precon nan
  * @brief
  * 1.Generate one valid Composite key pair and export raw public/private keys.
- * 2.Corrupt the ECDSA traditional public/private component encoding in the exported raw key.
- * 3.Import the malformed raw public/private key into fresh contexts.
+ * 2.Corrupt the EC traditional public/private component encoding in the exported raw key.
+ * 3.Import malformed keys through direct or Provider contexts, with the opposite SIGN key already set.
+ * 4.Check failed imports clear both components and parameters, then reset parameters and retry valid keys.
+ * 5.Reject trailing data after an ECPrivateKey that fits within the outer key-length bound.
  * @expect
- * 1.Malformed ECDSA traditional components are rejected during SetPub/SetPrv.
+ * 1.Malformed EC components return the expected errors during SetPub/SetPrv.
+ * 2.The public-key error has two entries from ECC/EAL; the ASN.1 error has one necessary Composite entry.
  * @prior nan
  * @auto FALSE
  @ */
 /* BEGIN_CASE */
-void SDV_CRYPTO_COMPOSITE_IMPORT_TRAD_PROFILE_TC001(int type)
+void SDV_CRYPTO_COMPOSITE_IMPORT_TRAD_PROFILE_TC001(int type, int provider)
 {
+    if (PkiSkipCompositeParaTest(type)) {
+        SKIP_TEST();
+    }
+#ifndef HITLS_CRYPTO_PROVIDER
+    if (provider != 0) {
+        SKIP_TEST();
+    }
+#endif
     CRYPT_EAL_PkeyCtx *srcCtx = NULL;
     CRYPT_EAL_PkeyCtx *badPubCtx = NULL;
     CRYPT_EAL_PkeyCtx *badPrvCtx = NULL;
@@ -2604,9 +2744,18 @@ void SDV_CRYPTO_COMPOSITE_IMPORT_TRAD_PROFILE_TC001(int type)
     TestMemInit();
     TestRandInit();
 
-    srcCtx = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_COMPOSITE);
-    badPubCtx = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_COMPOSITE);
-    badPrvCtx = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_COMPOSITE);
+#ifdef HITLS_CRYPTO_PROVIDER
+    if (provider != 0) {
+        srcCtx = CRYPT_EAL_ProviderPkeyNewCtx(NULL, CRYPT_PKEY_COMPOSITE, CRYPT_EAL_PKEY_UNKNOWN_OPERATE, NULL);
+        badPubCtx = CRYPT_EAL_ProviderPkeyNewCtx(NULL, CRYPT_PKEY_COMPOSITE, CRYPT_EAL_PKEY_UNKNOWN_OPERATE, NULL);
+        badPrvCtx = CRYPT_EAL_ProviderPkeyNewCtx(NULL, CRYPT_PKEY_COMPOSITE, CRYPT_EAL_PKEY_UNKNOWN_OPERATE, NULL);
+    } else
+#endif
+    {
+        srcCtx = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_COMPOSITE);
+        badPubCtx = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_COMPOSITE);
+        badPrvCtx = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_COMPOSITE);
+    }
     ASSERT_TRUE(srcCtx != NULL);
     ASSERT_TRUE(badPubCtx != NULL);
     ASSERT_TRUE(badPrvCtx != NULL);
@@ -2620,12 +2769,58 @@ void SDV_CRYPTO_COMPOSITE_IMPORT_TRAD_PROFILE_TC001(int type)
     ASSERT_EQ(CloneCompositePubKey(&goodPub, &badPub), CRYPT_SUCCESS);
     ASSERT_EQ(CloneCompositePrvKey(&goodPrv, &badPrv), CRYPT_SUCCESS);
 
+    if (((const CRYPT_CompositeCtx *)srcCtx->key)->info->kind == CRYPT_COMPOSITE_KIND_SIGN) {
+        ASSERT_EQ(CRYPT_EAL_PkeySetPrv(badPubCtx, &goodPrv), CRYPT_SUCCESS);
+        ASSERT_EQ(CRYPT_EAL_PkeySetPub(badPrvCtx, &goodPub), CRYPT_SUCCESS);
+    }
     pqcPubLen = ((const CRYPT_CompositeCtx *)srcCtx->key)->info->pqcPubkeyLen;
     pqcPrvLen = ((const CRYPT_CompositeCtx *)srcCtx->key)->info->pqcPrvkeyLen;
     badPub.key.compositePub.data[pqcPubLen] = 0x05U;
     badPrv.key.compositePrv.data[pqcPrvLen] = 0x31U;
-    ASSERT_NE(CRYPT_EAL_PkeySetPub(badPubCtx, &badPub), CRYPT_SUCCESS);
-    ASSERT_NE(CRYPT_EAL_PkeySetPrv(badPrvCtx, &badPrv), CRYPT_SUCCESS);
+    BSL_ERR_ClearError();
+    ASSERT_EQ(CRYPT_EAL_PkeySetPub(badPubCtx, &badPub), CRYPT_ECC_ERR_POINT_CODE);
+    ASSERT_EQ(BSL_ERR_GetLastError(), CRYPT_ECC_ERR_POINT_CODE);
+    ASSERT_EQ(BSL_ERR_GetLastError(), CRYPT_ECC_ERR_POINT_CODE);
+    ASSERT_EQ(BSL_ERR_GetLastError(), BSL_SUCCESS);
+    BSL_ERR_ClearError();
+    ASSERT_EQ(CRYPT_EAL_PkeySetPrv(badPrvCtx, &badPrv), BSL_ASN1_ERR_TAG_EXPECTED);
+    ASSERT_EQ(BSL_ERR_GetLastError(), BSL_ASN1_ERR_TAG_EXPECTED);
+    ASSERT_EQ(BSL_ERR_GetLastError(), BSL_SUCCESS);
+
+    /* Omit optional curve parameters so the trailing byte passes the outer key-length bound. */
+    uint8_t *ec = badPrv.key.compositePrv.data + pqcPrvLen;
+    ASSERT_TRUE(goodPrv.key.compositePrv.len >= pqcPrvLen + 51);
+    ASSERT_EQ(ec[1], 49);
+    ASSERT_EQ(ec[39], 0xa0);
+    ec[0] = 0x30;
+    ec[1] = 37;
+    ec[39] = 0;
+    badPrv.key.compositePrv.len = pqcPrvLen + 40;
+    ASSERT_EQ(CRYPT_EAL_PkeySetParaById(badPrvCtx, type), CRYPT_SUCCESS);
+    BSL_ERR_ClearError();
+    ASSERT_EQ(CRYPT_EAL_PkeySetPrv(badPrvCtx, &badPrv), CRYPT_COMPOSITE_KEYLEN_ERROR);
+    ASSERT_EQ(BSL_ERR_GetLastError(), CRYPT_COMPOSITE_KEYLEN_ERROR);
+    ASSERT_EQ(BSL_ERR_GetLastError(), BSL_SUCCESS);
+    badPrv.key.compositePrv.len = goodPrv.key.compositePrv.len;
+
+    CRYPT_EAL_PkeyCtx *failedCtxs[] = {badPubCtx, badPrvCtx};
+    for (uint32_t i = 0; i < sizeof(failedCtxs) / sizeof(failedCtxs[0]); i++) {
+        const CRYPT_CompositeCtx *inner = failedCtxs[i]->key;
+        ASSERT_EQ(inner->pqcCtx, NULL);
+        ASSERT_EQ(inner->tradCtx, NULL);
+        ASSERT_EQ(inner->info, NULL);
+        ASSERT_EQ(inner->pubLen, 0);
+        ASSERT_EQ(inner->prvLen, 0);
+        ASSERT_EQ(CRYPT_EAL_PkeySetParaById(failedCtxs[i], type), CRYPT_SUCCESS);
+    }
+    ASSERT_EQ(CRYPT_EAL_PkeySetPub(badPubCtx, &goodPub), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeySetPrv(badPrvCtx, &goodPrv), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyGetPub(badPubCtx, &badPub), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyGetPrv(badPrvCtx, &badPrv), CRYPT_SUCCESS);
+    ASSERT_COMPARE("recovered public key", badPub.key.compositePub.data, badPub.key.compositePub.len,
+                   goodPub.key.compositePub.data, goodPub.key.compositePub.len);
+    ASSERT_COMPARE("recovered private key", badPrv.key.compositePrv.data, badPrv.key.compositePrv.len,
+                   goodPrv.key.compositePrv.data, goodPrv.key.compositePrv.len);
 
 EXIT:
     BSL_SAL_ClearFree(badPrv.key.compositePrv.data, badPrv.key.compositePrv.len);
@@ -2658,6 +2853,9 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_CRYPTO_COMPOSITE_IMPORT_COMPRESSED_TRAD_PUB_TC001(int type, char *pubKeyPath)
 {
+    if (PkiSkipCompositeParaTest(type)) {
+        SKIP_TEST();
+    }
 #if !defined(HITLS_CRYPTO_CODECSKEY) || !defined(HITLS_BSL_SAL_FILE) || \
     !defined(HITLS_CRYPTO_KEY_DECODE) || !defined(HITLS_CRYPTO_KEY_ENCODE)
     (void)type;
@@ -2823,6 +3021,9 @@ EXIT:
 void SDV_CRYPT_EAL_COMPOSITE_KEY_ROUNDTRIP_TC001(char *sampleDir, int expectParaId,
     Hex *expectPubRawSha256, Hex *expectPrvRawSha256)
 {
+    if (PkiSkipCompositeParaTest(expectParaId)) {
+        SKIP_TEST();
+    }
 #if !defined(HITLS_CRYPTO_CODECSKEY) || !defined(HITLS_BSL_SAL_FILE) || \
     !defined(HITLS_CRYPTO_KEY_DECODE) || !defined(HITLS_CRYPTO_KEY_ENCODE)
     (void)sampleDir;
@@ -2843,6 +3044,7 @@ void SDV_CRYPT_EAL_COMPOSITE_KEY_ROUNDTRIP_TC001(char *sampleDir, int expectPara
     CRYPT_EAL_PkeyCtx *prvRoundtrip = NULL;
 
     TestMemInit();
+    TestRandInit();
 
     ASSERT_EQ(ReadCompositeSampleFile(sampleDir, "publickey.der", &pubFile, pubPath, sizeof(pubPath)), BSL_SUCCESS);
     ASSERT_EQ(ReadCompositeSampleFile(sampleDir, "privatekey.der", &prvFile, prvPath, sizeof(prvPath)), BSL_SUCCESS);
@@ -2881,6 +3083,7 @@ EXIT:
     BSL_SAL_FREE(pubEncode.data);
     BSL_SAL_ClearFree(prvFile.data, prvFile.dataLen);
     BSL_SAL_FREE(pubFile.data);
+    TestRandDeInit();
 #endif
 }
 /* END_CASE */
@@ -2904,13 +3107,16 @@ EXIT:
  @ */
 /* BEGIN_CASE */
 void SDV_CRYPT_EAL_COMPOSITE_SIGN_VERIFY_ROUNDTRIP_TC001(char *sampleDir, int expectParaId, Hex *msg,
-    Hex *bcSignature)
+    Hex *sampleSignature)
 {
+    if (PkiSkipCompositeParaTest(expectParaId)) {
+        SKIP_TEST();
+    }
 #if !defined(HITLS_CRYPTO_CODECSKEY) || !defined(HITLS_BSL_SAL_FILE) || !defined(HITLS_CRYPTO_KEY_DECODE)
     (void)sampleDir;
     (void)expectParaId;
     (void)msg;
-    (void)bcSignature;
+    (void)sampleSignature;
     SKIP_TEST();
 #else
     char pubPath[COMPOSITE_SAMPLE_PATH_MAX] = {0};
@@ -2937,7 +3143,7 @@ void SDV_CRYPT_EAL_COMPOSITE_SIGN_VERIFY_ROUNDTRIP_TC001(char *sampleDir, int ex
     ASSERT_EQ(CheckCompositeDecodedKey(pubCtx, expectParaId), CRYPT_SUCCESS);
     ASSERT_EQ(CheckCompositeDecodedKey(prvCtx, expectParaId), CRYPT_SUCCESS);
 
-    ASSERT_EQ(CRYPT_EAL_PkeyVerify(pubCtx, mdId, msg->x, msg->len, bcSignature->x, bcSignature->len),
+    ASSERT_EQ(CRYPT_EAL_PkeyVerify(pubCtx, mdId, msg->x, msg->len, sampleSignature->x, sampleSignature->len),
         CRYPT_SUCCESS);
 
     generatedSignatureLen = CRYPT_EAL_PkeyGetSignLen(prvCtx);
@@ -2984,6 +3190,9 @@ void SDV_CRYPT_EAL_COMPOSITE_SIGN_COMPARE_VECTOR_DETRAND_TC001(char *sampleDir, 
                                                                Hex *msg, Hex *expectSignature,
                                                                Hex *expectSignatureWithCtx)
 {
+    if (PkiSkipCompositeParaTest(expectParaId)) {
+        SKIP_TEST();
+    }
 #if !defined(HITLS_CRYPTO_CODECSKEY) || !defined(HITLS_BSL_SAL_FILE) || !defined(HITLS_CRYPTO_KEY_DECODE)
     (void)sampleDir;
     (void)expectParaId;
@@ -3055,6 +3264,2019 @@ EXIT:
     BSL_SAL_Free(generatedSignature);
     CRYPT_EAL_PkeyFreeCtx(prvCtx);
     CRYPT_EAL_PkeyFreeCtx(pubCtx);
+    TestRandDeInit();
+#endif
+}
+/* END_CASE */
+
+static CRYPT_EAL_PkeyCtx *CompositeKemNewCtx(int provider)
+{
+    return provider ? CRYPT_EAL_ProviderPkeyNewCtx(NULL, CRYPT_PKEY_COMPOSITE, CRYPT_EAL_PKEY_UNKNOWN_OPERATE, NULL) :
+                      CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_COMPOSITE);
+}
+
+static uint32_t CompositeKemCipherLen(int type)
+{
+    switch (type) {
+        case CRYPT_COMPOSITE_MLKEM768_RSA2048_SHA3_256:
+            return 1344;
+        case CRYPT_COMPOSITE_MLKEM768_RSA3072_SHA3_256:
+            return 1472;
+        case CRYPT_COMPOSITE_MLKEM768_RSA4096_SHA3_256:
+            return 1600;
+        case CRYPT_COMPOSITE_MLKEM768_X25519_SHA3_256:
+            return 1120;
+        case CRYPT_COMPOSITE_MLKEM768_ECDH_P256_SHA3_256:
+        case CRYPT_COMPOSITE_MLKEM768_ECDH_BRAINPOOLP256R1_SHA3_256:
+            return 1153;
+        case CRYPT_COMPOSITE_MLKEM768_ECDH_P384_SHA3_256:
+            return 1185;
+        case CRYPT_COMPOSITE_MLKEM1024_RSA3072_SHA3_256:
+            return 1952;
+        case CRYPT_COMPOSITE_MLKEM1024_ECDH_P384_SHA3_256:
+        case CRYPT_COMPOSITE_MLKEM1024_ECDH_BRAINPOOLP384R1_SHA3_256:
+            return 1665;
+        case CRYPT_COMPOSITE_MLKEM1024_ECDH_P521_SHA3_256:
+            return 1701;
+        default:
+            return 0;
+    }
+}
+
+static bool CompositeKemDisabled(int type)
+{
+    (void)type;
+#if !defined(HITLS_CRYPTO_COMPOSITE_KEM) || !defined(HITLS_CRYPTO_MLKEM) || !defined(HITLS_CRYPTO_SHA3)
+    return true;
+#else
+    switch (type) {
+#if defined(HITLS_CRYPTO_RSA) && defined(HITLS_CRYPTO_RSAES_OAEP) && defined(HITLS_CRYPTO_SHA256)
+        case CRYPT_COMPOSITE_MLKEM768_RSA2048_SHA3_256:
+        case CRYPT_COMPOSITE_MLKEM768_RSA3072_SHA3_256:
+        case CRYPT_COMPOSITE_MLKEM768_RSA4096_SHA3_256:
+        case CRYPT_COMPOSITE_MLKEM1024_RSA3072_SHA3_256:
+            return false;
+#endif
+#ifdef HITLS_CRYPTO_X25519
+        case CRYPT_COMPOSITE_MLKEM768_X25519_SHA3_256:
+            return false;
+#endif
+#ifdef HITLS_CRYPTO_ECDH
+#ifdef HITLS_CRYPTO_CURVE_NISTP256
+        case CRYPT_COMPOSITE_MLKEM768_ECDH_P256_SHA3_256:
+            return false;
+#endif
+#ifdef HITLS_CRYPTO_CURVE_NISTP384
+        case CRYPT_COMPOSITE_MLKEM768_ECDH_P384_SHA3_256:
+        case CRYPT_COMPOSITE_MLKEM1024_ECDH_P384_SHA3_256:
+            return false;
+#endif
+#ifdef HITLS_CRYPTO_CURVE_BP256R1
+        case CRYPT_COMPOSITE_MLKEM768_ECDH_BRAINPOOLP256R1_SHA3_256:
+            return false;
+#endif
+#ifdef HITLS_CRYPTO_CURVE_BP384R1
+        case CRYPT_COMPOSITE_MLKEM1024_ECDH_BRAINPOOLP384R1_SHA3_256:
+            return false;
+#endif
+#ifdef HITLS_CRYPTO_CURVE_NISTP521
+        case CRYPT_COMPOSITE_MLKEM1024_ECDH_P521_SHA3_256:
+            return false;
+#endif
+#endif
+        default:
+            return true;
+    }
+#endif
+}
+
+#ifdef HITLS_CRYPTO_COMPOSITE_KEM
+static bool CompositeKemCapabilities(CRYPT_EAL_PkeyCtx *src, CRYPT_EAL_PkeyCtx *pubCtx)
+{
+    bool success = false;
+    uint8_t sig[64];
+    uint32_t sigLen = sizeof(sig);
+    uint8_t pubBuf[1] = {0};
+#ifdef HITLS_CRYPTO_COMPOSITE_SIGN
+    int32_t signRet = CRYPT_NOT_SUPPORT;
+#else
+    int32_t signRet = CRYPT_EAL_ALG_NOT_SUPPORT;
+#endif
+    ASSERT_EQ(CRYPT_EAL_PkeySign(src, CRYPT_MD_SHA256, pubBuf, 1, sig, &sigLen), signRet);
+    ASSERT_EQ(CRYPT_EAL_PkeySignData(src, pubBuf, 32, sig, &sigLen), signRet);
+    ASSERT_EQ(CRYPT_EAL_PkeyVerify(src, CRYPT_MD_SHA256, pubBuf, 1, sig, sizeof(sig)), signRet);
+    ASSERT_EQ(CRYPT_EAL_PkeyVerifyData(src, pubBuf, 32, sig, sizeof(sig)), signRet);
+    ASSERT_EQ(CRYPT_EAL_PkeyEncapsInit(src, NULL), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyDecapsInit(src, NULL), CRYPT_SUCCESS);
+    sigLen = sizeof(sig);
+    ASSERT_EQ(CRYPT_EAL_PkeyEncrypt(src, pubBuf, 1, sig, &sigLen), CRYPT_EAL_ALG_NOT_SUPPORT);
+    ASSERT_EQ(CRYPT_EAL_PkeyDecrypt(src, pubBuf, 1, sig, &sigLen), CRYPT_EAL_ALG_NOT_SUPPORT);
+    ASSERT_EQ(CRYPT_EAL_PkeyComputeShareKey(src, pubCtx, sig, &sigLen), CRYPT_EAL_ALG_NOT_SUPPORT);
+    success = true;
+EXIT:
+    return success;
+}
+
+static bool CompositeKemReplaceKeys(CRYPT_EAL_PkeyCtx *src, CRYPT_EAL_PkeyCtx *pubCtx,
+    CRYPT_EAL_PkeyCtx *prvCtx, const CRYPT_EAL_PkeyPub *pub, const CRYPT_EAL_PkeyPrv *prv, int type, int provider)
+{
+    bool success = false;
+    uint8_t exportBuf[3000];
+    CRYPT_EAL_PkeyCtx *mixed = NULL;
+#ifndef HITLS_CRYPTO_COMPOSITE_CHECK
+    (void)prvCtx;
+#endif
+    ASSERT_EQ(CRYPT_EAL_PkeyGen(src), CRYPT_SUCCESS);
+    CRYPT_EAL_PkeyPub replaced = {.id = CRYPT_PKEY_COMPOSITE, .key.compositePub = {exportBuf, sizeof(exportBuf)}};
+    ASSERT_EQ(CRYPT_EAL_PkeyGetPub(src, &replaced), CRYPT_SUCCESS);
+    ASSERT_TRUE(replaced.key.compositePub.len != pub->key.compositePub.len ||
+                ConstTimeMemcmp(exportBuf, pub->key.compositePub.data, replaced.key.compositePub.len) != UINT32_MAX);
+#ifdef HITLS_CRYPTO_COMPOSITE_CHECK
+    ASSERT_NE(CRYPT_EAL_PkeyPairCheck(src, prvCtx), CRYPT_SUCCESS);
+#endif
+    CRYPT_EAL_PkeyPrv replacedPrv = {.id = CRYPT_PKEY_COMPOSITE, .key.compositePrv = {exportBuf, sizeof(exportBuf)}};
+    ASSERT_EQ(CRYPT_EAL_PkeyGetPrv(src, &replacedPrv), CRYPT_SUCCESS);
+    memcpy(exportBuf, prv->key.compositePrv.data, 64); /* Replace only the traditional private key. */
+    mixed = CompositeKemNewCtx(provider);
+    ASSERT_TRUE(mixed != NULL);
+    ASSERT_EQ(CRYPT_EAL_PkeySetParaById(mixed, type), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeySetPrv(mixed, &replacedPrv), CRYPT_SUCCESS);
+    uint8_t cipher[1952];
+    uint8_t secret[32];
+    uint8_t recovered[32];
+    uint32_t cipherLen = sizeof(cipher);
+    uint32_t secretLen = sizeof(secret);
+    uint32_t recoveredLen = sizeof(recovered);
+    TestErrClear();
+    ASSERT_EQ(CRYPT_EAL_PkeyEncaps(pubCtx, cipher, &cipherLen, secret, &secretLen), CRYPT_SUCCESS);
+    int32_t wrongKeyRet = CRYPT_EAL_PkeyDecaps(src, cipher, cipherLen, recovered, &recoveredLen);
+    ASSERT_TRUE(wrongKeyRet != CRYPT_SUCCESS || ConstTimeMemcmp(secret, recovered, sizeof(secret)) != UINT32_MAX);
+    recoveredLen = sizeof(recovered);
+    wrongKeyRet = CRYPT_EAL_PkeyDecaps(mixed, cipher, cipherLen, recovered, &recoveredLen);
+    ASSERT_TRUE(wrongKeyRet != CRYPT_SUCCESS || ConstTimeMemcmp(secret, recovered, sizeof(secret)) != UINT32_MAX);
+    success = true;
+EXIT:
+    CRYPT_EAL_PkeyFreeCtx(mixed);
+    BSL_SAL_CleanseData(exportBuf, sizeof(exportBuf));
+    return success;
+}
+
+static bool CompositeKemImportedTradKey(CRYPT_EAL_PkeyCtx *src, CRYPT_EAL_PkeyCtx *pubCtx,
+    CRYPT_EAL_PkeyCtx *prvCtx, CRYPT_EAL_PkeyCtx *dup)
+{
+    bool success = false;
+    uint8_t exportBuf[3000];
+    const CRYPT_CompositeCtx *inner = src->key;
+    BSL_Buffer tradPub = {0};
+    BSL_Buffer importedTradPub = {0};
+    int32_t ret = CRYPT_CompositeGetTradPubKey(src->key, &tradPub);
+    if (ret == CRYPT_SUCCESS) {
+        ret = CRYPT_CompositeGetTradPubKey(prvCtx->key, &importedTradPub);
+    }
+    bool pubEqual = ret == CRYPT_SUCCESS && tradPub.dataLen == importedTradPub.dataLen &&
+                    memcmp(tradPub.data, importedTradPub.data, tradPub.dataLen) == 0;
+    BSL_SAL_Free(tradPub.data);
+    BSL_SAL_Free(importedTradPub.data);
+    ASSERT_TRUE(pubEqual);
+    if (inner->info->tradAlg == CRYPT_PKEY_RSA) {
+        int32_t padding = 0;
+        ASSERT_EQ(CRYPT_EAL_PkeyCtrl(((CRYPT_CompositeCtx *)dup->key)->tradCtx, CRYPT_CTRL_GET_RSA_PADDING, &padding,
+                                     sizeof(padding)),
+                  CRYPT_SUCCESS);
+        ASSERT_EQ(padding, CRYPT_RSAES_OAEP);
+        uint8_t plaintext[32] = {0};
+        uint8_t ciphertext[512];
+        uint32_t cipherLen = sizeof(ciphertext);
+        uint32_t plainLen = sizeof(exportBuf);
+        ASSERT_EQ(CRYPT_EAL_PkeyEncrypt(((CRYPT_CompositeCtx *)pubCtx->key)->tradCtx, plaintext, sizeof(plaintext),
+                                        ciphertext, &cipherLen),
+                  CRYPT_SUCCESS);
+        ASSERT_EQ(CRYPT_EAL_PkeyDecrypt(((CRYPT_CompositeCtx *)dup->key)->tradCtx, ciphertext, cipherLen, exportBuf,
+                                        &plainLen),
+                  CRYPT_SUCCESS);
+        ASSERT_EQ(plainLen, sizeof(plaintext));
+        ASSERT_EQ(ConstTimeMemcmp(plaintext, exportBuf, plainLen), UINT32_MAX);
+    }
+    success = true;
+EXIT:
+    BSL_SAL_CleanseData(exportBuf, sizeof(exportBuf));
+    return success;
+}
+
+static bool CheckCompositeKemExchange(CRYPT_EAL_PkeyCtx *pubCtx, CRYPT_EAL_PkeyCtx *prvCtx)
+{
+    bool success = false;
+    uint8_t cipher[1952];
+    uint8_t secret[32];
+    uint8_t recovered[32];
+    uint32_t cipherLen = sizeof(cipher);
+    uint32_t secretLen = sizeof(secret);
+    uint32_t recoveredLen = sizeof(recovered);
+    ASSERT_EQ(CRYPT_EAL_PkeyEncaps(pubCtx, cipher, &cipherLen, secret, &secretLen), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyDecaps(prvCtx, cipher, cipherLen, recovered, &recoveredLen), CRYPT_SUCCESS);
+    ASSERT_EQ(secretLen, sizeof(secret));
+    ASSERT_EQ(recoveredLen, secretLen);
+    ASSERT_COMPARE("shared secret", recovered, recoveredLen, secret, secretLen);
+    success = true;
+EXIT:
+    BSL_SAL_CleanseData(secret, sizeof(secret));
+    BSL_SAL_CleanseData(recovered, sizeof(recovered));
+    return success;
+}
+
+static bool CompositeKemLifecycle(CRYPT_EAL_PkeyCtx *src, CRYPT_EAL_PkeyCtx *pubCtx,
+    CRYPT_EAL_PkeyCtx *prvCtx, const CRYPT_EAL_PkeyPrv *prv)
+{
+    bool success = false;
+    CRYPT_EAL_PkeyCtx *dup = NULL;
+    uint8_t exportBuf[3000];
+    uint8_t cipher[1952];
+    uint8_t secret[32];
+    uint8_t recovered[32];
+    uint32_t cipherLen = sizeof(cipher);
+    uint32_t secretLen = sizeof(secret);
+    uint32_t recoveredLen = sizeof(recovered);
+    dup = CRYPT_EAL_PkeyDupCtx(prvCtx);
+    ASSERT_TRUE(dup != NULL);
+    ASSERT_TRUE(((CRYPT_CompositeCtx *)dup->key)->tradCtx != ((CRYPT_CompositeCtx *)prvCtx->key)->tradCtx);
+    CRYPT_EAL_PkeyCtx *pubDup = CRYPT_EAL_PkeyDupCtx(pubCtx);
+    ASSERT_TRUE(pubDup != NULL);
+    CRYPT_EAL_PkeyFreeCtx(pubCtx);
+    pubCtx = pubDup;
+    BSL_Param exportParams[] = {{CRYPT_PARAM_COMPOSITE_PRVKEY, BSL_PARAM_TYPE_OCTETS, exportBuf, sizeof(exportBuf), 0},
+                                BSL_PARAM_END};
+    ASSERT_EQ(CRYPT_EAL_PkeyGetPrvEx(dup, exportParams), CRYPT_SUCCESS);
+    ASSERT_EQ(exportParams[0].useLen, prv->key.compositePrv.len);
+    ASSERT_EQ(ConstTimeMemcmp(exportBuf, prv->key.compositePrv.data, exportParams[0].useLen), UINT32_MAX);
+    ASSERT_TRUE(CheckCompositeKemExchange(src, src));
+    cipherLen = sizeof(cipher);
+    secretLen = sizeof(secret);
+    ASSERT_EQ(CRYPT_EAL_PkeyEncaps(pubCtx, cipher, &cipherLen, secret, &secretLen), CRYPT_SUCCESS);
+    recoveredLen = sizeof(recovered);
+    ASSERT_EQ(CRYPT_EAL_PkeyDecaps(prvCtx, cipher, cipherLen, recovered, &recoveredLen), CRYPT_SUCCESS);
+    ASSERT_EQ(ConstTimeMemcmp(secret, recovered, sizeof(secret)), UINT32_MAX);
+    recoveredLen = sizeof(recovered);
+    ASSERT_EQ(CRYPT_EAL_PkeyDecaps(dup, cipher, cipherLen, recovered, &recoveredLen), CRYPT_SUCCESS);
+    ASSERT_EQ(ConstTimeMemcmp(secret, recovered, sizeof(secret)), UINT32_MAX);
+    ASSERT_EQ(CRYPT_EAL_PkeyUpRef(prvCtx), CRYPT_SUCCESS);
+    CRYPT_EAL_PkeyFreeCtx(prvCtx);
+    recoveredLen = sizeof(recovered);
+    ASSERT_EQ(CRYPT_EAL_PkeyDecaps(prvCtx, cipher, cipherLen, recovered, &recoveredLen), CRYPT_SUCCESS);
+    ASSERT_EQ(ConstTimeMemcmp(secret, recovered, sizeof(secret)), UINT32_MAX);
+    ASSERT_TRUE(CheckCompositeKemExchange(prvCtx, dup));
+    recoveredLen = sizeof(recovered);
+    ASSERT_EQ(CRYPT_EAL_PkeyDecaps(pubCtx, cipher, sizeof(cipher), recovered, &recoveredLen),
+        CRYPT_COMPOSITE_KEY_NOT_SET);
+    cipherLen = sizeof(cipher);
+    secretLen = sizeof(secret);
+    ASSERT_EQ(CRYPT_EAL_PkeyEncaps(pubCtx, cipher, &cipherLen, secret, &secretLen), CRYPT_SUCCESS);
+    CRYPT_EAL_PkeyFreeCtx(src);
+    src = NULL;
+    CRYPT_EAL_PkeyFreeCtx(prvCtx);
+    prvCtx = NULL;
+    TestErrClear();
+    recoveredLen = sizeof(recovered);
+    ASSERT_EQ(CRYPT_EAL_PkeyDecaps(dup, cipher, cipherLen, recovered, &recoveredLen), CRYPT_SUCCESS);
+    ASSERT_EQ(ConstTimeMemcmp(secret, recovered, sizeof(secret)), UINT32_MAX);
+    uint8_t previous[1952];
+    memcpy(previous, cipher, cipherLen);
+    cipherLen = sizeof(cipher);
+    secretLen = sizeof(secret);
+    ASSERT_EQ(CRYPT_EAL_PkeyEncaps(dup, cipher, &cipherLen, secret, &secretLen), CRYPT_SUCCESS);
+    ASSERT_NE(ConstTimeMemcmp(previous, cipher, cipherLen), UINT32_MAX);
+    recoveredLen = sizeof(recovered);
+    ASSERT_EQ(CRYPT_EAL_PkeyDecaps(dup, cipher, cipherLen, recovered, &recoveredLen), CRYPT_SUCCESS);
+    ASSERT_EQ(ConstTimeMemcmp(secret, recovered, sizeof(secret)), UINT32_MAX);
+    ASSERT_TRUE(TestIsErrStackEmpty());
+    success = true;
+EXIT:
+    CRYPT_EAL_PkeyFreeCtx(dup);
+    CRYPT_EAL_PkeyFreeCtx(src);
+    CRYPT_EAL_PkeyFreeCtx(pubCtx);
+    CRYPT_EAL_PkeyFreeCtx(prvCtx);
+    BSL_SAL_CleanseData(exportBuf, sizeof(exportBuf));
+    BSL_SAL_CleanseData(secret, sizeof(secret));
+    BSL_SAL_CleanseData(recovered, sizeof(recovered));
+    return success;
+}
+#endif
+
+/* @
+ * @test SDV_CRYPTO_COMPOSITE_KEM_KEYMGMT_TC001
+ * @brief Generate and independently import KEM keys through direct and Provider contexts,
+ *        check pairing, canonical exports, duplication, and rejected mixed imports/signing.
+ * @expect Private-key imports recover the Composite public key and support both encapsulation and decapsulation.
+ * @precon nan
+ @ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_COMPOSITE_KEM_KEYMGMT_TC001(int type, int provider, int useEx)
+{
+#ifndef HITLS_CRYPTO_COMPOSITE_KEM
+    (void)type;
+    (void)provider;
+    (void)useEx;
+    SKIP_TEST();
+#else
+    if (CompositeKemDisabled(type)) {
+        SKIP_TEST();
+    }
+    TestMemInit();
+    TestRandInit();
+    CRYPT_EAL_PkeyCtx *src = NULL;
+    CRYPT_EAL_PkeyCtx *pubCtx = NULL;
+    CRYPT_EAL_PkeyCtx *prvCtx = NULL;
+    uint8_t pubBuf[2300];
+    uint8_t prvBuf[3000];
+    uint32_t length = 0;
+    CRYPT_EAL_PkeyPub pub = {.id = CRYPT_PKEY_COMPOSITE, .key.compositePub = {pubBuf, sizeof(pubBuf)}};
+    CRYPT_EAL_PkeyPrv prv = {.id = CRYPT_PKEY_COMPOSITE, .key.compositePrv = {prvBuf, sizeof(prvBuf)}};
+    src = CompositeKemNewCtx(provider);
+    pubCtx = CompositeKemNewCtx(provider);
+    prvCtx = CompositeKemNewCtx(!provider);
+    ASSERT_TRUE(src != NULL && pubCtx != NULL && prvCtx != NULL);
+    ASSERT_EQ(CRYPT_EAL_PkeySetParaById(src, type), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeySetParaById(pubCtx, type), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeySetParaById(prvCtx, type), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(src, CRYPT_CTRL_GET_CIPHERTEXT_LEN, &length, sizeof(length)), CRYPT_SUCCESS);
+    const CRYPT_CompositeCtx *inner = src->key;
+    ASSERT_EQ(inner->info->kind, CRYPT_COMPOSITE_KIND_KEM);
+    ASSERT_EQ(length, CompositeKemCipherLen(type));
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(src, CRYPT_CTRL_GET_SHARED_KEY_LEN, &length, sizeof(length)), CRYPT_SUCCESS);
+    ASSERT_EQ(length, 32);
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(src, CRYPT_CTRL_SET_CTX_INFO, NULL, 0), CRYPT_NOT_SUPPORT);
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(src, CRYPT_CTRL_GET_SIGNLEN, &length, sizeof(length)), CRYPT_NOT_SUPPORT);
+    ASSERT_EQ(CRYPT_EAL_PkeyGen(src), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyGetPub(src, &pub), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyGetPrv(src, &prv), CRYPT_SUCCESS);
+    BSL_Param pubParams[] = {{CRYPT_PARAM_COMPOSITE_PUBKEY, BSL_PARAM_TYPE_OCTETS, pubBuf, pub.key.compositePub.len, 0},
+                             BSL_PARAM_END};
+    BSL_Param prvParams[] = {{CRYPT_PARAM_COMPOSITE_PRVKEY, BSL_PARAM_TYPE_OCTETS, prvBuf, prv.key.compositePrv.len, 0},
+                             BSL_PARAM_END};
+    ASSERT_EQ(useEx ? CRYPT_EAL_PkeySetPubEx(pubCtx, pubParams) : CRYPT_EAL_PkeySetPub(pubCtx, &pub), CRYPT_SUCCESS);
+    ASSERT_EQ(useEx ? CRYPT_EAL_PkeySetPrvEx(prvCtx, prvParams) : CRYPT_EAL_PkeySetPrv(prvCtx, &prv), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeySetPrv(pubCtx, &prv), CRYPT_COMPOSITE_KEY_REPEATED_SET);
+    ASSERT_EQ(CRYPT_EAL_PkeySetPub(prvCtx, &pub), CRYPT_COMPOSITE_KEY_REPEATED_SET);
+    ASSERT_EQ(CRYPT_EAL_PkeySetPubEx(pubCtx, pubParams), CRYPT_COMPOSITE_KEY_REPEATED_SET);
+    ASSERT_EQ(CRYPT_EAL_PkeySetPrvEx(prvCtx, prvParams), CRYPT_COMPOSITE_KEY_REPEATED_SET);
+    ASSERT_EQ(CRYPT_EAL_PkeySetPub(src, &pub), CRYPT_COMPOSITE_KEY_REPEATED_SET);
+    ASSERT_EQ(CRYPT_EAL_PkeySetPrv(src, &prv), CRYPT_COMPOSITE_KEY_REPEATED_SET);
+    uint8_t importedPub[2300];
+    CRYPT_EAL_PkeyPub derived = {.id = CRYPT_PKEY_COMPOSITE, .key.compositePub = {importedPub, sizeof(importedPub)}};
+    BSL_Param derivedParams[] = {{CRYPT_PARAM_COMPOSITE_PUBKEY, BSL_PARAM_TYPE_OCTETS,
+                                  importedPub, sizeof(importedPub), 0}, BSL_PARAM_END};
+    ASSERT_EQ(useEx ? CRYPT_EAL_PkeyGetPubEx(prvCtx, derivedParams) : CRYPT_EAL_PkeyGetPub(prvCtx, &derived),
+              CRYPT_SUCCESS);
+    ASSERT_COMPARE("recovered public key", importedPub,
+        useEx ? derivedParams[0].useLen : derived.key.compositePub.len, pubBuf, pub.key.compositePub.len);
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(prvCtx, CRYPT_CTRL_GET_PUBKEY_LEN, &length, sizeof(length)), CRYPT_SUCCESS);
+    ASSERT_EQ(length, pub.key.compositePub.len);
+    ASSERT_EQ(CRYPT_EAL_PkeyGetPrv(pubCtx, &prv), CRYPT_COMPOSITE_KEY_NOT_SET);
+#ifdef HITLS_CRYPTO_COMPOSITE_CHECK
+    ASSERT_EQ(CRYPT_EAL_PkeyPairCheck(pubCtx, prvCtx), CRYPT_SUCCESS);
+#endif
+    ASSERT_TRUE(CompositeKemImportedTradKey(src, pubCtx, prvCtx, prvCtx));
+    ASSERT_TRUE(CompositeKemCapabilities(src, pubCtx));
+    ASSERT_TRUE(CompositeKemReplaceKeys(src, pubCtx, prvCtx, &pub, &prv, type, provider));
+    bool lifecycleOk = CompositeKemLifecycle(src, pubCtx, prvCtx, &prv);
+    src = NULL;
+    pubCtx = NULL;
+    prvCtx = NULL;
+    ASSERT_TRUE(lifecycleOk);
+
+EXIT:
+    CRYPT_EAL_PkeyFreeCtx(src);
+    CRYPT_EAL_PkeyFreeCtx(pubCtx);
+    CRYPT_EAL_PkeyFreeCtx(prvCtx);
+    BSL_SAL_CleanseData(prvBuf, sizeof(prvBuf));
+    TestRandDeInit();
+#endif
+}
+/* END_CASE */
+
+static bool CompositeKemExportBoundary(CRYPT_EAL_PkeyCtx *ctx, bool privateKey)
+{
+    bool success = false;
+    uint8_t baseline[3000];
+    uint8_t guarded[3002];
+    CRYPT_EAL_PkeyPub pub = {.id = CRYPT_PKEY_COMPOSITE, .key.compositePub = {baseline, sizeof(baseline)}};
+    CRYPT_EAL_PkeyPrv prv = {.id = CRYPT_PKEY_COMPOSITE, .key.compositePrv = {baseline, sizeof(baseline)}};
+    ASSERT_EQ(privateKey ? CRYPT_EAL_PkeyGetPrv(ctx, &prv) : CRYPT_EAL_PkeyGetPub(ctx, &pub), CRYPT_SUCCESS);
+    uint32_t length = privateKey ? prv.key.compositePrv.len : pub.key.compositePub.len;
+    uint32_t capacities[] = {0, length - 1, length, length + 1};
+    for (int useEx = 0; useEx < 2; useEx++) {
+        for (uint32_t i = 0; i < 4; i++) {
+            memset(guarded, 0xa5, sizeof(guarded));
+            pub.key.compositePub = (CRYPT_CompositePub){guarded + 1, capacities[i]};
+            prv.key.compositePrv = (CRYPT_CompositePrv){guarded + 1, capacities[i]};
+            BSL_Param params[] = {{privateKey ? CRYPT_PARAM_COMPOSITE_PRVKEY : CRYPT_PARAM_COMPOSITE_PUBKEY,
+                                   BSL_PARAM_TYPE_OCTETS, guarded + 1, capacities[i], 0},
+                                  BSL_PARAM_END};
+            int32_t ret = privateKey ? (useEx ? CRYPT_EAL_PkeyGetPrvEx(ctx, params) : CRYPT_EAL_PkeyGetPrv(ctx, &prv)) :
+                                       (useEx ? CRYPT_EAL_PkeyGetPubEx(ctx, params) : CRYPT_EAL_PkeyGetPub(ctx, &pub));
+            ASSERT_EQ(ret, i < 2 ? CRYPT_COMPOSITE_LEN_NOT_ENOUGH : CRYPT_SUCCESS);
+            ASSERT_EQ(guarded[0], 0xa5);
+            ASSERT_EQ(guarded[length + 1], 0xa5);
+            if (i >= 2) {
+                ASSERT_EQ(useEx ? params[0].useLen : (privateKey ? prv.key.compositePrv.len : pub.key.compositePub.len),
+                          length);
+                ASSERT_EQ(ConstTimeMemcmp(guarded + 1, baseline, length), UINT32_MAX);
+            } else {
+                for (uint32_t j = 0; j < sizeof(guarded); j++) {
+                    ASSERT_EQ(guarded[j], 0xa5);
+                }
+            }
+        }
+    }
+    success = true;
+EXIT:
+    BSL_SAL_CleanseData(baseline, sizeof(baseline));
+    BSL_SAL_CleanseData(guarded, sizeof(guarded));
+    return success;
+}
+
+#ifdef HITLS_CRYPTO_COMPOSITE_KEM
+static bool CompositeKemManagementArgs(CRYPT_EAL_PkeyCtx *ctx, int type)
+{
+    bool success = false;
+    CRYPT_EAL_PkeyCtx *copy = NULL;
+    uint32_t length = 0;
+    uint8_t scratch[3000];
+    CRYPT_EAL_PkeyPub pub = {.id = CRYPT_PKEY_COMPOSITE, .key.compositePub = {scratch, sizeof(scratch)}};
+    CRYPT_EAL_PkeyPrv prv = {.id = CRYPT_PKEY_COMPOSITE, .key.compositePrv = {scratch, sizeof(scratch)}};
+    ASSERT_EQ(CRYPT_EAL_PkeyGen(ctx), CRYPT_COMPOSITE_KEYINFO_NOT_SET);
+    copy = CRYPT_EAL_PkeyDupCtx(ctx);
+    ASSERT_TRUE(copy != NULL);
+    CRYPT_EAL_PkeyFreeCtx(copy);
+    copy = NULL;
+    ASSERT_EQ(CRYPT_EAL_PkeySetParaById(ctx, type), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyGetParaId(ctx), type);
+    ASSERT_EQ(CRYPT_EAL_PkeyGetPub(ctx, &pub), CRYPT_COMPOSITE_KEY_NOT_SET);
+    uint8_t expectedOid[] = {0x2b, 0x06, 0x01, 0x05,
+                             0x05, 0x07, 0x06, (uint8_t)(55 + type - CRYPT_COMPOSITE_MLKEM768_RSA2048_SHA3_256)};
+    BslOidString *oid = BSL_OBJ_GetOID(type);
+    ASSERT_TRUE(oid != NULL);
+    ASSERT_COMPARE("KEM OID", oid->octs, oid->octetLen, expectedOid, sizeof(expectedOid));
+    ASSERT_EQ(CRYPT_EAL_PkeyGetPrv(ctx, &prv), CRYPT_COMPOSITE_KEY_NOT_SET);
+    ASSERT_EQ(CRYPT_EAL_PkeySetParaById(ctx, type), CRYPT_COMPOSITE_CTRL_INIT_REPEATED);
+    copy = CRYPT_EAL_PkeyDupCtx(ctx);
+    ASSERT_TRUE(copy != NULL);
+    ASSERT_EQ(CRYPT_EAL_PkeyGetParaId(copy), type);
+    ASSERT_EQ(CRYPT_EAL_PkeyGetPub(copy, &pub), CRYPT_COMPOSITE_KEY_NOT_SET);
+    CRYPT_EAL_PkeyFreeCtx(copy);
+    copy = NULL;
+    int controls[] = {CRYPT_CTRL_GET_PARAID, CRYPT_CTRL_GET_CIPHERTEXT_LEN, CRYPT_CTRL_GET_SHARED_KEY_LEN};
+    for (uint32_t i = 0; i < 3; i++) {
+        ASSERT_EQ(CRYPT_EAL_PkeyCtrl(ctx, controls[i], NULL, sizeof(length)), CRYPT_INVALID_ARG);
+        ASSERT_EQ(CRYPT_EAL_PkeyCtrl(ctx, controls[i], &length, 0), CRYPT_INVALID_ARG);
+        ASSERT_EQ(CRYPT_EAL_PkeyCtrl(ctx, controls[i], &length, sizeof(length) - 1), CRYPT_INVALID_ARG);
+        ASSERT_EQ(CRYPT_EAL_PkeyCtrl(ctx, controls[i], &length, sizeof(length) + 1), CRYPT_INVALID_ARG);
+    }
+    ASSERT_EQ(CRYPT_EAL_PkeySetPub(ctx, NULL), CRYPT_NULL_INPUT);
+    ASSERT_EQ(CRYPT_EAL_PkeySetPrv(ctx, NULL), CRYPT_NULL_INPUT);
+    ASSERT_EQ(CRYPT_EAL_PkeyGetPub(ctx, NULL), CRYPT_NULL_INPUT);
+    ASSERT_EQ(CRYPT_EAL_PkeyGetPrv(ctx, NULL), CRYPT_NULL_INPUT);
+    ASSERT_EQ(CRYPT_EAL_PkeySetPubEx(ctx, NULL), CRYPT_NULL_INPUT);
+    ASSERT_EQ(CRYPT_EAL_PkeySetPrvEx(ctx, NULL), CRYPT_NULL_INPUT);
+    ASSERT_EQ(CRYPT_EAL_PkeyGetPubEx(ctx, NULL), CRYPT_NULL_INPUT);
+    ASSERT_EQ(CRYPT_EAL_PkeyGetPrvEx(ctx, NULL), CRYPT_NULL_INPUT);
+    ASSERT_EQ(CRYPT_EAL_PkeySetPub(NULL, &pub), CRYPT_NULL_INPUT);
+    ASSERT_EQ(CRYPT_EAL_PkeySetPrv(NULL, &prv), CRYPT_NULL_INPUT);
+    ASSERT_EQ(CRYPT_EAL_PkeyGetPub(NULL, &pub), CRYPT_NULL_INPUT);
+    ASSERT_EQ(CRYPT_EAL_PkeyGetPrv(NULL, &prv), CRYPT_NULL_INPUT);
+    BSL_Param nullData[] = {{CRYPT_PARAM_COMPOSITE_PUBKEY, BSL_PARAM_TYPE_OCTETS, NULL, sizeof(scratch), 0},
+                            BSL_PARAM_END};
+    ASSERT_EQ(CRYPT_EAL_PkeySetPubEx(ctx, nullData), CRYPT_NULL_INPUT);
+    nullData[0].key = CRYPT_PARAM_COMPOSITE_PRVKEY;
+    ASSERT_EQ(CRYPT_EAL_PkeySetPrvEx(ctx, nullData), CRYPT_NULL_INPUT);
+    ASSERT_EQ(CRYPT_EAL_PkeySetPubEx(NULL, nullData), CRYPT_NULL_INPUT);
+    ASSERT_EQ(CRYPT_EAL_PkeySetPrvEx(NULL, nullData), CRYPT_NULL_INPUT);
+    ASSERT_EQ(CRYPT_EAL_PkeyGetPubEx(NULL, nullData), CRYPT_NULL_INPUT);
+    ASSERT_EQ(CRYPT_EAL_PkeyGetPrvEx(NULL, nullData), CRYPT_NULL_INPUT);
+    BSL_Param empty[] = {BSL_PARAM_END};
+    ASSERT_EQ(CRYPT_EAL_PkeySetPubEx(ctx, empty), CRYPT_NULL_INPUT);
+    ASSERT_EQ(CRYPT_EAL_PkeySetPrvEx(ctx, empty), CRYPT_NULL_INPUT);
+    success = true;
+EXIT:
+    CRYPT_EAL_PkeyFreeCtx(copy);
+    return success;
+}
+
+static bool CompositeKemDecapsBounds(CRYPT_EAL_PkeyCtx *ctx, int type, uint8_t *cipher,
+    uint32_t cipherLen, const uint8_t *secret)
+{
+    bool success = false;
+    uint8_t recovered[34];
+    uint8_t output[34];
+    uint32_t outputLen = 0;
+    uint32_t expected = CompositeKemCipherLen(type);
+    uint32_t secretCaps[] = {0, 31, 32, 33};
+    for (uint32_t r = 0; r < 4; r++) {
+        memset(recovered, 0xa5, sizeof(recovered));
+        uint32_t recoveredLen = secretCaps[r];
+        ASSERT_EQ(CRYPT_EAL_PkeyDecaps(ctx, cipher + 1, cipherLen, recovered + 1, &recoveredLen),
+                  r < 2 ? CRYPT_COMPOSITE_LEN_NOT_ENOUGH : CRYPT_SUCCESS);
+        ASSERT_EQ(recoveredLen, r < 2 ? secretCaps[r] : 32);
+        ASSERT_EQ(recovered[0], 0xa5);
+        ASSERT_EQ(recovered[33], 0xa5);
+        if (r >= 2) {
+            ASSERT_EQ(ConstTimeMemcmp(secret + 1, recovered + 1, 32), UINT32_MAX);
+        } else {
+            for (uint32_t j = 0; j < sizeof(recovered); j++) {
+                ASSERT_EQ(recovered[j], 0xa5);
+            }
+        }
+    }
+    for (int i = 0; i < 4; i++) {
+        outputLen = sizeof(output);
+        ASSERT_EQ(CRYPT_EAL_PkeyDecaps(i == 0 ? NULL : ctx, i == 1 ? NULL : cipher + 1, expected,
+                                       i == 2 ? NULL : output, i == 3 ? NULL : &outputLen),
+                  CRYPT_NULL_INPUT);
+        ASSERT_EQ(outputLen, sizeof(output));
+    }
+    uint32_t pqcLength = type >= CRYPT_COMPOSITE_MLKEM1024_RSA3072_SHA3_256 ? 1568 : 1088;
+    uint32_t badLengths[] = {0, pqcLength - 1, pqcLength, pqcLength + 1, expected - 1, expected + 1};
+    for (uint32_t i = 0; i < sizeof(badLengths) / sizeof(badLengths[0]); i++) {
+        outputLen = sizeof(output);
+        ASSERT_EQ(CRYPT_EAL_PkeyDecaps(ctx, cipher + 1, badLengths[i], output, &outputLen),
+                  CRYPT_COMPOSITE_KEYLEN_ERROR);
+        ASSERT_EQ(outputLen, sizeof(output));
+    }
+    success = true;
+EXIT:
+    BSL_SAL_CleanseData(recovered, sizeof(recovered));
+    BSL_SAL_CleanseData(output, sizeof(output));
+    return success;
+}
+
+static bool CompositeKemOperationBounds(CRYPT_EAL_PkeyCtx *ctx, int type)
+{
+    bool success = false;
+    uint8_t cipher[1954];
+    uint8_t secret[34];
+    uint32_t cipherLen = 0;
+    uint32_t secretLen = 0;
+    for (int i = 0; i < 5; i++) {
+        cipherLen = sizeof(cipher);
+        secretLen = sizeof(secret);
+        ASSERT_EQ(CRYPT_EAL_PkeyEncaps(i == 0 ? NULL : ctx, i == 1 ? NULL : cipher, i == 2 ? NULL : &cipherLen,
+                                       i == 3 ? NULL : secret, i == 4 ? NULL : &secretLen),
+                  CRYPT_NULL_INPUT);
+        ASSERT_EQ(cipherLen, sizeof(cipher));
+        ASSERT_EQ(secretLen, sizeof(secret));
+    }
+    uint32_t expected = CompositeKemCipherLen(type);
+    uint32_t cipherCaps[] = {0, expected - 1, expected, expected + 1};
+    uint32_t secretCaps[] = {0, 31, 32, 33};
+    for (uint32_t c = 0; c < 4; c++) {
+        for (uint32_t s = 0; s < 4; s++) {
+            memset(cipher, 0xa5, sizeof(cipher));
+            memset(secret, 0xa5, sizeof(secret));
+            cipherLen = cipherCaps[c];
+            secretLen = secretCaps[s];
+            int32_t ret = CRYPT_EAL_PkeyEncaps(ctx, cipher + 1, &cipherLen, secret + 1, &secretLen);
+            ASSERT_EQ(ret, c < 2 || s < 2 ? CRYPT_COMPOSITE_LEN_NOT_ENOUGH : CRYPT_SUCCESS);
+            ASSERT_EQ(cipherLen, ret == CRYPT_SUCCESS ? expected : cipherCaps[c]);
+            ASSERT_EQ(secretLen, ret == CRYPT_SUCCESS ? 32 : secretCaps[s]);
+            ASSERT_EQ(cipher[0], 0xa5);
+            ASSERT_EQ(cipher[expected + 1], 0xa5);
+            ASSERT_EQ(secret[0], 0xa5);
+            ASSERT_EQ(secret[33], 0xa5);
+            if (ret != CRYPT_SUCCESS) {
+                for (uint32_t j = 0; j < sizeof(cipher); j++) {
+                    ASSERT_EQ(cipher[j], 0xa5);
+                }
+                for (uint32_t j = 0; j < sizeof(secret); j++) {
+                    ASSERT_EQ(secret[j], 0xa5);
+                }
+                continue;
+            }
+        }
+    }
+    ASSERT_TRUE(CompositeKemDecapsBounds(ctx, type, cipher, cipherLen, secret));
+    success = true;
+EXIT:
+    BSL_SAL_CleanseData(secret, sizeof(secret));
+    return success;
+}
+#endif
+
+/* @
+ * @test SDV_CRYPTO_COMPOSITE_KEM_API_TC001
+ * @brief Check KEM management and operation pointers, states and exact output boundaries.
+ * @expect Invalid calls preserve buffers; valid calls fill only the specified output region.
+ * @precon nan
+ @ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_COMPOSITE_KEM_API_TC001(int type, int provider)
+{
+#ifndef HITLS_CRYPTO_COMPOSITE_KEM
+    (void)type;
+    (void)provider;
+    SKIP_TEST();
+#else
+    if (CompositeKemDisabled(type)) {
+        SKIP_TEST();
+    }
+    TestMemInit();
+    TestRandInit();
+    CRYPT_EAL_PkeyCtx *ctx = CompositeKemNewCtx(provider);
+    uint8_t cipher[1954];
+    uint8_t secret[34];
+    uint32_t cipherLen = sizeof(cipher) - 2;
+    uint32_t secretLen = 32;
+    ASSERT_TRUE(ctx != NULL);
+    ASSERT_EQ(CRYPT_EAL_PkeyEncaps(ctx, cipher, &cipherLen, secret, &secretLen), CRYPT_COMPOSITE_KEYINFO_NOT_SET);
+    ASSERT_EQ(cipherLen, sizeof(cipher) - 2);
+    ASSERT_EQ(secretLen, 32);
+    ASSERT_TRUE(CompositeKemManagementArgs(ctx, type));
+    cipherLen = sizeof(cipher);
+    secretLen = sizeof(secret);
+    ASSERT_EQ(CRYPT_EAL_PkeyEncaps(ctx, cipher, &cipherLen, secret, &secretLen), CRYPT_COMPOSITE_KEY_NOT_SET);
+    ASSERT_EQ(cipherLen, sizeof(cipher));
+    ASSERT_EQ(secretLen, sizeof(secret));
+    ASSERT_EQ(CRYPT_EAL_PkeyGen(ctx), CRYPT_SUCCESS);
+    ASSERT_TRUE(CompositeKemExportBoundary(ctx, false));
+    ASSERT_TRUE(CompositeKemExportBoundary(ctx, true));
+    BSL_Param empty[] = {BSL_PARAM_END};
+    ASSERT_EQ(CRYPT_EAL_PkeyGetPubEx(ctx, empty), CRYPT_NULL_INPUT);
+    ASSERT_EQ(CRYPT_EAL_PkeyGetPrvEx(ctx, empty), CRYPT_NULL_INPUT);
+    ASSERT_TRUE(CompositeKemOperationBounds(ctx, type));
+
+EXIT:
+    CRYPT_EAL_PkeyFreeCtx(ctx);
+    BSL_SAL_CleanseData(secret, sizeof(secret));
+    TestRandDeInit();
+#endif
+}
+/* END_CASE */
+
+#ifdef HITLS_CRYPTO_COMPOSITE_KEM
+static bool CheckCompositeKemInvalidImport(CRYPT_EAL_PkeyCtx *src, const CRYPT_EAL_PkeyPub *pub,
+    const CRYPT_EAL_PkeyPrv *prv, int provider, bool privateKey)
+{
+    bool success = false;
+    CRYPT_EAL_PkeyCtx *target = NULL;
+    const CRYPT_CompositeCtx *inner = src->key;
+    const uint8_t *good = privateKey ? prv->key.compositePrv.data : pub->key.compositePub.data;
+    uint32_t goodLen = privateKey ? prv->key.compositePrv.len : pub->key.compositePub.len;
+    uint32_t pqcLen = privateKey ? 64 : inner->info->pqcPubkeyLen;
+    uint8_t bad[3000];
+    uint32_t lengths[] = {0, pqcLen, goodLen - 1, sizeof(bad)};
+    uint32_t scenarios = privateKey ? 5 : 6;
+    for (uint32_t scenario = 0; scenario < scenarios; scenario++) {
+        if (scenario == 4 && inner->info->tradAlg == CRYPT_PKEY_X25519) {
+            continue;
+        }
+        target = CompositeKemNewCtx(provider);
+        ASSERT_TRUE(target != NULL);
+        ASSERT_EQ(CRYPT_EAL_PkeySetParaById(target, inner->info->paramId), CRYPT_SUCCESS);
+        memset(bad, 0, sizeof(bad));
+        memcpy(bad, good, goodLen);
+        uint32_t badLen = scenario < 4 ? lengths[scenario] : goodLen;
+        if (scenario == 4) {
+            bad[pqcLen] = privateKey || inner->info->tradAlg == CRYPT_PKEY_RSA ? 0xff : 0x02;
+        } else if (scenario == 5) {
+            memset(bad, 0xff, pqcLen);
+        }
+        BSL_Param params[] = {{privateKey ? CRYPT_PARAM_COMPOSITE_PRVKEY : CRYPT_PARAM_COMPOSITE_PUBKEY,
+                               BSL_PARAM_TYPE_OCTETS, bad, badLen, 0}, BSL_PARAM_END};
+        ASSERT_NE(privateKey ? CRYPT_EAL_PkeySetPrvEx(target, params) : CRYPT_EAL_PkeySetPubEx(target, params),
+                  CRYPT_SUCCESS);
+        ASSERT_EQ(((CRYPT_CompositeCtx *)target->key)->pubLen, 0);
+        ASSERT_EQ(((CRYPT_CompositeCtx *)target->key)->prvLen, 0);
+        if (((CRYPT_CompositeCtx *)target->key)->info == NULL) {
+            ASSERT_EQ(((CRYPT_CompositeCtx *)target->key)->pqcCtx, NULL);
+            ASSERT_EQ(((CRYPT_CompositeCtx *)target->key)->tradCtx, NULL);
+            ASSERT_EQ(CRYPT_EAL_PkeySetParaById(target, inner->info->paramId), CRYPT_SUCCESS);
+        }
+        params[0].value = (uint8_t *)(uintptr_t)good;
+        params[0].valueLen = goodLen;
+        ASSERT_EQ(privateKey ? CRYPT_EAL_PkeySetPrvEx(target, params) : CRYPT_EAL_PkeySetPubEx(target, params),
+                  CRYPT_SUCCESS);
+        TestErrClear();
+        ASSERT_TRUE(CheckCompositeKemExchange(privateKey ? src : target, privateKey ? target : src));
+        ASSERT_TRUE(TestIsErrStackEmpty());
+        CRYPT_EAL_PkeyFreeCtx(target);
+        target = NULL;
+    }
+    success = true;
+EXIT:
+    CRYPT_EAL_PkeyFreeCtx(target);
+    BSL_SAL_CleanseData(bad, sizeof(bad));
+    return success;
+}
+
+static bool CheckCompositeKemEcPointImport(CRYPT_EAL_PkeyCtx *src, const CRYPT_EAL_PkeyPub *pub, int provider)
+{
+    bool success = false;
+    CRYPT_EAL_PkeyCtx *target = NULL;
+    const CRYPT_CompositeCtx *inner = src->key;
+    uint32_t pqcLen = inner->info->pqcPubkeyLen;
+    uint32_t goodLen = pub->key.compositePub.len;
+    uint8_t point[3000];
+    uint8_t prefixes[] = {0x02, 0x06};
+    for (uint32_t i = 0; i < sizeof(prefixes); i++) {
+        target = CompositeKemNewCtx(provider);
+        ASSERT_TRUE(target != NULL);
+        ASSERT_EQ(CRYPT_EAL_PkeySetParaById(target, inner->info->paramId), CRYPT_SUCCESS);
+        memcpy(point, pub->key.compositePub.data, goodLen);
+        point[pqcLen] = prefixes[i] | (point[goodLen - 1] & 1);
+        uint32_t pointLen = i == 0 ? pqcLen + 1 + (goodLen - pqcLen - 1) / 2 : goodLen;
+        BSL_Param params[] = {{CRYPT_PARAM_COMPOSITE_PUBKEY, BSL_PARAM_TYPE_OCTETS, point, pointLen, 0}, BSL_PARAM_END};
+        ASSERT_EQ(CRYPT_EAL_PkeySetPubEx(target, params), CRYPT_SUCCESS);
+        CRYPT_EAL_PkeyPub normalized = {.id = CRYPT_PKEY_COMPOSITE, .key.compositePub = {point, sizeof(point)}};
+        ASSERT_EQ(CRYPT_EAL_PkeyGetPub(target, &normalized), CRYPT_SUCCESS);
+        ASSERT_COMPARE("normalized public key", point, normalized.key.compositePub.len,
+            pub->key.compositePub.data, goodLen);
+        TestErrClear();
+        ASSERT_TRUE(CheckCompositeKemExchange(target, src));
+        ASSERT_TRUE(TestIsErrStackEmpty());
+        CRYPT_EAL_PkeyFreeCtx(target);
+        target = NULL;
+    }
+    success = true;
+EXIT:
+    CRYPT_EAL_PkeyFreeCtx(target);
+    return success;
+}
+#endif
+
+/* @
+ * @test SDV_CRYPTO_COMPOSITE_KEM_IMPORT_NEGATIVE_TC001
+ * @brief Reject malformed raw component keys, reset failed contexts and retry valid imports in the same objects.
+ * @expect Invalid imports publish no key; compatible RSA exponents and EC point encodings retain working KEM.
+ * @precon nan
+ @ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_COMPOSITE_KEM_IMPORT_NEGATIVE_TC001(int type, int provider)
+{
+#ifndef HITLS_CRYPTO_COMPOSITE_KEM
+    (void)type;
+    (void)provider;
+    SKIP_TEST();
+#else
+    if (CompositeKemDisabled(type)) {
+        SKIP_TEST();
+    }
+    TestMemInit();
+    TestRandInit();
+    CRYPT_EAL_PkeyCtx *src = CompositeKemNewCtx(provider);
+    CRYPT_EAL_PkeyPub pub = {0};
+    CRYPT_EAL_PkeyPrv prv = {0};
+    ASSERT_TRUE(src != NULL);
+    ASSERT_EQ(CRYPT_EAL_PkeySetParaById(src, type), CRYPT_SUCCESS);
+    CRYPT_CompositeCtx *inner = src->key;
+    if (inner->info->tradAlg == CRYPT_PKEY_RSA) {
+        uint8_t e[] = {1, 0, 3};
+        CRYPT_EAL_PkeyPara para = {.id = CRYPT_PKEY_RSA, .para.rsaPara = {e, sizeof(e), inner->info->bits}};
+        ASSERT_EQ(CRYPT_EAL_PkeySetPara(inner->tradCtx, &para), CRYPT_SUCCESS);
+    }
+    ASSERT_EQ(CRYPT_EAL_PkeyGen(src), CRYPT_SUCCESS);
+    ASSERT_EQ(ExportCompositePubKey(src, &pub), CRYPT_SUCCESS);
+    ASSERT_EQ(ExportCompositePrvKey(src, &prv), CRYPT_SUCCESS);
+    ASSERT_TRUE(CheckCompositeKemInvalidImport(src, &pub, &prv, provider, false));
+    ASSERT_TRUE(CheckCompositeKemInvalidImport(src, &pub, &prv, provider, true));
+    if (inner->info->tradAlg == CRYPT_PKEY_ECDH) {
+        ASSERT_TRUE(CheckCompositeKemEcPointImport(src, &pub, provider));
+    }
+EXIT:
+    CRYPT_EAL_PkeyFreeCtx(src);
+    BSL_SAL_Free(pub.key.compositePub.data);
+    BSL_SAL_ClearFree(prv.key.compositePrv.data, prv.key.compositePrv.len);
+    TestRandDeInit();
+#endif
+}
+/* END_CASE */
+
+static int32_t CompositeKemKeyFailCall(CRYPT_EAL_PkeyCtx *src, int type, int provider, int operation,
+                                       CRYPT_EAL_PkeyPub *pub, CRYPT_EAL_PkeyPrv *prv, BSL_Buffer *encoded)
+{
+    CRYPT_EAL_PkeyCtx *target = NULL;
+    uint8_t bytes[3000];
+    BSL_Buffer output = {0};
+    int32_t ret = CRYPT_SUCCESS;
+    if (operation <= 3) {
+        target = operation == 1 ? CRYPT_EAL_PkeyDupCtx(src) : CompositeKemNewCtx(provider);
+        if (target == NULL) {
+            return CRYPT_MEM_ALLOC_FAIL;
+        }
+        if (operation != 1) {
+            ret = CRYPT_EAL_PkeySetParaById(target, type);
+        }
+        if (ret == CRYPT_SUCCESS && operation == 2) {
+            ret = CRYPT_EAL_PkeySetPub(target, pub);
+        } else if (ret == CRYPT_SUCCESS && operation == 3) {
+            ret = CRYPT_EAL_PkeySetPrv(target, prv);
+        }
+    } else if (operation == 4) {
+        CRYPT_EAL_PkeyPub key = {.id = CRYPT_PKEY_COMPOSITE, .key.compositePub = {bytes, sizeof(bytes)}};
+        ret = CRYPT_EAL_PkeyGetPub(src, &key);
+    } else if (operation == 5) {
+        CRYPT_EAL_PkeyPrv key = {.id = CRYPT_PKEY_COMPOSITE, .key.compositePrv = {bytes, sizeof(bytes)}};
+        ret = CRYPT_EAL_PkeyGetPrv(src, &key);
+    } else if (operation == 6) {
+        ret = CRYPT_EAL_EncodeBuffKey(src, NULL, BSL_FORMAT_ASN1, CRYPT_PRIKEY_PKCS8_UNENCRYPT, &output);
+    } else {
+        ret = provider ?
+                  CRYPT_EAL_ProviderDecodeBuffKey(NULL, NULL, BSL_CID_UNKNOWN, "ASN1", "PRIKEY_PKCS8_UNENCRYPT",
+                                                  encoded, NULL, &target) :
+                  CRYPT_EAL_DecodeBuffKey(BSL_FORMAT_ASN1, CRYPT_PRIKEY_PKCS8_UNENCRYPT, encoded, NULL, 0, &target);
+        if (ret != CRYPT_SUCCESS && target != NULL) {
+            ret = CRYPT_SUCCESS;
+        }
+    }
+    if (operation == 3 && target != NULL && ret != CRYPT_SUCCESS) {
+        CRYPT_CompositeCtx *inner = target->key;
+        if (inner->pubLen != 0 || inner->prvLen != 0) {
+            ret = CRYPT_SUCCESS;
+        }
+    }
+    CRYPT_EAL_PkeyFreeCtx(target);
+    BSL_SAL_ClearFree(output.data, output.dataLen);
+    BSL_SAL_CleanseData(bytes, sizeof(bytes));
+    return ret;
+}
+
+/* @
+ * @test SDV_CRYPTO_COMPOSITE_KEM_KEYFAIL_TC001
+ * @brief Inject allocations into management and codecs, then exercise the original long-term key.
+ * @expect Failed temporary objects are released and the source key remains usable and unchanged.
+ * @precon nan
+ @ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_COMPOSITE_KEM_KEYFAIL_TC001(int type, int provider)
+{
+#ifndef HITLS_CRYPTO_COMPOSITE_KEM
+    (void)type;
+    (void)provider;
+    SKIP_TEST();
+#else
+    if (CompositeKemDisabled(type)) {
+        SKIP_TEST();
+    }
+    TestMemInit();
+    TestRandInit();
+    CRYPT_EAL_PkeyCtx *src = CompositeKemNewCtx(provider);
+    BSL_Buffer encoded = {0};
+    uint8_t pubBytes[2400];
+    uint8_t prvBytes[3000];
+    uint8_t exported[3000];
+    CRYPT_EAL_PkeyPub pub = {.id = CRYPT_PKEY_COMPOSITE, .key.compositePub = {pubBytes, sizeof(pubBytes)}};
+    CRYPT_EAL_PkeyPrv prv = {.id = CRYPT_PKEY_COMPOSITE, .key.compositePrv = {prvBytes, sizeof(prvBytes)}};
+    ASSERT_TRUE(src != NULL);
+    ASSERT_EQ(CRYPT_EAL_PkeySetParaById(src, type), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyGen(src), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyGetPub(src, &pub), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyGetPrv(src, &prv), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_EncodeBuffKey(src, NULL, BSL_FORMAT_ASN1, CRYPT_PRIKEY_PKCS8_UNENCRYPT, &encoded),
+              CRYPT_SUCCESS);
+    STUB_REPLACE(BSL_SAL_Malloc, STUB_BSL_SAL_Malloc);
+    for (int operation = 0; operation < 8; operation++) {
+        STUB_EnableMallocFail(false);
+        STUB_ResetMallocCount();
+        ASSERT_EQ(CompositeKemKeyFailCall(src, type, provider, operation, &pub, &prv, &encoded), CRYPT_SUCCESS);
+        uint32_t total = STUB_GetMallocCallCount();
+        ASSERT_TRUE(total > 0);
+        for (uint32_t i = 0; i < total; i++) {
+            STUB_ResetMallocCount();
+            STUB_SetMallocFailIndex(i);
+            STUB_EnableMallocFail(true);
+            int32_t ret = CompositeKemKeyFailCall(src, type, provider, operation, &pub, &prv, &encoded);
+            STUB_EnableMallocFail(false);
+            ASSERT_NE(ret, CRYPT_SUCCESS);
+        }
+        TestErrClear();
+        ASSERT_EQ(CompositeKemKeyFailCall(src, type, provider, operation, &pub, &prv, &encoded), CRYPT_SUCCESS);
+        CRYPT_EAL_PkeyPrv check = {.id = CRYPT_PKEY_COMPOSITE, .key.compositePrv = {exported, sizeof(exported)}};
+        ASSERT_EQ(CRYPT_EAL_PkeyGetPrv(src, &check), CRYPT_SUCCESS);
+        ASSERT_EQ(check.key.compositePrv.len, prv.key.compositePrv.len);
+        ASSERT_EQ(ConstTimeMemcmp(exported, prvBytes, check.key.compositePrv.len), UINT32_MAX);
+    }
+    uint8_t cipher[1952];
+    uint8_t secret[32];
+    uint8_t recovered[32];
+    uint32_t cipherLen = sizeof(cipher);
+    uint32_t secretLen = sizeof(secret);
+    uint32_t recoveredLen = sizeof(recovered);
+    ASSERT_EQ(CRYPT_EAL_PkeyEncaps(src, cipher, &cipherLen, secret, &secretLen), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyDecaps(src, cipher, cipherLen, recovered, &recoveredLen), CRYPT_SUCCESS);
+    ASSERT_EQ(ConstTimeMemcmp(secret, recovered, sizeof(secret)), UINT32_MAX);
+    BSL_SAL_CleanseData(secret, sizeof(secret));
+    BSL_SAL_CleanseData(recovered, sizeof(recovered));
+EXIT:
+    STUB_EnableMallocFail(false);
+    STUB_RESTORE(BSL_SAL_Malloc);
+    CRYPT_EAL_PkeyFreeCtx(src);
+    BSL_SAL_ClearFree(encoded.data, encoded.dataLen);
+    BSL_SAL_CleanseData(prvBytes, sizeof(prvBytes));
+    BSL_SAL_CleanseData(exported, sizeof(exported));
+    TestRandDeInit();
+#endif
+}
+/* END_CASE */
+
+/* @
+ * @test SDV_CRYPTO_COMPOSITE_KEM_GENFAIL_TC001
+ * @brief Inject each allocation failure into initial and repeated KEM generation, then check
+ *        that both component contexts, parameters, and key lengths have been cleared.
+ * @expect Failed generation preserves its error and leaves an object safe to destroy.
+ * @precon nan
+ @ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_COMPOSITE_KEM_GENFAIL_TC001(int type, int regenerate)
+{
+    if (CompositeKemDisabled(type)) {
+        SKIP_TEST();
+    }
+    TestMemInit();
+    TestRandInit();
+    CRYPT_RandRegist(CompositeDetRand);
+    CRYPT_RandRegistEx(CompositeDetRandEx);
+    STUB_REPLACE(BSL_SAL_Malloc, STUB_BSL_SAL_Malloc);
+    STUB_EnableMallocFail(false);
+    STUB_ResetMallocCount();
+    CRYPT_EAL_PkeyCtx *ctx = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_COMPOSITE);
+    uint32_t total = 0;
+    ASSERT_TRUE(ctx != NULL);
+    ASSERT_TRUE(STUB_GetMallocCallCount() > 0);
+    ASSERT_EQ(CRYPT_EAL_PkeySetParaById(ctx, type), CRYPT_SUCCESS);
+    if (regenerate) {
+        CompositeDetRandReset();
+        ASSERT_EQ(CRYPT_EAL_PkeyGen(ctx), CRYPT_SUCCESS);
+    }
+    STUB_ResetMallocCount();
+    CompositeDetRandReset();
+    ASSERT_EQ(CRYPT_EAL_PkeyGen(ctx), CRYPT_SUCCESS);
+    total = STUB_GetMallocCallCount();
+    if (total == 0) {
+        /* Some implementations generate keys without allocating heap memory. */
+        SkipTest(__FILE__);
+        goto EXIT;
+    }
+    CRYPT_EAL_PkeyFreeCtx(ctx);
+    ctx = NULL;
+    for (uint32_t i = 0; i < total; i++) {
+        ctx = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_COMPOSITE);
+        ASSERT_TRUE(ctx != NULL);
+        ASSERT_EQ(CRYPT_EAL_PkeySetParaById(ctx, type), CRYPT_SUCCESS);
+        if (regenerate) {
+            CompositeDetRandReset();
+            ASSERT_EQ(CRYPT_EAL_PkeyGen(ctx), CRYPT_SUCCESS);
+        }
+        CompositeDetRandReset();
+        STUB_ResetMallocCount();
+        STUB_SetMallocFailIndex(i);
+        STUB_EnableMallocFail(true);
+        int32_t ret = CRYPT_EAL_PkeyGen(ctx);
+        STUB_EnableMallocFail(false);
+        ASSERT_NE(ret, CRYPT_SUCCESS);
+        CRYPT_CompositeCtx *inner = ctx->key;
+        ASSERT_TRUE(inner->pqcCtx == NULL && inner->tradCtx == NULL && inner->info == NULL);
+        ASSERT_EQ(inner->pubLen, 0);
+        ASSERT_EQ(inner->prvLen, 0);
+        ASSERT_EQ(CRYPT_EAL_PkeyGen(ctx), CRYPT_COMPOSITE_KEYINFO_NOT_SET);
+        ASSERT_EQ(CRYPT_EAL_PkeySetParaById(ctx, type), CRYPT_SUCCESS);
+        CompositeDetRandReset();
+        ASSERT_EQ(CRYPT_EAL_PkeyGen(ctx), CRYPT_SUCCESS);
+        CRYPT_EAL_PkeyFreeCtx(ctx);
+        ctx = NULL;
+    }
+EXIT:
+    STUB_EnableMallocFail(false);
+    STUB_RESTORE(BSL_SAL_Malloc);
+    CRYPT_EAL_PkeyFreeCtx(ctx);
+    TestRandDeInit();
+}
+/* END_CASE */
+
+static int32_t g_compositeKemRandCall;
+static int32_t g_compositeKemRandFail;
+
+static int32_t CompositeKemFailRand(uint8_t *out, uint32_t len)
+{
+    if (g_compositeKemRandCall++ == g_compositeKemRandFail) {
+        return CRYPT_INVALID_ARG;
+    }
+    return CompositeDetRandFill(out, len);
+}
+
+static int32_t CompositeKemFailRandEx(void *libCtx, uint8_t *out, uint32_t len)
+{
+    (void)libCtx;
+    return CompositeKemFailRand(out, len);
+}
+
+/* @
+ * @test SDV_CRYPTO_COMPOSITE_KEM_RANDFAIL_TC001
+ * @brief Fail the random source in either component, including replacement of an existing key.
+ * @expect The original component error is returned and all generated key state is destroyed.
+ * @precon nan
+ @ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_COMPOSITE_KEM_RANDFAIL_TC001(int type, int component, int regenerate)
+{
+    if (CompositeKemDisabled(type)) {
+        SKIP_TEST();
+    }
+    TestMemInit();
+    TestRandInit();
+    CRYPT_RandRegist(CompositeKemFailRand);
+    CRYPT_RandRegistEx(CompositeKemFailRandEx);
+    CRYPT_EAL_PkeyCtx *ctx = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_COMPOSITE);
+    ASSERT_TRUE(ctx != NULL);
+    ASSERT_EQ(CRYPT_EAL_PkeySetParaById(ctx, type), CRYPT_SUCCESS);
+    g_compositeKemRandFail = -1;
+    g_compositeKemRandCall = 0;
+    CompositeDetRandReset();
+    if (regenerate) {
+        ASSERT_EQ(CRYPT_EAL_PkeyGen(ctx), CRYPT_SUCCESS);
+    }
+    g_compositeKemRandFail = component;
+    g_compositeKemRandCall = 0;
+    int32_t expected =
+        component == 1 && type != CRYPT_COMPOSITE_MLKEM768_X25519_SHA3_256 ? CRYPT_BN_RAND_GEN_FAIL : CRYPT_INVALID_ARG;
+    ASSERT_EQ(CRYPT_EAL_PkeyGen(ctx), expected);
+    CRYPT_CompositeCtx *inner = ctx->key;
+    ASSERT_TRUE(inner->info == NULL && inner->pqcCtx == NULL && inner->tradCtx == NULL);
+    ASSERT_EQ(inner->pubLen, 0);
+    ASSERT_EQ(inner->prvLen, 0);
+EXIT:
+    g_compositeKemRandFail = -1;
+    CRYPT_EAL_PkeyFreeCtx(ctx);
+    TestRandDeInit();
+}
+/* END_CASE */
+
+/* @
+ * @test SDV_CRYPTO_COMPOSITE_CTRL_TC001
+ * @brief Reject KEM controls on signature objects while preserving the pre-parameter
+ *        signature context behavior; KEM rejects signature context controls.
+ * @expect Existing signatures retain their contexts; KEM parameters reject signing context controls.
+ * @precon nan
+ @ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_COMPOSITE_CTRL_TC001(void)
+{
+    if (PkiSkipCompositeParaTest(CRYPT_COMPOSITE_MLDSA44_ED25519_SHA512) ||
+        CompositeKemDisabled(CRYPT_COMPOSITE_MLKEM768_X25519_SHA3_256)) {
+        SKIP_TEST();
+    }
+    TestMemInit();
+    CRYPT_EAL_PkeyCtx *sign = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_COMPOSITE);
+    CRYPT_EAL_PkeyCtx *kem = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_COMPOSITE);
+    uint32_t length = 0;
+    uint8_t context[] = {1, 2, 3};
+    ASSERT_TRUE(sign != NULL && kem != NULL);
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(sign, CRYPT_CTRL_SET_CTX_INFO, context, sizeof(context)), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(kem, CRYPT_CTRL_SET_CTX_INFO, context, sizeof(context)), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeySetParaById(sign, CRYPT_COMPOSITE_MLDSA44_ED25519_SHA512), CRYPT_SUCCESS);
+    ASSERT_EQ(((CRYPT_CompositeCtx *)sign->key)->info->kind, CRYPT_COMPOSITE_KIND_SIGN);
+    ASSERT_EQ(((CRYPT_CompositeCtx *)sign->key)->ctxLen, sizeof(context));
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(sign, CRYPT_CTRL_GET_CIPHERTEXT_LEN, &length, sizeof(length)), CRYPT_NOT_SUPPORT);
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(sign, CRYPT_CTRL_GET_SHARED_KEY_LEN, &length, sizeof(length)), CRYPT_NOT_SUPPORT);
+#ifdef HITLS_CRYPTO_COMPOSITE_KEM
+    uint8_t cipher[1120];
+    uint8_t secret[32];
+    uint32_t cipherLen = sizeof(cipher);
+    uint32_t secretLen = sizeof(secret);
+    ASSERT_EQ(CRYPT_EAL_PkeyEncaps(sign, cipher, &cipherLen, secret, &secretLen), CRYPT_NOT_SUPPORT);
+    ASSERT_EQ(CRYPT_EAL_PkeyDecaps(sign, cipher, sizeof(cipher), secret, &secretLen), CRYPT_NOT_SUPPORT);
+#endif
+    ASSERT_EQ(CRYPT_EAL_PkeySetParaById(kem, CRYPT_COMPOSITE_MLKEM768_X25519_SHA3_256), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(kem, CRYPT_CTRL_SET_CTX_INFO, context, sizeof(context)), CRYPT_NOT_SUPPORT);
+EXIT:
+    CRYPT_EAL_PkeyFreeCtx(sign);
+    CRYPT_EAL_PkeyFreeCtx(kem);
+}
+/* END_CASE */
+
+#if defined(HITLS_CRYPTO_COMPOSITE_KEM) && defined(HITLS_CRYPTO_KEY_ENCODE) && defined(HITLS_CRYPTO_KEY_DECODE)
+static bool CompositeKemRejectDer(BSL_Buffer *encoded, int provider, int *types, const char **typeNames)
+{
+    bool success = false;
+    CRYPT_EAL_PkeyCtx *invalidKey = NULL;
+    uint8_t invalid[3100];
+    BSL_Buffer bad = {0};
+    for (uint32_t i = 0; i < 3; i++) {
+        uint32_t algorithm = 0;
+        while (algorithm < 24 && !(encoded[i].data[algorithm] == 0x30 && encoded[i].data[algorithm + 1] == 10 &&
+                                   encoded[i].data[algorithm + 2] == 0x06)) {
+            algorithm++;
+        }
+        ASSERT_TRUE(algorithm < 24);
+        uint32_t insert = algorithm + 12;
+        memcpy(invalid, encoded[i].data, insert);
+        invalid[algorithm + 1] += 2;
+        invalid[insert] = 0x05;
+        invalid[insert + 1] = 0;
+        memcpy(invalid + insert + 2, encoded[i].data + insert, encoded[i].dataLen - insert);
+        if (i != 1) {
+            if (invalid[1] == 0x82) {
+                uint32_t length = ((uint32_t)invalid[2] << 8) + invalid[3] + 2;
+                invalid[2] = (uint8_t)(length >> 8);
+                invalid[3] = (uint8_t)length;
+            } else if (invalid[1] == 0x81) {
+                invalid[2] += 2;
+            } else {
+                invalid[1] += 2;
+            }
+        }
+        bad = (BSL_Buffer){invalid, encoded[i].dataLen + 2};
+        uint8_t parameterTags[] = {0x05, 0x06, 0x30};
+        for (uint32_t parameter = 0; parameter < sizeof(parameterTags); parameter++) {
+            invalid[insert] = parameterTags[parameter];
+            ASSERT_NE(provider ? CRYPT_EAL_ProviderDecodeBuffKey(NULL, NULL, BSL_CID_UNKNOWN, "ASN1", typeNames[i],
+                                                                 &bad, NULL, &invalidKey) :
+                                 CRYPT_EAL_DecodeBuffKey(BSL_FORMAT_ASN1, types[i], &bad, NULL, 0, &invalidKey),
+                      CRYPT_SUCCESS);
+            ASSERT_TRUE(invalidKey == NULL);
+        }
+        uint8_t badOids[] = {65, 127, 37}; /* Reserved KEM, unknown, and Composite SIGN OIDs. */
+        for (uint32_t oid = 0; oid < sizeof(badOids); oid++) {
+            memcpy(invalid, encoded[i].data, encoded[i].dataLen);
+            invalid[algorithm + 11] = badOids[oid];
+            bad = (BSL_Buffer){invalid, encoded[i].dataLen};
+            ASSERT_NE(provider ? CRYPT_EAL_ProviderDecodeBuffKey(NULL, NULL, BSL_CID_UNKNOWN, "ASN1", typeNames[i],
+                                                                 &bad, NULL, &invalidKey) :
+                                 CRYPT_EAL_DecodeBuffKey(BSL_FORMAT_ASN1, types[i], &bad, NULL, 0, &invalidKey),
+                      CRYPT_SUCCESS);
+            ASSERT_TRUE(invalidKey == NULL);
+        }
+        for (uint32_t truncation = 0; truncation < 3; truncation++) {
+            bad = (BSL_Buffer){encoded[i].data, truncation == 0 ? 0 :
+                                                truncation == 1 ? encoded[i].dataLen / 2 :
+                                                                  encoded[i].dataLen - 1};
+            ASSERT_NE(provider ? CRYPT_EAL_ProviderDecodeBuffKey(NULL, NULL, BSL_CID_UNKNOWN, "ASN1", typeNames[i],
+                                                                 &bad, NULL, &invalidKey) :
+                                 CRYPT_EAL_DecodeBuffKey(BSL_FORMAT_ASN1, types[i], &bad, NULL, 0, &invalidKey),
+                      CRYPT_SUCCESS);
+            ASSERT_TRUE(invalidKey == NULL);
+        }
+    }
+    success = true;
+EXIT:
+    CRYPT_EAL_PkeyFreeCtx(invalidKey);
+    return success;
+}
+
+static bool CompositeKemRejectPem(const BSL_Buffer *encoded, int provider)
+{
+    bool success = false;
+    CRYPT_EAL_PkeyCtx *invalidKey = NULL;
+    uint8_t invalid[3100];
+    BSL_Buffer bad = {0};
+    for (uint32_t mutation = 0; mutation < 3; mutation++) {
+        ASSERT_TRUE(encoded[0].dataLen <= sizeof(invalid));
+        memcpy(invalid, encoded[0].data, encoded[0].dataLen);
+        bad = (BSL_Buffer){invalid, mutation == 2 ? 0 : encoded[0].dataLen};
+        if (mutation == 0) {
+            invalid[11] = 'X'; /* Invalid PUBLIC KEY label. */
+        } else if (mutation == 1) {
+            uint32_t start = 0;
+            while (start < bad.dataLen && invalid[start] != '\n') {
+                start++;
+            }
+            ASSERT_TRUE(start + 1 < bad.dataLen);
+            invalid[start + 1] = '!'; /* Invalid Base64 character. */
+        }
+        ASSERT_NE(provider ? CRYPT_EAL_ProviderDecodeBuffKey(NULL, NULL, BSL_CID_UNKNOWN, "PEM", "PUBKEY_SUBKEY", &bad,
+                                                             NULL, &invalidKey) :
+                             CRYPT_EAL_DecodeBuffKey(BSL_FORMAT_PEM, CRYPT_PUBKEY_SUBKEY, &bad, NULL, 0, &invalidKey),
+                  CRYPT_SUCCESS);
+        ASSERT_TRUE(invalidKey == NULL);
+    }
+
+    success = true;
+EXIT:
+    CRYPT_EAL_PkeyFreeCtx(invalidKey);
+    return success;
+}
+
+static bool CompositeKemCodecRoundtrip(int type, int provider, int bufferFormat, int keyType, const char *typeName,
+    BSL_Buffer *encoded, CRYPT_EAL_PkeyCtx **decoded)
+{
+    bool success = false;
+    CRYPT_EAL_PkeyCtx *cross = NULL;
+    BSL_Buffer reencoded = {0};
+    if (provider) {
+        ASSERT_EQ(CRYPT_EAL_ProviderDecodeBuffKey(NULL, NULL, BSL_CID_UNKNOWN,
+            bufferFormat == BSL_FORMAT_ASN1 ? "ASN1" : "PEM", typeName, encoded, NULL, decoded),
+            CRYPT_SUCCESS);
+    } else {
+        ASSERT_EQ(CRYPT_EAL_DecodeBuffKey(bufferFormat, keyType, encoded, NULL, 0, decoded),
+            CRYPT_SUCCESS);
+    }
+    int32_t paraId = 0;
+    ASSERT_EQ(CRYPT_EAL_PkeyGetId(*decoded), CRYPT_PKEY_COMPOSITE);
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(*decoded, CRYPT_CTRL_GET_PARAID, &paraId, sizeof(paraId)), CRYPT_SUCCESS);
+    ASSERT_EQ(paraId, type);
+    ASSERT_EQ(provider ? CRYPT_EAL_DecodeBuffKey(bufferFormat, keyType, encoded, NULL, 0, &cross) :
+                         CRYPT_EAL_ProviderDecodeBuffKey(NULL, NULL, BSL_CID_UNKNOWN,
+                                                         bufferFormat == BSL_FORMAT_ASN1 ? "ASN1" : "PEM",
+                                                         typeName, encoded, NULL, &cross),
+              CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyGetParaId(cross), type);
+    CRYPT_EAL_PkeyFreeCtx(*decoded);
+    *decoded = cross;
+    cross = NULL;
+    ASSERT_EQ(keyType == CRYPT_PUBKEY_SUBKEY_WITHOUT_SEQ ? CRYPT_EAL_EncodePubKeyBuffInternal(*decoded, bufferFormat, CRYPT_PUBKEY_SUBKEY,
+        false, &reencoded) :
+        CRYPT_EAL_EncodeBuffKey(*decoded, NULL, bufferFormat, keyType, &reencoded), CRYPT_SUCCESS);
+    ASSERT_EQ(reencoded.dataLen, encoded->dataLen);
+    ASSERT_EQ(ConstTimeMemcmp(reencoded.data, encoded->data, encoded->dataLen), UINT32_MAX);
+    BSL_SAL_ClearFree(reencoded.data, reencoded.dataLen);
+    reencoded = (BSL_Buffer){0};
+    success = true;
+EXIT:
+    CRYPT_EAL_PkeyFreeCtx(cross);
+    BSL_SAL_ClearFree(reencoded.data, reencoded.dataLen);
+    return success;
+}
+#endif
+
+/* @
+ * @test SDV_CRYPTO_COMPOSITE_KEM_CODECS_TC001
+ * @brief Round-trip KEM SPKI, SPKI without SEQUENCE and PKCS8 through existing codecs.
+ * @expect Decoded public/private objects execute KEM and preserve canonical encodings.
+ * @precon nan
+ @ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_COMPOSITE_KEM_CODECS_TC001(int type, int provider, int format)
+{
+    if (CompositeKemDisabled(type)) {
+        SKIP_TEST();
+    }
+#if !defined(HITLS_CRYPTO_KEY_ENCODE) || !defined(HITLS_CRYPTO_KEY_DECODE) || !defined(HITLS_CRYPTO_COMPOSITE_KEM)
+    (void)provider;
+    (void)format;
+    SKIP_TEST();
+#else
+#ifndef HITLS_CRYPTO_KEY_DECODE_CHAIN
+    if (provider) {
+        SKIP_TEST();
+    }
+#endif
+    TestMemInit();
+    TestRandInit();
+    CRYPT_EAL_PkeyCtx *key = NULL;
+    CRYPT_EAL_PkeyCtx *decoded[3] = {0};
+    BSL_Buffer encoded[3] = {0};
+    int types[] = {CRYPT_PUBKEY_SUBKEY, CRYPT_PUBKEY_SUBKEY_WITHOUT_SEQ, CRYPT_PRIKEY_PKCS8_UNENCRYPT};
+    const char *typeNames[] = {"PUBKEY_SUBKEY", "PUBKEY_SUBKEY_WITHOUT_SEQ", "PRIKEY_PKCS8_UNENCRYPT"};
+    uint8_t cipher[1952];
+    uint8_t secret[32];
+    uint8_t recovered[32];
+    key = provider ? CRYPT_EAL_ProviderPkeyNewCtx(NULL, CRYPT_PKEY_COMPOSITE, CRYPT_EAL_PKEY_KEM_OPERATE, NULL) :
+        CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_COMPOSITE);
+    ASSERT_TRUE(key != NULL);
+    ASSERT_EQ(CRYPT_EAL_PkeySetParaById(key, type), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyGen(key), CRYPT_SUCCESS);
+    for (uint32_t i = 0; i < 3; i++) {
+        int bufferFormat = i == 1 ? BSL_FORMAT_ASN1 : format;
+        ASSERT_EQ(i == 1 ? CRYPT_EAL_EncodePubKeyBuffInternal(key, bufferFormat, CRYPT_PUBKEY_SUBKEY,
+            false, &encoded[i]) :
+            CRYPT_EAL_EncodeBuffKey(key, NULL, bufferFormat, types[i], &encoded[i]), CRYPT_SUCCESS);
+        ASSERT_TRUE(CompositeKemCodecRoundtrip(type, provider, bufferFormat, types[i], typeNames[i],
+            &encoded[i], &decoded[i]));
+    }
+    for (uint32_t i = 0; i < 2; i++) {
+        uint32_t cipherLen = sizeof(cipher);
+        uint32_t secretLen = sizeof(secret);
+        uint32_t recoveredLen = sizeof(recovered);
+        ASSERT_EQ(CRYPT_EAL_PkeyEncaps(decoded[i], cipher, &cipherLen, secret, &secretLen), CRYPT_SUCCESS);
+        uint32_t expectedLen = 0;
+        ASSERT_EQ(CRYPT_EAL_PkeyCtrl(key, CRYPT_CTRL_GET_CIPHERTEXT_LEN, &expectedLen, sizeof(expectedLen)),
+            CRYPT_SUCCESS);
+        ASSERT_EQ(cipherLen, expectedLen);
+        ASSERT_EQ(secretLen, sizeof(secret));
+        ASSERT_EQ(CRYPT_EAL_PkeyDecaps(decoded[2], cipher, cipherLen, recovered, &recoveredLen), CRYPT_SUCCESS);
+        ASSERT_EQ(recoveredLen, sizeof(recovered));
+        ASSERT_EQ(ConstTimeMemcmp(secret, recovered, sizeof(secret)), UINT32_MAX);
+    }
+    ASSERT_TRUE(format == BSL_FORMAT_ASN1 ? CompositeKemRejectDer(encoded, provider, types, typeNames) :
+                CompositeKemRejectPem(encoded, provider));
+
+EXIT:
+    CRYPT_EAL_PkeyFreeCtx(key);
+    for (uint32_t i = 0; i < 3; i++) {
+        CRYPT_EAL_PkeyFreeCtx(decoded[i]);
+        BSL_SAL_ClearFree(encoded[i].data, encoded[i].dataLen);
+    }
+    TestRandDeInit();
+#endif
+}
+/* END_CASE */
+
+#ifdef HITLS_CRYPTO_COMPOSITE_KEM
+static bool CompositeKemLeadingZero(CRYPT_EAL_PkeyCtx *ctx, int type, Hex *cipher)
+{
+    CRYPT_CompositeCtx *inner = ctx->key;
+    if (inner->info->tradAlg != CRYPT_PKEY_ECDH) {
+        return true;
+    }
+    bool success = false;
+    CRYPT_EAL_PkeyCtx *peer = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_ECDH);
+    uint8_t modified[1952];
+    uint8_t combined[400];
+    uint8_t publicKey[133];
+    uint8_t expected[32];
+    uint8_t recovered[32];
+    uint32_t pqcLen = type >= CRYPT_COMPOSITE_MLKEM1024_RSA3072_SHA3_256 ? 1568 : 1088;
+    uint32_t tradLen =
+        type == CRYPT_COMPOSITE_MLKEM1024_ECDH_P521_SHA3_256 ? 66 :
+        (type == CRYPT_COMPOSITE_MLKEM768_ECDH_P384_SHA3_256 || type == CRYPT_COMPOSITE_MLKEM1024_ECDH_P384_SHA3_256 ||
+         type == CRYPT_COMPOSITE_MLKEM1024_ECDH_BRAINPOOLP384R1_SHA3_256) ?
+                                                               48 :
+                                                               32;
+    ASSERT_TRUE(peer != NULL);
+    ASSERT_EQ(CRYPT_EAL_PkeySetParaById(peer, inner->info->tradParam), CRYPT_SUCCESS);
+    CompositeDetRandReset();
+    CRYPT_RandRegist(CompositeDetRand);
+    CRYPT_RandRegistEx(CompositeDetRandEx);
+    uint32_t secretLen = 0;
+    bool found = false;
+    for (uint32_t i = 0; i < 1024; i++) {
+        ASSERT_EQ(CRYPT_EAL_PkeyGen(peer), CRYPT_SUCCESS);
+        secretLen = 66;
+        ASSERT_EQ(CRYPT_EAL_PkeyComputeShareKey(inner->tradCtx, peer, combined + 32, &secretLen), CRYPT_SUCCESS);
+        ASSERT_EQ(secretLen, tradLen);
+        if (combined[32] == 0) {
+            found = true;
+            break;
+        }
+    }
+    ASSERT_TRUE(found);
+    memcpy(modified, cipher->x, cipher->len);
+    BSL_Param pub[] = {{CRYPT_PARAM_EC_PUBKEY, BSL_PARAM_TYPE_OCTETS, modified + pqcLen, sizeof(modified) - pqcLen, 0},
+                       BSL_PARAM_END};
+    ASSERT_EQ(CRYPT_EAL_PkeyGetPubEx(peer, pub), CRYPT_SUCCESS);
+    secretLen = 32;
+    ASSERT_EQ(CRYPT_EAL_PkeyDecaps(inner->pqcCtx, modified, pqcLen, combined, &secretLen), CRYPT_SUCCESS);
+    uint32_t pointLen = pub[0].useLen;
+    memcpy(combined + 32 + tradLen, modified + pqcLen, pointLen);
+    pub[0].value = publicKey;
+    pub[0].valueLen = sizeof(publicKey);
+    ASSERT_EQ(CRYPT_EAL_PkeyGetPubEx(inner->tradCtx, pub), CRYPT_SUCCESS);
+    memcpy(combined + 32 + tradLen + pointLen, publicKey, pub[0].useLen);
+    const char *label = type == CRYPT_COMPOSITE_MLKEM768_ECDH_P256_SHA3_256             ? "MLKEM768-P256" :
+                        type == CRYPT_COMPOSITE_MLKEM768_ECDH_P384_SHA3_256             ? "MLKEM768-P384" :
+                        type == CRYPT_COMPOSITE_MLKEM768_ECDH_BRAINPOOLP256R1_SHA3_256  ? "MLKEM768-BP256" :
+                        type == CRYPT_COMPOSITE_MLKEM1024_ECDH_P384_SHA3_256            ? "MLKEM1024-P384" :
+                        type == CRYPT_COMPOSITE_MLKEM1024_ECDH_BRAINPOOLP384R1_SHA3_256 ? "MLKEM1024-BP384" :
+                                                                                          "MLKEM1024-P521";
+    uint32_t combinedLen = 32 + tradLen + pointLen + pub[0].useLen;
+    memcpy(combined + combinedLen, label, strlen(label));
+    uint32_t expectedLen = sizeof(expected);
+    ASSERT_EQ(CRYPT_EAL_Md(CRYPT_MD_SHA3_256, combined, combinedLen + strlen(label), expected, &expectedLen),
+              CRYPT_SUCCESS);
+    secretLen = sizeof(recovered);
+    ASSERT_EQ(CRYPT_EAL_PkeyDecaps(ctx, modified, cipher->len, recovered, &secretLen), CRYPT_SUCCESS);
+    ASSERT_EQ(secretLen, sizeof(recovered));
+    ASSERT_EQ(ConstTimeMemcmp(expected, recovered, sizeof(expected)), UINT32_MAX);
+    success = true;
+EXIT:
+    CRYPT_EAL_PkeyFreeCtx(peer);
+    BSL_SAL_CleanseData(combined, sizeof(combined));
+    BSL_SAL_CleanseData(expected, sizeof(expected));
+    BSL_SAL_CleanseData(recovered, sizeof(recovered));
+    return success;
+}
+#endif
+
+#if defined(HITLS_CRYPTO_COMPOSITE_KEM)
+static bool CompositeKemVectorSeeds(CRYPT_EAL_PkeyCtx *ctx, int type, Hex *prv, Hex *cipher, Hex *secret)
+{
+    bool success = false;
+    CRYPT_EAL_PkeyCtx *seedCtx = NULL;
+    uint8_t changedSeed[3000];
+    uint8_t changedCipher[1952];
+    uint8_t recovered[32];
+    uint8_t rejected[32];
+    uint32_t recoveredLen = 0;
+    ASSERT_TRUE(prv->len <= sizeof(changedSeed));
+    for (uint32_t mutation = 0; mutation < 3; mutation++) {
+        memcpy(changedSeed, prv->x, prv->len);
+        if (mutation < 2) {
+            changedSeed[mutation * 32] ^= 1;
+        } else {
+            memcpy(changedSeed, prv->x + 32, 32);
+            memcpy(changedSeed + 32, prv->x, 32);
+        }
+        seedCtx = CompositeKemNewCtx(0);
+        ASSERT_TRUE(seedCtx != NULL);
+        ASSERT_EQ(CRYPT_EAL_PkeySetParaById(seedCtx, type), CRYPT_SUCCESS);
+        CRYPT_EAL_PkeyPrv changed = {.id = CRYPT_PKEY_COMPOSITE, .key.compositePrv = {changedSeed, prv->len}};
+        ASSERT_EQ(CRYPT_EAL_PkeySetPrv(seedCtx, &changed), CRYPT_SUCCESS);
+        recoveredLen = sizeof(recovered);
+        ASSERT_EQ(CRYPT_EAL_PkeyDecaps(seedCtx, cipher->x, cipher->len, recovered, &recoveredLen),
+                  CRYPT_SUCCESS);
+        if (mutation == 1) {
+            /* z is used only by implicit rejection, not by valid ciphertext decapsulation. */
+            ASSERT_EQ(ConstTimeMemcmp(recovered, secret->x, secret->len), UINT32_MAX);
+            ASSERT_TRUE(cipher->len <= sizeof(changedCipher));
+            memcpy(changedCipher, cipher->x, cipher->len);
+            changedCipher[0] ^= 1;
+            recoveredLen = sizeof(rejected);
+            ASSERT_EQ(CRYPT_EAL_PkeyDecaps(ctx, changedCipher, cipher->len, rejected, &recoveredLen),
+                      CRYPT_SUCCESS);
+            recoveredLen = sizeof(recovered);
+            ASSERT_EQ(CRYPT_EAL_PkeyDecaps(seedCtx, changedCipher, cipher->len, recovered, &recoveredLen),
+                      CRYPT_SUCCESS);
+            ASSERT_NE(ConstTimeMemcmp(recovered, rejected, sizeof(recovered)), UINT32_MAX);
+        } else {
+            ASSERT_NE(ConstTimeMemcmp(recovered, secret->x, secret->len), UINT32_MAX);
+        }
+        CRYPT_EAL_PkeyFreeCtx(seedCtx);
+        seedCtx = NULL;
+    }
+    success = true;
+EXIT:
+    CRYPT_EAL_PkeyFreeCtx(seedCtx);
+    BSL_SAL_CleanseData(changedSeed, sizeof(changedSeed));
+    BSL_SAL_CleanseData(recovered, sizeof(recovered));
+    BSL_SAL_CleanseData(rejected, sizeof(rejected));
+    return success;
+}
+#endif
+
+#if defined(HITLS_CRYPTO_COMPOSITE_KEM)
+static bool CompositeKemVectorCurve(int type, Hex *prv, Hex *cipher, Hex *secret)
+{
+    bool success = false;
+    CRYPT_EAL_PkeyCtx *seedCtx = NULL;
+    uint8_t recovered[32];
+    uint32_t recoveredLen = 0;
+    CRYPT_EAL_PkeyPrv key = {.id = CRYPT_PKEY_COMPOSITE, .key.compositePrv = {prv->x, prv->len}};
+    int otherCurve = type == CRYPT_COMPOSITE_MLKEM768_ECDH_P256_SHA3_256 ?
+                         CRYPT_COMPOSITE_MLKEM768_ECDH_BRAINPOOLP256R1_SHA3_256 :
+                     type == CRYPT_COMPOSITE_MLKEM768_ECDH_BRAINPOOLP256R1_SHA3_256 ?
+                         CRYPT_COMPOSITE_MLKEM768_ECDH_P256_SHA3_256 :
+                     type == CRYPT_COMPOSITE_MLKEM1024_ECDH_P384_SHA3_256 ?
+                         CRYPT_COMPOSITE_MLKEM1024_ECDH_BRAINPOOLP384R1_SHA3_256 :
+                     type == CRYPT_COMPOSITE_MLKEM1024_ECDH_BRAINPOOLP384R1_SHA3_256 ?
+                         CRYPT_COMPOSITE_MLKEM1024_ECDH_P384_SHA3_256 :
+                         0;
+    if (otherCurve != 0 && !CompositeKemDisabled(otherCurve)) {
+        seedCtx = CompositeKemNewCtx(0);
+        ASSERT_TRUE(seedCtx != NULL);
+        ASSERT_EQ(CRYPT_EAL_PkeySetParaById(seedCtx, otherCurve), CRYPT_SUCCESS);
+        int32_t ret = CRYPT_EAL_PkeySetPrv(seedCtx, &key);
+        if (ret == CRYPT_SUCCESS) {
+            recoveredLen = sizeof(recovered);
+            ret = CRYPT_EAL_PkeyDecaps(seedCtx, cipher->x, cipher->len, recovered, &recoveredLen);
+            ASSERT_TRUE(ret != CRYPT_SUCCESS ||
+                        ConstTimeMemcmp(recovered, secret->x, secret->len) != UINT32_MAX);
+        } else {
+            /* The longer brainpool private-key encoding exceeds the NIST parameter's limit. */
+            ASSERT_EQ(ret, CRYPT_COMPOSITE_KEYLEN_ERROR);
+        }
+        CRYPT_EAL_PkeyFreeCtx(seedCtx);
+        seedCtx = NULL;
+    }
+    success = true;
+EXIT:
+    CRYPT_EAL_PkeyFreeCtx(seedCtx);
+    BSL_SAL_CleanseData(recovered, sizeof(recovered));
+    return success;
+}
+#endif
+
+/* @
+ * @test SDV_CRYPTO_COMPOSITE_KEM_VECTOR_TC001
+ * @brief Decapsulate independently specified draft Appendix G vectors.
+ * @expect Direct and Provider objects produce the independently specified shared secret.
+ * @precon nan
+ @ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_COMPOSITE_KEM_VECTOR_TC001(int type, Hex *prv, Hex *cipher, Hex *secret)
+{
+#ifndef HITLS_CRYPTO_COMPOSITE_KEM
+    (void)type;
+    (void)prv;
+    (void)cipher;
+    (void)secret;
+    SKIP_TEST();
+#else
+    if (CompositeKemDisabled(type)) {
+        SKIP_TEST();
+    }
+    TestMemInit();
+    TestRandInit();
+    CRYPT_EAL_PkeyCtx *ctx = NULL;
+    uint8_t recovered[32];
+    uint8_t modified[146] = {0};
+    CRYPT_EAL_PkeyPrv key = {.id = CRYPT_PKEY_COMPOSITE, .key.compositePrv = {prv->x, prv->len}};
+    for (int path = 0; path < 4; path++) {
+        int provider = path / 2;
+        ctx = provider ? CRYPT_EAL_ProviderPkeyNewCtx(NULL, CRYPT_PKEY_COMPOSITE, CRYPT_EAL_PKEY_KEM_OPERATE, NULL) :
+            CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_COMPOSITE);
+        ASSERT_TRUE(ctx != NULL);
+        ASSERT_EQ(CRYPT_EAL_PkeySetParaById(ctx, type), CRYPT_SUCCESS);
+        BSL_Param params[] = {{CRYPT_PARAM_COMPOSITE_PRVKEY, BSL_PARAM_TYPE_OCTETS, prv->x, prv->len, 0},
+                              BSL_PARAM_END};
+        ASSERT_EQ(path % 2 ? CRYPT_EAL_PkeySetPrvEx(ctx, params) : CRYPT_EAL_PkeySetPrv(ctx, &key), CRYPT_SUCCESS);
+        uint32_t recoveredLen = sizeof(recovered);
+        ASSERT_EQ(CRYPT_EAL_PkeyDecaps(ctx, cipher->x, cipher->len, recovered, &recoveredLen), CRYPT_SUCCESS);
+        ASSERT_EQ(recoveredLen, secret->len);
+        ASSERT_EQ(ConstTimeMemcmp(recovered, secret->x, secret->len), UINT32_MAX);
+        if (path == 0) {
+            ASSERT_TRUE(CompositeKemLeadingZero(ctx, type, cipher));
+            ASSERT_TRUE(CompositeKemVectorSeeds(ctx, type, prv, cipher, secret));
+            ASSERT_TRUE(CompositeKemVectorCurve(type, prv, cipher, secret));
+        }
+        CRYPT_EAL_PkeyFreeCtx(ctx);
+        ctx = NULL;
+    }
+    if (type >= CRYPT_COMPOSITE_MLKEM768_ECDH_P256_SHA3_256 &&
+        type != CRYPT_COMPOSITE_MLKEM1024_RSA3072_SHA3_256) {
+        ASSERT_TRUE(prv->len <= sizeof(modified));
+        memcpy(modified, prv->x, prv->len);
+        modified[prv->len - 1] ^= 1; /* Existing EC import ignores the inner curve OID. */
+        key.key.compositePrv.data = modified;
+        ctx = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_COMPOSITE);
+        ASSERT_TRUE(ctx != NULL);
+        ASSERT_EQ(CRYPT_EAL_PkeySetParaById(ctx, type), CRYPT_SUCCESS);
+        ASSERT_EQ(CRYPT_EAL_PkeySetPrv(ctx, &key), CRYPT_SUCCESS);
+        uint32_t recoveredLen = sizeof(recovered);
+        ASSERT_EQ(CRYPT_EAL_PkeyDecaps(ctx, cipher->x, cipher->len, recovered, &recoveredLen), CRYPT_SUCCESS);
+        ASSERT_EQ(ConstTimeMemcmp(recovered, secret->x, secret->len), UINT32_MAX);
+    }
+EXIT:
+    BSL_SAL_CleanseData(modified, sizeof(modified));
+    BSL_SAL_CleanseData(recovered, sizeof(recovered));
+    CRYPT_EAL_PkeyFreeCtx(ctx);
+    TestRandDeInit();
+#endif
+}
+/* END_CASE */
+
+#if defined(HITLS_CRYPTO_COMPOSITE_KEM) && defined(HITLS_CRYPTO_KEY_DECODE) && defined(HITLS_CRYPTO_KEY_ENCODE) && \
+    defined(HITLS_BSL_SAL_FILE)
+static int32_t CompositeKemSampleDecode(BSL_Buffer *buff, int provider, int format, int privateKey, CRYPT_EAL_PkeyCtx **key)
+{
+    return provider ?
+               CRYPT_EAL_ProviderDecodeBuffKey(NULL, NULL, BSL_CID_UNKNOWN, format == BSL_FORMAT_ASN1 ? "ASN1" : "PEM",
+                                               privateKey ? "PRIKEY_PKCS8_UNENCRYPT" : "PUBKEY_SUBKEY", buff, NULL,
+                                               key) :
+               CRYPT_EAL_DecodeBuffKey(format, privateKey ? CRYPT_PRIKEY_PKCS8_UNENCRYPT : CRYPT_PUBKEY_SUBKEY, buff,
+                                       NULL, 0, key);
+}
+
+static bool CompositeKemSampleSecrets(const char *sampleDir, int type, CRYPT_EAL_PkeyCtx *key)
+{
+    char path[COMPOSITE_SAMPLE_PATH_MAX];
+    BSL_Buffer cipher = {0};
+    BSL_Buffer secret = {0};
+    uint8_t recovered[32];
+    bool success = false;
+    for (int i = 0; i < 2; i++) {
+        ASSERT_EQ(ReadCompositeSampleFile(sampleDir, i == 0 ? "ciphertext0.bin" : "ciphertext-rejected.bin",
+            &cipher, path, sizeof(path)), BSL_SUCCESS);
+        ASSERT_EQ(ReadCompositeSampleFile(sampleDir, i == 0 ? "secret0.bin" : "secret-rejected.bin",
+            &secret, path, sizeof(path)), BSL_SUCCESS);
+        ASSERT_EQ(cipher.dataLen, CompositeKemCipherLen(type));
+        ASSERT_EQ(secret.dataLen, sizeof(recovered));
+        uint32_t recoveredLen = sizeof(recovered);
+        ASSERT_EQ(CRYPT_EAL_PkeyDecaps(key, cipher.data, cipher.dataLen, recovered, &recoveredLen), CRYPT_SUCCESS);
+        ASSERT_EQ(recoveredLen, secret.dataLen);
+        ASSERT_EQ(ConstTimeMemcmp(recovered, secret.data, secret.dataLen), UINT32_MAX);
+        BSL_SAL_FREE(cipher.data);
+        BSL_SAL_ClearFree(secret.data, secret.dataLen);
+        secret = (BSL_Buffer){0};
+    }
+    success = true;
+EXIT:
+    BSL_SAL_FREE(cipher.data);
+    BSL_SAL_ClearFree(secret.data, secret.dataLen);
+    BSL_SAL_CleanseData(recovered, sizeof(recovered));
+    return success;
+}
+#endif
+
+/* @
+ * @test SDV_CRYPTO_COMPOSITE_KEM_SAMPLE_TC001
+ * @brief Decode saved sample keys, compare canonical DER, consume sample ciphertexts and rejection secrets.
+ * @expect All supported combinations interoperate; explicit NULL parameters and X448 are rejected.
+ * @precon Composite KEM static fixtures are present.
+ @ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_COMPOSITE_KEM_SAMPLE_TC001(char *sampleDir, int type, int provider, int format, int supported)
+{
+#if !defined(HITLS_CRYPTO_COMPOSITE_KEM) || !defined(HITLS_CRYPTO_KEY_DECODE) || !defined(HITLS_CRYPTO_KEY_ENCODE) || \
+    !defined(HITLS_BSL_SAL_FILE)
+    (void)sampleDir;
+    (void)type;
+    (void)provider;
+    (void)format;
+    (void)supported;
+    SKIP_TEST();
+#else
+    if (supported && CompositeKemDisabled(type)) {
+        SKIP_TEST();
+    }
+    TestMemInit();
+    TestRandInit();
+    CRYPT_EAL_PkeyCtx *keys[2] = {NULL, NULL};
+    CRYPT_EAL_PkeyCtx *roundtrip = NULL;
+    BSL_Buffer input = {0};
+    BSL_Buffer original = {0};
+    BSL_Buffer encoded = {0};
+    char name[48];
+    char path[COMPOSITE_SAMPLE_PATH_MAX];
+    uint8_t cipher[1952];
+    uint8_t secret[32];
+    uint8_t recovered[32];
+    for (int i = 0; i < 2; i++) {
+        ASSERT_TRUE(snprintf(name, sizeof(name), "%skey.%s", i ? "private" : "public",
+                             format == BSL_FORMAT_ASN1 ? "der" : "pem") > 0);
+        ASSERT_EQ(ReadCompositeSampleFile(sampleDir, name, &input, path, sizeof(path)), BSL_SUCCESS);
+        int32_t ret = CompositeKemSampleDecode(&input, provider, format, i, &keys[i]);
+        if (!supported) {
+            ASSERT_NE(ret, CRYPT_SUCCESS);
+            ASSERT_EQ(keys[i], NULL);
+        } else {
+            ASSERT_EQ(ret, CRYPT_SUCCESS);
+            ASSERT_EQ(CheckCompositeDecodedKey(keys[i], type), CRYPT_SUCCESS);
+            ASSERT_EQ(CRYPT_EAL_EncodeBuffKey(keys[i], NULL, BSL_FORMAT_ASN1,
+                                              i ? CRYPT_PRIKEY_PKCS8_UNENCRYPT : CRYPT_PUBKEY_SUBKEY, &encoded),
+                      CRYPT_SUCCESS);
+            ASSERT_TRUE(snprintf(name, sizeof(name), "%skey.der", i ? "private" : "public") > 0);
+            ASSERT_EQ(ReadCompositeSampleFile(sampleDir, name, &original, path, sizeof(path)), BSL_SUCCESS);
+            ASSERT_EQ(encoded.dataLen, original.dataLen);
+            ASSERT_EQ(ConstTimeMemcmp(encoded.data, original.data, original.dataLen), UINT32_MAX);
+            ASSERT_EQ(CompositeKemSampleDecode(&encoded, !provider, BSL_FORMAT_ASN1, i, &roundtrip), CRYPT_SUCCESS);
+            CRYPT_EAL_PkeyFreeCtx(keys[i]);
+            keys[i] = roundtrip;
+            roundtrip = NULL;
+        }
+        BSL_SAL_ClearFree(input.data, input.dataLen);
+        input = (BSL_Buffer){0};
+        BSL_SAL_ClearFree(original.data, original.dataLen);
+        original = (BSL_Buffer){0};
+        BSL_SAL_ClearFree(encoded.data, encoded.dataLen);
+        encoded = (BSL_Buffer){0};
+    }
+    if (!supported) {
+        goto EXIT;
+    }
+    ASSERT_TRUE(CompositeKemSampleSecrets(sampleDir, type, keys[1]));
+    uint32_t cipherLen = sizeof(cipher);
+    uint32_t secretLen = sizeof(secret);
+    uint32_t recoveredLen = sizeof(recovered);
+    ASSERT_EQ(CRYPT_EAL_PkeyEncaps(keys[0], cipher, &cipherLen, secret, &secretLen), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyDecaps(keys[1], cipher, cipherLen, recovered, &recoveredLen), CRYPT_SUCCESS);
+    ASSERT_EQ(secretLen, sizeof(secret));
+    ASSERT_EQ(recoveredLen, secretLen);
+    ASSERT_EQ(ConstTimeMemcmp(secret, recovered, secretLen), UINT32_MAX);
+    for (int i = 0; i < 2; i++) {
+        ASSERT_TRUE(snprintf(name, sizeof(name), "%skey-null.der", i ? "private" : "public") > 0);
+        ASSERT_EQ(ReadCompositeSampleFile(sampleDir, name, &input, path, sizeof(path)), BSL_SUCCESS);
+        ASSERT_NE(CompositeKemSampleDecode(&input, provider, BSL_FORMAT_ASN1, i, &roundtrip), CRYPT_SUCCESS);
+        ASSERT_EQ(roundtrip, NULL);
+        BSL_SAL_ClearFree(input.data, input.dataLen);
+        input = (BSL_Buffer){0};
+    }
+EXIT:
+    CRYPT_EAL_PkeyFreeCtx(keys[0]);
+    CRYPT_EAL_PkeyFreeCtx(keys[1]);
+    CRYPT_EAL_PkeyFreeCtx(roundtrip);
+    BSL_SAL_ClearFree(input.data, input.dataLen);
+    BSL_SAL_ClearFree(original.data, original.dataLen);
+    BSL_SAL_ClearFree(encoded.data, encoded.dataLen);
+    BSL_SAL_CleanseData(secret, sizeof(secret));
+    BSL_SAL_CleanseData(recovered, sizeof(recovered));
+    TestRandDeInit();
+#endif
+}
+/* END_CASE */
+
+#ifdef HITLS_CRYPTO_COMPOSITE_KEM
+static bool CompositeKemRejectRsaCipher(CRYPT_EAL_PkeyCtx *ctx, const uint8_t *cipher, uint32_t cipherLen)
+{
+    bool success = false;
+    uint8_t output[1952];
+    uint8_t recovered[32];
+    uint8_t sentinel[32];
+    uint32_t recoveredLen = sizeof(recovered);
+    memset(sentinel, 0xa5, sizeof(sentinel));
+    CRYPT_CompositeCtx *inner = ctx->key;
+    uint8_t plain[33] = {0};
+    for (uint32_t len = 31; len <= 33; len += 2) {
+        memcpy(output, cipher, cipherLen);
+        uint32_t rsaLen = inner->info->alg.kem.tradCipherLen;
+        ASSERT_EQ(CRYPT_EAL_PkeyEncrypt(inner->tradCtx, plain, len,
+            output + inner->info->alg.kem.pqcCipherLen, &rsaLen), CRYPT_SUCCESS);
+        memcpy(recovered, sentinel, sizeof(recovered));
+        recoveredLen = sizeof(recovered);
+        ASSERT_EQ(CRYPT_EAL_PkeyDecaps(ctx, output, cipherLen, recovered, &recoveredLen),
+            CRYPT_COMPOSITE_KEYLEN_ERROR);
+        ASSERT_EQ(recoveredLen, sizeof(recovered));
+        ASSERT_EQ(ConstTimeMemcmp(recovered, sentinel, sizeof(recovered)), UINT32_MAX);
+    }
+    for (int parameter = 0; parameter < 3; parameter++) {
+        CRYPT_MD_AlgId mdId = CRYPT_MD_SHA256;
+        CRYPT_MD_AlgId mgfId = CRYPT_MD_SHA256;
+#ifdef HITLS_CRYPTO_SHA512
+        mdId = parameter == 0 ? CRYPT_MD_SHA512 : mdId;
+        mgfId = parameter == 1 ? CRYPT_MD_SHA512 : mgfId;
+#else
+        if (parameter != 2) {
+            continue;
+        }
+#endif
+        BSL_Param params[] = {{CRYPT_PARAM_RSA_MD_ID, BSL_PARAM_TYPE_INT32, &mdId, sizeof(mdId), 0},
+            {CRYPT_PARAM_RSA_MGF1_ID, BSL_PARAM_TYPE_INT32, &mgfId, sizeof(mgfId), 0}, BSL_PARAM_END};
+        ASSERT_EQ(CRYPT_EAL_PkeyCtrl(inner->tradCtx, CRYPT_CTRL_SET_RSA_RSAES_OAEP, params, 0), CRYPT_SUCCESS);
+        if (parameter == 2) {
+            ASSERT_EQ(CRYPT_EAL_PkeyCtrl(inner->tradCtx, CRYPT_CTRL_SET_RSA_OAEP_LABEL, plain, 1), CRYPT_SUCCESS);
+        }
+        memcpy(output, cipher, cipherLen);
+        uint32_t rsaLen = inner->info->alg.kem.tradCipherLen;
+        ASSERT_EQ(CRYPT_EAL_PkeyEncrypt(inner->tradCtx, plain, 32,
+            output + inner->info->alg.kem.pqcCipherLen, &rsaLen), CRYPT_SUCCESS);
+        ASSERT_EQ(CRYPT_CompositeSetRsaPadding(inner), CRYPT_SUCCESS);
+        memcpy(recovered, sentinel, sizeof(recovered));
+        recoveredLen = sizeof(recovered);
+        ASSERT_NE(CRYPT_EAL_PkeyDecaps(ctx, output, cipherLen, recovered, &recoveredLen), CRYPT_SUCCESS);
+        ASSERT_EQ(recoveredLen, sizeof(recovered));
+        ASSERT_EQ(ConstTimeMemcmp(recovered, sentinel, sizeof(recovered)), UINT32_MAX);
+    }
+
+    success = true;
+EXIT:
+    BSL_SAL_CleanseData(recovered, sizeof(recovered));
+    return success;
+}
+
+static bool CheckCompositeKemImplicitRejection(CRYPT_EAL_PkeyCtx *ctx, uint32_t pqcLength,
+    uint8_t *cipher, uint32_t cipherLen, const uint8_t *secret)
+{
+    bool success = false;
+    uint8_t recovered[32];
+    uint8_t checked[32];
+    uint32_t recoveredLen = sizeof(recovered);
+    uint32_t positions[] = {0, pqcLength / 2, pqcLength - 1};
+    for (uint32_t i = 0; i < 3; i++) {
+        cipher[positions[i]] ^= 1;
+        recoveredLen = sizeof(recovered);
+        ASSERT_EQ(CRYPT_EAL_PkeyDecaps(ctx, cipher, cipherLen, recovered, &recoveredLen), CRYPT_SUCCESS);
+        ASSERT_EQ(recoveredLen, sizeof(recovered));
+        ASSERT_NE(ConstTimeMemcmp(secret, recovered, 32), UINT32_MAX);
+        uint32_t checkedLen = sizeof(checked);
+        ASSERT_EQ(CRYPT_EAL_PkeyDecaps(ctx, cipher, cipherLen, checked, &checkedLen), CRYPT_SUCCESS);
+        ASSERT_EQ(ConstTimeMemcmp(checked, recovered, sizeof(checked)), UINT32_MAX);
+        cipher[positions[i]] ^= 1;
+    }
+    success = true;
+EXIT:
+    BSL_SAL_CleanseData(recovered, sizeof(recovered));
+    BSL_SAL_CleanseData(checked, sizeof(checked));
+    return success;
+}
+
+static bool CompositeKemRejectCipher(CRYPT_EAL_PkeyCtx *ctx, int type, uint8_t *cipher, uint32_t cipherLen,
+    const uint8_t *secret)
+{
+    bool success = false;
+    uint8_t output[1952];
+    uint8_t recovered[32];
+    uint8_t sentinel[32];
+    uint32_t recoveredLen = sizeof(recovered);
+    memset(sentinel, 0xa5, sizeof(sentinel));
+    uint32_t pqcLength = type >= CRYPT_COMPOSITE_MLKEM1024_RSA3072_SHA3_256 ? 1568 : 1088;
+    ASSERT_TRUE(CheckCompositeKemImplicitRejection(ctx, pqcLength, cipher, cipherLen, secret));
+    memcpy(output, cipher, cipherLen);
+    CRYPT_CompositeCtx *inner = ctx->key;
+    memset(output + inner->info->alg.kem.pqcCipherLen, 0, inner->info->alg.kem.tradCipherLen);
+    recoveredLen = sizeof(recovered);
+    if (inner->info->tradAlg == CRYPT_PKEY_RSA) {
+        ASSERT_NE(CRYPT_EAL_PkeyDecaps(ctx, output, cipherLen, recovered, &recoveredLen), CRYPT_SUCCESS);
+    } else {
+        ASSERT_EQ(CRYPT_EAL_PkeyDecaps(ctx, output, cipherLen, recovered, &recoveredLen),
+            inner->info->tradAlg == CRYPT_PKEY_X25519 ?
+            CRYPT_CURVE25519_KEY_COMPUTE_FAILED : CRYPT_COMPOSITE_KEYLEN_ERROR);
+    }
+    ASSERT_EQ(recoveredLen, sizeof(recovered));
+    if (inner->info->tradAlg == CRYPT_PKEY_ECDH) {
+        output[inner->info->alg.kem.pqcCipherLen] = 0x04;
+        recoveredLen = sizeof(recovered);
+        ASSERT_NE(CRYPT_EAL_PkeyDecaps(ctx, output, cipherLen, recovered, &recoveredLen), CRYPT_SUCCESS);
+        ASSERT_EQ(recoveredLen, sizeof(recovered));
+        memcpy(output, cipher, cipherLen);
+        uint8_t prefixes[] = {0x02, 0x03, 0x06, 0x07, 0xff};
+        for (uint32_t i = 0; i < sizeof(prefixes); i++) {
+            output[inner->info->alg.kem.pqcCipherLen] = prefixes[i];
+            recoveredLen = sizeof(recovered);
+            ASSERT_EQ(CRYPT_EAL_PkeyDecaps(ctx, output, cipherLen, recovered, &recoveredLen),
+                      CRYPT_COMPOSITE_KEYLEN_ERROR);
+            ASSERT_EQ(recoveredLen, sizeof(recovered));
+        }
+        memset(output + pqcLength, 0xff, cipherLen - pqcLength);
+        output[pqcLength] = 0x04;
+        recoveredLen = sizeof(recovered);
+        ASSERT_NE(CRYPT_EAL_PkeyDecaps(ctx, output, cipherLen, recovered, &recoveredLen), CRYPT_SUCCESS);
+        ASSERT_EQ(recoveredLen, sizeof(recovered));
+    } else if (inner->info->tradAlg == CRYPT_PKEY_X25519) {
+        output[pqcLength] = 1; /* The encoded u = 1 point has low order. */
+        recoveredLen = sizeof(recovered);
+        memcpy(recovered, sentinel, sizeof(recovered));
+        ASSERT_EQ(CRYPT_EAL_PkeyDecaps(ctx, output, cipherLen, recovered, &recoveredLen),
+                  CRYPT_CURVE25519_KEY_COMPUTE_FAILED);
+        ASSERT_EQ(recoveredLen, sizeof(recovered));
+        ASSERT_EQ(ConstTimeMemcmp(recovered, sentinel, sizeof(recovered)), UINT32_MAX);
+    }
+    memcpy(output, cipher, cipherLen);
+    output[0] ^= 1;
+    memset(output + pqcLength, 0, cipherLen - pqcLength);
+    recoveredLen = sizeof(recovered);
+    memcpy(recovered, sentinel, sizeof(recovered));
+    ASSERT_NE(CRYPT_EAL_PkeyDecaps(ctx, output, cipherLen, recovered, &recoveredLen), CRYPT_SUCCESS);
+    ASSERT_EQ(recoveredLen, sizeof(recovered));
+    ASSERT_EQ(ConstTimeMemcmp(recovered, sentinel, sizeof(recovered)), UINT32_MAX);
+    if (inner->info->tradAlg == CRYPT_PKEY_RSA) {
+        ASSERT_TRUE(CompositeKemRejectRsaCipher(ctx, cipher, cipherLen));
+    }
+    success = true;
+EXIT:
+    BSL_SAL_CleanseData(recovered, sizeof(recovered));
+    return success;
+}
+
+static bool CompositeKemAllocFailure(CRYPT_EAL_PkeyCtx *ctx, int decaps, const uint8_t *cipher,
+    uint32_t cipherLen, const uint8_t *secret)
+{
+    bool success = false;
+    uint8_t output[1952];
+    uint8_t recovered[32];
+    uint8_t sentinel[32];
+    uint8_t checked[32];
+    uint32_t recoveredLen = sizeof(recovered);
+    memset(sentinel, 0xa5, sizeof(sentinel));
+    uint32_t outputLen = sizeof(output);
+    CRYPT_CompositeCtx *inner = ctx->key;
+    STUB_REPLACE(BSL_SAL_Malloc, STUB_BSL_SAL_Malloc);
+    STUB_EnableMallocFail(false);
+    STUB_ResetMallocCount();
+    outputLen = sizeof(output);
+    recoveredLen = sizeof(recovered);
+    ASSERT_EQ(decaps ? CRYPT_EAL_PkeyDecaps(ctx, cipher, cipherLen, recovered, &recoveredLen) :
+        CRYPT_EAL_PkeyEncaps(ctx, output, &outputLen, recovered, &recoveredLen), CRYPT_SUCCESS);
+    uint32_t total = STUB_GetMallocCallCount();
+    ASSERT_TRUE(total > 0);
+    for (uint32_t i = 0; i < total; i++) {
+        memcpy(recovered, sentinel, sizeof(recovered));
+        memset(output, 0xa5, sizeof(output));
+        outputLen = sizeof(output);
+        recoveredLen = sizeof(recovered);
+        STUB_ResetMallocCount();
+        STUB_SetMallocFailIndex(i);
+        STUB_EnableMallocFail(true);
+        int32_t ret = decaps ? CRYPT_EAL_PkeyDecaps(ctx, cipher, cipherLen, recovered, &recoveredLen) :
+            CRYPT_EAL_PkeyEncaps(ctx, output, &outputLen, recovered, &recoveredLen);
+        STUB_EnableMallocFail(false);
+        if (ret == CRYPT_SUCCESS && inner->info->tradAlg != CRYPT_PKEY_X25519) {
+            ASSERT_EQ(recoveredLen, sizeof(recovered));
+            if (!decaps) {
+                uint32_t checkedLen = sizeof(checked);
+                ASSERT_EQ(outputLen, cipherLen);
+                ASSERT_EQ(CRYPT_EAL_PkeyDecaps(ctx, output, outputLen, checked, &checkedLen), CRYPT_SUCCESS);
+                ASSERT_EQ(ConstTimeMemcmp(recovered, checked, sizeof(checked)), UINT32_MAX);
+            } else {
+                ASSERT_EQ(ConstTimeMemcmp(recovered, secret, 32), UINT32_MAX);
+            }
+            continue;
+        }
+        ASSERT_NE(ret, CRYPT_SUCCESS);
+        ASSERT_EQ(recoveredLen, sizeof(recovered));
+        ASSERT_COMPARE("failure preserves output", recovered, sizeof(recovered), sentinel, sizeof(sentinel));
+        if (!decaps) {
+            ASSERT_EQ(outputLen, sizeof(output));
+            for (uint32_t j = 0; j < sizeof(output); j++) {
+                ASSERT_EQ(output[j], 0xa5);
+            }
+        }
+    }
+    STUB_RESTORE(BSL_SAL_Malloc);
+    success = true;
+EXIT:
+    STUB_EnableMallocFail(false);
+    STUB_RESTORE(BSL_SAL_Malloc);
+    return success;
+}
+
+static bool CompositeKemPrimitiveFailure(CRYPT_EAL_PkeyCtx *ctx, int decaps, const uint8_t *cipher, uint32_t cipherLen)
+{
+    bool success = false;
+    uint8_t output[1952];
+    uint8_t recovered[32];
+    uint8_t sentinel[32];
+    uint32_t recoveredLen = sizeof(recovered);
+    memset(sentinel, 0xa5, sizeof(sentinel));
+    uint32_t outputLen = sizeof(output);
+    CRYPT_CompositeCtx *inner = ctx->key;
+    for (int component = 0; !decaps && component < (inner->info->tradAlg == CRYPT_PKEY_RSA ? 3 : 2); component++) {
+        g_compositeKemRandCall = 0;
+        g_compositeKemRandFail = component;
+        outputLen = sizeof(output);
+        recoveredLen = sizeof(recovered);
+        memset(output, 0xa5, sizeof(output));
+        memcpy(recovered, sentinel, sizeof(recovered));
+        ASSERT_NE(CRYPT_EAL_PkeyEncaps(ctx, output, &outputLen, recovered, &recoveredLen), CRYPT_SUCCESS);
+        ASSERT_EQ(outputLen, sizeof(output));
+        ASSERT_EQ(recoveredLen, sizeof(recovered));
+        ASSERT_EQ(ConstTimeMemcmp(recovered, sentinel, sizeof(recovered)), UINT32_MAX);
+        for (uint32_t j = 0; j < sizeof(output); j++) {
+            ASSERT_EQ(output[j], 0xa5);
+        }
+    }
+    g_compositeKemRandFail = -1;
+    for (int phase = 0; phase < 3; phase++) {
+        if (phase == 0) {
+            STUB_REPLACE(CRYPT_EAL_MdInit, CompositeKemFailMdInit);
+        } else if (phase == 1) {
+            STUB_REPLACE(CRYPT_EAL_MdUpdate, CompositeKemFailMdUpdate);
+        } else {
+            STUB_REPLACE(CRYPT_EAL_MdFinal, CompositeKemFailMdFinal);
+        }
+        outputLen = sizeof(output);
+        recoveredLen = sizeof(recovered);
+        memset(output, 0xa5, sizeof(output));
+        memcpy(recovered, sentinel, sizeof(recovered));
+        ASSERT_EQ(decaps ? CRYPT_EAL_PkeyDecaps(ctx, cipher, cipherLen, recovered, &recoveredLen) :
+                           CRYPT_EAL_PkeyEncaps(ctx, output, &outputLen, recovered, &recoveredLen),
+                  CRYPT_INVALID_ARG);
+        STUB_RESTORE(CRYPT_EAL_MdInit);
+        STUB_RESTORE(CRYPT_EAL_MdUpdate);
+        STUB_RESTORE(CRYPT_EAL_MdFinal);
+        ASSERT_EQ(recoveredLen, sizeof(recovered));
+        ASSERT_EQ(ConstTimeMemcmp(recovered, sentinel, sizeof(recovered)), UINT32_MAX);
+        if (!decaps) {
+            ASSERT_EQ(outputLen, sizeof(output));
+            for (uint32_t j = 0; j < sizeof(output); j++) {
+                ASSERT_EQ(output[j], 0xa5);
+            }
+        }
+    }
+    success = true;
+EXIT:
+    g_compositeKemRandFail = -1;
+    STUB_RESTORE(CRYPT_EAL_MdInit);
+    STUB_RESTORE(CRYPT_EAL_MdUpdate);
+    STUB_RESTORE(CRYPT_EAL_MdFinal);
+    return success;
+}
+#endif
+
+/* @
+ * @test SDV_CRYPTO_COMPOSITE_KEM_OPFAIL_TC001
+ * @brief Check operation boundaries, rejection semantics and allocation/random failures.
+ * @expect Failures preserve input lengths, output buffers and long-term keys, and permit reuse.
+ * @precon nan
+ @ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_COMPOSITE_KEM_OPFAIL_TC001(int type, int decaps)
+{
+#ifndef HITLS_CRYPTO_COMPOSITE_KEM
+    (void)type;
+    (void)decaps;
+    SKIP_TEST();
+#else
+    if (CompositeKemDisabled(type)) {
+        SKIP_TEST();
+    }
+    TestMemInit();
+    TestRandInit();
+    CRYPT_RandRegist(CompositeKemFailRand);
+    CRYPT_RandRegistEx(CompositeKemFailRandEx);
+    g_compositeKemRandFail = -1;
+    CompositeDetRandReset();
+    CRYPT_EAL_PkeyCtx *ctx = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_COMPOSITE);
+    uint8_t cipher[1952];
+    uint8_t secret[32];
+    uint8_t recovered[32];
+    uint32_t cipherLen = sizeof(cipher);
+    uint32_t secretLen = sizeof(secret);
+    uint32_t recoveredLen = sizeof(recovered);
+    ASSERT_TRUE(ctx != NULL);
+    ASSERT_EQ(CRYPT_EAL_PkeySetParaById(ctx, type), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyGen(ctx), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyEncaps(ctx, cipher, &cipherLen, secret, &secretLen), CRYPT_SUCCESS);
+    if (!decaps) {
+        ASSERT_TRUE(CompositeKemRejectCipher(ctx, type, cipher, cipherLen, secret));
+    }
+    ASSERT_TRUE(CompositeKemAllocFailure(ctx, decaps, cipher, cipherLen, secret));
+    ASSERT_TRUE(CompositeKemPrimitiveFailure(ctx, decaps, cipher, cipherLen));
+    recoveredLen = sizeof(recovered);
+    ASSERT_EQ(CRYPT_EAL_PkeyDecaps(ctx, cipher, cipherLen, recovered, &recoveredLen), CRYPT_SUCCESS);
+    ASSERT_EQ(ConstTimeMemcmp(secret, recovered, sizeof(secret)), UINT32_MAX);
+EXIT:
+    STUB_EnableMallocFail(false);
+    STUB_RESTORE(BSL_SAL_Malloc);
+    g_compositeKemRandFail = -1;
+    STUB_RESTORE(CRYPT_EAL_MdInit);
+    STUB_RESTORE(CRYPT_EAL_MdUpdate);
+    STUB_RESTORE(CRYPT_EAL_MdFinal);
+    CRYPT_EAL_PkeyFreeCtx(ctx);
     TestRandDeInit();
 #endif
 }

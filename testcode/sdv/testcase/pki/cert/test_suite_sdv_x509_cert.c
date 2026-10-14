@@ -16,11 +16,13 @@
 /* BEGIN_HEADER */
 
 #include "bsl_sal.h"
+#include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
 #include "stub_utils.h"
 #include "hitls_pki_cert.h"
 #include "hitls_pki_csr.h"
+#include "hitls_pki_crl.h"
 #include "hitls_pki_errno.h"
 #include "crypt_errno.h"
 #include "crypt_eal_pkey.h"
@@ -37,9 +39,13 @@
 #include "crypt_eal_codecs.h"
 #include "crypt_eal_provider.h"
 #include "crypt_eal_rand.h"
+#include "crypt_util_rand.h"
 #include "hitls_x509_local.h"
 #include "stub_utils.h"
 #include "test.h"
+#include "hitls_pki_x509.h"
+#include "hitls_x509_verify.h"
+#include "bsl_bytes.h"
 /* END_HEADER */
 
 /* ============================================================================
@@ -135,7 +141,7 @@ EXIT:
 /**
  * @test   SDV_X509_CERT_PARSE_COMPOSITE_FORMAT_TC001
  * @title  Parse a composite certificate and verify its public-key and signature algorithm identifiers.
- * @precon HITLS_PKI_X509_CRT_PARSE and HITLS_CRYPTO_COMPOSITE are enabled.
+ * @precon HITLS_PKI_X509_CRT_PARSE and HITLS_CRYPTO_COMPOSITE_SIGN are enabled.
  * @brief  Parse the PEM certificate, extract its subject public key and signature algorithm,
  *         then verify the public key type is composite and both identifiers match the expected OID.
  * @expect Certificate parsing succeeds, the extracted public key is composite, and the public-key
@@ -144,7 +150,7 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_X509_CERT_PARSE_COMPOSITE_FORMAT_TC001(char *path, int expOid)
 {
-#if !defined(HITLS_PKI_X509_CRT_PARSE) || !defined(HITLS_CRYPTO_COMPOSITE)
+#if !defined(HITLS_PKI_X509_CRT_PARSE) || !defined(HITLS_CRYPTO_COMPOSITE_SIGN)
     (void)path;
     (void)expOid;
     SKIP_TEST();
@@ -174,7 +180,7 @@ EXIT:
 /**
  * @test   SDV_X509_CERT_PARSE_COMPOSITE_NEGATIVE_TC001
  * @title  Reject a composite certificate whose signature AlgorithmIdentifier carries an explicit NULL parameter.
- * @precon HITLS_PKI_X509_CRT_PARSE and HITLS_CRYPTO_COMPOSITE are enabled.
+ * @precon HITLS_PKI_X509_CRT_PARSE and HITLS_CRYPTO_COMPOSITE_SIGN are enabled.
  * @brief
  *   1. Load a pre-generated malformed composite PEM certificate sample from testdata.
  *   2. Parse the malformed certificate file and verify the parser rejects it.
@@ -185,7 +191,7 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_X509_CERT_PARSE_COMPOSITE_NEGATIVE_TC001(char *path, int expRet)
 {
-#if !defined(HITLS_PKI_X509_CRT_PARSE) || !defined(HITLS_CRYPTO_COMPOSITE)
+#if !defined(HITLS_PKI_X509_CRT_PARSE) || !defined(HITLS_CRYPTO_COMPOSITE_SIGN)
     (void)path;
     (void)expRet;
     SKIP_TEST();
@@ -1290,6 +1296,567 @@ static int32_t SetCert(HITLS_X509_Cert *raw, HITLS_X509_Cert *new)
 EXIT:
     return ret;
 }
+
+#if defined(HITLS_CRYPTO_COMPOSITE_KEM) && defined(HITLS_PKI_X509_CRT_GEN) && \
+    defined(HITLS_PKI_X509_CRT_PARSE) && defined(HITLS_PKI_X509_VFY)
+static bool CheckCompositeKemExchange(CRYPT_EAL_PkeyCtx *pub, CRYPT_EAL_PkeyCtx *prv)
+{
+    bool success = false;
+    uint8_t cipher[1952];
+    uint8_t secret[32];
+    uint8_t recovered[32];
+    uint32_t cipherLen = sizeof(cipher);
+    uint32_t secretLen = sizeof(secret);
+    uint32_t recoveredLen = sizeof(recovered);
+    ASSERT_EQ(CRYPT_EAL_PkeyEncaps(pub, cipher, &cipherLen, secret, &secretLen), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyDecaps(prv, cipher, cipherLen, recovered, &recoveredLen), CRYPT_SUCCESS);
+    ASSERT_EQ(secretLen, sizeof(secret));
+    ASSERT_EQ(recoveredLen, secretLen);
+    ASSERT_COMPARE("shared secret", recovered, recoveredLen, secret, secretLen);
+    success = true;
+EXIT:
+    BSL_SAL_CleanseData(secret, sizeof(secret));
+    BSL_SAL_CleanseData(recovered, sizeof(recovered));
+    return success;
+}
+
+static bool BuildCompositeKemCertChain(HITLS_X509_Cert **certs, HITLS_X509_List **chain)
+{
+    bool success = false;
+    *chain = BSL_LIST_New(sizeof(HITLS_X509_Cert *));
+    ASSERT_NE(*chain, NULL);
+    for (uint32_t i = 0; i < 3; i++) {
+        if (certs[i] == NULL) {
+            continue;
+        }
+        int refs = 0;
+        ASSERT_EQ(HITLS_X509_CertCtrl(certs[i], HITLS_X509_REF_UP, &refs, sizeof(refs)), 0);
+        int32_t ret = BSL_LIST_AddElement(*chain, certs[i], BSL_LIST_POS_END);
+        if (ret != 0) {
+            HITLS_X509_CertFree(certs[i]);
+        }
+        ASSERT_EQ(ret, 0);
+    }
+    success = true;
+EXIT:
+    return success;
+}
+#endif
+
+#if defined(HITLS_CRYPTO_COMPOSITE_KEM) && defined(HITLS_PKI_X509_CRT_PARSE) && defined(HITLS_PKI_X509_VFY) && \
+    defined(HITLS_CRYPTO_KEY_DECODE) && defined(HITLS_PKI_X509_CRT_GEN)
+static int32_t ParseCompositeKemSampleCert(const char *sampleDir, const char *name, int format, int provider,
+                                       HITLS_X509_Cert **cert)
+{
+    char path[512];
+    int ret = snprintf(path, sizeof(path), "%s/%s.%s", sampleDir, name, format == BSL_FORMAT_ASN1 ? "der" : "pem");
+    if (ret < 0 || (uint32_t)ret >= sizeof(path)) {
+        return HITLS_X509_ERR_INVALID_PARAM;
+    }
+    return provider ?
+               HITLS_X509_ProviderCertParseFile(NULL, NULL, format == BSL_FORMAT_ASN1 ? "ASN1" : "PEM", path, cert) :
+               HITLS_X509_CertParseFile(format, path, cert);
+}
+#endif
+
+#if defined(HITLS_CRYPTO_COMPOSITE_KEM) && defined(HITLS_PKI_X509_CRT_PARSE) && defined(HITLS_PKI_X509_VFY) && \
+    defined(HITLS_CRYPTO_KEY_DECODE) && defined(HITLS_PKI_X509_CRT_GEN)
+static bool CheckCompositeKemCertSample(const char *keyDir, int type, CRYPT_EAL_PkeyCtx *pub)
+{
+    bool success = false;
+    CRYPT_EAL_PkeyCtx *prv = NULL;
+    BSL_Buffer cipherFile = {0};
+    BSL_Buffer secretFile = {0};
+    char path[512];
+    uint8_t recovered[32];
+    ASSERT_TRUE(snprintf(path, sizeof(path), "%s/privatekey.der", keyDir) > 0);
+    ASSERT_EQ(CRYPT_EAL_DecodeFileKey(BSL_FORMAT_ASN1, CRYPT_PRIKEY_PKCS8_UNENCRYPT, path, NULL, 0, &prv),
+              CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyGetParaId(prv), type);
+    ASSERT_TRUE(snprintf(path, sizeof(path), "%s/ciphertext0.bin", keyDir) > 0);
+    ASSERT_EQ(BSL_SAL_ReadFile(path, &cipherFile.data, &cipherFile.dataLen), BSL_SUCCESS);
+    ASSERT_TRUE(snprintf(path, sizeof(path), "%s/secret0.bin", keyDir) > 0);
+    ASSERT_EQ(BSL_SAL_ReadFile(path, &secretFile.data, &secretFile.dataLen), BSL_SUCCESS);
+    ASSERT_EQ(secretFile.dataLen, sizeof(recovered));
+    uint32_t recoveredLen = sizeof(recovered);
+    ASSERT_EQ(CRYPT_EAL_PkeyDecaps(prv, cipherFile.data, cipherFile.dataLen, recovered, &recoveredLen), CRYPT_SUCCESS);
+    ASSERT_EQ(recoveredLen, secretFile.dataLen);
+    ASSERT_EQ(ConstTimeMemcmp(recovered, secretFile.data, recoveredLen), UINT32_MAX);
+    ASSERT_TRUE(CheckCompositeKemExchange(pub, prv));
+    success = true;
+EXIT:
+    CRYPT_EAL_PkeyFreeCtx(prv);
+    BSL_SAL_Free(cipherFile.data);
+    BSL_SAL_ClearFree(secretFile.data, secretFile.dataLen);
+    BSL_SAL_CleanseData(recovered, sizeof(recovered));
+    return success;
+}
+#endif
+
+/**
+ * @test SDV_X509_CERT_COMPOSITE_KEM_SAMPLE_TC001
+ * @brief Verify saved sample KEM certificate chains and consume the corresponding sample KEM ciphertext.
+ * @expect Four signing CA types support direct/intermediate chains; invalid KEM usages fail.
+ * @precon Static Composite fixtures are present.
+ */
+/* BEGIN_CASE */
+void SDV_X509_CERT_COMPOSITE_KEM_SAMPLE_TC001(char *certDir, char *keyDir, int type, char *caName, int format, int provider,
+                                          int intermediate, int invalidUsage)
+{
+#if !defined(HITLS_CRYPTO_COMPOSITE_KEM) || !defined(HITLS_PKI_X509_CRT_PARSE) || !defined(HITLS_PKI_X509_VFY) || \
+    !defined(HITLS_CRYPTO_KEY_DECODE) || !defined(HITLS_PKI_X509_CRT_GEN)
+    (void)certDir;
+    (void)keyDir;
+    (void)type;
+    (void)caName;
+    (void)format;
+    (void)provider;
+    (void)intermediate;
+    (void)invalidUsage;
+    SKIP_TEST();
+#else
+#ifndef HITLS_CRYPTO_COMPOSITE_SIGN
+    if (strcmp(caName, "composite") == 0) {
+        SKIP_TEST();
+    }
+#endif
+    TestMemInit();
+    CRYPT_RandRegist(TestSimpleRand);
+#ifdef HITLS_CRYPTO_PROVIDER
+    CRYPT_RandRegistEx(TestSimpleRandEx);
+#endif
+    HITLS_X509_Cert *certs[3] = {NULL, NULL, NULL};
+    HITLS_X509_Cert *roundtrip = NULL;
+    HITLS_X509_StoreCtx *store = NULL;
+    BslList *chain = NULL;
+    CRYPT_EAL_PkeyCtx *pub = NULL;
+    BSL_Buffer encoded = {0};
+    BSL_Buffer original = {0};
+    char name[128];
+    char path[512];
+    int64_t verifyTime = 1790812800;
+    ASSERT_TRUE(snprintf(name, sizeof(name), invalidUsage ? "leaf-invalid-ku" : "leaf-%s%s", caName,
+                         intermediate ? "-intermediate" : "") > 0);
+    ASSERT_EQ(ParseCompositeKemSampleCert(certDir, name, format, provider, &certs[0]), HITLS_PKI_SUCCESS);
+    ASSERT_TRUE(snprintf(name, sizeof(name), "../ca/%s-root", caName) > 0);
+    ASSERT_EQ(ParseCompositeKemSampleCert(certDir, name, format, provider, &certs[2]), HITLS_PKI_SUCCESS);
+    if (intermediate) {
+        ASSERT_TRUE(snprintf(name, sizeof(name), "../ca/%s-intermediate", caName) > 0);
+        ASSERT_EQ(ParseCompositeKemSampleCert(certDir, name, format, provider, &certs[1]), HITLS_PKI_SUCCESS);
+    }
+    store = HITLS_X509_StoreCtxNew();
+    ASSERT_NE(store, NULL);
+    ASSERT_EQ(HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_SET_TIME, &verifyTime, sizeof(verifyTime)), 0);
+    ASSERT_EQ(HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_DEEP_COPY_SET_CA, certs[2], sizeof(HITLS_X509_Cert)),
+              HITLS_PKI_SUCCESS);
+    ASSERT_TRUE(BuildCompositeKemCertChain(certs, &chain));
+    ASSERT_EQ(HITLS_X509_CertVerify(store, chain), invalidUsage ? HITLS_X509_ERR_EXT_KU : HITLS_PKI_SUCCESS);
+    if (invalidUsage) {
+        goto EXIT;
+    }
+    ASSERT_EQ(HITLS_X509_CertGenBuff(BSL_FORMAT_ASN1, certs[0], &encoded), HITLS_PKI_SUCCESS);
+    ASSERT_TRUE(
+        snprintf(path, sizeof(path), "%s/leaf-%s%s.der", certDir, caName, intermediate ? "-intermediate" : "") > 0);
+    ASSERT_EQ(BSL_SAL_ReadFile(path, &original.data, &original.dataLen), BSL_SUCCESS);
+    ASSERT_EQ(encoded.dataLen, original.dataLen);
+    ASSERT_COMPARE("sample certificate DER roundtrip", encoded.data, encoded.dataLen, original.data, original.dataLen);
+    ASSERT_EQ(HITLS_X509_CertParseBuff(BSL_FORMAT_ASN1, &encoded, &roundtrip), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CertCtrl(roundtrip, HITLS_X509_GET_PUBKEY, &pub, sizeof(pub)), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyGetParaId(pub), type);
+    ASSERT_TRUE(CheckCompositeKemCertSample(keyDir, type, pub));
+EXIT:
+    BSL_LIST_FREE(chain, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);
+    HITLS_X509_StoreCtxFree(store);
+    for (uint32_t i = 0; i < 3; i++) {
+        HITLS_X509_CertFree(certs[i]);
+    }
+    HITLS_X509_CertFree(roundtrip);
+    CRYPT_EAL_PkeyFreeCtx(pub);
+    BSL_SAL_FREE(encoded.data);
+    BSL_SAL_FREE(original.data);
+    CRYPT_RandRegist(NULL);
+#ifdef HITLS_CRYPTO_PROVIDER
+    CRYPT_RandRegistEx(NULL);
+#endif
+#endif
+}
+/* END_CASE */
+
+#if defined(HITLS_CRYPTO_COMPOSITE_KEM) && defined(HITLS_PKI_X509_CRT_GEN)
+static int32_t SetCompositeKemCert(HITLS_X509_Cert *cert, CRYPT_EAL_PkeyCtx *key, bool root, int usage, bool isCa)
+{
+    int32_t ret = 1;
+    int32_t version = HITLS_X509_VERSION_3;
+    uint8_t serial = root ? 1 : 2;
+    BSL_TIME before = {.year = 2026, .month = 1, .day = 1};
+    BSL_TIME after = {.year = 2030, .month = 1, .day = 1};
+    BslList *issuer = HITLS_X509_DnListNew();
+    BslList *subject = HITLS_X509_DnListNew();
+    HITLS_X509_DN rootName = {BSL_CID_AT_COMMONNAME, (uint8_t *)"Composite CA", 12};
+    HITLS_X509_DN leafName = {BSL_CID_AT_COMMONNAME, (uint8_t *)"Composite KEM", 13};
+    HITLS_X509_ExtKeyUsage ku = {true, (uint32_t)usage};
+    HITLS_X509_ExtBCons bc = {true, isCa, -1};
+    ASSERT_NE(issuer, NULL);
+    ASSERT_NE(subject, NULL);
+    ASSERT_EQ(HITLS_X509_AddDnName(issuer, &rootName, 1), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_AddDnName(subject, root ? &rootName : &leafName, 1), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_SET_VERSION, &version, sizeof(version)), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_SET_SERIALNUM, &serial, sizeof(serial)), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_SET_BEFORE_TIME, &before, sizeof(before)), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_SET_AFTER_TIME, &after, sizeof(after)), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_SET_PUBKEY, key, sizeof(void *)), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_SET_ISSUER_DN, issuer, sizeof(BslList)), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_SET_SUBJECT_DN, subject, sizeof(BslList)), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_EXT_SET_BCONS, &bc, sizeof(bc)), HITLS_PKI_SUCCESS);
+    if (usage >= 0) {
+        ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_EXT_SET_KUSAGE, &ku, sizeof(ku)), HITLS_PKI_SUCCESS);
+    }
+    ret = HITLS_PKI_SUCCESS;
+EXIT:
+    HITLS_X509_DnListFree(issuer);
+    HITLS_X509_DnListFree(subject);
+    return ret;
+}
+#endif
+
+#if defined(HITLS_CRYPTO_COMPOSITE_KEM) && defined(HITLS_PKI_X509_CRT_GEN) && defined(HITLS_PKI_X509_CRT_PARSE) && defined(HITLS_PKI_X509_VFY)
+static bool CheckCompositeKemCertOid(const BSL_Buffer *leafBuff, int type, int provider)
+{
+    bool success = false;
+    BSL_Buffer invalidBuff = {0};
+    HITLS_X509_Cert *invalidLeaf = NULL;
+    BslOidString *oid = BSL_OBJ_GetOID(type);
+    ASSERT_NE(oid, NULL);
+    uint32_t offset = 0;
+    while (offset + oid->octetLen <= leafBuff->dataLen &&
+           memcmp(leafBuff->data + offset, oid->octs, oid->octetLen) != 0) {
+        offset++;
+    }
+    ASSERT_TRUE(offset + oid->octetLen <= leafBuff->dataLen);
+    invalidBuff.data = BSL_SAL_Malloc(leafBuff->dataLen);
+    invalidBuff.dataLen = leafBuff->dataLen;
+    ASSERT_NE(invalidBuff.data, NULL);
+    for (uint32_t i = 0; i < 2; i++) {
+        memcpy(invalidBuff.data, leafBuff->data, leafBuff->dataLen);
+        invalidBuff.data[offset + oid->octetLen - 1] = i == 0 ? 65 : 127;
+        ASSERT_NE(provider ? HITLS_X509_ProviderCertParseBuff(NULL, NULL, "ASN1", &invalidBuff, &invalidLeaf) :
+                             HITLS_X509_CertParseBuff(BSL_FORMAT_ASN1, &invalidBuff, &invalidLeaf),
+                  HITLS_PKI_SUCCESS);
+        ASSERT_EQ(invalidLeaf, NULL);
+    }
+    TestErrClear();
+    success = true;
+EXIT:
+    BSL_SAL_Free(invalidBuff.data);
+    HITLS_X509_CertFree(invalidLeaf);
+    return success;
+}
+#endif
+
+#if defined(HITLS_CRYPTO_COMPOSITE_KEM) && defined(HITLS_PKI_X509_CRT_GEN) && defined(HITLS_PKI_X509_CRT_PARSE) && defined(HITLS_PKI_X509_VFY)
+static bool CheckCompositeKemCertPolicy(CRYPT_EAL_PkeyCtx *pubKey, HITLS_X509_Cert *parsedLeaf,
+    HITLS_X509_StoreCtx *store, HITLS_X509_StoreCtx *untrusted, HITLS_X509_List *chain,
+    int type, int caId, uint32_t secBits)
+{
+    bool success = false;
+#if defined(HITLS_CRYPTO_MLDSA) || defined(HITLS_CRYPTO_SLH_DSA) || defined(HITLS_CRYPTO_COMPOSITE_SIGN)
+    (void)caId;
+#endif
+    ASSERT_EQ(HITLS_X509_CheckAlg(pubKey, &parsedLeaf->signAlgId), HITLS_X509_ERR_VFY_SIGNALG_NOT_MATCH);
+    HITLS_X509_Asn1AlgId alg = {.algId = BSL_CID_MLDSA44_RSA2048_PSS_SHA256};
+    ASSERT_EQ(HITLS_X509_CheckAlg(pubKey, &alg), HITLS_X509_ERR_VFY_SIGNALG_NOT_MATCH);
+    alg.algId = type;
+    ASSERT_EQ(HITLS_X509_CheckAlg(pubKey, &alg), HITLS_X509_ERR_VFY_GET_SIGNID);
+    int32_t verifyRet = HITLS_X509_CheckSignature(pubKey, parsedLeaf->tbs.tbsRawData, parsedLeaf->tbs.tbsRawDataLen,
+        &parsedLeaf->signAlgId, &parsedLeaf->signature);
+#if defined(HITLS_CRYPTO_MLDSA) || defined(HITLS_CRYPTO_SLH_DSA) || defined(HITLS_CRYPTO_COMPOSITE_SIGN)
+    ASSERT_EQ(verifyRet, HITLS_X509_ERR_VFY_SIGNALG_NOT_MATCH);
+#else
+    ASSERT_EQ(verifyRet, caId == CRYPT_PKEY_RSA ? CRYPT_NOT_SUPPORT : CRYPT_EAL_ALG_NOT_SUPPORT);
+#endif
+    ASSERT_NE(HITLS_X509_CertVerify(untrusted, chain), HITLS_PKI_SUCCESS);
+    parsedLeaf->signature.buff[0] ^= 1;
+    int32_t tamperedRet = HITLS_X509_CertVerify(store, chain);
+    parsedLeaf->signature.buff[0] ^= 1;
+    ASSERT_NE(tamperedRet, HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_SET_SECBITS, &secBits, sizeof(secBits)), 0);
+    ASSERT_EQ(HITLS_X509_CertVerify(store, chain), HITLS_PKI_SUCCESS);
+    secBits++;
+    ASSERT_EQ(HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_SET_SECBITS, &secBits, sizeof(secBits)), 0);
+    ASSERT_EQ(HITLS_X509_CertVerify(store, chain), HITLS_X509_ERR_VFY_CHECK_SECBITS);
+    success = true;
+EXIT:
+    return success;
+}
+#endif
+
+#if defined(HITLS_CRYPTO_COMPOSITE_KEM) && defined(HITLS_PKI_X509_CRT_GEN) && defined(HITLS_PKI_X509_CRT_PARSE) && defined(HITLS_PKI_X509_VFY)
+static bool SetCompositeKemCaKey(CRYPT_EAL_PkeyCtx *caKey, int caId, int type)
+{
+    bool success = false;
+    if (caId == CRYPT_PKEY_RSA) {
+        uint8_t e[] = {1, 0, 1};
+        CRYPT_EAL_PkeyPara para = {.id = CRYPT_PKEY_RSA, .para.rsaPara = {e, sizeof(e), 3072}};
+        ASSERT_EQ(CRYPT_EAL_PkeySetPara(caKey, &para), CRYPT_SUCCESS);
+    } else {
+        int32_t caPara = caId == CRYPT_PKEY_ECDSA ?
+            (type == CRYPT_COMPOSITE_MLKEM768_X25519_SHA3_256 ? CRYPT_ECC_NISTP256 : CRYPT_ECC_NISTP521) :
+            caId == CRYPT_PKEY_ML_DSA ? CRYPT_MLDSA_TYPE_MLDSA_65 : CRYPT_COMPOSITE_MLDSA44_ED25519_SHA512;
+        ASSERT_EQ(CRYPT_EAL_PkeySetParaById(caKey, caPara), CRYPT_SUCCESS);
+    }
+    success = true;
+EXIT:
+    return success;
+}
+#endif
+
+/**
+ * @test SDV_X509_CERT_COMPOSITE_KEM_SIGN_REJECT_TC001
+ * @brief A Composite KEM key cannot sign a certificate, CSR or CRL.
+ * @expect All enabled signing interfaces reject the KEM key.
+ */
+/* BEGIN_CASE */
+void SDV_X509_CERT_COMPOSITE_KEM_SIGN_REJECT_TC001(void)
+{
+#if !defined(HITLS_CRYPTO_COMPOSITE_KEM) || !defined(HITLS_CRYPTO_X25519) || \
+    !defined(HITLS_PKI_X509_CRT_GEN)
+    SKIP_TEST();
+#else
+    CRYPT_EAL_PkeyCtx *kemKey = NULL;
+    HITLS_X509_Cert *leaf = NULL;
+#ifdef HITLS_PKI_X509_CSR_GEN
+    HITLS_X509_Csr *csr = NULL;
+#endif
+#ifdef HITLS_PKI_X509_CRL_GEN
+    HITLS_X509_Crl *crl = NULL;
+#endif
+    int32_t mdId = CRYPT_MD_SHA256;
+    TestMemInit();
+    TestRandInit();
+    kemKey = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_COMPOSITE);
+    leaf = HITLS_X509_CertNew();
+    ASSERT_NE(kemKey, NULL);
+    ASSERT_NE(leaf, NULL);
+    ASSERT_EQ(CRYPT_EAL_PkeySetParaById(kemKey, CRYPT_COMPOSITE_MLKEM768_X25519_SHA3_256), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyGen(kemKey), CRYPT_SUCCESS);
+    ASSERT_EQ(SetCompositeKemCert(leaf, kemKey, false, HITLS_X509_EXT_KU_KEY_ENCIPHERMENT, false), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CertSign(mdId, kemKey, NULL, leaf), HITLS_X509_ERR_CERT_SIGN_ALG);
+    TestErrClear();
+#ifdef HITLS_PKI_X509_CSR_GEN
+    csr = HITLS_X509_CsrNew();
+    ASSERT_NE(csr, NULL);
+    ASSERT_EQ(HITLS_X509_CsrCtrl(csr, HITLS_X509_SET_PUBKEY, kemKey, sizeof(void *)), HITLS_PKI_SUCCESS);
+    HITLS_X509_DN csrName = {BSL_CID_AT_COMMONNAME, (uint8_t *)"Composite KEM", 13};
+    ASSERT_EQ(HITLS_X509_CsrCtrl(csr, HITLS_X509_ADD_SUBJECT_NAME, &csrName, 1), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CsrSign(mdId, kemKey, NULL, csr), HITLS_X509_ERR_CERT_SIGN_ALG);
+    TestErrClear();
+#endif
+#ifdef HITLS_PKI_X509_CRL_GEN
+    crl = HITLS_X509_CrlNew();
+    ASSERT_NE(crl, NULL);
+    ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_SET_ISSUER_DN, leaf->tbs.issuerName, sizeof(BslList)),
+              HITLS_PKI_SUCCESS);
+    BSL_TIME update = {.year = 2026, .month = 1, .day = 1};
+    ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_SET_BEFORE_TIME, &update, sizeof(update)), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CrlSign(mdId, kemKey, NULL, crl), HITLS_X509_ERR_CERT_SIGN_ALG);
+    TestErrClear();
+#endif
+EXIT:
+#ifdef HITLS_PKI_X509_CSR_GEN
+    HITLS_X509_CsrFree(csr);
+#endif
+#ifdef HITLS_PKI_X509_CRL_GEN
+    HITLS_X509_CrlFree(crl);
+#endif
+    HITLS_X509_CertFree(leaf);
+    CRYPT_EAL_PkeyFreeCtx(kemKey);
+    TestRandDeInit();
+#endif
+}
+/* END_CASE */
+
+#if defined(HITLS_CRYPTO_COMPOSITE_KEM) && defined(HITLS_PKI_X509_CRT_GEN) && \
+    defined(HITLS_PKI_X509_CRT_PARSE) && defined(HITLS_PKI_X509_VFY)
+static bool ParseCompositeKemGeneratedCert(HITLS_X509_Cert *cert, int format, int provider, int type,
+    HITLS_X509_Cert **parsed)
+{
+    bool success = false;
+    BSL_Buffer encoded = {0};
+    ASSERT_EQ(HITLS_X509_CertGenBuff(format, cert, &encoded), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(provider ? HITLS_X509_ProviderCertParseBuff(NULL, NULL,
+        format == BSL_FORMAT_PEM ? "PEM" : "ASN1", &encoded, parsed) :
+        HITLS_X509_CertParseBuff(format, &encoded, parsed), HITLS_PKI_SUCCESS);
+    if (type != 0 && format == BSL_FORMAT_ASN1) {
+        ASSERT_TRUE(CheckCompositeKemCertOid(&encoded, type, provider));
+    }
+    success = true;
+EXIT:
+    BSL_SAL_Free(encoded.data);
+    return success;
+}
+
+static bool CreateCompositeKemIntermediate(CRYPT_EAL_PkeyCtx *caKey, HITLS_X509_Cert *leaf, int mdId, int format,
+    CRYPT_EAL_PkeyCtx **midKey, HITLS_X509_Cert **parsedMid)
+{
+    bool success = false;
+    HITLS_X509_Cert *mid = NULL;
+    BslList *midName = NULL;
+    *midKey = CRYPT_EAL_PkeyDupCtx(caKey);
+    mid = HITLS_X509_CertNew();
+    midName = HITLS_X509_DnListNew();
+    ASSERT_NE(*midKey, NULL);
+    ASSERT_NE(mid, NULL);
+    ASSERT_NE(midName, NULL);
+    ASSERT_EQ(CRYPT_EAL_PkeyGen(*midKey), CRYPT_SUCCESS);
+    ASSERT_EQ(SetCompositeKemCert(mid, *midKey, true, HITLS_X509_EXT_KU_KEY_CERT_SIGN, true), 0);
+    HITLS_X509_DN name = {BSL_CID_AT_COMMONNAME, (uint8_t *)"Composite Intermediate", 22};
+    ASSERT_EQ(HITLS_X509_AddDnName(midName, &name, 1), 0);
+    ASSERT_EQ(HITLS_X509_CertCtrl(mid, HITLS_X509_SET_SUBJECT_DN, midName, sizeof(BslList)), 0);
+    ASSERT_EQ(HITLS_X509_CertCtrl(leaf, HITLS_X509_SET_ISSUER_DN, midName, sizeof(BslList)), 0);
+    ASSERT_EQ(HITLS_X509_CertSign(mdId, caKey, NULL, mid), 0);
+    ASSERT_TRUE(ParseCompositeKemGeneratedCert(mid, format, 0, 0, parsedMid));
+    success = true;
+EXIT:
+    HITLS_X509_DnListFree(midName);
+    HITLS_X509_CertFree(mid);
+    return success;
+}
+#endif
+
+/**
+ * @test SDV_X509_CERT_COMPOSITE_KEM_TC001
+ * @brief Sign and parse a new Composite KEM certificate, verify its trust chain and perform KEM.
+ * @expect Valid certificates complete KEM; invalid usages, signatures, trust and security thresholds fail.
+ * @precon Composite KEM, X25519 and X.509 generation, parsing and verification are enabled.
+ */
+/* BEGIN_CASE */
+void SDV_X509_CERT_COMPOSITE_KEM_TC001(int type, int caId, int format, int usage, int isCa, int provider,
+                                       int intermediate)
+{
+#if !defined(HITLS_CRYPTO_COMPOSITE_KEM) || \
+    !defined(HITLS_PKI_X509_CRT_GEN) || !defined(HITLS_PKI_X509_CRT_PARSE) || !defined(HITLS_PKI_X509_VFY)
+    SKIP_TEST();
+#else
+#ifndef HITLS_CRYPTO_RSA
+    if (caId == CRYPT_PKEY_RSA) {
+        SKIP_TEST();
+    }
+#endif
+#ifndef HITLS_CRYPTO_ECDSA
+    if (caId == CRYPT_PKEY_ECDSA) {
+        SKIP_TEST();
+    }
+#endif
+#ifndef HITLS_CRYPTO_MLDSA
+    if (caId == CRYPT_PKEY_ML_DSA) {
+        SKIP_TEST();
+    }
+#endif
+#ifndef HITLS_CRYPTO_COMPOSITE_SIGN
+    if (caId == CRYPT_PKEY_COMPOSITE) {
+        SKIP_TEST();
+    }
+#endif
+    CRYPT_EAL_PkeyCtx *caKey = NULL;
+    CRYPT_EAL_PkeyCtx *kemKey = NULL;
+    CRYPT_EAL_PkeyCtx *pubKey = NULL;
+    CRYPT_EAL_PkeyCtx *midKey = NULL;
+    HITLS_X509_Cert *ca = NULL;
+    HITLS_X509_Cert *leaf = NULL;
+    HITLS_X509_Cert *parsedCa = NULL;
+    HITLS_X509_Cert *parsedLeaf = NULL;
+    HITLS_X509_Cert *parsedMid = NULL;
+    HITLS_X509_StoreCtx *store = NULL;
+    HITLS_X509_StoreCtx *untrusted = NULL;
+    HITLS_X509_List *chain = NULL;
+    int32_t paraId = type;
+    uint32_t secBits = type == CRYPT_COMPOSITE_MLKEM768_RSA2048_SHA3_256 ? 112 :
+        type == CRYPT_COMPOSITE_MLKEM1024_ECDH_P521_SHA3_256 ? 256 :
+        (type == CRYPT_COMPOSITE_MLKEM768_ECDH_P384_SHA3_256 ||
+         type == CRYPT_COMPOSITE_MLKEM1024_ECDH_P384_SHA3_256 ||
+         type == CRYPT_COMPOSITE_MLKEM1024_ECDH_BRAINPOOLP384R1_SHA3_256) ? 192 : 128;
+    int32_t mdId = caId == CRYPT_PKEY_COMPOSITE || type != CRYPT_COMPOSITE_MLKEM768_X25519_SHA3_256 ?
+        CRYPT_MD_SHA512 : CRYPT_MD_SHA256;
+    int64_t verifyTime = 1790000000;
+    TestMemInit();
+    TestRandInit();
+    caKey = CRYPT_EAL_PkeyNewCtx(caId);
+    kemKey = provider ?
+        CRYPT_EAL_ProviderPkeyNewCtx(NULL, CRYPT_PKEY_COMPOSITE, CRYPT_EAL_PKEY_KEM_OPERATE, NULL) :
+        CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_COMPOSITE);
+    ASSERT_NE(caKey, NULL);
+    ASSERT_NE(kemKey, NULL);
+    ASSERT_TRUE(SetCompositeKemCaKey(caKey, caId, type));
+    ASSERT_EQ(CRYPT_EAL_PkeyGen(caKey), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeySetParaById(kemKey, paraId), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyGen(kemKey), CRYPT_SUCCESS);
+    ca = HITLS_X509_CertNew();
+    leaf = HITLS_X509_CertNew();
+    ASSERT_NE(ca, NULL);
+    ASSERT_NE(leaf, NULL);
+    ASSERT_EQ(SetCompositeKemCert(ca, caKey, true, HITLS_X509_EXT_KU_KEY_CERT_SIGN, true), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(SetCompositeKemCert(leaf, kemKey, false,
+        usage == 0 ? HITLS_X509_EXT_KU_KEY_ENCIPHERMENT : usage, isCa != 0), HITLS_PKI_SUCCESS);
+    if (usage == 0) {
+        HITLS_X509_ExtKeyUsage ku = {true, 0};
+        ASSERT_EQ(HITLS_X509_CertCtrl(leaf, HITLS_X509_EXT_SET_KUSAGE, &ku, sizeof(ku)), HITLS_X509_ERR_EXT_KU);
+        goto EXIT;
+    }
+    ASSERT_EQ(HITLS_X509_CertSign(mdId, caKey, NULL, ca), HITLS_PKI_SUCCESS);
+    if (intermediate) {
+        ASSERT_TRUE(CreateCompositeKemIntermediate(caKey, leaf, mdId, format, &midKey, &parsedMid));
+    }
+    ASSERT_EQ(HITLS_X509_CertSign(mdId, intermediate ? midKey : caKey, NULL, leaf), HITLS_PKI_SUCCESS);
+    ASSERT_TRUE(ParseCompositeKemGeneratedCert(ca, format, 0, 0, &parsedCa));
+    ASSERT_TRUE(ParseCompositeKemGeneratedCert(leaf, format, provider, type, &parsedLeaf));
+    store = HITLS_X509_StoreCtxNew();
+    untrusted = HITLS_X509_StoreCtxNew();
+    ASSERT_NE(store, NULL);
+    ASSERT_NE(untrusted, NULL);
+    ASSERT_EQ(HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_SET_TIME, &verifyTime, sizeof(verifyTime)), 0);
+    ASSERT_EQ(HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_DEEP_COPY_SET_CA, parsedCa,
+        sizeof(HITLS_X509_Cert)), HITLS_PKI_SUCCESS);
+    if (intermediate) {
+        HITLS_X509_Cert *certs[] = {parsedLeaf, parsedMid, parsedCa};
+        ASSERT_TRUE(BuildCompositeKemCertChain(certs, &chain));
+    } else {
+        ASSERT_EQ(HITLS_X509_CertChainBuild(store, true, parsedLeaf, &chain), HITLS_PKI_SUCCESS);
+    }
+    ASSERT_EQ(BSL_LIST_COUNT(chain), intermediate ? 3 : 2);
+    if (usage >= 0 && usage != HITLS_X509_EXT_KU_KEY_ENCIPHERMENT) {
+        ASSERT_EQ(HITLS_X509_CertVerify(store, chain), HITLS_X509_ERR_EXT_KU);
+        goto EXIT;
+    }
+    ASSERT_EQ(HITLS_X509_CertVerify(store, chain), HITLS_PKI_SUCCESS);
+    int64_t badTime[] = {1700000000, 2000000000};
+    for (uint32_t i = 0; i < 2; i++) {
+        ASSERT_EQ(HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_SET_TIME, &badTime[i], sizeof(int64_t)), 0);
+        ASSERT_NE(HITLS_X509_CertVerify(store, chain), HITLS_PKI_SUCCESS);
+    }
+    ASSERT_EQ(HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_SET_TIME, &verifyTime, sizeof(verifyTime)), 0);
+    ASSERT_EQ(HITLS_X509_CertCtrl(parsedLeaf, HITLS_X509_GET_PUBKEY, &pubKey, sizeof(pubKey)), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyGetSecurityBits(pubKey), secBits);
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(pubKey, CRYPT_CTRL_GET_PARAID, &paraId, sizeof(paraId)), CRYPT_SUCCESS);
+    ASSERT_EQ(paraId, type);
+    ASSERT_TRUE(CheckCompositeKemExchange(pubKey, kemKey));
+    ASSERT_TRUE(CheckCompositeKemCertPolicy(pubKey, parsedLeaf, store, untrusted, chain, type, caId, secBits));
+
+EXIT:
+    BSL_LIST_FREE(chain, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);
+    HITLS_X509_StoreCtxFree(store);
+    HITLS_X509_StoreCtxFree(untrusted);
+    HITLS_X509_CertFree(ca);
+    HITLS_X509_CertFree(leaf);
+    HITLS_X509_CertFree(parsedCa);
+    HITLS_X509_CertFree(parsedLeaf);
+    HITLS_X509_CertFree(parsedMid);
+    CRYPT_EAL_PkeyFreeCtx(caKey);
+    CRYPT_EAL_PkeyFreeCtx(kemKey);
+    CRYPT_EAL_PkeyFreeCtx(pubKey);
+    CRYPT_EAL_PkeyFreeCtx(midKey);
+#endif
+}
+/* END_CASE */
 
 /* BEGIN_CASE */
 void SDV_X509_CERT_SETANDGEN_TC001(char *derCertPath, char *privPath, int keyType, int pkeyId, int pad, int mdId,

@@ -231,7 +231,7 @@ if(HITLS_CRYPTO_MLDSA)
     add_subdirectory(mldsa)
 endif()
 
-if(HITLS_CRYPTO_COMPOSITE)
+if(HITLS_CRYPTO_COMPOSITE_SIGN OR HITLS_CRYPTO_COMPOSITE_KEM)
     add_subdirectory(composite)
 endif()
 

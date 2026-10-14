@@ -2887,7 +2887,7 @@ EXIT:
  * @title Test composite key decode through ProviderDecodeBuffKey on decoder-chain path
  * @precon None
  * @brief
- *    1. Build with HITLS_CRYPTO_PROVIDER, HITLS_CRYPTO_KEY_DECODE_CHAIN and HITLS_CRYPTO_COMPOSITE enabled
+ *    1. Build with HITLS_CRYPTO_PROVIDER, HITLS_CRYPTO_KEY_DECODE_CHAIN and HITLS_CRYPTO_COMPOSITE_SIGN enabled
  *    2. Read composite DER key file into buffer
  *    3. Decode with CRYPT_EAL_ProviderDecodeBuffKey
  *    4. On success, verify the decoded key is composite and paraId matches the input OID
@@ -2897,7 +2897,7 @@ EXIT:
 void SDV_CRYPT_EAL_PROVIDER_DECODE_BUFF_KEY_COMPOSITE_TC001(char *path, char *formatStr, char *typeStr,
     int expectRet, int expectParaId)
 {
-#if !defined(HITLS_CRYPTO_PROVIDER) || !defined(HITLS_CRYPTO_KEY_DECODE_CHAIN) || !defined(HITLS_CRYPTO_COMPOSITE)
+#if !defined(HITLS_CRYPTO_PROVIDER) || !defined(HITLS_CRYPTO_KEY_DECODE_CHAIN) || !defined(HITLS_CRYPTO_COMPOSITE_SIGN)
     (void)path;
     (void)formatStr;
     (void)typeStr;
@@ -3029,7 +3029,7 @@ EXIT:
  * @title Test composite Sign/Verify and SignData/VerifyData after provider decoder-chain decode
  * @precon None
  * @brief
- *    1. Build with HITLS_CRYPTO_PROVIDER, HITLS_CRYPTO_KEY_DECODE_CHAIN and HITLS_CRYPTO_COMPOSITE enabled
+ *    1. Build with HITLS_CRYPTO_PROVIDER, HITLS_CRYPTO_KEY_DECODE_CHAIN and HITLS_CRYPTO_COMPOSITE_SIGN enabled
  *    2. Read composite DER private/public key files into buffers
  *    3. Decode private/public keys with CRYPT_EAL_ProviderDecodeBuffKey
  *    4. Perform Sign/Verify on the message with the decoded composite key pair
@@ -3038,7 +3038,7 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_CRYPT_EAL_PROVIDER_COMPOSITE_SIGN_VERIFY_TC001(char *prvPath, char *pubPath, int mdId, Hex *msg)
 {
-#if !defined(HITLS_CRYPTO_PROVIDER) || !defined(HITLS_CRYPTO_KEY_DECODE_CHAIN) || !defined(HITLS_CRYPTO_COMPOSITE)
+#if !defined(HITLS_CRYPTO_PROVIDER) || !defined(HITLS_CRYPTO_KEY_DECODE_CHAIN) || !defined(HITLS_CRYPTO_COMPOSITE_SIGN)
     (void)prvPath;
     (void)pubPath;
     (void)mdId;

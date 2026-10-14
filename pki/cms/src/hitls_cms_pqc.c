@@ -22,7 +22,7 @@
 #include "hitls_cms_algprotect.h"
 #include "hitls_cms_util.h"
 
-#if defined(HITLS_CRYPTO_MLDSA) || defined(HITLS_CRYPTO_SLH_DSA) || defined(HITLS_CRYPTO_COMPOSITE)
+#if defined(HITLS_CRYPTO_MLDSA) || defined(HITLS_CRYPTO_SLH_DSA) || defined(HITLS_CRYPTO_COMPOSITE_SIGN)
 static int32_t NormalizeCmsPqcOperationState(CRYPT_EAL_PkeyCtx *key, BslCid signAlgId)
 {
     CRYPT_PKEY_AlgId keyAlgId = CRYPT_EAL_PkeyGetId(key);
@@ -31,7 +31,7 @@ static int32_t NormalizeCmsPqcOperationState(CRYPT_EAL_PkeyCtx *key, BslCid sign
         return X509_NormalizePqcOperationState(key, keyAlgId, signAlgId);
     }
 #endif
-#ifdef HITLS_CRYPTO_COMPOSITE
+#ifdef HITLS_CRYPTO_COMPOSITE_SIGN
     if (keyAlgId == CRYPT_PKEY_COMPOSITE) {
         return CRYPT_EAL_PkeyCtrl(key, CRYPT_CTRL_SET_CTX_INFO, NULL, 0);
     }
@@ -348,7 +348,7 @@ int32_t HITLS_CMS_PrepareSignKey(const CRYPT_EAL_PkeyCtx *prvKey, CRYPT_EAL_Pkey
 {
     *signKey = (CRYPT_EAL_PkeyCtx *)(uintptr_t)prvKey;
     *freeSignKey = false;
-#if defined(HITLS_CRYPTO_MLDSA) || defined(HITLS_CRYPTO_SLH_DSA) || defined(HITLS_CRYPTO_COMPOSITE)
+#if defined(HITLS_CRYPTO_MLDSA) || defined(HITLS_CRYPTO_SLH_DSA) || defined(HITLS_CRYPTO_COMPOSITE_SIGN)
     CRYPT_PKEY_AlgId keyAlgId = CRYPT_EAL_PkeyGetId(prvKey);
     if (keyAlgId == CRYPT_PKEY_ML_DSA || keyAlgId == CRYPT_PKEY_SLH_DSA || keyAlgId == CRYPT_PKEY_COMPOSITE) {
         HITLS_X509_Asn1AlgId signAlgId = {.algId = (BslCid)CRYPT_EAL_PkeyGetParaId(prvKey)};

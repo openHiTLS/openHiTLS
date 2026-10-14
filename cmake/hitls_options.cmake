@@ -11,7 +11,6 @@
 # MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 # See the Mulan PSL v2 for more details.
 
-
 # ============================================================
 # Current file defines all user-configurable options for the build.
 # Tip: The indentation preceding the options may indicate the following relationships:
@@ -27,6 +26,8 @@
 # ============================================================
 
 include_guard(GLOBAL)
+
+hitls_feature_defaults_handle()
 
 # ============================================================
 # Build Related Only Options
@@ -314,8 +315,9 @@ option(HITLS_CRYPTO_PKEY                                       "Public Key Crypt
   option(HITLS_CRYPTO_MLDSA                                      "MLDSA" OFF)
     option(HITLS_CRYPTO_MLDSA_CMP                                  "MLDSA Compare" OFF)
     option(HITLS_CRYPTO_MLDSA_CHECK                                "MLDSA Check" OFF)
-  option(HITLS_CRYPTO_COMPOSITE                                  "Composite signatures" OFF)
-    option(HITLS_CRYPTO_COMPOSITE_CHECK                            "Composite Check" OFF)
+  option(HITLS_CRYPTO_COMPOSITE_SIGN                             "Composite signatures" OFF)
+  option(HITLS_CRYPTO_COMPOSITE_KEM                              "Composite KEM" OFF)
+    option(HITLS_CRYPTO_COMPOSITE_CHECK                           "Composite Check" OFF)
   option(HITLS_CRYPTO_ACVP_TESTS                                 "ACVP Tests" OFF)
 ## Validation / test instrumentation
 # Valgrind-based constant-time validation: enables HITLS_CT_SECRET_MARK/HITLS_CT_SECRET_UNMARK

@@ -17,6 +17,9 @@
 #if defined(HITLS_CRYPTO_PKEY_KEM) && defined(HITLS_CRYPTO_PROVIDER)
 
 #include "crypt_eal_implprovider.h"
+#ifdef HITLS_CRYPTO_COMPOSITE_KEM
+#include "crypt_composite.h"
+#endif
 #ifdef HITLS_CRYPTO_MLKEM
 #include "crypt_mlkem.h"
 #endif
@@ -34,6 +37,13 @@
 const CRYPT_EAL_Func g_defEalMlKem[] = {
     {CRYPT_EAL_IMPLPKEYKEM_ENCAPSULATE, (CRYPT_EAL_ImplPkeyKemEncapsulate)CRYPT_ML_KEM_Encaps},
     {CRYPT_EAL_IMPLPKEYKEM_DECAPSULATE, (CRYPT_EAL_ImplPkeyKemDecapsulate)CRYPT_ML_KEM_Decaps},
+    CRYPT_EAL_FUNC_END
+};
+#endif
+#ifdef HITLS_CRYPTO_COMPOSITE_KEM
+const CRYPT_EAL_Func g_defEalKemComposite[] = {
+    {CRYPT_EAL_IMPLPKEYKEM_ENCAPSULATE, (CRYPT_EAL_ImplPkeyKemEncapsulate)CRYPT_COMPOSITE_Encaps},
+    {CRYPT_EAL_IMPLPKEYKEM_DECAPSULATE, (CRYPT_EAL_ImplPkeyKemDecapsulate)CRYPT_COMPOSITE_Decaps},
     CRYPT_EAL_FUNC_END
 };
 #endif

@@ -1231,12 +1231,33 @@ static int32_t HITLS_X509_CheckCrlExtNode(void *ctx, HITLS_X509_ExtEntry *extNod
     return HITLS_PKI_SUCCESS;
 }
 
-#if defined(HITLS_CRYPTO_MLDSA) || defined(HITLS_CRYPTO_SLH_DSA) || defined(HITLS_CRYPTO_COMPOSITE) || \
+#ifdef HITLS_CRYPTO_COMPOSITE_KEM
+static int32_t X509_IsCompositeKem(CRYPT_EAL_PkeyCtx *pubKey, bool *isKem)
+{
+    int32_t paraId = BSL_CID_UNKNOWN;
+    int32_t ret = CRYPT_EAL_PkeyCtrl(pubKey, CRYPT_CTRL_GET_PARAID, &paraId, sizeof(paraId));
+    if (ret != CRYPT_SUCCESS) {
+        return ret;
+    }
+#ifdef HITLS_CRYPTO_COMPOSITE_SIGN
+    if (paraId >= BSL_CID_MLDSA44_RSA2048_PSS_SHA256 && paraId <= BSL_CID_MLDSA87_ECDSA_P521_SHA512) {
+        *isKem = false;
+        return HITLS_PKI_SUCCESS;
+    }
+#endif
+    if (paraId >= BSL_CID_MLKEM768_RSA2048_SHA3_256 && paraId <= BSL_CID_MLKEM1024_ECDH_P521_SHA3_256) {
+        *isKem = true;
+        return HITLS_PKI_SUCCESS;
+    }
+    BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_ALG_UNSUPPORT);
+    return HITLS_X509_ERR_ALG_UNSUPPORT;
+}
+#endif
+
+#if defined(HITLS_CRYPTO_MLDSA) || defined(HITLS_CRYPTO_SLH_DSA) || defined(HITLS_CRYPTO_COMPOSITE_SIGN) || \
     defined(HITLS_CRYPTO_XMSS) || defined(HITLS_CRYPTO_XMSSMT) || defined(HITLS_CRYPTO_HSS_LMS)
 static int32_t CheckPqcSigKeyUsage(HITLS_X509_Cert *cert)
 {
-
-
     /* keyUsage applies to the subject public key, not the certificate's signature algorithm. */
     CRYPT_PKEY_AlgId pubKeyAlgId = CRYPT_EAL_PkeyGetId(cert->tbs.ealPubKey);
     if (!((pubKeyAlgId == CRYPT_PKEY_ML_DSA) || (pubKeyAlgId == CRYPT_PKEY_SLH_DSA) ||
@@ -1244,6 +1265,18 @@ static int32_t CheckPqcSigKeyUsage(HITLS_X509_Cert *cert)
         (pubKeyAlgId == CRYPT_PKEY_XMSSMT) || (pubKeyAlgId == CRYPT_PKEY_HSS_LMS))) {
         return HITLS_PKI_SUCCESS;
     }
+#ifdef HITLS_CRYPTO_COMPOSITE_KEM
+    if (pubKeyAlgId == CRYPT_PKEY_COMPOSITE) {
+        bool isKem = false;
+        int32_t ret = X509_IsCompositeKem(cert->tbs.ealPubKey, &isKem);
+        if (ret != HITLS_PKI_SUCCESS) {
+            return ret;
+        }
+        if (isKem) {
+            return HITLS_PKI_SUCCESS;
+        }
+    }
+#endif
 
     HITLS_X509_CertExt *tmpExt = (HITLS_X509_CertExt *)cert->tbs.ext.extData;
     if (tmpExt == NULL || (tmpExt->extFlags & HITLS_X509_EXT_FLAG_KUSAGE) == 0) {
@@ -1272,24 +1305,30 @@ static int32_t CheckPqcSigKeyUsage(HITLS_X509_Cert *cert)
 #endif
 
 #ifdef HITLS_CRYPTO_MLKEM
-static int32_t CheckMlKemKeyUsage(HITLS_X509_Cert *cert)
+static int32_t CheckKemKeyUsage(HITLS_X509_Cert *cert)
 {
     // Check ML-KEM keyUsage according to draft-ietf-lamps-kyber-certificates-11 Section 5
     // keyEncipherment MUST be the only key usage set for ML-KEM-512/768/1024 certificates
     CRYPT_PKEY_AlgId pubKeyId = CRYPT_EAL_PkeyGetId(cert->tbs.ealPubKey);
-    if (pubKeyId != CRYPT_PKEY_ML_KEM) {
-        return HITLS_PKI_SUCCESS;
-    }
-
     HITLS_X509_CertExt *tmpExt = (HITLS_X509_CertExt *)cert->tbs.ext.extData;
+    bool isKem = pubKeyId == CRYPT_PKEY_ML_KEM;
+#ifdef HITLS_CRYPTO_COMPOSITE_KEM
+    if (pubKeyId == CRYPT_PKEY_COMPOSITE) {
+        int32_t ret = X509_IsCompositeKem(cert->tbs.ealPubKey, &isKem);
+        if (ret != HITLS_PKI_SUCCESS) {
+            return ret;
+        }
+    }
+#endif
     // keyUsage extension is OPTIONAL.
     // If present in ML-KEM certificates, it MUST be keyEncipherment only (draft-ietf-lamps-kyber-certificates-11).
-    if (tmpExt == NULL || (tmpExt->extFlags & HITLS_X509_EXT_FLAG_KUSAGE) == 0) {
+    if (!isKem || tmpExt == NULL || (tmpExt->extFlags & HITLS_X509_EXT_FLAG_KUSAGE) == 0) {
         return HITLS_PKI_SUCCESS;
     }
 
     // ML-KEM certificates MUST have keyEncipherment as the ONLY key usage
     if (tmpExt->keyUsage != HITLS_X509_EXT_KU_KEY_ENCIPHERMENT) {
+        BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_EXT_KU);
         return HITLS_X509_ERR_EXT_KU;
     }
     return HITLS_PKI_SUCCESS;
@@ -1311,7 +1350,7 @@ static int32_t HITLS_X509_CheckCertExt(void *ctx, HITLS_X509_Cert *cert, int32_t
             (HITLS_X509_StoreCtx *)ctx, cert, depth, HITLS_X509_ERR_VFY_EXTENSIONS_REQUIRE_V3);
         return HITLS_PKI_SUCCESS;
     }
-#if defined(HITLS_CRYPTO_MLDSA) || defined(HITLS_CRYPTO_SLH_DSA) || defined(HITLS_CRYPTO_COMPOSITE) || \
+#if defined(HITLS_CRYPTO_MLDSA) || defined(HITLS_CRYPTO_SLH_DSA) || defined(HITLS_CRYPTO_COMPOSITE_SIGN) || \
     defined(HITLS_CRYPTO_XMSS) || defined(HITLS_CRYPTO_XMSSMT) || defined(HITLS_CRYPTO_HSS_LMS)
     int32_t pqcSigKeyUsageRet = CheckPqcSigKeyUsage(cert);
     if (pqcSigKeyUsageRet != HITLS_PKI_SUCCESS) {
@@ -1319,9 +1358,9 @@ static int32_t HITLS_X509_CheckCertExt(void *ctx, HITLS_X509_Cert *cert, int32_t
     }
 #endif
 #ifdef HITLS_CRYPTO_MLKEM
-    int32_t mlkemKeyUsageRet = CheckMlKemKeyUsage(cert);
-    if (mlkemKeyUsageRet != HITLS_PKI_SUCCESS) {
-        return mlkemKeyUsageRet;
+    int32_t kemKeyUsageRet = CheckKemKeyUsage(cert);
+    if (kemKeyUsageRet != HITLS_PKI_SUCCESS) {
+        return kemKeyUsageRet;
     }
 #endif
     return HITLS_X509_TrvList(cert->tbs.ext.extList, (HITLS_X509_TrvListCallBack)HITLS_X509_CheckCertExtNode, ctx);

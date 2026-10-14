@@ -17,7 +17,7 @@
 #define CRYPT_COMPOSITE_H
 
 #include "hitls_build.h"
-#ifdef HITLS_CRYPTO_COMPOSITE
+#if defined(HITLS_CRYPTO_COMPOSITE_SIGN) || defined(HITLS_CRYPTO_COMPOSITE_KEM)
 
 #include <stdint.h>
 #include "crypt_types.h"
@@ -51,6 +51,7 @@ int32_t CRYPT_COMPOSITE_SetPrvKeyEx(CRYPT_CompositeCtx *ctx, const BSL_Param *pa
 int32_t CRYPT_COMPOSITE_GetPubKeyEx(const CRYPT_CompositeCtx *ctx, BSL_Param *para);
 int32_t CRYPT_COMPOSITE_GetPrvKeyEx(const CRYPT_CompositeCtx *ctx, BSL_Param *para);
 
+#ifdef HITLS_CRYPTO_COMPOSITE_SIGN
 int32_t CRYPT_COMPOSITE_Sign(CRYPT_CompositeCtx *ctx, int32_t hashId, const uint8_t *data,
     uint32_t dataLen, uint8_t *sign, uint32_t *signLen);
 
@@ -63,6 +64,15 @@ int32_t CRYPT_COMPOSITE_Verify(CRYPT_CompositeCtx *ctx, int32_t hashId, const ui
 int32_t CRYPT_COMPOSITE_VerifyData(CRYPT_CompositeCtx *ctx, const uint8_t *data,
     uint32_t dataLen, const uint8_t *sign, uint32_t signLen);
 
+#endif // HITLS_CRYPTO_COMPOSITE_SIGN
+
+#ifdef HITLS_CRYPTO_COMPOSITE_KEM
+int32_t CRYPT_COMPOSITE_Encaps(const CRYPT_CompositeCtx *ctx, uint8_t *cipher, uint32_t *cipherLen,
+    uint8_t *sharekey, uint32_t *shareLen);
+int32_t CRYPT_COMPOSITE_Decaps(const CRYPT_CompositeCtx *ctx, const uint8_t *cipher, uint32_t cipherLen,
+    uint8_t *sharekey, uint32_t *shareLen);
+#endif // HITLS_CRYPTO_COMPOSITE_KEM
+
 #ifdef HITLS_CRYPTO_COMPOSITE_CHECK
 int32_t CRYPT_COMPOSITE_Check(uint32_t checkType, const CRYPT_CompositeCtx *pkey1, const CRYPT_CompositeCtx *pkey2);
 
@@ -72,5 +82,5 @@ int32_t CRYPT_COMPOSITE_Check(uint32_t checkType, const CRYPT_CompositeCtx *pkey
 }
 #endif
 
-#endif // HITLS_CRYPTO_COMPOSITE
+#endif // HITLS_CRYPTO_COMPOSITE_SIGN || HITLS_CRYPTO_COMPOSITE_KEM
 #endif // CRYPT_COMPOSITE_H

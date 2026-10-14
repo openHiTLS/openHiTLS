@@ -344,13 +344,22 @@ test_pqc()
     fi
 
     # Composite covers ML-DSA with RSA, ECDSA and Ed25519 components.
-    COMPOSITE_ENABLE="${EAL_ENABLE},composite,mldsa,pkey_cmp,drbg_hash,sha2,sha3,"
+    COMPOSITE_ENABLE="${EAL_ENABLE},composite_sign,mldsa,pkey_cmp,drbg_hash,sha2,sha3,"
     COMPOSITE_ENABLE+="rsa,rsa_sign,rsa_verify,rsa_emsa_pss,rsa_emsa_pkcsv15,ecc,ecdsa,${ECDSA_CURVES},"
     COMPOSITE_ENABLE+="curve25519,ed25519,codecskey,key_encode,key_decode,pem,sal_file,sal_str,sal_thread,"
     COMPOSITE_ENABLE+="cipher,modes,aes,hmac,pbkdf2,md,x509,x509_crt,x509_crt_parse,x509_crt_gen,"
     COMPOSITE_ENABLE+="x509_csr,x509_csr_parse,x509_csr_gen,x509_crl,x509_crl_parse,x509_crl_gen,x509_vfy"
     bash mini_build_test.sh $COMMON_PARAM $NO_LIB \
         enable=${COMPOSITE_ENABLE} test=composite
+
+    # Composite KEM covers all supported ML-KEM combinations with RSA, ECDH and X25519 components.
+    COMPOSITE_KEM_ENABLE="${EAL_ENABLE},ealinit,composite_kem,mlkem,pkey_cmp,drbg_hash,sha2,sha3,"
+    COMPOSITE_KEM_ENABLE+="rsa,rsa_encrypt,rsa_decrypt,rsaes_oaep,ecc,ecdh,${ECDSA_CURVES},curve25519,x25519,"
+    COMPOSITE_KEM_ENABLE+="provider,codecskey,key_encode,key_decode,key_decode_chain,pem,sal_file,sal_str,sal_thread,"
+    COMPOSITE_KEM_ENABLE+="cipher,modes,aes,hmac,pbkdf2,md,x509,x509_crt,x509_crt_parse,x509_crt_gen,"
+    COMPOSITE_KEM_ENABLE+="x509_csr,x509_csr_parse,x509_csr_gen,x509_crl,x509_crl_parse,x509_crl_gen,x509_vfy"
+    bash mini_build_test.sh $COMMON_PARAM $NO_LIB \
+        enable=${COMPOSITE_KEM_ENABLE} test=composite
 
     # ML-DSA
     bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=${EAL_ENABLE},mldsa,pkey_cmp,drbg_hash,sha2 test=mldsa

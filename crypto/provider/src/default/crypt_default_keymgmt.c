@@ -18,7 +18,7 @@
     defined(HITLS_CRYPTO_RSA) || defined(HITLS_CRYPTO_DH) || defined(HITLS_CRYPTO_ECDSA) || \
     defined(HITLS_CRYPTO_ECDH) || defined(HITLS_CRYPTO_SM2) || defined(HITLS_CRYPTO_PAILLIER) || \
     defined(HITLS_CRYPTO_ELGAMAL) || defined(HITLS_CRYPTO_SLH_DSA) || defined(HITLS_CRYPTO_MLKEM) || \
-    defined(HITLS_CRYPTO_MLDSA) || defined(HITLS_CRYPTO_COMPOSITE) || defined(HITLS_CRYPTO_HYBRIDKEM) || \
+    defined(HITLS_CRYPTO_MLDSA) || (defined(HITLS_CRYPTO_COMPOSITE_SIGN) || defined(HITLS_CRYPTO_COMPOSITE_KEM)) || defined(HITLS_CRYPTO_HYBRIDKEM) || \
     defined(HITLS_CRYPTO_MCELIECE) || defined(HITLS_CRYPTO_FRODOKEM) || \
     defined(HITLS_CRYPTO_XMSS) || defined(HITLS_CRYPTO_XMSSMT) || defined(HITLS_CRYPTO_HSS_LMS)) && \
     defined(HITLS_CRYPTO_PROVIDER)
@@ -67,7 +67,7 @@
 #ifdef HITLS_CRYPTO_MLDSA
 #include "crypt_mldsa.h"
 #endif
-#ifdef HITLS_CRYPTO_COMPOSITE
+#if defined(HITLS_CRYPTO_COMPOSITE_SIGN) || defined(HITLS_CRYPTO_COMPOSITE_KEM)
 #include "crypt_composite.h"
 #endif
 #ifdef HITLS_CRYPTO_XMSS
@@ -153,7 +153,7 @@ static const PkeyNewCtxEntry g_pkeyNewCtxTable[] = {
 #ifdef HITLS_CRYPTO_MLDSA
     {CRYPT_PKEY_ML_DSA, (PkeyNewCtxFn)CRYPT_ML_DSA_NewCtxEx},
 #endif
-#ifdef HITLS_CRYPTO_COMPOSITE
+#if defined(HITLS_CRYPTO_COMPOSITE_SIGN) || defined(HITLS_CRYPTO_COMPOSITE_KEM)
     {CRYPT_PKEY_COMPOSITE, (PkeyNewCtxFn)CRYPT_COMPOSITE_NewCtxEx},
 #endif
 };
@@ -476,7 +476,7 @@ const CRYPT_EAL_Func g_defEalKeyMgmtMlDsa[] = {
 };
 #endif
 
-#ifdef HITLS_CRYPTO_COMPOSITE
+#if defined(HITLS_CRYPTO_COMPOSITE_SIGN) || defined(HITLS_CRYPTO_COMPOSITE_KEM)
 const CRYPT_EAL_Func g_defEalKeyMgmtComposite[] = {
     {CRYPT_EAL_IMPLPKEYMGMT_NEWCTX, (CRYPT_EAL_ImplPkeyMgmtNewCtx)CRYPT_EAL_DefPkeyMgmtNewCtx},
     {CRYPT_EAL_IMPLPKEYMGMT_GENKEY, (CRYPT_EAL_ImplPkeyMgmtGenKey)CRYPT_COMPOSITE_GenKey},

@@ -696,7 +696,7 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_CRYPT_EAL_COMPOSITE_PARSE_KEY_MULTI_FAMILY_TC001(int format, int type, char *path, int expectParaId)
 {
-#if !defined(HITLS_CRYPTO_COMPOSITE) || !defined(HITLS_CRYPTO_CODECSKEY) || \
+#if !defined(HITLS_CRYPTO_COMPOSITE_SIGN) || !defined(HITLS_CRYPTO_CODECSKEY) || \
     !defined(HITLS_BSL_SAL_FILE) || !defined(HITLS_CRYPTO_KEY_DECODE)
     (void)format;
     (void)type;

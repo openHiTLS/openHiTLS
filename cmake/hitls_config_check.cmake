@@ -222,12 +222,12 @@ if(NOT HITLS_SKIP_CONFIG_CHECK)
             NOT HITLS_CRYPTO_ED25519 AND NOT HITLS_CRYPTO_RSA_SIGN AND NOT HITLS_CRYPTO_RSA_VERIFY AND
             NOT HITLS_CRYPTO_MLDSA AND NOT HITLS_CRYPTO_XMSS AND NOT HITLS_CRYPTO_DH AND
             NOT HITLS_CRYPTO_DSA AND NOT HITLS_CRYPTO_MLKEM AND NOT HITLS_CRYPTO_SLH_DSA AND
-            NOT HITLS_CRYPTO_COMPOSITE AND
+            NOT HITLS_CRYPTO_COMPOSITE_SIGN AND NOT HITLS_CRYPTO_COMPOSITE_KEM AND
             NOT HITLS_CRYPTO_X25519)
             hitls_add_dependency_warning(
                 "[HiTLS] The codecs key must work with at least one algorithm. "
                 "(HITLS_CRYPTO_ECDSA/HITLS_CRYPTO_SM2_SIGN/HITLS_CRYPTO_SM2_CRYPT/HITLS_CRYPTO_ED25519/"
-                "HITLS_CRYPTO_RSA_SIGN/HITLS_CRYPTO_RSA_VERIFY/HITLS_CRYPTO_MLDSA/HITLS_CRYPTO_COMPOSITE/"
+                "HITLS_CRYPTO_RSA_SIGN/HITLS_CRYPTO_RSA_VERIFY/HITLS_CRYPTO_MLDSA/HITLS_CRYPTO_COMPOSITE_SIGN/HITLS_CRYPTO_COMPOSITE_KEM/"
                 "HITLS_CRYPTO_XMSS/"
                 "HITLS_CRYPTO_DH/HITLS_CRYPTO_DSA/HITLS_CRYPTO_MLKEM/HITLS_CRYPTO_SLH_DSA/HITLS_CRYPTO_X25519)"
             )
@@ -243,7 +243,7 @@ if(NOT HITLS_SKIP_CONFIG_CHECK)
     endif()
 
     # Composite signature
-    if(HITLS_CRYPTO_COMPOSITE)
+    if(HITLS_CRYPTO_COMPOSITE_SIGN)
         if(NOT HITLS_CRYPTO_RSA AND NOT HITLS_CRYPTO_ECDSA AND NOT HITLS_CRYPTO_ED25519)
             hitls_add_dependency_warning(
                 "[HiTLS] The composite signature must work with at least one traditional signature algorithm. "
@@ -251,11 +251,13 @@ if(NOT HITLS_SKIP_CONFIG_CHECK)
             )
         endif()
     endif()
-    if(HITLS_CRYPTO_COMPOSITE_CHECK)
-        if(NOT HITLS_CRYPTO_RSA_CHECK AND NOT HITLS_CRYPTO_ECDSA_CHECK AND NOT HITLS_CRYPTO_ED25519_CHECK)
+
+    # Composite kem
+    if(HITLS_CRYPTO_COMPOSITE_KEM)
+        if(NOT HITLS_CRYPTO_RSA AND NOT HITLS_CRYPTO_ECDH AND NOT HITLS_CRYPTO_X25519)
             hitls_add_dependency_warning(
-                "[HiTLS] The composite check must work with at least one enabled traditional signature check. "
-                "(HITLS_CRYPTO_RSA_CHECK/HITLS_CRYPTO_ECDSA_CHECK/HITLS_CRYPTO_ED25519_CHECK)"
+                "[HiTLS] Composite KEM requires at least one traditional algorithm. "
+                "(HITLS_CRYPTO_RSA/HITLS_CRYPTO_ECDH/HITLS_CRYPTO_X25519)"
             )
         endif()
     endif()

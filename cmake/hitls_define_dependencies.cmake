@@ -275,7 +275,7 @@ hitls_define_dependency(HITLS_CRYPTO_PKEY
         HITLS_CRYPTO_SM9        HITLS_CRYPTO_PAILLIER  HITLS_CRYPTO_ELGAMAL
         HITLS_CRYPTO_MLKEM      HITLS_CRYPTO_FRODOKEM
         HITLS_CRYPTO_MCELIECE                  HITLS_CRYPTO_MLDSA
-        HITLS_CRYPTO_COMPOSITE
+        HITLS_CRYPTO_COMPOSITE_SIGN HITLS_CRYPTO_COMPOSITE_KEM
         HITLS_CRYPTO_HYBRIDKEM  HITLS_CRYPTO_SLH_DSA   HITLS_CRYPTO_XMSS
         HITLS_CRYPTO_XMSSMT     HITLS_CRYPTO_HSS_LMS
 )
@@ -452,13 +452,13 @@ hitls_define_dependency(HITLS_CRYPTO_MLDSA
     CHILDREN HITLS_CRYPTO_MLDSA_CHECK
 )
 hitls_define_dependency(HITLS_CRYPTO_MLDSA_CHECK        DEPS HITLS_CRYPTO_MLDSA)
-hitls_define_dependency(HITLS_CRYPTO_COMPOSITE
+hitls_define_dependency(HITLS_CRYPTO_COMPOSITE_SIGN
     DEPS HITLS_CRYPTO_EAL HITLS_CRYPTO_MLDSA
         HITLS_BSL_ASN1 HITLS_CRYPTO_SHA256 HITLS_CRYPTO_SHA384 HITLS_CRYPTO_SHA512
-    CHILDREN HITLS_CRYPTO_COMPOSITE_CHECK
 )
-hitls_define_dependency(HITLS_CRYPTO_COMPOSITE_CHECK
-    DEPS HITLS_CRYPTO_COMPOSITE HITLS_CRYPTO_MLDSA_CHECK
+hitls_define_dependency(HITLS_CRYPTO_COMPOSITE_KEM
+    DEPS HITLS_CRYPTO_EAL HITLS_CRYPTO_MLKEM HITLS_CRYPTO_PKEY_EXCH
+        HITLS_BSL_ASN1 HITLS_BSL_OBJ_DEFAULT
 )
 hitls_define_dependency(HITLS_CRYPTO_MCELIECE
     DEPS HITLS_CRYPTO_PKEY HITLS_CRYPTO_PKEY_KEM HITLS_CRYPTO_AES HITLS_CRYPTO_SHA3 HITLS_BSL_PARAMS
@@ -1664,7 +1664,43 @@ macro(hitls_auto_enable_asm_features)
 endmacro()
 
 
+macro(hitls_feature_defaults_handle)
+    if((HITLS_CRYPTO_COMPOSITE_SIGN OR HITLS_CRYPTO_COMPOSITE_KEM) AND
+       NOT DEFINED HITLS_CRYPTO_COMPOSITE_CHECK)
+        set(HITLS_CRYPTO_COMPOSITE_CHECK ON CACHE BOOL "Composite Check")
+    endif()
+endmacro()
+
 macro(hitls_special_depends_handle)
+    if(NOT HITLS_CRYPTO_COMPOSITE_SIGN AND NOT HITLS_CRYPTO_COMPOSITE_KEM)
+        if(HITLS_CRYPTO_COMPOSITE_CHECK)
+            message(WARNING
+                "[HiTLS] Composite Check requires HITLS_CRYPTO_COMPOSITE_SIGN or "
+                "HITLS_CRYPTO_COMPOSITE_KEM; disabling HITLS_CRYPTO_COMPOSITE_CHECK "
+                "for this configuration."
+            )
+        endif()
+        set(HITLS_CRYPTO_COMPOSITE_CHECK OFF)
+    endif()
+
+    if(HITLS_CRYPTO_COMPOSITE_CHECK)
+        if(HITLS_CRYPTO_COMPOSITE_SIGN)
+            foreach(_composite_alg MLDSA RSA ECDSA ED25519)
+                if(HITLS_CRYPTO_${_composite_alg})
+                    hitls_feature_local_enable(HITLS_CRYPTO_${_composite_alg}_CHECK)
+                endif()
+            endforeach()
+        endif()
+
+        if(HITLS_CRYPTO_COMPOSITE_KEM)
+            foreach(_composite_alg MLKEM RSA ECDH X25519)
+                if(HITLS_CRYPTO_${_composite_alg})
+                    hitls_feature_local_enable(HITLS_CRYPTO_${_composite_alg}_CHECK)
+                endif()
+            endforeach()
+        endif()
+    endif()
+
     if(HITLS_CRYPTO_ENTROPY_SYS)
         # eal_entropyPool.c picks the default seed-pool conditioner at compile time:
         # sm3_df under GM_CF, sha3_256_df otherwise. A static DEPS edge cannot express

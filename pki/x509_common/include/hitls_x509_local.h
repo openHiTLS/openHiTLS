@@ -144,7 +144,7 @@ typedef struct {
     HITLS_X509_Free x509Free;
 } X509_ParseFuncCbk;
 
-#if defined(HITLS_CRYPTO_MLDSA) || defined(HITLS_CRYPTO_SLH_DSA) || defined(HITLS_CRYPTO_COMPOSITE)
+#if defined(HITLS_CRYPTO_MLDSA) || defined(HITLS_CRYPTO_SLH_DSA) || defined(HITLS_CRYPTO_COMPOSITE_SIGN)
 int32_t X509_NormalizePqcOperationState(CRYPT_EAL_PkeyCtx *key, CRYPT_PKEY_AlgId keyAlgId,
     BslCid signAlgId);
 #endif
@@ -199,7 +199,7 @@ typedef int32_t (*HITLS_X509_SignCb)(int32_t mdId, CRYPT_EAL_PkeyCtx *prvKey, HI
     void *obj);
 
 #if defined(HITLS_CRYPTO_RSA) || defined(HITLS_CRYPTO_SM2) || defined(HITLS_CRYPTO_MLDSA) || \
-    defined(HITLS_CRYPTO_SLH_DSA) || defined(HITLS_CRYPTO_COMPOSITE)
+    defined(HITLS_CRYPTO_SLH_DSA) || defined(HITLS_CRYPTO_COMPOSITE_SIGN)
 typedef int32_t (*X509_SetSignParamCb)(CRYPT_EAL_PkeyCtx *signKey, int32_t mdId,
     const HITLS_X509_SignAlgParam *algParam, HITLS_X509_Asn1AlgId *signAlgId);
 
