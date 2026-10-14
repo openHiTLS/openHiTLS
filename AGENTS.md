@@ -23,7 +23,7 @@ This file is for agents modifying openHiTLS source code. Key references: `LICENS
 ## Security
 
 - Suspected vulnerabilities — crypto flaws, memory-safety bugs, timing side channels — must be reported through `SECURITY.md`; never opened as public issues, and PoCs / exploit details must not be pasted into issues, PRs, or test descriptions
-- Follow the Constant-Time Guidelines below on any path touching keys, MACs, or decrypted data; a passing test suite does not prove absence of side channels
+- Follow the Constant-Time Guidelines below for production code that handles keys, MACs, or decrypted data; a passing test suite does not prove absence of side channels
 
 ## Definition of Done
 
@@ -31,10 +31,9 @@ A task is only complete when **all** of the following hold:
 
 1. **Library builds clean**: `(cd build && make -j)` succeeds with no new warnings — compare the build log against a pre-change baseline, and never silence a warning with `-Wno...` or `#pragma` to satisfy this. Rebuild also whenever source changes out-of-band from your edits (notably after `git stash` / `git stash pop`) — do this before running any test.
 2. **Affected SDV suite passes**: relevant `execute_sdv.sh` invocation reports PASS for every case you touched (SKIP is acceptable only when guarded by `SKIP_TEST()` for a genuinely unrelated disabled feature; FAIL is never acceptable).
-3. **Formatting is stable**: `clang-format --dry-run --Werror <changed files>` reports no errors (non-mutating; `git diff` cannot verify this while edits are unstaged).
-4. **Secret-data hygiene** (whenever touching crypto / key / MAC / password paths): no `memcmp` on secret-derived data, no secret-dependent early exits, no secret-dependent array indices (see Constant-Time Guidelines).
-5. **Error-stack discipline**: errors are pushed exactly once at the first production site; callees that already pushed must be wrapped with `GOTO_ERR_IF_EX`, not `GOTO_ERR_IF`.
-6. **No unauthorized commits**: do not `git add` / `git commit` / `git push` or open a PR unless the user explicitly asks. When asked, follow the commit-message conventions linked in `CONTRIBUTING-zh.md`; PRs enter review only after the CI pipeline passes.
+3. **Secret-data hygiene** (in production code touching crypto / key / MAC / password paths): no `memcmp` on secret-derived data, no secret-dependent early exits, no secret-dependent array indices (see Constant-Time Guidelines).
+4. **Error-stack discipline**: push each failure once. If a callee already pushed the returned error, use `GOTO_ERR_IF_EX`; if it did not, push the error at the caller.
+5. **No unauthorized commits**: do not `git add` / `git commit` / `git push` or open a PR unless the user explicitly asks. When asked, follow the commit-message conventions linked in `CONTRIBUTING-zh.md`; PRs enter review only after the CI pipeline passes.
 
 If any step is blocked (e.g. test infrastructure unavailable), surface the blocker to the user instead of silently skipping it.
 
@@ -86,25 +85,12 @@ cd testcode/script && bash build_hitls.sh debug && bash build_sdv.sh && bash exe
 # Step 2: build & run one suite (use | in run-tests to add more; drop the no-<comp> flags you don't need)
 (cd testcode/script && bash build_sdv.sh no-demos no-tls no-pki run-tests="test_suite_sdv_pake" && bash execute_sdv.sh test_suite_sdv_pake)
 ```
-The `no-<component>` flags disable building that component's tests to save time — pick them to match what you are **not** touching:
-
-| Flag | Effect |
-|------|--------|
-| `no-crypto` | Skip crypto tests |
-| `no-tls` | Skip TLS tests |
-| `no-pki` | Skip PKI tests |
-| `no-auth` | Skip auth tests |
-| `no-bsl` | Skip BSL tests |
-| `no-demos` | Do not build demo programs |
-
-So `no-tls no-pki no-demos` is right for a PAKE (auth) fix; for an RSA (crypto) fix use `no-tls no-pki no-auth no-demos` instead. Blindly copying the example flags without checking the component will silently skip the suite you need.
+Use `no-crypto`, `no-tls`, `no-pki`, `no-auth`, and `no-bsl` to omit tests for untouched components; `no-demos` omits demo programs. See `bash build_sdv.sh --help` for details. Use `no-*` flags only for components outside the change scope; do not copy the example blindly.
 
 ### Single Test Case (faster iteration)
-Pass the case name (the `@test` ID, e.g. `SDV_CRYPT_EAL_SPAKE2PLUS_TC001`) to `execute_sdv.sh` — it locates the owning suite automatically — or run the suite binary directly with the case name as its argument:
+Pass the case name (the `@test` ID, e.g. `SDV_CRYPT_EAL_SPAKE2PLUS_TC001`) to `execute_sdv.sh`; it locates the owning suite automatically.
 ```bash
 (cd testcode/script && bash execute_sdv.sh SDV_CRYPT_EAL_SPAKE2PLUS_TC001)
-# or
-(cd testcode/output && ./test_suite_sdv_pake SDV_CRYPT_EAL_SPAKE2PLUS_TC001)
 ```
 
 ### Discovering Available Suites
@@ -124,15 +110,15 @@ cmake -B build-benchmark -DHITLS_BUILD_BENCHMARK=ON && make -C build-benchmark -
 
 - Most operation-style APIs return `int32_t`: `CRYPT_SUCCESS` (0) or `HITLS_SUCCESS` (0) on success, and a specific error code on failure. Constructor/new APIs commonly return pointers and use `NULL` for failure; free/deinit callbacks commonly return `void`.
 - Error codes: `include/crypto/crypt_errno.h` (crypto), `include/tls/hitls_error.h` (TLS)
-- Push errors to the BSL error stack at the point where the error is first produced; avoid duplicate pushes when the callee already pushed the error
+- `GOTO_ERR_IF` pushes the returned error; `GOTO_ERR_IF_EX` skips the push when the callee already pushed it. Both jump to `ERR` on failure.
 - Use `goto ERR` cleanup pattern for functions that allocate resources:
   ```c
   int32_t ret;
   Foo *a = NULL;
   Bar *b = NULL;
   a = Create(...);
-  GOTO_ERR_IF(SomeOp(a), ret);       // pushes error + goto ERR
-  GOTO_ERR_IF_EX(OtherOp(a), ret);   // goto ERR without pushing (callee already pushed)
+  GOTO_ERR_IF(SomeOp(a), ret);       // use when SomeOp returns failure without pushing it
+  GOTO_ERR_IF_EX(OtherOp(a), ret);   // use when OtherOp already pushed its failure
   // ... success path ...
   ERR:
       Destroy(a);
@@ -182,19 +168,12 @@ cmake -B build-benchmark -DHITLS_BUILD_BENCHMARK=ON && make -C build-benchmark -
 
 ## Constant-Time Guidelines
 
-- Apply these rules whenever values may depend on private keys, plaintext, MACs, passwords, shared secrets, decapsulation results, or other secret-derived data
-- Use `ConstTimeMemcmp` (from `bsl_bytes.h`) instead of `memcmp` for any comparison involving secret-derived data (MAC tags, decrypted plaintext, password-derived keys)
+- Apply these rules to production code when values may depend on private keys, plaintext, MACs, passwords, shared secrets, decapsulation results, or other secret-derived data; these rules do not prescribe comparison APIs for test code
+- In production code, use `ConstTimeMemcmp` (from `bsl_bytes.h`) instead of `memcmp` for comparisons involving secret-derived data. Use ordinary comparisons for public or non-sensitive data, and normal assertions or comparisons in `testcode/`
 - `ConstTimeMemcmp` returns `0xffffffff` on match, `0` on mismatch (inverted vs `memcmp`)
 - Use `Uint32ConstTimeIsZero`, `Uint32ConstTimeEqual`, `Uint32ConstTimeSelect`, `Uint8ConstTimeSelect` (from `bsl_bytes.h`) for secret-dependent conditionals
 - Loop bounds touching secret data must use public upper bounds (e.g. `params->t`) with masked accumulation rather than secret-dependent early exit
 - Memory access addresses must be independent of secret values — replace secret-keyed table indexing with the library's constant-time selection/gather patterns (`Uint32ConstTimeSelect` in `crypto/rsa/src/rsa_padding.c`, `ECP256_Gatherw5` in `crypto/ecc/src/asm_ecp_nistp256.c`, `MASK_LOW32` in `crypto/curve25519/src/curve25519_op.c`)
-
-## Architecture Notes
-
-- `HITLS_CRYPTO_RSA_BLINDING` is a CMake compile-time option (default OFF); SDV tests inherit whether it is enabled from the library build
-- `CRYPT_RSA_BLINDING` is a runtime flag on `CRYPT_RSA_Ctx->flags`; blinding needs a public exponent — `RSA_InitBlind` (`crypto/rsa/src/rsa_encdec.c`) derives `e` from `d`, `p`, `q` via `RSA_GetPublicExp` when `prvKey->e` is unset, so pre-set `e` (via `SetRsaPrvKeyEx`) only when derivation fails
-- RSA SDV tests that enable blinding need deterministic test RNG setup before the operation
-- `MontMulBin` / `MontMulBinCore` use `mont->t` internally as scratch buffer; never pass `mont->t` as output parameter to `MontMulBin`
 
 ## SDV Test Data Format
 
@@ -202,25 +181,19 @@ Test cases live in `.data` files under `testcode/sdv/testcase/`. Each case is tw
 
 ## Adding a New Test
 
-Each SDV suite is a triple under `testcode/sdv/testcase/<component>/<module>/`: `<suite>.base.c` (`main()` + framework init + shared stubs), `<suite>_<group>.c` (test functions for one group), `<suite>_<group>.data` (rows driving the matching `.c`). A group `.c` declares its base via `/* INCLUDE_BASE <suite> */` immediately after the license header. To add a case:
+Each SDV suite has a `.base.c`, a group `.c`, and a `.data` file under `testcode/sdv/testcase/<component>/<module>/`. The group file includes its base with `/* INCLUDE_BASE <suite> */`.
 
-1. **Write the test function** in the group `.c`, wrapped in `/* BEGIN_CASE */ ... /* END_CASE */`. The function name **must equal** the first field of the `.data` row. Header style: `@brief` describes the main test flow + test point in 1–3 sentences (not every ASSERT, not routine plumbing); `@expect` is a one-line outcome; `@precon` writes `nan` if nothing special. Shape (copy the full working example from `testcode/sdv/testcase/crypto/hkdf/test_suite_sdv_eal_kdf_hkdf.c`, case `SDV_CRYPT_EAL_KDF_HKDF_FUN_TC001`):
+1. Add a function wrapped in `/* BEGIN_CASE */ ... /* END_CASE */`. Its name **must match** the first field in `.data`; otherwise, the test is not found. Use the `@brief`, `@expect`, and `@precon` fields. See `testcode/sdv/testcase/crypto/hkdf/test_suite_sdv_eal_kdf_hkdf.c` for a working example.
    ```c
    /* BEGIN_CASE */
-   void SDV_CRYPT_EAL_KDF_HKDF_FUN_TC001(int algId, Hex *key, Hex *salt, Hex *info, Hex *result)
+   void TEST_NAME(...)
    {
-       if (IsHmacAlgDisabled(algId)) {
+       if (featureDisabled) {
            SKIP_TEST();
        }
-       CRYPT_EAL_KdfCtx *ctx = CRYPT_EAL_KdfNewCtx(CRYPT_KDF_HKDF);
-       ASSERT_TRUE(ctx != NULL);
-       /* set params via BSL_PARAM_InitValue + CRYPT_EAL_KdfSetParam, derive,
-          then ASSERT_COMPARE against the expected vector — see the reference file */
-   EXIT:
-       CRYPT_EAL_KdfFreeCtx(ctx);
+       /* Run operation and assert result. */
    }
    /* END_CASE */
    ```
-2. **Add one or more rows** to the matching `.data` file (format above). The first field **must** match the function name from step 1 — a typo produces a silent "function not found" at run time.
-3. **ASSERT macros** (`testcode/framework/include/test.h`): `ASSERT_TRUE` / `ASSERT_EQ` / `ASSERT_NE` / `ASSERT_LT` (value checks, `goto EXIT` on failure); `ASSERT_COMPARE` (byte-buffer diff); `SKIP_TEST()` (mark skipped — **must** replace bare `return` when a feature is disabled, else it is misreported as PASS).
-4. **Build & run**: rebuild library, then `(cd testcode/script && bash build_sdv.sh run-tests="<suite_stem>" && bash execute_sdv.sh <suite_stem>)`; verify PASS (or guarded SKIP) in `testcode/output/result.log`. For a brand-new suite, copy an existing triple (e.g. `testcode/sdv/testcase/crypto/rsa/`).
+2. Add matching rows to `.data`. Use assertions from `testcode/framework/include/test.h`; use `SKIP_TEST()` instead of bare `return` for disabled features.
+3. Build and run: `(cd testcode/script && bash build_sdv.sh run-tests="<suite_stem>" && bash execute_sdv.sh <suite_stem>)`. Confirm PASS or guarded SKIP in `testcode/output/result.log`. For a new suite, copy an existing triple, e.g. `testcode/sdv/testcase/crypto/rsa/`.
