@@ -898,6 +898,253 @@ EXIT:
 /* END_CASE */
 
 /* @
+* @test UT_TLS_HITLS_PEEK_TC002
+* @brief    1. Establish a TLS1.2 connection with secure renegotiation supported
+            2. The server initiates renegotiation and sends the HelloRequest message
+            3. The client calls HITLS_Peek, which receives the HelloRequest and enters the renegotiation
+               state machine, then needs to read the ServerHello handshake record
+            4. Drive the renegotiation to complete
+            5. The server sends app data, the client peeks twice and reads once
+* @expect   1. Return HITLS_SUCCESS
+            2. The HelloRequest is sent successfully
+            3. The renegotiation is triggered inside Peek and no internal exception occurs. Peek returns
+               HITLS_REC_NORMAL_RECV_BUF_EMPTY and the client state is CM_STATE_RENEGOTIATION
+            4. Both sides reach CM_STATE_TRANSPORTING
+            5. Two peeks return the same data and the read consumes it
+@ */
+/* BEGIN_CASE */
+void UT_TLS_HITLS_PEEK_TC002(void)
+{
+    FRAME_Init();
+
+    HITLS_Config *config = NULL;
+    FRAME_LinkObj *client = NULL;
+    FRAME_LinkObj *server = NULL;
+
+    config = HITLS_CFG_NewTLS12Config();
+    ASSERT_TRUE(config != NULL);
+    uint16_t signAlgs[] = {CERT_SIG_SCHEME_RSA_PKCS1_SHA256, CERT_SIG_SCHEME_ECDSA_SECP256R1_SHA256};
+    ASSERT_EQ(HITLS_CFG_SetSignature(config, signAlgs, sizeof(signAlgs) / sizeof(uint16_t)), HITLS_SUCCESS);
+    config->isSupportRenegotiation = true;
+
+    client = FRAME_CreateLink(config, BSL_UIO_TCP);
+    ASSERT_TRUE(client != NULL);
+    server = FRAME_CreateLink(config, BSL_UIO_TCP);
+    ASSERT_TRUE(server != NULL);
+
+    /* Step 1: first handshake */
+    ASSERT_EQ(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_SUCCESS);
+    ASSERT_EQ(client->ssl->state, CM_STATE_TRANSPORTING);
+    ASSERT_EQ(server->ssl->state, CM_STATE_TRANSPORTING);
+
+    /* Step 2: the server initiates the renegotiation, the HelloRequest is sent when the server read is driven */
+    ASSERT_EQ(HITLS_Renegotiate(server->ssl), HITLS_SUCCESS);
+    uint8_t tmpBuf[8] = {0};
+    uint32_t tmpLen = 0;
+    int32_t ret = HITLS_Read(server->ssl, tmpBuf, sizeof(tmpBuf), &tmpLen);
+    ASSERT_TRUE(ret == HITLS_REC_NORMAL_RECV_BUF_EMPTY || ret == HITLS_REC_NORMAL_IO_BUSY);
+    ASSERT_EQ(FRAME_TrasferMsgBetweenLink(server, client), HITLS_SUCCESS);
+
+    /* Step 3: the client peek receives the HelloRequest, enters renegotiation, sends the ClientHello and
+     * waits for the ServerHello, which is not available yet */
+    uint8_t peekBuf[8] = {0};
+    uint32_t peekLen = 0;
+    ret = HITLS_Peek(client->ssl, peekBuf, sizeof(peekBuf), &peekLen);
+    ASSERT_TRUE(ret == HITLS_REC_NORMAL_RECV_BUF_EMPTY || ret == HITLS_REC_NORMAL_IO_BUSY);
+    ASSERT_EQ(peekLen, 0u);
+    ASSERT_EQ(client->ssl->state, CM_STATE_RENEGOTIATION);
+
+    /* Step 4: complete the renegotiation */
+    ASSERT_EQ(FRAME_CreateRenegotiationState(client, server, true, HS_STATE_BUTT), HITLS_SUCCESS);
+    ASSERT_EQ(client->ssl->state, CM_STATE_TRANSPORTING);
+    ASSERT_EQ(server->ssl->state, CM_STATE_TRANSPORTING);
+
+    /* Step 5: the peek semantics on app data is kept after the renegotiation */
+    uint8_t s2c[] = {0xA5};
+    uint32_t writeLen = 0;
+    ASSERT_EQ(HITLS_Write(server->ssl, s2c, sizeof(s2c), &writeLen), HITLS_SUCCESS);
+    ASSERT_EQ(FRAME_TrasferMsgBetweenLink(server, client), HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_Peek(client->ssl, peekBuf, sizeof(peekBuf), &peekLen), HITLS_SUCCESS);
+    ASSERT_EQ(peekLen, sizeof(s2c));
+    ASSERT_EQ(memcmp(peekBuf, s2c, sizeof(s2c)), 0);
+    ASSERT_EQ(HITLS_Peek(client->ssl, peekBuf, sizeof(peekBuf), &peekLen), HITLS_SUCCESS);
+    ASSERT_EQ(peekLen, sizeof(s2c));
+    ASSERT_EQ(memcmp(peekBuf, s2c, sizeof(s2c)), 0);
+    uint8_t readBuf[8] = {0};
+    uint32_t readLen = 0;
+    ASSERT_EQ(HITLS_Read(client->ssl, readBuf, sizeof(readBuf), &readLen), HITLS_SUCCESS);
+    ASSERT_EQ(readLen, sizeof(s2c));
+    ASSERT_EQ(memcmp(readBuf, s2c, sizeof(s2c)), 0);
+
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
+EXIT:
+    HITLS_CFG_FreeConfig(config);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+}
+/* END_CASE */
+
+/* @
+* @test UT_TLS_HITLS_PEEK_TC003
+* @brief    1. Establish a TLS1.3 connection with post-handshake authentication supported and a
+               record size limit that fragments every post-handshake message into multiple records
+            2. The server initiates post-handshake authentication and sends the CertificateRequest message
+            3. The client is driven only by HITLS_Peek: after the first fragment of each post-handshake
+               message is cached in the handshake record list, assembling the message forces internal
+               handshake record reads from the wire while peekFlag is set
+            4. Both sides reach CM_STATE_TRANSPORTING
+            5. The server sends app data, the client peeks twice and reads once
+* @expect   1. Return HITLS_SUCCESS
+            2. The CertificateRequest is sent successfully
+            3. The post-handshake authentication is processed inside Peek and no internal exception occurs.
+               Every Peek returns HITLS_REC_NORMAL_RECV_BUF_EMPTY, HITLS_REC_NORMAL_IO_BUSY or HITLS_SUCCESS
+            4. Both sides reach CM_STATE_TRANSPORTING
+            5. Two peeks return the same data and the read consumes it
+@ */
+/* BEGIN_CASE */
+void UT_TLS_HITLS_PEEK_TC003(void)
+{
+    FRAME_Init();
+
+    HITLS_Config *c_config = NULL;
+    HITLS_Config *s_config = NULL;
+    FRAME_LinkObj *client = NULL;
+    FRAME_LinkObj *server = NULL;
+    HITLS_CERT_X509 *cCertChain = NULL;
+    HITLS_CERT_X509 *cCertee = NULL;
+    HITLS_CERT_Key *cPrivatekey = NULL;
+    HITLS_CERT_X509 *sCertChain = NULL;
+    HITLS_CERT_X509 *sCertee = NULL;
+    HITLS_CERT_Key *sPrivatekey = NULL;
+
+    c_config = HITLS_CFG_NewTLS13Config();
+    ASSERT_TRUE(c_config != NULL);
+    s_config = HITLS_CFG_NewTLS13Config();
+    ASSERT_TRUE(s_config != NULL);
+
+    /* The ECDSA chain keeps the certificate flights small enough for the framework message loop */
+    FRAME_CertInfo certInfo = {ECDSA_SHA256_CA_PATH, 0, 0, 0, 0, 0};
+    char cCertChainFile[] = "../testdata/tls/certificate/der/ecdsa_sha256/inter.der";
+    char cCerteeFile[] = "../testdata/tls/certificate/der/ecdsa_sha256/client.der";
+    char cPrivatekeyFile[] = "../testdata/tls/certificate/der/ecdsa_sha256/client.key.der";
+    char sCertChainFile[] = "../testdata/tls/certificate/der/ecdsa_sha256/inter.der";
+    char sCerteeFile[] = "../testdata/tls/certificate/der/ecdsa_sha256/server.der";
+    char sPrivatekeyFile[] = "../testdata/tls/certificate/der/ecdsa_sha256/server.key.der";
+
+    cCertChain = HITLS_CFG_ParseCert(c_config, (const uint8_t *)cCertChainFile,
+        strlen(cCertChainFile) + 1, TLS_PARSE_TYPE_FILE, TLS_PARSE_FORMAT_ASN1);
+    cCertee = HITLS_CFG_ParseCert(c_config, (const uint8_t *)cCerteeFile,
+        strlen(cCerteeFile) + 1, TLS_PARSE_TYPE_FILE, TLS_PARSE_FORMAT_ASN1);
+    cPrivatekey = HITLS_CFG_ParseKey(c_config, (const uint8_t *)cPrivatekeyFile,
+        strlen(cPrivatekeyFile) + 1, TLS_PARSE_TYPE_FILE, TLS_PARSE_FORMAT_ASN1);
+    sCertChain = HITLS_CFG_ParseCert(s_config, (const uint8_t *)sCertChainFile,
+        strlen(sCertChainFile) + 1, TLS_PARSE_TYPE_FILE, TLS_PARSE_FORMAT_ASN1);
+    sCertee = HITLS_CFG_ParseCert(s_config, (const uint8_t *)sCerteeFile,
+        strlen(sCerteeFile) + 1, TLS_PARSE_TYPE_FILE, TLS_PARSE_FORMAT_ASN1);
+    sPrivatekey = HITLS_CFG_ParseKey(s_config, (const uint8_t *)sPrivatekeyFile,
+        strlen(sPrivatekeyFile) + 1, TLS_PARSE_TYPE_FILE, TLS_PARSE_FORMAT_ASN1);
+    ASSERT_TRUE(cCertChain != NULL);
+    ASSERT_TRUE(cCertee != NULL);
+    ASSERT_TRUE(cPrivatekey != NULL);
+    ASSERT_TRUE(sCertChain != NULL);
+    ASSERT_TRUE(sCertee != NULL);
+    ASSERT_TRUE(sPrivatekey != NULL);
+
+    HITLS_CFG_SetClientVerifySupport(s_config, true);
+    HITLS_CFG_SetPostHandshakeAuthSupport(c_config, true);
+    HITLS_CFG_SetPostHandshakeAuthSupport(s_config, true);
+    /* A record size limit smaller than the NewSessionTicket plaintext forces every post-handshake
+     * message to span multiple records: after the first fragment is cached in the handshake record
+     * list, processing the message inside Peek must read the remaining fragments from the wire */
+    ASSERT_EQ(HITLS_CFG_SetRecordSizeLimit(c_config, 200), HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_CFG_SetRecordSizeLimit(s_config, 200), HITLS_SUCCESS);
+
+    /* Transfer the ownership of the parsed objects to the configs, they are released together with
+     * the configs (cloning them would leave the caller-owned copies leaked) */
+    ASSERT_TRUE(HITLS_CFG_SetCertificate(c_config, cCertee, false) == HITLS_SUCCESS);
+    ASSERT_TRUE(HITLS_CFG_SetPrivateKey(c_config, cPrivatekey, false) == HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_CFG_AddChainCert(c_config, cCertChain, false), HITLS_SUCCESS);
+
+    ASSERT_TRUE(HITLS_CFG_SetCertificate(s_config, sCertee, false) == HITLS_SUCCESS);
+    ASSERT_TRUE(HITLS_CFG_SetPrivateKey(s_config, sPrivatekey, false) == HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_CFG_AddChainCert(s_config, sCertChain, false), HITLS_SUCCESS);
+
+    client = FRAME_CreateLinkWithCert(c_config, BSL_UIO_TCP, &certInfo);
+    ASSERT_TRUE(client != NULL);
+    server = FRAME_CreateLinkWithCert(s_config, BSL_UIO_TCP, &certInfo);
+    ASSERT_TRUE(server != NULL);
+
+    /* Step 1: first handshake */
+    ASSERT_EQ(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_SUCCESS);
+
+    /* Step 2: the server initiates the post-handshake authentication, the CertificateRequest is sent when
+     * the server accept is driven and the server returns to the transporting state waiting for the client
+     * certificate to arrive as a post-handshake message */
+    ASSERT_EQ(HITLS_VerifyClientPostHandshake(server->ssl), HITLS_SUCCESS);
+    uint8_t buf[READ_BUF_LEN_18K] = {0};
+    uint32_t len = 0;
+    int32_t ret = HITLS_Accept(server->ssl);
+    ASSERT_TRUE(ret == HITLS_SUCCESS || ret == HITLS_REC_NORMAL_IO_BUSY ||
+        ret == HITLS_REC_NORMAL_RECV_BUF_EMPTY);
+    ASSERT_EQ(FRAME_TrasferMsgBetweenLink(server, client), HITLS_SUCCESS);
+
+    /* Step 3: the client is driven only by Peek until the post-handshake authentication completes and the
+     * client input is drained. Every internal handshake record read is performed with peekFlag set:
+     * CertificateRequest processing, Certificate/CertificateVerify/Finished sending continuation, the
+     * server Finished and the post-handshake NewSessionTickets */
+    FrameUioUserData *ioUserData = BSL_UIO_GetUserData(client->io);
+    ASSERT_TRUE(ioUserData != NULL);
+    uint32_t round = 0;
+    while (round < 100) {
+        if (client->ssl->state == CM_STATE_TRANSPORTING && server->ssl->state == CM_STATE_TRANSPORTING &&
+            ioUserData->recMsg.len == 0) {
+            break;
+        }
+        ret = HITLS_Peek(client->ssl, buf, sizeof(buf), &len);
+        ASSERT_TRUE(ret == HITLS_SUCCESS || ret == HITLS_REC_NORMAL_IO_BUSY ||
+            ret == HITLS_REC_NORMAL_RECV_BUF_EMPTY);
+        ASSERT_EQ(FRAME_TrasferMsgBetweenLink(client, server), HITLS_SUCCESS);
+        ret = HITLS_Read(server->ssl, buf, sizeof(buf), &len);
+        ASSERT_TRUE(ret == HITLS_SUCCESS || ret == HITLS_REC_NORMAL_IO_BUSY ||
+            ret == HITLS_REC_NORMAL_RECV_BUF_EMPTY);
+        ASSERT_EQ(FRAME_TrasferMsgBetweenLink(server, client), HITLS_SUCCESS);
+        round++;
+    }
+    ASSERT_TRUE(round < 100);
+
+    /* Step 4: the post-handshake authentication is completed */
+    ASSERT_EQ(client->ssl->state, CM_STATE_TRANSPORTING);
+    ASSERT_EQ(server->ssl->state, CM_STATE_TRANSPORTING);
+
+    /* Step 5: the peek semantics on app data is kept after the post-handshake authentication */
+    uint8_t s2c[] = {0x5A};
+    uint32_t writeLen = 0;
+    ASSERT_EQ(HITLS_Write(server->ssl, s2c, sizeof(s2c), &writeLen), HITLS_SUCCESS);
+    ASSERT_EQ(FRAME_TrasferMsgBetweenLink(server, client), HITLS_SUCCESS);
+    uint8_t peekBuf[8] = {0};
+    uint32_t peekLen = 0;
+    ASSERT_EQ(HITLS_Peek(client->ssl, peekBuf, sizeof(peekBuf), &peekLen), HITLS_SUCCESS);
+    ASSERT_EQ(peekLen, sizeof(s2c));
+    ASSERT_EQ(memcmp(peekBuf, s2c, sizeof(s2c)), 0);
+    ASSERT_EQ(HITLS_Peek(client->ssl, peekBuf, sizeof(peekBuf), &peekLen), HITLS_SUCCESS);
+    ASSERT_EQ(peekLen, sizeof(s2c));
+    ASSERT_EQ(memcmp(peekBuf, s2c, sizeof(s2c)), 0);
+    uint8_t readBuf[8] = {0};
+    uint32_t readLen = 0;
+    ASSERT_EQ(HITLS_Read(client->ssl, readBuf, sizeof(readBuf), &readLen), HITLS_SUCCESS);
+    ASSERT_EQ(readLen, sizeof(s2c));
+    ASSERT_EQ(memcmp(readBuf, s2c, sizeof(s2c)), 0);
+
+EXIT:
+    HITLS_CFG_FreeConfig(c_config);
+    HITLS_CFG_FreeConfig(s_config);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+}
+/* END_CASE */
+
+/* @
 * @test  UT_TLS_SetTmpDhCb_TC001
 * @spec  -
 * @title  HITLS_SetTmpDhCb interface test. The config field is empty.

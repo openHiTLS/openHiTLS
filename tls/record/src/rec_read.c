@@ -1005,12 +1005,12 @@ int32_t RecordDecryptPrepare(TLS_Ctx *ctx, uint16_t version, REC_Type recordType
         state->isWrapped = true;
     }
 
-    if (ctx->peekFlag != 0 && recordType != REC_TYPE_APP) {
-        BSL_ERR_PUSH_ERROR(HITLS_INTERNAL_EXCEPTION);
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16170, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "Peek mode applies only if record type is application.", 0, 0, 0, 0);
-        return HITLS_INTERNAL_EXCEPTION;
-    }
+    /*
+     * Do not reject non-application records in peek mode: the internal state machine (renegotiation,
+     * post-handshake messages) legitimately reads handshake records while HITLS_Peek is in progress.
+     * The peek non-consuming semantics are already confined to application data by the
+     * RecBufListGetBuffer callers, which pass isPeek only for REC_TYPE_APP.
+     */
 
     RecHdr recordHeader = { 0 };
     uint8_t *recordBody = NULL;
