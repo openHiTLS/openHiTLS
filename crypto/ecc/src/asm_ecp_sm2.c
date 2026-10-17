@@ -256,7 +256,9 @@ static int32_t ECP_Sm2Point2Array(SM2_point *r, const ECC_Point *p)
     int32_t ret;
     uint32_t len = SM2_LIMBS;
     GOTO_ERR_IF_EX(BN_Bn2U64Array(&p->x, (BN_UINT *)&r->x, &len), ret);
+    len = SM2_LIMBS;
     GOTO_ERR_IF_EX(BN_Bn2U64Array(&p->y, (BN_UINT *)&r->y, &len), ret);
+    len = SM2_LIMBS;
     GOTO_ERR_IF_EX(BN_Bn2U64Array(&p->z, (BN_UINT *)&r->z, &len), ret);
 ERR:
     return ret;
