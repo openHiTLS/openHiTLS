@@ -2216,11 +2216,11 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_PSS_PARAMETER_CHECK()
     uint16_t cipherSuite[] = {HITLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256};
     HITLS_CFG_SetCipherSuites(config_s, cipherSuite, sizeof(cipherSuite) / sizeof(uint16_t));
     FRAME_CertInfo certInfo = {
-        "rsa_pss_sha256/rsa_pss_root.der",
-        "rsa_pss_sha256/rsa_pss_intCa.der",
-        "rsa_pss_sha256/rsa_pss_dev_sha512.der",
+        "rsa_pss_sha512/root.der",
+        "rsa_pss_sha512/intCa.der",
+        "rsa_pss_sha512/dev.der",
         0,
-        "rsa_pss_sha256/rsa_pss_dev_sha512.key.der",
+        "rsa_pss_sha512/dev.key.der",
         0,
     };
     FRAME_LinkObj *client = FRAME_CreateLinkWithCert(config_c, BSL_UIO_TCP, &certInfo);

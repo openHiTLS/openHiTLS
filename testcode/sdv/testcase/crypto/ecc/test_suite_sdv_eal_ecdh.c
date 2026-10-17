@@ -795,3 +795,77 @@ EXIT:
     TestRandDeInit();
 }
 /* END_CASE */
+
+/**
+ * @test SDV_CRYPTO_ECC_SM2_COORDINATE_WIDTH_TC001
+ * @brief Check affine conversion and multiplication with different coordinate widths.
+ * @expect Results match the original affine point.
+ * @precon SM2 enabled.
+ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_ECC_SM2_COORDINATE_WIDTH_TC001(Hex *point, Hex *scale)
+{
+#ifndef HITLS_CRYPTO_CURVE_SM2
+    (void)point;
+    (void)scale;
+    SKIP_TEST();
+#else
+    ECC_Para *para = NULL;
+    ECC_Point *expected = NULL;
+    ECC_Point *input = NULL;
+    ECC_Point *result = NULL;
+    BN_BigNum *power = NULL;
+    BN_BigNum *one = NULL;
+    BN_BigNum *zero = NULL;
+    BN_Optimizer *opt = NULL;
+
+    TestMemInit();
+    ASSERT_EQ(TestRandInit(), CRYPT_SUCCESS);
+    para = ECC_NewPara(CRYPT_ECC_SM2);
+    ASSERT_TRUE(para != NULL);
+    expected = ECC_NewPoint(para);
+    input = ECC_NewPoint(para);
+    result = ECC_NewPoint(para);
+    power = BN_Create(256);
+    one = BN_Create(256);
+    zero = BN_Create(256);
+    opt = BN_OptimizerCreate();
+    ASSERT_TRUE(expected != NULL && input != NULL && result != NULL);
+    ASSERT_TRUE(power != NULL && one != NULL && zero != NULL && opt != NULL);
+    ASSERT_EQ(ECC_DecodePoint(para, expected, point->x, point->len), CRYPT_SUCCESS);
+    ASSERT_EQ(BN_Bin2Bn(input->z, scale->x, scale->len), CRYPT_SUCCESS);
+    ASSERT_EQ(BN_ModSqr(power, input->z, para->p, opt), CRYPT_SUCCESS);
+    ASSERT_EQ(BN_ModMul(input->x, expected->x, power, para->p, opt), CRYPT_SUCCESS);
+    ASSERT_EQ(BN_ModMul(power, power, input->z, para->p, opt), CRYPT_SUCCESS);
+    ASSERT_EQ(BN_ModMul(input->y, expected->y, power, para->p, opt), CRYPT_SUCCESS);
+    ASSERT_EQ(BN_SetLimb(one, 1), CRYPT_SUCCESS);
+    ASSERT_EQ(para->method->point2Affine(para, result, input), CRYPT_SUCCESS);
+    ASSERT_EQ(para->method->point2Affine(para, result, result), CRYPT_SUCCESS);
+    ASSERT_EQ(BN_Cmp(result->x, expected->x), 0);
+    ASSERT_EQ(BN_Cmp(result->y, expected->y), 0);
+    ASSERT_TRUE(BN_IsOne(result->z));
+
+    ASSERT_EQ(ECC_PointMul(para, result, one, input), CRYPT_SUCCESS);
+    ASSERT_EQ(para->method->point2Affine(para, result, result), CRYPT_SUCCESS);
+    ASSERT_EQ(BN_Cmp(result->x, expected->x), 0);
+    ASSERT_EQ(BN_Cmp(result->y, expected->y), 0);
+    ASSERT_TRUE(BN_IsOne(result->z));
+
+    ASSERT_EQ(ECC_PointMulAdd(para, result, zero, one, input), CRYPT_SUCCESS);
+    ASSERT_EQ(para->method->point2Affine(para, result, result), CRYPT_SUCCESS);
+    ASSERT_EQ(BN_Cmp(result->x, expected->x), 0);
+    ASSERT_EQ(BN_Cmp(result->y, expected->y), 0);
+    ASSERT_TRUE(BN_IsOne(result->z));
+EXIT:
+    BN_OptimizerDestroy(opt);
+    BN_Destroy(zero);
+    BN_Destroy(one);
+    BN_Destroy(power);
+    ECC_FreePoint(result);
+    ECC_FreePoint(input);
+    ECC_FreePoint(expected);
+    ECC_FreePara(para);
+    TestRandDeInit();
+#endif
+}
+/* END_CASE */
