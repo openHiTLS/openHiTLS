@@ -2572,3 +2572,47 @@ EXIT:
 #endif
 }
 /* END_CASE */
+
+/* @
+* @test  UT_TLS_TLCP_CONSISTENCY_TLS13_CLEAR_TLCP_BITS_TC001
+* @title TLS 1.3 connection clears TLCP bits from version masks
+* @precon nan
+* @brief  1. Create a tls_all config (TLS 1.2 + TLS 1.3 + TLCP bits) and establish a TLS 1.3 connection.
+*            Expected result 1.
+*         2. After the handshake, verify the server's version and originVersionMask have TLCP_VERSION_BITS cleared.
+*            Expected result 2.
+* @expect 1. The connection is established successfully and the negotiated version is TLS 1.3.
+*         2. TLCP_VERSION_BITS is cleared from both version and originVersionMask on the server.
+@ */
+/* BEGIN_CASE */
+void UT_TLS_TLCP_CONSISTENCY_TLS13_CLEAR_TLCP_BITS_TC001(void)
+{
+#if defined(HITLS_TLS_PROTO_TLS13) && defined(HITLS_TLS_CONFIG_VERSION)
+    FRAME_Init();
+    HITLS_Config *config = HITLS_CFG_NewTLSConfig();
+    ASSERT_TRUE(config != NULL);
+    ASSERT_TRUE((config->version & TLCP_VERSION_BITS) != 0);
+
+    FRAME_LinkObj *client = FRAME_CreateLink(config, BSL_UIO_TCP);
+    FRAME_LinkObj *server = FRAME_CreateLink(config, BSL_UIO_TCP);
+    ASSERT_TRUE(client != NULL);
+    ASSERT_TRUE(server != NULL);
+
+    ASSERT_EQ(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_SUCCESS);
+    ASSERT_TRUE(client->ssl->state == CM_STATE_TRANSPORTING);
+
+    HITLS_Ctx *serverTlsCtx = FRAME_GetTlsCtx(server);
+    ASSERT_EQ(serverTlsCtx->negotiatedInfo.version, HITLS_VERSION_TLS13);
+    ASSERT_TRUE((serverTlsCtx->config.tlsConfig.version & TLCP_VERSION_BITS) == 0);
+    ASSERT_TRUE((serverTlsCtx->config.tlsConfig.originVersionMask & TLCP_VERSION_BITS) == 0);
+
+    ASSERT_TRUE(TestIsErrStackEmpty());
+EXIT:
+    HITLS_CFG_FreeConfig(config);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+#else
+    SKIP_TEST();
+#endif
+}
+/* END_CASE */
