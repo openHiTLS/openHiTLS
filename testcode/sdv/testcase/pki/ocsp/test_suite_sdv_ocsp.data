@@ -185,16 +185,16 @@ SDV_OCSP_HTTP_TC001
 OCSP-HTTP ReqCtxNew with NULL parameters
 SDV_OCSP_HTTP_TC002
 
-OCSP-HTTP SendReq blocking round trip
+OCSP-HTTP HttpReqCtxExchange round trip
 SDV_OCSP_HTTP_TC003
 
-OCSP-HTTP SendReq non-blocking in progress
+OCSP-HTTP HttpReqCtxExchange non-blocking in progress
 SDV_OCSP_HTTP_TC004
 
-OCSP-HTTP SendReq passes HTTP errors through
+OCSP-HTTP HttpReqCtxExchange passes HTTP errors through
 SDV_OCSP_HTTP_TC005
 
-OCSP-HTTP SendReq with NULL parameters
+OCSP-HTTP HttpReqCtxExchange with NULL parameters
 SDV_OCSP_HTTP_TC006
 
 OCSP-HTTP ReqCtxFree with NULL is safe
@@ -212,13 +212,13 @@ SDV_OCSP_HTTP_TC010
 End-to-end: AIA URL to host/port/path to IP to UIO to OCSP exchange
 SDV_OCSP_HTTP_TC011
 
-SendReq rejects a body whose Content-Length disagrees with the DER length
+HttpReqCtxExchange rejects a body whose Content-Length disagrees with the DER length
 SDV_OCSP_HTTP_TC012
 
-SendReq passes the HTTP timeout through
+HttpReqCtxExchange passes the HTTP timeout through
 SDV_OCSP_HTTP_TC013
 
-SendReq rejects a non-200 HTTP status
+HttpReqCtxExchange rejects a non-200 HTTP status
 SDV_OCSP_HTTP_TC014
 
 Adding more than the single-request limit is rejected

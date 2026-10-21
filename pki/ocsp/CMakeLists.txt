@@ -16,6 +16,7 @@ set(_ocsp_sources
     ${CMAKE_CURRENT_SOURCE_DIR}/src/hitls_ocsp_certid.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/hitls_ocsp_request.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/hitls_ocsp_response.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/hitls_ocsp_http.c
 )
 
 add_library(_hitls_pki_ocsp OBJECT ${_ocsp_sources})

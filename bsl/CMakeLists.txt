@@ -79,6 +79,11 @@ if(HITLS_BSL_HASH)
     add_subdirectory(hash)
 endif()
 
+# HTTP - HTTP client
+if(HITLS_BSL_HTTP)
+    add_subdirectory(http)
+endif()
+
 # INIT - Initialization
 if(HITLS_BSL_INIT)
     add_subdirectory(init)

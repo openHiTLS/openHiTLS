@@ -89,6 +89,7 @@
 #cmakedefine HITLS_BSL_CONF
 #cmakedefine HITLS_BSL_ERR
 #cmakedefine HITLS_BSL_HASH
+#cmakedefine HITLS_BSL_HTTP
 #cmakedefine HITLS_BSL_INIT
 #cmakedefine HITLS_BSL_LIST
 #cmakedefine HITLS_BSL_LOG

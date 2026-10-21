@@ -196,6 +196,9 @@ set(TEST_INTF_INCLUDE_DIRS
     ${openHiTLS_SRC}/tls/record/include
     ${openHiTLS_SRC}/tls/record/src
     ${openHiTLS_SRC}/bsl/uio/src
+    ${openHiTLS_SRC}/bsl/http/include
+    ${openHiTLS_SRC}/bsl/http/src
+    ${openHiTLS_SRC}/testcode/sdv/testcase/bsl/http
     ${openHiTLS_SRC}/bsl/asn1/include
     ${openHiTLS_SRC}/bsl/buffer/include
     ${openHiTLS_SRC}/include/pki

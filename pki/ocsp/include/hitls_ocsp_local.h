@@ -21,6 +21,7 @@
 #include <stdint.h>
 #include "bsl_asn1_internal.h"
 #include "bsl_obj.h"
+#include "bsl_http.h"
 #include "crypt_eal_md.h"
 #include "crypt_eal_pkey.h"
 #include "hitls_pki_ocsp.h"

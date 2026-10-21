@@ -249,6 +249,19 @@ enum BSL_ERROR {
     BSL_OBJ_ERR_FIND_HASH_TABLE,
     BSL_OBJ_INVALID_HASH_TABLE,
     BSL_OBJ_INVALID_ALGID,
+
+    /* The return value of the HTTP submodule starts from 0x03140001. */
+    BSL_HTTP_ERR_PARAM = 0x03140001, /**< Invalid parameter. */
+    BSL_HTTP_ERR_IO, /**< I/O error. */
+    BSL_HTTP_ERR_RESP_PARSE, /**< Response parse error. */
+    BSL_HTTP_ERR_RESP_HDR_LINES, /**< Response header lines exceeded the limit. */
+    BSL_HTTP_ERR_RESP_TOO_LARGE, /**< Response body exceeded the size limit. */
+    BSL_HTTP_ERR_CONTENT_TYPE, /**< Response Content-Type mismatch. */
+    BSL_HTTP_ERR_IN_PROGRESS, /**< Non-blocking I/O in progress, retry later. */
+    BSL_HTTP_ERR_TIMEOUT, /**< The transfer deadline was reached. */
+    BSL_HTTP_ERR_RESP_STATUS, /**< Response status code is not 200. */
+    BSL_HTTP_ERR_REQ_NOT_SET, /**< Exchange was called before HITLS_HTTP_ReqCtxSetReq set the request body. */
+    BSL_HTTP_ERR_STATE, /**< The context is in an unexpected internal state. */
 };
 
 #ifdef __cplusplus

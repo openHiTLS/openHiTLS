@@ -6141,7 +6141,7 @@ void SDV_OCSP_HTTP_TC001(void)
     ctx = HITLS_OCSP_HttpReqCtxNew(uio, "/responder/ocsp", req);
     ASSERT_TRUE(ctx != NULL);
 EXIT:
-    HITLS_HTTP_ReqCtxFree(ctx);
+    HITLS_OCSP_HttpReqCtxFree(ctx);
     HITLS_OCSP_ReqFree(req);
     BSL_UIO_Free(uio);
 #else
@@ -6186,15 +6186,17 @@ EXIT:
 
 /**
  * @test  SDV_OCSP_HTTP_TC003
- * @title  OCSP-HTTP SendReq blocking round trip
+ * @title  OCSP-HTTP HttpReqCtxExchange round trip
  * @precon  nan
  * @brief
  *    1. Build an OCSP request and a canned HTTP response wrapping a non-successful OCSPResponse.
- *    2. Create the context and call HITLS_OCSP_SendReq in blocking mode.
+ *    2. Create the context and call HITLS_OCSP_HttpReqCtxExchange once (the stub
+ *       delivers everything in one step).
  * @expect
  *    1. The response is set up and the context created successfully.
- *    2. SendReq returns HITLS_PKI_SUCCESS, the parsed response status matches, and the
- *       request on the wire carries the OCSP request line, content type and content length.
+ *    2. HttpReqCtxExchange returns HITLS_PKI_SUCCESS, the parsed response status matches,
+ *       and the request on the wire carries the OCSP request line, content type and
+ *       content length.
  */
 /* BEGIN_CASE */
 void SDV_OCSP_HTTP_TC003(void)
@@ -6218,7 +6220,7 @@ void SDV_OCSP_HTTP_TC003(void)
     HttpTestSetResponseBuf(payload, payloadLen);
     ctx = HITLS_OCSP_HttpReqCtxNew(uio, "/responder/ocsp", req);
     ASSERT_TRUE(ctx != NULL);
-    ASSERT_EQ(HITLS_OCSP_SendReq(ctx, &parsed, true), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_OCSP_HttpReqCtxExchange(ctx, &parsed), HITLS_PKI_SUCCESS);
     ASSERT_TRUE(parsed != NULL);
     int32_t status = -1;
     ASSERT_EQ(HITLS_OCSP_RespCtrl(parsed, HITLS_OCSP_RESP_GET_STATUS, &status, sizeof(status)), HITLS_PKI_SUCCESS);
@@ -6229,7 +6231,7 @@ EXIT:
     free(payload);
     BSL_SAL_Free(respDer.data);
     HITLS_OCSP_RespFree(parsed);
-    HITLS_HTTP_ReqCtxFree(ctx);
+    HITLS_OCSP_HttpReqCtxFree(ctx);
     HITLS_OCSP_ReqFree(req);
     BSL_UIO_Free(uio);
 #else
@@ -6240,11 +6242,11 @@ EXIT:
 
 /**
  * @test  SDV_OCSP_HTTP_TC004
- * @title  OCSP-HTTP SendReq non-blocking in progress
+ * @title  OCSP-HTTP HttpReqCtxExchange non-blocking in progress
  * @precon  nan
  * @brief
  *    1. Build a request and a canned response; make the first write block.
- *    2. Call HITLS_OCSP_SendReq(ctx, resp, false) twice.
+ *    2. Call HITLS_OCSP_HttpReqCtxExchange(ctx, resp) twice.
  * @expect
  *    1. The response is set up and the context created successfully.
  *    2. The first call returns HITLS_OCSP_ERR_IN_PROGRESS and the retry returns HITLS_PKI_SUCCESS.
@@ -6272,17 +6274,17 @@ void SDV_OCSP_HTTP_TC004(void)
     ctx = HITLS_OCSP_HttpReqCtxNew(uio, "/responder/ocsp", req);
     ASSERT_TRUE(ctx != NULL);
     g_httpWriteBlockFirst = 1;
-    int32_t ret = HITLS_OCSP_SendReq(ctx, &parsed, false);
+    int32_t ret = HITLS_OCSP_HttpReqCtxExchange(ctx, &parsed);
     ASSERT_EQ(ret, HITLS_OCSP_ERR_IN_PROGRESS);
     ASSERT_TRUE(parsed == NULL);
-    ret = HITLS_OCSP_SendReq(ctx, &parsed, false);
+    ret = HITLS_OCSP_HttpReqCtxExchange(ctx, &parsed);
     ASSERT_EQ(ret, HITLS_PKI_SUCCESS);
     ASSERT_TRUE(parsed != NULL);
 EXIT:
     free(payload);
     BSL_SAL_Free(respDer.data);
     HITLS_OCSP_RespFree(parsed);
-    HITLS_HTTP_ReqCtxFree(ctx);
+    HITLS_OCSP_HttpReqCtxFree(ctx);
     HITLS_OCSP_ReqFree(req);
     BSL_UIO_Free(uio);
 #else
@@ -6293,14 +6295,14 @@ EXIT:
 
 /**
  * @test  SDV_OCSP_HTTP_TC005
- * @title  OCSP-HTTP SendReq passes HTTP errors through
+ * @title  OCSP-HTTP HttpReqCtxExchange passes HTTP errors through
  * @precon  nan
  * @brief
  *    1. Build a request and make the stub write fail.
- *    2. Call HITLS_OCSP_SendReq in blocking mode.
+ *    2. Call HITLS_OCSP_HttpReqCtxExchange once.
  * @expect
  *    1. The context is created successfully.
- *    2. SendReq returns the HTTP I/O error code.
+ *    2. HttpReqCtxExchange returns the HTTP I/O error code.
  */
 /* BEGIN_CASE */
 void SDV_OCSP_HTTP_TC005(void)
@@ -6318,10 +6320,10 @@ void SDV_OCSP_HTTP_TC005(void)
     ctx = HITLS_OCSP_HttpReqCtxNew(uio, "/responder/ocsp", req);
     ASSERT_TRUE(ctx != NULL);
     g_httpWriteRet = BSL_UIO_IO_EXCEPTION;
-    ASSERT_EQ(HITLS_OCSP_SendReq(ctx, &parsed, true), BSL_HTTP_ERR_IO);
+    ASSERT_EQ(HITLS_OCSP_HttpReqCtxExchange(ctx, &parsed), BSL_HTTP_ERR_IO);
 EXIT:
     HITLS_OCSP_RespFree(parsed);
-    HITLS_HTTP_ReqCtxFree(ctx);
+    HITLS_OCSP_HttpReqCtxFree(ctx);
     HITLS_OCSP_ReqFree(req);
     BSL_UIO_Free(uio);
 #else
@@ -6332,11 +6334,11 @@ EXIT:
 
 /**
  * @test  SDV_OCSP_HTTP_TC006
- * @title  OCSP-HTTP SendReq with NULL parameters
+ * @title  OCSP-HTTP HttpReqCtxExchange with NULL parameters
  * @precon  nan
  * @brief
  *    1. Build a request and a context.
- *    2. Call HITLS_OCSP_SendReq with NULL ctx and with NULL resp.
+ *    2. Call HITLS_OCSP_HttpReqCtxExchange with NULL ctx and with NULL resp.
  * @expect
  *    1. The context is created successfully.
  *    2. Both calls return HITLS_OCSP_ERR_NULL_POINTER.
@@ -6354,13 +6356,13 @@ void SDV_OCSP_HTTP_TC006(void)
     ASSERT_TRUE(uio != NULL);
     req = OcspHttpBuildReq();
     ASSERT_TRUE(req != NULL);
-    ASSERT_EQ(HITLS_OCSP_SendReq(NULL, &parsed, true), HITLS_OCSP_ERR_NULL_POINTER);
+    ASSERT_EQ(HITLS_OCSP_HttpReqCtxExchange(NULL, &parsed), HITLS_OCSP_ERR_NULL_POINTER);
     ctx = HITLS_OCSP_HttpReqCtxNew(uio, "/responder/ocsp", req);
     ASSERT_TRUE(ctx != NULL);
-    ASSERT_EQ(HITLS_OCSP_SendReq(ctx, NULL, true), HITLS_OCSP_ERR_NULL_POINTER);
+    ASSERT_EQ(HITLS_OCSP_HttpReqCtxExchange(ctx, NULL), HITLS_OCSP_ERR_NULL_POINTER);
 EXIT:
     HITLS_OCSP_RespFree(parsed);
-    HITLS_HTTP_ReqCtxFree(ctx);
+    HITLS_OCSP_HttpReqCtxFree(ctx);
     HITLS_OCSP_ReqFree(req);
     BSL_UIO_Free(uio);
 #else
@@ -6374,14 +6376,14 @@ EXIT:
  * @title  OCSP-HTTP ReqCtxFree with NULL is safe
  * @precon  nan
  * @brief
- *    1. Call HITLS_HTTP_ReqCtxFree(NULL).
+ *    1. Call HITLS_OCSP_HttpReqCtxFree(NULL).
  * @expect
  *    1. No operation and no crash.
  */
 /* BEGIN_CASE */
 void SDV_OCSP_HTTP_TC007(void)
 {
-    HITLS_HTTP_ReqCtxFree(NULL);
+    HITLS_OCSP_HttpReqCtxFree(NULL);
     ASSERT_TRUE(true);
 EXIT:
     return;
@@ -6431,7 +6433,7 @@ void SDV_OCSP_HTTP_TC008(void)
     uint32_t dummy = 0;
     ASSERT_EQ(HITLS_HTTP_ReqCtxCtrl(ctx, 9999, &dummy, sizeof(dummy)), BSL_HTTP_ERR_PARAM);
 EXIT:
-    HITLS_HTTP_ReqCtxFree(ctx);
+    HITLS_OCSP_HttpReqCtxFree(ctx);
     HITLS_OCSP_ReqFree(req);
     BSL_UIO_Free(uio);
 #else
@@ -6446,10 +6448,10 @@ EXIT:
  * @precon  nan
  * @brief
  *    1. Build a request, a canned response and a context; add the Host header.
- *    2. Send in blocking mode.
+ *    2. Drive the exchange once.
  * @expect
  *    1. The context is created successfully and the AddHeader call succeeds.
- *    2. SendReq returns success and the request carries Host: status.geotrust.com.
+ *    2. HttpReqCtxExchange returns success and the request carries Host: status.geotrust.com.
  */
 /* BEGIN_CASE */
 void SDV_OCSP_HTTP_TC009(void)
@@ -6474,14 +6476,14 @@ void SDV_OCSP_HTTP_TC009(void)
     ctx = HITLS_OCSP_HttpReqCtxNew(uio, "/responder/ocsp", req);
     ASSERT_TRUE(ctx != NULL);
     ASSERT_EQ(HITLS_HTTP_ReqCtxAddHeader(ctx, "Host", "status.geotrust.com"), HITLS_PKI_SUCCESS);
-    ASSERT_EQ(HITLS_OCSP_SendReq(ctx, &parsed, true), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_OCSP_HttpReqCtxExchange(ctx, &parsed), HITLS_PKI_SUCCESS);
     ASSERT_TRUE(parsed != NULL);
     ASSERT_TRUE(HttpTestWrittenContains("Host: status.geotrust.com\r\n"));
 EXIT:
     free(payload);
     BSL_SAL_Free(respDer.data);
     HITLS_OCSP_RespFree(parsed);
-    HITLS_HTTP_ReqCtxFree(ctx);
+    HITLS_OCSP_HttpReqCtxFree(ctx);
     HITLS_OCSP_ReqFree(req);
     BSL_UIO_Free(uio);
 #else
@@ -6523,7 +6525,7 @@ void SDV_OCSP_HTTP_TC010(void)
     tooLong[sizeof(tooLong) - 1] = '\0';
     ASSERT_NE(HITLS_HTTP_ReqCtxAddHeader(ctx, "Host", tooLong), HITLS_PKI_SUCCESS);
 EXIT:
-    HITLS_HTTP_ReqCtxFree(ctx);
+    HITLS_OCSP_HttpReqCtxFree(ctx);
     HITLS_OCSP_ReqFree(req);
     BSL_UIO_Free(uio);
 #else
@@ -6540,11 +6542,11 @@ EXIT:
  *    1. Parse the preset certificate carrying an AIA OCSP URL.
  *    2. Extract the URL, split it into host/port/path and resolve the host to an IP.
  *    3. Create a stub UIO, build an OCSP request and send it through the
- *       OCSP-HTTP adapter in blocking mode with the URL host set explicitly.
+ *       OCSP-HTTP adapter with the URL host set explicitly.
  * @expect
  *    1. The URL is "http://status.geotrust.com" -> host, port 80 and path "/".
  *    2. The host resolves to 10.1.2.3.
- *    3. SendReq returns success and the response parses; the request on the wire
+ *    3. HttpReqCtxExchange returns success and the response parses; the request on the wire
  *       carries "POST / HTTP/1.0" and "Host: status.geotrust.com".
  */
 /* BEGIN_CASE */
@@ -6612,7 +6614,7 @@ void SDV_OCSP_HTTP_TC011(void)
     ctx = HITLS_OCSP_HttpReqCtxNew(uio, path, req);
     ASSERT_TRUE(ctx != NULL);
     ASSERT_EQ(HITLS_HTTP_ReqCtxAddHeader(ctx, "Host", host), HITLS_PKI_SUCCESS);
-    ASSERT_EQ(HITLS_OCSP_SendReq(ctx, &parsed, true), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_OCSP_HttpReqCtxExchange(ctx, &parsed), HITLS_PKI_SUCCESS);
     ASSERT_TRUE(parsed != NULL);
     int32_t status = -1;
     ASSERT_EQ(HITLS_OCSP_RespCtrl(parsed, HITLS_OCSP_RESP_GET_STATUS, &status, sizeof(status)), HITLS_PKI_SUCCESS);
@@ -6625,7 +6627,7 @@ EXIT:
     free(payload);
     BSL_SAL_Free(respDer.data);
     HITLS_OCSP_RespFree(parsed);
-    HITLS_HTTP_ReqCtxFree(ctx);
+    HITLS_OCSP_HttpReqCtxFree(ctx);
     HITLS_OCSP_ReqFree(req);
     BSL_LIST_FREE(urls, (BSL_LIST_PFUNC_FREE)BslBufferFree);
     HITLS_X509_CertFree(cert);
@@ -6638,7 +6640,7 @@ EXIT:
 
 /**
  * @test  SDV_OCSP_HTTP_TC012
- * @title  SendReq rejects a body whose Content-Length disagrees with the DER length
+ * @title  HttpReqCtxExchange rejects a body whose Content-Length disagrees with the DER length
  * @precon  nan
  * @brief
  *    1. Build a request, a valid OCSP response DER and a stub UIO.
@@ -6680,9 +6682,9 @@ void SDV_OCSP_HTTP_TC012(void)
     HttpTestSetResponseBuf(payload, (uint32_t)hn + paddedLen);
     ctx = HITLS_OCSP_HttpReqCtxNew(uio, "/responder/ocsp", req);
     ASSERT_TRUE(ctx != NULL);
-    ASSERT_EQ(HITLS_OCSP_SendReq(ctx, &parsed, true), HITLS_OCSP_ERR_LENGTH_MISMATCH);
+    ASSERT_EQ(HITLS_OCSP_HttpReqCtxExchange(ctx, &parsed), HITLS_OCSP_ERR_LENGTH_MISMATCH);
     ASSERT_TRUE(parsed == NULL);
-    HITLS_HTTP_ReqCtxFree(ctx);
+    HITLS_OCSP_HttpReqCtxFree(ctx);
     ctx = NULL;
     HITLS_OCSP_ReqFree(req);
     req = NULL;
@@ -6709,13 +6711,13 @@ void SDV_OCSP_HTTP_TC012(void)
     HttpTestSetResponseBuf(payload, (uint32_t)hn + (uint32_t)strlen(garbage));
     ctx = HITLS_OCSP_HttpReqCtxNew(uio, "/responder/ocsp", req);
     ASSERT_TRUE(ctx != NULL);
-    ASSERT_EQ(HITLS_OCSP_SendReq(ctx, &parsed, true), HITLS_OCSP_ERR_INVALID_RESPONSE);
+    ASSERT_EQ(HITLS_OCSP_HttpReqCtxExchange(ctx, &parsed), HITLS_OCSP_ERR_INVALID_RESPONSE);
     ASSERT_TRUE(parsed == NULL);
 EXIT:
     free(payload);
     BSL_SAL_Free(respDer.data);
     HITLS_OCSP_RespFree(parsed);
-    HITLS_HTTP_ReqCtxFree(ctx);
+    HITLS_OCSP_HttpReqCtxFree(ctx);
     HITLS_OCSP_ReqFree(req);
     BSL_UIO_Free(uio);
 #else
@@ -6726,14 +6728,16 @@ EXIT:
 
 /**
  * @test  SDV_OCSP_HTTP_TC013
- * @title  OCSP-HTTP SendReq passes the HTTP timeout through
+ * @title  OCSP-HTTP HttpReqCtxExchange passes the HTTP timeout through
  * @precon  nan
  * @brief
  *    1. Build a request, a canned response and a context; set a 1 second deadline.
- *    2. Make the first read return in progress and call SendReq in blocking mode.
+ *    2. Make the first read return in progress and poll HITLS_OCSP_HttpReqCtxExchange
+ *       until it is no longer in progress.
  * @expect
  *    1. The context is created successfully and the timeout is set.
- *    2. SendReq returns BSL_HTTP_ERR_TIMEOUT (the HTTP deadline error passes through
+ *    2. The poll loop ends with HttpReqCtxExchange returning BSL_HTTP_ERR_TIMEOUT
+ *       (the HTTP deadline error passes through
  *       the adapter) and no response is produced.
  */
 /* BEGIN_CASE */
@@ -6755,11 +6759,17 @@ void SDV_OCSP_HTTP_TC013(void)
     ASSERT_EQ(HITLS_HTTP_ReqCtxCtrl(ctx, HITLS_HTTP_CTRL_SET_TIMEOUT, &timeoutSec, sizeof(timeoutSec)),
               HITLS_PKI_SUCCESS);
     g_httpReadBlockFirst = 1;
-    ASSERT_EQ(HITLS_OCSP_SendReq(ctx, &parsed, true), BSL_HTTP_ERR_TIMEOUT);
+    /* Single-step non-blocking exchange: poll until the 1s deadline passes and
+     * the HTTP layer reports BSL_HTTP_ERR_TIMEOUT. */
+    int32_t ret;
+    do {
+        ret = HITLS_OCSP_HttpReqCtxExchange(ctx, &parsed);
+    } while (ret == HITLS_OCSP_ERR_IN_PROGRESS);
+    ASSERT_EQ(ret, BSL_HTTP_ERR_TIMEOUT);
     ASSERT_TRUE(parsed == NULL);
 EXIT:
     HITLS_OCSP_RespFree(parsed);
-    HITLS_HTTP_ReqCtxFree(ctx);
+    HITLS_OCSP_HttpReqCtxFree(ctx);
     HITLS_OCSP_ReqFree(req);
     BSL_UIO_Free(uio);
 #else
@@ -6770,14 +6780,14 @@ EXIT:
 
 /**
  * @test  SDV_OCSP_HTTP_TC014
- * @title  OCSP-HTTP SendReq rejects a non-200 HTTP status
+ * @title  OCSP-HTTP HttpReqCtxExchange rejects a non-200 HTTP status
  * @precon  nan
  * @brief
  *    1. Build a request, a 400 error response and a context.
- *    2. Call SendReq in blocking mode.
+ *    2. Call HITLS_OCSP_HttpReqCtxExchange once.
  * @expect
  *    1. The context is created successfully.
- *    2. SendReq returns HITLS_OCSP_ERR_HTTP_STATUS (not the raw HTTP Content-Type
+ *    2. HttpReqCtxExchange returns HITLS_OCSP_ERR_HTTP_STATUS (not the raw HTTP Content-Type
  *       or parse error) and the status code is retrievable via GET_RESP_STATUS.
  */
 /* BEGIN_CASE */
@@ -6800,14 +6810,14 @@ void SDV_OCSP_HTTP_TC014(void)
                         "Content-Length: 5\r\n"
                         "\r\n"
                         "error");
-    ASSERT_EQ(HITLS_OCSP_SendReq(ctx, &parsed, true), HITLS_OCSP_ERR_HTTP_STATUS);
+    ASSERT_EQ(HITLS_OCSP_HttpReqCtxExchange(ctx, &parsed), HITLS_OCSP_ERR_HTTP_STATUS);
     ASSERT_TRUE(parsed == NULL);
     uint32_t status = 0;
     ASSERT_EQ(HITLS_HTTP_ReqCtxCtrl(ctx, HITLS_HTTP_CTRL_GET_RESP_STATUS, &status, sizeof(status)), HITLS_PKI_SUCCESS);
     ASSERT_EQ(status, 400);
 EXIT:
     HITLS_OCSP_RespFree(parsed);
-    HITLS_HTTP_ReqCtxFree(ctx);
+    HITLS_OCSP_HttpReqCtxFree(ctx);
     HITLS_OCSP_ReqFree(req);
     BSL_UIO_Free(uio);
 #else

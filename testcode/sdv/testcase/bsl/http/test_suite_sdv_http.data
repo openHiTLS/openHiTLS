@@ -1,0 +1,242 @@
+ReqCtxNew main path: create with connected uio + path, host from peer IP, default limits, WRITE_HDR state
+SDV_BSL_HTTP_CTX_TC001:
+
+ReqCtxNew with uio NULL returns NULL
+SDV_BSL_HTTP_CTX_TC002:
+
+ReqCtxNew with path NULL returns NULL
+SDV_BSL_HTTP_CTX_TC003:
+
+ReqCtxNew with memory allocation failure returns NULL
+SDV_BSL_HTTP_CTX_TC004:
+
+SetReq main path: request header contains request line, Content-Type and Content-Length (no Host by default)
+SDV_BSL_HTTP_CTX_TC005:
+
+SetReq with an empty request body produces Content-Length: 0
+SDV_BSL_HTTP_CTX_TC006:
+
+SetReq with ctx NULL returns parameter error
+SDV_BSL_HTTP_CTX_TC007:
+
+SetReq with contentType NULL returns parameter error
+SDV_BSL_HTTP_CTX_TC008:
+
+ReqCtxFree main path: releases resources, uio stays usable
+SDV_BSL_HTTP_CTX_TC025:
+
+ReqCtxFree with ctx NULL is safe
+SDV_BSL_HTTP_CTX_TC026:
+
+ReqCtxNew rejects an over-long path
+SDV_BSL_HTTP_CTX_TC027:
+
+SetReq rejects an over-long Content-Type
+SDV_BSL_HTTP_CTX_TC028:
+
+AddHeader main path: custom Accept header is included in the request
+SDV_BSL_HTTP_ADDHEADER_TC001:
+
+AddHeader with NULL ctx/name/value returns parameter error
+SDV_BSL_HTTP_ADDHEADER_TC002:
+
+AddHeader rejects framing headers Content-Type/Content-Length but accepts Host
+SDV_BSL_HTTP_ADDHEADER_TC003:
+
+AddHeader rejects CR/LF injection in header values
+SDV_BSL_HTTP_ADDHEADER_TC004:
+
+AddHeader after SetReq succeeds (order-independent)
+SDV_BSL_HTTP_ADDHEADER_TC005:
+
+AddHeader rejects an over-long header value
+SDV_BSL_HTTP_ADDHEADER_TC006:
+
+AddHeader rejects an over-long header name
+SDV_BSL_HTTP_ADDHEADER_TC007:
+
+AddHeader header count limit is enforced
+SDV_BSL_HTTP_ADDHEADER_TC008:
+
+Set and get MAX_RESP_LEN round-trips 50KB
+SDV_BSL_HTTP_CTRL_TC001:
+
+Set and get MAX_RESP_HDR_LINES round-trips 128
+SDV_BSL_HTTP_CTRL_TC002:
+
+Set EXPECTED_CT stores a deep copy
+SDV_BSL_HTTP_CTRL_TC003:
+
+Set EXPECTED_CT with NULL clears the value
+SDV_BSL_HTTP_CTRL_TC004:
+
+Invalid Ctrl command returns parameter error
+SDV_BSL_HTTP_CTRL_TC005:
+
+AddHeader("Host") appends the Host header, order-independent with SetReq
+SDV_BSL_HTTP_CTRL_TC006:
+
+AddHeader("Host") rejects NULL, injection and over-long values
+SDV_BSL_HTTP_CTRL_TC007:
+
+SET ctrl commands are rejected once the transfer starts
+SDV_BSL_HTTP_CTRL_TC008:
+
+Setting a 0 response limit is rejected
+SDV_BSL_HTTP_CTRL_TC009:
+
+Set/get max response line length and reject out-of-range values
+SDV_BSL_HTTP_CTRL_TC010:
+
+A response line longer than maxLineLen is rejected
+SDV_BSL_HTTP_CTRL_TC011:
+
+HttpParseDecimal ignores a stale errno
+SDV_BSL_HTTP_PARSE_TC001:
+
+HttpParseStatusLine validates the minor-version token
+SDV_BSL_HTTP_PARSE_TC002:
+
+HttpParseHeaderLine rejects an empty field name
+SDV_BSL_HTTP_PARSE_TC003:
+
+Non-blocking full send/receive round trip succeeds and returns the body
+SDV_BSL_HTTP_EXCHANGE_TC001:
+
+Non-blocking retry does not lose intermediate state
+SDV_BSL_HTTP_EXCHANGE_TC002:
+
+Blocking mode loops until completion
+SDV_BSL_HTTP_EXCHANGE_TC003:
+
+Response header line limit is enforced
+SDV_BSL_HTTP_EXCHANGE_TC004:
+
+Response body size limit is enforced
+SDV_BSL_HTTP_EXCHANGE_TC005:
+
+Content-Type mismatch is rejected
+SDV_BSL_HTTP_EXCHANGE_TC006:
+
+I/O error is reported
+SDV_BSL_HTTP_EXCHANGE_TC007:
+
+HTTP/1.1 response is accepted
+SDV_BSL_HTTP_EXCHANGE_TC008:
+
+Malformed status line is rejected
+SDV_BSL_HTTP_EXCHANGE_TC009:
+
+Set EXPECTED_CT enforcement (regression of T2 pending case)
+SDV_BSL_HTTP_EXCHANGE_TC010:
+
+Set EXPECTED_CT(NULL) skips the check (regression of T2 pending case)
+SDV_BSL_HTTP_EXCHANGE_TC011:
+
+Exchange out params return the response body on success
+SDV_BSL_HTTP_EXCHANGE_TC012:
+
+Exchange out params are cleared while in progress
+SDV_BSL_HTTP_EXCHANGE_TC013:
+
+Chunked transfer encoding reaches the caller undecoded
+SDV_BSL_HTTP_EXCHANGE_TC014:
+
+Transfer-Encoding identity is accepted as raw body
+SDV_BSL_HTTP_EXCHANGE_TC015:
+
+Redirect status is rejected
+SDV_BSL_HTTP_EXCHANGE_TC016:
+
+Server error with a text body is rejected by Content-Type check
+SDV_BSL_HTTP_EXCHANGE_TC017:
+
+SetReq rejects a NULL body with a non-zero length
+SDV_BSL_HTTP_CTX_TC029:
+
+ReqCtxNew rejects a path that breaks the request line
+SDV_BSL_HTTP_CTX_TC030:
+
+SetReq rejects a Content-Type with control characters
+SDV_BSL_HTTP_CTX_TC031:
+
+SetReq can be called only once (rejects a second call after completion or in flight)
+SDV_BSL_HTTP_CTX_TC032:
+
+SetReq rejects empty and whitespace-only Content-Type
+SDV_BSL_HTTP_CTX_TC033:
+
+AddHeader rejects framing headers
+SDV_BSL_HTTP_ADDHEADER_TC009:
+
+AddHeader rejects names that are not RFC 7230 tokens
+SDV_BSL_HTTP_ADDHEADER_TC010:
+
+AddHeader rejects control characters in the value
+SDV_BSL_HTTP_ADDHEADER_TC011:
+
+AddHeader is rejected once the transfer starts
+SDV_BSL_HTTP_ADDHEADER_TC012:
+
+AddHeader is rejected after the transfer completes
+SDV_BSL_HTTP_ADDHEADER_TC013:
+
+Trailing OWS in a header value is stripped (RFC 7230 3.2.4)
+SDV_BSL_HTTP_EXCHANGE_TC018:
+
+Response lines terminated by a bare LF are accepted
+SDV_BSL_HTTP_EXCHANGE_TC019:
+
+Repeated Content-Length with the same value is accepted
+SDV_BSL_HTTP_EXCHANGE_TC020:
+
+Conflicting Content-Length values are rejected
+SDV_BSL_HTTP_EXCHANGE_TC021:
+
+Content-Type with media type parameters matches
+SDV_BSL_HTTP_EXCHANGE_TC022:
+
+A hard error is latched in a terminal state
+SDV_BSL_HTTP_EXCHANGE_TC023:
+
+Exchange with a NULL context
+SDV_BSL_HTTP_EXCHANGE_TC024:
+
+Content-Length trailing OWS is stripped (RFC 7230 3.2.4)
+SDV_BSL_HTTP_EXCHANGE_TC025:
+
+Content-Length with a sign is rejected
+SDV_BSL_HTTP_EXCHANGE_TC032:
+
+Whitespace before the header name colon prevents a match
+SDV_BSL_HTTP_EXCHANGE_TC026:
+
+Header lines without a colon and with an empty name are skipped
+SDV_BSL_HTTP_EXCHANGE_TC027:
+
+Only HTTP/1.x status lines are accepted and error responses return content
+SDV_BSL_HTTP_EXCHANGE_TC028:
+
+Close-delimited body grows on demand past the initial buffer
+SDV_BSL_HTTP_EXCHANGE_TC029:
+
+Transfer deadline bounds a close-delimited response that never EOFs
+SDV_BSL_HTTP_EXCHANGE_TC030:
+
+Close-delimited body of exactly maxRespLen is accepted
+SDV_BSL_HTTP_EXCHANGE_TC031:
+
+A deadline already passed before the flush is checked
+SDV_BSL_HTTP_EXCHANGE_TC033:
+
+Exchange rejects a non-NULL *respBody or non-zero *respLen
+SDV_BSL_HTTP_EXCHANGE_TC034:
+
+Exchange rejects a request without SetReq and recovers after it
+SDV_BSL_HTTP_EXCHANGE_TC035:
+
+Repeated Content-Type with the same value is accepted
+SDV_BSL_HTTP_EXCHANGE_TC036:
+
+Conflicting Content-Type values are rejected
+SDV_BSL_HTTP_EXCHANGE_TC037:
