@@ -119,17 +119,11 @@ static int32_t XmssChainHash(const void *vctx, const void *vadrs, const uint8_t 
 
     /* Generate n-byte key */
     XmssAdrs_SetKeyAndMask(&xadrs, 0);
-    ret = CalcMultiMsgHash(mdId, hashData, sizeof(hashData) / sizeof(hashData[0]), key, n);
-    if (ret != CRYPT_SUCCESS) {
-        return ret;
-    }
+    RETURN_RET_IF_ERR_EX(CalcMultiMsgHash(mdId, hashData, sizeof(hashData) / sizeof(hashData[0]), key, n), ret);
 
     /* Generate n-byte bitmask */
     XmssAdrs_SetKeyAndMask(&xadrs, 1);
-    ret = CalcMultiMsgHash(mdId, hashData, sizeof(hashData) / sizeof(hashData[0]), bitmask, n);
-    if (ret != CRYPT_SUCCESS) {
-        return ret;
-    }
+    RETURN_RET_IF_ERR_EX(CalcMultiMsgHash(mdId, hashData, sizeof(hashData) / sizeof(hashData[0]), bitmask, n), ret);
 
     /* XOR message with bitmask */
     for (uint32_t i = 0; i < n; i++) {
@@ -138,7 +132,6 @@ static int32_t XmssChainHash(const void *vctx, const void *vadrs, const uint8_t 
 
     PUT_UINT32_BE(PADDING_F, padding, paddingLen - 4);
     ret = CalcMultiMsgHash(mdId, hashData1, sizeof(hashData1) / sizeof(hashData1[0]), out, n);
-    BSL_SAL_CleanseData(key, n);
     BSL_SAL_CleanseData(bitmask, sizeof(bitmask));
     return ret;
 }
@@ -149,6 +142,7 @@ static int32_t XmssChainHash(const void *vctx, const void *vadrs, const uint8_t 
 static int32_t XmssNodeHash(const void *vctx, const void *vadrs, const uint8_t *msg, uint32_t msgLen, uint8_t *out)
 {
     (void)msgLen;
+    int32_t ret;
     const XmssCtxCommon *ctx = (const XmssCtxCommon *)vctx;
     XmssAdrs xadrs = *(const XmssAdrs *)vadrs;
     uint32_t n = ctx->n;
@@ -166,27 +160,15 @@ static int32_t XmssNodeHash(const void *vctx, const void *vadrs, const uint8_t *
 
     /* Generate n-byte key */
     XmssAdrs_SetKeyAndMask(&xadrs, 0);
-    int32_t ret = CalcMultiMsgHash(mdId, hashData, sizeof(hashData) / sizeof(hashData[0]), key, n);
-    if (ret != CRYPT_SUCCESS) {
-        BSL_SAL_CleanseData(key, n);
-        return ret;
-    }
+    RETURN_RET_IF_ERR_EX(CalcMultiMsgHash(mdId, hashData, sizeof(hashData) / sizeof(hashData[0]), key, n), ret);
 
     /* Generate n-byte BM_0 */
     XmssAdrs_SetKeyAndMask(&xadrs, 1);
-    ret = CalcMultiMsgHash(mdId, hashData, sizeof(hashData) / sizeof(hashData[0]), bitmask, n);
-    if (ret != CRYPT_SUCCESS) {
-        BSL_SAL_CleanseData(key, n);
-        return ret;
-    }
+    RETURN_RET_IF_ERR_EX(CalcMultiMsgHash(mdId, hashData, sizeof(hashData) / sizeof(hashData[0]), bitmask, n), ret);
 
     /* Generate n-byte BM_1 */
     XmssAdrs_SetKeyAndMask(&xadrs, 2);
-    ret = CalcMultiMsgHash(mdId, hashData, sizeof(hashData) / sizeof(hashData[0]), bitmask + n, n);
-    if (ret != CRYPT_SUCCESS) {
-        BSL_SAL_CleanseData(key, n);
-        return ret;
-    }
+    RETURN_RET_IF_ERR_EX(CalcMultiMsgHash(mdId, hashData, sizeof(hashData) / sizeof(hashData[0]), bitmask + n, n), ret);
 
     /* XOR input with bitmasks */
     for (uint32_t i = 0; i < 2 * n; i++) {
@@ -194,9 +176,7 @@ static int32_t XmssNodeHash(const void *vctx, const void *vadrs, const uint8_t *
     }
 
     PUT_UINT32_BE(PADDING_H, padding, paddingLen - 4);
-    ret = CalcMultiMsgHash(mdId, hashData1, sizeof(hashData1) / sizeof(hashData1[0]), out, n);
-    BSL_SAL_CleanseData(key, n);
-    return ret;
+    return CalcMultiMsgHash(mdId, hashData1, sizeof(hashData1) / sizeof(hashData1[0]), out, n);
 }
 
 /* pkCompress - L-tree compression (T_l)

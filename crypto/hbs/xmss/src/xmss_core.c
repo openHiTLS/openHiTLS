@@ -378,17 +378,14 @@ int32_t CRYPT_XMSS_Sign(CryptXmssCtx *ctx, int32_t algId, const uint8_t *data, u
         ret = HbsTree_Sign(prepareResult.digest, ctx->params->n, (uint32_t)prepareResult.index, &adrs, &treeCtx,
                            sign + prepareResult.offset, &treeSigLen, root);
     }
-    BSL_SAL_CleanseData(prepareResult.digest, sizeof(prepareResult.digest));
     if (ret != CRYPT_SUCCESS) {
-        goto ERR_CLEAN_SIG;
+        goto ERR;
     }
 
     *signLen = prepareResult.offset + treeSigLen;
     return CRYPT_SUCCESS;
 
 ERR:
-    BSL_SAL_CleanseData(prepareResult.digest, sizeof(prepareResult.digest));
-ERR_CLEAN_SIG:
     if (prepareResult.idxConsumed) {
         XmssBds_Free(&ctx->bds);
         BSL_SAL_CleanseData(sign, signBufLen);
