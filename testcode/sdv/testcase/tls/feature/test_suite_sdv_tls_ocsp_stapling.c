@@ -50,6 +50,7 @@ int32_t ClientRecvCertificateStatus(TLS_Ctx *ctx, const HS_Msg *hsMsg);
 static int32_t g_statusCbCount = 0;
 static int32_t g_statusCbCtxCount = 0;
 static HITLS_OCSP_Resp **g_serverList = NULL;
+static BSL_Buffer g_rsaSerial = {0}; /* serial of the RSA EE certificate, for ServerStaplingCbSelective */
 
 static void FreeOcspRespArray(HITLS_OCSP_Resp **arr)
 {
@@ -206,88 +207,135 @@ static int32_t ClientStatusCbBadResp(HITLS_Ctx *ctx, void *arg)
     return HITLS_STATUS_REJECT;
 }
 
-static int32_t ServerStaplingCbSkip(HITLS_Ctx *ctx, void *arg)
+static int32_t ServerStaplingCbSkip(HITLS_Ctx *ctx, const HITLS_CERT_X509 *cert, uint32_t chainidx,
+                                    HITLS_OCSP_Resp **outResp, void *arg)
 {
     (void)ctx;
+    (void)cert;
+    (void)chainidx;
+    (void)outResp;
     (void)arg;
     return HITLS_STAPLING_SKIP;
 }
 
-static int32_t ServerStaplingCbErr(HITLS_Ctx *ctx, void *arg)
+static int32_t ServerStaplingCbErr(HITLS_Ctx *ctx, const HITLS_CERT_X509 *cert, uint32_t chainidx,
+                                   HITLS_OCSP_Resp **outResp, void *arg)
 {
     (void)ctx;
+    (void)cert;
+    (void)chainidx;
+    (void)outResp;
     (void)arg;
     return HITLS_STAPLING_ERROR;
 }
 
-static int32_t ServerStaplingCbInvalid(HITLS_Ctx *ctx, void *arg)
+static int32_t ServerStaplingCbInvalid(HITLS_Ctx *ctx, const HITLS_CERT_X509 *cert, uint32_t chainidx,
+                                       HITLS_OCSP_Resp **outResp, void *arg)
 {
     (void)ctx;
+    (void)cert;
+    (void)chainidx;
+    (void)outResp;
     (void)arg;
     return HITLS_MSG_HANDLE_OCSP_STATUS_ERR;
 }
 
-static int32_t ServerStaplingCb(HITLS_Ctx *ctx, void *arg)
+/* Returns the EE certificate's OCSP response directly via *outResp (borrowed). */
+static int32_t ServerStaplingCb(HITLS_Ctx *ctx, const HITLS_CERT_X509 *cert, uint32_t chainidx,
+                                HITLS_OCSP_Resp **outResp, void *arg)
 {
+    (void)ctx;
+    (void)cert;
+    (void)chainidx;
     (void)arg;
-    g_serverList = CreateOcspRespArray();
     if (g_serverList == NULL) {
-        return HITLS_MEMALLOC_FAIL;
+        g_serverList = CreateOcspRespArray();
+        if (g_serverList == NULL || g_serverList[0] == NULL) {
+            return HITLS_STAPLING_ERROR;
+        }
     }
-    int32_t ret = HITLS_SetOcspResponseList(ctx, g_serverList, 1);
-    if (ret != HITLS_SUCCESS) {
-        return HITLS_STAPLING_ERROR;
-    }
+    *outResp = g_serverList[0];
     return HITLS_STAPLING_SEND;
 }
 
 /* Supplies OCSP responses for both the EE and the intermediate certificate
- * (TLS 1.3 multi-response scenario). */
-static int32_t ServerStaplingCbMulti(HITLS_Ctx *ctx, void *arg)
+ * (TLS 1.3 multi-response scenario): one response per certificate. */
+static int32_t ServerStaplingCbMulti(HITLS_Ctx *ctx, const HITLS_CERT_X509 *cert, uint32_t chainidx,
+                                     HITLS_OCSP_Resp **outResp, void *arg)
 {
+    (void)ctx;
+    (void)cert;
     (void)arg;
-    g_serverList = CreateTwoOcspRespArray();
     if (g_serverList == NULL) {
-        return HITLS_MEMALLOC_FAIL;
+        g_serverList = CreateTwoOcspRespArray();
+        if (g_serverList == NULL) {
+            return HITLS_STAPLING_ERROR;
+        }
     }
-    int32_t ret = HITLS_SetOcspResponseList(ctx, g_serverList, 2);
-    if (ret != HITLS_SUCCESS) {
-        return HITLS_STAPLING_ERROR;
-    }
+    *outResp = (chainidx < 2) ? g_serverList[chainidx] : NULL;
     return HITLS_STAPLING_SEND;
 }
 
 /* Supplies the OCSP response for the RSA EE certificate (RSA key exchange test). */
-static int32_t ServerStaplingCbRsa(HITLS_Ctx *ctx, void *arg)
+static int32_t ServerStaplingCbRsa(HITLS_Ctx *ctx, const HITLS_CERT_X509 *cert, uint32_t chainidx,
+                                   HITLS_OCSP_Resp **outResp, void *arg)
 {
+    (void)ctx;
+    (void)cert;
+    (void)chainidx;
     (void)arg;
-    g_serverList = CreateRsaOcspRespArray();
     if (g_serverList == NULL) {
-        return HITLS_MEMALLOC_FAIL;
+        g_serverList = CreateRsaOcspRespArray();
+        if (g_serverList == NULL || g_serverList[0] == NULL) {
+            return HITLS_STAPLING_ERROR;
+        }
     }
-    int32_t ret = HITLS_SetOcspResponseList(ctx, g_serverList, 1);
-    if (ret != HITLS_SUCCESS) {
-        return HITLS_STAPLING_ERROR;
+    *outResp = g_serverList[0];
+    return HITLS_STAPLING_SEND;
+}
+
+/* Returns the RSA response only when the currently selected EE certificate is
+ * the RSA one (checked via HITLS_GetCertificate's serial); otherwise skips.
+ * This proves the per-certificate callback runs after the cipher-suite-driven
+ * certificate selection, not against a pre-selection default. */
+static int32_t ServerStaplingCbSelective(HITLS_Ctx *ctx, const HITLS_CERT_X509 *cert, uint32_t chainidx,
+                                         HITLS_OCSP_Resp **outResp, void *arg)
+{
+    (void)cert;
+    (void)chainidx;
+    (void)arg;
+    if (g_serverList == NULL) {
+        g_serverList = CreateRsaOcspRespArray();
+        if (g_serverList == NULL || g_serverList[0] == NULL) {
+            return HITLS_STAPLING_ERROR;
+        }
+    }
+    *outResp = NULL;
+    HITLS_CERT_X509 *ee = HITLS_GetCertificate(ctx);
+    if (ee == NULL) {
+        return HITLS_STAPLING_SEND; /* SEND with NULL -> no response, skipped */
+    }
+    BSL_Buffer serial = {0};
+    if (HITLS_X509_CertCtrl(ee, HITLS_X509_GET_SERIALNUM, &serial, sizeof(BSL_Buffer)) == HITLS_PKI_SUCCESS) {
+        /* serial is a shallow copy referencing the certificate; do not free it. */
+        if (serial.dataLen == g_rsaSerial.dataLen && memcmp(serial.data, g_rsaSerial.data, serial.dataLen) == 0) {
+            *outResp = g_serverList[0];
+        }
     }
     return HITLS_STAPLING_SEND;
 }
 
-/* Supplies a response list whose first (EE) entry is NULL: "no response for
- * the EE certificate". The library must skip stapling (no echo, no empty
+/* SEND with no response for the EE certificate: "no response for the EE
+ * certificate". The library must skip stapling (no echo, no empty
  * CertificateStatus) instead of sending a malformed empty message. */
-static int32_t ServerStaplingCbNullFirst(HITLS_Ctx *ctx, void *arg)
+static int32_t ServerStaplingCbNullFirst(HITLS_Ctx *ctx, const HITLS_CERT_X509 *cert, uint32_t chainidx,
+                                         HITLS_OCSP_Resp **outResp, void *arg)
 {
+    (void)ctx;
+    (void)cert;
+    (void)chainidx;
+    (void)outResp;
     (void)arg;
-    g_serverList = (HITLS_OCSP_Resp **)BSL_SAL_Calloc(2, sizeof(HITLS_OCSP_Resp *));
-    if (g_serverList == NULL) {
-        return HITLS_STAPLING_ERROR;
-    }
-    int32_t ret = HITLS_SetOcspResponseList(ctx, g_serverList, 1);
-    if (ret != HITLS_SUCCESS) {
-        BSL_SAL_Free(g_serverList);
-        g_serverList = NULL;
-        return HITLS_STAPLING_ERROR;
-    }
     return HITLS_STAPLING_SEND;
 }
 
@@ -375,7 +423,7 @@ void SDV_TLS_OCSP_STAPLING_TLS12_CB_TC001()
 
     ASSERT_EQ(HITLS_CFG_SetStatusRequestType(c_config, HITLS_STATUS_REQUEST_TYPE_OCSP), HITLS_SUCCESS);
     ASSERT_EQ(HITLS_CFG_SetStatusCb(c_config, ClientStatusCb, NULL), HITLS_SUCCESS);
-    ASSERT_EQ(HITLS_CFG_SetStaplingCb(s_config, ServerStaplingCb, NULL), HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_CFG_SetStaplingCbPerCert(s_config, ServerStaplingCb, NULL), HITLS_SUCCESS);
 
     LoadStaplingCerts(c_config, false);
     client = FRAME_CreateLinkEx(c_config, BSL_UIO_TCP);
@@ -552,7 +600,7 @@ void SDV_TLS_OCSP_STAPLING_TLS13_CB_TC004()
 
     ASSERT_EQ(HITLS_CFG_SetStatusRequestType(c_config, HITLS_STATUS_REQUEST_TYPE_OCSP), HITLS_SUCCESS);
     ASSERT_EQ(HITLS_CFG_SetStatusCb(c_config, ClientStatusCb, NULL), HITLS_SUCCESS);
-    ASSERT_EQ(HITLS_CFG_SetStaplingCb(s_config, ServerStaplingCb, NULL), HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_CFG_SetStaplingCbPerCert(s_config, ServerStaplingCb, NULL), HITLS_SUCCESS);
 
     LoadStaplingCerts(c_config, false);
     client = FRAME_CreateLinkEx(c_config, BSL_UIO_TCP);
@@ -607,9 +655,8 @@ void SDV_TLS_OCSP_STAPLING_PARAM_TC005()
     ASSERT_EQ(HITLS_CFG_SetStatusRequestType(NULL, HITLS_STATUS_REQUEST_TYPE_OCSP), HITLS_NULL_INPUT);
     ASSERT_EQ(HITLS_CFG_SetStatusCb(NULL, ClientStatusCb, NULL), HITLS_NULL_INPUT);
     ASSERT_EQ(HITLS_SetStatusCb(NULL, ClientStatusCb, NULL), HITLS_NULL_INPUT);
-    ASSERT_EQ(HITLS_CFG_SetStaplingCb(NULL, ServerStaplingCb, NULL), HITLS_NULL_INPUT);
-    ASSERT_EQ(HITLS_SetStaplingCb(NULL, ServerStaplingCb, NULL), HITLS_NULL_INPUT);
-    ASSERT_EQ(HITLS_SetOcspResponseList(NULL, NULL, 0), HITLS_NULL_INPUT);
+    ASSERT_EQ(HITLS_CFG_SetStaplingCbPerCert(NULL, ServerStaplingCb, NULL), HITLS_NULL_INPUT);
+    ASSERT_EQ(HITLS_SetStaplingCbPerCert(NULL, ServerStaplingCb, NULL), HITLS_NULL_INPUT);
     ASSERT_EQ(HITLS_GetPeerOcspResponseList(NULL, NULL, NULL), HITLS_NULL_INPUT);
 EXIT:
     return;
@@ -649,7 +696,7 @@ void SDV_TLS_OCSP_STAPLING_TLS12_CB_TC006()
 
     ASSERT_EQ(HITLS_CFG_SetStatusRequestType(c_config, HITLS_STATUS_REQUEST_TYPE_OCSP), HITLS_SUCCESS);
     ASSERT_EQ(HITLS_CFG_SetStatusCb(c_config, ClientStatusCb, NULL), HITLS_SUCCESS);
-    ASSERT_EQ(HITLS_CFG_SetStaplingCb(s_config, ServerStaplingCb, NULL), HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_CFG_SetStaplingCbPerCert(s_config, ServerStaplingCb, NULL), HITLS_SUCCESS);
 
     LoadStaplingCerts(c_config, false);
     client = FRAME_CreateLinkEx(c_config, BSL_UIO_TCP);
@@ -717,7 +764,7 @@ void SDV_TLS_OCSP_STAPLING_DTLS12_RESTRICT_TC007()
 
     ASSERT_EQ(HITLS_CFG_SetStatusRequestType(c_config, HITLS_STATUS_REQUEST_TYPE_OCSP), HITLS_SUCCESS);
     ASSERT_EQ(HITLS_CFG_SetStatusCb(c_config, ClientStatusCb, NULL), HITLS_SUCCESS);
-    ASSERT_EQ(HITLS_CFG_SetStaplingCb(s_config, ServerStaplingCb, NULL), HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_CFG_SetStaplingCbPerCert(s_config, ServerStaplingCb, NULL), HITLS_SUCCESS);
 
     LoadStaplingCerts(c_config, false);
     client = FRAME_CreateLinkEx(c_config, BSL_UIO_UDP);
@@ -839,7 +886,7 @@ void SDV_TLS_OCSP_STAPLING_TLS12_BAD_RESP_TC010()
 
     ASSERT_EQ(HITLS_CFG_SetStatusRequestType(c_config, HITLS_STATUS_REQUEST_TYPE_OCSP), HITLS_SUCCESS);
     ASSERT_EQ(HITLS_CFG_SetStatusCb(c_config, ClientStatusCbBadResp, NULL), HITLS_SUCCESS);
-    ASSERT_EQ(HITLS_CFG_SetStaplingCb(s_config, ServerStaplingCb, NULL), HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_CFG_SetStaplingCbPerCert(s_config, ServerStaplingCb, NULL), HITLS_SUCCESS);
 
     LoadStaplingCerts(c_config, false);
     client = FRAME_CreateLinkEx(c_config, BSL_UIO_TCP);
@@ -892,7 +939,7 @@ void SDV_TLS_OCSP_STAPLING_TLS12_ACK_NO_RESP_TC011()
     ASSERT_TRUE(s_config != NULL);
     ASSERT_EQ(HITLS_CFG_SetStatusRequestType(c_config, HITLS_STATUS_REQUEST_TYPE_OCSP), HITLS_SUCCESS);
     ASSERT_EQ(HITLS_CFG_SetStatusCb(c_config, ClientStatusCb, NULL), HITLS_SUCCESS);
-    ASSERT_EQ(HITLS_CFG_SetStaplingCb(s_config, ServerStaplingCb, NULL), HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_CFG_SetStaplingCbPerCert(s_config, ServerStaplingCb, NULL), HITLS_SUCCESS);
 
     LoadStaplingCerts(c_config, false);
     client = FRAME_CreateLinkEx(c_config, BSL_UIO_TCP);
@@ -963,7 +1010,7 @@ void SDV_TLS_OCSP_STAPLING_STAPLING_CB_SKIP_TC012()
     ASSERT_TRUE(s_config != NULL);
     ASSERT_EQ(HITLS_CFG_SetStatusRequestType(c_config, HITLS_STATUS_REQUEST_TYPE_OCSP), HITLS_SUCCESS);
     ASSERT_EQ(HITLS_CFG_SetStatusCb(c_config, ClientStatusCb, NULL), HITLS_SUCCESS);
-    ASSERT_EQ(HITLS_CFG_SetStaplingCb(s_config, ServerStaplingCbSkip, NULL), HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_CFG_SetStaplingCbPerCert(s_config, ServerStaplingCbSkip, NULL), HITLS_SUCCESS);
 
     LoadStaplingCerts(c_config, false);
     client = FRAME_CreateLinkEx(c_config, BSL_UIO_TCP);
@@ -1016,7 +1063,7 @@ void SDV_TLS_OCSP_STAPLING_STAPLING_CB_ERR_TC013()
     ASSERT_TRUE(c_config != NULL);
     ASSERT_TRUE(s_config != NULL);
     ASSERT_EQ(HITLS_CFG_SetStatusRequestType(c_config, HITLS_STATUS_REQUEST_TYPE_OCSP), HITLS_SUCCESS);
-    ASSERT_EQ(HITLS_CFG_SetStaplingCb(s_config, ServerStaplingCbErr, NULL), HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_CFG_SetStaplingCbPerCert(s_config, ServerStaplingCbErr, NULL), HITLS_SUCCESS);
 
     LoadStaplingCerts(c_config, false);
     client = FRAME_CreateLinkEx(c_config, BSL_UIO_TCP);
@@ -1062,7 +1109,7 @@ void SDV_TLS_OCSP_STAPLING_STAPLING_CB_INVALID_TC014()
     ASSERT_TRUE(c_config != NULL);
     ASSERT_TRUE(s_config != NULL);
     ASSERT_EQ(HITLS_CFG_SetStatusRequestType(c_config, HITLS_STATUS_REQUEST_TYPE_OCSP), HITLS_SUCCESS);
-    ASSERT_EQ(HITLS_CFG_SetStaplingCb(s_config, ServerStaplingCbInvalid, NULL), HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_CFG_SetStaplingCbPerCert(s_config, ServerStaplingCbInvalid, NULL), HITLS_SUCCESS);
 
     LoadStaplingCerts(c_config, false);
     client = FRAME_CreateLinkEx(c_config, BSL_UIO_TCP);
@@ -1110,7 +1157,7 @@ void SDV_TLS_OCSP_STAPLING_NO_RESP_REJECT_TC015()
     ASSERT_TRUE(s_config != NULL);
     ASSERT_EQ(HITLS_CFG_SetStatusRequestType(c_config, HITLS_STATUS_REQUEST_TYPE_OCSP), HITLS_SUCCESS);
     ASSERT_EQ(HITLS_CFG_SetStatusCb(c_config, ClientStatusCbBadResp, NULL), HITLS_SUCCESS);
-    ASSERT_EQ(HITLS_CFG_SetStaplingCb(s_config, ServerStaplingCbSkip, NULL), HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_CFG_SetStaplingCbPerCert(s_config, ServerStaplingCbSkip, NULL), HITLS_SUCCESS);
 
     LoadStaplingCerts(c_config, false);
     client = FRAME_CreateLinkEx(c_config, BSL_UIO_TCP);
@@ -1281,7 +1328,7 @@ void SDV_TLS_OCSP_STAPLING_TLS12_ACK_NO_RESP_RSA_TC021()
     ASSERT_EQ(HITLS_CFG_SetCipherSuites(s_config, &rsaSuite, 1), HITLS_SUCCESS);
     ASSERT_EQ(HITLS_CFG_SetStatusRequestType(c_config, HITLS_STATUS_REQUEST_TYPE_OCSP), HITLS_SUCCESS);
     ASSERT_EQ(HITLS_CFG_SetStatusCb(c_config, ClientStatusCb, NULL), HITLS_SUCCESS);
-    ASSERT_EQ(HITLS_CFG_SetStaplingCb(s_config, ServerStaplingCbRsa, NULL), HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_CFG_SetStaplingCbPerCert(s_config, ServerStaplingCbRsa, NULL), HITLS_SUCCESS);
 
     LoadRsaStaplingCerts(c_config, false);
     client = FRAME_CreateLinkEx(c_config, BSL_UIO_TCP);
@@ -1378,10 +1425,10 @@ EXIT:
 /* @
 * @test  SDV_TLS_OCSP_STAPLING_TLS12_NO_CB_TC023
 * @spec  -
-* @title  TLS 1.2: without a server stapling callback nothing is sent even if a response list is set.
+* @title  TLS 1.2: without a server stapling callback nothing is sent.
 * @precon  nan
 * @brief
-1. Create TLS 1.2 client and server configs. Client enables OCSP stapling and registers a status callback. Server sets the response list directly but registers no stapling callback.
+1. Create TLS 1.2 client and server configs. Client enables OCSP stapling and registers a status callback. Server registers no stapling callback.
 2. Establish a full handshake.
 3. Check that no CertificateStatus is sent: the client has no peer response, and the status callback is invoked to report the empty result.
 * @expect  1. Handshake succeeds. 2. No peer OCSP response is stored; the client status callback is invoked once.
@@ -1407,7 +1454,7 @@ void SDV_TLS_OCSP_STAPLING_TLS12_NO_CB_TC023()
 
     ASSERT_EQ(HITLS_CFG_SetStatusRequestType(c_config, HITLS_STATUS_REQUEST_TYPE_OCSP), HITLS_SUCCESS);
     ASSERT_EQ(HITLS_CFG_SetStatusCb(c_config, ClientStatusCb, NULL), HITLS_SUCCESS);
-    ASSERT_EQ(HITLS_CFG_SetStaplingCb(s_config, NULL, NULL), HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_CFG_SetStaplingCbPerCert(s_config, NULL, NULL), HITLS_SUCCESS);
 
     LoadStaplingCerts(c_config, false);
     client = FRAME_CreateLinkEx(c_config, BSL_UIO_TCP);
@@ -1415,10 +1462,6 @@ void SDV_TLS_OCSP_STAPLING_TLS12_NO_CB_TC023()
     LoadStaplingCerts(s_config, true);
     server = FRAME_CreateLinkEx(s_config, BSL_UIO_TCP);
     ASSERT_TRUE(server != NULL);
-
-    g_serverList = CreateOcspRespArray();
-    ASSERT_TRUE(g_serverList != NULL);
-    ASSERT_EQ(HITLS_SetOcspResponseList(FRAME_GetTlsCtx(server), g_serverList, 1), HITLS_SUCCESS);
 
     ASSERT_EQ(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_SUCCESS);
 
@@ -1474,7 +1517,7 @@ void SDV_TLS_OCSP_STAPLING_TLS13_MULTI_RESP_TC024()
 
     ASSERT_EQ(HITLS_CFG_SetStatusRequestType(c_config, HITLS_STATUS_REQUEST_TYPE_OCSP), HITLS_SUCCESS);
     ASSERT_EQ(HITLS_CFG_SetStatusCb(c_config, ClientStatusCb, NULL), HITLS_SUCCESS);
-    ASSERT_EQ(HITLS_CFG_SetStaplingCb(s_config, ServerStaplingCbMulti, NULL), HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_CFG_SetStaplingCbPerCert(s_config, ServerStaplingCbMulti, NULL), HITLS_SUCCESS);
 
     LoadStaplingCerts(c_config, false);
     client = FRAME_CreateLinkEx(c_config, BSL_UIO_TCP);
@@ -1548,7 +1591,7 @@ void SDV_TLS_OCSP_STAPLING_TLS12_RESUME_TC025()
     ASSERT_EQ(EnableStatefulSessionResume(s_config), HITLS_SUCCESS);
     ASSERT_EQ(HITLS_CFG_SetStatusRequestType(c_config, HITLS_STATUS_REQUEST_TYPE_OCSP), HITLS_SUCCESS);
     ASSERT_EQ(HITLS_CFG_SetStatusCb(c_config, ClientStatusCb, NULL), HITLS_SUCCESS);
-    ASSERT_EQ(HITLS_CFG_SetStaplingCb(s_config, ServerStaplingCb, NULL), HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_CFG_SetStaplingCbPerCert(s_config, ServerStaplingCb, NULL), HITLS_SUCCESS);
 
     LoadStaplingCerts(c_config, false);
     client = FRAME_CreateLinkEx(c_config, BSL_UIO_TCP);
@@ -1644,7 +1687,7 @@ void SDV_TLS_OCSP_STAPLING_TLS12_RENEGO_TC026()
     ASSERT_TRUE(s_config != NULL);
     ASSERT_EQ(HITLS_CFG_SetStatusRequestType(c_config, HITLS_STATUS_REQUEST_TYPE_OCSP), HITLS_SUCCESS);
     ASSERT_EQ(HITLS_CFG_SetStatusCb(c_config, ClientStatusCb, NULL), HITLS_SUCCESS);
-    ASSERT_EQ(HITLS_CFG_SetStaplingCb(s_config, ServerStaplingCb, NULL), HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_CFG_SetStaplingCbPerCert(s_config, ServerStaplingCb, NULL), HITLS_SUCCESS);
 
     LoadStaplingCerts(c_config, false);
     client = FRAME_CreateLinkEx(c_config, BSL_UIO_TCP);
@@ -1735,7 +1778,7 @@ void SDV_TLS_OCSP_STAPLING_TLS12_RENEGO_CIPHER_TC027()
     ASSERT_EQ(HITLS_CFG_SetCipherSuites(s_config, &cipher128, 1), HITLS_SUCCESS);
     ASSERT_EQ(HITLS_CFG_SetStatusRequestType(c_config, HITLS_STATUS_REQUEST_TYPE_OCSP), HITLS_SUCCESS);
     ASSERT_EQ(HITLS_CFG_SetStatusCb(c_config, ClientStatusCb, NULL), HITLS_SUCCESS);
-    ASSERT_EQ(HITLS_CFG_SetStaplingCb(s_config, ServerStaplingCb, NULL), HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_CFG_SetStaplingCbPerCert(s_config, ServerStaplingCb, NULL), HITLS_SUCCESS);
 
     LoadStaplingCerts(c_config, false);
     client = FRAME_CreateLinkEx(c_config, BSL_UIO_TCP);
@@ -1838,7 +1881,7 @@ void SDV_TLS_OCSP_STAPLING_TLS13_RESUME_TC028()
     ASSERT_TRUE(s_config != NULL);
     ASSERT_EQ(HITLS_CFG_SetStatusRequestType(c_config, HITLS_STATUS_REQUEST_TYPE_OCSP), HITLS_SUCCESS);
     ASSERT_EQ(HITLS_CFG_SetStatusCb(c_config, ClientStatusCb, NULL), HITLS_SUCCESS);
-    ASSERT_EQ(HITLS_CFG_SetStaplingCb(s_config, ServerStaplingCb, NULL), HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_CFG_SetStaplingCbPerCert(s_config, ServerStaplingCb, NULL), HITLS_SUCCESS);
 
     LoadStaplingCerts(c_config, false);
     client = FRAME_CreateLinkEx(c_config, BSL_UIO_TCP);
@@ -1928,7 +1971,7 @@ void SDV_TLS_OCSP_STAPLING_TLS12_NULL_FIRST_TC029()
     ASSERT_TRUE(s_config != NULL);
     ASSERT_EQ(HITLS_CFG_SetStatusRequestType(c_config, HITLS_STATUS_REQUEST_TYPE_OCSP), HITLS_SUCCESS);
     ASSERT_EQ(HITLS_CFG_SetStatusCb(c_config, ClientStatusCb, NULL), HITLS_SUCCESS);
-    ASSERT_EQ(HITLS_CFG_SetStaplingCb(s_config, ServerStaplingCbNullFirst, NULL), HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_CFG_SetStaplingCbPerCert(s_config, ServerStaplingCbNullFirst, NULL), HITLS_SUCCESS);
 
     LoadStaplingCerts(c_config, false);
     client = FRAME_CreateLinkEx(c_config, BSL_UIO_TCP);
@@ -1949,6 +1992,88 @@ void SDV_TLS_OCSP_STAPLING_TLS12_NULL_FIRST_TC029()
     ASSERT_EQ(g_statusCbCount, 1);
 
 EXIT:
+    HITLS_CFG_FreeConfig(c_config);
+    HITLS_CFG_FreeConfig(s_config);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+    if (g_serverList != NULL) {
+        FreeOcspRespArray(g_serverList);
+        g_serverList = NULL;
+    }
+}
+/* END_CASE */
+
+/* @
+* @test  SDV_TLS_OCSP_STAPLING_TLS12_MULTI_CERT_TC030
+* @spec  -
+* @title  TLS 1.2: the stapling callback runs after the cipher-suite-driven certificate selection.
+* @precon  nan
+* @brief
+1. Configure a server with both an RSA and an ECDSA certificate pair and force the ECDHE-RSA cipher suite.
+2. The callback returns the RSA OCSP response only when the selected EE certificate is the RSA one.
+3. Complete the handshake and check stapling is delivered for the selected RSA certificate.
+* @expect  1. The handshake succeeds. 2. The client receives the RSA stapled response (proving the
+*          callback saw the selected certificate, not the default ECDSA one).
+* @prior  Level 2
+* @auto  TRUE
+@ */
+/* BEGIN_CASE */
+void SDV_TLS_OCSP_STAPLING_TLS12_MULTI_CERT_TC030()
+{
+    FRAME_Init();
+    RegDefaultMemCallback();
+    HITLS_Config *c_config = NULL;
+    HITLS_Config *s_config = NULL;
+    FRAME_LinkObj *client = NULL;
+    FRAME_LinkObj *server = NULL;
+    HITLS_X509_Cert *rsaCert = NULL;
+    g_statusCbCount = 0;
+    g_serverList = NULL;
+    uint16_t suite = HITLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256;
+
+    c_config = HITLS_CFG_NewTLS12Config();
+    s_config = HITLS_CFG_NewTLS12Config();
+    ASSERT_TRUE(c_config != NULL);
+    ASSERT_TRUE(s_config != NULL);
+    ASSERT_EQ(HITLS_CFG_SetCipherSuites(c_config, &suite, 1), HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_CFG_SetCipherSuites(s_config, &suite, 1), HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_CFG_SetStatusRequestType(c_config, HITLS_STATUS_REQUEST_TYPE_OCSP), HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_CFG_SetStatusCb(c_config, ClientStatusCb, NULL), HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_CFG_SetStaplingCbPerCert(s_config, ServerStaplingCbSelective, NULL), HITLS_SUCCESS);
+
+    /* Capture the RSA EE serial so the callback can tell it apart from the
+     * default (last loaded) ECDSA certificate. */
+    ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_ASN1, STAPLING_CERTS_PATH "rsa_server.der", &rsaCert), HITLS_SUCCESS);
+    ASSERT_TRUE(rsaCert != NULL);
+    ASSERT_EQ(HITLS_X509_CertCtrl(rsaCert, HITLS_X509_GET_SERIALNUM, &g_rsaSerial, sizeof(BSL_Buffer)), HITLS_SUCCESS);
+
+    LoadStaplingCerts(c_config, false);
+    client = FRAME_CreateLinkEx(c_config, BSL_UIO_TCP);
+    ASSERT_TRUE(client != NULL);
+    /* Load the RSA pair first so the default/current key type is the ECDSA pair
+     * loaded last; the ECDHE-RSA suite then selects the RSA certificate and the
+     * callback must see it (not the default ECDSA one). */
+    LoadRsaStaplingCerts(s_config, true);
+    LoadStaplingCerts(s_config, true);
+    server = FRAME_CreateLinkEx(s_config, BSL_UIO_TCP);
+    ASSERT_TRUE(server != NULL);
+
+    ASSERT_EQ(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_SUCCESS);
+
+    HITLS_Ctx *clientTlsCtx = FRAME_GetTlsCtx(client);
+    HITLS_OCSP_Resp **respList = NULL;
+    uint32_t respCount = 0;
+    ASSERT_EQ(HITLS_GetPeerOcspResponseList(clientTlsCtx, &respList, &respCount), HITLS_SUCCESS);
+    ASSERT_TRUE(respList != NULL);
+    ASSERT_EQ(respCount, 1);
+    int32_t respStatus = -1;
+    ASSERT_EQ(HITLS_OCSP_RespCtrl(respList[0], HITLS_OCSP_RESP_GET_STATUS, &respStatus, sizeof(respStatus)),
+              HITLS_PKI_SUCCESS);
+    ASSERT_EQ(respStatus, HITLS_OCSP_RESP_STATUS_SUCCESSFUL);
+    ASSERT_EQ(g_statusCbCount, 1);
+
+EXIT:
+    HITLS_X509_CertFree(rsaCert);
     HITLS_CFG_FreeConfig(c_config);
     HITLS_CFG_FreeConfig(s_config);
     FRAME_FreeLink(client);

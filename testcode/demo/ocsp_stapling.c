@@ -15,8 +15,9 @@
 
 /* OCSP stapling (RFC 6066 status_request) demo over configurable TLS versions.
  * Runs a server thread and a client thread on one loopback socket:
- *  - server registers a stapling callback that supplies an OCSP response list
- *    (HITLS_SetOcspResponseList) and returns HITLS_STAPLING_SEND;
+ *  - server registers a per-certificate stapling callback
+ *    (HITLS_CFG_SetStaplingCbPerCert) that returns each certificate's OCSP
+ *    response directly and returns HITLS_STAPLING_SEND;
  *  - client requests the status (HITLS_CFG_SetStatusRequestType) and, in the
  *    status callback, reads the stapled responses with
  *    HITLS_GetPeerOcspResponseList and prints them.
@@ -192,31 +193,29 @@ static void LoadOcspResponse(void)
 }
 
 /* Server stapling callback: called before the CertificateStatus message is
- * built (TLS 1.2) or the Certificate message (TLS 1.3), so the response array
- * must be set here (or earlier). */
-static int32_t ServerStaplingCb(HITLS_Ctx *ctx, void *arg)
+ * built (TLS 1.2) or the Certificate message (TLS 1.3). It is invoked once per
+ * certificate; the response is returned directly via *outResp and is borrowed
+ * for the handshake. The embedded DER is parsed once and reused, so no response
+ * is leaked across invocations. */
+static HITLS_OCSP_Resp *gRespCached = NULL;
+
+static int32_t ServerStaplingCb(HITLS_Ctx *ctx, const HITLS_CERT_X509 *cert, uint32_t chainidx,
+                                HITLS_OCSP_Resp **outResp, void *arg)
 {
+    (void)ctx;
+    (void)cert;
     (void)arg;
     gServerCbCalled = 1;
-    BSL_Buffer encode = {(uint8_t *)gRespData, gRespLen};
-    HITLS_OCSP_Resp *resp = NULL;
-    if (HITLS_OCSP_RespParseBuff(BSL_FORMAT_ASN1, &encode, &resp) != HITLS_PKI_SUCCESS || resp == NULL) {
-        printf("[server] stapling callback: cannot parse the OCSP response.\n");
-        return HITLS_STAPLING_ERROR;
+    if (gRespCached == NULL) {
+        BSL_Buffer encode = {(uint8_t *)gRespData, gRespLen};
+        if (HITLS_OCSP_RespParseBuff(BSL_FORMAT_ASN1, &encode, &gRespCached) != HITLS_PKI_SUCCESS ||
+            gRespCached == NULL) {
+            printf("[server] stapling callback: cannot parse the OCSP response.\n");
+            return HITLS_STAPLING_ERROR;
+        }
     }
-    HITLS_OCSP_Resp **arr = (HITLS_OCSP_Resp **)BSL_SAL_Calloc(2, sizeof(HITLS_OCSP_Resp *));
-    if (arr == NULL) {
-        HITLS_OCSP_RespFree(resp);
-        return HITLS_STAPLING_ERROR;
-    }
-    arr[0] = resp;
-    if (HITLS_SetOcspResponseList(ctx, arr, 1) != HITLS_SUCCESS) {
-        HITLS_OCSP_RespFree(resp);
-        BSL_SAL_Free(arr);
-        return HITLS_STAPLING_ERROR;
-    }
-    /* The array is owned by the application and stays alive for the handshake. */
-    printf("[server] stapling callback: %u-byte OCSP response supplied.\n", gRespLen);
+    *outResp = gRespCached;
+    printf("[server] stapling callback: %u-byte OCSP response supplied (chainidx %u).\n", gRespLen, chainidx);
     return HITLS_STAPLING_SEND;
 }
 
@@ -322,7 +321,7 @@ static int32_t RunServer(void)
         goto EXIT;
     }
     if (gServerCbEnabled) {
-        ret = HITLS_CFG_SetStaplingCb(config, ServerStaplingCb, NULL);
+        ret = HITLS_CFG_SetStaplingCbPerCert(config, ServerStaplingCb, NULL);
         if (ret != HITLS_SUCCESS) {
             goto EXIT;
         }

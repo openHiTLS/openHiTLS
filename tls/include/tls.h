@@ -486,11 +486,10 @@ struct TlsCtx {
     bool statusExpected;                       /* whether the peer acknowledged/requested OCSP stapling */
     HITLS_OCSP_Resp **peerOcspRespList;        /* stapled OCSP responses received from the peer (owned by ctx) */
     uint32_t peerOcspRespCount;                /* number of entries in peerOcspRespList */
-    HITLS_OCSP_Resp **ocspResponseList;        /* OCSP responses to be stapled (owned by the application) */
-    uint32_t ocspResponseCount;                /* number of entries in ocspResponseList */
+    HITLS_OCSP_Resp *staplingResp;             /* TLS1.2 EE OCSP response obtained from the per-cert callback (borrowed) */
     HITLS_StatusCb statusCb;                   /* client certificate status callback (ctx level) */
     void *statusCbArg;                         /* user data of statusCb */
-    HITLS_StaplingCb staplingCb;               /* server certificate status stapling callback (ctx level) */
+    HITLS_StaplingCbPerCert staplingCb;        /* server per-certificate stapling callback (ctx level) */
     void *staplingCbArg;                       /* user data of staplingCb */
     int32_t staplingResult;                    /* result of the server stapling callback: HITLS_STAPLING_SEND/_SKIP */
 #endif

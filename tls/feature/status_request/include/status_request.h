@@ -59,6 +59,11 @@ int32_t PackServerStatusRequest(const TLS_Ctx *ctx, PackPacket *pkt);
 /* Server: parse the status_request extension in the ClientHello (stream TLS 1.0-1.3). */
 int32_t ParseClientStatusRequest(ParsePacket *pkt, ClientHelloMsg *msg);
 
+/* Server (TLS 1.2): fetch the EE certificate's OCSP response from the
+ * per-certificate callback after the certificate chain has been selected
+ * (called after ProcessCertCallback in ServerPostProcessClientHello). */
+int32_t ServerFetchStaplingEeResp(TLS_Ctx *ctx);
+
 /* Server (stream TLS up to 1.2): build the CertificateStatus handshake message body. */
 int32_t PackCertificateStatus(const TLS_Ctx *ctx, PackPacket *pkt);
 

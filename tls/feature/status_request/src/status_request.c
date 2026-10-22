@@ -23,6 +23,7 @@
 #include "bsl_log.h"
 #include "hitls_error.h"
 #include "hitls_status_request.h"
+#include "hitls_cert.h"
 #include "hitls_pki_cert.h"
 #include "hitls_pki_ocsp.h"
 #include "hitls_pki_errno.h"
@@ -89,13 +90,17 @@ static int32_t InvokeOcspStatusCb(TLS_Ctx *ctx)
 }
 #endif /* HITLS_TLS_HOST_CLIENT */
 
-/* Invoke the server stapling callback with ctx-level priority over config-level.
- * Without a callback the application did not opt into stapling, so nothing is
- * sent unless a callback explicitly returns HITLS_STAPLING_SEND. */
+/* Invoke the server per-certificate stapling callback with ctx-level priority
+ * over config-level. The callback returns one response for the given certificate
+ * through *resp. Without a callback the application did not opt into stapling,
+ * so the certificate is skipped. The return value is one of
+ * HITLS_STAPLING_SEND / _SKIP / _ERROR (or an invalid value to be rejected by
+ * the caller). */
 #ifdef HITLS_TLS_HOST_SERVER
-static int32_t ServerStaplingCbInvoke(TLS_Ctx *ctx)
+static int32_t ServerStaplingCbInvoke(TLS_Ctx *ctx, HITLS_CERT_X509 *cert, uint32_t chainidx, HITLS_OCSP_Resp **resp)
 {
-    HITLS_StaplingCb cb = ctx->staplingCb;
+    *resp = NULL;
+    HITLS_StaplingCbPerCert cb = ctx->staplingCb;
     void *arg = ctx->staplingCbArg;
     if (cb == NULL) {
         cb = ctx->config.tlsConfig.staplingCb;
@@ -104,7 +109,7 @@ static int32_t ServerStaplingCbInvoke(TLS_Ctx *ctx)
     if (cb == NULL) {
         return HITLS_STAPLING_SKIP;
     }
-    return cb(ctx, arg);
+    return cb(ctx, cert, chainidx, resp, arg);
 }
 #endif /* HITLS_TLS_HOST_SERVER */
 
@@ -134,6 +139,11 @@ static int32_t StoreOcspRespToList(TLS_Ctx *ctx, HITLS_OCSP_Resp *resp, uint32_t
         BSL_SAL_FREE(ctx->peerOcspRespList);
         ctx->peerOcspRespList = grown;
         ctx->peerOcspRespCount = chainidx + 1;
+    }
+    /* Defensive: a duplicate write to an already-filled slot would leak the
+     * previous response (owned by the ctx); release it before overwriting. */
+    if (ctx->peerOcspRespList[chainidx] != NULL) {
+        OcspRespFree(ctx->peerOcspRespList[chainidx]);
     }
     ctx->peerOcspRespList[chainidx] = resp;
     return HITLS_SUCCESS;
@@ -227,19 +237,39 @@ int32_t ParseClientStatusRequest(ParsePacket *pkt, ClientHelloMsg *msg)
          * server cannot fulfil the request and ignores it. */
         return HITLS_SUCCESS;
     }
+    /* Only record the request here. The per-certificate stapling callback is
+     * invoked once the certificates to be stapled are known: at certificate
+     * selection time for TLS 1.2 (ServerFetchStaplingEeResp) and while building
+     * the Certificate message for TLS 1.3 (PackCertEntryOcspStatus). */
     pkt->ctx->statusExpected = true;
-    /* Give the application a chance to provide the OCSP responses before the
-     * ServerHello acknowledgment is decided. The return value must be one of
-     * HITLS_STAPLING_SEND / _SKIP / _ERROR; any other value is an invalid
-     * callback return and aborts with the fatal internal_error alert. */
-    int32_t cbRet = ServerStaplingCbInvoke(pkt->ctx);
-    if (cbRet != HITLS_STAPLING_SEND && cbRet != HITLS_STAPLING_SKIP) {
-        return ParseErrorProcess(pkt->ctx, HITLS_INTERNAL_EXCEPTION, 0, NULL, ALERT_INTERNAL_ERROR);
+    return HITLS_SUCCESS;
+}
+
+/* TLS 1.2: fetch the EE certificate's OCSP response from the per-certificate
+ * callback once the certificate chain has been selected (called after
+ * ProcessCertCallback in ServerPostProcessClientHello). The response and the
+ * resulting staplingResult are cached so the ServerHello acknowledgment and the
+ * CertificateStatus packing reuse them; the callback runs at most once per
+ * handshake for the EE certificate. */
+int32_t ServerFetchStaplingEeResp(TLS_Ctx *ctx)
+{
+    if (!IsStreamTlsStatusRequest(ctx) || !ctx->statusExpected) {
+        return HITLS_SUCCESS;
     }
-    if (pkt->ctx->ocspResponseCount == 0 || pkt->ctx->ocspResponseList == NULL) {
-        cbRet = HITLS_STAPLING_SKIP;
+    /* The per-certificate callback is invoked at most once per handshake: this
+     * function runs once from ServerPostProcessClientHello after the certificate
+     * was selected. */
+    HITLS_CERT_X509 *eeCert = HITLS_GetCertificate(ctx);
+    HITLS_OCSP_Resp *resp = NULL;
+    int32_t cbRet = HITLS_STAPLING_SKIP;
+    if (eeCert != NULL) {
+        cbRet = ServerStaplingCbInvoke(ctx, eeCert, 0, &resp);
+        if (cbRet != HITLS_STAPLING_SEND && cbRet != HITLS_STAPLING_SKIP) {
+            return ParseErrorProcess(ctx, HITLS_INTERNAL_EXCEPTION, 0, NULL, ALERT_INTERNAL_ERROR);
+        }
     }
-    pkt->ctx->staplingResult = cbRet;
+    ctx->staplingResp = (cbRet == HITLS_STAPLING_SEND) ? resp : NULL;
+    ctx->staplingResult = (cbRet == HITLS_STAPLING_SEND && resp != NULL) ? HITLS_STAPLING_SEND : HITLS_STAPLING_SKIP;
     return HITLS_SUCCESS;
 }
 #endif /* HITLS_TLS_HOST_SERVER */
@@ -435,20 +465,15 @@ EXIT:
  * use this message; it embeds the response in CertificateEntry instead. */
 int32_t PackCertificateStatus(const TLS_Ctx *ctx, PackPacket *pkt)
 {
-    if (ctx->ocspResponseList == NULL || ctx->ocspResponseCount == 0) {
-        /* Reached the send state without any response: an internal state
+    if (ctx->staplingResp == NULL) {
+        /* Reached the send state without the EE response: an internal state
          * inconsistency. Fail explicitly instead of emitting an empty
          * CertificateStatus that would abort the peer. */
         BSL_ERR_PUSH_ERROR(HITLS_INVALID_INPUT);
         return HITLS_INVALID_INPUT;
     }
-    const HITLS_OCSP_Resp *resp = ctx->ocspResponseList[0];
-    if (resp == NULL) {
-        BSL_ERR_PUSH_ERROR(HITLS_INVALID_INPUT);
-        return HITLS_INVALID_INPUT;
-    }
     BSL_Buffer buff = {0};
-    int32_t ret = HITLS_OCSP_RespGenBuff(BSL_FORMAT_ASN1, resp, &buff);
+    int32_t ret = HITLS_OCSP_RespGenBuff(BSL_FORMAT_ASN1, ctx->staplingResp, &buff);
     if (ret != HITLS_PKI_SUCCESS) {
         return ret;
     }
@@ -613,7 +638,7 @@ int32_t ParseCertEntryOcspStatus(TLS_Ctx *ctx, const uint8_t *buf, uint32_t bufL
 #ifdef HITLS_TLS_HOST_SERVER
 int32_t PackCertEntryOcspStatus(TLS_Ctx *ctx, HITLS_CERT_X509 *cert, PackPacket *pkt, uint32_t chainidx)
 {
-    if (ctx->staplingResult != HITLS_STAPLING_SEND || !ctx->statusExpected) {
+    if (!ctx->statusExpected) {
         return HITLS_SUCCESS;
     }
     /* Self-signed certificates are skipped. */
@@ -623,11 +648,15 @@ int32_t PackCertEntryOcspStatus(TLS_Ctx *ctx, HITLS_CERT_X509 *cert, PackPacket 
     if (ret == HITLS_SUCCESS && isSelfSigned) {
         return HITLS_SUCCESS;
     }
-    const HITLS_OCSP_Resp *resp = NULL;
-    if (chainidx < ctx->ocspResponseCount) {
-        resp = ctx->ocspResponseList[chainidx];
+    /* The per-certificate callback returns the response for this certificate.
+     * SEND with a response staples it; SKIP / no response skips this
+     * certificate; an invalid return aborts with internal_error. */
+    HITLS_OCSP_Resp *resp = NULL;
+    int32_t cbRet = ServerStaplingCbInvoke(ctx, cert, chainidx, &resp);
+    if (cbRet != HITLS_STAPLING_SEND && cbRet != HITLS_STAPLING_SKIP) {
+        return ParseErrorProcess(ctx, HITLS_INTERNAL_EXCEPTION, 0, NULL, ALERT_INTERNAL_ERROR);
     }
-    if (resp == NULL) {
+    if (cbRet != HITLS_STAPLING_SEND || resp == NULL) {
         return HITLS_SUCCESS;
     }
     /* Only staple a response that matches this certificate. "No matching CertID"
@@ -718,9 +747,8 @@ void CleanOcspStapling(TLS_Ctx *ctx)
     }
     ctx->peerOcspRespList = NULL;
     ctx->peerOcspRespCount = 0;
-    /* ocspResponseList is owned by the application, do not release it. */
-    ctx->ocspResponseList = NULL;
-    ctx->ocspResponseCount = 0;
+    /* staplingResp is borrowed from the application, do not release it. */
+    ctx->staplingResp = NULL;
     ctx->statusExpected = false;
     ctx->staplingResult = HITLS_STAPLING_SKIP;
 }
@@ -729,19 +757,17 @@ void CleanOcspStapling(TLS_Ctx *ctx)
 /* Reports whether the server will send a CertificateStatus message (stream TLS
  * up to 1.2). TLS 1.3 embeds OCSP responses into CertificateEntry extensions
  * instead and is excluded here; that path is handled by PackCertEntryOcspStatus.
- * The application callback has already been invoked when the status_request
- * extension was parsed. The first (EE) response must exist and match the EE
- * certificate (status + CertID), otherwise nothing is sent. A NULL first slot is
- * the documented "no response for that certificate" marker and means skip. Real
- * failures from the match check are propagated, not folded into a silent skip
- * (consistent with PackCertEntryOcspStatus).
+ * The EE response was already fetched by ServerFetchStaplingEeResp (after the
+ * certificate was selected); it must exist and match the EE certificate
+ * (status + CertID), otherwise nothing is sent. Real failures from the match
+ * check are propagated, not folded into a silent skip.
  *
  * The match outcome is folded into ctx->staplingResult so that the TLS 1.2
  * send_certificate state transition can reuse it instead of re-running the
  * (expensive) match check: matched keeps SEND, every "not sent" path sets SKIP.
  * This function is invoked once per handshake (during ServerHello packing).
  * The TLS 1.3 branch must leave staplingResult untouched: it answers through
- * PackCertEntryOcspStatus, which still needs the callback-time SEND. */
+ * PackCertEntryOcspStatus. */
 int32_t ServerNeedSendCertificateStatus(const TLS_Ctx *ctx, bool *needSend)
 {
     *needSend = false;
@@ -757,16 +783,14 @@ int32_t ServerNeedSendCertificateStatus(const TLS_Ctx *ctx, bool *needSend)
         goto OCSP_NOT_SENT;
     }
 #endif
-    if (ctx->staplingResult != HITLS_STAPLING_SEND || !ctx->statusExpected || ctx->ocspResponseList == NULL ||
-        ctx->ocspResponseCount == 0 || ctx->ocspResponseList[0] == NULL) {
+    if (ctx->staplingResult != HITLS_STAPLING_SEND || !ctx->statusExpected || ctx->staplingResp == NULL) {
         goto OCSP_NOT_SENT;
     }
-    CERT_MgrCtx *mgrCtx = ctx->config.tlsConfig.certMgrCtx;
-    HITLS_CERT_X509 *eeCert = (mgrCtx != NULL) ? SAL_CERT_GetCurrentCert(mgrCtx) : NULL;
+    HITLS_CERT_X509 *eeCert = HITLS_GetCertificate(ctx);
     if (eeCert == NULL) {
         goto OCSP_NOT_SENT;
     }
-    int32_t matchRet = OcspRespMatchesCert(ctx->ocspResponseList[0], eeCert);
+    int32_t matchRet = OcspRespMatchesCert(ctx->staplingResp, eeCert);
     if (matchRet == HITLS_SUCCESS) {
         /* Match: keep staplingResult SEND; send_certificate reuses it so the
          * validity check runs only once per handshake (during ServerHello packing). */
@@ -780,7 +804,7 @@ int32_t ServerNeedSendCertificateStatus(const TLS_Ctx *ctx, bool *needSend)
 OCSP_NOT_SENT:
     /* No CertificateStatus will be sent: fold the decision into staplingResult
      * (SKIP) so send_certificate does not reuse the callback-time SEND and
-     * wrongly enter the send state (e.g. when ocspResponseList[0] is NULL). */
+     * wrongly enter the send state. */
     ((TLS_Ctx *)(uintptr_t)ctx)->staplingResult = HITLS_STAPLING_SKIP;
     return HITLS_SUCCESS;
 }

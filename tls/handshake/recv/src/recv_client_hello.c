@@ -49,6 +49,9 @@
 #endif
 #include "bsl_bytes.h"
 #include "cert_method.h"
+#ifdef HITLS_TLS_FEATURE_STATUS_REQUEST
+#include "status_request.h"
+#endif
 #ifdef HITLS_TLS_FEATURE_QUIC_TLS
 #include "quic_tls_internal.h"
 #endif
@@ -1485,6 +1488,16 @@ static int32_t ServerPostProcessClientHello(TLS_Ctx *ctx, const ClientHelloMsg *
     if (ret != HITLS_SUCCESS) {
         return ret;
     }
+#ifdef HITLS_TLS_FEATURE_STATUS_REQUEST
+    /* The certificate chain is now selected (ProcessCertCallback and the
+     * cipher-suite-driven certificate selection have both run). Fetch the EE
+     * OCSP response from the per-certificate callback so the ServerHello
+     * acknowledgment and the CertificateStatus packing reuse the same response. */
+    ret = ServerFetchStaplingEeResp(ctx);
+    if (ret != HITLS_SUCCESS) {
+        return ret;
+    }
+#endif
     return ServerProcessClientHelloExt(ctx, clientHello);
 }
 #endif /* HITLS_TLS_PROTO_TLS_BASIC || HITLS_TLS_PROTO_DTLS12 */

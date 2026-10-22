@@ -428,7 +428,7 @@ int32_t HITLS_SetStatusCb(HITLS_Ctx *ctx, HITLS_StatusCb cb, void *arg)
     return HITLS_SUCCESS;
 }
 
-int32_t HITLS_SetStaplingCb(HITLS_Ctx *ctx, HITLS_StaplingCb cb, void *arg)
+int32_t HITLS_SetStaplingCbPerCert(HITLS_Ctx *ctx, HITLS_StaplingCbPerCert cb, void *arg)
 {
     if (ctx == NULL) {
         return HITLS_NULL_INPUT;
@@ -436,30 +436,6 @@ int32_t HITLS_SetStaplingCb(HITLS_Ctx *ctx, HITLS_StaplingCb cb, void *arg)
 
     ctx->staplingCb = cb;
     ctx->staplingCbArg = arg;
-
-    return HITLS_SUCCESS;
-}
-
-#define OCSP_RESPONSE_LIST_MAX_SIZE 1024
-int32_t HITLS_SetOcspResponseList(HITLS_Ctx *ctx, HITLS_OCSP_Resp **list, uint32_t count)
-{
-    if (ctx == NULL) {
-        return HITLS_NULL_INPUT;
-    }
-    if (list == NULL && count != 0) {
-        return HITLS_INVALID_INPUT;
-    }
-    if (list != NULL && count == 0) {
-        return HITLS_INVALID_INPUT;
-    }
-    if (count > OCSP_RESPONSE_LIST_MAX_SIZE) {
-        return HITLS_INVALID_INPUT;
-    }
-    /* A NULL element is allowed: it means "no response for that certificate"
-     * and is skipped when the response is packed (see the public header). */
-
-    ctx->ocspResponseList = list;
-    ctx->ocspResponseCount = count;
 
     return HITLS_SUCCESS;
 }
