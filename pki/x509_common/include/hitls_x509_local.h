@@ -57,6 +57,11 @@ extern "C" {
 #define HITLS_X509_GN_EDI   (HITLS_X509_GN_X400 + 1)
 #define HITLS_X509_GN_RID   (HITLS_X509_GN_EDI + 1)
 
+/* Max length of an OCSP Nonce extension value (RFC 6960 does not mandate a value,
+ * 128 is the library-wide cap). Shared by the x509 OCSP-nonce extension handling
+ * and the OCSP module (which includes this header). */
+#define HITLS_OCSP_NONCE_MAX_LEN 128
+
 typedef struct _HITLS_X509_NameNode {
     BSL_ASN1_Buffer nameType;
     BSL_ASN1_Buffer nameValue;
@@ -88,6 +93,7 @@ typedef struct _HITLS_X509_CertExt {
 typedef enum {
     HITLS_X509_EXT_TYPE_CERT = 1,
     HITLS_X509_EXT_TYPE_CRL,
+    HITLS_X509_EXT_TYPE_OCSP,
 } HITLS_X509_ExtInnerType;
 
 struct _HITLS_X509_Ext {
@@ -243,6 +249,14 @@ int32_t HITLS_X509_ParseCdp(HITLS_X509_ExtEntry *extEntry, HITLS_X509_ExtCdp *cr
 
 int32_t HITLS_X509_CheckCdp(const HITLS_X509_ExtCdp *crldp);
 #endif
+
+int32_t HITLS_X509_ParseAia(HITLS_X509_ExtEntry *extEntry, HITLS_X509_ExtAia *aia);
+
+void HITLS_X509_ClearAia(HITLS_X509_ExtAia *aia);
+
+int32_t HITLS_X509_ParseTlsFeature(HITLS_X509_ExtEntry *extEntry, HITLS_X509_ExtTlsFeature *tlsFeature);
+
+void HITLS_X509_ClearTlsFeature(HITLS_X509_ExtTlsFeature *tlsFeature);
 
 void HITLS_X509_ClearExtendedKeyUsage(HITLS_X509_ExtExKeyUsage *exku);
 

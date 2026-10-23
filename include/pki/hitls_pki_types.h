@@ -95,6 +95,7 @@ typedef enum {
     HITLS_X509_EXT_SET_DELTA_CRL,               /** Set the delta CRL indicator extension. */
     HITLS_X509_EXT_SET_IDP,                     /** Set the issuing distribution point extension. */
     HITLS_X509_EXT_SET_CDP,                     /** Set the cRLDistributionPoints extension. */
+    HITLS_X509_EXT_SET_OCSP_NONCE,              /** Set the ocsp nonce. */
 
     HITLS_X509_EXT_GET_SKI = 0x0500,            /** Get Subject Key Identifier from extensions.
                                                     Note: Kid is a shallow copy. */
@@ -111,8 +112,22 @@ typedef enum {
     HITLS_X509_EXT_GET_DELTA_CRL,               /** Get the delta CRL indicator extension. */
     HITLS_X509_EXT_GET_IDP,                     /** Get the issuing distribution point extension. */
     HITLS_X509_EXT_GET_CDP,                     /** Get cRLDistributionPoints from extensions. */
+    HITLS_X509_EXT_GET_AIA,                     /** Get the authority information access extension.
+                                                    Note: Call HITLS_X509_ClearAia to clean the output.
+                                                    The oid and location.value pointers are borrowed
+                                                    from the extension storage; they are valid only
+                                                    while the certificate/extension is alive. */
+    HITLS_X509_EXT_GET_TLSFEATURE,              /** Get the TLS Feature extension.
+                                                    Note: Call HITLS_X509_ClearTlsFeature to clean the output. */
+    HITLS_X509_EXT_GET_OCSP_NONCE,              /** Get the ocsp nonce.
+                                                    Note: nonce is a borrowed pointer, do not free. */
+    HITLS_X509_EXT_GET_EXKUSAGE,                /** Get the extended key usage extension.
+                                                    Note: Returns a list of OID buffers
+                                                    (HITLS_X509_ExtExKeyUsage). Call
+                                                    HITLS_X509_ClearExtendedKeyUsage to clean the output. */
 
     HITLS_X509_EXT_CHECK_SKI = 0x0600,          /** Check if ski is exists. */
+    HITLS_X509_EXT_CHECK_OCSP_NOCHECK,          /** Check whether the certificate carries the OCSP No Check extension. */
 
     HITLS_X509_CSR_GET_ATTRIBUTES = 0x0700,     /** Get the attributes from the csr. */
 
@@ -199,6 +214,51 @@ typedef struct {
     bool critical;
     BslList *oidList; // Object Identifier: list of BSL_Buffer
 } HITLS_X509_ExtExKeyUsage;
+
+/**
+ * @ingroup hitls_pki_types
+ * @brief X.509 Distinguished Name opaque handle (shared by AR-003 ServiceLocator extension and
+ *        AR-005 X.509 OCSP extension parsing).
+ */
+typedef struct HITLS_X509_Name_St HITLS_X509_Name;
+
+/**
+ * @ingroup hitls_pki_types
+ * @brief Authority Information Access single access description (RFC 5280 Section 4.2.2.1).
+ */
+typedef struct {
+    BSL_Buffer oid;                      /**< DER-encoded accessMethod OID */
+    HITLS_X509_GeneralName location;     /**< Access location (OCSP: HITLS_X509_GN_URI) */
+} HITLS_X509_AccessDescription;
+
+/**
+ * @ingroup hitls_pki_types
+ * @brief Authority Information Access extension. descriptions is a list of HITLS_X509_AccessDescription.
+ */
+typedef struct {
+    bool critical;
+    BslList *descriptions;   /**< List of HITLS_X509_AccessDescription * */
+} HITLS_X509_ExtAia;
+
+/**
+ * @ingroup hitls_pki_types
+ * @brief TLS Feature (rfc7633) status_request feature value.
+ */
+#define HITLS_X509_TLSFEATURE_STATUS_REQUEST 5
+
+/**
+ * @ingroup hitls_pki_types
+ * @brief TLS Feature extension. features is a list of int32_t * feature values.
+ */
+typedef struct {
+    bool critical;
+    BslList *features;       /**< List of int32_t * */
+} HITLS_X509_ExtTlsFeature;
+
+typedef struct {
+    bool critical;
+    BSL_Buffer nonce;       /**< OCSP nonce bytes (borrowed pointer, do not free) */
+} HITLS_X509_ExtOcspNonce;
 
 /**
  * Subject Alternative Name
@@ -392,7 +452,7 @@ typedef enum {
                                                        revocation checks, but skips IDP/CDP scope/reason
                                                        matching and delta CRL processing. */
 
-    HITLS_X509_VFY_FLAG_CRL_USE_DELTA = 1 << 5     /** use delta crl */
+    HITLS_X509_VFY_FLAG_CRL_USE_DELTA = 1 << 5,    /** use delta crl */
 } HITLS_X509_VFY_FLAGS;
 
 typedef enum {
@@ -463,6 +523,15 @@ typedef enum {
     HITLS_X509_STORECTX_SET_CUR_DEPTH,
     HITLS_X509_STORECTX_GET_CUR_DEPTH,
     HITLS_X509_STORECTX_GET_CERT_CHAIN,
+    /**< Enable/disable keeping the built cert chain after verification.
+     * val = int32_t * (0 = disable (default), non-zero = enable).
+     * When enabled, the chain built by a successful HITLS_X509_CertVerify is retained in
+     * storeCtx and can be read with HITLS_X509_STORECTX_GET_CERT_CHAIN; it is released by
+     * HITLS_X509_StoreCtxFree. The chain returned by HITLS_X509_STORECTX_GET_CERT_CHAIN is a
+     * borrowed pointer: it is invalidated by the next HITLS_X509_CertVerify call on the same
+     * storeCtx (the previous retained chain is released when a new chain is built) or by
+     * HITLS_X509_StoreCtxFree. */
+    HITLS_X509_STORECTX_SET_KEEP_CERT_CHAIN,
 
     HITLS_X509_STORECTX_MAX
 } HITLS_X509_StoreCtxCmd;
@@ -495,6 +564,8 @@ typedef enum {
     HITLS_PKI_PRINT_CSR,
     HITLS_PKI_PRINT_CRL,
     HITLS_PKI_PRINT_CERT_BRIEF,
+    HITLS_PKI_PRINT_OCSP_REQ,   /* val: HITLS_OCSP_Req*  */
+    HITLS_PKI_PRINT_OCSP_RESP,  /* val: HITLS_OCSP_Resp* */
 } HITLS_PKI_PrintCmd;
 
 /**

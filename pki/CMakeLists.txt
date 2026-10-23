@@ -93,4 +93,9 @@ if(HITLS_PKI_INFO)
     add_subdirectory(print)
 endif()
 
+# OCSP - Online Certificate Status Protocol (RFC 6960)
+if(HITLS_PKI_OCSP)
+    add_subdirectory(ocsp)
+endif()
+
 message(STATUS "[PKI] PKI configuration complete")

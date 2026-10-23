@@ -373,6 +373,10 @@
 #cmakedefine HITLS_PKI_INFO_CRT
 #cmakedefine HITLS_PKI_INFO_CSR
 #cmakedefine HITLS_PKI_INFO_CRL
+#cmakedefine HITLS_PKI_INFO_OCSP
+
+// OCSP
+#cmakedefine HITLS_PKI_OCSP
 
 /* ==============================================================================
  * Crypto Assembling Features

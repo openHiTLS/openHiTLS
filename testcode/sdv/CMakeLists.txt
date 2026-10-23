@@ -207,6 +207,7 @@ set(TEST_INTF_INCLUDE_DIRS
     ${openHiTLS_SRC}/pki/cms/include
     ${openHiTLS_SRC}/pki/x509_verify/include
     ${openHiTLS_SRC}/pki/x509_verify/src
+    ${openHiTLS_SRC}/pki/ocsp/include
     ${openHiTLS_SRC}/pki/print/include
     ${openHiTLS_SRC}/config/macro_config
     ${openHiTLS_SRC}/tls/handshake/include

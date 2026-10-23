@@ -41,17 +41,21 @@
 #include "hitls_crl_local.h"
 #include "hitls_pki_crl.h"
 #endif
+#ifdef HITLS_PKI_INFO_OCSP
+#include "hitls_ocsp_local.h"
+#include "hitls_pki_ocsp.h"
+#endif
 #include "hitls_pki_utils.h"
 #include "hitls_print_local.h"
 
 #define HITLS_X509_IPV4_LEN 4
 #define HITLS_X509_IPV6_LEN 16
 
-#define HITLS_X509_UNKOWN "Unknown\n"
-#define HITLS_X509_UNSUPPORT "<unsupported>"
-#define HITLS_X509_UNSUPPORT_N "<unsupported>\n"
-#define HITLS_X509_V3_EXT "X509V3 extensions:\n"
-#define HITLS_X509_UNSUPPORT_EXT "<Unsupported extension>\n"
+#define HITLS_X509_UNKNOWN        "Unknown\n"
+#define HITLS_X509_UNSUPPORT      "<unsupported>"
+#define HITLS_X509_UNSUPPORT_N    "<unsupported>\n"
+#define HITLS_X509_V3_EXT         "X509V3 extensions:\n"
+#define HITLS_X509_UNSUPPORT_EXT  "<Unsupported extension>\n"
 #define HITLS_X509_PRINT_NEW_LINE "\n"
 typedef struct {
     uint32_t type;
@@ -516,7 +520,7 @@ static int32_t PrintExtendedKeyUsage(HITLS_X509_ExtEntry *entry, uint32_t layer,
         BSL_Buffer *oid = (BSL_Buffer *)BSL_LIST_GetData(oidNode);
         fmt = cnt == 0 ? "%s" : ", %s";
         name = BSL_OBJ_GetOidNameFromOidBuff(oid->data, oid->dataLen);
-        if (BSL_PRINT_Fmt(cnt == 0 ? layer : 0, uio, fmt, name == NULL ? HITLS_X509_UNKOWN : name) != 0) {
+        if (BSL_PRINT_Fmt(cnt == 0 ? layer : 0, uio, fmt, name == NULL ? HITLS_X509_UNKNOWN : name) != 0) {
             HITLS_X509_ClearExtendedKeyUsage(&exKu);
             BSL_ERR_PUSH_ERROR(HITLS_PRINT_ERR_EXT_EXTKU);
             return HITLS_PRINT_ERR_EXT_EXTKU;
@@ -546,6 +550,29 @@ static int32_t PrintCrlNumber(HITLS_X509_Ext *ext, uint32_t layer, BSL_UIO *uio)
 }
 #endif
 
+#ifdef HITLS_PKI_INFO_OCSP
+static int32_t PrintOcspNonce(HITLS_X509_ExtEntry *entry, uint32_t layer, BSL_UIO *uio)
+{
+    uint8_t *temp = entry->extnValue.buff;
+    uint32_t tempLen = entry->extnValue.len;
+    uint32_t nonceLen = 0;
+    int32_t ret = BSL_ASN1_DecodeTagLen(BSL_ASN1_TAG_OCTETSTRING, &temp, &tempLen, &nonceLen);
+    if (ret != BSL_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        return ret;
+    }
+    if (tempLen != nonceLen) {
+        BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_PARSE_NO_ENOUGH);
+        return HITLS_X509_ERR_PARSE_NO_ENOUGH;
+    }
+    if (nonceLen == 0 || nonceLen > HITLS_OCSP_NONCE_MAX_LEN) {
+        BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_EXT_OCSP_NONCE_LEN);
+        return HITLS_X509_ERR_EXT_OCSP_NONCE_LEN;
+    }
+    return BSL_PRINT_Hex(layer, false, temp, nonceLen, uio) == 0 ? HITLS_PKI_SUCCESS : HITLS_PRINT_ERR_EXT;
+}
+#endif
+
 static int32_t PrintExt(HITLS_X509_Ext *ext, HITLS_X509_ExtEntry *entry, uint32_t layer, BSL_UIO *uio)
 {
     switch (entry->cid) {
@@ -566,6 +593,10 @@ static int32_t PrintExt(HITLS_X509_Ext *ext, HITLS_X509_ExtEntry *entry, uint32_
 #ifdef HITLS_PKI_INFO_CRL
         case BSL_CID_CE_CRLNUMBER:
             return PrintCrlNumber(ext, layer, uio);
+#endif
+#ifdef HITLS_PKI_INFO_OCSP
+        case BSL_CID_PKIX_OCSP_NONCE:
+            return PrintOcspNonce(entry, layer, uio);
 #endif
         default:
             return BSL_PRINT_Buff(layer, uio, HITLS_X509_UNSUPPORT_N, strlen(HITLS_X509_UNSUPPORT_N)) == 0
@@ -706,7 +737,7 @@ static int32_t PrintSignAlgInfo(uint32_t layer, HITLS_X509_Asn1AlgId *algId, BSL
 {
     const char *name = BSL_OBJ_GetOidNameFromCID(algId->algId);
     if (name == NULL) {
-        name = HITLS_X509_UNKOWN;
+        name = HITLS_X509_UNKNOWN;
     }
     (void)BSL_PRINT_Fmt(layer, uio, "Signature Algorithm: %s\n", name);
 
@@ -806,7 +837,7 @@ static int32_t PrintCertBrief(HITLS_X509_Cert *cert, BSL_UIO *uio)
 
     /* Signature Algorithm */
     const char *name = BSL_OBJ_GetOidNameFromCID(tbs->signAlgId.algId);
-    (void)BSL_PRINT_Fmt(layer, uio, "Signature Algorithm: %s\n", name ? name : HITLS_X509_UNKOWN);
+    (void)BSL_PRINT_Fmt(layer, uio, "Signature Algorithm: %s\n", name ? name : HITLS_X509_UNKNOWN);
 
     /* Public Key size */
     CRYPT_EAL_PkeyCtx *pubKey = (CRYPT_EAL_PkeyCtx *)tbs->ealPubKey;
@@ -822,7 +853,7 @@ static int32_t PrintCertBrief(HITLS_X509_Cert *cert, BSL_UIO *uio)
     return HITLS_PKI_SUCCESS;
 }
 
-static int32_t PrintCert(HITLS_X509_Cert *cert, uint32_t valLen, bool brief, BSL_UIO *uio)
+static int32_t PrintCert(HITLS_X509_Cert *cert, uint32_t valLen, bool brief, uint32_t layer, BSL_UIO *uio)
 {
     if (valLen != sizeof(HITLS_X509_Cert *)) {
         BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
@@ -831,7 +862,6 @@ static int32_t PrintCert(HITLS_X509_Cert *cert, uint32_t valLen, bool brief, BSL
     if (brief) {
         return PrintCertBrief(cert, uio);
     }
-    uint32_t layer = 0;
     (void)BSL_PRINT_Fmt(layer++, uio, "Certificate:\n");
     (void)BSL_PRINT_Fmt(layer, uio, "Data:\n");
 
@@ -1171,6 +1201,276 @@ static int32_t PrintDnNameHash(uint32_t layer, BslList *list, BSL_UIO *uio)
 }
 #endif
 
+#ifdef HITLS_PKI_INFO_OCSP
+static int32_t PrintOcspCertId(const HITLS_OCSP_CertId *certId, uint32_t layer, BSL_UIO *uio)
+{
+    CRYPT_MD_AlgId hashAlg = 0;
+    BSL_Buffer issuerNameHash = {0};
+    BSL_Buffer issuerKeyHash = {0};
+    BSL_Buffer serialNumber = {0};
+    int32_t ret = HITLS_OCSP_CertIdGetInfo(certId, &hashAlg, &issuerNameHash, &issuerKeyHash, &serialNumber);
+    if (ret != HITLS_PKI_SUCCESS) {
+        return ret;
+    }
+    (void)BSL_PRINT_Fmt(layer, uio, "Certificate ID:\n");
+    layer++;
+    const char *algName = "unknown";
+    switch (hashAlg) {
+        case CRYPT_MD_SHA1:
+            algName = "SHA1";
+            break;
+        case CRYPT_MD_SHA224:
+            algName = "SHA224";
+            break;
+        case CRYPT_MD_SHA256:
+            algName = "SHA256";
+            break;
+        case CRYPT_MD_SHA384:
+            algName = "SHA384";
+            break;
+        case CRYPT_MD_SHA512:
+            algName = "SHA512";
+            break;
+        default:
+            break;
+    }
+    (void)BSL_PRINT_Fmt(layer, uio, "Hash Algorithm: %s\n", algName);
+    RETURN_RET_IF(BSL_PRINT_Number(layer, "Issuer Name Hash", issuerNameHash.data, issuerNameHash.dataLen, uio) != 0,
+                  HITLS_PRINT_ERR_EXT);
+    RETURN_RET_IF(BSL_PRINT_Number(layer, "Issuer Key Hash", issuerKeyHash.data, issuerKeyHash.dataLen, uio) != 0,
+                  HITLS_PRINT_ERR_EXT);
+    return BSL_PRINT_Number(layer, "Serial Number", serialNumber.data, serialNumber.dataLen, uio) == 0
+               ? HITLS_PKI_SUCCESS
+               : HITLS_PRINT_ERR_EXT;
+}
+
+static int32_t PrintOcspReq(const HITLS_OCSP_Req *req, uint32_t layer, BSL_UIO *uio)
+{
+    (void)BSL_PRINT_Fmt(layer, uio, "OCSP Request:\n");
+    const HITLS_OCSP_Req_Internal *internal = (const HITLS_OCSP_Req_Internal *)req;
+    (void)BSL_PRINT_Fmt(layer + 1, uio, "TBS Request:\n");
+    (void)BSL_PRINT_Fmt(layer + 2, uio, "Version: 1 (0x0)\n");
+    int32_t ret = HITLS_PKI_SUCCESS;
+#if defined(HITLS_PKI_INFO_CRT) || defined(HITLS_PKI_INFO_CSR) || defined(HITLS_PKI_INFO_CRL)
+    if (internal->requestorName.data != NULL && internal->requestorName.dataLen != 0) {
+        BslList *gnList = NULL;
+        ret = HITLS_X509_ParseGeneralNames(internal->requestorName.data, internal->requestorName.dataLen, &gnList);
+        if (ret != HITLS_PKI_SUCCESS) {
+            return ret;
+        }
+        (void)BSL_PRINT_Fmt(layer + 2, uio, "Requestor Name: ");
+        ret = PrintGeneralNames(gnList, 0, uio);
+        HITLS_X509_FreeGeneralNames(gnList);
+        if (ret != HITLS_PKI_SUCCESS) {
+            return ret;
+        }
+    }
+#endif
+    uint32_t count = 0;
+    ret = HITLS_OCSP_ReqGetSingleReqCount(req, &count);
+    if (ret != HITLS_PKI_SUCCESS) {
+        return ret;
+    }
+    for (uint32_t i = 0; i < count; i++) {
+        HITLS_OCSP_SingleReq *singleReq = NULL;
+        ret = HITLS_OCSP_ReqGetSingleReqByIndex(req, i, &singleReq);
+        if (ret != HITLS_PKI_SUCCESS) {
+            return ret;
+        }
+        (void)BSL_PRINT_Fmt(layer + 2, uio, "Request [%u]:\n", i);
+        HITLS_OCSP_CertId *certId = NULL;
+        ret = HITLS_OCSP_SingleReqGetCertId(singleReq, &certId);
+        if (ret != HITLS_PKI_SUCCESS) {
+            return ret;
+        }
+        ret = PrintOcspCertId(certId, layer + 3, uio);
+        if (ret != HITLS_PKI_SUCCESS) {
+            return ret;
+        }
+        /* singleRequestExtensions [0] EXPLICIT (RFC 6960 Request optional field) */
+        HITLS_OCSP_SingleReq_Internal *srInternal = (HITLS_OCSP_SingleReq_Internal *)singleReq;
+        if (srInternal->ext != NULL && BSL_LIST_COUNT(srInternal->ext->extList) > 0) {
+            (void)BSL_PRINT_Fmt(layer + 3, uio, "Single Request Extensions:\n");
+            ret = PrintX509Ext(srInternal->ext, false, layer + 3, uio);
+            if (ret != HITLS_PKI_SUCCESS) {
+                return ret;
+            }
+        }
+    }
+    if (internal->ext != NULL && BSL_LIST_COUNT(internal->ext->extList) > 0) {
+        (void)BSL_PRINT_Fmt(layer + 2, uio, "Request Extensions:\n");
+        ret = PrintX509Ext(internal->ext, false, layer + 2, uio);
+        if (ret != HITLS_PKI_SUCCESS) {
+            return ret;
+        }
+    }
+    if (internal->signature.buff != NULL && internal->signature.len != 0) {
+#if defined(HITLS_PKI_INFO_CRT) || defined(HITLS_PKI_INFO_CSR) || defined(HITLS_PKI_INFO_CRL)
+        ret = PrintSignAlgInfo(layer + 1, (HITLS_X509_Asn1AlgId *)(uintptr_t)&internal->signAlgId, uio);
+        if (ret != HITLS_PKI_SUCCESS) {
+            return ret;
+        }
+#endif
+        (void)BSL_PRINT_Number(layer + 1, "Signature Value", internal->signature.buff, internal->signature.len, uio);
+    }
+#ifdef HITLS_PKI_INFO_CRT
+    if (internal->certs != NULL) {
+        for (BslListNode *node = BSL_LIST_FirstNode(internal->certs); node != NULL;
+             node = BSL_LIST_GetNextNode(internal->certs, node)) {
+            ret =
+                PrintCert((HITLS_X509_Cert *)BSL_LIST_GetData(node), sizeof(HITLS_X509_Cert *), false, layer + 1, uio);
+            if (ret != HITLS_PKI_SUCCESS) {
+                return ret;
+            }
+        }
+    }
+#endif
+    return HITLS_PKI_SUCCESS;
+}
+
+static int32_t PrintOcspSingleResp(const HITLS_OCSP_SingleResp *single, uint32_t layer, BSL_UIO *uio)
+{
+    const HITLS_OCSP_SingleResp_Internal *sr = (const HITLS_OCSP_SingleResp_Internal *)single;
+    int32_t ret = PrintOcspCertId(sr->certId, layer, uio);
+    if (ret != HITLS_PKI_SUCCESS) {
+        return ret;
+    }
+    const char *status = HITLS_OCSP_CertStatusToStr(sr->certStatus);
+    (void)BSL_PRINT_Fmt(layer, uio, "Cert Status: %s\n", status != NULL ? status : "unknown");
+    if (sr->hasRevocationTime) {
+        (void)BSL_PRINT_Fmt(layer + 1, uio, "Revocation Time: ");
+        (void)BSL_PRINT_Time(0, &sr->revocationTime, uio);
+        const char *reason = NULL;
+        if (sr->hasRevocationReason) {
+            reason = HITLS_OCSP_RevocationReasonToStr(sr->revocationReason);
+        }
+        (void)BSL_PRINT_Fmt(layer + 1, uio, "Revocation Reason: %s\n", reason != NULL ? reason : "N/A");
+    }
+    (void)BSL_PRINT_Fmt(layer, uio, "This Update: ");
+    (void)BSL_PRINT_Time(0, &sr->thisUpdate, uio);
+    if (sr->hasNextUpdate) {
+        (void)BSL_PRINT_Fmt(layer, uio, "Next Update: ");
+        (void)BSL_PRINT_Time(0, &sr->nextUpdate, uio);
+    }
+    /* singleExtensions [1] EXPLICIT (RFC 6960 SingleResponse optional field) */
+    if (sr->ext != NULL && BSL_LIST_COUNT(sr->ext->extList) > 0) {
+        (void)BSL_PRINT_Fmt(layer, uio, "Single Response Extensions:\n");
+        ret = PrintX509Ext(sr->ext, false, layer, uio);
+        if (ret != HITLS_PKI_SUCCESS) {
+            return ret;
+        }
+    }
+    return HITLS_PKI_SUCCESS;
+}
+
+static int32_t PrintOcspResponderId(const HITLS_OCSP_ResponderId *responderId, uint32_t layer, BSL_UIO *uio)
+{
+    (void)BSL_PRINT_Fmt(layer, uio, "Responder Id: ");
+    if (responderId == NULL) {
+        (void)BSL_PRINT_Buff(0, uio, HITLS_X509_UNSUPPORT_N, strlen(HITLS_X509_UNSUPPORT_N));
+        return HITLS_PKI_SUCCESS;
+    }
+    if (responderId->type == HITLS_OCSP_RESPONDERID_BY_KEY) {
+        (void)BSL_PRINT_Hex(0, true, responderId->value.byKey.data, responderId->value.byKey.dataLen, uio);
+        return HITLS_PKI_SUCCESS;
+    }
+    uint8_t *nameBuff = responderId->value.byName.data;
+    uint32_t remain = responderId->value.byName.dataLen;
+    uint32_t valueLen = 0;
+    int32_t ret =
+        BSL_ASN1_DecodeTagLen(BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE, &nameBuff, &remain, &valueLen);
+    if (ret != BSL_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        return ret;
+    }
+    if (remain != valueLen) {
+        BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_PARSE_NO_ENOUGH);
+        return HITLS_X509_ERR_PARSE_NO_ENOUGH;
+    }
+    BSL_ASN1_List *dnList = BSL_LIST_New(sizeof(HITLS_X509_NameNode));
+    if (dnList == NULL) {
+        BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
+        return BSL_MALLOC_FAIL;
+    }
+    BSL_ASN1_Buffer nameAsn = {.buff = nameBuff, .len = valueLen};
+    ret = HITLS_X509_ParseNameList(&nameAsn, dnList);
+    if (ret != HITLS_PKI_SUCCESS) {
+        BSL_LIST_FREE(dnList, (BSL_LIST_PFUNC_FREE)HITLS_X509_FreeParsedNameNode);
+        return ret;
+    }
+    ret = HITLS_PKI_PrintDnName(layer + 1, dnList, true, uio);
+    BSL_LIST_FREE(dnList, (BSL_LIST_PFUNC_FREE)HITLS_X509_FreeParsedNameNode);
+    return ret;
+}
+
+static int32_t PrintOcspResp(const HITLS_OCSP_Resp *resp, uint32_t layer, BSL_UIO *uio)
+{
+    (void)BSL_PRINT_Fmt(layer, uio, "OCSP Response:\n");
+    const HITLS_OCSP_Resp_Internal *internal = (const HITLS_OCSP_Resp_Internal *)resp;
+    const char *status = HITLS_OCSP_RespStatusToStr((HITLS_OCSP_RespStatus)internal->status);
+    (void)BSL_PRINT_Fmt(layer + 1, uio, "Response Status: %s\n", status != NULL ? status : "unknown");
+    if (internal->basicResp == NULL) {
+        return HITLS_PKI_SUCCESS;
+    }
+    const HITLS_OCSP_BasicResp_Internal *bs = (const HITLS_OCSP_BasicResp_Internal *)internal->basicResp;
+    (void)BSL_PRINT_Fmt(layer + 1, uio, "Basic OCSP Response:\n");
+    (void)BSL_PRINT_Fmt(layer + 2, uio, "Response Data:\n");
+    (void)BSL_PRINT_Fmt(layer + 3, uio, "Version: 1 (0x0)\n");
+    int32_t ret = PrintOcspResponderId(bs->responderId, layer + 3, uio);
+    if (ret != HITLS_PKI_SUCCESS) {
+        return ret;
+    }
+    (void)BSL_PRINT_Fmt(layer + 3, uio, "Produced At: ");
+    (void)BSL_PRINT_Time(0, &bs->producedAt, uio);
+    uint32_t count = 0;
+    ret = HITLS_OCSP_BasicRespGetRespCount((HITLS_OCSP_BasicResp *)internal->basicResp, &count);
+    if (ret != HITLS_PKI_SUCCESS) {
+        return ret;
+    }
+    for (uint32_t i = 0; i < count; i++) {
+        HITLS_OCSP_SingleResp *single = NULL;
+        ret = HITLS_OCSP_BasicRespGetRespByIndex((HITLS_OCSP_BasicResp *)internal->basicResp, i, &single);
+        if (ret != HITLS_PKI_SUCCESS) {
+            return ret;
+        }
+        (void)BSL_PRINT_Fmt(layer + 3, uio, "Single Response [%u]:\n", i);
+        ret = PrintOcspSingleResp(single, layer + 4, uio);
+        if (ret != HITLS_PKI_SUCCESS) {
+            return ret;
+        }
+    }
+    if (bs->ext != NULL && BSL_LIST_COUNT(bs->ext->extList) > 0) {
+        (void)BSL_PRINT_Fmt(layer + 3, uio, "Response Extensions:\n");
+        ret = PrintX509Ext(bs->ext, false, layer + 3, uio);
+        if (ret != HITLS_PKI_SUCCESS) {
+            return ret;
+        }
+    }
+    if (bs->signature.buff != NULL && bs->signature.len != 0) {
+#if defined(HITLS_PKI_INFO_CRT) || defined(HITLS_PKI_INFO_CSR) || defined(HITLS_PKI_INFO_CRL)
+        ret = PrintSignAlgInfo(layer + 2, (HITLS_X509_Asn1AlgId *)(uintptr_t)&bs->signAlgId, uio);
+        if (ret != HITLS_PKI_SUCCESS) {
+            return ret;
+        }
+#endif
+        (void)BSL_PRINT_Number(layer + 2, "Signature Value", bs->signature.buff, bs->signature.len, uio);
+    }
+#ifdef HITLS_PKI_INFO_CRT
+    if (bs->certs != NULL) {
+        for (BslListNode *node = BSL_LIST_FirstNode(bs->certs); node != NULL;
+             node = BSL_LIST_GetNextNode(bs->certs, node)) {
+            ret =
+                PrintCert((HITLS_X509_Cert *)BSL_LIST_GetData(node), sizeof(HITLS_X509_Cert *), false, layer + 2, uio);
+            if (ret != HITLS_PKI_SUCCESS) {
+                return ret;
+            }
+        }
+    }
+#endif
+    return HITLS_PKI_SUCCESS;
+}
+#endif
+
 int32_t HITLS_PKI_PrintCtrl(int32_t cmd, void *val, uint32_t valLen, BSL_UIO *uio)
 {
 #ifdef HITLS_PKI_INFO_DN_CONF
@@ -1206,9 +1506,9 @@ int32_t HITLS_PKI_PrintCtrl(int32_t cmd, void *val, uint32_t valLen, BSL_UIO *ui
             return BSL_PRINT_Time(0, val, uio);
 #ifdef HITLS_PKI_INFO_CRT
         case HITLS_PKI_PRINT_CERT:
-            return PrintCert(val, valLen, false, uio);
+            return PrintCert(val, valLen, false, 0, uio);
         case HITLS_PKI_PRINT_CERT_BRIEF:
-            return PrintCert(val, valLen, true, uio);
+            return PrintCert(val, valLen, true, 0, uio);
 #endif
 #ifdef HITLS_PKI_INFO_CSR
         case HITLS_PKI_PRINT_CSR:
@@ -1225,6 +1525,20 @@ int32_t HITLS_PKI_PrintCtrl(int32_t cmd, void *val, uint32_t valLen, BSL_UIO *ui
                 return HITLS_X509_ERR_INVALID_PARAM;
             }
             return PrintCrl(val, uio);
+#endif
+#ifdef HITLS_PKI_INFO_OCSP
+        case HITLS_PKI_PRINT_OCSP_REQ:
+            if (valLen != sizeof(HITLS_OCSP_Req *)) {
+                BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
+                return HITLS_X509_ERR_INVALID_PARAM;
+            }
+            return PrintOcspReq((const HITLS_OCSP_Req *)val, 0, uio);
+        case HITLS_PKI_PRINT_OCSP_RESP:
+            if (valLen != sizeof(HITLS_OCSP_Resp *)) {
+                BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
+                return HITLS_X509_ERR_INVALID_PARAM;
+            }
+            return PrintOcspResp((const HITLS_OCSP_Resp *)val, 0, uio);
 #endif
         default:
             return HITLS_X509_ERR_INVALID_PARAM;

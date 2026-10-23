@@ -30,6 +30,7 @@ target_include_directories(_hitls_pki_print
         ${PROJECT_SOURCE_DIR}/pki/x509_cert/include
         ${PROJECT_SOURCE_DIR}/pki/x509_crl/include
         ${PROJECT_SOURCE_DIR}/pki/x509_csr/include
+        ${PROJECT_SOURCE_DIR}/pki/ocsp/include
         ${PROJECT_SOURCE_DIR}/pki/cms/include
         ${PROJECT_SOURCE_DIR}/pki/pkcs12/include
         ${PROJECT_SOURCE_DIR}/crypto/codecskey/include

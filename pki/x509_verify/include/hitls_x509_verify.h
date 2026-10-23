@@ -64,6 +64,7 @@ struct _HITLS_X509_StoreCtx {
     const char *attrName;             // Provider attribute name
     HITLS_X509_List *crls;            // CRL snapshot built during verification
     HITLS_X509_List *certChain;       // Certificate chain built during verification
+    int32_t keepCertChain;
 #ifdef HITLS_PKI_X509_VFY_CB
     int32_t error;                    // Error code
     int32_t curDepth;                 // Current verification depth

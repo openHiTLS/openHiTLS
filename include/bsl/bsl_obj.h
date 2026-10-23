@@ -761,6 +761,7 @@ typedef enum {
     BSL_CID_SMIMECAP = 5306,
     BSL_CID_ON_DNSSRV = 5307, /* identifies id-on-dnsSRV */
     BSL_CID_CHACHA20 = 5308,  /* identifies ChaCha20 algorithm */
+    BSL_CID_CE_TLSFEATURE = 5309, /* identifies TLSFEATURE (RFC 7633) */
     /* RFC 6211 Section 2: id-aa-CMSAlgorithmProtection is 1.2.840.113549.1.9.52. */
     BSL_CID_PKCS9_AT_ALGORITHM_PROTECTION = 5400,
 

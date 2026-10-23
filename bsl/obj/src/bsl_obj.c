@@ -81,7 +81,12 @@ BslOidInfo g_oidTable[] = {
     {{8, "\52\206\110\316\75\3\1\7", BSL_OID_GLOBAL}, "prime256v1", BSL_CID_PRIME256V1},
     {{9, "\52\206\110\206\367\15\1\5\14", BSL_OID_GLOBAL}, "PBKDF2", BSL_CID_PBKDF2},
     {{9, "\52\206\110\206\367\15\1\5\15", BSL_OID_GLOBAL}, "PBES2", BSL_CID_PBES2},
+    {{9, "\53\6\1\5\5\7\60\1\1", BSL_OID_GLOBAL}, "OCSPBasic", BSL_CID_PKIX_OCSP_BASIC},
+    {{9, "\53\6\1\5\5\7\60\1\2", BSL_OID_GLOBAL}, "OCSPNonce", BSL_CID_PKIX_OCSP_NONCE},
+    {{9, "\53\6\1\5\5\7\60\1\5", BSL_OID_GLOBAL}, "OCSPNoCheck", BSL_CID_PKIX_OCSP_NOCHECK},
     {{9, "\52\206\110\206\367\15\1\11\16", BSL_OID_GLOBAL}, "Extension Request", BSL_CID_EXTENSIONREQUEST},
+    {{8, "\53\6\1\5\5\7\60\1", BSL_OID_GLOBAL}, "AD_OCSP", BSL_CID_AD_OCSP},
+    {{8, "\53\6\1\5\5\7\60\2", BSL_OID_GLOBAL}, "AD_CAISSUERS", BSL_CID_AD_CAISSUERS},
     {{3, "\125\4\4", BSL_OID_GLOBAL}, "SN", BSL_CID_AT_SURNAME},
     {{3, "\125\4\52", BSL_OID_GLOBAL}, "GN", BSL_CID_AT_GIVENNAME},
     {{3, "\125\4\53", BSL_OID_GLOBAL}, "initials", BSL_CID_AT_INITIALS},
@@ -270,6 +275,7 @@ BslOidInfo g_oidTable[] = {
     {{10, "\52\206\110\206\367\15\1\11\27\1", BSL_OID_GLOBAL}, "x509crl", BSL_CID_X509CRL},
     {{9, "\52\206\110\206\367\15\1\11\17", BSL_OID_GLOBAL}, "smimeCapabilities", BSL_CID_SMIMECAP},
     {{8, "\53\6\1\5\5\7\10\7", BSL_OID_GLOBAL}, "id-on-dnsSRV", BSL_CID_ON_DNSSRV},
+    {{8, "\53\6\1\5\5\7\1\30", BSL_OID_GLOBAL}, "TLSFeature", BSL_CID_CE_TLSFEATURE}, /* RFC 7633 id-pe-tlsfeature = 1.3.6.1.5.5.7.1.24 */
     /* RFC 6211 Section 2: id-aa-CMSAlgorithmProtection ::= { 1 2 840 113549 1 9 52 }. */
     {{9, "\52\206\110\206\367\15\1\11\64", BSL_OID_GLOBAL},
      "algorithmProtection",

@@ -1582,6 +1582,51 @@ EXIT:
 }
 /* END_CASE */
 
+/* BEGIN_CASE */
+void SDV_X509_EXT_ParseAia_TC001(Hex *encode, Hex *oid, Hex *location, int descCnt)
+{
+    TestMemInit();
+    HITLS_X509_ExtAia aia = {0};
+    HITLS_X509_ExtEntry entry = {BSL_CID_PE_AUTHORITYINFOACCESS, {0}, true, {0, encode->len, encode->x}};
+
+    ASSERT_EQ(HITLS_X509_ParseAia(&entry, &aia), 0);
+    ASSERT_EQ(aia.critical, entry.critical);
+    ASSERT_EQ(BSL_LIST_COUNT(aia.descriptions), descCnt);
+    HITLS_X509_AccessDescription *desc = BSL_LIST_GET_FIRST(aia.descriptions);
+    ASSERT_NE(desc, NULL);
+    ASSERT_COMPARE("accessMethod", desc->oid.data, desc->oid.dataLen, oid->x, oid->len);
+    ASSERT_EQ(desc->location.type, HITLS_X509_GN_URI);
+    ASSERT_COMPARE("accessLocation", desc->location.value.data, desc->location.value.dataLen, location->x, location->len);
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
+EXIT:
+    HITLS_X509_ClearAia(&aia);
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_X509_EXT_ParseTlsFeature_TC001(Hex *encode, int f1, int f2)
+{
+    TestMemInit();
+    HITLS_X509_ExtTlsFeature tlsFeature = {0};
+    HITLS_X509_ExtEntry entry = {BSL_CID_CE_TLSFEATURE, {0}, true, {0, encode->len, encode->x}};
+
+    ASSERT_EQ(HITLS_X509_ParseTlsFeature(&entry, &tlsFeature), 0);
+    ASSERT_EQ(tlsFeature.critical, entry.critical);
+    ASSERT_EQ(BSL_LIST_COUNT(tlsFeature.features), 2);
+    int32_t *feat = BSL_LIST_GET_FIRST(tlsFeature.features);
+    ASSERT_NE(feat, NULL);
+    ASSERT_EQ(*feat, f1);
+    feat = BSL_LIST_GET_NEXT(tlsFeature.features);
+    ASSERT_NE(feat, NULL);
+    ASSERT_EQ(*feat, f2);
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
+EXIT:
+    HITLS_X509_ClearTlsFeature(&tlsFeature);
+}
+/* END_CASE */
+
 /**
  * @test SDV_X509_EXT_CheckAkiSerial_TC001
  * @brief Padded AKI serials must match the issuer's serial; different values or lengths must fail
@@ -3838,5 +3883,156 @@ EXIT:
     HITLS_X509_CertFree(cert);
     BSL_LIST_FREE(names, FreeSanListData);
 #endif
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_X509_EXT_GetAia_TC001(Hex *encode, int ret, int descCount, int ocspUriPresent, Hex *ocspUri)
+{
+    TestMemInit();
+
+    BSL_ASN1_Buffer asnExt = {BSL_ASN1_CLASS_CTX_SPECIFIC | BSL_ASN1_TAG_CONSTRUCTED, encode->len, encode->x};
+    HITLS_X509_ExtAia aia = {0};
+
+    HITLS_X509_Ext *ext = HITLS_X509_ExtNew(HITLS_X509_EXT_TYPE_CSR);
+    ASSERT_NE(ext, NULL);
+    ASSERT_EQ(HITLS_X509_ParseExt(&asnExt, ext), HITLS_PKI_SUCCESS);
+
+    ASSERT_EQ(HITLS_X509_ExtCtrl(ext, HITLS_X509_EXT_GET_AIA, &aia, sizeof(HITLS_X509_ExtAia)), ret);
+    if (ret == HITLS_PKI_SUCCESS) {
+        ASSERT_EQ(BSL_LIST_COUNT(aia.descriptions), descCount);
+        bool foundOcsp = false;
+        for (BslListNode *node = BSL_LIST_FirstNode(aia.descriptions); node != NULL;
+            node = BSL_LIST_GetNextNode(aia.descriptions, node)) {
+            HITLS_X509_AccessDescription *ad = (HITLS_X509_AccessDescription *)BSL_LIST_GetData(node);
+            BslCid cid = BSL_OBJ_GetCidFromOidBuff(ad->oid.data, ad->oid.dataLen);
+            if (cid == BSL_CID_AD_OCSP && ad->location.type == HITLS_X509_GN_URI) {
+                foundOcsp = true;
+                ASSERT_COMPARE("OCSP URI", (uint8_t *)ad->location.value.data, ad->location.value.dataLen,
+                    ocspUri->x, ocspUri->len);
+            }
+        }
+        ASSERT_EQ(foundOcsp, ocspUriPresent);
+        ASSERT_TRUE(TestIsErrStackEmpty());
+    }
+
+EXIT:
+    HITLS_X509_ClearAia(&aia);
+    HITLS_X509_ExtFree(ext);
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_X509_EXT_GetTlsFeature_TC001(Hex *encode, int ret, int featCount, int hasStatusRequest)
+{
+    TestMemInit();
+
+    BSL_ASN1_Buffer asnExt = {BSL_ASN1_CLASS_CTX_SPECIFIC | BSL_ASN1_TAG_CONSTRUCTED, encode->len, encode->x};
+    HITLS_X509_ExtTlsFeature tlsFeat = {0};
+
+    HITLS_X509_Ext *ext = HITLS_X509_ExtNew(HITLS_X509_EXT_TYPE_CSR);
+    ASSERT_NE(ext, NULL);
+    ASSERT_EQ(HITLS_X509_ParseExt(&asnExt, ext), HITLS_PKI_SUCCESS);
+
+    ASSERT_EQ(HITLS_X509_ExtCtrl(ext, HITLS_X509_EXT_GET_TLSFEATURE, &tlsFeat, sizeof(HITLS_X509_ExtTlsFeature)), ret);
+    if (ret == HITLS_PKI_SUCCESS) {
+        ASSERT_EQ(BSL_LIST_COUNT(tlsFeat.features), featCount);
+        bool found = false;
+        for (BslListNode *node = BSL_LIST_FirstNode(tlsFeat.features); node != NULL;
+            node = BSL_LIST_GetNextNode(tlsFeat.features, node)) {
+            int32_t *feat = (int32_t *)BSL_LIST_GetData(node);
+            if (*feat == HITLS_X509_TLSFEATURE_STATUS_REQUEST) {
+                found = true;
+            }
+        }
+        ASSERT_EQ(found, hasStatusRequest);
+        ASSERT_TRUE(TestIsErrStackEmpty());
+    }
+
+EXIT:
+    HITLS_X509_ClearTlsFeature(&tlsFeat);
+    HITLS_X509_ExtFree(ext);
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_X509_EXT_CheckOcspNoCheck_TC001(Hex *encode, int ret, int isPresent)
+{
+    TestMemInit();
+
+    BSL_ASN1_Buffer asnExt = {BSL_ASN1_CLASS_CTX_SPECIFIC | BSL_ASN1_TAG_CONSTRUCTED, encode->len, encode->x};
+    bool isExist = false;
+
+    HITLS_X509_Ext *ext = HITLS_X509_ExtNew(HITLS_X509_EXT_TYPE_CSR);
+    ASSERT_NE(ext, NULL);
+    ASSERT_EQ(HITLS_X509_ParseExt(&asnExt, ext), HITLS_PKI_SUCCESS);
+
+    ASSERT_EQ(HITLS_X509_ExtCtrl(ext, HITLS_X509_EXT_CHECK_OCSP_NOCHECK, &isExist, sizeof(bool)), ret);
+    ASSERT_EQ(isExist, isPresent);
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
+EXIT:
+    HITLS_X509_ExtFree(ext);
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_X509_EXT_CheckSki_Regression_TC001(Hex *encode, int ret, int isPresent)
+{
+    TestMemInit();
+
+    BSL_ASN1_Buffer asnExt = {BSL_ASN1_CLASS_CTX_SPECIFIC | BSL_ASN1_TAG_CONSTRUCTED, encode->len, encode->x};
+    bool isExist = false;
+
+    HITLS_X509_Ext *ext = HITLS_X509_ExtNew(HITLS_X509_EXT_TYPE_CSR);
+    ASSERT_NE(ext, NULL);
+    ASSERT_EQ(HITLS_X509_ParseExt(&asnExt, ext), HITLS_PKI_SUCCESS);
+
+    ASSERT_EQ(HITLS_X509_ExtCtrl(ext, HITLS_X509_EXT_CHECK_SKI, &isExist, sizeof(bool)), ret);
+    ASSERT_EQ(isExist, isPresent);
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
+EXIT:
+    HITLS_X509_ExtFree(ext);
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_X509_EXT_GetAia_NoExt_TC001(Hex *encode)
+{
+    TestMemInit();
+
+    BSL_ASN1_Buffer asnExt = {BSL_ASN1_CLASS_CTX_SPECIFIC | BSL_ASN1_TAG_CONSTRUCTED, encode->len, encode->x};
+    HITLS_X509_ExtAia aia = {0};
+
+    HITLS_X509_Ext *ext = HITLS_X509_ExtNew(HITLS_X509_EXT_TYPE_CSR);
+    ASSERT_NE(ext, NULL);
+    ASSERT_EQ(HITLS_X509_ParseExt(&asnExt, ext), HITLS_PKI_SUCCESS);
+
+    ASSERT_EQ(HITLS_X509_ExtCtrl(ext, HITLS_X509_EXT_GET_AIA, &aia, sizeof(HITLS_X509_ExtAia)),
+        HITLS_X509_ERR_EXT_NOT_FOUND);
+
+EXIT:
+    HITLS_X509_ExtFree(ext);
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_X509_EXT_GetTlsFeature_NoExt_TC001(Hex *encode)
+{
+    TestMemInit();
+
+    BSL_ASN1_Buffer asnExt = {BSL_ASN1_CLASS_CTX_SPECIFIC | BSL_ASN1_TAG_CONSTRUCTED, encode->len, encode->x};
+    HITLS_X509_ExtTlsFeature tlsFeat = {0};
+
+    HITLS_X509_Ext *ext = HITLS_X509_ExtNew(HITLS_X509_EXT_TYPE_CSR);
+    ASSERT_NE(ext, NULL);
+    ASSERT_EQ(HITLS_X509_ParseExt(&asnExt, ext), HITLS_PKI_SUCCESS);
+
+    ASSERT_EQ(HITLS_X509_ExtCtrl(ext, HITLS_X509_EXT_GET_TLSFEATURE, &tlsFeat, sizeof(HITLS_X509_ExtTlsFeature)),
+        HITLS_X509_ERR_EXT_NOT_FOUND);
+
+EXIT:
+    HITLS_X509_ExtFree(ext);
 }
 /* END_CASE */

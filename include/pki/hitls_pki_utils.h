@@ -116,6 +116,36 @@ void HITLS_X509_ClearSubjectAltName(HITLS_X509_ExtSan *san);
 
 /**
  * @ingroup pki
+ * @brief Clear a HITLS_X509_ExtExKeyUsage structure.
+ * @par Description: This interface needs to be called to clean up memory when obtaining
+ *  extended key usage extensions using the macro HITLS_X509_EXT_GET_EXKUSAGE.
+ *
+ * @param exku [IN] The HITLS_X509_ExtExKeyUsage structure.
+ */
+void HITLS_X509_ClearExtendedKeyUsage(HITLS_X509_ExtExKeyUsage *exku);
+
+/**
+ * @ingroup pki
+ * @brief Clear a HITLS_X509_ExtAia structure.
+ * @par Description: This interface needs to be called to clean up memory when obtaining AIA
+ *  extensions using the macro HITLS_X509_EXT_GET_AIA.
+ *
+ * @param aia [IN] The HITLS_X509_ExtAia structure.
+ */
+void HITLS_X509_ClearAia(HITLS_X509_ExtAia *aia);
+
+/**
+ * @ingroup pki
+ * @brief Clear a HITLS_X509_ExtTlsFeature structure.
+ * @par Description: This interface needs to be called to clean up memory when obtaining
+ *  TLS Feature extensions using the macro HITLS_X509_EXT_GET_TLSFEATURE.
+ *
+ * @param tlsFeature [IN] The HITLS_X509_ExtTlsFeature structure.
+ */
+void HITLS_X509_ClearTlsFeature(HITLS_X509_ExtTlsFeature *tlsFeature);
+
+/**
+ * @ingroup pki
  * @brief Free a general name.
  *
  * @param data [IN] The general name.

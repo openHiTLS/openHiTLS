@@ -110,6 +110,7 @@ void HITLS_X509_StoreCtxFree(HITLS_X509_StoreCtx *storeCtx);
  *        HITLS_X509_STORECTX_SET_CUR_DEPTH             int32_t               sizeof(int32_t)
  *        HITLS_X509_STORECTX_GET_CUR_DEPTH             int32_t *             sizeof(int32_t)
  *        HITLS_X509_STORECTX_GET_CERT_CHAIN            HITLS_X509_List **    sizeof(HITLS_X509_List *)
+ *        HITLS_X509_STORECTX_SET_KEEP_CERT_CHAIN       const int32_t *       sizeof(int32_t)
  *        HITLS_X509_STORECTX_SET_PEER_CERT_CHAIN       HITLS_X509_List *     sizeof(HITLS_X509_List *)
  *        HITLS_X509_STORECTX_GET_PEER_CERT_CHAIN       HITLS_X509_List **    sizeof(HITLS_X509_List *)
  *        HITLS_X509_STORECTX_SET_URI_ID                char *                string length

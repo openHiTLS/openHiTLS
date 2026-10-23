@@ -485,6 +485,16 @@ static int32_t X509_GetCertChain(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_List 
     return HITLS_PKI_SUCCESS;
 }
 
+static int32_t X509_SetKeepCertChain(HITLS_X509_StoreCtx *storeCtx, const int32_t *val, uint32_t valLen)
+{
+    if (val == NULL || valLen != sizeof(int32_t)) {
+        BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
+        return HITLS_X509_ERR_INVALID_PARAM;
+    }
+    storeCtx->keepCertChain = *val;
+    return HITLS_PKI_SUCCESS;
+}
+
 #if defined(HITLS_PKI_X509_VFY_IDENTITY) || defined(HITLS_PKI_X509_VFY_LOCATION)
 
 static char *DupString(const char *str)
@@ -793,6 +803,8 @@ int32_t X509VfyDoingCtrl(HITLS_X509_StoreCtx *storeCtx, int32_t cmd, void *val, 
 #endif
         case HITLS_X509_STORECTX_GET_CERT_CHAIN:
             return X509_GetCertChain(storeCtx, val, valLen);
+        case HITLS_X509_STORECTX_SET_KEEP_CERT_CHAIN:
+            return X509_SetKeepCertChain(storeCtx, (const int32_t *)val, valLen);
         default:
             BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
             return HITLS_X509_ERR_INVALID_PARAM;
@@ -2700,7 +2712,9 @@ int32_t HITLS_X509_CertVerify(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_List *ch
     ret = VerifyCertCbk(storeCtx, NULL, -1, HITLS_PKI_SUCCESS);
 #endif
 EXIT:
-    BSL_LIST_FREE(storeCtx->certChain, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);
+    if (ret != HITLS_PKI_SUCCESS || storeCtx->keepCertChain == 0) {
+        BSL_LIST_FREE(storeCtx->certChain, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);
+    }
     return ret;
 }
 
@@ -2861,6 +2875,7 @@ HITLS_X509_StoreCtx *HITLS_X509_StoreCtxDup(const HITLS_X509_StoreCtx *ctx)
 
     newCtx->libCtx = ctx->libCtx;
     newCtx->attrName = ctx->attrName;
+    newCtx->keepCertChain = ctx->keepCertChain;
 #ifdef HITLS_PKI_X509_VFY_CB
     newCtx->verifyCb = ctx->verifyCb;
     newCtx->usrData = ctx->usrData;

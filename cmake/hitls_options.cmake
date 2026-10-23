@@ -477,6 +477,10 @@ option(HITLS_PKI_INFO                                          "PKI Info" OFF)
   option(HITLS_PKI_INFO_CRT                                      "PKI Info Certificate" OFF)
   option(HITLS_PKI_INFO_CSR                                      "PKI Info CSR" OFF)
   option(HITLS_PKI_INFO_CRL                                      "PKI Info CRL" OFF)
+  option(HITLS_PKI_INFO_OCSP                                     "PKI Info OCSP" OFF)
+
+# --- OCSP ---
+option(HITLS_PKI_OCSP                                          "OCSP" OFF)
 
 # --- TLS Features ---
 option(HITLS_TLS_PROTO_TLS                                     "TLS Protocol TLS" OFF)

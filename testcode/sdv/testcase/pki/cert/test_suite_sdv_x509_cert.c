@@ -2320,3 +2320,85 @@ EXIT:
     CertSerialMemTrackStop();
 }
 /* END_CASE */
+
+/* TC: ParseAccessDesc must reject an AccessDescription that carries an accessMethod OID
+ * but no accessLocation GeneralName (RFC 5280 4.2.2.1 requires it), instead of reading past
+ * the SEQUENCE content. */
+/* BEGIN_CASE */
+void SDV_X509_CERT_EXT_AIA_MALFORMED_TC001(void)
+{
+#ifdef HITLS_PKI_X509
+    /* AuthorityInfoAccessSyntax ::= SEQUENCE { AccessDescription } with
+     * AccessDescription ::= SEQUENCE { accessMethod OBJECT IDENTIFIER } only. */
+    uint8_t malformedDer[] = {
+        0x30, 0x07, /* SEQUENCE (AIA) len 7 */
+        0x30, 0x05, /* SEQUENCE (AccessDescription) len 5 */
+        0x06, 0x03, 0x2a, 0x03, 0x04 /* OBJECT IDENTIFIER 1.2.3.4 */
+    };
+
+    HITLS_X509_ExtEntry extEntry;
+    memset(&extEntry, 0, sizeof(extEntry));
+    extEntry.extnValue.buff = malformedDer;
+    extEntry.extnValue.len = sizeof(malformedDer);
+
+    HITLS_X509_ExtAia aia = {0};
+    ASSERT_EQ(HITLS_X509_ParseAia(&extEntry, &aia), HITLS_X509_ERR_PARSE_NO_ENOUGH);
+    ASSERT_TRUE(aia.descriptions == NULL);
+
+    /* Sanity: a well-formed AccessDescription (OID + [6] IA5String URI) still parses. */
+    uint8_t validDer[] = {
+        0x30, 0x0a, /* SEQUENCE (AIA) len 10 */
+        0x30, 0x08, /* SEQUENCE (AccessDescription) len 8 */
+        0x06, 0x03, 0x2a, 0x03, 0x04, /* OBJECT IDENTIFIER 1.2.3.4 */
+        0x86, 0x01, 0x61 /* GeneralName [6] IA5String "a" */
+    };
+    extEntry.extnValue.buff = validDer;
+    extEntry.extnValue.len = sizeof(validDer);
+    HITLS_X509_ExtAia okAia = {0};
+    ASSERT_EQ(HITLS_X509_ParseAia(&extEntry, &okAia), HITLS_PKI_SUCCESS);
+    ASSERT_TRUE(okAia.descriptions != NULL);
+    ASSERT_EQ(BSL_LIST_COUNT(okAia.descriptions), 1);
+    HITLS_X509_ClearAia(&okAia);
+EXIT:
+    HITLS_X509_ClearAia(&aia);
+#endif
+}
+/* END_CASE */
+
+/* TC: ParseTlsFeatureItem must reject a TLS Feature value that does not fit in int32.
+ * A positive INTEGER >= 2^31 is DER-encoded with a leading 0x00 pad, which
+ * BSL_ASN1_DecodeInteger strips first; the resulting 4-byte content then has its top bit
+ * set and would otherwise decode to a negative int32. */
+/* BEGIN_CASE */
+void SDV_X509_CERT_EXT_TLSFEATURE_BIGINT_TC001(void)
+{
+#ifdef HITLS_PKI_X509
+    /* RFC 7633 id-pe-tlsfeature = 1.3.6.1.5.5.7.1.24 must resolve to the TLS Feature CID. */
+    uint8_t tlsFeatureOid[] = {0x2b, 0x06, 0x01, 0x05, 0x05, 0x07, 0x01, 0x18};
+    ASSERT_EQ(BSL_OBJ_GetCidFromOidBuff(tlsFeatureOid, sizeof(tlsFeatureOid)), BSL_CID_CE_TLSFEATURE);
+
+    /* Positive 0x80000000 (needs 5 content bytes with a 0x00 pad). */
+    uint8_t big[] = {0x30, 0x07, 0x02, 0x05, 0x00, 0x80, 0x00, 0x00, 0x00};
+    HITLS_X509_ExtEntry extEntry;
+    memset(&extEntry, 0, sizeof(extEntry));
+    extEntry.extnValue.buff = big;
+    extEntry.extnValue.len = sizeof(big);
+    HITLS_X509_ExtTlsFeature tf = {0};
+    ASSERT_EQ(HITLS_X509_ParseTlsFeature(&extEntry, &tf), HITLS_X509_ERR_EXT_TLSFEATURE_ELE);
+    ASSERT_TRUE(tf.features == NULL);
+
+    /* A 4-byte positive value (top bit clear) decodes correctly. */
+    uint8_t m4[] = {0x30, 0x06, 0x02, 0x04, 0x12, 0x34, 0x56, 0x78};
+    extEntry.extnValue.buff = m4;
+    extEntry.extnValue.len = sizeof(m4);
+    ASSERT_EQ(HITLS_X509_ParseTlsFeature(&extEntry, &tf), HITLS_PKI_SUCCESS);
+    ASSERT_TRUE(tf.features != NULL);
+    ASSERT_EQ(BSL_LIST_COUNT(tf.features), 1);
+    int32_t *got = (int32_t *)BSL_LIST_GetIndexNode(0, tf.features);
+    ASSERT_TRUE(got != NULL);
+    ASSERT_EQ(*got, 0x12345678);
+EXIT:
+    HITLS_X509_ClearTlsFeature(&tf);
+#endif
+}
+/* END_CASE */
