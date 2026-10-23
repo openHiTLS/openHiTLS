@@ -363,6 +363,16 @@ typedef struct {
     uint8_t *verifyData;
 } FinishedMsg;
 
+#ifdef HITLS_TLS_FEATURE_STATUS_REQUEST
+/* Transmits the certificate status (CertificateStatus) message.
+   Body: status_type(1) + response length(3) + OCSP response DER. */
+typedef struct {
+    uint8_t statusType; /* 1 = OCSP */
+    uint8_t *response;  /* DER-encoded OCSP response */
+    uint32_t responseLen;
+} CertificateStatusMsg;
+#endif
+
 typedef struct {
     uint16_t *supportedGroups;
     uint16_t supportedGroupsSize;
@@ -415,6 +425,9 @@ typedef struct {
         NewSessionTicketMsg newSessionTicket;
         FinishedMsg finished;
         KeyUpdateMsg keyUpdate;
+#ifdef HITLS_TLS_FEATURE_STATUS_REQUEST
+        CertificateStatusMsg certificateStatus;
+#endif
 #ifdef HITLS_TLS_FEATURE_DTLS_CID
         NewConnectionIdMsg newConnectionId;
         RequestConnectionIdMsg requestConnectionId;

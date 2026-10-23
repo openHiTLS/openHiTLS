@@ -34,6 +34,9 @@
 #include "config_type.h"
 #include "pack.h"
 #include "custom_extensions.h"
+#ifdef HITLS_TLS_FEATURE_STATUS_REQUEST
+#include "status_request.h"
+#endif
 
 #ifdef HITLS_TLS_FEATURE_SECURITY
 int32_t SAL_CERT_CheckKeySecbits(HITLS_Ctx *ctx, HITLS_CERT_X509 *cert, HITLS_CERT_Key *key)
@@ -195,6 +198,16 @@ int32_t EncodeCertificate(HITLS_Ctx *ctx, HITLS_CERT_X509 *cert, PackPacket *pkt
             }
         }
 #endif /* HITLS_TLS_FEATURE_CUSTOM_EXTENSION */
+#ifdef HITLS_TLS_HOST_SERVER
+#ifdef HITLS_TLS_FEATURE_STATUS_REQUEST
+        /* Embed the OCSP response into the CertificateEntry extension when
+         * OCSP stapling is negotiated (self-signed entries are skipped). */
+        ret = PackCertEntryOcspStatus(ctx, cert, pkt, certIndex);
+        if (ret != HITLS_SUCCESS) {
+            return ret;
+        }
+#endif
+#endif /* HITLS_TLS_HOST_SERVER */
 
         /* Valid extensions for server certificates at present include the OCSP Status extension [RFC6066]
         and the SignedCertificateTimestamp extension [RFC6962] */

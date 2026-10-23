@@ -36,6 +36,9 @@
 #include "cert.h"
 #include "bsl_bytes.h"
 #include "hitls_pki_errno.h"
+#ifdef HITLS_TLS_FEATURE_STATUS_REQUEST
+#include "status_request.h"
+#endif
 
 // PKI error code to Alert mapping for certificate validation
 static const struct {
@@ -381,6 +384,11 @@ int32_t RecvCertificateProcess(TLS_Ctx *ctx, const HS_Msg *msg)
 
     /** Update the state machine */
     if (ctx->isClient) {
+#ifdef HITLS_TLS_FEATURE_STATUS_REQUEST
+        if (ctx->statusExpected) {
+            return HS_ChangeState(ctx, TRY_RECV_CERTIFICATE_STATUS);
+        }
+#endif
         if (IsNeedServerKeyExchange(ctx) == true) {
             return HS_ChangeState(ctx, TRY_RECV_SERVER_KEY_EXCHANGE);
         }
@@ -500,6 +508,21 @@ int32_t Tls13RecvCertificateProcess(TLS_Ctx *ctx, const HS_Msg *msg)
             return ret;
         }
     }
+
+#ifdef HITLS_TLS_FEATURE_STATUS_REQUEST
+    /* The Certificate message is fully processed and verified, and the
+     * CertificateEntry OCSP responses are already stored. Notify the application
+     * here (client only) instead of waiting for the server Finished, so the
+     * stapling decision is available as soon as the peer certificate chain is
+     * validated. A resumed handshake never reaches here (no Certificate message),
+     * so no notification is produced for it. */
+    if (ctx->isClient) {
+        ret = ClientNotifyOcspStatus(ctx);
+        if (ret != HITLS_SUCCESS) {
+            return ret;
+        }
+    }
+#endif
 
     return HS_ChangeState(ctx, TRY_RECV_CERTIFICATE_VERIFY);
 }

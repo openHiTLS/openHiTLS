@@ -327,6 +327,9 @@ static void BasicInitConfig(HITLS_Config *config)
 #ifdef HITLS_TLS_FEATURE_ETM
     config->isEncryptThenMac = true;
 #endif
+#ifdef HITLS_TLS_FEATURE_STATUS_REQUEST
+    config->statusRequestType = HITLS_STATUS_REQUEST_TYPE_DISABLE;
+#endif
 }
 static void InitConfig(HITLS_Config *config)
 {

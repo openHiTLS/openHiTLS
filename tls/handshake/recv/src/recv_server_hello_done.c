@@ -18,6 +18,9 @@
 #include "rec.h"
 #include "hs_ctx.h"
 #include "hs_common.h"
+#ifdef HITLS_TLS_FEATURE_STATUS_REQUEST
+#include "status_request.h"
+#endif
 
 int32_t ClientRecvServerHelloDoneProcess(TLS_Ctx *ctx)
 {
@@ -27,6 +30,16 @@ int32_t ClientRecvServerHelloDoneProcess(TLS_Ctx *ctx)
 #if defined(HITLS_TLS_PROTO_DTLS12) && defined(HITLS_BSL_UIO_UDP)
     /* clear the retransmission queue */
     REC_RetransmitListClean(ctx->recCtx);
+#endif
+
+#ifdef HITLS_TLS_FEATURE_STATUS_REQUEST
+    /* The server flight is fully received. Give the application the decision
+     * whether the stapling outcome is acceptable, whether or not the peer
+     * actually sent a CertificateStatus response. */
+    int32_t ret = ClientNotifyOcspStatus(ctx);
+    if (ret != HITLS_SUCCESS) {
+        return ret;
+    }
 #endif
 
     /** Certificate messages are sent whenever a server certificate request is received,

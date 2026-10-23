@@ -2575,8 +2575,8 @@ EXIT:
 /** @
 * @test  UT_TLS_TLS13_RFC8446_CERT_EXTENSION_TC001
 * @spec  -
-* @title The test certificate message carries the extension of the response. However, due to the current feature not
-*        being supported, requests will not be sent proactively. Expected to send illegal alerts and disconnect links.
+* @title The test certificate message carries a status_request extension that the client did not request.
+*        The client must reject the unsolicited extension (RFC 8446 4.2) and disconnect.
 * @precon  nan
 * @brief
 *   1. Apply and initialize config
@@ -2585,7 +2585,7 @@ EXIT:
 * @expect
 *   1. Initialization successful
 *   2. Setup successful
-*   3. The client returns alert ALERT_ILLEGAL_PARAMETER.
+*   3. The client returns alert ALERT_UNSUPPORTED_EXTENSION.
 @ */
 /* BEGIN_CASE */
 void UT_TLS_TLS13_RFC8446_CERT_EXTENSION_TC001()
@@ -2611,11 +2611,11 @@ void UT_TLS_TLS13_RFC8446_CERT_EXTENSION_TC001()
     ASSERT_TRUE(testInfo.server != NULL);
 
     ASSERT_EQ(FRAME_CreateConnection(testInfo.client, testInfo.server, true, HS_STATE_BUTT),
-        HITLS_MSG_HANDLE_UNSUPPORT_EXTENSION_TYPE);
+        HITLS_PARSE_CERT_ERR);
     ALERT_Info alert = {0};
     ALERT_GetInfo(testInfo.client->ssl, &alert);
     ASSERT_EQ(alert.level, ALERT_LEVEL_FATAL);
-    ASSERT_EQ(alert.description, ALERT_ILLEGAL_PARAMETER);
+    ASSERT_EQ(alert.description, ALERT_UNSUPPORTED_EXTENSION);
 EXIT:
     ClearWrapper();
     HITLS_CFG_FreeConfig(testInfo.config);

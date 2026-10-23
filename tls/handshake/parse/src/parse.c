@@ -129,6 +129,43 @@ static int32_t CheckCertificateRequestType(TLS_Ctx *ctx, const HS_MsgType msgTyp
     return HITLS_MSG_HANDLE_UNEXPECTED_MESSAGE;
 }
 
+#if defined(HITLS_TLS_FEATURE_STATUS_REQUEST) && defined(HITLS_TLS_HOST_CLIENT)
+/* RFC 6066: the server may send the status_request acknowledgment in the
+ * ServerHello but then choose not to send a CertificateStatus message. In that
+ * case the client must continue the handshake without stapling instead of
+ * aborting, so the normal messages that follow the Certificate message are
+ * accepted here by moving to the matching receive state. */
+int32_t CheckCertificateStatusType(TLS_Ctx *ctx, const HS_MsgType msgType)
+{
+    bool needKx = IsNeedServerKeyExchange(ctx);
+    switch (msgType) {
+        case SERVER_KEY_EXCHANGE:
+            if (needKx) {
+                (void)HS_ChangeState(ctx, TRY_RECV_SERVER_KEY_EXCHANGE);
+                return HITLS_SUCCESS;
+            }
+            break;
+        case CERTIFICATE_REQUEST:
+            if (!needKx) {
+                (void)HS_ChangeState(ctx, TRY_RECV_CERTIFICATE_REQUEST);
+                return HITLS_SUCCESS;
+            }
+            break;
+        case SERVER_HELLO_DONE:
+            if (!needKx) {
+                (void)HS_ChangeState(ctx, TRY_RECV_SERVER_HELLO_DONE);
+                return HITLS_SUCCESS;
+            }
+            break;
+        default:
+            break;
+    }
+    BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17436, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+        "Check certificate status type fail", 0, 0, 0, 0);
+    return HITLS_MSG_HANDLE_UNEXPECTED_MESSAGE;
+}
+#endif /* HITLS_TLS_FEATURE_STATUS_REQUEST && HITLS_TLS_HOST_CLIENT */
+
 #ifdef HITLS_TLS_PROTO_DTLS13
 static int32_t CheckDtls13RecvAnyMsgType(TLS_Ctx *ctx, const HS_MsgType msgType)
 {
@@ -195,6 +232,9 @@ static const HsMsgTypeCheck g_checkHsMsgTypeList[] = {
     [TRY_RECV_SERVER_KEY_EXCHANGE] = {.msgType = SERVER_KEY_EXCHANGE, .checkCb = CheckServerKeyExchangeType},
     [TRY_RECV_CERTIFICATE_REQUEST] = {.msgType = CERTIFICATE_REQUEST, .checkCb = CheckCertificateRequestType},
     [TRY_RECV_SERVER_HELLO_DONE] = {.msgType = SERVER_HELLO_DONE, .checkCb = NULL},
+#if defined(HITLS_TLS_FEATURE_STATUS_REQUEST) && defined(HITLS_TLS_HOST_CLIENT)
+    [TRY_RECV_CERTIFICATE_STATUS] = {.msgType = CERTIFICATION_STATUS, .checkCb = CheckCertificateStatusType},
+#endif
     [TRY_RECV_CLIENT_KEY_EXCHANGE] = {.msgType = CLIENT_KEY_EXCHANGE, .checkCb = NULL},
     [TRY_RECV_CERTIFICATE_VERIFY] = {.msgType = CERTIFICATE_VERIFY,  .checkCb = NULL},
     [TRY_RECV_NEW_SESSION_TICKET] = {.msgType = NEW_SESSION_TICKET, .checkCb = NULL},
@@ -377,6 +417,10 @@ static int32_t ParseHandShakeMsg(TLS_Ctx *ctx, const uint8_t *data, uint32_t len
 #ifdef HITLS_TLS_HOST_SERVER
         case CLIENT_KEY_EXCHANGE:
             return ParseClientKeyExchange(ctx, data, len, hsMsg);
+#endif
+#if defined(HITLS_TLS_FEATURE_STATUS_REQUEST) && defined(HITLS_TLS_HOST_CLIENT)
+        case CERTIFICATION_STATUS:
+            return ParseCertificateStatus(ctx, data, len, hsMsg);
 #endif
 #if defined(HITLS_TLS_HOST_SERVER) && defined(HITLS_TLS_FEATURE_CERT_MODE_CLIENT_VERIFY)
         case CERTIFICATE_VERIFY:
@@ -604,6 +648,10 @@ void HS_CleanMsg(HS_Msg *hsMsg)
 #endif
         case FINISHED:
             return CleanFinished(&hsMsg->body.finished);
+#if defined(HITLS_TLS_FEATURE_STATUS_REQUEST) && defined(HITLS_TLS_HOST_CLIENT)
+        case CERTIFICATION_STATUS:
+            return CleanCertificateStatus(&hsMsg->body.certificateStatus);
+#endif
         case KEY_UPDATE:
         case HELLO_REQUEST:
         case SERVER_HELLO_DONE:

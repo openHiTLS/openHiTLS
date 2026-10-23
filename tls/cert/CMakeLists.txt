@@ -49,6 +49,11 @@ target_include_directories(_hitls_tls_cert
         ${PROJECT_SOURCE_DIR}/pki/x509_cert/include
         ${PROJECT_SOURCE_DIR}/pki/x509_common/include
         ${PROJECT_SOURCE_DIR}/bsl/asn1/include
+        ${PROJECT_SOURCE_DIR}/tls/handshake/parse/src
 )
+if(HITLS_TLS_FEATURE_STATUS_REQUEST)
+    target_include_directories(_hitls_tls_cert PRIVATE
+        ${PROJECT_SOURCE_DIR}/tls/feature/status_request/include)
+endif()
 
 hitls_register_objects(TLS _hitls_tls_cert)

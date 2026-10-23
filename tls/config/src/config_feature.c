@@ -31,6 +31,9 @@
 #ifdef HITLS_TLS_FEATURE_SNI
 #include "hitls_sni.h"
 #endif
+#ifdef HITLS_TLS_FEATURE_STATUS_REQUEST
+#include "hitls_status_request.h"
+#endif
 #ifdef HITLS_TLS_FEATURE_SESSION
 #include "session_mgr.h"
 #endif
@@ -130,6 +133,47 @@ int32_t HITLS_CFG_GetServerNameArg(HITLS_Config *config, void **arg)
     return HITLS_SUCCESS;
 }
 #endif /* HITLS_TLS_FEATURE_SNI */
+
+#ifdef HITLS_TLS_FEATURE_STATUS_REQUEST
+int32_t HITLS_CFG_SetStatusRequestType(HITLS_Config *config, int32_t type)
+{
+    if (config == NULL) {
+        return HITLS_NULL_INPUT;
+    }
+    /* Only the defined status types and the disable sentinel are accepted. */
+    if (type != HITLS_STATUS_REQUEST_TYPE_DISABLE && type != HITLS_STATUS_REQUEST_TYPE_OCSP) {
+        return HITLS_INVALID_INPUT;
+    }
+
+    config->statusRequestType = type;
+
+    return HITLS_SUCCESS;
+}
+
+int32_t HITLS_CFG_SetStatusCb(HITLS_Config *config, HITLS_StatusCb cb, void *arg)
+{
+    if (config == NULL) {
+        return HITLS_NULL_INPUT;
+    }
+
+    config->statusCb = cb;
+    config->statusCbArg = arg;
+
+    return HITLS_SUCCESS;
+}
+
+int32_t HITLS_CFG_SetStaplingCb(HITLS_Config *config, HITLS_StaplingCb cb, void *arg)
+{
+    if (config == NULL) {
+        return HITLS_NULL_INPUT;
+    }
+
+    config->staplingCb = cb;
+    config->staplingCbArg = arg;
+
+    return HITLS_SUCCESS;
+}
+#endif /* HITLS_TLS_FEATURE_STATUS_REQUEST */
 
 #ifdef HITLS_TLS_FEATURE_ALPN
 static int32_t AlpnListValidationCheck(const uint8_t *alpnList, uint32_t alpnProtosLen)

@@ -24,6 +24,9 @@
 #include "tls.h"
 #include "hs.h"
 #include "alert.h"
+#ifdef HITLS_TLS_FEATURE_STATUS_REQUEST
+#include "status_request.h"
+#endif
 #include "conn_init.h"
 #include "conn_common.h"
 #include "rec.h"
@@ -965,6 +968,12 @@ int32_t HITLS_Renegotiate(HITLS_Ctx *ctx)
             "HS_Init fail when start renegotiate.", 0, 0, 0, 0);
         return ret;
     }
+#ifdef HITLS_TLS_FEATURE_STATUS_REQUEST
+    /* Reset the stapling state for the new handshake: the previous handshake's
+     * application-owned response list may already be released (borrowed until
+     * "the handshake completes"), so stale pointers must not be reused. */
+    CleanOcspStapling(ctx);
+#endif
 
 #ifdef HITLS_TLS_FEATURE_RECORD_SIZE_LIMIT
     ctx->negotiatedInfo.renegoRecordSizeLimit = ctx->negotiatedInfo.recordSizeLimit;

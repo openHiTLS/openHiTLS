@@ -27,6 +27,9 @@
 #include "hs_extensions.h"
 #include "parse_extensions.h"
 #include "custom_extensions.h"
+#ifdef HITLS_TLS_FEATURE_STATUS_REQUEST
+#include "status_request.h"
+#endif
 
 /**
  * @brief   Parse the certificate signature
@@ -100,6 +103,9 @@ static int32_t ParseCertExtension(ParsePacket *pkt, CertificateMsg *msg, CERT_It
 #ifdef HITLS_TLS_FEATURE_CUSTOM_EXTENSION
     uint32_t customExtSeenMask = 0;
 #endif
+#if defined(HITLS_TLS_FEATURE_STATUS_REQUEST) && defined(HITLS_TLS_HOST_CLIENT)
+    uint64_t extensionTypeMask = 0;
+#endif
     while (offset < certExLen) {
         uint16_t extMsgType = HS_EX_TYPE_END;
         uint32_t extMsgLen = 0u;
@@ -137,6 +143,24 @@ static int32_t ParseCertExtension(ParsePacket *pkt, CertificateMsg *msg, CERT_It
         {
             msg->extensionTypeMask |= 1ULL << HS_GetExtensionTypeId(extMsgType);
         }
+#if defined(HITLS_TLS_FEATURE_STATUS_REQUEST) && defined(HITLS_TLS_HOST_CLIENT)
+        if (extMsgType == HS_EX_TYPE_STATUS_REQUEST) {
+            uint32_t extensionId = HS_GetExtensionTypeId(extMsgType);
+            if (((extensionTypeMask & (1ULL << extensionId)) != 0) && extensionId != HS_EX_TYPE_ID_UNRECOGNIZED) {
+                BSL_ERR_PUSH_ERROR(HITLS_PARSE_DUPLICATE_EXTENDED_MSG);
+                BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17424, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+                    "extension type %u is repeated.", extensionId, 0, 0, 0);
+                pkt->ctx->method.sendAlert(pkt->ctx, ALERT_LEVEL_FATAL, ALERT_ILLEGAL_PARAMETER);
+                return HITLS_PARSE_DUPLICATE_EXTENDED_MSG;
+            }
+            ret = ParseCertEntryOcspStatus(pkt->ctx, &pkt->buf[*pkt->bufOffset], extMsgLen, certIndex);
+            if (ret != HITLS_SUCCESS) {
+                return ret;
+            }
+            extensionTypeMask |= 1ULL << HS_GetExtensionTypeId(extMsgType);
+        }
+#endif
+
         *pkt->bufOffset += extMsgLen;
         offset += extMsgLen;
     }

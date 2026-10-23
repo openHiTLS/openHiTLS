@@ -26,6 +26,9 @@
 #include "change_cipher_spec.h"
 #include "conn_common.h"
 #include "hs_ctx.h"
+#ifdef HITLS_TLS_FEATURE_STATUS_REQUEST
+#include "status_request.h"
+#endif
 // an instance of unexpectedMsgProcessCb
 int32_t ConnUnexpectedMsg(HITLS_Ctx *ctx, uint32_t msgType, const uint8_t *data, uint32_t dataLen, bool isPlain)
 {
@@ -134,4 +137,7 @@ void CONN_Deinit(TLS_Ctx *ctx)
     ALERT_Deinit(ctx);
     CCS_DeInit(ctx);
     HS_DeInit(ctx);
+#ifdef HITLS_TLS_FEATURE_STATUS_REQUEST
+    CleanOcspStapling(ctx);
+#endif
 }

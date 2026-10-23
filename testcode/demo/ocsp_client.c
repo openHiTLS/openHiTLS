@@ -342,6 +342,7 @@ int main(int argc, char *argv[])
     uint16_t port = 0;
     struct addrinfo hints;
     int32_t ret;
+    const char *outputPath = NULL;
 
     if (CRYPT_EAL_Init(CRYPT_EAL_INIT_ALL) != CRYPT_SUCCESS) {
         printf("CRYPT_EAL_Init failed.\n");
@@ -350,20 +351,39 @@ int main(int argc, char *argv[])
     HITLS_CertMethodInit();
     HITLS_CryptMethodInit();
 
+    /* Extract the optional --output <file> (DER OCSP response dump) and collect
+     * up to three positional cert files (cert, issuer, optional trusted CA). */
+    const char *posArgs[3] = {NULL, NULL, NULL};
+    int32_t posCount = 0;
+    for (int i = 1; i < argc; i++) {
+        if (strcmp(argv[i], "--output") == 0) {
+            if (i + 1 >= argc) {
+                printf("--output requires a file path.\n");
+                goto EXIT;
+            }
+            outputPath = argv[++i];
+        } else if (posCount < 3) {
+            posArgs[posCount++] = argv[i];
+        } else {
+            printf("too many arguments.\n");
+            goto EXIT;
+        }
+    }
+
     /* Load the target cert and its issuer (PEM only). Without arguments the demo
      * uses the preset chain (*.openhitls.net <- GeoTrust TLS RSA CA G1 <- DigiCert
      * Global Root G2) embedded below. */
-    if (argc >= 3) {
-        if (HITLS_X509_CertParseFile(BSL_FORMAT_PEM, argv[1], &cert) != HITLS_PKI_SUCCESS) {
-            printf("failed to parse cert (PEM): %s\n", argv[1]);
+    if (posCount >= 2) {
+        if (HITLS_X509_CertParseFile(BSL_FORMAT_PEM, posArgs[0], &cert) != HITLS_PKI_SUCCESS) {
+            printf("failed to parse cert (PEM): %s\n", posArgs[0]);
             goto EXIT;
         }
-        if (HITLS_X509_CertParseFile(BSL_FORMAT_PEM, argv[2], &issuer) != HITLS_PKI_SUCCESS) {
-            printf("failed to parse issuer (PEM): %s\n", argv[2]);
+        if (HITLS_X509_CertParseFile(BSL_FORMAT_PEM, posArgs[1], &issuer) != HITLS_PKI_SUCCESS) {
+            printf("failed to parse issuer (PEM): %s\n", posArgs[1]);
             goto EXIT;
         }
-        if (argc > 3 && HITLS_X509_CertParseFile(BSL_FORMAT_PEM, argv[3], &ca) != HITLS_PKI_SUCCESS) {
-            printf("failed to parse trusted CA (PEM): %s\n", argv[3]);
+        if (posCount > 2 && HITLS_X509_CertParseFile(BSL_FORMAT_PEM, posArgs[2], &ca) != HITLS_PKI_SUCCESS) {
+            printf("failed to parse trusted CA (PEM): %s\n", posArgs[2]);
             goto EXIT;
         }
     } else {
@@ -590,6 +610,25 @@ int main(int argc, char *argv[])
         }
         ret = HITLS_OCSP_BasicRespVerify(bs, signerCerts, store, 0);
         printf("[10] signature verify: %s (ret=0x%x)\n", ret == HITLS_PKI_SUCCESS ? "ok" : "failed", (unsigned)ret);
+    }
+
+    /* Optionally dump the raw DER OCSPResponse to a file for a stapling demo. */
+    if (outputPath != NULL) {
+        BSL_Buffer der = {0};
+        if (HITLS_OCSP_RespGenBuff(BSL_FORMAT_ASN1, resp, &der) != HITLS_PKI_SUCCESS || der.data == NULL) {
+            printf("failed to encode the OCSP response to DER.\n");
+            goto EXIT;
+        }
+        FILE *fp = fopen(outputPath, "wb");
+        if (fp == NULL) {
+            printf("failed to open output file: %s\n", outputPath);
+            BSL_SAL_FREE(der.data);
+            goto EXIT;
+        }
+        (void)fwrite(der.data, 1, der.dataLen, fp);
+        (void)fclose(fp);
+        printf("wrote %u bytes of DER OCSP response to %s.\n", der.dataLen, outputPath);
+        BSL_SAL_FREE(der.data);
     }
 
     printf("\nOCSP exchange completed.\n");

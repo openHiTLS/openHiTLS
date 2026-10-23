@@ -244,6 +244,13 @@ static void ShallowCopy(HITLS_Ctx *ctx, const HITLS_Config *srcConfig)
 #ifdef HITLS_TLS_FEATURE_DTLS_CID
     destConfig->isSupportConnectionId = srcConfig->isSupportConnectionId;
 #endif
+#ifdef HITLS_TLS_FEATURE_STATUS_REQUEST
+    destConfig->statusRequestType = srcConfig->statusRequestType;
+    destConfig->statusCb = srcConfig->statusCb;
+    destConfig->statusCbArg = srcConfig->statusCbArg;
+    destConfig->staplingCb = srcConfig->staplingCb;
+    destConfig->staplingCbArg = srcConfig->staplingCbArg;
+#endif
 }
 
 static int32_t DeepCopy(void** destConfig, const void* srcConfig, uint32_t logId, uint32_t len)

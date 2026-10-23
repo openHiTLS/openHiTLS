@@ -26,6 +26,8 @@
 #include "bsl_async.h"
 #endif
 #include "hitls.h"
+#include "bsl_list.h"
+#include "hitls_status_request.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -163,6 +165,9 @@ typedef enum {
     TRY_SEND_SERVER_KEY_EXCHANGE,   /* sends server key exchange message */
     TRY_SEND_CERTIFICATE_REQUEST,   /* sends certificate request message */
     TRY_SEND_SERVER_HELLO_DONE,     /* sends server hello done message */
+#ifdef HITLS_TLS_FEATURE_STATUS_REQUEST
+    TRY_SEND_CERTIFICATE_STATUS,    /* sends certificate status message */
+#endif
     TRY_SEND_CLIENT_KEY_EXCHANGE,   /* sends client key exchange message */
     TRY_SEND_CERTIFICATE_VERIFY,    /* sends certificate verify message */
     TRY_SEND_NEW_SESSION_TICKET,    /* sends new session ticket message */
@@ -179,6 +184,9 @@ typedef enum {
     TRY_RECV_SERVER_KEY_EXCHANGE,   /* attempts to receive server key exchange message */
     TRY_RECV_CERTIFICATE_REQUEST,   /* attempts to receive certificate request message */
     TRY_RECV_SERVER_HELLO_DONE,     /* attempts to receive server hello done message */
+#ifdef HITLS_TLS_FEATURE_STATUS_REQUEST
+    TRY_RECV_CERTIFICATE_STATUS,    /* attempts to receive certificate status message */
+#endif
     TRY_RECV_CLIENT_KEY_EXCHANGE,   /* attempts to receive client key exchange message */
     TRY_RECV_CERTIFICATE_VERIFY,    /* attempts to receive certificate verify message */
     TRY_RECV_NEW_SESSION_TICKET,    /* attempts to receive new session ticket message */
@@ -473,6 +481,18 @@ struct TlsCtx {
     BSL_ASYNC_Task *asyncTask; /* outstanding async task; NULL when none */
     BSL_ASYNC_NotifyCtx *asyncNotifyCtx; /* connection-private notify context, lazily created */
     HITLS_ASYNC_ARGS asyncArgs; /* first-call args copy, valid only while asyncTask != NULL */
+#endif
+#ifdef HITLS_TLS_FEATURE_STATUS_REQUEST
+    bool statusExpected;                       /* whether the peer acknowledged/requested OCSP stapling */
+    HITLS_OCSP_Resp **peerOcspRespList;        /* stapled OCSP responses received from the peer (owned by ctx) */
+    uint32_t peerOcspRespCount;                /* number of entries in peerOcspRespList */
+    HITLS_OCSP_Resp **ocspResponseList;        /* OCSP responses to be stapled (owned by the application) */
+    uint32_t ocspResponseCount;                /* number of entries in ocspResponseList */
+    HITLS_StatusCb statusCb;                   /* client certificate status callback (ctx level) */
+    void *statusCbArg;                         /* user data of statusCb */
+    HITLS_StaplingCb staplingCb;               /* server certificate status stapling callback (ctx level) */
+    void *staplingCbArg;                       /* user data of staplingCb */
+    int32_t staplingResult;                    /* result of the server stapling callback: HITLS_STAPLING_SEND/_SKIP */
 #endif
 };
 

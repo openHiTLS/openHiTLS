@@ -29,6 +29,7 @@
 #include "hitls_sni.h"
 #include "hitls_cookie.h"
 #include "hitls_alpn.h"
+#include "hitls_status_request.h"
 #include "sal_atomic.h"
 #ifdef HITLS_TLS_FEATURE_PROVIDER
 #include "crypt_eal_provider.h"
@@ -289,6 +290,14 @@ typedef struct TlsConfig {
 #ifdef HITLS_TLS_FEATURE_MODE_ASYNC
     HITLS_AsyncCallback asyncCallback; /* async completion callback, NULL means the handle mode */
     void *asyncCallbackArg; /* argument passed to the async completion callback */
+#endif
+
+#ifdef HITLS_TLS_FEATURE_STATUS_REQUEST
+    int32_t statusRequestType;          /* certificate status request type, -1 means disabled. */
+    HITLS_StatusCb statusCb;            /* client certificate status callback */
+    void *statusCbArg;                  /* user data of statusCb */
+    HITLS_StaplingCb staplingCb;        /* server certificate status stapling callback */
+    void *staplingCbArg;                /* user data of staplingCb */
 #endif
 } TLS_Config;
 

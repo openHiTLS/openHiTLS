@@ -196,6 +196,21 @@ int32_t ParseCertificateVerify(TLS_Ctx *ctx, const uint8_t *buf, uint32_t bufLen
  * @retval  HITLS_PARSE_INVALID_MSG_LEN The message length is incorrect
  */
 int32_t ParseFinished(TLS_Ctx *ctx, const uint8_t *buf, uint32_t bufLen, HS_Msg *hsMsg);
+#ifdef HITLS_TLS_FEATURE_STATUS_REQUEST
+/**
+ * @brief   Parse the CertificateStatus message.
+ *
+ * @param   ctx [IN] TLS context
+ * @param   buf [IN] Message buffer
+ * @param   bufLen [IN] Maximum message length
+ * @param   hsMsg [OUT] Message structure
+ *
+ * @retval  HITLS_SUCCESS
+ * @retval  HITLS_MEMALLOC_FAIL Memory allocated failed
+ * @retval  HITLS_PARSE_INVALID_MSG_LEN The message length is incorrect
+ */
+int32_t ParseCertificateStatus(TLS_Ctx *ctx, const uint8_t *buf, uint32_t bufLen, HS_Msg *hsMsg);
+#endif
 /**
  * @brief   Parse KeyUpdate message
  *
@@ -300,6 +315,15 @@ void CleanNewSessionTicket(NewSessionTicketMsg *msg);
  * @param   msg [IN] Message structure
  */
 void CleanFinished(FinishedMsg *msg);
+
+#ifdef HITLS_TLS_FEATURE_STATUS_REQUEST
+/**
+ * @brief   Clear the memory allocated in the CertificateStatus message structure
+ *
+ * @param   msg [IN] Message structure
+ */
+void CleanCertificateStatus(CertificateStatusMsg *msg);
+#endif
 
 #ifdef HITLS_TLS_FEATURE_DTLS_CID
 int32_t ParseNewConnectionId(TLS_Ctx *ctx, const uint8_t *buf, uint32_t bufLen, HS_Msg *hsMsg);

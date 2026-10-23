@@ -42,6 +42,9 @@ endif()
 if(HITLS_TLS_FEATURE_SNI)
     list(APPEND _feature_sources ${CMAKE_CURRENT_SOURCE_DIR}/sni/src/sni.c)
 endif()
+if(HITLS_TLS_FEATURE_STATUS_REQUEST)
+    list(APPEND _feature_sources ${CMAKE_CURRENT_SOURCE_DIR}/status_request/src/status_request.c)
+endif()
 
 if(_feature_sources)
     add_library(_hitls_tls_feature OBJECT ${_feature_sources})
@@ -61,6 +64,7 @@ if(_feature_sources)
             $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/security/include>
             $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/session/include>
             $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/sni/include>
+            $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/status_request/include>
         PRIVATE
             ${PROJECT_SOURCE_DIR}/tls/alert/include
             ${PROJECT_SOURCE_DIR}/tls/cert/include
@@ -70,7 +74,9 @@ if(_feature_sources)
             ${PROJECT_SOURCE_DIR}/tls/handshake/include
             ${PROJECT_SOURCE_DIR}/tls/handshake/common/include
             ${PROJECT_SOURCE_DIR}/tls/handshake/pack/include
+            ${PROJECT_SOURCE_DIR}/tls/handshake/pack/src
             ${PROJECT_SOURCE_DIR}/tls/handshake/parse/src
+            ${PROJECT_SOURCE_DIR}/tls/handshake/send/src
             ${PROJECT_SOURCE_DIR}/bsl/tlv/include
     )
 

@@ -133,6 +133,10 @@ static const char *g_stateMachineStr[] = {
     [TRY_RECV_CERTIFICATE_VERIFY] = "recv certificate verify",
     [TRY_RECV_FINISH] = "recv finished",
     [TRY_SEND_FINISH] = "send finished",
+#ifdef HITLS_TLS_FEATURE_STATUS_REQUEST
+    [TRY_SEND_CERTIFICATE_STATUS] = "send certificate status",
+    [TRY_RECV_CERTIFICATE_STATUS] = "recv certificate status",
+#endif
 };
 
 const char *HS_GetStateStr(uint32_t state)
@@ -630,6 +634,9 @@ static const HS_MaxMessageSizeMap HS_MAX_MESSAGE_SIZE_MAP[] = {
     { CLIENT_KEY_EXCHANGE, HITLS_CLIENT_KEY_EXCH_MAX_SIZE },
     { CERTIFICATE_VERIFY, MAX_CERT_VERIFY_SIZE },
     { FINISHED, HITLS_FINISHED_MAX_SIZE },
+#ifdef HITLS_TLS_FEATURE_STATUS_REQUEST
+    { CERTIFICATION_STATUS, HITLS_CERTIFICATE_STATUS_MAX_SIZE },
+#endif
 #if defined(HITLS_TLS_PROTO_TLS13_FAMILY)
     { ENCRYPTED_EXTENSIONS, HITLS_ENCRYPTED_EXTENSIONS_MAX_SIZE },
     { END_OF_EARLY_DATA, HITLS_END_OF_EARLY_DATA_MAX_SIZE },
@@ -957,6 +964,7 @@ uint32_t HS_GetExtensionTypeId(uint32_t hsExtensionsType)
 {
     switch (hsExtensionsType) {
         case HS_EX_TYPE_SERVER_NAME: return HS_EX_TYPE_ID_SERVER_NAME;
+        case HS_EX_TYPE_STATUS_REQUEST: return HS_EX_TYPE_ID_STATUS_REQUEST;
         case HS_EX_TYPE_SUPPORTED_GROUPS: return HS_EX_TYPE_ID_SUPPORTED_GROUPS;
         case HS_EX_TYPE_POINT_FORMATS: return HS_EX_TYPE_ID_POINT_FORMATS;
         case HS_EX_TYPE_SIGNATURE_ALGORITHMS: return HS_EX_TYPE_ID_SIGNATURE_ALGORITHMS;

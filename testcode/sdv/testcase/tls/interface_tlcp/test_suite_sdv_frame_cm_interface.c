@@ -1569,6 +1569,9 @@ void UT_TLS_CM_GET_STATE_STRING_FUNC_TC001()
         [TRY_SEND_SERVER_KEY_EXCHANGE] = "send server key exchange",
         [TRY_SEND_CERTIFICATE_REQUEST] = "send certificate request",
         [TRY_SEND_SERVER_HELLO_DONE] = "send server hello done",
+#ifdef HITLS_TLS_FEATURE_STATUS_REQUEST
+        [TRY_SEND_CERTIFICATE_STATUS] = "send certificate status",
+#endif
         [TRY_SEND_CLIENT_KEY_EXCHANGE] = "send client key exchange",
         [TRY_SEND_CERTIFICATE_VERIFY] = "send certificate verify",
         [TRY_SEND_NEW_SESSION_TICKET] = "send new session ticket",
@@ -1585,6 +1588,9 @@ void UT_TLS_CM_GET_STATE_STRING_FUNC_TC001()
         [TRY_RECV_SERVER_KEY_EXCHANGE] = "recv server key exchange",
         [TRY_RECV_CERTIFICATE_REQUEST] = "recv certificate request",
         [TRY_RECV_SERVER_HELLO_DONE] = "recv server hello done",
+#ifdef HITLS_TLS_FEATURE_STATUS_REQUEST
+        [TRY_RECV_CERTIFICATE_STATUS] = "recv certificate status",
+#endif
         [TRY_RECV_CLIENT_KEY_EXCHANGE] = "recv client key exchange",
         [TRY_RECV_CERTIFICATE_VERIFY] = "recv certificate verify",
         [TRY_RECV_NEW_SESSION_TICKET] = "recv new session ticket",

@@ -595,6 +595,8 @@ static int32_t X509_CertGetCtrlCmd(HITLS_X509_Cert *cert, int32_t cmd, void *val
 #ifdef HITLS_PKI_X509_CRT_AUTH
         case HITLS_X509_GET_ENCODE_SUBJECT_DN:
             return HITLS_X509_GetEncodeDn(cert->tbs.subjectName, val, valLen);
+        case HITLS_X509_GET_ENCODE_ISSUER_DN:
+            return HITLS_X509_GetEncodeDn(cert->tbs.issuerName, val, valLen);
 #endif
 #ifdef HITLS_PKI_X509_VFY
         case HITLS_X509_IS_SELF_SIGNED: {

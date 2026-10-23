@@ -29,6 +29,9 @@
 #include "pack_msg.h"
 #include "alert.h"
 #include "pack_common.h"
+#ifdef HITLS_TLS_FEATURE_STATUS_REQUEST
+#include "status_request.h"
+#endif
 
 #if defined(HITLS_TLS_PROTO_TLS_BASIC) || defined(HITLS_TLS_PROTO_DTLS12)
 static int32_t PackHsMsgBody(TLS_Ctx *ctx, HS_MsgType type, PackPacket *pkt)
@@ -75,6 +78,13 @@ static int32_t PackHsMsgBody(TLS_Ctx *ctx, HS_MsgType type, PackPacket *pkt)
         case CERTIFICATE:
             ret = PackCertificate(ctx, pkt);
             break;
+#ifdef HITLS_TLS_HOST_SERVER
+#ifdef HITLS_TLS_FEATURE_STATUS_REQUEST
+        case CERTIFICATION_STATUS:
+            ret = PackCertificateStatus(ctx, pkt);
+            break;
+#endif
+#endif /* HITLS_TLS_HOST_SERVER */
         case FINISHED:
             ret = PackFinished(ctx, pkt);
             break;

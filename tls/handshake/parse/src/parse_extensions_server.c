@@ -32,6 +32,9 @@
 #include "alert.h"
 #include "parse_extensions.h"
 #include "custom_extensions.h"
+#ifdef HITLS_TLS_FEATURE_STATUS_REQUEST
+#include "status_request.h"
+#endif
 #ifdef HITLS_TLS_FEATURE_QUIC_TLS
 #include "quic_tls_internal.h"
 #endif
@@ -970,6 +973,9 @@ static int32_t ParseClientExBody(TLS_Ctx *ctx, uint16_t extMsgType, const uint8_
         { .exMsgType = HS_EX_TYPE_POINT_FORMATS, .parseFunc = ParseClientPointFormats },
         { .exMsgType = HS_EX_TYPE_SUPPORTED_GROUPS, .parseFunc = ParseClientSupportGroups },
         { .exMsgType = HS_EX_TYPE_SIGNATURE_ALGORITHMS, .parseFunc = ParseClientSignatureAlgorithms},
+#ifdef HITLS_TLS_FEATURE_STATUS_REQUEST
+        { .exMsgType = HS_EX_TYPE_STATUS_REQUEST, .parseFunc = ParseClientStatusRequest},
+#endif
 #ifdef HITLS_TLS_FEATURE_SNI
         { .exMsgType = HS_EX_TYPE_SERVER_NAME, .parseFunc = ParseClientServerName},
 #endif /* HITLS_TLS_FEATURE_SNI */

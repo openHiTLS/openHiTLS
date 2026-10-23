@@ -48,6 +48,9 @@ extern "C" {
 #define HITLS_NEXT_PROTO_MAX_SIZE           514
 #define HITLS_FINISHED_MAX_SIZE             64
 #define HITLS_HELLO_REQUEST_MAX_SIZE        0
+#ifdef HITLS_TLS_FEATURE_STATUS_REQUEST
+#define HITLS_CERTIFICATE_STATUS_MAX_SIZE   20480
+#endif
 
 enum HITLS_CryptInfoCmd {
     HITLS_CRYPT_INFO_CMD_GET_PUBLIC_KEY_LEN = 0, /* Get the length of the public key, param is HITLS_NamedGroup */

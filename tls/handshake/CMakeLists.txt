@@ -115,6 +115,9 @@ endif()
 if(HITLS_TLS_PROTO_DTLS12 AND HITLS_TLS_HOST_CLIENT)
     list(APPEND _handshake_sources_parse ${source_dir}/parse/src/parse_hello_verify_request.c)
 endif()
+if(HITLS_TLS_FEATURE_STATUS_REQUEST AND HITLS_TLS_HOST_CLIENT)
+    list(APPEND _handshake_sources_parse ${source_dir}/parse/src/parse_certificate_status.c)
+endif()
 if(HITLS_TLS_FEATURE_DTLS_CID AND HITLS_TLS_PROTO_DTLS13)
     list(APPEND _handshake_sources_parse ${source_dir}/parse/src/parse_new_connection_id.c)
 endif()
@@ -243,6 +246,10 @@ target_include_directories(_hitls_tls_handshake
 if(HITLS_TLS_FEATURE_QUIC_TLS)
     target_include_directories(_hitls_tls_handshake PRIVATE
         ${PROJECT_SOURCE_DIR}/tls/feature/quic_tls/include)
+endif()
+if(HITLS_TLS_FEATURE_STATUS_REQUEST)
+    target_include_directories(_hitls_tls_handshake PRIVATE
+        ${PROJECT_SOURCE_DIR}/tls/feature/status_request/include)
 endif()
 
 hitls_register_objects(TLS _hitls_tls_handshake)

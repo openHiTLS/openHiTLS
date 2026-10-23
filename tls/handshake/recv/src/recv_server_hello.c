@@ -40,6 +40,9 @@
 #include "transcript_hash.h"
 #include "session_mgr.h"
 #include "alpn.h"
+#ifdef HITLS_TLS_FEATURE_STATUS_REQUEST
+#include "status_request.h"
+#endif
 #include "alert.h"
 #include "hs_kx.h"
 #include "config_type.h"
@@ -49,6 +52,29 @@
 #endif
 
 typedef int32_t (*CheckExtFunc)(TLS_Ctx *ctx, const ServerHelloMsg *serverHello);
+
+#if defined(HITLS_TLS_FEATURE_STATUS_REQUEST) && defined(HITLS_TLS_HOST_CLIENT)
+/* RFC 6066 allows the server to acknowledge status_request in the ServerHello
+ * on stream TLS up to 1.2; a TLS 1.3 echo is rejected here (RFC 8446 carries
+ * the answer inside CertificateEntry extensions) and the stapling expectation
+ * is reset. The negotiated version is known by the time this check runs. */
+static int32_t ClientCheckStatusRequest(TLS_Ctx *ctx, const ServerHelloMsg *serverHello)
+{
+    (void)serverHello;
+    if (!ctx->statusExpected) {
+        return HITLS_SUCCESS;
+    }
+    if (IsServerHelloStatusRequestValid(ctx)) {
+        return HITLS_SUCCESS;
+    }
+    ctx->statusExpected = false;
+    BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17425, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+                          "status_request must not be echoed on this protocol version.", 0, 0, 0, 0);
+    ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_UNSUPPORTED_EXTENSION);
+    BSL_ERR_PUSH_ERROR(HITLS_MSG_HANDLE_UNSUPPORT_EXTENSION_TYPE);
+    return HITLS_MSG_HANDLE_UNSUPPORT_EXTENSION_TYPE;
+}
+#endif /* HITLS_TLS_FEATURE_STATUS_REQUEST && HITLS_TLS_HOST_CLIENT */
 
 static int32_t ClientCheckPointFormats(TLS_Ctx *ctx, const ServerHelloMsg *serverHello)
 {
@@ -418,6 +444,9 @@ static int32_t ClientCheckExtensionsFlag(TLS_Ctx *ctx, const ServerHelloMsg *ser
 {
     static const CheckExtFunc extInfoList[] = {
         ClientCheckPointFormats,
+#if defined(HITLS_TLS_FEATURE_STATUS_REQUEST) && defined(HITLS_TLS_HOST_CLIENT)
+        ClientCheckStatusRequest,
+#endif /* HITLS_TLS_FEATURE_STATUS_REQUEST && HITLS_TLS_HOST_CLIENT */
 #ifdef HITLS_TLS_FEATURE_SNI
         ClientCheckServerName,
 #endif /* HITLS_TLS_FEATURE_SNI */

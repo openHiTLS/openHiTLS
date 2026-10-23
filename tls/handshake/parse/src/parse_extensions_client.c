@@ -32,6 +32,9 @@
 #include "parse_common.h"
 #include "parse_extensions.h"
 #include "custom_extensions.h"
+#ifdef HITLS_TLS_FEATURE_STATUS_REQUEST
+#include "status_request.h"
+#endif
 //  Parses the point format message sent by the server
 static int32_t ParseServerPointFormats(ParsePacket *pkt, ServerHelloMsg *msg)
 {
@@ -357,6 +360,10 @@ static int32_t ParseServerExBody(TLS_Ctx *ctx, uint16_t extMsgType, const uint8_
         case HS_EX_TYPE_SERVER_NAME:
             return ParseServerServerName(&pkt, msg);
 #endif /* HITLS_TLS_FEATURE_SNI */
+#ifdef HITLS_TLS_FEATURE_STATUS_REQUEST
+        case HS_EX_TYPE_STATUS_REQUEST:
+            return ParseServerStatusRequest(&pkt);
+#endif /* HITLS_TLS_FEATURE_STATUS_REQUEST */
 #ifdef HITLS_TLS_FEATURE_EXTENDED_MASTER_SECRET
         case HS_EX_TYPE_EXTENDED_MASTER_SECRET:
             return ParseServerExtMasterSecret(&pkt, msg);

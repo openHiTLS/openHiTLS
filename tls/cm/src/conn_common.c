@@ -30,6 +30,9 @@
 #ifdef HITLS_TLS_FEATURE_ALPN
 #include "hitls_alpn.h"
 #endif
+#ifdef HITLS_TLS_FEATURE_STATUS_REQUEST
+#include "hitls_status_request.h"
+#endif
 #include "hs.h"
 #include "hs_common.h"
 #include "alert.h"
@@ -410,6 +413,67 @@ int32_t HITLS_SetAlpnProtos(HITLS_Ctx *ctx, const uint8_t *protos, uint32_t prot
         return HITLS_NULL_INPUT;
     }
     return HITLS_CFG_SetAlpnProtos(&(ctx->config.tlsConfig), protos, protosLen);
+}
+#endif
+#ifdef HITLS_TLS_FEATURE_STATUS_REQUEST
+int32_t HITLS_SetStatusCb(HITLS_Ctx *ctx, HITLS_StatusCb cb, void *arg)
+{
+    if (ctx == NULL) {
+        return HITLS_NULL_INPUT;
+    }
+
+    ctx->statusCb = cb;
+    ctx->statusCbArg = arg;
+
+    return HITLS_SUCCESS;
+}
+
+int32_t HITLS_SetStaplingCb(HITLS_Ctx *ctx, HITLS_StaplingCb cb, void *arg)
+{
+    if (ctx == NULL) {
+        return HITLS_NULL_INPUT;
+    }
+
+    ctx->staplingCb = cb;
+    ctx->staplingCbArg = arg;
+
+    return HITLS_SUCCESS;
+}
+
+#define OCSP_RESPONSE_LIST_MAX_SIZE 1024
+int32_t HITLS_SetOcspResponseList(HITLS_Ctx *ctx, HITLS_OCSP_Resp **list, uint32_t count)
+{
+    if (ctx == NULL) {
+        return HITLS_NULL_INPUT;
+    }
+    if (list == NULL && count != 0) {
+        return HITLS_INVALID_INPUT;
+    }
+    if (list != NULL && count == 0) {
+        return HITLS_INVALID_INPUT;
+    }
+    if (count > OCSP_RESPONSE_LIST_MAX_SIZE) {
+        return HITLS_INVALID_INPUT;
+    }
+    /* A NULL element is allowed: it means "no response for that certificate"
+     * and is skipped when the response is packed (see the public header). */
+
+    ctx->ocspResponseList = list;
+    ctx->ocspResponseCount = count;
+
+    return HITLS_SUCCESS;
+}
+
+int32_t HITLS_GetPeerOcspResponseList(const HITLS_Ctx *ctx, HITLS_OCSP_Resp ***list, uint32_t *count)
+{
+    if (ctx == NULL || list == NULL || count == NULL) {
+        return HITLS_NULL_INPUT;
+    }
+
+    *list = ctx->peerOcspRespList;
+    *count = ctx->peerOcspRespCount;
+
+    return HITLS_SUCCESS;
 }
 #endif
 #ifdef HITLS_TLS_FEATURE_PSK

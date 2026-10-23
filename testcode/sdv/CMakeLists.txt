@@ -237,6 +237,7 @@ set(TEST_INTF_INCLUDE_DIRS
     ${openHiTLS_SRC}/config/macro_config
     ${openHiTLS_SRC}/codecs/include
     ${openHiTLS_SRC}/tls/feature/custom_extensions/include
+    ${openHiTLS_SRC}/tls/feature/status_request/include
     ${openHiTLS_SRC}/crypto/mlkem/include
     ${openHiTLS_SRC}/crypto/mlkem/src
     ${openHiTLS_SRC}/crypto/mldsa/include

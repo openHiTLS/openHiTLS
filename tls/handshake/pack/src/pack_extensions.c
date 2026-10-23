@@ -43,6 +43,9 @@
 #include "security.h"
 #include "pack_extensions.h"
 #include "dtls_cid.h"
+#ifdef HITLS_TLS_FEATURE_STATUS_REQUEST
+#include "status_request.h"
+#endif
 #ifdef HITLS_TLS_FEATURE_QUIC_TLS
 #include "quic_tls_internal.h"
 #endif
@@ -1004,6 +1007,10 @@ static int32_t PackClientExtensions(const TLS_Ctx *ctx, PackPacket *pkt)
 #ifdef HITLS_TLS_FEATURE_RECORD_SIZE_LIMIT
         { EXTENSION_MSG(HS_EX_TYPE_RECORD_SIZE_LIMIT, (tlsConfig->recordSizeLimit != 0), PackRecordSizeLimit) },
 #endif /* HITLS_TLS_FEATURE_RECORD_SIZE_LIMIT */
+#ifdef HITLS_TLS_FEATURE_STATUS_REQUEST
+        { EXTENSION_MSG(HS_EX_TYPE_STATUS_REQUEST, (tlsConfig->statusRequestType == HITLS_STATUS_REQUEST_TYPE_OCSP),
+            PackClientStatusRequest) },
+#endif /* HITLS_TLS_FEATURE_STATUS_REQUEST */
 #ifdef HITLS_TLS_FEATURE_SNI
         { EXTENSION_MSG(HS_EX_TYPE_SERVER_NAME, IsNeedClientPackServerName(ctx), PackServerName) },
 #endif /* HITLS_TLS_FEATURE_SNI */
@@ -1393,6 +1400,16 @@ static int32_t PackServerExtensions(const TLS_Ctx *ctx, PackPacket *pkt)
 #endif /* HITLS_TLS_PROTO_TLS13_FAMILY */
     const TLS_NegotiatedInfo *negoInfo = &ctx->negotiatedInfo;
     (void)negoInfo;
+#ifdef HITLS_TLS_FEATURE_STATUS_REQUEST
+    /* Evaluated outside the table so a real failure from the match check can be
+     * propagated (aborts the ServerHello packing) instead of being folded into
+     * a silent "don't acknowledge" decision. */
+    bool statusRequestNeedPack = false;
+    int32_t statusRequestRet = ServerNeedSendCertificateStatus(ctx, &statusRequestNeedPack);
+    if (statusRequestRet != HITLS_SUCCESS) {
+        return statusRequestRet;
+    }
+#endif /* HITLS_TLS_FEATURE_STATUS_REQUEST */
     PackExtInfo extMsgList[] = {
 #ifdef HITLS_TLS_FEATURE_RECORD_SIZE_LIMIT
         { EXTENSION_MSG(HS_EX_TYPE_RECORD_SIZE_LIMIT,
@@ -1401,6 +1418,9 @@ static int32_t PackServerExtensions(const TLS_Ctx *ctx, PackPacket *pkt)
 #ifdef HITLS_TLS_FEATURE_SNI
         { EXTENSION_MSG(HS_EX_TYPE_SERVER_NAME, IsNeedServerPackServerName(ctx), NULL) },
 #endif /* HITLS_TLS_FEATURE_SNI */
+#ifdef HITLS_TLS_FEATURE_STATUS_REQUEST
+        { EXTENSION_MSG(HS_EX_TYPE_STATUS_REQUEST, statusRequestNeedPack, PackServerStatusRequest) },
+#endif /* HITLS_TLS_FEATURE_STATUS_REQUEST */
 #ifdef HITLS_TLS_FEATURE_SESSION_TICKET
         { EXTENSION_MSG(HS_EX_TYPE_SESSION_TICKET, negoInfo->isTicket, NULL) },
 #endif /* HITLS_TLS_FEATURE_SESSION_TICKET */

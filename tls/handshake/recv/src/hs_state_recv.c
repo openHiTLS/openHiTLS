@@ -39,6 +39,9 @@
 #include "crypt.h"
 #include "bsl_uio.h"
 #include "hs_kx.h"
+#ifdef HITLS_TLS_FEATURE_STATUS_REQUEST
+#include "status_request.h"
+#endif
 #if defined(HITLS_TLS_PROTO_DTLS13) && defined(HITLS_TLS_FEATURE_DTLS_CID)
 #include "dtls_cid.h"
 #endif
@@ -252,6 +255,12 @@ static int32_t ProcessHandshakeMsg(TLS_Ctx *ctx, HS_Msg *hsMsg)
 #endif /* HITLS_TLS_HOST_CLIENT */
         case TRY_RECV_CERTIFICATE:
             return RecvCertificateProcess(ctx, hsMsg);
+#ifdef HITLS_TLS_HOST_CLIENT
+#ifdef HITLS_TLS_FEATURE_STATUS_REQUEST
+        case TRY_RECV_CERTIFICATE_STATUS:
+            return ClientRecvCertificateStatus(ctx, hsMsg);
+#endif
+#endif /* HITLS_TLS_HOST_CLIENT */
         case TRY_RECV_FINISH:
 #ifdef HITLS_TLS_HOST_CLIENT
             if (ctx->isClient) {

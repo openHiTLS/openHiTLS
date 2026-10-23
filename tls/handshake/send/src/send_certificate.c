@@ -64,6 +64,17 @@ int32_t SendCertificateProcess(TLS_Ctx *ctx)
     if (ctx->isClient) {
         return HS_ChangeState(ctx, TRY_SEND_CLIENT_KEY_EXCHANGE);
     }
+#ifdef HITLS_TLS_HOST_SERVER
+#ifdef HITLS_TLS_FEATURE_STATUS_REQUEST
+    /* The match check ran once during ServerHello packing and its outcome was
+     * folded into staplingResult: SEND means "callback agreed + response
+     * available + CertID matched the EE certificate". Reuse it here so the
+     * response validity check does not run twice per handshake. */
+    if (ctx->staplingResult == HITLS_STAPLING_SEND && ctx->statusExpected) {
+        return HS_ChangeState(ctx, TRY_SEND_CERTIFICATE_STATUS);
+    }
+#endif
+#endif /* HITLS_TLS_HOST_SERVER */
     if (IsNeedServerKeyExchange(ctx) == true) {
         return HS_ChangeState(ctx, TRY_SEND_SERVER_KEY_EXCHANGE);
     }

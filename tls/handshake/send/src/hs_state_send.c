@@ -28,6 +28,9 @@
 #include "pack.h"
 #include "bsl_uio.h"
 #include "bsl_sal.h"
+#ifdef HITLS_TLS_FEATURE_STATUS_REQUEST
+#include "status_request.h"
+#endif
 #ifdef HITLS_TLS_FEATURE_DTLS_CID
 #include "dtls_cid.h"
 #endif
@@ -119,6 +122,10 @@ static int32_t ProcessSendHandshakeMsg(TLS_Ctx *ctx)
             return ServerSendServerHelloProcess(ctx);
         case TRY_SEND_SERVER_KEY_EXCHANGE:
             return ServerSendServerKeyExchangeProcess(ctx);
+#ifdef HITLS_TLS_FEATURE_STATUS_REQUEST
+        case TRY_SEND_CERTIFICATE_STATUS:
+            return ServerSendCertificateStatusProcess(ctx);
+#endif
 #ifdef HITLS_TLS_FEATURE_CERT_MODE_CLIENT_VERIFY
         case TRY_SEND_CERTIFICATE_REQUEST:
             return ServerSendCertRequestProcess(ctx);
