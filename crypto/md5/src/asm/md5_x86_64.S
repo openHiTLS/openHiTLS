@@ -51,7 +51,7 @@
 .set    D, %r11d
 
 /* MD5 Used constant value. For details about the data source, see the RFC1321 document. */
-    .text
+    .section .rodata
     .align 64
     .type	g_tMd5, %object
 g_tMd5:

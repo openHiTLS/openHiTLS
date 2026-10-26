@@ -105,9 +105,9 @@ AARCH64_PACIASP
     ldp w6, w7, [x22, #24]
 
     prfm pldl1keep, [x23, #64]
-    blocksloop_1:
+    .Lblocksloop_1:
     subs w24, w24, #1
-    bmi end
+    bmi .Lend
     // Due to the SM3 feature, only three messages can be extended in parallel.
     // You need to use ext to ensure that the data meets the requirements for calculation.
     // To reduce the delay, the message expansion is calculated together with the compression function,
@@ -666,8 +666,8 @@ AARCH64_PACIASP
     stp w2, w3, [x22, #8]
     stp w4, w5, [x22, #16]
     stp w6, w7, [x22, #24]
-    b blocksloop_1
-    end:
+    b .Lblocksloop_1
+    .Lend:
 
     add sp, sp, 128
 

@@ -342,6 +342,44 @@ run_demos()
     bash "${SCRIPT_DIR}/execute_demos.sh" || exit 1
 }
 
+# Run the assembly guard scan; fail the suite on any ERROR finding.
+# Builds without assembly targets only need a source scan.
+run_asm_guard()
+{
+    echo ""
+    echo "Begin Assembly Guard"
+    echo ".................................................."
+    local scan_flags=(--build-dir "${HITLS_ROOT_DIR}/build")
+    local asm_object
+    local build_rules=()
+    local target_dir
+    if [ -f "${HITLS_ROOT_DIR}/build/build.ninja" ]; then
+        build_rules+=("${HITLS_ROOT_DIR}/build/build.ninja")
+        for target_dir in "${HITLS_ROOT_DIR}/build/CMakeFiles/"*.ninja; do
+            if [ -f "${target_dir}" ]; then
+                build_rules+=("${target_dir}")
+            fi
+        done
+    elif [ -f "${HITLS_ROOT_DIR}/build/CMakeFiles/TargetDirectories.txt" ]; then
+        while IFS= read -r target_dir; do
+            if [ -f "${target_dir}/build.make" ]; then
+                build_rules+=("${target_dir}/build.make")
+            fi
+        done < "${HITLS_ROOT_DIR}/build/CMakeFiles/TargetDirectories.txt"
+    fi
+    asm_object=$(find "${HITLS_ROOT_DIR}/build" \( -name "*.S.o" -o -name "*.s.o" -o -name "*.S.obj" -o -name "*.s.obj" \) -type f 2>/dev/null | head -1)
+    if [ -z "${asm_object}" ] && [ ${#build_rules[@]} -gt 0 ] && ! grep -qE '\.[sS]\.(o|obj)([^[:alnum:]_]|$)' "${build_rules[@]}"; then
+        scan_flags=(--source-only)
+        echo "[INFO] No assembly targets in the build rules: source-only scan"
+    fi
+    python3 "${SCRIPT_DIR}/asm_guard.py" "${scan_flags[@]}"
+    if [ $? -ne 0 ]; then
+        echo "ASM GUARD ERROR. Exit with failure."
+        exit 1
+    fi
+    echo "Assembly guard passed with no errors."
+}
+
 clean()
 {
     rm -rf ${HITLS_ROOT_DIR}/testcode/output/log/*
@@ -364,3 +402,4 @@ else
     run_test
 fi
 gen_test_report
+run_asm_guard
