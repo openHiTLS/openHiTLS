@@ -1,0 +1,2 @@
+TLS1.3-only mini build completes a basic handshake and exchanges application data
+SDV_HITLS_TLS13_ONLY_BASE_CONNECT_TC001:

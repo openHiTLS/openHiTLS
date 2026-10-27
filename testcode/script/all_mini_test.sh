@@ -406,6 +406,9 @@ test_tls()
     bash mini_build_test.sh $COMMON_PARAM $NO_LIB feature-config=dtls13_only_feature test=dtls13_family linux \
         add-feature-options="-DHITLS_SEED_DRBG_INIT_RAND_ALG=CRYPT_RAND_SHA256" \
         add-feature-options="-DHITLS_CRYPTO_ENTROPY_DEVRANDOM=ON"
+    bash mini_build_test.sh $COMMON_PARAM $NO_LIB feature-config=tls13_only_feature test=tls13_family linux \
+        add-feature-options="-DHITLS_SEED_DRBG_INIT_RAND_ALG=CRYPT_RAND_SHA256" \
+        add-feature-options="-DHITLS_CRYPTO_ENTROPY_DEVRANDOM=ON"
     TLS_PARSE_MSG_BUILD_OPTS="add-feature-options=-DHITLS_PRESET_LOADED=ON \
         add-feature-options=-DHITLS_BUILD_SHARED=ON \
         add-feature-options=-DHITLS_BSL_LOG=ON \

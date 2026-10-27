@@ -233,9 +233,11 @@ static REC_Type RecCastUintToRecType(TLS_Ctx *ctx, uint8_t value, uint16_t epoch
     }
 #if defined(HITLS_TLS_PROTO_TLS13_FAMILY)
     RecConnState *state = GetReadConnState(ctx);
+#if defined(HITLS_TLS_PROTO_DATAGRAM)
     if (epoch == 0 && RecConnGetEpoch(state) == 2 && IS_SUPPORT_DATAGRAM(ctx->config.tlsConfig.originVersionMask)) {
         return type;
     }
+#endif /* HITLS_TLS_PROTO_DATAGRAM */
 
     if (IS_TLS13_FAMILY_VERSION(GET_VERSION_FROM_CTX(ctx)) && state->suiteInfo != NULL) {
         if (type != REC_TYPE_APP && type != REC_TYPE_ALERT &&
