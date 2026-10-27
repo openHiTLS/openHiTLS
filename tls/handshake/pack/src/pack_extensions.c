@@ -1401,14 +1401,10 @@ static int32_t PackServerExtensions(const TLS_Ctx *ctx, PackPacket *pkt)
     const TLS_NegotiatedInfo *negoInfo = &ctx->negotiatedInfo;
     (void)negoInfo;
 #ifdef HITLS_TLS_FEATURE_STATUS_REQUEST
-    /* Evaluated outside the table so a real failure from the match check can be
-     * propagated (aborts the ServerHello packing) instead of being folded into
-     * a silent "don't acknowledge" decision. */
-    bool statusRequestNeedPack = false;
-    int32_t statusRequestRet = ServerNeedSendCertificateStatus(ctx, &statusRequestNeedPack);
-    if (statusRequestRet != HITLS_SUCCESS) {
-        return statusRequestRet;
-    }
+    /* Evaluated outside the table; the decision is already folded into
+     * staplingResult by ServerFetchStaplingEeResp, so only a boolean
+     * "send CertificateStatus" flag is returned here. */
+    bool statusRequestNeedPack = ServerNeedSendCertificateStatus(ctx);
 #endif /* HITLS_TLS_FEATURE_STATUS_REQUEST */
     PackExtInfo extMsgList[] = {
 #ifdef HITLS_TLS_FEATURE_RECORD_SIZE_LIMIT

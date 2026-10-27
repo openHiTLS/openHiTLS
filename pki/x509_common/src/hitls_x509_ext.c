@@ -487,8 +487,8 @@ void X509_ExtFree(HITLS_X509_Ext *ext, bool isFreeOut)
         BSL_LIST_FREE(ext->extList, (BSL_LIST_PFUNC_FREE)HITLS_X509_ExtEntryFree);
     }
 
-    if ((ext->type == HITLS_X509_EXT_TYPE_CERT || ext->type == HITLS_X509_EXT_TYPE_CSR) &&
-        ext->extData != NULL) {
+    if ((ext->type == HITLS_X509_EXT_TYPE_CERT || ext->type == HITLS_X509_EXT_TYPE_CSR ||
+         ext->type == HITLS_X509_EXT_TYPE_OCSP) && ext->extData != NULL) {
         HITLS_X509_CertExt *c = (HITLS_X509_CertExt *)ext->extData;
         if ((c->extFlags & HITLS_X509_EXT_FLAG_EXKUSAGE) != 0) {
             HITLS_X509_ClearExtendedKeyUsage(&c->exKeyUsage);
@@ -1436,6 +1436,12 @@ static int32_t ParseAccessDesc(uint32_t layer, BSL_ASN1_Buffer *asn, void *param
     ret = BSL_ASN1_DecodeLen(&buff, &buffLen, false, &gnLen);
     if (ret != BSL_SUCCESS) {
         return ret;
+    }
+    /* RFC 5280 4.2.2.1: an AccessDescription holds exactly accessMethod +
+     * accessLocation, so the GeneralName TLV must end with the item. */
+    if ((uint32_t)(buff - asn->buff) + gnLen != asn->len) {
+        BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_PARSE_NO_ENOUGH);
+        return HITLS_X509_ERR_PARSE_NO_ENOUGH;
     }
 
     BslList *gnList = BSL_LIST_New(sizeof(HITLS_X509_GeneralName));
@@ -2717,9 +2723,12 @@ static int32_t GetExtCtrl(HITLS_X509_Ext *ext, int32_t cmd, void *val, uint32_t 
         case HITLS_X509_EXT_GET_OCSP_NONCE:
             return HITLS_X509_GetExt(ext->extList, BSL_CID_PKIX_OCSP_NONCE, &buff,
                 sizeof(HITLS_X509_ExtOcspNonce), (DecodeExtCb)ParseOcspNonce);
+#if defined(HITLS_PKI_X509_CRT_PARSE) || defined(HITLS_PKI_X509_CSR) || defined(HITLS_PKI_X509_CRL_PARSE) || \
+    defined(HITLS_PKI_INFO_CRT) || defined(HITLS_PKI_INFO_CSR)
         case HITLS_X509_EXT_GET_EXKUSAGE:
             return HITLS_X509_GetExt(ext->extList, BSL_CID_CE_EXTKEYUSAGE, &buff,
                 sizeof(HITLS_X509_ExtExKeyUsage), (DecodeExtCb)HITLS_X509_ParseExtendedKeyUsage);
+#endif
         default:
             BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
             return HITLS_X509_ERR_INVALID_PARAM;

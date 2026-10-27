@@ -163,7 +163,7 @@ for source in "${sources[@]}"; do
                     "${noise}" seq "${WORK_DIR}/${noise}.raw" 1000 lsb8
             done
             ;;
-        ocsp_stapling)
+        example_ocsp_stapling)
             run_demo "${name}" "${BUILD_DIR}" "${BUILD_DIR}/${name}" \
                 tls1.2:tls1.3 tls1.2:tls1.3 1 1
             ;;

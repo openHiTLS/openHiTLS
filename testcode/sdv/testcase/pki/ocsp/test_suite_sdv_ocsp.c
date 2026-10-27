@@ -338,7 +338,14 @@ static HITLS_OCSP_SingleResp *OcspTestCreateSingleResp(CRYPT_EAL_MdCtx *mdCtx, H
     HITLS_OCSP_SingleRespCtrl(sr, HITLS_OCSP_SINGLERESP_SET_NEXT_UPDATE, &nextUpdate, sizeof(BSL_TIME));
     if (status == HITLS_OCSP_CERT_STATUS_REVOKED) {
         BSL_TIME revokeTime = thisUpdate;
-        revokeTime.hour -= 1;
+        /* Keep revokeTime strictly before thisUpdate; at exactly midnight, roll back
+         * to the previous day instead of underflowing the uint8_t hour field. */
+        if (revokeTime.hour == 0) {
+            revokeTime.hour = 23;
+            revokeTime.day = (revokeTime.day > 1) ? revokeTime.day - 1 : revokeTime.day;
+        } else {
+            revokeTime.hour--;
+        }
         int32_t reason = HITLS_X509_REVOKED_REASON_KEY_COMPROMISE;
         HITLS_OCSP_SingleRespCtrl(sr, HITLS_OCSP_SINGLERESP_SET_REVOCATION_TIME, &revokeTime, sizeof(BSL_TIME));
         HITLS_OCSP_SingleRespCtrl(sr, HITLS_OCSP_SINGLERESP_SET_REVOCATION_REASON, &reason, sizeof(int32_t));
@@ -639,7 +646,7 @@ static int32_t OcspTestPrintReq(const HITLS_OCSP_Req *req)
     }
     int32_t ret = HITLS_PKI_PrintCtrl(HITLS_PKI_PRINT_OCSP_REQ, (void *)req, sizeof(HITLS_OCSP_Req *), uio);
 
-    if (1) {
+    if (0) {
         Print2Terminal(uio);
     }
 
@@ -655,7 +662,7 @@ static int32_t OcspTestPrintResp(const HITLS_OCSP_Resp *resp)
     }
     int32_t ret = HITLS_PKI_PrintCtrl(HITLS_PKI_PRINT_OCSP_RESP, (void *)resp, sizeof(HITLS_OCSP_Resp *), uio);
 
-    if (1) {
+    if (0) {
         Print2Terminal(uio);
     }
 
@@ -2478,6 +2485,67 @@ EXIT:
 /* END_CASE */
 
 /* BEGIN_CASE */
+void SDV_OCSP_REVOCATION_FIELDS_REQUIRE_REVOKED_TC010A(void)
+{
+#ifdef HITLS_PKI_OCSP
+    HITLS_OCSP_SingleResp *srGood = NULL;
+    HITLS_OCSP_SingleResp *srUnknown = NULL;
+    ASSERT_EQ(OcspTestGlobalSetup(), 0);
+
+    HITLS_OCSP_CertId *certId = HITLS_OCSP_CertIdNewFromCert(g_mdCtx, g_chain1.ee, g_chain1.intermediate);
+    ASSERT_TRUE(certId != NULL);
+    srGood = HITLS_OCSP_SingleRespNew(certId, HITLS_OCSP_CERT_STATUS_GOOD, &(BSL_TIME){0});
+    certId = NULL;
+    ASSERT_TRUE(srGood != NULL);
+    HITLS_OCSP_CertId *certId2 = HITLS_OCSP_CertIdNewFromCert(g_mdCtx, g_chain1.ee, g_chain1.intermediate);
+    ASSERT_TRUE(certId2 != NULL);
+    srUnknown = HITLS_OCSP_SingleRespNew(certId2, HITLS_OCSP_CERT_STATUS_UNKNOWN, &(BSL_TIME){0});
+    certId2 = NULL;
+    ASSERT_TRUE(srUnknown != NULL);
+
+    BSL_TIME revokeTime = {0};
+    int32_t reason = HITLS_X509_REVOKED_REASON_CA_COMPROMISE;
+
+    /* RFC 6960 §3.2: revocationTime/revocationReason belong only to a revoked
+     * certStatus; a GOOD/UNKNOWN response must reject them. */
+    ASSERT_NE(HITLS_OCSP_SingleRespCtrl(srGood, HITLS_OCSP_SINGLERESP_SET_REVOCATION_TIME, &revokeTime,
+                                        sizeof(revokeTime)),
+              HITLS_PKI_SUCCESS);
+    ASSERT_NE(HITLS_OCSP_SingleRespCtrl(srGood, HITLS_OCSP_SINGLERESP_SET_REVOCATION_REASON, &reason,
+                                        sizeof(reason)),
+              HITLS_PKI_SUCCESS);
+    ASSERT_NE(HITLS_OCSP_SingleRespCtrl(srUnknown, HITLS_OCSP_SINGLERESP_SET_REVOCATION_TIME, &revokeTime,
+                                        sizeof(revokeTime)),
+              HITLS_PKI_SUCCESS);
+    ASSERT_NE(HITLS_OCSP_SingleRespCtrl(srUnknown, HITLS_OCSP_SINGLERESP_SET_REVOCATION_REASON, &reason,
+                                        sizeof(reason)),
+              HITLS_PKI_SUCCESS);
+
+    /* Sanity: the same fields are accepted for a revoked response. */
+    HITLS_OCSP_CertId *certId3 = HITLS_OCSP_CertIdNewFromCert(g_mdCtx, g_chain1.ee, g_chain1.intermediate);
+    ASSERT_TRUE(certId3 != NULL);
+    HITLS_OCSP_SingleResp *srRevoked =
+        HITLS_OCSP_SingleRespNew(certId3, HITLS_OCSP_CERT_STATUS_REVOKED, &(BSL_TIME){0});
+    certId3 = NULL;
+    ASSERT_TRUE(srRevoked != NULL);
+    ASSERT_EQ(HITLS_OCSP_SingleRespCtrl(srRevoked, HITLS_OCSP_SINGLERESP_SET_REVOCATION_TIME, &revokeTime,
+                                        sizeof(revokeTime)),
+              HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_OCSP_SingleRespCtrl(srRevoked, HITLS_OCSP_SINGLERESP_SET_REVOCATION_REASON, &reason,
+                                        sizeof(reason)),
+              HITLS_PKI_SUCCESS);
+
+EXIT:
+    HITLS_OCSP_SingleRespFree(srGood);
+    HITLS_OCSP_SingleRespFree(srUnknown);
+    HITLS_OCSP_SingleRespFree(srRevoked);
+#else
+    SKIP_TEST();
+#endif
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
 void SDV_OCSP_RESP_SIGN_VERIFY_TC011(void)
 {
 #ifdef HITLS_PKI_OCSP
@@ -3066,8 +3134,8 @@ void SDV_OCSP_PRESET_PREDATA_API_REQ_SIGNED_TC023(void)
     HITLS_OCSP_CertId *certId = NULL;
     ASSERT_EQ(HITLS_OCSP_SingleReqGetCertId(singleReq, &certId), HITLS_PKI_SUCCESS);
     ASSERT_TRUE(certId != NULL);
-    int32_t hashAlg = -1;
-    ASSERT_EQ(HITLS_OCSP_CertIdGetInfo(certId, (CRYPT_MD_AlgId *)&hashAlg, NULL, NULL, NULL), HITLS_PKI_SUCCESS);
+    CRYPT_MD_AlgId hashAlg = CRYPT_MD_MAX;
+    ASSERT_EQ(HITLS_OCSP_CertIdGetInfo(certId, &hashAlg, NULL, NULL, NULL), HITLS_PKI_SUCCESS);
     ASSERT_EQ(hashAlg, CRYPT_MD_SHA256);
     BSL_Buffer nonce = {0};
     ASSERT_EQ(HITLS_OCSP_ReqCtrl(req, HITLS_OCSP_REQ_GET_NONCE, &nonce, sizeof(nonce)), HITLS_PKI_SUCCESS);
@@ -3132,11 +3200,11 @@ void SDV_OCSP_PRESET_PREDATA_API_REQ_MULTI_TC024(void)
     HITLS_OCSP_CertId *certId1 = NULL;
     ASSERT_EQ(HITLS_OCSP_SingleReqGetCertId(singleReq1, &certId1), HITLS_PKI_SUCCESS);
     ASSERT_TRUE(certId1 != NULL);
-    int32_t hashAlg0 = -1;
-    ASSERT_EQ(HITLS_OCSP_CertIdGetInfo(certId0, (CRYPT_MD_AlgId *)&hashAlg0, NULL, NULL, NULL), HITLS_PKI_SUCCESS);
+    CRYPT_MD_AlgId hashAlg0 = CRYPT_MD_MAX;
+    ASSERT_EQ(HITLS_OCSP_CertIdGetInfo(certId0, &hashAlg0, NULL, NULL, NULL), HITLS_PKI_SUCCESS);
     ASSERT_EQ(hashAlg0, CRYPT_MD_SHA256);
-    int32_t hashAlg1 = -1;
-    ASSERT_EQ(HITLS_OCSP_CertIdGetInfo(certId1, (CRYPT_MD_AlgId *)&hashAlg1, NULL, NULL, NULL), HITLS_PKI_SUCCESS);
+    CRYPT_MD_AlgId hashAlg1 = CRYPT_MD_MAX;
+    ASSERT_EQ(HITLS_OCSP_CertIdGetInfo(certId1, &hashAlg1, NULL, NULL, NULL), HITLS_PKI_SUCCESS);
     ASSERT_EQ(hashAlg1, CRYPT_MD_SHA256);
     BSL_Buffer nonce = {0};
     ASSERT_EQ(HITLS_OCSP_ReqCtrl(req, HITLS_OCSP_REQ_GET_NONCE, &nonce, sizeof(nonce)), HITLS_PKI_SUCCESS);
@@ -5595,7 +5663,14 @@ void SDV_OCSP_MULTI_HASH_TC056(void)
     HITLS_OCSP_SingleResp *sr2 = HITLS_OCSP_SingleRespNew(cidSha256, HITLS_OCSP_CERT_STATUS_REVOKED, &now);
     ASSERT_TRUE(sr2 != NULL);
     BSL_TIME revTime = now;
-    revTime.hour -= 1;
+    /* Keep revokeTime strictly before now; at exactly midnight, roll back to the
+     * previous day instead of underflowing the uint8_t hour field. */
+    if (revTime.hour == 0) {
+        revTime.hour = 23;
+        revTime.day = (revTime.day > 1) ? revTime.day - 1 : revTime.day;
+    } else {
+        revTime.hour--;
+    }
     int32_t revReason = HITLS_X509_REVOKED_REASON_KEY_COMPROMISE;
     ASSERT_EQ(HITLS_OCSP_SingleRespCtrl(sr2, HITLS_OCSP_SINGLERESP_SET_REVOCATION_TIME, &revTime, sizeof(revTime)),
               HITLS_PKI_SUCCESS);
@@ -5802,7 +5877,8 @@ void SDV_OCSP_CERTID_SHA_VERIFY_TC059(void)
         cid->hashAlg = (CRYPT_MD_AlgId)algs[k];
         uint8_t hash[64] = {0};
         uint32_t hashLen = sizeof(hash);
-        ASSERT_EQ(OcspGetIssuerNameHash(mdCtx, g_chain1.intermediate, hash, &hashLen), HITLS_PKI_SUCCESS);
+        ASSERT_EQ(OcspGetNameHash(mdCtx, g_chain1.intermediate, HITLS_X509_GET_ENCODE_SUBJECT_DN, hash, &hashLen),
+                  HITLS_PKI_SUCCESS);
         ASSERT_EQ(OcspSetHashField((CRYPT_MD_AlgId)algs[k], &cid->issuerNameHash, hash, hashLen), HITLS_PKI_SUCCESS);
         hashLen = sizeof(hash);
         ASSERT_EQ(OcspGetPubKeyHash(mdCtx, g_chain1.intermediate, hash, &hashLen), HITLS_PKI_SUCCESS);
@@ -7104,6 +7180,372 @@ EXIT:
     HITLS_OCSP_RespFree(resp);
     HITLS_OCSP_ReqFree(parsedReq);
     HITLS_OCSP_RespFree(parsedResp);
+#else
+    SKIP_TEST();
+#endif
+}
+/* END_CASE */
+
+/* ==================== EC SPKI issuerKeyHash helpers ==================== */
+
+/* Generate an ECDSA P-256 key pair. */
+static int32_t OcspTestGenEcKey(CRYPT_EAL_PkeyCtx **key)
+{
+    *key = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_ECDSA);
+    if (*key == NULL) {
+        return -1;
+    }
+    int32_t ret = CRYPT_EAL_PkeySetParaById(*key, CRYPT_ECC_NISTP256);
+    if (ret != CRYPT_SUCCESS) {
+        CRYPT_EAL_PkeyFreeCtx(*key);
+        *key = NULL;
+        return -1;
+    }
+    ret = CRYPT_EAL_PkeyGen(*key);
+    if (ret != CRYPT_SUCCESS) {
+        CRYPT_EAL_PkeyFreeCtx(*key);
+        *key = NULL;
+        return -1;
+    }
+    return 0;
+}
+
+/* Build an EC certificate chain (root self-signed, intermediate, ee). */
+static int32_t OcspTestCreateEcCertChain(OcspTestCertChain *chain)
+{
+    if (OcspTestGenEcKey(&chain->rootKey) != 0) {
+        return -1;
+    }
+    if (OcspTestGenEcKey(&chain->intermediateKey) != 0) {
+        return -1;
+    }
+    if (OcspTestGenEcKey(&chain->eeKey) != 0) {
+        return -1;
+    }
+    chain->root = NULL;
+    chain->intermediate = NULL;
+    chain->ee = NULL;
+    if (OcspTestCreateCert(&chain->root, chain->rootKey, NULL, chain->rootKey, "OCSP Test EC Root", true) != 0) {
+        return -1;
+    }
+    if (OcspTestCreateCert(&chain->intermediate, chain->intermediateKey, chain->root, chain->rootKey,
+                           "OCSP Test EC Intermediate", true) != 0) {
+        return -1;
+    }
+    if (OcspTestCreateCert(&chain->ee, chain->eeKey, chain->intermediate, chain->intermediateKey, "OCSP Test EC EE",
+                           false) != 0) {
+        return -1;
+    }
+    return 0;
+}
+
+/* Free the generated key pairs of an EC test chain. */
+static void OcspTestFreeEcChainKeys(OcspTestCertChain *chain)
+{
+    CRYPT_EAL_PkeyFreeCtx(chain->eeKey);
+    CRYPT_EAL_PkeyFreeCtx(chain->intermediateKey);
+    CRYPT_EAL_PkeyFreeCtx(chain->rootKey);
+}
+
+/* Extract the subjectPublicKey BIT STRING content from a DER certificate:
+ * Certificate SEQUENCE { tbsCertificate SEQUENCE { ... subject SPKI
+ * SEQUENCE { algorithm SEQUENCE, subjectPublicKey BIT STRING } } }.
+ * On success *out borrows into der and *outLen is set; returns 0 on success. */
+static int32_t OcspTestExtractSpkiBitString(const uint8_t *der, uint32_t derLen, const uint8_t **out,
+                                            uint32_t *outLen)
+{
+    uint32_t pos = 0;
+    uint32_t vp = 0;
+    uint32_t vl = 0;
+    if (OcspTestSkipTlv(der, derLen, pos, &vp, &vl) != 0) { /* Certificate SEQUENCE */
+        return -1;
+    }
+    pos = vp;
+    if (OcspTestSkipTlv(der, derLen, pos, &vp, &vl) != 0) { /* tbsCertificate SEQUENCE */
+        return -1;
+    }
+    pos = vp;
+    /* TBS fields before subjectPublicKeyInfo: [0] version?, serialNumber, signature,
+     * issuer, validity, subject. Each skip lands on the next TLV's tag position. */
+    if ((pos < derLen) && (der[pos] == 0xa0)) { /* [0] version (explicit) */
+        if (OcspTestSkipTlv(der, derLen, pos, &vp, &vl) != 0) {
+            return -1;
+        }
+        pos = vp + vl;
+    }
+    for (int i = 0; i < 5; i++) { /* serialNumber, signature, issuer, validity, subject */
+        if (OcspTestSkipTlv(der, derLen, pos, &vp, &vl) != 0) {
+            return -1;
+        }
+        pos = vp + vl;
+    }
+    if (OcspTestSkipTlv(der, derLen, pos, &vp, &vl) != 0) { /* subjectPublicKeyInfo SEQUENCE */
+        return -1;
+    }
+    uint32_t spkiPos = vp;
+    uint32_t spkiEnd = vp + vl;
+    if (OcspTestSkipTlv(der, derLen, spkiPos, &vp, &vl) != 0) { /* algorithm SEQUENCE */
+        return -1;
+    }
+    spkiPos = vp + vl;
+    if (OcspTestSkipTlv(der, derLen, spkiPos, &vp, &vl) != 0) { /* subjectPublicKey BIT STRING */
+        return -1;
+    }
+    if (vp + vl != spkiEnd) { /* BIT STRING (value + length) must end exactly at the SPKI end */
+        return -1;
+    }
+    if (vl < 1 || der[vp] != 0x00) { /* unused-bits byte must be 0 for byte-aligned keys */
+        return -1;
+    }
+    *out = der + vp + 1;
+    *outLen = vl - 1;
+    return 0;
+}
+
+/* Hash of a buffer with the given MD algorithm (used to build the expected
+ * issuerKeyHash; must match the CertID's hash, SHA-256 here). */
+static int32_t OcspTestHash(CRYPT_MD_AlgId mdId, const uint8_t *data, uint32_t dataLen, uint8_t *digest,
+                            uint32_t *digestLen)
+{
+    CRYPT_EAL_MdCtx *md = CRYPT_EAL_MdNewCtx(mdId);
+    if (md == NULL) {
+        return -1;
+    }
+    int32_t ret = CRYPT_EAL_MdInit(md);
+    if (ret == CRYPT_SUCCESS) {
+        ret = CRYPT_EAL_MdUpdate(md, data, dataLen);
+    }
+    if (ret == CRYPT_SUCCESS) {
+        ret = CRYPT_EAL_MdFinal(md, digest, digestLen);
+    }
+    CRYPT_EAL_MdFreeCtx(md);
+    return (ret == CRYPT_SUCCESS) ? 0 : -1;
+}
+
+/** @
+* @test  SDV_OCSP_EC_CERTID_SPKI_TC064
+* @spec  RFC 6960 4.1.1
+* @title  EC (uncompressed) certificate: issuerKeyHash equals the certificate subjectPublicKey BIT STRING.
+* @precon  nan
+* @brief
+*   1. Build an ECDSA P-256 certificate chain.
+*   2. Encode the EE certificate to DER and extract its subjectPublicKey BIT STRING content.
+*   3. Build the CertID and compare issuerKeyHash with SHA-1 of the extracted content.
+* @expect  1. Success. 2. Success. 3. Both issuerKeyHash values are equal.
+* @prior  Level 2
+* @auto  TRUE
+@ */
+/* BEGIN_CASE */
+void SDV_OCSP_EC_CERTID_SPKI_TC064(void)
+{
+#if defined(HITLS_PKI_OCSP) && defined(HITLS_CRYPTO_ECDSA) && defined(HITLS_CRYPTO_SHA1)
+    ASSERT_EQ(OcspTestGlobalSetup(), 0);
+    OcspTestCertChain chain = {0};
+    HITLS_OCSP_CertId *cid = NULL;
+    BSL_Buffer derBuff = {0};
+    ASSERT_EQ(OcspTestCreateEcCertChain(&chain), 0);
+
+    /* issuerKeyHash hashes the ISSUER's public key (RFC 6960 §4.1.1), so encode
+     * the intermediate certificate and extract its subjectPublicKey BIT STRING. */
+    ASSERT_EQ(HITLS_X509_CertGenBuff(BSL_FORMAT_ASN1, chain.intermediate, &derBuff), HITLS_PKI_SUCCESS);
+
+    const uint8_t *spkiBits = NULL;
+    uint32_t spkiBitsLen = 0;
+    ASSERT_EQ(OcspTestExtractSpkiBitString(derBuff.data, derBuff.dataLen, &spkiBits, &spkiBitsLen), 0);
+
+    uint8_t expected[32];
+    uint32_t expectedLen = sizeof(expected);
+    ASSERT_EQ(OcspTestHash(CRYPT_MD_SHA256, spkiBits, spkiBitsLen, expected, &expectedLen), 0);
+
+    cid = HITLS_OCSP_CertIdNewFromCert(g_mdCtx, chain.ee, chain.intermediate);
+    ASSERT_TRUE(cid != NULL);
+    BSL_Buffer issuerKeyHash = {0};
+    ASSERT_EQ(HITLS_OCSP_CertIdGetInfo(cid, NULL, NULL, &issuerKeyHash, NULL), HITLS_PKI_SUCCESS);
+    ASSERT_TRUE(issuerKeyHash.data != NULL);
+    ASSERT_EQ(issuerKeyHash.dataLen, expectedLen);
+    ASSERT_TRUE(memcmp(issuerKeyHash.data, expected, expectedLen) == 0);
+
+EXIT:
+    HITLS_OCSP_CertIdFree(cid);
+    BSL_SAL_FREE(derBuff.data);
+    OcspTestFreeEcChainKeys(&chain);
+    HITLS_X509_CertFree(chain.ee);
+    HITLS_X509_CertFree(chain.intermediate);
+    HITLS_X509_CertFree(chain.root);
+#else
+    SKIP_TEST();
+#endif
+}
+/* END_CASE */
+
+/** @
+* @test  SDV_OCSP_EC_CERTID_SPKI_COMPRESSED_TC065
+* @spec  RFC 6960 4.1.1
+* @title  EC (compressed) certificate: issuerKeyHash equals the certificate subjectPublicKey BIT STRING.
+* @precon  nan
+* @brief
+*   1. Build an ECDSA P-256 certificate chain with the EE key set to compressed point format.
+*   2. Encode the EE certificate to DER and extract its subjectPublicKey BIT STRING content (compressed point).
+*   3. Build the CertID and compare issuerKeyHash with SHA-1 of the extracted content.
+* @expect  1. Success. 2. Success. 3. Both issuerKeyHash values are equal.
+* @prior  Level 2
+* @auto  TRUE
+@ */
+/* BEGIN_CASE */
+void SDV_OCSP_EC_CERTID_SPKI_COMPRESSED_TC065(void)
+{
+#if defined(HITLS_PKI_OCSP) && defined(HITLS_CRYPTO_ECDSA) && defined(HITLS_CRYPTO_SHA1)
+    ASSERT_EQ(OcspTestGlobalSetup(), 0);
+    OcspTestCertChain chain = {0};
+    HITLS_OCSP_CertId *cid = NULL;
+    BSL_Buffer derBuff = {0};
+    ASSERT_EQ(OcspTestCreateEcCertChain(&chain), 0);
+
+    /* Set the intermediate key to output compressed points so the issuer
+     * certificate SPKI carries a compressed point. Rebuild the intermediate
+     * (signed by the root); the ee/root keys stay uncompressed. */
+    uint32_t compressed = CRYPT_POINT_COMPRESSED;
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(chain.intermediateKey, CRYPT_CTRL_SET_ECC_POINT_FORMAT, &compressed,
+                                 sizeof(compressed)),
+              CRYPT_SUCCESS);
+    HITLS_X509_CertFree(chain.intermediate);
+    chain.intermediate = NULL;
+    ASSERT_EQ(OcspTestCreateCert(&chain.intermediate, chain.intermediateKey, chain.root, chain.rootKey,
+                                 "OCSP Test EC Intermediate", true),
+              0);
+
+    /* issuerKeyHash hashes the ISSUER's public key (RFC 6960 §4.1.1), so encode
+     * the (compressed-point) intermediate certificate and extract its SPKI. */
+    ASSERT_EQ(HITLS_X509_CertGenBuff(BSL_FORMAT_ASN1, chain.intermediate, &derBuff), HITLS_PKI_SUCCESS);
+
+    const uint8_t *spkiBits = NULL;
+    uint32_t spkiBitsLen = 0;
+    ASSERT_EQ(OcspTestExtractSpkiBitString(derBuff.data, derBuff.dataLen, &spkiBits, &spkiBitsLen), 0);
+    /* A compressed P-256 point is 1 + 32 bytes. */
+    ASSERT_EQ(spkiBitsLen, 33);
+    ASSERT_TRUE((spkiBits[0] == 0x02) || (spkiBits[0] == 0x03));
+
+    uint8_t expected[32];
+    uint32_t expectedLen = sizeof(expected);
+    ASSERT_EQ(OcspTestHash(CRYPT_MD_SHA256, spkiBits, spkiBitsLen, expected, &expectedLen), 0);
+
+    cid = HITLS_OCSP_CertIdNewFromCert(g_mdCtx, chain.ee, chain.intermediate);
+    ASSERT_TRUE(cid != NULL);
+    BSL_Buffer issuerKeyHash = {0};
+    ASSERT_EQ(HITLS_OCSP_CertIdGetInfo(cid, NULL, NULL, &issuerKeyHash, NULL), HITLS_PKI_SUCCESS);
+    ASSERT_TRUE(issuerKeyHash.data != NULL);
+    ASSERT_EQ(issuerKeyHash.dataLen, expectedLen);
+    ASSERT_TRUE(memcmp(issuerKeyHash.data, expected, expectedLen) == 0);
+
+EXIT:
+    HITLS_OCSP_CertIdFree(cid);
+    BSL_SAL_FREE(derBuff.data);
+    OcspTestFreeEcChainKeys(&chain);
+    HITLS_X509_CertFree(chain.ee);
+    HITLS_X509_CertFree(chain.intermediate);
+    HITLS_X509_CertFree(chain.root);
+#else
+    SKIP_TEST();
+#endif
+}
+/* END_CASE */
+
+/** @
+* @test  SDV_OCSP_EC_CERTID_COMPRESS_TC066
+* @spec  RFC 6960 4.1.1
+* @title  Same EC public key in compressed vs uncompressed form yields different CertID issuerKeyHash.
+* @precon  nan
+* @brief
+*   1. Build an ECDSA P-256 chain; the intermediate cert carries the key uncompressed.
+*   2. Rebuild the intermediate with the SAME key compressed.
+*   3. Compare the two CertIDs: same issuerNameHash/serial, but different issuerKeyHash.
+* @expect  1. issuerKeyHash equals the uncompressed SPKI hash. 2. equals the compressed SPKI hash.
+*          3. issuerNameHash and serial match, issuerKeyHash differ (compressed != uncompressed).
+* @prior  Level 2
+* @auto  TRUE
+@ */
+/* BEGIN_CASE */
+void SDV_OCSP_EC_CERTID_COMPRESS_TC066(void)
+{
+#if defined(HITLS_PKI_OCSP) && defined(HITLS_CRYPTO_ECDSA) && defined(HITLS_CRYPTO_SHA1)
+    ASSERT_EQ(OcspTestGlobalSetup(), 0);
+    OcspTestCertChain chain = {0};
+    HITLS_OCSP_CertId *cidU = NULL;
+    HITLS_OCSP_CertId *cidC = NULL;
+    BSL_Buffer derBuff = {0};
+    uint8_t hashU[32];
+    uint8_t hashC[32];
+    uint32_t hashLen = sizeof(hashU);
+    ASSERT_EQ(OcspTestCreateEcCertChain(&chain), 0);
+
+    /* Phase 1: uncompressed intermediate (default). */
+    ASSERT_EQ(HITLS_X509_CertGenBuff(BSL_FORMAT_ASN1, chain.intermediate, &derBuff), HITLS_PKI_SUCCESS);
+    const uint8_t *spkiBits = NULL;
+    uint32_t spkiBitsLen = 0;
+    ASSERT_EQ(OcspTestExtractSpkiBitString(derBuff.data, derBuff.dataLen, &spkiBits, &spkiBitsLen), 0);
+    ASSERT_EQ(spkiBitsLen, 65);
+    ASSERT_EQ(spkiBits[0], 0x04); /* uncompressed point prefix */
+    ASSERT_EQ(OcspTestHash(CRYPT_MD_SHA256, spkiBits, spkiBitsLen, hashU, &hashLen), 0);
+    BSL_SAL_FREE(derBuff.data);
+    derBuff = (BSL_Buffer){0};
+
+    cidU = HITLS_OCSP_CertIdNewFromCert(g_mdCtx, chain.ee, chain.intermediate);
+    ASSERT_TRUE(cidU != NULL);
+    BSL_Buffer nameHashU = {0};
+    BSL_Buffer keyHashU = {0};
+    BSL_Buffer serialU = {0};
+    ASSERT_EQ(HITLS_OCSP_CertIdGetInfo(cidU, NULL, &nameHashU, &keyHashU, &serialU), HITLS_PKI_SUCCESS);
+    ASSERT_TRUE(keyHashU.data != NULL);
+    ASSERT_EQ(keyHashU.dataLen, hashLen);
+    ASSERT_TRUE(memcmp(keyHashU.data, hashU, hashLen) == 0);
+
+    /* Phase 2: same key, compressed intermediate (rebuilt and re-signed by root). */
+    uint32_t compressed = CRYPT_POINT_COMPRESSED;
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(chain.intermediateKey, CRYPT_CTRL_SET_ECC_POINT_FORMAT, &compressed,
+                                 sizeof(compressed)),
+              CRYPT_SUCCESS);
+    HITLS_X509_CertFree(chain.intermediate);
+    chain.intermediate = NULL;
+    ASSERT_EQ(OcspTestCreateCert(&chain.intermediate, chain.intermediateKey, chain.root, chain.rootKey,
+                                 "OCSP Test EC Intermediate", true),
+              0);
+
+    ASSERT_EQ(HITLS_X509_CertGenBuff(BSL_FORMAT_ASN1, chain.intermediate, &derBuff), HITLS_PKI_SUCCESS);
+    spkiBits = NULL;
+    spkiBitsLen = 0;
+    ASSERT_EQ(OcspTestExtractSpkiBitString(derBuff.data, derBuff.dataLen, &spkiBits, &spkiBitsLen), 0);
+    ASSERT_EQ(spkiBitsLen, 33);
+    ASSERT_TRUE((spkiBits[0] == 0x02) || (spkiBits[0] == 0x03)); /* compressed point prefix */
+    hashLen = sizeof(hashC);
+    ASSERT_EQ(OcspTestHash(CRYPT_MD_SHA256, spkiBits, spkiBitsLen, hashC, &hashLen), 0);
+
+    cidC = HITLS_OCSP_CertIdNewFromCert(g_mdCtx, chain.ee, chain.intermediate);
+    ASSERT_TRUE(cidC != NULL);
+    BSL_Buffer nameHashC = {0};
+    BSL_Buffer keyHashC = {0};
+    BSL_Buffer serialC = {0};
+    ASSERT_EQ(HITLS_OCSP_CertIdGetInfo(cidC, NULL, &nameHashC, &keyHashC, &serialC), HITLS_PKI_SUCCESS);
+    ASSERT_TRUE(keyHashC.data != NULL);
+    ASSERT_EQ(keyHashC.dataLen, hashLen);
+    ASSERT_TRUE(memcmp(keyHashC.data, hashC, hashLen) == 0);
+
+    /* Same certificate identity, same serial: only the public-key encoding differs. */
+    ASSERT_EQ(nameHashU.dataLen, nameHashC.dataLen);
+    ASSERT_TRUE(memcmp(nameHashU.data, nameHashC.data, nameHashU.dataLen) == 0);
+    ASSERT_EQ(serialU.dataLen, serialC.dataLen);
+    ASSERT_TRUE(memcmp(serialU.data, serialC.data, serialU.dataLen) == 0);
+    /* The two encodings must not alias: different issuerKeyHash. */
+    ASSERT_EQ(keyHashU.dataLen, keyHashC.dataLen);
+    ASSERT_TRUE(memcmp(keyHashU.data, keyHashC.data, keyHashU.dataLen) != 0);
+
+EXIT:
+    HITLS_OCSP_CertIdFree(cidU);
+    HITLS_OCSP_CertIdFree(cidC);
+    BSL_SAL_FREE(derBuff.data);
+    OcspTestFreeEcChainKeys(&chain);
+    HITLS_X509_CertFree(chain.ee);
+    HITLS_X509_CertFree(chain.intermediate);
+    HITLS_X509_CertFree(chain.root);
 #else
     SKIP_TEST();
 #endif

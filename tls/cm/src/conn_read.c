@@ -35,6 +35,9 @@
 #include "bsl_bytes.h"
 #include "conn_async.h"
 #include "dtls_cid.h"
+#ifdef HITLS_TLS_FEATURE_STATUS_REQUEST
+#include "status_request.h"
+#endif
 #ifdef HITLS_TLS_FEATURE_QUIC_TLS
 #include "quic_tls_internal.h"
 #endif

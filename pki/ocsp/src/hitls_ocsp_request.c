@@ -824,6 +824,12 @@ static int32_t OcspParseReqRequestList(BSL_ASN1_Buffer *asns, HITLS_OCSP_Req_Int
         BSL_ERR_PUSH_ERROR(HITLS_OCSP_ERR_EMPTY_REQUEST);
         return HITLS_OCSP_ERR_EMPTY_REQUEST;
     }
+    /* Cap the parsed count like the encode-side ADD_SINGLEREQ ctrl, so an
+     * attacker-controlled request cannot force unbounded allocation. */
+    if (BSL_LIST_COUNT(internal->singleReqs) > HITLS_OCSP_MAX_SINGLE_REQ) {
+        BSL_ERR_PUSH_ERROR(HITLS_OCSP_ERR_TOO_MANY);
+        return HITLS_OCSP_ERR_TOO_MANY;
+    }
     return HITLS_PKI_SUCCESS;
 }
 

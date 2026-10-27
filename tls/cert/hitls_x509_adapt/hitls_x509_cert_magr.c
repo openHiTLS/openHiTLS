@@ -209,6 +209,12 @@ int32_t HITLS_X509_Adapt_CertCtrl(HITLS_Config *config, HITLS_CERT_X509 *cert, H
         case CERT_CTRL_GET_ENCODE_LEN:
             ret = HITLS_X509_CertCtrl(cert, HITLS_X509_GET_ENCODELEN, output, (uint32_t)sizeof(uint32_t));
             break;
+        case CERT_CTRL_GET_SERIALNUM:
+            ret = HITLS_X509_CertCtrl(cert, HITLS_X509_GET_SERIALNUM, output, sizeof(BSL_Buffer));
+            break;
+        case CERT_CTRL_GET_ENCODE_ISSUER_DN:
+            ret = HITLS_X509_CertCtrl(cert, HITLS_X509_GET_ENCODE_ISSUER_DN, output, sizeof(BSL_Buffer *));
+            break;
         case CERT_CTRL_GET_PUB_KEY:
             ret = HITLS_X509_CertCtrl(cert, HITLS_X509_GET_PUBKEY, output, (uint32_t)sizeof(CRYPT_EAL_PkeyPub *));
             break;

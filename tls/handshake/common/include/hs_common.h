@@ -49,6 +49,7 @@ extern "C" {
 #define HITLS_FINISHED_MAX_SIZE             64
 #define HITLS_HELLO_REQUEST_MAX_SIZE        0
 #ifdef HITLS_TLS_FEATURE_STATUS_REQUEST
+/* CertificateStatus (RFC 6066) may occupy the whole handshake message buffer. */
 #define HITLS_CERTIFICATE_STATUS_MAX_SIZE   20480
 #endif
 

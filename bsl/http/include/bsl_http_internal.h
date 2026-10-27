@@ -123,10 +123,13 @@ int32_t HttpParseStatusLine(char *line, uint32_t *statusCode);
  * @param value [OUT] Pointer to the header value (within line).
  * @retval HITLS_HTTP_HEADER_PARSE_OK on success, HITLS_HTTP_HEADER_PARSE_IGNORE
  *         when the line has no ':' or only whitespace after the colon (the
- *         caller must skip such lines), error code on NULL input.
+ *         caller must skip such lines), HITLS_HTTP_HEADER_PARSE_ERR on a
+ *         malformed line (e.g. obs-fold, RFC 7230 §3.2.4), error code on
+ *         NULL input.
  */
 #define HITLS_HTTP_HEADER_PARSE_OK     0
 #define HITLS_HTTP_HEADER_PARSE_IGNORE 1
+#define HITLS_HTTP_HEADER_PARSE_ERR    (-1)
 int32_t HttpParseHeaderLine(char *line, const char **name, const char **value);
 
 /**

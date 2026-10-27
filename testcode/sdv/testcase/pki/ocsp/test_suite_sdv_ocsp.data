@@ -28,6 +28,9 @@ SDV_OCSP_REQ_EMPTY_TC009
 SDV_OCSP_INVALID_REVOCATION_REASON_TC010
 SDV_OCSP_INVALID_REVOCATION_REASON_TC010
 
+Revocation time/reason are rejected unless certStatus is revoked
+SDV_OCSP_REVOCATION_FIELDS_REQUIRE_REVOKED_TC010A
+
 SDV_OCSP_RESP_SIGN_VERIFY_TC011
 SDV_OCSP_RESP_SIGN_VERIFY_TC011
 
@@ -232,3 +235,12 @@ SDV_OCSP_NEXTUPDATE_BEFORE_THISUPDATE_TC062
 
 Malformed request/response DER is rejected with the request/response parse-failure code
 SDV_OCSP_MALFORMED_DER_TC063
+
+EC (uncompressed) certificate: issuerKeyHash equals the certificate subjectPublicKey BIT STRING
+SDV_OCSP_EC_CERTID_SPKI_TC064
+
+EC (compressed) certificate: issuerKeyHash equals the certificate subjectPublicKey BIT STRING
+SDV_OCSP_EC_CERTID_SPKI_COMPRESSED_TC065
+
+Same EC public key compressed vs uncompressed yields different CertID issuerKeyHash
+SDV_OCSP_EC_CERTID_COMPRESS_TC066

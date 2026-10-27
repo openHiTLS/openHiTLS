@@ -105,6 +105,12 @@ int32_t HttpParseHeaderLine(char *line, const char **name, const char **value)
     if (line == NULL || name == NULL || value == NULL) {
         return BSL_HTTP_ERR_RESP_PARSE;
     }
+    if (*line == ' ' || *line == '\t') {
+        /* RFC 7230 §3.2.4 obs-fold: a continuation line starting with SP/HTAB.
+         * Senders must not generate it; receiving it is a parsing ambiguity
+         * (notably for framing headers), so reject the response. */
+        return HITLS_HTTP_HEADER_PARSE_ERR;
+    }
     char *colon = strchr(line, ':');
     if (colon == NULL) {
         /* A header line without a colon is silently skipped. */

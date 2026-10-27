@@ -137,7 +137,4 @@ void CONN_Deinit(TLS_Ctx *ctx)
     ALERT_Deinit(ctx);
     CCS_DeInit(ctx);
     HS_DeInit(ctx);
-#ifdef HITLS_TLS_FEATURE_STATUS_REQUEST
-    CleanOcspStapling(ctx);
-#endif
 }

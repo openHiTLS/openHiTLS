@@ -38,6 +38,14 @@ typedef void HITLS_CERT_X509;
 
 /**
  * @ingroup hitls_cert_type
+ * @brief   Opaque OCSP response handle. The concrete type lives in the pki
+ *          module (hitls_pki_ocsp.h); applications that use pki may cast it
+ *          back, other libraries cast it to their own structure.
+ */
+typedef void HITLS_CERT_OcspResp;
+
+/**
+ * @ingroup hitls_cert_type
  * @brief   Describes the CRL
  */
 typedef void HITLS_CERT_CRL;
@@ -109,6 +117,8 @@ typedef enum {
     CERT_CTRL_GET_SIGN_ALGO,                /**< Obtain the certificate signature algorithm. */
     CERT_CTRL_GET_ENCODE_SUBJECT_DN,        /**< Get the subject distinguished name as a buffer. */
     CERT_CTRL_IS_SELF_SIGNED,               /** Determine whether the certificate is a self-signed certificate */
+    CERT_CTRL_GET_SERIALNUM,                /**< Get the certificate serial number as a buffer. */
+    CERT_CTRL_GET_ENCODE_ISSUER_DN,         /**< Get the issuer distinguished name as a buffer. */
 
     CERT_KEY_CTRL_GET_SIGN_LEN = 400,       /**< Obtain the signature length. */
     CERT_KEY_CTRL_GET_TYPE,                 /**< Obtaining the Key Type. */

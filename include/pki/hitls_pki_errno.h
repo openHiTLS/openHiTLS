@@ -325,6 +325,8 @@ typedef enum {
     HITLS_OCSP_ERR_REQUESTOR_NAME_UNSUPPORT, /**< The requestorName is not the supported directoryName form. */
     HITLS_OCSP_ERR_INVALID_REQUEST, /**< The OCSPRequest data is malformed (parse failure). */
     HITLS_OCSP_ERR_MALFORMED, /**< The OCSP data is malformed (neutral internal parse-failure code). */
+    HITLS_OCSP_ERR_NO_SIGN_KEYUSAGE, /**< The delegated responder certificate lacks digitalSignature KeyUsage. */
+    HITLS_OCSP_ERR_UNSUPPORT_CRITICAL_EXT, /**< An unrecognized critical extension was rejected. */
 } HITLS_X509_ERRNO;
 
 #ifdef __cplusplus

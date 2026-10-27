@@ -199,6 +199,9 @@ SDV_BSL_HTTP_EXCHANGE_TC022:
 A hard error is latched in a terminal state
 SDV_BSL_HTTP_EXCHANGE_TC023:
 
+An obs-fold continuation header line is rejected
+SDV_BSL_HTTP_EXCHANGE_OBSFOLD_TC023A:
+
 Exchange with a NULL context
 SDV_BSL_HTTP_EXCHANGE_TC024:
 
@@ -240,3 +243,6 @@ SDV_BSL_HTTP_EXCHANGE_TC036:
 
 Conflicting Content-Type values are rejected
 SDV_BSL_HTTP_EXCHANGE_TC037:
+
+Body bytes exceeding the declared Content-Length are rejected
+SDV_BSL_HTTP_EXCHANGE_TC038:

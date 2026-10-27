@@ -37,7 +37,6 @@ target_include_directories(_hitls_tls_cm
         ${PROJECT_SOURCE_DIR}/tls/handshake/send/include
         ${PROJECT_SOURCE_DIR}/tls/record/include
         ${PROJECT_SOURCE_DIR}/tls/record/src
-        ${PROJECT_SOURCE_DIR}/tls/handshake/parse/src
 )
 
 if(HITLS_TLS_FEATURE_QUIC_TLS)

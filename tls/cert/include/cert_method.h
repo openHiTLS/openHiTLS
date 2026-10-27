@@ -267,6 +267,52 @@ HITLS_CERT_CRLList *SAL_CERT_CrlParse(HITLS_Config *config, const uint8_t *buf, 
  */
 void SAL_CERT_CrlFree(HITLS_CERT_CRLList *crlList);
 
+/* ===== OCSP stapling support (SAL wrapper; keeps pki out of feature code) ===== */
+
+/**
+ * @brief Parse a DER-encoded OCSPResponse into an opaque response handle.
+ *
+ * @param ctx   [IN] TLS connection context
+ * @param der   [IN] DER bytes of the OCSPResponse
+ * @param resp  [OUT] Parsed OCSP response (owned by the caller)
+ *
+ * @retval HITLS_SUCCESS on success, error code otherwise
+ */
+int32_t SAL_CERT_OcspRespParseBuff(const HITLS_Ctx *ctx, const BSL_Buffer *der, HITLS_CERT_OcspResp **resp);
+
+/**
+ * @brief Encode an OCSP response handle back to DER.
+ *
+ * @param resp [IN] OCSP response handle
+ * @param der  [OUT] Freshly allocated DER bytes (caller frees der->data)
+ *
+ * @retval HITLS_SUCCESS on success, error code otherwise
+ */
+int32_t SAL_CERT_OcspRespGenBuff(const HITLS_CERT_OcspResp *resp, BSL_Buffer *der);
+
+/**
+ * @brief Free an OCSP response handle.
+ *
+ * @param resp [IN] OCSP response handle (NULL is a no-op)
+ */
+void SAL_CERT_OcspRespFree(HITLS_CERT_OcspResp *resp);
+
+/**
+ * @brief Check whether an OCSP response belongs to the given certificate.
+ *
+ * A response that cannot be validated against the certificate is treated as a
+ * match (the response is still delivered); only a valid response carrying a
+ * CertID for another certificate is reported as a non-match.
+ *
+ * @param ctx   [IN] TLS connection context
+ * @param resp  [IN] OCSP response handle
+ * @param cert  [IN] Certificate to match against
+ *
+ * @retval true when the response matches (or cannot be validated), false when it
+ *         is valid but carries no CertID for this certificate.
+ */
+bool SAL_CERT_OcspRespMatchCert(const HITLS_Ctx *ctx, const HITLS_CERT_OcspResp *resp, HITLS_CERT_X509 *cert);
+
 #ifdef __cplusplus
 }
 #endif

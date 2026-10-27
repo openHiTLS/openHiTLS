@@ -162,7 +162,7 @@ int32_t HITLS_CFG_SetStatusCb(HITLS_Config *config, HITLS_StatusCb cb, void *arg
     return HITLS_SUCCESS;
 }
 
-int32_t HITLS_CFG_SetStaplingCbPerCert(HITLS_Config *config, HITLS_StaplingCbPerCert cb, void *arg)
+int32_t HITLS_CFG_SetStaplingOneCertCb(HITLS_Config *config, HITLS_StaplingOneCertCb cb, void *arg)
 {
     if (config == NULL) {
         return HITLS_NULL_INPUT;

@@ -15,6 +15,9 @@
 file(GLOB _cert_sources ${CMAKE_CURRENT_SOURCE_DIR}/cert_adapt/*.c)
 
 list(APPEND _cert_sources ${CMAKE_CURRENT_SOURCE_DIR}/hitls_x509_adapt/hitls_x509_init.c)
+if(HITLS_TLS_FEATURE_STATUS_REQUEST)
+    list(APPEND _cert_sources ${CMAKE_CURRENT_SOURCE_DIR}/hitls_x509_adapt/hitls_x509_ocsp_magr.c)
+endif()
 if(HITLS_TLS_CALLBACK_CERT OR HITLS_TLS_FEATURE_PROVIDER)
     list(APPEND _cert_sources
         ${CMAKE_CURRENT_SOURCE_DIR}/hitls_x509_adapt/hitls_x509_cert_chain.c
@@ -49,7 +52,6 @@ target_include_directories(_hitls_tls_cert
         ${PROJECT_SOURCE_DIR}/pki/x509_cert/include
         ${PROJECT_SOURCE_DIR}/pki/x509_common/include
         ${PROJECT_SOURCE_DIR}/bsl/asn1/include
-        ${PROJECT_SOURCE_DIR}/tls/handshake/parse/src
 )
 if(HITLS_TLS_FEATURE_STATUS_REQUEST)
     target_include_directories(_hitls_tls_cert PRIVATE

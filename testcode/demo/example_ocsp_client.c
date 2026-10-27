@@ -17,8 +17,8 @@
  * OCSP client demo.
  *
  * Usage:
- *     ocsp_client                 # use the preset PEM chain embedded below
- *     ocsp_client <cert.pem> <issuer.pem> [trusted_ca.pem]
+ *     example_ocsp_client                 # use the preset PEM chain embedded below
+ *     example_ocsp_client <cert.pem> <issuer.pem> [trusted_ca.pem]
  *
  * Reads the target certificate (PEM) and its issuer (PEM), takes the OCSP
  * responder URL from the certificate AIA extension, then opens a real TCP

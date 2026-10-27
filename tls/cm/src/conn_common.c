@@ -421,26 +421,18 @@ int32_t HITLS_SetStatusCb(HITLS_Ctx *ctx, HITLS_StatusCb cb, void *arg)
     if (ctx == NULL) {
         return HITLS_NULL_INPUT;
     }
-
-    ctx->statusCb = cb;
-    ctx->statusCbArg = arg;
-
-    return HITLS_SUCCESS;
+    return HITLS_CFG_SetStatusCb(&ctx->config.tlsConfig, cb, arg);
 }
 
-int32_t HITLS_SetStaplingCbPerCert(HITLS_Ctx *ctx, HITLS_StaplingCbPerCert cb, void *arg)
+int32_t HITLS_SetStaplingOneCertCb(HITLS_Ctx *ctx, HITLS_StaplingOneCertCb cb, void *arg)
 {
     if (ctx == NULL) {
         return HITLS_NULL_INPUT;
     }
-
-    ctx->staplingCb = cb;
-    ctx->staplingCbArg = arg;
-
-    return HITLS_SUCCESS;
+    return HITLS_CFG_SetStaplingOneCertCb(&ctx->config.tlsConfig, cb, arg);
 }
 
-int32_t HITLS_GetPeerOcspResponseList(const HITLS_Ctx *ctx, HITLS_OCSP_Resp ***list, uint32_t *count)
+int32_t HITLS_GetPeerOcspResponseList(const HITLS_Ctx *ctx, HITLS_CERT_OcspResp ***list, uint32_t *count)
 {
     if (ctx == NULL || list == NULL || count == NULL) {
         return HITLS_NULL_INPUT;

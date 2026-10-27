@@ -73,17 +73,13 @@ static int32_t OcspParseCertIdSerial(const BSL_ASN1_Buffer *serialAsn, HITLS_OCS
     }
     uint8_t *serialData = serialAsn->buff;
     uint32_t serialLen = serialAsn->len;
-    bool negative = (serialData[0] & 0x80) != 0;
-    while (serialLen > 1) {
-        if (serialData[0] == 0x00 && !negative && (serialData[1] & 0x80) == 0) {
-            serialData++;
-            serialLen--;
-        } else if (serialData[0] == 0xFF && negative && (serialData[1] & 0x80) != 0) {
-            serialData++;
-            serialLen--;
-        } else {
-            break;
-        }
+    /* The ASN.1 decoder already returns a non-negative INTEGER leaf with redundant
+     * leading 0x00 stripped (BSL_ASN1_DecodeInteger) and rejects negative values, so
+     * only strip any remaining redundant leading 0x00 here; a leading 0xFF would denote
+     * a negative INTEGER and must not be stripped as padding. */
+    while (serialLen > 1 && serialData[0] == 0x00) {
+        serialData++;
+        serialLen--;
     }
     certId->serialNumber.buff = BSL_SAL_Dump(serialData, serialLen);
     if (certId->serialNumber.buff == NULL) {
@@ -351,16 +347,52 @@ int32_t OcspEncodeExt(HITLS_X509_Ext *ext, uint8_t tag, BSL_ASN1_Buffer *extData
 
 int32_t OcspDecodeExt(BSL_ASN1_Buffer *extSeqof, HITLS_X509_Ext **ext)
 {
-    HITLS_X509_Ext *extTmp = HITLS_X509_ExtNew(HITLS_X509_EXT_TYPE_OCSP);
-    if (extTmp == NULL) {
+    if (ext == NULL || extSeqof == NULL || (extSeqof->len != 0 && extSeqof->buff == NULL) ||
+        extSeqof->len > (UINT32_MAX - sizeof(HITLS_X509_Ext))) {
+        BSL_ERR_PUSH_ERROR(HITLS_OCSP_ERR_INVALID_PARAM);
+        return HITLS_OCSP_ERR_INVALID_PARAM;
+    }
+
+    /* HITLS_X509_ParseExt stores borrowed pointers into the extension buffer. The
+     * OCSP object outlives the caller's parse buffer (e.g. TLS frees the
+     * CertificateStatus bytes before the status callback), so keep an owned copy of
+     * the extension DER in the same allocation as the HITLS_X509_Ext and parse from
+     * it: every borrowed pointer then lives exactly as long as the ext and is
+     * released together with it by HITLS_X509_ExtFree. */
+    HITLS_X509_Ext *extTmp = BSL_SAL_Calloc(1, sizeof(HITLS_X509_Ext) + extSeqof->len);
+    if (extTmp == NULL || X509_ExtNew(extTmp, HITLS_X509_EXT_TYPE_OCSP) == NULL) {
+        BSL_SAL_Free(extTmp);
         BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
         return BSL_MALLOC_FAIL;
     }
-    int32_t ret = HITLS_X509_ParseExt(extSeqof, extTmp);
-    if (ret != BSL_SUCCESS) {
-        HITLS_X509_ExtFree(extTmp);
-        return ret;
+
+    if (extSeqof->len > 0) {
+        uint8_t *owned = (uint8_t *)(extTmp + 1);
+        memcpy(owned, extSeqof->buff, extSeqof->len);
+        BSL_ASN1_Buffer ownedBuf = {extSeqof->tag, extSeqof->len, owned};
+        int32_t ret = HITLS_X509_ParseExt(&ownedBuf, extTmp);
+        if (ret != BSL_SUCCESS) {
+            HITLS_X509_ExtFree(extTmp);
+            BSL_ERR_PUSH_ERROR(ret);
+            return ret;
+        }
     }
+
+    /* RFC 6960 §4.1.1/§4.1.2: an unrecognized critical extension must be
+     * rejected, not silently ignored. This implementation understands only the
+     * nonce extension, so any other critical extension is refused here; unknown
+     * non-critical extensions remain tolerated for compatibility. */
+    BslListNode *node = BSL_LIST_FirstNode(extTmp->extList);
+    while (node != NULL) {
+        HITLS_X509_ExtEntry *entry = (HITLS_X509_ExtEntry *)BSL_LIST_GetData(node);
+        if (entry != NULL && entry->critical && entry->cid != BSL_CID_PKIX_OCSP_NONCE) {
+            HITLS_X509_ExtFree(extTmp);
+            BSL_ERR_PUSH_ERROR(HITLS_OCSP_ERR_UNSUPPORT_CRITICAL_EXT);
+            return HITLS_OCSP_ERR_UNSUPPORT_CRITICAL_EXT;
+        }
+        node = BSL_LIST_GetNextNode(extTmp->extList, node);
+    }
+
     *ext = extTmp;
     return HITLS_PKI_SUCCESS;
 }

@@ -2663,6 +2663,9 @@ int32_t HITLS_X509_CertVerify(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_List *ch
         return HITLS_X509_ERR_CERT_CHAIN_COUNT_IS0;
     }
 
+    /* Release a chain retained by a previous keepCertChain-enabled verify before
+     * it is overwritten below, matching the documented GET_CERT_CHAIN lifetime. */
+    BSL_LIST_FREE(storeCtx->certChain, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);
     int32_t ret = X509_GetVerifyCertChain(storeCtx, chain, &storeCtx->certChain);
     if (ret != HITLS_PKI_SUCCESS) {
         int32_t cbkRet = X509_NotifyBuildChainTrustError(storeCtx, storeCtx->certChain, ret);

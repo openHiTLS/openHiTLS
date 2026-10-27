@@ -46,10 +46,6 @@ static int32_t OcspHttpCheckRespDer(const uint8_t *body, uint32_t bodyLen)
         BSL_ERR_PUSH_ERROR(HITLS_OCSP_ERR_NULL_POINTER);
         return HITLS_OCSP_ERR_NULL_POINTER;
     }
-    if (bodyLen < 2) {
-        BSL_ERR_PUSH_ERROR(HITLS_OCSP_ERR_LENGTH_MISMATCH);
-        return HITLS_OCSP_ERR_LENGTH_MISMATCH;
-    }
     uint8_t *p = (uint8_t *)(uintptr_t)body;
     uint32_t rest = bodyLen;
     uint32_t valLen = 0;
@@ -76,7 +72,7 @@ HITLS_HTTP_ReqCtx *HITLS_OCSP_HttpReqCtxNew(BSL_UIO *uio, const char *path, cons
     if (httpCtx == NULL) {
         return NULL;
     }
-    int32_t ret = HITLS_HTTP_ReqCtxCtrl(httpCtx, HITLS_HTTP_CTRL_SET_EXPECTED_CT, HITLS_OCSP_HTTP_EXPECTED_RESP_CT, 0);
+    int32_t ret = HITLS_HTTP_ReqCtxCtrl(httpCtx, HITLS_HTTP_CTRL_SET_EXP_CONTENT_TYPE, HITLS_OCSP_HTTP_EXPECTED_RESP_CT, 0);
     if (ret != BSL_SUCCESS) {
         HITLS_HTTP_ReqCtxFree(httpCtx);
         return NULL;

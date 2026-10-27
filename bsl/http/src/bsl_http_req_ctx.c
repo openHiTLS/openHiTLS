@@ -28,33 +28,42 @@
 #include "bsl_http.h"
 #include "bsl_http_internal.h"
 
-/* Return 0 when no deadline applies or it has not passed yet;
- * otherwise BSL_HTTP_ERR_TIMEOUT. */
+/* Return BSL_SUCCESS when no deadline applies or it has not passed yet;
+ * BSL_HTTP_ERR_TIMEOUT when it has passed, or the SAL error when the clock is
+ * unavailable (fail-closed). */
 static int32_t HttpCheckDeadline(HITLS_HTTP_ReqCtx *ctx)
 {
     if (ctx->deadline == 0) {
-        return 0;
+        return BSL_SUCCESS;
     }
     BSL_TIME now = {0};
-    if (BSL_SAL_SysTimeGet(&now) != BSL_SUCCESS) {
-        return 0;
+    int32_t ret = BSL_SAL_SysTimeGet(&now);
+    if (ret != BSL_SUCCESS) {
+        /* The clock is unavailable: the deadline cannot be enforced. Fail
+         * closed with the actual SAL error (not a misleading TIMEOUT). */
+        BSL_ERR_PUSH_ERROR(ret);
+        return ret;
     }
     int64_t nowUtc = 0;
-    if (BSL_SAL_DateToUtcTimeConvert(&now, &nowUtc) != BSL_SUCCESS) {
-        return 0;
+    ret = BSL_SAL_DateToUtcTimeConvert(&now, &nowUtc);
+    if (ret != BSL_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        return ret;
     }
     if (nowUtc >= ctx->deadline) {
         BSL_ERR_PUSH_ERROR(BSL_HTTP_ERR_TIMEOUT);
         return BSL_HTTP_ERR_TIMEOUT;
     }
-    return 0;
+    return BSL_SUCCESS;
 }
 
-/* Return IN_PROGRESS, or TIMEOUT when the transfer deadline has passed. */
+/* Return IN_PROGRESS, or the fatal result of HttpCheckDeadline (BSL_HTTP_ERR_TIMEOUT
+ * when the deadline has passed, or the SAL error when the clock is unavailable). */
 static int32_t HttpInProgressOrTimeout(HITLS_HTTP_ReqCtx *ctx)
 {
-    if (HttpCheckDeadline(ctx) != 0) {
-        return BSL_HTTP_ERR_TIMEOUT;
+    int32_t ret = HttpCheckDeadline(ctx);
+    if (ret != BSL_SUCCESS) {
+        return ret;
     }
     return BSL_HTTP_ERR_IN_PROGRESS;
 }
@@ -453,7 +462,7 @@ static int32_t HttpCtrlSetMaxLineLen(HITLS_HTTP_ReqCtx *ctx, void *val, uint32_t
     return BSL_SUCCESS;
 }
 
-/* HITLS_HTTP_CTRL_SET_EXPECTED_CT: set or clear the expected response Content-Type. */
+/* HITLS_HTTP_CTRL_SET_EXP_CONTENT_TYPE: set or clear the expected response Content-Type. */
 static int32_t HttpCtrlSetExpectedCt(HITLS_HTTP_ReqCtx *ctx, void *val, uint32_t valLen)
 {
     /* The command takes a NUL-terminated string; a non-zero length from a caller
@@ -508,7 +517,7 @@ static bool HttpIsSetCmd(int32_t cmd)
         case HITLS_HTTP_CTRL_SET_MAX_RESP_LEN:
         case HITLS_HTTP_CTRL_SET_MAX_RESP_HDR_LINES:
         case HITLS_HTTP_CTRL_SET_MAX_LINE_LEN:
-        case HITLS_HTTP_CTRL_SET_EXPECTED_CT:
+        case HITLS_HTTP_CTRL_SET_EXP_CONTENT_TYPE:
         case HITLS_HTTP_CTRL_SET_TIMEOUT:
             return true;
         default:
@@ -555,7 +564,7 @@ int32_t HITLS_HTTP_ReqCtxCtrl(HITLS_HTTP_ReqCtx *ctx, int32_t cmd, void *val, ui
             return HttpCtrlSetU32(val, valLen, &ctx->maxHdrLines);
         case HITLS_HTTP_CTRL_SET_MAX_LINE_LEN:
             return HttpCtrlSetMaxLineLen(ctx, val, valLen);
-        case HITLS_HTTP_CTRL_SET_EXPECTED_CT:
+        case HITLS_HTTP_CTRL_SET_EXP_CONTENT_TYPE:
             return HttpCtrlSetExpectedCt(ctx, val, valLen);
         case HITLS_HTTP_CTRL_SET_TIMEOUT:
             return HttpCtrlSetTimeout(ctx, val, valLen);
@@ -601,8 +610,9 @@ static int32_t HttpWriteRequestHeader(HITLS_HTTP_ReqCtx *ctx)
     while (ctx->reqHdrSent < hdrLen) {
         /* Hard deadline: fail once the transfer has exceeded its allowed time,
          * even while data is flowing (not only at would-block points). */
-        if (HttpCheckDeadline(ctx) != 0) {
-            return BSL_HTTP_ERR_TIMEOUT;
+        int32_t deadlineRet = HttpCheckDeadline(ctx);
+        if (deadlineRet != BSL_SUCCESS) {
+            return deadlineRet;
         }
         uint32_t writeLen = 0;
         int32_t writeRet = BSL_UIO_Write(ctx->uio, bm->data + ctx->reqHdrSent, hdrLen - ctx->reqHdrSent, &writeLen);
@@ -628,8 +638,9 @@ static int32_t HttpWriteRequestBody(HITLS_HTTP_ReqCtx *ctx)
 {
     while (ctx->reqBodySent < ctx->reqBody.dataLen) {
         /* Hard deadline: fail once the transfer has exceeded its allowed time. */
-        if (HttpCheckDeadline(ctx) != 0) {
-            return BSL_HTTP_ERR_TIMEOUT;
+        int32_t deadlineRet = HttpCheckDeadline(ctx);
+        if (deadlineRet != BSL_SUCCESS) {
+            return deadlineRet;
         }
         uint32_t writeLen = 0;
         int32_t ret = BSL_UIO_Write(ctx->uio, ctx->reqBody.data + ctx->reqBodySent,
@@ -656,8 +667,9 @@ static int32_t HttpFlush(HITLS_HTTP_ReqCtx *ctx)
     if (ret == BSL_SUCCESS) {
         /* The write phase may have consumed most of the transfer deadline
          * (partial writes + retries), so check it before starting to read. */
-        if (HttpCheckDeadline(ctx) != 0) {
-            return BSL_HTTP_ERR_TIMEOUT;
+        int32_t deadlineRet = HttpCheckDeadline(ctx);
+        if (deadlineRet != BSL_SUCCESS) {
+            return deadlineRet;
         }
         ctx->state = HITLS_HTTP_STATE_READ_HDR;
         return BSL_SUCCESS;
@@ -726,11 +738,19 @@ static int32_t HttpEndResponseHeader(HITLS_HTTP_ReqCtx *ctx)
 }
 
 /* Process a parsed response header (non-status, non-blank line). Only
- * Content-Type and Content-Length frame/validate the body; other headers are
- * ignored (Transfer-Encoding is not inspected: an undecoded chunked stream
- * reaches the caller raw). */
+ * Content-Type and Content-Length frame/validate the body; Transfer-Encoding is
+ * rejected because this client only supports identity framing (RFC 7230 §3.3.3);
+ * all other headers are ignored. */
 static int32_t HttpProcessResponseHeaderLine(HITLS_HTTP_ReqCtx *ctx, const char *name, const char *value)
 {
+    if (BSL_SAL_StrcaseCmp(name, "Transfer-Encoding") == 0) {
+        /* This client only supports identity framing with an optional
+         * Content-Length (RFC 7230 §3.3.3). A chunked or any other transfer
+         * coding would make the accumulated body not the raw payload the
+         * caller expects - reject explicitly. */
+        BSL_ERR_PUSH_ERROR(BSL_HTTP_ERR_RESP_PARSE);
+        return BSL_HTTP_ERR_RESP_PARSE;
+    }
     if (BSL_SAL_StrcaseCmp(name, "Content-Type") == 0) {
         if (ctx->expectedCt != NULL && !HttpMediaTypeMatch(value, ctx->expectedCt)) {
             BSL_ERR_PUSH_ERROR(BSL_HTTP_ERR_CONTENT_TYPE);
@@ -834,7 +854,9 @@ static int32_t HttpAppendRespBody(HITLS_HTTP_ReqCtx *ctx, const uint8_t *data, u
  * chunk read past the end of the headers already belongs to the body). There is
  * at most one such batch - header reads finish at the end-of-headers transition
  * - so the caller invokes this exactly once, right after dropping the blank
- * line. Returns BSL_SUCCESS or an error. */
+ * line. Body bytes that exceed the declared Content-Length are a framing error
+ * (RFC 9112 6.3): the server sent more body than it announced, so the response
+ * is rejected. Returns BSL_SUCCESS or an error. */
 static int32_t HttpAppendLineBufBody(HITLS_HTTP_ReqCtx *ctx)
 {
     uint32_t take = ctx->lineBufLen;
@@ -842,7 +864,8 @@ static int32_t HttpAppendLineBufBody(HITLS_HTTP_ReqCtx *ctx)
         return BSL_SUCCESS;
     }
     if (ctx->hasContentLength && (uint64_t)ctx->respBodyLen + take > ctx->respContentLength) {
-        take = ctx->respContentLength - ctx->respBodyLen;
+        BSL_ERR_PUSH_ERROR(BSL_HTTP_ERR_RESP_PARSE);
+        return BSL_HTTP_ERR_RESP_PARSE;
     }
     int32_t appRet = HttpAppendRespBody(ctx, (const uint8_t *)ctx->lineBuf, take);
     if (appRet != BSL_SUCCESS) {
@@ -888,8 +911,9 @@ static int32_t HttpReadResponseHeader(HITLS_HTTP_ReqCtx *ctx)
             return BSL_HTTP_ERR_RESP_PARSE;
         }
         /* Hard deadline: fail once the transfer has exceeded its allowed time. */
-        if (HttpCheckDeadline(ctx) != 0) {
-            return BSL_HTTP_ERR_TIMEOUT;
+        int32_t deadlineRet = HttpCheckDeadline(ctx);
+        if (deadlineRet != BSL_SUCCESS) {
+            return deadlineRet;
         }
         int32_t ret = BSL_UIO_Read(ctx->uio, chunk, want, &readLen);
         if (ret == BSL_SUCCESS) {
@@ -918,8 +942,9 @@ static int32_t HttpReadResponseHeader(HITLS_HTTP_ReqCtx *ctx)
 static int32_t HttpProbeRespBodyEof(HITLS_HTTP_ReqCtx *ctx)
 {
     /* Hard deadline: fail once the transfer has exceeded its allowed time. */
-    if (HttpCheckDeadline(ctx) != 0) {
-        return BSL_HTTP_ERR_TIMEOUT;
+    int32_t deadlineRet = HttpCheckDeadline(ctx);
+    if (deadlineRet != BSL_SUCCESS) {
+        return deadlineRet;
     }
     uint8_t probe;
     uint32_t probeLen = 0;
@@ -960,8 +985,9 @@ static int32_t HttpReadResponseBody(HITLS_HTTP_ReqCtx *ctx)
             return HttpProbeRespBodyEof(ctx);
         }
         /* Hard deadline: fail once the transfer has exceeded its allowed time. */
-        if (HttpCheckDeadline(ctx) != 0) {
-            return BSL_HTTP_ERR_TIMEOUT;
+        int32_t deadlineRet = HttpCheckDeadline(ctx);
+        if (deadlineRet != BSL_SUCCESS) {
+            return deadlineRet;
         }
         uint8_t chunk[HITLS_HTTP_READ_CHUNK];
         uint32_t readLen = 0;

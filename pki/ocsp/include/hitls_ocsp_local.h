@@ -152,6 +152,7 @@ typedef struct SingleResp_St {
     bool hasRevocationReason;
     int32_t revocationReason;
     HITLS_X509_Ext *ext; /* singleExtensions [1] EXPLICIT, optional */
+    bool frozen;         /* set when the parent BasicResp is signed or when parsed from DER */
 } HITLS_OCSP_SingleResp_Internal;
 
 /*
@@ -247,8 +248,8 @@ int32_t OcspParseCertId(const BSL_ASN1_Buffer *asn, HITLS_OCSP_CertId_Internal *
 
 /* Shared helpers (ocsp_certid.c) */
 bool OcspCertIdIssuerMatch(const HITLS_OCSP_CertId_Internal *a, const HITLS_OCSP_CertId_Internal *b);
-int32_t OcspGetIssuerNameHash(CRYPT_EAL_MdCtx *mdCtx, const HITLS_X509_Cert *issuer,
-                             uint8_t *out, uint32_t *outLen);
+int32_t OcspGetNameHash(CRYPT_EAL_MdCtx *mdCtx, const HITLS_X509_Cert *cert, int32_t dnCmd,
+                        uint8_t *out, uint32_t *outLen);
 int32_t OcspGetPubKeyHash(CRYPT_EAL_MdCtx *mdCtx, const HITLS_X509_Cert *cert,
                           uint8_t *out, uint32_t *outLen);
 

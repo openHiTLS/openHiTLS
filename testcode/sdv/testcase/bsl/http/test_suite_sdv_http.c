@@ -76,6 +76,13 @@ static const char RESP_MALFORMED[] = "INVALID 200 OK\r\n"
                                      "\r\n"
                                      "12345";
 
+/* RFC 7230 §3.2.4 obs-fold: a continuation header line starting with SP/HTAB. */
+static const char RESP_OBSFOLD[] = "HTTP/1.0 200 OK\r\n"
+                                   "Content-Type: application/ocsp-response\r\n"
+                                   "  Content-Length: 5\r\n"
+                                   "\r\n"
+                                   "12345";
+
 static const char RESP_STATUS_SIGNED[] = "HTTP/1.0 +200 OK\r\n"
                                          "Content-Length: 5\r\n"
                                          "\r\n"
@@ -817,7 +824,7 @@ EXIT:
 
 /**
  * @test  SDV_BSL_HTTP_CTRL_TC003
- * @title  Set EXPECTED_CT stores a deep copy
+ * @title  Set EXP_CONTENT_TYPE stores a deep copy
  * @precon  nan
  * @brief
  *    1. Create a context.
@@ -834,7 +841,7 @@ void SDV_BSL_HTTP_CTRL_TC003(void)
     ASSERT_TRUE(uio != NULL);
     HITLS_HTTP_ReqCtx *ctx = HITLS_HTTP_ReqCtxNew(uio, HITLS_HTTP_METHOD_POST, "/responder/ocsp");
     ASSERT_TRUE(ctx != NULL);
-    int32_t ret = HITLS_HTTP_ReqCtxCtrl(ctx, HITLS_HTTP_CTRL_SET_EXPECTED_CT, "application/ocsp-response", 0);
+    int32_t ret = HITLS_HTTP_ReqCtxCtrl(ctx, HITLS_HTTP_CTRL_SET_EXP_CONTENT_TYPE, "application/ocsp-response", 0);
     ASSERT_EQ(ret, BSL_SUCCESS);
     ASSERT_TRUE(ctx->expectedCt != NULL);
     ASSERT_TRUE(strcmp(ctx->expectedCt, "application/ocsp-response") == 0);
@@ -847,7 +854,7 @@ EXIT:
 
 /**
  * @test  SDV_BSL_HTTP_CTRL_TC004
- * @title  Set EXPECTED_CT with NULL clears the value
+ * @title  Set EXP_CONTENT_TYPE with NULL clears the value
  * @precon  nan
  * @brief
  *    1. Create a context and set an expected Content-Type.
@@ -864,10 +871,10 @@ void SDV_BSL_HTTP_CTRL_TC004(void)
     ASSERT_TRUE(uio != NULL);
     HITLS_HTTP_ReqCtx *ctx = HITLS_HTTP_ReqCtxNew(uio, HITLS_HTTP_METHOD_POST, "/responder/ocsp");
     ASSERT_TRUE(ctx != NULL);
-    int32_t ret = HITLS_HTTP_ReqCtxCtrl(ctx, HITLS_HTTP_CTRL_SET_EXPECTED_CT, "application/ocsp-response", 0);
+    int32_t ret = HITLS_HTTP_ReqCtxCtrl(ctx, HITLS_HTTP_CTRL_SET_EXP_CONTENT_TYPE, "application/ocsp-response", 0);
     ASSERT_EQ(ret, BSL_SUCCESS);
     ASSERT_TRUE(ctx->expectedCt != NULL);
-    ret = HITLS_HTTP_ReqCtxCtrl(ctx, HITLS_HTTP_CTRL_SET_EXPECTED_CT, NULL, 0);
+    ret = HITLS_HTTP_ReqCtxCtrl(ctx, HITLS_HTTP_CTRL_SET_EXP_CONTENT_TYPE, NULL, 0);
     ASSERT_EQ(ret, BSL_SUCCESS);
     ASSERT_TRUE(ctx->expectedCt == NULL);
     HITLS_HTTP_ReqCtxFree(ctx);
@@ -989,7 +996,7 @@ EXIT:
  * @precon  nan
  * @brief
  *    1. Set a request body and drive Exchange once so the state leaves INIT.
- *    2. Apply SET_MAX_RESP_LEN, SET_EXPECTED_CT and SET_TIMEOUT.
+ *    2. Apply SET_MAX_RESP_LEN, SET_EXP_CONTENT_TYPE and SET_TIMEOUT.
  * @expect
  *    1. Exchange returns IN_PROGRESS.
  *    2. Every SET command returns BSL_HTTP_ERR_PARAM (transfer settings are frozen).
@@ -1009,7 +1016,7 @@ void SDV_BSL_HTTP_CTRL_TC008(void)
     ASSERT_EQ(HITLS_HTTP_ReqCtxExchange(ctx, &body, &len), BSL_HTTP_ERR_IN_PROGRESS);
     uint32_t v = 1024;
     ASSERT_EQ(HITLS_HTTP_ReqCtxCtrl(ctx, HITLS_HTTP_CTRL_SET_MAX_RESP_LEN, &v, sizeof(v)), BSL_HTTP_ERR_PARAM);
-    ASSERT_EQ(HITLS_HTTP_ReqCtxCtrl(ctx, HITLS_HTTP_CTRL_SET_EXPECTED_CT, "text/html", 0), BSL_HTTP_ERR_PARAM);
+    ASSERT_EQ(HITLS_HTTP_ReqCtxCtrl(ctx, HITLS_HTTP_CTRL_SET_EXP_CONTENT_TYPE, "text/html", 0), BSL_HTTP_ERR_PARAM);
     ASSERT_EQ(HITLS_HTTP_ReqCtxCtrl(ctx, HITLS_HTTP_CTRL_SET_TIMEOUT, &v, sizeof(v)), BSL_HTTP_ERR_PARAM);
     HITLS_HTTP_ReqCtxFree(ctx);
     BSL_UIO_Free(uio);
@@ -1398,14 +1405,15 @@ EXIT:
 
 /**
  * @test  SDV_BSL_HTTP_EXCHANGE_TC015
- * @title  Transfer-Encoding identity is accepted as raw body
+ * @title  Transfer-Encoding is rejected
  * @precon  nan
  * @brief
  *    1. Create a context and set a request body.
  *    2. Drive Exchange against a response with Transfer-Encoding: identity.
  * @expect
  *    1. The request is configured successfully.
- *    2. Exchange returns BSL_SUCCESS since identity means an untransformed body.
+ *    2. Exchange returns BSL_HTTP_ERR_RESP_PARSE: this client only supports
+ *       identity framing, so any Transfer-Encoding is rejected explicitly.
  */
 /* BEGIN_CASE */
 void SDV_BSL_HTTP_EXCHANGE_TC015(void)
@@ -1421,9 +1429,8 @@ void SDV_BSL_HTTP_EXCHANGE_TC015(void)
     const uint8_t *body = NULL;
     uint32_t len = 0;
     ret = HttpTestDrive(ctx, &body, &len, NULL);
-    ASSERT_EQ(ret, BSL_SUCCESS);
-    ASSERT_EQ(len, 5);
-    ASSERT_TRUE(body != NULL && memcmp(body, "12345", 5) == 0);
+    ASSERT_EQ(ret, BSL_HTTP_ERR_RESP_PARSE);
+    ASSERT_TRUE(body == NULL);
     HITLS_HTTP_ReqCtxFree(ctx);
     BSL_UIO_Free(uio);
 EXIT:
@@ -1482,7 +1489,7 @@ void SDV_BSL_HTTP_EXCHANGE_TC017(void)
     ASSERT_TRUE(uio != NULL);
     HITLS_HTTP_ReqCtx *ctx = HITLS_HTTP_ReqCtxNew(uio, HITLS_HTTP_METHOD_POST, "/responder/ocsp");
     ASSERT_TRUE(ctx != NULL);
-    int32_t ret = HITLS_HTTP_ReqCtxCtrl(ctx, HITLS_HTTP_CTRL_SET_EXPECTED_CT, "application/ocsp-response", 0);
+    int32_t ret = HITLS_HTTP_ReqCtxCtrl(ctx, HITLS_HTTP_CTRL_SET_EXP_CONTENT_TYPE, "application/ocsp-response", 0);
     ASSERT_EQ(ret, BSL_SUCCESS);
     ret = HITLS_HTTP_ReqCtxSetReq(ctx, "application/ocsp-request", NULL, 0);
     ASSERT_EQ(ret, BSL_SUCCESS);
@@ -1574,7 +1581,7 @@ void SDV_BSL_HTTP_EXCHANGE_TC006(void)
     ASSERT_TRUE(uio != NULL);
     HITLS_HTTP_ReqCtx *ctx = HITLS_HTTP_ReqCtxNew(uio, HITLS_HTTP_METHOD_POST, "/responder/ocsp");
     ASSERT_TRUE(ctx != NULL);
-    int32_t ret = HITLS_HTTP_ReqCtxCtrl(ctx, HITLS_HTTP_CTRL_SET_EXPECTED_CT, "application/ocsp-response", 0);
+    int32_t ret = HITLS_HTTP_ReqCtxCtrl(ctx, HITLS_HTTP_CTRL_SET_EXP_CONTENT_TYPE, "application/ocsp-response", 0);
     ASSERT_EQ(ret, BSL_SUCCESS);
     ret = HITLS_HTTP_ReqCtxSetReq(ctx, "application/ocsp-request", NULL, 0);
     ASSERT_EQ(ret, BSL_SUCCESS);
@@ -1737,7 +1744,7 @@ EXIT:
 
 /**
  * @test  SDV_BSL_HTTP_EXCHANGE_TC010
- * @title  Set EXPECTED_CT enforcement (regression of T2 pending case)
+ * @title  Set EXP_CONTENT_TYPE enforcement (regression of T2 pending case)
  * @precon  nan
  * @brief
  *    1. Create a context expecting "application/ocsp-response".
@@ -1754,7 +1761,7 @@ void SDV_BSL_HTTP_EXCHANGE_TC010(void)
     ASSERT_TRUE(uio != NULL);
     HITLS_HTTP_ReqCtx *ctx = HITLS_HTTP_ReqCtxNew(uio, HITLS_HTTP_METHOD_POST, "/responder/ocsp");
     ASSERT_TRUE(ctx != NULL);
-    int32_t ret = HITLS_HTTP_ReqCtxCtrl(ctx, HITLS_HTTP_CTRL_SET_EXPECTED_CT, "application/ocsp-response", 0);
+    int32_t ret = HITLS_HTTP_ReqCtxCtrl(ctx, HITLS_HTTP_CTRL_SET_EXP_CONTENT_TYPE, "application/ocsp-response", 0);
     ASSERT_EQ(ret, BSL_SUCCESS);
     ret = HITLS_HTTP_ReqCtxSetReq(ctx, "application/ocsp-request", NULL, 0);
     ASSERT_EQ(ret, BSL_SUCCESS);
@@ -1770,7 +1777,7 @@ EXIT:
 
 /**
  * @test  SDV_BSL_HTTP_EXCHANGE_TC011
- * @title  Set EXPECTED_CT(NULL) skips the check (regression of T2 pending case)
+ * @title  Set EXP_CONTENT_TYPE(NULL) skips the check (regression of T2 pending case)
  * @precon  nan
  * @brief
  *    1. Create a context without an expected Content-Type.
@@ -1878,7 +1885,7 @@ EXIT:
 
 /**
  * @test  SDV_BSL_HTTP_EXCHANGE_TC014
- * @title  Chunked transfer encoding reaches the caller undecoded
+ * @title  Chunked transfer encoding is rejected
  * @precon  nan
  * @brief
  *    1. Create a context and set a request body.
@@ -1886,9 +1893,9 @@ EXIT:
  *       Content-Length.
  * @expect
  *    1. The request is configured successfully.
- *    2. Exchange returns BSL_SUCCESS with the raw 15-byte chunk framing: like
- *       OpenSSL, the parser never inspects Transfer-Encoding and Content-Length
- *       frames the body (here: read to EOF), decoding is left to the caller.
+ *    2. Exchange returns BSL_HTTP_ERR_RESP_PARSE: this client cannot decode a
+ *       chunked transfer coding, so the response is rejected instead of handing
+ *       the raw chunk framing to the caller.
  */
 /* BEGIN_CASE */
 void SDV_BSL_HTTP_EXCHANGE_TC014(void)
@@ -1905,9 +1912,8 @@ void SDV_BSL_HTTP_EXCHANGE_TC014(void)
     const uint8_t *body = NULL;
     uint32_t len = 0;
     ret = HttpTestDrive(ctx, &body, &len, NULL);
-    ASSERT_EQ(ret, BSL_SUCCESS);
-    ASSERT_EQ(len, 15);
-    ASSERT_TRUE(body != NULL && memcmp(body, "5\r\n12345\r\n0\r\n\r\n", 15) == 0);
+    ASSERT_EQ(ret, BSL_HTTP_ERR_RESP_PARSE);
+    ASSERT_TRUE(body == NULL);
     HITLS_HTTP_ReqCtxFree(ctx);
     BSL_UIO_Free(uio);
 EXIT:
@@ -2202,6 +2208,40 @@ void SDV_BSL_HTTP_EXCHANGE_TC037(void)
     ASSERT_TRUE(ctx != NULL);
     ASSERT_EQ(HITLS_HTTP_ReqCtxSetReq(ctx, "application/ocsp-request", NULL, 0), BSL_SUCCESS);
     HttpTestSetResponse(RESP_DUP_CT_DIFF);
+    int32_t ret = HttpTestDrive(ctx, NULL, NULL, NULL);
+    ASSERT_EQ(ret, BSL_HTTP_ERR_RESP_PARSE);
+    HITLS_HTTP_ReqCtxFree(ctx);
+    BSL_UIO_Free(uio);
+EXIT:
+    return;
+}
+/* END_CASE */
+
+/**
+ * @test  SDV_BSL_HTTP_EXCHANGE_TC038
+ * @title  Body bytes exceeding the declared Content-Length are rejected
+ * @precon  nan
+ * @brief
+ *    1. Drive Exchange against a response that declares Content-Length: 5 but whose
+ *       body bytes read together with the headers exceed that value.
+ * @expect
+ *    1. Exchange returns BSL_HTTP_ERR_RESP_PARSE (RFC 9112 6.3: the server sent
+ *       more body than the announced Content-Length, so the framing is invalid).
+ */
+/* BEGIN_CASE */
+void SDV_BSL_HTTP_EXCHANGE_TC038(void)
+{
+    HttpTestReset();
+    BSL_UIO *uio = HttpTestNewUio();
+    ASSERT_TRUE(uio != NULL);
+    HITLS_HTTP_ReqCtx *ctx = HITLS_HTTP_ReqCtxNew(uio, HITLS_HTTP_METHOD_POST, "/responder/ocsp");
+    ASSERT_TRUE(ctx != NULL);
+    ASSERT_EQ(HITLS_HTTP_ReqCtxSetReq(ctx, "application/ocsp-request", NULL, 0), BSL_SUCCESS);
+    /* Declared Content-Length is 5 but 10 body bytes arrive in the same read. */
+    HttpTestSetResponse("HTTP/1.0 200 OK\r\n"
+                        "Content-Length: 5\r\n"
+                        "\r\n"
+                        "0123456789");
     int32_t ret = HttpTestDrive(ctx, NULL, NULL, NULL);
     ASSERT_EQ(ret, BSL_HTTP_ERR_RESP_PARSE);
     HITLS_HTTP_ReqCtxFree(ctx);
@@ -2626,7 +2666,7 @@ void SDV_BSL_HTTP_EXCHANGE_TC018(void)
     ASSERT_TRUE(uio != NULL);
     HITLS_HTTP_ReqCtx *ctx = HITLS_HTTP_ReqCtxNew(uio, HITLS_HTTP_METHOD_POST, "/responder/ocsp");
     ASSERT_TRUE(ctx != NULL);
-    ASSERT_EQ(HITLS_HTTP_ReqCtxCtrl(ctx, HITLS_HTTP_CTRL_SET_EXPECTED_CT, "application/ocsp-response", 0), BSL_SUCCESS);
+    ASSERT_EQ(HITLS_HTTP_ReqCtxCtrl(ctx, HITLS_HTTP_CTRL_SET_EXP_CONTENT_TYPE, "application/ocsp-response", 0), BSL_SUCCESS);
     ASSERT_EQ(HITLS_HTTP_ReqCtxSetReq(ctx, "application/ocsp-request", NULL, 0), BSL_SUCCESS);
     HttpTestSetResponse(RESP_TRAILING_OWS);
     const uint8_t *body = NULL;
@@ -2752,7 +2792,7 @@ void SDV_BSL_HTTP_EXCHANGE_TC022(void)
     ASSERT_TRUE(uio != NULL);
     HITLS_HTTP_ReqCtx *ctx = HITLS_HTTP_ReqCtxNew(uio, HITLS_HTTP_METHOD_POST, "/responder/ocsp");
     ASSERT_TRUE(ctx != NULL);
-    ASSERT_EQ(HITLS_HTTP_ReqCtxCtrl(ctx, HITLS_HTTP_CTRL_SET_EXPECTED_CT, "application/ocsp-response", 0), BSL_SUCCESS);
+    ASSERT_EQ(HITLS_HTTP_ReqCtxCtrl(ctx, HITLS_HTTP_CTRL_SET_EXP_CONTENT_TYPE, "application/ocsp-response", 0), BSL_SUCCESS);
     ASSERT_EQ(HITLS_HTTP_ReqCtxSetReq(ctx, "application/ocsp-request", NULL, 0), BSL_SUCCESS);
     HttpTestSetResponse(RESP_CT_PARAMS);
     const uint8_t *body = NULL;
@@ -2795,6 +2835,35 @@ void SDV_BSL_HTTP_EXCHANGE_TC023(void)
     const uint8_t *body = NULL;
     uint32_t len = 0;
     ret = HITLS_HTTP_ReqCtxExchange(ctx, &body, &len);
+    ASSERT_EQ(ret, BSL_HTTP_ERR_RESP_PARSE);
+    HITLS_HTTP_ReqCtxFree(ctx);
+    BSL_UIO_Free(uio);
+EXIT:
+    return;
+}
+/* END_CASE */
+
+/**
+ * @test  SDV_BSL_HTTP_EXCHANGE_OBSFOLD_TC023A
+ * @title  Exchange rejects an obs-fold continuation header line.
+ * @precon  nan
+ * @brief
+ *   1. Drive Exchange against a response whose header contains an obs-fold
+ *      line (leading SP/HTAB, RFC 7230 §3.2.4).
+ * @expect
+ *   1. The transfer fails with BSL_HTTP_ERR_RESP_PARSE.
+ */
+/* BEGIN_CASE */
+void SDV_BSL_HTTP_EXCHANGE_OBSFOLD_TC023A(void)
+{
+    HttpTestReset();
+    BSL_UIO *uio = HttpTestNewUio();
+    ASSERT_TRUE(uio != NULL);
+    HITLS_HTTP_ReqCtx *ctx = HITLS_HTTP_ReqCtxNew(uio, HITLS_HTTP_METHOD_POST, "/responder/ocsp");
+    ASSERT_TRUE(ctx != NULL);
+    ASSERT_EQ(HITLS_HTTP_ReqCtxSetReq(ctx, "application/ocsp-request", NULL, 0), BSL_SUCCESS);
+    HttpTestSetResponse(RESP_OBSFOLD);
+    int32_t ret = HttpTestDrive(ctx, NULL, NULL, NULL);
     ASSERT_EQ(ret, BSL_HTTP_ERR_RESP_PARSE);
     HITLS_HTTP_ReqCtxFree(ctx);
     BSL_UIO_Free(uio);

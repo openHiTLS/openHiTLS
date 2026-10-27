@@ -58,7 +58,7 @@ typedef enum {
     HITLS_HTTP_CTRL_SET_MAX_LINE_LEN, /**< val = uint32_t*, set max response line length.
                                                     Default 4096; range [256, 4096]. */
     HITLS_HTTP_CTRL_GET_MAX_LINE_LEN, /**< val = uint32_t*, get max response line length. */
-    HITLS_HTTP_CTRL_SET_EXPECTED_CT, /**< val = const char* (valLen = 0), expected Content-Type
+    HITLS_HTTP_CTRL_SET_EXP_CONTENT_TYPE, /**< val = const char* (valLen = 0), expected Content-Type
                                                               (NULL = skip check; max 128 chars). */
     HITLS_HTTP_CTRL_SET_TIMEOUT, /**< val = uint32_t*, transfer deadline in seconds; 0 disables it. */
     HITLS_HTTP_CTRL_GET_RESP_STATUS, /**< val = uint32_t*, get the HTTP response status code
@@ -148,7 +148,7 @@ int32_t HITLS_HTTP_ReqCtxExchange(HITLS_HTTP_ReqCtx *ctx, const uint8_t **respBo
 /**
  * @brief Ctrl command dispatch: set/get security limits and expected Content-Type.
  *        SET_* commands (HITLS_HTTP_CTRL_SET_MAX_RESP_LEN, _SET_MAX_RESP_HDR_LINES,
- *        _SET_MAX_LINE_LEN, _SET_EXPECTED_CT, _SET_TIMEOUT) apply only while the
+ *        _SET_MAX_LINE_LEN, _SET_EXP_CONTENT_TYPE, _SET_TIMEOUT) apply only while the
  *        context is in the INIT (configuration) state, before the first
  *        HITLS_HTTP_ReqCtxExchange call; the GET_* commands may be called at any time.
  * @param ctx    [IN] Context.

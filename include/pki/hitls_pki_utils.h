@@ -57,10 +57,14 @@ int32_t HITLS_PKI_PrintCtrl(int32_t cmd, void *val, uint32_t valLen, BSL_UIO *ui
  *        HITLS_X509_EXT_GET|SET_SKI            HITLS_X509_ExtSki
  *        HITLS_X509_EXT_GET|SET_SAN            HITLS_X509_ExtSan
  *        HITLS_X509_EXT_GET|SET_EXKUSAGE       HITLS_X509_ExtExKeyUsage
+ *        HITLS_X509_EXT_GET_AIA                HITLS_X509_ExtAia
+ *        HITLS_X509_EXT_GET_TLSFEATURE         HITLS_X509_ExtTlsFeature
+ *        HITLS_X509_EXT_GET|SET_OCSP_NONCE     HITLS_X509_ExtOcspNonce
  *        HITLS_X509_EXT_GET|SET_DELTA_CRL      HITLS_X509_ExtDeltaCrl
  *        HITLS_X509_EXT_GET|SET_IDP            HITLS_X509_ExtIdp
  *        HITLS_X509_EXT_GET|SET_CDP            HITLS_X509_ExtCdp
  *        HITLS_X509_EXT_CHECK_SKI              bool
+ *        HITLS_X509_EXT_CHECK_OCSP_NOCHECK     bool
  * @param val    [IN/OUT] input and output value
  * @param valLen [In] value length
  * @retval #HITLS_PKI_SUCCESS, success.

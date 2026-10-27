@@ -1165,7 +1165,9 @@ EXIT:
 }
 
 #ifdef HITLS_CRYPTO_KEY_DECODE
-static int32_t X509_DecodeSubPubkeyInfoFromRaw(HITLS_X509_Cert *cert, CRYPT_DECODE_SubPubkeyInfo *subPubkeyInfo)
+/* Extract the subjectPublicKeyInfo from the cert's raw DER and its public key BIT
+ * STRING (borrowed). Shared across modules. */
+int32_t X509_DecodeSubPubkeyInfoFromRaw(HITLS_X509_Cert *cert, CRYPT_DECODE_SubPubkeyInfo *subPubkeyInfo)
 {
     BSL_ASN1_Buffer asnArr[HITLS_X509_CERT_MAX_IDX] = {0};
     BSL_ASN1_Template templ = {g_certTempl, sizeof(g_certTempl) / sizeof(g_certTempl[0])};

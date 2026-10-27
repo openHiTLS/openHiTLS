@@ -64,112 +64,44 @@ EXIT:
     return ret;
 }
 
-int32_t OcspGetIssuerNameHash(CRYPT_EAL_MdCtx *mdCtx, const HITLS_X509_Cert *issuer,
-                             uint8_t *out, uint32_t *outLen)
+/* Hash a DN field (subject or issuer, selected by dnCmd) of the given certificate.
+ * dnCmd is one of HITLS_X509_GET_ENCODE_SUBJECT_DN / HITLS_X509_GET_ENCODE_ISSUER_DN. */
+int32_t OcspGetNameHash(CRYPT_EAL_MdCtx *mdCtx, const HITLS_X509_Cert *cert, int32_t dnCmd,
+                        uint8_t *out, uint32_t *outLen)
 {
     BSL_Buffer dnDer = {0};
-    int32_t ret = HITLS_X509_CertCtrl((HITLS_X509_Cert *)(uintptr_t)issuer, HITLS_X509_GET_ENCODE_SUBJECT_DN,
-                                      &dnDer, sizeof(BSL_Buffer *));
+    int32_t ret = HITLS_X509_CertCtrl((HITLS_X509_Cert *)(uintptr_t)cert, dnCmd, &dnDer, sizeof(BSL_Buffer *));
     if (ret != HITLS_PKI_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
     ret = OcspHashData(mdCtx, (const uint8_t *)dnDer.data, dnDer.dataLen, out, outLen);
     BSL_SAL_Free(dnDer.data);
-    /* OcspHashData has already pushed the error; propagate it without re-pushing. */
     return ret;
 }
 
-/* Encode the cert's public key (SUBKEY) and extract the raw key bytes: the BIT STRING
- * content after the unused-bits prefix byte.
- * Output borrows into spkiContent; caller frees spkiContent.data. */
-static int32_t OcspExtractPubKeyContent(const HITLS_X509_Cert *cert, BSL_Buffer *spkiContent, uint8_t **keyOut,
-                                        uint32_t *keyLen)
-{
-    CRYPT_EAL_PkeyCtx *pubKey = NULL;
-    int32_t ret = HITLS_X509_CertCtrl((HITLS_X509_Cert *)(uintptr_t)cert, HITLS_X509_GET_PUBKEY, &pubKey, 0);
-    if (ret != HITLS_PKI_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
-        return ret;
-    }
-
-    ret = CRYPT_EAL_EncodePubKeyBuffInternal(pubKey, BSL_FORMAT_ASN1, CRYPT_PUBKEY_SUBKEY, false, spkiContent);
-    CRYPT_EAL_PkeyFreeCtx(pubKey);
-    if (ret != CRYPT_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
-        return ret;
-    }
-
-    /* CRYPT_PUBKEY_SUBKEY outputs: AlgorithmIdentifier SEQUENCE + BIT STRING (no outer SEQUENCE). */
-    uint8_t *p = (uint8_t *)spkiContent->data;
-    uint32_t remaining = spkiContent->dataLen;
-    uint32_t vLen = 0;
-
-    /* Skip AlgorithmIdentifier SEQUENCE */
-    ret = BSL_ASN1_DecodeTagLen(BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE, &p, &remaining, &vLen);
-    if (ret != BSL_SUCCESS) {
-        goto EXIT;
-    }
-    p += vLen;
-    remaining -= vLen;
-
-    /* Decode BIT STRING */
-    ret = BSL_ASN1_DecodeTagLen(BSL_ASN1_TAG_BITSTRING, &p, &remaining, &vLen);
-    if (ret != BSL_SUCCESS) {
-        goto EXIT;
-    }
-    /* BIT STRING must be the last element: no trailing data after it */
-    if (remaining != vLen) {
-        ret = HITLS_OCSP_ERR_INVALID_PARAM;
-        goto EXIT;
-    }
-    /* Skip unused-bits prefix byte. DER requires it to be 0x00 for byte-aligned keys;
-     * reject non-zero values loudly instead of silently producing a wrong hash. */
-    if (vLen < 1) {
-        ret = HITLS_OCSP_ERR_INVALID_PARAM;
-        goto EXIT;
-    }
-    if (*p != 0x00) {
-        ret = HITLS_OCSP_ERR_INVALID_PARAM;
-        goto EXIT;
-    }
-    p++;
-    vLen--;
-    if (vLen == 0) {
-        ret = HITLS_OCSP_ERR_INVALID_PARAM;
-        goto EXIT;
-    }
-
-    *keyOut = p;
-    *keyLen = vLen;
-    return HITLS_PKI_SUCCESS;
-
-EXIT:
-    BSL_SAL_Free(spkiContent->data);
-    spkiContent->data = NULL;
-    spkiContent->dataLen = 0;
-    if (ret != BSL_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
-    }
-    return ret;
-}
+/* Defined in hitls_x509_cert.c (internal, shared across modules). */
+int32_t X509_DecodeSubPubkeyInfoFromRaw(HITLS_X509_Cert *cert, CRYPT_DECODE_SubPubkeyInfo *subPubkeyInfo);
 
 int32_t OcspGetPubKeyHash(CRYPT_EAL_MdCtx *mdCtx, const HITLS_X509_Cert *cert, uint8_t *out, uint32_t *outLen)
 {
-    /* Hash the raw public key bytes (BIT STRING content after the unused-bits byte),
-     * not the full SPKI DER. */
-    BSL_Buffer spkiContent = {0};
-    uint8_t *keyData = NULL;
-    uint32_t keyLen = 0;
-    int32_t ret = OcspExtractPubKeyContent(cert, &spkiContent, &keyData, &keyLen);
-    if (ret != HITLS_PKI_SUCCESS) {
-        return ret;
+    /* Hash the public key bytes exactly as carried in the certificate: the
+     * subjectPublicKey BIT STRING content (RFC 6960 §4.1.1). The shared cert
+     * template extracts the original bytes, so the result is independent of EC
+     * point compression; no re-encoding from the pkey is performed. */
+    if (mdCtx == NULL || cert == NULL || out == NULL || outLen == NULL) {
+        BSL_ERR_PUSH_ERROR(HITLS_OCSP_ERR_NULL_POINTER);
+        return HITLS_OCSP_ERR_NULL_POINTER;
     }
-
-    ret = OcspHashData(mdCtx, keyData, keyLen, out, outLen);
-    BSL_SAL_Free(spkiContent.data);
-    /* OcspHashData has already pushed the error; propagate it without re-pushing. */
-    return ret;
+    CRYPT_DECODE_SubPubkeyInfo subPubkeyInfo = {0};
+    int32_t ret = X509_DecodeSubPubkeyInfoFromRaw((HITLS_X509_Cert *)(uintptr_t)cert, &subPubkeyInfo);
+    if (ret != HITLS_PKI_SUCCESS) {
+        return ret; /* error already pushed by the callee */
+    }
+    if (subPubkeyInfo.pubKey.buff == NULL || subPubkeyInfo.pubKey.len == 0) {
+        BSL_ERR_PUSH_ERROR(HITLS_OCSP_ERR_INVALID_PARAM);
+        return HITLS_OCSP_ERR_INVALID_PARAM;
+    }
+    return OcspHashData(mdCtx, subPubkeyInfo.pubKey.buff, subPubkeyInfo.pubKey.len, out, outLen);
 }
 
 /* Get the serial number from cert and store it into certId->serialNumber (deep copy). */
@@ -179,7 +111,6 @@ static int32_t OcspSetCertIdSerial(const HITLS_X509_Cert *cert, HITLS_OCSP_CertI
     int32_t ret =
         HITLS_X509_CertCtrl((HITLS_X509_Cert *)(uintptr_t)cert, HITLS_X509_GET_SERIALNUM, &serial, sizeof(BSL_Buffer));
     if (ret != HITLS_PKI_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
     if (serial.dataLen == 0 || serial.data == NULL) {
@@ -187,21 +118,14 @@ static int32_t OcspSetCertIdSerial(const HITLS_X509_Cert *cert, HITLS_OCSP_CertI
         return HITLS_OCSP_ERR_INVALID_PARAM;
     }
     /* Normalize the DER INTEGER serial exactly like OcspParseCertIdSerial (strip redundant
-     * leading 0x00 for positive / 0xFF for negative) so CertIdCmp sees identical bytes
-     * whether the CertID came from construction or parsing. */
+     * leading 0x00) so CertIdCmp sees identical bytes whether the CertID came from
+     * construction or parsing. A leading 0xFF denotes a negative INTEGER and is not
+     * padding: it must not be stripped, or 0xFF80 would alias 0x80. */
     uint8_t *serialData = serial.data;
     uint32_t serialLen = serial.dataLen;
-    bool negative = (serialData[0] & 0x80) != 0;
-    while (serialLen > 1) {
-        if (serialData[0] == 0x00 && !negative && (serialData[1] & 0x80) == 0) {
-            serialData++;
-            serialLen--;
-        } else if (serialData[0] == 0xFF && negative && (serialData[1] & 0x80) != 0) {
-            serialData++;
-            serialLen--;
-        } else {
-            break;
-        }
+    while (serialLen > 1 && serialData[0] == 0x00) {
+        serialData++;
+        serialLen--;
     }
     certId->serialNumber.buff = BSL_SAL_Dump(serialData, serialLen);
     if (certId->serialNumber.buff == NULL) {
@@ -236,7 +160,9 @@ HITLS_OCSP_CertId *HITLS_OCSP_CertIdNewFromCert(CRYPT_EAL_MdCtx *mdCtx, const HI
     uint8_t hash[32];
     uint32_t hashLen = sizeof(hash);
 
-    int32_t ret = OcspGetIssuerNameHash(mdCtx, issuer, hash, &hashLen);
+    /* issuerNameHash: hash of the target cert's Issuer DN (RFC 6960 §4.1.1).
+     * issuerKeyHash below is over the issuer cert's public key. */
+    int32_t ret = OcspGetNameHash(mdCtx, cert, HITLS_X509_GET_ENCODE_ISSUER_DN, hash, &hashLen);
     if (ret != HITLS_PKI_SUCCESS) {
         goto EXIT; /* error already pushed by the callee */
     }
@@ -245,7 +171,6 @@ HITLS_OCSP_CertId *HITLS_OCSP_CertIdNewFromCert(CRYPT_EAL_MdCtx *mdCtx, const HI
 
     ret = OcspSetHashField(mdId, &certId->issuerNameHash, hash, hashLen);
     if (ret != HITLS_PKI_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
         goto EXIT;
     }
 
@@ -258,7 +183,6 @@ HITLS_OCSP_CertId *HITLS_OCSP_CertIdNewFromCert(CRYPT_EAL_MdCtx *mdCtx, const HI
 
     ret = OcspSetHashField(mdId, &certId->issuerKeyHash, hash, hashLen);
     if (ret != HITLS_PKI_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
         goto EXIT;
     }
 

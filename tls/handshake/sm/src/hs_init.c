@@ -26,6 +26,9 @@
 #include "hs_kx.h"
 #include "hs.h"
 #include "parse.h"
+#ifdef HITLS_TLS_FEATURE_STATUS_REQUEST
+#include "status_request.h"
+#endif
 #ifdef HITLS_TLS_FEATURE_QUIC_TLS
 #include "quic_tls_internal.h"
 #endif
@@ -202,7 +205,18 @@ exit:
 
 void HS_DeInit(TLS_Ctx *ctx)
 {
-    if (ctx == NULL || ctx->hsCtx == NULL) {
+    if (ctx == NULL) {
+        return;
+    }
+#ifdef HITLS_TLS_FEATURE_STATUS_REQUEST
+    /* The stapling state is per-handshake: release it here (handshake success,
+     * renegotiation, connection teardown all go through HS_DeInit) so the
+     * peer response list is freed as soon as the handshake is done. The EE
+     * response (staplingResp) is borrowed from the application and only the
+     * pointer is cleared. */
+    CleanOcspStapling(ctx);
+#endif
+    if (ctx->hsCtx == NULL) {
         return;
     }
     HS_Ctx *hsCtx = ctx->hsCtx;

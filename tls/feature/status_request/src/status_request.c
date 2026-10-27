@@ -24,11 +24,6 @@
 #include "hitls_error.h"
 #include "hitls_status_request.h"
 #include "hitls_cert.h"
-#include "hitls_pki_cert.h"
-#include "hitls_pki_ocsp.h"
-#include "hitls_pki_errno.h"
-#include "crypt_eal_md.h"
-#include "crypt_errno.h"
 #include "tls.h"
 #include "hs_ctx.h"
 #include "hs_msg.h"
@@ -47,14 +42,12 @@
 
 static void OcspRespFree(void *data)
 {
-    HITLS_OCSP_Resp *resp = (HITLS_OCSP_Resp *)data;
-    if (resp != NULL) {
-        HITLS_OCSP_RespFree(resp);
-    }
+    SAL_CERT_OcspRespFree((HITLS_CERT_OcspResp *)data);
 }
 
 /* OCSP stapling is supported on stream TLS 1.0-1.3 connections (RFC 6066);
- * DTLS and TLCP are excluded. */
+ * DTLS and TLCP are excluded (DTLS has no such extension support, and the
+ * TLCP stream protocol does not implement OCSP stapling). */
 static bool IsStreamTlsStatusRequest(const TLS_Ctx *ctx)
 {
     if (IS_SUPPORT_DATAGRAM(ctx->config.tlsConfig.originVersionMask)) {
@@ -73,16 +66,12 @@ bool IsServerHelloStatusRequestValid(const TLS_Ctx *ctx)
     return IsStreamTlsStatusRequest(ctx) && !IS_TLS13_FAMILY_VERSION(GET_VERSION_FROM_CTX(ctx));
 }
 
-/* Invoke the client status callback with ctx-level priority over config-level. */
+/* Invoke the client status callback registered in the connection config. */
 #ifdef HITLS_TLS_HOST_CLIENT
 static int32_t InvokeOcspStatusCb(TLS_Ctx *ctx)
 {
-    HITLS_StatusCb cb = ctx->statusCb;
-    void *arg = ctx->statusCbArg;
-    if (cb == NULL) {
-        cb = ctx->config.tlsConfig.statusCb;
-        arg = ctx->config.tlsConfig.statusCbArg;
-    }
+    HITLS_StatusCb cb = ctx->config.tlsConfig.statusCb;
+    void *arg = ctx->config.tlsConfig.statusCbArg;
     if (cb == NULL) {
         return HITLS_SUCCESS;
     }
@@ -90,26 +79,32 @@ static int32_t InvokeOcspStatusCb(TLS_Ctx *ctx)
 }
 #endif /* HITLS_TLS_HOST_CLIENT */
 
-/* Invoke the server per-certificate stapling callback with ctx-level priority
- * over config-level. The callback returns one response for the given certificate
+/* Invoke the server per-certificate stapling callback registered in the
+ * connection config. The callback returns one response for the given certificate
  * through *resp. Without a callback the application did not opt into stapling,
  * so the certificate is skipped. The return value is one of
  * HITLS_STAPLING_SEND / _SKIP / _ERROR (or an invalid value to be rejected by
  * the caller). */
 #ifdef HITLS_TLS_HOST_SERVER
-static int32_t ServerStaplingCbInvoke(TLS_Ctx *ctx, HITLS_CERT_X509 *cert, uint32_t chainidx, HITLS_OCSP_Resp **resp)
+static int32_t ServerStaplingCbInvoke(TLS_Ctx *ctx, HITLS_CERT_X509 *cert, uint32_t chainidx, HITLS_CERT_OcspResp **resp)
 {
     *resp = NULL;
-    HITLS_StaplingCbPerCert cb = ctx->staplingCb;
-    void *arg = ctx->staplingCbArg;
-    if (cb == NULL) {
-        cb = ctx->config.tlsConfig.staplingCb;
-        arg = ctx->config.tlsConfig.staplingCbArg;
-    }
+    HITLS_StaplingOneCertCb cb = ctx->config.tlsConfig.staplingCb;
+    void *arg = ctx->config.tlsConfig.staplingCbArg;
     if (cb == NULL) {
         return HITLS_STAPLING_SKIP;
     }
-    return cb(ctx, cert, chainidx, resp, arg);
+    int32_t ret = cb(ctx, cert, chainidx, resp, arg);
+    if (ret != HITLS_STAPLING_SEND && ret != HITLS_STAPLING_SKIP) {
+        return ret; /* caller converts to internal_error */
+    }
+    /* A SEND without a response (or with a response that does not belong to this
+     * certificate) means nothing is stapled for this certificate: fold both into
+     * SKIP so the callers only handle SEND (matched) / SKIP (skip) / error. */
+    if (ret != HITLS_STAPLING_SEND || *resp == NULL) {
+        return HITLS_STAPLING_SKIP;
+    }
+    return SAL_CERT_OcspRespMatchCert(ctx, *resp, cert) ? HITLS_STAPLING_SEND : HITLS_STAPLING_SKIP;
 }
 #endif /* HITLS_TLS_HOST_SERVER */
 
@@ -119,10 +114,10 @@ static int32_t ServerStaplingCbInvoke(TLS_Ctx *ctx, HITLS_CERT_X509 *cert, uint3
  * with the peer certificate chain; the application can then match each response
  * to the certificate at the same depth. */
 #ifdef HITLS_TLS_HOST_CLIENT
-static int32_t StoreOcspRespToList(TLS_Ctx *ctx, HITLS_OCSP_Resp *resp, uint32_t chainidx)
+static int32_t StoreOcspRespToList(TLS_Ctx *ctx, HITLS_CERT_OcspResp *resp, uint32_t chainidx)
 {
     if (ctx->peerOcspRespList == NULL) {
-        ctx->peerOcspRespList = (HITLS_OCSP_Resp **)BSL_SAL_Calloc(chainidx + 1, sizeof(HITLS_OCSP_Resp *));
+        ctx->peerOcspRespList = (HITLS_CERT_OcspResp **)BSL_SAL_Calloc(chainidx + 1, sizeof(HITLS_CERT_OcspResp *));
         if (ctx->peerOcspRespList == NULL) {
             BSL_ERR_PUSH_ERROR(HITLS_MEMALLOC_FAIL);
             return HITLS_MEMALLOC_FAIL;
@@ -130,12 +125,12 @@ static int32_t StoreOcspRespToList(TLS_Ctx *ctx, HITLS_OCSP_Resp *resp, uint32_t
         ctx->peerOcspRespCount = chainidx + 1;
     } else if (chainidx >= ctx->peerOcspRespCount) {
         /* Grow the array so index chainidx exists; new entries default to NULL. */
-        HITLS_OCSP_Resp **grown = (HITLS_OCSP_Resp **)BSL_SAL_Calloc(chainidx + 1, sizeof(HITLS_OCSP_Resp *));
+        HITLS_CERT_OcspResp **grown = (HITLS_CERT_OcspResp **)BSL_SAL_Calloc(chainidx + 1, sizeof(HITLS_CERT_OcspResp *));
         if (grown == NULL) {
             BSL_ERR_PUSH_ERROR(HITLS_MEMALLOC_FAIL);
             return HITLS_MEMALLOC_FAIL;
         }
-        (void)memcpy(grown, ctx->peerOcspRespList, ctx->peerOcspRespCount * sizeof(HITLS_OCSP_Resp *));
+        (void)memcpy(grown, ctx->peerOcspRespList, ctx->peerOcspRespCount * sizeof(HITLS_CERT_OcspResp *));
         BSL_SAL_FREE(ctx->peerOcspRespList);
         ctx->peerOcspRespList = grown;
         ctx->peerOcspRespCount = chainidx + 1;
@@ -147,6 +142,24 @@ static int32_t StoreOcspRespToList(TLS_Ctx *ctx, HITLS_OCSP_Resp *resp, uint32_t
     }
     ctx->peerOcspRespList[chainidx] = resp;
     return HITLS_SUCCESS;
+}
+
+/* Parse a DER OCSPResponse and store it at the certificate chain depth index.
+ * Shared by the TLS 1.2 CertificateStatus and TLS 1.3 CertificateEntry paths;
+ * a malformed DER aborts with bad_certificate_status_response (RFC 6066 §8). */
+static int32_t ParseAndStoreOcspResp(TLS_Ctx *ctx, const BSL_Buffer *encode, uint32_t chainidx,
+                                     uint32_t logId, const char *logStr)
+{
+    HITLS_CERT_OcspResp *resp = NULL;
+    if (SAL_CERT_OcspRespParseBuff(ctx, encode, &resp) != HITLS_SUCCESS || resp == NULL) {
+        return ParseErrorProcess(ctx, HITLS_MSG_HANDLE_OCSP_STATUS_ERR, logId, logStr,
+                                 ALERT_BAD_CERTIFICATE_STATUS_RESPONSE);
+    }
+    int32_t ret = StoreOcspRespToList(ctx, resp, chainidx);
+    if (ret != HITLS_SUCCESS) {
+        SAL_CERT_OcspRespFree(resp);
+    }
+    return ret;
 }
 #endif /* HITLS_TLS_HOST_CLIENT */
 
@@ -260,7 +273,7 @@ int32_t ServerFetchStaplingEeResp(TLS_Ctx *ctx)
      * function runs once from ServerPostProcessClientHello after the certificate
      * was selected. */
     HITLS_CERT_X509 *eeCert = HITLS_GetCertificate(ctx);
-    HITLS_OCSP_Resp *resp = NULL;
+    HITLS_CERT_OcspResp *resp = NULL;
     int32_t cbRet = HITLS_STAPLING_SKIP;
     if (eeCert != NULL) {
         cbRet = ServerStaplingCbInvoke(ctx, eeCert, 0, &resp);
@@ -275,187 +288,35 @@ int32_t ServerFetchStaplingEeResp(TLS_Ctx *ctx)
 #endif /* HITLS_TLS_HOST_SERVER */
 
 #ifdef HITLS_TLS_HOST_SERVER
-/* Extract the serialNumber and the issuer Name (DER) from a server certificate.
- * HITLS_CERT_X509 is the TLS-adapted pki HITLS_X509_Cert (the adapt layer casts
- * it directly, see hitls_x509_cert_magr.c), so the pki CertCtrl commands are
- * used without encoding and re-parsing the certificate. The output buffers are
- * freshly allocated; the caller must free serial->data and issuerDn->data. */
-static int32_t ExtractCertSerialAndIssuerDn(HITLS_CERT_X509 *cert, BSL_Buffer *serial, BSL_Buffer *issuerDn)
-{
-    /* Serial number (shallow copy inside the cert). */
-    BSL_Buffer tmpSerial = {0};
-    int32_t ret = HITLS_X509_CertCtrl(cert, HITLS_X509_GET_SERIALNUM, &tmpSerial, sizeof(BSL_Buffer));
-    if (ret != HITLS_PKI_SUCCESS) {
-        return ret;
-    }
-    if (tmpSerial.data == NULL || tmpSerial.dataLen == 0) {
-        return HITLS_INVALID_INPUT;
-    }
-    /* Normalize the DER INTEGER serial (strip redundant leading 0x00/0xFF bytes
-     * while keeping the sign byte) to match the OCSP CertID serial encoding
-     * (RFC 6960 uses the minimal DER integer). */
-    uint8_t *serialData = tmpSerial.data;
-    uint32_t serialLen = tmpSerial.dataLen;
-    bool negative = (serialData[0] & 0x80) != 0;
-    while (serialLen > 1) {
-        if (serialData[0] == 0x00 && !negative && (serialData[1] & 0x80) == 0) {
-            serialData++;
-            serialLen--;
-        } else if (serialData[0] == 0xFF && negative && (serialData[1] & 0x80) != 0) {
-            serialData++;
-            serialLen--;
-        } else {
-            break;
-        }
-    }
-    serial->data = (uint8_t *)BSL_SAL_Dump(serialData, serialLen);
-    serial->dataLen = serialLen;
-    if (serial->data == NULL) {
-        BSL_ERR_PUSH_ERROR(HITLS_MEMALLOC_FAIL);
-        return HITLS_MEMALLOC_FAIL;
-    }
-
-    /* Issuer DN as DER (freshly allocated by the encoder; caller frees it). */
-    ret = HITLS_X509_CertCtrl(cert, HITLS_X509_GET_ENCODE_ISSUER_DN, issuerDn, sizeof(BSL_Buffer *));
-    if (ret != HITLS_PKI_SUCCESS) {
-        /* Propagate the encoder error (EncodeTemplate OOM is not pushed by the
-         * callee); the caller only treats any non-success as "not matching". */
-        BSL_SAL_FREE(serial->data);
-        BSL_ERR_PUSH_ERROR(ret);
-        return ret;
-    }
-    return HITLS_SUCCESS;
-}
-
-/* Check whether a CertID belongs to the certificate: its serialNumber must match
- * and its issuerNameHash (computed over the certificate's issuer DN with the
- * CertID hash algorithm) must match. Returns HITLS_SUCCESS on match,
- * HITLS_OCSP_ERR_CERTID_NOT_FOUND when the serial differs (this SingleResponse
- * is not for the certificate; the caller keeps looking), and a real error code
- * on failure. */
-static int32_t OcspCertIdMatchesCert(const HITLS_OCSP_CertId *certId, const BSL_Buffer *serial,
-                                     const BSL_Buffer *issuerDn)
-{
-    CRYPT_MD_AlgId hashAlg = CRYPT_MD_SHA1;
-    BSL_Buffer respIssuerHash = {0};
-    BSL_Buffer respSerial = {0};
-    int32_t ret = HITLS_OCSP_CertIdGetInfo(certId, &hashAlg, &respIssuerHash, NULL, &respSerial);
-    if (ret != HITLS_PKI_SUCCESS) {
-        return ret;
-    }
-    if (respSerial.dataLen != serial->dataLen || memcmp(respSerial.data, serial->data, serial->dataLen) != 0) {
-        return HITLS_OCSP_ERR_CERTID_NOT_FOUND;
-    }
-    /* Hash the certificate's issuer DN with the same algorithm as the CertID. */
-    CRYPT_EAL_MdCtx *md = CRYPT_EAL_MdNewCtx(hashAlg);
-    if (md == NULL) {
-        BSL_ERR_PUSH_ERROR(HITLS_MEMALLOC_FAIL);
-        return HITLS_MEMALLOC_FAIL;
-    }
-    uint8_t digest[64] = {0}; /* SHA-512 is the largest supported digest */
-    uint32_t digestLen = sizeof(digest);
-    int32_t hr = CRYPT_EAL_MdInit(md);
-    if (hr == CRYPT_SUCCESS) {
-        hr = CRYPT_EAL_MdUpdate(md, issuerDn->data, issuerDn->dataLen);
-    }
-    if (hr == CRYPT_SUCCESS) {
-        hr = CRYPT_EAL_MdFinal(md, digest, &digestLen);
-    }
-    CRYPT_EAL_MdFreeCtx(md);
-    if (hr != CRYPT_SUCCESS) {
-        return hr;
-    }
-    return (respIssuerHash.dataLen == digestLen && memcmp(respIssuerHash.data, digest, digestLen) == 0) ?
-               HITLS_SUCCESS :
-               HITLS_OCSP_ERR_CERTID_NOT_FOUND;
-}
-
-/* Basic OCSP response validation for a certificate.
- * Returns:
- *   - HITLS_SUCCESS: the response is valid for this certificate (status
- *     successful, a BasicOCSPResponse is present, and one of its SingleResponses
- *     carries a CertID matching the certificate).
- *   - HITLS_OCSP_ERR_CERTID_NOT_FOUND: the response is valid but contains no
- *     CertID matching this certificate ("no matching response" -> the caller
- *     skips stapling for this certificate and the handshake continues).
- *   - any other error code: a real failure (OOM, invalid response, encode
- *     error) that must be propagated, not silently treated as "not matching". */
-static int32_t OcspRespMatchesCert(const HITLS_OCSP_Resp *resp, HITLS_CERT_X509 *cert)
-{
-    int32_t status = -1;
-    int32_t ret =
-        HITLS_OCSP_RespCtrl((HITLS_OCSP_Resp *)(uintptr_t)resp, HITLS_OCSP_RESP_GET_STATUS, &status, sizeof(status));
-    if (ret != HITLS_PKI_SUCCESS) {
-        return ret;
-    }
-    if (status != HITLS_OCSP_RESP_STATUS_SUCCESSFUL) {
-        BSL_ERR_PUSH_ERROR(HITLS_OCSP_ERR_INVALID_STATUS);
-        return HITLS_OCSP_ERR_INVALID_STATUS;
-    }
-    HITLS_OCSP_BasicResp *bs = NULL;
-    ret = HITLS_OCSP_RespCtrl((HITLS_OCSP_Resp *)(uintptr_t)resp, HITLS_OCSP_RESP_GET_BASIC, &bs, sizeof(bs));
-    if (ret != HITLS_PKI_SUCCESS) {
-        return ret;
-    }
-    if (bs == NULL) {
-        BSL_ERR_PUSH_ERROR(HITLS_OCSP_ERR_FIELD_NOT_PRESENT);
-        return HITLS_OCSP_ERR_FIELD_NOT_PRESENT;
-    }
-    BSL_Buffer serial = {0};
-    BSL_Buffer issuerDn = {0};
-    ret = ExtractCertSerialAndIssuerDn(cert, &serial, &issuerDn);
-    if (ret != HITLS_SUCCESS) {
-        return ret;
-    }
-    uint32_t count = 0;
-    ret = HITLS_OCSP_BasicRespGetRespCount(bs, &count);
-    if (ret != HITLS_PKI_SUCCESS) {
-        BSL_SAL_FREE(serial.data);
-        BSL_SAL_FREE(issuerDn.data);
-        return ret;
-    }
-    int32_t result = HITLS_OCSP_ERR_CERTID_NOT_FOUND;
-    for (uint32_t i = 0; i < count; i++) {
-        HITLS_OCSP_SingleResp *single = NULL;
-        ret = HITLS_OCSP_BasicRespGetRespByIndex(bs, i, &single);
-        if (ret != HITLS_PKI_SUCCESS) {
-            result = ret;
-            goto EXIT;
-        }
-        if (single == NULL) {
-            result = HITLS_OCSP_ERR_FIELD_NOT_PRESENT;
-            goto EXIT;
-        }
-        HITLS_OCSP_CertId *certId = NULL;
-        ret = HITLS_OCSP_SingleRespCtrl(single, HITLS_OCSP_SINGLERESP_GET_CERTID, &certId, sizeof(certId));
-        if (ret != HITLS_PKI_SUCCESS) {
-            result = ret;
-            goto EXIT;
-        }
-        if (certId == NULL) {
-            result = HITLS_OCSP_ERR_FIELD_NOT_PRESENT;
-            goto EXIT;
-        }
-        ret = OcspCertIdMatchesCert(certId, &serial, &issuerDn);
-        if (ret == HITLS_SUCCESS) {
-            result = HITLS_SUCCESS;
-            break;
-        }
-        if (ret != HITLS_OCSP_ERR_CERTID_NOT_FOUND) {
-            result = ret;
-            goto EXIT;
-        }
-        /* CERTID_NOT_FOUND: this SingleResponse is for another certificate;
-         * keep looking at the remaining ones. */
-    }
-EXIT:
-    BSL_SAL_FREE(serial.data);
-    BSL_SAL_FREE(issuerDn.data);
-    return result;
-}
 #endif /* HITLS_TLS_HOST_SERVER */
 
 #ifdef HITLS_TLS_HOST_SERVER
+/* Append the OCSP response body shared by the TLS 1.2 CertificateStatus message
+ * and the TLS 1.3 CertificateEntry extension: status_type(1) + 24-bit length(3)
+ * + the OCSP response DER. Frees der->data; on failure the caller's packet is
+ * left in a partial state (the handshake aborts). */
+static int32_t PackOcspRespBody(PackPacket *pkt, BSL_Buffer *der)
+{
+    int32_t ret = PackAppendUint8ToBuf(pkt, HITLS_STATUS_REQUEST_TYPE_OCSP);
+    if (ret != HITLS_SUCCESS) {
+        BSL_SAL_FREE(der->data);
+        return ret;
+    }
+    uint32_t lenPos = 0;
+    ret = PackStartLengthField(pkt, UINT24_SIZE, &lenPos);
+    if (ret != HITLS_SUCCESS) {
+        BSL_SAL_FREE(der->data);
+        return ret;
+    }
+    ret = PackAppendDataToBuf(pkt, der->data, der->dataLen);
+    BSL_SAL_FREE(der->data);
+    if (ret != HITLS_SUCCESS) {
+        return ret;
+    }
+    PackCloseUint24Field(pkt, lenPos);
+    return HITLS_SUCCESS;
+}
+
 /* Build the CertificateStatus message body (stream TLS up to 1.2). This is
  * reached only through the state machine: the server enters
  * TRY_SEND_CERTIFICATE_STATUS only when ServerNeedSendCertificateStatus
@@ -473,8 +334,8 @@ int32_t PackCertificateStatus(const TLS_Ctx *ctx, PackPacket *pkt)
         return HITLS_INVALID_INPUT;
     }
     BSL_Buffer buff = {0};
-    int32_t ret = HITLS_OCSP_RespGenBuff(BSL_FORMAT_ASN1, ctx->staplingResp, &buff);
-    if (ret != HITLS_PKI_SUCCESS) {
+    int32_t ret = SAL_CERT_OcspRespGenBuff(ctx->staplingResp, &buff);
+    if (ret != HITLS_SUCCESS) {
         return ret;
     }
     if (buff.dataLen > 0xFFFFFFu) {
@@ -483,37 +344,12 @@ int32_t PackCertificateStatus(const TLS_Ctx *ctx, PackPacket *pkt)
         return HITLS_INVALID_INPUT;
     }
     /* Message body: status_type(1) + response length(3) + OCSP response DER. */
-    ret = PackAppendUint8ToBuf(pkt, HITLS_STATUS_REQUEST_TYPE_OCSP);
-    if (ret != HITLS_SUCCESS) {
-        BSL_SAL_FREE(buff.data);
-        return ret;
-    }
-    uint32_t lenPos = 0;
-    ret = PackStartLengthField(pkt, UINT24_SIZE, &lenPos);
-    if (ret != HITLS_SUCCESS) {
-        BSL_SAL_FREE(buff.data);
-        return ret;
-    }
-    ret = PackAppendDataToBuf(pkt, buff.data, buff.dataLen);
-    BSL_SAL_FREE(buff.data);
-    if (ret != HITLS_SUCCESS) {
-        return ret;
-    }
-    PackCloseUint24Field(pkt, lenPos);
-    return HITLS_SUCCESS;
+    return PackOcspRespBody(pkt, &buff);
 }
 #endif /* HITLS_TLS_HOST_SERVER */
 
 /* TLS 1.2 client: transition to the state following the CertificateStatus message. */
 #ifdef HITLS_TLS_HOST_CLIENT
-static int32_t ClientTransitAfterCertificateStatus(TLS_Ctx *ctx)
-{
-    if (IsNeedServerKeyExchange(ctx)) {
-        return HS_ChangeState(ctx, TRY_RECV_SERVER_KEY_EXCHANGE);
-    }
-    return HS_ChangeState(ctx, TRY_RECV_CERTIFICATE_REQUEST);
-}
-
 int32_t ClientRecvCertificateStatus(TLS_Ctx *ctx, const HS_Msg *hsMsg)
 {
     const CertificateStatusMsg *msg = &hsMsg->body.certificateStatus;
@@ -535,18 +371,17 @@ int32_t ClientRecvCertificateStatus(TLS_Ctx *ctx, const HS_Msg *hsMsg)
     /* The peer response must be a parseable OCSPResponse; a malformed DER is an
      * unsatisfactory response and aborts the handshake. */
     BSL_Buffer encode = {(uint8_t *)msg->response, msg->responseLen};
-    HITLS_OCSP_Resp *resp = NULL;
-    if (HITLS_OCSP_RespParseBuff(BSL_FORMAT_ASN1, &encode, &resp) != HITLS_PKI_SUCCESS || resp == NULL) {
-        return ParseErrorProcess(ctx, HITLS_MSG_HANDLE_OCSP_STATUS_ERR, BINLOG_ID17427,
-                                 BINGLOG_STR("certificate status response cannot be parsed"),
-                                 ALERT_BAD_CERTIFICATE_STATUS_RESPONSE);
-    }
-    int32_t ret = StoreOcspRespToList(ctx, resp, 0);
+    int32_t ret = ParseAndStoreOcspResp(ctx, &encode, 0, BINLOG_ID17427,
+                                        BINGLOG_STR("certificate status response cannot be parsed"));
     if (ret != HITLS_SUCCESS) {
-        HITLS_OCSP_RespFree(resp);
         return ret;
     }
-    return ClientTransitAfterCertificateStatus(ctx);
+    /* CertificateStatus comes right before ServerKeyExchange (DHE) or
+     * CertificateRequest (RSA/ECDH); move on to the next expected message. */
+    if (IsNeedServerKeyExchange(ctx)) {
+        return HS_ChangeState(ctx, TRY_RECV_SERVER_KEY_EXCHANGE);
+    }
+    return HS_ChangeState(ctx, TRY_RECV_CERTIFICATE_REQUEST);
 }
 #endif /* HITLS_TLS_HOST_CLIENT */
 
@@ -613,7 +448,10 @@ int32_t ParseCertEntryOcspStatus(TLS_Ctx *ctx, const uint8_t *buf, uint32_t bufL
                                  BINGLOG_STR("certificate entry OCSP response is empty"),
                                  ALERT_BAD_CERTIFICATE_STATUS_RESPONSE);
     }
-    if (respLen > (bufLen - (sizeof(uint8_t) + UINT24_SIZE))) {
+    /* RFC 8446 section 4.4.2.1: the extension is exactly status_type(1) +
+     * response length(3) + the OCSPResponse DER; a length mismatch (trailing
+     * bytes after the response, or a length larger than the body) is malformed. */
+    if (respLen != (bufLen - (sizeof(uint8_t) + UINT24_SIZE))) {
         return ParseErrorProcess(ctx, HITLS_PARSE_INVALID_MSG_LEN, BINLOG_ID17431,
                                  BINGLOG_STR("certificate entry OCSP response length is incorrect"),
                                  ALERT_DECODE_ERROR);
@@ -621,17 +459,8 @@ int32_t ParseCertEntryOcspStatus(TLS_Ctx *ctx, const uint8_t *buf, uint32_t bufL
     /* The entry response must be a parseable OCSPResponse; a malformed DER is an
      * unsatisfactory response and aborts the handshake. */
     BSL_Buffer encode = {(uint8_t *)(uintptr_t)&buf[sizeof(uint8_t) + UINT24_SIZE], respLen};
-    HITLS_OCSP_Resp *resp = NULL;
-    if (HITLS_OCSP_RespParseBuff(BSL_FORMAT_ASN1, &encode, &resp) != HITLS_PKI_SUCCESS || resp == NULL) {
-        return ParseErrorProcess(ctx, HITLS_MSG_HANDLE_OCSP_STATUS_ERR, BINLOG_ID17432,
-                                 BINGLOG_STR("certificate entry OCSP response cannot be parsed"),
-                                 ALERT_BAD_CERTIFICATE_STATUS_RESPONSE);
-    }
-    int32_t ret = StoreOcspRespToList(ctx, resp, chainidx);
-    if (ret != HITLS_SUCCESS) {
-        HITLS_OCSP_RespFree(resp);
-    }
-    return ret;
+    return ParseAndStoreOcspResp(ctx, &encode, chainidx, BINLOG_ID17432,
+                                 BINGLOG_STR("certificate entry OCSP response cannot be parsed"));
 }
 #endif /* HITLS_TLS_HOST_CLIENT */
 
@@ -651,60 +480,36 @@ int32_t PackCertEntryOcspStatus(TLS_Ctx *ctx, HITLS_CERT_X509 *cert, PackPacket 
     /* The per-certificate callback returns the response for this certificate.
      * SEND with a response staples it; SKIP / no response skips this
      * certificate; an invalid return aborts with internal_error. */
-    HITLS_OCSP_Resp *resp = NULL;
+    HITLS_CERT_OcspResp *resp = NULL;
     int32_t cbRet = ServerStaplingCbInvoke(ctx, cert, chainidx, &resp);
     if (cbRet != HITLS_STAPLING_SEND && cbRet != HITLS_STAPLING_SKIP) {
         return ParseErrorProcess(ctx, HITLS_INTERNAL_EXCEPTION, 0, NULL, ALERT_INTERNAL_ERROR);
     }
+    /* ServerStaplingCbInvoke already folded "no response" and "no matching
+     * CertID" into SKIP, so a SEND result carries a valid matched response. */
     if (cbRet != HITLS_STAPLING_SEND || resp == NULL) {
         return HITLS_SUCCESS;
     }
-    /* Only staple a response that matches this certificate. "No matching CertID"
-     * skips stapling for this certificate; real failures are propagated. */
-    int32_t matchRet = OcspRespMatchesCert(resp, cert);
-    if (matchRet != HITLS_SUCCESS) {
-        if (matchRet == HITLS_OCSP_ERR_CERTID_NOT_FOUND) {
-            return HITLS_SUCCESS;
-        }
-        return matchRet;
-    }
     BSL_Buffer buff = {0};
-    ret = HITLS_OCSP_RespGenBuff(BSL_FORMAT_ASN1, resp, &buff);
-    if (ret != HITLS_PKI_SUCCESS) {
+    ret = SAL_CERT_OcspRespGenBuff(resp, &buff);
+    if (ret != HITLS_SUCCESS) {
         return ret;
     }
     /* The TLS 1.3 CertificateEntry extension length field is a uint16; a
      * response too large to fit is a configuration error and aborts the
-     * handshake (matching OpenSSL). Only "no matching response" is skipped. */
+     * handshake. Only "no matching response" is skipped. */
     if (buff.dataLen > (uint32_t)(UINT16_MAX - sizeof(uint8_t) - UINT24_SIZE)) {
         BSL_SAL_FREE(buff.data);
         BSL_ERR_PUSH_ERROR(HITLS_INVALID_INPUT);
         return HITLS_INVALID_INPUT;
     }
-    /* Extension body: status_type(1) + response length(3) + OCSP response DER. */
+    /* Extension header, then the shared status_type + length(3) + DER body. */
     ret = PackExtensionHeader(HS_EX_TYPE_STATUS_REQUEST, sizeof(uint8_t) + UINT24_SIZE + buff.dataLen, pkt);
     if (ret != HITLS_SUCCESS) {
         BSL_SAL_FREE(buff.data);
         return ret;
     }
-    ret = PackAppendUint8ToBuf(pkt, HITLS_STATUS_REQUEST_TYPE_OCSP);
-    if (ret != HITLS_SUCCESS) {
-        BSL_SAL_FREE(buff.data);
-        return ret;
-    }
-    uint32_t lenPos = 0;
-    ret = PackStartLengthField(pkt, UINT24_SIZE, &lenPos);
-    if (ret != HITLS_SUCCESS) {
-        BSL_SAL_FREE(buff.data);
-        return ret;
-    }
-    ret = PackAppendDataToBuf(pkt, buff.data, buff.dataLen);
-    BSL_SAL_FREE(buff.data);
-    if (ret != HITLS_SUCCESS) {
-        return ret;
-    }
-    PackCloseUint24Field(pkt, lenPos);
-    return HITLS_SUCCESS;
+    return PackOcspRespBody(pkt, &buff);
 }
 #endif /* HITLS_TLS_HOST_SERVER */
 
@@ -757,10 +562,10 @@ void CleanOcspStapling(TLS_Ctx *ctx)
 /* Reports whether the server will send a CertificateStatus message (stream TLS
  * up to 1.2). TLS 1.3 embeds OCSP responses into CertificateEntry extensions
  * instead and is excluded here; that path is handled by PackCertEntryOcspStatus.
- * The EE response was already fetched by ServerFetchStaplingEeResp (after the
- * certificate was selected); it must exist and match the EE certificate
- * (status + CertID), otherwise nothing is sent. Real failures from the match
- * check are propagated, not folded into a silent skip.
+ * The EE response was already fetched and validated against the EE certificate
+ * by ServerFetchStaplingEeResp (via ServerStaplingCbInvoke, which folds "no
+ * response" and "no matching CertID" into SKIP); a SEND staplingResult means a
+ * matched response is ready.
  *
  * The match outcome is folded into ctx->staplingResult so that the TLS 1.2
  * send_certificate state transition can reuse it instead of re-running the
@@ -768,11 +573,10 @@ void CleanOcspStapling(TLS_Ctx *ctx)
  * This function is invoked once per handshake (during ServerHello packing).
  * The TLS 1.3 branch must leave staplingResult untouched: it answers through
  * PackCertEntryOcspStatus. */
-int32_t ServerNeedSendCertificateStatus(const TLS_Ctx *ctx, bool *needSend)
+bool ServerNeedSendCertificateStatus(const TLS_Ctx *ctx)
 {
-    *needSend = false;
     if (IS_TLS13_FAMILY_CTX(ctx)) {
-        return HITLS_SUCCESS;
+        return false;
     }
 #ifdef HITLS_TLS_FEATURE_SESSION
     /* An abbreviated handshake (session resumption) does not send a Certificate
@@ -790,23 +594,16 @@ int32_t ServerNeedSendCertificateStatus(const TLS_Ctx *ctx, bool *needSend)
     if (eeCert == NULL) {
         goto OCSP_NOT_SENT;
     }
-    int32_t matchRet = OcspRespMatchesCert(ctx->staplingResp, eeCert);
-    if (matchRet == HITLS_SUCCESS) {
-        /* Match: keep staplingResult SEND; send_certificate reuses it so the
-         * validity check runs only once per handshake (during ServerHello packing). */
-        *needSend = true;
-        return HITLS_SUCCESS;
-    }
-    if (matchRet == HITLS_OCSP_ERR_CERTID_NOT_FOUND) {
-        goto OCSP_NOT_SENT;
-    }
-    return matchRet;
+    /* The callback response is already validated against the certificate by
+     * ServerStaplingCbInvoke (ServerFetchStaplingEeResp); a SEND result means
+     * the response matches, so nothing to re-check here. */
+    return true;
 OCSP_NOT_SENT:
     /* No CertificateStatus will be sent: fold the decision into staplingResult
      * (SKIP) so send_certificate does not reuse the callback-time SEND and
      * wrongly enter the send state. */
     ((TLS_Ctx *)(uintptr_t)ctx)->staplingResult = HITLS_STAPLING_SKIP;
-    return HITLS_SUCCESS;
+    return false;
 }
 #endif /* HITLS_TLS_HOST_SERVER */
 #endif /* HITLS_TLS_FEATURE_STATUS_REQUEST */

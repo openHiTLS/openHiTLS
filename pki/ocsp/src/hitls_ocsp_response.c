@@ -388,6 +388,13 @@ static int32_t OcspSingleRespSetCtrl(HITLS_OCSP_SingleResp_Internal *internal, i
         BSL_ERR_PUSH_ERROR(HITLS_OCSP_ERR_NULL_POINTER);
         return HITLS_OCSP_ERR_NULL_POINTER;
     }
+    /* A SingleResp that is part of a signed BasicResp or was parsed from DER is
+     * covered by the response signature; mutating it after the fact would make
+     * the in-memory state diverge from the signed data (RFC 6960 §3.2). */
+    if (internal->frozen) {
+        BSL_ERR_PUSH_ERROR(HITLS_OCSP_ERR_ALREADY_SIGNED);
+        return HITLS_OCSP_ERR_ALREADY_SIGNED;
+    }
     switch (cmd) {
         case HITLS_OCSP_SINGLERESP_SET_NEXT_UPDATE:
             if (valLen < sizeof(BSL_TIME)) {
@@ -402,6 +409,12 @@ static int32_t OcspSingleRespSetCtrl(HITLS_OCSP_SingleResp_Internal *internal, i
             internal->hasNextUpdate = true;
             return HITLS_PKI_SUCCESS;
         case HITLS_OCSP_SINGLERESP_SET_REVOCATION_TIME:
+            /* RFC 6960 §3.2: revocationTime only exists in the RevokedInfo of a
+             * revoked certStatus; reject it for GOOD/UNKNOWN responses. */
+            if (internal->certStatus != HITLS_OCSP_CERT_STATUS_REVOKED) {
+                BSL_ERR_PUSH_ERROR(HITLS_OCSP_ERR_INVALID_PARAM);
+                return HITLS_OCSP_ERR_INVALID_PARAM;
+            }
             if (valLen < sizeof(BSL_TIME)) {
                 BSL_ERR_PUSH_ERROR(HITLS_OCSP_ERR_INVALID_PARAM);
                 return HITLS_OCSP_ERR_INVALID_PARAM;
@@ -410,6 +423,12 @@ static int32_t OcspSingleRespSetCtrl(HITLS_OCSP_SingleResp_Internal *internal, i
             internal->hasRevocationTime = true;
             return HITLS_PKI_SUCCESS;
         case HITLS_OCSP_SINGLERESP_SET_REVOCATION_REASON: {
+            /* RFC 6960 §3.2: revocationReason only exists in the RevokedInfo of a
+             * revoked certStatus; reject it for GOOD/UNKNOWN responses. */
+            if (internal->certStatus != HITLS_OCSP_CERT_STATUS_REVOKED) {
+                BSL_ERR_PUSH_ERROR(HITLS_OCSP_ERR_INVALID_PARAM);
+                return HITLS_OCSP_ERR_INVALID_PARAM;
+            }
             if (valLen < sizeof(int32_t)) {
                 BSL_ERR_PUSH_ERROR(HITLS_OCSP_ERR_INVALID_PARAM);
                 return HITLS_OCSP_ERR_INVALID_PARAM;
@@ -1057,6 +1076,17 @@ int32_t HITLS_OCSP_BasicRespSign(int32_t mdId, const CRYPT_EAL_PkeyCtx *prvKey, 
         goto EXIT;
     }
     internal->isSigned = true;
+    /* Freeze every SingleResp: their fields are now covered by the response
+     * signature, so later mutation would desynchronize them from the signed
+     * ResponseData (RFC 6960 §3.2). */
+    BslListNode *node = BSL_LIST_FirstNode(internal->responses);
+    while (node != NULL) {
+        HITLS_OCSP_SingleResp_Internal *single = (HITLS_OCSP_SingleResp_Internal *)BSL_LIST_GetData(node);
+        if (single != NULL) {
+            single->frozen = true;
+        }
+        node = BSL_LIST_GetNextNode(internal->responses, node);
+    }
     return HITLS_PKI_SUCCESS;
 
 EXIT:
@@ -1324,7 +1354,7 @@ static int32_t OcspMatchIssuerId(const HITLS_X509_Cert *cert,
 
     uint8_t nameHash[64] = {0};
     uint32_t nameHashLen = sizeof(nameHash);
-    int32_t ret = OcspGetIssuerNameHash(mdCtx, cert, nameHash, &nameHashLen);
+    int32_t ret = OcspGetNameHash(mdCtx, cert, HITLS_X509_GET_ENCODE_SUBJECT_DN, nameHash, &nameHashLen);
     if (ret != HITLS_PKI_SUCCESS) {
         CRYPT_EAL_MdFreeCtx(mdCtx);
         return ret;
@@ -1415,6 +1445,23 @@ static int32_t OcspCheckDelegated(HITLS_X509_Cert *signer)
     if (!found) {
         BSL_ERR_PUSH_ERROR(HITLS_OCSP_ERR_NO_OCSPSIGNING_EXKUSAGE);
         return HITLS_OCSP_ERR_NO_OCSPSIGNING_EXKUSAGE;
+    }
+
+    /* RFC 5280 §4.2.1.12: KeyUsage and Extended KeyUsage must both be satisfied
+     * for the certificate's actual use. A delegated responder signs responses,
+     * so a present KeyUsage must permit digitalSignature; an absent KeyUsage
+     * (HITLS_X509_ERR_KU_IS_NONE) imposes no restriction. */
+    uint32_t keyUsage = 0;
+    ret = HITLS_X509_CertCtrl(signer, HITLS_X509_EXT_GET_KUSAGE, &keyUsage, sizeof(keyUsage));
+    if (ret == HITLS_X509_ERR_KU_IS_NONE) {
+        return HITLS_PKI_SUCCESS;
+    }
+    if (ret != HITLS_PKI_SUCCESS) {
+        return ret; /* internal error, already pushed by the callee */
+    }
+    if ((keyUsage & HITLS_X509_EXT_KU_DIGITAL_SIGN) == 0) {
+        BSL_ERR_PUSH_ERROR(HITLS_OCSP_ERR_NO_SIGN_KEYUSAGE);
+        return HITLS_OCSP_ERR_NO_SIGN_KEYUSAGE;
     }
     return HITLS_PKI_SUCCESS;
 }
@@ -2005,6 +2052,9 @@ static int32_t OcspParseSingleRespFields(const BSL_ASN1_Buffer *asns, HITLS_OCSP
         return BSL_MALLOC_FAIL;
     }
     sr->certId = (HITLS_OCSP_CertId *)certId;
+    /* Parsed from DER: the fields are covered by the response signature and must
+     * stay immutable (see OcspSingleRespSetCtrl). */
+    sr->frozen = true;
 
     ret = OcspParseCertStatus(&asns[SINGLE_RESP_DEC_CERT_STATUS_IDX], sr);
     if (ret != HITLS_PKI_SUCCESS) {
@@ -2158,6 +2208,16 @@ static int32_t OcspParseResponseData(const BSL_ASN1_Buffer *tbsContent, HITLS_OC
         BSL_ERR_PUSH_ERROR(HITLS_OCSP_ERR_INVALID_RESPONSE);
         return HITLS_OCSP_ERR_INVALID_RESPONSE;
     }
+    /* RFC 6960 §4.2.1: ResponseData version is DEFAULT v1 and only v1 is defined;
+     * reject any present non-v1 version like the request decoder does. */
+    if (asns[RESP_DATA_DEC_VERSION_IDX].tag != 0) {
+        const uint8_t *vp = asns[RESP_DATA_DEC_VERSION_IDX].buff;
+        uint32_t vl = asns[RESP_DATA_DEC_VERSION_IDX].len;
+        if (vl != 1 || vp == NULL || *vp != 0) {
+            BSL_ERR_PUSH_ERROR(HITLS_OCSP_ERR_INVALID_VERSION);
+            return HITLS_OCSP_ERR_INVALID_VERSION;
+        }
+    }
 
     ret = OcspParseResponderID(&asns[RESP_DATA_DEC_RESPONDER_ID_IDX], internal);
     if (ret != BSL_SUCCESS) {
@@ -2181,6 +2241,12 @@ static int32_t OcspParseResponseData(const BSL_ASN1_Buffer *tbsContent, HITLS_OC
     if (BSL_LIST_COUNT(internal->responses) == 0) {
         BSL_ERR_PUSH_ERROR(HITLS_OCSP_ERR_EMPTY_RESPONSE);
         return HITLS_OCSP_ERR_EMPTY_RESPONSE;
+    }
+    /* Cap the parsed count like the encode-side ADD_SINGLERESP ctrl, so an
+     * attacker-controlled response cannot force unbounded allocation. */
+    if (BSL_LIST_COUNT(internal->responses) > HITLS_OCSP_MAX_SINGLE_RESP) {
+        BSL_ERR_PUSH_ERROR(HITLS_OCSP_ERR_TOO_MANY);
+        return HITLS_OCSP_ERR_TOO_MANY;
     }
     if (asns[RESP_DATA_DEC_EXTENSIONS_IDX].tag != 0) {
         ret = OcspDecodeExt(&asns[RESP_DATA_DEC_EXTENSIONS_IDX], &internal->ext);

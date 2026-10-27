@@ -20,8 +20,8 @@
  *
  * The mechanism-level interfaces (status request type, status/stapling callbacks)
  * are status-type agnostic. The OCSP data interfaces (OCSP response list set/get)
- * operate on HITLS_OCSP_Resp objects, which is the only status type defined by
- * RFC 6066.
+ * operate on HITLS_CERT_OcspResp opaque handles, which is the only status type
+ * defined by RFC 6066.
  */
 
 #ifndef HITLS_STATUS_REQUEST_H
@@ -30,10 +30,6 @@
 #include <stdint.h>
 #include "hitls_type.h"
 #include "hitls_cert_type.h"
-/* OCSP responses are referenced by pointer only in this header; the complete
- * type is defined in include/pki/hitls_pki_ocsp.h and remains opaque here so
- * this TLS header does not pull in the pki headers. */
-typedef struct Resp_St HITLS_OCSP_Resp;
 
 #ifdef __cplusplus
 extern "C" {
@@ -46,15 +42,11 @@ extern "C" {
 #define HITLS_STATUS_REQUEST_TYPE_DISABLE (-1)
 
 /* Client status callback (HITLS_StatusCb) return values. */
-#define HITLS_STATUS_OK 0 /* The stapled response is satisfactory; continue the handshake. */
-#define HITLS_STATUS_REJECT \
-    1 /* The response failed to parse or the certificate is revoked. The library
-                                    aborts with the fatal bad_certificate_status_response alert. */
-#define HITLS_STATUS_ERROR \
-    2 /* Internal error (e.g., memory allocation failure). The library aborts with
-                                    the fatal internal_error alert. */
+#define HITLS_STATUS_OK      0 /* The response is satisfactory; continue the handshake. */
+#define HITLS_STATUS_REJECT  1 /* The response failed to parse or the certificate is revoked (fatal alert). */
+#define HITLS_STATUS_ERROR   2 /* An internal error occurred (fatal alert). */
 
-/* Server per-certificate stapling callback (HITLS_StaplingCbPerCert) return values. */
+/* Server per-certificate stapling callback (HITLS_StaplingOneCertCb) return values. */
 #define HITLS_STAPLING_SEND  1 /* Send the status (acknowledge and send CertificateStatus / embed). */
 #define HITLS_STAPLING_SKIP  0 /* Do not send the status; the handshake continues without stapling. */
 #define HITLS_STAPLING_ERROR 2 /* Internal error; the handshake is aborted with the fatal internal_error alert. */
@@ -95,8 +87,8 @@ typedef int32_t (*HITLS_StatusCb)(HITLS_Ctx *ctx, void *arg);
  * @retval HITLS_STAPLING_SKIP, do not staple this certificate; the handshake continues.
  * @retval HITLS_STAPLING_ERROR, an internal error occurred; the handshake is aborted.
  */
-typedef int32_t (*HITLS_StaplingCbPerCert)(HITLS_Ctx *ctx, const HITLS_CERT_X509 *cert, uint32_t chainidx,
-                                           HITLS_OCSP_Resp **outResp, void *arg);
+typedef int32_t (*HITLS_StaplingOneCertCb)(HITLS_Ctx *ctx, const HITLS_CERT_X509 *cert, uint32_t chainidx,
+                                           HITLS_CERT_OcspResp **outResp, void *arg);
 
 /**
  * @ingroup hitls_status_request
@@ -127,9 +119,10 @@ int32_t HITLS_CFG_SetStatusCb(HITLS_Config *config, HITLS_StatusCb cb, void *arg
 
 /**
  * @ingroup hitls_status_request
- * @brief Register a client certificate status notification callback at the ctx
- *        level. The ctx-level callback takes priority over the config-level
- *        callback.
+ * @brief Register a client certificate status notification callback for a
+ *        connection. The callback is stored in the connection's config copy
+ *        (the same storage as HITLS_CFG_SetStatusCb); a later registration
+ *        overwrites the earlier one.
  *
  * @param ctx [IN] TLS connection handle
  * @param cb  [IN] Client status callback
@@ -150,13 +143,14 @@ int32_t HITLS_SetStatusCb(HITLS_Ctx *ctx, HITLS_StatusCb cb, void *arg);
  * @retval HITLS_SUCCESS, success.
  * @retval HITLS_NULL_INPUT, config is NULL.
  */
-int32_t HITLS_CFG_SetStaplingCbPerCert(HITLS_Config *config, HITLS_StaplingCbPerCert cb, void *arg);
+int32_t HITLS_CFG_SetStaplingOneCertCb(HITLS_Config *config, HITLS_StaplingOneCertCb cb, void *arg);
 
 /**
  * @ingroup hitls_status_request
- * @brief Register a server per-certificate stapling callback at the ctx
- *        level. The ctx-level callback takes priority over the config-level
- *        callback.
+ * @brief Register a server per-certificate stapling callback for a
+ *        connection. The callback is stored in the connection's config copy
+ *        (the same storage as HITLS_CFG_SetStaplingOneCertCb); a later
+ *        registration overwrites the earlier one.
  *
  * @param ctx [IN] TLS connection handle
  * @param cb  [IN] Server per-certificate stapling callback
@@ -164,26 +158,30 @@ int32_t HITLS_CFG_SetStaplingCbPerCert(HITLS_Config *config, HITLS_StaplingCbPer
  * @retval HITLS_SUCCESS, success.
  * @retval HITLS_NULL_INPUT, ctx is NULL.
  */
-int32_t HITLS_SetStaplingCbPerCert(HITLS_Ctx *ctx, HITLS_StaplingCbPerCert cb, void *arg);
+int32_t HITLS_SetStaplingOneCertCb(HITLS_Ctx *ctx, HITLS_StaplingOneCertCb cb, void *arg);
 
 /**
  * @ingroup hitls_status_request
  * @brief Obtain the OCSP responses stapled by the peer.
  *        TLS 1.2 returns one entry; TLS 1.3 returns one entry per certificate
  *        (chainidx 0 is the EE certificate). The returned array is a borrowed
- *        reference owned by the ctx and is only valid until the handshake (or
- *        the ctx) is torn down; the application must not free it. Each element
- *        is a parsed HITLS_OCSP_Resp; a NULL element means the certificate at
- *        that chain index carried no status_request extension.
+ *        reference owned by the ctx and is only valid while the handshake is in
+ *        progress; once the handshake completes the stapling state is released,
+ *        so a call after the handshake returns *list = NULL and *count = 0.
+ *        The application must not free the array. Each element
+ *        is a parsed HITLS_CERT_OcspResp (an opaque handle; cast to the pki
+ *        HITLS_OCSP_Resp when the application uses the pki module); a NULL element
+ *        means the certificate at that chain index carried no status_request
+ *        extension.
  *
  * @param ctx   [IN] TLS connection handle
- * @param list  [OUT] Peer OCSP response array (HITLS_OCSP_Resp * entries);
+ * @param list  [OUT] Peer OCSP response array (HITLS_CERT_OcspResp * entries);
  *                    *list is NULL and *count is 0 when the peer sent no response
  * @param count [OUT] Number of entries in the array
  * @retval HITLS_SUCCESS, success.
  * @retval HITLS_NULL_INPUT, ctx, list or count is NULL.
  */
-int32_t HITLS_GetPeerOcspResponseList(const HITLS_Ctx *ctx, HITLS_OCSP_Resp ***list, uint32_t *count);
+int32_t HITLS_GetPeerOcspResponseList(const HITLS_Ctx *ctx, HITLS_CERT_OcspResp ***list, uint32_t *count);
 
 #ifdef __cplusplus
 }

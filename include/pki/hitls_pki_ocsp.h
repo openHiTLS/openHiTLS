@@ -208,7 +208,7 @@ typedef int32_t HITLS_OCSP_NonceStatus;
  * @retval HITLS_OCSP_CertId * on success, NULL on failure.
  */
 HITLS_OCSP_CertId *HITLS_OCSP_CertIdNewFromCert(CRYPT_EAL_MdCtx *mdCtx, const HITLS_X509_Cert *cert,
-                                                 const HITLS_X509_Cert *issuer);
+                                                const HITLS_X509_Cert *issuer);
 
 /**
  * @ingroup hitls_pki_ocsp
@@ -459,7 +459,7 @@ int32_t HITLS_OCSP_ReqGetSingleReqCount(const HITLS_OCSP_Req *req, uint32_t *cou
  *         Error codes can be found in hitls_pki_errno.h
  */
 int32_t HITLS_OCSP_ReqGetSingleReqByIndex(const HITLS_OCSP_Req *req, uint32_t index,
-                                           HITLS_OCSP_SingleReq **singleReq);
+                                          HITLS_OCSP_SingleReq **singleReq);
 
 /* ===== Response: SingleResp ===== */
 
@@ -475,8 +475,8 @@ int32_t HITLS_OCSP_ReqGetSingleReqByIndex(const HITLS_OCSP_Req *req, uint32_t in
  * @retval HITLS_OCSP_SingleResp * on success, NULL on failure.
  */
 HITLS_OCSP_SingleResp *HITLS_OCSP_SingleRespNew(HITLS_OCSP_CertId *certId,
-                                                 HITLS_OCSP_CertStatus certStatus,
-                                                 const BSL_TIME *thisUpdate);
+                                                HITLS_OCSP_CertStatus certStatus,
+                                                const BSL_TIME *thisUpdate);
 
 /**
  * @ingroup hitls_pki_ocsp
@@ -608,7 +608,7 @@ int32_t HITLS_OCSP_BasicRespGetRespCount(const HITLS_OCSP_BasicResp *bs, uint32_
  *         Error codes can be found in hitls_pki_errno.h
  */
 int32_t HITLS_OCSP_BasicRespGetRespByIndex(const HITLS_OCSP_BasicResp *bs, uint32_t index,
-                                            HITLS_OCSP_SingleResp **single);
+                                           HITLS_OCSP_SingleResp **single);
 
 /**
  * @ingroup hitls_pki_ocsp
@@ -749,7 +749,8 @@ const char *HITLS_OCSP_RespStatusToStr(HITLS_OCSP_RespStatus status);
  *         carries no usable OCSP access-location URI (no AIA, or none of the AIA descriptions
  *         holds an id-ad-ocsp accessMethod with a URI GeneralName).
  *         Error codes can be found in hitls_pki_errno.h
- * @note Caller must free each BSL_Buffer.data and then free the list.
+ * @note Caller owns the result: free each element (BSL_Buffer) and its data, then the list.
+ *       The list stores BSL_Buffer*, so BSL_LIST_GetData returns a BSL_Buffer**.
  */
 int32_t HITLS_OCSP_GetCertOcspUrls(const HITLS_X509_Cert *cert, BslList **urls);
 

@@ -141,6 +141,15 @@ bool GetExtensionFlagValue(TLS_Ctx *ctx, uint32_t hsExTypeId);
 int32_t CheckForDuplicateExtension(ParsePacket *pkt, uint16_t *extMsgType, uint32_t *extMsgLen,
     uint32_t *extensionId, uint64_t extensionTypeMask);
 
+#ifdef HITLS_TLS_FEATURE_STATUS_REQUEST
+/* Client: parse the empty status_request acknowledgment in the ServerHello
+ * (stream TLS up to 1.2; TLS 1.3 answers in CertificateEntry instead). */
+int32_t ParseServerStatusRequest(ParsePacket *pkt);
+
+/* Server: parse the status_request extension in the ClientHello (stream TLS 1.0-1.3). */
+int32_t ParseClientStatusRequest(ParsePacket *pkt, ClientHelloMsg *msg);
+#endif
+
 #ifdef HITLS_TLS_FEATURE_CUSTOM_EXTENSION
 int32_t CheckForDuplicateCustomExtension(TLS_Ctx *ctx, uint16_t extMsgType, uint32_t context,
     uint32_t *customExtSeenMask, bool *isCustomExt);

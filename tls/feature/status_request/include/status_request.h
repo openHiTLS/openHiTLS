@@ -18,7 +18,6 @@
 
 #include "tls.h"
 #include "hs_msg.h"
-#include "parse_common.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -33,10 +32,6 @@ bool IsServerHelloStatusRequestValid(const TLS_Ctx *ctx);
 #ifdef HITLS_TLS_HOST_CLIENT
 /* Client: pack the status_request extension in the ClientHello. */
 int32_t PackClientStatusRequest(const TLS_Ctx *ctx, PackPacket *pkt);
-
-/* Client: parse the empty status_request acknowledgment in the ServerHello
- * (stream TLS up to 1.2; TLS 1.3 answers in CertificateEntry instead). */
-int32_t ParseServerStatusRequest(ParsePacket *pkt);
 
 /* Client (stream TLS up to 1.2): process a received CertificateStatus message. */
 int32_t ClientRecvCertificateStatus(TLS_Ctx *ctx, const HS_Msg *hsMsg);
@@ -55,9 +50,6 @@ int32_t ClientNotifyOcspStatus(TLS_Ctx *ctx);
 /* Server: pack the empty status_request acknowledgment in the ServerHello
  * (stream TLS up to 1.2; TLS 1.3 answers in CertificateEntry instead). */
 int32_t PackServerStatusRequest(const TLS_Ctx *ctx, PackPacket *pkt);
-
-/* Server: parse the status_request extension in the ClientHello (stream TLS 1.0-1.3). */
-int32_t ParseClientStatusRequest(ParsePacket *pkt, ClientHelloMsg *msg);
 
 /* Server (TLS 1.2): fetch the EE certificate's OCSP response from the
  * per-certificate callback after the certificate chain has been selected
@@ -79,7 +71,7 @@ int32_t PackCertEntryOcspStatus(TLS_Ctx *ctx, HITLS_CERT_X509 *cert, PackPacket 
  * On success *needSend holds the decision; real failures (invalid response,
  * encode/OOM) are propagated so the caller can abort the handshake, matching
  * the TLS 1.3 CertificateEntry path. */
-int32_t ServerNeedSendCertificateStatus(const TLS_Ctx *ctx, bool *needSend);
+bool ServerNeedSendCertificateStatus(const TLS_Ctx *ctx);
 #endif /* HITLS_TLS_HOST_SERVER */
 
 /* Release the OCSP stapling state owned by the ctx. */

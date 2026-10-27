@@ -296,7 +296,7 @@ typedef struct TlsConfig {
     int32_t statusRequestType;          /* certificate status request type, -1 means disabled. */
     HITLS_StatusCb statusCb;            /* client certificate status callback */
     void *statusCbArg;                  /* user data of statusCb */
-    HITLS_StaplingCbPerCert staplingCb;      /* server per-certificate stapling callback */
+    HITLS_StaplingOneCertCb staplingCb;      /* server per-certificate stapling callback */
     void *staplingCbArg;                /* user data of staplingCb */
 #endif
 } TLS_Config;

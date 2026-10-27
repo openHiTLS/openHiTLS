@@ -26,7 +26,6 @@
 #include "bsl_async.h"
 #endif
 #include "hitls.h"
-#include "bsl_list.h"
 #include "hitls_status_request.h"
 
 #ifdef __cplusplus
@@ -484,13 +483,9 @@ struct TlsCtx {
 #endif
 #ifdef HITLS_TLS_FEATURE_STATUS_REQUEST
     bool statusExpected;                       /* whether the peer acknowledged/requested OCSP stapling */
-    HITLS_OCSP_Resp **peerOcspRespList;        /* stapled OCSP responses received from the peer (owned by ctx) */
+    HITLS_CERT_OcspResp **peerOcspRespList;    /* stapled OCSP responses received from the peer (owned by ctx) */
     uint32_t peerOcspRespCount;                /* number of entries in peerOcspRespList */
-    HITLS_OCSP_Resp *staplingResp;             /* TLS1.2 EE OCSP response obtained from the per-cert callback (borrowed) */
-    HITLS_StatusCb statusCb;                   /* client certificate status callback (ctx level) */
-    void *statusCbArg;                         /* user data of statusCb */
-    HITLS_StaplingCbPerCert staplingCb;        /* server per-certificate stapling callback (ctx level) */
-    void *staplingCbArg;                       /* user data of staplingCb */
+    HITLS_CERT_OcspResp *staplingResp;         /* TLS1.2 EE OCSP response obtained from the per-cert callback (borrowed) */
     int32_t staplingResult;                    /* result of the server stapling callback: HITLS_STAPLING_SEND/_SKIP */
 #endif
 };

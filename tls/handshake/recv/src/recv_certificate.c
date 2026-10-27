@@ -509,7 +509,7 @@ int32_t Tls13RecvCertificateProcess(TLS_Ctx *ctx, const HS_Msg *msg)
         }
     }
 
-#ifdef HITLS_TLS_FEATURE_STATUS_REQUEST
+#if defined(HITLS_TLS_FEATURE_STATUS_REQUEST) && defined(HITLS_TLS_HOST_CLIENT)
     /* The Certificate message is fully processed and verified, and the
      * CertificateEntry OCSP responses are already stored. Notify the application
      * here (client only) instead of waiting for the server Finished, so the
