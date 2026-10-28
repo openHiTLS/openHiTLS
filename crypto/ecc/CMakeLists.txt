@@ -12,48 +12,55 @@
 # See the Mulan PSL v2 for more details.
 
 
-set(_ecc_sources
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/ecc.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/ecc_method.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/ecc_para.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/ecc_pkey.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/ecp_mont.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/ecp_nist.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/ecp_simple.c
-)
-if(HITLS_CRYPTO_CURVE_NISTP224 AND HITLS_CRYPTO_NIST_USE_ACCEL)
-    list(APPEND _ecc_sources ${CMAKE_CURRENT_SOURCE_DIR}/src/ecp_nistp224.c)
-endif()
-if(HITLS_CRYPTO_CURVE_NISTP521 AND HITLS_CRYPTO_NIST_USE_ACCEL)
-    list(APPEND _ecc_sources ${CMAKE_CURRENT_SOURCE_DIR}/src/ecp_nistp521.c)
-endif()
-
-if(HITLS_CRYPTO_ECC_X8664)
-    list(APPEND _ecc_sources
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/asm_ecp_sm2.c
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/asm_ecp_nistp256.c
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/asm_ecp_sm2_table.c
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/asm64_ecp_nistp256.c
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/asm/ecp256_x86_64.S
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/asm/ecp_sm2_x86_64.S
-    )
-elseif(HITLS_CRYPTO_ECC_ARMV8)
-    list(APPEND _ecc_sources
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/asm_ecp_sm2.c
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/asm_ecp_nistp256.c
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/asm_ecp_sm2_table.c
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/asm64_ecp_nistp256.c
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/asm/ecp256_armv8.S
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/asm/ecp_sm2_armv8.S
-    )
-elseif(HITLS_CRYPTO_ECC_ARMV7)
-    list(APPEND _ecc_sources
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/asm_ecp_sm2_armv7.c
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/asm/ecp_sm2_armv7.S
+if(HITLS_CRYPTO_ECC_LITE)
+    set(_ecc_sources
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/ecc_lite.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/ecc_pkey_lite.c
     )
 else()
-    if(HITLS_CRYPTO_CURVE_NISTP256 AND HITLS_CRYPTO_NIST_USE_ACCEL)
-        list(APPEND _ecc_sources ${CMAKE_CURRENT_SOURCE_DIR}/src/noasm_ecp_nistp256.c)
+    set(_ecc_sources
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/ecc.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/ecc_method.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/ecc_para.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/ecc_pkey.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/ecp_mont.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/ecp_nist.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/ecp_simple.c
+    )
+    if(HITLS_CRYPTO_CURVE_NISTP224 AND HITLS_CRYPTO_NIST_USE_ACCEL)
+        list(APPEND _ecc_sources ${CMAKE_CURRENT_SOURCE_DIR}/src/ecp_nistp224.c)
+    endif()
+    if(HITLS_CRYPTO_CURVE_NISTP521 AND HITLS_CRYPTO_NIST_USE_ACCEL)
+        list(APPEND _ecc_sources ${CMAKE_CURRENT_SOURCE_DIR}/src/ecp_nistp521.c)
+    endif()
+
+    if(HITLS_CRYPTO_ECC_X8664)
+        list(APPEND _ecc_sources
+            ${CMAKE_CURRENT_SOURCE_DIR}/src/asm_ecp_sm2.c
+            ${CMAKE_CURRENT_SOURCE_DIR}/src/asm_ecp_nistp256.c
+            ${CMAKE_CURRENT_SOURCE_DIR}/src/asm_ecp_sm2_table.c
+            ${CMAKE_CURRENT_SOURCE_DIR}/src/asm64_ecp_nistp256.c
+            ${CMAKE_CURRENT_SOURCE_DIR}/src/asm/ecp256_x86_64.S
+            ${CMAKE_CURRENT_SOURCE_DIR}/src/asm/ecp_sm2_x86_64.S
+        )
+    elseif(HITLS_CRYPTO_ECC_ARMV8)
+        list(APPEND _ecc_sources
+            ${CMAKE_CURRENT_SOURCE_DIR}/src/asm_ecp_sm2.c
+            ${CMAKE_CURRENT_SOURCE_DIR}/src/asm_ecp_nistp256.c
+            ${CMAKE_CURRENT_SOURCE_DIR}/src/asm_ecp_sm2_table.c
+            ${CMAKE_CURRENT_SOURCE_DIR}/src/asm64_ecp_nistp256.c
+            ${CMAKE_CURRENT_SOURCE_DIR}/src/asm/ecp256_armv8.S
+            ${CMAKE_CURRENT_SOURCE_DIR}/src/asm/ecp_sm2_armv8.S
+        )
+    elseif(HITLS_CRYPTO_ECC_ARMV7)
+        list(APPEND _ecc_sources
+            ${CMAKE_CURRENT_SOURCE_DIR}/src/asm_ecp_sm2_armv7.c
+            ${CMAKE_CURRENT_SOURCE_DIR}/src/asm/ecp_sm2_armv7.S
+        )
+    else()
+        if(HITLS_CRYPTO_CURVE_NISTP256 AND HITLS_CRYPTO_NIST_USE_ACCEL)
+            list(APPEND _ecc_sources ${CMAKE_CURRENT_SOURCE_DIR}/src/noasm_ecp_nistp256.c)
+        endif()
     endif()
 endif()
 
@@ -72,5 +79,11 @@ target_include_directories(_hitls_crypto_ecc
         ${CMAKE_CURRENT_SOURCE_DIR}/src/sm9/inc
         ${PROJECT_SOURCE_DIR}/crypto/bn/include
 )
+
+if(HITLS_CRYPTO_ECC_LITE)
+    target_include_directories(_hitls_crypto_ecc PRIVATE
+        ${PROJECT_SOURCE_DIR}/crypto/bn/src
+    )
+endif()
 
 hitls_register_objects(CRYPTO _hitls_crypto_ecc)

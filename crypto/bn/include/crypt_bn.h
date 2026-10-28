@@ -17,7 +17,6 @@
 #define CRYPT_BN_H
 
 #include "hitls_build.h"
-#ifdef HITLS_CRYPTO_BN
 
 #include <stdint.h>
 #include <stdlib.h>
@@ -1510,7 +1509,5 @@ int32_t BN_Lcm(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *b, BN_Optimize
 #ifdef __cplusplus
 }
 #endif
-
-#endif /* HITLS_CRYPTO_BN */
 
 #endif

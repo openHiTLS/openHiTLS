@@ -80,6 +80,7 @@
         "curve_bp384r1": ["test_suite_sdv_eal_ecdh", "test_suite_sdv_eal_ecdsa"],
         "curve_bp512r1": ["test_suite_sdv_eal_ecdh", "test_suite_sdv_eal_ecdsa"],
         "ecdh": ["test_suite_sdv_eal_ecdh"],
+        "ecdh_lite": ["test_suite_sdv_ecdh_lite"],
         "ecdsa": ["test_suite_sdv_eal_ecdsa"],
 
         "sm2": ["test_suite_sdv_eal_sm2_exchange", "test_suite_sdv_eal_sm2_sign", "test_suite_sdv_eal_sm2_crypt"],
@@ -251,6 +252,22 @@
             "SDV_CRYPTO_ECDH_CTRL_API_TC003",
             "SDV_CRYPTO_ECDH_EXCH_FUNC_TC001",
             "SDV_CRYPTO_ECDH_GEN_KEY_FUNC_TC001"
+        ],
+        "test_suite_sdv_ecdh_lite": [
+            "SDV_ECDH_LITE_SCALAR_WIDTH_TC001",
+            "SDV_ECDH_LITE_IMPORT_BOUNDARY_TC001",
+            "SDV_ECDH_LITE_VECTOR_TC001",
+            "SDV_ECDH_LITE_KEYGEN_TC001",
+            "SDV_ECDH_LITE_EAL_VECTOR_TC001",
+            "SDV_ECDH_LITE_KEYGEN_ERROR_TC001",
+            "SDV_ECDH_LITE_INVALID_TC001",
+            "SDV_ECDH_LITE_MISMATCH_TC001",
+            "SDV_ECDH_LITE_ALLOC_TC001",
+            "SDV_ECDH_LITE_INPUT_TC001",
+            "SDV_ECDH_LITE_EAL_INPUT_TC001",
+            "SDV_ECDH_LITE_NULL_INPUT_TC001",
+            "SDV_ECDH_LITE_CURVE_SELECT_TC001",
+            "SDV_ECDH_LITE_UNSUPPORTED_PKEY_TC001"
         ],
         "test_suite_sdv_eal_ecdsa": [
             "SDV_CRYPTO_ECDSA_SIGN_VERIFY_FUNC_TC001",

@@ -170,6 +170,11 @@ if(NOT HITLS_SKIP_CONFIG_CHECK)
         )
     endif()
 
+    if(HITLS_CRYPTO_ECC_LITE)
+        if(NOT HITLS_SIXTY_FOUR_BITS)
+            hitls_add_dependency_warning("[HiTLS] ECDH lite requires 64-bit limbs.")
+        endif()
+    endif()
 
     # --- Crypto Check ---
     # DRBG

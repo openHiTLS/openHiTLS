@@ -16,7 +16,6 @@
 #define BN_BINCAL_X8664_H
 
 #include "hitls_build.h"
-#ifdef HITLS_CRYPTO_BN
 
 #include <stdint.h>
 #include "bn_basic.h"
@@ -133,7 +132,5 @@ void ReduceCore(BN_UINT *r, BN_UINT *x, const BN_UINT *one, const BN_UINT *m, ui
 #ifdef __cplusplus
 }
 #endif
-
-#endif /* HITLS_CRYPTO_BN */
 
 #endif

@@ -321,6 +321,11 @@ BN_BigNum *ECC_GetParaH(const ECC_Para *para)
     return BN_Dup(para->h);
 }
 
+int32_t ECC_CofactorIsOne(const ECC_Para *para)
+{
+    return para != NULL && para->h != NULL && BN_IsOne(para->h);
+}
+
 BN_BigNum *ECC_GetParaN(const ECC_Para *para)
 {
     if (para == NULL) {

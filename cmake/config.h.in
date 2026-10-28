@@ -243,6 +243,7 @@
 #cmakedefine HITLS_CRYPTO_DH_CMP
 #cmakedefine HITLS_CRYPTO_DH_CHECK
 #cmakedefine HITLS_CRYPTO_ECC
+#cmakedefine HITLS_CRYPTO_ECC_LITE
 #cmakedefine HITLS_CRYPTO_ECC_CMP
 #cmakedefine HITLS_CRYPTO_ECC_CHECK
 #cmakedefine HITLS_CRYPTO_CURVE_MONT

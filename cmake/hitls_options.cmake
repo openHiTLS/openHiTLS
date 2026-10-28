@@ -263,6 +263,7 @@ option(HITLS_CRYPTO_PKEY                                       "Public Key Crypt
     option(HITLS_CRYPTO_DH_CMP                                     "Diffie-Hellman Compare" OFF)
     option(HITLS_CRYPTO_DH_CHECK                                   "Diffie-Hellman Check" OFF)
   option(HITLS_CRYPTO_ECC                                        "Elliptic Curve Cryptography" OFF)
+    option(HITLS_CRYPTO_ECC_LITE                                   "ECDH P-192/P-256 compact implementation (64-bit only)" OFF)
     option(HITLS_CRYPTO_ECC_CMP                                    "Elliptic Curve Compare" OFF)
     option(HITLS_CRYPTO_ECC_CHECK                                  "Elliptic Curve Check" OFF)
     option(HITLS_CRYPTO_CURVE_MONT                                 "Montgomery Curve" OFF)

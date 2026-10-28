@@ -29,7 +29,7 @@ parse_option()
     for i in $PARAM_LIST
     do
         case "${i}" in
-            "bsl"|"md"|"mac"|"kdf"|"cipher"|"bn"|"ecc"|"pkey"|"pqc"|"pki"|"all"|"tls"|"provider")
+            "bsl"|"md"|"mac"|"kdf"|"cipher"|"bn"|"ecc"|"ecdh_lite"|"pkey"|"pqc"|"pki"|"all"|"tls"|"provider")
                 TEST=$i
                 ;;
             "x8664"|"armv8")
@@ -232,8 +232,23 @@ test_bn()
     bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=bn_prime_rfc
 }
 
+test_ecdh_lite()
+{
+    local lite_params="" param
+    for param in $COMMON_PARAM; do
+        case "$param" in
+            32) echo "ECDH lite requires 64-bit limbs"; return ;;
+            x8664|armv8) ;;
+            *) lite_params="$lite_params $param" ;;
+        esac
+    done
+    bash mini_build_test.sh $lite_params no-tls enable=sal_mem,eal,curve_nistp192,curve_nistp256 \
+        test=ecdh_lite add-feature-options=-DHITLS_CRYPTO_ECC_LITE=ON
+}
+
 test_ecc()
 {
+    test_ecdh_lite
     NO_LIB="no-tls"
     ASM_EALINIT=""
     EAL_BN_ENABLE="eal,eal_bn"
@@ -641,6 +656,9 @@ case $TEST in
         ;;
     "ecc")
         test_ecc
+        ;;
+    "ecdh_lite")
+        test_ecdh_lite
         ;;
     "pkey")
         test_pkey

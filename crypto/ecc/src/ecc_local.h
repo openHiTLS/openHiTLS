@@ -26,6 +26,70 @@
 extern "C" {
 #endif
 
+#ifdef HITLS_CRYPTO_ECC_LITE
+
+#if !defined(HITLS_SIXTY_FOUR_BITS)
+#error "ECDH lite requires HITLS_SIXTY_FOUR_BITS."
+#endif
+
+#define ECC_LITE_MAX_BITS  256u
+#define ECC_LITE_MAX_BYTES (ECC_LITE_MAX_BITS / 8u)
+#define ECC_LITE_MAX_WORDS BITS_TO_BN_UNIT(ECC_LITE_MAX_BITS)
+#define ECC_LITE_TMP_WORDS ((ECC_LITE_MAX_WORDS * 2u) + 2u)
+
+typedef struct EccLiteBn {
+    BN_UINT data[ECC_LITE_MAX_WORDS];
+} ECC_LiteBn;
+
+/* Arithmetic operands must be non-NULL; EccLiteBnFree accepts NULL. */
+/* Cleanse a, then free it. */
+void EccLiteBnFree(ECC_LiteBn *a);
+/* a = 0. */
+void EccLiteBnZero(ECC_LiteBn *a);
+/* r = w. */
+void EccLiteBnSetLimb(ECC_LiteBn *r, BN_UINT w);
+/* Return a == 0. */
+bool EccLiteBnIsZero(const ECC_LiteBn *a);
+/* Return a == 1. */
+bool EccLiteBnIsOne(const ECC_LiteBn *a);
+/* Return a < sum(b[i] * 2^(BN_UINT_BITS * i)), i = 0..words-1. */
+bool EccLiteBnLessThan(const ECC_LiteBn *a, const BN_UINT *b, uint32_t words);
+/* r = a. */
+void EccLiteBnCopy(ECC_LiteBn *r, const ECC_LiteBn *a);
+/* r = sum(bin[i] * 256^(binLen - 1 - i)), i = 0..binLen-1 (big-endian). */
+int32_t EccLiteBnBin2Bn(ECC_LiteBn *r, const uint8_t *bin, uint32_t binLen, uint32_t maxBytes);
+/* r = sum(data[i] * 2^(BN_UINT_BITS * i)), i = 0..size-1; size <= ECC_LITE_MAX_WORDS. */
+void EccLiteBnSetWords(ECC_LiteBn *r, const BN_UINT *data, uint32_t size);
+
+/* ONE = R mod p; RR = R^2 mod p; AM/BM/XM/YM are Montgomery residues. */
+enum { ECC_LITE_P, ECC_LITE_N, ECC_LITE_AM, ECC_LITE_BM, ECC_LITE_XM, ECC_LITE_YM, ECC_LITE_ONE, ECC_LITE_RR };
+
+/* x and y are affine Montgomery residues; z is the ordinary 0/1 infinity flag. */
+struct EccPointInfo {
+    ECC_LiteBn x;
+    ECC_LiteBn y;
+    ECC_LiteBn z;
+    CRYPT_PKEY_ParaId id;
+};
+
+struct EccPara {
+    const BN_UINT *data;
+    uint32_t words;
+    uint32_t bytes;
+    CRYPT_PKEY_ParaId id;
+};
+
+/* Return para->data + field * para->words. */
+static inline const BN_UINT *EccLiteParaData(const ECC_Para *para, uint32_t field)
+{
+    return para->data + field * para->words;
+}
+
+/* r = k * pt, or k * G when pt == NULL; x/y use Montgomery form. */
+int32_t ECP_LitePointMul(ECC_Para *para, ECC_Point *r, const ECC_LiteBn *k, const ECC_Point *pt);
+
+#else
+
 #define ECC_MAX_BIT_LEN 521
 
 #define PRE_COMPUTE_WINDOW 5 // Default Window Size
@@ -398,6 +462,8 @@ int32_t ECP_PrimePointAddMont(const ECC_Para *para, ECC_Point *r, const ECC_Poin
 int32_t ECP_PointMulMont(ECC_Para *para, ECC_Point *r, const BN_BigNum *k, const ECC_Point *pt);
 
 #endif // HITLS_CRYPTO_CURVE_MONT
+
+#endif // HITLS_CRYPTO_ECC_LITE
 
 #ifdef __cplusplus
 }

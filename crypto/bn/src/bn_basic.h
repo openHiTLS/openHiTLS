@@ -17,7 +17,6 @@
 #define BN_BASIC_H
 
 #include "hitls_build.h"
-#ifdef HITLS_CRYPTO_BN
 
 #include "crypt_bn.h"
 
@@ -55,7 +54,5 @@ int32_t BnExtend(BN_BigNum *a, uint32_t words);
 #ifdef __cplusplus
 }
 #endif
-
-#endif /* HITLS_CRYPTO_BN */
 
 #endif

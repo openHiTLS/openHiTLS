@@ -17,7 +17,6 @@
 #define BN_BINCAL_H
 
 #include "hitls_build.h"
-#ifdef HITLS_CRYPTO_BN
 
 #include <stdint.h>
 #include "bn_basic.h"
@@ -212,7 +211,5 @@ void SqrConquer(BN_UINT *r, const BN_UINT *a, uint32_t size, BN_UINT *space, boo
 #ifdef __cplusplus
 }
 #endif
-
-#endif /* HITLS_CRYPTO_BN */
 
 #endif

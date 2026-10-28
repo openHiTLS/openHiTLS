@@ -19,7 +19,6 @@
 #include "hitls_build.h"
 #ifdef HITLS_CRYPTO_ECC
 
-#include "crypt_bn.h"
 #include "crypt_ecc.h"
 #include "crypt_algid.h"
 #include "sal_atomic.h"
@@ -36,7 +35,7 @@ extern "C" {
 
 /* ECC key context */
 typedef struct ECC_PkeyCtx {
-    BN_BigNum *prvkey;      // Private key
+    ECC_Scalar *prvkey;      // Private key
     ECC_Point *pubkey;      // Public key
     ECC_Para *para;         // Key parameter
     CRYPT_PKEY_PointFormat pointFormat;   // Public key point format

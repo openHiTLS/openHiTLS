@@ -609,78 +609,63 @@ ERR:
 }
 
 /*
- * XZ coordinates for short Weierstrass curves
- * https://hyperelliptic.org/EFD/g1p/auto-shortw-xz.html#ladder-mladd-2002-bj-3
- * MontLadderDoubleAndAdd return:
- *    r2 = 2 * r2
- *    r3 = r2 + r3
-*/
-static int32_t MontLadderDoubleAndAdd(ECC_Para *para, ECC_Point *r2, ECC_Point *r3, ECC_Point *p, BN_Optimizer *opt)
+ * Izu-Takagi differential addition, followed by doubling; x = X/Z.
+ * https://hyperelliptic.org/EFD/g1p/auto-shortw-xz.html#diffadd-mdadd-2002-it-4
+ * https://hyperelliptic.org/EFD/g1p/auto-shortw-xz.html#doubling-dbl-2002-bj-3
+ * Input: affine p, x(r1-r0) = p->x. Output: (r0, r1) = (2*r0, r0+r1).
+ */
+static int32_t MontLadderDoubleAndAdd(ECC_Para *para, ECC_Point *r0, ECC_Point *r1, ECC_Point *p, BN_Optimizer *opt)
 {
     (void)OptimizerStart(opt);
-    BN_BigNum *t0;
-    BN_BigNum *t1;
-    BN_BigNum *t2;
-    BN_BigNum *t3;
-    BN_BigNum *t4;
-    BN_BigNum *t5;
-    BN_BigNum *bns[6]; // get 6 BNs
-    int32_t ret = OptimizerGetXBn(opt, p->x.room, 6, bns); // get 6 BNs
+    BN_BigNum *bns[4];
+    int32_t ret = OptimizerGetXBn(opt, p->x.room, 4, bns);
     if (ret != CRYPT_SUCCESS) {
-        // Not need to release other large numbers, they shoule be uniformly managed by optimizer.
         goto ERR;
     }
-    t0 = bns[0]; // 0th bn
-    t1 = bns[1]; // 1st bn
-    t2 = bns[2]; // 2nd bn
-    t3 = bns[3]; // 3rd bn
-    t4 = bns[4]; // 4th bn
-    t5 = bns[5]; // 5th bn
+    BN_BigNum *t0 = bns[0];
+    BN_BigNum *t1 = bns[1];
+    BN_BigNum *t2 = bns[2];
+    BN_BigNum *t3 = bns[3];
 
-    GOTO_ERR_IF(para->method->bnModNistEccSqr(&r2->y, &r2->x, para->montP, opt), ret); // x2 ^ 2
-    GOTO_ERR_IF(para->method->bnModNistEccSqr(&r3->y, &r2->z, para->montP, opt), ret); // z2 ^ 2
-    GOTO_ERR_IF(para->method->bnModNistEccMul(t0, &r2->x, &r2->z, para->montP, opt), ret); // X2 * Z2
-    GOTO_ERR_IF(BN_ModAddQuick(t0, t0, t0, para->p, opt), ret); // 2 * X2 * Z2
-    GOTO_ERR_IF(BN_ModAddQuick(t0, t0, t0, para->p, opt), ret); // 4 * X2 * Z2
-    GOTO_ERR_IF(para->method->bnModNistEccMul(t1, para->a, &r3->y, para->montP, opt), ret); // aZZ = a * ZZ
+    GOTO_ERR_IF(para->method->bnModNistEccMul(t0, &r0->x, &r1->x, para->montP, opt), ret); // T1 = X0*X1
+    GOTO_ERR_IF(para->method->bnModNistEccMul(t1, &r0->z, &r1->z, para->montP, opt), ret); // T2 = Z0*Z1
+    GOTO_ERR_IF(para->method->bnModNistEccMul(t2, &r0->x, &r1->z, para->montP, opt), ret); // T3 = X0*Z1
+    GOTO_ERR_IF(para->method->bnModNistEccMul(t3, &r0->z, &r1->x, para->montP, opt), ret); // T4 = Z0*X1
+    GOTO_ERR_IF(para->method->bnModNistEccMul(&r1->x, para->a, t1, para->montP, opt), ret); // X1 = a*T2
+    GOTO_ERR_IF(BN_ModAddQuick(&r1->x, t0, &r1->x, para->p, opt), ret); // X1 = T1 + X1
+    GOTO_ERR_IF(BN_ModAddQuick(t0, t2, t3, para->p, opt), ret); // T1 = T3 + T4
+    GOTO_ERR_IF(para->method->bnModNistEccMul(&r1->x, &r1->x, t0, para->montP, opt), ret); // X1 = X1*T1
+    GOTO_ERR_IF(BN_ModAddQuick(&r1->x, &r1->x, &r1->x, para->p, opt), ret); // X1 = X1 + X1
+    GOTO_ERR_IF(para->method->bnModNistEccSqr(t0, t1, para->montP, opt), ret); // T1 = T2^2
+    GOTO_ERR_IF(para->method->bnModNistEccMul(t0, t0, para->b, para->montP, opt), ret); // T1 = b*T1
+    GOTO_ERR_IF(BN_ModAddQuick(t0, t0, t0, para->p, opt), ret); // T1 = T1 + T1
+    GOTO_ERR_IF(BN_ModAddQuick(t0, t0, t0, para->p, opt), ret); // T1 = T1 + T1
+    GOTO_ERR_IF(BN_ModAddQuick(&r1->x, &r1->x, t0, para->p, opt), ret); // X1 = X1 + T1
+    GOTO_ERR_IF(BN_ModSubQuick(t2, t2, t3, para->p, opt), ret); // T3 = T3 - T4
+    GOTO_ERR_IF(para->method->bnModNistEccSqr(&r1->z, t2, para->montP, opt), ret); // Z1' = T3^2
+    GOTO_ERR_IF(para->method->bnModNistEccMul(t2, &p->x, &r1->z, para->montP, opt), ret); // T3 = x*Z1'
+    GOTO_ERR_IF(BN_ModSubQuick(&r1->x, &r1->x, t2, para->p, opt), ret); // X1' = X1 - T3
 
-    GOTO_ERR_IF(para->method->bnModNistEccMul(t2, &r2->x, &r3->x, para->montP, opt), ret); // X2 * X3
-    GOTO_ERR_IF(para->method->bnModNistEccMul(t3, &r2->z, &r3->z, para->montP, opt), ret); // Z2 * Z3
-    GOTO_ERR_IF(para->method->bnModNistEccMul(t4, &r2->x, &r3->z, para->montP, opt), ret); // X2 * Z3
-    GOTO_ERR_IF(para->method->bnModNistEccMul(t5, &r2->z, &r3->x, para->montP, opt), ret); // Z2 * X3
-
-    GOTO_ERR_IF(BN_ModSubQuick(&r2->x, &r2->y, t1, para->p, opt), ret); // XX - aZZ
-    GOTO_ERR_IF(BN_ModAddQuick(&r2->z, &r2->y, t1, para->p, opt), ret); // XX + aZZ
-    GOTO_ERR_IF(para->method->bnModNistEccMul(&r2->z, t0, &r2->z, para->montP, opt), ret); // E * (XX + aZZ)
-
-    GOTO_ERR_IF(para->method->bnModNistEccMul(t0, t0, &r3->y, para->montP, opt), ret); // E * ZZ
-    GOTO_ERR_IF(para->method->bnModNistEccMul(t0, t0, para->b, para->montP, opt), ret); // b *  E * ZZ
-    GOTO_ERR_IF(BN_ModAddQuick(t0, t0, t0, para->p, opt), ret); // 2b *  E * ZZ
-
-    GOTO_ERR_IF(para->method->bnModNistEccSqr(&r2->x, &r2->x, para->montP, opt), ret); // (XX - aZZ) ^ 2
-    GOTO_ERR_IF(BN_ModSubQuick(&r2->x, &r2->x, t0, para->p, opt), ret); // (XX - aZZ) ^ 2 - 2b *  E * ZZ
-
-    GOTO_ERR_IF(para->method->bnModNistEccSqr(&r3->y, &r3->y, para->montP, opt), ret); // ZZ ^ 2
-    GOTO_ERR_IF(para->method->bnModNistEccMul(&r3->y, &r3->y, para->b, para->montP, opt), ret); // b * ZZ^2
-    GOTO_ERR_IF(BN_ModAddQuick(&r3->y, &r3->y, &r3->y, para->p, opt), ret); // 2 * b * ZZ^2
-    GOTO_ERR_IF(BN_ModAddQuick(&r3->y, &r3->y, &r3->y, para->p, opt), ret); // 4 * b * ZZ^2
-    GOTO_ERR_IF(BN_ModAddQuick(&r2->z, &r2->z, &r3->y, para->p, opt), ret); // E * (XX + aZZ) + 4 * b * ZZ^2
-
-    GOTO_ERR_IF(para->method->bnModNistEccMul(&r3->x, para->a, t3, para->montP, opt), ret); // a * B
-    GOTO_ERR_IF(BN_ModSubQuick(&r3->x, t2, &r3->x, para->p, opt), ret); // A - a * B
-    GOTO_ERR_IF(para->method->bnModNistEccSqr(&r3->x, &r3->x, para->montP, opt), ret); // (A - a * B) ^ 2
-    GOTO_ERR_IF(BN_ModAddQuick(t2, t4, t5, para->p, opt), ret); // C + D
-    GOTO_ERR_IF(para->method->bnModNistEccMul(t2, t2, t3, para->montP, opt), ret); // B * (C + D)
-    GOTO_ERR_IF(para->method->bnModNistEccMul(t2, t2, para->b, para->montP, opt), ret); // b * B * (C + D)
-    GOTO_ERR_IF(BN_ModAddQuick(t2, t2, t2, para->p, opt), ret); // 2 * b * B * (C + D)
-    GOTO_ERR_IF(BN_ModAddQuick(t2, t2, t2, para->p, opt), ret); // 4 * b * B * (C + D)
-    GOTO_ERR_IF(BN_ModSubQuick(&r3->x, &r3->x, t2, para->p, opt), ret); // (A - a * B) ^ 2 - 4 * b * B * (C + D)
-
-    GOTO_ERR_IF(BN_ModSubQuick(t4, t4, t5, para->p, opt), ret); // C - D
-    GOTO_ERR_IF(para->method->bnModNistEccSqr(t4, t4, para->montP, opt), ret); // (C - D) ^ 2
-    GOTO_ERR_IF(para->method->bnModNistEccMul(&r3->z, &p->x, t4, para->montP, opt), ret); // px * (C + D) ^ 2
-
- ERR:
+    GOTO_ERR_IF(para->method->bnModNistEccSqr(t0, &r0->x, para->montP, opt), ret); // T1 = X0^2
+    GOTO_ERR_IF(para->method->bnModNistEccSqr(t1, &r0->z, para->montP, opt), ret); // T2 = Z0^2
+    GOTO_ERR_IF(para->method->bnModNistEccMul(t2, &r0->x, &r0->z, para->montP, opt), ret); // T3 = X0*Z0
+    GOTO_ERR_IF(BN_ModAddQuick(t2, t2, t2, para->p, opt), ret); // T3 = T3 + T3
+    GOTO_ERR_IF(BN_ModAddQuick(t2, t2, t2, para->p, opt), ret); // T3 = T3 + T3
+    GOTO_ERR_IF(para->method->bnModNistEccMul(t3, para->a, t1, para->montP, opt), ret); // T4 = a*T2
+    GOTO_ERR_IF(BN_ModSubQuick(&r0->x, t0, t3, para->p, opt), ret); // X0 = T1 - T4
+    GOTO_ERR_IF(BN_ModAddQuick(&r0->z, t0, t3, para->p, opt), ret); // Z0 = T1 + T4
+    GOTO_ERR_IF(para->method->bnModNistEccMul(&r0->z, t2, &r0->z, para->montP, opt), ret); // Z0 = T3*Z0
+    GOTO_ERR_IF(para->method->bnModNistEccMul(t3, t2, t1, para->montP, opt), ret); // T4 = T3*T2
+    GOTO_ERR_IF(para->method->bnModNistEccMul(t3, t3, para->b, para->montP, opt), ret); // T4 = b*T4
+    GOTO_ERR_IF(BN_ModAddQuick(t3, t3, t3, para->p, opt), ret); // T4 = T4 + T4
+    GOTO_ERR_IF(para->method->bnModNistEccSqr(&r0->x, &r0->x, para->montP, opt), ret); // X0 = X0^2
+    GOTO_ERR_IF(BN_ModSubQuick(&r0->x, &r0->x, t3, para->p, opt), ret); // X0' = X0 - T4
+    GOTO_ERR_IF(para->method->bnModNistEccSqr(t3, t1, para->montP, opt), ret); // T4 = T2^2
+    GOTO_ERR_IF(para->method->bnModNistEccMul(t3, t3, para->b, para->montP, opt), ret); // T4 = b*T4
+    GOTO_ERR_IF(BN_ModAddQuick(t3, t3, t3, para->p, opt), ret); // T4 = T4 + T4
+    GOTO_ERR_IF(BN_ModAddQuick(t3, t3, t3, para->p, opt), ret); // T4 = T4 + T4
+    GOTO_ERR_IF(BN_ModAddQuick(&r0->z, &r0->z, t3, para->p, opt), ret); // Z0' = Z0 + T4
+ERR:
     OptimizerEnd(opt);
     return ret;
 }

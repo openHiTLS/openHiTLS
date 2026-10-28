@@ -19,9 +19,12 @@
 #include "hitls_build.h"
 #ifdef HITLS_CRYPTO_ECC
 
-#include "crypt_bn.h"
+#include <stdint.h>
 #include "crypt_algid.h"
 #include "crypt_types.h"
+#ifndef HITLS_CRYPTO_ECC_LITE
+#include "crypt_bn.h"
+#endif
 
 #ifdef __cplusplus
 extern "C" {
@@ -37,16 +40,12 @@ typedef struct EccPointInfo ECC_Point;
  */
 typedef struct EccPara ECC_Para;
 
-/**
- * Point information of elliptic curve scalar after recoding
- */
-typedef struct {
-    int8_t *num;
-    uint32_t *wide;
-    uint32_t size;
-    uint32_t baseBits; // Indicates the offset start address of the first block.
-    uint32_t offset;
-} ReCodeData;
+#ifdef HITLS_CRYPTO_ECC_LITE
+typedef struct EccLiteBn ECC_LiteBn;
+typedef ECC_LiteBn ECC_Scalar;
+#else
+typedef BN_BigNum ECC_Scalar;
+#endif
 
 /**
  * @ingroup ecc
@@ -112,6 +111,94 @@ void ECC_FreePoint(ECC_Point *pt);
 
 /**
  * @ingroup ecc
+ * @brief Obtain affine coordinates. The regular backend normalizes Jacobian points in place.
+ *
+ * @param para [IN] Curve parameter information
+ * @param pt [IN/OUT] Point information
+ * @param x [OUT] Affine x-coordinate
+ * @param y [OUT] Affine y-coordinate, may be NULL.
+ *
+ * @retval CRYPT_SUCCESS succeeded.
+ * @retval For details about other errors, see crypt_errno.h.
+ */
+int32_t ECC_GetPoint(const ECC_Para *para, ECC_Point *pt, CRYPT_Data *x, CRYPT_Data *y);
+
+/**
+ * @ingroup ecc
+ * @brief Calculate r = k * pt. When pt is NULL, calculate r = k * G, where G is the generator
+ * The regular backend may update the pre-computation table under para.
+ *
+ * @param para [IN] Curve parameter information
+ * @param r [OUT] Scalar multiplication
+ * @param k [IN] Scalar
+ * @param pt [IN] Point data, which can be NULL.
+ *
+ * @retval CRYPT_SUCCESS succeeded.
+ * @retval For details about other errors, see crypt_errno.h.
+ */
+int32_t ECC_PointMul(ECC_Para *para, ECC_Point *r, const ECC_Scalar *k, const ECC_Point *pt);
+
+/**
+ * @ingroup ecc
+ * @brief Encode the data stream into point information.
+ *
+ * @param para [IN] Curve parameter information
+ * @param pt [OUT] Point in affine coordinate(z=1)
+ * @param data [IN] Data stream
+ * @param dataLen [IN] Data stream length
+ *
+ * @retval CRYPT_SUCCESS succeeded.
+ * @retval For details about other errors, see crypt_errno.h.
+ */
+int32_t ECC_DecodePoint(const ECC_Para *para, ECC_Point *pt, const uint8_t *data, uint32_t dataLen);
+
+/**
+ * @ingroup ecc
+ * @brief Check whether the point is valid.
+ *
+ * @param pt [IN] Point information
+ *
+ * @retval CRYPT_SUCCESS                This point is valid.
+ * @retval CRYPT_ECC_POINT_AT_INFINITY  The point is an infinite point (0 point).
+ * @retval For details about other errors, see crypt_errno.h.
+ */
+int32_t ECC_PointCheck(const ECC_Point *pt);
+
+/**
+ * @ingroup ecc
+ * @brief ecc get security bits
+ *
+ * @param para [IN] ecc Context structure
+ *
+ * @retval security bits
+ */
+int32_t ECC_GetSecBits(const ECC_Para *para);
+
+/**
+ * @ingroup ecc
+ * @brief Check h = 1, where h = #E(Fp) / n is the curve cofactor.
+ * @param para [IN] Curve parameters, may be NULL.
+ * @retval 1 The cofactor is 1.
+ * @retval 0 Otherwise, including NULL para.
+ * @note Lite curves P-192 and P-256 both have h = 1.
+ */
+int32_t ECC_CofactorIsOne(const ECC_Para *para);
+
+#ifndef HITLS_CRYPTO_ECC_LITE
+
+/**
+ * Point information of elliptic curve scalar after recoding
+ */
+typedef struct {
+    int8_t *num;
+    uint32_t *wide;
+    uint32_t size;
+    uint32_t baseBits; // Indicates the offset start address of the first block.
+    uint32_t offset;
+} ReCodeData;
+
+/**
+ * @ingroup ecc
  * @brief Point copy
  *
  * @param dst [OUT] The copied point information
@@ -149,20 +236,6 @@ int32_t ECC_PointCmp(const ECC_Para *para, const ECC_Point *a, const ECC_Point *
 
 /**
  * @ingroup ecc
- * @brief Convert the Jacobian coordinate point (x, y, z) to affine coordinate (x/z^2, y/z^3, 1) and get coordinates.
- *
- * @param para [IN] Curve parameter information
- * @param pt [IN/OUT] Point (x, y, z) -> (x/z^2, y/z^3, 1)
- * @param x [OUT] x/z^2
- * @param y [OUT] y/z^3
- *
- * @retval CRYPT_SUCCESS succeeded.
- * @retval For details about other errors, see crypt_errno.h.
- */
-int32_t ECC_GetPoint(const ECC_Para *para, ECC_Point *pt, CRYPT_Data *x, CRYPT_Data *y);
-
-/**
- * @ingroup ecc
  * @brief Convert the Jacobian coordinate point (x, y, z) to affine coordinate (x/z^2, y/z^3, 1) and get coordinats.
  *
  * @param para [IN] Curve parameter information
@@ -187,22 +260,6 @@ int32_t ECC_GetPoint2Bn(const ECC_Para *para, ECC_Point *pt, BN_BigNum *x, BN_Bi
  * @retval For details about other errors, see crypt_errno.h.
  */
 int32_t ECC_GetPointDataX(const ECC_Para *para, ECC_Point *pt, BN_BigNum *x);
-
-/**
- * @ingroup ecc
- * @brief Calculate r = k * pt. When pt is NULL, calculate r = k * G, where G is the generator
- * The pre-computation table under the para parameter will be updated.
- *
- * @param para [IN] Curve parameter information
- * @param r [OUT] Scalar multiplication
- * @param k [IN] Scalar
- * @param pt [IN] Point data, which can be NULL.
- *
- * @retval CRYPT_SUCCESS succeeded.
- * @retval For details about other errors, see crypt_errno.h.
- */
-int32_t ECC_PointMul(ECC_Para *para,  ECC_Point *r,
-    const BN_BigNum *k, const ECC_Point *pt);
 
 /**
  * @ingroup ecc
@@ -235,20 +292,6 @@ int32_t ECC_PointMulAdd(ECC_Para *para,  ECC_Point *r,
  */
 int32_t ECC_EncodePoint(const ECC_Para *para, ECC_Point *pt, uint8_t *data, uint32_t *dataLen,
     CRYPT_PKEY_PointFormat format);
-
-/**
- * @ingroup ecc
- * @brief Encode the data stream into point information.
- *
- * @param para [IN] Curve parameter information
- * @param pt [OUT] Point in affine coordinate(z=1)
- * @param data [IN] Data stream
- * @param dataLen [IN] Data stream length
- *
- * @retval CRYPT_SUCCESS succeeded.
- * @retval For details about other errors, see crypt_errno.h.
- */
-int32_t ECC_DecodePoint(const ECC_Para *para, ECC_Point *pt, const uint8_t *data, uint32_t dataLen);
 
 /**
  * @ingroup ecc
@@ -350,19 +393,6 @@ ECC_Para *ECC_DupPara(const ECC_Para *para);
 
 /**
  * @ingroup ecc
- * @brief Check whether the point is valid.
- *
- * @param pt [IN] Point information
- *
- * @retval CRYPT_SUCCESS                This point is valid.
- * @retval CRYPT_ECC_POINT_AT_INFINITY  The point is an infinite point (0 point).
- * @retval For details about other errors, see crypt_errno.h.
- */
-int32_t ECC_PointCheck(const ECC_Point *pt);
-
-
-/**
- * @ingroup ecc
  * @brief Obtain the generator(with z=1) based on curve parameters.
  *
  * @param para [IN] Curve parameters
@@ -422,15 +452,6 @@ int32_t ECC_PointAddAffine(const ECC_Para *para, ECC_Point *r, const ECC_Point *
 
 /**
  * @ingroup ecc
- * @brief ecc get security bits
- *
- * @param para [IN] ecc Context structure
- *
- * @retval security bits
- */
-int32_t ECC_GetSecBits(const ECC_Para *para);
-/**
- * @ingroup ecc
  * @brief   convert ecc point to mont form
  * @param   para [IN] Curve parameters
  * @param   pt [IN/OUT] Point information
@@ -473,6 +494,8 @@ int32_t ECC_PointToMont(const ECC_Para *para, ECC_Point *pt, BN_Optimizer *opt);
  * @retval For details about other errors, see crypt_errno.h
  */
 void ECC_PointFromMont(const ECC_Para *para, ECC_Point *r);
+
+#endif // !HITLS_CRYPTO_ECC_LITE
 
 #ifdef __cplusplus
 }

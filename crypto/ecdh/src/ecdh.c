@@ -24,7 +24,6 @@
 #include "sal_atomic.h"
 #include "crypt_utils.h"
 #include "crypt_util_ctrl.h"
-#include "crypt_bn.h"
 #include "crypt_ecc.h"
 #include "crypt_ecc_pkey.h"
 #include "eal_pkey_local.h"
@@ -87,6 +86,7 @@ int32_t CRYPT_ECDH_SetPara(CRYPT_ECDH_Ctx *ctx, const CRYPT_EccPara *para)
     return ECC_SetPara(ctx, CRYPT_ECDH_NewPara(para));
 }
 
+#ifdef HITLS_BSL_PARAMS
 int32_t CRYPT_ECDH_SetParaEx(CRYPT_ECDH_Ctx *ctx, const BSL_Param *para)
 {
     if (para == NULL) {
@@ -103,6 +103,7 @@ int32_t CRYPT_ECDH_SetParaEx(CRYPT_ECDH_Ctx *ctx, const BSL_Param *para)
     (void)GetConstParamValue(para, CRYPT_PARAM_EC_Y, &(eccPara.y), &(eccPara.yLen));
     return CRYPT_ECDH_SetPara(ctx, &eccPara);
 }
+#endif
 
 static int32_t ComputeShareKeyInputCheck(const CRYPT_ECDH_Ctx *ctx, const CRYPT_ECDH_Ctx *pubKey,
     const uint8_t *shareKey, const uint32_t *shareKeyLen)
@@ -116,20 +117,10 @@ static int32_t ComputeShareKeyInputCheck(const CRYPT_ECDH_Ctx *ctx, const CRYPT_
         BSL_ERR_PUSH_ERROR(CRYPT_ECDH_ERR_EMPTY_KEY);
         return CRYPT_ECDH_ERR_EMPTY_KEY;
     }
-
-    // only the cofactor which value is 1 is supported currently
-    BN_BigNum *paraH = ECC_GetParaH(ctx->para);
-    if (paraH == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
-        return CRYPT_MEM_ALLOC_FAIL;
-    }
-    if (BN_IsOne(paraH) != true) {
-        BN_Destroy(paraH);
+    if (!ECC_CofactorIsOne(ctx->para)) {
         BSL_ERR_PUSH_ERROR(CRYPT_ECDH_ERR_INVALID_COFACTOR);
         return CRYPT_ECDH_ERR_INVALID_COFACTOR;
     }
-    BN_Destroy(paraH);
-
     return CRYPT_SUCCESS;
 }
 
@@ -145,7 +136,6 @@ int32_t CRYPT_ECDH_ComputeShareKey(const CRYPT_ECDH_Ctx *ctx, const CRYPT_ECDH_C
     ECC_Point *sharePoint = ECC_NewPoint(ctx->para);
     if (sharePoint == NULL) {
         ret = CRYPT_MEM_ALLOC_FAIL;
-        BSL_ERR_PUSH_ERROR(ret);
         goto EXIT;
     }
 
@@ -154,19 +144,11 @@ int32_t CRYPT_ECDH_ComputeShareKey(const CRYPT_ECDH_Ctx *ctx, const CRYPT_ECDH_C
      */
     ret = ECC_PointMul(ctx->para, sharePoint, ctx->prvkey, pubKey->pubkey);
     if (ret != CRYPT_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
-        goto EXIT;
-    }
-
-    ret = ECC_PointCheck(sharePoint);
-    if (ret != CRYPT_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
         goto EXIT;
     }
 
     ret = ECC_GetPoint(ctx->para, sharePoint, &shareKeyX, NULL);
     if (ret != CRYPT_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
         goto EXIT;
     }
     *shareKeyLen = shareKeyX.len;

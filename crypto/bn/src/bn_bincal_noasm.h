@@ -16,7 +16,6 @@
 #define BN_BINCAL_NOASM_H
 
 #include "hitls_build.h"
-#ifdef HITLS_CRYPTO_BN
 
 #include <stdint.h>
 #include "bn_basic.h"
@@ -199,7 +198,5 @@ do { \
 #ifdef __cplusplus
 }
 #endif
-
-#endif /* HITLS_CRYPTO_BN */
 
 #endif
