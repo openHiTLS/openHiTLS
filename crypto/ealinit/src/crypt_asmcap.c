@@ -14,6 +14,7 @@
  */
 
 #include "bsl_init.h"
+#include "bsl_sal.h"
 #include "bsl_err_internal.h"
 #include "crypt_local_types.h"
 #include "crypt_algid.h"
@@ -31,6 +32,47 @@
 
 static uint64_t g_ealInitOpts = 0;
 
+/* Exclusive cleanup releases the init lock and resets its once state. */
+BSL_SAL_DECLARE_THREAD_ONCE(g_ealInitOnce);
+static BSL_SAL_ThreadLockHandle g_ealInitLock = NULL;
+static bool g_ealInitLockReady = false;
+
+static void EalInitLockCreate(void)
+{
+    /* A NULL handle is valid when the SAL has no lock support. */
+    g_ealInitLockReady = BSL_SAL_ThreadLockNew(&g_ealInitLock) == BSL_SUCCESS;
+}
+
+static int32_t EalInitLockEnsure(void)
+{
+    int32_t ret = BSL_SAL_ThreadRunOnce(&g_ealInitOnce, EalInitLockCreate);
+    if (ret == BSL_SUCCESS && !g_ealInitLockReady) {
+        ret = CRYPT_MEM_ALLOC_FAIL;
+    }
+    if (ret != CRYPT_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+    }
+    return ret;
+}
+
+static int32_t EalInitWriteLock(void)
+{
+    int32_t ret = EalInitLockEnsure();
+    if (ret != CRYPT_SUCCESS) {
+        return ret;
+    }
+    ret = BSL_SAL_ThreadWriteLock(g_ealInitLock);
+    if (ret != BSL_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+    }
+    return ret;
+}
+
+static void EalInitUnlock(void)
+{
+    BSL_SAL_ThreadUnlock(g_ealInitLock);
+}
+
 #if defined(HITLS_CRYPTO_PROVIDER)
 static int32_t ProviderModuleInit(uint64_t initOpt, int32_t alg)
 {
@@ -45,11 +87,15 @@ static int32_t ProviderModuleInit(uint64_t initOpt, int32_t alg)
     }
 #if defined(HITLS_CRYPTO_DRBG)
     if ((initOpt & CRYPT_EAL_INIT_PROVIDER_RAND) && ((g_ealInitOpts & CRYPT_EAL_INIT_PROVIDER_RAND) == 0)) {
+        bool hadProvider = CRYPT_EAL_GetGlobalLibCtx() != NULL;
         ret = CRYPT_EAL_ProviderRandInitCtx(NULL, alg, "provider=default", NULL, 0, NULL);
         if (ret != CRYPT_SUCCESS) {
             return ret;
         }
         g_ealInitOpts |= CRYPT_EAL_INIT_PROVIDER_RAND;
+        if (!hadProvider) {
+            g_ealInitOpts |= CRYPT_EAL_INIT_PROVIDER;
+        }
     }
 #endif
 
@@ -59,6 +105,11 @@ static int32_t ProviderModuleInit(uint64_t initOpt, int32_t alg)
 static void ProviderModuleFree(uint64_t initOpt)
 {
     if ((initOpt & CRYPT_EAL_INIT_PROVIDER) == 0) {
+#if defined(HITLS_CRYPTO_DRBG)
+        if ((initOpt & CRYPT_EAL_INIT_PROVIDER_RAND) != 0) {
+            CRYPT_EAL_RandDeinitEx(NULL);
+        }
+#endif
         return;
     }
     CRYPT_EAL_FreePreDefinedProviders();
@@ -174,7 +225,7 @@ static bool g_ealInitOptsFlags = false;
 #endif
 
 #if defined(HITLS_EAL_INIT_OPTS)
-__attribute__((constructor(102))) int32_t CRYPT_EAL_Init(uint64_t opts)
+__attribute__((constructor)) int32_t CRYPT_EAL_Init(uint64_t opts)
 #else
 int32_t CRYPT_EAL_Init(uint64_t opts)
 #endif
@@ -194,55 +245,51 @@ int32_t CRYPT_EAL_Init(uint64_t opts)
     int32_t alg = CRYPT_RAND_SHA256;
 #endif
 
-    // Step 1: CPU capability detection (no dependencies)
-    if ((initOpt & CRYPT_EAL_INIT_CPU) && (g_ealInitOpts & CRYPT_EAL_INIT_CPU) == 0) {
+    ret = EalInitWriteLock();
+    if (ret != CRYPT_SUCCESS) {
+        return ret;
+    }
+
+    /*
+     * Init order: CPU → BSL → Lock → Provider → ProviderRand → Rand.
+     * The seed lock must exist before the DRBG inits of ProviderRand and Rand,
+     * because EAL_GetDefaultSeed() can be called during DRBG instantiation.
+     */
+    uint64_t done = g_ealInitOpts;
+    if ((initOpt & CRYPT_EAL_INIT_CPU) != 0 && (g_ealInitOpts & CRYPT_EAL_INIT_CPU) == 0) {
         GetCpuInstrSupportState();
         g_ealInitOpts |= CRYPT_EAL_INIT_CPU;
     }
-
-    // Step 2: BSL initialization (foundational layer, no dependencies)
     ret = BslModuleInit(initOpt);
     if (ret != CRYPT_SUCCESS) {
-        g_ealInitOpts &= ~CRYPT_EAL_INIT_CPU;
-        return ret;
+        goto ERR;
     }
-
-    // Step 3: Global lock initialization (must be before Rand and Provider Rand)
-    // The seed lock (g_seedLock) is used by EAL_GetDefaultSeed() which may be
-    // called during DRBG initialization in both RandModuleInit and ProviderModuleInit.
     ret = GlobalLockInit(initOpt);
     if (ret != CRYPT_SUCCESS) {
-        BslModuleFree(initOpt);
-        g_ealInitOpts &= ~(CRYPT_EAL_INIT_CPU | CRYPT_EAL_INIT_BSL);
-        return ret;
+        goto ERR;
     }
-
-    // Step 4: Provider initialization (depends on BSL and Lock)
     ret = ProviderModuleInit(initOpt, alg);
     if (ret != CRYPT_SUCCESS) {
-        GlobalLockFree(initOpt);
-        BslModuleFree(initOpt);
-        g_ealInitOpts &= ~(CRYPT_EAL_INIT_CPU | CRYPT_EAL_INIT_BSL | CRYPT_EAL_INIT_LOCK);
-        return ret;
+        goto ERR;
     }
-
-    // Step 5: Rand module initialization (depends on BSL and Lock, independent of Provider)
-    // Note: Rand and Provider are independent parallel paths for random number generation
     ret = RandModuleInit(initOpt, alg);
-    if (ret != CRYPT_SUCCESS) {
-        ProviderModuleFree(initOpt);
-        GlobalLockFree(initOpt);
-        BslModuleFree(initOpt);
-        g_ealInitOpts &= ~(CRYPT_EAL_INIT_CPU | CRYPT_EAL_INIT_BSL | CRYPT_EAL_INIT_LOCK |
-            CRYPT_EAL_INIT_PROVIDER | CRYPT_EAL_INIT_PROVIDER_RAND);
-        return ret;
-    }
 
+ERR:
+    if (ret != CRYPT_SUCCESS) {
+        /* Roll back only the modules initialized by this call. */
+        uint64_t newBits = g_ealInitOpts & ~done;
+        ProviderModuleFree(newBits);
+        GlobalLockFree(newBits);
+        BslModuleFree(newBits);
+        g_ealInitOpts = done;
+    }
+    EalInitUnlock();
     return ret;
 }
 
+/* Cleanup must not overlap any other library call, including Init or Cleanup. */
 #if defined(HITLS_EAL_INIT_OPTS)
-__attribute__((destructor(101))) void CRYPT_EAL_Cleanup(uint64_t opts)
+__attribute__((destructor)) void CRYPT_EAL_Cleanup(uint64_t opts)
 #else
 void CRYPT_EAL_Cleanup(uint64_t opts)
 #endif
@@ -255,21 +302,31 @@ void CRYPT_EAL_Cleanup(uint64_t opts)
 #if defined(HITLS_CRYPTO_PROVIDER) && defined(HITLS_CRYPTO_DRBG)
     /*
      * Provider RAND is stored in the predefined provider libCtx. Freeing the
-     * provider also frees that DRBG, so keep the init-state bits consistent.
+     * provider also frees that DRBG, so clean the init-state bits together.
      */
     if ((initOpt & CRYPT_EAL_INIT_PROVIDER) != 0) {
         cleanOpt |= CRYPT_EAL_INIT_PROVIDER_RAND;
     }
 #endif
 
-    // Cleanup in reverse order of initialization (LIFO principle)
-    // Init order: CPU → BSL → Lock → Provider → Rand
-    // Cleanup order: Rand → Provider → Lock → BSL
+    if (g_ealInitLockReady && EalInitWriteLock() != CRYPT_SUCCESS) {
+        return;
+    }
+
     RandModuleFree(initOpt);
     ProviderModuleFree(initOpt);
     GlobalLockFree(initOpt);
     BslModuleFree(initOpt);
-    g_ealInitOpts &= (~cleanOpt);
+    g_ealInitOpts &= ~cleanOpt;
+    if (g_ealInitLockReady) {
+        EalInitUnlock();
+    }
+    if (g_ealInitLock != NULL) {
+        BSL_SAL_ThreadLockFree(g_ealInitLock);
+        g_ealInitLock = NULL;
+    }
+    g_ealInitLockReady = false;
+    g_ealInitOnce = (BSL_SAL_OnceControl)BSL_SAL_ONCE_INIT;
 }
 
 #ifdef HITLS_CRYPTO_ASM_CHECK

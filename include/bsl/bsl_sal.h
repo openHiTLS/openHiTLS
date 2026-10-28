@@ -1867,6 +1867,8 @@ typedef int32_t (*BslDlSym)(void *handle, const char *funcName, void **func);
  * callback deactivates the whole set. Register the complete set before the
  * first thread local key is created (in particular before
  * BSL_ASYNC_InitThread), because keys of different backends cannot be mixed.
+ * @attention Register lock callbacks before calling CRYPT_EAL_Init or CRYPT_EAL_Cleanup.
+ * Do not re-register them afterward, even after cleanup, because the init lock persists.
  * @param funcType [IN] Type of the callback function to be controlled
  * @param funcCb [IN] Pointer to the callback function
  * @retval #BSL_SUCCESS Callback function controlled successfully
