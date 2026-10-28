@@ -1843,6 +1843,8 @@ typedef int32_t (*BslDlSym)(void *handle, const char *funcName, void **func);
  *
  * @attention For memory callbacks (BSL_SAL_MEM_MALLOC/BSL_SAL_MEM_FREE),
  * both malloc and free must be registered together.
+ * @attention Register lock callbacks before calling CRYPT_EAL_Init or CRYPT_EAL_Cleanup.
+ * Do not re-register them afterward, even after cleanup, because the init lock persists.
  * @param funcType [IN] Type of the callback function to be controlled
  * @param funcCb [IN] Pointer to the callback function
  * @retval #BSL_SUCCESS Callback function controlled successfully

@@ -47,12 +47,22 @@ extern "C" {
  *                    marked as "RAND".
  * @retval #CRYPT_SUCCESS, if successful.
  *         For other error codes, see the crypt_errno.h file.
+ * @attention Init calls may run concurrently, but must not overlap Cleanup.
+ *         The init lock is created through BSL_SAL_ThreadRunOnce and released by Cleanup.
+ *         Lock creation failure returns CRYPT_MEM_ALLOC_FAIL until Cleanup resets the lock state.
+ *         Register SAL lock callbacks before calling CRYPT_EAL_Init or CRYPT_EAL_Cleanup;
+ *         do not re-register them afterward, even after cleanup.
+ *         Automatic initialization creates the init lock before main.
+ *         Without POSIX threads, call CRYPT_EAL_Init once before other threads start.
  */
 int32_t CRYPT_EAL_Init(uint64_t opts);
 
 /**
  * @ingroup crypt_method
  * @brief   release the CRYPTO initialization memory.
+ * @attention The caller must exclude all other library calls, including Init and Cleanup,
+ *         until this call returns. Cleanup releases the init lock even for partial cleanup;
+ *         the next Init recreates it.
  *
  * @param opts   [IN] information about the bits to be deinitialized, which is the same as that of CRYPT_EAL_Init.
  */
