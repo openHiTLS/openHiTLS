@@ -505,12 +505,12 @@ int32_t CRYPT_SLH_DSA_Sign(CryptSlhDsaCtx *ctx, int32_t algId, const uint8_t *da
     ret = GetAddRand(ctx, addrand);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        BSL_SAL_Free(mp);
+        BSL_SAL_ClearFree(mp, mpLen);
         return ret;
     }
     ret = SlhDsaSignInternal(ctx, mp, mpLen, addrand, sign, signLen);
     BSL_SAL_CleanseData(addrand, sizeof(addrand));
-    BSL_SAL_Free(mp);
+    BSL_SAL_ClearFree(mp, mpLen);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         BSL_SAL_CleanseData(sign, sigBytes);
@@ -540,7 +540,7 @@ int32_t CRYPT_SLH_DSA_Verify(const CryptSlhDsaCtx *ctx, int32_t algId, const uin
         return ret;
     }
     ret = SlhDsaVerifyInternal(ctx, mp, mpLen, sign, signLen);
-    BSL_SAL_Free(mp);
+    BSL_SAL_ClearFree(mp, mpLen);
     return ret;
 }
 

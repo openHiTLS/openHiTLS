@@ -459,6 +459,10 @@ void ENTROPY_EsDeinit(ENTROPY_EntropySource *es)
 }
 static int32_t EsPoolSizeSet(ENTROPY_EntropySource *es, void *data, uint32_t len)
 {
+    if (data == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return CRYPT_NULL_INPUT;
+    }
     if (es->isWork) {
         BSL_ERR_PUSH_ERROR(CRYPT_ENTROPY_ES_STATE_ERROR);
         return CRYPT_ENTROPY_ES_STATE_ERROR;
