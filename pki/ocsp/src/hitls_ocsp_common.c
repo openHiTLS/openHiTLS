@@ -317,7 +317,7 @@ int32_t OcspGetNonce(HITLS_X509_Ext *ext, BSL_Buffer *val, uint32_t valLen)
         BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_EXT_NOT_FOUND);
         return HITLS_X509_ERR_EXT_NOT_FOUND;
     }
-    if (val == NULL || valLen < sizeof(BSL_Buffer)) {
+    if (val == NULL || valLen != sizeof(BSL_Buffer)) {
         BSL_ERR_PUSH_ERROR(HITLS_OCSP_ERR_INVALID_PARAM);
         return HITLS_OCSP_ERR_INVALID_PARAM;
     }

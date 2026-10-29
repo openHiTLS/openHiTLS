@@ -1377,7 +1377,7 @@ void SDV_OCSP_E2E_SINGLE_TC001(void)
     ASSERT_EQ(respStatus, HITLS_OCSP_RESP_STATUS_SUCCESSFUL);
 
     HITLS_OCSP_BasicResp *parsedBs = NULL;
-    ASSERT_EQ(HITLS_OCSP_RespCtrl(parsedResp, HITLS_OCSP_RESP_GET_BASIC, &parsedBs, sizeof(&parsedBs)),
+    ASSERT_EQ(HITLS_OCSP_RespCtrl(parsedResp, HITLS_OCSP_RESP_GET_BASIC, &parsedBs, sizeof(parsedBs)),
               HITLS_PKI_SUCCESS);
     ASSERT_TRUE(parsedBs != NULL);
 
@@ -1534,7 +1534,7 @@ void SDV_OCSP_E2E_MULTI_TC002(void)
     respDer.data = NULL;
 
     HITLS_OCSP_BasicResp *parsedBs = NULL;
-    ASSERT_EQ(HITLS_OCSP_RespCtrl(parsedResp, HITLS_OCSP_RESP_GET_BASIC, &parsedBs, sizeof(&parsedBs)),
+    ASSERT_EQ(HITLS_OCSP_RespCtrl(parsedResp, HITLS_OCSP_RESP_GET_BASIC, &parsedBs, sizeof(parsedBs)),
               HITLS_PKI_SUCCESS);
 
     uint32_t respCount = 0;
@@ -1633,7 +1633,7 @@ void SDV_OCSP_RESP_REVOKED_TC003(void)
     ASSERT_EQ(HITLS_OCSP_RespParseBuff(BSL_FORMAT_ASN1, &parseBuf, &parsedResp), HITLS_PKI_SUCCESS);
 
     HITLS_OCSP_BasicResp *parsedBs = NULL;
-    ASSERT_EQ(HITLS_OCSP_RespCtrl(parsedResp, HITLS_OCSP_RESP_GET_BASIC, &parsedBs, sizeof(&parsedBs)),
+    ASSERT_EQ(HITLS_OCSP_RespCtrl(parsedResp, HITLS_OCSP_RESP_GET_BASIC, &parsedBs, sizeof(parsedBs)),
               HITLS_PKI_SUCCESS);
 
     HITLS_OCSP_SingleResp *parsedSr = NULL;
@@ -1699,7 +1699,7 @@ void SDV_OCSP_RESP_UNKNOWN_TC004(void)
     ASSERT_EQ(HITLS_OCSP_RespParseBuff(BSL_FORMAT_ASN1, &parseBuf, &parsedResp), HITLS_PKI_SUCCESS);
 
     HITLS_OCSP_BasicResp *parsedBs = NULL;
-    ASSERT_EQ(HITLS_OCSP_RespCtrl(parsedResp, HITLS_OCSP_RESP_GET_BASIC, &parsedBs, sizeof(&parsedBs)),
+    ASSERT_EQ(HITLS_OCSP_RespCtrl(parsedResp, HITLS_OCSP_RESP_GET_BASIC, &parsedBs, sizeof(parsedBs)),
               HITLS_PKI_SUCCESS);
 
     HITLS_OCSP_SingleResp *parsedSr = NULL;
@@ -1861,6 +1861,80 @@ EXIT:;
 /* END_CASE */
 
 /* BEGIN_CASE */
+void SDV_OCSP_INVALID_THISUPDATE_TC007A(void)
+{
+#ifdef HITLS_PKI_OCSP
+    ASSERT_EQ(OcspTestGlobalSetup(), 0);
+
+    HITLS_OCSP_CertId *certId = HITLS_OCSP_CertIdNewFromCert(g_mdCtx, g_chain1.ee, g_chain1.intermediate);
+    ASSERT_TRUE(certId != NULL);
+    /* A zeroed BSL_TIME (year 0) is an invalid time, so construction is
+     * rejected. On failure certId ownership stays with the caller and can be
+     * freed without a double-free. */
+    BSL_TIME badThisUpdate = {0};
+    ASSERT_TRUE(HITLS_OCSP_SingleRespNew(certId, HITLS_OCSP_CERT_STATUS_GOOD, &badThisUpdate) == NULL);
+    HITLS_OCSP_CertIdFree(certId);
+
+EXIT:;
+#else
+    SKIP_TEST();
+#endif
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_OCSP_CTRL_VALLEN_TC007B(void)
+{
+#ifdef HITLS_PKI_OCSP
+    ASSERT_EQ(OcspTestGlobalSetup(), 0);
+
+    HITLS_OCSP_CertId *certId = HITLS_OCSP_CertIdNewFromCert(g_mdCtx, g_chain1.ee, g_chain1.intermediate);
+    ASSERT_TRUE(certId != NULL);
+    BSL_TIME thisUpdate = {0};
+    thisUpdate.year = 2024;
+    thisUpdate.month = 1;
+    thisUpdate.day = 1;
+    HITLS_OCSP_SingleResp *sr = HITLS_OCSP_SingleRespNew(certId, HITLS_OCSP_CERT_STATUS_GOOD, &thisUpdate);
+    certId = NULL;
+    ASSERT_TRUE(sr != NULL);
+
+    /* valLen must exactly equal sizeof(BSL_TIME): both undersized and oversized
+     * buffers are rejected (no silent truncation / slack). */
+    BSL_TIME nextUpdate = thisUpdate;
+    ASSERT_NE(HITLS_OCSP_SingleRespCtrl(sr, HITLS_OCSP_SINGLERESP_SET_NEXT_UPDATE, &nextUpdate,
+                                        sizeof(BSL_TIME) - 1),
+              HITLS_PKI_SUCCESS);
+    ASSERT_NE(HITLS_OCSP_SingleRespCtrl(sr, HITLS_OCSP_SINGLERESP_SET_NEXT_UPDATE, &nextUpdate,
+                                        sizeof(BSL_TIME) + 1),
+              HITLS_PKI_SUCCESS);
+    ASSERT_NE(HITLS_OCSP_SingleRespCtrl(sr, HITLS_OCSP_SINGLERESP_SET_NEXT_UPDATE, &nextUpdate, 0),
+              HITLS_PKI_SUCCESS);
+    /* The exact length still works. */
+    ASSERT_EQ(HITLS_OCSP_SingleRespCtrl(sr, HITLS_OCSP_SINGLERESP_SET_NEXT_UPDATE, &nextUpdate,
+                                        sizeof(BSL_TIME)),
+              HITLS_PKI_SUCCESS);
+
+    /* RespCtrl GET_STATUS: pointer-size mismatch is rejected. A non-successful
+     * status needs no signed BasicResp, so it can be built directly. */
+    HITLS_OCSP_Resp *resp = HITLS_OCSP_RespNew(HITLS_OCSP_RESP_STATUS_INTERNAL_ERROR, NULL);
+    ASSERT_TRUE(resp != NULL);
+    int32_t status = -1;
+    ASSERT_NE(HITLS_OCSP_RespCtrl(resp, HITLS_OCSP_RESP_GET_STATUS, &status, sizeof(status) + 1),
+              HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_OCSP_RespCtrl(resp, HITLS_OCSP_RESP_GET_STATUS, &status, sizeof(status)),
+              HITLS_PKI_SUCCESS);
+    ASSERT_EQ(status, HITLS_OCSP_RESP_STATUS_INTERNAL_ERROR);
+    HITLS_OCSP_RespFree(resp);
+    HITLS_OCSP_SingleRespFree(sr);
+
+EXIT:;
+#else
+    SKIP_TEST();
+#endif
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
 void SDV_OCSP_INVALID_STATUS_TC008(void)
 {
 #ifdef HITLS_PKI_OCSP
@@ -1902,7 +1976,7 @@ void SDV_OCSP_INVALID_STATUS_TC008(void)
 
     // GET_BASIC should fail for non-successful
     HITLS_OCSP_BasicResp *getBs = NULL;
-    ASSERT_NE(HITLS_OCSP_RespCtrl(parsedResp, HITLS_OCSP_RESP_GET_BASIC, &getBs, sizeof(&getBs)), HITLS_PKI_SUCCESS);
+    ASSERT_NE(HITLS_OCSP_RespCtrl(parsedResp, HITLS_OCSP_RESP_GET_BASIC, &getBs, sizeof(getBs)), HITLS_PKI_SUCCESS);
 
     // Exercise the print APIs on the created request/response (no terminal output).
     ASSERT_EQ(OcspTestPrintResp(parsedResp), HITLS_PKI_SUCCESS);
@@ -2059,11 +2133,12 @@ void SDV_OCSP_CHECK_VALIDITY_TC015(void)
     // Valid: current time, generous limits
     ASSERT_EQ(HITLS_OCSP_CheckValidity(sr, 300, 3600), HITLS_PKI_SUCCESS);
 
-    // maxage = 0 disables the maxage check (drift = 0 also passes for thisUpdate == now)
-    ASSERT_EQ(HITLS_OCSP_CheckValidity(sr, 0, 0), HITLS_PKI_SUCCESS);
+    // maxage < 0 disables the maxage check (drift = 0 also passes for thisUpdate == now)
+    ASSERT_EQ(HITLS_OCSP_CheckValidity(sr, 0, -1), HITLS_PKI_SUCCESS);
 
-    // Stale response: thisUpdate well in the past. With maxage = 0 the maxage check is
-    // disabled, so it passes; with a positive maxage it must be rejected.
+    // Stale response: thisUpdate well in the past. With maxage < 0 the maxage check is
+    // disabled, so it passes; with a positive maxage it must be rejected. With
+    // maxage = 0 (check that thisUpdate is not in the past) it must also be rejected.
     HITLS_OCSP_CertId *oldCid = HITLS_OCSP_CertIdNewFromCert(g_mdCtx, g_chain1.ee, g_chain1.intermediate);
     ASSERT_TRUE(oldCid != NULL);
     BSL_TIME oldTime = {0};
@@ -2071,12 +2146,32 @@ void SDV_OCSP_CHECK_VALIDITY_TC015(void)
     oldTime.year -= 1;
     HITLS_OCSP_SingleResp *staleSr = HITLS_OCSP_SingleRespNew(oldCid, HITLS_OCSP_CERT_STATUS_GOOD, &oldTime);
     ASSERT_TRUE(staleSr != NULL);
-    ASSERT_EQ(HITLS_OCSP_CheckValidity(staleSr, 0, 0), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_OCSP_CheckValidity(staleSr, 0, -1), HITLS_PKI_SUCCESS);
     ASSERT_NE(HITLS_OCSP_CheckValidity(staleSr, 300, 3600), HITLS_PKI_SUCCESS);
+    /* maxage = 0 checks that thisUpdate is not earlier than now: a response one
+     * year old is deterministically rejected (unlike sr whose thisUpdate was
+     * sampled only moments ago). */
+    ASSERT_NE(HITLS_OCSP_CheckValidity(staleSr, 300, 0), HITLS_PKI_SUCCESS);
     HITLS_OCSP_SingleRespFree(staleSr);
 
-    // Too far in future: drift = -1 (thisUpdate > now - 1)
-    ASSERT_NE(HITLS_OCSP_CheckValidity(sr, -1, -1), HITLS_PKI_SUCCESS);
+    // Too far in future: drift = -1 clamps to 0 (thisUpdate <= now - 0 passes),
+    // maxage = -1 disables the maxage check, so -1/-1 is valid.
+    ASSERT_EQ(HITLS_OCSP_CheckValidity(sr, -1, -1), HITLS_PKI_SUCCESS);
+
+    // Negative maxage disables the maxage check while drift stays active.
+    ASSERT_EQ(HITLS_OCSP_CheckValidity(sr, 300, -1), HITLS_PKI_SUCCESS);
+    // A stale response with a negative maxage is also accepted (maxage disabled),
+    // whereas a positive maxage rejects it.
+    BSL_TIME oldTime2 = {0};
+    BSL_SAL_SysTimeGet(&oldTime2);
+    oldTime2.year -= 1;
+    HITLS_OCSP_CertId *oldCid2 = HITLS_OCSP_CertIdNewFromCert(g_mdCtx, g_chain1.ee, g_chain1.intermediate);
+    ASSERT_TRUE(oldCid2 != NULL);
+    HITLS_OCSP_SingleResp *staleSr2 = HITLS_OCSP_SingleRespNew(oldCid2, HITLS_OCSP_CERT_STATUS_GOOD, &oldTime2);
+    ASSERT_TRUE(staleSr2 != NULL);
+    ASSERT_EQ(HITLS_OCSP_CheckValidity(staleSr2, 300, -1), HITLS_PKI_SUCCESS);
+    ASSERT_NE(HITLS_OCSP_CheckValidity(staleSr2, 300, 3600), HITLS_PKI_SUCCESS);
+    HITLS_OCSP_SingleRespFree(staleSr2);
 
     // NULL single response
     ASSERT_EQ(HITLS_OCSP_CheckValidity(NULL, 300, 3600), HITLS_OCSP_ERR_NULL_POINTER);
@@ -2130,7 +2225,7 @@ void SDV_OCSP_VERIFY_ABNORMAL_TC016(void)
     ASSERT_EQ(HITLS_OCSP_RespParseBuff(BSL_FORMAT_ASN1, &parseBuf, &parsedResp), HITLS_PKI_SUCCESS);
 
     HITLS_OCSP_BasicResp *parsedBs = NULL;
-    ASSERT_EQ(HITLS_OCSP_RespCtrl(parsedResp, HITLS_OCSP_RESP_GET_BASIC, &parsedBs, sizeof(&parsedBs)),
+    ASSERT_EQ(HITLS_OCSP_RespCtrl(parsedResp, HITLS_OCSP_RESP_GET_BASIC, &parsedBs, sizeof(parsedBs)),
               HITLS_PKI_SUCCESS);
     ASSERT_TRUE(parsedBs != NULL);
 
@@ -2267,7 +2362,7 @@ void SDV_OCSP_PRESET_FULL_TC017(void)
     ASSERT_EQ(respStatus, HITLS_OCSP_RESP_STATUS_SUCCESSFUL);
 
     HITLS_OCSP_BasicResp *parsedBs = NULL;
-    ASSERT_EQ(HITLS_OCSP_RespCtrl(parsedResp, HITLS_OCSP_RESP_GET_BASIC, &parsedBs, sizeof(&parsedBs)),
+    ASSERT_EQ(HITLS_OCSP_RespCtrl(parsedResp, HITLS_OCSP_RESP_GET_BASIC, &parsedBs, sizeof(parsedBs)),
               HITLS_PKI_SUCCESS);
 
     // Verify nonce
@@ -2386,7 +2481,7 @@ void SDV_OCSP_PRESET_MINIMAL_TC018(void)
     ASSERT_EQ(HITLS_OCSP_RespParseBuff(BSL_FORMAT_ASN1, &respParseBuf, &parsedResp), HITLS_PKI_SUCCESS);
 
     HITLS_OCSP_BasicResp *parsedBs = NULL;
-    ASSERT_EQ(HITLS_OCSP_RespCtrl(parsedResp, HITLS_OCSP_RESP_GET_BASIC, &parsedBs, sizeof(&parsedBs)),
+    ASSERT_EQ(HITLS_OCSP_RespCtrl(parsedResp, HITLS_OCSP_RESP_GET_BASIC, &parsedBs, sizeof(parsedBs)),
               HITLS_PKI_SUCCESS);
 
     // No nonce in response
@@ -2450,7 +2545,11 @@ void SDV_OCSP_INVALID_REVOCATION_REASON_TC010(void)
 
     HITLS_OCSP_CertId *certId = HITLS_OCSP_CertIdNewFromCert(g_mdCtx, g_chain1.ee, g_chain1.intermediate);
     ASSERT_TRUE(certId != NULL);
-    sr = HITLS_OCSP_SingleRespNew(certId, HITLS_OCSP_CERT_STATUS_REVOKED, &(BSL_TIME){0});
+    BSL_TIME thisUpdate = {0};
+    thisUpdate.year = 2024;
+    thisUpdate.month = 1;
+    thisUpdate.day = 1;
+    sr = HITLS_OCSP_SingleRespNew(certId, HITLS_OCSP_CERT_STATUS_REVOKED, &thisUpdate);
     certId = NULL;
     ASSERT_TRUE(sr != NULL);
 
@@ -2494,12 +2593,16 @@ void SDV_OCSP_REVOCATION_FIELDS_REQUIRE_REVOKED_TC010A(void)
 
     HITLS_OCSP_CertId *certId = HITLS_OCSP_CertIdNewFromCert(g_mdCtx, g_chain1.ee, g_chain1.intermediate);
     ASSERT_TRUE(certId != NULL);
-    srGood = HITLS_OCSP_SingleRespNew(certId, HITLS_OCSP_CERT_STATUS_GOOD, &(BSL_TIME){0});
+    BSL_TIME thisUpdate = {0};
+    thisUpdate.year = 2024;
+    thisUpdate.month = 1;
+    thisUpdate.day = 1;
+    srGood = HITLS_OCSP_SingleRespNew(certId, HITLS_OCSP_CERT_STATUS_GOOD, &thisUpdate);
     certId = NULL;
     ASSERT_TRUE(srGood != NULL);
     HITLS_OCSP_CertId *certId2 = HITLS_OCSP_CertIdNewFromCert(g_mdCtx, g_chain1.ee, g_chain1.intermediate);
     ASSERT_TRUE(certId2 != NULL);
-    srUnknown = HITLS_OCSP_SingleRespNew(certId2, HITLS_OCSP_CERT_STATUS_UNKNOWN, &(BSL_TIME){0});
+    srUnknown = HITLS_OCSP_SingleRespNew(certId2, HITLS_OCSP_CERT_STATUS_UNKNOWN, &thisUpdate);
     certId2 = NULL;
     ASSERT_TRUE(srUnknown != NULL);
 
@@ -2525,7 +2628,7 @@ void SDV_OCSP_REVOCATION_FIELDS_REQUIRE_REVOKED_TC010A(void)
     HITLS_OCSP_CertId *certId3 = HITLS_OCSP_CertIdNewFromCert(g_mdCtx, g_chain1.ee, g_chain1.intermediate);
     ASSERT_TRUE(certId3 != NULL);
     HITLS_OCSP_SingleResp *srRevoked =
-        HITLS_OCSP_SingleRespNew(certId3, HITLS_OCSP_CERT_STATUS_REVOKED, &(BSL_TIME){0});
+        HITLS_OCSP_SingleRespNew(certId3, HITLS_OCSP_CERT_STATUS_REVOKED, &thisUpdate);
     certId3 = NULL;
     ASSERT_TRUE(srRevoked != NULL);
     ASSERT_EQ(HITLS_OCSP_SingleRespCtrl(srRevoked, HITLS_OCSP_SINGLERESP_SET_REVOCATION_TIME, &revokeTime,
@@ -2584,7 +2687,7 @@ void SDV_OCSP_RESP_SIGN_VERIFY_TC011(void)
     ASSERT_EQ(HITLS_OCSP_RespParseBuff(BSL_FORMAT_ASN1, &parseBuf, &parsedResp), HITLS_PKI_SUCCESS);
 
     HITLS_OCSP_BasicResp *parsedBs = NULL;
-    ASSERT_EQ(HITLS_OCSP_RespCtrl(parsedResp, HITLS_OCSP_RESP_GET_BASIC, &parsedBs, sizeof(&parsedBs)),
+    ASSERT_EQ(HITLS_OCSP_RespCtrl(parsedResp, HITLS_OCSP_RESP_GET_BASIC, &parsedBs, sizeof(parsedBs)),
               HITLS_PKI_SUCCESS);
     ASSERT_TRUE(parsedBs != NULL);
 
@@ -7000,10 +7103,12 @@ void SDV_OCSP_NEXTUPDATE_BEFORE_THISUPDATE_TC062(void)
     BSL_TIME badNext = {0};
     ASSERT_EQ(OcspTestGlobalSetup(), 0);
 
-    /* Positive control: nextUpdate after thisUpdate passes CheckValidity. */
+    /* Positive control: nextUpdate after thisUpdate passes CheckValidity.
+     * maxage = -1 disables the maxage check (a zero maxage would reject a
+     * thisUpdate marginally earlier than now). */
     goodSr = OcspTestCreateSingleResp(g_mdCtx, g_chain1.ee, g_chain1.intermediate, HITLS_OCSP_CERT_STATUS_GOOD);
     ASSERT_TRUE(goodSr != NULL);
-    ASSERT_EQ(HITLS_OCSP_CheckValidity(goodSr, 300, 0), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_OCSP_CheckValidity(goodSr, 300, -1), HITLS_PKI_SUCCESS);
 
     /* Construction path: SET_NEXT_UPDATE rejects nextUpdate (now - 1h) preceding
      * thisUpdate (now), and does not set the field. */
@@ -7041,7 +7146,9 @@ void SDV_OCSP_NEXTUPDATE_BEFORE_THISUPDATE_TC062(void)
     ASSERT_TRUE(bs != NULL);
     ASSERT_EQ(HITLS_OCSP_BasicRespGetRespByIndex(bs, 0, &parsedSr), HITLS_PKI_SUCCESS);
     ASSERT_TRUE(parsedSr != NULL);
-    ASSERT_EQ(HITLS_OCSP_CheckValidity(parsedSr, 300, 0), HITLS_OCSP_ERR_VALIDITY);
+    /* maxage = -1 disables the maxage check so the nextUpdate-before-thisUpdate
+     * ordering error (VALIDITY) is what is reported. */
+    ASSERT_EQ(HITLS_OCSP_CheckValidity(parsedSr, 300, -1), HITLS_OCSP_ERR_VALIDITY);
 
 EXIT:
     HITLS_OCSP_SingleRespFree(goodSr);

@@ -2251,7 +2251,7 @@ EXIT:
 }
 /* END_CASE */
 
-/* Response fixtures for parsing-spec cases (aligned with OpenSSL http_client). */
+/* Response fixtures for parsing-spec cases. */
 static const char RESP_TRAILING_OWS[] = "HTTP/1.0 200 OK\r\n"
                                         "Content-Type: application/ocsp-response \r\n"
                                         "Content-Length: 5 \r\n"
@@ -2974,8 +2974,8 @@ EXIT:
  *    1. Drive Exchange against a response whose Content-Length line is written as
  *       "Content-Length : 5" and whose body is 10 bytes long.
  * @expect
- *    1. Exchange returns BSL_SUCCESS with all 10 body bytes: like OpenSSL, the raw
- *       field name never matches, the line is ignored and the body is read to
+ *    1. Exchange returns BSL_SUCCESS with all 10 body bytes: the raw field name
+ *       never matches, the line is ignored and the body is read to
  *       EOF instead of stopping at 5 bytes.
  */
 /* BEGIN_CASE */
@@ -3011,7 +3011,7 @@ EXIT:
  *       a line whose field name is empty.
  * @expect
  *    1. Exchange returns BSL_SUCCESS with the 5-byte body: both lines are dropped
- *       without processing, matching the OpenSSL header loop.
+ *       without processing, matching the header parsing loop.
  */
 /* BEGIN_CASE */
 void SDV_BSL_HTTP_EXCHANGE_TC027(void)
@@ -3044,8 +3044,8 @@ EXIT:
  *    1. Drive Exchange against a response whose status line starts with "HTTP/2.0".
  *    2. Drive a fresh context against a 404 response with a body.
  * @expect
- *    1. The first drive returns BSL_HTTP_ERR_RESP_PARSE (OpenSSL
- *       parse_http_line1 requires the "HTTP/1." prefix).
+ *    1. The first drive returns BSL_HTTP_ERR_RESP_PARSE (the status line parser
+ *       requires the "HTTP/1." prefix).
  *    2. The second drive returns BSL_HTTP_ERR_RESP_STATUS: a non-200 status stops
  *       the transfer and the error body is not read.
  */

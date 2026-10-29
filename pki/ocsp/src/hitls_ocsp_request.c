@@ -327,13 +327,13 @@ int32_t HITLS_OCSP_ReqCtrl(HITLS_OCSP_Req *req, int32_t cmd, void *val, uint32_t
 
     switch (cmd) {
         case HITLS_OCSP_REQ_GET_NONCE:
-            if (valLen < sizeof(BSL_Buffer)) {
+            if (valLen != sizeof(BSL_Buffer)) {
                 BSL_ERR_PUSH_ERROR(HITLS_OCSP_ERR_INVALID_PARAM);
                 return HITLS_OCSP_ERR_INVALID_PARAM;
             }
             return OcspGetNonce(internal->ext, (BSL_Buffer *)val, valLen);
         case HITLS_OCSP_REQ_ADD_SINGLEREQ:
-            if (valLen < sizeof(HITLS_OCSP_SingleReq *)) {
+            if (valLen != sizeof(HITLS_OCSP_SingleReq *)) {
                 BSL_ERR_PUSH_ERROR(HITLS_OCSP_ERR_INVALID_PARAM);
                 return HITLS_OCSP_ERR_INVALID_PARAM;
             }

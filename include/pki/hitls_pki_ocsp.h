@@ -471,6 +471,9 @@ int32_t HITLS_OCSP_ReqGetSingleReqByIndex(const HITLS_OCSP_Req *req, uint32_t in
  *                        still owns it and must free it with #HITLS_OCSP_CertIdFree).
  * @param certStatus [IN] Certificate status (HITLS_OCSP_CERT_STATUS_GOOD / REVOKED / UNKNOWN).
  * @param thisUpdate [IN] Time of this update (input, copied into the object; must not be NULL).
+ *                          Must be a valid time (year/month/day/hour/minute/second etc.
+ *                          within their valid ranges); an invalid time is rejected and
+ *                          returns NULL.
  *
  * @retval HITLS_OCSP_SingleResp * on success, NULL on failure.
  */
@@ -799,7 +802,10 @@ int32_t HITLS_OCSP_CheckNonce(const HITLS_OCSP_Req *req, const HITLS_OCSP_BasicR
  *
  * @param single   [IN]  SingleResponse to check.
  * @param driftSec [IN]  Allowed clock drift in seconds (e.g. 300 for 5 minutes).
- * @param maxageSec [IN] Maximum age in seconds (0 to disable maxage check).
+ *                       A negative value is clamped to 0.
+ * @param maxageSec [IN] Maximum age in seconds (a negative value disables the
+ *                       maxage check; 0 checks that thisUpdate is not earlier
+ *                       than the current time).
  *
  * @retval #HITLS_PKI_SUCCESS, success (response is within validity window).
  *         Error codes can be found in hitls_pki_errno.h

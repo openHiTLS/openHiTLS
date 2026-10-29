@@ -23,6 +23,7 @@
 #include "bsl_asn1_internal.h"
 #include "bsl_obj.h"
 #include "bsl_obj_internal.h"
+#include "sal_time.h"
 #include "crypt_errno.h"
 #include "hitls_pki_errno.h"
 #include "hitls_pki_ocsp.h"
@@ -279,6 +280,14 @@ HITLS_OCSP_SingleResp *HITLS_OCSP_SingleRespNew(HITLS_OCSP_CertId *certId,
     }
     single->certId = certId;
     single->certStatus = certStatus;
+    /* Reject a malformed thisUpdate (year before 1970, month/day/hour/... out of
+     * range) before it is encoded into a bogus GeneralizedTime. Only the
+     * structure is freed here: certId ownership stays with the caller on failure. */
+    if (!BSL_DateTimeCheck(thisUpdate)) {
+        BSL_SAL_Free(single);
+        BSL_ERR_PUSH_ERROR(HITLS_OCSP_ERR_INVALID_PARAM);
+        return NULL;
+    }
     single->thisUpdate = *thisUpdate;
     return (HITLS_OCSP_SingleResp *)single;
 }
@@ -304,28 +313,28 @@ static int32_t OcspSingleRespGetCtrl(HITLS_OCSP_SingleResp_Internal *internal, i
     }
     switch (cmd) {
         case HITLS_OCSP_SINGLERESP_GET_CERTID:
-            if (valLen < sizeof(HITLS_OCSP_CertId *)) {
+            if (valLen != sizeof(HITLS_OCSP_CertId *)) {
                 BSL_ERR_PUSH_ERROR(HITLS_OCSP_ERR_INVALID_PARAM);
                 return HITLS_OCSP_ERR_INVALID_PARAM;
             }
             *(HITLS_OCSP_CertId **)val = internal->certId;
             return HITLS_PKI_SUCCESS;
         case HITLS_OCSP_SINGLERESP_GET_CERT_STATUS:
-            if (valLen < sizeof(HITLS_OCSP_CertStatus)) {
+            if (valLen != sizeof(HITLS_OCSP_CertStatus)) {
                 BSL_ERR_PUSH_ERROR(HITLS_OCSP_ERR_INVALID_PARAM);
                 return HITLS_OCSP_ERR_INVALID_PARAM;
             }
             *(HITLS_OCSP_CertStatus *)val = internal->certStatus;
             return HITLS_PKI_SUCCESS;
         case HITLS_OCSP_SINGLERESP_GET_THIS_UPDATE:
-            if (valLen < sizeof(BSL_TIME)) {
+            if (valLen != sizeof(BSL_TIME)) {
                 BSL_ERR_PUSH_ERROR(HITLS_OCSP_ERR_INVALID_PARAM);
                 return HITLS_OCSP_ERR_INVALID_PARAM;
             }
             *(BSL_TIME *)val = internal->thisUpdate;
             return HITLS_PKI_SUCCESS;
         case HITLS_OCSP_SINGLERESP_GET_NEXT_UPDATE:
-            if (valLen < sizeof(BSL_TIME)) {
+            if (valLen != sizeof(BSL_TIME)) {
                 BSL_ERR_PUSH_ERROR(HITLS_OCSP_ERR_INVALID_PARAM);
                 return HITLS_OCSP_ERR_INVALID_PARAM;
             }
@@ -336,7 +345,7 @@ static int32_t OcspSingleRespGetCtrl(HITLS_OCSP_SingleResp_Internal *internal, i
             *(BSL_TIME *)val = internal->nextUpdate;
             return HITLS_PKI_SUCCESS;
         case HITLS_OCSP_SINGLERESP_GET_REVOCATION_TIME:
-            if (valLen < sizeof(BSL_TIME)) {
+            if (valLen != sizeof(BSL_TIME)) {
                 BSL_ERR_PUSH_ERROR(HITLS_OCSP_ERR_INVALID_PARAM);
                 return HITLS_OCSP_ERR_INVALID_PARAM;
             }
@@ -347,7 +356,7 @@ static int32_t OcspSingleRespGetCtrl(HITLS_OCSP_SingleResp_Internal *internal, i
             *(BSL_TIME *)val = internal->revocationTime;
             return HITLS_PKI_SUCCESS;
         case HITLS_OCSP_SINGLERESP_GET_REVOCATION_REASON:
-            if (valLen < sizeof(int32_t)) {
+            if (valLen != sizeof(int32_t)) {
                 BSL_ERR_PUSH_ERROR(HITLS_OCSP_ERR_INVALID_PARAM);
                 return HITLS_OCSP_ERR_INVALID_PARAM;
             }
@@ -397,7 +406,7 @@ static int32_t OcspSingleRespSetCtrl(HITLS_OCSP_SingleResp_Internal *internal, i
     }
     switch (cmd) {
         case HITLS_OCSP_SINGLERESP_SET_NEXT_UPDATE:
-            if (valLen < sizeof(BSL_TIME)) {
+            if (valLen != sizeof(BSL_TIME)) {
                 BSL_ERR_PUSH_ERROR(HITLS_OCSP_ERR_INVALID_PARAM);
                 return HITLS_OCSP_ERR_INVALID_PARAM;
             }
@@ -415,7 +424,7 @@ static int32_t OcspSingleRespSetCtrl(HITLS_OCSP_SingleResp_Internal *internal, i
                 BSL_ERR_PUSH_ERROR(HITLS_OCSP_ERR_INVALID_PARAM);
                 return HITLS_OCSP_ERR_INVALID_PARAM;
             }
-            if (valLen < sizeof(BSL_TIME)) {
+            if (valLen != sizeof(BSL_TIME)) {
                 BSL_ERR_PUSH_ERROR(HITLS_OCSP_ERR_INVALID_PARAM);
                 return HITLS_OCSP_ERR_INVALID_PARAM;
             }
@@ -429,7 +438,7 @@ static int32_t OcspSingleRespSetCtrl(HITLS_OCSP_SingleResp_Internal *internal, i
                 BSL_ERR_PUSH_ERROR(HITLS_OCSP_ERR_INVALID_PARAM);
                 return HITLS_OCSP_ERR_INVALID_PARAM;
             }
-            if (valLen < sizeof(int32_t)) {
+            if (valLen != sizeof(int32_t)) {
                 BSL_ERR_PUSH_ERROR(HITLS_OCSP_ERR_INVALID_PARAM);
                 return HITLS_OCSP_ERR_INVALID_PARAM;
             }
@@ -514,7 +523,7 @@ static int32_t OcspBasicRespGetCtrl(HITLS_OCSP_BasicResp_Internal *internal, int
     }
     switch (cmd) {
         case HITLS_OCSP_BASICRESP_GET_PRODUCED_AT:
-            if (valLen < sizeof(BSL_TIME)) {
+            if (valLen != sizeof(BSL_TIME)) {
                 BSL_ERR_PUSH_ERROR(HITLS_OCSP_ERR_INVALID_PARAM);
                 return HITLS_OCSP_ERR_INVALID_PARAM;
             }
@@ -532,7 +541,7 @@ static int32_t OcspBasicRespGetCtrl(HITLS_OCSP_BasicResp_Internal *internal, int
  * responses list. Ownership transfers only on success. */
 static int32_t OcspBasicRespAddSingleResp(HITLS_OCSP_BasicResp_Internal *internal, void *val, uint32_t valLen)
 {
-    if (valLen < sizeof(HITLS_OCSP_SingleResp *)) {
+    if (valLen != sizeof(HITLS_OCSP_SingleResp *)) {
         BSL_ERR_PUSH_ERROR(HITLS_OCSP_ERR_INVALID_PARAM);
         return HITLS_OCSP_ERR_INVALID_PARAM;
     }
@@ -1158,14 +1167,14 @@ int32_t HITLS_OCSP_RespCtrl(HITLS_OCSP_Resp *resp, int32_t cmd, void *val, uint3
     HITLS_OCSP_Resp_Internal *internal = (HITLS_OCSP_Resp_Internal *)resp;
     switch (cmd) {
         case HITLS_OCSP_RESP_GET_STATUS:
-            if (val == NULL || valLen < sizeof(int32_t)) {
+            if (val == NULL || valLen != sizeof(int32_t)) {
                 BSL_ERR_PUSH_ERROR(HITLS_OCSP_ERR_INVALID_PARAM);
                 return HITLS_OCSP_ERR_INVALID_PARAM;
             }
             *(int32_t *)val = internal->status;
             return HITLS_PKI_SUCCESS;
         case HITLS_OCSP_RESP_GET_BASIC:
-            if (val == NULL || valLen < sizeof(HITLS_OCSP_BasicResp *)) {
+            if (val == NULL || valLen != sizeof(HITLS_OCSP_BasicResp *)) {
                 BSL_ERR_PUSH_ERROR(HITLS_OCSP_ERR_INVALID_PARAM);
                 return HITLS_OCSP_ERR_INVALID_PARAM;
             }
@@ -1242,20 +1251,6 @@ static int32_t OcspFindSignerInList(const HITLS_OCSP_BasicResp_Internal *bs, con
     return HITLS_PKI_SUCCESS;
 }
 
-/* Takes one additional reference on the located signer certificate so that the pointer
- * returned to the API user stays valid after bs and the searched cert list are released.
- * On failure *signer is reset to NULL so the caller never sees an un-referenced pointer. */
-static int32_t OcspSignerRefUp(HITLS_X509_Cert **signer)
-{
-    int32_t ref = 0;
-    int32_t ret = HITLS_X509_CertCtrl(*signer, HITLS_X509_REF_UP, &ref, sizeof(int));
-    if (ret != HITLS_PKI_SUCCESS) {
-        *signer = NULL;
-        return ret;
-    }
-    return HITLS_PKI_SUCCESS;
-}
-
 int32_t HITLS_OCSP_BasicRespGetSigner(const HITLS_OCSP_BasicResp *bs, const HITLS_X509_List *certs,
                                        HITLS_X509_Cert **signer)
 {
@@ -1270,25 +1265,34 @@ int32_t HITLS_OCSP_BasicRespGetSigner(const HITLS_OCSP_BasicResp *bs, const HITL
     }
     const HITLS_OCSP_BasicResp_Internal *internal = (const HITLS_OCSP_BasicResp_Internal *)bs;
 
-    /* Try external certs first */
-    int32_t ret = OcspFindSignerInList(internal, certs, signer);
+    /* Locate the signer in the external list first, then fall back to the embedded
+     * certs. The located pointer is held in a local until every step (find + ref) has
+     * succeeded, so *signer is only written on success and left unchanged on failure. */
+    HITLS_X509_Cert *found = NULL;
+    int32_t ret = OcspFindSignerInList(internal, certs, &found);
     if (ret != HITLS_PKI_SUCCESS) {
         return ret;
     }
-    if (*signer != NULL) {
-        return OcspSignerRefUp(signer);
+    if (found == NULL) {
+        ret = OcspFindSignerInList(internal, internal->certs, &found);
+        if (ret != HITLS_PKI_SUCCESS) {
+            return ret;
+        }
     }
-
-    /* Fall back to embedded certs */
-    ret = OcspFindSignerInList(internal, internal->certs, signer);
-    if (ret != HITLS_PKI_SUCCESS) {
-        return ret;
-    }
-    if (*signer == NULL) {
+    if (found == NULL) {
         BSL_ERR_PUSH_ERROR(HITLS_OCSP_ERR_SIGNER_NOT_FOUND);
         return HITLS_OCSP_ERR_SIGNER_NOT_FOUND;
     }
-    return OcspSignerRefUp(signer);
+
+    /* Take one reference before handing the pointer to the caller. Only on success
+     * is *signer written; a failed ref leaves *signer (and found) untouched. */
+    int32_t ref = 0;
+    ret = HITLS_X509_CertCtrl(found, HITLS_X509_REF_UP, &ref, sizeof(int));
+    if (ret != HITLS_PKI_SUCCESS) {
+        return ret;
+    }
+    *signer = found;
+    return HITLS_PKI_SUCCESS;
 }
 
 /* Detect whether all SingleResponse CertIDs reference the same issuer
@@ -1704,9 +1708,10 @@ int32_t HITLS_OCSP_CheckValidity(const HITLS_OCSP_SingleResp *single, int64_t dr
         BSL_ERR_PUSH_ERROR(HITLS_OCSP_ERR_NULL_POINTER);
         return HITLS_OCSP_ERR_NULL_POINTER;
     }
-    if (driftSec < 0 || maxageSec < 0) {
-        BSL_ERR_PUSH_ERROR(HITLS_OCSP_ERR_INVALID_PARAM);
-        return HITLS_OCSP_ERR_INVALID_PARAM;
+    if (driftSec < 0) {
+        /* Negative drift is clamped to 0: a negative clock-drift allowance is
+         * meaningless, treat it as "no drift". */
+        driftSec = 0;
     }
     const HITLS_OCSP_SingleResp_Internal *internal = (const HITLS_OCSP_SingleResp_Internal *)single;
 
@@ -1739,8 +1744,8 @@ int32_t HITLS_OCSP_CheckValidity(const HITLS_OCSP_SingleResp *single, int64_t dr
         return HITLS_OCSP_ERR_NOT_YET_VALID;
     }
 
-    /* Check thisUpdate is not too old (maxage). maxageSec == 0 disables this check. */
-    if (maxageSec > 0 && nowUtc - thisUtc > maxageSec) {
+    /* Check thisUpdate is not too old (maxage). maxageSec < 0 disables this check. */
+    if (maxageSec >= 0 && nowUtc - thisUtc > maxageSec) {
         BSL_ERR_PUSH_ERROR(HITLS_OCSP_ERR_TOO_OLD);
         return HITLS_OCSP_ERR_TOO_OLD;
     }
