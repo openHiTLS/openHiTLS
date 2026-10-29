@@ -256,6 +256,8 @@ int32_t HITLS_Clear(HITLS_Ctx *ctx)
     }
 #endif
     ctx->rwstate = HITLS_NOTHING;
+    ctx->appWriteOffset = 0;
+    ctx->appWriteData = NULL;
 #ifdef HITLS_TLS_FEATURE_SESSION
     if (HITLS_ClearBadSession(ctx) != HITLS_SUCCESS) {
         HITLS_SESS_Free(ctx->session);

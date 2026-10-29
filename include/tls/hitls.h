@@ -218,9 +218,21 @@ int32_t HITLS_Peek(HITLS_Ctx *ctx, uint8_t *data, uint32_t bufSize, uint32_t *re
 /**
  * @ingroup tls
  * @brief   Write data.
- * @details: Encrypts and packs data with the specified length dataLen into a single record and sends the record.
- * @attention The length of the data to be sent cannot exceed the maximum writable length,
- *            which can be obtained by calling HITLS_GetMaxWriteSize.
+ * @details: Encrypts and packs data into records and sends them. Which is done depends on
+ *           HITLS_MODE_ENABLE_PARTIAL_WRITE, which is enabled by default:
+ *           - Enabled: a single record is packed per call, so at most HITLS_GetMaxWriteSize() bytes are
+ *             written and *writeLen returns the length of that record. The remaining data is left to the
+ *             caller, which must continue with a new buffer.
+ *           - Disabled, stream protocols: all of dataLen is written before the call returns, *writeLen ==
+ *             dataLen, and the progress is kept inside the context when the I/O blocks.
+ *           - Datagram protocols (DTLS/DTLCP) always pack at most one record per call, whatever this bit is.
+ *             *writeLen tells how much was written, so the caller must not assume dataLen was consumed.
+ * @attention When HITLS_REC_NORMAL_IO_BUSY is returned, *writeLen is 0 and the call must be repeated with the
+ *            same data pointer (unless HITLS_MODE_ACCEPT_MOVING_WRITE_BUFFER is set).
+ *            With HITLS_MODE_ENABLE_PARTIAL_WRITE enabled (the default) the retry must pass the same dataLen.
+ *            With it disabled, dataLen on the retry must cover both the bytes already sent and the pending
+ *            record, and may be larger to append further data. An invalid retry terminates the connection
+ *            with a fatal alert and HITLS_APP_ERR_WRITE_BAD_RETRY is returned.
  * @param   ctx [IN] TLS context
  * @param   data [IN] Data to be written
  * @param   dataLen [IN] Length to be written
@@ -1895,11 +1907,21 @@ int32_t HITLS_GetOutPendingSize(const HITLS_Ctx *ctx, uint32_t *size);
 /**
  * @ingroup tls
  * @brief   Flush the record out buffer
+ * @details Sends out the record that has already been encrypted and is pending in the output buffer.
+ *          No new record is encrypted, and no length is reported.
+ * @attention Only available when HITLS_MODE_ENABLE_PARTIAL_WRITE is set, which is the default. In that
+ *            mode, a successful flush means the pending record has been sent, so the caller must advance
+ *            its buffer by the record length before writing again. When the mode is cleared (full write)
+ *            on a stream connection, HITLS_CONFIG_UNSUPPORT is returned and the caller must retry
+ *            HITLS_Write instead. Datagram connections (DTLS/DTLCP) are exempt: flush stays available and
+ *            is a no-op, because they always keep the single record semantics.
  *
  * @param   ctx [IN] TLS connection handle
  *
  * @retval  HITLS_SUCCESS Out buffer is empty or flush success
  * @retval  HITLS_REC_NORMAL_IO_BUSY Out buffer is not empty, but the IO operation is busy
+ * @retval  HITLS_CONFIG_UNSUPPORT The connection is not in partial write mode
+ * @retval  HITLS_ASYNC_ERR_OPERATION_BUSY An async task is outstanding
  */
 int32_t HITLS_Flush(HITLS_Ctx *ctx);
 

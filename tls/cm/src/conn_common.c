@@ -914,6 +914,23 @@ int32_t HITLS_Flush(HITLS_Ctx *ctx)
     if (ctx == NULL || ctx->recCtx == NULL) {
         return HITLS_NULL_INPUT;
     }
+#ifdef HITLS_TLS_FEATURE_MODE_ASYNC
+    if (ctx->asyncTask != NULL) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17438, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+            "flush rejected while async task outstanding", 0, 0, 0, 0);
+        BSL_ERR_PUSH_ERROR(HITLS_ASYNC_ERR_OPERATION_BUSY);
+        return HITLS_ASYNC_ERR_OPERATION_BUSY;
+    }
+#endif
+    /* In full write mode the caller learns the written length only from HITLS_Write, so flushing here would
+     * commit bytes that it can never account for. Datagram links keep the single record semantics, so the bit
+     * does not change anything for them. */
+    if (!IS_SUPPORT_DATAGRAM(ctx->config.tlsConfig.originVersionMask) && !IsPartialWriteMode(ctx)) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17439, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+            "HITLS_Flush requires HITLS_MODE_ENABLE_PARTIAL_WRITE.", 0, 0, 0, 0);
+        BSL_ERR_PUSH_ERROR(HITLS_CONFIG_UNSUPPORT);
+        return HITLS_CONFIG_UNSUPPORT;
+    }
 #ifdef HITLS_TLS_PROTO_TLS
     return REC_OutBufFlush(ctx);
 #else

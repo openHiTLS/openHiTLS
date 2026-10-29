@@ -75,6 +75,13 @@ int32_t AlertEventProcess(HITLS_Ctx *ctx);
 
 void ChangeConnState(HITLS_Ctx *ctx, CM_State state);
 
+/**
+ * @ingroup hitls
+ * @brief   Whether HITLS_Write packs at most one record per call (HITLS_MODE_ENABLE_PARTIAL_WRITE).
+ *          Always true when HITLS_TLS_FEATURE_MODE is not compiled in, which keeps the historical behaviour.
+ */
+bool IsPartialWriteMode(const HITLS_Ctx *ctx);
+
 void ConnCleanSensitiveData(TLS_Ctx *ctx);
 
 #ifdef HITLS_TLS_PROTO_DTLS13

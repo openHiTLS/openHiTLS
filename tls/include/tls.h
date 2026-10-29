@@ -488,6 +488,8 @@ struct TlsCtx {
     HITLS_CERT_OcspResp *staplingResp;         /* TLS1.2 EE OCSP response obtained from the per-cert callback (borrowed) */
     int32_t staplingResult;                    /* result of the server stapling callback: HITLS_STAPLING_SEND/_SKIP */
 #endif
+    uint32_t appWriteOffset; /* App data of the current write already sent but not reported to the user yet */
+    const uint8_t *appWriteData; /* Base buffer of the full write that is in progress */
 };
 
 typedef struct {

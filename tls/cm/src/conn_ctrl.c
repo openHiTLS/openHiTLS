@@ -348,6 +348,22 @@ int32_t HITLS_ClearRenegotiationNum(HITLS_Ctx *ctx, uint32_t *renegotiationNum)
 #endif
 
 #ifdef HITLS_TLS_FEATURE_MODE
+/* A write that is still in progress keeps its progress and its pending record, switching the mode under it
+ * would make the retry inconsistent (the pending record is addressed relative to the original buffer). */
+static int32_t CheckPartialWriteSwitch(const HITLS_Ctx *ctx, uint32_t mode)
+{
+    if ((mode & HITLS_MODE_ENABLE_PARTIAL_WRITE) == 0) {
+        return HITLS_SUCCESS;
+    }
+    if (ctx->appWriteOffset != 0 || (ctx->recCtx != NULL && ctx->recCtx->pendingData != NULL)) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17440, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+            "the partial write mode cannot be changed while a write is in progress", 0, 0, 0, 0);
+        BSL_ERR_PUSH_ERROR(HITLS_MSG_HANDLE_STATE_ILLEGAL);
+        return HITLS_MSG_HANDLE_STATE_ILLEGAL;
+    }
+    return HITLS_SUCCESS;
+}
+
 int32_t HITLS_SetModeSupport(HITLS_Ctx *ctx, uint32_t mode)
 {
     if (ctx == NULL) {
@@ -358,7 +374,11 @@ int32_t HITLS_SetModeSupport(HITLS_Ctx *ctx, uint32_t mode)
         return HITLS_ASYNC_ERR_OPERATION_BUSY;
     }
 #endif
-
+    /* Only a bit that would actually be added can switch the write mode. */
+    int32_t ret = CheckPartialWriteSwitch(ctx, mode & ~ctx->config.tlsConfig.modeSupport);
+    if (ret != HITLS_SUCCESS) {
+        return ret;
+    }
     return HITLS_CFG_SetModeSupport(&(ctx->config.tlsConfig), mode);
 }
 
@@ -372,6 +392,11 @@ int32_t HITLS_ClearModeSupport(HITLS_Ctx *ctx, uint32_t mode)
         return HITLS_ASYNC_ERR_OPERATION_BUSY;
     }
 #endif
+    /* Only a bit that is currently set can be removed and switch the write mode. */
+    int32_t ret = CheckPartialWriteSwitch(ctx, mode & ctx->config.tlsConfig.modeSupport);
+    if (ret != HITLS_SUCCESS) {
+        return ret;
+    }
     return HITLS_CFG_ClearModeSupport(&(ctx->config.tlsConfig), mode);
 }
 

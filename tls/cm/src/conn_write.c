@@ -17,6 +17,7 @@
 #include "bsl_log_internal.h"
 #include "tls_binlog_id.h"
 #include "bsl_log.h"
+#include "bsl_err_internal.h"
 #include "hitls_error.h"
 #include "hitls_type.h"
 #include "tls.h"
@@ -97,9 +98,75 @@ static int32_t WriteRecordWithRetry(HITLS_Ctx *ctx, uint8_t recordType, const ui
     return ret;
 }
 
+bool IsPartialWriteMode(const HITLS_Ctx *ctx)
+{
+#ifdef HITLS_TLS_FEATURE_MODE
+    return (ctx->config.tlsConfig.modeSupport & HITLS_MODE_ENABLE_PARTIAL_WRITE) != 0;
+#else
+    /* Without the mode feature the field is never initialised nor copied, keep the historical single record
+     * semantics instead of silently switching every caller to the full write loop. */
+    (void)ctx;
+    return true;
+#endif
+}
+
+static int32_t WriteAppData(HITLS_Ctx *ctx, const uint8_t *data, uint32_t dataLen, uint32_t *writeLen)
+{
+    /* Partial write and datagram keep the single record semantics: at most one record is packed per call.
+     * The mode cannot be switched while a write is in progress, see CheckPartialWriteSwitch(). */
+    if (IS_SUPPORT_DATAGRAM(ctx->config.tlsConfig.originVersionMask) || IsPartialWriteMode(ctx)) {
+        return WriteRecordWithRetry(ctx, REC_TYPE_APP, data, dataLen, writeLen);
+    }
+    int32_t ret;
+    if (ctx->appWriteOffset == 0) {
+        /* A new full write starts here, remember which buffer it belongs to. */
+        ctx->appWriteData = data;
+    }
+    bool rejectMovedBuffer = true;
+#ifdef HITLS_TLS_FEATURE_MODE_ACCEPT_MOVING_WRITE_BUFFER
+    rejectMovedBuffer = (ctx->config.tlsConfig.modeSupport & HITLS_MODE_ACCEPT_MOVING_WRITE_BUFFER) == 0;
+#endif
+    /* The record layer detects a changed buffer only while a record is pending. When the write was interrupted
+     * with nothing pending (for example by the KeyUpdate handling below), the recorded base buffer is the only
+     * way to tell a retry from an unrelated write. */
+    if ((rejectMovedBuffer && ctx->appWriteOffset != 0 && ctx->appWriteData != data) ||
+        ctx->recCtx->pendingDataSize + ctx->appWriteOffset > dataLen) {
+        ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_INTERNAL_ERROR);
+        ctx->appWriteOffset = 0;
+        ctx->appWriteData = NULL;
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17437, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+            "invalid full-write retry.", 0, 0, 0, 0);
+        BSL_ERR_PUSH_ERROR(HITLS_APP_ERR_WRITE_BAD_RETRY);
+        (void)AlertEventProcess(ctx);
+        return HITLS_APP_ERR_WRITE_BAD_RETRY;
+    }
+    while (ctx->appWriteOffset < dataLen) {
+        uint32_t n = 0;
+        ret = WriteRecordWithRetry(ctx, REC_TYPE_APP, data + ctx->appWriteOffset, dataLen - ctx->appWriteOffset, &n);
+        if (ret != HITLS_SUCCESS) {
+            return ret;
+        }
+        ctx->appWriteOffset += n;
+        /* CheckEncryptionLimits may have scheduled an automatic KeyUpdate while this record was encrypted,
+         * which switches the connection to CM_STATE_HANDSHAKING. If the remaining data is written without
+         * driving that state, the old key would be used past its limit, so send the KeyUpdate first. The
+         * progress is already recorded, so a busy I/O here resumes with the same parameters. */
+        if (ctx->appWriteOffset < dataLen && GetConnState(ctx) == CM_STATE_HANDSHAKING) {
+            ret = CommonEventInHandshakingState(ctx);
+            if (ret != HITLS_SUCCESS) {
+                return ret;
+            }
+        }
+    }
+    *writeLen = ctx->appWriteOffset;
+    ctx->appWriteOffset = 0;
+    ctx->appWriteData = NULL;
+    return HITLS_SUCCESS;
+}
+
 static int32_t WriteEventInTransportingState(HITLS_Ctx *ctx, const uint8_t *data, uint32_t dataLen, uint32_t *writeLen)
 {
-    return WriteRecordWithRetry(ctx, REC_TYPE_APP, data, dataLen, writeLen);
+    return WriteAppData(ctx, data, dataLen, writeLen);
 }
 
 static int32_t WriteEventInHandshakingState(HITLS_Ctx *ctx, const uint8_t *data, uint32_t dataLen, uint32_t *writeLen)
@@ -165,7 +232,7 @@ static int32_t WriteEventInClosedState(HITLS_Ctx *ctx, const uint8_t *data, uint
 {
     if ((ctx->shutdownState & HITLS_SENT_SHUTDOWN) == 0) {
         ALERT_CleanInfo(ctx);
-        int ret = APP_Write(ctx, REC_TYPE_APP, data, dataLen, writeLen);
+        int32_t ret = WriteAppData(ctx, data, dataLen, writeLen);
         if (ret == HITLS_SUCCESS || ret == HITLS_REC_NORMAL_IO_BUSY) {
             return ret;
         }

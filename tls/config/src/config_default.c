@@ -312,7 +312,9 @@ static void BasicInitConfig(HITLS_Config *config)
     config->isMiddleBoxCompat = true;
 #endif
 #ifdef HITLS_TLS_FEATURE_MODE
-    config->modeSupport = HITLS_MODE_AUTO_RETRY;
+    /* Partial write is the default so that one HITLS_Write carries at most one record, which is the behaviour
+     * HiTLS always had. */
+    config->modeSupport = HITLS_MODE_AUTO_RETRY | HITLS_MODE_ENABLE_PARTIAL_WRITE;
 #endif
 #ifdef HITLS_TLS_FEATURE_MAX_SEND_FRAGMENT
     config->maxSendFragment = HITLS_MAX_SEND_FRAGMENT_DEFAULT;
