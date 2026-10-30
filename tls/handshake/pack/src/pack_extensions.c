@@ -503,14 +503,14 @@ static int32_t PackClientAlpnList(const TLS_Ctx *ctx, PackPacket *pkt)
 {
     int32_t ret = HITLS_SUCCESS;
     uint16_t exMsgHeaderLen = 0u;
-    uint8_t exMsgDataLen = 0u;
+    uint16_t exMsgDataLen = 0u;
     const TLS_Config *config = &(ctx->config.tlsConfig);
 
     if (config->alpnListSize == 0) {
         return HITLS_SUCCESS;
     }
 
-    if (config->alpnList == NULL) {
+    if (config->alpnList == NULL || (uint16_t)config->alpnListSize > UINT16_MAX - sizeof(uint16_t)) {
         BSL_ERR_PUSH_ERROR(HITLS_INTERNAL_EXCEPTION);
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15416, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "pack alpn list extension error, invalid input parameter.", 0, 0, 0, 0);
@@ -519,7 +519,7 @@ static int32_t PackClientAlpnList(const TLS_Ctx *ctx, PackPacket *pkt)
 
     /* Calculate the extension length */
     exMsgHeaderLen = sizeof(uint16_t);
-    exMsgDataLen = (uint8_t)config->alpnListSize;
+    exMsgDataLen = (uint16_t)config->alpnListSize;
 
     ret = PackExtensionHeader(HS_EX_TYPE_APP_LAYER_PROTOCOLS, exMsgHeaderLen + exMsgDataLen, pkt);
     if (ret != HITLS_SUCCESS) {
@@ -1134,15 +1134,18 @@ int32_t PackServerSelectAlpnProto(const TLS_Ctx *ctx, PackPacket *pkt)
 {
     int32_t ret = HITLS_SUCCESS;
     uint16_t exMsgHeaderLen = 0u;
-    uint8_t exMsgDataLen = 0u;
+    uint16_t exMsgDataLen = 0u;
 
     if (ctx->negotiatedInfo.alpnSelectedSize == 0) {
         return HITLS_SUCCESS;
     }
-
+    if ((uint16_t)ctx->negotiatedInfo.alpnSelectedSize > UINT16_MAX - sizeof(uint8_t) - sizeof(uint16_t)) {
+        BSL_ERR_PUSH_ERROR(HITLS_INTERNAL_EXCEPTION);
+        return HITLS_INTERNAL_EXCEPTION;
+    }
     /* Calculate the extension length */
     exMsgHeaderLen = sizeof(uint16_t);
-    exMsgDataLen = (uint8_t)ctx->negotiatedInfo.alpnSelectedSize + sizeof(uint8_t);
+    exMsgDataLen = (uint16_t)ctx->negotiatedInfo.alpnSelectedSize + sizeof(uint8_t);
 
     /* Pack the extension header */
     ret = PackExtensionHeader(HS_EX_TYPE_APP_LAYER_PROTOCOLS, exMsgHeaderLen + exMsgDataLen, pkt);
@@ -1150,9 +1153,9 @@ int32_t PackServerSelectAlpnProto(const TLS_Ctx *ctx, PackPacket *pkt)
         return ret;
     }
 
-    (void)PackAppendUint16ToBuf(pkt, (uint16_t)exMsgDataLen);
+    (void)PackAppendUint16ToBuf(pkt, exMsgDataLen);
 
-    (void)PackAppendUint8ToBuf(pkt, exMsgDataLen - sizeof(uint8_t));
+    (void)PackAppendUint8ToBuf(pkt, (uint8_t)(exMsgDataLen - sizeof(uint8_t)));
 
     (void)PackAppendDataToBuf(pkt, ctx->negotiatedInfo.alpnSelected, ctx->negotiatedInfo.alpnSelectedSize);
 

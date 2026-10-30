@@ -145,6 +145,92 @@ EXIT:
 /* END_CASE */
 
 /**
+ * @test UT_TLS_ALPN_PARSE_PROTO_FUNC_TC002
+ * @precon nan
+ * @brief Negotiate long ALPN lists and protocol names over TLS 1.2 and TLS 1.3.
+ * @expect Both peers select the server's protocol without length truncation.
+ */
+/* BEGIN_CASE */
+void UT_TLS_ALPN_PARSE_PROTO_FUNC_TC002(int version, int protocolLen, int protocolCount)
+{
+    FRAME_Init();
+    RegDefaultMemCallback();
+    HITLS_Config *config = NULL;
+    FRAME_LinkObj *client = NULL;
+    FRAME_LinkObj *server = NULL;
+    uint8_t protocols[512] = {0};
+    uint32_t entryLen = (uint32_t)protocolLen + 1;
+    uint32_t listLen = entryLen * (uint32_t)protocolCount;
+    uint8_t *selected = NULL;
+    uint32_t selectedLen = 0;
+
+    ASSERT_TRUE(protocolLen > 0 && protocolLen <= UINT8_MAX);
+    ASSERT_TRUE(protocolCount > 0 && listLen <= sizeof(protocols));
+    for (int i = 0; i < protocolCount; i++) {
+        protocols[i * entryLen] = (uint8_t)protocolLen;
+        (void)memset(protocols + i * entryLen + 1, 'a' + i, protocolLen);
+    }
+    TlsAlpnExtCtx serverAlpn = {protocols + listLen - entryLen, entryLen};
+    config = (version == HITLS_VERSION_TLS12) ? HITLS_CFG_NewTLS12Config() : HITLS_CFG_NewTLS13Config();
+    ASSERT_TRUE(config != NULL);
+    ASSERT_EQ(HITLS_CFG_SetAlpnProtos(config, protocols, listLen), HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_CFG_SetAlpnProtosSelectCb(config, ExampleAlpnCbForLlt, &serverAlpn), HITLS_SUCCESS);
+    client = FRAME_CreateLink(config, BSL_UIO_TCP);
+    server = FRAME_CreateLink(config, BSL_UIO_TCP);
+    ASSERT_TRUE(client != NULL);
+    ASSERT_TRUE(server != NULL);
+
+    ASSERT_EQ(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_SUCCESS);
+    HITLS_GetSelectedAlpnProto(client->ssl, &selected, &selectedLen);
+    ASSERT_EQ(selectedLen, protocolLen);
+    ASSERT_COMPARE("selected ALPN", selected, selectedLen, serverAlpn.serverAlpnList + 1, (uint32_t)protocolLen);
+    HITLS_GetSelectedAlpnProto(server->ssl, &selected, &selectedLen);
+    ASSERT_EQ(selectedLen, protocolLen);
+    ASSERT_COMPARE("selected ALPN", selected, selectedLen, serverAlpn.serverAlpnList + 1, (uint32_t)protocolLen);
+
+EXIT:
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+    HITLS_CFG_FreeConfig(config);
+}
+/* END_CASE */
+
+/**
+ * @test UT_TLS_ALPN_PARSE_PROTO_FUNC_TC003
+ * @precon nan
+ * @brief Send a valid ALPN list whose extension length exceeds the uint16 limit.
+ * @expect ClientHello packing returns HITLS_INTERNAL_EXCEPTION.
+ */
+/* BEGIN_CASE */
+void UT_TLS_ALPN_PARSE_PROTO_FUNC_TC003(int version, int listLen)
+{
+    FRAME_Init();
+    RegDefaultMemCallback();
+    HITLS_Config *config = NULL;
+    FRAME_LinkObj *client = NULL;
+    uint8_t *protocols = BSL_SAL_Malloc(listLen);
+    ASSERT_TRUE(protocols != NULL);
+    for (int i = 0; i < listLen;) {
+        uint8_t protocolLen = (listLen - i == 3) ? 2 : 1;
+        protocols[i++] = protocolLen;
+        (void)memset(protocols + i, 'a', protocolLen);
+        i += protocolLen;
+    }
+    config = (version == HITLS_VERSION_TLS12) ? HITLS_CFG_NewTLS12Config() : HITLS_CFG_NewTLS13Config();
+    ASSERT_TRUE(config != NULL);
+    ASSERT_EQ(HITLS_CFG_SetAlpnProtos(config, protocols, listLen), HITLS_SUCCESS);
+    client = FRAME_CreateLink(config, BSL_UIO_TCP);
+    ASSERT_TRUE(client != NULL);
+    ASSERT_EQ(HITLS_Connect(client->ssl), HITLS_INTERNAL_EXCEPTION);
+
+EXIT:
+    BSL_SAL_FREE(protocols);
+    FRAME_FreeLink(client);
+    HITLS_CFG_FreeConfig(config);
+}
+/* END_CASE */
+
+/**
  * @test UT_TLS_ALPN_SELECT_FUNC_TC001
  * @title  HITLS_SelectAlpnProtocol function test
  * @precon  nan

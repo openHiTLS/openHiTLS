@@ -89,7 +89,7 @@ static int32_t CheckCertSecuritylevel(HITLS_Config *config, HITLS_CERT_X509 *cer
 
 int32_t HITLS_CFG_SetVerifyStore(HITLS_Config *config, HITLS_CERT_Store *store, bool isClone)
 {
-    if (config == NULL) {
+    if (config == NULL || config->certMgrCtx == NULL) {
         return HITLS_NULL_INPUT;
     }
 
@@ -123,7 +123,7 @@ HITLS_CERT_Store *HITLS_CFG_GetVerifyStore(const HITLS_Config *config)
 
 int32_t HITLS_CFG_SetChainStore(HITLS_Config *config, HITLS_CERT_Store *store, bool isClone)
 {
-    if (config == NULL) {
+    if (config == NULL || config->certMgrCtx == NULL) {
         return HITLS_NULL_INPUT;
     }
 
@@ -157,7 +157,7 @@ HITLS_CERT_Store *HITLS_CFG_GetChainStore(const HITLS_Config *config)
 
 int32_t HITLS_CFG_SetCertStore(HITLS_Config *config, HITLS_CERT_Store *store, bool isClone)
 {
-    if (config == NULL) {
+    if (config == NULL || config->certMgrCtx == NULL) {
         return HITLS_NULL_INPUT;
     }
 
