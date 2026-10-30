@@ -21,9 +21,8 @@
 /*
  * ML-DSA polynomial arithmetic backend, ARMv8 NEON implementation.
  *
- * This file provides the same four entry points as the portable C backend in
- * ml_dsa_ntt.c (MLDSA_ComputesNTT, MLDSA_ComputesINVNTT, MLDSA_VectorsMul,
- * MLDSA_MatrixMulAcc), backed by the assembly in asm/ml_dsa_ntt_armv8.S.
+ * This file provides MLDSA_ComputesNTT, MLDSA_ComputesINVNTT, MLDSA_VectorsMul
+ * and MLDSA_MatrixMul, backed by the assembly in asm/ml_dsa_ntt_armv8.S.
  *
  * Arithmetic style (Becker/Hwang/Kannwischer/Yang/Yang, "Neon NTT",
  * https://eprint.iacr.org/2021/986):
@@ -39,16 +38,17 @@
  * Value-range/domain contract (differs from the C backend internally; the
  * external behaviour of the four entry points composed as used by
  * ml_dsa_core.c is identical mod q):
- *   - MLDSA_ComputesNTT: input in (-q, q), output exact NTT values, |out| < 5q.
- *   - MLDSA_VectorsMul / MLDSA_MatrixMulAcc: signed Montgomery reduction of
- *     the 64-bit (accumulated) products followed by a Barrett reduction;
- *     output == (sum a_i * b_i) * 2^-32 mod q with |out| <= q/2 + 1.
- *   - MLDSA_ComputesINVNTT: Gentleman-Sande inverse NTT whose final layer is
- *     fused with multiplication by F = 256^-1 * 2^32 == 2^24 mod q, cancelling
- *     both the 1/256 inverse-transform scaling and the single 2^-32 Montgomery
- *     factor introduced by the pointwise multiplication; |out| <= 3q/4.
+ *   - MLDSA_ComputesNTT: input in (-q, q), output exact NTT values, |out| < 6q.
+ *   - MLDSA_VectorsMul / MLDSA_MatrixMul: signed Montgomery reduction of the
+ *     64-bit (accumulated) products, without a subsequent Barrett reduction.
+ *     Here m = signed32(lo32(T * q^-1)), r = (T - m*q)/2^32. With at most seven
+ *     products and |a|, |b| < 6q, |r| < q/2 + 7*(6q)^2/2^32 < q.
+ *   - MLDSA_ComputesINVNTT: input in (-q, q); the unreduced sums/differences
+ *     stay below 256q = 2145386752 < 2^31. The final len = 128 layer is fused
+ *     with F = 256^-1 * 2^32 == 2^24 mod q, cancelling both the 1/256 inverse
+ *     scaling and the single 2^-32 Montgomery factor; |out| < q.
  *
- * Twiddle table layout (consumption order of the assembly):
+ * Twiddle table layout (storage order, retained by the pipelined schedules):
  *   MLDSA_NTT_TWIDDLE_TABLE, 544 x int32:
  *     [0..31]   NTT top (layers len=128/64/32/16): (zl, zh) for zeta_1..zeta_15,
  *               then {q, 0} padding (q is read from lane v7.s[2]).
@@ -67,8 +67,7 @@
  *     downward); the final fused layer uses F = 2^24 mod q and
  *     G = F * (-zeta_1) mod+- q (note -zeta_1 == zeta_1^-1 since zeta_1^2 == -1).
  *
- * Generation script (verified against ml_dsa_ntt.c ZETAS and a schoolbook
- * negacyclic product; see check comments inline):
+ * Generation script for these two tables:
  *
  *   Q = 8380417; N = 256; ROOT = 1753
  *   def bitrev8(x):
@@ -124,10 +123,8 @@
  */
 
 #define MLDSA_NTT_TABLE_LEN 544
-#define MLDSA_NTT_TOP_LEN 32
-#define MLDSA_INTT_BOT_LEN 512
 
-const __attribute__((aligned(16))) int32_t MLDSA_NTT_TWIDDLE_TABLE[MLDSA_NTT_TABLE_LEN] = {
+static const __attribute__((aligned(16))) int32_t MLDSA_NTT_TWIDDLE_TABLE[MLDSA_NTT_TABLE_LEN] = {
        -3572223,  -915382907,     3765607,   964937599,     3761513,   963888510,
        -3201494,  -820383522,    -2883726,  -738955404,    -3145678,  -806080660,
        -3201430,  -820367122,     -601683,  -154181397,     3542485,   907762539,
@@ -221,7 +218,7 @@ const __attribute__((aligned(16))) int32_t MLDSA_NTT_TWIDDLE_TABLE[MLDSA_NTT_TAB
       904878186,  -967019376,  -200355636,  -187430119,
 };
 
-const __attribute__((aligned(16))) int32_t MLDSA_INTT_TWIDDLE_TABLE[MLDSA_NTT_TABLE_LEN] = {
+static const __attribute__((aligned(16))) int32_t MLDSA_INTT_TWIDDLE_TABLE[MLDSA_NTT_TABLE_LEN] = {
        -2283733,  -585207070,    -2815639,  -721508096,    -1858416,  -476219497,
        -3345963,  -857403734,    -1853806,  -475038184,    -2917338,  -747568486,
               0,           0,           0,           0,      731434,      781875,
@@ -315,50 +312,38 @@ const __attribute__((aligned(16))) int32_t MLDSA_INTT_TWIDDLE_TABLE[MLDSA_NTT_TA
           16382,     4197891,     -294725,   -75523344,
 };
 
-void MLDSA_NTTTopAsm(int32_t *a, const int32_t *table);
-void MLDSA_NTTBotAsm(int32_t *a, const int32_t *table);
-void MLDSA_INTTBotAsm(int32_t *a, const int32_t *table);
-void MLDSA_INTTTopAsm(int32_t *a, const int32_t *table);
-void MLDSA_PointwiseAccMontAsm(int32_t *t, const int32_t *const *a, const int32_t *const *b, uint64_t l);
+void MLDSA_NTTAsm(int32_t *w, const int32_t *table);
+void MLDSA_INTTAsm(int32_t *w, const int32_t *table);
+void MLDSA_PointwiseMontAsm(int32_t *t, const int32_t *a, const int32_t *b);
+void MLDSA_PointwiseAccMontL4Asm(int32_t *t, const int32_t *a, const int32_t *b);
+void MLDSA_PointwiseAccMontL5Asm(int32_t *t, const int32_t *a, const int32_t *b);
+void MLDSA_PointwiseAccMontL7Asm(int32_t *t, const int32_t *a, const int32_t *b);
 
 void MLDSA_ComputesNTT(int32_t w[MLDSA_N])
 {
-    MLDSA_NTTTopAsm(w, MLDSA_NTT_TWIDDLE_TABLE);
-    MLDSA_NTTBotAsm(w, MLDSA_NTT_TWIDDLE_TABLE + MLDSA_NTT_TOP_LEN);
+    MLDSA_NTTAsm(w, MLDSA_NTT_TWIDDLE_TABLE);
 }
 
 void MLDSA_ComputesINVNTT(int32_t w[MLDSA_N])
 {
-    MLDSA_INTTBotAsm(w, MLDSA_INTT_TWIDDLE_TABLE);
-    MLDSA_INTTTopAsm(w, MLDSA_INTT_TWIDDLE_TABLE + MLDSA_INTT_BOT_LEN);
+    MLDSA_INTTAsm(w, MLDSA_INTT_TWIDDLE_TABLE);
 }
 
 void MLDSA_VectorsMul(int32_t *t, const int32_t *a, const int32_t *b)
 {
-    const int32_t *const ap[1] = {a};
-    const int32_t *const bp[1] = {b};
-    MLDSA_PointwiseAccMontAsm(t, ap, bp, 1);
+    MLDSA_PointwiseMontAsm(t, a, b);
 }
 
-/*
- * mldsa-mine keeps the dispatch signature MLDSA_MatrixMul(ctx, t, matrix, s):
- * the inner-product length is l = ctx->info->l (ML-DSA-44/65/87 -> 4/5/7).
- * mldsa-mine lays the l polynomials of a matrix row (and of the s vector)
- * contiguously starting at matrix[0]/s[0] (mirrors the layout its previous
- * L4/L5/L7 assembly relied on), so we rebuild the pointer arrays from the
- * base with an MLDSA_N stride and hand them to the Becker-style accumulator.
- */
 void MLDSA_MatrixMul(const CRYPT_ML_DSA_Ctx *ctx, int32_t *t, int32_t *const matrix[MLDSA_L_MAX],
-    int32_t *const s[MLDSA_L_MAX])
+                     int32_t *const s[MLDSA_L_MAX])
 {
-    const uint32_t l = ctx->info->l;
-    const int32_t *ap[MLDSA_L_MAX];
-    const int32_t *bp[MLDSA_L_MAX];
-    for (uint32_t i = 0; i < l; i++) {
-        ap[i] = matrix[0] + i * MLDSA_N;
-        bp[i] = s[0] + i * MLDSA_N;
+    // The core allocates each row/vector as one contiguous l-by-N buffer.
+    if (ctx->info->l == 4) {
+        MLDSA_PointwiseAccMontL4Asm(t, matrix[0], s[0]);
+    } else if (ctx->info->l == 5) {
+        MLDSA_PointwiseAccMontL5Asm(t, matrix[0], s[0]);
+    } else {
+        MLDSA_PointwiseAccMontL7Asm(t, matrix[0], s[0]);
     }
-    MLDSA_PointwiseAccMontAsm(t, ap, bp, l);
 }
-
 #endif // HITLS_CRYPTO_MLDSA_ARMV8

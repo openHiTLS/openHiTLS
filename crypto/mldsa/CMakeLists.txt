@@ -17,7 +17,7 @@ list(APPEND _mldsa_sources ${CMAKE_CURRENT_SOURCE_DIR}/src/ml_dsa_core.c)
 
 if(HITLS_CRYPTO_MLDSA_ARMV8)
     list(APPEND _mldsa_sources ${CMAKE_CURRENT_SOURCE_DIR}/src/asm/ml_dsa_armv8.S)
-    # NTT / INVNTT / pointwise-acc: Becker-style NEON backend ported from pr_1628
+    # NTT / INVNTT / pointwise: software-pipelined NEON arithmetic kernels
     list(APPEND _mldsa_sources ${CMAKE_CURRENT_SOURCE_DIR}/src/asm/ml_dsa_ntt_armv8.S)
     list(APPEND _mldsa_sources ${CMAKE_CURRENT_SOURCE_DIR}/src/asm_ml_dsa_ntt.c)
     list(APPEND _mldsa_sources ${CMAKE_CURRENT_SOURCE_DIR}/src/asm_ml_dsa_poly.c)
