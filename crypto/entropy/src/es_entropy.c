@@ -127,6 +127,10 @@ static int32_t EsPoolSizeSet(ENTROPY_EntropySource *es, void *data, uint32_t len
         BSL_ERR_PUSH_ERROR(CRYPT_ENTROPY_ES_STATE_ERROR);
         return CRYPT_ENTROPY_ES_STATE_ERROR;
     }
+    if (data == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return CRYPT_NULL_INPUT;
+    }
     if (len != sizeof(uint32_t) || *(uint32_t *)data < ENTROPY_POOL_SIZE_MIN ||
         *(uint32_t *)data > ENTROPY_POOL_SIZE_MAX) {
         BSL_ERR_PUSH_ERROR(CRYPT_ENTROPY_CTRL_INVALID_PARAM);
