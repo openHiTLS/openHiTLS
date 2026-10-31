@@ -872,6 +872,31 @@ EXIT:
 /* END_CASE */
 
 /**
+ * @test SDV_ECDH_LITE_INV_EXP_TC001
+ * @brief Check that p-2 changes only the low limb.
+ * @precon ECC lite and the selected curve are enabled.
+ * @expect The prime has a low limb of at least 2.
+ */
+/* BEGIN_CASE */
+void SDV_ECDH_LITE_INV_EXP_TC001(int id)
+{
+#ifndef HITLS_CRYPTO_ECC_LITE
+    (void)id;
+    SKIP_TEST();
+#else
+    if (!LiteCurveEnabled(id)) {
+        SKIP_TEST();
+    }
+    ECC_Para *para = ECC_NewPara(id);
+    ASSERT_TRUE(para != NULL);
+    ASSERT_TRUE(EccLiteParaData(para, ECC_LITE_P)[0] >= 2u);
+EXIT:
+    ECC_FreePara(para);
+#endif
+}
+/* END_CASE */
+
+/**
  * @test SDV_ECDH_LITE_UNSUPPORTED_PKEY_TC001
  * @brief Check unsupported key operations through EAL.
  * @precon ECC lite and EAL are enabled.

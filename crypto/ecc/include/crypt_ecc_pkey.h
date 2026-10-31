@@ -34,6 +34,13 @@ extern "C" {
 #endif
 
 /* ECC key context */
+#ifdef HITLS_CRYPTO_ECC_LITE
+typedef struct ECC_PkeyCtx {
+    ECC_LiteBn *prvkey;
+    ECC_Point *pubkey;
+    ECC_Para *para;
+} ECC_Pkey;
+#else
 typedef struct ECC_PkeyCtx {
     ECC_Scalar *prvkey;      // Private key
     ECC_Point *pubkey;      // Public key
@@ -46,6 +53,7 @@ typedef struct ECC_PkeyCtx {
     void *libCtx;
     char *mdAttr;
 } ECC_Pkey;
+#endif
 
 /**
  * @ingroup ecc

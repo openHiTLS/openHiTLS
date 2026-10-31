@@ -267,6 +267,7 @@
             "SDV_ECDH_LITE_EAL_INPUT_TC001",
             "SDV_ECDH_LITE_NULL_INPUT_TC001",
             "SDV_ECDH_LITE_CURVE_SELECT_TC001",
+            "SDV_ECDH_LITE_INV_EXP_TC001",
             "SDV_ECDH_LITE_UNSUPPORTED_PKEY_TC001"
         ],
         "test_suite_sdv_eal_ecdsa": [

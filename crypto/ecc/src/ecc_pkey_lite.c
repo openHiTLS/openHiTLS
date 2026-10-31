@@ -37,18 +37,9 @@ void ECC_FreeCtx(ECC_Pkey *ctx)
     if (ctx == NULL) {
         return;
     }
-    int ret = 0;
-    BSL_SAL_AtomicDownReferences(&(ctx->references), &ret);
-    if (ret > 0) {
-        return;
-    }
-    BSL_SAL_ReferencesFree(&(ctx->references));
     EccLiteBnFree(ctx->prvkey);
     ECC_FreePoint(ctx->pubkey);
-    ctx->pubkey = NULL;
     ECC_FreePara(ctx->para);
-    ctx->para = NULL;
-    BSL_SAL_Free(ctx->mdAttr);
     BSL_SAL_Free(ctx);
 }
 
@@ -227,7 +218,7 @@ int32_t ECC_PkeyGen(ECC_Pkey *ctx)
     ECC_LiteBn candidate = {0};
     int32_t ret = CRYPT_SUCCESS;
     for (uint32_t i = 0; i < CRYPT_ECC_TRY_MAX_CNT; i++) {
-        GOTO_ERR_IF_EX(CRYPT_RandEx(ctx->libCtx, bytes, ctx->para->bytes), ret);
+        GOTO_ERR_IF_EX(CRYPT_RandEx(NULL, bytes, ctx->para->bytes), ret);
         GOTO_ERR_IF_EX(EccLiteBnBin2Bn(&candidate, bytes, ctx->para->bytes, ctx->para->bytes), ret);
         /* Rejection sampling discards invalid draws; it does not reduce modulo n. */
         if (EccLiteBnIsZero(&candidate) ||

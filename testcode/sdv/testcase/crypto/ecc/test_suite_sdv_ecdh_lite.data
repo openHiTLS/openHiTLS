@@ -1751,3 +1751,9 @@ SDV_ECDH_LITE_SCALAR_WIDTH_TC001:CRYPT_ECC_NISTP256:"fffffffffffffffffffffffffff
 
 CRYPT_ECC_NISTP256 scalar max-width, explicit point=1; k=2^256-1
 SDV_ECDH_LITE_SCALAR_WIDTH_TC001:CRYPT_ECC_NISTP256:"ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff":"046b17d1f2e12c4247f8bce6e563a440f277037d812deb33a0f4a13945d898c2964fe342e2fe1a7f9b8ee7eb4a7c0f9e162bce33576b315ececbb6406837bf51f5":CRYPT_ECC_POINT_MUL_ERR_K_LEN:CRYPT_SUCCESS:""
+
+P-192 inverse exponent subtracts 2 without borrowing across limbs
+SDV_ECDH_LITE_INV_EXP_TC001:CRYPT_ECC_NISTP192
+
+P-256 inverse exponent subtracts 2 without borrowing across limbs
+SDV_ECDH_LITE_INV_EXP_TC001:CRYPT_ECC_NISTP256

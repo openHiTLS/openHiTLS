@@ -38,6 +38,7 @@ CRYPT_ECDH_Ctx *CRYPT_ECDH_NewCtx(void)
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         return NULL;
     }
+#ifndef HITLS_CRYPTO_ECC_LITE
     ctx->useCofactorMode = true;
     ctx->pointFormat = CRYPT_POINT_UNCOMPRESSED;    // the point format is uncompressed by default
     if (BSL_SAL_ReferencesInit(&(ctx->references)) != BSL_SUCCESS) {
@@ -45,9 +46,11 @@ CRYPT_ECDH_Ctx *CRYPT_ECDH_NewCtx(void)
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         return NULL;
     }
+#endif
     return ctx;
 }
 
+#ifdef HITLS_CRYPTO_PROVIDER
 CRYPT_ECDH_Ctx *CRYPT_ECDH_NewCtxEx(void *libCtx)
 {
     CRYPT_ECDH_Ctx *ctx = CRYPT_ECDH_NewCtx();
@@ -57,6 +60,7 @@ CRYPT_ECDH_Ctx *CRYPT_ECDH_NewCtxEx(void *libCtx)
     ctx->libCtx = libCtx;
     return ctx;
 }
+#endif
 
 CRYPT_EcdhPara *CRYPT_ECDH_NewPara(const CRYPT_EccPara *eccPara)
 {
