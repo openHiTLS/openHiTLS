@@ -237,6 +237,7 @@
             "SDV_CRYPTO_DSA_SIGN_VERIFY_DATA_FUNC_TC001"
         ],
         "test_suite_sdv_eal_ecdh": [
+            "SDV_CRYPTO_ECC_POINT_MUL_ZERO_X_TC001",
             "SDV_CRYPTO_ECDH_CTRL_API_TC003",
             "SDV_CRYPTO_ECDH_EXCH_FUNC_TC001",
             "SDV_CRYPTO_ECDH_GEN_KEY_FUNC_TC001"

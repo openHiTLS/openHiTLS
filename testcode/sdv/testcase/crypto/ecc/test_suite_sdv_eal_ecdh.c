@@ -21,6 +21,48 @@
 #define ECDH_MAX_BIT_LEN 521
 
 /**
+ * @test SDV_CRYPTO_ECC_POINT_MUL_ZERO_X_TC001
+ * @brief Multiply valid points with a zero input or output x coordinate.
+ * @precon The selected curve is enabled.
+ * @expect The complete point matches the vector.
+ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_ECC_POINT_MUL_ZERO_X_TC001(int id, Hex *scalar, Hex *point, Hex *expected)
+{
+    if (IsCurveDisabled(id)) {
+        SKIP_TEST();
+    }
+    ECC_Para *para = NULL;
+    ECC_Point *input = NULL;
+    ECC_Point *result = NULL;
+    BN_BigNum *k = NULL;
+    uint8_t encoded[PUBKEY_MAX_LEN];
+    uint32_t len = sizeof(encoded);
+
+    TestMemInit();
+    ASSERT_EQ(TestRandInit(), CRYPT_SUCCESS);
+    para = ECC_NewPara(id);
+    ASSERT_TRUE(para != NULL);
+    input = ECC_NewPoint(para);
+    result = ECC_NewPoint(para);
+    k = BN_Create(ECDH_MAX_BIT_LEN);
+    ASSERT_TRUE(input != NULL && result != NULL && k != NULL);
+    ASSERT_EQ(BN_Bin2Bn(k, scalar->x, scalar->len), CRYPT_SUCCESS);
+    ASSERT_EQ(ECC_DecodePoint(para, input, point->x, point->len), CRYPT_SUCCESS);
+    ASSERT_EQ(ECC_PointMul(para, result, k, input), CRYPT_SUCCESS);
+    ASSERT_EQ(ECC_EncodePoint(para, result, encoded, &len, CRYPT_POINT_UNCOMPRESSED), CRYPT_SUCCESS);
+    ASSERT_COMPARE("point", encoded, len, expected->x, expected->len);
+    ASSERT_TRUE(TestIsErrStackEmpty());
+EXIT:
+    BN_Destroy(k);
+    ECC_FreePoint(result);
+    ECC_FreePoint(input);
+    ECC_FreePara(para);
+    TestRandDeInit();
+}
+/* END_CASE */
+
+/**
  * @test   SDV_CRYPTO_ECDH_NEW_CTX_API_TC001
  * @title  ECDH CRYPT_EAL_PkeyNewCtx test.
  * @precon Registering memory-related functions.
