@@ -143,8 +143,9 @@ static int32_t RandModuleInit(uint64_t initOpt, int32_t alg)
         return BSL_SUCCESS;
     }
     int32_t ret = CRYPT_EAL_RandInit(alg, NULL, NULL, NULL, 0);
-    if (ret == CRYPT_SUCCESS) {
+    if (ret == CRYPT_SUCCESS || ret == CRYPT_EAL_ERR_DRBG_REPEAT_INIT) {
         g_ealInitOpts |= CRYPT_EAL_INIT_RAND;
+        return CRYPT_SUCCESS;
     }
     return ret;
 }
@@ -163,18 +164,6 @@ static int32_t RandModuleInit(uint64_t initOpt, int32_t alg)
 #endif
 
 #if defined(HITLS_BSL_INIT)
-static int32_t BslModuleInit(uint64_t initOpt)
-{
-    if (!(initOpt & CRYPT_EAL_INIT_BSL) || (g_ealInitOpts & CRYPT_EAL_INIT_BSL) != 0) {
-        return BSL_SUCCESS;
-    }
-    int32_t ret = BSL_GLOBAL_Init();
-    if (ret == BSL_SUCCESS) {
-        g_ealInitOpts |= CRYPT_EAL_INIT_BSL;
-    }
-    return ret;
-}
-
 static void BslModuleFree(uint64_t initOpt)
 {
     if ((initOpt & CRYPT_EAL_INIT_BSL) == 0) {
@@ -183,12 +172,6 @@ static void BslModuleFree(uint64_t initOpt)
     BSL_GLOBAL_DeInit();
 }
 #else
-static int32_t BslModuleInit(uint64_t initOpt)
-{
-    (void) initOpt;
-    return CRYPT_SUCCESS;
-}
-
 static void BslModuleFree(uint64_t initOpt)
 {
     (void) initOpt;
@@ -259,10 +242,6 @@ int32_t CRYPT_EAL_Init(uint64_t opts)
     if ((initOpt & CRYPT_EAL_INIT_CPU) != 0 && (g_ealInitOpts & CRYPT_EAL_INIT_CPU) == 0) {
         GetCpuInstrSupportState();
         g_ealInitOpts |= CRYPT_EAL_INIT_CPU;
-    }
-    ret = BslModuleInit(initOpt);
-    if (ret != CRYPT_SUCCESS) {
-        goto ERR;
     }
     ret = GlobalLockInit(initOpt);
     if (ret != CRYPT_SUCCESS) {
