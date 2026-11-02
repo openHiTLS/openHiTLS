@@ -789,6 +789,20 @@ EXIT:
 }
 /* END_CASE */
 
+/* BEGIN_CASE */
+void UT_HITLS_APP_OptUioOut_TC004(void)
+{
+    uint8_t byte = 0;
+    BSL_UIO *uio = HITLS_APP_UioOpen(NULL, 'w', 0);
+
+    ASSERT_NE(uio, NULL);
+    ASSERT_EQ(HITLS_APP_OptWriteUio(uio, &byte, (UINT32_MAX - 1) / 2 + 1, HITLS_APP_FORMAT_HEX),
+        HITLS_APP_INTERNAL_EXCEPTION);
+EXIT:
+    BSL_UIO_Free(uio);
+}
+/* END_CASE */
+
 /**
  * @test UT_HITLS_APP_OptToBase64_TC001
  * @spec  -
@@ -832,6 +846,19 @@ void UT_HITLS_APP_BytesToHex_TC001(void)
     ASSERT_EQ(ret3, HITLS_APP_INTERNAL_EXCEPTION);
     int ret4 = HITLS_APP_BytesToHex(str, 12, outBuf, 4);
     ASSERT_EQ(ret4, HITLS_APP_INTERNAL_EXCEPTION);
+EXIT:
+    return;
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void UT_HITLS_APP_BytesToHex_TC002(void)
+{
+    uint8_t byte = 0;
+    char outBuf[1] = {0};
+
+    ASSERT_EQ(HITLS_APP_BytesToHex(&byte, (UINT32_MAX - 1) / 2 + 1, outBuf, sizeof(outBuf)),
+        HITLS_APP_INTERNAL_EXCEPTION);
 EXIT:
     return;
 }

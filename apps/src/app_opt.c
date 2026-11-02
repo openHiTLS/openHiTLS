@@ -611,7 +611,8 @@ int32_t HITLS_APP_BytesToHex(const uint8_t *bytes, uint32_t bytesLen, char *hexS
 {
     // One byte is encoded into hex and becomes 2 bytes.
     int32_t hexCharSize = 2;
-    if (bytes == NULL || hexStr == NULL || bytesLen == 0 || hexStrSize < hexCharSize * bytesLen + 1) {
+    if (bytes == NULL || hexStr == NULL || bytesLen == 0 || bytesLen > (UINT32_MAX - 1) / hexCharSize ||
+        hexStrSize < hexCharSize * bytesLen + 1) {
         AppPrintError("opt: Invalid input buffer or output buffer.\n");
         return HITLS_APP_INTERNAL_EXCEPTION;
     }
@@ -644,6 +645,9 @@ int32_t HITLS_APP_OptWriteUio(BSL_UIO *uio, uint8_t *buf, uint32_t bufLen, int32
             break;
         // One byte is encoded into hex and becomes 2 bytes.
         case HITLS_APP_FORMAT_HEX:
+            if (bufLen > (UINT32_MAX - 1) / 2) {
+                return HITLS_APP_INTERNAL_EXCEPTION;
+            }
             outBufLen = bufLen * 2; // The length of the encoded data is 2 times the length of the original data.
             break;
         default: // The original length of bufLen is used by the default type.
