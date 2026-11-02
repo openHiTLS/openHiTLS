@@ -487,6 +487,10 @@ static int32_t X509_GetSerialNumStr(HITLS_X509_Cert *cert, BSL_Buffer *val)
         BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
         return HITLS_X509_ERR_INVALID_PARAM;
     }
+    if (serialNum.len > UINT32_MAX / 3) {
+        BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
+        return HITLS_X509_ERR_INVALID_PARAM;
+    }
 
     val->data = BSL_SAL_Calloc(serialNum.len * 3, sizeof(uint8_t));  // "%02x:" Use 3 bytes.
     if (val->data == NULL) {

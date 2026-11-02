@@ -3373,6 +3373,9 @@ SDV_X509_CERT_CTRL_FUNC_TC002:"../testdata/cert/asn1/rsa2048ssa-pss.crt":"54:f3:
 SDV_X509_CERT_CTRL_FUNC_TC002 with key usage sha256 rsa v3 ca
 SDV_X509_CERT_CTRL_FUNC_TC002:"../testdata/cert/asn1/cawithkeyusage.der":"5a:ba:49:ca:e8:4a:3d:d8:be:35:53:d5:a4:ff:5a:85:32:4c:87:ef":"C=CN,O=Test-hitls,CN=CA":"C=CN,O=Test-hitls,CN=RootCA":"Apr 20 09:34:13 2024 GMT":"Apr 18 09:34:13 2034 GMT"
 
+SDV_X509_CERT_CTRL_FUNC_TC003 rejects overflowing serial number length
+SDV_X509_CERT_CTRL_FUNC_TC003:
+
 SDV_X509_CERT_DUP_FUNC_TC001 parse ecc p384 v3 ca cert
 SDV_X509_CERT_DUP_FUNC_TC001:"../testdata/cert/asn1/nist384ca.crt":BSL_CID_ECDSAWITHSHA256:0:0:0:65535
 

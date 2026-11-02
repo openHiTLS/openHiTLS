@@ -842,6 +842,30 @@ EXIT:
 }
 
 /* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_X509_CERT_CTRL_FUNC_TC003(void)
+{
+    TestMemInit();
+    HITLS_X509_Cert *cert = HITLS_X509_CertNew();
+    BSL_Buffer serialNum = { NULL, 0 };
+
+    ASSERT_NE(cert, NULL);
+    cert->tbs.serialNum.tag = BSL_ASN1_TAG_INTEGER;
+    cert->tbs.serialNum.buff = BSL_SAL_Malloc(1);
+    ASSERT_NE(cert->tbs.serialNum.buff, NULL);
+    cert->tbs.serialNum.len = UINT32_MAX / 3 + 1;
+    ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_GET_SERIALNUM_STR, &serialNum, sizeof(BSL_Buffer)),
+        HITLS_X509_ERR_INVALID_PARAM);
+    ASSERT_EQ(serialNum.data, NULL);
+EXIT:
+    if (cert != NULL) {
+        BSL_SAL_FREE(cert->tbs.serialNum.buff);
+    }
+    BSL_SAL_FREE(serialNum.data);
+    HITLS_X509_CertFree(cert);
+}
+/* END_CASE */
 // subkey
 /* BEGIN_CASE */
 void SDV_X509_CERT_PARSE_PUBKEY_FUNC_TC001(char *path, char *path2)
