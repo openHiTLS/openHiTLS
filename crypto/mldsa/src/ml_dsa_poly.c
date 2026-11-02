@@ -127,6 +127,7 @@ void MLDSA_Batch_Decompose(const CRYPT_ML_DSA_Ctx *ctx, int32_t a[MLDSA_N], int3
 int32_t MLDSA_RejNTTPoly(int32_t a[MLDSA_N], const uint8_t seed[MLDSA_SEED_EXTEND_BYTES_LEN])
 {
     int32_t ret;
+    uint32_t j = 0;
     unsigned int outlen = CRYPT_SHAKE128_BLOCKSIZE;
     const uint32_t buflen = CRYPT_SHAKE128_BLOCKSIZE / 4;
     uint32_t buf[CRYPT_SHAKE128_BLOCKSIZE / 4];
@@ -144,7 +145,6 @@ int32_t MLDSA_RejNTTPoly(int32_t a[MLDSA_N], const uint8_t seed[MLDSA_SEED_EXTEN
     GOTO_ERR_IF(hashMethod->init(mdCtx, NULL), ret);
     GOTO_ERR_IF(hashMethod->update(mdCtx, seed, MLDSA_SEED_EXTEND_BYTES_LEN), ret);
     GOTO_ERR_IF(hashMethod->squeeze(mdCtx, (uint8_t *)buf, outlen), ret);
-    uint32_t j = 0;
     for (int32_t i = 0; i < MLDSA_N;) {
         const uint32_t w0 = CRYPT_HTOLE32(buf[j]);
         const uint32_t w1 = CRYPT_HTOLE32(buf[j + 1]);

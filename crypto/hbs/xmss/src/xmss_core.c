@@ -345,6 +345,7 @@ int32_t CRYPT_XMSS_Sign(CryptXmssCtx *ctx, int32_t algId, const uint8_t *data, u
         return ret;
     }
 
+    uint32_t treeSigLen;
     uint32_t signBufLen = *signLen;
     XmssSignPrepareInput prepareInput = {
         common,
@@ -362,7 +363,7 @@ int32_t CRYPT_XMSS_Sign(CryptXmssCtx *ctx, int32_t algId, const uint8_t *data, u
         goto ERR;
     }
 
-    uint32_t treeSigLen = *signLen - prepareResult.offset;
+    treeSigLen = *signLen - prepareResult.offset;
     if (ctx->bds.enabled) {
         ret = XmssSignWithBds(ctx, prepareResult.digest, ctx->params->n, prepareResult.index,
                               sign + prepareResult.offset, &treeSigLen);

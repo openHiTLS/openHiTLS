@@ -366,6 +366,11 @@ static int32_t RsaSetOaep(CRYPT_RSA_Ctx *ctx, BSL_Param *param)
 {
     int32_t ret;
     uint32_t len = 0;
+    void *mdProvCtx = NULL;
+    void *mgfProvCtx = NULL;
+    void *libCtx = NULL;
+    EAL_MdMethod *mdMeth = NULL;
+    EAL_MdMethod *mgfMeth = NULL;
     RSA_PadingPara padPara = {0};
     const BSL_Param *temp = NULL;
     if ((temp = BSL_PARAM_FindConstParam(param, CRYPT_PARAM_RSA_MD_ID)) != NULL) {
@@ -386,12 +391,10 @@ static int32_t RsaSetOaep(CRYPT_RSA_Ctx *ctx, BSL_Param *param)
         BSL_ERR_PUSH_ERROR(CRYPT_EAL_ERR_ALGID);
         return CRYPT_EAL_ERR_ALGID;
     }
-    void *mdProvCtx = NULL;
-    void *mgfProvCtx = NULL;
-    void *libCtx = LIBCTX_FROM_RSA_CTX(ctx);
-    EAL_MdMethod *mdMeth = EAL_MdFindMethodEx(padPara.mdId, libCtx, MDATTR_FROM_RSA_CTX(ctx),
+    libCtx = LIBCTX_FROM_RSA_CTX(ctx);
+    mdMeth = EAL_MdFindMethodEx(padPara.mdId, libCtx, MDATTR_FROM_RSA_CTX(ctx),
         &padPara.mdMeth, &mdProvCtx, libCtx != NULL);
-    EAL_MdMethod *mgfMeth = EAL_MdFindMethodEx(padPara.mgfId, libCtx, MDATTR_FROM_RSA_CTX(ctx),
+    mgfMeth = EAL_MdFindMethodEx(padPara.mgfId, libCtx, MDATTR_FROM_RSA_CTX(ctx),
         &padPara.mgfMeth, &mgfProvCtx, libCtx != NULL);
     if (mdMeth == NULL || mgfMeth == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_EAL_ERR_ALGID);
@@ -410,6 +413,11 @@ static int32_t RsaSetPss(CRYPT_RSA_Ctx *ctx, BSL_Param *param)
 {
     int32_t ret;
     uint32_t len = 0;
+    void *mdProvCtx = NULL;
+    void *mgfProvCtx = NULL;
+    void *libCtx = NULL;
+    EAL_MdMethod *mdMeth = NULL;
+    EAL_MdMethod *mgfMeth = NULL;
     RSA_PadingPara padPara = {0};
     const BSL_Param *temp = NULL;
     if ((temp = BSL_PARAM_FindConstParam(param, CRYPT_PARAM_RSA_MD_ID)) != NULL) {
@@ -433,12 +441,10 @@ static int32_t RsaSetPss(CRYPT_RSA_Ctx *ctx, BSL_Param *param)
         BSL_ERR_PUSH_ERROR(CRYPT_EAL_ERR_ALGID);
         return CRYPT_EAL_ERR_ALGID;
     }
-    void *mdProvCtx = NULL;
-    void *mgfProvCtx = NULL;
-    void *libCtx = LIBCTX_FROM_RSA_CTX(ctx);
-    EAL_MdMethod *mdMeth = EAL_MdFindMethodEx(padPara.mdId, libCtx, MDATTR_FROM_RSA_CTX(ctx),
+    libCtx = LIBCTX_FROM_RSA_CTX(ctx);
+    mdMeth = EAL_MdFindMethodEx(padPara.mdId, libCtx, MDATTR_FROM_RSA_CTX(ctx),
         &padPara.mdMeth, &mdProvCtx, libCtx != NULL);
-    EAL_MdMethod *mgfMeth = EAL_MdFindMethodEx(padPara.mgfId, libCtx, MDATTR_FROM_RSA_CTX(ctx),
+    mgfMeth = EAL_MdFindMethodEx(padPara.mgfId, libCtx, MDATTR_FROM_RSA_CTX(ctx),
         &padPara.mgfMeth, &mgfProvCtx, libCtx != NULL);
     if (mdMeth == NULL || mgfMeth == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_EAL_ERR_ALGID);
@@ -456,6 +462,9 @@ ERR:
 #ifdef HITLS_CRYPTO_RSA_EMSA_ISO9796_2
 static int32_t RsaSetIso9796_2(CRYPT_RSA_Ctx *ctx, BSL_Param *param)
 {
+    void *mdProvCtx = NULL;
+    void *libCtx = NULL;
+    EAL_MdMethod *mdMeth = NULL;
     RSA_PadingPara padPara = {0};
     const BSL_Param *temp = BSL_PARAM_FindConstParam(param, CRYPT_PARAM_RSA_MD_ID);
     if (temp == NULL || temp->value == NULL || temp->valueLen == 0) {
@@ -469,9 +478,8 @@ static int32_t RsaSetIso9796_2(CRYPT_RSA_Ctx *ctx, BSL_Param *param)
         BSL_ERR_PUSH_ERROR(CRYPT_EAL_ERR_ALGID);
         return CRYPT_EAL_ERR_ALGID;
     }
-    void *mdProvCtx = NULL;
-    void *libCtx = LIBCTX_FROM_RSA_CTX(ctx);
-    EAL_MdMethod *mdMeth = EAL_MdFindMethodEx(padPara.mdId, libCtx, MDATTR_FROM_RSA_CTX(ctx),
+    libCtx = LIBCTX_FROM_RSA_CTX(ctx);
+    mdMeth = EAL_MdFindMethodEx(padPara.mdId, libCtx, MDATTR_FROM_RSA_CTX(ctx),
         &padPara.mdMeth, &mdProvCtx, libCtx != NULL);
     if (mdMeth == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_EAL_ERR_ALGID);

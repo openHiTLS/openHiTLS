@@ -367,6 +367,7 @@ static void Sha256FinalPad(CRYPT_SHA2_256_Ctx *ctx)
 static int32_t ChainSha256(const uint8_t *x, uint32_t xLen, uint32_t start, uint32_t steps, const uint8_t *pubSeed,
                            void *adrs, const void *ctx, uint8_t *output)
 {
+    uint32_t num;
     (void)pubSeed; // Parameter kept for API compatibility
     if (steps == 0) {
         memcpy(output, x, xLen);
@@ -410,7 +411,7 @@ static int32_t ChainSha256(const uint8_t *x, uint32_t xLen, uint32_t start, uint
     // block: |---ADRS---|--MSG--|0X80|-----|hNum|lNum|
     Sha256FinalPad(sha256Ctx);
     SHA256CompressMultiBlocks(sha256Ctx->h, (uint8_t *)sha256Ctx->block, 1);
-    uint32_t num = n / sizeof(uint32_t);
+    num = n / sizeof(uint32_t);
     for (uint32_t i = 1; i < steps; ++i) {
         for (uint32_t j = 0; j < num; ++j) {
             PUT_UINT32_BE(sha256Ctx->h[j], (uint8_t *)sha256Ctx->block + adrsLen, sizeof(uint32_t) * j);

@@ -199,6 +199,11 @@ static CRYPT_EAL_PkeyPara *PkeyNewRsaPara(uint8_t *e, uint32_t eLen, uint32_t bi
 static int32_t HandlePkey(GenrsaInOpt *opt, char *resBuf, uint32_t bufLen)
 {
     int32_t ret = HITLS_APP_SUCCESS;
+    char pwd[APP_MAX_PASS_LENGTH + 1] = {0};
+    int32_t pwdLen = 0;
+    CRYPT_Pbkdf2Param pbkdfParam = {0};
+    CRYPT_EncodeParam encodeParam = {CRYPT_DERIVE_PBKDF2, &pbkdfParam};
+    BSL_Buffer encode = {0};
     // Setting the Entropy Source
     (void)CRYPT_EAL_ProviderRandInitCtx(NULL, CRYPT_RAND_SHA256, "provider=default", NULL, 0, NULL);
     CRYPT_EAL_PkeyCtx *pkey = CRYPT_EAL_ProviderPkeyNewCtx(NULL, CRYPT_PKEY_RSA,
@@ -220,17 +225,14 @@ static int32_t HandlePkey(GenrsaInOpt *opt, char *resBuf, uint32_t bufLen)
         ret = HITLS_APP_CRYPTO_FAIL;
         goto hpEnd;
     }
-    char pwd[APP_MAX_PASS_LENGTH + 1] = {0};
-    int32_t pwdLen = HITLS_APP_Passwd(pwd, APP_MAX_PASS_LENGTH + 1, 1);
+    pwdLen = HITLS_APP_Passwd(pwd, APP_MAX_PASS_LENGTH + 1, 1);
     if (pwdLen == -1) {
         BSL_SAL_CleanseData(pwd, APP_MAX_PASS_LENGTH);
         ret = HITLS_APP_PASSWD_FAIL;
         goto hpEnd;
     }
-    CRYPT_Pbkdf2Param pbkdfParam = {BSL_CID_PBES2, BSL_CID_PBKDF2, CRYPT_MAC_HMAC_SHA1,
+    pbkdfParam = (CRYPT_Pbkdf2Param){BSL_CID_PBES2, BSL_CID_PBKDF2, CRYPT_MAC_HMAC_SHA1,
         opt->cipherId, 16, (uint8_t *)pwd, pwdLen, 2048};
-    CRYPT_EncodeParam encodeParam = {CRYPT_DERIVE_PBKDF2, &pbkdfParam};
-    BSL_Buffer encode = {0};
     ret = CRYPT_EAL_EncodeBuffKey(pkey, &encodeParam, BSL_FORMAT_PEM, CRYPT_PRIKEY_PKCS8_ENCRYPT, &encode);
     BSL_SAL_CleanseData(pwd, APP_MAX_PASS_LENGTH);
     if (ret != CRYPT_SUCCESS) {
@@ -257,6 +259,7 @@ int32_t HITLS_GenRSAMain(int argc, char *argv[])
     BSL_UIO *outUio = NULL;
     int32_t ret = HITLS_APP_SUCCESS;
     char *resBuf = NULL;
+    uint32_t writeLen = 0;
     if ((ret = HITLS_APP_OptBegin(argc, argv, g_genrsaOpts)) != HITLS_APP_SUCCESS) {
         AppPrintError("error in opt begin.\n");
         goto GenRsaEnd;
@@ -277,7 +280,6 @@ int32_t HITLS_GenRSAMain(int argc, char *argv[])
     if ((ret = HandlePkey(&opt, resBuf, REC_MAX_PEM_FILELEN)) != HITLS_APP_SUCCESS) {
         goto GenRsaEnd;
     }
-    uint32_t writeLen = 0;
     if (BSL_UIO_Write(outUio, resBuf, strlen(resBuf), &writeLen) != BSL_SUCCESS || writeLen == 0) {
         ret = HITLS_APP_UIO_FAIL;
         goto GenRsaEnd;

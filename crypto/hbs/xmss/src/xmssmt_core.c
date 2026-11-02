@@ -430,6 +430,10 @@ int32_t CRYPT_XMSSMT_Sign(CryptXmssmtCtx *ctx, int32_t algId, const uint8_t *dat
         return ret;
     }
 
+    uint32_t hp;
+    uint32_t leafIdx;
+    uint64_t treeIdx;
+    uint32_t treeSigLen;
     uint32_t signBufLen = *signLen;
     uint32_t idxBytes = (ctx->params->h + 7) / 8;
     XmssSignPrepareInput prepareInput = {
@@ -448,10 +452,10 @@ int32_t CRYPT_XMSSMT_Sign(CryptXmssmtCtx *ctx, int32_t algId, const uint8_t *dat
         goto ERR;
     }
 
-    uint32_t hp = ctx->params->hp;
-    uint32_t leafIdx = (uint32_t)(prepareResult.index & (((uint64_t)1 << hp) - 1));
-    uint64_t treeIdx = prepareResult.index >> hp;
-    uint32_t treeSigLen = *signLen - prepareResult.offset;
+    hp = ctx->params->hp;
+    leafIdx = (uint32_t)(prepareResult.index & (((uint64_t)1 << hp) - 1));
+    treeIdx = prepareResult.index >> hp;
+    treeSigLen = *signLen - prepareResult.offset;
     if (ctx->bds.enabled) {
         ret = XmssmtSignWithBds(ctx, prepareResult.digest, ctx->params->n, prepareResult.index,
                                 sign + prepareResult.offset, &treeSigLen);

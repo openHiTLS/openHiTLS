@@ -62,6 +62,7 @@ static int32_t CheckPrime(const char *numStr, int32_t hex, int32_t checks)
     int32_t ret;
     BN_BigNum *bn = NULL;
     BN_Optimizer *optimizer = NULL;
+    uint32_t checkTimes = (checks > 0) ? (uint32_t)checks : DEFAULT_PRIME_CHECKS;
 
     if (hex) {
         ret = BN_Hex2Bn(&bn, numStr);
@@ -81,8 +82,6 @@ static int32_t CheckPrime(const char *numStr, int32_t hex, int32_t checks)
         ret = HITLS_APP_BSL_FAIL;
         goto EXIT;
     }
-
-    uint32_t checkTimes = (checks > 0) ? (uint32_t)checks : DEFAULT_PRIME_CHECKS;
 
     ret = BN_PrimeCheck(bn, checkTimes, optimizer, NULL);
     if (ret == CRYPT_SUCCESS) {

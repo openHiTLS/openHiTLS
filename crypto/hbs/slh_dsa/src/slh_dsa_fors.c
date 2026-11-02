@@ -90,6 +90,7 @@ ERR:
 int32_t ForsPkFromSig(const uint8_t *sig, uint32_t sigLen, const uint8_t *md, uint32_t mdLen, SlhDsaAdrs *adrs,
                       const CryptSlhDsaCtx *ctx, uint8_t *pk)
 {
+    SlhDsaAdrs forspkAdrs;
     int32_t ret;
     uint32_t *indices = NULL;
     uint8_t *root = NULL;
@@ -148,7 +149,7 @@ int32_t ForsPkFromSig(const uint8_t *sig, uint32_t sigLen, const uint8_t *md, ui
         memcpy(root + i * n, node0, n);
     }
 
-    SlhDsaAdrs forspkAdrs = *adrs;
+    forspkAdrs = *adrs;
     ctx->adrsOps.setType(&forspkAdrs, FORS_ROOTS);
     ctx->adrsOps.copyKeyPairAddr(&forspkAdrs, adrs);
 

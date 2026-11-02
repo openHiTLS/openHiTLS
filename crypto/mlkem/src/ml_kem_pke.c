@@ -533,6 +533,8 @@ int32_t MLKEM_DecapsInternal(CRYPT_ML_KEM_Ctx *ctx, uint8_t *ct, uint32_t ctLen,
 
     uint8_t mh[MLKEM_SEED_LEN + CRYPT_SHA3_256_DIGESTSIZE]; // m′ and h
     uint8_t kr[CRYPT_SHA3_512_DIGESTSIZE + 1]; // K' and r'
+    uint8_t *r = kr + MLKEM_SHARED_KEY_LEN;
+    uint8_t mask = 0;
     uint8_t *newCt = NULL;
     int32_t ret;
 
@@ -548,7 +550,6 @@ int32_t MLKEM_DecapsInternal(CRYPT_ML_KEM_Ctx *ctx, uint8_t *ct, uint32_t ctLen,
     (void)memcpy(mh + MLKEM_SEED_LEN, h, CRYPT_SHA3_256_DIGESTSIZE);
     CRYPT_SHA3_512(kr, mh, MLKEM_SEED_LEN + CRYPT_SHA3_256_DIGESTSIZE);
     // Step 8: 𝑐′ ← K-PKE.Encrypt(ekPKE,𝑚′,𝑟′)
-    uint8_t *r = kr + MLKEM_SHARED_KEY_LEN;
     newCt = BSL_SAL_Malloc(ctLen + MLKEM_SEED_LEN);
     if (newCt == NULL) {
         ret = BSL_MALLOC_FAIL;
@@ -558,7 +559,6 @@ int32_t MLKEM_DecapsInternal(CRYPT_ML_KEM_Ctx *ctx, uint8_t *ct, uint32_t ctLen,
     GOTO_ERR_IF(PkeEncrypt(ctx, newCt, mh, r), ret);
 
     // Step 9: if c != c′
-    uint8_t mask = 0;
     for (uint32_t i = 0; i < ctLen; i++) {
         mask |= (ct[i] ^ newCt[i]);
     }

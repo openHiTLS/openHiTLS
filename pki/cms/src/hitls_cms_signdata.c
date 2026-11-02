@@ -700,6 +700,16 @@ static int32_t EncodeSignerIdentifier(CMS_SignerInfo *si, BSL_ASN1_Buffer *sid)
 
 static int32_t EncodeSignerInfo(CMS_SignerInfo *si, BSL_ASN1_Buffer *asn)
 {
+    BSL_ASN1_TemplateItem siTemplItems[] = {
+        {BSL_ASN1_TAG_INTEGER, 0, 0},
+        {BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE, 0, 0},
+        {BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE, 0, 0},
+        {BSL_ASN1_CLASS_CTX_SPECIFIC | BSL_ASN1_TAG_CONSTRUCTED, BSL_ASN1_FLAG_OPTIONAL, 0},
+        {BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE, 0, 0},
+        {BSL_ASN1_TAG_OCTETSTRING, 0, 0},
+        {BSL_ASN1_CLASS_CTX_SPECIFIC | BSL_ASN1_TAG_CONSTRUCTED | 1, BSL_ASN1_FLAG_OPTIONAL, 0},
+    };
+    BSL_ASN1_Template templ = {siTemplItems, sizeof(siTemplItems) / sizeof(siTemplItems[0])};
     BSL_ASN1_Buffer asnbuff[7] = {0}; // only need 7 temp buffers
     int32_t ret = BSL_ASN1_EncodeLimb(BSL_ASN1_TAG_INTEGER, (uint64_t)si->version, &asnbuff[0]); // 0: version
     if (ret != HITLS_PKI_SUCCESS) {
@@ -741,19 +751,9 @@ static int32_t EncodeSignerInfo(CMS_SignerInfo *si, BSL_ASN1_Buffer *asn)
         goto ERR;
     }
 
-    BSL_ASN1_TemplateItem siTemplItems[] = {
-        {BSL_ASN1_TAG_INTEGER, 0, 0},
-        {BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE, 0, 0},
-        {BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE, 0, 0},
-        {BSL_ASN1_CLASS_CTX_SPECIFIC | BSL_ASN1_TAG_CONSTRUCTED, BSL_ASN1_FLAG_OPTIONAL, 0},
-        {BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE, 0, 0},
-        {BSL_ASN1_TAG_OCTETSTRING, 0, 0},
-        {BSL_ASN1_CLASS_CTX_SPECIFIC | BSL_ASN1_TAG_CONSTRUCTED | 1, BSL_ASN1_FLAG_OPTIONAL, 0},
-    };
     if (si->version == HITLS_CMS_SIGNEDDATA_SIGNERINFO_V3) {
         siTemplItems[1].tag = BSL_ASN1_CLASS_CTX_SPECIFIC;
     }
-    BSL_ASN1_Template templ = {siTemplItems, sizeof(siTemplItems) / sizeof(siTemplItems[0])};
     ret = BSL_ASN1_EncodeTemplate(&templ, asnbuff, 7, &asn->buff, &asn->len); // 7: total items
     if (ret != HITLS_PKI_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
@@ -813,6 +813,7 @@ static int32_t GetSignedDataVersion(CMS_SignedData *sigData)
 
 static int32_t CMS_GenSignedDataBuffAsn1(HITLS_CMS *cms, BSL_Buffer *encode)
 {
+    BSL_ASN1_Template templ = {g_signedDataTempl, sizeof(g_signedDataTempl) / sizeof(g_signedDataTempl[0])};
     BSL_ASN1_Buffer asnbuff[HITLS_CMS_SIGNEDDATA_MAX_IDX] = {0};
     CMS_SignedData *sigData = cms->ctx.signedData;
     if (sigData == NULL) {
@@ -846,7 +847,6 @@ static int32_t CMS_GenSignedDataBuffAsn1(HITLS_CMS *cms, BSL_Buffer *encode)
     if (ret != HITLS_PKI_SUCCESS) {
         goto ERR;
     }
-    BSL_ASN1_Template templ = {g_signedDataTempl, sizeof(g_signedDataTempl) / sizeof(g_signedDataTempl[0])};
     ret = BSL_ASN1_EncodeTemplate(&templ, asnbuff, HITLS_CMS_SIGNEDDATA_MAX_IDX, &encode->data, &encode->dataLen);
     if (ret != HITLS_PKI_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);

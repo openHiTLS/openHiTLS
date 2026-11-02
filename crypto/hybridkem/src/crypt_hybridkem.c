@@ -456,6 +456,8 @@ int32_t CRYPT_HYBRID_KEM_Encaps(const CRYPT_HybridKemCtx *ctx, uint8_t *cipher, 
         CRYPT_NULL_INPUT);
 
     uint32_t shareBufLen = *shareLen;
+    BSL_Param kemSK = { 0 };
+    BSL_Param pkeyShared = { 0 };
     BSL_Param kemCT = { 0 };
     BSL_Param pubKey[2] = {{CRYPT_PARAM_EC_PUBKEY, BSL_PARAM_TYPE_OCTETS, NULL, 0, 0}, BSL_PARAM_END};
     RETURN_RET_IF_ERR(CRYPT_HybridGetCipherTextLen(ctx, &(pubKey[0].valueLen), &(kemCT.valueLen)), ret);
@@ -469,8 +471,6 @@ int32_t CRYPT_HYBRID_KEM_Encaps(const CRYPT_HybridKemCtx *ctx, uint8_t *cipher, 
     }
     GOTO_ERR_IF(ctx->pKeyMethod->getPub(tmpKey, pubKey), ret);
 
-    BSL_Param kemSK = { 0 };
-    BSL_Param pkeyShared = { 0 };
     GOTO_ERR_IF(CRYPT_HybridGetShareKeyLen(ctx, &pkeyShared.valueLen, &kemSK.valueLen), ret);
     GOTO_ERR_IF(CRYPT_HybridGetKeyPtr(ctx, sharekey, *shareLen, &pkeyShared, &kemSK), ret);
     GOTO_ERR_IF(ctx->pKeyMethod->computeShareKey(tmpKey, ctx->pkeyCtx, pkeyShared.value, &pkeyShared.valueLen), ret);
@@ -496,6 +496,8 @@ int32_t CRYPT_HYBRID_KEM_Decaps(const CRYPT_HybridKemCtx *ctx, uint8_t *cipher, 
     RETURN_RET_IF((ctx == NULL || cipher == NULL || sharekey == NULL || shareLen == NULL), CRYPT_NULL_INPUT);
 
     uint32_t shareBufLen = *shareLen;
+    BSL_Param kemSK = { 0 };
+    BSL_Param pkeyShared = { 0 };
     BSL_Param kemCT = { 0 };
     BSL_Param pubKey[2] = {{CRYPT_PARAM_EC_PUBKEY, BSL_PARAM_TYPE_OCTETS, NULL, 0, 0}, BSL_PARAM_END};
     RETURN_RET_IF_ERR(CRYPT_HybridGetCipherTextLen(ctx, &pubKey[0].valueLen, &kemCT.valueLen), ret);
@@ -509,8 +511,6 @@ int32_t CRYPT_HYBRID_KEM_Decaps(const CRYPT_HybridKemCtx *ctx, uint8_t *cipher, 
     }
     GOTO_ERR_IF(ctx->pKeyMethod->setPub(tmpKey, pubKey), ret);
 
-    BSL_Param pkeyShared = { 0 };
-    BSL_Param kemSK = { 0 };
     GOTO_ERR_IF(CRYPT_HybridGetShareKeyLen(ctx, &pkeyShared.valueLen, &kemSK.valueLen), ret);
     GOTO_ERR_IF(CRYPT_HybridGetKeyPtr(ctx, sharekey, *shareLen, &pkeyShared, &kemSK), ret);
     GOTO_ERR_IF(ctx->pKeyMethod->computeShareKey(ctx->pkeyCtx, tmpKey, pkeyShared.value, &pkeyShared.valueLen), ret);

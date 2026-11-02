@@ -38,6 +38,7 @@ static int32_t CRYPT_CompositeKemCheckParam(const CRYPT_CompositeCtx *ctx, bool 
 static int32_t CRYPT_CompositeKemCombine(const CRYPT_CompositeCtx *ctx, const uint8_t *pqcSecret,
     const uint8_t *tradSecret, const uint8_t *tradCipher, uint8_t *secret)
 {
+    uint32_t secretLen = COMPOSITE_KEM_SECRET_LEN;
     BSL_Buffer tradPub = {0};
     int32_t ret = CRYPT_CompositeGetTradPubKey(ctx, &tradPub);
     if (ret != CRYPT_SUCCESS) {
@@ -48,7 +49,6 @@ static int32_t CRYPT_CompositeKemCombine(const CRYPT_CompositeCtx *ctx, const ui
         ret = CRYPT_MEM_ALLOC_FAIL;
         goto ERR;
     }
-    uint32_t secretLen = COMPOSITE_KEM_SECRET_LEN;
     GOTO_ERR_IF_EX(CRYPT_EAL_MdInit(md), ret);
     GOTO_ERR_IF_EX(CRYPT_EAL_MdUpdate(md, pqcSecret, COMPOSITE_KEM_SECRET_LEN), ret);
     GOTO_ERR_IF_EX(CRYPT_EAL_MdUpdate(md, tradSecret, ctx->info->alg.kem.tradSharedLen), ret);
@@ -145,6 +145,7 @@ int32_t CRYPT_COMPOSITE_Encaps(const CRYPT_CompositeCtx *ctx, uint8_t *cipher, u
     RETURN_RET_IF(*cipherLen < totalCipherLen || *shareLen < COMPOSITE_KEM_SECRET_LEN, CRYPT_COMPOSITE_LEN_NOT_ENOUGH);
     CRYPT_EAL_PkeyCtx *ephemeral = NULL;
     RETURN_RET_IF_ERR_EX(CRYPT_CompositeKemNewTradCtx(ctx, &ephemeral), ret);
+    uint8_t *tradCipher = NULL;
     uint8_t *tmpCipher = BSL_SAL_Malloc(totalCipherLen);
     uint8_t pqcSecret[COMPOSITE_KEM_SECRET_LEN];
     uint8_t tradSecret[COMPOSITE_KEM_MAX_TRAD_SECRET_LEN];
@@ -154,7 +155,7 @@ int32_t CRYPT_COMPOSITE_Encaps(const CRYPT_CompositeCtx *ctx, uint8_t *cipher, u
     ret = CRYPT_MEM_ALLOC_FAIL;
     GOTO_ERR_IF_TRUE(tmpCipher == NULL, ret);
     /* Composite ciphertext: PQC ciphertext || traditional ciphertext. */
-    uint8_t *tradCipher = tmpCipher + pqcCipherLen;
+    tradCipher = tmpCipher + pqcCipherLen;
     GOTO_ERR_IF_EX(CRYPT_EAL_PkeyEncaps(ctx->pqcCtx, tmpCipher, &pqcCipherLen, pqcSecret, &pqcSecretLen), ret);
     GOTO_ERR_IF_EX(CRYPT_CompositeKemEncapsTrad(ctx, ephemeral, tradCipher, tradSecret), ret);
     GOTO_ERR_IF_EX(CRYPT_CompositeKemCombine(ctx, pqcSecret, tradSecret, tradCipher, secret), ret);

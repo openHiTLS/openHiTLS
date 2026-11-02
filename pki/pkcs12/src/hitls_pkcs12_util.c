@@ -432,6 +432,7 @@ int32_t HITLS_PKCS12_KDF(HITLS_PKCS12 *p12, const uint8_t *pwd, uint32_t pwdLen,
         return HITLS_PKCS12_ERR_INVALID_PARAM;
     }
     HITLS_PKCS12_MacData *macData = p12->macData;
+    uint32_t c;
     uint32_t n = output->dataLen;
     uint32_t iter = macData->iteration;
     uint8_t *key = output->data;
@@ -488,7 +489,7 @@ int32_t HITLS_PKCS12_KDF(HITLS_PKCS12 *p12, const uint8_t *pwd, uint32_t pwdLen,
     }
 
     /* C = ceiling(n/u) */
-    uint32_t c = (n + param->u - 1) / param->u;
+    c = (n + param->u - 1) / param->u;
     for (uint32_t i = 0; i < c; i++) {
         ret = MacLoop(iter, ctx, param, D, I, A, k, param->u);
         if (ret != HITLS_PKI_SUCCESS) {

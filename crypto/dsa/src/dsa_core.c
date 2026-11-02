@@ -1283,8 +1283,8 @@ int32_t CryptDsaFips1864GenPq(CRYPT_DSA_Ctx *ctx, DSA_FIPS186_4_Para *fipsPara, 
     msg.dataLen = seed->dataLen;
     msg.data = (uint8_t *)BSL_SAL_Calloc(seed->dataLen, 1);
     int32_t ret = CRYPT_MEM_ALLOC_FAIL;
-    GOTO_ERR_IF_TRUE(pow == NULL || pTmp == NULL || qTmp == NULL || msg.data == NULL, ret);
     CRYPT_DSA_Para dsaParaTmp = {pTmp, qTmp, NULL};
+    GOTO_ERR_IF_TRUE(pow == NULL || pTmp == NULL || qTmp == NULL || msg.data == NULL, ret);
     GOTO_ERR_IF(BN_SetLimb(pow, 1), ret);
     GOTO_ERR_IF(BN_Lshift(pow, pow, fipsPara->l - 1), ret);
     while (true) { // until valid p,q or error occurs.
@@ -1341,9 +1341,10 @@ int32_t CryptDsaFips1864ValidatePq(int32_t algId, void *libCtx, const char *mdAt
     BN_BigNum *qTmp = OptimizerGetBn(opt, BITS_TO_BN_UNIT(qBits));
     msg.dataLen = seed->dataLen;
     msg.data = (uint8_t *)BSL_SAL_Dump(seed->data, seed->dataLen);
+    DSA_FIPS186_4_Para fipsPara = {algId, 0, pBits, qBits};
     int32_t ret = CRYPT_MEM_ALLOC_FAIL;
-    GOTO_ERR_IF_TRUE(pow == NULL || pTmp == NULL || qTmp == NULL || msg.data == NULL, ret);
     CRYPT_DSA_Para dsaParaTmp = {pTmp, qTmp, NULL};
+    GOTO_ERR_IF_TRUE(pow == NULL || pTmp == NULL || qTmp == NULL || msg.data == NULL, ret);
     GOTO_ERR_IF(BN_SetLimb(pow, 1), ret);
     GOTO_ERR_IF(BN_Lshift(pow, pow, pBits - 1), ret);
     /* Validate Q */
@@ -1352,7 +1353,6 @@ int32_t CryptDsaFips1864ValidatePq(int32_t algId, void *libCtx, const char *mdAt
     ret = CRYPT_DSA_PARA_NOT_EQUAL;
     GOTO_ERR_IF_TRUE(BN_Cmp(qTmp, dsaPara->q), ret);
     /* Validate P */
-    DSA_FIPS186_4_Para fipsPara = {algId, 0, pBits, qBits};
     for (uint32_t i = 0; i <= counter; i++) {
         GOTO_ERR_IF(BN_Zeroize(pTmp), ret);
         GOTO_ERR_IF(DSAFips1864GenP(libCtx, mdAttr, &fipsPara, pow, opt, &msg, &dsaParaTmp), ret);

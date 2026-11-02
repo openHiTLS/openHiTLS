@@ -164,6 +164,7 @@ static int32_t SetPubBasicCheck(const CRYPT_PAILLIER_Ctx *ctx, const CRYPT_Paill
 
 int32_t CRYPT_PAILLIER_SetPubKey(CRYPT_PAILLIER_Ctx *ctx, const CRYPT_PaillierPub *pub)
 {
+    uint32_t bnBits;
     int32_t ret = SetPubBasicCheck(ctx, pub);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
@@ -177,7 +178,7 @@ int32_t CRYPT_PAILLIER_SetPubKey(CRYPT_PAILLIER_Ctx *ctx, const CRYPT_PaillierPu
         return CRYPT_MEM_ALLOC_FAIL;
     }
     GOTO_ERR_IF(BN_Bin2Bn(newPub->n, pub->n, pub->nLen), ret);
-    uint32_t bnBits = BN_Bits(newPub->n);
+    bnBits = BN_Bits(newPub->n);
     if (bnBits > PAILLIER_MAX_MODULUS_BITS || bnBits <= 0) {
         ret = CRYPT_PAILLIER_ERR_KEY_BITS;
         BSL_ERR_PUSH_ERROR(ret);

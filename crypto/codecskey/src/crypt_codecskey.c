@@ -338,6 +338,7 @@ int32_t ProviderDecodeBuffKeyEx(CRYPT_EAL_LibCtx *libCtx, const char *attrName, 
     char *targetType = "HIGH_KEY";
     char *targetFormat = "OBJECT";
     uint32_t index = 0;
+    int32_t algId;
     BSL_Param *outParam = NULL;
     /**
      * isFreeOutData controls ownership transfer:
@@ -375,7 +376,7 @@ int32_t ProviderDecodeBuffKeyEx(CRYPT_EAL_LibCtx *libCtx, const char *attrName, 
     if (ret != CRYPT_SUCCESS) {
         goto EXIT;
     }
-    int32_t algId = CRYPT_EAL_PkeyGetId(tmpPKey);
+    algId = CRYPT_EAL_PkeyGetId(tmpPKey);
     if (pkeyAlgId != BSL_CID_UNKNOWN && algId != pkeyAlgId) {
         ret = CRYPT_EAL_ERR_ALGID;
         BSL_ERR_PUSH_ERROR(CRYPT_EAL_ERR_ALGID);

@@ -18,6 +18,7 @@
 
 #include <stdint.h>
 #include "tls.h"
+#include "pack.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -55,10 +56,6 @@ int32_t PackHelloVerifyRequest(const TLS_Ctx *ctx, PackPacket *pkt);
  * @retval  For other error codes, see hitls_error.h
  */
 int32_t PackServerHello(const TLS_Ctx *ctx, PackPacket *pkt);
-
-#if defined(HITLS_TLS_PROTO_TLS13_FAMILY)
-int32_t PackTls13HelloRetryRequest(const TLS_Ctx *ctx, PackPacket *pkt);
-#endif /* HITLS_TLS_PROTO_TLS13_FAMILY */
 
 /**
  * @brief   Pack Encrypted Extensions message

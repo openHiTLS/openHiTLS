@@ -39,16 +39,6 @@ extern "C" {
  */
 int32_t PackSessionId(PackPacket *pkt, const uint8_t *id, uint32_t idSize);
 
-/**
- * @brief   Pack DTLS message header
- *
- * @param   type [IN] Message type
- * @param   sequence [IN] Sequence number (only in DTLS)
- * @param   length [IN] Length of message body
- * @param   buf [OUT] Message header
- */
-void PackDtlsMsgHeader(HS_MsgType type, uint16_t sequence, uint32_t length, uint8_t *buf);
-
 int32_t PackTrustedCAList(HITLS_TrustedCAList *caList, PackPacket *pkt);
 
 int32_t PackCertificateReqCtx(const TLS_Ctx *ctx, PackPacket *pkt);

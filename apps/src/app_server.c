@@ -906,6 +906,8 @@ int HITLS_ServerMain(int argc, char *argv[])
     HITLS_Config *dtlcpConfig = NULL;
     int dtlcpListenFd = -1;
     HITLS_ServerParams dtlcpParams = {0};
+    ThreadServerArgs threadArgs1 = {0};
+    ThreadServerArgs threadArgs2 = {0};
     int ret = HITLS_APP_SUCCESS;
     
     /* Initialize library */
@@ -958,8 +960,8 @@ int HITLS_ServerMain(int argc, char *argv[])
     /* Handle SIGCHLD for child processes */
     RegisterSignal();
     
-    ThreadServerArgs threadArgs1 = {config, listenFd, &params, HITLS_APP_SUCCESS};
-    ThreadServerArgs threadArgs2 = {dtlcpConfig, dtlcpListenFd, &dtlcpParams, HITLS_APP_SUCCESS};
+    threadArgs1 = (ThreadServerArgs){config, listenFd, &params, HITLS_APP_SUCCESS};
+    threadArgs2 = (ThreadServerArgs){dtlcpConfig, dtlcpListenFd, &dtlcpParams, HITLS_APP_SUCCESS};
     ret = CreateServerThread(&threadArgs1, &threadArgs2, &appProvider);
     if (ret != HITLS_APP_SUCCESS) {
         goto cleanup;

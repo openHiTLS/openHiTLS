@@ -93,6 +93,7 @@ static int32_t CMAC_Final(CRYPT_CMAC_Ctx *ctx)
     uint8_t k2[CIPHER_MAC_MAXBLOCKSIZE];
     const EAL_SymMethod *method = ctx->method;
     uint32_t blockSize = method->blockSize;
+    uint32_t length;
 
     int32_t ret = method->encryptBlock(ctx->key, z, l, blockSize);
     if (ret != CRYPT_SUCCESS) {
@@ -107,7 +108,7 @@ static int32_t CMAC_Final(CRYPT_CMAC_Ctx *ctx)
         rb = 0x1B; /* When the DES and TDES algorithms are used and blocksize is 64 bits, rb uses 0x1B. */
     }
     k1[blockSize - 1] ^= rb & CmacMsbMask(l[0]);
-    uint32_t length = ctx->len;
+    length = ctx->len;
     if (length == blockSize) {  // When the message length is an integer multiple of blockSize, use K1
         DATA_XOR(ctx->left, k1, ctx->left, blockSize);
     } else {  // The message length is not an integer multiple of blockSize. Use K2 after padding.

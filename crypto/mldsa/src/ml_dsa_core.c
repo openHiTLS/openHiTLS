@@ -907,6 +907,9 @@ int32_t MLDSA_KeyGenInternal(CRYPT_ML_DSA_Ctx *ctx, const uint8_t *d)
     uint8_t l = ctx->info->l;
     uint8_t seed[MLDSA_SEED_EXTEND_BYTES_LEN] = {0};
     uint8_t digest[MLDSA_EXPANDED_SEED_BYTES_LEN] = {0};
+    uint8_t *pubSeed = digest;
+    uint8_t *prvSeed = digest + MLDSA_PUBLIC_SEED_LEN;
+    uint8_t *signSeed = digest + MLDSA_PUBLIC_SEED_LEN + MLDSA_PRIVATE_SEED_LEN;
     uint8_t tr[MLDSA_TR_MSG_LEN] = {0};
     MLDSA_KeyGenMatrixSt st = {0};
     int32_t ret;
@@ -918,9 +921,6 @@ int32_t MLDSA_KeyGenInternal(CRYPT_ML_DSA_Ctx *ctx, const uint8_t *d)
     seed[MLDSA_SEED_BYTES_LEN + 1] = l;
     // (ρ, ρ′, K) ∈ B32 × B64 × B32 ← H(𝜉||IntegerToBytes(k, 1)||IntegerToBytes(ℓ, 1), 128)
     GOTO_ERR_IF(HashFuncH(seed, sizeof(seed), NULL, 0, digest, MLDSA_EXPANDED_SEED_BYTES_LEN), ret);
-    uint8_t *pubSeed = digest;
-    uint8_t *prvSeed = digest + MLDSA_PUBLIC_SEED_LEN;
-    uint8_t *signSeed = digest + MLDSA_PUBLIC_SEED_LEN + MLDSA_PRIVATE_SEED_LEN;
 
     // (𝐬1, 𝐬2) ← ExpandS(ρ′)
     GOTO_ERR_IF(ExpandS(ctx, prvSeed, st.s1, st.s2), ret);
@@ -953,6 +953,8 @@ ERR:
 int32_t MLDSA_SignInternal(const CRYPT_ML_DSA_Ctx *ctx, const CRYPT_Data *msg, uint8_t *out, uint32_t *outLen,
     const uint8_t *rand)
 {
+    uint16_t u = 0;
+    uint32_t cBufLen;
     int32_t ret = CRYPT_SUCCESS;
     uint8_t pubSeed[MLDSA_PUBLIC_SEED_LEN];
     uint8_t uBuf[MLDSA_XOF_MSG_LEN];
@@ -985,9 +987,8 @@ int32_t MLDSA_SignInternal(const CRYPT_ML_DSA_Ctx *ctx, const CRYPT_Data *msg, u
     uint8_t p[MLDSA_XOF_MSG_LEN + 2]; // The counter used 2 bytes.
     GOTO_ERR_IF(HashFuncH(signSeed, sizeof(signSeed), uBuf, MLDSA_XOF_MSG_LEN, p, MLDSA_XOF_MSG_LEN), ret);
 
-    uint16_t u = 0;
     // The length of c is λ/4.
-    uint32_t cBufLen = ctx->info->secBits / 4;
+    cBufLen = ctx->info->secBits / 4;
     int32_t c[MLDSA_N];
     do {
         // y ← ExpandMask(ρ″, 𝜅)
@@ -1005,7 +1006,6 @@ int32_t MLDSA_SignInternal(const CRYPT_ML_DSA_Ctx *ctx, const CRYPT_Data *msg, u
         GOTO_ERR_IF(SampleInBall(ctx, out, cBufLen, c), ret);
         // 𝑐 ← NTT(𝑐)
         MLDSA_ComputesNTT(c);
-
         // ⟨⟨𝑐𝐬1⟩⟩ ← NTT^−1(𝑐 ∘ 𝐬1); z ← y + ⟨⟨𝑐𝐬1⟩⟩
         ComputesZ(ctx, st.y, c, st.s1, st.z);
         // if ||z||∞ ≥ 𝛾1 − β

@@ -36,6 +36,7 @@ int main(int argc, char **argv)
     PerfOptions opt;
     CRYPT_EAL_LibCtx *libCtx = NULL;
     CRYPT_EAL_ProvMgrCtx *mgr = NULL;
+    const char *provPath = NULL;
     PerfScenario scenarios[PERF_FORM_BUTT * PERF_PROFILE_BUTT];
     bool globalRand = false;
     bool localRand = false;
@@ -55,7 +56,7 @@ int main(int argc, char **argv)
         fprintf(stderr, "select exactly one server scenario with -a\n");
         goto EXIT;
     }
-    const char *provPath = opt.providerPath;
+    provPath = opt.providerPath;
     if (provPath == NULL) {
         provPath = getenv("HITLS_ASYNC_SIM_PROVIDER_PATH");
         if (provPath == NULL || provPath[0] == '\0') {

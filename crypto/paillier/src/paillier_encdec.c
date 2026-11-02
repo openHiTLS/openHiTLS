@@ -27,6 +27,7 @@
 static int32_t CRYPT_PAILLIER_PubEnc(const CRYPT_PAILLIER_Ctx *ctx, const uint8_t *input, uint32_t inputLen,
     uint8_t *out, uint32_t *outLen)
 {
+    uint32_t n2Bytes;
     int32_t ret;
     CRYPT_PAILLIER_PubKey *pubKey = ctx->pubKey;
     if (pubKey == NULL) {
@@ -113,7 +114,7 @@ static int32_t CRYPT_PAILLIER_PubEnc(const CRYPT_PAILLIER_Ctx *ctx, const uint8_
 
     /* Export a fixed n^2-sized ciphertext so that the strict length check in
      * DecryptInputCheck also holds when the ciphertext has leading zero bytes. */
-    uint32_t n2Bytes = 2 * BN_BITS_TO_BYTES(bits);
+    n2Bytes = 2 * BN_BITS_TO_BYTES(bits);
     ret = BN_Bn2BinFixZero(result, out, n2Bytes);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
@@ -388,6 +389,8 @@ EXIT:
 
 int32_t CRYPT_PAILLIER_Add(const void *ctx, const BSL_Param *input, uint8_t *out, uint32_t *outLen)
 {
+    uint8_t *tmpBuf = NULL;
+    uint32_t actualLen;
     if (ctx == NULL || input == NULL || out == NULL || outLen == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
@@ -493,14 +496,14 @@ int32_t CRYPT_PAILLIER_Add(const void *ctx, const BSL_Param *input, uint8_t *out
     }
 
     // Export result as fixed-length n^2 bytes with leading-zero padding
-    uint8_t *tmpBuf = (uint8_t *)BSL_SAL_Malloc(n2Bytes);
+    tmpBuf = (uint8_t *)BSL_SAL_Malloc(n2Bytes);
     if (tmpBuf == NULL) {
         ret = CRYPT_MEM_ALLOC_FAIL;
         BSL_ERR_PUSH_ERROR(ret);
         goto EXIT;
     }
 
-    uint32_t actualLen = n2Bytes;
+    actualLen = n2Bytes;
     ret = BN_Bn2Bin(result, tmpBuf, &actualLen);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);

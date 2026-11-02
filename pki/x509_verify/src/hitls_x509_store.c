@@ -110,6 +110,7 @@ static int32_t X509_SetCA(HITLS_X509_Store *store, HITLS_X509_Cert *cert, bool i
 
 static int32_t X509_StoreSetCRL(HITLS_X509_Store *store, HITLS_X509_Crl *crl)
 {
+    int ref = 0;
     int32_t ret = BSL_SAL_ThreadWriteLock(store->rwLock);
     if (ret != BSL_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
@@ -119,7 +120,6 @@ static int32_t X509_StoreSetCRL(HITLS_X509_Store *store, HITLS_X509_Crl *crl)
     if (ret != HITLS_PKI_SUCCESS) {
         goto EXIT;
     }
-    int ref = 0;
     /* The CRL list stores shared objects, so keep one reference on behalf of the store. */
     ret = HITLS_X509_CrlCtrl(crl, HITLS_X509_REF_UP, &ref, sizeof(int));
     if (ret != HITLS_PKI_SUCCESS) {

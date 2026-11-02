@@ -701,6 +701,8 @@ static int32_t Spake2PlusProverFinish(Spake2plusCtx *ctx, BSL_Buffer x, BSL_Buff
     ECC_Point *Z0 = ECC_NewPoint(para);
     ECC_Point *V0 = ECC_NewPoint(para);
     CRYPT_EAL_PkeyCtx* shareVKey = NULL;
+    uint8_t n[MAX_ECC_PARAM_LEN];
+    uint32_t nLen = MAX_ECC_PARAM_LEN;
     int32_t ret = HITLS_AUTH_SUCCESS;
 
     if (para == NULL || Z == NULL || N == NULL || Y == NULL || Z0 == NULL || V0 == NULL ||
@@ -722,9 +724,6 @@ static int32_t Spake2PlusProverFinish(Spake2plusCtx *ctx, BSL_Buffer x, BSL_Buff
     if (ret != HITLS_AUTH_SUCCESS) {
         goto ERR;
     }
-
-    uint8_t n[MAX_ECC_PARAM_LEN];
-    uint32_t nLen = MAX_ECC_PARAM_LEN;
 
     ret = Spake2PlusCreatePubKey(ctx, shareV.data, shareV.dataLen, &shareVKey);
     if (ret != HITLS_AUTH_SUCCESS) {
@@ -814,6 +813,8 @@ static int32_t Spake2PlusVerifierFinish(Spake2plusCtx *ctx, BSL_Buffer y, BSL_Bu
     ECC_Point *V0 = ECC_NewPoint(para);
     ECC_Point *L = ECC_NewPoint(para);
     CRYPT_EAL_PkeyCtx* sharePKey = NULL;
+    uint8_t n[MAX_ECC_PARAM_LEN];
+    uint32_t nLen = MAX_ECC_PARAM_LEN;
     int32_t ret = HITLS_AUTH_SUCCESS;
 
     if (para == NULL || Z == NULL || M == NULL || X == NULL || Z0 == NULL || V0 == NULL ||
@@ -822,8 +823,6 @@ static int32_t Spake2PlusVerifierFinish(Spake2plusCtx *ctx, BSL_Buffer y, BSL_Bu
         ret = HITLS_AUTH_PAKE_MEMORY_ALLOC_FAIL;
         goto ERR;
     }
-    uint8_t n[MAX_ECC_PARAM_LEN];
-    uint32_t nLen = MAX_ECC_PARAM_LEN;
 
     ret = BN_Bin2Bn(w0, ctx->w0.data, ctx->w0.dataLen);
     if (ret != HITLS_AUTH_SUCCESS) {
@@ -1037,6 +1036,8 @@ ERR:
 static int32_t Spake2PlusComputeKeySchedule(Spake2plusCtx *ctx, BSL_Buffer tt, BSL_Buffer *kConfirmP,
     BSL_Buffer *kConfirmV, BSL_Buffer *kShared)
 {
+    uint8_t *info0 = (uint8_t*)"SharedKey"; // data from rfc 9383, section 3.4
+    uint32_t info0Len = strlen("SharedKey");
     uint8_t kMain[g_spake2PlusAlgInfo[ctx->index].hashKeyLen];
     uint32_t kMainLen = g_spake2PlusAlgInfo[ctx->index].hashKeyLen;
 
@@ -1111,9 +1112,6 @@ static int32_t Spake2PlusComputeKeySchedule(Spake2plusCtx *ctx, BSL_Buffer tt, B
     kConfirmP->dataLen = g_spake2PlusAlgInfo[ctx->index].macKeyLen;
     kConfirmV->dataLen = g_spake2PlusAlgInfo[ctx->index].macKeyLen;
 
-    uint8_t *info0 = (uint8_t*)"SharedKey"; // data from rfc 9383, section 3.4
-    uint32_t info0Len = strlen("SharedKey");
-    
     ret = BSL_PARAM_InitValue(&params[4], CRYPT_PARAM_KDF_INFO, BSL_PARAM_TYPE_OCTETS, info0, info0Len);
     if (ret != HITLS_AUTH_SUCCESS) {
         goto ERR;
@@ -1243,6 +1241,7 @@ int32_t HITLS_AUTH_Spake2plusRespSetup(HITLS_AUTH_PakeCtx *ctx, BSL_Buffer y, BS
         return HITLS_AUTH_PAKE_INVALID_CONTEXT;
     }
 
+    uint32_t ttSize = 0;
     int32_t ret = HITLS_AUTH_SUCCESS;
     uint8_t randnum[MAX_ECC_PARAM_LEN] = { 0 };
     uint32_t randnumLen = MAX_ECC_PARAM_LEN;
@@ -1300,8 +1299,6 @@ int32_t HITLS_AUTH_Spake2plusRespSetup(HITLS_AUTH_PakeCtx *ctx, BSL_Buffer y, BS
     if (ret != HITLS_AUTH_SUCCESS) {
         goto err;
     }
-
-    uint32_t ttSize = 0;
 
     ret = Spake2PlusComputeTranscript(ctx, shareP, *shareV, zBuffer, vBuffer, NULL, &ttSize);
     if (ret != HITLS_AUTH_SUCCESS) {
@@ -1379,6 +1376,7 @@ int32_t HITLS_AUTH_Spake2plusReqDerive(HITLS_AUTH_PakeCtx *ctx, BSL_Buffer share
         return HITLS_AUTH_PAKE_INVALID_CONTEXT;
     }
 
+    uint32_t ttSize = 0;
     int32_t ret = HITLS_AUTH_SUCCESS;
     BSL_Buffer zBuffer = {.data = BSL_SAL_Malloc(MAX_ECC_KEY_LEN), .dataLen = MAX_ECC_KEY_LEN};
     BSL_Buffer vBuffer = {.data = BSL_SAL_Malloc(MAX_ECC_KEY_LEN), .dataLen = MAX_ECC_KEY_LEN};
@@ -1400,7 +1398,6 @@ int32_t HITLS_AUTH_Spake2plusReqDerive(HITLS_AUTH_PakeCtx *ctx, BSL_Buffer share
         goto err;
     }
     
-    uint32_t ttSize = 0;
     ret = Spake2PlusComputeTranscript(ctx, spakeCtx->share, shareV, zBuffer, vBuffer, NULL, &ttSize);
     if (ret != HITLS_AUTH_SUCCESS) {
         goto err;

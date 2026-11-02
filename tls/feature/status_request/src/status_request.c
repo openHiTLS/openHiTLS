@@ -571,6 +571,7 @@ void CleanOcspStapling(TLS_Ctx *ctx)
  * PackCertEntryOcspStatus. */
 bool ServerNeedSendCertificateStatus(const TLS_Ctx *ctx)
 {
+    HITLS_CERT_X509 *eeCert = NULL;
     if (IS_TLS13_FAMILY_CTX(ctx)) {
         return false;
     }
@@ -586,7 +587,7 @@ bool ServerNeedSendCertificateStatus(const TLS_Ctx *ctx)
     if (ctx->staplingResult != HITLS_STAPLING_SEND || !ctx->statusExpected || ctx->staplingResp == NULL) {
         goto OCSP_NOT_SENT;
     }
-    HITLS_CERT_X509 *eeCert = HITLS_GetCertificate(ctx);
+    eeCert = HITLS_GetCertificate(ctx);
     if (eeCert == NULL) {
         goto OCSP_NOT_SENT;
     }

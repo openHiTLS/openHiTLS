@@ -254,6 +254,8 @@ int32_t Sm2ComputeZDigest(const CRYPT_SM2_Ctx *ctx, uint8_t *out, uint32_t *outL
     uint8_t eByte = (uint8_t)(entl >> 8);
     uint8_t maxPubData[SM2_MAX_PUBKEY_DATA_LENGTH] = {0};
     CRYPT_Sm2Pub pub = {maxPubData, SM2_MAX_PUBKEY_DATA_LENGTH};
+    BSL_Param tmpPara[2] = {{CRYPT_PARAM_EC_PUBKEY, BSL_PARAM_TYPE_OCTETS, maxPubData,
+        SM2_MAX_PUBKEY_DATA_LENGTH, 0}, BSL_PARAM_END};
     uint32_t keyBits = CRYPT_SM2_GetBits(ctx);
     BN_BigNum *a = ECC_GetParaA(ctx->pkey->para);
     BN_BigNum *b = ECC_GetParaB(ctx->pkey->para);
@@ -266,8 +268,6 @@ int32_t Sm2ComputeZDigest(const CRYPT_SM2_Ctx *ctx, uint8_t *out, uint32_t *outL
         BSL_ERR_PUSH_ERROR(ret);
         goto ERR;
     }
-    BSL_Param tmpPara[2] = {{CRYPT_PARAM_EC_PUBKEY, BSL_PARAM_TYPE_OCTETS, maxPubData,
-        SM2_MAX_PUBKEY_DATA_LENGTH, 0}, BSL_PARAM_END};
     GOTO_ERR_IF(CRYPT_SM2_GetPubKeyEx(ctx, tmpPara), ret);
     pub.len = tmpPara[0].useLen;
     GOTO_ERR_IF(ctx->hashMethod->init(mdCtx, NULL), ret);

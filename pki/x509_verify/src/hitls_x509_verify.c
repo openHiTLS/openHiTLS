@@ -2680,6 +2680,8 @@ int32_t HITLS_X509_CertVerify(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_List *ch
     bool verifyRoot =
         ((ret != HITLS_X509_ERR_VFY_ISSUE_CERT_NOT_FOUND_LOCALLY) && (ret != HITLS_X509_ERR_ISSUE_CERT_NOT_FOUND) &&
          ((storeCtx->verifyParam.flags & HITLS_X509_VFY_FLAG_PARTIAL_CHAIN) == 0));
+    bool isCheckTime;
+    int64_t time = 0;
     ret = HITLS_X509_VerifyParamAndExt(storeCtx, storeCtx->certChain);
     if (ret != HITLS_PKI_SUCCESS) {
         goto EXIT;
@@ -2689,8 +2691,6 @@ int32_t HITLS_X509_CertVerify(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_List *ch
         goto EXIT;
     }
 
-    bool isCheckTime;
-    int64_t time = 0;
     ret = GetCheckTime(storeCtx, &isCheckTime, &time);
     if (ret != HITLS_PKI_SUCCESS) {
         goto EXIT;

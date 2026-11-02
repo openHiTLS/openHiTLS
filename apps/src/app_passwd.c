@@ -554,14 +554,13 @@ static int32_t ShaCrypt(const ShaCryptParam *param, char *out, uint32_t outLen)
     alt = (uint8_t *)BSL_SAL_Malloc(info->digestLen);
     pBytes = (uint8_t *)BSL_SAL_Malloc(passLen);
     sBytes = (uint8_t *)BSL_SAL_Malloc(saltLen);
+    BSL_Buffer altBuf = {alt, info->digestLen};
+    BSL_Buffer pBytesBuf = {pBytes, passLen};
+    BSL_Buffer sBytesBuf = {sBytes, saltLen};
     if (alt == NULL || pBytes == NULL || sBytes == NULL) {
         ret = HITLS_APP_MEM_ALLOC_FAIL;
         goto end;
     }
-    BSL_Buffer altBuf = {alt, info->digestLen};
-    BSL_Buffer pBytesBuf = {pBytes, passLen};
-    BSL_Buffer sBytesBuf = {sBytes, saltLen};
-
     ctx = CRYPT_EAL_MdNewCtx(info->mdId);
     if (ctx == NULL) {
         ret = HITLS_APP_CRYPTO_FAIL;

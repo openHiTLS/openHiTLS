@@ -81,6 +81,10 @@ int main(int argc, char **argv)
     HITLS_Ctx *ctx = NULL;
     BSL_UIO *uio = NULL;
     int fd = -1;
+    int32_t socketFd = -1;
+    struct sockaddr_in addr = {
+        .sin_family = AF_INET, .sin_port = htons((uint16_t)port), .sin_addr.s_addr = htonl(INADDR_LOOPBACK)};
+    int enabled = 1;
     int ret = -1;
     uint16_t group = HITLS_EC_GROUP_SECP256R1;
     if (cfg == NULL || HITLS_CFG_SetGroups(cfg, &group, 1) != HITLS_SUCCESS ||
@@ -88,16 +92,13 @@ int main(int argc, char **argv)
         goto EXIT;
     }
     fd = socket(AF_INET, SOCK_STREAM, 0);
-    struct sockaddr_in addr = {
-        .sin_family = AF_INET, .sin_port = htons((uint16_t)port), .sin_addr.s_addr = htonl(INADDR_LOOPBACK)};
-    int enabled = 1;
     if (fd < 0 || setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, &enabled, sizeof(enabled)) != 0 ||
         connect(fd, (struct sockaddr *)&addr, sizeof(addr)) != 0) {
         goto EXIT;
     }
     ctx = HITLS_New(cfg);
     uio = BSL_UIO_New(BSL_UIO_TcpMethod());
-    int32_t socketFd = fd;
+    socketFd = fd;
     if (ctx == NULL || uio == NULL || BSL_UIO_Ctrl(uio, BSL_UIO_SET_FD, sizeof(socketFd), &socketFd) != BSL_SUCCESS ||
         HITLS_SetUio(ctx, uio) != HITLS_SUCCESS) {
         goto EXIT;

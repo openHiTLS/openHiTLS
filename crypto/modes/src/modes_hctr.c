@@ -72,6 +72,8 @@ static void HctrGf128Mul(const uint8_t a[HCTR_BLOCK_SIZE], const uint8_t b[HCTR_
 static int32_t HctrUniversalHash(const uint8_t *k, const uint8_t *data, uint32_t dataLen,
                                  const uint8_t *tw, uint8_t *out)
 {
+    uint8_t lenBlock[HCTR_BLOCK_SIZE] = {0};
+    uint64_t totalLenBits;
     uint8_t hashVal[HCTR_BLOCK_SIZE] = {0};
     uint8_t currentBlock[HCTR_BLOCK_SIZE] = {0};
     uint8_t *allData = NULL;
@@ -141,8 +143,7 @@ static int32_t HctrUniversalHash(const uint8_t *k, const uint8_t *data, uint32_t
     }
 
     // Process length block term: L * K
-    uint8_t lenBlock[HCTR_BLOCK_SIZE] = {0};
-    uint64_t totalLenBits = effectiveLen * 8;
+    totalLenBits = effectiveLen * 8;
     PUT_UINT64_BE(totalLenBits, lenBlock, 8);
 
     uint8_t lenTerm[HCTR_BLOCK_SIZE];

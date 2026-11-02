@@ -86,6 +86,8 @@ int main(int argc, char *argv[])
     --paramNum;
     ++paramVal;
     int newArgc = 0;
+    HITLS_CmdFunc func = { 0 };
+    char *proName = NULL;
     char **newArgv = CopyArgs(paramNum, paramVal, &newArgc);
     if (newArgv == NULL) {
         AppPrintError("Copy args failed.\n");
@@ -93,8 +95,7 @@ int main(int argc, char *argv[])
         goto end;
     }
 
-    HITLS_CmdFunc func = { 0 };
-    char *proName = newArgv[0];
+    proName = newArgv[0];
     ret = AppGetProgFunc(proName, &func);
     if (ret != 0) {
         AppPrintError("Please enter help to obtain the support list.\n");

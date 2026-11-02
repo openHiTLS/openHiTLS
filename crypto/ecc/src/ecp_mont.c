@@ -620,7 +620,8 @@ static int32_t MontLadderDoubleAndAdd(ECC_Para *para, ECC_Point *r0, ECC_Point *
     BN_BigNum *bns[4];
     int32_t ret = OptimizerGetXBn(opt, p->x.room, 4, bns);
     if (ret != CRYPT_SUCCESS) {
-        goto ERR;
+        OptimizerEnd(opt);
+        return ret;
     }
     BN_BigNum *t0 = bns[0];
     BN_BigNum *t1 = bns[1];

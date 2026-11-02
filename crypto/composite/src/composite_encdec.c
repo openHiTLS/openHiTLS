@@ -163,6 +163,9 @@ static int32_t CRYPT_CompositeCheckRsaBits(const CRYPT_CompositeCtx *ctx, const 
 
 static int32_t CRYPT_CompositeGetRsaPrvKey(const CRYPT_CompositeCtx *ctx, BSL_Buffer *encode)
 {
+    BSL_ASN1_Buffer asn1[CRYPT_RSA_PRV_OTHER_PRIME_IDX + 1] = {0};
+    uint8_t version = 0;
+    BSL_ASN1_Template templ = {g_rsaPrvTempl, sizeof(g_rsaPrvTempl) / sizeof(g_rsaPrvTempl[0])};
     int32_t ret;
     uint32_t bnLen = BITS_TO_BYTES(ctx->info->bits);
     uint32_t prvLen = bnLen * 8;
@@ -178,8 +181,6 @@ static int32_t CRYPT_CompositeGetRsaPrvKey(const CRYPT_CompositeCtx *ctx, BSL_Bu
                          {CRYPT_PARAM_RSA_QINV, BSL_PARAM_TYPE_OCTETS, pri + bnLen * 7, bnLen, 0},
                          BSL_PARAM_END};
     GOTO_ERR_IF(CRYPT_EAL_PkeyGetPrvEx(ctx->tradCtx, param), ret);
-    BSL_ASN1_Buffer asn1[CRYPT_RSA_PRV_OTHER_PRIME_IDX + 1] = {0};
-    uint8_t version = 0;
     asn1[CRYPT_RSA_PRV_VERSION_IDX].buff = (uint8_t *)&version;
     asn1[CRYPT_RSA_PRV_VERSION_IDX].len = sizeof(version);
     asn1[CRYPT_RSA_PRV_VERSION_IDX].tag = BSL_ASN1_TAG_INTEGER;
@@ -208,7 +209,6 @@ static int32_t CRYPT_CompositeGetRsaPrvKey(const CRYPT_CompositeCtx *ctx, BSL_Bu
     asn1[CRYPT_RSA_PRV_DQ_IDX].tag = BSL_ASN1_TAG_INTEGER;
     asn1[CRYPT_RSA_PRV_QINV_IDX].tag = BSL_ASN1_TAG_INTEGER;
 
-    BSL_ASN1_Template templ = {g_rsaPrvTempl, sizeof(g_rsaPrvTempl) / sizeof(g_rsaPrvTempl[0])};
     GOTO_ERR_IF(
         BSL_ASN1_EncodeTemplate(&templ, asn1, CRYPT_RSA_PRV_OTHER_PRIME_IDX + 1, &encode->data, &encode->dataLen), ret);
     BSL_SAL_ClearFree(pri, prvLen);
@@ -220,23 +220,24 @@ ERR:
 
 static int32_t CRYPT_CompositeGetRsaPubKey(const CRYPT_CompositeCtx *ctx, BSL_Buffer *encode)
 {
-    int32_t ret;
     uint32_t bnLen = BITS_TO_BYTES(ctx->info->bits);
     uint8_t *n = (uint8_t *)BSL_SAL_Malloc(bnLen);
     RETURN_RET_IF(n == NULL, CRYPT_MEM_ALLOC_FAIL);
     uint8_t *e = (uint8_t *)BSL_SAL_Malloc(bnLen);
-    ret = CRYPT_MEM_ALLOC_FAIL;
-    GOTO_ERR_IF_TRUE(e == NULL, ret);
     BSL_Param param[3] = {{CRYPT_PARAM_RSA_N, BSL_PARAM_TYPE_OCTETS, n, bnLen, 0},
                           {CRYPT_PARAM_RSA_E, BSL_PARAM_TYPE_OCTETS, e, bnLen, 0},
                           BSL_PARAM_END};
-    GOTO_ERR_IF(CRYPT_EAL_PkeyGetPubEx(ctx->tradCtx, param), ret);
-
     BSL_ASN1_Buffer pubAsn1[CRYPT_RSA_PUB_E_IDX + 1] = {
-        {BSL_ASN1_TAG_INTEGER, param[0].useLen, n},
-        {BSL_ASN1_TAG_INTEGER, param[1].useLen, e},
+        {BSL_ASN1_TAG_INTEGER, 0, n},
+        {BSL_ASN1_TAG_INTEGER, 0, e},
     };
     BSL_ASN1_Template pubTempl = {g_rsaPubTempl, sizeof(g_rsaPubTempl) / sizeof(g_rsaPubTempl[0])};
+    int32_t ret = CRYPT_MEM_ALLOC_FAIL;
+    GOTO_ERR_IF_TRUE(e == NULL, ret);
+    GOTO_ERR_IF(CRYPT_EAL_PkeyGetPubEx(ctx->tradCtx, param), ret);
+
+    pubAsn1[0].len = param[0].useLen;
+    pubAsn1[1].len = param[1].useLen;
     GOTO_ERR_IF(BSL_ASN1_EncodeTemplate(&pubTempl, pubAsn1, CRYPT_RSA_PUB_E_IDX + 1, &encode->data, &encode->dataLen),
                 ret);
     BSL_SAL_FREE(n);
@@ -251,6 +252,10 @@ ERR:
 
 static int32_t CRYPT_CompositeGetEcPrvKey(const CRYPT_CompositeCtx *ctx, BSL_Buffer *encode)
 {
+    uint8_t version = 1;
+    BSL_ASN1_Buffer asn1[CRYPT_ECPRIKEY_PUBKEY_IDX + 1] = {
+        {BSL_ASN1_TAG_INTEGER, sizeof(version), &version}, {0}, {0}, {0}};
+    BSL_ASN1_Template templ = {g_ecPriKeyTempl, sizeof(g_ecPriKeyTempl) / sizeof(g_ecPriKeyTempl[0])};
     int32_t ret;
     uint32_t keyLen = 0;
     BslOidString *oid = BSL_OBJ_GetOID((BslCid)ctx->info->tradParam);
@@ -263,9 +268,6 @@ static int32_t CRYPT_CompositeGetEcPrvKey(const CRYPT_CompositeCtx *ctx, BSL_Buf
     GOTO_ERR_IF(CRYPT_EAL_PkeyGetPrvEx(ctx->tradCtx, param), ret);
     memmove(pri + (keyLen - param[0].useLen), pri, param[0].useLen);
     memset(pri, 0, keyLen - param[0].useLen);
-    uint8_t version = 1;
-    BSL_ASN1_Buffer asn1[CRYPT_ECPRIKEY_PUBKEY_IDX + 1] = {
-        {BSL_ASN1_TAG_INTEGER, sizeof(version), &version}, {0}, {0}, {0}};
 
     asn1[CRYPT_ECPRIKEY_PARAM_IDX].buff = (uint8_t *)oid->octs;
     asn1[CRYPT_ECPRIKEY_PARAM_IDX].len = oid->octetLen;
@@ -274,7 +276,6 @@ static int32_t CRYPT_CompositeGetEcPrvKey(const CRYPT_CompositeCtx *ctx, BSL_Buf
     asn1[CRYPT_ECPRIKEY_PRIKEY_IDX].tag = BSL_ASN1_TAG_OCTETSTRING;
     asn1[CRYPT_ECPRIKEY_PRIKEY_IDX].len = keyLen;
     asn1[CRYPT_ECPRIKEY_PRIKEY_IDX].buff = pri;
-    BSL_ASN1_Template templ = {g_ecPriKeyTempl, sizeof(g_ecPriKeyTempl) / sizeof(g_ecPriKeyTempl[0])};
     GOTO_ERR_IF(BSL_ASN1_EncodeTemplate(&templ, asn1, CRYPT_ECPRIKEY_PUBKEY_IDX + 1, &encode->data, &encode->dataLen),
                 ret);
     BSL_SAL_ClearFree(pri, keyLen);

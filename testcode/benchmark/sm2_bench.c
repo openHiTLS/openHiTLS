@@ -77,8 +77,7 @@ static int32_t Sm2KeyDerive(void *ctx, const BenchExecOptions *opts)
     if (peerCtx == NULL || CRYPT_EAL_PkeyGen(peerCtx) != CRYPT_SUCCESS) {
         printf("Failed to create pkey context\n");
         CRYPT_EAL_PkeyFreeCtx(peerCtx);
-        rc = CRYPT_MEM_ALLOC_FAIL;
-        goto ERR_OUT;
+        return CRYPT_MEM_ALLOC_FAIL;
     }
 
     char *peerRHex =

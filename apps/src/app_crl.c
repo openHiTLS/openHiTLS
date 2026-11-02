@@ -298,6 +298,7 @@ int32_t  HITLS_CrlMain(int argc, char *argv[])
 {
     CrlInfo crlInfo = {0, BSL_FORMAT_PEM, NULL, NULL, NULL, false, false, false, false, false, NULL};
     HITLS_X509_Crl *crl = NULL;
+    int unParseParamNum = 0;
     int32_t mainRet = HITLS_APP_OptBegin(argc, argv, g_crlOpts);
     if (mainRet != HITLS_APP_SUCCESS) {
         AppPrintError("error in opt begin.\n");
@@ -307,7 +308,7 @@ int32_t  HITLS_CrlMain(int argc, char *argv[])
     if (mainRet != HITLS_APP_SUCCESS) {
         goto end;
     }
-    int unParseParamNum = HITLS_APP_GetRestOptNum();
+    unParseParamNum = HITLS_APP_GetRestOptNum();
     if (unParseParamNum != 0) {  // The input parameters are not completely parsed.
         AppPrintError("Extra arguments given.\n");
         AppPrintError("crl: Use -help for summary.\n");

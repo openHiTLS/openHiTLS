@@ -80,6 +80,9 @@ typedef enum {
 
 HITLS_X509_Csr *HITLS_X509_CsrNew(void)
 {
+#ifdef HITLS_PKI_X509_CSR_ATTR
+    HITLS_X509_Attrs *attributes = NULL;
+#endif
     HITLS_X509_Csr *csr = (HITLS_X509_Csr *)BSL_SAL_Calloc(1, sizeof(HITLS_X509_Csr));
     BSL_ASN1_List *subjectName = BSL_LIST_New(sizeof(HITLS_X509_NameNode));
     if (csr == NULL || subjectName == NULL) {
@@ -87,7 +90,7 @@ HITLS_X509_Csr *HITLS_X509_CsrNew(void)
         goto ERR;
     }
 #ifdef HITLS_PKI_X509_CSR_ATTR
-    HITLS_X509_Attrs *attributes = HITLS_X509_AttrsNew();
+    attributes = HITLS_X509_AttrsNew();
     if (attributes == NULL) {
         BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
         goto ERR;

@@ -315,6 +315,7 @@ static int32_t CRYPT_CompositeSetRsaPara(CRYPT_CompositeCtx *ctx)
 static int32_t CRYPT_CompositeSetAlgInfo(CRYPT_CompositeCtx *ctx, void *val, uint32_t len)
 {
     int32_t ret;
+    int32_t pqcParam;
     RETURN_RET_IF(len != sizeof(int32_t) || val == NULL, CRYPT_INVALID_ARG);
     RETURN_RET_IF(ctx->info != NULL, CRYPT_COMPOSITE_CTRL_INIT_REPEATED);
     ctx->info = CRYPT_COMPOSITE_GetInfo(*(int32_t *)val);
@@ -329,7 +330,7 @@ static int32_t CRYPT_CompositeSetAlgInfo(CRYPT_CompositeCtx *ctx, void *val, uin
         ret = CRYPT_MEM_ALLOC_FAIL;
         goto ERR;
     }
-    int32_t pqcParam = ctx->info->pqcParam;
+    pqcParam = ctx->info->pqcParam;
     GOTO_ERR_IF_EX(CRYPT_EAL_PkeyCtrl(ctx->pqcCtx, CRYPT_CTRL_SET_PARA_BY_ID, &(pqcParam), sizeof(pqcParam)), ret);
     if (ctx->info->tradAlg == CRYPT_PKEY_RSA) {
         GOTO_ERR_IF_EX(CRYPT_CompositeSetRsaPara(ctx), ret);

@@ -568,13 +568,15 @@ static int32_t ProviderAddSignatureSchemeInfo(const BSL_Param *params, void *arg
     }
 
 #ifdef HITLS_BSL_OBJ_CUSTOM
-    BslOidInfo keyTypeOidInfo = { { keyTypeOidLen, (char *)(uintptr_t)keyTypeOid, 0 }, keyTypeName };
-    BslOidInfo paraOidInfo = { { paraOidLen, (char *)(uintptr_t)paraOid, 0 }, paraName };
-    BslOidInfo signHashAlgOidInfo = { { signHashAlgOidLen, (char *)(uintptr_t)signHashAlgOid, 0 }, signHashAlgName };
-    BslOidInfo hashOidInfo = { { hashOidLen, (char *)(uintptr_t)hashOid, 0 }, hashName };
-    ret = ProcessOids(scheme, &keyTypeOidInfo, &paraOidInfo, &signHashAlgOidInfo, &hashOidInfo);
-    if (ret != HITLS_SUCCESS) {
-        goto ERR;
+    {
+        BslOidInfo keyTypeOidInfo = { { keyTypeOidLen, (char *)(uintptr_t)keyTypeOid, 0 }, keyTypeName };
+        BslOidInfo paraOidInfo = { { paraOidLen, (char *)(uintptr_t)paraOid, 0 }, paraName };
+        BslOidInfo signHashAlgOidInfo = { { signHashAlgOidLen, (char *)(uintptr_t)signHashAlgOid, 0 }, signHashAlgName };
+        BslOidInfo hashOidInfo = { { hashOidLen, (char *)(uintptr_t)hashOid, 0 }, hashName };
+        ret = ProcessOids(scheme, &keyTypeOidInfo, &paraOidInfo, &signHashAlgOidInfo, &hashOidInfo);
+        if (ret != HITLS_SUCCESS) {
+            goto ERR;
+        }
     }
 #endif
     config->sigSchemeInfolen++;

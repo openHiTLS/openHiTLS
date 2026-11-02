@@ -451,6 +451,7 @@ int32_t HITLS_X509_AddDnName(BslList *list, HITLS_X509_DN *dnNames, uint32_t siz
         BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
         return BSL_MALLOC_FAIL;
     }
+    BslList *sorted = NULL;
     int32_t ret;
     for (uint32_t i = 0; i < size; i++) {
         ret = X509AddDnNameItemToList(dnNameList, dnNames[i].cid, dnNames[i].data, dnNames[i].dataLen);
@@ -459,7 +460,7 @@ int32_t HITLS_X509_AddDnName(BslList *list, HITLS_X509_DN *dnNames, uint32_t siz
         }
     }
     // sort
-    BslList *sorted = BSL_LIST_Sort(dnNameList, CmpDnNameByEncode);
+    sorted = BSL_LIST_Sort(dnNameList, CmpDnNameByEncode);
     if (sorted == NULL) {
         ret = HITLS_X509_ERR_SORT_NAME_NODE;
         goto EXIT;

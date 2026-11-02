@@ -2997,6 +2997,17 @@ static int32_t EncodeSaltLen(int32_t saltLen, BSL_ASN1_Buffer *asn)
 int32_t CRYPT_EAL_EncodeRsaPssAlgParam(const CRYPT_RSA_PssPara *rsaPssParam, uint8_t **buf, uint32_t *bufLen)
 {
     BSL_ASN1_Buffer asnArr[X509_RSAPSS_ELEM_NUMBER] = {0};
+    BSL_ASN1_TemplateItem rsapssTempl[] = {
+        {BSL_ASN1_CLASS_CTX_SPECIFIC | BSL_ASN1_TAG_CONSTRUCTED | CRYPT_ASN1_CTX_SPECIFIC_TAG_RSAPSS_HASH,
+            BSL_ASN1_FLAG_DEFAULT, 0},
+        {BSL_ASN1_CLASS_CTX_SPECIFIC | BSL_ASN1_TAG_CONSTRUCTED | CRYPT_ASN1_CTX_SPECIFIC_TAG_RSAPSS_MASKGEN,
+            BSL_ASN1_FLAG_DEFAULT, 0},
+        {BSL_ASN1_CLASS_CTX_SPECIFIC | BSL_ASN1_TAG_CONSTRUCTED | CRYPT_ASN1_CTX_SPECIFIC_TAG_RSAPSS_SALTLEN,
+            BSL_ASN1_FLAG_DEFAULT, 0},
+        {BSL_ASN1_CLASS_CTX_SPECIFIC | BSL_ASN1_TAG_CONSTRUCTED | CRYPT_ASN1_CTX_SPECIFIC_TAG_RSAPSS_TRAILED,
+            BSL_ASN1_FLAG_DEFAULT, 0},
+    };
+    BSL_ASN1_Template templ = {rsapssTempl, sizeof(rsapssTempl) / sizeof(rsapssTempl[0])};
     int32_t ret = EncodeHashAlg(rsaPssParam->mdId, &asnArr[0]);
     if (ret != CRYPT_SUCCESS) {
         return ret;
@@ -3015,17 +3026,6 @@ int32_t CRYPT_EAL_EncodeRsaPssAlgParam(const CRYPT_RSA_PssPara *rsaPssParam, uin
     }
     // 3 : trailed
     asnArr[3].tag = BSL_ASN1_CLASS_CTX_SPECIFIC | BSL_ASN1_TAG_CONSTRUCTED | CRYPT_ASN1_CTX_SPECIFIC_TAG_RSAPSS_TRAILED;
-    BSL_ASN1_TemplateItem rsapssTempl[] = {
-        {BSL_ASN1_CLASS_CTX_SPECIFIC | BSL_ASN1_TAG_CONSTRUCTED | CRYPT_ASN1_CTX_SPECIFIC_TAG_RSAPSS_HASH,
-            BSL_ASN1_FLAG_DEFAULT, 0},
-        {BSL_ASN1_CLASS_CTX_SPECIFIC | BSL_ASN1_TAG_CONSTRUCTED | CRYPT_ASN1_CTX_SPECIFIC_TAG_RSAPSS_MASKGEN,
-            BSL_ASN1_FLAG_DEFAULT, 0},
-        {BSL_ASN1_CLASS_CTX_SPECIFIC | BSL_ASN1_TAG_CONSTRUCTED | CRYPT_ASN1_CTX_SPECIFIC_TAG_RSAPSS_SALTLEN,
-            BSL_ASN1_FLAG_DEFAULT, 0},
-        {BSL_ASN1_CLASS_CTX_SPECIFIC | BSL_ASN1_TAG_CONSTRUCTED | CRYPT_ASN1_CTX_SPECIFIC_TAG_RSAPSS_TRAILED,
-            BSL_ASN1_FLAG_DEFAULT, 0},
-    };
-    BSL_ASN1_Template templ = {rsapssTempl, sizeof(rsapssTempl) / sizeof(rsapssTempl[0])};
     ret = BSL_ASN1_EncodeTemplate(&templ, asnArr, X509_RSAPSS_ELEM_NUMBER, buf, bufLen);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);

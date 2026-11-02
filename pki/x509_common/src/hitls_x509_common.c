@@ -459,6 +459,8 @@ int32_t X509_EncodeRdName(BSL_ASN1_List *list, const BslListNode *rdnNode, BSL_A
 int32_t HITLS_X509_EncodeNameList(BSL_ASN1_List *list, BSL_ASN1_Buffer *name)
 {
     int32_t ret;
+    BSL_ASN1_TemplateItem x509Name[] = {{BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SET, 0, 0}};
+    BSL_ASN1_Template templ = {x509Name, 1};
     // (count + 1) / 2 : round up, the maximum number of set
     uint32_t maxCount = ((uint32_t)BSL_LIST_COUNT(list) + 1) / 2;
     BSL_ASN1_Buffer *asnBuf = BSL_SAL_Calloc(maxCount, sizeof(BSL_ASN1_Buffer));
@@ -477,8 +479,6 @@ int32_t HITLS_X509_EncodeNameList(BSL_ASN1_List *list, BSL_ASN1_Buffer *name)
         rdnNode = nextRdnNode;
     }
 
-    BSL_ASN1_TemplateItem x509Name[] = {{BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SET, 0, 0}};
-    BSL_ASN1_Template templ = {x509Name, 1};
     ret = BSL_ASN1_EncodeListItem(BSL_ASN1_TAG_SEQUENCE, iter, &templ, asnBuf, iter, name);
 EXIT:
     for (uint32_t index = 0; index < iter; index++) {

@@ -252,13 +252,7 @@ int32_t HITLS_X509_CheckCdp(const HITLS_X509_ExtCdp *crldp);
 
 int32_t HITLS_X509_ParseAia(HITLS_X509_ExtEntry *extEntry, HITLS_X509_ExtAia *aia);
 
-void HITLS_X509_ClearAia(HITLS_X509_ExtAia *aia);
-
 int32_t HITLS_X509_ParseTlsFeature(HITLS_X509_ExtEntry *extEntry, HITLS_X509_ExtTlsFeature *tlsFeature);
-
-void HITLS_X509_ClearTlsFeature(HITLS_X509_ExtTlsFeature *tlsFeature);
-
-void HITLS_X509_ClearExtendedKeyUsage(HITLS_X509_ExtExKeyUsage *exku);
 
 HITLS_X509_Ext *X509_ExtNew(HITLS_X509_Ext *ext, int32_t type);
 

@@ -285,6 +285,7 @@ static int32_t RsaNewParaBasicCheck(const CRYPT_RsaPara *para)
 
 CRYPT_RSA_Para *CRYPT_RSA_NewPara(const CRYPT_RsaPara *para)
 {
+    int32_t ret;
     if (RsaNewParaBasicCheck(para) != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
         return NULL;
@@ -302,7 +303,7 @@ CRYPT_RSA_Para *CRYPT_RSA_NewPara(const CRYPT_RsaPara *para)
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         goto ERR;
     }
-    int32_t ret = BN_Bin2Bn(retPara->e, para->e, para->eLen);
+    ret = BN_Bin2Bn(retPara->e, para->e, para->eLen);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         goto ERR;

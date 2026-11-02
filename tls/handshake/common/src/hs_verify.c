@@ -631,6 +631,10 @@ int32_t VERIFY_CalcPskBinder(const TLS_Ctx *ctx, HITLS_HashAlgo hashAlgo, bool i
     uint32_t pskLen, const uint8_t *msg, uint32_t msgLen, uint8_t *binder, uint32_t binderLen)
 {
     int32_t ret = HITLS_SUCCESS;
+    const uint8_t *labelPrefix = NULL;
+    uint32_t labelPrefixLen = 0;
+    VERIFY_TranscriptStyle transcriptStyle = VERIFY_TRANSCRIPT_RAW;
+    uint16_t transcriptVersion;
     HITLS_HASH_Ctx *hashCtx = NULL;
     uint8_t earlySecret[MAX_DIGEST_SIZE] = {0};
     uint8_t binderKey[MAX_DIGEST_SIZE] = {0};
@@ -650,8 +654,6 @@ int32_t VERIFY_CalcPskBinder(const TLS_Ctx *ctx, HITLS_HashAlgo hashAlgo, bool i
             "DeriveEarlySecret fail", 0, 0, 0, 0);
         goto EXIT;
     }
-    const uint8_t *labelPrefix = NULL;
-    uint32_t labelPrefixLen = 0;
 #ifdef HITLS_TLS_PROTO_DTLS13
     if (IS_DTLS13_CTX(ctx)) {
         labelPrefix = (const uint8_t *)CRYPT_DTLS13_HKDF_LABEL_PREFIX;
@@ -683,14 +685,13 @@ int32_t VERIFY_CalcPskBinder(const TLS_Ctx *ctx, HITLS_HashAlgo hashAlgo, bool i
         goto EXIT;
     }
 
-    uint16_t transcriptVersion = GET_VERSION_FROM_CTX(ctx);
+    transcriptVersion = GET_VERSION_FROM_CTX(ctx);
     ret = VERIFY_UpdateCachedTranscriptHash(hashCtx, ctx->hsCtx->verifyCtx->dataBuf, transcriptVersion,
         ctx->isClient ? 0 : 1);
     if (ret != HITLS_SUCCESS) {
         goto EXIT;
     }
 
-    VERIFY_TranscriptStyle transcriptStyle = VERIFY_TRANSCRIPT_RAW;
 #ifdef HITLS_TLS_PROTO_DTLS13
     if (IS_DTLS13_CTX(ctx)) {
         transcriptStyle = VERIFY_TRANSCRIPT_DTLS13;

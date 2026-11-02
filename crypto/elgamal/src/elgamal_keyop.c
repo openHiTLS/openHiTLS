@@ -91,6 +91,7 @@ ERR:
 
 int32_t CRYPT_ELGAMAL_SetPubKey(CRYPT_ELGAMAL_Ctx *ctx, const CRYPT_ElGamalPub *pub)
 {
+    uint32_t bnBits;
     if (ctx == NULL || pub == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
@@ -109,7 +110,7 @@ int32_t CRYPT_ELGAMAL_SetPubKey(CRYPT_ELGAMAL_Ctx *ctx, const CRYPT_ElGamalPub *
         return CRYPT_MEM_ALLOC_FAIL;
     }
     GOTO_ERR_IF(BN_Bin2Bn(newPub->p, pub->p, pub->pLen), ret);
-    uint32_t bnBits = BN_Bits(newPub->p);
+    bnBits = BN_Bits(newPub->p);
     if (bnBits > ELGAMAL_MAX_MODULUS_BITS || bnBits <= 0) {
         ret = CRYPT_ELGAMAL_ERR_KEY_BITS;
         BSL_ERR_PUSH_ERROR(ret);

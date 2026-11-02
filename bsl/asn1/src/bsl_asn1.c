@@ -1256,12 +1256,13 @@ static int32_t CheckAsn(BSL_ASN1_Buffer *asn)
     switch (asn->tag) {
         case BSL_ASN1_TAG_BOOLEAN:
             return asn->len != sizeof(bool) ? BSL_ASN1_ERR_ENCODE_BOOL : BSL_SUCCESS;
-        case BSL_ASN1_TAG_BITSTRING:
+        case BSL_ASN1_TAG_BITSTRING: {
             if (asn->len != sizeof(BSL_ASN1_BitString)) {
                 return BSL_ASN1_ERR_ENCODE_BIT_STRING;
             }
             BSL_ASN1_BitString *bs = (BSL_ASN1_BitString *)(uintptr_t)asn->buff;
             return bs->unusedBits > BSL_ASN1_VAL_MAX_BIT_STRING_LEN ? BSL_ASN1_ERR_ENCODE_BIT_STRING : BSL_SUCCESS;
+        }
         case BSL_ASN1_TAG_UTCTIME:
         case BSL_ASN1_TAG_GENERALIZEDTIME:
             return CheckBslTime(asn);

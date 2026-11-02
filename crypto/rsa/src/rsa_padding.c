@@ -857,6 +857,8 @@ int32_t CRYPT_RSA_VerifyPkcs1Oaep(RSA_PadingPara *pad, const uint8_t *in, uint32
     }
     uint32_t maskedDBLen = inLen - hashLen - 1;
     int32_t ret;
+    // Initialize valid flag to 0xFFFFFFFF (all checks pass initially)
+    uint32_t valid = RSA_MASK;
     uint32_t offset = 0;
     uint8_t seedMask[HASH_MAX_MDSIZE];
     uint32_t copyMask;
@@ -875,8 +877,6 @@ int32_t CRYPT_RSA_VerifyPkcs1Oaep(RSA_PadingPara *pad, const uint8_t *in, uint32
         k is intLen , hLen is hashLen
     */
     GOTO_ERR_IF_EX(OaepVerifyLengthCheck(*msgLen, inLen, hashLen), ret);
-    // Initialize valid flag to 0xFFFFFFFF (all checks pass initially)
-    uint32_t valid = RSA_MASK;
     // rfc8017 section 7.1.2 requires the first byte must be 0x00
     valid &= Uint32ConstTimeIsZero(in[0]); // if not, valid = 0
 

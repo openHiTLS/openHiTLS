@@ -468,6 +468,13 @@ int32_t HITLS_X509_EncodeRevokeCrlList(BSL_ASN1_List *crlList, BSL_ASN1_Buffer *
     }
     memset(asnBuf, 0, (uint32_t)count * sizeof(BSL_ASN1_Buffer) * X509_CRLENTRY_ELEM_NUMBER);
     uint32_t iter = 0;
+    BSL_ASN1_TemplateItem crlEntryTempl[] = {
+        {BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE, BSL_ASN1_FLAG_SAME | BSL_ASN1_FLAG_OPTIONAL, 0},
+            {BSL_ASN1_TAG_INTEGER, 0, 1},
+            {BSL_ASN1_TAG_CHOICE, 0, 1},
+            {BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE, BSL_ASN1_FLAG_OPTIONAL, 1}
+    };
+    BSL_ASN1_Template templ = {crlEntryTempl, sizeof(crlEntryTempl) / sizeof(crlEntryTempl[0])};
     int32_t ret;
     for (BslListNode *crlNode = BSL_LIST_FirstNode(crlList); crlNode != NULL;
         crlNode = BSL_LIST_GetNextNode(crlList, crlNode)) {
@@ -479,13 +486,6 @@ int32_t HITLS_X509_EncodeRevokeCrlList(BSL_ASN1_List *crlList, BSL_ASN1_Buffer *
         }
         iter += X509_CRLENTRY_ELEM_NUMBER;
     }
-    BSL_ASN1_TemplateItem crlEntryTempl[] = {
-        {BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE, BSL_ASN1_FLAG_SAME | BSL_ASN1_FLAG_OPTIONAL, 0},
-            {BSL_ASN1_TAG_INTEGER, 0, 1},
-            {BSL_ASN1_TAG_CHOICE, 0, 1},
-            {BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE, BSL_ASN1_FLAG_OPTIONAL, 1}
-    };
-    BSL_ASN1_Template templ = {crlEntryTempl, sizeof(crlEntryTempl) / sizeof(crlEntryTempl[0])};
     ret = BSL_ASN1_EncodeListItem(BSL_ASN1_TAG_SEQUENCE, (uint32_t)count, &templ, asnBuf, iter, revokeBuf);
 EXIT:
     for (int32_t i = 0; i < count; i++) {
@@ -545,6 +545,7 @@ static void X509_EncodeVersion(uint8_t *version, BSL_ASN1_Buffer *asn)
 #define X509_CRLTBS_ELEM_NUMBER 7
 int32_t HITLS_X509_EncodeCrlTbsRaw(HITLS_X509_CrlTbs *crlTbs, BSL_ASN1_Buffer *asn)
 {
+    BSL_ASN1_Template templ = {g_crlTbsTempl, sizeof(g_crlTbsTempl) / sizeof(g_crlTbsTempl[0])};
     BSL_ASN1_Buffer asnArr[X509_CRLTBS_ELEM_NUMBER] = {0};
     uint8_t version = (uint8_t)crlTbs->version;
     X509_EncodeVersion(&version, asnArr); // 0 is version
@@ -573,7 +574,6 @@ int32_t HITLS_X509_EncodeCrlTbsRaw(HITLS_X509_CrlTbs *crlTbs, BSL_ASN1_Buffer *a
         BSL_ERR_PUSH_ERROR(ret);
         goto EXIT;
     }
-    BSL_ASN1_Template templ = {g_crlTbsTempl, sizeof(g_crlTbsTempl) / sizeof(g_crlTbsTempl[0])};
     ret = BSL_ASN1_EncodeTemplate(&templ, asnArr, X509_CRLTBS_ELEM_NUMBER, &(asn->buff), &(asn->len));
     if (ret != BSL_SUCCESS) {
         goto EXIT;

@@ -112,11 +112,11 @@ int PerfAffinityInit(int cpu, uint32_t workers)
         return 0;
     }
     PerfCpu before[CPU_SETSIZE] = {0};
+    struct timespec delay = {0, 500000000};
     if (workers >= CPU_SETSIZE - 1 || sched_getaffinity(0, sizeof(g_original), &g_original) != 0 ||
         !PerfReadCpuTimes(before)) {
         goto FAIL;
     }
-    struct timespec delay = {0, 500000000};
     while (nanosleep(&delay, &delay) != 0) {
         if (errno != EINTR) {
             goto FAIL;

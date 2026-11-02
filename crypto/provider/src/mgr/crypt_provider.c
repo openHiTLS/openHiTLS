@@ -212,6 +212,7 @@ int32_t CRYPT_EAL_ProviderLoad(CRYPT_EAL_LibCtx *libCtx, BSL_SAL_LibFmtCmd cmd,
         return CRYPT_PROVIDER_INVALID_LIB_CTX;
     }
 
+    CRYPT_EAL_ImplProviderInit initFunc = NULL;
     CRYPT_EAL_ProvMgrCtx *providerMgr = NULL;
     char *providerFullName = NULL;
     int32_t ret = BSL_SAL_LibNameFormat(cmd, providerName, &providerFullName);
@@ -240,7 +241,6 @@ int32_t CRYPT_EAL_ProviderLoad(CRYPT_EAL_LibCtx *libCtx, BSL_SAL_LibFmtCmd cmd,
         goto EXIT;
     }
 
-    CRYPT_EAL_ImplProviderInit initFunc = NULL;
     if (IsEalPreDefinedProvider(providerFullName)) {
         initFunc = CRYPT_EAL_DefaultProvInit;
     } else {

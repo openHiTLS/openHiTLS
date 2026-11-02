@@ -111,6 +111,8 @@ CRYPT_DECODER_Ctx *CRYPT_DECODE_NewDecoderCtxByMethod(const CRYPT_EAL_Func *func
 {
     void *provCtx = NULL;
     DECODER_AttrInfo attrInfo = {0};
+    BSL_Param param[2] = {{CRYPT_PARAM_DECODE_PROVIDER_CTX, BSL_PARAM_TYPE_CTX_PTR, mgrCtx, 0, 0},
+        BSL_PARAM_END};
     CRYPT_DECODER_Ctx *ctx = BSL_SAL_Calloc(1, sizeof(CRYPT_DECODER_Ctx));
     if (ctx == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
@@ -133,8 +135,6 @@ CRYPT_DECODER_Ctx *CRYPT_DECODE_NewDecoderCtxByMethod(const CRYPT_EAL_Func *func
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         goto ERR;
     }
-    BSL_Param param[2] = {{CRYPT_PARAM_DECODE_PROVIDER_CTX, BSL_PARAM_TYPE_CTX_PTR, mgrCtx, 0, 0},
-        BSL_PARAM_END};
     ret = ctx->method->setParam(ctx->decoderCtx, param);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);

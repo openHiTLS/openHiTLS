@@ -114,6 +114,7 @@ int32_t CRYPT_PBKDF2_Un(const CRYPT_PBKDF2_Ctx *pCtx, uint8_t *u, uint32_t *bloc
 
 int32_t CRYPT_PBKDF2_CalcT(const CRYPT_PBKDF2_Ctx *pCtx, uint32_t blockCount, uint8_t *t, uint32_t *tlen)
 {
+    uint32_t len;
     uint8_t u[PBKDF2_MAX_BLOCKSIZE];
     uint8_t tmpT[PBKDF2_MAX_BLOCKSIZE];
     uint32_t blockSize = PBKDF2_MAX_BLOCKSIZE;
@@ -135,7 +136,7 @@ int32_t CRYPT_PBKDF2_CalcT(const CRYPT_PBKDF2_Ctx *pCtx, uint32_t blockCount, ui
             goto EXIT;
         }
     }
-    uint32_t len = (*tlen > blockSize) ? blockSize : (*tlen);
+    len = (*tlen > blockSize) ? blockSize : (*tlen);
     memcpy(t, tmpT, len);
     *tlen = len;
 EXIT:

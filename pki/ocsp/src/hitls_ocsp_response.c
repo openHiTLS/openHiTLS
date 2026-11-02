@@ -402,7 +402,7 @@ static int32_t OcspSingleRespSetCtrl(HITLS_OCSP_SingleResp_Internal *internal, i
         return HITLS_OCSP_ERR_ALREADY_SIGNED;
     }
     switch (cmd) {
-        case HITLS_OCSP_SINGLERESP_SET_NEXT_UPDATE:
+        case HITLS_OCSP_SINGLERESP_SET_NEXT_UPDATE: {
             if (valLen != sizeof(BSL_TIME)) {
                 BSL_ERR_PUSH_ERROR(HITLS_OCSP_ERR_INVALID_PARAM);
                 return HITLS_OCSP_ERR_INVALID_PARAM;
@@ -414,6 +414,7 @@ static int32_t OcspSingleRespSetCtrl(HITLS_OCSP_SingleResp_Internal *internal, i
             internal->nextUpdate = *(BSL_TIME *)val;
             internal->hasNextUpdate = true;
             return HITLS_PKI_SUCCESS;
+        }
         case HITLS_OCSP_SINGLERESP_SET_REVOCATION_TIME:
             /* RFC 6960 §3.2: revocationTime only exists in the RevokedInfo of a
              * revoked certStatus; reject it for GOOD/UNKNOWN responses. */
@@ -824,6 +825,8 @@ static int32_t OcspEncodeResponderId(const HITLS_OCSP_BasicResp_Internal *intern
 /* Encode all SingleResponses into a SEQUENCE OF TLV. Output is owned by caller (free buff). */
 static int32_t OcspEncodeResponses(const HITLS_OCSP_BasicResp_Internal *internal, BSL_ASN1_Buffer *responsesSeq)
 {
+    BSL_ASN1_Template elemTempl = {g_ocspSingleRespElemEncTempl,
+                                   sizeof(g_ocspSingleRespElemEncTempl) / sizeof(g_ocspSingleRespElemEncTempl[0])};
     uint32_t count = BSL_LIST_COUNT(internal->responses);
     if (count == 0) {
         BSL_ERR_PUSH_ERROR(HITLS_OCSP_ERR_EMPTY_RESPONSE);
@@ -848,8 +851,6 @@ static int32_t OcspEncodeResponses(const HITLS_OCSP_BasicResp_Internal *internal
         node = BSL_LIST_GetNextNode(internal->responses, node);
     }
 
-    BSL_ASN1_Template elemTempl = {g_ocspSingleRespElemEncTempl,
-                                   sizeof(g_ocspSingleRespElemEncTempl) / sizeof(g_ocspSingleRespElemEncTempl[0])};
     ret = BSL_ASN1_EncodeListItem(BSL_ASN1_TAG_SEQUENCE, count, &elemTempl, respAsns, i, responsesSeq);
     if (ret != BSL_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
@@ -1038,6 +1039,7 @@ int32_t HITLS_OCSP_BasicRespSign(int32_t mdId, const CRYPT_EAL_PkeyCtx *prvKey, 
                                  const HITLS_X509_Cert *signerCert, const HITLS_X509_List *certs,
                                  HITLS_OCSP_BasicResp *bs, HITLS_OCSP_SignFlag flags)
 {
+    BslListNode *node = NULL;
     if (bs == NULL || prvKey == NULL || signerCert == NULL) {
         BSL_ERR_PUSH_ERROR(HITLS_OCSP_ERR_NULL_POINTER);
         return HITLS_OCSP_ERR_NULL_POINTER;
@@ -1089,7 +1091,7 @@ int32_t HITLS_OCSP_BasicRespSign(int32_t mdId, const CRYPT_EAL_PkeyCtx *prvKey, 
     /* Freeze every SingleResp: their fields are now covered by the response
      * signature, so later mutation would desynchronize them from the signed
      * ResponseData (RFC 6960 §3.2). */
-    BslListNode *node = BSL_LIST_FirstNode(internal->responses);
+    node = BSL_LIST_FirstNode(internal->responses);
     while (node != NULL) {
         HITLS_OCSP_SingleResp_Internal *single = (HITLS_OCSP_SingleResp_Internal *)BSL_LIST_GetData(node);
         if (single != NULL) {
@@ -1559,6 +1561,9 @@ static void OcspFreeListData(void *data)
 int32_t OcspVerifySigner(const HITLS_X509_List *embeddedCerts, const HITLS_X509_List *certs,
                          const HITLS_X509_StoreCtx *storeCtx, HITLS_X509_Cert *signer, HITLS_X509_Cert **signerIssuer)
 {
+    HITLS_X509_Cert *issuer = NULL;
+    int32_t ref = 0;
+    HITLS_X509_List *builtChain = NULL;
     if (storeCtx == NULL) {
         BSL_ERR_PUSH_ERROR(HITLS_OCSP_ERR_NULL_POINTER);
         return HITLS_OCSP_ERR_NULL_POINTER;
@@ -1607,13 +1612,12 @@ int32_t OcspVerifySigner(const HITLS_X509_List *embeddedCerts, const HITLS_X509_
 
     /* Built chain layout: [signer, signer's issuer, ..., root]; index 1 is
      * the signer's issuer, which the authorization check needs. */
-    HITLS_X509_List *builtChain = NULL;
     ret = HITLS_X509_StoreCtxCtrl(newStoreCtx, HITLS_X509_STORECTX_GET_CERT_CHAIN, &builtChain,
                                   sizeof(HITLS_X509_List *));
     if (ret != HITLS_PKI_SUCCESS) {
         goto EXIT;
     }
-    HITLS_X509_Cert *issuer = (HITLS_X509_Cert *)BSL_LIST_GetIndexNode(1, builtChain);
+    issuer = (HITLS_X509_Cert *)BSL_LIST_GetIndexNode(1, builtChain);
     if (issuer == NULL) {
         /* The chain has a single cert, i.e. the signer is itself the trusted root.
          * It has no issuer, so *signerIssuer stays NULL and the authorization check
@@ -1622,7 +1626,6 @@ int32_t OcspVerifySigner(const HITLS_X509_List *embeddedCerts, const HITLS_X509_
         ret = HITLS_PKI_SUCCESS;
         goto EXIT;
     }
-    int32_t ref = 0;
     ret = HITLS_X509_CertCtrl(issuer, HITLS_X509_REF_UP, &ref, sizeof(int));
     if (ret != HITLS_PKI_SUCCESS) {
         goto EXIT;

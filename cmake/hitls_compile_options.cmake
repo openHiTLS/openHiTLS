@@ -23,6 +23,7 @@ set(_hitls_compile_options_list
     -pipe
     # CC_WARN_FLAGS
     -Werror -Wextra -Wcast-qual -Wall -Wfloat-equal -Wshadow -Wformat=2
+    -Werror=redundant-decls
     # CC_LANGUAGE_FLAGS
     -fsigned-char
     # CC_CDG_FLAGS
@@ -52,6 +53,7 @@ if(CMAKE_C_COMPILER_ID STREQUAL "GNU")
     list(APPEND _hitls_compile_options_list
         # CC_WARN_FLAGS
         -Wdate-time
+        -Werror=jump-misses-init
         # CC_SEC_FLAGS
         --param=ssp-buffer-size=4
     )

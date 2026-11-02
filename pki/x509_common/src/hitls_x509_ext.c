@@ -993,6 +993,7 @@ static int32_t ParseRelativeNameAsnItem(uint32_t layer, BSL_ASN1_Buffer *asn, vo
 
 static int32_t ParseRelativeName(uint8_t *encode, uint32_t encLen, BslList **list)
 {
+    BSL_ASN1_Buffer asn = {BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SET, encLen, encode};
     uint8_t expTag[] = {BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE};
     BSL_ASN1_DecodeListParam listParam = {1, expTag};
     BslList *name = BSL_LIST_New(sizeof(HITLS_X509_NameNode));
@@ -1004,7 +1005,6 @@ static int32_t ParseRelativeName(uint8_t *encode, uint32_t encLen, BslList **lis
     if (ret != HITLS_PKI_SUCCESS) {
         goto ERR;
     }
-    BSL_ASN1_Buffer asn = {BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SET, encLen, encode};
     ret = BSL_ASN1_DecodeListItem(&listParam, &asn, ParseRelativeNameAsnItem, NULL, name);
     if (ret != HITLS_PKI_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
@@ -2117,6 +2117,7 @@ static int32_t SetExtGeneralNames(HITLS_X509_Ext *ext, HITLS_X509_ExtEntry *entr
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
+    BSL_ASN1_Template templ = {items, number + 1};
     items[0].depth = 0;
     items[0].tag = BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE;
     ret = BuildGeneralNameAsns(san->names, asns);
@@ -2126,7 +2127,6 @@ static int32_t SetExtGeneralNames(HITLS_X509_Ext *ext, HITLS_X509_ExtEntry *entr
     }
     SetGnTemplateItems(items + 1, asns, number);
 
-    BSL_ASN1_Template templ = {items, number + 1};
     ret = BSL_ASN1_EncodeTemplate(&templ, asns, number, &entry->extnValue.buff, &entry->extnValue.len);
     if (ret != BSL_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
@@ -2155,6 +2155,7 @@ static int32_t SetExtExKeyUsage(HITLS_X509_Ext *ext, HITLS_X509_ExtEntry *entry,
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
+    BSL_ASN1_Template templ = {items, number + 1};
     items[0].depth = 0;
     items[0].tag = BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE;
     uint32_t i = 0;
@@ -2173,7 +2174,6 @@ static int32_t SetExtExKeyUsage(HITLS_X509_Ext *ext, HITLS_X509_ExtEntry *entry,
         asns[i].buff = buffer->data;
     }
 
-    BSL_ASN1_Template templ = {items, number + 1};
     ret = BSL_ASN1_EncodeTemplate(&templ, asns, number, &entry->extnValue.buff, &entry->extnValue.len);
     if (ret != BSL_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
@@ -2363,6 +2363,10 @@ EXIT:
 
 static int32_t SetExtCrlDp(HITLS_X509_Ext *ext, HITLS_X509_ExtEntry *entry, const void *val)
 {
+    BSL_ASN1_TemplateItem crlDpPointTempl[] = {
+        {BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE, 0, 0},
+    };
+    BSL_ASN1_Template templ = {crlDpPointTempl, sizeof(crlDpPointTempl) / sizeof(crlDpPointTempl[0])};
     BSL_ASN1_Buffer crlDpSeqOf = {0};
     if (ext->type == HITLS_X509_EXT_TYPE_CRL) {
         BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_EXT_CRLDP);
@@ -2392,10 +2396,6 @@ static int32_t SetExtCrlDp(HITLS_X509_Ext *ext, HITLS_X509_ExtEntry *entry, cons
             goto EXIT;
         }
     }
-    BSL_ASN1_TemplateItem crlDpPointTempl[] = {
-        {BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE, 0, 0},
-    };
-    BSL_ASN1_Template templ = {crlDpPointTempl, sizeof(crlDpPointTempl) / sizeof(crlDpPointTempl[0])};
     ret = BSL_ASN1_EncodeListItem(BSL_ASN1_TAG_SEQUENCE, count, &templ, asnArr, count, &crlDpSeqOf);
     if (ret != BSL_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);

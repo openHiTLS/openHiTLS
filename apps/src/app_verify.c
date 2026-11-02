@@ -265,6 +265,8 @@ int32_t HITLS_VerifyMain(int argc, char *argv[])
     char *userId = NULL;
     char *untrustedFile = NULL;
     HITLS_X509_List *untrustedList = NULL;
+    int unParseParamNum = 0;
+    char **unParseParam = NULL;
     int32_t mainRet = HITLS_APP_SUCCESS;
     mainRet = HITLS_APP_OptBegin(argc, argv, g_verifyOpts);
     if (mainRet != HITLS_APP_SUCCESS) {
@@ -312,8 +314,8 @@ int32_t HITLS_VerifyMain(int argc, char *argv[])
         }
     }
 
-    int unParseParamNum = HITLS_APP_GetRestOptNum();
-    char **unParseParam = HITLS_APP_GetRestOpt();
+    unParseParamNum = HITLS_APP_GetRestOptNum();
+    unParseParam = HITLS_APP_GetRestOpt();
 
     mainRet = VerifyCerts(store, untrustedList, unParseParamNum, unParseParam);
 end:

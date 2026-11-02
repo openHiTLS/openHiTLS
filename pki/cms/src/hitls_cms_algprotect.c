@@ -135,6 +135,8 @@ int32_t CMS_EncodeAlgorithmProtection(const CMS_AlgorithmProtection *algProtect,
         return HITLS_CMS_ERR_INVALID_PARAM;
     }
 
+    BSL_ASN1_Template templ = {g_algorithmProtectionTempl,
+        sizeof(g_algorithmProtectionTempl) / sizeof(g_algorithmProtectionTempl[0])};
     BSL_ASN1_Buffer asn1[HITLS_CMS_ALGORITHM_PROTECTION_MAX_IDX] = {0};
     int32_t ret = CMS_EncodeAlgIdInfo(&algProtect->digestAlgorithm,
         &asn1[HITLS_CMS_ALGORITHM_PROTECTION_DIGESTALG_IDX]);
@@ -158,8 +160,6 @@ int32_t CMS_EncodeAlgorithmProtection(const CMS_AlgorithmProtection *algProtect,
         asn1[HITLS_CMS_ALGORITHM_PROTECTION_MACALG_IDX].tag =
             BSL_ASN1_CLASS_CTX_SPECIFIC | BSL_ASN1_TAG_CONSTRUCTED | 2;
     }
-    BSL_ASN1_Template templ = {g_algorithmProtectionTempl,
-        sizeof(g_algorithmProtectionTempl) / sizeof(g_algorithmProtectionTempl[0])};
     ret = BSL_ASN1_EncodeTemplate(&templ, asn1, HITLS_CMS_ALGORITHM_PROTECTION_MAX_IDX,
         &encode->data, &encode->dataLen);
     if (ret != BSL_SUCCESS) {

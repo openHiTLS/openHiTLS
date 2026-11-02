@@ -800,6 +800,7 @@ int32_t HITLS_CRYPT_EcdhCalcSharedSecret(HITLS_Lib_Ctx *libCtx, const char *attr
     uint8_t *sharedSecret, uint32_t *sharedSecretLen)
 {
 #ifdef HITLS_CRYPTO_PKEY
+    BSL_Param param[2] = { {0}, BSL_PARAM_END };
     int32_t ret;
     int32_t id = CRYPT_EAL_PkeyGetId(key);
     CRYPT_EAL_PkeyCtx *peerPk = CRYPT_EAL_ProviderPkeyNewCtx(libCtx, id, CRYPT_EAL_PKEY_EXCH_OPERATE, attrName);
@@ -820,7 +821,6 @@ int32_t HITLS_CRYPT_EcdhCalcSharedSecret(HITLS_Lib_Ctx *libCtx, const char *attr
             goto EXIT;
         }
     }
-    BSL_Param param[2] = { {0}, BSL_PARAM_END };
     (void)BSL_PARAM_InitValue(param, CRYPT_PARAM_PKEY_ENCODE_PUBKEY, BSL_PARAM_TYPE_OCTETS, peerPubkey, pubKeyLen);
     ret = CRYPT_EAL_PkeySetPubEx(peerPk, param);
     if (ret != CRYPT_SUCCESS) {

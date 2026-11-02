@@ -425,6 +425,7 @@ static int32_t PrintCipherSuiteDetails(const uint16_t *ids, uint32_t count)
 static int32_t PrintCipherSuites(const PrintOptions *options)
 {
     HITLS_Config *config = NULL;
+    uint32_t count = 0;
     int32_t ret = CRYPT_EAL_Init(CRYPT_EAL_INIT_ALL);
     if (ret != CRYPT_SUCCESS) {
         ret = HITLS_APP_CRYPTO_FAIL;
@@ -438,7 +439,6 @@ static int32_t PrintCipherSuites(const PrintOptions *options)
         goto EXIT;
     }
     uint16_t ids[HITLS_CFG_MAX_SIZE];
-    uint32_t count = 0;
     ret = HITLS_CFG_GetCipherSuites(config, ids, sizeof(ids) / sizeof(ids[0]), &count);
     if (ret != HITLS_SUCCESS) {
         ret = HITLS_APP_INTERNAL_EXCEPTION;

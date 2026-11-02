@@ -218,6 +218,7 @@ ERR:
 #ifdef HITLS_PKI_X509_CRT_PARSE
 int32_t HITLS_X509_ParseCertTbs(BSL_ASN1_Buffer *asnArr, HITLS_X509_Cert *cert)
 {
+    BSL_Buffer subPubKeyBuff;
     int32_t ret;
     // version: default is 0
     if (asnArr[HITLS_X509_CERT_VERSION_IDX].tag != 0) {
@@ -262,7 +263,7 @@ int32_t HITLS_X509_ParseCertTbs(BSL_ASN1_Buffer *asnArr, HITLS_X509_Cert *cert)
     }
 
     // subject public key info
-    BSL_Buffer subPubKeyBuff = {asnArr[HITLS_X509_CERT_SUBKEYINFO_IDX].buff,
+    subPubKeyBuff = (BSL_Buffer){asnArr[HITLS_X509_CERT_SUBKEYINFO_IDX].buff,
         asnArr[HITLS_X509_CERT_SUBKEYINFO_IDX].len};
     ret = CRYPT_EAL_ProviderDecodeBuffKey(cert->libCtx, cert->attrName, BSL_CID_UNKNOWN, "ASN1",
         "PUBKEY_SUBKEY_WITHOUT_SEQ", &subPubKeyBuff, NULL, (CRYPT_EAL_PkeyCtx **)&cert->tbs.ealPubKey);
@@ -1147,10 +1148,12 @@ int32_t HITLS_X509_CertDigest(HITLS_X509_Cert *cert, CRYPT_MD_AlgId mdId, uint8_
     }
 
 #ifdef HITLS_PKI_X509_CRT_GEN
-    int32_t ret = HITLS_X509_EncodeAsn1Cert(cert, NULL);
-    if (ret != HITLS_PKI_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
-        return ret;
+    {
+        int32_t ret = HITLS_X509_EncodeAsn1Cert(cert, NULL);
+        if (ret != HITLS_PKI_SUCCESS) {
+            BSL_ERR_PUSH_ERROR(ret);
+            return ret;
+        }
     }
     goto EXIT;
 #else

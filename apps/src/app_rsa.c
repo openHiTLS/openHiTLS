@@ -176,6 +176,7 @@ int32_t HITLS_RsaMain(int argc, char *argv[])
         .output.outFormat = BSL_FORMAT_PEM,
     };
     int32_t mainRet = HITLS_APP_SUCCESS;
+    int unParseParamNum = 0;
     mainRet = HITLS_APP_OptBegin(argc, argv, g_rsaOpts);
     if (mainRet != HITLS_APP_SUCCESS) {
         goto end;
@@ -184,7 +185,7 @@ int32_t HITLS_RsaMain(int argc, char *argv[])
     if (mainRet != HITLS_APP_SUCCESS) {
         goto end;
     }
-    int unParseParamNum = HITLS_APP_GetRestOptNum();
+    unParseParamNum = HITLS_APP_GetRestOptNum();
     if (unParseParamNum != 0) {  // The input parameters are not completely parsed.
         AppPrintError("Extra arguments given.\n");
         AppPrintError("rsa: Use -help for summary.\n");

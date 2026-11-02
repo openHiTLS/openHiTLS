@@ -967,18 +967,20 @@ static int32_t EncodeAttrValue(HITLS_PKCS12_SafeBagAttr *attribute, BSL_Buffer *
     asnArr.buff = attribute->attrValue.data;
     asnArr.len = attribute->attrValue.dataLen;
     switch (attribute->attrId) {
-        case BSL_CID_FRIENDLYNAME:
+        case BSL_CID_FRIENDLYNAME: {
             asnArr.tag = BSL_ASN1_TAG_BMPSTRING;
             BSL_ASN1_TemplateItem nameTemplItem = {BSL_ASN1_TAG_BMPSTRING, 0, 0};
             BSL_ASN1_Template nameTempl = {&nameTemplItem, 1};
             ret = BSL_ASN1_EncodeTemplate(&nameTempl, &asnArr, 1, &encode->data, &encode->dataLen);
             break;
-        case BSL_CID_LOCALKEYID:
+        }
+        case BSL_CID_LOCALKEYID: {
             asnArr.tag = BSL_ASN1_TAG_OCTETSTRING;
             BSL_ASN1_TemplateItem locatedIdTemplItem = {BSL_ASN1_TAG_OCTETSTRING, 0, 0};
             BSL_ASN1_Template locatedIdTempl = {&locatedIdTemplItem, 1};
             ret = BSL_ASN1_EncodeTemplate(&locatedIdTempl, &asnArr, 1, &encode->data, &encode->dataLen);
             break;
+        }
         default:
             BSL_ERR_PUSH_ERROR(HITLS_PKCS12_ERR_INVALID_SAFEBAG_ATTRIBUTES);
             return HITLS_PKCS12_ERR_INVALID_SAFEBAG_ATTRIBUTES;

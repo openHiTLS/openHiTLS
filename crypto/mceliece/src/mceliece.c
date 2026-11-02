@@ -870,6 +870,7 @@ int32_t McElieceShake256(uint8_t *output, const uint32_t outlen, const uint8_t *
 
 int32_t McElieceEncapsInternal(CRYPT_MCELIECE_Ctx *ctx, uint8_t *ciphertext, uint8_t *sessionKey, bool isPc)
 {
+    uint8_t prefix = 1;
     int32_t ret;
     uint8_t *c0 = ciphertext;
     uint8_t *c1 = ciphertext + ctx->para->cipherBytes - MCELIECE_L_BYTES;
@@ -888,7 +889,6 @@ int32_t McElieceEncapsInternal(CRYPT_MCELIECE_Ctx *ctx, uint8_t *ciphertext, uin
         memcpy(hashIn + 1, e, ctx->para->nBytes);
         GOTO_ERR_IF(McElieceShake256(c1, MCELIECE_L_BYTES, hashIn, ctx->para->nBytes + 1), ret);
     }
-    uint8_t prefix = 1;
     ret = ComputeSessionKeyWithPrefix(sessionKey, prefix, e, ciphertext, ctx->para);
 ERR:
     BSL_SAL_CleanseData(e, ctx->para->nBytes);
@@ -917,6 +917,8 @@ static int32_t BuildVectorAndDecoding(const uint8_t *c0, const CMPrivateKey *sk,
 int32_t McElieceDecapsInternal(const uint8_t *ciphertext, const CMPrivateKey *sk, uint8_t *sessionKey,
     const McelieceParams *params, bool isPc)
 {
+    uint8_t mask;
+    uint8_t b;
     int32_t ret;
     const uint8_t *c0 = ciphertext;
     const uint8_t *c1 = ciphertext + params->cipherBytes - MCELIECE_L_BYTES;
@@ -936,7 +938,7 @@ int32_t McElieceDecapsInternal(const uint8_t *ciphertext, const CMPrivateKey *sk
     // Recompute syndrome from e
     GOTO_ERR_IF_EX(ComputeSyndrome(e, sk->g, sk->alpha, params, verifySyndrome, true), ret);
     // Verify decodeSyndrome == verifySyndrome
-    uint8_t mask = (uint8_t)ConstTimeMemcmp((uint8_t *)decodeSyndrome, (uint8_t *)verifySyndrome,
+    mask = (uint8_t)ConstTimeMemcmp((uint8_t *)decodeSyndrome, (uint8_t *)verifySyndrome,
         2U * params->t * (uint32_t)sizeof(uint16_t));
     // Verify error weight == t
     mask &= (uint8_t)Uint32ConstTimeEqual(VectorWeight(e, params->nBytes), params->t);
@@ -948,7 +950,7 @@ int32_t McElieceDecapsInternal(const uint8_t *ciphertext, const CMPrivateKey *sk
         mask &= (uint8_t)ConstTimeMemcmp(c1Prime, c1, MCELIECE_L_BYTES); // If C' != C1, set b <- 0
     }
     // b = 1 if errorWeight == t, 0 otherwise
-    uint8_t b = (1 & mask) | (0 & (~mask));
+    b = (1 & mask) | (0 & (~mask));
     // if mask is invalid (0), e[i] = s[i], refernce: https://classic.mceliece.org/mceliece-spec-20221023.pdf, Section 5.6
     for (uint32_t i = 0; i < params->nBytes; i++) {
         e[i] = (e[i] & mask) | (sk->s[i] & ~mask);

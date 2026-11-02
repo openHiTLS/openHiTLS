@@ -253,6 +253,10 @@ int32_t SESSMGR_EncryptSessionTicket(TLS_Ctx *ctx,
         return RETURN_ERROR_NUMBER_PROCESS(HITLS_INTERNAL_EXCEPTION, BINLOG_ID16713, "input null");
     }
 
+    uint32_t dataLen = 0;
+    uint32_t packLen = 0;
+    uint32_t offset = 0;
+    uint8_t *data = NULL;
     Ticket ticket = {0};
     HITLS_CipherParameters cipher = {0};
     BSL_SAL_ThreadReadLock(sessMgr->lock);
@@ -270,15 +274,12 @@ int32_t SESSMGR_EncryptSessionTicket(TLS_Ctx *ctx,
         goto exit;
     }
 
-    uint32_t dataLen = 0;
-    uint8_t *data = NewTicketBuf(sess, &cipher, &dataLen);
+    data = NewTicketBuf(sess, &cipher, &dataLen);
     if (data == NULL) {
         ret = HITLS_MEMALLOC_FAIL;
         goto exit;
     }
     /* Fill in the key name and iv. */
-    uint32_t packLen = 0;
-    uint32_t offset = 0;
     ret = PackKeyNameAndIv(&ticket, &data[0], dataLen, &packLen);
     if (ret != HITLS_SUCCESS) {
         BSL_SAL_FREE(data);

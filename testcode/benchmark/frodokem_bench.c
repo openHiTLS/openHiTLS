@@ -153,13 +153,13 @@ static int32_t FrodokemDecaps(void *ctx, const BenchExecOptions *opts)
 
     uint32_t outCiphertextLen = ciphertextLen;
     uint32_t outSharedKeyLen = sharedKeyLen;
+    uint32_t decapsSharedKeyLen = sharedKeyLen;
     rc = CRYPT_EAL_PkeyEncaps(ctx, ciphertext, &outCiphertextLen, sharedKey, &outSharedKeyLen);
     if (rc != CRYPT_SUCCESS) {
         printf("Failed to frodokem encap\n");
         goto EXIT;
     }
 
-    uint32_t decapsSharedKeyLen = sharedKeyLen;
     BENCH_RUN_VA(CRYPT_EAL_PkeyDecaps(ctx, ciphertext, outCiphertextLen, decapsSharedKey, &decapsSharedKeyLen), rc,
         CRYPT_SUCCESS, (int32_t)outCiphertextLen, opts, "%s decaps", GetParaName(opts->paraId));
 

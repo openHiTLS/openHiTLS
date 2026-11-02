@@ -77,6 +77,7 @@ static int32_t FrodoCommonMulAddAES(uint16_t *out, const uint16_t *matrixSTransp
     const uint32_t n, const uint32_t nBar, uint16_t *rows, uint8_t *plaintext, FrodoMulAddFunc multFunction,
     void *libCtx)
 {
+    const uint32_t blocksPerRow = n / 8;
     CRYPT_EAL_CipherCtx *ctx = CRYPT_EAL_ProviderCipherNewCtx(libCtx, CRYPT_CIPHER_AES128_ECB, NULL);
     if (ctx == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
@@ -92,7 +93,6 @@ static int32_t FrodoCommonMulAddAES(uint16_t *out, const uint16_t *matrixSTransp
         BSL_ERR_PUSH_ERROR(ret);
         goto EXIT;
     }
-    const uint32_t blocksPerRow = n / 8;
     InitAESHeaderBlockNumber(plaintext, blocksPerRow);
     for (uint32_t rowNumber = 0; rowNumber < n; rowNumber += 4) {
         ret = AESCtrEncrypt(ctx, n, rows, plaintext, blocksPerRow, rowNumber);
