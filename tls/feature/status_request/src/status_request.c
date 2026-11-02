@@ -29,15 +29,11 @@
 #include "hs_msg.h"
 #include "hs_extensions.h"
 #include "hs_common.h"
-#include "hs_kx.h"
-#include "hs.h"
 #include "pack.h"
 #include "pack_extensions.h"
 #include "parse_common.h"
 #include "send_process.h"
-#include "cert.h"
 #include "cert_method.h"
-#include "cert_mgr.h"
 #include "status_request.h"
 
 static void OcspRespFree(void *data)

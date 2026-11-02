@@ -19,19 +19,12 @@
 #include <string.h>
 #include "bsl_sal.h"
 #include "bsl_err_internal.h"
-#include "bsl_asn1_internal.h"
-#include "bsl_obj.h"
-#include "bsl_obj_internal.h"
 #include "crypt_eal_md.h"
-#include "crypt_eal_pkey.h"
 #include "crypt_codecskey.h"
 #include "crypt_errno.h"
 #include "hitls_pki_errno.h"
 #include "hitls_pki_types.h"
 #include "hitls_pki_cert.h"
-#include "hitls_pki_x509.h"
-#include "hitls_cert_local.h"
-#include "hitls_x509_local.h"
 #include "hitls_ocsp_local.h"
 
 static int32_t OcspHashData(CRYPT_EAL_MdCtx *mdCtx, const uint8_t *data, uint32_t dataLen,

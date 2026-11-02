@@ -24,16 +24,13 @@
 #include "bsl_obj.h"
 #include "bsl_obj_internal.h"
 #include "sal_time.h"
-#include "crypt_errno.h"
 #include "hitls_pki_errno.h"
 #include "hitls_pki_ocsp.h"
 #include "hitls_x509_local.h"
 #include "hitls_ocsp_local.h"
 #ifdef HITLS_PKI_X509_VFY
-#include "hitls_x509_verify.h"
-#include "hitls_x509_store_local.h"
+#include "hitls_pki_x509.h"
 #endif
-#include "hitls_cert_local.h"
 
 #define CRYPT_SHA1_DIGEST_SIZE 20
 

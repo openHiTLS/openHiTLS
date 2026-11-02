@@ -14,13 +14,9 @@
  */
 #include "hitls_build.h"
 #if defined(HITLS_TLS_FEATURE_STATUS_REQUEST) && defined(HITLS_TLS_HOST_CLIENT)
-#include <string.h>
 #include "bsl_sal.h"
 #include "bsl_bytes.h"
-#include "bsl_err_internal.h"
 #include "tls_binlog_id.h"
-#include "bsl_log_internal.h"
-#include "bsl_log.h"
 #include "hitls_error.h"
 #include "hs_msg.h"
 #include "parse_msg.h"

@@ -24,7 +24,6 @@
 #include "hitls_pki_errno.h"
 #include "hitls_pki_ocsp.h"
 #include "hitls_pki_ocsp_http.h"
-#include "hitls_ocsp_local.h"
 
 #define HITLS_OCSP_HTTP_REQ_CONTENT_TYPE "application/ocsp-request"
 #define HITLS_OCSP_HTTP_EXPECTED_RESP_CT "application/ocsp-response"

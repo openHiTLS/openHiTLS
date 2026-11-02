@@ -22,7 +22,6 @@
 #include "bsl_err_internal.h"
 #include "bsl_asn1_internal.h"
 #include "bsl_obj.h"
-#include "bsl_obj_internal.h"
 #include "crypt_errno.h"
 #include "hitls_pki_errno.h"
 #include "hitls_pki_ocsp.h"
