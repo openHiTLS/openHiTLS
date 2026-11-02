@@ -122,7 +122,7 @@ int32_t EccLiteBnBin2Bn(ECC_LiteBn *r, const uint8_t *bin, uint32_t binLen, uint
 
 void EccLiteBnSetWords(ECC_LiteBn *r, const BN_UINT *data, uint32_t size)
 {
-    EccLiteBnZero(r);
+    (void)memset(r->data, 0, sizeof(r->data));
     if (size != 0) {
         (void)memcpy(r->data, data, size * sizeof(BN_UINT));
     }
@@ -255,12 +255,14 @@ static void LiteFInv(BN_UINT *r, const BN_UINT *a, const ECC_Para *para)
  */
 typedef BN_UINT Fe[ECC_LITE_MAX_WORDS];
 
-/* Bytecode: each instruction is {op, dst, src1, src2}; OP_END terminates. */
+/* Each 16-bit instruction packs {op, dst, src1, src2} into four nibbles. */
 #define OP_END 0
 #define OP_MUL 1
 #define OP_ADD 2
 #define OP_SUB 3
 #define OP_INV 4
+
+#define LITE_OP(op, dst, src1, src2) (((op) << 12) | ((dst) << 8) | ((src1) << 4) | (src2))
 
 /* Register file layout shared by all programs. */
 #define RG_R0X 0
@@ -277,26 +279,25 @@ typedef BN_UINT Fe[ECC_LITE_MAX_WORDS];
 #define RG_T2  11
 #define RG_T3  12
 #define RG_T4  13
-#define RG_T5  14
-#define NREG   15
+#define NREG   14
 
 /* Formulas use x = X/Z and curve coefficients a, b; all field values are Montgomery encoded. */
 /* MontLadderDouble: R1 = 2P, with affine P = (x, y). */
-static const uint8_t LITE_DBL_BASE[] = {
-    OP_MUL, RG_T0,  RG_XP,  RG_XP,  // x^2
-    OP_ADD, RG_T1,  RG_XP,  RG_XP,  // 2*x
-    OP_ADD, RG_T1,  RG_T1,  RG_T1,  // E = 4*x
-    OP_SUB, RG_T2,  RG_T0,  RG_A,   // x^2 - a
-    OP_ADD, RG_T3,  RG_T0,  RG_A,   // x^2 + a
-    OP_MUL, RG_R1X, RG_T2,  RG_T2,  // (x^2 - a)^2
-    OP_MUL, RG_T4,  RG_B,   RG_T1,  // b*E
-    OP_SUB, RG_R1X, RG_R1X, RG_T4,  // (x^2 - a)^2 - b*E
-    OP_SUB, RG_R1X, RG_R1X, RG_T4,  // X1 = (x^2 - a)^2 - 2*b*E
-    OP_MUL, RG_R1Z, RG_T1,  RG_T3,  // E*(x^2 + a)
-    OP_ADD, RG_T4,  RG_B,   RG_B,   // 2*b
-    OP_ADD, RG_T4,  RG_T4,  RG_T4,  // 4*b
-    OP_ADD, RG_R1Z, RG_R1Z, RG_T4,  // Z1 = E*(x^2 + a) + 4*b
-    OP_END, 0,      0,      0,
+static const uint16_t LITE_DBL_BASE[] = {
+    LITE_OP(OP_MUL, RG_T0, RG_XP, RG_XP), // x^2
+    LITE_OP(OP_ADD, RG_T1, RG_XP, RG_XP), // 2*x
+    LITE_OP(OP_ADD, RG_T1, RG_T1, RG_T1), // E = 4*x
+    LITE_OP(OP_SUB, RG_T2, RG_T0, RG_A), // x^2 - a
+    LITE_OP(OP_ADD, RG_T3, RG_T0, RG_A), // x^2 + a
+    LITE_OP(OP_MUL, RG_R1X, RG_T2, RG_T2), // (x^2 - a)^2
+    LITE_OP(OP_MUL, RG_T4, RG_B, RG_T1), // b*E
+    LITE_OP(OP_SUB, RG_R1X, RG_R1X, RG_T4), // (x^2 - a)^2 - b*E
+    LITE_OP(OP_SUB, RG_R1X, RG_R1X, RG_T4), // X1 = (x^2 - a)^2 - 2*b*E
+    LITE_OP(OP_MUL, RG_R1Z, RG_T1, RG_T3), // E*(x^2 + a)
+    LITE_OP(OP_ADD, RG_T4, RG_B, RG_B), // 2*b
+    LITE_OP(OP_ADD, RG_T4, RG_T4, RG_T4), // 4*b
+    LITE_OP(OP_ADD, RG_R1Z, RG_R1Z, RG_T4), // Z1 = E*(x^2 + a) + 4*b
+    OP_END,
 };
 
 /*
@@ -304,105 +305,105 @@ static const uint8_t LITE_DBL_BASE[] = {
  * https://hyperelliptic.org/EFD/g1p/auto-shortw-xz.html#diffadd-mdadd-2002-it-4
  * https://hyperelliptic.org/EFD/g1p/auto-shortw-xz.html#doubling-dbl-2002-bj-3
  */
-static const uint8_t LITE_DBL_ADD[] = {
-    OP_MUL, RG_T0,  RG_R0X, RG_R1X, // T1 = X0*X1
-    OP_MUL, RG_T1,  RG_R0Z, RG_R1Z, // T2 = Z0*Z1
-    OP_MUL, RG_T2,  RG_R0X, RG_R1Z, // T3 = X0*Z1
-    OP_MUL, RG_T3,  RG_R0Z, RG_R1X, // T4 = Z0*X1
-    OP_MUL, RG_R1X, RG_A,   RG_T1,  // X1 = a*T2
-    OP_ADD, RG_R1X, RG_T0,  RG_R1X, // X1 = T1 + X1
-    OP_ADD, RG_T0,  RG_T2,  RG_T3,  // T1 = T3 + T4
-    OP_MUL, RG_R1X, RG_R1X, RG_T0,  // X1 = X1*T1
-    OP_ADD, RG_R1X, RG_R1X, RG_R1X, // X1 = X1 + X1
-    OP_MUL, RG_T0,  RG_T1,  RG_T1,  // T1 = T2^2
-    OP_MUL, RG_T0,  RG_T0,  RG_B,   // T1 = b*T1
-    OP_ADD, RG_T0,  RG_T0,  RG_T0,  // T1 = T1 + T1
-    OP_ADD, RG_T0,  RG_T0,  RG_T0,  // T1 = T1 + T1
-    OP_ADD, RG_R1X, RG_R1X, RG_T0,  // X1 = X1 + T1
-    OP_SUB, RG_T2,  RG_T2,  RG_T3,  // T3 = T3 - T4
-    OP_MUL, RG_R1Z, RG_T2,  RG_T2,  // Z1' = T3^2
-    OP_MUL, RG_T2,  RG_XP,  RG_R1Z, // T3 = x*Z1'
-    OP_SUB, RG_R1X, RG_R1X, RG_T2,  // X1' = X1 - T3
-    OP_MUL, RG_T0,  RG_R0X, RG_R0X, // T1 = X0^2
-    OP_MUL, RG_T1,  RG_R0Z, RG_R0Z, // T2 = Z0^2
-    OP_MUL, RG_T2,  RG_R0X, RG_R0Z, // T3 = X0*Z0
-    OP_ADD, RG_T2,  RG_T2,  RG_T2,  // T3 = T3 + T3
-    OP_ADD, RG_T2,  RG_T2,  RG_T2,  // T3 = T3 + T3
-    OP_MUL, RG_T3,  RG_A,   RG_T1,  // T4 = a*T2
-    OP_SUB, RG_R0X, RG_T0,  RG_T3,  // X0 = T1 - T4
-    OP_ADD, RG_R0Z, RG_T0,  RG_T3,  // Z0 = T1 + T4
-    OP_MUL, RG_R0Z, RG_T2,  RG_R0Z, // Z0 = T3*Z0
-    OP_MUL, RG_T3,  RG_T2,  RG_T1,  // T4 = T3*T2
-    OP_MUL, RG_T3,  RG_T3,  RG_B,   // T4 = b*T4
-    OP_ADD, RG_T3,  RG_T3,  RG_T3,  // T4 = T4 + T4
-    OP_MUL, RG_R0X, RG_R0X, RG_R0X, // X0 = X0^2
-    OP_SUB, RG_R0X, RG_R0X, RG_T3,  // X0' = X0 - T4
-    OP_MUL, RG_T3,  RG_T1,  RG_T1,  // T4 = T2^2
-    OP_MUL, RG_T3,  RG_T3,  RG_B,   // T4 = b*T4
-    OP_ADD, RG_T3,  RG_T3,  RG_T3,  // T4 = T4 + T4
-    OP_ADD, RG_T3,  RG_T3,  RG_T3,  // T4 = T4 + T4
-    OP_ADD, RG_R0Z, RG_R0Z, RG_T3,  // Z0' = Z0 + T4
-    OP_END, 0,      0,      0,
+static const uint16_t LITE_DBL_ADD[] = {
+    LITE_OP(OP_MUL, RG_T0, RG_R0X, RG_R1X), // T1 = X0*X1
+    LITE_OP(OP_MUL, RG_T1, RG_R0Z, RG_R1Z), // T2 = Z0*Z1
+    LITE_OP(OP_MUL, RG_T2, RG_R0X, RG_R1Z), // T3 = X0*Z1
+    LITE_OP(OP_MUL, RG_T3, RG_R0Z, RG_R1X), // T4 = Z0*X1
+    LITE_OP(OP_MUL, RG_R1X, RG_A, RG_T1), // X1 = a*T2
+    LITE_OP(OP_ADD, RG_R1X, RG_T0, RG_R1X), // X1 = T1 + X1
+    LITE_OP(OP_ADD, RG_T0, RG_T2, RG_T3), // T1 = T3 + T4
+    LITE_OP(OP_MUL, RG_R1X, RG_R1X, RG_T0), // X1 = X1*T1
+    LITE_OP(OP_ADD, RG_R1X, RG_R1X, RG_R1X), // X1 = X1 + X1
+    LITE_OP(OP_MUL, RG_T0, RG_T1, RG_T1), // T1 = T2^2
+    LITE_OP(OP_MUL, RG_T0, RG_T0, RG_B), // T1 = b*T1
+    LITE_OP(OP_ADD, RG_T0, RG_T0, RG_T0), // T1 = T1 + T1
+    LITE_OP(OP_ADD, RG_T0, RG_T0, RG_T0), // T1 = T1 + T1
+    LITE_OP(OP_ADD, RG_R1X, RG_R1X, RG_T0), // X1 = X1 + T1
+    LITE_OP(OP_SUB, RG_T2, RG_T2, RG_T3), // T3 = T3 - T4
+    LITE_OP(OP_MUL, RG_R1Z, RG_T2, RG_T2), // Z1' = T3^2
+    LITE_OP(OP_MUL, RG_T2, RG_XP, RG_R1Z), // T3 = x*Z1'
+    LITE_OP(OP_SUB, RG_R1X, RG_R1X, RG_T2), // X1' = X1 - T3
+    LITE_OP(OP_MUL, RG_T0, RG_R0X, RG_R0X), // T1 = X0^2
+    LITE_OP(OP_MUL, RG_T1, RG_R0Z, RG_R0Z), // T2 = Z0^2
+    LITE_OP(OP_MUL, RG_T2, RG_R0X, RG_R0Z), // T3 = X0*Z0
+    LITE_OP(OP_ADD, RG_T2, RG_T2, RG_T2), // T3 = T3 + T3
+    LITE_OP(OP_ADD, RG_T2, RG_T2, RG_T2), // T3 = T3 + T3
+    LITE_OP(OP_MUL, RG_T3, RG_A, RG_T1), // T4 = a*T2
+    LITE_OP(OP_SUB, RG_R0X, RG_T0, RG_T3), // X0 = T1 - T4
+    LITE_OP(OP_ADD, RG_R0Z, RG_T0, RG_T3), // Z0 = T1 + T4
+    LITE_OP(OP_MUL, RG_R0Z, RG_T2, RG_R0Z), // Z0 = T3*Z0
+    LITE_OP(OP_MUL, RG_T3, RG_T2, RG_T1), // T4 = T3*T2
+    LITE_OP(OP_MUL, RG_T3, RG_T3, RG_B), // T4 = b*T4
+    LITE_OP(OP_ADD, RG_T3, RG_T3, RG_T3), // T4 = T4 + T4
+    LITE_OP(OP_MUL, RG_R0X, RG_R0X, RG_R0X), // X0 = X0^2
+    LITE_OP(OP_SUB, RG_R0X, RG_R0X, RG_T3), // X0' = X0 - T4
+    LITE_OP(OP_MUL, RG_T3, RG_T1, RG_T1), // T4 = T2^2
+    LITE_OP(OP_MUL, RG_T3, RG_T3, RG_B), // T4 = b*T4
+    LITE_OP(OP_ADD, RG_T3, RG_T3, RG_T3), // T4 = T4 + T4
+    LITE_OP(OP_ADD, RG_T3, RG_T3, RG_T3), // T4 = T4 + T4
+    LITE_OP(OP_ADD, RG_R0Z, RG_R0Z, RG_T3), // Z0' = Z0 + T4
+    OP_END,
 };
 
 /*
  * MontLadderRecoverYAndToMont formulas, with R1 = R0 + P and Q = Z1*Z0^2:
  * N = 2*b*Q + Z1*(a*Z0 + x*X0)*(x*Z0 + X0) - X1*(x*Z0 - X0)^2; D = 2*y*Q.
- * RG_T4 = X0/Z0 and RG_T5 = N/D share one inversion; outputs stay Montgomery encoded.
+ * RG_T4 = X0/Z0 and RG_T1 = N/D share one inversion; outputs stay Montgomery encoded.
  */
-static const uint8_t LITE_RECOVER[] = {
-    OP_MUL, RG_T0,  RG_R0Z, RG_R0Z, // Z0^2
-    OP_MUL, RG_T0,  RG_T0,  RG_R1Z, // Q = Z1*Z0^2
-    OP_ADD, RG_T1,  RG_B,   RG_B,   // 2*b
-    OP_MUL, RG_T1,  RG_T0,  RG_T1,  // 2*b*Q
-    OP_MUL, RG_T2,  RG_A,   RG_R0Z, // a*Z0
-    OP_MUL, RG_T3,  RG_XP,  RG_R0X, // x*X0
-    OP_ADD, RG_T2,  RG_T2,  RG_T3,  // a*Z0 + x*X0
-    OP_MUL, RG_T3,  RG_XP,  RG_R0Z, // x*Z0
-    OP_ADD, RG_T3,  RG_T3,  RG_R0X, // x*Z0 + X0
-    OP_MUL, RG_T2,  RG_T2,  RG_R1Z, // Z1*(a*Z0 + x*X0)
-    OP_MUL, RG_T2,  RG_T2,  RG_T3,  // Z1*(a*Z0 + x*X0)*(x*Z0 + X0)
-    OP_MUL, RG_T3,  RG_XP,  RG_R0Z, // x*Z0
-    OP_SUB, RG_T3,  RG_T3,  RG_R0X, // x*Z0 - X0
-    OP_MUL, RG_T3,  RG_T3,  RG_T3,  // (x*Z0 - X0)^2
-    OP_MUL, RG_T3,  RG_T3,  RG_R1X, // X1*(x*Z0 - X0)^2
-    OP_ADD, RG_T1,  RG_T1,  RG_T2,  // 2*b*Q + Z1*(a*Z0 + x*X0)*(x*Z0 + X0)
-    OP_SUB, RG_T1,  RG_T1,  RG_T3,  // N: subtract X1*(x*Z0 - X0)^2
-    OP_MUL, RG_T1,  RG_T1,  RG_R0Z, // N*Z0
-    OP_MUL, RG_T2,  RG_T0,  RG_YP,  // y*Q
-    OP_ADD, RG_T2,  RG_T2,  RG_T2,  // D = 2*y*Q
-    OP_MUL, RG_T4,  RG_R0X, RG_T2,  // X0*D
-    OP_MUL, RG_T2,  RG_T2,  RG_R0Z, // D*Z0
-    OP_INV, RG_T2,  RG_T2,  0,      // (D*Z0)^-1
-    OP_MUL, RG_T4,  RG_T4,  RG_T2,  // Affine x = X0/Z0
-    OP_MUL, RG_T5,  RG_T1,  RG_T2,  // Affine y = N/D
-    OP_END, 0,      0,      0,
+static const uint16_t LITE_RECOVER[] = {
+    LITE_OP(OP_MUL, RG_T0, RG_R0Z, RG_R0Z), // Z0^2
+    LITE_OP(OP_MUL, RG_T0, RG_T0, RG_R1Z), // Q = Z1*Z0^2
+    LITE_OP(OP_ADD, RG_T1, RG_B, RG_B), // 2*b
+    LITE_OP(OP_MUL, RG_T1, RG_T0, RG_T1), // 2*b*Q
+    LITE_OP(OP_MUL, RG_T2, RG_A, RG_R0Z), // a*Z0
+    LITE_OP(OP_MUL, RG_T3, RG_XP, RG_R0X), // x*X0
+    LITE_OP(OP_ADD, RG_T2, RG_T2, RG_T3), // a*Z0 + x*X0
+    LITE_OP(OP_MUL, RG_T4, RG_XP, RG_R0Z), // x*Z0
+    LITE_OP(OP_ADD, RG_T3, RG_T4, RG_R0X), // x*Z0 + X0
+    LITE_OP(OP_MUL, RG_T2, RG_T2, RG_R1Z), // Z1*(a*Z0 + x*X0)
+    LITE_OP(OP_MUL, RG_T2, RG_T2, RG_T3), // Z1*(a*Z0 + x*X0)*(x*Z0 + X0)
+    LITE_OP(OP_SUB, RG_T3, RG_T4, RG_R0X), // x*Z0 - X0
+    LITE_OP(OP_MUL, RG_T3, RG_T3, RG_T3), // (x*Z0 - X0)^2
+    LITE_OP(OP_MUL, RG_T3, RG_T3, RG_R1X), // X1*(x*Z0 - X0)^2
+    LITE_OP(OP_ADD, RG_T1, RG_T1, RG_T2), // 2*b*Q + Z1*(a*Z0 + x*X0)*(x*Z0 + X0)
+    LITE_OP(OP_SUB, RG_T1, RG_T1, RG_T3), // N: subtract X1*(x*Z0 - X0)^2
+    LITE_OP(OP_MUL, RG_T1, RG_T1, RG_R0Z), // N*Z0
+    LITE_OP(OP_MUL, RG_T2, RG_T0, RG_YP), // y*Q
+    LITE_OP(OP_ADD, RG_T2, RG_T2, RG_T2), // D = 2*y*Q
+    LITE_OP(OP_MUL, RG_T4, RG_R0X, RG_T2), // X0*D
+    LITE_OP(OP_MUL, RG_T2, RG_T2, RG_R0Z), // D*Z0
+    LITE_OP(OP_INV, RG_T2, RG_T2, 0), // (D*Z0)^-1
+    LITE_OP(OP_MUL, RG_T4, RG_T4, RG_T2), // Affine x = X0/Z0
+    LITE_OP(OP_MUL, RG_T1, RG_T1, RG_T2), // Affine y = N/D
+    OP_END,
 };
 
 /*
  * Affine y^2 = x^3 - 3*x + b: RG_R0X = x, RG_R0Z = y, RG_R1X = b.
- * The caller compares RG_T0 (right side) with RG_T1 (left side).
+ * The caller compares RG_R1Z (right side) with RG_A (left side).
  */
-static const uint8_t LITE_ON_CURVE[] = {
-    OP_MUL, RG_T0,  RG_R0X, RG_R0X, // x^2
-    OP_MUL, RG_T0,  RG_T0,  RG_R0X, // x^3
-    OP_ADD, RG_T1,  RG_R0X, RG_R0X, // 2*x
-    OP_ADD, RG_T1,  RG_T1,  RG_R0X, // 3*x
-    OP_SUB, RG_T0,  RG_T0,  RG_T1,  // x^3 - 3*x
-    OP_ADD, RG_T0,  RG_T0,  RG_R1X, // x^3 - 3*x + b
-    OP_MUL, RG_T1,  RG_R0Z, RG_R0Z, // y^2
-    OP_END, 0,      0,      0,
+static const uint16_t LITE_ON_CURVE[] = {
+    LITE_OP(OP_MUL, RG_R1Z, RG_R0X, RG_R0X), // x^2
+    LITE_OP(OP_MUL, RG_R1Z, RG_R1Z, RG_R0X), // x^3
+    LITE_OP(OP_ADD, RG_A, RG_R0X, RG_R0X), // 2*x
+    LITE_OP(OP_ADD, RG_A, RG_A, RG_R0X), // 3*x
+    LITE_OP(OP_SUB, RG_R1Z, RG_R1Z, RG_A), // x^3 - 3*x
+    LITE_OP(OP_ADD, RG_R1Z, RG_R1Z, RG_R1X), // x^3 - 3*x + b
+    LITE_OP(OP_MUL, RG_A, RG_R0Z, RG_R0Z), // y^2
+    OP_END,
 };
 
-static void LiteRunProg(const uint8_t *prog, Fe *reg, const ECC_Para *para)
+static void LiteRunProg(const uint16_t *prog, Fe *reg, const ECC_Para *para)
 {
     const BN_UINT *p = EccLiteParaData(para, ECC_LITE_P);
     uint32_t n = para->words;
-    for (; prog[0] != OP_END; prog += 4) {
-        BN_UINT *d = reg[prog[1]];
-        const BN_UINT *s1 = reg[prog[2]];
-        const BN_UINT *s2 = reg[prog[3]];
-        switch (prog[0]) {
+    for (; *prog != OP_END; prog++) {
+        uint16_t ins = *prog;
+        BN_UINT *d = reg[(ins >> 8) & 0xfu];
+        const BN_UINT *s1 = reg[(ins >> 4) & 0xfu];
+        const BN_UINT *s2 = reg[ins & 0xfu];
+        switch (ins >> 12) {
             case OP_MUL:
                 LiteFMul(d, s1, s2, p, n);
                 break;
@@ -419,37 +420,16 @@ static void LiteRunProg(const uint8_t *prog, Fe *reg, const ECC_Para *para)
     }
 }
 
-static int32_t ECP_PointAtInfinity(const ECC_Para *para, const ECC_Point *pt)
-{
-    if (para->id != pt->id) {
-        BSL_ERR_PUSH_ERROR(CRYPT_ECC_POINT_ERR_CURVE_ID);
-        return CRYPT_ECC_POINT_ERR_CURVE_ID;
-    }
-    if (EccLiteBnIsZero(&pt->z)) {
-        BSL_ERR_PUSH_ERROR(CRYPT_ECC_POINT_AT_INFINITY);
-        return CRYPT_ECC_POINT_AT_INFINITY;
-    }
-    return CRYPT_SUCCESS;
-}
-
 static int32_t ECP_PointOnCurve(const ECC_Para *para, const ECC_Point *pt)
 {
-    int32_t ret = ECP_PointAtInfinity(para, pt);
-    if (ret != CRYPT_SUCCESS) {
-        return ret;
-    }
-    if (!EccLiteBnIsOne(&pt->z)) {
-        BSL_ERR_PUSH_ERROR(CRYPT_ECC_POINT_NOT_AFFINE);
-        return CRYPT_ECC_POINT_NOT_AFFINE;
-    }
-
+    int32_t ret = CRYPT_SUCCESS;
     uint32_t n = para->words;
-    ALIGN32 Fe reg[NREG] = {0};
+    ALIGN32 Fe reg[5] = {0}; // need 5 tmp registers for on-curve check
     (void)memcpy(reg[RG_R0X], pt->x.data, sizeof(Fe));
     (void)memcpy(reg[RG_R0Z], pt->y.data, sizeof(Fe));
     (void)memcpy(reg[RG_R1X], EccLiteParaData(para, ECC_LITE_BM), para->bytes);
     LiteRunProg(LITE_ON_CURVE, reg, para);
-    if (ConstTimeMemcmp((const uint8_t *)reg[RG_T0], (const uint8_t *)reg[RG_T1], n * sizeof(BN_UINT)) != 0xffffffffu) {
+    if (ConstTimeMemcmp((const uint8_t *)reg[RG_R1Z], (const uint8_t *)reg[RG_A], n * sizeof(BN_UINT)) != 0xffffffffu) {
         ret = CRYPT_ECC_POINT_NOT_ON_CURVE;
         BSL_ERR_PUSH_ERROR(ret);
     }
@@ -483,10 +463,10 @@ int32_t ECP_LitePointMul(ECC_Para *para, ECC_Point *r, const ECC_LiteBn *k, cons
     (void)memcpy(reg[RG_R0Z], reg[RG_ONE], sizeof(Fe));
     LiteRunProg(LITE_DBL_BASE, reg, para); // R1 = 2 * base
 
-    // dblAdd leaves T4/T5 unused. Select k+n or k+2n with an implicit high 1 bit.
+    // Select k+n or k+2n with an implicit high 1 bit.
     uint32_t numBits = para->bytes * 8u;
     BN_UINT *kk = reg[RG_T4];
-    BN_UINT *k1 = reg[RG_T5];
+    BN_UINT *k1 = reg[RG_T0];
     const BN_UINT *order = EccLiteParaData(para, ECC_LITE_N);
     BN_UINT carry = liteBinAdd(kk, k->data, order, n);
     (void)liteBinAdd(k1, kk, order, n);
@@ -508,10 +488,10 @@ int32_t ECP_LitePointMul(ECC_Para *para, ECC_Point *r, const ECC_LiteBn *k, cons
     (void)memset(reg[RG_T0], 0, sizeof(Fe));
     LiteFSub(reg[RG_T0], reg[RG_T0], reg[RG_YP], p, n);
     BinSelectByMaskConsttime(reg[RG_T4], reg[RG_XP], reg[RG_T4], n, negative);
-    BinSelectByMaskConsttime(reg[RG_T5], reg[RG_T0], reg[RG_T5], n, negative);
+    BinSelectByMaskConsttime(reg[RG_T1], reg[RG_T0], reg[RG_T1], n, negative);
     r->id = para->id;
     EccLiteBnSetWords(&r->x, reg[RG_T4], n);
-    EccLiteBnSetWords(&r->y, reg[RG_T5], n);
+    EccLiteBnSetWords(&r->y, reg[RG_T1], n);
     EccLiteBnSetLimb(&r->z, 1u ^ infinity);
     BSL_SAL_CleanseData(reg, sizeof(reg));
     return CRYPT_SUCCESS;
