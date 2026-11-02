@@ -126,7 +126,8 @@ static int32_t OcspCertIdMatchesCert(const HITLS_OCSP_CertId *certId, const BSL_
     if (respSerial.dataLen != serial->dataLen || memcmp(respSerial.data, serial->data, serial->dataLen) != 0) {
         return HITLS_OCSP_ERR_CERTID_NOT_FOUND;
     }
-    /* Hash the certificate's issuer DN with the same algorithm as the CertID. */
+    /* Hash the certificate's issuer DN with the same algorithm as the CertID.
+     * Use MdNewCtx so the digest CPU capability check (CRYPT_ASMCAP_Md) applies. */
     CRYPT_EAL_MdCtx *md = CRYPT_EAL_MdNewCtx(hashAlg);
     if (md == NULL) {
         BSL_ERR_PUSH_ERROR(HITLS_MEMALLOC_FAIL);
@@ -134,20 +135,22 @@ static int32_t OcspCertIdMatchesCert(const HITLS_OCSP_CertId *certId, const BSL_
     }
     uint8_t digest[64] = {0}; /* SHA-512 is the largest supported digest */
     uint32_t digestLen = sizeof(digest);
-    int32_t hr = CRYPT_EAL_MdInit(md);
-    if (hr == CRYPT_SUCCESS) {
-        hr = CRYPT_EAL_MdUpdate(md, issuerDn->data, issuerDn->dataLen);
+    ret = CRYPT_EAL_MdInit(md);
+    if (ret == CRYPT_SUCCESS) {
+        ret = CRYPT_EAL_MdUpdate(md, issuerDn->data, issuerDn->dataLen);
     }
-    if (hr == CRYPT_SUCCESS) {
-        hr = CRYPT_EAL_MdFinal(md, digest, &digestLen);
+    if (ret == CRYPT_SUCCESS) {
+        ret = CRYPT_EAL_MdFinal(md, digest, &digestLen);
     }
     CRYPT_EAL_MdFreeCtx(md);
-    if (hr != CRYPT_SUCCESS) {
-        return hr;
+    if (ret != CRYPT_SUCCESS) {
+        return ret;
     }
-    return (respIssuerHash.dataLen == digestLen && memcmp(respIssuerHash.data, digest, digestLen) == 0) ?
-               HITLS_SUCCESS :
-               HITLS_OCSP_ERR_CERTID_NOT_FOUND;
+    if (respIssuerHash.dataLen != digestLen ||
+        memcmp(respIssuerHash.data, digest, digestLen) != 0) {
+        return HITLS_OCSP_ERR_CERTID_NOT_FOUND;
+    }
+    return HITLS_SUCCESS;
 }
 
 /* Decide whether a prepared OCSP response should be stapled for the given
