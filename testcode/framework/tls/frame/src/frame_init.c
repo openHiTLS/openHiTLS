@@ -54,7 +54,9 @@ void FRAME_Init(void)
 {
     BSL_SAL_CallBack_Ctrl(BSL_SAL_MEM_MALLOC, StdMalloc);
     BSL_SAL_CallBack_Ctrl(BSL_SAL_MEM_FREE, StdFree);
-    BSL_ERR_Init();
+    if (BSL_ERR_Init() != BSL_SUCCESS) {
+        return;
+    }
 #ifdef TLS_DEBUG
     BSL_LOG_SetBinLogLevel(BSL_LOG_LEVEL_DEBUG);
     BSL_LOG_BinLogFuncs logFunc = { BinLogFixLenFunc, BinLogVarLenFunc };

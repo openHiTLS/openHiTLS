@@ -82,7 +82,9 @@ void RegDefaultMemCallback(void)
 {
     BSL_SAL_CallBack_Ctrl(BSL_SAL_MEM_MALLOC, malloc);
     BSL_SAL_CallBack_Ctrl(BSL_SAL_MEM_FREE, free);
-    BSL_ERR_Init();
+    if (BSL_ERR_Init() != BSL_SUCCESS) {
+        return;
+    }
     BSL_LOG_SetBinLogLevel(BSL_LOG_LEVEL_DEBUG);
 #ifdef TLS_DEBUG
     BSL_LOG_BinLogFuncs logFunc = { BinLogFixLenFunc, BinLogVarLenFunc };

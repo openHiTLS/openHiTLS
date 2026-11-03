@@ -1457,7 +1457,6 @@ static uint64_t pthreadGetId(void)
 /* BEGIN_CASE */
 void SDV_CRYPTO_RSA_REFERENCES_API_TC001(Hex *n, Hex *d, int isProvider)
 {
-    BSL_ERR_Init();
     pthread_t pid1;
     pthread_t pid2;
     CRYPT_EAL_PkeyPrv prvkey = {0};
@@ -1466,8 +1465,8 @@ void SDV_CRYPTO_RSA_REFERENCES_API_TC001(Hex *n, Hex *d, int isProvider)
     CRYPT_EAL_PkeyCtx *pkey2 = NULL;
 
     SetRsaPrvKey(&prvkey, n->x, n->len, d->x, d->len);
-
     TestMemInit();
+    ASSERT_EQ(BSL_ERR_Init(), BSL_SUCCESS);
     ASSERT_TRUE(BSL_SAL_CallBack_Ctrl(BSL_SAL_THREAD_LOCK_NEW_CB_FUNC, pthreadRWLockNew) == BSL_SUCCESS);
     ASSERT_TRUE(BSL_SAL_CallBack_Ctrl(BSL_SAL_THREAD_LOCK_FREE_CB_FUNC, pthreadRWLockFree) == BSL_SUCCESS);
     ASSERT_TRUE(BSL_SAL_CallBack_Ctrl(BSL_SAL_THREAD_LOCK_READ_LOCK_CB_FUNC, pthreadRWLockReadLock) == BSL_SUCCESS);

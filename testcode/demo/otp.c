@@ -110,7 +110,9 @@ int32_t validateTotp(HITLS_AUTH_OtpCtx *ctx, BslUnixTime curTime, char *otp, uin
 
 int main()
 {
-    BSL_ERR_Init(); // Initialize error code module
+    if (BSL_ERR_Init() != BSL_SUCCESS) { // Initialize error code module
+        return 1;
+    }
     BSL_SAL_CallBack_Ctrl(BSL_SAL_MEM_MALLOC, StdMalloc); // Register memory allocation function
     BSL_SAL_CallBack_Ctrl(BSL_SAL_MEM_FREE, free); // Register memory free function
     int32_t ret = 1;

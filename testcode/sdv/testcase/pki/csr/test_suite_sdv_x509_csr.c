@@ -121,6 +121,8 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_X509_CSR_New_FUNC_TC001(void)
 {
+    /* Create the one-time error lock before injecting an allocation failure. */
+    TestErrClear();
     TestMemInitErr();
     HITLS_X509_Csr *csr = HITLS_X509_CsrNew();
     ASSERT_EQ(csr, NULL);

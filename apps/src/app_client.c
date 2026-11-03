@@ -945,7 +945,10 @@ int HITLS_ClientMain(int argc, char *argv[])
 
     /* Initialize library */
     /* BSL memory callbacks are already set up in BSL module */
-    BSL_ERR_Init();
+    ret = BSL_ERR_Init();
+    if (ret != BSL_SUCCESS) {
+        return HITLS_APP_INIT_FAILED;
+    }
 
     /* Initialize print UIO for error and info output */
     ret = AppPrintErrorUioInit(stderr);

@@ -520,7 +520,6 @@ int32_t CRYPT_EAL_RandInit(CRYPT_RAND_AlgId id, CRYPT_RandSeedMethod *seedMeth, 
 {
     CRYPT_EAL_RndCtx *ctx = NULL;
     if (g_globalRndCtx != NULL) { // Prevent DRBG repeated Init
-        BSL_ERR_PUSH_ERROR(CRYPT_EAL_ERR_DRBG_REPEAT_INIT);
         return CRYPT_EAL_ERR_DRBG_REPEAT_INIT;
     }
     int32_t ret = DrbgParaIsValid(id, seedMeth, seedCtx, pers, persLen);

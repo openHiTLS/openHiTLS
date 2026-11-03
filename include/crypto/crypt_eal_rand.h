@@ -111,6 +111,8 @@ int32_t CRYPT_EAL_RandInit(CRYPT_RAND_AlgId id, CRYPT_RandSeedMethod *seedMeth, 
  * @ingroup crypt_eal_rand
  * @brief   Random number initialization in the providers.
  *
+ * @attention: This interface does not support concurrent initialization or deinitialization,
+ * direct callers must serialize access to the same libCtx.
  * @param libCtx [IN] Library context
  * @param algId [IN] rand algorithm ID.
  * @param attrName [IN] Specify expected attribute values

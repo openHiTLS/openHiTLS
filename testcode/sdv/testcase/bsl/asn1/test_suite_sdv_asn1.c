@@ -1494,11 +1494,11 @@ void SDV_BSL_ASN1_TO_UTF8_STRING_FUNC_TC001(int tag, char *path, char *expectPat
     (void)expectPath;
     SKIP_TEST();
 #else
-    BSL_ERR_Init();
     BSL_ASN1_Buffer in = {0};
     BSL_ASN1_Buffer out = {0};
     BSL_ASN1_Buffer expectOut = {0};
     in.tag = (uint8_t)tag;
+    ASSERT_EQ(BSL_ERR_Init(), BSL_SUCCESS);
     ASSERT_EQ(ReadHexFileAsBytes(path, &in), BSL_SUCCESS);
     ASSERT_EQ(ReadHexFileAsBytes(expectPath, &expectOut), BSL_SUCCESS);
 

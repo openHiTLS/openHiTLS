@@ -234,7 +234,9 @@ int32_t CRYPT_EAL_Init(uint64_t opts)
     }
 
     /*
-     * Init order: CPU → BSL → Lock → Provider → ProviderRand → Rand.
+     * Init order: CPU → Lock → Provider → ProviderRand → Rand.
+     * BSL is not initialized here: the BSL error module creates its lock lazily
+     * on first use, so the BSL init step is a no-op.
      * The seed lock must exist before the DRBG inits of ProviderRand and Rand,
      * because EAL_GetDefaultSeed() can be called during DRBG instantiation.
      */

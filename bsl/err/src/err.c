@@ -81,25 +81,30 @@ BSL_SAL_DECLARE_THREAD_ONCE(g_isErrInit);
 /* Handle of the thread lock */
 static BSL_SAL_ThreadLockHandle g_errLock = NULL;
 
-static void ErrAutoInit(void)
+/* Result of the one-time lock creation, published by the run-once routine. */
+static int32_t g_errLockInitRet = BSL_SUCCESS;
+
+static void ErrLockCreate(void)
 {
-    /* Attempting self-initialization in abnormal conditions */
-    (void)BSL_ERR_Init();
+    g_errLockInitRet = BSL_SAL_ThreadLockNew(&g_errLock);
 }
 
 int32_t BSL_ERR_Init(void)
 {
-    g_outputFunc = NULL;
-    if (g_errLock != NULL) {
-        return BSL_SUCCESS;
+    /* Serialize both direct callers (e.g. BSL_GLOBAL_Init) and implicit callers (error APIs). */
+    int32_t ret = BSL_SAL_ThreadRunOnce(&g_isErrInit, ErrLockCreate);
+    if (ret != BSL_SUCCESS) {
+        return ret;
     }
-
-    return BSL_SAL_ThreadLockNew(&g_errLock);
+    /* ErrLockCreate runs at most once; a failed creation stays failed until BSL_ERR_DeInit. */
+    return g_errLockInitRet;
 }
 
 void BSL_ERR_DeInit(void)
 {
     (void)memset(&g_isErrInit, 0, sizeof(g_isErrInit));
+    /* Clear the callback with the rest of the module state so it does not survive re-initialization. */
+    g_outputFunc = NULL;
     if (g_errLock == NULL) {
         return;
     }
@@ -169,7 +174,9 @@ void BSL_ERR_PushError(int32_t err, const char *file, uint32_t lineNo)
         /* push success is not allowed. */
         return;
     }
-    (void)BSL_SAL_ThreadRunOnce(&g_isErrInit, ErrAutoInit);
+    if (BSL_ERR_Init() != BSL_SUCCESS) {
+        return;
+    }
     int32_t ret = BSL_SAL_ThreadWriteLock(g_errLock);
     if (ret != BSL_SUCCESS) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID05007, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
@@ -194,7 +201,9 @@ void BSL_ERR_PushError(int32_t err, const char *file, uint32_t lineNo)
 
 void BSL_ERR_ClearError(void)
 {
-    (void)BSL_SAL_ThreadRunOnce(&g_isErrInit, ErrAutoInit);
+    if (BSL_ERR_Init() != BSL_SUCCESS) {
+        return;
+    }
 
     uint64_t threadId = BSL_SAL_ThreadGetId();
     int32_t ret = BSL_SAL_ThreadWriteLock(g_errLock);
@@ -218,7 +227,9 @@ void BSL_ERR_ClearError(void)
 
 void BSL_ERR_RemoveErrorStack(bool isRemoveAll)
 {
-    (void)BSL_SAL_ThreadRunOnce(&g_isErrInit, ErrAutoInit);
+    if (BSL_ERR_Init() != BSL_SUCCESS) {
+        return;
+    }
 
     int32_t ret = BSL_SAL_ThreadWriteLock(g_errLock);
     if (ret != BSL_SUCCESS) {
@@ -270,7 +281,11 @@ static int32_t GetErrorInfo(const char **file, uint32_t *lineNo, bool clr, bool 
 {
     uint16_t idx;
 
-    int32_t ret = BSL_SAL_ThreadReadLock(g_errLock);
+    int32_t ret = BSL_ERR_Init();
+    if (ret != BSL_SUCCESS) {
+        return ret;
+    }
+    ret = BSL_SAL_ThreadReadLock(g_errLock);
     if (ret != BSL_SUCCESS) {
         return BSL_ERR_ERR_ACQUIRE_READ_LOCK_FAIL;
     }
@@ -406,7 +421,11 @@ int32_t BSL_ERR_AddErrStringBatch(const BSL_ERR_Desc *descList, uint32_t num)
     if (descList == NULL || num == 0) {
         return BSL_NULL_INPUT;
     }
-    int32_t ret = BSL_SAL_ThreadWriteLock(g_errLock);
+    int32_t ret = BSL_ERR_Init();
+    if (ret != BSL_SUCCESS) {
+        return ret;
+    }
+    ret = BSL_SAL_ThreadWriteLock(g_errLock);
     if (ret != BSL_SUCCESS) {
         return ret;
     }
@@ -422,6 +441,9 @@ int32_t BSL_ERR_AddErrStringBatch(const BSL_ERR_Desc *descList, uint32_t num)
 
 void BSL_ERR_RemoveErrStringBatch(void)
 {
+    if (BSL_ERR_Init() != BSL_SUCCESS) {
+        return;
+    }
     int32_t ret = BSL_SAL_ThreadWriteLock(g_errLock);
     if (ret != BSL_SUCCESS) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID05085, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
@@ -440,7 +462,11 @@ const char *BSL_ERR_GetString(int32_t error)
     if (error < 0) {
         return NULL;
     }
-    int32_t ret = BSL_SAL_ThreadWriteLock(g_errLock);
+    int32_t ret = BSL_ERR_Init();
+    if (ret != BSL_SUCCESS) {
+        return NULL;
+    }
+    ret = BSL_SAL_ThreadWriteLock(g_errLock);
     if (ret != BSL_SUCCESS) {
         return NULL;
     }
@@ -460,7 +486,11 @@ const char *BSL_ERR_GetString(int32_t error)
 
 static int32_t BSL_LIST_WriteLockCreate(ErrorCodeStack **errStack, uint32_t *top)
 {
-    int32_t ret = BSL_SAL_ThreadWriteLock(g_errLock);
+    int32_t ret = BSL_ERR_Init();
+    if (ret != BSL_SUCCESS) {
+        return ret;
+    }
+    ret = BSL_SAL_ThreadWriteLock(g_errLock);
     if (ret != BSL_SUCCESS) {
         return BSL_ERR_ERR_ACQUIRE_WRITE_LOCK_FAIL;
     }
@@ -563,7 +593,9 @@ void BSL_ERR_OutputErrorStack(void)
     ErrorOutputItem items[SAL_MAX_ERROR_STACK];
     uint16_t itemCount = 0;
 
-    (void)BSL_SAL_ThreadRunOnce(&g_isErrInit, ErrAutoInit);
+    if (BSL_ERR_Init() != BSL_SUCCESS) {
+        return;
+    }
     int32_t ret = BSL_SAL_ThreadReadLock(g_errLock);
     if (ret != BSL_SUCCESS) {
         return;
@@ -608,7 +640,9 @@ void BSL_ERR_OutputErrorStack(void)
 
 void BSL_ERR_RegErrStackLog(BSL_ERR_OutputFunc func)
 {
-    (void)BSL_SAL_ThreadRunOnce(&g_isErrInit, ErrAutoInit);
+    if (BSL_ERR_Init() != BSL_SUCCESS) {
+        return;
+    }
     int32_t ret = BSL_SAL_ThreadWriteLock(g_errLock);
     if (ret != BSL_SUCCESS) {
         return;

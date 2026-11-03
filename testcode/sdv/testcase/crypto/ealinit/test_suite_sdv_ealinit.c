@@ -753,8 +753,8 @@ EXIT:
 /**
  * @test SDV_CRYPT_INIT_ROLLBACK_TC003
  * @precon Provider and DRBG are enabled.
- * @brief Provider RAND creates the global provider; the following RAND step fails.
- * @expect Rollback frees the new provider and preserves the caller's existing RAND.
+ * @brief The global DRBG is already initialized when EAL init runs the RAND step.
+ * @expect Repeated RAND init succeeds, keeps the new provider, and does not take it back.
  */
 /* BEGIN_CASE */
 void SDV_CRYPT_INIT_ROLLBACK_TC003(void)
@@ -767,10 +767,13 @@ void SDV_CRYPT_INIT_ROLLBACK_TC003(void)
     ASSERT_EQ(ForceRandInitFailure(), CRYPT_SUCCESS);
     g_initProviderCreates = 0;
     STUB_REPLACE(GetCurrentProviderLibCtx, STUB_GetCurrentProviderLibCtx_Fresh);
-    ASSERT_EQ(CRYPT_EAL_Init(CRYPT_EAL_INIT_RAND | CRYPT_EAL_INIT_PROVIDER_RAND), CRYPT_EAL_ERR_DRBG_REPEAT_INIT);
+    ASSERT_EQ(CRYPT_EAL_Init(CRYPT_EAL_INIT_RAND | CRYPT_EAL_INIT_PROVIDER_RAND), CRYPT_SUCCESS);
     ASSERT_EQ(g_initProviderCreates, 1);
-    ASSERT_TRUE(CRYPT_EAL_GetGlobalLibCtx() == NULL);
+    ASSERT_TRUE(CRYPT_EAL_GetGlobalLibCtx() != NULL);
     ASSERT_EQ(CRYPT_EAL_Randbytes(output, sizeof(output)), CRYPT_SUCCESS);
+    /* Repeated init must still succeed and must not create the provider again. */
+    ASSERT_EQ(CRYPT_EAL_Init(CRYPT_EAL_INIT_RAND | CRYPT_EAL_INIT_PROVIDER_RAND), CRYPT_SUCCESS);
+    ASSERT_EQ(g_initProviderCreates, 1);
 EXIT:
     STUB_RESTORE(GetCurrentProviderLibCtx);
     CRYPT_EAL_RandDeinit();
@@ -836,6 +839,8 @@ void SDV_CRYPT_INIT_ROLLBACK_TC004(int failOpt, int preOpts, int initOpts, int r
 
     ASSERT_EQ(CRYPT_EAL_Init(initOpts), CRYPT_MEM_ALLOC_FAIL);
     ASSERT_EQ(g_initRollback.attempted, (uint64_t)(rollbackOpts | failOpt));
+    /* BSL is no longer initialized by CRYPT_EAL_Init, so it is neither attempted nor rolled back. */
+    ASSERT_EQ(g_initRollback.attempted & CRYPT_EAL_INIT_BSL, 0);
     ASSERT_EQ(g_initRollback.bslFrees, (rollbackOpts & CRYPT_EAL_INIT_BSL) != 0);
     ASSERT_EQ(g_initRollback.lockFrees, (rollbackOpts & CRYPT_EAL_INIT_LOCK) != 0);
     ASSERT_EQ(g_initRollback.providerFrees, (rollbackOpts & CRYPT_EAL_INIT_PROVIDER) != 0);
@@ -882,6 +887,40 @@ EXIT:
     (void)preOpts;
     (void)initOpts;
     (void)rollbackOpts;
+    SKIP_TEST();
+#endif
+}
+/* END_CASE */
+
+/**
+ * @test SDV_CRYPT_INIT_BSL_LAZY_TC001
+ * @precon BSL, entropy, provider and DRBG are enabled.
+ * @brief CRYPT_EAL_Init must not initialize BSL.
+ * @expect Init succeeds without calling BSL_GLOBAL_Init; error reporting is lazily initialized.
+ */
+/* BEGIN_CASE */
+void SDV_CRYPT_INIT_BSL_LAZY_TC001(void)
+{
+#if defined(HITLS_BSL_INIT) && defined(HITLS_CRYPTO_ENTROPY) && \
+    defined(HITLS_CRYPTO_PROVIDER) && defined(HITLS_CRYPTO_DRBG)
+    CRYPT_EAL_Cleanup(CRYPT_EAL_INIT_ALL);
+    ResetStatus();
+    g_initFailOpt = CRYPT_EAL_INIT_BSL;
+    memset(&g_initRollback, 0, sizeof(g_initRollback));
+    STUB_REPLACE(BSL_GLOBAL_Init, STUB_BSL_GLOBAL_Init_Fail);
+    ASSERT_EQ(CRYPT_EAL_Init(CRYPT_EAL_INIT_ALL), CRYPT_SUCCESS);
+    ASSERT_EQ(g_initRollback.attempted & CRYPT_EAL_INIT_BSL, 0);
+    /* The BSL error stack is initialized lazily on first use. */
+    BSL_ERR_ClearError();
+    BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
+    ASSERT_EQ(BSL_ERR_GetLastError(), CRYPT_MEM_ALLOC_FAIL);
+    BSL_ERR_ClearError();
+EXIT:
+    g_initFailOpt = 0;
+    STUB_RESTORE(BSL_GLOBAL_Init);
+    CRYPT_EAL_Cleanup(CRYPT_EAL_INIT_ALL);
+    ResetStatus();
+#else
     SKIP_TEST();
 #endif
 }

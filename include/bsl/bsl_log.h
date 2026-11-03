@@ -145,6 +145,8 @@ typedef struct {
  * @brief   Set the fixed-length and variable-length callback function for binlogs.
  *
  * @attention The input parameter can be NULL.
+ * @attention This function updates process-global configuration and is not thread-safe
+ * with concurrent callers that read or write the same setting.
  * @param   funcs [IN] Callback function pointer collection of the binlog.
  *          The parameter cannot be null, but the member of the structure can be null.
  * @retval  #BSL_SUCCESS.
@@ -156,6 +158,8 @@ int32_t BSL_LOG_RegBinLogFunc(const BSL_LOG_BinLogFuncs *funcs);
  * @brief   Set the level of binlogs.
  *
  * @attention The level must be valid.
+ * @attention This function updates process-global configuration and is not thread-safe
+ * with concurrent callers that read or write the same setting.
  * @param   level [IN] Level of the binlogs. The valid values are BSL_LOG_LEVEL_SEC, BSL_LOG_LEVEL_FATAL,
  *          BSL_LOG_LEVEL_ERR, BSL_LOG_LEVEL_WARN, BSL_LOG_LEVEL_INFO, BSL_LOG_LEVEL_DEBUG
  * @retval  #BSL_SUCCESS.
@@ -167,6 +171,8 @@ int32_t BSL_LOG_SetBinLogLevel(uint32_t level);
  * @ingroup bsl_log
  * @brief   Obtain the level of binlogs.
  *
+ * @attention This function reads process-global configuration and is not thread-safe if
+ * another thread may update the same setting concurrently.
  * @retval  Level of the binlog. The value can be BSL_LOG_LEVEL_SEC, BSL_LOG_LEVEL_FATAL, BSL_LOG_LEVEL_ERR,
  *          BSL_LOG_LEVEL_WARN, BSL_LOG_LEVEL_INFO, BSL_LOG_LEVEL_DEBUG
  */
