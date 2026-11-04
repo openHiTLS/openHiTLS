@@ -618,7 +618,11 @@ int32_t HITLS_OCSP_BasicRespGetRespByIndex(const HITLS_OCSP_BasicResp *bs, uint3
         BSL_ERR_PUSH_ERROR(HITLS_OCSP_ERR_INVALID_PARAM);
         return HITLS_OCSP_ERR_INVALID_PARAM;
     }
-    *single = (HITLS_OCSP_SingleResp *)BSL_LIST_GetIndexNode(index, internal->responses);
+    /* Indexed access via the cursor-free accessor: a BasicResp can be shared
+     * read-only across threads (e.g. the TLS server lending one cached response to
+     * concurrent handshakes), and BSL_LIST_GetIndexNode would mutate the list's
+     * shared internal cursor (curr), racing between concurrent readers. */
+    *single = (HITLS_OCSP_SingleResp *)BSL_LIST_GetIndexNodeEx(index, NULL, internal->responses);
     return HITLS_PKI_SUCCESS;
 }
 

@@ -387,7 +387,10 @@ int32_t HITLS_OCSP_ReqGetSingleReqByIndex(const HITLS_OCSP_Req *req, uint32_t in
         BSL_ERR_PUSH_ERROR(HITLS_OCSP_ERR_INVALID_PARAM);
         return HITLS_OCSP_ERR_INVALID_PARAM;
     }
-    *singleReq = (HITLS_OCSP_SingleReq *)BSL_LIST_GetIndexNode(index, internal->singleReqs);
+    /* Indexed access via the cursor-free accessor: a Req may be read
+     * concurrently, and BSL_LIST_GetIndexNode would mutate the list's shared
+     * internal cursor (curr), racing between concurrent readers. */
+    *singleReq = (HITLS_OCSP_SingleReq *)BSL_LIST_GetIndexNodeEx(index, NULL, internal->singleReqs);
     return HITLS_PKI_SUCCESS;
 }
 
