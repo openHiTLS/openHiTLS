@@ -7658,3 +7658,168 @@ EXIT:
 #endif
 }
 /* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_OCSP_EXT_NULL_OUTPUT_TC067(void)
+{
+#ifdef HITLS_PKI_OCSP
+    ASSERT_EQ(OcspTestGlobalSetup(), 0);
+    HITLS_X509_Cert *cert = g_chain1.ee;
+    ASSERT_TRUE(cert != NULL);
+
+    /* A NULL output pointer with the correct length must return INVALID_PARAM
+     * instead of being dereferenced by the extension GET/CHECK handlers. */
+    ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_EXT_GET_EXKUSAGE, NULL, sizeof(HITLS_X509_ExtExKeyUsage)),
+              HITLS_X509_ERR_INVALID_PARAM);
+    ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_EXT_GET_GENERIC, NULL, sizeof(HITLS_X509_ExtGeneric)),
+              HITLS_X509_ERR_INVALID_PARAM);
+    ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_EXT_GET_AKI, NULL, sizeof(HITLS_X509_ExtAki)),
+              HITLS_X509_ERR_INVALID_PARAM);
+    ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_EXT_CHECK_SKI, NULL, sizeof(bool)),
+              HITLS_X509_ERR_INVALID_PARAM);
+
+    /* The normal path on the same certificate is unaffected. */
+    HITLS_X509_ExtExKeyUsage exku = {0};
+    int32_t ret = HITLS_X509_CertCtrl(cert, HITLS_X509_EXT_GET_EXKUSAGE, &exku, sizeof(exku));
+    ASSERT_TRUE(ret == HITLS_PKI_SUCCESS || ret == HITLS_X509_ERR_EXT_NOT_FOUND);
+
+EXIT:;
+#else
+    SKIP_TEST();
+#endif
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_OCSP_STRICT_GENERALNAME_PARSE_TC068(void)
+{
+#ifdef HITLS_PKI_OCSP
+    HITLS_OCSP_CertId *cid = NULL;
+    HITLS_OCSP_SingleReq *sr = NULL;
+    HITLS_OCSP_Req *req = NULL;
+    HITLS_OCSP_Req *parsedReq = NULL;
+    HITLS_OCSP_SingleResp *goodSr = NULL;
+    HITLS_OCSP_SingleResp *srArr[1] = {NULL};
+    HITLS_OCSP_BasicResp *bs = NULL;
+    HITLS_OCSP_Resp *resp = NULL;
+    HITLS_OCSP_Resp *parsedResp = NULL;
+    BSL_Buffer reqDer = {0};
+    BSL_Buffer respDer = {0};
+    uint8_t bad[4096] = {0};
+    BSL_Buffer badBuf = {0};
+    bool found = false;
+    ASSERT_EQ(OcspTestGlobalSetup(), 0);
+
+    /* Valid signed request (requestorName = directoryName [4]). */
+    cid = HITLS_OCSP_CertIdNewFromCert(g_mdCtx, g_chain1.ee, g_chain1.intermediate);
+    ASSERT_TRUE(cid != NULL);
+    sr = HITLS_OCSP_SingleReqNew(cid);
+    ASSERT_TRUE(sr != NULL);
+    cid = NULL;
+    req = HITLS_OCSP_ReqNew();
+    ASSERT_TRUE(req != NULL);
+    ASSERT_EQ(HITLS_OCSP_ReqCtrl(req, HITLS_OCSP_REQ_ADD_SINGLEREQ, sr, sizeof(sr)), HITLS_PKI_SUCCESS);
+    sr = NULL;
+    ASSERT_EQ(HITLS_OCSP_ReqSign(CRYPT_MD_SHA256, g_chain1.intermediateKey, NULL, g_chain1.intermediate, NULL, req, 0),
+              HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_OCSP_ReqGenBuff(BSL_FORMAT_ASN1, req, &reqDer), HITLS_PKI_SUCCESS);
+
+    /* OCSP-001: requestorName [1] contains a Name directly (30 ...) instead of a
+     * GeneralName -> INVALID_REQUEST. Locate the A1 wrapper holding the A4 GeneralName. */
+    ASSERT_TRUE(reqDer.dataLen <= sizeof(bad));
+    memset(bad, 0, sizeof(bad));
+    memcpy(bad, reqDer.data, reqDer.dataLen);
+    found = false;
+    for (uint32_t i = 0; i + 2 < reqDer.dataLen; i++) {
+        if (bad[i] == 0xa1 && (bad[i + 1] & 0x80) == 0 && bad[i + 2] == 0xa4) {
+            bad[i + 2] = 0x30;
+            found = true;
+            break;
+        }
+    }
+    ASSERT_TRUE(found);
+    badBuf = (BSL_Buffer){bad, reqDer.dataLen};
+    ASSERT_EQ(HITLS_OCSP_ReqParseBuff(BSL_FORMAT_ASN1, &badBuf, &parsedReq), HITLS_OCSP_ERR_INVALID_REQUEST);
+    ASSERT_TRUE(parsedReq == NULL);
+
+    /* OCSP-002: requestorName [1] carries trailing bytes after the GeneralName ->
+     * INVALID_REQUEST. Shorten the inner A4 Name length so two bytes remain. */
+    memset(bad, 0, sizeof(bad));
+    memcpy(bad, reqDer.data, reqDer.dataLen);
+    found = false;
+    for (uint32_t i = 0; i + 3 < reqDer.dataLen; i++) {
+        if (bad[i] == 0xa1 && (bad[i + 1] & 0x80) == 0 && bad[i + 2] == 0xa4 && (bad[i + 3] & 0x80) == 0 &&
+            bad[i + 3] >= 2) {
+            bad[i + 3] = bad[i + 3] - 2;
+            found = true;
+            break;
+        }
+    }
+    ASSERT_TRUE(found);
+    badBuf = (BSL_Buffer){bad, reqDer.dataLen};
+    ASSERT_EQ(HITLS_OCSP_ReqParseBuff(BSL_FORMAT_ASN1, &badBuf, &parsedReq), HITLS_OCSP_ERR_INVALID_REQUEST);
+    ASSERT_TRUE(parsedReq == NULL);
+
+    /* Valid signed response (good status, byName responderID). */
+    goodSr = OcspTestCreateSingleResp(g_mdCtx, g_chain1.ee, g_chain1.intermediate, HITLS_OCSP_CERT_STATUS_GOOD);
+    ASSERT_TRUE(goodSr != NULL);
+    srArr[0] = goodSr;
+    bs = OcspTestCreateBasicResp(g_chain1.intermediate, g_chain1.intermediateKey, NULL, srArr, 1, NULL);
+    ASSERT_TRUE(bs != NULL);
+    resp = HITLS_OCSP_RespNew(HITLS_OCSP_RESP_STATUS_SUCCESSFUL, bs);
+    ASSERT_TRUE(resp != NULL);
+    bs = NULL;
+    ASSERT_EQ(HITLS_OCSP_RespGenBuff(BSL_FORMAT_ASN1, resp, &respDer), HITLS_PKI_SUCCESS);
+
+    /* OCSP-003: responderID.byName [1] holds an OCTET STRING instead of a Name ->
+     * INVALID_RESPONSE. The byName wrapper is the first A1 whose content starts 30. */
+    ASSERT_TRUE(respDer.dataLen <= sizeof(bad));
+    memset(bad, 0, sizeof(bad));
+    memcpy(bad, respDer.data, respDer.dataLen);
+    found = false;
+    for (uint32_t i = 0; i + 2 < respDer.dataLen; i++) {
+        if (bad[i] == 0xa1 && (bad[i + 1] & 0x80) == 0 && bad[i + 2] == 0x30) {
+            bad[i + 2] = 0x04;
+            found = true;
+            break;
+        }
+    }
+    ASSERT_TRUE(found);
+    badBuf = (BSL_Buffer){bad, respDer.dataLen};
+    ASSERT_EQ(HITLS_OCSP_RespParseBuff(BSL_FORMAT_ASN1, &badBuf, &parsedResp), HITLS_OCSP_ERR_INVALID_RESPONSE);
+    ASSERT_TRUE(parsedResp == NULL);
+
+    /* OCSP-004: responderID.byName [1] carries trailing bytes after the Name ->
+     * INVALID_RESPONSE. Shorten the inner Name length so two bytes remain. */
+    memset(bad, 0, sizeof(bad));
+    memcpy(bad, respDer.data, respDer.dataLen);
+    found = false;
+    for (uint32_t i = 0; i + 3 < respDer.dataLen; i++) {
+        if (bad[i] == 0xa1 && (bad[i + 1] & 0x80) == 0 && bad[i + 2] == 0x30 && (bad[i + 3] & 0x80) == 0 &&
+            bad[i + 3] >= 2) {
+            bad[i + 3] = bad[i + 3] - 2;
+            found = true;
+            break;
+        }
+    }
+    ASSERT_TRUE(found);
+    badBuf = (BSL_Buffer){bad, respDer.dataLen};
+    ASSERT_EQ(HITLS_OCSP_RespParseBuff(BSL_FORMAT_ASN1, &badBuf, &parsedResp), HITLS_OCSP_ERR_INVALID_RESPONSE);
+    ASSERT_TRUE(parsedResp == NULL);
+
+EXIT:
+    BSL_SAL_FREE(reqDer.data);
+    BSL_SAL_FREE(respDer.data);
+    HITLS_OCSP_CertIdFree(cid);
+    HITLS_OCSP_SingleReqFree(sr);
+    HITLS_OCSP_SingleRespFree(srArr[0]);
+    HITLS_OCSP_BasicRespFree(bs);
+    HITLS_OCSP_ReqFree(req);
+    HITLS_OCSP_RespFree(resp);
+    HITLS_OCSP_ReqFree(parsedReq);
+    HITLS_OCSP_RespFree(parsedResp);
+#else
+    SKIP_TEST();
+#endif
+}
+/* END_CASE */

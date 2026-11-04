@@ -250,3 +250,9 @@ SDV_OCSP_EC_CERTID_SPKI_COMPRESSED_TC065
 
 Same EC public key compressed vs uncompressed yields different CertID issuerKeyHash
 SDV_OCSP_EC_CERTID_COMPRESS_TC066
+
+Extension GET/CHECK with NULL output pointer returns INVALID_PARAM instead of crashing
+SDV_OCSP_EXT_NULL_OUTPUT_TC067
+
+Strict GeneralName parsing: requestorName/byName must be exactly one well-formed TLV
+SDV_OCSP_STRICT_GENERALNAME_PARSE_TC068

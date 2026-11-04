@@ -76,7 +76,11 @@ int32_t HITLS_X509_GetEncodeDn(BslList *list, void *val, uint32_t valLen)
 
     ret = BSL_ASN1_EncodeTemplate(&templ, &tmp, 1, &res->data, &res->dataLen);
     BSL_SAL_Free(tmp.buff);
-    return ret;
+    if (ret != BSL_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        return ret;
+    }
+    return HITLS_PKI_SUCCESS;
 }
 #endif
 

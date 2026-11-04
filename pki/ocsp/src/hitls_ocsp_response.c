@@ -1970,9 +1970,8 @@ static int32_t OcspParseRevokedInfo(const BSL_ASN1_Buffer *certStatusAsn, HITLS_
         return HITLS_OCSP_ERR_INVALID_RESPONSE;
     }
 
-    ret = BSL_ASN1_DecodePrimitiveItem(&asns[REVOKED_INFO_DEC_TIME_IDX], &sr->revocationTime);
-    if (ret != BSL_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
+    ret = OcspDecodeGeneralizedTime(&asns[REVOKED_INFO_DEC_TIME_IDX], &sr->revocationTime);
+    if (ret != HITLS_PKI_SUCCESS) {
         return ret;
     }
     sr->hasRevocationTime = true;
@@ -1999,6 +1998,10 @@ static int32_t OcspParseRevokedInfo(const BSL_ASN1_Buffer *certStatusAsn, HITLS_
 static int32_t OcspParseCertStatus(const BSL_ASN1_Buffer *csAsn, HITLS_OCSP_SingleResp_Internal *sr)
 {
     if (csAsn->tag == (BSL_ASN1_CLASS_CTX_SPECIFIC | 0)) {
+        if (csAsn->len != 0) { /* good [0] IMPLICIT NULL must have no content (X.690 8.8.2) */
+            BSL_ERR_PUSH_ERROR(HITLS_OCSP_ERR_INVALID_RESPONSE);
+            return HITLS_OCSP_ERR_INVALID_RESPONSE;
+        }
         sr->certStatus = HITLS_OCSP_CERT_STATUS_GOOD;
         return HITLS_PKI_SUCCESS;
     }
@@ -2007,6 +2010,10 @@ static int32_t OcspParseCertStatus(const BSL_ASN1_Buffer *csAsn, HITLS_OCSP_Sing
         return OcspParseRevokedInfo((BSL_ASN1_Buffer *)(uintptr_t)csAsn, sr);
     }
     if (csAsn->tag == (BSL_ASN1_CLASS_CTX_SPECIFIC | 2)) {
+        if (csAsn->len != 0) { /* unknown [2] IMPLICIT UnknownInfo(NULL) must have no content */
+            BSL_ERR_PUSH_ERROR(HITLS_OCSP_ERR_INVALID_RESPONSE);
+            return HITLS_OCSP_ERR_INVALID_RESPONSE;
+        }
         sr->certStatus = HITLS_OCSP_CERT_STATUS_UNKNOWN;
         return HITLS_PKI_SUCCESS;
     }
@@ -2067,18 +2074,14 @@ static int32_t OcspParseSingleRespFields(const BSL_ASN1_Buffer *asns, HITLS_OCSP
         goto EXIT;
     }
 
-    ret = BSL_ASN1_DecodePrimitiveItem((BSL_ASN1_Buffer *)(uintptr_t)&asns[SINGLE_RESP_DEC_THIS_UPDATE_IDX],
-                                       &sr->thisUpdate);
-    if (ret != BSL_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
+    ret = OcspDecodeGeneralizedTime(&asns[SINGLE_RESP_DEC_THIS_UPDATE_IDX], &sr->thisUpdate);
+    if (ret != HITLS_PKI_SUCCESS) {
         goto EXIT;
     }
 
     if (asns[SINGLE_RESP_DEC_NEXT_UPDATE_IDX].tag != 0) {
-        ret = BSL_ASN1_DecodePrimitiveItem((BSL_ASN1_Buffer *)(uintptr_t)&asns[SINGLE_RESP_DEC_NEXT_UPDATE_IDX],
-                                           &sr->nextUpdate);
-        if (ret != BSL_SUCCESS) {
-            BSL_ERR_PUSH_ERROR(ret);
+        ret = OcspDecodeGeneralizedTime(&asns[SINGLE_RESP_DEC_NEXT_UPDATE_IDX], &sr->nextUpdate);
+        if (ret != HITLS_PKI_SUCCESS) {
             goto EXIT;
         }
         sr->hasNextUpdate = true;
@@ -2086,6 +2089,10 @@ static int32_t OcspParseSingleRespFields(const BSL_ASN1_Buffer *asns, HITLS_OCSP
 
     if (asns[SINGLE_RESP_DEC_EXTENSIONS_IDX].tag != 0) {
         ret = OcspDecodeExt((BSL_ASN1_Buffer *)(uintptr_t)&asns[SINGLE_RESP_DEC_EXTENSIONS_IDX], &sr->ext);
+        if (ret == HITLS_OCSP_ERR_MALFORMED) {
+            BSL_ERR_PUSH_ERROR(HITLS_OCSP_ERR_INVALID_RESPONSE);
+            ret = HITLS_OCSP_ERR_INVALID_RESPONSE;
+        }
         if (ret != HITLS_PKI_SUCCESS) {
             goto EXIT; /* error already pushed by the callee */
         }
@@ -2140,7 +2147,8 @@ static int32_t OcspParseOctetString(const BSL_ASN1_Buffer *asn, uint8_t **out, u
     uint32_t contentLen = 0;
     int32_t ret = BSL_ASN1_DecodeTagLen(BSL_ASN1_TAG_OCTETSTRING, &p, &remaining, &contentLen);
     if (ret != BSL_SUCCESS) {
-        return ret; /* DecodeTagLen already pushed its error */
+        BSL_ERR_PUSH_ERROR(ret); /* DecodeTagLen only returns the code; record the error here. */
+        return ret;
     }
     if (remaining != contentLen) {
         BSL_ERR_PUSH_ERROR(HITLS_OCSP_ERR_INVALID_RESPONSE);
@@ -2160,6 +2168,15 @@ static int32_t OcspParseResponderID(BSL_ASN1_Buffer *ridAsn, HITLS_OCSP_BasicRes
     }
 
     if (ridAsn->tag == (BSL_ASN1_CLASS_CTX_SPECIFIC | BSL_ASN1_TAG_CONSTRUCTED | 1)) {
+        /* byName [1] Name: the content must be exactly one Name SEQUENCE (no
+         * non-Name type, no trailing bytes). */
+        uint8_t nameTag = 0;
+        int32_t ret = OcspCheckSingleTlv(ridAsn->buff, ridAsn->len, &nameTag);
+        if (ret != HITLS_PKI_SUCCESS || nameTag != (BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE)) {
+            BSL_ERR_PUSH_ERROR(HITLS_OCSP_ERR_INVALID_RESPONSE);
+            BSL_SAL_Free(rid);
+            return HITLS_OCSP_ERR_INVALID_RESPONSE;
+        }
         rid->value.byName.data = BSL_SAL_Dump(ridAsn->buff, ridAsn->len);
         if (rid->value.byName.data == NULL) {
             BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
@@ -2230,9 +2247,8 @@ static int32_t OcspParseResponseData(const BSL_ASN1_Buffer *tbsContent, HITLS_OC
         return ret;
     }
 
-    ret = BSL_ASN1_DecodePrimitiveItem(&asns[RESP_DATA_DEC_PRODUCED_AT_IDX], &internal->producedAt);
-    if (ret != BSL_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
+    ret = OcspDecodeGeneralizedTime(&asns[RESP_DATA_DEC_PRODUCED_AT_IDX], &internal->producedAt);
+    if (ret != HITLS_PKI_SUCCESS) {
         return ret;
     }
 
@@ -2256,6 +2272,10 @@ static int32_t OcspParseResponseData(const BSL_ASN1_Buffer *tbsContent, HITLS_OC
     }
     if (asns[RESP_DATA_DEC_EXTENSIONS_IDX].tag != 0) {
         ret = OcspDecodeExt(&asns[RESP_DATA_DEC_EXTENSIONS_IDX], &internal->ext);
+        if (ret == HITLS_OCSP_ERR_MALFORMED) {
+            BSL_ERR_PUSH_ERROR(HITLS_OCSP_ERR_INVALID_RESPONSE);
+            return HITLS_OCSP_ERR_INVALID_RESPONSE;
+        }
         if (ret != HITLS_PKI_SUCCESS) {
             return ret;
         }

@@ -345,6 +345,60 @@ int32_t OcspEncodeExt(HITLS_X509_Ext *ext, uint8_t tag, BSL_ASN1_Buffer *extData
     return HITLS_X509_EncodeExt(tag, ext->extList, extData);
 }
 
+/* Verify that data[0..len) is exactly one well-formed TLV. On success *tag
+ * receives the TLV tag and the caller knows the input was fully consumed
+ * (no trailing bytes after the single TLV). */
+int32_t OcspCheckSingleTlv(const uint8_t *data, uint32_t len, uint8_t *tag)
+{
+    if (data == NULL || len == 0 || tag == NULL) {
+        return HITLS_OCSP_ERR_INVALID_PARAM;
+    }
+    uint8_t *p = (uint8_t *)(uintptr_t)data;
+    uint32_t remain = len;
+    BSL_ASN1_Buffer item = {0};
+    int32_t ret = BSL_ASN1_DecodeItem(&p, &remain, &item);
+    if (ret != BSL_SUCCESS || remain != 0) {
+        return HITLS_OCSP_ERR_MALFORMED;
+    }
+    *tag = item.tag;
+    return HITLS_PKI_SUCCESS;
+}
+
+/* TRUE if tag selects one of the RFC 6960 GeneralName CHOICE alternatives
+ * (context-specific tags [0]..[8] with the constructed bit matching the type). */
+bool OcspIsGeneralNameTag(uint8_t tag)
+{
+    if ((tag & 0xC0) != BSL_ASN1_CLASS_CTX_SPECIFIC) {
+        return false;
+    }
+    uint8_t num = tag & 0x1F;
+    if (num > 8) {
+        return false;
+    }
+    bool constructed = (tag & BSL_ASN1_TAG_CONSTRUCTED) != 0;
+    bool expectConstructed = (num == 0 || num == 3 || num == 4 || num == 5);
+    return constructed == expectConstructed;
+}
+
+/* OCSP times use DER GeneralizedTime (X.690 11.7.1), which must end with 'Z'
+ * (UTC). Missing 'Z' is rejected. */
+/* The shared decoder accepts a 14-byte GeneralizedTime without the UTC suffix,
+ * so require the trailing 'Z' first, then decode. A missing/invalid suffix is
+ * reported as HITLS_OCSP_ERR_INVALID_RESPONSE (the OCSP-response context). */
+int32_t OcspDecodeGeneralizedTime(const BSL_ASN1_Buffer *asn, BSL_TIME *time)
+{
+    if (asn == NULL || asn->buff == NULL || asn->len == 0 || asn->buff[asn->len - 1] != 'Z') {
+        BSL_ERR_PUSH_ERROR(HITLS_OCSP_ERR_INVALID_RESPONSE);
+        return HITLS_OCSP_ERR_INVALID_RESPONSE;
+    }
+    int32_t ret = BSL_ASN1_DecodePrimitiveItem((BSL_ASN1_Buffer *)(uintptr_t)asn, time);
+    if (ret != BSL_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        return ret;
+    }
+    return HITLS_PKI_SUCCESS;
+}
+
 int32_t OcspDecodeExt(BSL_ASN1_Buffer *extSeqof, HITLS_X509_Ext **ext)
 {
     if (ext == NULL || extSeqof == NULL || (extSeqof->len != 0 && extSeqof->buff == NULL) ||
@@ -366,16 +420,28 @@ int32_t OcspDecodeExt(BSL_ASN1_Buffer *extSeqof, HITLS_X509_Ext **ext)
         return BSL_MALLOC_FAIL;
     }
 
-    if (extSeqof->len > 0) {
-        uint8_t *owned = (uint8_t *)(extTmp + 1);
-        memcpy(owned, extSeqof->buff, extSeqof->len);
-        BSL_ASN1_Buffer ownedBuf = {extSeqof->tag, extSeqof->len, owned};
-        int32_t ret = HITLS_X509_ParseExt(&ownedBuf, extTmp);
-        if (ret != BSL_SUCCESS) {
-            HITLS_X509_ExtFree(extTmp);
-            BSL_ERR_PUSH_ERROR(ret);
-            return ret;
-        }
+    if (extSeqof->len == 0) {
+        /* A present EXPLICIT extensions field must carry an inner Extensions
+         * SEQUENCE; an empty wrapper (A0 00 / A1 00) is malformed (RFC 6960). */
+        HITLS_X509_ExtFree(extTmp);
+        BSL_ERR_PUSH_ERROR(HITLS_OCSP_ERR_MALFORMED);
+        return HITLS_OCSP_ERR_MALFORMED;
+    }
+    uint8_t *owned = (uint8_t *)(extTmp + 1);
+    memcpy(owned, extSeqof->buff, extSeqof->len);
+    BSL_ASN1_Buffer ownedBuf = {extSeqof->tag, extSeqof->len, owned};
+    int32_t ret = HITLS_X509_ParseExt(&ownedBuf, extTmp);
+    if (ret != BSL_SUCCESS) {
+        HITLS_X509_ExtFree(extTmp);
+        BSL_ERR_PUSH_ERROR(ret);
+        return ret;
+    }
+
+    /* Extensions ::= SEQUENCE SIZE (1..MAX) OF Extension (RFC 5280 A.1). */
+    if (BSL_LIST_COUNT(extTmp->extList) == 0) {
+        HITLS_X509_ExtFree(extTmp);
+        BSL_ERR_PUSH_ERROR(HITLS_OCSP_ERR_MALFORMED);
+        return HITLS_OCSP_ERR_MALFORMED;
     }
 
     /* RFC 6960 §4.1.1/§4.1.2: an unrecognized critical extension must be

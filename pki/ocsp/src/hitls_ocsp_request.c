@@ -674,6 +674,11 @@ static int32_t OcspParseSingleReq(uint32_t layer, BSL_ASN1_Buffer *asn, void *cb
     singleReq->certId = (HITLS_OCSP_CertId *)certId;
     if (reqAsns[REQUEST_DEC_SINGLE_EXT_IDX].tag != 0) {
         ret = OcspDecodeExt(&reqAsns[REQUEST_DEC_SINGLE_EXT_IDX], &singleReq->ext);
+        if (ret == HITLS_OCSP_ERR_MALFORMED) {
+            BSL_ERR_PUSH_ERROR(HITLS_OCSP_ERR_INVALID_REQUEST);
+            HITLS_OCSP_SingleReqFree((HITLS_OCSP_SingleReq *)singleReq);
+            return HITLS_OCSP_ERR_INVALID_REQUEST;
+        }
         if (ret != HITLS_PKI_SUCCESS) {
             HITLS_OCSP_SingleReqFree((HITLS_OCSP_SingleReq *)singleReq);
             return ret;
@@ -768,6 +773,10 @@ static int32_t OcspParseReqFields(BSL_ASN1_Buffer *asns, HITLS_OCSP_Req_Internal
 
     if (asns[OCSP_REQ_DEC_EXTENSIONS_IDX].tag != 0) {
         int32_t ret = OcspDecodeExt(&asns[OCSP_REQ_DEC_EXTENSIONS_IDX], &internal->ext);
+        if (ret == HITLS_OCSP_ERR_MALFORMED) {
+            BSL_ERR_PUSH_ERROR(HITLS_OCSP_ERR_INVALID_REQUEST);
+            return HITLS_OCSP_ERR_INVALID_REQUEST;
+        }
         if (ret != HITLS_PKI_SUCCESS) {
             return ret;
         }
@@ -776,7 +785,14 @@ static int32_t OcspParseReqFields(BSL_ASN1_Buffer *asns, HITLS_OCSP_Req_Internal
     if (asns[OCSP_REQ_DEC_REQUESTOR_NAME_IDX].tag != 0) {
         /* The [1] EXPLICIT wrapper is unwrapped by the template; the leaf holds the inner
          * GeneralName TLV (A4 ...), matching the representation produced by
-         * OcspGenRequestorName at sign time. */
+         * OcspGenRequestorName at sign time. Reject a non-GeneralName or trailing bytes. */
+        uint8_t gnTag = 0;
+        int32_t ret = OcspCheckSingleTlv(asns[OCSP_REQ_DEC_REQUESTOR_NAME_IDX].buff,
+                                         asns[OCSP_REQ_DEC_REQUESTOR_NAME_IDX].len, &gnTag);
+        if (ret != HITLS_PKI_SUCCESS || !OcspIsGeneralNameTag(gnTag)) {
+            BSL_ERR_PUSH_ERROR(HITLS_OCSP_ERR_INVALID_REQUEST);
+            return HITLS_OCSP_ERR_INVALID_REQUEST;
+        }
         internal->requestorName.data =
             BSL_SAL_Dump(asns[OCSP_REQ_DEC_REQUESTOR_NAME_IDX].buff, asns[OCSP_REQ_DEC_REQUESTOR_NAME_IDX].len);
         if (internal->requestorName.data == NULL) {

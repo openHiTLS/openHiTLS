@@ -255,6 +255,19 @@ int32_t OcspGetPubKeyHash(CRYPT_EAL_MdCtx *mdCtx, const HITLS_X509_Cert *cert,
 /* Shared ASN.1 ANY/CHOICE callback for decode templates (ocsp_common.c) */
 int32_t OcspTagGetOrCheck(int32_t type, uint32_t idx, void *data, void *expVal);
 
+/* Verify data[0..len) is exactly one well-formed TLV with no trailing bytes;
+ * on success *tag receives the TLV tag. Used to validate requestorName
+ * (GeneralName) and ResponderID.byName (Name). */
+int32_t OcspCheckSingleTlv(const uint8_t *data, uint32_t len, uint8_t *tag);
+
+/* TRUE if tag is one of the RFC 6960 GeneralName CHOICE alternatives. */
+bool OcspIsGeneralNameTag(uint8_t tag);
+
+/* Check the trailing 'Z' and decode the GeneralizedTime leaf into *time;
+ * a missing/invalid UTC suffix is reported as HITLS_OCSP_ERR_INVALID_RESPONSE,
+ * and a decode failure is reported with its own pushed error. */
+int32_t OcspDecodeGeneralizedTime(const BSL_ASN1_Buffer *asn, BSL_TIME *time);
+
 #ifdef __cplusplus
 }
 #endif
