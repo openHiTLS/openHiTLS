@@ -728,6 +728,7 @@ static int32_t ClientCheckIfResumeFromSession(TLS_Ctx *ctx, const ServerHelloMsg
     if (isResume == true) {
         /* Resume the session */
         ctx->negotiatedInfo.isResume = true;
+        ctx->peerInfo.verifyResult = SESS_GetVerifyResult(ctx->session);
         /* Check whether the version number, cipher suite, and master key extension match */
         return ClientCheckResumeServerHello(ctx, serverHello);
     }
@@ -1254,6 +1255,9 @@ static int32_t ClientProcessPreSharedKey(TLS_Ctx *ctx, const ServerHelloMsg *ser
     }
     pskInfo->pskLen = pskLen;
     ctx->negotiatedInfo.isResume = isResumePsk;
+    if (isResumePsk) {
+        ctx->peerInfo.verifyResult = SESS_GetVerifyResult(pskSession);
+    }
     return HITLS_SUCCESS;
 }
 

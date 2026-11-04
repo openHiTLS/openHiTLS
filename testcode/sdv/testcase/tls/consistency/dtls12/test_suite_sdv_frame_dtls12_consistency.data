@@ -193,3 +193,15 @@ UT_TLS_DTLS_CONSISTENCY_REASS_CLEAR_TC001:
 
 UT_TLS_DTLS_CONSISTENCY_CLEAR_TIMER_TC001
 UT_TLS_DTLS_CONSISTENCY_CLEAR_TIMER_TC001:
+
+DTLS 1.2 consumes a cached current fragment and retains a future fragment
+SDV_TLS_DTLS_REASS_CONSUME_TC001:0:1
+
+DTLS 1.2 consumes a message without a cached current fragment
+SDV_TLS_DTLS_REASS_CONSUME_TC001:0:0
+
+DTLCP consumes a cached current fragment and retains a future fragment
+SDV_TLS_DTLS_REASS_CONSUME_TC001:1:1
+
+DTLCP consumes a message without a cached current fragment
+SDV_TLS_DTLS_REASS_CONSUME_TC001:1:0

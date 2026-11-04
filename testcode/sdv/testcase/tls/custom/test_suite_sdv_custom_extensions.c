@@ -47,6 +47,8 @@
 #include "parser_frame_msg.h"
 #include "conn_init.h"
 #include "hs.h"
+#include "hs_common.h"
+#include "hs_ctx.h"
 #include "recv_process.h"
 
 
@@ -1111,5 +1113,86 @@ EXIT:
     FRAME_FreeLink(client);
     FRAME_FreeLink(server);
     ResetClientHelloCbState();
+}
+/* END_CASE */
+
+/**
+ * @brief Grow the receive buffer and reuse it for handshake packing.
+ * @expect Capacity stays within the limit, retained data survives, and excess packing fails.
+ * @precon Requested message size does not exceed the handshake limit.
+ */
+/* BEGIN_CASE */
+void SDV_TLS_HS_BUFFER_GROW_TC001(int msgSize, int keepOldData)
+{
+    FRAME_Init();
+    HS_Ctx hsCtx = {.bufferLen = HITLS_HS_INIT_BUFFER_SIZE};
+    TLS_Ctx ctx = {.hsCtx = &hsCtx};
+    hsCtx.msgBuf = BSL_SAL_Calloc(1u, hsCtx.bufferLen);
+    ASSERT_TRUE(hsCtx.msgBuf != NULL);
+    (void)memset(hsCtx.msgBuf, 0xA5, hsCtx.bufferLen);
+
+    ASSERT_EQ(HS_GrowMsgBuf(&ctx, (uint32_t)msgSize, keepOldData), HITLS_SUCCESS);
+    ASSERT_TRUE(hsCtx.bufferLen >= (uint32_t)msgSize);
+    ASSERT_TRUE(hsCtx.bufferLen <= HITLS_HS_BUFFER_SIZE_LIMIT);
+    uint8_t expected = keepOldData || (uint32_t)msgSize <= HITLS_HS_INIT_BUFFER_SIZE ? 0xA5 : 0;
+    for (uint32_t i = 0; i < HITLS_HS_INIT_BUFFER_SIZE; i++) {
+        ASSERT_EQ(hsCtx.msgBuf[i], expected);
+    }
+    uint8_t *original = hsCtx.msgBuf;
+    uint32_t capacity = hsCtx.bufferLen;
+    ASSERT_EQ(HS_GrowMsgBuf(&ctx, HITLS_HS_INIT_BUFFER_SIZE, true), HITLS_SUCCESS);
+    ASSERT_TRUE(hsCtx.msgBuf == original);
+    ASSERT_EQ(hsCtx.bufferLen, capacity);
+
+    if ((uint32_t)msgSize == HITLS_HS_BUFFER_SIZE_LIMIT) {
+        PackPacket pkt = {.buf = &hsCtx.msgBuf, .bufLen = &hsCtx.bufferLen, .bufOffset = &hsCtx.msgLen};
+        uint8_t *reserved = NULL;
+        ASSERT_EQ(PackSkipBytes(&pkt, HITLS_HS_BUFFER_SIZE_LIMIT - 1), HITLS_SUCCESS);
+        ASSERT_EQ(PackReserveBytes(&pkt, 2, &reserved), HITLS_PACK_NOT_ENOUGH_BUF_LENGTH);
+        ASSERT_TRUE(reserved == NULL);
+        ASSERT_EQ(hsCtx.msgLen, HITLS_HS_BUFFER_SIZE_LIMIT - 1);
+        ASSERT_EQ(PackAppendUint8ToBuf(&pkt, 0x5A), HITLS_SUCCESS);
+        ASSERT_EQ(hsCtx.msgBuf[HITLS_HS_BUFFER_SIZE_LIMIT - 1], 0x5A);
+        ASSERT_EQ(PackAppendUint8ToBuf(&pkt, 0x5A), HITLS_PACK_NOT_ENOUGH_BUF_LENGTH);
+        ASSERT_EQ(PackSkipBytes(&pkt, 1), HITLS_PACK_NOT_ENOUGH_BUF_LENGTH);
+        ASSERT_EQ(hsCtx.msgLen, HITLS_HS_BUFFER_SIZE_LIMIT);
+        ASSERT_EQ(hsCtx.bufferLen, capacity);
+        ASSERT_TRUE(hsCtx.msgBuf == original);
+    }
+    ASSERT_TRUE(TestIsErrStackEmpty());
+EXIT:
+    BSL_SAL_FREE(hsCtx.msgBuf);
+}
+/* END_CASE */
+
+/**
+ * @brief Reject oversized handshake buffer requests.
+ * @expect Return a length error without changing the buffer.
+ * @precon An initialized handshake buffer.
+ */
+/* BEGIN_CASE */
+void SDV_TLS_HS_BUFFER_GROW_TC002(int keepOldData)
+{
+    FRAME_Init();
+    HS_Ctx hsCtx = {.bufferLen = HITLS_HS_INIT_BUFFER_SIZE};
+    TLS_Ctx ctx = {.hsCtx = &hsCtx};
+    hsCtx.msgBuf = BSL_SAL_Calloc(1u, hsCtx.bufferLen);
+    ASSERT_TRUE(hsCtx.msgBuf != NULL);
+    (void)memset(hsCtx.msgBuf, 0xA5, hsCtx.bufferLen);
+    uint8_t *original = hsCtx.msgBuf;
+    const uint32_t sizes[] = {HITLS_HS_BUFFER_SIZE_LIMIT + 1, UINT32_MAX};
+
+    for (uint32_t i = 0; i < sizeof(sizes) / sizeof(sizes[0]); i++) {
+        ASSERT_EQ(HS_GrowMsgBuf(&ctx, sizes[i], keepOldData), HITLS_PARSE_EXCESSIVE_MESSAGE_SIZE);
+        ASSERT_EQ(BSL_ERR_GetLastError(), HITLS_PARSE_EXCESSIVE_MESSAGE_SIZE);
+        ASSERT_TRUE(TestIsErrStackEmpty());
+        ASSERT_TRUE(hsCtx.msgBuf == original);
+        ASSERT_EQ(hsCtx.bufferLen, HITLS_HS_INIT_BUFFER_SIZE);
+        for (uint32_t j = 0; j < hsCtx.bufferLen; j++) {
+            ASSERT_EQ(hsCtx.msgBuf[j], 0xA5);
+        }
+    }
+EXIT:
+    BSL_SAL_FREE(hsCtx.msgBuf);
 }
 /* END_CASE */

@@ -542,6 +542,9 @@ int32_t HITLS_SetSession(HITLS_Ctx *ctx, HITLS_Session *session)
 
     /* Ignore whether the HITLS_SESS_Dup return is NULL or non-NULL */
     ctx->session = HITLS_SESS_Dup(session);
+    if (ctx->session != NULL) {
+        ctx->peerInfo.verifyResult = SESS_GetVerifyResult(ctx->session);
+    }
     return HITLS_SUCCESS;
 }
 

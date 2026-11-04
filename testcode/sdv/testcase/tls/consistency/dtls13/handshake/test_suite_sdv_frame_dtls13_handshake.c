@@ -4833,3 +4833,88 @@ EXIT:
     FRAME_FreeLink(server);
 }
 /* END_CASE */
+
+static int32_t SendDtls13TicketFragment(FRAME_LinkObj *server, FRAME_LinkObj *client, uint16_t sequence,
+    uint32_t offset, uint32_t len)
+{
+    const uint8_t ticketBody[14] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0xAA, 0, 0};
+    uint8_t msg[DTLS_HS_MSG_HEADER_SIZE + sizeof(ticketBody)] = {0};
+    BuildDtlsHsMsg(msg, NEW_SESSION_TICKET, sequence, ticketBody, sizeof(ticketBody));
+    BSL_Uint24ToByte(offset, &msg[DTLS_HS_FRAGMENT_OFFSET_ADDR]);
+    BSL_Uint24ToByte(len, &msg[DTLS_HS_FRAGMENT_LEN_ADDR]);
+    (void)memcpy(&msg[DTLS_HS_MSG_HEADER_SIZE], &ticketBody[offset], len);
+    int32_t ret = REC_Write(server->ssl, REC_TYPE_HANDSHAKE, msg, DTLS_HS_MSG_HEADER_SIZE + len);
+    if (ret != HITLS_SUCCESS) {
+        return ret;
+    }
+    return FRAME_TrasferMsgBetweenLink(server, client);
+}
+
+/** @
+* @test SDV_TLS_DTLS13_HANDSHAKE_CONSISTENCY_FUNC_TC064
+* @title DTLS1.3 consumes only the current message's reassembly node.
+* @precon Established DTLS1.3 connection.
+* @brief Receive complete and fragmented tickets with a future fragment buffered.
+* @expect Consumed nodes are removed; the future fragment remains usable.
+@ */
+/* BEGIN_CASE */
+void SDV_TLS_DTLS13_HANDSHAKE_CONSISTENCY_FUNC_TC064(int cacheCurrent)
+{
+    HITLS_Config *config = NULL;
+    FRAME_LinkObj *client = NULL;
+    FRAME_LinkObj *server = NULL;
+    uint8_t readBuf[APP_READ_BUF_SIZE] = {0};
+    uint32_t readLen = 0;
+
+    FRAME_Init();
+    config = HITLS_CFG_NewDTLS13Config();
+    ASSERT_TRUE(config != NULL);
+    ASSERT_EQ(HITLS_CFG_SetTicketNums(config, 0), HITLS_SUCCESS);
+    client = FRAME_CreateLink(config, BSL_UIO_UDP);
+    server = FRAME_CreateLink(config, BSL_UIO_UDP);
+    ASSERT_TRUE(client != NULL && server != NULL);
+    ASSERT_EQ(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_SUCCESS);
+    ASSERT_TRUE(HS_ReassQueueIsEmpty(client->ssl));
+    uint16_t sequence = client->ssl->dtls13ExpectRecvSeq;
+
+    if (cacheCurrent) {
+        ASSERT_EQ(SendDtls13TicketFragment(server, client, sequence, 0, 1), HITLS_SUCCESS);
+        ASSERT_EQ(HITLS_Read(client->ssl, readBuf, sizeof(readBuf), &readLen), HITLS_REC_NORMAL_RECV_BUF_EMPTY);
+        ASSERT_TRUE(!HS_ReassQueueIsEmpty(client->ssl));
+        ASSERT_EQ(client->ssl->dtls13ExpectRecvSeq, sequence);
+    }
+
+    ASSERT_EQ(SendDtls13TicketFragment(server, client, sequence + 1, 0, 1), HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_Read(client->ssl, readBuf, sizeof(readBuf), &readLen), HITLS_REC_NORMAL_RECV_BUF_EMPTY);
+    ASSERT_TRUE(!HS_ReassQueueIsEmpty(client->ssl));
+    ListHead *futureHead = client->ssl->reassMsg->head.prev;
+    HS_ReassQueue *future = BSL_LIST_ENTRY(futureHead, HS_ReassQueue, head);
+    ASSERT_EQ(future->sequence, sequence + 1);
+
+    ASSERT_EQ(SendDtls13TicketFragment(server, client, sequence, 0, 14), HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_Read(client->ssl, readBuf, sizeof(readBuf), &readLen), HITLS_REC_NORMAL_RECV_BUF_EMPTY);
+    ASSERT_EQ(client->ssl->dtls13ExpectRecvSeq, sequence + 1);
+    ASSERT_TRUE(client->ssl->reassMsg->head.next == futureHead);
+    ASSERT_TRUE(client->ssl->reassMsg->head.prev == futureHead);
+    ASSERT_TRUE(!future->isReassComplete);
+    ASSERT_EQ(future->reassBitMap[0], 1);
+
+    ASSERT_EQ(SendDtls13TicketFragment(server, client, sequence + 1, 1, 13), HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_Read(client->ssl, readBuf, sizeof(readBuf), &readLen), HITLS_REC_NORMAL_RECV_BUF_EMPTY);
+    ASSERT_EQ(HITLS_Read(client->ssl, readBuf, sizeof(readBuf), &readLen), HITLS_REC_NORMAL_RECV_BUF_EMPTY);
+    ASSERT_EQ(client->ssl->dtls13ExpectRecvSeq, sequence + 2);
+    ASSERT_TRUE(HS_ReassQueueIsEmpty(client->ssl));
+
+    ASSERT_EQ(SendDtls13TicketFragment(server, client, sequence + 2, 0, 14), HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_Read(client->ssl, readBuf, sizeof(readBuf), &readLen), HITLS_REC_NORMAL_RECV_BUF_EMPTY);
+    ASSERT_EQ(client->ssl->dtls13ExpectRecvSeq, sequence + 3);
+    ASSERT_TRUE(HS_ReassQueueIsEmpty(client->ssl));
+    ASSERT_EQ(client->ssl->state, CM_STATE_TRANSPORTING);
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
+EXIT:
+    HITLS_CFG_FreeConfig(config);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+}
+/* END_CASE */

@@ -22,6 +22,7 @@
 #include "sal_time.h"
 #include "sal_timeimpl.h"
 #include "alert.h"
+#include "bsl_module_list.h"
 int32_t HS_ReassAppend(TLS_Ctx *ctx, HS_MsgInfo *msgInfo);
 /* INCLUDE_BASE test_suite_sdv_frame_dtls12_consistency */
 /* END_HEADER */
@@ -3667,5 +3668,112 @@ void UT_TLS_DTLS_CONSISTENCY_CLEAR_TIMER_TC001(void)
 EXIT:
     HITLS_CFG_FreeConfig(tlsConfig);
     FRAME_FreeLink(server);
+}
+/* END_CASE */
+
+static int32_t SendReassFragment(FRAME_LinkObj *server, FRAME_LinkObj *client, const uint8_t *msg,
+    uint32_t offset, uint32_t len)
+{
+    uint8_t fragment[MAX_RECORD_LENTH] = {0};
+    (void)memcpy(fragment, msg, DTLS_HS_MSG_HEADER_SIZE);
+    BSL_Uint24ToByte(offset, &fragment[DTLS_HS_FRAGMENT_OFFSET_ADDR]);
+    BSL_Uint24ToByte(len, &fragment[DTLS_HS_FRAGMENT_LEN_ADDR]);
+    (void)memcpy(&fragment[DTLS_HS_MSG_HEADER_SIZE], &msg[DTLS_HS_MSG_HEADER_SIZE + offset], len);
+    int32_t ret = REC_Write(server->ssl, REC_TYPE_HANDSHAKE, fragment, DTLS_HS_MSG_HEADER_SIZE + len);
+    if (ret != HITLS_SUCCESS) {
+        return ret;
+    }
+    return FRAME_TrasferMsgBetweenLink(server, client);
+}
+
+/**
+ * @brief Consume a complete ServerHello while retaining a future Certificate fragment.
+ * @expect Only the consumed node is removed; the Certificate reassembles and the handshake succeeds.
+ * @precon DTLS 1.2 or DTLCP over UDP.
+ */
+/* BEGIN_CASE */
+void SDV_TLS_DTLS_REASS_CONSUME_TC001(int isDtlcp, int cacheCurrent)
+{
+    HITLS_Config *config = NULL;
+    FRAME_LinkObj *client = NULL;
+    FRAME_LinkObj *server = NULL;
+    uint8_t serverHello[MAX_RECORD_LENTH] = {0};
+    uint8_t certificate[MAX_RECORD_LENTH] = {0};
+    uint32_t certRecordLen = 0;
+    FRAME_Init();
+    if (isDtlcp) {
+#ifdef HITLS_TLS_PROTO_DTLCP11
+        config = HITLS_CFG_NewDTLCPConfig();
+        ASSERT_TRUE(config != NULL);
+        client = FRAME_CreateTLCPLink(config, BSL_UIO_UDP, true);
+        server = FRAME_CreateTLCPLink(config, BSL_UIO_UDP, false);
+#else
+        SKIP_TEST();
+#endif
+    } else {
+        config = HITLS_CFG_NewDTLS12Config();
+        ASSERT_TRUE(config != NULL);
+        client = FRAME_CreateLink(config, BSL_UIO_UDP);
+        server = FRAME_CreateLink(config, BSL_UIO_UDP);
+    }
+    ASSERT_TRUE(client != NULL && server != NULL);
+    ASSERT_EQ(HITLS_SetMtu(client->ssl, 16384), HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_SetMtu(server->ssl, 16384), HITLS_SUCCESS);
+    ASSERT_EQ(FRAME_CreateConnection(client, server, true, TRY_RECV_SERVER_HELLO), HITLS_SUCCESS);
+    FrameUioUserData *ioData = BSL_UIO_GetUserData(client->io);
+    ASSERT_TRUE(ioData->recMsg.len > REC_DTLS_RECORD_HEADER_LEN + DTLS_HS_MSG_HEADER_SIZE);
+    (void)memcpy(serverHello, &ioData->recMsg.msg[REC_DTLS_RECORD_HEADER_LEN],
+        ioData->recMsg.len - REC_DTLS_RECORD_HEADER_LEN);
+    ioData->recMsg.len = 0;
+    ASSERT_EQ(serverHello[0], SERVER_HELLO);
+    uint32_t helloLen = BSL_ByteToUint24(&serverHello[DTLS_HS_MSGLEN_ADDR]);
+    uint16_t sequence = BSL_ByteToUint16(&serverHello[DTLS_HS_MSGSEQ_ADDR]);
+    ASSERT_EQ(BSL_ByteToUint24(&serverHello[DTLS_HS_FRAGMENT_LEN_ADDR]), helloLen);
+
+    ASSERT_EQ(HITLS_Accept(server->ssl), HITLS_REC_NORMAL_IO_BUSY);
+    ASSERT_EQ(FRAME_TransportSendMsg(server->io, certificate, sizeof(certificate), &certRecordLen), HITLS_SUCCESS);
+    ASSERT_TRUE(certRecordLen > REC_DTLS_RECORD_HEADER_LEN + DTLS_HS_MSG_HEADER_SIZE);
+    uint8_t *certMsg = &certificate[REC_DTLS_RECORD_HEADER_LEN];
+    ASSERT_EQ(certMsg[0], CERTIFICATE);
+    uint32_t certLen = BSL_ByteToUint24(&certMsg[DTLS_HS_MSGLEN_ADDR]);
+    ASSERT_EQ(BSL_ByteToUint24(&certMsg[DTLS_HS_FRAGMENT_LEN_ADDR]), certLen);
+    ASSERT_EQ(BSL_ByteToUint16(&certMsg[DTLS_HS_MSGSEQ_ADDR]), sequence + 1);
+    ASSERT_TRUE(HS_ReassQueueIsEmpty(client->ssl));
+
+    if (cacheCurrent) {
+        ASSERT_EQ(SendReassFragment(server, client, serverHello, 0, 1), HITLS_SUCCESS);
+        ASSERT_EQ(HS_RecvMsgProcess(client->ssl), HITLS_SUCCESS);
+        ASSERT_EQ(client->ssl->hsCtx->expectRecvSeq, sequence);
+        ASSERT_TRUE(!HS_ReassQueueIsEmpty(client->ssl));
+    }
+    ASSERT_EQ(SendReassFragment(server, client, certMsg, 0, 1), HITLS_SUCCESS);
+    ASSERT_EQ(HS_RecvMsgProcess(client->ssl), HITLS_SUCCESS);
+    ListHead *futureHead = client->ssl->reassMsg->head.prev;
+    HS_ReassQueue *future = BSL_LIST_ENTRY(futureHead, HS_ReassQueue, head);
+    ASSERT_EQ(future->sequence, sequence + 1);
+
+    ASSERT_EQ(SendReassFragment(server, client, serverHello, 0, helloLen), HITLS_SUCCESS);
+    ASSERT_EQ(HS_RecvMsgProcess(client->ssl), HITLS_SUCCESS);
+    ASSERT_EQ(client->ssl->hsCtx->state, TRY_RECV_CERTIFICATE);
+    ASSERT_EQ(client->ssl->hsCtx->expectRecvSeq, sequence + 1);
+    ASSERT_TRUE(client->ssl->reassMsg->head.next == futureHead);
+    ASSERT_TRUE(client->ssl->reassMsg->head.prev == futureHead);
+    ASSERT_TRUE(!future->isReassComplete);
+    ASSERT_EQ(future->reassBitMap[0], 1);
+
+    ASSERT_EQ(SendReassFragment(server, client, certMsg, 1, certLen - 1), HITLS_SUCCESS);
+    ASSERT_EQ(HS_RecvMsgProcess(client->ssl), HITLS_SUCCESS);
+    ASSERT_EQ(HS_RecvMsgProcess(client->ssl), HITLS_SUCCESS);
+    ASSERT_EQ(client->ssl->hsCtx->expectRecvSeq, sequence + 2);
+    ASSERT_TRUE(HS_ReassQueueIsEmpty(client->ssl));
+    ASSERT_EQ(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_SUCCESS);
+    ASSERT_EQ(client->ssl->state, CM_STATE_TRANSPORTING);
+    ASSERT_EQ(server->ssl->state, CM_STATE_TRANSPORTING);
+    ASSERT_TRUE(isDtlcp ? TestIsErrStackNotEmpty() : TestIsErrStackEmpty());
+
+EXIT:
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+    HITLS_CFG_FreeConfig(config);
 }
 /* END_CASE */

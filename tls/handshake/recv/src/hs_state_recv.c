@@ -610,6 +610,7 @@ static int32_t DtlsCheckAndParseMsg(TLS_Ctx *ctx, HS_MsgInfo *hsMsgInfo, HS_Msg 
     }
 #endif
     hsCtx->expectRecvSeq++; /* Auto-increment of the received message sequence number */
+    HS_ReassRemove(ctx, hsMsgInfo->sequence);
     return HITLS_SUCCESS;
 }
 

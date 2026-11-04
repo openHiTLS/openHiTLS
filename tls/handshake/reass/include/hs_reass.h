@@ -51,6 +51,8 @@ int32_t HS_ReassAppend(TLS_Ctx *ctx, HS_MsgInfo *msgInfo);
  */
 int32_t HS_GetReassMsg(TLS_Ctx *ctx, HS_MsgInfo *msgInfo, uint32_t *len);
 
+void HS_ReassRemove(TLS_Ctx *ctx, uint16_t sequence);
+
 #endif /* HITLS_TLS_PROTO_DATAGRAM */
 
 #ifdef __cplusplus

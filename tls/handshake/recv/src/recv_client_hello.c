@@ -1074,6 +1074,7 @@ static int32_t ServerCheckResumeParam(TLS_Ctx *ctx, const ClientHelloMsg *client
         return HITLS_SUCCESS;
     }
 
+    ctx->peerInfo.verifyResult = SESS_GetVerifyResult(sess);
     if (ctx->negotiatedInfo.version != version) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15887, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "Resuming Sessions: version is inconsistent.", 0, 0, 0, 0);
@@ -1947,6 +1948,7 @@ static int32_t TLS13ServerProcessTicket(TLS_Ctx *ctx, PreSharedKey *cur,
 
     HITLS_SESS_Free(ctx->session);
     ctx->session = pskSession;
+    ctx->peerInfo.verifyResult = SESS_GetVerifyResult(pskSession);
     ctx->negotiatedInfo.isResume = true;
     return HITLS_SUCCESS;
 }

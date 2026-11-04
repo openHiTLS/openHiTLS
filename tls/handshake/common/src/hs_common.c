@@ -586,6 +586,10 @@ const char *HS_GetServerName(const TLS_Ctx *ctx)
 
 int32_t HS_GrowMsgBuf(TLS_Ctx *ctx, uint32_t msgSize, bool keepOldData)
 {
+    if (msgSize > HITLS_HS_BUFFER_SIZE_LIMIT) {
+        BSL_ERR_PUSH_ERROR(HITLS_PARSE_EXCESSIVE_MESSAGE_SIZE);
+        return HITLS_PARSE_EXCESSIVE_MESSAGE_SIZE;
+    }
     if (msgSize <= ctx->hsCtx->bufferLen) {
         return HITLS_SUCCESS;
     }
@@ -594,6 +598,9 @@ int32_t HS_GrowMsgBuf(TLS_Ctx *ctx, uint32_t msgSize, bool keepOldData)
     uint8_t *oldDataAddr = ctx->hsCtx->msgBuf;
     while (bufSize != 0 && bufSize < msgSize) {
         bufSize = bufSize << 1;
+    }
+    if (bufSize > HITLS_HS_BUFFER_SIZE_LIMIT) {
+        bufSize = HITLS_HS_BUFFER_SIZE_LIMIT;
     }
     ctx->hsCtx->msgBuf = BSL_SAL_Calloc(1u, bufSize);
     if (ctx->hsCtx->msgBuf == NULL) {
