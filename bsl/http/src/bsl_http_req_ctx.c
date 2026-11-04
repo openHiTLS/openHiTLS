@@ -589,6 +589,38 @@ static int32_t HttpTerminateHdr(HITLS_HTTP_ReqCtx *ctx)
     return BSL_SUCCESS;
 }
 
+/* Write |len| bytes from |data| to the uio, advancing *sent until all bytes
+ * are flushed. Returns BSL_SUCCESS, BSL_HTTP_ERR_IN_PROGRESS when the uio
+ * would block (deadline permitting), or an error. Shared by the request-header
+ * and request-body writers. */
+static int32_t HttpWriteChunk(HITLS_HTTP_ReqCtx *ctx, const void *data, uint32_t len, uint32_t *sent)
+{
+    while (*sent < len) {
+        /* Hard deadline: fail once the transfer has exceeded its allowed time,
+         * even while data is flowing (not only at would-block points). */
+        int32_t deadlineRet = HttpCheckDeadline(ctx);
+        if (deadlineRet != BSL_SUCCESS) {
+            return deadlineRet;
+        }
+        uint32_t writeLen = 0;
+        int32_t ret = BSL_UIO_Write(ctx->uio, (const uint8_t *)data + *sent, len - *sent, &writeLen);
+        if (ret == BSL_UIO_IO_BUSY) {
+            /* The buffered UIO wrapper reports a full/failed flush as BUSY:
+             * the transfer is still in progress, not a hard I/O error. */
+            return HttpInProgressOrTimeout(ctx);
+        }
+        if (ret != BSL_SUCCESS) {
+            BSL_ERR_PUSH_ERROR(BSL_HTTP_ERR_IO);
+            return BSL_HTTP_ERR_IO;
+        }
+        if (writeLen == 0) {
+            return HttpInProgressOrTimeout(ctx);
+        }
+        *sent += writeLen;
+    }
+    return BSL_SUCCESS;
+}
+
 static int32_t HttpWriteRequestHeader(HITLS_HTTP_ReqCtx *ctx)
 {
     int32_t ret = HttpTerminateHdr(ctx);
@@ -606,29 +638,9 @@ static int32_t HttpWriteRequestHeader(HITLS_HTTP_ReqCtx *ctx)
         BSL_ERR_PUSH_ERROR(BSL_SAL_ERR_UNKNOWN);
         return BSL_SAL_ERR_UNKNOWN;
     }
-    uint32_t hdrLen = (uint32_t)bm->length;
-    while (ctx->reqHdrSent < hdrLen) {
-        /* Hard deadline: fail once the transfer has exceeded its allowed time,
-         * even while data is flowing (not only at would-block points). */
-        int32_t deadlineRet = HttpCheckDeadline(ctx);
-        if (deadlineRet != BSL_SUCCESS) {
-            return deadlineRet;
-        }
-        uint32_t writeLen = 0;
-        int32_t writeRet = BSL_UIO_Write(ctx->uio, bm->data + ctx->reqHdrSent, hdrLen - ctx->reqHdrSent, &writeLen);
-        if (writeRet == BSL_UIO_IO_BUSY) {
-            /* The buffered UIO wrapper reports a full/failed flush as BUSY:
-             * the transfer is still in progress, not a hard I/O error. */
-            return HttpInProgressOrTimeout(ctx);
-        }
-        if (writeRet != BSL_SUCCESS) {
-            BSL_ERR_PUSH_ERROR(BSL_HTTP_ERR_IO);
-            return BSL_HTTP_ERR_IO;
-        }
-        if (writeLen == 0) {
-            return HttpInProgressOrTimeout(ctx);
-        }
-        ctx->reqHdrSent += writeLen;
+    ret = HttpWriteChunk(ctx, bm->data, (uint32_t)bm->length, &ctx->reqHdrSent);
+    if (ret != BSL_SUCCESS) {
+        return ret;
     }
     ctx->state = HITLS_HTTP_STATE_WRITE_REQ;
     return BSL_SUCCESS;
@@ -636,26 +648,9 @@ static int32_t HttpWriteRequestHeader(HITLS_HTTP_ReqCtx *ctx)
 
 static int32_t HttpWriteRequestBody(HITLS_HTTP_ReqCtx *ctx)
 {
-    while (ctx->reqBodySent < ctx->reqBody.dataLen) {
-        /* Hard deadline: fail once the transfer has exceeded its allowed time. */
-        int32_t deadlineRet = HttpCheckDeadline(ctx);
-        if (deadlineRet != BSL_SUCCESS) {
-            return deadlineRet;
-        }
-        uint32_t writeLen = 0;
-        int32_t ret = BSL_UIO_Write(ctx->uio, ctx->reqBody.data + ctx->reqBodySent,
-                                    ctx->reqBody.dataLen - ctx->reqBodySent, &writeLen);
-        if (ret == BSL_UIO_IO_BUSY) {
-            return HttpInProgressOrTimeout(ctx);
-        }
-        if (ret != BSL_SUCCESS) {
-            BSL_ERR_PUSH_ERROR(BSL_HTTP_ERR_IO);
-            return BSL_HTTP_ERR_IO;
-        }
-        if (writeLen == 0) {
-            return HttpInProgressOrTimeout(ctx);
-        }
-        ctx->reqBodySent += writeLen;
+    int32_t ret = HttpWriteChunk(ctx, ctx->reqBody.data, ctx->reqBody.dataLen, &ctx->reqBodySent);
+    if (ret != BSL_SUCCESS) {
+        return ret;
     }
     ctx->state = HITLS_HTTP_STATE_FLUSH;
     return BSL_SUCCESS;
@@ -878,6 +873,35 @@ static int32_t HttpAppendLineBufBody(HITLS_HTTP_ReqCtx *ctx)
     return BSL_SUCCESS;
 }
 
+/* Read up to |want| bytes from the uio into |buf|. Returns BSL_SUCCESS with
+ * *readLen > 0 on data, BSL_HTTP_ERR_IN_PROGRESS when the uio would block
+ * (deadline permitting), BSL_UIO_IO_EOF at end of stream (the caller decides
+ * whether EOF is legal), or BSL_HTTP_ERR_IO on a hard I/O error. Shared by the
+ * header and body readers. */
+static int32_t HttpReadChunk(HITLS_HTTP_ReqCtx *ctx, uint8_t *buf, uint32_t want, uint32_t *readLen)
+{
+    /* Hard deadline: fail once the transfer has exceeded its allowed time. */
+    int32_t deadlineRet = HttpCheckDeadline(ctx);
+    if (deadlineRet != BSL_SUCCESS) {
+        return deadlineRet;
+    }
+    int32_t ret = BSL_UIO_Read(ctx->uio, buf, want, readLen);
+    if (ret == BSL_SUCCESS) {
+        if (*readLen > 0) {
+            return BSL_SUCCESS;
+        }
+        return HttpInProgressOrTimeout(ctx);
+    }
+    if (ret == BSL_UIO_IO_BUSY) {
+        return HttpInProgressOrTimeout(ctx);
+    }
+    if (ret == BSL_UIO_IO_EOF) {
+        return BSL_UIO_IO_EOF;
+    }
+    BSL_ERR_PUSH_ERROR(BSL_HTTP_ERR_IO);
+    return BSL_HTTP_ERR_IO;
+}
+
 static int32_t HttpReadResponseHeader(HITLS_HTTP_ReqCtx *ctx)
 {
     for (;;) {
@@ -910,29 +934,16 @@ static int32_t HttpReadResponseHeader(HITLS_HTTP_ReqCtx *ctx)
             BSL_ERR_PUSH_ERROR(BSL_HTTP_ERR_RESP_PARSE);
             return BSL_HTTP_ERR_RESP_PARSE;
         }
-        /* Hard deadline: fail once the transfer has exceeded its allowed time. */
-        int32_t deadlineRet = HttpCheckDeadline(ctx);
-        if (deadlineRet != BSL_SUCCESS) {
-            return deadlineRet;
-        }
-        int32_t ret = BSL_UIO_Read(ctx->uio, chunk, want, &readLen);
-        if (ret == BSL_SUCCESS) {
-            if (readLen > 0) {
-                (void)memcpy(ctx->lineBuf + ctx->lineBufLen, chunk, readLen);
-                ctx->lineBufLen += readLen;
-                continue;
-            }
-            return HttpInProgressOrTimeout(ctx);
-        }
-        if (ret == BSL_UIO_IO_BUSY) {
-            return HttpInProgressOrTimeout(ctx);
-        }
+        int32_t ret = HttpReadChunk(ctx, chunk, want, &readLen);
         if (ret == BSL_UIO_IO_EOF) {
             BSL_ERR_PUSH_ERROR(BSL_HTTP_ERR_RESP_PARSE);
             return BSL_HTTP_ERR_RESP_PARSE;
         }
-        BSL_ERR_PUSH_ERROR(BSL_HTTP_ERR_IO);
-        return BSL_HTTP_ERR_IO;
+        if (ret != BSL_SUCCESS) {
+            return ret;
+        }
+        (void)memcpy(ctx->lineBuf + ctx->lineBufLen, chunk, readLen);
+        ctx->lineBufLen += readLen;
     }
 }
 
@@ -984,27 +995,9 @@ static int32_t HttpReadResponseBody(HITLS_HTTP_ReqCtx *ctx)
         if (want == 0) {
             return HttpProbeRespBodyEof(ctx);
         }
-        /* Hard deadline: fail once the transfer has exceeded its allowed time. */
-        int32_t deadlineRet = HttpCheckDeadline(ctx);
-        if (deadlineRet != BSL_SUCCESS) {
-            return deadlineRet;
-        }
         uint8_t chunk[HITLS_HTTP_READ_CHUNK];
         uint32_t readLen = 0;
-        int32_t ret = BSL_UIO_Read(ctx->uio, chunk, want, &readLen);
-        if (ret == BSL_SUCCESS) {
-            if (readLen > 0) {
-                int32_t appRet = HttpAppendRespBody(ctx, chunk, readLen);
-                if (appRet != BSL_SUCCESS) {
-                    return appRet;
-                }
-                continue;
-            }
-            return HttpInProgressOrTimeout(ctx);
-        }
-        if (ret == BSL_UIO_IO_BUSY) {
-            return HttpInProgressOrTimeout(ctx);
-        }
+        int32_t ret = HttpReadChunk(ctx, chunk, want, &readLen);
         if (ret == BSL_UIO_IO_EOF) {
             if (ctx->hasContentLength && ctx->respBodyLen < ctx->respContentLength) {
                 BSL_ERR_PUSH_ERROR(BSL_HTTP_ERR_RESP_PARSE);
@@ -1013,8 +1006,13 @@ static int32_t HttpReadResponseBody(HITLS_HTTP_ReqCtx *ctx)
             ctx->state = HITLS_HTTP_STATE_DONE;
             return BSL_SUCCESS;
         }
-        BSL_ERR_PUSH_ERROR(BSL_HTTP_ERR_IO);
-        return BSL_HTTP_ERR_IO;
+        if (ret != BSL_SUCCESS) {
+            return ret;
+        }
+        int32_t appRet = HttpAppendRespBody(ctx, chunk, readLen);
+        if (appRet != BSL_SUCCESS) {
+            return appRet;
+        }
     }
 }
 

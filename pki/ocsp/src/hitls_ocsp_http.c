@@ -33,17 +33,14 @@
  * disagrees with the DER length inside the body is rejected before decoding. */
 static int32_t OcspHttpCheckRespDer(const uint8_t *body, uint32_t bodyLen)
 {
-    /* An empty or sub-2-byte body is a malformed response (it cannot carry an
-     * OCSPResponse SEQUENCE), not an internal NULL fault. Checked before
-     * body == NULL so an empty body (respBody = NULL, respLen = 0 from the
-     * HTTP layer) is reported as LENGTH_MISMATCH rather than NULL_POINTER. */
-    if (bodyLen < 2) {
+    /* A NULL body (the HTTP layer reports an empty body as respBody = NULL,
+     * respLen = 0) or a sub-2-byte body is a malformed response: it cannot
+     * carry an OCSPResponse SEQUENCE. Report LENGTH_MISMATCH rather than
+     * NULL_POINTER - this is a zero-length protocol response, not a caller
+     * NULL argument. */
+    if (body == NULL || bodyLen < 2) {
         BSL_ERR_PUSH_ERROR(HITLS_OCSP_ERR_LENGTH_MISMATCH);
         return HITLS_OCSP_ERR_LENGTH_MISMATCH;
-    }
-    if (body == NULL) {
-        BSL_ERR_PUSH_ERROR(HITLS_OCSP_ERR_NULL_POINTER);
-        return HITLS_OCSP_ERR_NULL_POINTER;
     }
     uint8_t *p = (uint8_t *)(uintptr_t)body;
     uint32_t rest = bodyLen;
