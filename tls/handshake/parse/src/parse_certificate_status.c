@@ -47,10 +47,15 @@ int32_t ParseCertificateStatus(TLS_Ctx *ctx, const uint8_t *buf, uint32_t bufLen
     uint32_t respLen = BSL_ByteToUint24(&buf[1]);
     /* RFC 6066 §2.2: the body is exactly status_type(1) + response(opaque<1..2^24-1>);
      * a length mismatch (trailing bytes after the response, or a length larger than
-     * the body) is malformed, and an empty response is invalid (opaque<1..>). */
-    if (respLen == 0 || respLen != (bufLen - (sizeof(uint8_t) + UINT24_SIZE))) {
+     * the body) is malformed. */
+    if (respLen != (bufLen - (sizeof(uint8_t) + UINT24_SIZE))) {
         return ParseErrorProcess(ctx, HITLS_PARSE_INVALID_MSG_LEN, BINLOG_ID17434,
                                  BINGLOG_STR("certificate status response length is incorrect"), ALERT_DECODE_ERROR);
+    }
+    if (respLen == 0) {
+        return ParseErrorProcess(ctx, HITLS_MSG_HANDLE_OCSP_STATUS_ERR, BINLOG_ID17434,
+                                 BINGLOG_STR("certificate status response is empty"),
+                                 ALERT_BAD_CERTIFICATE_STATUS_RESPONSE);
     }
     msg->response = (uint8_t *)BSL_SAL_Dump(&buf[sizeof(uint8_t) + UINT24_SIZE], respLen);
     if (msg->response == NULL) {
