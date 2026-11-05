@@ -1563,6 +1563,138 @@ EXIT:
 }
 /* END_CASE */
 
+#ifdef HITLS_BSL_UIO_BASE64
+static struct {
+    uint8_t data[1600];
+    uint32_t len;
+    uint32_t firstLimit;
+    uint32_t retries;
+    uint32_t flushes;
+    bool blocked;
+} g_base64RetrySink;
+
+static int32_t Base64RetrySinkCreate(BSL_UIO *uio)
+{
+    BSL_UIO_SetInit(uio, true);
+    return BSL_SUCCESS;
+}
+
+static int32_t Base64RetrySinkWrite(BSL_UIO *uio, const void *buf, uint32_t len, uint32_t *written)
+{
+    *written = 0;
+    (void)BSL_UIO_ClearFlags(uio, BSL_UIO_FLAGS_RWS | BSL_UIO_FLAGS_SHOULD_RETRY);
+    if (len > sizeof(g_base64RetrySink.data) - g_base64RetrySink.len) {
+        return BSL_INVALID_ARG;
+    }
+    if (g_base64RetrySink.blocked) {
+        (void)BSL_UIO_SetFlags(uio, BSL_UIO_FLAGS_WRITE | BSL_UIO_FLAGS_SHOULD_RETRY);
+        return ++g_base64RetrySink.retries > 4 ? BSL_UIO_IO_EXCEPTION : BSL_SUCCESS;
+    }
+    uint32_t take = len;
+    if (g_base64RetrySink.firstLimit != 0) {
+        take = take > g_base64RetrySink.firstLimit ? g_base64RetrySink.firstLimit : take;
+        g_base64RetrySink.firstLimit = 0;
+        g_base64RetrySink.blocked = true;
+    }
+    memcpy(g_base64RetrySink.data + g_base64RetrySink.len, buf, take);
+    g_base64RetrySink.len += take;
+    *written = take;
+    return BSL_SUCCESS;
+}
+
+static int32_t Base64RetrySinkCtrl(BSL_UIO *uio, int32_t cmd, int32_t larg, void *parg)
+{
+    (void)uio;
+    (void)larg;
+    (void)parg;
+    if (cmd != BSL_UIO_FLUSH) {
+        return BSL_INVALID_ARG;
+    }
+    g_base64RetrySink.flushes++;
+    return BSL_SUCCESS;
+}
+#endif
+
+/**
+ * @test SDV_BSL_UIO_BASE64_WRITE_RETRY_TC001
+ * @brief Preserve pending encoding across write retries and stop flush when the downstream makes no progress.
+ * @precon Base64 UIO is enabled.
+ * @expect Input counts and retry flags are correct, and resumed output is complete without duplication.
+ */
+/* BEGIN_CASE */
+void SDV_BSL_UIO_BASE64_WRITE_RETRY_TC001(int scenario)
+{
+#ifdef HITLS_BSL_UIO_BASE64
+    BSL_UIO *uio = NULL;
+    BSL_UIO *sink = NULL;
+    BSL_Base64Ctx *encoder = NULL;
+    uint8_t input[1034];
+    char expected[1600];
+    uint32_t inputLen = sizeof(input);
+    uint32_t firstWriteLen = scenario == 0 ? inputLen : 1024;
+    uint32_t expectedLen = sizeof(expected);
+    uint32_t written = 0;
+    uint32_t tailLen;
+    const BSL_UIO_Method method = {
+        .uioType = BSL_UIO_EXTEND,
+        .uioWrite = Base64RetrySinkWrite,
+        .uioCtrl = Base64RetrySinkCtrl,
+        .uioCreate = Base64RetrySinkCreate
+    };
+    for (uint32_t i = 0; i < sizeof(input); i++) {
+        input[i] = (uint8_t)i;
+    }
+    encoder = BSL_BASE64_CtxNew();
+    ASSERT_NE(encoder, NULL);
+    ASSERT_EQ(BSL_BASE64_EncodeInit(encoder), BSL_SUCCESS);
+    ASSERT_EQ(BSL_BASE64_EncodeUpdate(encoder, input, inputLen, expected, &expectedLen), BSL_SUCCESS);
+    tailLen = sizeof(expected) - expectedLen;
+    ASSERT_EQ(BSL_BASE64_EncodeFinal(encoder, expected + expectedLen, &tailLen), BSL_SUCCESS);
+    expectedLen += tailLen;
+
+    memset(&g_base64RetrySink, 0, sizeof(g_base64RetrySink));
+    g_base64RetrySink.firstLimit = 1000;
+    uio = BSL_UIO_New(BSL_UIO_Base64Method());
+    sink = BSL_UIO_New(&method);
+    ASSERT_NE(uio, NULL);
+    ASSERT_NE(sink, NULL);
+    ASSERT_EQ(BSL_UIO_Append(uio, sink), BSL_SUCCESS);
+    sink = NULL;
+    ASSERT_EQ(BSL_UIO_Write(uio, input, firstWriteLen, &written), BSL_SUCCESS);
+    ASSERT_EQ(written, 1024);
+    ASSERT_EQ(BSL_UIO_Write(uio, input + 1024, inputLen - 1024, &written), BSL_SUCCESS);
+    ASSERT_EQ(written, 0);
+    if (scenario == 2) {
+        uint32_t retries = g_base64RetrySink.retries;
+        ASSERT_EQ(BSL_UIO_Ctrl(uio, BSL_UIO_FLUSH, 0, NULL), BSL_UIO_IO_BUSY);
+        ASSERT_EQ(g_base64RetrySink.retries, retries + 1);
+        ASSERT_EQ(g_base64RetrySink.flushes, 0);
+    }
+    ASSERT_TRUE((uio->flags & BSL_UIO_FLAGS_SHOULD_RETRY) != 0);
+    ASSERT_TRUE((uio->flags & BSL_UIO_FLAGS_WRITE) != 0);
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
+    g_base64RetrySink.blocked = false;
+    ASSERT_EQ(BSL_UIO_Write(uio, input + 1024, inputLen - 1024, &written), BSL_SUCCESS);
+    ASSERT_EQ(written, inputLen - 1024);
+    ASSERT_EQ(BSL_UIO_Ctrl(uio, BSL_UIO_FLUSH, 0, NULL), BSL_SUCCESS);
+    ASSERT_TRUE((uio->flags & BSL_UIO_FLAGS_SHOULD_RETRY) == 0);
+    ASSERT_TRUE((uio->flags & BSL_UIO_FLAGS_RWS) == 0);
+    ASSERT_COMPARE("resumed base64", g_base64RetrySink.data, g_base64RetrySink.len, expected, expectedLen);
+    ASSERT_EQ(BSL_UIO_Ctrl(uio, BSL_UIO_FLUSH, 0, NULL), BSL_SUCCESS);
+    ASSERT_EQ(g_base64RetrySink.len, expectedLen);
+    ASSERT_TRUE(TestIsErrStackEmpty());
+EXIT:
+    BSL_UIO_FreeChain(uio);
+    BSL_UIO_Free(sink);
+    BSL_BASE64_CtxFree(encoder);
+#else
+    (void)scenario;
+    SKIP_TEST();
+#endif
+}
+/* END_CASE */
+
 /* @
 * @test  SDV_BSL_UIO_BASE64_FUN_TC001
 * @spec  -

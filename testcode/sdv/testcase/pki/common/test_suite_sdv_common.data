@@ -932,3 +932,12 @@ SDV_X509_AKI_CERT_CHAIN_TC001:"../testdata/cert/chain/aki_serial_padding/ca.pem"
 
 SDV_X509_GetNameByCid_TC001: get several name values and check invalid inputs
 SDV_X509_GetNameByCid_TC001
+
+CN decoding rejects raw-byte hostname interpretation
+SDV_PKI_VERIFY_CN_ENCODING_TC001:BSL_ASN1_TAG_BMPSTRING:"7777772e746573742e436f6d":"e79db7e79caee791a5e78db4e2b983e6bdad":"www.test.com":HITLS_PKI_SUCCESS
+
+CN decoding rejects raw-byte wildcard interpretation
+SDV_PKI_VERIFY_CN_ENCODING_TC001:BSL_ASN1_TAG_BMPSTRING:"2a2e746573742e636f6d":"e2a8aee791a5e78db4e2b9a3e6bdad":"www.test.com":HITLS_PKI_SUCCESS
+
+CN decoding rejects an invalid BMPString length
+SDV_PKI_VERIFY_CN_ENCODING_TC001:BSL_ASN1_TAG_BMPSTRING:"61":"":"a":BSL_ASN1_ERR_INVALID_STRING_LEN
