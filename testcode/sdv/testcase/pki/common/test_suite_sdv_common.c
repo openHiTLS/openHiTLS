@@ -18,6 +18,7 @@
 #include <stdio.h>
 #include <string.h>
 #include "bsl_sal.h"
+#include "bsl_errno.h"
 #include "stub_utils.h"
 #include "hitls_error.h"
 #include "hitls_pki_cert.h"
@@ -3431,6 +3432,62 @@ EXIT:
 #else
     UnusedParam2(algId, format, encode);
     (void)flag;
+    SKIP_TEST();
+#endif
+}
+/* END_CASE */
+
+/**
+ * @test SDV_PKI_VERIFY_CN_ENCODING_TC001
+ * @brief Check CN string conversion and hostname rejection for non-ASCII or invalid encodings.
+ * @precon Certificate parsing and identity verification are enabled.
+ * @expect CN extraction returns decoded UTF-8 or a conversion error; hostname verification fails.
+ */
+/* BEGIN_CASE */
+void SDV_PKI_VERIFY_CN_ENCODING_TC001(int tag, Hex *value, Hex *expectedUtf8, char *hostname, int expectedRet)
+{
+#if defined(HITLS_PKI_X509_CRT_PARSE) && defined(HITLS_PKI_X509_VFY_IDENTITY)
+    HITLS_X509_Cert *cert = NULL;
+    BSL_Buffer cn = {0};
+    uint8_t cnOid[] = {0x55, 0x04, 0x03};
+    HITLS_X509_NameNode node = {
+        .nameType = {BSL_ASN1_TAG_OBJECT_ID, sizeof(cnOid), cnOid},
+        .nameValue = {(uint8_t)tag, value->len, value->x},
+        .layer = 2
+    };
+    uint32_t flags[] = {0, HITLS_X509_FLAG_VFY_WITH_PARTIAL_WILDCARD};
+    TestMemInit();
+    cert = HITLS_X509_CertNew();
+    ASSERT_NE(cert, NULL);
+    ASSERT_EQ(BSL_LIST_AddElement(cert->tbs.subjectName, &node, BSL_LIST_POS_END), BSL_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_GET_SUBJECT_CN_STR, &cn, sizeof(cn)), expectedRet);
+    if (expectedRet == HITLS_PKI_SUCCESS) {
+        ASSERT_NE(cn.data, NULL);
+        ASSERT_COMPARE("decoded CN", cn.data, cn.dataLen, expectedUtf8->x, expectedUtf8->len);
+        ASSERT_EQ(cn.data[cn.dataLen], 0);
+        ASSERT_TRUE(TestIsErrStackEmpty());
+    } else {
+        ASSERT_EQ(cn.data, NULL);
+        ASSERT_EQ(cn.dataLen, 0);
+        TestErrClear();
+    }
+    for (uint32_t i = 0; i < sizeof(flags) / sizeof(flags[0]); i++) {
+        int32_t ret = HITLS_X509_VerifyHostname(cert, flags[i], hostname, strlen(hostname));
+        ASSERT_EQ(ret, expectedRet == HITLS_PKI_SUCCESS ? HITLS_X509_ERR_VFY_HOSTNAME_FAIL : expectedRet);
+        TestErrClear();
+    }
+EXIT:
+    BSL_SAL_FREE(cn.data);
+    if (cert != NULL) {
+        BSL_LIST_DeleteAll(cert->tbs.subjectName, FreeListData);
+    }
+    HITLS_X509_CertFree(cert);
+#else
+    (void)tag;
+    (void)value;
+    (void)expectedUtf8;
+    (void)hostname;
+    (void)expectedRet;
     SKIP_TEST();
 #endif
 }

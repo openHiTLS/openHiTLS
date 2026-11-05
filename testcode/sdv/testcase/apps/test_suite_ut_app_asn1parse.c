@@ -268,6 +268,64 @@ EXIT:
 }
 /* END_CASE */
 
+static uint32_t g_asn1NodeAllocCalls;
+
+static void *Asn1NodeAllocFail(uint32_t size)
+{
+    (void)size;
+    g_asn1NodeAllocCalls++;
+    return NULL;
+}
+
+/**
+ * @test UT_HITLS_APP_ASN1PARSE_GET_NODE_LENGTH_INVALID_TC001
+ * @title Reject unsupported node lengths before allocation
+ * @precon None
+ * @brief Check node extraction with excessive lengths and allocator size limits.
+ * @expect Decode failure without allocating a node or changing the output.
+ */
+/* BEGIN_CASE */
+void UT_HITLS_APP_ASN1PARSE_GET_NODE_LENGTH_INVALID_TC001(int scenario)
+{
+    uint8_t buf[3 + sizeof(size_t)] = {0x00, 0x04, (uint8_t)(0x80 | sizeof(size_t))};
+    size_t headerLen = sizeof(buf) - 1;
+    size_t contentLen = SIZE_MAX;
+    size_t bufLen = sizeof(buf);
+    uint8_t *outBuf = NULL;
+    size_t outLen = 0;
+
+    if (scenario == 1) {
+        contentLen = SIZE_MAX - headerLen + 1;
+    } else if (scenario == 2) {
+        contentLen = SIZE_MAX - headerLen;
+    } else if (scenario == 3) {
+#if SIZE_MAX > UINT32_MAX
+        contentLen = UINT32_MAX;
+        /* Only the header is accessed before rejecting this synthetic buffer size. */
+        bufLen = SIZE_MAX;
+#else
+        SKIP_TEST();
+#endif
+    }
+    for (size_t i = 0; i < sizeof(size_t); i++) {
+        buf[sizeof(buf) - 1 - i] = (uint8_t)contentLen;
+        contentLen >>= 8;
+    }
+
+    AppPrintErrorUioUnInit();
+    g_asn1NodeAllocCalls = 0;
+    ASSERT_EQ(BSL_SAL_CallBack_Ctrl(BSL_SAL_MEM_MALLOC, Asn1NodeAllocFail), BSL_SUCCESS);
+    ASSERT_EQ(AppAsn1GetNodeBytes(buf, bufLen, 1, &outBuf, &outLen), HITLS_APP_DECODE_FAIL);
+    ASSERT_EQ(g_asn1NodeAllocCalls, 0);
+    ASSERT_EQ(outBuf, NULL);
+    ASSERT_EQ(outLen, 0);
+EXIT:
+    (void)BSL_SAL_CallBack_Ctrl(BSL_SAL_MEM_MALLOC, NULL);
+    TestMemInit();
+    BSL_SAL_FREE(outBuf);
+}
+/* END_CASE */
+
 /**
  * @test UT_HITLS_APP_ASN1PARSE_COMPUTE_HEADER_LEN_TC001
  * @title Test computing header length of TLV structure

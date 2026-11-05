@@ -174,7 +174,7 @@ int32_t HITLS_X509_CertChainBuild(HITLS_X509_StoreCtx *storeCtx, bool isWithRoot
  *
  * @param cert [IN] The certificate to verify, type : HITLS_X509_Cert *.
  * @param flags [IN] A flag controlling wildcard matching behavior, type : uint32_t.
- * @param hostname [IN] The hostname to match against, type : const char *.
+ * @param hostname [IN] A UTF-8 encoded, null-terminated hostname to match against, type : const char *.
  * @param hostnameLen [IN] The length of the hostname, type : uint32_t.
  * @retval #HITLS_PKI_SUCCESS if the hostname is successfully verified.
  * @retval #HITLS_X509_ERR_VFY_HOSTNAME_FAIL if the hostname does not match.
@@ -235,7 +235,8 @@ int32_t HITLS_X509_CertChainBuild(HITLS_X509_StoreCtx *storeCtx, bool isWithRoot
  * @param cert [IN] The certificate to verify, type : HITLS_X509_Cert *.
  * @param flags [IN] A flag controlling wildcard matching behavior, type : uint32_t.
  * @param type [IN] Types that need to be verified, type : uint32_t.
- * @param val [IN] A string of ip, hostname, URI-ID or SRV-ID, type : const char *.
+ * @param val [IN] An IP address, hostname, URI-ID or SRV-ID, type : const char *.
+ *                 For hostname verification, supply a UTF-8 encoded, null-terminated string.
  * @param valLen [IN] The length of the val, type : uint32_t.
  * @retval #HITLS_PKI_SUCCESS if the value is successfully verified.
  * @retval #HITLS_X509_ERR_VFY_IP_FAIL if the value is ip and does not match.

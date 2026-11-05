@@ -45,3 +45,15 @@ UT_HITLS_APP_ASN1PARSE_NEGATIVE_STRPARSE_TC001:
 
 Test ASN.1 length-wrap rejection
 UT_HITLS_APP_ASN1PARSE_LENGTH_WRAP_TC001:
+
+Node extraction rejects excessive content length
+UT_HITLS_APP_ASN1PARSE_GET_NODE_LENGTH_INVALID_TC001:0
+
+Node extraction rejects excessive node length
+UT_HITLS_APP_ASN1PARSE_GET_NODE_LENGTH_INVALID_TC001:1
+
+Node extraction rejects excessive node end offset
+UT_HITLS_APP_ASN1PARSE_GET_NODE_LENGTH_INVALID_TC001:2
+
+Node extraction rejects unsupported allocation size
+UT_HITLS_APP_ASN1PARSE_GET_NODE_LENGTH_INVALID_TC001:3

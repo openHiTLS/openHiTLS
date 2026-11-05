@@ -895,11 +895,15 @@ int AppAsn1GetNodeBytes(const uint8_t *buf, size_t bufLen, size_t offset, uint8_
     if (ReadLength(buf, bufLen, offset + tagInfo.tagBytes, &lenLen, &contentLen) != HITLS_APP_SUCCESS) {
         return HITLS_APP_DECODE_FAIL;
     }
-    size_t total = tagInfo.tagBytes + lenLen + contentLen;
-    if (offset + total > bufLen) {
+    size_t headerLen = tagInfo.tagBytes + lenLen;
+    if (ValidateNodeBounds(offset, headerLen, contentLen, bufLen, bufLen) != HITLS_APP_SUCCESS) {
         return HITLS_APP_DECODE_FAIL;
     }
-    uint8_t *out = (uint8_t *)BSL_SAL_Calloc(total, 1);
+    size_t total = headerLen + contentLen;
+    if (total > UINT32_MAX) {
+        return HITLS_APP_DECODE_FAIL;
+    }
+    uint8_t *out = (uint8_t *)BSL_SAL_Calloc((uint32_t)total, 1);
     if (!out) {
         return HITLS_APP_MEM_ALLOC_FAIL;
     }

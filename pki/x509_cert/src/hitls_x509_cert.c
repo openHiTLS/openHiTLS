@@ -18,6 +18,7 @@
 #include <stdio.h>
 #include <string.h>
 #include "bsl_sal.h"
+#include "bsl_asn1_internal.h"
 #ifdef HITLS_BSL_SAL_FILE
 #include "sal_file.h"
 #endif
@@ -559,6 +560,8 @@ static int32_t X509_GetCNStrFromList(BSL_ASN1_List *nameList, BSL_Buffer *buff, 
         BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
         return HITLS_X509_ERR_INVALID_PARAM;
     }
+    BSL_ASN1_Buffer utf8 = {0};
+    int32_t ret = HITLS_X509_ERR_CERT_CN_NOT_FOUND;
     for (BslListNode *nameNodeIt = BSL_LIST_FirstNode(nameList); nameNodeIt != NULL;
         nameNodeIt = BSL_LIST_GetNextNode(nameList, nameNodeIt)) {
         HITLS_X509_NameNode *nameNode = (HITLS_X509_NameNode *)BSL_LIST_GetData(nameNodeIt);
@@ -570,18 +573,27 @@ static int32_t X509_GetCNStrFromList(BSL_ASN1_List *nameList, BSL_Buffer *buff, 
         if (oidName == NULL || strcmp(oidName, "CN") != 0) {
             continue;
         }
-        buff->data = BSL_SAL_Malloc(nameNode->nameValue.len + 1);
-        if (buff->data == NULL) {
-            BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
-            return BSL_MALLOC_FAIL;
+        ret = BSL_ASN1_ToUtf8String(&nameNode->nameValue, &utf8);
+        if (ret != BSL_SUCCESS) {
+            goto ERR;
         }
-        memcpy(buff->data, nameNode->nameValue.buff, nameNode->nameValue.len);
-        buff->data[nameNode->nameValue.len] = '\0';
-        buff->dataLen = nameNode->nameValue.len;
+        buff->data = BSL_SAL_Malloc(utf8.len + 1);
+        if (buff->data == NULL) {
+            ret = BSL_MALLOC_FAIL;
+            goto ERR;
+        }
+        if (utf8.len != 0) {
+            memcpy(buff->data, utf8.buff, utf8.len);
+        }
+        buff->data[utf8.len] = '\0';
+        buff->dataLen = utf8.len;
+        BSL_SAL_FREE(utf8.buff);
         return HITLS_PKI_SUCCESS;
     }
-    BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_CERT_CN_NOT_FOUND);
-    return HITLS_X509_ERR_CERT_CN_NOT_FOUND;
+ERR:
+    BSL_SAL_FREE(utf8.buff);
+    BSL_ERR_PUSH_ERROR(ret);
+    return ret;
 }
 
 static int32_t X509_CertGetCtrlCmd(HITLS_X509_Cert *cert, int32_t cmd, void *val, uint32_t valLen)

@@ -97,6 +97,10 @@ static int32_t Base64WriteRefreshBuf(BSL_UIO *uio, BSL_UIO *next, Base64Ctx *ctx
 {
     int32_t ret = BSL_SUCCESS;
 
+    if (ctx->bufUsed > ctx->bufLen || ctx->bufLen > (uint32_t)sizeof(ctx->buf)) {
+        BSL_ERR_PUSH_ERROR(BSL_INVALID_ARG);
+        return BSL_INVALID_ARG;
+    }
     uint32_t len = ctx->bufLen - ctx->bufUsed;
     uint32_t wLen = 0;
     while (len > 0) {
@@ -156,7 +160,6 @@ static int32_t Base64Write(BSL_UIO *uio, const void *buf, uint32_t len, uint32_t
 {
     int32_t ret = BSL_SUCCESS;
     *writeLen = 0;
-    uint32_t wLen = 0;
     const uint8_t *tmpbuf = (const uint8_t *)buf;
     uint32_t tmpLen = len;
     Base64Ctx *ctx = (Base64Ctx *)uio->ctx;
@@ -167,14 +170,11 @@ static int32_t Base64Write(BSL_UIO *uio, const void *buf, uint32_t len, uint32_t
     }
 
     Base64WriteInit(uio, ctx);
-    /* Prevent context from being tampered with */
-    if (ctx->bufUsed > ctx->bufLen || ctx->bufLen > (uint32_t)sizeof(ctx->buf)) {
-        BSL_ERR_PUSH_ERROR(BSL_INVALID_ARG);
-        return BSL_INVALID_ARG;
-    }
     ret = Base64WriteRefreshBuf(uio, next, ctx); /* In this case, all data to be processed is written. */
-    if (ret != BSL_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
+    if (ret != BSL_SUCCESS || ctx->bufUsed != ctx->bufLen) {
+        if (ret != BSL_SUCCESS) {
+            BSL_ERR_PUSH_ERROR(ret);
+        }
         return ret;
     }
 
@@ -188,18 +188,19 @@ static int32_t Base64Write(BSL_UIO *uio, const void *buf, uint32_t len, uint32_t
             return ret;
         }
 
-        wLen += n;
+        *writeLen += n;
         tmpbuf = tmpbuf + n;
         tmpLen -= n;
 
         ret = Base64WriteRefreshBuf(uio, next, ctx);
-        if (ret != BSL_SUCCESS) {
-            BSL_ERR_PUSH_ERROR(ret);
+        if (ret != BSL_SUCCESS || ctx->bufUsed != ctx->bufLen) {
+            if (ret != BSL_SUCCESS) {
+                BSL_ERR_PUSH_ERROR(ret);
+            }
             return ret;
         }
     }
 
-    *writeLen = wLen;
     return ret;
 }
 
@@ -488,6 +489,10 @@ static int32_t Base64Flush(BSL_UIO *uio, BSL_UIO *next, int32_t cmd, int32_t lar
             ret = Base64WriteRefreshBuf(uio, next, ctx);
             if (ret != BSL_SUCCESS) {
                 return ret;
+            }
+            /* Return to the caller instead of spinning when the downstream makes no progress. */
+            if (ctx->bufUsed != ctx->bufLen) {
+                return BSL_UIO_IO_BUSY;
             }
         }
         if (ctx->encode == BASE64_ENCODE && ctx->base64Ctx->num != 0) {
