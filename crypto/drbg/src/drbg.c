@@ -552,7 +552,6 @@ static int32_t GetCipherKeyLen(int32_t  id, uint32_t *keyLen)
 DRBG_Ctx *DRBG_New(void *libCtx, int32_t algId, CRYPT_RandSeedMethod *seedMethod, void *seedCtx)
 {
     (void)libCtx;
-    int32_t ret;
     if (seedMethod == NULL) {
         return NULL;
     }
@@ -595,7 +594,6 @@ DRBG_Ctx *DRBG_New(void *libCtx, int32_t algId, CRYPT_RandSeedMethod *seedMethod
         drbg = DRBG_NewCtrCtx(ciphMeth, keyLen, algId == CRYPT_RAND_SM4_CTR_DF, isUsedDF, seedMethod, seedCtx);
     }
 #endif
-    (void)ret;
     return drbg;
 }
 

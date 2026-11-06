@@ -77,12 +77,12 @@ static int32_t FrodoCommonMulAddAES(uint16_t *out, const uint16_t *matrixSTransp
     const uint32_t n, const uint32_t nBar, uint16_t *rows, uint8_t *plaintext, FrodoMulAddFunc multFunction,
     void *libCtx)
 {
-    const uint32_t blocksPerRow = n / 8;
     CRYPT_EAL_CipherCtx *ctx = CRYPT_EAL_ProviderCipherNewCtx(libCtx, CRYPT_CIPHER_AES128_ECB, NULL);
     if (ctx == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         return CRYPT_MEM_ALLOC_FAIL;
     }
+    const uint32_t blocksPerRow = n / 8;
     int32_t ret = CRYPT_EAL_CipherInit(ctx, seedA, 16, NULL, 0, true);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);

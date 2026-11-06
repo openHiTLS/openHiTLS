@@ -71,14 +71,16 @@ static bool CRYPT_CMVP_SelftestKdfTls12Internal(void *libCtx, const char *attrNa
 
     ctx = CRYPT_EAL_ProviderKdfNewCtx(libCtx, CRYPT_KDF_KDFTLS12, attrName);
     GOTO_ERR_IF_TRUE(ctx == NULL, CRYPT_CMVP_ERR_ALGO_SELFTEST);
-    BSL_Param param[5] = {
-        {CRYPT_PARAM_KDF_MAC_ID, BSL_PARAM_TYPE_UINT32, &id, sizeof(id), 0},
-        {CRYPT_PARAM_KDF_KEY, BSL_PARAM_TYPE_OCTETS, key, keyLen, 0},
-        {CRYPT_PARAM_KDF_LABEL, BSL_PARAM_TYPE_OCTETS, label, labelLen, 0},
-        {CRYPT_PARAM_KDF_SEED, BSL_PARAM_TYPE_OCTETS, seed, seedLen, 0},
-        BSL_PARAM_END
-    };
-    GOTO_ERR_IF_TRUE(CRYPT_EAL_KdfSetParam(ctx, param) != CRYPT_SUCCESS, CRYPT_CMVP_ERR_ALGO_SELFTEST);
+    {
+        BSL_Param param[5] = {
+            {CRYPT_PARAM_KDF_MAC_ID, BSL_PARAM_TYPE_UINT32, &id, sizeof(id), 0},
+            {CRYPT_PARAM_KDF_KEY, BSL_PARAM_TYPE_OCTETS, key, keyLen, 0},
+            {CRYPT_PARAM_KDF_LABEL, BSL_PARAM_TYPE_OCTETS, label, labelLen, 0},
+            {CRYPT_PARAM_KDF_SEED, BSL_PARAM_TYPE_OCTETS, seed, seedLen, 0},
+            BSL_PARAM_END
+        };
+        GOTO_ERR_IF_TRUE(CRYPT_EAL_KdfSetParam(ctx, param) != CRYPT_SUCCESS, CRYPT_CMVP_ERR_ALGO_SELFTEST);
+    }
     GOTO_ERR_IF_TRUE(CRYPT_EAL_KdfDerive(ctx, dk, expDkLen) != CRYPT_SUCCESS, CRYPT_CMVP_ERR_ALGO_SELFTEST);
     GOTO_ERR_IF_TRUE(memcmp(dk, expDk, expDkLen) != 0, CRYPT_CMVP_ERR_ALGO_SELFTEST);
     ret = true;

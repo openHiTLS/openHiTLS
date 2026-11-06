@@ -136,11 +136,11 @@ int32_t HbsWots_Chain(const uint8_t *x, uint32_t xLen, uint32_t start, uint32_t 
 /* Generate the WOTS+ public key by chaining each private key element to the end and compressing. */
 int32_t HbsWots_GeneratePublicKey(uint8_t *pub, void *adrs, const HbsWotsCtx *ctx)
 {
-    uint8_t wotspkBuffer[HBS_MAX_ADRS_SIZE] = {0};
-    void *wotspk = wotspkBuffer;
     int32_t ret;
     uint32_t n = ctx->n;
     uint32_t len = ctx->otsLen;
+    uint8_t wotspkBuffer[HBS_MAX_ADRS_SIZE] = {0};
+    void *wotspk = wotspkBuffer;
 
     /* Allocate temporary buffer for chaining results */
     uint8_t *tmp = (uint8_t *)BSL_SAL_Malloc(len * n);
@@ -267,13 +267,13 @@ int32_t HbsWots_Sign(uint8_t *sig, uint32_t *sigLen, const uint8_t *msg, uint32_
 int32_t HbsWots_PkFromSig(const uint8_t *msg, uint32_t msgLen, const uint8_t *sig, uint32_t sigLen, void *adrs,
                           const HbsWotsCtx *ctx, uint8_t *pub)
 {
-    uint8_t wotspkBuffer[HBS_MAX_ADRS_SIZE] = {0};
-    void *wotspk = wotspkBuffer;
     int32_t ret;
     uint32_t n = ctx->n;
     uint32_t len = ctx->otsLen;
     uint32_t *msgw = NULL;
     uint8_t *tmp = NULL;
+    uint8_t wotspkBuffer[HBS_MAX_ADRS_SIZE] = {0};
+    void *wotspk = wotspkBuffer;
 
     if (sigLen < len * n) {
         int32_t err =

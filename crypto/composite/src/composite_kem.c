@@ -38,8 +38,8 @@ static int32_t CRYPT_CompositeKemCheckParam(const CRYPT_CompositeCtx *ctx, bool 
 static int32_t CRYPT_CompositeKemCombine(const CRYPT_CompositeCtx *ctx, const uint8_t *pqcSecret,
     const uint8_t *tradSecret, const uint8_t *tradCipher, uint8_t *secret)
 {
-    uint32_t secretLen = COMPOSITE_KEM_SECRET_LEN;
     BSL_Buffer tradPub = {0};
+    uint32_t secretLen = COMPOSITE_KEM_SECRET_LEN;
     int32_t ret = CRYPT_CompositeGetTradPubKey(ctx, &tradPub);
     if (ret != CRYPT_SUCCESS) {
         return ret;

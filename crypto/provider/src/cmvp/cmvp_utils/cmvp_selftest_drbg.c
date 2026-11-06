@@ -390,6 +390,11 @@ static CRYPT_EAL_RndCtx *CMVP_DrbgInit(void *libCtx, const char *attrName, const
     uint32_t persLen;
     CRYPT_RandSeedMethod method;
     const CMVP_DRBG_VECTOR *vector = drbgVec;
+    int32_t index = 0;
+    BSL_Param param[DRBG_PARAM_COUNT] = {0};
+#ifdef HITLS_CRYPTO_CMVP_SM
+    int32_t selfTest = 0;
+#endif
     GOTO_ERR_IF_TRUE(vector->pers == NULL, CRYPT_CMVP_ERR_ALGO_SELFTEST);
     pers = CMVP_StringsToBins(vector->pers, &persLen);
     GOTO_ERR_IF_TRUE(pers == NULL, CRYPT_CMVP_ERR_ALGO_SELFTEST);
@@ -399,8 +404,6 @@ static CRYPT_EAL_RndCtx *CMVP_DrbgInit(void *libCtx, const char *attrName, const
     method.getNonce = CMVP_DrbgGetNonce;
     method.cleanNonce = CMVP_DrbgCleanData;
 
-    int32_t index = 0;
-    BSL_Param param[DRBG_PARAM_COUNT] = {0};
     (void)BSL_PARAM_InitValue(&param[index++], CRYPT_PARAM_RAND_SEEDCTX, BSL_PARAM_TYPE_CTX_PTR,
         seedCtx, 0);
     (void)BSL_PARAM_InitValue(&param[index++], CRYPT_PARAM_RAND_SEED_GETENTROPY, BSL_PARAM_TYPE_FUNC_PTR,
@@ -415,7 +418,6 @@ static CRYPT_EAL_RndCtx *CMVP_DrbgInit(void *libCtx, const char *attrName, const
 
     GOTO_ERR_IF_TRUE(ctx == NULL, CRYPT_CMVP_ERR_ALGO_SELFTEST);
 #ifdef HITLS_CRYPTO_CMVP_SM
-    int32_t selfTest = 0;
     GOTO_ERR_IF_TRUE(CRYPT_EAL_DrbgCtrl(ctx, CRYPT_CTRL_SET_SELFTEST_FLAG, &selfTest, sizeof(int32_t)) != CRYPT_SUCCESS,
         CRYPT_CMVP_ERR_ALGO_SELFTEST);
 #endif

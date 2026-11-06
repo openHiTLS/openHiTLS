@@ -87,6 +87,9 @@ static int32_t GetPkey(void *libCtx, const char *attrName, const CMVP_SlhdsaSign
     CRYPT_EAL_PkeyPrv prvKey = {0};
     uint8_t *vectorKey = NULL;
     uint8_t *context = NULL;
+    uint32_t keyLen = 0;
+    uint32_t vectorKeyLen = 0;
+    uint32_t contextLen = 0;
     *pkeyPrv = CRYPT_EAL_ProviderPkeyNewCtx(libCtx, vector->algId, 0, attrName);
     GOTO_ERR_IF_TRUE(*pkeyPrv == NULL, CRYPT_CMVP_ERR_ALGO_SELFTEST);
     *pkeyPub = CRYPT_EAL_ProviderPkeyNewCtx(libCtx, vector->algId, 0, attrName);
@@ -97,10 +100,8 @@ static int32_t GetPkey(void *libCtx, const char *attrName, const CMVP_SlhdsaSign
     ret = CRYPT_EAL_PkeySetParaById(*pkeyPub, vector->type);
     GOTO_ERR_IF_TRUE(ret != CRYPT_SUCCESS, ret);
 
-    uint32_t keyLen = 0;
     ret = CRYPT_EAL_PkeyCtrl(*pkeyPrv, CRYPT_CTRL_GET_SLH_DSA_KEY_LEN, (void *)&keyLen, sizeof(keyLen));
 
-    uint32_t vectorKeyLen = 0;
     vectorKey = CMVP_StringsToBins(vector->sk, &vectorKeyLen);
     prvKey.id = CRYPT_PKEY_SLH_DSA;
     prvKey.key.slhDsaPrv.seed = vectorKey;
@@ -110,7 +111,6 @@ static int32_t GetPkey(void *libCtx, const char *attrName, const CMVP_SlhdsaSign
     prvKey.key.slhDsaPrv.pub.len = keyLen;
     ret = CRYPT_EAL_PkeySetPrv(*pkeyPrv, &prvKey);
     GOTO_ERR_IF_TRUE(ret != CRYPT_SUCCESS, ret);
-    uint32_t contextLen = 0;
     context = CMVP_StringsToBins(vector->context, &contextLen);
     ret = CRYPT_EAL_PkeyCtrl(*pkeyPrv, CRYPT_CTRL_SET_CTX_INFO, context, contextLen);
     GOTO_ERR_IF_TRUE(ret != CRYPT_SUCCESS, ret);

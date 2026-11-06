@@ -212,6 +212,16 @@ bool CRYPT_CMVP_SelftestSM2Crypt(void *libCtx, const char *attrName)
     uint32_t plainTextLen = sizeof(plainText);
     uint8_t encodeText[MAX_PLAIN_TEXT_LEN + CIPHER_TEXT_EXTRA_LEN] = {0};
     uint32_t encodeTextLen = sizeof(encodeText);
+    CRYPT_SM2_EncryptData data = {
+        .x = decodeText + 1,
+        .xLen = SM2_POINT_SINGLE_COORDINATE_LEN,
+        .y = decodeText + SM2_POINT_SINGLE_COORDINATE_LEN + 1,
+        .yLen = SM2_POINT_SINGLE_COORDINATE_LEN,
+        .hash = decodeText + SM2_POINT_COORDINATE_LEN,
+        .hashLen = SM3_MD_SIZE,
+        .cipher = decodeText + SM2_POINT_COORDINATE_LEN + SM3_MD_SIZE,
+        .cipherLen = decodeoutLen - SM2_POINT_COORDINATE_LEN - SM3_MD_SIZE
+    };
     CRYPT_EAL_RandFunc func = CRYPT_RandRegistGet();
     CRYPT_EAL_RandFuncEx funcEx = CRYPT_RandRegistExGet();
     CRYPT_RandRegistEx(NULL);
@@ -234,16 +244,6 @@ bool CRYPT_CMVP_SelftestSM2Crypt(void *libCtx, const char *attrName)
     GOTO_ERR_IF_TRUE(CRYPT_EAL_PkeyEncrypt(pubCtx, plain, plainLen, cipherText, &cipherTextLen) != CRYPT_SUCCESS,
         CRYPT_CMVP_ERR_ALGO_SELFTEST);
 
-    CRYPT_SM2_EncryptData data = {
-        .x = decodeText + 1,
-        .xLen = SM2_POINT_SINGLE_COORDINATE_LEN,
-        .y = decodeText + SM2_POINT_SINGLE_COORDINATE_LEN + 1,
-        .yLen = SM2_POINT_SINGLE_COORDINATE_LEN,
-        .hash = decodeText + SM2_POINT_COORDINATE_LEN,
-        .hashLen = SM3_MD_SIZE,
-        .cipher = decodeText + SM2_POINT_COORDINATE_LEN + SM3_MD_SIZE,
-        .cipherLen = decodeoutLen - SM2_POINT_COORDINATE_LEN - SM3_MD_SIZE
-    };
     GOTO_ERR_IF_TRUE(CRYPT_EAL_DecodeSm2EncryptData(cipherText, cipherTextLen, &data) != CRYPT_SUCCESS,
         CRYPT_CMVP_ERR_ALGO_SELFTEST);
     decodeText[0] = 0x04;
@@ -385,6 +385,7 @@ bool CRYPT_CMVP_SelftestSM2Exchange(void *libCtx, const char *attrName)
     uint8_t *R = NULL;
     uint8_t *out = NULL;
     uint8_t *sharekey = NULL;
+    uint32_t outLen;
     uint8_t localR[65];
     
     int32_t server = 1;
@@ -408,7 +409,7 @@ bool CRYPT_CMVP_SelftestSM2Exchange(void *libCtx, const char *attrName)
     sharekey = CMVP_StringsToBins(SM2Exchange_VECTOR.sharekey, &sharekeyLen);
     GOTO_ERR_IF_TRUE(sharekey == NULL, CRYPT_CMVP_COMMON_ERR);
 
-    uint32_t outLen = sharekeyLen;
+    outLen = sharekeyLen;
     out = BSL_SAL_Malloc(outLen);
     GOTO_ERR_IF_TRUE(out == NULL, CRYPT_CMVP_COMMON_ERR);
     GOTO_ERR_IF_TRUE(SetUserId(selfCtx, SM2Exchange_VECTOR.userid1) != true, CRYPT_CMVP_ERR_ALGO_SELFTEST);
@@ -498,16 +499,6 @@ static bool SM2_Consistency_Crypt(void)
     uint32_t encodeTextLen = sizeof(encodeText);
     CRYPT_EAL_PkeyCtx *pkey = NULL;
 
-    pkey = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_SM2);
-    GOTO_ERR_IF_TRUE(pkey == NULL, CRYPT_CMVP_ERR_ALGO_SELFTEST);
-
-    GOTO_ERR_IF_TRUE(CRYPT_EAL_PkeyGen(pkey) != CRYPT_SUCCESS, CRYPT_CMVP_ERR_ALGO_SELFTEST);
-
-    plain = CMVP_StringsToBins(SM2_CRYPT_TEST_VECTOR.plain, &plainLen);
-    GOTO_ERR_IF_TRUE(plain == NULL, CRYPT_CMVP_COMMON_ERR);
-
-    GOTO_ERR_IF_TRUE(CRYPT_EAL_PkeyEncrypt(pkey, plain, plainLen, cipherText, &cipherTextLen) != CRYPT_SUCCESS,
-        CRYPT_CMVP_ERR_ALGO_SELFTEST);
     CRYPT_SM2_EncryptData data = {
         .x = decodeText+ 1,
         .xLen = SM2_POINT_SINGLE_COORDINATE_LEN,
@@ -518,6 +509,16 @@ static bool SM2_Consistency_Crypt(void)
         .cipher = decodeText + SM2_POINT_COORDINATE_LEN + SM3_MD_SIZE,
         .cipherLen = decodeTextLen - SM2_POINT_COORDINATE_LEN - SM3_MD_SIZE
     };
+    pkey = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_SM2);
+    GOTO_ERR_IF_TRUE(pkey == NULL, CRYPT_CMVP_ERR_ALGO_SELFTEST);
+
+    GOTO_ERR_IF_TRUE(CRYPT_EAL_PkeyGen(pkey) != CRYPT_SUCCESS, CRYPT_CMVP_ERR_ALGO_SELFTEST);
+
+    plain = CMVP_StringsToBins(SM2_CRYPT_TEST_VECTOR.plain, &plainLen);
+    GOTO_ERR_IF_TRUE(plain == NULL, CRYPT_CMVP_COMMON_ERR);
+
+    GOTO_ERR_IF_TRUE(CRYPT_EAL_PkeyEncrypt(pkey, plain, plainLen, cipherText, &cipherTextLen) != CRYPT_SUCCESS,
+        CRYPT_CMVP_ERR_ALGO_SELFTEST);
     GOTO_ERR_IF_TRUE(CRYPT_EAL_DecodeSm2EncryptData(cipherText, cipherTextLen, &data) != CRYPT_SUCCESS,
         CRYPT_CMVP_ERR_ALGO_SELFTEST);
 

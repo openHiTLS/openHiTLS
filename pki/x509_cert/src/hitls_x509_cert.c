@@ -218,8 +218,8 @@ ERR:
 #ifdef HITLS_PKI_X509_CRT_PARSE
 int32_t HITLS_X509_ParseCertTbs(BSL_ASN1_Buffer *asnArr, HITLS_X509_Cert *cert)
 {
-    BSL_Buffer subPubKeyBuff;
     int32_t ret;
+    BSL_Buffer subPubKeyBuff;
     // version: default is 0
     if (asnArr[HITLS_X509_CERT_VERSION_IDX].tag != 0) {
         ret = BSL_ASN1_DecodePrimitiveItem(&asnArr[HITLS_X509_CERT_VERSION_IDX], &cert->tbs.version);

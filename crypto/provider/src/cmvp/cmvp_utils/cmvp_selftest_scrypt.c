@@ -69,15 +69,17 @@ static bool CRYPT_CMVP_SelftestScryptInternal(void *libCtx, const char *attrName
 
     ctx = CRYPT_EAL_ProviderKdfNewCtx(libCtx, CRYPT_KDF_SCRYPT, attrName);
     GOTO_ERR_IF_TRUE(ctx == NULL, CRYPT_CMVP_ERR_ALGO_SELFTEST);
-    BSL_Param param[6] = {
-        {CRYPT_PARAM_KDF_PASSWORD, BSL_PARAM_TYPE_OCTETS, pw, pwLen, 0},
-        {CRYPT_PARAM_KDF_SALT, BSL_PARAM_TYPE_OCTETS, salt, saltLen, 0},
-        {CRYPT_PARAM_KDF_N, BSL_PARAM_TYPE_UINT32, &n, sizeof(uint32_t), 0},
-        {CRYPT_PARAM_KDF_R, BSL_PARAM_TYPE_UINT32, &r, sizeof(uint32_t), 0},
-        {CRYPT_PARAM_KDF_P, BSL_PARAM_TYPE_UINT32, &p, sizeof(uint32_t), 0},
-        BSL_PARAM_END
-    };
-    GOTO_ERR_IF_TRUE(CRYPT_EAL_KdfSetParam(ctx, param) != CRYPT_SUCCESS, CRYPT_CMVP_ERR_ALGO_SELFTEST);
+    {
+        BSL_Param param[6] = {
+            {CRYPT_PARAM_KDF_PASSWORD, BSL_PARAM_TYPE_OCTETS, pw, pwLen, 0},
+            {CRYPT_PARAM_KDF_SALT, BSL_PARAM_TYPE_OCTETS, salt, saltLen, 0},
+            {CRYPT_PARAM_KDF_N, BSL_PARAM_TYPE_UINT32, &n, sizeof(uint32_t), 0},
+            {CRYPT_PARAM_KDF_R, BSL_PARAM_TYPE_UINT32, &r, sizeof(uint32_t), 0},
+            {CRYPT_PARAM_KDF_P, BSL_PARAM_TYPE_UINT32, &p, sizeof(uint32_t), 0},
+            BSL_PARAM_END
+        };
+        GOTO_ERR_IF_TRUE(CRYPT_EAL_KdfSetParam(ctx, param) != CRYPT_SUCCESS, CRYPT_CMVP_ERR_ALGO_SELFTEST);
+    }
     GOTO_ERR_IF_TRUE(CRYPT_EAL_KdfDerive(ctx, key, expkeyLen) != CRYPT_SUCCESS, CRYPT_CMVP_ERR_ALGO_SELFTEST);
     GOTO_ERR_IF_TRUE(memcmp(key, expkey, expkeyLen) != 0, CRYPT_CMVP_ERR_ALGO_SELFTEST);
     ret = true;

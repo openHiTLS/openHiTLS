@@ -86,12 +86,6 @@ static bool CRYPT_CMVP_SelftestPbkdf2Internal(void *libCtx, const char *attrName
     pwLen = (uint32_t)strlen(pbkdf2Vec->pw);
     salt = pbkdf2Vec->salt;
     saltLen = (uint32_t)strlen(pbkdf2Vec->salt);
-    expOut = CMVP_StringsToBins(pbkdf2Vec->key, &expOutLen);
-    GOTO_ERR_IF_TRUE(expOut == NULL, CRYPT_CMVP_COMMON_ERR);
-    out = BSL_SAL_Malloc(expOutLen);
-    GOTO_ERR_IF_TRUE(out == NULL, CRYPT_MEM_ALLOC_FAIL);
-    ctx = CRYPT_EAL_ProviderKdfNewCtx(libCtx, CRYPT_KDF_PBKDF2, attrName);
-    GOTO_ERR_IF_TRUE(ctx == NULL, CRYPT_CMVP_ERR_ALGO_SELFTEST);
     BSL_Param param[5] = {
         {CRYPT_PARAM_KDF_MAC_ID, BSL_PARAM_TYPE_UINT32, &id, sizeof(id), 0},
         {CRYPT_PARAM_KDF_PASSWORD, BSL_PARAM_TYPE_OCTETS, (void *)(uintptr_t)pw, pwLen, 0},
@@ -99,6 +93,12 @@ static bool CRYPT_CMVP_SelftestPbkdf2Internal(void *libCtx, const char *attrName
         {CRYPT_PARAM_KDF_ITER, BSL_PARAM_TYPE_UINT32, &iter, sizeof(uint32_t), 0},
         BSL_PARAM_END
     };
+    expOut = CMVP_StringsToBins(pbkdf2Vec->key, &expOutLen);
+    GOTO_ERR_IF_TRUE(expOut == NULL, CRYPT_CMVP_COMMON_ERR);
+    out = BSL_SAL_Malloc(expOutLen);
+    GOTO_ERR_IF_TRUE(out == NULL, CRYPT_MEM_ALLOC_FAIL);
+    ctx = CRYPT_EAL_ProviderKdfNewCtx(libCtx, CRYPT_KDF_PBKDF2, attrName);
+    GOTO_ERR_IF_TRUE(ctx == NULL, CRYPT_CMVP_ERR_ALGO_SELFTEST);
     GOTO_ERR_IF_TRUE(CRYPT_EAL_KdfSetParam(ctx, param) != CRYPT_SUCCESS, CRYPT_CMVP_ERR_ALGO_SELFTEST);
     GOTO_ERR_IF_TRUE(CRYPT_EAL_KdfDerive(ctx, out, expOutLen) != CRYPT_SUCCESS, CRYPT_CMVP_ERR_ALGO_SELFTEST);
     GOTO_ERR_IF_TRUE(memcmp(out, expOut, expOutLen) != 0, CRYPT_CMVP_ERR_ALGO_SELFTEST);

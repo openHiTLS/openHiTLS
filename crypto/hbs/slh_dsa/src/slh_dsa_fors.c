@@ -90,7 +90,6 @@ ERR:
 int32_t ForsPkFromSig(const uint8_t *sig, uint32_t sigLen, const uint8_t *md, uint32_t mdLen, SlhDsaAdrs *adrs,
                       const CryptSlhDsaCtx *ctx, uint8_t *pk)
 {
-    SlhDsaAdrs forspkAdrs;
     int32_t ret;
     uint32_t *indices = NULL;
     uint8_t *root = NULL;
@@ -100,6 +99,7 @@ int32_t ForsPkFromSig(const uint8_t *sig, uint32_t sigLen, const uint8_t *md, ui
     uint32_t n = math->n;
     uint32_t a = math->a;
     uint32_t k = math->k;
+    SlhDsaAdrs forspkAdrs;
 
     if (sigLen < (a + 1) * n * k) {
         return CRYPT_SLHDSA_ERR_SIG_LEN_NOT_ENOUGH;

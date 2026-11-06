@@ -355,12 +355,8 @@ static int32_t ReadDevRandom(void *ctx, uint32_t timeout, uint8_t *buf, uint32_t
 static int32_t CreateSmEs(CRYPT_EAL_Es **es)
 {
     int32_t ret = CRYPT_SUCCESS;
-    CRYPT_EAL_Es *esTemp = CRYPT_EAL_EsNew();
-    RETURN_RET_IF(esTemp == NULL, CRYPT_MEM_ALLOC_FAIL);
-
-    ret = CRYPT_EAL_EsCtrl(esTemp, CRYPT_ENTROPY_SET_CF, "sm3_df", (uint32_t)strlen("sm3_df"));
-    GOTO_ERR_IF_TRUE(ret != CRYPT_SUCCESS, ret);
-
+    bool healthTest = true;
+    uint32_t size = CRYPT_ENTROPY_SEED_POOL_SIZE;
     CRYPT_EAL_NsPara para = {
         "dev-random",
         false,
@@ -368,14 +364,18 @@ static int32_t CreateSmEs(CRYPT_EAL_Es **es)
         {NULL, NULL, ReadDevRandom, NULL},
         {4, 16, 512},
     };
+    CRYPT_EAL_Es *esTemp = CRYPT_EAL_EsNew();
+    RETURN_RET_IF(esTemp == NULL, CRYPT_MEM_ALLOC_FAIL);
+
+    ret = CRYPT_EAL_EsCtrl(esTemp, CRYPT_ENTROPY_SET_CF, "sm3_df", (uint32_t)strlen("sm3_df"));
+    GOTO_ERR_IF_TRUE(ret != CRYPT_SUCCESS, ret);
+
     ret = CRYPT_EAL_EsCtrl(esTemp, CRYPT_ENTROPY_ADD_NS, (void *)&para, sizeof(CRYPT_EAL_NsPara));
     GOTO_ERR_IF_TRUE(ret != CRYPT_SUCCESS, ret);
 
-    bool healthTest = true;
     ret = CRYPT_EAL_EsCtrl(esTemp, CRYPT_ENTROPY_ENABLE_TEST, &healthTest, sizeof(healthTest));
     GOTO_ERR_IF_TRUE(ret != CRYPT_SUCCESS, ret);
 
-    uint32_t size = CRYPT_ENTROPY_SEED_POOL_SIZE;
     ret = CRYPT_EAL_EsCtrl(esTemp, CRYPT_ENTROPY_SET_POOL_SIZE, &size, sizeof(size));
     GOTO_ERR_IF_TRUE(ret != CRYPT_SUCCESS, ret);
 

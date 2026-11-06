@@ -271,6 +271,8 @@ static void EntropyRunLogCb(int32_t ret)
 static int32_t CreateIsoEs(CRYPT_EAL_Es **es)
 {
     int32_t ret = CRYPT_SUCCESS;
+    bool healthTest = true;
+    uint32_t size = CRYPT_ENTROPY_SEED_POOL_SIZE;
     CRYPT_EAL_Es *esTemp = CRYPT_EAL_EsNew();
     RETURN_RET_IF(esTemp == NULL, CRYPT_MEM_ALLOC_FAIL);
 
@@ -280,11 +282,9 @@ static int32_t CreateIsoEs(CRYPT_EAL_Es **es)
     ret = CRYPT_EAL_EsCtrl(esTemp, CRYPT_ENTROPY_SET_LOG_CALLBACK, EntropyRunLogCb, 0);
     GOTO_ERR_IF_TRUE(ret != CRYPT_SUCCESS, ret);
 
-    bool healthTest = true;
     ret = CRYPT_EAL_EsCtrl(esTemp, CRYPT_ENTROPY_ENABLE_TEST, &healthTest, sizeof(healthTest));
     GOTO_ERR_IF_TRUE(ret != CRYPT_SUCCESS, ret);
 
-    uint32_t size = CRYPT_ENTROPY_SEED_POOL_SIZE;
     ret = CRYPT_EAL_EsCtrl(esTemp, CRYPT_ENTROPY_SET_POOL_SIZE, &size, sizeof(size));
     GOTO_ERR_IF_TRUE(ret != CRYPT_SUCCESS, ret);
 

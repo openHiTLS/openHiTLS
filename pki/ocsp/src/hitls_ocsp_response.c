@@ -1039,7 +1039,6 @@ int32_t HITLS_OCSP_BasicRespSign(int32_t mdId, const CRYPT_EAL_PkeyCtx *prvKey, 
                                  const HITLS_X509_Cert *signerCert, const HITLS_X509_List *certs,
                                  HITLS_OCSP_BasicResp *bs, HITLS_OCSP_SignFlag flags)
 {
-    BslListNode *node = NULL;
     if (bs == NULL || prvKey == NULL || signerCert == NULL) {
         BSL_ERR_PUSH_ERROR(HITLS_OCSP_ERR_NULL_POINTER);
         return HITLS_OCSP_ERR_NULL_POINTER;
@@ -1051,6 +1050,7 @@ int32_t HITLS_OCSP_BasicRespSign(int32_t mdId, const CRYPT_EAL_PkeyCtx *prvKey, 
         return HITLS_OCSP_ERR_INVALID_PARAM;
     }
 
+    BslListNode *node = NULL;
     int32_t ret = OcspCheckSignKey(prvKey, signerCert);
     if (ret != HITLS_PKI_SUCCESS) {
         return ret;

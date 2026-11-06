@@ -408,8 +408,6 @@ int32_t HITLS_OCSP_ReqGetSingleReqByIndex(const HITLS_OCSP_Req *req, uint32_t in
  */
 static int32_t OcspEncodeRequestList(BslList *singleReqs, BSL_ASN1_Buffer *out)
 {
-    BSL_ASN1_Template elemTempl = {g_ocspRequestElemEncTempl,
-                                    sizeof(g_ocspRequestElemEncTempl) / sizeof(g_ocspRequestElemEncTempl[0])};
     uint32_t count = BSL_LIST_COUNT(singleReqs);
     if (count == 0) {
         BSL_ERR_PUSH_ERROR(HITLS_OCSP_ERR_INVALID_PARAM);
@@ -427,6 +425,8 @@ static int32_t OcspEncodeRequestList(BslList *singleReqs, BSL_ASN1_Buffer *out)
 
     int32_t ret = HITLS_PKI_SUCCESS;
     uint32_t i = 0;
+    BSL_ASN1_Template elemTempl = {g_ocspRequestElemEncTempl,
+                                    sizeof(g_ocspRequestElemEncTempl) / sizeof(g_ocspRequestElemEncTempl[0])};
     BslListNode *node = BSL_LIST_FirstNode(singleReqs);
     while (node != NULL) {
         HITLS_OCSP_SingleReq *singleReq = (HITLS_OCSP_SingleReq *)BSL_LIST_GetData(node);
