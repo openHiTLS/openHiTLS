@@ -24,7 +24,6 @@
 #endif
 #ifdef HITLS_CRYPTO_ENTROPY_GETENTROPY
 #include <sys/syscall.h>
-static int EntropyGetEntropy(void *buffer, size_t length) __attribute__((weakref("getentropy")));
 #endif
 #include <string.h>
 #include "entropy_seed_pool.h"
@@ -37,8 +36,14 @@ uint32_t ENTROPY_SysEntropyGet(void *ctx, uint8_t *buf, uint32_t bufLen)
 #if defined(HITLS_CRYPTO_ENTROPY_GETENTROPY) || defined(HITLS_CRYPTO_ENTROPY_DEVRANDOM)
     uint32_t res = 0;
 #if defined(HITLS_CRYPTO_ENTROPY_GETENTROPY)
-    if (EntropyGetEntropy != NULL) {
-        if (EntropyGetEntropy(buf, bufLen) == 0) {
+#if defined(__GNUC__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wredundant-decls"
+    extern int getentropy(void *__buffer, size_t __length) __attribute__((weak));
+#pragma GCC diagnostic pop
+#endif
+    if (getentropy != NULL) {
+        if (getentropy(buf, bufLen) == 0) {
             return bufLen;
         }
     }
