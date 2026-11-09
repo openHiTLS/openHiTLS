@@ -171,11 +171,13 @@ EXIT:
 * @test  UT_TLS_TLS13_PSK_IDENTITIES_LIMIT_FUNC_TC001
 * @spec  -
 * @title Initialize the client and server to TLS1.3 PSK mode, then construct a ClientHello whose pre_shared_key
-*        extension carries more than the maximum supported number of PSK identities. The handshake is expected to fail.
+*        extension carries more than the maximum supported number of PSK identities. The server is expected to
+*        ignore the excess identities and proceed with the first MAX_PSK_IDENTITY_COUNT identities.
 * @precon nan
 * @brief 4.2.11. Pre-Shared Key Extension
-* @expect 1. The server rejects the malformed ClientHello with a fatal illegal_parameter alert.
-*         2. The PSK server callback is not invoked after the PSK identity count limit is exceeded.
+* @expect 1. The server ignores identities beyond MAX_PSK_IDENTITY_COUNT and invokes the PSK callback for each
+*           kept identity.
+*         2. The handshake succeeds because the server falls back to certificate-based authentication.
 @ */
 /* BEGIN_CASE */
 void UT_TLS_TLS13_PSK_IDENTITIES_LIMIT_FUNC_TC001()
@@ -203,15 +205,8 @@ void UT_TLS_TLS13_PSK_IDENTITIES_LIMIT_FUNC_TC001()
     HITLS_CFG_SetPskClientCallback(testInfo.config, (HITLS_PskClientCb)ExampleClientCb);
     testInfo.client = FRAME_CreateLink(testInfo.config, testInfo.uioType);
     testInfo.server = FRAME_CreateLink(testInfo.config, testInfo.uioType);
-    ASSERT_EQ(FRAME_CreateConnection(testInfo.client, testInfo.server, true, HS_STATE_BUTT),
-        HITLS_PARSE_INVALID_MSG_LEN);
-    ASSERT_EQ(g_pskIdentityLimitServerCbCalls, 0);
-
-    ALERT_Info alert = {0};
-    ALERT_GetInfo(testInfo.server->ssl, &alert);
-    ASSERT_EQ(alert.flag, ALERT_FLAG_SEND);
-    ASSERT_EQ(alert.level, ALERT_LEVEL_FATAL);
-    ASSERT_EQ(alert.description, ALERT_ILLEGAL_PARAMETER);
+    ASSERT_EQ(FRAME_CreateConnection(testInfo.client, testInfo.server, true, HS_STATE_BUTT), HITLS_SUCCESS);
+    ASSERT_EQ(g_pskIdentityLimitServerCbCalls, MAX_PSK_IDENTITY_COUNT);
 
 EXIT:
     ClearWrapper();

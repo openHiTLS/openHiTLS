@@ -345,12 +345,7 @@ int32_t ParseIdentities(TLS_Ctx *ctx, PreSharedKey *preSharedKey, const uint8_t 
     uint32_t identityCount = 0;
     PreSharedKey *tmp = preSharedKey;
 
-    while (bufOffset + sizeof(uint16_t) < bufLen) {
-        if (identityCount >= MAX_PSK_IDENTITY_COUNT) {
-            ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_ILLEGAL_PARAMETER);
-            BSL_ERR_PUSH_ERROR(HITLS_PARSE_INVALID_MSG_LEN);
-            return HITLS_PARSE_INVALID_MSG_LEN;
-        }
+    while (bufOffset + sizeof(uint16_t) < bufLen && identityCount < MAX_PSK_IDENTITY_COUNT) {
         /* Create a linked list node */
         PreSharedKey *node = (PreSharedKey *)BSL_SAL_Calloc(1, sizeof(PreSharedKey));
         if (node == NULL) {
@@ -391,7 +386,7 @@ int32_t ParseIdentities(TLS_Ctx *ctx, PreSharedKey *preSharedKey, const uint8_t 
         identityCount++;
     }
 
-    if (bufOffset != bufLen) {
+    if (identityCount < MAX_PSK_IDENTITY_COUNT && bufOffset != bufLen) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15147, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "IdentityEntry error. bufLen = %d ", bufLen, 0, 0, 0);
         ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_ILLEGAL_PARAMETER);
@@ -592,6 +587,7 @@ static int32_t ParseBinders(TLS_Ctx *ctx, PreSharedKey *preSharedKey, const uint
     PreSharedKey *cur = NULL;
     PreSharedKey *cache = preSharedKey;
 
+    uint32_t binderCount = 0;
     LIST_FOR_EACH_ITEM_SAFE(node, tmpNode, &(cache->pskNode))
     {
         cur = BSL_LIST_ENTRY(node, PreSharedKey, pskNode);
@@ -617,9 +613,10 @@ static int32_t ParseBinders(TLS_Ctx *ctx, PreSharedKey *preSharedKey, const uint
 
         memcpy(cur->binder, &buf[bufOffset], binderLen);
         bufOffset += binderLen;
+        binderCount++;
     }
 
-    if (bufLen != bufOffset) {
+    if (binderCount < MAX_PSK_IDENTITY_COUNT && bufLen != bufOffset) {
         return ParseErrorExtLengthProcess(ctx, BINLOG_ID15167, BINGLOG_STR("binder in pre share key"));
     }
 
