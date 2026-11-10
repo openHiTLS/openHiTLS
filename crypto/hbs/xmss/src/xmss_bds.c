@@ -112,6 +112,31 @@ static void DecodeNodes(const uint8_t **pos, uint8_t nodes[][XMSS_MAX_MDSIZE], u
     }
 }
 
+static bool CheckUninitializedState(const XmssBdsState *state, uint32_t hp)
+{
+    uint32_t pos = 0;
+    uint32_t nextLeaf = state->nextLeaf;
+
+    for (uint32_t h = hp; h > 0; h--) {
+        uint32_t level = h - 1U;
+
+        if (((nextLeaf >> level) & 1U) == 0) {
+            continue;
+        }
+
+        if (pos >= state->stackOffset ||
+            state->stackLevels[pos] != level) {
+            return false;
+        }
+        pos++;
+    }
+
+    if (pos != state->stackOffset) {
+        return false;
+    }
+    return true;
+}
+
 /*
  * Validate fields that later control array indexes, stack traversal and leaf generation.
  *
@@ -133,13 +158,29 @@ static bool IsStateValid(const XmssBdsState *state, uint32_t hp)
             return false;
         }
     }
+    if (!state->initialized && CheckUninitializedState(state, hp) == false) {
+        return false;
+    }
+    /*
+     * Every unfinished treehash instance owns a disjoint slice of the shared
+     * stack, so their stackUsage values must fit within stackOffset together.
+     * Completed instances must have released their slices.
+     */
+    uint32_t stackUsed = 0;
     for (uint32_t i = 0; i < hp; i++) {
         const XmssBdsTreehash *treehash = &state->treehash[i];
         if (treehash->height != i || treehash->nextIdx > leafCount || treehash->stackUsage > state->stackOffset) {
             return false;
         }
+        if (treehash->completed) {
+            if (treehash->stackUsage != 0) {
+                return false;
+            }
+            continue;
+        }
+        stackUsed += treehash->stackUsage;
     }
-    return true;
+    return stackUsed <= state->stackOffset;
 }
 
 /*

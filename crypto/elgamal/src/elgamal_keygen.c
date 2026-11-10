@@ -369,7 +369,7 @@ CRYPT_ELGAMAL_PrvKey *ElGamal_NewPrvKey(uint32_t bits)
     prvKey->p = BN_Create(bits);
     prvKey->g = BN_Create(bits);
     prvKey->x = BN_Create(bits);
-
+    (void)BN_SetFlag(prvKey->x, CRYPT_BN_FLAG_CONSTTIME);
     if (prvKey->p == NULL || prvKey->g == NULL || prvKey->x == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         ELGAMAL_FREE_PRV_KEY(prvKey);
