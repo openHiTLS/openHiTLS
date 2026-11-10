@@ -603,8 +603,7 @@ static int32_t PkeyDecrypt(PkeyUtlOpt *pkeyUtlOpt)
             break;
         }
 
-        BSL_UIO *fileWriteUio = HITLS_APP_UioOpen(pkeyUtlOpt->outFile, 'w',
-            pkeyUtlOpt->outFile != NULL ? 1 : 0);
+        BSL_UIO *fileWriteUio = HITLS_APP_UioOpenPrivate(pkeyUtlOpt->outFile, 'w');
         if (fileWriteUio == NULL) {
             AppPrintError("pkeyutl: Failed to open the output file for plaintext.\n");
             ret = HITLS_APP_UIO_FAIL;
@@ -619,7 +618,8 @@ static int32_t PkeyDecrypt(PkeyUtlOpt *pkeyUtlOpt)
     BSL_SAL_ClearFree(prv.data, prv.dataLen);
     BSL_SAL_FREE(hexBuf);
     BSL_SAL_FREE(cipherText);
-    BSL_SAL_FREE(plainText);
+    /* Wipe the recovered plaintext (possibly key material) before releasing it. */
+    BSL_SAL_ClearFree(plainText, outLen);
     CRYPT_EAL_PkeyFreeCtx(ctx);
     return ret;
 }

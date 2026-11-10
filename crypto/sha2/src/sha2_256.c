@@ -363,7 +363,7 @@ int32_t CRYPT_SHA256_MBUpdate(CRYPT_SHA2_256_MB_Ctx *ctx, const uint8_t *data[],
     const uint8_t *d0 = data[0];
     const uint8_t *d1 = data[1];
     uint32_t caches = ctx0->blocklen;
-    if (caches + commonBytes >= CRYPT_SHA2_256_BLOCKSIZE) {
+    if (commonBytes >= CRYPT_SHA2_256_BLOCKSIZE - caches) {
         if (caches != 0) {
             uint32_t cpysize = CRYPT_SHA2_256_BLOCKSIZE - caches;
             memcpy(b0 + caches, d0, cpysize);

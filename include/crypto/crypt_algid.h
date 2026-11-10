@@ -164,6 +164,9 @@ typedef enum {
     CRYPT_CIPHER_AES192_ECB = BSL_CID_AES192_ECB,
     CRYPT_CIPHER_AES256_ECB = BSL_CID_AES256_ECB,
 
+    /* AES-XTS supports only one CRYPT_EAL_CipherUpdate call per
+     * Init/Reinit. Call CipherReinit with a fresh data-unit tweak before
+     * processing another data unit; a second Update reuses the tweak. */
     CRYPT_CIPHER_AES128_XTS = BSL_CID_AES128_XTS,
     CRYPT_CIPHER_AES256_XTS = BSL_CID_AES256_XTS,
 
@@ -185,6 +188,9 @@ typedef enum {
     CRYPT_CIPHER_CHACHA20 = BSL_CID_CHACHA20,
     CRYPT_CIPHER_CHACHA20_POLY1305 = BSL_CID_CHACHA20_POLY1305,
 
+    /* SM4-XTS supports only one CRYPT_EAL_CipherUpdate call per
+     * Init/Reinit. Call CipherReinit with a fresh data-unit tweak before
+     * processing another data unit; a second Update reuses the tweak. */
     CRYPT_CIPHER_SM4_XTS = BSL_CID_SM4_XTS,
     CRYPT_CIPHER_SM4_CBC = BSL_CID_SM4_CBC,
     CRYPT_CIPHER_SM4_ECB = BSL_CID_SM4_ECB,
