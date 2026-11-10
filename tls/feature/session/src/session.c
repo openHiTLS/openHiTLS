@@ -193,6 +193,29 @@ HITLS_Session *SESS_Copy(HITLS_Session *src)
     return dest;
 }
 
+int32_t SESS_SetVerifyResult(HITLS_Session *sess, int32_t verifyResult)
+{
+    if (sess == NULL) {
+        BSL_ERR_PUSH_ERROR(HITLS_NULL_INPUT);
+        return HITLS_NULL_INPUT;
+    }
+    BSL_SAL_ThreadWriteLock(sess->lock);
+    sess->verifyResult = verifyResult;
+    BSL_SAL_ThreadUnlock(sess->lock);
+    return HITLS_SUCCESS;
+}
+
+int32_t SESS_GetVerifyResult(const HITLS_Session *sess)
+{
+    if (sess == NULL) {
+        return HITLS_NULL_INPUT;
+    }
+    BSL_SAL_ThreadReadLock(sess->lock);
+    int32_t verifyResult = sess->verifyResult;
+    BSL_SAL_ThreadUnlock(sess->lock);
+    return verifyResult;
+}
+
 /* Just make a simple judgment */
 bool HITLS_SESS_IsResumable(const HITLS_Session *sess)
 {
@@ -416,6 +439,7 @@ int32_t SESS_SetPeerCert(HITLS_Session *sess, CERT_Pair *peerCert)
     }
 
     BSL_SAL_ThreadWriteLock(sess->lock);
+    SAL_CERT_PairFree(sess->certMgrCtx, sess->peerCert);
     sess->peerCert = peerCert;
 
     BSL_SAL_ThreadUnlock(sess->lock);

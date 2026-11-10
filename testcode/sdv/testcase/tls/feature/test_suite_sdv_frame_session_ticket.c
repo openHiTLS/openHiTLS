@@ -24,6 +24,14 @@
 #include "session_mgr.h"
 #include "bsl_sal.h"
 #include "hitls_session.h"
+#include "hitls_cert.h"
+#include "hitls_alpn.h"
+#include "cert_method.h"
+#include "hlt_type.h"
+#include "stub_utils.h"
+#include "session_enc.h"
+#include "bsl_err.h"
+#include "bsl_list.h"
 /* END_HEADER */
 
 static int32_t ServernameCbErrOK(HITLS_Ctx *ctx, int *alert, void *arg)
@@ -2239,6 +2247,473 @@ EXIT:
     (void)copy;
     (void)noStore;
     SKIP_TEST();
+#endif
+}
+/* END_CASE */
+
+#ifdef HITLS_TLS_FEATURE_ALPN
+static int32_t RejectResumeAlpn(HITLS_Ctx *ctx, uint8_t **selected, uint8_t *selectedLen,
+    uint8_t *protocols, uint32_t protocolsLen, void *arg)
+{
+    (void)ctx;
+    (void)selected;
+    (void)selectedLen;
+    (void)protocols;
+    (void)protocolsLen;
+    (void)arg;
+    return HITLS_ALPN_ERR_ALERT_FATAL;
+}
+#endif
+
+/**
+ * @brief Restore cached verification results after version and EMS checks.
+ * @expect Version/EMS rejection preserves the result; cipher/ALPN rejection retains the cached result.
+ * @precon TLS 1.2 session IDs and ALPN are enabled.
+ */
+/* BEGIN_CASE */
+void SDV_TLS_SESSION_RESUME_VERIFY_RESULT_TC001(int rejectReason, int cachedFailure)
+{
+#if defined(HITLS_TLS_PROTO_TLS12) && defined(HITLS_TLS_FEATURE_SESSION_ID) && defined(HITLS_TLS_FEATURE_ALPN)
+    FRAME_LinkObj *client = NULL;
+    FRAME_LinkObj *server = NULL;
+    HITLS_Config *clientConfig = NULL;
+    HITLS_Config *serverConfig = NULL;
+    HITLS_Session *session = NULL;
+    HITLS_Session *cached = NULL;
+    HITLS_ERROR cachedResult = cachedFailure ? HITLS_CERT_ERR_VERIFY_CERT_CHAIN : 0;
+    HITLS_ERROR priorResult = cachedFailure ? 0 : HITLS_CERT_ERR_VERIFY_CERT_CHAIN;
+    HITLS_ERROR actual = 0;
+    uint16_t cipher = HITLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256;
+    FRAME_Init();
+    clientConfig = HITLS_CFG_NewTLS12Config();
+    serverConfig = HITLS_CFG_NewTLS12Config();
+    ASSERT_TRUE(clientConfig != NULL && serverConfig != NULL);
+    ASSERT_EQ(HITLS_CFG_SetSessionTicketSupport(clientConfig, false), HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_CFG_SetSessionTicketSupport(serverConfig, false), HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_CFG_SetSessionCacheMode(serverConfig, HITLS_SESS_CACHE_SERVER), HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_CFG_SetCipherSuites(clientConfig, &cipher, 1), HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_CFG_SetCipherSuites(serverConfig, &cipher, 1), HITLS_SUCCESS);
+    if (rejectReason == HITLS_MSG_HANDLE_INVALID_EXTENDED_MASTER_SECRET) {
+        ASSERT_EQ(HITLS_CFG_SetExtendedMasterSecretMode(clientConfig, HITLS_EMS_MODE_FORBID), HITLS_SUCCESS);
+        ASSERT_EQ(HITLS_CFG_SetExtendedMasterSecretMode(serverConfig, HITLS_EMS_MODE_FORBID), HITLS_SUCCESS);
+    }
+    client = FRAME_CreateLink(clientConfig, BSL_UIO_TCP);
+    server = FRAME_CreateLink(serverConfig, BSL_UIO_TCP);
+    ASSERT_TRUE(client != NULL && server != NULL);
+    ASSERT_EQ(FRAME_CreateConnection(client, server, false, HS_STATE_BUTT), HITLS_SUCCESS);
+    session = HITLS_GetDupSession(client->ssl);
+    cached = HITLS_GetDupSession(server->ssl);
+    ASSERT_TRUE(session != NULL && cached != NULL);
+    ASSERT_EQ(SESS_SetVerifyResult(cached, cachedResult), HITLS_SUCCESS);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+    client = NULL;
+    server = NULL;
+
+    if (rejectReason == HITLS_MSG_HANDLE_ILLEGAL_VERSION) {
+        ASSERT_EQ(HITLS_SESS_SetProtocolVersion(cached, HITLS_VERSION_TLS13), HITLS_SUCCESS);
+    } else if (rejectReason == HITLS_MSG_HANDLE_ILLEGAL_CIPHER_SUITE) {
+        ASSERT_EQ(HITLS_SESS_SetCipherSuite(cached, HITLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384), HITLS_SUCCESS);
+    } else if (rejectReason == HITLS_MSG_HANDLE_ALPN_PROTOCOL_NO_MATCH) {
+        uint8_t protocols[] = {2, 'h', '2'};
+        ASSERT_EQ(HITLS_CFG_SetAlpnProtos(clientConfig, protocols, sizeof(protocols)), HITLS_SUCCESS);
+        ASSERT_EQ(HITLS_CFG_SetAlpnProtosSelectCb(serverConfig, RejectResumeAlpn, NULL), HITLS_SUCCESS);
+    } else if (rejectReason == HITLS_MSG_HANDLE_INVALID_EXTENDED_MASTER_SECRET) {
+        ASSERT_EQ(HITLS_SESS_SetHaveExtMasterSecret(cached, true), HITLS_SUCCESS);
+    }
+
+    client = FRAME_CreateLink(clientConfig, BSL_UIO_TCP);
+    server = FRAME_CreateLink(serverConfig, BSL_UIO_TCP);
+    ASSERT_TRUE(client != NULL && server != NULL);
+    ASSERT_EQ(HITLS_SetSession(client->ssl, session), HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_Accept(server->ssl), HITLS_REC_NORMAL_RECV_BUF_EMPTY);
+    ASSERT_EQ(FRAME_CreateConnection(client, server, false, TRY_RECV_CLIENT_HELLO), HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_SetVerifyResult(server->ssl, priorResult), HITLS_SUCCESS);
+    if (rejectReason == HITLS_SUCCESS) {
+        ASSERT_EQ(FRAME_CreateConnection(client, server, false, HS_STATE_BUTT), HITLS_SUCCESS);
+        bool reused = false;
+        ASSERT_EQ(HITLS_IsSessionReused(server->ssl, &reused), HITLS_SUCCESS);
+        ASSERT_TRUE(reused);
+    } else {
+        ASSERT_EQ(HITLS_Accept(server->ssl), rejectReason);
+    }
+    ASSERT_EQ(HITLS_GetVerifyResult(server->ssl, &actual), HITLS_SUCCESS);
+    bool rejectedBeforeRestore = rejectReason == HITLS_MSG_HANDLE_ILLEGAL_VERSION ||
+        rejectReason == HITLS_MSG_HANDLE_INVALID_EXTENDED_MASTER_SECRET;
+    ASSERT_EQ(actual, rejectedBeforeRestore ? priorResult : cachedResult);
+    ASSERT_EQ(SESS_GetVerifyResult(cached), cachedResult);
+EXIT:
+    HITLS_SESS_Free(session);
+    HITLS_SESS_Free(cached);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+    HITLS_CFG_FreeConfig(clientConfig);
+    HITLS_CFG_FreeConfig(serverConfig);
+#else
+    (void)rejectReason;
+    (void)cachedFailure;
+    SKIP_TEST();
+EXIT:
+    return;
+#endif
+}
+/* END_CASE */
+
+static int32_t RejectSessionPeerCert(HITLS_CERT_StoreCtx *storeCtx, void *arg)
+{
+    (void)storeCtx;
+    (void)arg;
+    return 0;
+}
+
+/**
+ * @brief Preserve peer verification results across repeated session resumptions.
+ * @expect Results survive copying, serialization and resumption; connection overrides do not alter sessions.
+ * @precon Session resumption and certificate verification callbacks are enabled.
+ */
+/* BEGIN_CASE */
+void SDV_TLS_SESSION_VERIFY_RESULT_TC001(int version, int ticket, int rejectPeer)
+{
+    FRAME_LinkObj *client = NULL;
+    FRAME_LinkObj *server = NULL;
+    HITLS_Config *clientConfig = NULL;
+    HITLS_Config *serverConfig = NULL;
+    HITLS_Session *session = NULL;
+    HITLS_Session *sessionCopy = NULL;
+    uint8_t *encoded = NULL;
+    HITLS_ERROR clientResult = 0;
+    HITLS_ERROR serverResult = 0;
+    FRAME_Init();
+    clientConfig = HITLS_CFG_NewTLSConfig();
+    serverConfig = HITLS_CFG_NewTLSConfig();
+    ASSERT_TRUE(clientConfig != NULL && serverConfig != NULL);
+    ASSERT_EQ(HITLS_CFG_SetVersion(clientConfig, version, version), HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_CFG_SetVersion(serverConfig, version, version), HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_CFG_SetSessionTicketSupport(clientConfig, ticket), HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_CFG_SetSessionTicketSupport(serverConfig, ticket), HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_CFG_SetSessionCacheMode(serverConfig,
+        ticket ? HITLS_SESS_CACHE_NO : HITLS_SESS_CACHE_SERVER), HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_CFG_SetClientVerifySupport(serverConfig, true), HITLS_SUCCESS);
+    if (rejectPeer != 0) {
+        HITLS_Config *config = rejectPeer == 1 ? clientConfig : serverConfig;
+        ASSERT_EQ(HITLS_CFG_SetVerifyNoneSupport(config, true), HITLS_SUCCESS);
+        ASSERT_EQ(HITLS_CFG_SetCertVerifyCb(config, RejectSessionPeerCert, NULL), HITLS_SUCCESS);
+    }
+
+    for (uint32_t round = 0; round < 3; round++) {
+        client = FRAME_CreateLink(clientConfig, BSL_UIO_TCP);
+        server = FRAME_CreateLink(serverConfig, BSL_UIO_TCP);
+        ASSERT_TRUE(client != NULL && server != NULL);
+        if (round != 0) {
+            HITLS_ERROR overridden = clientResult == 0 ? HITLS_CERT_ERR_VERIFY_CERT_CHAIN : 0;
+            HITLS_ERROR actual = 0;
+            ASSERT_EQ(HITLS_SetVerifyResult(client->ssl, overridden), HITLS_SUCCESS);
+            ASSERT_EQ(HITLS_SetSession(client->ssl, NULL), HITLS_SUCCESS);
+            ASSERT_EQ(HITLS_GetVerifyResult(client->ssl, &actual), HITLS_SUCCESS);
+            ASSERT_EQ(actual, overridden);
+            ASSERT_EQ(HITLS_SetSession(client->ssl, session), HITLS_SUCCESS);
+            ASSERT_EQ(HITLS_GetVerifyResult(client->ssl, &actual), HITLS_SUCCESS);
+            ASSERT_EQ(actual, clientResult);
+        }
+        ASSERT_EQ(FRAME_CreateConnection(client, server, false, HS_STATE_BUTT), HITLS_SUCCESS);
+        if (version == HITLS_VERSION_TLS13) {
+            uint8_t buf[1];
+            uint32_t readLen = 0;
+            ASSERT_EQ(HITLS_Read(client->ssl, buf, sizeof(buf), &readLen), HITLS_REC_NORMAL_RECV_BUF_EMPTY);
+        }
+        bool reused = false;
+        ASSERT_EQ(HITLS_IsSessionReused(client->ssl, &reused), HITLS_SUCCESS);
+        ASSERT_EQ(reused, round != 0);
+        ASSERT_EQ(HITLS_IsSessionReused(server->ssl, &reused), HITLS_SUCCESS);
+        ASSERT_EQ(reused, round != 0);
+        HITLS_ERROR actualClient = 0;
+        HITLS_ERROR actualServer = 0;
+        ASSERT_EQ(HITLS_GetVerifyResult(client->ssl, &actualClient), HITLS_SUCCESS);
+        ASSERT_EQ(HITLS_GetVerifyResult(server->ssl, &actualServer), HITLS_SUCCESS);
+        if (round == 0) {
+            clientResult = actualClient;
+            serverResult = actualServer;
+            ASSERT_EQ(clientResult == 0, rejectPeer != 1);
+            ASSERT_EQ(serverResult == 0, rejectPeer != 2);
+        } else {
+            ASSERT_EQ(actualClient, clientResult);
+            ASSERT_EQ(actualServer, serverResult);
+        }
+        ASSERT_EQ(SESS_GetVerifyResult(HITLS_GetSession(client->ssl)), clientResult);
+        ASSERT_EQ(SESS_GetVerifyResult(HITLS_GetSession(server->ssl)), serverResult);
+        ASSERT_EQ(HITLS_SetVerifyResult(client->ssl,
+            clientResult == 0 ? HITLS_CERT_ERR_VERIFY_CERT_CHAIN : 0), HITLS_SUCCESS);
+        ASSERT_EQ(HITLS_SetVerifyResult(server->ssl,
+            serverResult == 0 ? HITLS_CERT_ERR_VERIFY_CERT_CHAIN : 0), HITLS_SUCCESS);
+        ASSERT_EQ(SESS_GetVerifyResult(HITLS_GetSession(client->ssl)), clientResult);
+        ASSERT_EQ(SESS_GetVerifyResult(HITLS_GetSession(server->ssl)), serverResult);
+        HITLS_SESS_Free(session);
+        session = HITLS_GetDupSession(client->ssl);
+        ASSERT_TRUE(session != NULL);
+        if (round == 0) {
+            sessionCopy = SESS_Copy(session);
+            ASSERT_TRUE(sessionCopy != NULL);
+            ASSERT_EQ(SESS_GetVerifyResult(sessionCopy), clientResult);
+        } else if (round == 1) {
+            uint32_t encodedLen = SESS_GetTotalEncodeSize(session);
+            ASSERT_TRUE(encodedLen > 0);
+            encoded = BSL_SAL_Malloc(encodedLen);
+            ASSERT_TRUE(encoded != NULL);
+            ASSERT_EQ(SESS_Encode(session, encoded, encodedLen, &encodedLen), HITLS_SUCCESS);
+            sessionCopy = HITLS_SESS_New();
+            ASSERT_TRUE(sessionCopy != NULL);
+            ASSERT_EQ(SESS_Decode(sessionCopy, encoded, encodedLen), HITLS_SUCCESS);
+            ASSERT_EQ(SESS_GetVerifyResult(sessionCopy), clientResult);
+            /* Ticket payload encoding excludes the ticket itself. */
+            if (session->ticketSize != 0) {
+                ASSERT_EQ(SESS_SetTicket(sessionCopy, session->ticket, session->ticketSize), HITLS_SUCCESS);
+            }
+            BSL_SAL_FREE(encoded);
+        }
+        if (sessionCopy != NULL) {
+            HITLS_SESS_Free(session);
+            session = sessionCopy;
+            sessionCopy = NULL;
+        }
+        FRAME_FreeLink(client);
+        FRAME_FreeLink(server);
+        client = NULL;
+        server = NULL;
+    }
+EXIT:
+    BSL_SAL_FREE(encoded);
+    HITLS_SESS_Free(sessionCopy);
+    HITLS_SESS_Free(session);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+    HITLS_CFG_FreeConfig(clientConfig);
+    HITLS_CFG_FreeConfig(serverConfig);
+}
+/* END_CASE */
+
+#ifdef HITLS_TLS_FEATURE_PHA
+static bool SessionCertificateEquals(HITLS_Ctx *ctx, HITLS_CERT_X509 *a, HITLS_CERT_X509 *b)
+{
+    if (a == NULL || b == NULL) {
+        return a == b;
+    }
+    uint8_t encodedA[4096];
+    uint8_t encodedB[4096];
+    uint32_t lenA = 0;
+    uint32_t lenB = 0;
+    if (SAL_CERT_X509Encode(ctx, a, encodedA, sizeof(encodedA), &lenA) != HITLS_SUCCESS ||
+        SAL_CERT_X509Encode(ctx, b, encodedB, sizeof(encodedB), &lenB) != HITLS_SUCCESS) {
+        return false;
+    }
+    return lenA == lenB && memcmp(encodedA, encodedB, lenA) == 0;
+}
+
+STUB_DEFINE_RET1(HITLS_Session *, SESS_Copy, HITLS_Session *);
+
+static HITLS_Session *g_phaSessionCopyFail;
+
+static HITLS_Session *PhaSessionCopyFail(HITLS_Session *session)
+{
+    return session == g_phaSessionCopyFail ? NULL : get_real_SESS_Copy()(session);
+}
+#endif
+
+/**
+ * @brief Refresh the peer identity and verification result after PHA on a resumed connection.
+ * @expect PHA updates the certificate, chain and result together without altering the original session.
+ * @precon TLS 1.3 session tickets and PHA are enabled.
+ */
+/* BEGIN_CASE */
+void SDV_TLS_SESSION_PHA_VERIFY_RESULT_TC001(int rejectPha, int failCopy, int peerMode)
+{
+#ifdef HITLS_TLS_FEATURE_PHA
+    FRAME_LinkObj *client = NULL;
+    FRAME_LinkObj *server = NULL;
+    HITLS_Config *clientConfig = NULL;
+    HITLS_Config *serverConfig = NULL;
+    HITLS_Session *session = NULL;
+    HITLS_Session *beforePha = NULL;
+    HITLS_CERT_X509 *initialPeer = NULL;
+    HITLS_CERT_X509 *phaPeer = NULL;
+    HITLS_CERT_X509 *phaIssuer = NULL;
+    HITLS_CERT_X509 *actualPeer = NULL;
+    HITLS_ERROR initialResult = rejectPha ? 0 : HITLS_CERT_ERR_VERIFY_CERT_CHAIN;
+    HITLS_ERROR phaResult = rejectPha == 1 ? HITLS_CERT_ERR_VERIFY_CERT_CHAIN : 0;
+    if (peerMode == 3) {
+        phaResult = initialResult;
+    }
+    uint8_t buf[1] = {0};
+    uint32_t readLen = 0;
+    FRAME_Init();
+    clientConfig = HITLS_CFG_NewTLS13Config();
+    serverConfig = HITLS_CFG_NewTLS13Config();
+    ASSERT_TRUE(clientConfig != NULL && serverConfig != NULL);
+    ASSERT_EQ(HITLS_CFG_SetPostHandshakeAuthSupport(clientConfig, true), HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_CFG_SetPostHandshakeAuthSupport(serverConfig, false), HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_CFG_SetClientVerifySupport(serverConfig, true), HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_CFG_SetTicketNums(serverConfig, 1), HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_CFG_SetVerifyNoneSupport(serverConfig, !rejectPha), HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_CFG_SetCertVerifyCb(serverConfig, rejectPha ? NULL : RejectSessionPeerCert, NULL), HITLS_SUCCESS);
+
+    for (uint32_t round = 0; round < 3; round++) {
+        client = FRAME_CreateLink(clientConfig, BSL_UIO_TCP);
+        server = FRAME_CreateLink(serverConfig, BSL_UIO_TCP);
+        ASSERT_TRUE(client != NULL && server != NULL);
+        if (round != 0) {
+            ASSERT_EQ(HITLS_SetSession(client->ssl, session), HITLS_SUCCESS);
+        }
+        if (round == 0) {
+            ASSERT_EQ(HITLS_RemoveCertAndKey(client->ssl), HITLS_SUCCESS);
+            ASSERT_EQ(HITLS_LoadCertFile(client->ssl, DEFAULT_CERT_PATH ECDSA_SHA256_EE_PATH,
+                TLS_PARSE_FORMAT_ASN1), HITLS_SUCCESS);
+            ASSERT_EQ(HITLS_LoadKeyFile(client->ssl, DEFAULT_CERT_PATH ECDSA_SHA256_PRIV_PATH,
+                TLS_PARSE_FORMAT_ASN1), HITLS_SUCCESS);
+        }
+        ASSERT_EQ(FRAME_CreateConnection(client, server, false, HS_STATE_BUTT), HITLS_SUCCESS);
+        ASSERT_EQ(HITLS_Read(client->ssl, buf, sizeof(buf), &readLen), HITLS_REC_NORMAL_RECV_BUF_EMPTY);
+        bool reused = false;
+        ASSERT_EQ(HITLS_IsSessionReused(client->ssl, &reused), HITLS_SUCCESS);
+        ASSERT_EQ(reused, round != 0);
+        ASSERT_EQ(HITLS_IsSessionReused(server->ssl, &reused), HITLS_SUCCESS);
+        ASSERT_EQ(reused, round != 0);
+        HITLS_ERROR actual = 0;
+        ASSERT_EQ(HITLS_GetVerifyResult(server->ssl, &actual), HITLS_SUCCESS);
+        ASSERT_EQ(actual, round < 2 ? initialResult : phaResult);
+        ASSERT_EQ(SESS_GetVerifyResult(HITLS_GetSession(server->ssl)), actual);
+        if (round == 0) {
+            initialPeer = HITLS_GetPeerCertificate(server->ssl);
+            ASSERT_TRUE(initialPeer != NULL);
+        } else {
+            actualPeer = HITLS_GetPeerCertificate(server->ssl);
+            HITLS_CERT_X509 *expected = round == 1 ? initialPeer : phaPeer;
+            if (round == 2 && (peerMode == 2 || peerMode == 3)) {
+                expected = NULL;
+            }
+            ASSERT_TRUE(SessionCertificateEquals(server->ssl, actualPeer, expected));
+            SAL_CERT_X509Free(actualPeer);
+            actualPeer = NULL;
+        }
+
+        if (round == 1) {
+            beforePha = HITLS_GetDupSession(server->ssl);
+            ASSERT_TRUE(beforePha != NULL);
+            ASSERT_EQ(HITLS_SESS_SetUserData(beforePha, &rejectPha), HITLS_SUCCESS);
+            ASSERT_EQ(HITLS_RemoveCertAndKey(client->ssl), HITLS_SUCCESS);
+            if (peerMode != 3) {
+                const char *certFile = peerMode == 0 ? DEFAULT_CERT_PATH ECDSA_SHA256_EE_PATH :
+                    DEFAULT_CERT_PATH ECDSA_SHA384_EE_PATH;
+                const char *keyFile = peerMode == 0 ? DEFAULT_CERT_PATH ECDSA_SHA256_PRIV_PATH :
+                    DEFAULT_CERT_PATH ECDSA_SHA384_PRIV_PATH;
+                const char *issuerFile = DEFAULT_CERT_PATH ECDSA_SHA_CHAIN_PATH;
+                ASSERT_EQ(HITLS_LoadCertFile(client->ssl, certFile, TLS_PARSE_FORMAT_ASN1), HITLS_SUCCESS);
+                ASSERT_EQ(HITLS_LoadKeyFile(client->ssl, keyFile, TLS_PARSE_FORMAT_ASN1), HITLS_SUCCESS);
+                phaPeer = SAL_CERT_X509Ref(client->ssl->config.tlsConfig.certMgrCtx,
+                    HITLS_GetCertificate(client->ssl));
+                ASSERT_TRUE(phaPeer != NULL);
+                ASSERT_EQ(SessionCertificateEquals(server->ssl, initialPeer, phaPeer), peerMode == 0);
+                phaIssuer = HITLS_CFG_ParseCert(clientConfig, (const uint8_t *)issuerFile, strlen(issuerFile),
+                    TLS_PARSE_TYPE_FILE, TLS_PARSE_FORMAT_ASN1);
+                ASSERT_TRUE(phaIssuer != NULL);
+                ASSERT_EQ(HITLS_CFG_AddChainCert(&client->ssl->config.tlsConfig, phaIssuer, true), HITLS_SUCCESS);
+            }
+            ASSERT_EQ(HITLS_SetKeepPeerCertificate(server->ssl, peerMode != 2), HITLS_SUCCESS);
+            if (failCopy) {
+                g_phaSessionCopyFail = beforePha;
+                STUB_REPLACE(SESS_Copy, PhaSessionCopyFail);
+            }
+            ASSERT_EQ(HITLS_VerifyClientPostHandshake(server->ssl), HITLS_SUCCESS);
+            ASSERT_EQ(HITLS_Accept(server->ssl), HITLS_SUCCESS);
+            ASSERT_EQ(server->ssl->phaState, PHA_REQUESTED);
+            ASSERT_EQ(FRAME_TrasferMsgBetweenLink(server, client), HITLS_SUCCESS);
+            for (uint32_t i = 0; i < 8 && server->ssl->phaState == PHA_REQUESTED; i++) {
+                int32_t ret = HITLS_Read(client->ssl, buf, sizeof(buf), &readLen);
+                ASSERT_TRUE(ret == HITLS_REC_NORMAL_IO_BUSY || ret == HITLS_REC_NORMAL_RECV_BUF_EMPTY);
+                ASSERT_EQ(FRAME_TrasferMsgBetweenLink(client, server), HITLS_SUCCESS);
+                ret = HITLS_Read(server->ssl, buf, sizeof(buf), &readLen);
+                if (failCopy && ret == HITLS_MEMALLOC_FAIL) {
+                    ASSERT_TRUE(HITLS_GetSession(server->ssl) == beforePha);
+                    ASSERT_EQ(SESS_GetVerifyResult(beforePha), initialResult);
+                    ASSERT_TRUE(SessionCertificateEquals(server->ssl, beforePha->peerCert->cert, initialPeer));
+                    ASSERT_TRUE(HITLS_SESS_GetUserData(beforePha) == &rejectPha);
+                    ASSERT_EQ(BSL_ERR_GetLastError(), HITLS_MEMALLOC_FAIL);
+                    ASSERT_TRUE(TestIsErrStackEmpty());
+                    goto EXIT;
+                }
+                ASSERT_TRUE(ret == HITLS_REC_NORMAL_IO_BUSY || ret == HITLS_REC_NORMAL_RECV_BUF_EMPTY);
+                ASSERT_EQ(FRAME_TrasferMsgBetweenLink(server, client), HITLS_SUCCESS);
+            }
+            ASSERT_EQ(failCopy, 0);
+            ASSERT_EQ(server->ssl->phaState, PHA_EXTENSION);
+            ASSERT_EQ(client->ssl->phaState, PHA_EXTENSION);
+            ASSERT_EQ(server->ssl->state, CM_STATE_TRANSPORTING);
+            ASSERT_EQ(client->ssl->state, CM_STATE_TRANSPORTING);
+            ASSERT_TRUE(server->ssl->hsCtx == NULL);
+            ASSERT_EQ(HITLS_Read(client->ssl, buf, sizeof(buf), &readLen), HITLS_REC_NORMAL_RECV_BUF_EMPTY);
+            ASSERT_EQ(HITLS_GetVerifyResult(server->ssl, &actual), HITLS_SUCCESS);
+            ASSERT_EQ(actual, phaResult);
+            ASSERT_EQ(SESS_GetVerifyResult(HITLS_GetSession(server->ssl)), phaResult);
+            ASSERT_EQ(SESS_GetVerifyResult(beforePha), initialResult);
+            ASSERT_TRUE(HITLS_GetSession(server->ssl) != beforePha);
+            ASSERT_TRUE(HITLS_SESS_GetUserData(HITLS_GetSession(server->ssl)) == &rejectPha);
+            ASSERT_TRUE(HITLS_SESS_GetUserData(beforePha) == &rejectPha);
+            actualPeer = HITLS_GetPeerCertificate(server->ssl);
+            ASSERT_TRUE(SessionCertificateEquals(server->ssl, actualPeer,
+                peerMode == 2 || peerMode == 3 ? NULL : phaPeer));
+            SAL_CERT_X509Free(actualPeer);
+            actualPeer = NULL;
+            ASSERT_TRUE(SessionCertificateEquals(server->ssl, beforePha->peerCert->cert, initialPeer));
+            HITLS_CERT_Chain *chain = HITLS_GetPeerCertChain(server->ssl);
+            if (peerMode == 2 || peerMode == 3) {
+                ASSERT_TRUE(chain == NULL);
+            } else {
+                ASSERT_TRUE(chain != NULL && BSL_LIST_COUNT(chain) >= 2);
+                ASSERT_TRUE(SessionCertificateEquals(server->ssl, BSL_LIST_GetData(BSL_LIST_FirstNode(chain)),
+                    phaPeer));
+                ASSERT_TRUE(SessionCertificateEquals(server->ssl, BSL_LIST_GetData(BSL_LIST_LastNode(chain)),
+                    phaIssuer));
+            }
+        }
+        if ((round == 0 && !rejectPha) || (round == 1 && rejectPha == 1 && peerMode != 3)) {
+            do {
+                ASSERT_EQ(BSL_ERR_GetError(), HITLS_CERT_ERR_VERIFY_CERT_CHAIN);
+            } while (BSL_ERR_PeekError() != HITLS_SUCCESS);
+        } else {
+            ASSERT_TRUE(TestIsErrStackEmpty());
+        }
+        HITLS_SESS_Free(session);
+        session = HITLS_GetDupSession(client->ssl);
+        ASSERT_TRUE(session != NULL);
+        FRAME_FreeLink(client);
+        FRAME_FreeLink(server);
+        client = NULL;
+        server = NULL;
+        if (round == 0) {
+            ASSERT_EQ(HITLS_CFG_SetPostHandshakeAuthSupport(serverConfig, true), HITLS_SUCCESS);
+            ASSERT_EQ(HITLS_CFG_SetVerifyNoneSupport(serverConfig, rejectPha == 1), HITLS_SUCCESS);
+            ASSERT_EQ(HITLS_CFG_SetCertVerifyCb(serverConfig, rejectPha == 1 ? RejectSessionPeerCert : NULL, NULL),
+                HITLS_SUCCESS);
+        }
+    }
+EXIT:
+    STUB_RESTORE(SESS_Copy);
+    g_phaSessionCopyFail = NULL;
+    SAL_CERT_X509Free(actualPeer);
+    SAL_CERT_X509Free(phaIssuer);
+    SAL_CERT_X509Free(phaPeer);
+    SAL_CERT_X509Free(initialPeer);
+    HITLS_SESS_Free(beforePha);
+    HITLS_SESS_Free(session);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+    HITLS_CFG_FreeConfig(clientConfig);
+    HITLS_CFG_FreeConfig(serverConfig);
+#else
+    (void)rejectPha;
+    (void)failCopy;
+    (void)peerMode;
+    SKIP_TEST();
+EXIT:
+    return;
 #endif
 }
 /* END_CASE */

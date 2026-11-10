@@ -124,6 +124,7 @@ static int32_t SessionConfig(TLS_Ctx *ctx)
 #endif /* HITLS_TLS_FEATURE_SNI */
     (void)HITLS_SESS_SetProtocolVersion(ctx->session, ctx->negotiatedInfo.version);
     (void)HITLS_SESS_SetCipherSuite(ctx->session, ctx->negotiatedInfo.cipherSuiteInfo.cipherSuite);
+    (void)SESS_SetVerifyResult(ctx->session, ctx->peerInfo.verifyResult);
 
     uint32_t masterKeySize = MASTER_SECRET_LEN;
 #ifdef HITLS_TLS_PROTO_TLS13
@@ -170,7 +171,26 @@ int32_t HsSetSessionInfo(TLS_Ctx *ctx)
         SESSMGR_ClearTimeout(ctx->globalConfig, (uint64_t)BSL_SAL_CurrentSysTimeGet());
     }
 
-    /* This parameter is not required for session multiplexing */
+#ifdef HITLS_TLS_FEATURE_PHA
+    if (ctx->phaState == PHA_REQUESTED) {
+        HITLS_Session *newSession = SESS_Copy(ctx->session);
+        if (newSession == NULL) {
+            BSL_ERR_PUSH_ERROR(HITLS_MEMALLOC_FAIL);
+            return HITLS_MEMALLOC_FAIL;
+        }
+#if defined(HITLS_TLS_CONNECTION_INFO_NEGOTIATION) && defined(HITLS_TLS_FEATURE_SESSION)
+        (void)SESS_SetPeerCert(newSession, ctx->config.tlsConfig.isKeepPeerCert ? ctx->hsCtx->peerCert : NULL);
+        if (ctx->config.tlsConfig.isKeepPeerCert) {
+            ctx->hsCtx->peerCert = NULL;
+        }
+#endif /* HITLS_TLS_CONNECTION_INFO_NEGOTIATION && HITLS_TLS_FEATURE_SESSION */
+        (void)SESS_SetVerifyResult(newSession, ctx->peerInfo.verifyResult);
+        HITLS_SESS_Free(ctx->session);
+        ctx->session = newSession;
+        return HITLS_SUCCESS;
+    }
+#endif
+
     if (ctx->negotiatedInfo.isResume == true) {
         return HITLS_SUCCESS;
     }

@@ -39,3 +39,30 @@ SDV_TLS_PARSE_NST_DUP_CUSTOM_EXTENSION_TC001:
 
 SDV_TLS12_CLIENT_HELLO_GET_EXTENSIONS_PRESENT_MASS_CUSTOM_EXT_TC001
 SDV_TLS12_CLIENT_HELLO_GET_EXTENSIONS_PRESENT_MASS_CUSTOM_EXT_TC001:
+
+Handshake buffer reuse without growth
+SDV_TLS_HS_BUFFER_GROW_TC001:HITLS_HS_INIT_BUFFER_SIZE:1
+
+Handshake buffer growth below the limit
+SDV_TLS_HS_BUFFER_GROW_TC001:16384:1
+
+Handshake buffer growth with cleared data
+SDV_TLS_HS_BUFFER_GROW_TC001:16385:0
+
+Handshake buffer growth with retained data
+SDV_TLS_HS_BUFFER_GROW_TC001:18000:1
+
+Handshake buffer growth just below the limit
+SDV_TLS_HS_BUFFER_GROW_TC001:20479:1
+
+Handshake buffer growth to the limit with retained data
+SDV_TLS_HS_BUFFER_GROW_TC001:HITLS_HS_BUFFER_SIZE_LIMIT:1
+
+Handshake buffer growth to the limit with cleared data
+SDV_TLS_HS_BUFFER_GROW_TC001:HITLS_HS_BUFFER_SIZE_LIMIT:0
+
+Reject oversized handshake buffers with data retention
+SDV_TLS_HS_BUFFER_GROW_TC002:1
+
+Reject oversized handshake buffers without data retention
+SDV_TLS_HS_BUFFER_GROW_TC002:0

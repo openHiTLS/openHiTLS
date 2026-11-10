@@ -35,6 +35,10 @@ void HITLS_SESS_UpRef(HITLS_Session *sess);
 /* Deep copy session */
 HITLS_Session *SESS_Copy(HITLS_Session *src);
 
+int32_t SESS_SetVerifyResult(HITLS_Session *sess, int32_t verifyResult);
+
+int32_t SESS_GetVerifyResult(const HITLS_Session *sess);
+
 /* Disable session */
 void SESS_Disable(HITLS_Session *sess);
 

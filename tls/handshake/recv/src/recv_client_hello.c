@@ -967,6 +967,7 @@ static int32_t ServerCheckResumeParam(TLS_Ctx *ctx, const ClientHelloMsg *client
         return HITLS_MSG_HANDLE_ILLEGAL_VERSION;
     }
 
+    ctx->peerInfo.verifyResult = SESS_GetVerifyResult(sess);
     ret = ServerCheckResumeCipherSuite(clientHello, cipherSuite);
     if (ret != HITLS_SUCCESS) {
         ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_ILLEGAL_PARAMETER);
@@ -1842,6 +1843,7 @@ static int32_t TLS13ServerProcessTicket(TLS_Ctx *ctx, PreSharedKey *cur,
 
     HITLS_SESS_Free(ctx->session);
     ctx->session = pskSession;
+    ctx->peerInfo.verifyResult = SESS_GetVerifyResult(pskSession);
     ctx->negotiatedInfo.isResume = true;
     return HITLS_SUCCESS;
 }
