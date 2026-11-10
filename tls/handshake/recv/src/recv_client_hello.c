@@ -1074,7 +1074,6 @@ static int32_t ServerCheckResumeParam(TLS_Ctx *ctx, const ClientHelloMsg *client
         return HITLS_SUCCESS;
     }
 
-    ctx->peerInfo.verifyResult = SESS_GetVerifyResult(sess);
     if (ctx->negotiatedInfo.version != version) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15887, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "Resuming Sessions: version is inconsistent.", 0, 0, 0, 0);
@@ -1082,6 +1081,7 @@ static int32_t ServerCheckResumeParam(TLS_Ctx *ctx, const ClientHelloMsg *client
         return HITLS_MSG_HANDLE_ILLEGAL_VERSION;
     }
 
+    ctx->peerInfo.verifyResult = SESS_GetVerifyResult(sess);
     ret = ServerCheckResumeCipherSuite(clientHello, cipherSuite);
     if (ret != HITLS_SUCCESS) {
         ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_ILLEGAL_PARAMETER);

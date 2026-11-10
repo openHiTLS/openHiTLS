@@ -222,10 +222,64 @@ Session verification result HITLS_VERSION_TLS13 ticket=1 rejectPeer=2
 SDV_TLS_SESSION_VERIFY_RESULT_TC001:HITLS_VERSION_TLS13:1:2
 
 Successful PHA replaces a resumed session verification failure
-SDV_TLS_SESSION_PHA_VERIFY_RESULT_TC001:0:0
+SDV_TLS_SESSION_PHA_VERIFY_RESULT_TC001:0:0:0
 
 Tolerated PHA verification failure persists in renewed tickets
-SDV_TLS_SESSION_PHA_VERIFY_RESULT_TC001:1:0
+SDV_TLS_SESSION_PHA_VERIFY_RESULT_TC001:1:0:0
 
 PHA session copy failure preserves the original session
-SDV_TLS_SESSION_PHA_VERIFY_RESULT_TC001:0:1
+SDV_TLS_SESSION_PHA_VERIFY_RESULT_TC001:0:1:0
+
+PHA replaces a rejected certificate with a verified certificate
+SDV_TLS_SESSION_PHA_VERIFY_RESULT_TC001:0:0:1
+
+PHA replaces a verified certificate with a tolerated rejected certificate
+SDV_TLS_SESSION_PHA_VERIFY_RESULT_TC001:1:0:1
+
+PHA replaces a verified certificate with another verified certificate
+SDV_TLS_SESSION_PHA_VERIFY_RESULT_TC001:2:0:1
+
+PHA copy failure preserves the original certificate
+SDV_TLS_SESSION_PHA_VERIFY_RESULT_TC001:0:1:1
+
+PHA discards the previous certificate when retention is disabled
+SDV_TLS_SESSION_PHA_VERIFY_RESULT_TC001:0:0:2
+
+PHA discards the previous certificate when retention is disabled and verification fails
+SDV_TLS_SESSION_PHA_VERIFY_RESULT_TC001:1:0:2
+
+PHA without a certificate clears the previous identity and retains its failure result
+SDV_TLS_SESSION_PHA_VERIFY_RESULT_TC001:0:0:3
+
+PHA without a certificate clears the previous identity and retains its success result
+SDV_TLS_SESSION_PHA_VERIFY_RESULT_TC001:1:0:3
+
+TLS 1.2 resumption accepted, cached verification success
+SDV_TLS_SESSION_RESUME_VERIFY_RESULT_TC001:HITLS_SUCCESS:0
+
+TLS 1.2 resumption accepted, cached verification failure
+SDV_TLS_SESSION_RESUME_VERIFY_RESULT_TC001:HITLS_SUCCESS:1
+
+TLS 1.2 resumption version mismatch, cached verification success
+SDV_TLS_SESSION_RESUME_VERIFY_RESULT_TC001:HITLS_MSG_HANDLE_ILLEGAL_VERSION:0
+
+TLS 1.2 resumption version mismatch, cached verification failure
+SDV_TLS_SESSION_RESUME_VERIFY_RESULT_TC001:HITLS_MSG_HANDLE_ILLEGAL_VERSION:1
+
+TLS 1.2 resumption cipher mismatch, cached verification success
+SDV_TLS_SESSION_RESUME_VERIFY_RESULT_TC001:HITLS_MSG_HANDLE_ILLEGAL_CIPHER_SUITE:0
+
+TLS 1.2 resumption cipher mismatch, cached verification failure
+SDV_TLS_SESSION_RESUME_VERIFY_RESULT_TC001:HITLS_MSG_HANDLE_ILLEGAL_CIPHER_SUITE:1
+
+TLS 1.2 resumption ALPN rejection, cached verification success
+SDV_TLS_SESSION_RESUME_VERIFY_RESULT_TC001:HITLS_MSG_HANDLE_ALPN_PROTOCOL_NO_MATCH:0
+
+TLS 1.2 resumption ALPN rejection, cached verification failure
+SDV_TLS_SESSION_RESUME_VERIFY_RESULT_TC001:HITLS_MSG_HANDLE_ALPN_PROTOCOL_NO_MATCH:1
+
+TLS 1.2 resumption EMS mismatch, cached verification success
+SDV_TLS_SESSION_RESUME_VERIFY_RESULT_TC001:HITLS_MSG_HANDLE_INVALID_EXTENDED_MASTER_SECRET:0
+
+TLS 1.2 resumption EMS mismatch, cached verification failure
+SDV_TLS_SESSION_RESUME_VERIFY_RESULT_TC001:HITLS_MSG_HANDLE_INVALID_EXTENDED_MASTER_SECRET:1

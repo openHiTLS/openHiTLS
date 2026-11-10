@@ -441,6 +441,7 @@ int32_t SESS_SetPeerCert(HITLS_Session *sess, CERT_Pair *peerCert)
     }
 
     BSL_SAL_ThreadWriteLock(sess->lock);
+    SAL_CERT_PairFree(sess->certMgrCtx, sess->peerCert);
     sess->peerCert = peerCert;
 
     BSL_SAL_ThreadUnlock(sess->lock);
