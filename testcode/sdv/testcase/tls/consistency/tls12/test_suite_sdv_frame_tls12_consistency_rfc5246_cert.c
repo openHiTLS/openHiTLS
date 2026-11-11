@@ -35,7 +35,15 @@
 #include "stub_utils.h"
 #include "hitls_pki_types.h"
 #include "hitls_pki_x509.h"
+#include "hitls_pki_errno.h"
 #include "rec_wrapper.h"
+
+static BslUnixTime g_certVerifyTime;
+
+static BslUnixTime CertVerifyTime(void)
+{
+    return g_certVerifyTime;
+}
 /* END_HEADER */
 
 /* ============================================================================
@@ -1534,6 +1542,58 @@ void UT_TLS_TLS12_RFC5246_CONSISTENCY_SIGNATURE_PRIORITY_TC001()
 EXIT:
     HITLS_CFG_FreeConfig(config_c);
     HITLS_CFG_FreeConfig(config_s);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+}
+/* END_CASE */
+
+/* @
+ * @test SDV_TLS_CERT_EXPIRED_ALERT_TC001
+ * @brief Check peer certificate validity alerts in TLS 1.2/1.3.
+ * @precon Default certificate chain.
+ * @expect Invalid validity periods send fatal certificate_expired; valid chains connect.
+@ */
+/* BEGIN_CASE */
+void SDV_TLS_CERT_EXPIRED_ALERT_TC001(int version, int isClient, int verifyError)
+{
+    FRAME_Init();
+    HITLS_Config *config = NULL;
+    FRAME_LinkObj *client = NULL;
+    FRAME_LinkObj *server = NULL;
+    g_certVerifyTime = 1735689600; /* 2025-01-01 UTC: certificates are valid. */
+    ASSERT_EQ(BSL_SAL_CallBack_Ctrl(BSL_SAL_TIME_GET_UTC_TIME_CB_FUNC, CertVerifyTime), HITLS_SUCCESS);
+
+    config = HITLS_CFG_NewTLSConfig();
+    ASSERT_TRUE(config != NULL);
+    ASSERT_EQ(HITLS_CFG_SetVersion(config, version, version), HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_CFG_SetClientVerifySupport(config, true), HITLS_SUCCESS);
+    client = FRAME_CreateLink(config, BSL_UIO_TCP);
+    ASSERT_TRUE(client != NULL);
+    server = FRAME_CreateLink(config, BSL_UIO_TCP);
+    ASSERT_TRUE(server != NULL);
+    if (verifyError != HITLS_SUCCESS) {
+        ASSERT_EQ(FRAME_CreateConnection(client, server, isClient, TRY_RECV_CERTIFICATE), HITLS_SUCCESS);
+        /* 2040-01-01 or 2020-01-01 UTC: outside the certificate validity period. */
+        g_certVerifyTime = verifyError == HITLS_X509_ERR_VFY_NOTAFTER_EXPIRED ? 2208988800 : 1577836800;
+        ASSERT_EQ(isClient ? HITLS_Connect(client->ssl) : HITLS_Accept(server->ssl),
+            HITLS_CERT_ERR_VERIFY_CERT_CHAIN);
+    } else {
+        ASSERT_EQ(FRAME_CreateConnection(client, server, isClient, HS_STATE_BUTT), HITLS_SUCCESS);
+    }
+    HITLS_Ctx *verifier = isClient ? client->ssl : server->ssl;
+    HITLS_ERROR verifyResult = HITLS_SUCCESS;
+    ASSERT_EQ(HITLS_GetVerifyResult(verifier, &verifyResult), HITLS_SUCCESS);
+    ASSERT_EQ(verifyResult, verifyError);
+    if (verifyError != HITLS_SUCCESS) {
+        ALERT_Info alertInfo = {0};
+        ALERT_GetInfo(verifier, &alertInfo);
+        ASSERT_EQ(alertInfo.level, ALERT_LEVEL_FATAL);
+        ASSERT_EQ(alertInfo.description, ALERT_CERTIFICATE_EXPIRED);
+    }
+
+EXIT:
+    BSL_SAL_CallBack_Ctrl(BSL_SAL_TIME_GET_UTC_TIME_CB_FUNC, NULL);
+    HITLS_CFG_FreeConfig(config);
     FRAME_FreeLink(client);
     FRAME_FreeLink(server);
 }
