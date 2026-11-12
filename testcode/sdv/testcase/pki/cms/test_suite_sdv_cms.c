@@ -298,3 +298,36 @@ EXIT:
 #endif
 }
 /* END_CASE */
+
+/**		
+* For test parse p7-DigestInfo whose AlgorithmIdentifier.parameters is absent.
+* RFC 2315 9.4 defines parameters as ANY DEFINED BY algorithm OPTIONAL, so an
+* absent parameters field is a legal encoding and must be accepted. For the
+* hash algorithms usable by a PKCS12 MAC, RFC 5754 2 / RFC 3370 2 require the
+* parameters field to be either absent or NULL, so a non-NULL type is rejected.
+*/
+/* BEGIN_CASE */
+void SDV_CMS_PARSE_DIGESTINFO_TC003(Hex *buff, int expectRet, int alg, Hex *digest)
+{
+#if !defined(HITLS_PKI_CMS_DIGESTINFO)
+    (void)buff;
+    (void)expectRet;
+    (void)alg;
+    (void)digest;
+    SKIP_TEST();
+#else
+    BSL_Buffer output = {0};
+    BslCid cid = BSL_CID_UNKNOWN;
+    int32_t ret = HITLS_CMS_ParseDigestInfo((BSL_Buffer *)buff, &cid, &output);
+    ASSERT_EQ(ret, expectRet);
+    if (expectRet == HITLS_PKI_SUCCESS) {
+        ASSERT_EQ(alg, cid);
+        ASSERT_EQ(output.dataLen, digest->len);
+        ASSERT_EQ(memcmp(output.data, digest->x, digest->len), 0);
+    }
+EXIT:
+    BSL_SAL_Free(output.data);
+    return;
+#endif
+}
+/* END_CASE */

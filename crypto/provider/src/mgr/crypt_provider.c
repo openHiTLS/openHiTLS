@@ -439,17 +439,23 @@ int32_t CRYPT_EAL_ProviderSetLoadPath(CRYPT_EAL_LibCtx *libCtx, const char *sear
         BSL_ERR_PUSH_ERROR(CRYPT_PROVIDER_INVALID_LIB_CTX);
         return CRYPT_PROVIDER_INVALID_LIB_CTX;
     }
-
+    int32_t ret = BSL_SAL_ThreadWriteLock(localCtx->lock);
+    if (ret != BSL_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        return ret;
+    }
     char *tempPath = NULL;
     if (searchPath != NULL) {
         tempPath = BSL_SAL_Dump(searchPath, BSL_SAL_Strnlen(searchPath, DEFAULT_PROVIDER_PATH_LEN_MAX) + 1);
         if (tempPath == NULL) {
             BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
+            (void)BSL_SAL_ThreadUnlock(localCtx->lock);
             return CRYPT_MEM_ALLOC_FAIL;
         }
     }
     BSL_SAL_FREE(localCtx->searchProviderPath);
     localCtx->searchProviderPath = tempPath;
+    (void)BSL_SAL_ThreadUnlock(localCtx->lock);
     return CRYPT_SUCCESS;
 #else
     (void)libCtx;

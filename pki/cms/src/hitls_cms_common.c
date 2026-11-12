@@ -78,7 +78,7 @@ static BSL_ASN1_TemplateItem g_digestInfoTempl[] = {
     /* digestAlgorithm */
     {BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE, 0, 0},
         {BSL_ASN1_TAG_OBJECT_ID, 0, 1},
-        {BSL_ASN1_TAG_NULL, 0, 1},
+        {BSL_ASN1_TAG_NULL, BSL_ASN1_FLAG_OPTIONAL, 1},
     /* digest */
     {BSL_ASN1_TAG_OCTETSTRING, 0, 0},
 };
