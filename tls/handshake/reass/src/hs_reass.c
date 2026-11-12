@@ -147,19 +147,23 @@ static HS_ReassQueue *GetReassNode(HS_ReassQueue *reassQueue, uint16_t sequence)
     return NULL;
 }
 
-void HS_ReassRemove(TLS_Ctx *ctx, uint16_t sequence)
+void HS_ReassRemoveUpTo(TLS_Ctx *ctx, uint16_t sequence)
 {
-    if (ctx == NULL) {
+    if (ctx == NULL || ctx->reassMsg == NULL) {
         return;
     }
-    HS_ReassQueue *node = GetReassNode(ctx->reassMsg, sequence);
-    if (node == NULL) {
-        return;
+    ListHead *node = NULL;
+    ListHead *tmpNode = NULL;
+    HS_ReassQueue *cur = NULL;
+    LIST_FOR_EACH_ITEM_SAFE(node, tmpNode, &ctx->reassMsg->head) {
+        cur = BSL_LIST_ENTRY(node, HS_ReassQueue, head);
+        if (cur->sequence <= sequence) {
+            BSL_LIST_REMOVE(&cur->head);
+            BSL_SAL_FREE(cur->reassBitMap);
+            BSL_SAL_FREE(cur->msg);
+            BSL_SAL_FREE(cur);
+        }
     }
-    BSL_LIST_REMOVE(&node->head);
-    BSL_SAL_FREE(node->reassBitMap);
-    BSL_SAL_FREE(node->msg);
-    BSL_SAL_FREE(node);
 }
 
 static HS_ReassQueue *ReassNodeNew(HS_ReassQueue *reassQueue, HS_MsgInfo *msgInfo)

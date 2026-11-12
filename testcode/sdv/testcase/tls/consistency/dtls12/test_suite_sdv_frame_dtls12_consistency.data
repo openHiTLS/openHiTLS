@@ -205,3 +205,18 @@ SDV_TLS_DTLS_REASS_CONSUME_TC001:1:1
 
 DTLCP consumes a message without a cached current fragment
 SDV_TLS_DTLS_REASS_CONSUME_TC001:1:0
+
+After the DTLS1.2 connection is established, an application message of the next epoch is received and cached
+UT_TLS_DTLS_CONSISTENCY_RECV_FUTURE_EPOCH_APP_MSG_TC001:
+
+A duplicate of the last initial ClientHello fragment after HelloVerifyRequest must not block the handshake
+SDV_TLS_DTLS12_DUP_LAST_CH_FRAGMENT_TC001:
+
+A fragmented retransmission of the initial ClientHello with a lost HelloVerifyRequest is reassembled and answered with a new HelloVerifyRequest
+SDV_TLS_DTLS12_RETRANSMIT_FRAGMENTED_CH_TC001:
+
+A duplicate fragment of the ClientHello consumed by a later cookie exchange round must not block the handshake
+SDV_TLS_DTLS12_MULTI_ROUND_DUP_CH_FRAGMENT_TC001:
+
+Consuming a ClientHello prunes the stale reassembly nodes left by earlier cookie exchange rounds
+SDV_TLS_DTLS12_MULTI_ROUND_REASS_PRUNE_TC001:

@@ -2797,6 +2797,7 @@ EXIT:
 *    1. The epoch 3 low bits are reconstructed to epoch 3.
 *    2. The record is not decrypted while readEpoch is 2.
 *    3. The ciphertext is stored in UnprocessedMsgList for later epoch 3 processing.
+*    4. The application read returns HITLS_REC_NORMAL_RECV_BUF_EMPTY so that the user reads again.
 @ */
 /* BEGIN_CASE */
 void SDV_TLS_DTLS13_EPOCH2_BUFFER_EPOCH3_TC030(void)
@@ -2830,7 +2831,7 @@ void SDV_TLS_DTLS13_EPOCH2_BUFFER_EPOCH3_TC030(void)
 
     ASSERT_EQ(BuildDtls13UnifiedHeader(record, sizeof(record), 3, 0, 0, REC_TYPE_APP), sizeof(record));
     ASSERT_EQ(FRAME_TransportRecMsg(server->io, record, sizeof(record)), HITLS_SUCCESS);
-    ASSERT_EQ(HITLS_Read(server->ssl, readBuf, APP_READ_BUF_SIZE, &readLen), HITLS_REC_NORMAL_RECV_DISORDER_MSG);
+    ASSERT_EQ(HITLS_Read(server->ssl, readBuf, APP_READ_BUF_SIZE, &readLen), HITLS_REC_NORMAL_RECV_BUF_EMPTY);
     ASSERT_EQ(recCtx->UnprocessedMsgList.count, 1);
     ASSERT_EQ(REC_EPOCH_GET(BSL_LIST_ENTRY(recCtx->UnprocessedMsgList.head.next, UnprocessedMsg, head)->hdr.epochSeq),
         3);

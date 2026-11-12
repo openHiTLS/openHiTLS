@@ -149,6 +149,12 @@ int32_t ServerSendServerHelloProcess(TLS_Ctx *ctx)
     /* Obtain server information */
     HS_Ctx *hsCtx = (HS_Ctx *)ctx->hsCtx;
 
+#if defined(HITLS_TLS_PROTO_DATAGRAM)
+    /* DTLS: before the ServerHello is sent, the peer is strictly waiting for it, so no reassembly
+     * node can still be needed. Drop the nodes left by retransmissions of earlier ClientHellos,
+     * otherwise they block the pending read state activation on the later ChangeCipherSpec. */
+    HS_ReassQueueClear(ctx);
+#endif
     /* Determine whether to pack a message */
     if (hsCtx->msgLen == 0) {
 #ifdef HITLS_TLS_FEATURE_SESSION
