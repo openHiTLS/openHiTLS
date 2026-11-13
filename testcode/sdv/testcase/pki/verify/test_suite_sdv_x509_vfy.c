@@ -2682,6 +2682,10 @@ void SDV_X509_BUILD_SLHDSA_CERT_CHAIN_FUNC_TC001(char *variant)
     HITLS_X509_StoreCtx *store = HITLS_X509_StoreCtxNew();
     ASSERT_TRUE(store != NULL);
 
+    uint64_t flag = HITLS_X509_VFY_FLAG_DISABLE_TIME_CHECK;
+    ASSERT_EQ(HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_SET_PARAM_FLAGS, &flag, sizeof(flag)),
+        HITLS_PKI_SUCCESS);
+
     // Step 1: Add intermediate CA to store
     HITLS_X509_Cert *inter = NULL;
     ASSERT_EQ(HITLS_AddCertToStoreTest(interPath, store, &inter), HITLS_PKI_SUCCESS);

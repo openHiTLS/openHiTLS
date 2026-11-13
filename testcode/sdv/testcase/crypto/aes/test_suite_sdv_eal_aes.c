@@ -1798,3 +1798,31 @@ EXIT:
     CRYPT_EAL_CipherFreeCtx(ctx);
 }
 /* END_CASE */
+
+/**
+ * @test  SDV_CRYPTO_AES_EMPTY_CIPHER_PADDING_INVALID_TC001
+ * @title  AES-CBC with padding rejects empty ciphertext
+ * @precon Registering memory-related functions.
+ * @brief
+ *    Initialize AES-CBC for decryption with PKCS5/PKCS7 padding and call Final without any ciphertext.
+ * @expect
+ *    Final returns CRYPT_EAL_CIPHER_DATA_ERROR.
+ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_AES_EMPTY_CIPHER_PADDING_INVALID_TC001(int algId, Hex *key, Hex *iv, int padding)
+{
+    TestMemInit();
+    CRYPT_EAL_CipherCtx *ctx = NULL;
+    uint8_t out[AES_BLOCKSIZE] = {0};
+    uint32_t outLen = sizeof(out);
+
+    ctx = CRYPT_EAL_CipherNewCtx(algId);
+    ASSERT_TRUE(ctx != NULL);
+    ASSERT_EQ(CRYPT_EAL_CipherInit(ctx, key->x, key->len, iv->x, iv->len, false), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_CipherSetPadding(ctx, padding), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_CipherFinal(ctx, out, &outLen), CRYPT_EAL_CIPHER_DATA_ERROR);
+
+EXIT:
+    CRYPT_EAL_CipherFreeCtx(ctx);
+}
+/* END_CASE */

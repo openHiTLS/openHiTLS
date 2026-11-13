@@ -401,6 +401,12 @@ int32_t MODES_CipherFinal(MODES_CipherCtx *modeCtx, void *blockUpdate, uint8_t *
         *outLen = modeCtx->dataLen;
     } else {
         if (modeCtx->dataLen == 0) {
+            // With padding enabled, even an empty plaintext is encrypted into one full block,
+            // so an empty ciphertext can never be valid.
+            if (modeCtx->pad != CRYPT_PADDING_NONE) {
+                BSL_ERR_PUSH_ERROR(CRYPT_EAL_CIPHER_DATA_ERROR);
+                return CRYPT_EAL_CIPHER_DATA_ERROR;
+            }
             *outLen = modeCtx->dataLen;
             return CRYPT_SUCCESS;
         }

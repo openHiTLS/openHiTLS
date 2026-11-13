@@ -504,9 +504,9 @@ void SDV_CRYPTO_SM4_ENCRYPT_FUNC_TC001(int id, Hex *key, Hex *iv, int padding, i
 
     ctxEnc = CRYPT_EAL_CipherNewCtx(id);
     ASSERT_TRUE(ctxEnc != NULL);
-    ret = SetPadding(isSetPadding, ctxEnc, padding);
-    ASSERT_TRUE(ret == CRYPT_SUCCESS);
     ret = CRYPT_EAL_CipherInit(ctxEnc, key->x, key->len, iv->x, iv->len, true);
+    ASSERT_TRUE(ret == CRYPT_SUCCESS);
+    ret = SetPadding(isSetPadding, ctxEnc, padding);
     ASSERT_TRUE(ret == CRYPT_SUCCESS);
     ret = CRYPT_EAL_CipherFinal(ctxEnc, outTmp, &len);
     ASSERT_TRUE(ret == CRYPT_SUCCESS);
