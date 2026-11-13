@@ -344,12 +344,12 @@ void SDV_CRYPTO_EAL_DES_API_TC008(int id, Hex *key, Hex *iv, int padding, int is
 
     ctxEnc = CRYPT_EAL_CipherNewCtx(id);
     ASSERT_TRUE(ctxEnc != NULL);
+    ret = CRYPT_EAL_CipherInit(ctxEnc, key->x, key->len, iv->x, iv->len, true);
+    ASSERT_TRUE(ret == CRYPT_SUCCESS);
     if (isSetPadding == 1) {
         ret = CRYPT_EAL_CipherSetPadding(ctxEnc, padding);
         ASSERT_TRUE(ret == CRYPT_SUCCESS);
     }
-    ret = CRYPT_EAL_CipherInit(ctxEnc, key->x, key->len, iv->x, iv->len, true);
-    ASSERT_TRUE(ret == CRYPT_SUCCESS);
     ret = CRYPT_EAL_CipherFinal(ctxEnc, outTmp, &len);
     ASSERT_TRUE(ret == CRYPT_SUCCESS);
 
