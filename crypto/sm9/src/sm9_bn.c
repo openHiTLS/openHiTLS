@@ -388,6 +388,7 @@ int32_t BN_Mod_Basic(uint32_t *rem, int32_t iBNWordLen_r, uint32_t *pwBNX,
     if (lenRem > iBNWordLen_r)
         return 0;
     bn_assign(rem, pwBNX, lenRem);
+    bn_reset(rem + lenRem, iBNWordLen_r - lenRem);
     return 1;
 }
 

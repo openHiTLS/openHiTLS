@@ -709,6 +709,10 @@ ERR:
 int32_t MontMulCore(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *b, BN_Mont *mont, BN_Optimizer *opt)
 {
     int32_t ret;
+    if (a->size > mont->mSize || b->size > mont->mSize) {
+        BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
+        return CRYPT_INVALID_ARG;
+    }
     bool consttime = BN_IsFlag(a, CRYPT_BN_FLAG_CONSTTIME) || BN_IsFlag(b, CRYPT_BN_FLAG_CONSTTIME);
     BN_BigNum *t1 = OptimizerGetBn(opt, mont->mSize);
     if (t1 == NULL) {

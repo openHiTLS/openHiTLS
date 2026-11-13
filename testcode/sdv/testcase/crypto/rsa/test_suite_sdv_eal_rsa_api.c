@@ -397,10 +397,12 @@ EXIT:
  *       (5) q is 0, expected result 1.
  *       (6) nLen is 2049, expected result 2.
  *       (7) p is null, expected result 3.
+ *       (8) Import qInv larger than p, expected result 4 when decrypting.
  * @expect
  *    1. CRYPT_RSA_ERR_INPUT_VALUE
  *    2. CRYPT_RSA_ERR_KEY_BITS
  *    3. CRYPT_RSA_NO_KEY_INFO
+ *    4. CRYPT_INVALID_ARG
  */
 /* BEGIN_CASE */
 void SDV_CRYPTO_RSA_SET_PRV_API_TC001(int isProvider)
@@ -415,6 +417,15 @@ void SDV_CRYPTO_RSA_SET_PRV_API_TC001(int isProvider)
     uint8_t prvP[600];
     uint8_t prvQ[600];
     uint8_t prvE[600];
+    uint8_t prvDP[600];
+    uint8_t prvDQ[600];
+    uint8_t oversizedQInv[600];
+    uint8_t plaintext[128] = {0};
+    uint8_t ciphertext[600];
+    uint8_t decrypted[600];
+    uint32_t ciphertextLen = sizeof(ciphertext);
+    uint32_t decryptedLen = sizeof(decrypted);
+    int32_t pad = CRYPT_RSA_NO_PAD;
 
     SetRsaPrvKey(&prvKey, prvN, 600, prvD, 600);
     SetRsaPara(&para, e, 3, 1024);
@@ -473,6 +484,26 @@ void SDV_CRYPTO_RSA_SET_PRV_API_TC001(int isProvider)
     ASSERT_TRUE(CRYPT_EAL_PkeySetPrv(pkey2, &prvKey) == CRYPT_SUCCESS);
     ASSERT_TRUE(CRYPT_EAL_PkeyGetPrv(pkey2, &prvKey) == CRYPT_SUCCESS);
     ASSERT_COMPARE("rsa e", prvKey.key.rsaPrv.e, prvKey.key.rsaPrv.eLen, e, 3);
+
+    prvKey.key.rsaPrv.dP = prvDP;
+    prvKey.key.rsaPrv.dPLen = sizeof(prvDP);
+    prvKey.key.rsaPrv.dQ = prvDQ;
+    prvKey.key.rsaPrv.dQLen = sizeof(prvDQ);
+    prvKey.key.rsaPrv.qInv = oversizedQInv;
+    prvKey.key.rsaPrv.qInvLen = sizeof(oversizedQInv);
+    ASSERT_TRUE(CRYPT_EAL_PkeyGetPrv(pkey, &prvKey) == CRYPT_SUCCESS);
+    memset(oversizedQInv, 0xff, sizeof(oversizedQInv));
+    prvKey.key.rsaPrv.qInv = oversizedQInv;
+    prvKey.key.rsaPrv.qInvLen = prvKey.key.rsaPrv.pLen + 1;
+    ASSERT_EQ(CRYPT_EAL_PkeySetPrv(pkey2, &prvKey), CRYPT_SUCCESS);
+
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_SET_RSA_PADDING, &pad, sizeof(pad)), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(pkey2, CRYPT_CTRL_SET_RSA_PADDING, &pad, sizeof(pad)), CRYPT_SUCCESS);
+    plaintext[sizeof(plaintext) - 1] = 2;
+    ASSERT_EQ(CRYPT_EAL_PkeyEncrypt(pkey, plaintext, sizeof(plaintext), ciphertext, &ciphertextLen), CRYPT_SUCCESS);
+    ASSERT_TRUE_AND_LOG("oversized qInv reaches Montgomery multiply",
+        CRYPT_EAL_PkeyDecrypt(pkey2, ciphertext, ciphertextLen, decrypted, &decryptedLen) ==
+        CRYPT_INVALID_ARG);
 EXIT:
     TestRandDeInit();
     CRYPT_EAL_PkeyFreeCtx(pkey);

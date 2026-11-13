@@ -19,6 +19,7 @@
 #include "crypt_sm9.h"
 #include "crypt_errno.h"
 #include "sm9.h"
+#include "sm9_ecp2.h"
 #include "bsl_sal.h"
 #include <string.h>
 
@@ -44,6 +45,7 @@ int32_t SM9_SetEncMasterKey(SM9_Ctx *ctx, uint8_t *msk)
 
     ctx->has_enc_sys = 1;
     ctx->has_enc_g = 1;
+    ctx->has_enc_msk = 1;
 
     return CRYPT_SUCCESS;
 }
@@ -54,7 +56,7 @@ int32_t SM9_SetEncMasterKey(SM9_Ctx *ctx, uint8_t *msk)
         return CRYPT_SM9_ERR_BAD_INPUT;
     }
 
-    if (!ctx->has_enc_sys) {
+    if (!ctx->has_enc_sys || !ctx->has_enc_msk) {
         return CRYPT_SM9_ERR_BAD_INPUT;
     }
 
@@ -74,6 +76,9 @@ int32_t SM9_SetEncMasterKey(SM9_Ctx *ctx, uint8_t *msk)
 int32_t SM9_SetEncUserKey(SM9_Ctx *ctx, uint8_t *user_id, uint32_t id_len, uint8_t *dek)
 {
     if (!ctx || !user_id || id_len == 0 || id_len > 256 || !dek) {
+        return CRYPT_SM9_ERR_BAD_INPUT;
+    }
+    if (SM9_Ecp2_A_ValidateBytes(dek) != 0) {
         return CRYPT_SM9_ERR_BAD_INPUT;
     }
 

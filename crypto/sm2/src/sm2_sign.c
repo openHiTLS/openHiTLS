@@ -948,6 +948,7 @@ static int32_t Sm2SetR(CRYPT_SM2_Ctx *ctx, const void *val, uint32_t len)
 static int32_t Sm2SetRandom(CRYPT_SM2_Ctx *ctx, const void *val, uint32_t len)
 {
     int32_t ret;
+    Sm2Clean(ctx);
     uint32_t keyBits = CRYPT_SM2_GetBits(ctx);
     ctx->r = BN_Create(keyBits);
     ctx->pointR = ECC_NewPoint(ctx->pkey->para);

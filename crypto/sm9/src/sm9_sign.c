@@ -60,6 +60,7 @@ int32_t SM9_SetSignMasterKey(SM9_Ctx *ctx, uint8_t *msk)
 
     ctx->has_sig_sys = 1;
     ctx->has_sig_g = 1;
+    ctx->has_sig_msk = 1;
 
     return CRYPT_SUCCESS;
 }
@@ -90,6 +91,9 @@ int32_t SM9_GenSignUserKey(SM9_Ctx *ctx, const uint8_t *user_id, uint32_t id_len
 int32_t SM9_SetSignUserKey(SM9_Ctx *ctx, uint8_t *user_id, uint32_t id_len, uint8_t *dsk)
 {
     if (!ctx || !user_id || id_len == 0 || id_len > 256 || !dsk) {
+        return CRYPT_SM9_ERR_BAD_INPUT;
+    }
+    if (SM9_Ecp_A_ValidateBytes(dsk) != 0) {
         return CRYPT_SM9_ERR_BAD_INPUT;
     }
 

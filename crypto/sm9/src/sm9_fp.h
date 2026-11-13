@@ -85,6 +85,8 @@ void SM9_Fp_ReadBytes(uint32_t *dst, const uint8_t *src);
 
 void SM9_Fp_WriteBytes(uint8_t *dst, uint32_t *src);
 
+int32_t SM9_Fp_CheckFieldElementEncoding(const uint8_t *src);
+
 #ifdef  __cplusplus
 }
 #endif

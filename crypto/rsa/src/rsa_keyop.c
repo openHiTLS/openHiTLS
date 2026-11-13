@@ -129,7 +129,7 @@ int32_t CRYPT_RSA_SetPrvKey(CRYPT_RSA_Ctx *ctx, const CRYPT_RsaPrv *prv)
         goto ERR;
     }
 
-    GOTO_ERR_IF(SetPrvPara(newCtx->prvKey, prv), ret);
+    GOTO_ERR_IF_EX(SetPrvPara(newCtx->prvKey, prv), ret);
     if (prv->p != NULL && prv->dP == NULL) {
         BN_Optimizer *optimizer = BN_OptimizerCreate();
         if (optimizer == NULL) {

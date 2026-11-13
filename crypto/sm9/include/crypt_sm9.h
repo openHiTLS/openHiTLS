@@ -45,6 +45,8 @@ struct SM9_Ctx_st {
     uint8_t user_id[256];
     uint32_t user_id_len;
 
+    uint32_t has_sig_msk : 1;
+    uint32_t has_enc_msk : 1;
     uint32_t has_sig_sys : 1;
     uint32_t has_sig_usr : 1;
     uint32_t has_sig_g   : 1;

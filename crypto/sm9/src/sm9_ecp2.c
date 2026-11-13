@@ -121,9 +121,13 @@ void SM9_Ecp2_J_AddA(SM9_ECP2_J *pJs, SM9_ECP2_J *pJp, SM9_ECP2_A *pAp)
     SM9_Fp2_Mul(&Fp2_T2, &Fp2_T3, &pJp->Z);    // T2 = Z1^3
     SM9_Fp2_Mul(&Fp2_T3, &Fp2_T3, &pAp->X);    // T3 = X2 * Z1^2 = A
     SM9_Fp2_Sub(&Fp2_T3, &Fp2_T3, &pJp->X);    // T3 = A - X1 = C
-    SM9_Fp2_Mul(&pJs->Z, &pJp->Z, &Fp2_T3);    // Z3 = Z1 * C
     SM9_Fp2_Mul(&Fp2_T2, &Fp2_T2, &pAp->Y);    // T2 = Y2 * Z1 ^ 3 = B
     SM9_Fp2_Sub(&Fp2_T2, &Fp2_T2, &pJp->Y);    // T2 = B - Y1 = D
+    if (SM9_Fp2_IsZero(&Fp2_T3) && SM9_Fp2_IsZero(&Fp2_T2)) {
+        SM9_Ecp2_J_DoubleJ(pJs, pJp);
+        return;
+    }
+    SM9_Fp2_Mul(&pJs->Z, &pJp->Z, &Fp2_T3);    // Z3 = Z1 * C
 
     SM9_Fp2_Squ(&Fp2_T1, &Fp2_T3);            // T1 = C ^ 2
     SM9_Fp2_Mul(&Fp2_T3, &Fp2_T3, &Fp2_T1);    // T3 = C ^ 3
@@ -224,12 +228,50 @@ int32_t SM9_Ecp2_A_Check(SM9_ECP2_A *pAp)
     SM9_Fp2_Add(&Fp2_tmp2, &Fp2_x3, &Fp2_tmp2);  // tmp2 = x^3 + a*x
     SM9_Fp2_Add(&Fp2_tmp2, &Fp2_tmp2, &sm9_sys_para.EC_Fp2_B_Mont);
 
+    SM9_Fp_LastRes(Fp2_tmp1.Coef_0);
+    SM9_Fp_LastRes(Fp2_tmp1.Coef_1);
+    SM9_Fp_LastRes(Fp2_tmp2.Coef_0);
+    SM9_Fp_LastRes(Fp2_tmp2.Coef_1);
+
     // Check y^2 == x^3 + a*x + b
     if (bn_equal(Fp2_tmp1.Coef_0, Fp2_tmp2.Coef_0, sm9_sys_para.wsize) == 0
         || bn_equal(Fp2_tmp1.Coef_1, Fp2_tmp2.Coef_1, sm9_sys_para.wsize) == 0) {
         return -1;
     }
     return 0;
+}
+
+int32_t SM9_Ecp2_A_ValidateBytes(const uint8_t *src)
+{
+    SM9_ECP2_A point;
+    SM9_ECP2_A nPoint;
+    int32_t ret = -1;
+
+    if (src == NULL) {
+        return -1;
+    }
+    for (uint32_t i = 0; i < 4; i++) {
+        if (SM9_Fp_CheckFieldElementEncoding(src + i * BNByteLen) != 0) {
+            goto EXIT;
+        }
+    }
+    SM9_Ecp2_A_ReadBytes(&point, src);
+    if (SM9_Ecp2_A_Check(&point) != 0) {
+        goto EXIT;
+    }
+    SM9_Ecp2_KP(&nPoint, &point, sm9_sys_para.EC_N);
+    if (bn_is_zero(nPoint.X.Coef_0, BNWordLen) == 0 ||
+        bn_is_zero(nPoint.X.Coef_1, BNWordLen) == 0 ||
+        bn_is_zero(nPoint.Y.Coef_0, BNWordLen) == 0 ||
+        bn_is_zero(nPoint.Y.Coef_1, BNWordLen) == 0) {
+        goto EXIT;
+    }
+    ret = 0;
+
+EXIT:
+    BSL_SAL_CleanseData(&point, sizeof(point));
+    BSL_SAL_CleanseData(&nPoint, sizeof(nPoint));
+    return ret;
 }
 
 #endif // HITLS_CRYPTO_SM9

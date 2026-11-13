@@ -20,6 +20,8 @@
 #include "crypt_algid.h"
 #include "crypt_errno.h"
 #include "crypt_sm9.h"
+#include "crypt_sm9_eal.h"
+#include "crypt_local_types.h"
 #include "crypt_params_key.h"
 #include "bsl_params.h"
 #include <string.h>
@@ -142,6 +144,90 @@ EXIT:
     CRYPT_EAL_PkeyFreeCtx(encCtx);
     CRYPT_EAL_PkeyFreeCtx(decCtx);
     SM9_FreeCtx(nativeCtx);
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_CRYPTO_SM9_CHECK_IMPORTED_ENC_KEY_TC001(Hex *masterKey, Hex *userId, Hex *wrongUserId)
+{
+    CRYPT_SM9_Ctx *masterCtx = NULL;
+    CRYPT_SM9_Ctx *userCtx = NULL;
+    SM9_Ctx *kgcCtx = NULL;
+    uint8_t masterPub[SM9_ENC_SYS_PUBKEY_BYTES];
+    uint8_t userKey[SM9_ENC_USR_PRIKEY_BYTES];
+    masterCtx = CRYPT_SM9_NewCtx();
+    userCtx = CRYPT_SM9_NewCtx();
+    kgcCtx = SM9_NewCtx();
+    ASSERT_TRUE(masterCtx != NULL && userCtx != NULL && kgcCtx != NULL);
+    ASSERT_EQ(SM9_Alg_MEKG(masterKey->x, masterPub), CRYPT_SUCCESS);
+    ASSERT_EQ(SM9_Alg_UEKG(userId->x, userId->len, masterKey->x, userKey), CRYPT_SUCCESS);
+    memcpy(masterCtx->enc_mpk, masterPub, sizeof(masterPub));
+    masterCtx->has_enc_sys = 1;
+    memcpy(kgcCtx->enc_msk, masterKey->x, SM9_ENC_SYS_PRIKEY_BYTES);
+    memcpy(kgcCtx->enc_mpk, masterPub, sizeof(masterPub));
+    memcpy(kgcCtx->enc_dek, userKey, sizeof(userKey));
+    memcpy(kgcCtx->user_id, userId->x, userId->len);
+    kgcCtx->user_id_len = userId->len;
+    kgcCtx->has_enc_sys = 1;
+    kgcCtx->has_enc_msk = 1;
+    kgcCtx->has_enc_usr = 1;
+    ASSERT_EQ(CRYPT_SM9_Check(CRYPT_PKEY_CHECK_KEYPAIR, masterCtx, kgcCtx), CRYPT_SUCCESS);
+
+    ASSERT_EQ(SM9_SetEncUserKey(userCtx, userId->x, userId->len, userKey), CRYPT_SUCCESS);
+    ASSERT_EQ(userCtx->has_enc_sys, 0);
+    ASSERT_EQ(userCtx->has_enc_msk, 0);
+    ASSERT_EQ(CRYPT_SM9_Check(CRYPT_PKEY_CHECK_KEYPAIR, masterCtx, userCtx), CRYPT_SUCCESS);
+
+    ASSERT_EQ(SM9_SetEncUserKey(userCtx, wrongUserId->x, wrongUserId->len, userKey), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_SM9_Check(CRYPT_PKEY_CHECK_KEYPAIR, masterCtx, userCtx),
+        CRYPT_SM9_PAIRWISE_CHECK_FAIL);
+
+EXIT:
+    CRYPT_SM9_FreeCtx(masterCtx);
+    CRYPT_SM9_FreeCtx(userCtx);
+    SM9_FreeCtx(kgcCtx);
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_CRYPTO_SM9_ENC_USERKEY_REQUIRES_MSK_TC001(Hex *masterKey, Hex *userId)
+{
+    CRYPT_EAL_PkeyCtx *masterCtx = NULL;
+    CRYPT_EAL_PkeyCtx *publicOnlyCtx = NULL;
+    uint8_t masterPub[SM9_ENC_SYS_PUBKEY_BYTES] = {0};
+    BSL_Param params[3];
+    int32_t keyType = SM9_KEY_TYPE_ENC;
+
+    masterCtx = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_SM9);
+    publicOnlyCtx = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_SM9);
+    ASSERT_TRUE(masterCtx != NULL && publicOnlyCtx != NULL);
+
+    BSL_PARAM_InitValue(&params[0], CRYPT_PARAM_SM9_MASTER_KEY, BSL_PARAM_TYPE_OCTETS,
+        masterKey->x, masterKey->len);
+    BSL_PARAM_InitValue(&params[1], CRYPT_PARAM_SM9_KEY_TYPE, BSL_PARAM_TYPE_INT32,
+        &keyType, sizeof(keyType));
+    params[2] = (BSL_Param)BSL_PARAM_END;
+    ASSERT_EQ(CRYPT_EAL_PkeySetPubEx(masterCtx, params), CRYPT_SUCCESS);
+
+    BSL_PARAM_InitValue(&params[0], CRYPT_PARAM_SM9_MASTER_PUB_KEY, BSL_PARAM_TYPE_OCTETS,
+        masterPub, sizeof(masterPub));
+    BSL_PARAM_InitValue(&params[1], CRYPT_PARAM_SM9_KEY_TYPE, BSL_PARAM_TYPE_INT32,
+        &keyType, sizeof(keyType));
+    params[2] = (BSL_Param)BSL_PARAM_END;
+    ASSERT_EQ(CRYPT_EAL_PkeyGetPubEx(masterCtx, params), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeySetPubEx(publicOnlyCtx, params), CRYPT_SUCCESS);
+
+    BSL_PARAM_InitValue(&params[0], CRYPT_PARAM_SM9_USER_ID, BSL_PARAM_TYPE_OCTETS,
+        userId->x, userId->len);
+    BSL_PARAM_InitValue(&params[1], CRYPT_PARAM_SM9_KEY_TYPE, BSL_PARAM_TYPE_INT32,
+        &keyType, sizeof(keyType));
+    params[2] = (BSL_Param)BSL_PARAM_END;
+    ASSERT_EQ(CRYPT_EAL_PkeySetPrvEx(publicOnlyCtx, params), CRYPT_SM9_ERR_KEY_ERR);
+    ASSERT_EQ(CRYPT_EAL_PkeyPrvCheck(publicOnlyCtx), CRYPT_SM9_INVALID_PRVKEY);
+
+EXIT:
+    CRYPT_EAL_PkeyFreeCtx(masterCtx);
+    CRYPT_EAL_PkeyFreeCtx(publicOnlyCtx);
 }
 /* END_CASE */
 

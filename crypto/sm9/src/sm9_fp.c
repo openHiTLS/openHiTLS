@@ -18,11 +18,25 @@
 
 #include "sm9_fp.h"
 #include "sm9_bn.h"
+#include "bsl_sal.h"
 
 void SM9_Fp_ReadBytes(uint32_t *dst, const uint8_t *src)
 {
     ByteToBN(src, BNByteLen, dst, BNWordLen);
     bn_mont_mul(dst, dst, sm9_sys_para.Q_R2, sm9_sys_para.EC_Q, sm9_sys_para.Q_Mc, sm9_sys_para.wsize);
+}
+
+int32_t SM9_Fp_CheckFieldElementEncoding(const uint8_t *src)
+{
+    uint32_t value[BNWordLen];
+
+    if (src == NULL) {
+        return -1;
+    }
+    ByteToBN(src, BNByteLen, value, BNWordLen);
+    int32_t ret = bn_cmp(value, sm9_sys_para.EC_Q, sm9_sys_para.wsize) < 0 ? 0 : -1;
+    BSL_SAL_CleanseData(value, sizeof(value));
+    return ret;
 }
 
 void SM9_Fp_WriteBytes(uint8_t *dst, uint32_t *src)

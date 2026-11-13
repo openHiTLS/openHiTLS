@@ -50,6 +50,7 @@ void SM9_Ecp_A_WriteBytes(uint8_t *dst, SM9_ECP_A *src);
 int32_t SM9_Fp_ECP_A_WriteBytesWithPC(uint8_t *dst, uint8_t PC, SM9_ECP_A *src);
 
 int32_t SM9_Ecp_A_Check(SM9_ECP_A *pAp);
+int32_t SM9_Ecp_A_ValidateBytes(const uint8_t *src);
 
 #ifdef  __cplusplus
 }

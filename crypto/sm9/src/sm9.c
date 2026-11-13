@@ -20,6 +20,9 @@
 #include "sm9_curve.h"
 #include "sm9_pairing.h"
 #include "sm9_fp.h"
+#include "sm9_ecp.h"
+#include "sm9_ecp2.h"
+#include "sm9_fp12.h"
 #include "crypt_util_rand.h"
 #include "crypt_errno.h"
 #include "bsl_sal.h"
@@ -221,6 +224,10 @@ int32_t SM9_Alg_Pair(uint8_t *g, uint8_t *p1, uint8_t *p2)
     SM9_ECP2_A Ecp2_P2;
     SM9_Fp12 Fp12_G;
 
+    if (SM9_Ecp_A_ValidateBytes(p1) != 0 || SM9_Ecp2_A_ValidateBytes(p2) != 0) {
+        return CRYPT_SM9_ERR_BAD_INPUT;
+    }
+
     // Read ecpoint P1 and convert to MontMode
     SM9_Ecp_A_ReadBytes(&Ecp_P1, p1);
     // Read ecpoint P2 and convert to MontMode
@@ -234,6 +241,92 @@ int32_t SM9_Alg_Pair(uint8_t *g, uint8_t *p1, uint8_t *p2)
 #else
     return CRYPT_SM9_ERR_NOT_SUPPORT;
 #endif /* SM9_PAIR_ENABLE */
+}
+
+static int32_t SM9_Alg_PairEqual(SM9_ECP_A *p1A, SM9_ECP2_A *p2A,
+    SM9_ECP_A *p1B, SM9_ECP2_A *p2B)
+{
+    SM9_Fp12 pairA;
+    SM9_Fp12 pairB;
+    uint8_t pairABytes[12 * BNByteLen];
+    uint8_t pairBBytes[12 * BNByteLen];
+
+    SM9_Alg_Pair_Mont(&pairA, p1A, p2A);
+    SM9_Alg_Pair_Mont(&pairB, p1B, p2B);
+    SM9_Fp12_WriteBytes(pairABytes, &pairA);
+    SM9_Fp12_WriteBytes(pairBBytes, &pairB);
+    int32_t ret = ConstTimeMemcmp(pairABytes, pairBBytes, sizeof(pairABytes)) == 0xFFFFFFFFu ?
+        CRYPT_SUCCESS : CRYPT_SM9_PAIRWISE_CHECK_FAIL;
+
+    BSL_SAL_CleanseData(&pairA, sizeof(pairA));
+    BSL_SAL_CleanseData(&pairB, sizeof(pairB));
+    BSL_SAL_CleanseData(pairABytes, sizeof(pairABytes));
+    BSL_SAL_CleanseData(pairBBytes, sizeof(pairBBytes));
+    return ret;
+}
+
+int32_t SM9_Alg_CheckSignUserKey(const uint8_t *mpk, const uint8_t *id, uint32_t ilen, const uint8_t *dsk)
+{
+    uint32_t h1[BNWordLen];
+    SM9_ECP_A userKey;
+    SM9_ECP2_A masterPub;
+    SM9_ECP2_A idPoint;
+    SM9_ECP2_A userPub;
+    SM9_ECP2_J userPubJ;
+    int32_t ret = CRYPT_SM9_ERR_BAD_INPUT;
+
+    if (mpk == NULL || id == NULL || ilen == 0 || ilen > 256 || dsk == NULL) {
+        return ret;
+    }
+
+    SM9_Ecp_A_ReadBytes(&userKey, dsk);
+    SM9_Ecp2_A_ReadBytes(&masterPub, mpk);
+    SM9_Hash_H1(h1, id, ilen, SM9_HID_Sign, sizeof(SM9_HID_Sign));
+    SM9_Ecp2_KP(&idPoint, &sm9_sys_para.EC_Fp2_G_Mont, h1);
+    SM9_Ecp2_A_ToJ(&userPubJ, &masterPub);
+    SM9_Ecp2_J_AddA(&userPubJ, &userPubJ, &idPoint);
+    SM9_Ecp2_J_ToA(&userPub, &userPubJ);
+
+    ret = SM9_Alg_PairEqual(&userKey, &userPub, &sm9_sys_para.EC_Fp_G_Mont, &masterPub);
+    BSL_SAL_CleanseData(h1, sizeof(h1));
+    BSL_SAL_CleanseData(&userKey, sizeof(userKey));
+    BSL_SAL_CleanseData(&masterPub, sizeof(masterPub));
+    BSL_SAL_CleanseData(&idPoint, sizeof(idPoint));
+    BSL_SAL_CleanseData(&userPub, sizeof(userPub));
+    BSL_SAL_CleanseData(&userPubJ, sizeof(userPubJ));
+    return ret;
+}
+
+int32_t SM9_Alg_CheckEncUserKey(const uint8_t *mpk, const uint8_t *id, uint32_t ilen, const uint8_t *dek)
+{
+    uint32_t h1[BNWordLen];
+    SM9_ECP_A masterPub;
+    SM9_ECP_A idPoint;
+    SM9_ECP_A userPub;
+    SM9_ECP_J userPubJ;
+    SM9_ECP2_A userKey;
+    int32_t ret = CRYPT_SM9_ERR_BAD_INPUT;
+
+    if (mpk == NULL || id == NULL || ilen == 0 || ilen > 256 || dek == NULL) {
+        return ret;
+    }
+
+    SM9_Ecp_A_ReadBytes(&masterPub, mpk);
+    SM9_Ecp2_A_ReadBytes(&userKey, dek);
+    SM9_Hash_H1(h1, id, ilen, SM9_HID_Enc, sizeof(SM9_HID_Enc));
+    SM9_Ecp_KP(&idPoint, &sm9_sys_para.EC_Fp_G_Mont, h1);
+    SM9_Ecp_A_ToJ(&userPubJ, &masterPub);
+    SM9_Ecp_J_AddA(&userPubJ, &userPubJ, &idPoint);
+    SM9_Ecp_J_ToA(&userPub, &userPubJ);
+
+    ret = SM9_Alg_PairEqual(&userPub, &userKey, &masterPub, &sm9_sys_para.EC_Fp2_G_Mont);
+    BSL_SAL_CleanseData(h1, sizeof(h1));
+    BSL_SAL_CleanseData(&masterPub, sizeof(masterPub));
+    BSL_SAL_CleanseData(&idPoint, sizeof(idPoint));
+    BSL_SAL_CleanseData(&userPub, sizeof(userPub));
+    BSL_SAL_CleanseData(&userPubJ, sizeof(userPubJ));
+    BSL_SAL_CleanseData(&userKey, sizeof(userKey));
+    return ret;
 }
 
 int32_t SM9_Get_Sig_G(uint8_t *g, uint8_t *mpk)
@@ -308,6 +401,11 @@ static int32_t _sm9_alg_sign(
     SM9_Fp12 Fp12_g;
     SM9_ECP2_A Ecp2_P;
     int32_t ret = CRYPT_SUCCESS;
+
+    if (SM9_Ecp_A_ValidateBytes(ds) != 0 ||
+        (g == NULL && SM9_Ecp2_A_ValidateBytes(mpk) != 0)) {
+        return CRYPT_SM9_ERR_BAD_INPUT;
+    }
 
     // Read Random number r(in NormMode), ensure r in [1, N-1]
     SM9_Bn_ReadBytes(BN_r, r);
@@ -486,6 +584,8 @@ int32_t SM9_Verify(
 {
     int32_t ret;
     uint32_t BN_h[BNWordLen];
+    uint32_t pointX[BNWordLen];
+    uint32_t pointY[BNWordLen];
     SM9_ECP_A Ecp_s;
 
     if (opt == SM9_OPT_DM_MODE1) {
@@ -503,8 +603,19 @@ int32_t SM9_Verify(
         return CRYPT_SM9_VERIFY_FAIL;
     }
     sign += sm9_sys_para.wsize*WordByteLen;
-    if (SM9_Fp_ECP_A_ReadBytesWithPC(&Ecp_s, opt, sign))
-        return -1;
+    ByteToBN(sign, BNByteLen, pointX, BNWordLen);
+    ByteToBN(sign + BNByteLen, BNByteLen, pointY, BNWordLen);
+    if (bn_cmp(pointX, sm9_sys_para.EC_Q, sm9_sys_para.wsize) >= 0 ||
+        bn_cmp(pointY, sm9_sys_para.EC_Q, sm9_sys_para.wsize) >= 0) {
+        return CRYPT_SM9_VERIFY_FAIL;
+    }
+    // #E(Fq) = q + 1 - trace = N, so affine on-curve points belong to G1.
+    if (SM9_Fp_ECP_A_ReadBytesWithPC(&Ecp_s, opt, sign) != 0 || SM9_Ecp_A_Check(&Ecp_s) != 0) {
+        return CRYPT_SM9_VERIFY_FAIL;
+    }
+    if (SM9_Ecp2_A_ValidateBytes(mpk) != 0) {
+        return CRYPT_SM9_VERIFY_FAIL;
+    }
 
     ret = _sm9_alg_vefiry(msg, mlen, id, ilen, g, mpk, BN_h, &Ecp_s);
 
@@ -598,7 +709,7 @@ void SM9_Hash_KDF_Block(SM9_CTX *ctx, uint32_t cnt, uint8_t *k)
     SM9_Hash_Final(&tmp_ctx, k);
 }
 
-static void _sm9_enc_init(SM9_CTX *ctx, const uint8_t *id, uint32_t ilen, uint8_t *r,
+static int32_t _sm9_enc_init(SM9_CTX *ctx, const uint8_t *id, uint32_t ilen, uint8_t *r,
     const uint8_t *g, const uint8_t *mpk, uint8_t *C1)
 {
     uint32_t BN_r[BNWordLen];
@@ -607,6 +718,10 @@ static void _sm9_enc_init(SM9_CTX *ctx, const uint8_t *id, uint32_t ilen, uint8_
     SM9_ECP_A Ecp_T;
     SM9_Fp12 Fp12_g;
     uint8_t pbW[12 * BNByteLen];
+
+    if (SM9_Ecp_A_ValidateBytes(mpk) != 0) {
+        return CRYPT_SM9_ERR_BAD_INPUT;
+    }
 
     // Read Random number r(in NormMode), ensure r in [1, N-1]
     SM9_Bn_ReadBytes(BN_r, r);
@@ -644,6 +759,7 @@ static void _sm9_enc_init(SM9_CTX *ctx, const uint8_t *id, uint32_t ilen, uint8_
     BSL_SAL_CleanseData(BN_r, sizeof(BN_r));
     BSL_SAL_CleanseData(pbW, sizeof(pbW));
     BSL_SAL_CleanseData(&Fp12_g, sizeof(Fp12_g));
+    return CRYPT_SUCCESS;
 }
 
 // Key derivation function for public key encryption
@@ -722,6 +838,7 @@ int32_t SM9_Alg_Enc(const uint8_t *msg, uint32_t mlen,
     uint8_t *C2;
     uint8_t *C3;
     uint8_t mkey[SM9_Hash_Size];
+    int32_t ret;
 
 #ifndef SM9_ALG_RND_ENABLE
     uint8_t randBuf[BNByteLen];
@@ -742,7 +859,10 @@ int32_t SM9_Alg_Enc(const uint8_t *msg, uint32_t mlen,
     if ((C2 > msg) && (C2 < msg + mlen))
         return CRYPT_SM9_ERR_BAD_INPUT;
 
-    _sm9_enc_init(&sm9_ctx, id, ilen, r, g, mpk, C1);
+    ret = _sm9_enc_init(&sm9_ctx, id, ilen, r, g, mpk, C1);
+    if (ret != CRYPT_SUCCESS) {
+        return ret;
+    }
     SM9_Mac_Init(&sm9_ctx);
 
     _sm9_pke_kdf(&sm9_ctx, msg, mlen, C2);
@@ -777,14 +897,14 @@ int32_t SM9_Dec_Init(SM9_CTX *ctx, const uint8_t *de, const uint8_t *id, uint32_
     SM9_Fp12 Fp12_g;
     uint8_t pbW[12 * BNByteLen];
 
+    if (SM9_Ecp_A_ValidateBytes(C1) != 0) {
+        return CRYPT_SM9_ERR_DECRYPT_FAILED;
+    }
+
     // Read User Prikey and convert to MontMode
     SM9_Ecp2_A_ReadBytes(&Ecp2_D, de);
     // Read Cipher Part1(in APoint MontMode)
     SM9_Ecp_A_ReadBytes(&Ecp_P, C1);
-
-    // Check C1 is a point
-    if (SM9_Ecp_A_Check(&Ecp_P))
-        return CRYPT_SM9_ERR_DECRYPT_FAILED;
 
     // w'=e(C1, de)
     SM9_Alg_Pair_Mont(&Fp12_g, &Ecp_P, &Ecp2_D);

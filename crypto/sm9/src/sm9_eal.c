@@ -31,19 +31,45 @@
 #define SM9_KEY_TYPE_SIGN  1
 #define SM9_KEY_TYPE_ENC   2
 
+static int32_t SM9_ValidateMasterPrivateKey(const uint8_t *masterPrvKey)
+{
+    uint32_t masterKey[BNWordLen];
+    int32_t valid;
+
+    SM9_Bn_ReadBytes(masterKey, masterPrvKey);
+    valid = !SM9_Bn_IsZero(masterKey) && bn_cmp(masterKey, sm9_sys_para.EC_N, sm9_sys_para.wsize) < 0;
+    BSL_SAL_CleanseData(masterKey, sizeof(masterKey));
+    return valid ? CRYPT_SUCCESS : CRYPT_SM9_ERR_KEY_ERR;
+}
+
+static int32_t SM9_ValidateMasterKeyPair(const uint8_t *masterPrvKey, const uint8_t *masterPubKey,
+                                         uint32_t masterPubKeyLen, int32_t keyType)
+{
+    uint8_t masterKey[SM9_ENC_SYS_PRIKEY_BYTES];
+    uint8_t derivedPubKey[SM9_SIG_SYS_PUBKEY_BYTES];
+    int32_t ret;
+
+    memcpy(masterKey, masterPrvKey, sizeof(masterKey));
+    if (keyType == SM9_KEY_TYPE_SIGN) {
+        ret = SM9_Alg_MSKG(masterKey, derivedPubKey);
+    } else {
+        ret = SM9_Alg_MEKG(masterKey, derivedPubKey);
+    }
+    if (ret == CRYPT_SUCCESS && memcmp(derivedPubKey, masterPubKey, masterPubKeyLen) != 0) {
+        ret = CRYPT_SM9_ERR_KEY_ERR;
+    }
+    BSL_SAL_CleanseData(masterKey, sizeof(masterKey));
+    BSL_SAL_CleanseData(derivedPubKey, sizeof(derivedPubKey));
+    return ret;
+}
+
 static int32_t SM9_ValidateG1PubKey(const uint8_t *pubkey, uint32_t len)
 {
-    SM9_ECP_A point;
-
     if (len != SM9_ENC_SYS_PUBKEY_BYTES) {
         return CRYPT_SM9_ERR_KEY_ERR;
     }
 
-    // Read and convert to Montgomery representation
-    SM9_Ecp_A_ReadBytes(&point, pubkey);
-
-    // Check if point is on the curve
-    if (SM9_Ecp_A_Check(&point) != 0) {
+    if (SM9_Ecp_A_ValidateBytes(pubkey) != 0) {
         return CRYPT_SM9_ERR_BAD_INPUT;
     }
 
@@ -52,21 +78,41 @@ static int32_t SM9_ValidateG1PubKey(const uint8_t *pubkey, uint32_t len)
 
 static int32_t SM9_ValidateG2PubKey(const uint8_t *pubkey, uint32_t len)
 {
-    SM9_ECP2_A point;
-
     if (len != SM9_SIG_SYS_PUBKEY_BYTES) {
         return CRYPT_SM9_ERR_KEY_ERR;
     }
 
-    // Read and convert to Montgomery representation
-    SM9_Ecp2_A_ReadBytes(&point, pubkey);
-
-    // Check if point is on the curve
-    if (SM9_Ecp2_A_Check(&point) != 0) {
+    if (SM9_Ecp2_A_ValidateBytes(pubkey) != 0) {
         return CRYPT_SM9_ERR_BAD_INPUT;
     }
 
     return CRYPT_SUCCESS;
+}
+
+static int32_t SM9_CheckSignKeyPair(const CRYPT_SM9_Ctx *masterCtx, const CRYPT_SM9_Ctx *userCtx)
+{
+    if (userCtx->user_id_len == 0 ||
+        userCtx->user_id_len > sizeof(userCtx->user_id) ||
+        (masterCtx->user_id_len > 0 &&
+         (masterCtx->user_id_len != userCtx->user_id_len ||
+          memcmp(masterCtx->user_id, userCtx->user_id, userCtx->user_id_len) != 0))) {
+        return CRYPT_SM9_PAIRWISE_CHECK_FAIL;
+    }
+    return SM9_Alg_CheckSignUserKey(masterCtx->sig_mpk, userCtx->user_id, userCtx->user_id_len,
+        userCtx->sig_dsk);
+}
+
+static int32_t SM9_CheckEncKeyPair(const CRYPT_SM9_Ctx *masterCtx, const CRYPT_SM9_Ctx *userCtx)
+{
+    if (userCtx->user_id_len == 0 ||
+        userCtx->user_id_len > sizeof(userCtx->user_id) ||
+        (masterCtx->user_id_len > 0 &&
+         (masterCtx->user_id_len != userCtx->user_id_len ||
+          memcmp(masterCtx->user_id, userCtx->user_id, userCtx->user_id_len) != 0))) {
+        return CRYPT_SM9_PAIRWISE_CHECK_FAIL;
+    }
+    return SM9_Alg_CheckEncUserKey(masterCtx->enc_mpk, userCtx->user_id, userCtx->user_id_len,
+        userCtx->enc_dek);
 }
 
 CRYPT_SM9_Ctx *CRYPT_SM9_NewCtx(void)
@@ -213,12 +259,18 @@ int32_t CRYPT_SM9_SetPubKeyEx(CRYPT_SM9_Ctx *ctx, const BSL_Param *param)
 
     /* Set master keys based on type */
     if (keyType == SM9_KEY_TYPE_SIGN) {
+        const uint8_t *keyToCheck = masterPrvKey;
+
         /* Set master private key if provided */
         if (masterPrvKey != NULL) {
             if (masterPrvKeyLen != SM9_SIG_SYS_PRIKEY_BYTES) {
                 return CRYPT_SM9_ERR_BAD_INPUT;
             }
-            memcpy(ctx->sig_msk, masterPrvKey, SM9_SIG_SYS_PRIKEY_BYTES);
+            if (SM9_ValidateMasterPrivateKey(masterPrvKey) != CRYPT_SUCCESS) {
+                return CRYPT_SM9_ERR_KEY_ERR;
+            }
+        } else if (ctx->has_sig_msk) {
+            keyToCheck = ctx->sig_msk;
         }
 
         /* Set master public key if provided, otherwise generate from private key */
@@ -231,9 +283,21 @@ int32_t CRYPT_SM9_SetPubKeyEx(CRYPT_SM9_Ctx *ctx, const BSL_Param *param)
             if (ret != CRYPT_SUCCESS) {
                 return ret;
             }
+            if (keyToCheck != NULL) {
+                ret = SM9_ValidateMasterKeyPair(keyToCheck, masterPubKey, masterPubKeyLen, keyType);
+                if (ret != CRYPT_SUCCESS) {
+                    return CRYPT_SM9_ERR_KEY_ERR;
+                }
+            }
+            if (masterPrvKey != NULL) {
+                memcpy(ctx->sig_msk, masterPrvKey, SM9_SIG_SYS_PRIKEY_BYTES);
+                ctx->has_sig_msk = 1;
+            }
             memcpy(ctx->sig_mpk, masterPubKey, SM9_SIG_SYS_PUBKEY_BYTES);
         } else if (masterPrvKey != NULL) {
             /* Generate master public key from master private key */
+            memcpy(ctx->sig_msk, masterPrvKey, SM9_SIG_SYS_PRIKEY_BYTES);
+            ctx->has_sig_msk = 1;
             ret = SM9_Alg_MSKG(ctx->sig_msk, ctx->sig_mpk);
             if (ret != CRYPT_SUCCESS) {
                 return CRYPT_SM9_ERR_SIGN_FAILED;
@@ -250,12 +314,18 @@ int32_t CRYPT_SM9_SetPubKeyEx(CRYPT_SM9_Ctx *ctx, const BSL_Param *param)
         ctx->has_sig_g = 1;
 
     } else if (keyType == SM9_KEY_TYPE_ENC) {
+        const uint8_t *keyToCheck = masterPrvKey;
+
         /* Set master private key if provided */
         if (masterPrvKey != NULL) {
             if (masterPrvKeyLen != SM9_ENC_SYS_PRIKEY_BYTES) {
                 return CRYPT_SM9_ERR_KEY_ERR;
             }
-            memcpy(ctx->enc_msk, masterPrvKey, SM9_ENC_SYS_PRIKEY_BYTES);
+            if (SM9_ValidateMasterPrivateKey(masterPrvKey) != CRYPT_SUCCESS) {
+                return CRYPT_SM9_ERR_KEY_ERR;
+            }
+        } else if (ctx->has_enc_msk) {
+            keyToCheck = ctx->enc_msk;
         }
 
         /* Set master public key if provided, otherwise generate from private key */
@@ -268,9 +338,21 @@ int32_t CRYPT_SM9_SetPubKeyEx(CRYPT_SM9_Ctx *ctx, const BSL_Param *param)
             if (ret != CRYPT_SUCCESS) {
                 return ret;
             }
+            if (keyToCheck != NULL) {
+                ret = SM9_ValidateMasterKeyPair(keyToCheck, masterPubKey, masterPubKeyLen, keyType);
+                if (ret != CRYPT_SUCCESS) {
+                    return CRYPT_SM9_ERR_KEY_ERR;
+                }
+            }
+            if (masterPrvKey != NULL) {
+                memcpy(ctx->enc_msk, masterPrvKey, SM9_ENC_SYS_PRIKEY_BYTES);
+                ctx->has_enc_msk = 1;
+            }
             memcpy(ctx->enc_mpk, masterPubKey, SM9_ENC_SYS_PUBKEY_BYTES);
         } else if (masterPrvKey != NULL) {
             /* Generate master public key from master private key */
+            memcpy(ctx->enc_msk, masterPrvKey, SM9_ENC_SYS_PRIKEY_BYTES);
+            ctx->has_enc_msk = 1;
             ret = SM9_Alg_MEKG(ctx->enc_msk, ctx->enc_mpk);
             if (ret != CRYPT_SUCCESS) {
                 return CRYPT_SM9_ERR_KEY_ERR;
@@ -632,25 +714,12 @@ int32_t CRYPT_SM9_Check(int32_t checkType, const CRYPT_SM9_Ctx *ctx1, const CRYP
 
             /* Check signature key pair: ctx1 has master public key, ctx2 has user private key */
             if (ctx1->has_sig_sys && ctx2->has_sig_usr) {
-                if (ctx1->user_id_len > 0 && ctx2->user_id_len > 0) {
-                    /* User IDs should match */
-                    if (ctx1->user_id_len != ctx2->user_id_len ||
-                        memcmp(ctx1->user_id, ctx2->user_id, ctx1->user_id_len) != 0) {
-                        return CRYPT_SM9_PAIRWISE_CHECK_FAIL;
-                    }
-                }
-                return CRYPT_SUCCESS;
+                return SM9_CheckSignKeyPair(ctx1, ctx2);
             }
 
             /* Check encryption key pair */
             if (ctx1->has_enc_sys && ctx2->has_enc_usr) {
-                if (ctx1->user_id_len > 0 && ctx2->user_id_len > 0) {
-                    if (ctx1->user_id_len != ctx2->user_id_len ||
-                        memcmp(ctx1->user_id, ctx2->user_id, ctx1->user_id_len) != 0) {
-                        return CRYPT_SM9_PAIRWISE_CHECK_FAIL;
-                    }
-                }
-                return CRYPT_SUCCESS;
+                return SM9_CheckEncKeyPair(ctx1, ctx2);
             }
 
             /* No valid key pair found */

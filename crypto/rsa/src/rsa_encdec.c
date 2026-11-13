@@ -577,8 +577,8 @@ static int32_t BssaBlind(CRYPT_RSA_Ctx *ctx, const uint8_t *input, uint32_t inpu
             ret = CRYPT_MEM_ALLOC_FAIL;
             goto ERR;
         }
-        GOTO_ERR_IF(RSA_BlindCreateParam(LIBCTX_FROM_RSA_CTX(ctx), param->para.bssa, e, n, bits, opt), ret);
     }
+    GOTO_ERR_IF(RSA_BlindCreateParam(LIBCTX_FROM_RSA_CTX(ctx), param->para.bssa, e, n, bits, opt), ret);
     GOTO_ERR_IF(BN_ModMul(enMsg, enMsg, param->para.bssa->r, n, opt), ret);
     GOTO_ERR_IF(BN_Bn2BinFixZero(enMsg, out, BN_BITS_TO_BYTES(bits)), ret);
     *outLen = BN_BITS_TO_BYTES(bits);

@@ -378,7 +378,7 @@ static void DeinitCtx(CRYPT_HKDF_Ctx *ctx)
         ctx->macCtx = NULL;
     }
     BSL_SAL_ClearFree((void *)ctx->key, ctx->keyLen);
-    BSL_SAL_FREE(ctx->salt);
+    BSL_SAL_ClearFree((void *)ctx->salt, ctx->saltLen);
     BSL_SAL_ClearFree((void *)ctx->prk, ctx->prkLen);
     BSL_SAL_ClearFree((void *)ctx->info, ctx->infoLen);
 }
@@ -454,7 +454,7 @@ ERR:
     BSL_SAL_ClearFree(key, ctx->keyLen);
     BSL_SAL_ClearFree(prk, ctx->prkLen);
     BSL_SAL_ClearFree(info, ctx->infoLen);
-    BSL_SAL_Free(salt);
+    BSL_SAL_ClearFree(salt, ctx->saltLen);
     BSL_SAL_Free(newCtx);
     return NULL;
 }

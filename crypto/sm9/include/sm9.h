@@ -86,6 +86,18 @@ int32_t SM9_Alg_Pair(
     uint8_t *p1,
     uint8_t *p2);
 
+int32_t SM9_Alg_CheckSignUserKey(
+    const uint8_t *mpk,
+    const uint8_t *id,
+    uint32_t ilen,
+    const uint8_t *dsk);
+
+int32_t SM9_Alg_CheckEncUserKey(
+    const uint8_t *mpk,
+    const uint8_t *id,
+    uint32_t ilen,
+    const uint8_t *dek);
+
 int32_t SM9_Get_Sig_G(uint8_t *g, uint8_t *mpk);
 
 int32_t SM9_Get_Enc_G(uint8_t *g, uint8_t *mpk);

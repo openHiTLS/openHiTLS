@@ -99,9 +99,13 @@ void SM9_Ecp_J_AddA(SM9_ECP_J *pJ_Sum, SM9_ECP_J *pJp, SM9_ECP_A *pAp)
     SM9_Fp_Mul(Fp_T2, Fp_T3, FP_z1);    // T2 = T3 * Z1 = Z1^3
     SM9_Fp_Mul(Fp_T3, Fp_T3, FP_x2);    // T3 = T3 * X2 = X2 * Z1^2 = A
     SM9_Fp_Sub(Fp_T3, Fp_T3, FP_x1);    // T3 = T3 - X1 = C
-    SM9_Fp_Mul(FP_z3, FP_z1, Fp_T3);    // Z3 = Z1 * T3 = Z1 * C
     SM9_Fp_Mul(Fp_T2, Fp_T2, FP_y2);    // T2 = Y2 * T2 = Y2 * Z1^3 = B
     SM9_Fp_Sub(Fp_T2, Fp_T2, FP_y1);    // T2 = T2 - Y1 = B - Y1 = D
+    if (SM9_Fq_IsZero(Fp_T3) && SM9_Fq_IsZero(Fp_T2)) {
+        SM9_Ecp_J_DoubleJ(pJ_Sum, pJp);
+        return;
+    }
+    SM9_Fp_Mul(FP_z3, FP_z1, Fp_T3);    // Z3 = Z1 * T3 = Z1 * C
     SM9_Fp_Mul(Fp_T1, Fp_T3, Fp_T3);    // T1 = T3^2 = C^2
     SM9_Fp_Mul(Fp_T3, Fp_T3, Fp_T1);    // T3 = T3 * T1 = C^3
     SM9_Fp_Mul(Fp_T1, Fp_T1, FP_x1);    // T1 = T1 * X1 = X1 * C^2
@@ -292,6 +296,23 @@ int32_t SM9_Ecp_A_Check(SM9_ECP_A *pAp)
         return 0;
     else
         return -1;
+}
+
+int32_t SM9_Ecp_A_ValidateBytes(const uint8_t *src)
+{
+    SM9_ECP_A point;
+    int32_t ret = -1;
+
+    if (src == NULL || SM9_Fp_CheckFieldElementEncoding(src) != 0 ||
+        SM9_Fp_CheckFieldElementEncoding(src + BNByteLen) != 0) {
+        goto EXIT;
+    }
+    SM9_Ecp_A_ReadBytes(&point, src);
+    ret = SM9_Ecp_A_Check(&point);
+
+EXIT:
+    BSL_SAL_CleanseData(&point, sizeof(point));
+    return ret;
 }
 
 #endif // HITLS_CRYPTO_SM9
