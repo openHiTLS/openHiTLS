@@ -295,7 +295,6 @@ option(HITLS_CRYPTO_PKEY                                       "Public Key Crypt
   option(HITLS_CRYPTO_SM9                                        "SM9 Public Key Encryption" OFF)
     option(HITLS_CRYPTO_SM9_CRYPT                                  "SM9 Cryptography" OFF)
     option(HITLS_CRYPTO_SM9_SIGN                                   "SM9 Sign" OFF)
-    option(HITLS_CRYPTO_SM9_CMP                                    "SM9 Compare" OFF)
     option(HITLS_CRYPTO_SM9_CHECK                                  "SM9 Check" OFF)
   option(HITLS_CRYPTO_PAILLIER                                   "Paillier Cryptosystem" OFF)
   option(HITLS_CRYPTO_ELGAMAL                                    "ElGamal Public Key Encryption" OFF)

@@ -167,6 +167,7 @@ set(TEST_INTF_INCLUDE_DIRS
     ${openHiTLS_SRC}/crypto/sm2/include
     ${openHiTLS_SRC}/crypto/sm2/src
     ${openHiTLS_SRC}/crypto/sm9/include
+    ${openHiTLS_SRC}/crypto/sm9/src
     ${openHiTLS_SRC}/crypto/paillier/include
     ${openHiTLS_SRC}/crypto/paillier/src
     ${openHiTLS_SRC}/crypto/elgamal/include

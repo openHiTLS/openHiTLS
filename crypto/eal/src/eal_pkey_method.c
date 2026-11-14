@@ -44,7 +44,7 @@
 #include "crypt_slh_dsa.h"
 #endif
 #ifdef HITLS_CRYPTO_SM9
-#include "crypt_sm9_eal.h"
+#include "crypt_sm9.h"
 #endif
 #ifdef HITLS_CRYPTO_PAILLIER
 #include "crypt_paillier.h"

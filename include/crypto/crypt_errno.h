@@ -429,6 +429,9 @@ enum CRYPT_ERROR {
     CRYPT_SM9_ERR_NO_MASTER_KEY,                      /**< SM9 master key not set. */
     CRYPT_SM9_PAIRWISE_CHECK_FAIL,                    /**< The public and private keys are inconsistent. */
     CRYPT_SM9_INVALID_PRVKEY,                         /**< Invalid private key. */
+    CRYPT_SM9_ERR_COORDINATE_RANGE,                   /**< Point coordinate is outside the field. */
+    CRYPT_SM9_ERR_POINT_NOT_ON_CURVE,                 /**< Point is not on the curve. */
+    CRYPT_SM9_ERR_POINT_NOT_IN_SUBGROUP,              /**< Point is not in the prime-order subgroup. */
 
     CRYPT_MD_INPUT_OVERFLOW = 0x011D0001,             /**< The length of the input data exceeds the
                                                            maximum processing range of the MD5. */

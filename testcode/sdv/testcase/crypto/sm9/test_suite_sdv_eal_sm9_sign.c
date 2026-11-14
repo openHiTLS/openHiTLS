@@ -20,7 +20,7 @@
 #include "crypt_algid.h"
 #include "crypt_errno.h"
 #include "crypt_sm9.h"
-#include "crypt_sm9_eal.h"
+#include "sm9_local.h"
 #include "crypt_local_types.h"
 #include "crypt_params_key.h"
 #include "bsl_params.h"
@@ -257,14 +257,14 @@ void SDV_CRYPTO_SM9_GET_PRV_API_TC001(Hex *masterKey, Hex *userId)
     int ret;
 
     // Generate expected user key using native API
-    nativeCtx = SM9_NewCtx();
+    nativeCtx = CRYPT_SM9_NewCtx();
     ASSERT_TRUE(nativeCtx != NULL);
     ret = SM9_SetSignMasterKey(nativeCtx, masterKey->x);
     ASSERT_EQ(ret, CRYPT_SUCCESS);
     ret = SM9_GenSignUserKey(nativeCtx, userId->x, userId->len);
     ASSERT_EQ(ret, CRYPT_SUCCESS);
     if ((SM9_SIG_USR_PRIKEY_BYTES) <= (sizeof(expectedUserKey)))
-        memcpy(expectedUserKey, nativeCtx->sig_dsk, SM9_SIG_USR_PRIKEY_BYTES);
+        memcpy(expectedUserKey, nativeCtx->sigDsk, SM9_SIG_USR_PRIKEY_BYTES);
 
     // Step 1: Create EAL context
     ctx = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_SM9);
@@ -326,7 +326,7 @@ void SDV_CRYPTO_SM9_GET_PRV_API_TC001(Hex *masterKey, Hex *userId)
 
 EXIT:
     CRYPT_EAL_PkeyFreeCtx(ctx);
-    SM9_FreeCtx(nativeCtx);
+    CRYPT_SM9_FreeCtx(nativeCtx);
 }
 /* END_CASE */
 
@@ -889,12 +889,12 @@ void SDV_CRYPTO_SM9_CHECK_IMPORTED_SIGN_KEY_TC001(Hex *masterKey, Hex *userId, H
 
     masterCtx = CRYPT_SM9_NewCtx();
     userCtx = CRYPT_SM9_NewCtx();
-    kgcCtx = SM9_NewCtx();
+    kgcCtx = CRYPT_SM9_NewCtx();
     ASSERT_TRUE(masterCtx != NULL && userCtx != NULL && kgcCtx != NULL);
     ASSERT_EQ(SM9_SetSignMasterKey(kgcCtx, masterKey->x), CRYPT_SUCCESS);
     ASSERT_EQ(SM9_GenSignUserKey(kgcCtx, userId->x, userId->len), CRYPT_SUCCESS);
-    memcpy(masterPub, kgcCtx->sig_mpk, sizeof(masterPub));
-    memcpy(userKey, kgcCtx->sig_dsk, sizeof(userKey));
+    memcpy(masterPub, kgcCtx->sigMpk, sizeof(masterPub));
+    memcpy(userKey, kgcCtx->sigDsk, sizeof(userKey));
 
     BSL_PARAM_InitValue(&params[0], CRYPT_PARAM_SM9_MASTER_PUB_KEY, BSL_PARAM_TYPE_OCTETS,
         masterPub, sizeof(masterPub));
@@ -905,8 +905,8 @@ void SDV_CRYPTO_SM9_CHECK_IMPORTED_SIGN_KEY_TC001(Hex *masterKey, Hex *userId, H
     ASSERT_EQ(CRYPT_SM9_Check(CRYPT_PKEY_CHECK_KEYPAIR, masterCtx, kgcCtx), CRYPT_SUCCESS);
 
     ASSERT_EQ(SM9_SetSignUserKey(userCtx, userId->x, userId->len, userKey), CRYPT_SUCCESS);
-    ASSERT_EQ(userCtx->has_sig_sys, 0);
-    ASSERT_EQ(userCtx->has_sig_msk, 0);
+    ASSERT_EQ(userCtx->hasSigSys, 0);
+    ASSERT_EQ(userCtx->hasSigMsk, 0);
     ret = CRYPT_SM9_Check(CRYPT_PKEY_CHECK_KEYPAIR, masterCtx, userCtx);
     ASSERT_EQ(ret, CRYPT_SUCCESS);
 
@@ -917,7 +917,7 @@ void SDV_CRYPTO_SM9_CHECK_IMPORTED_SIGN_KEY_TC001(Hex *masterKey, Hex *userId, H
 EXIT:
     CRYPT_SM9_FreeCtx(masterCtx);
     CRYPT_SM9_FreeCtx(userCtx);
-    SM9_FreeCtx(kgcCtx);
+    CRYPT_SM9_FreeCtx(kgcCtx);
 }
 /* END_CASE */
 
@@ -1038,7 +1038,7 @@ void SDV_CRYPTO_SM9_PUBKEY_SET_TEST_TC001(void)
                         &keyType, sizeof(int32_t));
     setParams[2] = (BSL_Param)BSL_PARAM_END;
 
-    ASSERT_EQ(CRYPT_EAL_PkeySetPubEx(ctx2, setParams), CRYPT_SM9_ERR_BAD_INPUT);
+    ASSERT_EQ(CRYPT_EAL_PkeySetPubEx(ctx2, setParams), CRYPT_SM9_ERR_POINT_NOT_ON_CURVE);
 
 EXIT:
     CRYPT_EAL_PkeyFreeCtx(ctx);
@@ -1070,7 +1070,12 @@ void SDV_CRYPTO_SM9_MASTER_PAIR_VALIDATE_TC001(void)
         &keyType, sizeof(keyType));
     params[3] = (BSL_Param)BSL_PARAM_END;
 
-    ASSERT_EQ(CRYPT_SM9_SetPubKeyEx(ctx, params), CRYPT_SM9_ERR_KEY_ERR);
+    ASSERT_EQ(CRYPT_SM9_SetPubKeyEx(ctx, params), CRYPT_SM9_PAIRWISE_CHECK_FAIL);
+
+    keyType = SM9_KEY_TYPE_ENC;
+    ASSERT_EQ(SM9_Alg_MEKG(otherMasterKey, otherMasterPub), CRYPT_SUCCESS);
+    params[1].valueLen = SM9_ENC_SYS_PUBKEY_BYTES;
+    ASSERT_EQ(CRYPT_SM9_SetPubKeyEx(ctx, params), CRYPT_SM9_PAIRWISE_CHECK_FAIL);
 
 EXIT:
     CRYPT_SM9_FreeCtx(ctx);
@@ -1101,7 +1106,7 @@ void SDV_CRYPTO_SM9_MASTER_SCALAR_VALIDATE_TC001(int keyType, Hex *invalidMaster
                         invalidMaster->len);
     BSL_PARAM_InitValue(&params[1], CRYPT_PARAM_SM9_KEY_TYPE, BSL_PARAM_TYPE_INT32, &keyType, sizeof(keyType));
     params[2] = (BSL_Param)BSL_PARAM_END;
-    ASSERT_TRUE(CRYPT_SM9_SetPubKeyEx(ctx, params) != CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_SM9_SetPubKeyEx(ctx, params), CRYPT_SM9_INVALID_PRVKEY);
 
     BSL_PARAM_InitValue(&params[0], CRYPT_PARAM_SM9_MASTER_PUB_KEY, BSL_PARAM_TYPE_OCTETS, validPub, validPubLen);
     ASSERT_EQ(CRYPT_SM9_SetPubKeyEx(ctx, params), CRYPT_SUCCESS);
@@ -1111,7 +1116,7 @@ void SDV_CRYPTO_SM9_MASTER_SCALAR_VALIDATE_TC001(int keyType, Hex *invalidMaster
     ASSERT_EQ(CRYPT_SM9_SetPubKeyEx(ctx, params), CRYPT_SUCCESS);
     BSL_PARAM_InitValue(&params[0], CRYPT_PARAM_SM9_MASTER_KEY, BSL_PARAM_TYPE_OCTETS, invalidMaster->x,
                         invalidMaster->len);
-    ASSERT_TRUE(CRYPT_SM9_SetPubKeyEx(ctx, params) != CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_SM9_SetPubKeyEx(ctx, params), CRYPT_SM9_INVALID_PRVKEY);
     BSL_PARAM_InitValue(&params[0], CRYPT_PARAM_SM9_MASTER_PUB_KEY, BSL_PARAM_TYPE_OCTETS, validPub, validPubLen);
     ASSERT_EQ(CRYPT_SM9_SetPubKeyEx(ctx, params), CRYPT_SUCCESS);
 
@@ -1124,6 +1129,7 @@ EXIT:
 void SDV_CRYPTO_SM9_G2_SUBGROUP_VALIDATE_TC001(Hex *point)
 {
     CRYPT_SM9_Ctx *ctx = NULL;
+    uint8_t userId[] = {'A'};
     BSL_Param params[3];
     int32_t keyType = SM9_KEY_TYPE_SIGN;
 
@@ -1135,7 +1141,9 @@ void SDV_CRYPTO_SM9_G2_SUBGROUP_VALIDATE_TC001(Hex *point)
         &keyType, sizeof(keyType));
     params[2] = (BSL_Param)BSL_PARAM_END;
 
-    ASSERT_EQ(CRYPT_SM9_SetPubKeyEx(ctx, params), CRYPT_SM9_ERR_BAD_INPUT);
+    ASSERT_EQ(CRYPT_SM9_SetPubKeyEx(ctx, params), CRYPT_SM9_ERR_POINT_NOT_IN_SUBGROUP);
+    ASSERT_EQ(SM9_Ecp2A_ValidateBytes(point->x), CRYPT_SM9_ERR_POINT_NOT_IN_SUBGROUP);
+    ASSERT_EQ(SM9_SetEncUserKey(ctx, userId, sizeof(userId), point->x), CRYPT_SM9_ERR_POINT_NOT_IN_SUBGROUP);
 
 EXIT:
     CRYPT_SM9_FreeCtx(ctx);
@@ -1148,6 +1156,8 @@ void SDV_CRYPTO_SM9_G2_VALIDATION_TC001(void)
     CRYPT_SM9_Ctx *ctx = NULL;
     uint8_t masterKey[SM9_SIG_MASTER_KEY_LEN] = {0};
     uint8_t masterPub[SM9_SIG_SYS_PUBKEY_BYTES] = {0};
+    uint8_t userId[] = {'A'};
+    uint8_t pairing[12 * SM9_BN_BYTES];
     BSL_Param params[3];
     int32_t keyType = SM9_KEY_TYPE_SIGN;
 
@@ -1162,6 +1172,18 @@ void SDV_CRYPTO_SM9_G2_VALIDATION_TC001(void)
     params[2] = (BSL_Param)BSL_PARAM_END;
 
     ASSERT_EQ(CRYPT_SM9_SetPubKeyEx(ctx, params), CRYPT_SUCCESS);
+    ASSERT_EQ(SM9_Ecp2A_ValidateBytes(masterPub), CRYPT_SUCCESS);
+    ASSERT_EQ(SM9_Ecp2A_ValidateBytes(NULL), CRYPT_NULL_INPUT);
+    memset(masterPub, 0, sizeof(masterPub));
+    ASSERT_EQ(SM9_Ecp2A_ValidateBytes(masterPub), CRYPT_SM9_ERR_POINT_NOT_ON_CURVE);
+    ASSERT_EQ(CRYPT_SM9_SetPubKeyEx(ctx, params), CRYPT_SM9_ERR_POINT_NOT_ON_CURVE);
+    ASSERT_EQ(SM9_SetEncUserKey(ctx, userId, sizeof(userId), masterPub), CRYPT_SM9_ERR_POINT_NOT_ON_CURVE);
+    ASSERT_EQ(SM9_Alg_Pair(pairing, g_sm9G1, masterPub), CRYPT_SM9_ERR_POINT_NOT_ON_CURVE);
+    memset(masterPub, 0xff, sizeof(masterPub));
+    ASSERT_EQ(SM9_Ecp2A_ValidateBytes(masterPub), CRYPT_SM9_ERR_COORDINATE_RANGE);
+    ASSERT_EQ(CRYPT_SM9_SetPubKeyEx(ctx, params), CRYPT_SM9_ERR_COORDINATE_RANGE);
+    ASSERT_EQ(SM9_SetEncUserKey(ctx, userId, sizeof(userId), masterPub), CRYPT_SM9_ERR_COORDINATE_RANGE);
+    ASSERT_EQ(SM9_Alg_Pair(pairing, g_sm9G1, masterPub), CRYPT_SM9_ERR_COORDINATE_RANGE);
 
 EXIT:
     CRYPT_SM9_FreeCtx(ctx);
@@ -1172,12 +1194,26 @@ EXIT:
 void SDV_CRYPTO_SM9_SIGN_USERKEY_VALIDATE_TC001(void)
 {
     static const uint8_t msg[] = {0x41};
+    SM9_Ctx ctx = {0};
+    uint8_t userId[] = {'A'};
     uint8_t dsk[SM9_SIG_USR_PRIKEY_BYTES] = {0};
     uint8_t r[SM9_SIG_MASTER_KEY_LEN] = {0};
     uint8_t g[12 * SM9_SIG_MASTER_KEY_LEN] = {0};
     uint8_t sign[SM9_SIGNATURE_BYTES] = {0};
+    SM9_EcpA point;
 
-    ASSERT_EQ(SM9_Alg_Sign(msg, sizeof(msg), dsk, r, g, NULL, sign), CRYPT_SM9_ERR_BAD_INPUT);
+    ASSERT_EQ(SM9_Alg_Sign(msg, sizeof(msg), dsk, r, g, NULL, sign), CRYPT_SM9_ERR_POINT_NOT_ON_CURVE);
+    SM9_EcpA_ReadBytes(&point, dsk);
+    ASSERT_EQ(SM9_EcpA_Check(&point), CRYPT_SM9_ERR_POINT_NOT_ON_CURVE);
+    ASSERT_EQ(SM9_EcpA_ValidateBytes(dsk), CRYPT_SM9_ERR_POINT_NOT_ON_CURVE);
+    ASSERT_EQ(SM9_SetSignUserKey(&ctx, userId, sizeof(userId), dsk), CRYPT_SM9_ERR_POINT_NOT_ON_CURVE);
+    ASSERT_EQ(SM9_Alg_Pair(g, dsk, g_sm9G2), CRYPT_SM9_ERR_POINT_NOT_ON_CURVE);
+    ASSERT_EQ(SM9_EcpA_ValidateBytes(NULL), CRYPT_NULL_INPUT);
+    memset(dsk, 0xff, sizeof(dsk));
+    ASSERT_EQ(SM9_EcpA_ValidateBytes(dsk), CRYPT_SM9_ERR_COORDINATE_RANGE);
+    ASSERT_EQ(SM9_SetSignUserKey(&ctx, userId, sizeof(userId), dsk), CRYPT_SM9_ERR_COORDINATE_RANGE);
+    ASSERT_EQ(SM9_Alg_Pair(g, dsk, g_sm9G2), CRYPT_SM9_ERR_COORDINATE_RANGE);
+    ASSERT_EQ(SM9_EcpA_ValidateBytes(g_sm9G1), CRYPT_SUCCESS);
 
 EXIT:
     return;

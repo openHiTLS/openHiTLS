@@ -26,7 +26,7 @@ target_include_directories(_hitls_crypto_sm9
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
     PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}/src
-        ${PROJECT_SOURCE_DIR}/crypto/ecc/src/sm9/inc
+        ${PROJECT_SOURCE_DIR}/crypto/sm3/include
 )
 
 hitls_register_objects(CRYPTO _hitls_crypto_sm9)

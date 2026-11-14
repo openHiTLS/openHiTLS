@@ -16,30 +16,40 @@
 #include "hitls_build.h"
 #ifdef HITLS_CRYPTO_SM9
 
-#include <string.h>
-#include "crypt_sm9_eal.h"
-#include "crypt_sm9.h"
+#include "sm9_local.h"
 #include "crypt_errno.h"
+#include "crypt_sm9.h"
+#include "crypt_util_rand.h"
 #include "crypt_utils.h"
 #include "crypt_params_key.h"
 #include "bsl_sal.h"
 #include "bsl_bytes.h"
-#include "sm9_ecp.h"
-#include "sm9_ecp2.h"
+#include <string.h>
 
-/* Key type constants */
-#define SM9_KEY_TYPE_SIGN  1
-#define SM9_KEY_TYPE_ENC   2
+#define SM9_KEY_TYPE_SIGN 1
+#define SM9_KEY_TYPE_ENC  2
+
+static void SM9_ModifyKeyRange(uint8_t *key)
+{
+    uint32_t scalar[SM9_BN_WORDS];
+    SM9_BN_ReadBytes(scalar, key);
+    SM9_Fn_LastRes(scalar);
+    SM9_BN_AddInt(scalar, scalar, 1, SM9_BN_WORDS);
+    SM9_Fn_LastRes(scalar);
+    SM9_Fp_WriteBytes(key, scalar);
+    BSL_SAL_CleanseData(scalar, sizeof(scalar));
+}
 
 static int32_t SM9_ValidateMasterPrivateKey(const uint8_t *masterPrvKey)
 {
-    uint32_t masterKey[BNWordLen];
+    uint32_t masterKey[SM9_BN_WORDS];
     int32_t valid;
 
-    SM9_Bn_ReadBytes(masterKey, masterPrvKey);
-    valid = !SM9_Bn_IsZero(masterKey) && bn_cmp(masterKey, sm9_sys_para.EC_N, sm9_sys_para.wsize) < 0;
+    SM9_BN_ReadBytes(masterKey, masterPrvKey);
+    valid = SM9_BN_IsZero(masterKey, g_sm9SysPara.wordSize) == 0 &&
+            SM9_BN_Compare(masterKey, g_sm9SysPara.ecN, g_sm9SysPara.wordSize) < 0;
     BSL_SAL_CleanseData(masterKey, sizeof(masterKey));
-    return valid ? CRYPT_SUCCESS : CRYPT_SM9_ERR_KEY_ERR;
+    return valid != 0 ? CRYPT_SUCCESS : CRYPT_SM9_INVALID_PRVKEY;
 }
 
 static int32_t SM9_ValidateMasterKeyPair(const uint8_t *masterPrvKey, const uint8_t *masterPubKey,
@@ -56,7 +66,7 @@ static int32_t SM9_ValidateMasterKeyPair(const uint8_t *masterPrvKey, const uint
         ret = SM9_Alg_MEKG(masterKey, derivedPubKey);
     }
     if (ret == CRYPT_SUCCESS && memcmp(derivedPubKey, masterPubKey, masterPubKeyLen) != 0) {
-        ret = CRYPT_SM9_ERR_KEY_ERR;
+        ret = CRYPT_SM9_PAIRWISE_CHECK_FAIL;
     }
     BSL_SAL_CleanseData(masterKey, sizeof(masterKey));
     BSL_SAL_CleanseData(derivedPubKey, sizeof(derivedPubKey));
@@ -69,11 +79,7 @@ static int32_t SM9_ValidateG1PubKey(const uint8_t *pubkey, uint32_t len)
         return CRYPT_SM9_ERR_KEY_ERR;
     }
 
-    if (SM9_Ecp_A_ValidateBytes(pubkey) != 0) {
-        return CRYPT_SM9_ERR_BAD_INPUT;
-    }
-
-    return CRYPT_SUCCESS;
+    return SM9_EcpA_ValidateBytes(pubkey);
 }
 
 static int32_t SM9_ValidateG2PubKey(const uint8_t *pubkey, uint32_t len)
@@ -82,42 +88,12 @@ static int32_t SM9_ValidateG2PubKey(const uint8_t *pubkey, uint32_t len)
         return CRYPT_SM9_ERR_KEY_ERR;
     }
 
-    if (SM9_Ecp2_A_ValidateBytes(pubkey) != 0) {
-        return CRYPT_SM9_ERR_BAD_INPUT;
-    }
-
-    return CRYPT_SUCCESS;
-}
-
-static int32_t SM9_CheckSignKeyPair(const CRYPT_SM9_Ctx *masterCtx, const CRYPT_SM9_Ctx *userCtx)
-{
-    if (userCtx->user_id_len == 0 ||
-        userCtx->user_id_len > sizeof(userCtx->user_id) ||
-        (masterCtx->user_id_len > 0 &&
-         (masterCtx->user_id_len != userCtx->user_id_len ||
-          memcmp(masterCtx->user_id, userCtx->user_id, userCtx->user_id_len) != 0))) {
-        return CRYPT_SM9_PAIRWISE_CHECK_FAIL;
-    }
-    return SM9_Alg_CheckSignUserKey(masterCtx->sig_mpk, userCtx->user_id, userCtx->user_id_len,
-        userCtx->sig_dsk);
-}
-
-static int32_t SM9_CheckEncKeyPair(const CRYPT_SM9_Ctx *masterCtx, const CRYPT_SM9_Ctx *userCtx)
-{
-    if (userCtx->user_id_len == 0 ||
-        userCtx->user_id_len > sizeof(userCtx->user_id) ||
-        (masterCtx->user_id_len > 0 &&
-         (masterCtx->user_id_len != userCtx->user_id_len ||
-          memcmp(masterCtx->user_id, userCtx->user_id, userCtx->user_id_len) != 0))) {
-        return CRYPT_SM9_PAIRWISE_CHECK_FAIL;
-    }
-    return SM9_Alg_CheckEncUserKey(masterCtx->enc_mpk, userCtx->user_id, userCtx->user_id_len,
-        userCtx->enc_dek);
+    return SM9_Ecp2A_ValidateBytes(pubkey);
 }
 
 CRYPT_SM9_Ctx *CRYPT_SM9_NewCtx(void)
 {
-    return SM9_NewCtx();
+    return BSL_SAL_Calloc(1u, sizeof(CRYPT_SM9_Ctx));
 }
 
 CRYPT_SM9_Ctx *CRYPT_SM9_DupCtx(const CRYPT_SM9_Ctx *ctx)
@@ -126,7 +102,7 @@ CRYPT_SM9_Ctx *CRYPT_SM9_DupCtx(const CRYPT_SM9_Ctx *ctx)
         return NULL;
     }
 
-    CRYPT_SM9_Ctx *newCtx = SM9_NewCtx();
+    CRYPT_SM9_Ctx *newCtx = CRYPT_SM9_NewCtx();
     if (newCtx == NULL) {
         return NULL;
     }
@@ -139,9 +115,7 @@ CRYPT_SM9_Ctx *CRYPT_SM9_DupCtx(const CRYPT_SM9_Ctx *ctx)
 
 void CRYPT_SM9_FreeCtx(CRYPT_SM9_Ctx *ctx)
 {
-    if (ctx != NULL) {
-        SM9_FreeCtx(ctx);
-    }
+    BSL_SAL_ClearFree(ctx, sizeof(CRYPT_SM9_Ctx));
 }
 
 int32_t CRYPT_SM9_Gen(CRYPT_SM9_Ctx *ctx)
@@ -151,54 +125,54 @@ int32_t CRYPT_SM9_Gen(CRYPT_SM9_Ctx *ctx)
     }
 
     int32_t ret;
-    uint8_t sig_msk[SM9_SIG_SYS_PRIKEY_BYTES];
-    uint8_t enc_msk[SM9_ENC_SYS_PRIKEY_BYTES];
+    uint8_t sigMsk[SM9_SIG_SYS_PRIKEY_BYTES];
+    uint8_t encMsk[SM9_ENC_SYS_PRIKEY_BYTES];
 
     /* Generate random master private key for signature in [1, N-1] */
-    ret = sm9_rand(sig_msk, SM9_SIG_SYS_PRIKEY_BYTES);
+    ret = CRYPT_RandEx(NULL, sigMsk, SM9_SIG_SYS_PRIKEY_BYTES);
     if (ret != CRYPT_SUCCESS) {
         return CRYPT_SM9_ERR_KEY_ERR;
     }
-    SM9_ModifyKeyRange(sig_msk);
-    ret = SM9_SetSignMasterKey(ctx, sig_msk);
+    SM9_ModifyKeyRange(sigMsk);
+    ret = SM9_SetSignMasterKey(ctx, sigMsk);
     if (ret != CRYPT_SUCCESS) {
-        BSL_SAL_CleanseData(sig_msk, SM9_SIG_SYS_PRIKEY_BYTES);
+        BSL_SAL_CleanseData(sigMsk, SM9_SIG_SYS_PRIKEY_BYTES);
         return CRYPT_SM9_ERR_KEY_ERR;
     }
 
     /* Generate random master private key for encryption in [1, N-1] */
-    ret = sm9_rand(enc_msk, SM9_ENC_SYS_PRIKEY_BYTES);
+    ret = CRYPT_RandEx(NULL, encMsk, SM9_ENC_SYS_PRIKEY_BYTES);
     if (ret != CRYPT_SUCCESS) {
-        BSL_SAL_CleanseData(sig_msk, SM9_SIG_SYS_PRIKEY_BYTES);
+        BSL_SAL_CleanseData(sigMsk, SM9_SIG_SYS_PRIKEY_BYTES);
         return CRYPT_SM9_ERR_KEY_ERR;
     }
-    SM9_ModifyKeyRange(enc_msk);
-    ret = SM9_SetEncMasterKey(ctx, enc_msk);
+    SM9_ModifyKeyRange(encMsk);
+    ret = SM9_SetEncMasterKey(ctx, encMsk);
     if (ret != CRYPT_SUCCESS) {
-        BSL_SAL_CleanseData(sig_msk, SM9_SIG_SYS_PRIKEY_BYTES);
-        BSL_SAL_CleanseData(enc_msk, SM9_ENC_SYS_PRIKEY_BYTES);
+        BSL_SAL_CleanseData(sigMsk, SM9_SIG_SYS_PRIKEY_BYTES);
+        BSL_SAL_CleanseData(encMsk, SM9_ENC_SYS_PRIKEY_BYTES);
         return CRYPT_SM9_ERR_KEY_ERR;
     }
 
     /* If user ID is set, generate user keys */
-    if (ctx->user_id_len > 0) {
-        ret = SM9_GenSignUserKey(ctx, ctx->user_id, ctx->user_id_len);
+    if (ctx->userIdLen > 0) {
+        ret = SM9_GenSignUserKey(ctx, ctx->userId, ctx->userIdLen);
         if (ret != CRYPT_SUCCESS) {
-            BSL_SAL_CleanseData(sig_msk, SM9_SIG_SYS_PRIKEY_BYTES);
-            BSL_SAL_CleanseData(enc_msk, SM9_ENC_SYS_PRIKEY_BYTES);
+            BSL_SAL_CleanseData(sigMsk, SM9_SIG_SYS_PRIKEY_BYTES);
+            BSL_SAL_CleanseData(encMsk, SM9_ENC_SYS_PRIKEY_BYTES);
             return CRYPT_SM9_ERR_KEY_ERR;
         }
 
-        ret = SM9_GenEncUserKey(ctx, ctx->user_id, ctx->user_id_len);
+        ret = SM9_GenEncUserKey(ctx, ctx->userId, ctx->userIdLen);
         if (ret != CRYPT_SUCCESS) {
-            BSL_SAL_CleanseData(sig_msk, SM9_SIG_SYS_PRIKEY_BYTES);
-            BSL_SAL_CleanseData(enc_msk, SM9_ENC_SYS_PRIKEY_BYTES);
+            BSL_SAL_CleanseData(sigMsk, SM9_SIG_SYS_PRIKEY_BYTES);
+            BSL_SAL_CleanseData(encMsk, SM9_ENC_SYS_PRIKEY_BYTES);
             return CRYPT_SM9_ERR_KEY_ERR;
         }
     }
 
-    BSL_SAL_CleanseData(sig_msk, SM9_SIG_SYS_PRIKEY_BYTES);
-    BSL_SAL_CleanseData(enc_msk, SM9_ENC_SYS_PRIKEY_BYTES);
+    BSL_SAL_CleanseData(sigMsk, SM9_SIG_SYS_PRIKEY_BYTES);
+    BSL_SAL_CleanseData(encMsk, SM9_ENC_SYS_PRIKEY_BYTES);
     return CRYPT_SUCCESS;
 }
 
@@ -209,11 +183,11 @@ int32_t CRYPT_SM9_SetPubKeyEx(CRYPT_SM9_Ctx *ctx, const BSL_Param *param)
     }
 
     const BSL_Param *p = NULL;
-    const uint8_t *masterPrvKey = NULL;  /* Master private key (msk) */
+    const uint8_t *masterPrvKey = NULL; /* Master private key (msk) */
     uint32_t masterPrvKeyLen = 0;
-    const uint8_t *masterPubKey = NULL;  /* Master public key (mpk) */
+    const uint8_t *masterPubKey = NULL; /* Master public key (mpk) */
     uint32_t masterPubKeyLen = 0;
-    const uint8_t *userId = NULL;        /* User ID (optional, for verification) */
+    const uint8_t *userId = NULL; /* User ID (optional, for verification) */
     uint32_t userIdLen = 0;
     int32_t keyType = 0;
     int32_t ret;
@@ -267,10 +241,10 @@ int32_t CRYPT_SM9_SetPubKeyEx(CRYPT_SM9_Ctx *ctx, const BSL_Param *param)
                 return CRYPT_SM9_ERR_BAD_INPUT;
             }
             if (SM9_ValidateMasterPrivateKey(masterPrvKey) != CRYPT_SUCCESS) {
-                return CRYPT_SM9_ERR_KEY_ERR;
+                return CRYPT_SM9_INVALID_PRVKEY;
             }
-        } else if (ctx->has_sig_msk) {
-            keyToCheck = ctx->sig_msk;
+        } else if (ctx->hasSigMsk != 0) {
+            keyToCheck = ctx->sigMsk;
         }
 
         /* Set master public key if provided, otherwise generate from private key */
@@ -286,32 +260,32 @@ int32_t CRYPT_SM9_SetPubKeyEx(CRYPT_SM9_Ctx *ctx, const BSL_Param *param)
             if (keyToCheck != NULL) {
                 ret = SM9_ValidateMasterKeyPair(keyToCheck, masterPubKey, masterPubKeyLen, keyType);
                 if (ret != CRYPT_SUCCESS) {
-                    return CRYPT_SM9_ERR_KEY_ERR;
+                    return ret;
                 }
             }
             if (masterPrvKey != NULL) {
-                memcpy(ctx->sig_msk, masterPrvKey, SM9_SIG_SYS_PRIKEY_BYTES);
-                ctx->has_sig_msk = 1;
+                memcpy(ctx->sigMsk, masterPrvKey, SM9_SIG_SYS_PRIKEY_BYTES);
+                ctx->hasSigMsk = 1;
             }
-            memcpy(ctx->sig_mpk, masterPubKey, SM9_SIG_SYS_PUBKEY_BYTES);
+            memcpy(ctx->sigMpk, masterPubKey, SM9_SIG_SYS_PUBKEY_BYTES);
         } else if (masterPrvKey != NULL) {
             /* Generate master public key from master private key */
-            memcpy(ctx->sig_msk, masterPrvKey, SM9_SIG_SYS_PRIKEY_BYTES);
-            ctx->has_sig_msk = 1;
-            ret = SM9_Alg_MSKG(ctx->sig_msk, ctx->sig_mpk);
+            memcpy(ctx->sigMsk, masterPrvKey, SM9_SIG_SYS_PRIKEY_BYTES);
+            ctx->hasSigMsk = 1;
+            ret = SM9_Alg_MSKG(ctx->sigMsk, ctx->sigMpk);
             if (ret != CRYPT_SUCCESS) {
                 return CRYPT_SM9_ERR_SIGN_FAILED;
             }
         }
 
-        /* Generate sig_g from master public key */
-        ret = SM9_Get_Sig_G(ctx->sig_g, ctx->sig_mpk);
+        /* Generate sigG from master public key */
+        ret = SM9_Alg_Pair(ctx->sigG, g_sm9G1, ctx->sigMpk);
         if (ret != CRYPT_SUCCESS) {
             return CRYPT_SM9_ERR_ENCRYPT_FAILED;
         }
 
-        ctx->has_sig_sys = 1;
-        ctx->has_sig_g = 1;
+        ctx->hasSigSys = 1;
+        ctx->hasSigG = 1;
 
     } else if (keyType == SM9_KEY_TYPE_ENC) {
         const uint8_t *keyToCheck = masterPrvKey;
@@ -322,10 +296,10 @@ int32_t CRYPT_SM9_SetPubKeyEx(CRYPT_SM9_Ctx *ctx, const BSL_Param *param)
                 return CRYPT_SM9_ERR_KEY_ERR;
             }
             if (SM9_ValidateMasterPrivateKey(masterPrvKey) != CRYPT_SUCCESS) {
-                return CRYPT_SM9_ERR_KEY_ERR;
+                return CRYPT_SM9_INVALID_PRVKEY;
             }
-        } else if (ctx->has_enc_msk) {
-            keyToCheck = ctx->enc_msk;
+        } else if (ctx->hasEncMsk != 0) {
+            keyToCheck = ctx->encMsk;
         }
 
         /* Set master public key if provided, otherwise generate from private key */
@@ -341,41 +315,41 @@ int32_t CRYPT_SM9_SetPubKeyEx(CRYPT_SM9_Ctx *ctx, const BSL_Param *param)
             if (keyToCheck != NULL) {
                 ret = SM9_ValidateMasterKeyPair(keyToCheck, masterPubKey, masterPubKeyLen, keyType);
                 if (ret != CRYPT_SUCCESS) {
-                    return CRYPT_SM9_ERR_KEY_ERR;
+                    return ret;
                 }
             }
             if (masterPrvKey != NULL) {
-                memcpy(ctx->enc_msk, masterPrvKey, SM9_ENC_SYS_PRIKEY_BYTES);
-                ctx->has_enc_msk = 1;
+                memcpy(ctx->encMsk, masterPrvKey, SM9_ENC_SYS_PRIKEY_BYTES);
+                ctx->hasEncMsk = 1;
             }
-            memcpy(ctx->enc_mpk, masterPubKey, SM9_ENC_SYS_PUBKEY_BYTES);
+            memcpy(ctx->encMpk, masterPubKey, SM9_ENC_SYS_PUBKEY_BYTES);
         } else if (masterPrvKey != NULL) {
             /* Generate master public key from master private key */
-            memcpy(ctx->enc_msk, masterPrvKey, SM9_ENC_SYS_PRIKEY_BYTES);
-            ctx->has_enc_msk = 1;
-            ret = SM9_Alg_MEKG(ctx->enc_msk, ctx->enc_mpk);
+            memcpy(ctx->encMsk, masterPrvKey, SM9_ENC_SYS_PRIKEY_BYTES);
+            ctx->hasEncMsk = 1;
+            ret = SM9_Alg_MEKG(ctx->encMsk, ctx->encMpk);
             if (ret != CRYPT_SUCCESS) {
                 return CRYPT_SM9_ERR_KEY_ERR;
             }
         }
 
-        /* Generate enc_g from master public key */
-        ret = SM9_Get_Enc_G(ctx->enc_g, ctx->enc_mpk);
+        /* Generate encG from master public key */
+        ret = SM9_Alg_Pair(ctx->encG, ctx->encMpk, g_sm9G2);
         if (ret != CRYPT_SUCCESS) {
             return CRYPT_SM9_ERR_KEY_ERR;
         }
 
-        ctx->has_enc_sys = 1;
-        ctx->has_enc_g = 1;
+        ctx->hasEncSys = 1;
+        ctx->hasEncG = 1;
     }
 
     /* If user ID is provided, save it for verification */
     if (userId != NULL && userIdLen > 0) {
-        if (userIdLen > sizeof(ctx->user_id)) {
+        if (userIdLen > sizeof(ctx->userId)) {
             return CRYPT_SM9_ERR_KEY_ERR;
         }
-        memcpy(ctx->user_id, userId, userIdLen);
-        ctx->user_id_len = userIdLen;
+        memcpy(ctx->userId, userId, userIdLen);
+        ctx->userIdLen = userIdLen;
     }
 
     return CRYPT_SUCCESS;
@@ -399,15 +373,15 @@ int32_t CRYPT_SM9_SetPrvKeyEx(CRYPT_SM9_Ctx *ctx, const BSL_Param *param)
         userId = (const uint8_t *)p->value;
         userIdLen = p->valueLen;
         /* Store user ID in context */
-        if (userIdLen > sizeof(ctx->user_id)) {
+        if (userIdLen > sizeof(ctx->userId)) {
             return CRYPT_SM9_ERR_BAD_INPUT;
         }
-        memcpy(ctx->user_id, userId, userIdLen);
-        ctx->user_id_len = userIdLen;
-    } else if (ctx->user_id_len > 0) {
+        memcpy(ctx->userId, userId, userIdLen);
+        ctx->userIdLen = userIdLen;
+    } else if (ctx->userIdLen > 0) {
         /* Use user ID from context if not provided in parameter */
-        userId = ctx->user_id;
-        userIdLen = ctx->user_id_len;
+        userId = ctx->userId;
+        userIdLen = ctx->userIdLen;
     }
 
     /* Get key type */
@@ -424,12 +398,12 @@ int32_t CRYPT_SM9_SetPrvKeyEx(CRYPT_SM9_Ctx *ctx, const BSL_Param *param)
     /* Generate user key from master keys in context based on type */
     if (keyType == SM9_KEY_TYPE_SIGN) {
         /* Check if master keys are set */
-        if (!ctx->has_sig_sys) {
+        if (ctx->hasSigSys == 0) {
             return CRYPT_SM9_ERR_NO_MASTER_KEY;
         }
 
         /* Generate signature user key from master key */
-        /* Note: SM9_GenSignUserKey will also save user_id to ctx, but we already saved it above */
+        /* Note: SM9_GenSignUserKey will also save userId to ctx, but we already saved it above */
         ret = SM9_GenSignUserKey(ctx, userId, userIdLen);
         if (ret != CRYPT_SUCCESS) {
             return CRYPT_SM9_ERR_KEY_ERR;
@@ -437,7 +411,7 @@ int32_t CRYPT_SM9_SetPrvKeyEx(CRYPT_SM9_Ctx *ctx, const BSL_Param *param)
 
     } else if (keyType == SM9_KEY_TYPE_ENC) {
         /* Check if master keys are set */
-        if (!ctx->has_enc_sys) {
+        if (ctx->hasEncSys == 0) {
             return CRYPT_SM9_ERR_NO_MASTER_KEY;
         }
 
@@ -468,7 +442,7 @@ int32_t CRYPT_SM9_GetPubKeyEx(const CRYPT_SM9_Ctx *ctx, BSL_Param *param)
 
     /* Return master public key based on type */
     if (keyType == SM9_KEY_TYPE_SIGN) {
-        if (!ctx->has_sig_sys) {
+        if (ctx->hasSigSys == 0) {
             return CRYPT_SM9_ERR_NO_MASTER_KEY;
         }
 
@@ -480,12 +454,12 @@ int32_t CRYPT_SM9_GetPubKeyEx(const CRYPT_SM9_Ctx *ctx, BSL_Param *param)
             if (p->valueLen < SM9_SIG_SYS_PUBKEY_BYTES) {
                 return CRYPT_SM9_BUFF_LEN_NOT_ENOUGH;
             }
-            memcpy(p->value, ctx->sig_mpk, SM9_SIG_SYS_PUBKEY_BYTES);
+            memcpy(p->value, ctx->sigMpk, SM9_SIG_SYS_PUBKEY_BYTES);
             p->useLen = SM9_SIG_SYS_PUBKEY_BYTES;
         }
 
     } else if (keyType == SM9_KEY_TYPE_ENC) {
-        if (!ctx->has_enc_sys) {
+        if (ctx->hasEncSys == 0) {
             return CRYPT_SM9_ERR_NO_MASTER_KEY;
         }
 
@@ -497,7 +471,7 @@ int32_t CRYPT_SM9_GetPubKeyEx(const CRYPT_SM9_Ctx *ctx, BSL_Param *param)
             if (p->valueLen < SM9_ENC_SYS_PUBKEY_BYTES) {
                 return CRYPT_SM9_BUFF_LEN_NOT_ENOUGH;
             }
-            memcpy(p->value, ctx->enc_mpk, SM9_ENC_SYS_PUBKEY_BYTES);
+            memcpy(p->value, ctx->encMpk, SM9_ENC_SYS_PUBKEY_BYTES);
             p->useLen = SM9_ENC_SYS_PUBKEY_BYTES;
         }
     }
@@ -522,7 +496,7 @@ int32_t CRYPT_SM9_GetPrvKeyEx(const CRYPT_SM9_Ctx *ctx, BSL_Param *param)
 
     /* Return user private key based on type */
     if (keyType == SM9_KEY_TYPE_SIGN) {
-        if (!ctx->has_sig_usr) {
+        if (ctx->hasSigUsr == 0) {
             return CRYPT_SM9_ERR_NO_USER_KEY;
         }
 
@@ -534,12 +508,12 @@ int32_t CRYPT_SM9_GetPrvKeyEx(const CRYPT_SM9_Ctx *ctx, BSL_Param *param)
             if (p->valueLen < SM9_SIG_USR_PRIKEY_BYTES) {
                 return CRYPT_SM9_BUFF_LEN_NOT_ENOUGH;
             }
-            memcpy(p->value, ctx->sig_dsk, SM9_SIG_USR_PRIKEY_BYTES);
+            memcpy(p->value, ctx->sigDsk, SM9_SIG_USR_PRIKEY_BYTES);
             p->useLen = SM9_SIG_USR_PRIKEY_BYTES;
         }
 
     } else if (keyType == SM9_KEY_TYPE_ENC) {
-        if (!ctx->has_enc_usr) {
+        if (ctx->hasEncUsr == 0) {
             return CRYPT_SM9_ERR_NO_USER_KEY;
         }
 
@@ -551,131 +525,22 @@ int32_t CRYPT_SM9_GetPrvKeyEx(const CRYPT_SM9_Ctx *ctx, BSL_Param *param)
             if (p->valueLen < SM9_ENC_USR_PRIKEY_BYTES) {
                 return CRYPT_SM9_BUFF_LEN_NOT_ENOUGH;
             }
-            memcpy(p->value, ctx->enc_dek, SM9_ENC_USR_PRIKEY_BYTES);
+            memcpy(p->value, ctx->encDek, SM9_ENC_USR_PRIKEY_BYTES);
             p->useLen = SM9_ENC_USR_PRIKEY_BYTES;
         }
     }
 
     /* Also return user ID if available */
-    if (ctx->user_id_len > 0) {
+    if (ctx->userIdLen > 0) {
         p = BSL_PARAM_FindParam(param, CRYPT_PARAM_SM9_USER_ID);
         if (p != NULL) {
-            if (p->value != NULL && p->valueLen >= ctx->user_id_len) {
-                memcpy(p->value, ctx->user_id, ctx->user_id_len);
-                p->useLen = ctx->user_id_len;
+            if (p->value != NULL && p->valueLen >= ctx->userIdLen) {
+                memcpy(p->value, ctx->userId, ctx->userIdLen);
+                p->useLen = ctx->userIdLen;
             }
         }
     }
 
-    return CRYPT_SUCCESS;
-}
-
-int32_t CRYPT_SM9_Sign(const CRYPT_SM9_Ctx *ctx, int32_t mdId,
-                       const uint8_t *data, uint32_t dataLen,
-                       uint8_t *sign, uint32_t *signLen)
-{
-    if (ctx == NULL || data == NULL || sign == NULL || signLen == NULL) {
-        return CRYPT_NULL_INPUT;
-    }
-
-    if (*signLen < SM9_SIGNATURE_BYTES) {
-        return CRYPT_SM9_BUFF_LEN_NOT_ENOUGH;
-    }
-
-    /* SM9 signature always uses SM3, mdId is ignored for compatibility */
-    (void)mdId;
-
-    int32_t ret = SM9_SignCtx(ctx, data, dataLen, NULL, sign);
-    if (ret != CRYPT_SUCCESS) {
-        return CRYPT_SM9_ERR_SIGN_FAILED;
-    }
-
-    /* SM9 signature length is fixed */
-    *signLen = SM9_SIGNATURE_BYTES;
-
-    return CRYPT_SUCCESS;
-}
-
-int32_t CRYPT_SM9_Verify(const CRYPT_SM9_Ctx *ctx, int32_t mdId,
-                         const uint8_t *data, uint32_t dataLen,
-                         const uint8_t *sign, uint32_t signLen)
-{
-    if (ctx == NULL || data == NULL || sign == NULL) {
-        return CRYPT_NULL_INPUT;
-    }
-
-    /* SM9 signature always uses SM3, mdId is ignored */
-    (void)mdId;
-
-    if (signLen != SM9_SIGNATURE_BYTES) {
-        return CRYPT_SM9_ERR_INVALID_SIGNATURE_LEN;
-    }
-
-    /* SM9 verify needs user ID - must be stored in context */
-    if (ctx->user_id_len == 0) {
-        return CRYPT_SM9_ERR_NO_USER_ID;
-    }
-
-    int32_t ret = SM9_VerifyCtx(ctx, ctx->user_id, ctx->user_id_len, data, dataLen, sign);
-    if (ret != CRYPT_SUCCESS) {
-        return CRYPT_SM9_VERIFY_FAIL;
-    }
-
-    return CRYPT_SUCCESS;
-}
-
-int32_t CRYPT_SM9_Encrypt(const CRYPT_SM9_Ctx *ctx,
-                          const uint8_t *data, uint32_t dataLen,
-                          uint8_t *out, uint32_t *outLen)
-{
-    if (ctx == NULL || data == NULL || out == NULL || outLen == NULL) {
-        return CRYPT_NULL_INPUT;
-    }
-
-    /* SM9 encryption needs user ID - must be stored in context */
-    if (ctx->user_id_len == 0) {
-        return CRYPT_SM9_ERR_NO_USER_ID;
-    }
-
-    uint32_t requiredLen = dataLen + SM9_ENC_OVERHEAD_BYTES;
-    if (requiredLen < dataLen || *outLen < requiredLen) {
-        return CRYPT_SM9_BUFF_LEN_NOT_ENOUGH;
-    }
-
-    uint32_t cipherLen = *outLen;
-    int32_t ret = SM9_EncryptCtx(ctx, ctx->user_id, ctx->user_id_len, data, dataLen, out, &cipherLen);
-    if (ret != CRYPT_SUCCESS) {
-        return CRYPT_SM9_ERR_ENCRYPT_FAILED;
-    }
-
-    *outLen = cipherLen;
-    return CRYPT_SUCCESS;
-}
-
-int32_t CRYPT_SM9_Decrypt(const CRYPT_SM9_Ctx *ctx,
-                          const uint8_t *data, uint32_t dataLen,
-                          uint8_t *out, uint32_t *outLen)
-{
-    if (ctx == NULL || data == NULL || out == NULL || outLen == NULL) {
-        return CRYPT_NULL_INPUT;
-    }
-
-    if (dataLen < SM9_ENC_OVERHEAD_BYTES) {
-        return CRYPT_SM9_ERR_DECRYPT_FAILED;
-    }
-
-    uint32_t plaintextLen = dataLen - SM9_ENC_OVERHEAD_BYTES;
-    if (*outLen < plaintextLen) {
-        return CRYPT_SM9_BUFF_LEN_NOT_ENOUGH;
-    }
-
-    uint32_t plainLen = *outLen;
-    int32_t ret = SM9_DecryptCtx(ctx, data, dataLen, out, &plainLen);
-    if (ret != CRYPT_SUCCESS) {
-        return CRYPT_SM9_ERR_DECRYPT_FAILED;
-    }
-
-    *outLen = plainLen;
     return CRYPT_SUCCESS;
 }
 
@@ -687,11 +552,11 @@ int32_t CRYPT_SM9_Ctrl(CRYPT_SM9_Ctx *ctx, int32_t cmd, void *val, uint32_t valL
 
     switch (cmd) {
         case CRYPT_CTRL_SET_SM9_USER_ID:
-            if (val == NULL || valLen == 0 || valLen > sizeof(ctx->user_id)) {
+            if (val == NULL || valLen == 0 || valLen > sizeof(ctx->userId)) {
                 return CRYPT_SM9_ERR_BAD_INPUT;
             }
-            memcpy(ctx->user_id, val, valLen);
-            ctx->user_id_len = valLen;
+            memcpy(ctx->userId, val, valLen);
+            ctx->userIdLen = valLen;
             return CRYPT_SUCCESS;
         default:
             return CRYPT_SM9_ERR_NOT_SUPPORT;
@@ -713,12 +578,12 @@ int32_t CRYPT_SM9_Check(int32_t checkType, const CRYPT_SM9_Ctx *ctx1, const CRYP
             }
 
             /* Check signature key pair: ctx1 has master public key, ctx2 has user private key */
-            if (ctx1->has_sig_sys && ctx2->has_sig_usr) {
+            if (ctx1->hasSigSys != 0 && ctx2->hasSigUsr != 0) {
                 return SM9_CheckSignKeyPair(ctx1, ctx2);
             }
 
             /* Check encryption key pair */
-            if (ctx1->has_enc_sys && ctx2->has_enc_usr) {
+            if (ctx1->hasEncSys != 0 && ctx2->hasEncUsr != 0) {
                 return SM9_CheckEncKeyPair(ctx1, ctx2);
             }
 
@@ -727,7 +592,7 @@ int32_t CRYPT_SM9_Check(int32_t checkType, const CRYPT_SM9_Ctx *ctx1, const CRYP
 
         case CRYPT_PKEY_CHECK_PRVKEY:
             /* Check if we have any user private key (signature or encryption) */
-            if (ctx1->has_sig_usr || ctx1->has_enc_usr) {
+            if (ctx1->hasSigUsr != 0 || ctx1->hasEncUsr != 0) {
                 return CRYPT_SUCCESS;
             }
             return CRYPT_SM9_INVALID_PRVKEY;

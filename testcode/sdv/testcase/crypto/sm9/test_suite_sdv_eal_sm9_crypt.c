@@ -20,7 +20,7 @@
 #include "crypt_algid.h"
 #include "crypt_errno.h"
 #include "crypt_sm9.h"
-#include "crypt_sm9_eal.h"
+#include "sm9_local.h"
 #include "crypt_local_types.h"
 #include "crypt_params_key.h"
 #include "bsl_params.h"
@@ -72,16 +72,16 @@ void SDV_CRYPTO_SM9_CRYPT_API_TC001(Hex *masterKey, Hex *userId, Hex *plaintext)
     int32_t keyType = SM9_KEY_TYPE_ENC;
 
     // Step 1: Generate user decrypt key using native API (KGC operation)
-    nativeCtx = SM9_NewCtx();
+    nativeCtx = CRYPT_SM9_NewCtx();
     ASSERT_TRUE(nativeCtx != NULL);
     ret = SM9_SetEncMasterKey(nativeCtx, masterKey->x);
     ASSERT_EQ(ret, CRYPT_SUCCESS);
     ret = SM9_GenEncUserKey(nativeCtx, userId->x, userId->len);
     ASSERT_EQ(ret, CRYPT_SUCCESS);
     if ((SM9_ENC_USR_PRIKEY_BYTES) <= (sizeof(userKey)))
-        memcpy(userKey, nativeCtx->enc_dek, SM9_ENC_USR_PRIKEY_BYTES);
+        memcpy(userKey, nativeCtx->encDek, SM9_ENC_USR_PRIKEY_BYTES);
     if ((SM9_ENC_SYS_PUBKEY_BYTES) <= (sizeof(masterPubKey)))
-        memcpy(masterPubKey, nativeCtx->enc_mpk, SM9_ENC_SYS_PUBKEY_BYTES);
+        memcpy(masterPubKey, nativeCtx->encMpk, SM9_ENC_SYS_PUBKEY_BYTES);
 
     // Step 2: Create encrypt context and set master private key + user ID
     encCtx = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_SM9);
@@ -143,7 +143,7 @@ void SDV_CRYPTO_SM9_CRYPT_API_TC001(Hex *masterKey, Hex *userId, Hex *plaintext)
 EXIT:
     CRYPT_EAL_PkeyFreeCtx(encCtx);
     CRYPT_EAL_PkeyFreeCtx(decCtx);
-    SM9_FreeCtx(nativeCtx);
+    CRYPT_SM9_FreeCtx(nativeCtx);
 }
 /* END_CASE */
 
@@ -157,25 +157,25 @@ void SDV_CRYPTO_SM9_CHECK_IMPORTED_ENC_KEY_TC001(Hex *masterKey, Hex *userId, He
     uint8_t userKey[SM9_ENC_USR_PRIKEY_BYTES];
     masterCtx = CRYPT_SM9_NewCtx();
     userCtx = CRYPT_SM9_NewCtx();
-    kgcCtx = SM9_NewCtx();
+    kgcCtx = CRYPT_SM9_NewCtx();
     ASSERT_TRUE(masterCtx != NULL && userCtx != NULL && kgcCtx != NULL);
     ASSERT_EQ(SM9_Alg_MEKG(masterKey->x, masterPub), CRYPT_SUCCESS);
     ASSERT_EQ(SM9_Alg_UEKG(userId->x, userId->len, masterKey->x, userKey), CRYPT_SUCCESS);
-    memcpy(masterCtx->enc_mpk, masterPub, sizeof(masterPub));
-    masterCtx->has_enc_sys = 1;
-    memcpy(kgcCtx->enc_msk, masterKey->x, SM9_ENC_SYS_PRIKEY_BYTES);
-    memcpy(kgcCtx->enc_mpk, masterPub, sizeof(masterPub));
-    memcpy(kgcCtx->enc_dek, userKey, sizeof(userKey));
-    memcpy(kgcCtx->user_id, userId->x, userId->len);
-    kgcCtx->user_id_len = userId->len;
-    kgcCtx->has_enc_sys = 1;
-    kgcCtx->has_enc_msk = 1;
-    kgcCtx->has_enc_usr = 1;
+    memcpy(masterCtx->encMpk, masterPub, sizeof(masterPub));
+    masterCtx->hasEncSys = 1;
+    memcpy(kgcCtx->encMsk, masterKey->x, SM9_ENC_SYS_PRIKEY_BYTES);
+    memcpy(kgcCtx->encMpk, masterPub, sizeof(masterPub));
+    memcpy(kgcCtx->encDek, userKey, sizeof(userKey));
+    memcpy(kgcCtx->userId, userId->x, userId->len);
+    kgcCtx->userIdLen = userId->len;
+    kgcCtx->hasEncSys = 1;
+    kgcCtx->hasEncMsk = 1;
+    kgcCtx->hasEncUsr = 1;
     ASSERT_EQ(CRYPT_SM9_Check(CRYPT_PKEY_CHECK_KEYPAIR, masterCtx, kgcCtx), CRYPT_SUCCESS);
 
     ASSERT_EQ(SM9_SetEncUserKey(userCtx, userId->x, userId->len, userKey), CRYPT_SUCCESS);
-    ASSERT_EQ(userCtx->has_enc_sys, 0);
-    ASSERT_EQ(userCtx->has_enc_msk, 0);
+    ASSERT_EQ(userCtx->hasEncSys, 0);
+    ASSERT_EQ(userCtx->hasEncMsk, 0);
     ASSERT_EQ(CRYPT_SM9_Check(CRYPT_PKEY_CHECK_KEYPAIR, masterCtx, userCtx), CRYPT_SUCCESS);
 
     ASSERT_EQ(SM9_SetEncUserKey(userCtx, wrongUserId->x, wrongUserId->len, userKey), CRYPT_SUCCESS);
@@ -185,7 +185,7 @@ void SDV_CRYPTO_SM9_CHECK_IMPORTED_ENC_KEY_TC001(Hex *masterKey, Hex *userId, He
 EXIT:
     CRYPT_SM9_FreeCtx(masterCtx);
     CRYPT_SM9_FreeCtx(userCtx);
-    SM9_FreeCtx(kgcCtx);
+    CRYPT_SM9_FreeCtx(kgcCtx);
 }
 /* END_CASE */
 
@@ -255,7 +255,7 @@ void SDV_CRYPTO_SM9_CRYPT_K1_ZERO_TC001(Hex *masterKey, Hex *userId, Hex *plaint
     uint32_t decryptLen = sizeof(decrypted);
     int ret;
 
-    ctx = SM9_NewCtx();
+    ctx = CRYPT_SM9_NewCtx();
     ASSERT_TRUE(ctx != NULL);
     ret = SM9_SetEncMasterKey(ctx, masterKey->x);
     ASSERT_EQ(ret, CRYPT_SUCCESS);
@@ -264,26 +264,26 @@ void SDV_CRYPTO_SM9_CRYPT_K1_ZERO_TC001(Hex *masterKey, Hex *userId, Hex *plaint
 
     // Encrypt with specified random - should succeed (K1 won't be all zeros)
     ret = SM9_Alg_Enc(plaintext->x, plaintext->len, userId->x, userId->len,
-                      randHex->x, ctx->enc_g, ctx->enc_mpk, ciphertext, &cipherLen);
+                      randHex->x, ctx->encG, ctx->encMpk, ciphertext, &cipherLen);
     ASSERT_EQ(ret, CRYPT_SUCCESS);
 
     // Decrypt and verify
-    ret = SM9_Alg_Dec(ciphertext, cipherLen, ctx->enc_dek, userId->x, userId->len,
+    ret = SM9_Alg_Dec(ciphertext, cipherLen, ctx->encDek, userId->x, userId->len,
                       decrypted, &decryptLen);
     ASSERT_EQ(ret, CRYPT_SUCCESS);
     ASSERT_EQ(decryptLen, plaintext->len);
     ASSERT_EQ(memcmp(decrypted, plaintext->x, plaintext->len), 0);
     // Tamper with C2 (located after C1 + C3)
-    uint32_t c2Offset = 2 * 32 + 32; // SM9_C1_ByteLen + SM9_C3_ByteLen
+    uint32_t c2Offset = 2 * 32 + 32; // SM9_C1_BYTE_LEN + SM9_C3_BYTE_LEN
     ciphertext[c2Offset] ^= 0xFF;
 
     // Decrypt should fail (MAC mismatch or K1 zero check)
-    ret = SM9_Alg_Dec(ciphertext, cipherLen, ctx->enc_dek, userId->x, userId->len,
+    ret = SM9_Alg_Dec(ciphertext, cipherLen, ctx->encDek, userId->x, userId->len,
                       decrypted, &decryptLen);
     ASSERT_EQ(ret, CRYPT_SM9_ERR_DECRYPT_FAILED);
 
 EXIT:
-    SM9_FreeCtx(ctx);
+    CRYPT_SM9_FreeCtx(ctx);
 }
 /* END_CASE */
 
@@ -331,16 +331,16 @@ void SDV_CRYPTO_SM9_CRYPT_API_TC002(Hex *masterKey, Hex *userId, Hex *plaintext)
     ASSERT_EQ(ret, CRYPT_NULL_INPUT);
 
     // Step 4: Set up valid keys
-    nativeCtx = SM9_NewCtx();
+    nativeCtx = CRYPT_SM9_NewCtx();
     ASSERT_TRUE(nativeCtx != NULL);
     ret = SM9_SetEncMasterKey(nativeCtx, masterKey->x);
     ASSERT_EQ(ret, CRYPT_SUCCESS);
     ret = SM9_GenEncUserKey(nativeCtx, userId->x, userId->len);
     ASSERT_EQ(ret, CRYPT_SUCCESS);
     if ((SM9_ENC_USR_PRIKEY_BYTES) <= (sizeof(userKey)))
-        memcpy(userKey, nativeCtx->enc_dek, SM9_ENC_USR_PRIKEY_BYTES);
+        memcpy(userKey, nativeCtx->encDek, SM9_ENC_USR_PRIKEY_BYTES);
     if ((SM9_ENC_SYS_PUBKEY_BYTES) <= (sizeof(masterPubKey)))
-        memcpy(masterPubKey, nativeCtx->enc_mpk, SM9_ENC_SYS_PUBKEY_BYTES);
+        memcpy(masterPubKey, nativeCtx->encMpk, SM9_ENC_SYS_PUBKEY_BYTES);
 
     // Set master private key + user ID for encryption
     BSL_PARAM_InitValue(&params[0], CRYPT_PARAM_SM9_MASTER_KEY, BSL_PARAM_TYPE_OCTETS,
@@ -366,7 +366,7 @@ void SDV_CRYPTO_SM9_CRYPT_API_TC002(Hex *masterKey, Hex *userId, Hex *plaintext)
 
 EXIT:
     CRYPT_EAL_PkeyFreeCtx(ctx);
-    SM9_FreeCtx(nativeCtx);
+    CRYPT_SM9_FreeCtx(nativeCtx);
 }
 /* END_CASE */
 
@@ -413,7 +413,7 @@ void SDV_CRYPTO_SM9_CRYPT_API_TC003(Hex *masterKey, Hex *userIdA, Hex *userIdB, 
     int32_t keyType = SM9_KEY_TYPE_ENC;
 
     // Step 1: Generate user keys using native API (KGC operation)
-    nativeCtx = SM9_NewCtx();
+    nativeCtx = CRYPT_SM9_NewCtx();
     ASSERT_TRUE(nativeCtx != NULL);
     ret = SM9_SetEncMasterKey(nativeCtx, masterKey->x);
     ASSERT_EQ(ret, CRYPT_SUCCESS);
@@ -422,17 +422,17 @@ void SDV_CRYPTO_SM9_CRYPT_API_TC003(Hex *masterKey, Hex *userIdA, Hex *userIdB, 
     ret = SM9_GenEncUserKey(nativeCtx, userIdA->x, userIdA->len);
     ASSERT_EQ(ret, CRYPT_SUCCESS);
     if ((SM9_ENC_USR_PRIKEY_BYTES) <= (sizeof(userKeyA)))
-        memcpy(userKeyA, nativeCtx->enc_dek, SM9_ENC_USR_PRIKEY_BYTES);
+        memcpy(userKeyA, nativeCtx->encDek, SM9_ENC_USR_PRIKEY_BYTES);
 
     // Generate User B's key
     ret = SM9_GenEncUserKey(nativeCtx, userIdB->x, userIdB->len);
     ASSERT_EQ(ret, CRYPT_SUCCESS);
     if ((SM9_ENC_USR_PRIKEY_BYTES) <= (sizeof(userKeyB)))
-        memcpy(userKeyB, nativeCtx->enc_dek, SM9_ENC_USR_PRIKEY_BYTES);
+        memcpy(userKeyB, nativeCtx->encDek, SM9_ENC_USR_PRIKEY_BYTES);
 
     // Save master public key
     if ((SM9_ENC_SYS_PUBKEY_BYTES) <= (sizeof(masterPubKey)))
-        memcpy(masterPubKey, nativeCtx->enc_mpk, SM9_ENC_SYS_PUBKEY_BYTES);
+        memcpy(masterPubKey, nativeCtx->encMpk, SM9_ENC_SYS_PUBKEY_BYTES);
 
     // Step 2: Create encrypt context for User A
     encCtxA = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_SM9);
@@ -549,7 +549,7 @@ EXIT:
     CRYPT_EAL_PkeyFreeCtx(encCtxB);
     CRYPT_EAL_PkeyFreeCtx(decCtxA);
     CRYPT_EAL_PkeyFreeCtx(decCtxB);
-    SM9_FreeCtx(nativeCtx);
+    CRYPT_SM9_FreeCtx(nativeCtx);
 }
 /* END_CASE */
 
@@ -585,13 +585,13 @@ void SDV_CRYPTO_SM9_CRYPT_VECTOR_TC001(Hex *masterKey, Hex *userId, Hex *message
     int32_t keyType = SM9_KEY_TYPE_ENC;
 
     // Step 1: Generate user key using native KGC API
-    nativeCtx = SM9_NewCtx();
+    nativeCtx = CRYPT_SM9_NewCtx();
     ASSERT_TRUE(nativeCtx != NULL);
     ret = SM9_SetEncMasterKey(nativeCtx, masterKey->x);
     ASSERT_EQ(ret, CRYPT_SUCCESS);
     ret = SM9_GenEncUserKey(nativeCtx, userId->x, userId->len);
     ASSERT_EQ(ret, CRYPT_SUCCESS);
-    memcpy(userKey, nativeCtx->enc_dek, SM9_ENC_USR_PRIKEY_BYTES);
+    memcpy(userKey, nativeCtx->encDek, SM9_ENC_USR_PRIKEY_BYTES);
 
     // Step 2: Create EAL encrypt context
     encCtx = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_SM9);
@@ -660,6 +660,6 @@ EXIT:
     g_sm9StubRandLen = 0;
     CRYPT_EAL_PkeyFreeCtx(encCtx);
     CRYPT_EAL_PkeyFreeCtx(decCtx);
-    SM9_FreeCtx(nativeCtx);
+    CRYPT_SM9_FreeCtx(nativeCtx);
 }
 /* END_CASE */
