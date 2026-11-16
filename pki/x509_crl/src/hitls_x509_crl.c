@@ -184,6 +184,10 @@ int32_t HITLS_CRL_ParseExtAsnItem(uint32_t layer, BSL_ASN1_Buffer *asn, void *pa
     (void) param;
     (void) layer;
     HITLS_X509_ExtEntry extEntry = {0};
+    if (BSL_LIST_COUNT(list) >= HITLS_X509_EXT_MAX_COUNT) {
+        BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_EXT_COUNT_EXCEEDED);
+        return HITLS_X509_ERR_EXT_COUNT_EXCEEDED;
+    }
     int32_t ret = HITLS_X509_ParseExtItem(asn, &extEntry);
     if (ret != HITLS_PKI_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);

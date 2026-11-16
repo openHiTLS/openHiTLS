@@ -136,12 +136,7 @@ int32_t HITLS_X509_SetPkey(void **pkey, void *val)
 {
     CRYPT_EAL_PkeyCtx *src = (CRYPT_EAL_PkeyCtx *)val;
     CRYPT_EAL_PkeyCtx **dest = (CRYPT_EAL_PkeyCtx **)pkey;
-
-    if (*dest != NULL) {
-        CRYPT_EAL_PkeyFreeCtx(*dest);
-        *dest = NULL;
-    }
-
+    CRYPT_EAL_PkeyFreeCtx(*dest);
     *dest = CRYPT_EAL_PkeyDupCtx(src);
     if (*dest == NULL) {
         BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_SET_KEY);
@@ -162,7 +157,6 @@ static HITLS_X509_NameNode *DupNameNode(const HITLS_X509_NameNode *src)
 
     // nameType
     dest->nameType = src->nameType;
-    dest->nameType.len = src->nameType.len;
     if (dest->nameType.len != 0) {
         dest->nameType.buff = BSL_SAL_Dump(src->nameType.buff, src->nameType.len);
         if (dest->nameType.buff == NULL) {
@@ -174,7 +168,6 @@ static HITLS_X509_NameNode *DupNameNode(const HITLS_X509_NameNode *src)
 
     // nameValue
     dest->nameValue = src->nameValue;
-    dest->nameValue.len = src->nameValue.len;
     if (dest->nameValue.len != 0) {
         dest->nameValue.buff = BSL_SAL_Dump(src->nameValue.buff, src->nameValue.len);
         if (dest->nameValue.buff == NULL) {

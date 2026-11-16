@@ -666,3 +666,21 @@ SDV_X509_CRL_ENTRY_SET_SERIAL_REPLACE_MEM_TC001:
 
 SDV_X509_CRL_PARSE_REVOKED_EXT_FAIL_FREE_TC001 parse failure releases revoked entry extensions
 SDV_X509_CRL_PARSE_REVOKED_EXT_FAIL_FREE_TC001:"../testdata/cert/pem/crl/crl_v2.mul3.crl"
+
+CRL extension count at limit succeeds
+SDV_X509_CRL_EXT_PARSE_COUNT_TC001:0:200:0:HITLS_PKI_SUCCESS
+
+CRL extension count above limit fails
+SDV_X509_CRL_EXT_PARSE_COUNT_TC001:0:201:0:HITLS_X509_ERR_EXT_COUNT_EXCEEDED
+
+Duplicate CRL extension within count limit fails
+SDV_X509_CRL_EXT_PARSE_COUNT_TC001:0:200:1:HITLS_X509_ERR_PARSE_EXT_REPEAT
+
+CRL entry extension count at limit succeeds
+SDV_X509_CRL_EXT_PARSE_COUNT_TC001:1:200:0:HITLS_PKI_SUCCESS
+
+CRL entry extension count above limit fails
+SDV_X509_CRL_EXT_PARSE_COUNT_TC001:1:201:0:HITLS_X509_ERR_EXT_COUNT_EXCEEDED
+
+Duplicate CRL entry extension within count limit fails
+SDV_X509_CRL_EXT_PARSE_COUNT_TC001:1:200:1:HITLS_X509_ERR_PARSE_EXT_REPEAT

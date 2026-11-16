@@ -981,7 +981,6 @@ int32_t X509_GetHashId(const HITLS_X509_Asn1AlgId *alg, int32_t *hashId)
     }
     if (alg->algId == BSL_CID_RSASSAPSS) {
         *hashId = alg->rsaPssParam.mdId;
-        return BSL_SUCCESS;
     }
     return BSL_SUCCESS;
 }

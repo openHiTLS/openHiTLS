@@ -2426,3 +2426,42 @@ EXIT:
 #endif
 }
 /* END_CASE */
+
+/**
+ * @brief Check the extension count boundary for the common extension parser.
+ * @precon The corresponding X.509 parsing features are enabled.
+ * @expect Lists within the limit succeed; excess and duplicate extensions fail.
+ */
+/* BEGIN_CASE */
+void SDV_X509_EXT_PARSE_COUNT_TC001(int count, int duplicate, int expected)
+{
+#if defined(HITLS_PKI_X509_CRT_PARSE) || defined(HITLS_PKI_X509_CSR)
+    uint8_t encoded[4 + 201 * 10] = {0x30, 0x82};
+    HITLS_X509_Ext *ext = NULL;
+    TestMemInit();
+    ASSERT_TRUE(count >= 200 && count <= 201);
+    uint32_t contentLen = (uint32_t)count * 10;
+    encoded[2] = (uint8_t)(contentLen >> 8);
+    encoded[3] = (uint8_t)contentLen;
+    for (int i = 0; i < count; i++) {
+        uint32_t oid = (duplicate && i == count - 1) ? 0 : (uint32_t)i;
+        uint8_t item[] = {0x30, 0x08, 0x06, 0x04, 0x2b, 0x7f,
+            (uint8_t)(0x81 + (oid >> 7)), (uint8_t)(oid & 0x7f), 0x04, 0x00};
+        memcpy(encoded + 4 + i * 10, item, sizeof(item));
+    }
+    BSL_ASN1_Buffer asn = {BSL_ASN1_TAG_SEQUENCE | BSL_ASN1_TAG_CONSTRUCTED, contentLen + 4, encoded};
+    ext = X509_ExtNew(NULL, HITLS_X509_EXT_TYPE_CERT);
+    ASSERT_NE(ext, NULL);
+    ASSERT_EQ(HITLS_X509_ParseExt(&asn, ext), expected);
+    ASSERT_EQ(BSL_LIST_COUNT(ext->extList), expected == HITLS_PKI_SUCCESS ? count : 0);
+
+EXIT:
+    X509_ExtFree(ext, true);
+#else
+    (void)count;
+    (void)duplicate;
+    (void)expected;
+    SKIP_TEST();
+#endif
+}
+/* END_CASE */

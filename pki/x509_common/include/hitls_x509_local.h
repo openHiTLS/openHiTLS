@@ -45,6 +45,8 @@ extern "C" {
 /* Identifies the current ext as a generated state */
 #define HITLS_X509_EXT_FLAG_GEN (1 << 1)
 
+#define HITLS_X509_EXT_MAX_COUNT 200
+
 /* Identifies the keyusage extension in the current structure */
 #define HITLS_X509_EXT_FLAG_KUSAGE (1 << 0)
 /* Identifies the basic constraints extension in the current structure */

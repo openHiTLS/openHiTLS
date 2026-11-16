@@ -4754,3 +4754,104 @@ EXIT:
     TestErrClear();
 }
 /* END_CASE */
+
+#ifdef HITLS_PKI_X509_CRL_PARSE
+static void CrlExtCountEncodeHeader(uint8_t *buf, uint8_t tag, uint32_t len)
+{
+    buf[0] = tag;
+    buf[1] = 0x82;
+    buf[2] = (uint8_t)(len >> 8);
+    buf[3] = (uint8_t)len;
+}
+#endif
+
+/**
+ * @brief Check CRL and CRL entry extension counts through the public CRL parser.
+ * @precon CRL parsing is enabled.
+ * @expect Lists within the limit succeed; excess and duplicate extensions fail without returning a CRL.
+ */
+/* BEGIN_CASE */
+void SDV_X509_CRL_EXT_PARSE_COUNT_TC001(int mode, int count, int duplicate, int expected)
+{
+#ifdef HITLS_PKI_X509_CRL_PARSE
+    const uint8_t algorithm[] = {0x30, 0x0d, 0x06, 0x09, 0x2a, 0x86, 0x48, 0x86,
+        0xf7, 0x0d, 0x01, 0x01, 0x0b, 0x05, 0x00};
+    const uint8_t issuer[] = {0x30, 0x0f, 0x31, 0x0d, 0x30, 0x0b, 0x06, 0x03,
+        0x55, 0x04, 0x03, 0x0c, 0x04, 't', 'e', 's', 't'};
+    const uint8_t date[] = {0x17, 0x0d,
+        '2', '6', '0', '1', '0', '1', '0', '0', '0', '0', '0', '0', 'Z'};
+    const uint8_t signature[] = {0x03, 0x02, 0x00, 0x01};
+    uint8_t encoded[128 + 201 * 10] = {0};
+    uint32_t contentLen = (uint32_t)count * 10;
+    uint32_t offset = 8;
+    HITLS_X509_Crl *crl = NULL;
+
+    TestMemInit();
+    ASSERT_TRUE(count >= 200 && count <= 201);
+    ASSERT_TRUE(mode == 0 || mode == 1);
+    const uint8_t version[] = {0x02, 0x01, 0x01};
+    memcpy(encoded + offset, version, sizeof(version));
+    offset += sizeof(version);
+    memcpy(encoded + offset, algorithm, sizeof(algorithm));
+    offset += sizeof(algorithm);
+    memcpy(encoded + offset, issuer, sizeof(issuer));
+    offset += sizeof(issuer);
+    memcpy(encoded + offset, date, sizeof(date));
+    offset += sizeof(date);
+    if (mode == 0) {
+        CrlExtCountEncodeHeader(encoded + offset, 0xa0, 4 + contentLen);
+        offset += 4;
+    } else {
+        CrlExtCountEncodeHeader(encoded + offset, 0x30, 4 + 3 + sizeof(date) + 4 + contentLen);
+        offset += 4;
+        CrlExtCountEncodeHeader(encoded + offset, 0x30, 3 + sizeof(date) + 4 + contentLen);
+        offset += 4;
+        const uint8_t serial[] = {0x02, 0x01, 0x01};
+        memcpy(encoded + offset, serial, sizeof(serial));
+        offset += sizeof(serial);
+        memcpy(encoded + offset, date, sizeof(date));
+        offset += sizeof(date);
+    }
+    CrlExtCountEncodeHeader(encoded + offset, 0x30, contentLen);
+    offset += 4;
+    for (int i = 0; i < count; i++) {
+        uint32_t oid = (duplicate && i == count - 1) ? 0 : (uint32_t)i;
+        uint8_t item[] = {0x30, 0x08, 0x06, 0x04, 0x2b, 0x7f,
+            (uint8_t)(0x81 + (oid >> 7)), (uint8_t)(oid & 0x7f), 0x04, 0x00};
+        memcpy(encoded + offset, item, sizeof(item));
+        offset += sizeof(item);
+    }
+    CrlExtCountEncodeHeader(encoded + 4, 0x30, offset - 8);
+    memcpy(encoded + offset, algorithm, sizeof(algorithm));
+    offset += sizeof(algorithm);
+    memcpy(encoded + offset, signature, sizeof(signature));
+    offset += sizeof(signature);
+    CrlExtCountEncodeHeader(encoded, 0x30, offset - 4);
+
+    BSL_Buffer input = {encoded, offset};
+    ASSERT_EQ(HITLS_X509_CrlParseBuff(BSL_FORMAT_ASN1, &input, &crl), expected);
+    if (expected == HITLS_PKI_SUCCESS) {
+        ASSERT_NE(crl, NULL);
+        if (mode == 0) {
+            ASSERT_EQ(BSL_LIST_COUNT(crl->tbs.crlExt.extList), count);
+        } else {
+            ASSERT_EQ(BSL_LIST_COUNT(crl->tbs.revokedCerts), 1);
+            HITLS_X509_CrlEntry *entry = BSL_LIST_GetIndexNode(0, crl->tbs.revokedCerts);
+            ASSERT_NE(entry, NULL);
+            ASSERT_EQ(BSL_LIST_COUNT(entry->extList), count);
+        }
+        ASSERT_TRUE(TestIsErrStackEmpty());
+    } else {
+        ASSERT_EQ(crl, NULL);
+    }
+EXIT:
+    HITLS_X509_CrlFree(crl);
+#else
+    (void)mode;
+    (void)count;
+    (void)duplicate;
+    (void)expected;
+    SKIP_TEST();
+#endif
+}
+/* END_CASE */

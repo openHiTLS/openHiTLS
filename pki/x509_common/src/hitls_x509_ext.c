@@ -1705,11 +1705,13 @@ int32_t HITLS_X509_ParseExtItem(BSL_ASN1_Buffer *extItem, HITLS_X509_ExtEntry *e
     extEntry->extnValue = asnArr[HITLS_X509_EXT_VALUE_IDX];
     return ret;
 }
-#endif
 
-#if defined(HITLS_PKI_X509_CRT_PARSE) || defined(HITLS_PKI_X509_CRL_PARSE) || defined(HITLS_PKI_X509_CSR)
 static int32_t ParseExtAsnItem(BSL_ASN1_Buffer *asn, void *param, BSL_ASN1_List *list)
 {
+    if (BSL_LIST_COUNT(list) >= HITLS_X509_EXT_MAX_COUNT) {
+        BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_EXT_COUNT_EXCEEDED);
+        return HITLS_X509_ERR_EXT_COUNT_EXCEEDED;
+    }
     HITLS_X509_Ext *ext = param;
     HITLS_X509_ExtEntry extEntry = {0};
     int32_t ret = HITLS_X509_ParseExtItem(asn, &extEntry);
