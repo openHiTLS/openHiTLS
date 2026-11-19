@@ -784,15 +784,22 @@ static int32_t OcspParseReqFields(BSL_ASN1_Buffer *asns, HITLS_OCSP_Req_Internal
 
     if (asns[OCSP_REQ_DEC_REQUESTOR_NAME_IDX].tag != 0) {
         /* The [1] EXPLICIT wrapper is unwrapped by the template; the leaf holds the inner
-         * GeneralName TLV (A4 ...), matching the representation produced by
-         * OcspGenRequestorName at sign time. Reject a non-GeneralName or trailing bytes. */
-        uint8_t gnTag = 0;
-        int32_t ret = OcspCheckSingleTlv(asns[OCSP_REQ_DEC_REQUESTOR_NAME_IDX].buff,
-                                         asns[OCSP_REQ_DEC_REQUESTOR_NAME_IDX].len, &gnTag);
-        if (ret != HITLS_PKI_SUCCESS || !OcspIsGeneralNameTag(gnTag)) {
+         * GeneralName TLV, matching the representation produced by OcspGenRequestorName at
+         * sign time. The X.509 parser validates the tag domain, the constructed/primitive
+         * bit, definite lengths and the directoryName RDNSequence, but it also accepts an
+         * empty input or a list, while OCSP carries exactly one non-empty GeneralName. */
+        BslList *gnList = NULL;
+        int32_t ret = HITLS_X509_ParseGeneralNames(asns[OCSP_REQ_DEC_REQUESTOR_NAME_IDX].buff,
+                                                   asns[OCSP_REQ_DEC_REQUESTOR_NAME_IDX].len, &gnList);
+        if (ret == BSL_MALLOC_FAIL || ret == BSL_LIST_MALLOC_FAIL) {
+            return ret;
+        }
+        if (ret != HITLS_PKI_SUCCESS || BSL_LIST_COUNT(gnList) != 1) {
+            HITLS_X509_FreeGeneralNames(gnList);
             BSL_ERR_PUSH_ERROR(HITLS_OCSP_ERR_INVALID_REQUEST);
             return HITLS_OCSP_ERR_INVALID_REQUEST;
         }
+        HITLS_X509_FreeGeneralNames(gnList);
         internal->requestorName.data =
             BSL_SAL_Dump(asns[OCSP_REQ_DEC_REQUESTOR_NAME_IDX].buff, asns[OCSP_REQ_DEC_REQUESTOR_NAME_IDX].len);
         if (internal->requestorName.data == NULL) {

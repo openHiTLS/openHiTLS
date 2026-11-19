@@ -313,6 +313,39 @@ void SAL_CERT_OcspRespFree(HITLS_CERT_OcspResp *resp);
  */
 bool SAL_CERT_OcspRespMatchCert(const HITLS_Ctx *ctx, const HITLS_CERT_OcspResp *resp, HITLS_CERT_X509 *cert);
 
+/**
+ * @brief Validate the request_extensions field of a TLS status_request offer.
+ *
+ * RFC 6066 section 8: a zero-length value means "no extensions"; otherwise the
+ * value must be a well-formed RFC 5280 Extensions SEQUENCE, parsed with the
+ * X509 extension parser. The extensions are not interpreted here (they are
+ * meant for the OCSP responder the server may consult), so no criticality
+ * policy is applied.
+ *
+ * @param ext   [IN] request_extensions DER (borrowed; not kept)
+ *
+ * @retval HITLS_SUCCESS when the value is a valid Extensions (or empty),
+ *         an error code otherwise
+ */
+int32_t SAL_CERT_StatusReqCheckExtensions(const BSL_Buffer *ext);
+
+/**
+ * @brief Validate the byName Name of a TLS status_request ResponderID.
+ *
+ * RFC 6960 section 4.2.1 / RFC 5280 section 4.1.2.4: byName carries a Name. The
+ * value is parsed with the X509 name parser so a structurally invalid name
+ * (non-SET RDN, bad OID/string) is rejected. The parser's own semantics apply:
+ * an empty RDNSequence is accepted (RFC 5280 allows it), and an empty RDN is not
+ * constrained here, matching the OCSP response parser.
+ *
+ * @param name     [IN] Name content (RDNSequence, without the outer SEQUENCE
+ *                      tag/length; borrowed, not kept)
+ * @param nameLen  [IN] length of name
+ *
+ * @retval true when the name is structurally valid, false otherwise
+ */
+bool SAL_CERT_StatusReqCheckByName(const uint8_t *name, uint32_t nameLen);
+
 #ifdef __cplusplus
 }
 #endif

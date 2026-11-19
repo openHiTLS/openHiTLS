@@ -492,6 +492,40 @@ static int32_t OcspTestSkipTlv(const uint8_t *der, uint32_t derLen, uint32_t pos
     return 0;
 }
 
+/* Encode a DER definite length in minimal form into out; returns the byte count. */
+static uint32_t OcspTestEncodeDerLen(uint32_t len, uint8_t *out)
+{
+    if (len < 0x80) {
+        out[0] = (uint8_t)len;
+        return 1;
+    }
+    uint8_t tmp[4] = {0};
+    uint32_t n = 0;
+    while (len > 0) {
+        tmp[n++] = (uint8_t)(len & 0xFF);
+        len >>= 8;
+    }
+    out[0] = (uint8_t)(0x80 | n);
+    for (uint32_t i = 0; i < n; i++) {
+        out[1 + i] = tmp[n - 1 - i];
+    }
+    return 1 + n;
+}
+
+/* Number of bytes a DER definite length occupies in minimal form. */
+static uint32_t OcspTestDerLenSize(uint32_t len)
+{
+    if (len < 0x80) {
+        return 1;
+    }
+    uint32_t n = 0;
+    while (len > 0) {
+        n++;
+        len >>= 8;
+    }
+    return 1 + n;
+}
+
 /* Extract the ResponseData (tbsResponseData) TLV from a full OCSPResponse DER.
  * rdOut and rdLenOut cover tag+length+content of the ResponseData SEQUENCE. */
 static int32_t OcspTestExtractResponseData(const uint8_t *der, uint32_t derLen, const uint8_t **rdOut,
@@ -7807,6 +7841,25 @@ void SDV_OCSP_STRICT_GENERALNAME_PARSE_TC068(void)
     ASSERT_EQ(HITLS_OCSP_RespParseBuff(BSL_FORMAT_ASN1, &badBuf, &parsedResp), HITLS_OCSP_ERR_INVALID_RESPONSE);
     ASSERT_TRUE(parsedResp == NULL);
 
+    /* OCSP-005: responderID.byName [1] is one Name SEQUENCE, but its first RDN is
+     * an OCTET STRING instead of a SET, so the Name structure is invalid ->
+     * INVALID_RESPONSE. */
+    memset(bad, 0, sizeof(bad));
+    memcpy(bad, respDer.data, respDer.dataLen);
+    found = false;
+    for (uint32_t i = 0; i + 4 < respDer.dataLen; i++) {
+        if (bad[i] == 0xa1 && (bad[i + 1] & 0x80) == 0 && bad[i + 2] == 0x30 && (bad[i + 3] & 0x80) == 0 &&
+            bad[i + 4] == 0x31) {
+            bad[i + 4] = 0x04;
+            found = true;
+            break;
+        }
+    }
+    ASSERT_TRUE(found);
+    badBuf = (BSL_Buffer){bad, respDer.dataLen};
+    ASSERT_EQ(HITLS_OCSP_RespParseBuff(BSL_FORMAT_ASN1, &badBuf, &parsedResp), HITLS_OCSP_ERR_INVALID_RESPONSE);
+    ASSERT_TRUE(parsedResp == NULL);
+
 EXIT:
     BSL_SAL_FREE(reqDer.data);
     BSL_SAL_FREE(respDer.data);
@@ -7818,6 +7871,154 @@ EXIT:
     HITLS_OCSP_RespFree(resp);
     HITLS_OCSP_ReqFree(parsedReq);
     HITLS_OCSP_RespFree(parsedResp);
+#else
+    SKIP_TEST();
+#endif
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_OCSP_REQ_REQUESTOR_NAME_STRUCT_TC069(void)
+{
+#ifdef HITLS_PKI_OCSP
+    HITLS_OCSP_CertId *cid = NULL;
+    HITLS_OCSP_SingleReq *sr = NULL;
+    HITLS_OCSP_Req *req = NULL;
+    HITLS_OCSP_Req *parsedReq = NULL;
+    BSL_Buffer reqDer = {0};
+    uint8_t bad[4096] = {0};
+    BSL_Buffer badBuf = {0};
+    uint32_t vp = 0;
+    uint32_t vl = 0;
+    uint32_t gnPos = 0;
+    uint32_t namePos = 0;
+    uint32_t rdnPos = 0;
+    uint32_t gnValPos = 0;
+    uint32_t gnValLen = 0;
+    uint32_t outLen = 0;
+    uint8_t out[4096] = {0};
+    ASSERT_EQ(OcspTestGlobalSetup(), 0);
+
+    /* Build a signed request whose requestorName is a directoryName [4]. */
+    cid = HITLS_OCSP_CertIdNewFromCert(g_mdCtx, g_chain1.ee, g_chain1.intermediate);
+    ASSERT_TRUE(cid != NULL);
+    sr = HITLS_OCSP_SingleReqNew(cid);
+    ASSERT_TRUE(sr != NULL);
+    cid = NULL;
+    req = HITLS_OCSP_ReqNew();
+    ASSERT_TRUE(req != NULL);
+    ASSERT_EQ(HITLS_OCSP_ReqCtrl(req, HITLS_OCSP_REQ_ADD_SINGLEREQ, sr, sizeof(sr)), HITLS_PKI_SUCCESS);
+    sr = NULL;
+    ASSERT_EQ(HITLS_OCSP_ReqSign(CRYPT_MD_SHA256, g_chain1.intermediateKey, NULL, g_chain1.intermediate, NULL, req, 0),
+              HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_OCSP_ReqGenBuff(BSL_FORMAT_ASN1, req, &reqDer), HITLS_PKI_SUCCESS);
+    ASSERT_TRUE(reqDer.dataLen <= sizeof(bad));
+
+    /* Locate OCSPRequest -> TBSRequest -> requestorName [1] -> GeneralName [4] -> Name -> RDN. */
+    ASSERT_EQ(OcspTestSkipTlv(reqDer.data, reqDer.dataLen, 0, &vp, &vl), 0); /* OCSPRequest */
+    ASSERT_EQ(OcspTestSkipTlv(reqDer.data, reqDer.dataLen, vp, &vp, &vl), 0); /* TBSRequest */
+    gnPos = vp; /* requestorName [1] TLV */
+    ASSERT_EQ(reqDer.data[gnPos], 0xa1);
+    ASSERT_EQ(OcspTestSkipTlv(reqDer.data, reqDer.dataLen, gnPos, &vp, &vl), 0); /* [1] -> GeneralName */
+    ASSERT_EQ(reqDer.data[vp], 0xa4);
+    namePos = vp;
+    ASSERT_EQ(OcspTestSkipTlv(reqDer.data, reqDer.dataLen, namePos, &vp, &vl), 0); /* [4] -> Name SEQUENCE */
+    ASSERT_EQ(reqDer.data[vp], 0x30);
+    ASSERT_EQ(OcspTestSkipTlv(reqDer.data, reqDer.dataLen, vp, &rdnPos, &vl), 0); /* Name -> RDNSequence */
+    ASSERT_TRUE(rdnPos < reqDer.dataLen);
+    ASSERT_EQ(reqDer.data[rdnPos], 0x31);
+    ASSERT_EQ(OcspTestSkipTlv(reqDer.data, reqDer.dataLen, namePos, &gnValPos, &gnValLen), 0);
+    uint32_t gnTlvLen = (gnValPos - namePos) + gnValLen;
+
+    /* directoryName must carry a parseable RDNSequence: turning the first RDN SET into
+     * SEQUENCE makes the Name structure invalid -> INVALID_REQUEST. */
+    memset(bad, 0, sizeof(bad));
+    memcpy(bad, reqDer.data, reqDer.dataLen);
+    bad[rdnPos] = 0x30;
+    badBuf = (BSL_Buffer){bad, reqDer.dataLen};
+    ASSERT_EQ(HITLS_OCSP_ReqParseBuff(BSL_FORMAT_ASN1, &badBuf, &parsedReq), HITLS_OCSP_ERR_INVALID_REQUEST);
+    ASSERT_TRUE(parsedReq == NULL);
+
+    /* requestorName carries exactly one GeneralName: pack an empty directoryName plus a
+     * dNSName into the same A1 content length so two valid entries are parsed -> the count
+     * check must reject it (ParseGeneralNames alone accepts a list). */
+    ASSERT_TRUE(gnTlvLen > 6 && gnTlvLen - 6 < 128);
+    memset(bad, 0, sizeof(bad));
+    memcpy(bad, reqDer.data, reqDer.dataLen);
+    bad[namePos] = 0xa4; /* directoryName [4] */
+    bad[namePos + 1] = 0x02; /* length 2 */
+    bad[namePos + 2] = 0x30; /* empty Name SEQUENCE */
+    bad[namePos + 3] = 0x00;
+    bad[namePos + 4] = 0x82; /* dNSName [2] */
+    bad[namePos + 5] = (uint8_t)(gnTlvLen - 6);
+    memset(bad + namePos + 6, 'a', gnTlvLen - 6);
+    badBuf = (BSL_Buffer){bad, reqDer.dataLen};
+    ASSERT_EQ(HITLS_OCSP_ReqParseBuff(BSL_FORMAT_ASN1, &badBuf, &parsedReq), HITLS_OCSP_ERR_INVALID_REQUEST);
+    ASSERT_TRUE(parsedReq == NULL);
+
+    /* One empty directoryName is a valid requestorName: A1 04 A4 02 30 00 (a single
+     * GeneralName whose Name is an empty RDNSequence). Rebuild the request with the three
+     * enclosing lengths shortened and the tail moved up. */
+    uint32_t outerVp = 0;
+    uint32_t outerVl = 0;
+    uint32_t tbsVp = 0;
+    uint32_t tbsVl = 0;
+    uint32_t reqNameVl = 0;
+    ASSERT_EQ(OcspTestSkipTlv(reqDer.data, reqDer.dataLen, 0, &outerVp, &outerVl), 0);
+    ASSERT_EQ(reqDer.data[0], 0x30);
+    ASSERT_EQ(OcspTestSkipTlv(reqDer.data, reqDer.dataLen, outerVp, &tbsVp, &tbsVl), 0);
+    ASSERT_EQ(reqDer.data[outerVp], 0x30);
+    ASSERT_EQ(tbsVp, gnPos); /* The generated request omits the DEFAULT version. */
+    ASSERT_EQ(OcspTestSkipTlv(reqDer.data, reqDer.dataLen, gnPos, &vp, &reqNameVl), 0);
+    ASSERT_EQ(reqNameVl, gnTlvLen);
+    ASSERT_TRUE(gnTlvLen > 6);
+    /* a1Total covers the whole requestorName [1] TLV: its header plus the GeneralName. */
+    uint32_t a1Total = (namePos - gnPos) + gnTlvLen;
+    uint32_t delta = a1Total - 6; /* New [1] TLV is A1 04 A4 02 30 00 (6 bytes). */
+    uint32_t reqEnd = outerVp + outerVl;
+    ASSERT_TRUE(reqEnd == reqDer.dataLen);
+    /* The TBSRequest header may change size when its body shrinks, so fold the new header
+     * size into the outer length instead of subtracting delta from the old value. */
+    uint32_t tbsHdrLen = gnPos - outerVp;
+    ASSERT_TRUE(outerVl >= tbsHdrLen + tbsVl);
+    uint32_t sigLen = outerVl - tbsHdrLen - tbsVl;
+    uint32_t newTbsBody = tbsVl - delta;
+    uint32_t newOuterBody = 1 + OcspTestDerLenSize(newTbsBody) + newTbsBody + sigLen;
+    uint32_t tailStart = gnPos + a1Total;
+    ASSERT_TRUE(tailStart <= reqEnd);
+    out[outLen++] = 0x30;
+    outLen += OcspTestEncodeDerLen(newOuterBody, out + outLen);
+    out[outLen++] = 0x30;
+    outLen += OcspTestEncodeDerLen(newTbsBody, out + outLen);
+    out[outLen++] = 0xa1; /* requestorName [1] */
+    out[outLen++] = 0x04;
+    out[outLen++] = 0xa4; /* directoryName [4] */
+    out[outLen++] = 0x02;
+    out[outLen++] = 0x30; /* empty Name SEQUENCE */
+    out[outLen++] = 0x00;
+    memcpy(out + outLen, reqDer.data + tailStart, reqEnd - tailStart);
+    outLen += reqEnd - tailStart;
+    badBuf = (BSL_Buffer){out, outLen};
+    ASSERT_EQ(HITLS_OCSP_ReqParseBuff(BSL_FORMAT_ASN1, &badBuf, &parsedReq), HITLS_PKI_SUCCESS);
+    ASSERT_TRUE(parsedReq != NULL);
+    HITLS_OCSP_ReqFree(parsedReq);
+    parsedReq = NULL;
+
+    /* Only the structure is validated: turning [4] into dNSName [2] keeps the DER framing
+     * valid, so the value octets stay opaque and the request still parses. */
+    memset(bad, 0, sizeof(bad));
+    memcpy(bad, reqDer.data, reqDer.dataLen);
+    bad[namePos] = 0x82;
+    badBuf = (BSL_Buffer){bad, reqDer.dataLen};
+    ASSERT_EQ(HITLS_OCSP_ReqParseBuff(BSL_FORMAT_ASN1, &badBuf, &parsedReq), HITLS_PKI_SUCCESS);
+    ASSERT_TRUE(parsedReq != NULL);
+
+EXIT:
+    BSL_SAL_FREE(reqDer.data);
+    HITLS_OCSP_CertIdFree(cid);
+    HITLS_OCSP_SingleReqFree(sr);
+    HITLS_OCSP_ReqFree(req);
+    HITLS_OCSP_ReqFree(parsedReq);
 #else
     SKIP_TEST();
 #endif

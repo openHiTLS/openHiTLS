@@ -37,7 +37,10 @@
 #include "hs_msg.h"
 #include "hs_extensions.h"
 #include "hitls_session.h"
+#include "parse_common.h"
 int32_t ParseCertEntryOcspStatus(TLS_Ctx *ctx, const uint8_t *buf, uint32_t bufLen, uint32_t chainidx);
+int32_t ParseClientStatusRequest(ParsePacket *pkt, ClientHelloMsg *msg);
+int32_t ParseServerStatusRequest(ParsePacket *pkt);
 int32_t CheckCertificateStatusType(TLS_Ctx *ctx, const HS_MsgType msgType);
 int32_t ClientRecvCertificateStatus(TLS_Ctx *ctx, const HS_Msg *hsMsg);
 /* END_HEADER */
@@ -68,6 +71,14 @@ static void TestSendAlert(const TLS_Ctx *ctx, ALERT_Level level, ALERT_Descripti
     (void)ctx;
     (void)level;
     (void)description;
+}
+
+static ALERT_Description g_lastAlertDesc = ALERT_CLOSE_NOTIFY;
+static void TestSendAlertRecord(const TLS_Ctx *ctx, ALERT_Level level, ALERT_Description description)
+{
+    (void)ctx;
+    (void)level;
+    g_lastAlertDesc = description;
 }
 
 /* Load one DER OCSP response from a file into an array (single entry + trailing
@@ -856,6 +867,328 @@ EXIT:
 /* END_CASE */
 
 /* @
+* @test  SDV_TLS_OCSP_STAPLING_TLS12_PARSE_CH_STRICT_TC031
+* @spec  -
+* @title  TLS 1.2: malformed ClientHello status_request bodies are rejected per RFC 6066.
+* @precon  nan
+* @brief
+1. Create a TLS 1.2 server config and link.
+2. Feed status_request extension bodies to ParseClientStatusRequest.
+3. Check that a truncated body, a semantically invalid ResponderID (byKey not
+   a 20-byte OCTET STRING, byName not a single Name SEQUENCE), and an invalid
+   request_extensions (RFC 5280 Extensions) are rejected (RFC 5246 section
+   7.2.2 decode_error), a valid body is accepted, and an unsupported
+   status_type is ignored.
+* @expect  1. Truncated body: rejected. 2. Invalid ResponderID DER/semantics: rejected.
+3. Valid body: accepted and statusExpected set. 4. Unsupported status_type: ignored.
+* @prior  Level 2
+* @auto  TRUE
+@ */
+/* BEGIN_CASE */
+void SDV_TLS_OCSP_STAPLING_TLS12_PARSE_CH_STRICT_TC031()
+{
+    FRAME_Init();
+    RegDefaultMemCallback();
+    HITLS_Config *config = NULL;
+    FRAME_LinkObj *link = NULL;
+    TLS_Ctx *tls = NULL;
+
+    config = HITLS_CFG_NewTLS12Config();
+    ASSERT_TRUE(config != NULL);
+    link = FRAME_CreateLink(config, BSL_UIO_TCP);
+    ASSERT_TRUE(link != NULL);
+    tls = (TLS_Ctx *)FRAME_GetTlsCtx(link);
+    tls->method.sendAlert = TestSendAlert;
+
+    /* A 2-byte body is too short for status_type(1) + responder_id_list
+     * length(2) + request_extensions length(2); RFC 5246 section 7.2.2
+     * requires decode_error for a length that cannot be decoded. */
+    uint8_t shortBody[] = {0x01, 0x00};
+    uint32_t off = 0;
+    ParsePacket pkt = {.ctx = tls, .buf = shortBody, .bufLen = sizeof(shortBody), .bufOffset = &off};
+    ASSERT_NE(ParseClientStatusRequest(&pkt, NULL), HITLS_SUCCESS);
+    ASSERT_TRUE(!tls->statusExpected);
+
+    /* The responder_id_list carries one ResponderID whose DER is a single 0x00
+     * byte; that is not a valid byName [1] / byKey [2] DER value, so the
+     * supported extension cannot be decoded. */
+    uint8_t badDerBody[] = {0x01, 0x00, 0x03, 0x00, 0x01, 0x00, 0x00, 0x00};
+    off = 0;
+    pkt.buf = badDerBody;
+    pkt.bufLen = sizeof(badDerBody);
+    ASSERT_NE(ParseClientStatusRequest(&pkt, NULL), HITLS_SUCCESS);
+    ASSERT_TRUE(!tls->statusExpected);
+
+    /* A structurally valid request (empty responder_id_list and
+     * request_extensions) is accepted and records the request. */
+    uint8_t validBody[] = {0x01, 0x00, 0x00, 0x00, 0x00};
+    off = 0;
+    pkt.buf = validBody;
+    pkt.bufLen = sizeof(validBody);
+    ASSERT_EQ(ParseClientStatusRequest(&pkt, NULL), HITLS_SUCCESS);
+    ASSERT_TRUE(tls->statusExpected);
+
+    /* RFC 6066 section 8 defines only ocsp(1); any other status_type is
+     * ignored (the server cannot fulfil the request), matching OpenSSL. */
+    tls->statusExpected = false;
+    uint8_t otherTypeBody[] = {0x02, 0x00, 0x00, 0x00, 0x00};
+    off = 0;
+    pkt.buf = otherTypeBody;
+    pkt.bufLen = sizeof(otherTypeBody);
+    ASSERT_EQ(ParseClientStatusRequest(&pkt, NULL), HITLS_SUCCESS);
+    ASSERT_TRUE(!tls->statusExpected);
+
+    /* RFC 6960 section 4.2.1: KeyHash is a SHA-1 hash (20 bytes), so a byKey
+     * ResponderID carrying a 19-byte OCTET STRING is malformed. */
+    uint8_t shortKeyBody[] = {
+        0x01, 0x00, 0x19,          /* status_type, responder_id_list length 25 */
+        0x00, 0x17,                /* responder_id length 23 */
+        0xA2, 0x15, 0x04, 0x13,    /* byKey [2], OCTET STRING of 19 bytes */
+        0xAB, 0xAB, 0xAB, 0xAB, 0xAB, 0xAB, 0xAB, 0xAB, 0xAB, 0xAB, 0xAB, 0xAB,
+        0xAB, 0xAB, 0xAB, 0xAB, 0xAB, 0xAB, 0xAB,
+        0x00, 0x00                 /* empty request_extensions */
+    };
+    off = 0;
+    pkt.buf = shortKeyBody;
+    pkt.bufLen = sizeof(shortKeyBody);
+    ASSERT_NE(ParseClientStatusRequest(&pkt, NULL), HITLS_SUCCESS);
+    ASSERT_TRUE(!tls->statusExpected);
+
+    /* A byKey ResponderID whose content is 20 raw bytes (not wrapped in an
+     * OCTET STRING) is not a valid KeyHash. */
+    uint8_t rawKeyBody[] = {
+        0x01, 0x00, 0x18,          /* status_type, responder_id_list length 24 */
+        0x00, 0x16,                /* responder_id length 22 */
+        0xA2, 0x14,                /* byKey [2], 20 raw content bytes */
+        0xAB, 0xAB, 0xAB, 0xAB, 0xAB, 0xAB, 0xAB, 0xAB, 0xAB, 0xAB, 0xAB, 0xAB,
+        0xAB, 0xAB, 0xAB, 0xAB, 0xAB, 0xAB, 0xAB, 0xAB,
+        0x00, 0x00
+    };
+    off = 0;
+    pkt.buf = rawKeyBody;
+    pkt.bufLen = sizeof(rawKeyBody);
+    ASSERT_NE(ParseClientStatusRequest(&pkt, NULL), HITLS_SUCCESS);
+    ASSERT_TRUE(!tls->statusExpected);
+
+    /* A byKey ResponderID with a trailing byte after the OCTET STRING does not
+     * fill the element exactly. */
+    uint8_t trailingKeyBody[] = {
+        0x01, 0x00, 0x1B,          /* status_type, responder_id_list length 27 */
+        0x00, 0x19,                /* responder_id length 25 */
+        0xA2, 0x17, 0x04, 0x14,    /* byKey [2], OCTET STRING of 20 bytes */
+        0xAB, 0xAB, 0xAB, 0xAB, 0xAB, 0xAB, 0xAB, 0xAB, 0xAB, 0xAB, 0xAB, 0xAB,
+        0xAB, 0xAB, 0xAB, 0xAB, 0xAB, 0xAB, 0xAB, 0xAB,
+        0x00,                      /* trailing byte */
+        0x00, 0x00
+    };
+    off = 0;
+    pkt.buf = trailingKeyBody;
+    pkt.bufLen = sizeof(trailingKeyBody);
+    ASSERT_NE(ParseClientStatusRequest(&pkt, NULL), HITLS_SUCCESS);
+    ASSERT_TRUE(!tls->statusExpected);
+
+    /* A byKey ResponderID carrying exactly one 20-byte OCTET STRING is valid. */
+    uint8_t validKeyBody[] = {
+        0x01, 0x00, 0x1A,          /* status_type, responder_id_list length 26 */
+        0x00, 0x18,                /* responder_id length 24 */
+        0xA2, 0x16, 0x04, 0x14,    /* byKey [2], OCTET STRING of 20 bytes */
+        0xAB, 0xAB, 0xAB, 0xAB, 0xAB, 0xAB, 0xAB, 0xAB, 0xAB, 0xAB, 0xAB, 0xAB,
+        0xAB, 0xAB, 0xAB, 0xAB, 0xAB, 0xAB, 0xAB, 0xAB,
+        0x00, 0x00
+    };
+    off = 0;
+    pkt.buf = validKeyBody;
+    pkt.bufLen = sizeof(validKeyBody);
+    ASSERT_EQ(ParseClientStatusRequest(&pkt, NULL), HITLS_SUCCESS);
+    ASSERT_TRUE(tls->statusExpected);
+
+    /* RFC 6960 section 4.2.1: byName content must be a single Name SEQUENCE;
+     * an INTEGER is not a Name. */
+    tls->statusExpected = false;
+    uint8_t intNameBody[] = {
+        0x01, 0x00, 0x07,          /* status_type, responder_id_list length 7 */
+        0x00, 0x05,                /* responder_id length 5 */
+        0xA1, 0x03, 0x02, 0x01, 0x01, /* byName [1], INTEGER 1 */
+        0x00, 0x00
+    };
+    off = 0;
+    pkt.buf = intNameBody;
+    pkt.bufLen = sizeof(intNameBody);
+    ASSERT_NE(ParseClientStatusRequest(&pkt, NULL), HITLS_SUCCESS);
+    ASSERT_TRUE(!tls->statusExpected);
+
+    /* Two TLVs inside byName is not a single Name. */
+    uint8_t twoNameBody[] = {
+        0x01, 0x00, 0x08,          /* status_type, responder_id_list length 8 */
+        0x00, 0x06,                /* responder_id length 6 */
+        0xA1, 0x04, 0x30, 0x00, 0x30, 0x00, /* byName [1], two SEQUENCEs */
+        0x00, 0x00
+    };
+    off = 0;
+    pkt.buf = twoNameBody;
+    pkt.bufLen = sizeof(twoNameBody);
+    ASSERT_NE(ParseClientStatusRequest(&pkt, NULL), HITLS_SUCCESS);
+    ASSERT_TRUE(!tls->statusExpected);
+
+    /* A byName ResponderID carrying exactly one Name SEQUENCE is valid. */
+    uint8_t validNameBody[] = {
+        0x01, 0x00, 0x13,          /* status_type, responder_id_list length 19 */
+        0x00, 0x11,                /* responder_id length 17 */
+        0xA1, 0x0F,                /* byName [1], content length 15 */
+        0x30, 0x0D,                /* Name SEQUENCE */
+        0x31, 0x0B,                /* RDN SET */
+        0x30, 0x09,                /* AttributeTypeAndValue */
+        0x06, 0x03, 0x55, 0x04, 0x03, /* OID 2.5.4.3 (CN) */
+        0x0C, 0x02, 0x61, 0x62,    /* UTF8String "ab" */
+        0x00, 0x00
+    };
+    off = 0;
+    pkt.buf = validNameBody;
+    pkt.bufLen = sizeof(validNameBody);
+    ASSERT_EQ(ParseClientStatusRequest(&pkt, NULL), HITLS_SUCCESS);
+    ASSERT_TRUE(tls->statusExpected);
+
+    /* RFC 5280 section 4.1.2.4: a Name is SEQUENCE OF SET OF
+     * AttributeTypeAndValue. A single Name SEQUENCE whose content is not a SET
+     * (here an OCTET STRING) violates the structure. */
+    tls->statusExpected = false;
+    uint8_t nonSetNameBody[] = {
+        0x01, 0x00, 0x09,          /* status_type, responder_id_list length 9 */
+        0x00, 0x07,                /* responder_id length 7 */
+        0xA1, 0x05,                /* byName [1], content length 5 */
+        0x30, 0x03, 0x04, 0x01, 0x00, /* Name SEQUENCE containing an OCTET STRING */
+        0x00, 0x00
+    };
+    off = 0;
+    pkt.buf = nonSetNameBody;
+    pkt.bufLen = sizeof(nonSetNameBody);
+    ASSERT_NE(ParseClientStatusRequest(&pkt, NULL), HITLS_SUCCESS);
+    ASSERT_TRUE(!tls->statusExpected);
+
+    /* An empty RDNSequence (30 00) is a valid Name (RFC 5280 allows an empty
+     * subject DN), so it is accepted. */
+    tls->statusExpected = false;
+    uint8_t emptyNameBody[] = {
+        0x01, 0x00, 0x06,          /* status_type, responder_id_list length 6 */
+        0x00, 0x04,                /* responder_id length 4 */
+        0xA1, 0x02, 0x30, 0x00,    /* byName [1], empty Name SEQUENCE */
+        0x00, 0x00
+    };
+    off = 0;
+    pkt.buf = emptyNameBody;
+    pkt.bufLen = sizeof(emptyNameBody);
+    ASSERT_EQ(ParseClientStatusRequest(&pkt, NULL), HITLS_SUCCESS);
+    ASSERT_TRUE(tls->statusExpected);
+
+    /* request_extensions must be a valid Extensions SEQUENCE; garbage DER is
+     * rejected (RFC 6066 section 8, RFC 5246 section 7.2.2). */
+    tls->statusExpected = false;
+    uint8_t badExtBody[] = {0x01, 0x00, 0x00, 0x00, 0x03, 0x01, 0x01, 0x00};
+    off = 0;
+    pkt.buf = badExtBody;
+    pkt.bufLen = sizeof(badExtBody);
+    ASSERT_NE(ParseClientStatusRequest(&pkt, NULL), HITLS_SUCCESS);
+    ASSERT_TRUE(!tls->statusExpected);
+
+    /* Extensions ::= SEQUENCE SIZE (1..MAX) OF Extension (RFC 5280 A.1): an
+     * empty SEQUENCE is not a valid Extensions value. */
+    uint8_t emptyExtBody[] = {0x01, 0x00, 0x00, 0x00, 0x02, 0x30, 0x00};
+    off = 0;
+    pkt.buf = emptyExtBody;
+    pkt.bufLen = sizeof(emptyExtBody);
+    ASSERT_NE(ParseClientStatusRequest(&pkt, NULL), HITLS_SUCCESS);
+    ASSERT_TRUE(!tls->statusExpected);
+
+    /* A well-formed Extensions SEQUENCE (one unknown-OID extension) is
+     * accepted. */
+    uint8_t validExtBody[] = {
+        0x01, 0x00, 0x00, 0x00, 0x0F, /* status_type, empty list, ext length 15 */
+        0x30, 0x0D,                /* Extensions SEQUENCE */
+        0x30, 0x0B,                /* Extension */
+        0x06, 0x03, 0x2A, 0x03, 0x04, /* OID 1.2.3.4 */
+        0x04, 0x04, 0x61, 0x62, 0x63, 0x64 /* OCTET STRING "abcd" */
+    };
+    off = 0;
+    pkt.buf = validExtBody;
+    pkt.bufLen = sizeof(validExtBody);
+    ASSERT_EQ(ParseClientStatusRequest(&pkt, NULL), HITLS_SUCCESS);
+    ASSERT_TRUE(tls->statusExpected);
+
+    /* Trailing bytes after the Extensions SEQUENCE are not part of the value. */
+    tls->statusExpected = false;
+    uint8_t trailingExtBody[] = {
+        0x01, 0x00, 0x00, 0x00, 0x10, /* status_type, empty list, ext length 16 */
+        0x30, 0x0D, 0x30, 0x0B, 0x06, 0x03, 0x2A, 0x03, 0x04, 0x04, 0x04, 0x61,
+        0x62, 0x63, 0x64,
+        0x00                      /* trailing byte */
+    };
+    off = 0;
+    pkt.buf = trailingExtBody;
+    pkt.bufLen = sizeof(trailingExtBody);
+    ASSERT_NE(ParseClientStatusRequest(&pkt, NULL), HITLS_SUCCESS);
+    ASSERT_TRUE(!tls->statusExpected);
+
+EXIT:
+    HITLS_CFG_FreeConfig(config);
+    FRAME_FreeLink(link);
+}
+/* END_CASE */
+
+/* @
+* @test  SDV_TLS_OCSP_STAPLING_TLS12_PARSE_SH_STRICT_TC032
+* @spec  -
+* @title  TLS 1.2: a non-empty ServerHello status_request echo is rejected with decode_error.
+* @precon  nan
+* @brief
+1. Create a TLS 1.2 client config that requests OCSP stapling and a link.
+2. Feed a non-empty ServerHello status_request body to ParseServerStatusRequest.
+3. Check that it is rejected with decode_error (RFC 6066 section 8 requires an
+   empty extension_data; RFC 5246 section 7.2.2 mandates decode_error for the
+   incorrect length), and an empty body is accepted.
+* @expect  1. Non-empty body: rejected with ALERT_DECODE_ERROR. 2. Empty body: accepted.
+* @prior  Level 2
+* @auto  TRUE
+@ */
+/* BEGIN_CASE */
+void SDV_TLS_OCSP_STAPLING_TLS12_PARSE_SH_STRICT_TC032()
+{
+    FRAME_Init();
+    RegDefaultMemCallback();
+    HITLS_Config *config = NULL;
+    FRAME_LinkObj *link = NULL;
+    TLS_Ctx *tls = NULL;
+
+    config = HITLS_CFG_NewTLS12Config();
+    ASSERT_TRUE(config != NULL);
+    ASSERT_EQ(HITLS_CFG_SetStatusRequestType(config, HITLS_STATUS_REQUEST_TYPE_OCSP), HITLS_SUCCESS);
+    link = FRAME_CreateLink(config, BSL_UIO_TCP);
+    ASSERT_TRUE(link != NULL);
+    tls = (TLS_Ctx *)FRAME_GetTlsCtx(link);
+    tls->method.sendAlert = TestSendAlertRecord;
+    g_lastAlertDesc = ALERT_CLOSE_NOTIFY;
+
+    /* A non-empty ServerHello status_request body is a length violation: the
+     * body must be empty, so the extension cannot be decoded. */
+    uint8_t nonEmptyBody[] = {0x00};
+    uint32_t off = 0;
+    ParsePacket pkt = {.ctx = tls, .buf = nonEmptyBody, .bufLen = sizeof(nonEmptyBody), .bufOffset = &off};
+    ASSERT_NE(ParseServerStatusRequest(&pkt), HITLS_SUCCESS);
+    ASSERT_EQ(g_lastAlertDesc, ALERT_DECODE_ERROR);
+
+    /* An empty body is the legal acknowledgment. */
+    off = 0;
+    pkt.buf = nonEmptyBody;
+    pkt.bufLen = 0;
+    ASSERT_EQ(ParseServerStatusRequest(&pkt), HITLS_SUCCESS);
+    ASSERT_TRUE(tls->statusExpected);
+
+EXIT:
+    HITLS_CFG_FreeConfig(config);
+    FRAME_FreeLink(link);
+}
+/* END_CASE */
+
+/* @
 * @test  SDV_TLS_OCSP_STAPLING_TLS12_BAD_RESP_TC010
 * @spec  -
 * @title  TLS 1.2: an unsatisfactory OCSP response aborts the handshake.
@@ -1190,6 +1523,9 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_TLS_OCSP_STAPLING_STATUS_TYPE_VALIDATE_TC016()
 {
+    FRAME_Init();
+    RegDefaultMemCallback();
+
     HITLS_Config *config = HITLS_CFG_NewTLS12Config();
     ASSERT_TRUE(config != NULL);
 

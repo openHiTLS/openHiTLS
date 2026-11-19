@@ -256,3 +256,6 @@ SDV_OCSP_EXT_NULL_OUTPUT_TC067
 
 Strict GeneralName parsing: requestorName/byName must be exactly one well-formed TLV
 SDV_OCSP_STRICT_GENERALNAME_PARSE_TC068
+
+requestorName GeneralName structure: directoryName carries a parseable RDNSequence, other forms stay opaque
+SDV_OCSP_REQ_REQUESTOR_NAME_STRUCT_TC069

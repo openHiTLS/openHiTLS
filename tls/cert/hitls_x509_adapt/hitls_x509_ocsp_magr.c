@@ -16,11 +16,13 @@
 #if defined(HITLS_TLS_FEATURE_STATUS_REQUEST)
 #include <string.h>
 #include "bsl_sal.h"
+#include "bsl_asn1.h"
 #include "bsl_err_internal.h"
 #include "hitls_error.h"
 #include "hitls_cert_type.h"
 #include "hitls_pki_ocsp.h"
 #include "hitls_pki_errno.h"
+#include "hitls_x509_local.h"
 #include "crypt_eal_md.h"
 #include "crypt_errno.h"
 #include "tls.h"
@@ -233,6 +235,59 @@ EXIT:
     BSL_SAL_FREE(issuerDn.data);
     BSL_ERR_POP_TO_MARK();
     return result;
+}
+
+/* Validate the request_extensions field of a TLS status_request offer (RFC
+ * 6066 section 8): a zero-length value means "no extensions"; otherwise the
+ * value must be a well-formed RFC 5280 Extensions SEQUENCE, parsed with the
+ * X509 extension parser (the same parser the OCSP module uses via
+ * OcspDecodeExt). The extensions are not interpreted here -- they are meant
+ * for the OCSP responder the server may consult -- so no criticality policy
+ * is applied. */
+int32_t SAL_CERT_StatusReqCheckExtensions(const BSL_Buffer *ext)
+{
+    if (ext == NULL || (ext->dataLen != 0 && ext->data == NULL)) {
+        BSL_ERR_PUSH_ERROR(HITLS_INVALID_INPUT);
+        return HITLS_INVALID_INPUT;
+    }
+    if (ext->dataLen == 0) {
+        /* RFC 6066 section 8: a zero-length request_extensions value indicates
+         * that there are no extensions. */
+        return HITLS_SUCCESS;
+    }
+    HITLS_X509_Ext *x509Ext = HITLS_X509_ExtNew(HITLS_X509_EXT_TYPE_OCSP);
+    if (x509Ext == NULL) {
+        BSL_ERR_PUSH_ERROR(HITLS_MEMALLOC_FAIL);
+        return HITLS_MEMALLOC_FAIL;
+    }
+    BSL_ASN1_Buffer extAsn = {BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE, ext->dataLen, ext->data};
+    int32_t ret = HITLS_X509_ParseExt(&extAsn, x509Ext);
+    /* Extensions ::= SEQUENCE SIZE (1..MAX) OF Extension (RFC 5280 A.1): when
+     * present, the value must carry at least one extension. */
+    if (ret == HITLS_PKI_SUCCESS && BSL_LIST_COUNT(x509Ext->extList) == 0) {
+        ret = HITLS_X509_ERR_PARSE_EXT_BUF;
+        BSL_ERR_PUSH_ERROR(ret);
+    }
+    HITLS_X509_ExtFree(x509Ext);
+    return ret;
+}
+
+/* Validate a byName Name (RDNSequence content, without the outer SEQUENCE
+ * header) with the X509 name parser. Behavior follows HITLS_X509_ParseNameList:
+ * an empty RDNSequence is accepted and an empty RDN is not constrained. */
+bool SAL_CERT_StatusReqCheckByName(const uint8_t *name, uint32_t nameLen)
+{
+    if (name == NULL) {
+        return false;
+    }
+    BSL_ASN1_List *nameList = BSL_LIST_New(sizeof(HITLS_X509_NameNode));
+    if (nameList == NULL) {
+        return false;
+    }
+    BSL_ASN1_Buffer nameAsn = {.buff = (uint8_t *)(uintptr_t)name, .len = nameLen};
+    int32_t ret = HITLS_X509_ParseNameList(&nameAsn, nameList);
+    BSL_LIST_FREE(nameList, (BSL_LIST_PFUNC_FREE)HITLS_X509_FreeParsedNameNode);
+    return ret == HITLS_PKI_SUCCESS;
 }
 
 #endif /* HITLS_TLS_FEATURE_STATUS_REQUEST */

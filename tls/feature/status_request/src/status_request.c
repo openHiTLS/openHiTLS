@@ -17,6 +17,7 @@
 #include <string.h>
 #include "bsl_sal.h"
 #include "bsl_bytes.h"
+#include "bsl_asn1.h"
 #include "bsl_err_internal.h"
 #include "tls_binlog_id.h"
 #include "bsl_log_internal.h"
@@ -35,6 +36,10 @@
 #include "send_process.h"
 #include "cert_method.h"
 #include "status_request.h"
+
+/* KeyHash ::= OCTET STRING -- SHA-1 hash (RFC 6066 section 8): the byKey
+ * ResponderID value is exactly one SHA-1 digest. */
+#define STATUS_REQ_SHA1_DIGEST_SIZE 20
 
 static void OcspRespFree(void *data)
 {
@@ -213,8 +218,12 @@ int32_t ParseServerStatusRequest(ParsePacket *pkt)
         return ParseErrorProcess(ctx, HITLS_PARSE_UNSUPPORTED_EXTENSION, 0, NULL, ALERT_UNSUPPORTED_EXTENSION);
     }
     if (pkt->bufLen != 0) {
-        /* The ServerHello status_request extension must carry an empty body. */
-        return ParseErrorProcess(ctx, HITLS_MSG_HANDLE_OCSP_STATUS_ERR, 0, NULL, ALERT_ILLEGAL_PARAMETER);
+        /* RFC 6066 section 8 requires the ServerHello status_request
+         * extension_data to be empty; a non-empty body cannot be decoded, so
+         * RFC 5246 section 7.2.2 mandates decode_error. */
+        return ParseErrorProcess(ctx, HITLS_PARSE_INVALID_MSG_LEN, BINLOG_ID17441,
+                                 BINGLOG_STR("server hello status_request body must be empty"),
+                                 ALERT_DECODE_ERROR);
     }
     ctx->statusExpected = true;
     return HITLS_SUCCESS;
@@ -222,12 +231,61 @@ int32_t ParseServerStatusRequest(ParsePacket *pkt)
 #endif /* HITLS_TLS_HOST_CLIENT */
 
 #ifdef HITLS_TLS_HOST_SERVER
+/* RFC 6960 section 4.2.1: ResponderID is a CHOICE of byName [1] Name (0xA1,
+ * constructed) and byKey [2] KeyHash (0xA2, primitive), both DER encoded.
+ * The status_request feature does not consume the value, so only the RFC 6960
+ * content constraints are checked with the public ASN.1 decoder: a known tag,
+ * a definite length, an exact fit, and -- matching the OCSP module's own
+ * ResponderID parser (OcspParseResponderID) -- byKey must be exactly one
+ * OCTET STRING of 20 bytes (KeyHash is the SHA-1 hash of the responder key)
+ * and byName must be exactly one Name SEQUENCE. This rejects truncated,
+ * oversized or non-DER bodies without pulling full ASN.1 decoding into the
+ * status_request feature. */
+static bool IsValidResponderIdDer(const uint8_t *der, uint32_t len)
+{
+    if (der == NULL || len == 0) {
+        return false;
+    }
+    uint8_t *p = (uint8_t *)(uintptr_t)der;
+    uint32_t remaining = len;
+    uint32_t contentLen = 0;
+    uint8_t tag = der[0];
+    if (tag != (BSL_ASN1_CLASS_CTX_SPECIFIC | BSL_ASN1_TAG_CONSTRUCTED | 1) &&
+        tag != (BSL_ASN1_CLASS_CTX_SPECIFIC | BSL_ASN1_TAG_CONSTRUCTED | 2)) {
+        return false;
+    }
+    /* The wrapper TLV must fill the element exactly (DER has no trailing bytes). */
+    if (BSL_ASN1_DecodeTagLen(tag, &p, &remaining, &contentLen) != BSL_SUCCESS || remaining != contentLen) {
+        return false;
+    }
+    if (tag == (BSL_ASN1_CLASS_CTX_SPECIFIC | BSL_ASN1_TAG_CONSTRUCTED | 2)) {
+        /* byKey [2] KeyHash: the content must be exactly one OCTET STRING whose
+         * value is 20 bytes (KeyHash is a SHA-1 hash, RFC 6066 section 8). */
+        uint32_t keyLen = 0;
+        if (BSL_ASN1_DecodeTagLen(BSL_ASN1_TAG_OCTETSTRING, &p, &remaining, &keyLen) != BSL_SUCCESS ||
+            remaining != keyLen || keyLen != STATUS_REQ_SHA1_DIGEST_SIZE) {
+            return false;
+        }
+        return true;
+    }
+    /* byName [1] Name: exactly one Name SEQUENCE whose internal structure is a
+     * valid RDNSequence (RFC 5280 section 4.1.2.4), parsed with the X509 name
+     * parser. */
+    uint32_t nameLen = 0;
+    if (BSL_ASN1_DecodeTagLen(BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE, &p, &remaining, &nameLen) !=
+        BSL_SUCCESS || remaining != nameLen) {
+        return false;
+    }
+    return SAL_CERT_StatusReqCheckByName(p, nameLen);
+}
+
 /* Parse the status_request extension from the client. Server-side handling is
- * lenient: RFC 6066 section 1.1 makes extensions backwards compatible (a
- * server that does not support an extension ignores it), and section 8 gives
- * the server the MAY to answer or not. A request the server cannot process
- * (wrong protocol, malformed body, unsupported status_type) is therefore
- * treated as "not requested": stapling is skipped and the handshake continues. */
+ * strict on the structure of a supported extension: RFC 6066 section 8 gives
+ * the server the MAY to answer or not, and RFC 5246 section 7.2.2 requires a
+ * decode_error for an extension whose body cannot be decoded, so a truncated
+ * or internally inconsistent CertificateStatusRequest aborts the handshake.
+ * An unsupported status_type (section 8 defines only ocsp(1)) is instead
+ * ignored, matching OpenSSL. */
 int32_t ParseClientStatusRequest(ParsePacket *pkt, ClientHelloMsg *msg)
 {
     (void)msg;
@@ -235,16 +293,75 @@ int32_t ParseClientStatusRequest(ParsePacket *pkt, ClientHelloMsg *msg)
         /* DTLS/TLCP do not carry status_request; ignore the offer. */
         return HITLS_SUCCESS;
     }
+    /* RFC 6066 section 8: the body is status_type(1) + responder_id_list
+     * length(2) + request_extensions length(2). A shorter body cannot be
+     * decoded and aborts with decode_error. */
     if (pkt->bufLen < (sizeof(uint8_t) + sizeof(uint16_t) * 2)) {
-        /* Malformed extension, ignore it (RFC 6066 section 8: the server MAY
-         * choose not to answer, so an unparseable request is not an error). */
-        return HITLS_SUCCESS;
+        return ParseErrorProcess(pkt->ctx, HITLS_PARSE_INVALID_MSG_LEN, BINLOG_ID17442,
+                                 BINGLOG_STR("status_request length is incorrect"), ALERT_DECODE_ERROR);
     }
     if (pkt->buf[0] != HITLS_STATUS_REQUEST_TYPE_OCSP) {
         /* Only the OCSP status type is supported (RFC 6066 section 8 defines
          * ocsp(1) as the only status_type); an unsupported type means the
          * server cannot fulfil the request and ignores it. */
         return HITLS_SUCCESS;
+    }
+    /* responder_id_list is ResponderID<0..2^16-1>: a 2-byte length followed by
+     * per-element opaque<1..2^16-1> DER values. request_extensions follows as
+     * opaque<0..2^16-1>. The lengths must be consistent with the body and each
+     * ResponderID must be a well-formed DER TLV, otherwise the supported
+     * extension cannot be decoded (RFC 5246 section 7.2.2 decode_error). */
+    uint32_t offset = sizeof(uint8_t);
+    uint32_t listLen = BSL_ByteToUint16(&pkt->buf[offset]);
+    offset += sizeof(uint16_t);
+    if (listLen > (pkt->bufLen - offset)) {
+        return ParseErrorProcess(pkt->ctx, HITLS_PARSE_INVALID_MSG_LEN, BINLOG_ID17443,
+                                 BINGLOG_STR("status_request responder list length is incorrect"),
+                                 ALERT_DECODE_ERROR);
+    }
+    uint32_t listEnd = offset + listLen;
+    while (offset < listEnd) {
+        if ((listEnd - offset) < sizeof(uint16_t)) {
+            return ParseErrorProcess(pkt->ctx, HITLS_PARSE_INVALID_MSG_LEN, BINLOG_ID17443,
+                                     BINGLOG_STR("status_request responder id length is incorrect"),
+                                     ALERT_DECODE_ERROR);
+        }
+        uint32_t idLen = BSL_ByteToUint16(&pkt->buf[offset]);
+        offset += sizeof(uint16_t);
+        if (idLen == 0 || idLen > (listEnd - offset)) {
+            return ParseErrorProcess(pkt->ctx, HITLS_PARSE_INVALID_MSG_LEN, BINLOG_ID17443,
+                                     BINGLOG_STR("status_request responder id length is incorrect"),
+                                     ALERT_DECODE_ERROR);
+        }
+        if (!IsValidResponderIdDer(&pkt->buf[offset], idLen)) {
+            return ParseErrorProcess(pkt->ctx, HITLS_PARSE_INVALID_MSG_LEN, BINLOG_ID17444,
+                                     BINGLOG_STR("status_request responder id DER is invalid"),
+                                     ALERT_DECODE_ERROR);
+        }
+        offset += idLen;
+    }
+    if ((pkt->bufLen - offset) < sizeof(uint16_t)) {
+        return ParseErrorProcess(pkt->ctx, HITLS_PARSE_INVALID_MSG_LEN, BINLOG_ID17443,
+                                 BINGLOG_STR("status_request extensions length is incorrect"),
+                                 ALERT_DECODE_ERROR);
+    }
+    uint32_t extLen = BSL_ByteToUint16(&pkt->buf[offset]);
+    offset += sizeof(uint16_t);
+    if (extLen != (pkt->bufLen - offset)) {
+        return ParseErrorProcess(pkt->ctx, HITLS_PARSE_INVALID_MSG_LEN, BINLOG_ID17443,
+                                 BINGLOG_STR("status_request extensions length is incorrect"),
+                                 ALERT_DECODE_ERROR);
+    }
+    /* RFC 6066 section 8: request_extensions is the RFC 5280 Extensions
+     * structure. A zero-length value means "no extensions"; otherwise it must
+     * be a well-formed Extensions SEQUENCE, parsed with the X509 extension
+     * parser, or the supported extension cannot be decoded (RFC 5246 section
+     * 7.2.2 decode_error). */
+    BSL_Buffer reqExt = {(uint8_t *)(uintptr_t)&pkt->buf[offset], extLen};
+    if (SAL_CERT_StatusReqCheckExtensions(&reqExt) != HITLS_SUCCESS) {
+        return ParseErrorProcess(pkt->ctx, HITLS_PARSE_INVALID_MSG_LEN, BINLOG_ID17445,
+                                 BINGLOG_STR("status_request extensions DER is invalid"),
+                                 ALERT_DECODE_ERROR);
     }
     /* Only record the request here. The per-certificate stapling callback is
      * invoked once the certificates to be stapled are known: at certificate

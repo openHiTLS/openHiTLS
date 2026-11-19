@@ -2172,10 +2172,36 @@ static int32_t OcspParseResponderID(BSL_ASN1_Buffer *ridAsn, HITLS_OCSP_BasicRes
 
     if (ridAsn->tag == (BSL_ASN1_CLASS_CTX_SPECIFIC | BSL_ASN1_TAG_CONSTRUCTED | 1)) {
         /* byName [1] Name: the content must be exactly one Name SEQUENCE (no
-         * non-Name type, no trailing bytes). */
-        uint8_t nameTag = 0;
-        int32_t ret = OcspCheckSingleTlv(ridAsn->buff, ridAsn->len, &nameTag);
-        if (ret != HITLS_PKI_SUCCESS || nameTag != (BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE)) {
+         * non-Name type, no trailing bytes), and its RDNSequence structure must
+         * parse (RFC 5280 section 4.1.2.4). The parser's own semantics apply: an
+         * empty RDNSequence is accepted, and an empty RDN is not constrained here,
+         * matching the certificate/CSR/CRL parsers. */
+        uint8_t *nameBuff = ridAsn->buff;
+        uint32_t nameRemain = ridAsn->len;
+        uint32_t nameValueLen = 0;
+        int32_t ret = BSL_ASN1_DecodeTagLen(BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE, &nameBuff,
+                                            &nameRemain, &nameValueLen);
+        if (ret != BSL_SUCCESS || nameRemain != nameValueLen) {
+            BSL_ERR_PUSH_ERROR(HITLS_OCSP_ERR_INVALID_RESPONSE);
+            BSL_SAL_Free(rid);
+            return HITLS_OCSP_ERR_INVALID_RESPONSE;
+        }
+        BSL_ASN1_List *nameList = BSL_LIST_New(sizeof(HITLS_X509_NameNode));
+        if (nameList == NULL) {
+            BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
+            BSL_SAL_Free(rid);
+            return BSL_MALLOC_FAIL;
+        }
+        BSL_ASN1_Buffer nameAsn = {.buff = nameBuff, .len = nameValueLen};
+        ret = HITLS_X509_ParseNameList(&nameAsn, nameList);
+        BSL_LIST_FREE(nameList, (BSL_LIST_PFUNC_FREE)HITLS_X509_FreeParsedNameNode);
+        if (ret == BSL_MALLOC_FAIL || ret == BSL_LIST_MALLOC_FAIL) {
+            /* Keep allocation failures distinguishable from malformed data;
+             * the name parser has already recorded the error. */
+            BSL_SAL_Free(rid);
+            return ret;
+        }
+        if (ret != HITLS_PKI_SUCCESS) {
             BSL_ERR_PUSH_ERROR(HITLS_OCSP_ERR_INVALID_RESPONSE);
             BSL_SAL_Free(rid);
             return HITLS_OCSP_ERR_INVALID_RESPONSE;
