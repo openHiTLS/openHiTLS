@@ -36,6 +36,66 @@
 STUB_DEFINE_RET1(void *, BSL_SAL_Malloc, uint32_t);
 
 /**
+ * @test SDV_CRYPTO_XTS_INPLACE_TC001
+ * @brief Compare in-place and separate-buffer XTS encryption and decryption.
+ * @precon XTS and the selected cipher are enabled.
+ * @expect Both operations produce the same results for aligned and partial blocks.
+ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_XTS_INPLACE_TC001(int algId)
+{
+    if (IsCipherAlgDisabled(algId)) {
+        SKIP_TEST();
+    }
+    TestMemInit();
+    CRYPT_EAL_CipherCtx *ctx = NULL;
+    uint8_t key[32], iv[16] = {0}, plain[529], cipher[529], inplace[529], decoded[529];
+    for (uint32_t i = 0; i < sizeof(key); i++) {
+        key[i] = (uint8_t)i;
+    }
+    for (uint32_t i = 0; i < sizeof(plain); i++) {
+        plain[i] = (uint8_t)i;
+    }
+    ctx = CRYPT_EAL_CipherNewCtx(algId);
+    ASSERT_NE(ctx, NULL);
+    /* x86-64 helper boundaries: remainder 16 and 32, 15-block helper loop
+       with tail, multi-group bulk with and without a tail */
+    static const uint32_t boundaryLens[] = {272, 273, 288, 511, 512, 529};
+    for (uint32_t iter = 0; iter < 54; iter++) {
+        uint32_t len;
+        if (iter < 32) {
+            len = 16 + iter;
+        } else if (iter < 48) {
+            len = 256 + iter - 32;
+        } else {
+            len = boundaryLens[iter - 48];
+        }
+        uint32_t outLen = len;
+        ASSERT_EQ(CRYPT_EAL_CipherInit(ctx, key, sizeof(key), iv, sizeof(iv), true), CRYPT_SUCCESS);
+        ASSERT_EQ(CRYPT_EAL_CipherUpdate(ctx, plain, len, cipher, &outLen), CRYPT_SUCCESS);
+        ASSERT_EQ(outLen, len);
+        memcpy(inplace, plain, len);
+        outLen = len;
+        ASSERT_EQ(CRYPT_EAL_CipherInit(ctx, key, sizeof(key), iv, sizeof(iv), true), CRYPT_SUCCESS);
+        ASSERT_EQ(CRYPT_EAL_CipherUpdate(ctx, inplace, len, inplace, &outLen), CRYPT_SUCCESS);
+        ASSERT_COMPARE("in-place encryption", inplace, outLen, cipher, len);
+
+        outLen = len;
+        ASSERT_EQ(CRYPT_EAL_CipherInit(ctx, key, sizeof(key), iv, sizeof(iv), false), CRYPT_SUCCESS);
+        ASSERT_EQ(CRYPT_EAL_CipherUpdate(ctx, cipher, len, decoded, &outLen), CRYPT_SUCCESS);
+        ASSERT_COMPARE("separate decryption", decoded, outLen, plain, len);
+        memcpy(inplace, cipher, len);
+        outLen = len;
+        ASSERT_EQ(CRYPT_EAL_CipherInit(ctx, key, sizeof(key), iv, sizeof(iv), false), CRYPT_SUCCESS);
+        ASSERT_EQ(CRYPT_EAL_CipherUpdate(ctx, inplace, len, inplace, &outLen), CRYPT_SUCCESS);
+        ASSERT_COMPARE("in-place decryption", inplace, outLen, plain, len);
+    }
+EXIT:
+    CRYPT_EAL_CipherFreeCtx(ctx);
+}
+/* END_CASE */
+
+/**
  * @test  SDV_CRYPTO_AES_MULTI_UPDATE_FUNC_TC001
  * @title  Impact of two updates on the encryption and decryption functions
  * @precon Registering memory-related functions.

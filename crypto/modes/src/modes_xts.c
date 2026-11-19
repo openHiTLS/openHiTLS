@@ -223,8 +223,9 @@ int32_t MODES_XTS_Encrypt(MODES_CipherXTSCtx *ctx, const uint8_t *in, uint8_t *o
     lastBlock = tmpOut - blockSize;
     // Process the subsequent two pieces of data.
     for (i = 0; i < tmpLen; i++) {
+        uint8_t inputByte = tmpIn[i];
         tmpOut[i] = lastBlock[i];
-        pp[i] = tmpIn[i];
+        pp[i] = inputByte;
     }
 
     for (i = tmpLen; i < blockSize; i++) {
@@ -290,8 +291,9 @@ int32_t MODES_XTS_Decrypt(MODES_CipherXTSCtx *ctx, const uint8_t *in, uint8_t *o
     tmpLen -= blockSize;
 
     for (i = 0; i < tmpLen; i++) {
+        uint8_t inputByte = tmpIn[i + blockSize];
         tmpOut[i + blockSize] = pp[i];
-        pp[i] = tmpIn[i + blockSize];
+        pp[i] = inputByte;
     }
 
     ret = BlockCrypt(ctx, pp, t2, pp, false);
