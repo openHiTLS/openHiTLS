@@ -42,7 +42,8 @@ struct EAL_ProviderMgrCtx {
     void *handle; // so handle
 #endif
     void *provCtx;
-    BSL_SAL_RefCount ref;
+    int32_t loadRefs; // load references, changed only under the libCtx write lock
+    int32_t walkRefs; // traversal references, changed only under the libCtx write lock
     char *providerName;
     char *providerPath;
 #ifdef HITLS_CRYPTO_ENTROPY_DEFAULT

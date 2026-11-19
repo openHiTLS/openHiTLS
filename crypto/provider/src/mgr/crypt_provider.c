@@ -106,25 +106,27 @@ static int32_t ListCompareProvider(const void *a, const void *b)
     return (strcmp(ctx->providerName, providerName) == 0) ? 0 : 1;
 }
 
-static int32_t CheckProviderLoadedNoLock(CRYPT_EAL_LibCtx *libCtx, const char *providerName, bool increaseRef,
+static CRYPT_EAL_ProvMgrCtx *FindProviderByNameNoLock(CRYPT_EAL_LibCtx *libCtx, const char *providerName)
+{
+    return (CRYPT_EAL_ProvMgrCtx *)BSL_LIST_SearchDataConst(libCtx->providers, providerName, ListCompareProvider, NULL);
+}
+
+// Take a load reference. The caller must hold libCtx->lock in write mode: loadRefs
+// changes only under the write lock.
+static int32_t CheckProviderLoadedNoLock(CRYPT_EAL_LibCtx *libCtx, const char *providerName,
     CRYPT_EAL_ProvMgrCtx **providerMgr)
 {
-    CRYPT_EAL_ProvMgrCtx *tempProviderMgr =
-        (CRYPT_EAL_ProvMgrCtx *)BSL_LIST_SearchDataConst(libCtx->providers, providerName, ListCompareProvider, NULL);
-    if (tempProviderMgr != NULL && increaseRef) {
-        int32_t tempCount = 0;
-        int32_t ret = BSL_SAL_AtomicUpReferences(&tempProviderMgr->ref, &tempCount);
-        if (ret != BSL_SUCCESS) {
-            BSL_ERR_PUSH_ERROR(ret);
-            return ret;
-        }
+    CRYPT_EAL_ProvMgrCtx *tempProviderMgr = FindProviderByNameNoLock(libCtx, providerName);
+    if (tempProviderMgr != NULL) {
+        tempProviderMgr->loadRefs++;
     }
 
     *providerMgr = tempProviderMgr;
     return CRYPT_SUCCESS;
 }
 
-static int32_t CheckProviderLoaded(CRYPT_EAL_LibCtx *libCtx, const char *providerName, bool increaseRef,
+// Search under the read lock without taking a reference.
+static int32_t FindProviderByName(CRYPT_EAL_LibCtx *libCtx, const char *providerName,
     CRYPT_EAL_ProvMgrCtx **providerMgr)
 {
     int32_t ret = BSL_SAL_ThreadReadLock(libCtx->lock);
@@ -132,10 +134,9 @@ static int32_t CheckProviderLoaded(CRYPT_EAL_LibCtx *libCtx, const char *provide
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
-
-    ret = CheckProviderLoadedNoLock(libCtx, providerName, increaseRef, providerMgr);
+    *providerMgr = FindProviderByNameNoLock(libCtx, providerName);
     (void)BSL_SAL_ThreadUnlock(libCtx->lock);
-    return ret;
+    return CRYPT_SUCCESS;
 }
 
 static bool IsEalPreDefinedProvider(const char *providerName)
@@ -229,7 +230,7 @@ int32_t CRYPT_EAL_ProviderLoad(CRYPT_EAL_LibCtx *libCtx, BSL_SAL_LibFmtCmd cmd,
     }
 
     // Check if the provider is already loaded
-    ret = CheckProviderLoadedNoLock(localCtx, providerFullName, true, &providerMgr);
+    ret = CheckProviderLoadedNoLock(localCtx, providerFullName, &providerMgr);
     if (ret != CRYPT_SUCCESS) {
         goto EXIT;
     }
@@ -295,7 +296,7 @@ int32_t CRYPT_EAL_ProviderRegister(CRYPT_EAL_LibCtx *libCtx, const char *provide
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
-    ret = CheckProviderLoadedNoLock(localCtx, providerName, true, &providerMgr);
+    ret = CheckProviderLoadedNoLock(localCtx, providerName, &providerMgr);
     if (ret != CRYPT_SUCCESS) {
         goto EXIT;
     }
@@ -345,7 +346,7 @@ int32_t CRYPT_EAL_ProviderIsLoaded(CRYPT_EAL_LibCtx *libCtx, BSL_SAL_LibFmtCmd c
 
     // Check if the provider is already loaded
     CRYPT_EAL_ProvMgrCtx *providerMgr = NULL;
-    ret = CheckProviderLoaded(localCtx, providerFullName, false, &providerMgr);
+    ret = FindProviderByName(localCtx, providerFullName, &providerMgr);
     BSL_SAL_Free(providerFullName);
     if (ret != CRYPT_SUCCESS) {
         return ret;
@@ -361,8 +362,8 @@ int32_t CRYPT_EAL_ProviderIsLoaded(CRYPT_EAL_LibCtx *libCtx, BSL_SAL_LibFmtCmd c
 #endif
 }
 
-// Remove provider from the list
-static void RemoveAndFreeProvider(BslList *providers, CRYPT_EAL_ProvMgrCtx *providerMgr)
+// Remove provider from the list, keep the object alive
+static void ProviderMgrRemoveFromList(BslList *providers, CRYPT_EAL_ProvMgrCtx *providerMgr)
 {
     BslListNode *node = BSL_LIST_FirstNode(providers);
     while (node != NULL) {
@@ -372,7 +373,16 @@ static void RemoveAndFreeProvider(BslList *providers, CRYPT_EAL_ProvMgrCtx *prov
         }
         node = BSL_LIST_GetNextNode(providers, node);
     }
-    CRYPT_EAL_ProviderMgrCtxFree(providerMgr);
+}
+
+// Free the provider when load and traversal references are both exhausted.
+// Both counts change only under the libCtx write lock, so this check cannot
+// race a concurrent reference change.
+static void ProviderMgrFreeIfUnused(CRYPT_EAL_ProvMgrCtx *providerMgr)
+{
+    if (providerMgr->loadRefs <= 0 && providerMgr->walkRefs == 0) {
+        CRYPT_EAL_ProviderMgrCtxFree(providerMgr);
+    }
 }
 
 // Unload provider
@@ -410,17 +420,11 @@ int32_t CRYPT_EAL_ProviderUnload(CRYPT_EAL_LibCtx *libCtx, BSL_SAL_LibFmtCmd cmd
         (void)BSL_SAL_ThreadUnlock(localCtx->lock);
         return CRYPT_SUCCESS;
     }
-    // Decrease reference count
-    int refCount = 0;
-    ret = BSL_SAL_AtomicDownReferences(&providerMgr->ref, &refCount);
-    if (ret != BSL_SUCCESS) {
-        (void)BSL_SAL_ThreadUnlock(localCtx->lock);
-        BSL_ERR_PUSH_ERROR(ret);
-        return ret;
-    }
-
-    if (refCount <= 0) {
-        RemoveAndFreeProvider(localCtx->providers, providerMgr);
+    // Decrease the load reference count
+    providerMgr->loadRefs--;
+    if (providerMgr->loadRefs <= 0) {
+        ProviderMgrRemoveFromList(localCtx->providers, providerMgr);
+        ProviderMgrFreeIfUnused(providerMgr);
     }
     (void)BSL_SAL_ThreadUnlock(localCtx->lock);
     return CRYPT_SUCCESS;
@@ -502,28 +506,75 @@ int32_t CRYPT_EAL_ProviderGetCaps(CRYPT_EAL_ProvMgrCtx *ctx, int32_t cmd, CRYPT_
     return ctx->provGetCap(ctx->provCtx, cmd, cb, args);
 }
 
+typedef struct {
+    CRYPT_EAL_ProvMgrCtx **items;
+    int32_t count;
+} ProviderSnapshot;
+
+static int32_t ProviderSnapshotTake(CRYPT_EAL_LibCtx *libCtx, ProviderSnapshot *snapshot)
+{
+    int32_t ret;
+    RETURN_RET_IF_ERR(BSL_SAL_ThreadWriteLock(libCtx->lock), ret);
+    BslList *providers = libCtx->providers;
+    snapshot->count = BSL_LIST_COUNT(providers);
+    if (snapshot->count > 0) {
+        snapshot->items = BSL_SAL_Malloc((uint32_t)snapshot->count * sizeof(*snapshot->items));
+        if (snapshot->items == NULL) {
+            (void)BSL_SAL_ThreadUnlock(libCtx->lock);
+            BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
+            return CRYPT_MEM_ALLOC_FAIL;
+        }
+    }
+
+    int32_t i = 0;
+    for (BslListNode *node = BSL_LIST_FirstNode(providers); node != NULL;
+         node = BSL_LIST_GetNextNode(providers, node)) {
+        CRYPT_EAL_ProvMgrCtx *provider = BSL_LIST_GetData(node);
+        provider->walkRefs++;
+        snapshot->items[i++] = provider;
+    }
+    (void)BSL_SAL_ThreadUnlock(libCtx->lock);
+    return CRYPT_SUCCESS;
+}
+
+static int32_t ProviderSnapshotRelease(CRYPT_EAL_LibCtx *libCtx, ProviderSnapshot *snapshot)
+{
+    int32_t ret;
+    // Dropping references without the lock can race with unload.
+    // Keep them on failure, even if that leaves a detached provider unreclaimed.
+    GOTO_ERR_IF(BSL_SAL_ThreadWriteLock(libCtx->lock), ret);
+    for (int32_t i = 0; i < snapshot->count; i++) {
+        CRYPT_EAL_ProvMgrCtx *provider = snapshot->items[i];
+        provider->walkRefs--;
+        ProviderMgrFreeIfUnused(provider);
+    }
+    (void)BSL_SAL_ThreadUnlock(libCtx->lock);
+ERR:
+    BSL_SAL_FREE(snapshot->items);
+    return ret;
+}
+
 int32_t CRYPT_EAL_ProviderProcessAll(CRYPT_EAL_LibCtx *ctx, CRYPT_EAL_ProviderProcessCb cb, void *args)
 {
-    if (cb == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
-        return CRYPT_NULL_INPUT;
-    }
-    CRYPT_EAL_LibCtx *localCtx = GetCurrentProviderLibCtx(ctx);
-    if (localCtx == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_PROVIDER_INVALID_LIB_CTX);
-        return CRYPT_PROVIDER_INVALID_LIB_CTX;
-    }
-    BslListNode *node = BSL_LIST_FirstNode(localCtx->providers);
-    while (node != NULL) {
-        CRYPT_EAL_ProvMgrCtx *providerMgr = (CRYPT_EAL_ProvMgrCtx *)BSL_LIST_GetData(node);
-        int32_t ret = cb(providerMgr, args);
+    RETURN_RET_IF(cb == NULL, CRYPT_NULL_INPUT);
+    CRYPT_EAL_LibCtx *libCtx = GetCurrentProviderLibCtx(ctx);
+    RETURN_RET_IF(libCtx == NULL, CRYPT_PROVIDER_INVALID_LIB_CTX);
+
+    ProviderSnapshot snapshot = {0};
+    int32_t ret;
+    RETURN_RET_IF_ERR_EX(ProviderSnapshotTake(libCtx, &snapshot), ret);
+
+    // Callbacks can re-enter the provider manager, so run them without the lock.
+    for (int32_t i = 0; i < snapshot.count; i++) {
+        ret = cb(snapshot.items[i], args);
         if (ret != CRYPT_SUCCESS) {
             BSL_ERR_PUSH_ERROR(ret);
-            return ret;
+            break;
         }
-        node = BSL_LIST_GetNextNode(localCtx->providers, node);
     }
-    return CRYPT_SUCCESS;
+
+    int32_t cleanupRet = ProviderSnapshotRelease(libCtx, &snapshot);
+    return ret != CRYPT_SUCCESS ? ret : cleanupRet;
 }
 
 int32_t CRYPT_EAL_ProviderQuery(CRYPT_EAL_ProvMgrCtx *ctx, int32_t operaId, CRYPT_EAL_AlgInfo **algInfos)

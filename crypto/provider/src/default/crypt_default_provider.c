@@ -1407,22 +1407,6 @@ static CRYPT_EAL_Func g_defEalProvOutFuncs[] = {
     CRYPT_EAL_FUNC_END
 };
 
-#ifdef HITLS_CRYPTO_ENTROPY
-static void *g_providerSeedCtx = NULL;
-static CRYPT_RandSeedMethod g_providerSeedMethod = {0};
-
-int32_t CRYPT_EAL_ProviderGetSeed(CRYPT_RandSeedMethod **method, void **seedCtx)
-{
-    if (method == NULL || seedCtx == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
-        return CRYPT_NULL_INPUT;
-    }
-    *method = &g_providerSeedMethod;
-    *seedCtx = g_providerSeedCtx;
-    return CRYPT_SUCCESS;
-}
-#endif
-
 int32_t CRYPT_EAL_DefaultProvInit(CRYPT_EAL_ProvMgrCtx *mgrCtx, BSL_Param *param,
     CRYPT_EAL_Func *capFuncs, CRYPT_EAL_Func **outFuncs, void **provCtx)
 {
@@ -1431,20 +1415,24 @@ int32_t CRYPT_EAL_DefaultProvInit(CRYPT_EAL_ProvMgrCtx *mgrCtx, BSL_Param *param
     CRYPT_EAL_ProvMgrCtrlCb mgrCtrl = NULL;
     int32_t index = 0;
     int32_t ret;
+#ifdef HITLS_CRYPTO_ENTROPY_DEFAULT
+    CRYPT_RandSeedMethod seedMethod = {0};
+    void *seedCtx = NULL;
+#endif
     while (capFuncs[index].id != 0) {
         switch (capFuncs[index].id) {
 #ifdef HITLS_CRYPTO_ENTROPY_DEFAULT
             case CRYPT_EAL_CAP_GETENTROPY:
-                g_providerSeedMethod.getEntropy = capFuncs[index].func;
+                seedMethod.getEntropy = capFuncs[index].func;
                 break;
             case CRYPT_EAL_CAP_CLEANENTROPY:
-                g_providerSeedMethod.cleanEntropy = capFuncs[index].func;
+                seedMethod.cleanEntropy = capFuncs[index].func;
                 break;
             case CRYPT_EAL_CAP_GETNONCE:
-                g_providerSeedMethod.getNonce = capFuncs[index].func;
+                seedMethod.getNonce = capFuncs[index].func;
                 break;
             case CRYPT_EAL_CAP_CLEANNONCE:
-                g_providerSeedMethod.cleanNonce = capFuncs[index].func;
+                seedMethod.cleanNonce = capFuncs[index].func;
                 break;
 #endif
             case CRYPT_EAL_CAP_MGRCTXCTRL:
@@ -1459,14 +1447,18 @@ int32_t CRYPT_EAL_DefaultProvInit(CRYPT_EAL_ProvMgrCtx *mgrCtx, BSL_Param *param
         return CRYPT_PROVIDER_NOT_SUPPORT;
     }
 #ifdef HITLS_CRYPTO_ENTROPY_DEFAULT
-    RETURN_RET_IF_ERR_EX(mgrCtrl(mgrCtx, CRYPT_EAL_MGR_GETSEEDCTX, &g_providerSeedCtx, 0), ret);
+    RETURN_RET_IF_ERR_EX(mgrCtrl(mgrCtx, CRYPT_EAL_MGR_GETSEEDCTX, &seedCtx, 0), ret);
 #endif
     RETURN_RET_IF_ERR_EX(mgrCtrl(mgrCtx, CRYPT_EAL_MGR_GETLIBCTX, &libCtx, 0), ret);
-    CRYPT_EAL_DefProvCtx *temp = BSL_SAL_Malloc(sizeof(CRYPT_EAL_DefProvCtx));
+    CRYPT_EAL_DefProvCtx *temp = BSL_SAL_Calloc(1, sizeof(CRYPT_EAL_DefProvCtx));
     if (temp == NULL) {
         BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
         return BSL_MALLOC_FAIL;
     }
+#ifdef HITLS_CRYPTO_ENTROPY_DEFAULT
+    temp->seedMethod = seedMethod;
+    temp->seedCtx = seedCtx;
+#endif
     temp->libCtx = libCtx;
     *provCtx = temp;
     *outFuncs = g_defEalProvOutFuncs;

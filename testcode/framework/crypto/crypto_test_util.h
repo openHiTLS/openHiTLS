@@ -28,6 +28,8 @@ void TestMemInit(void);
 
 int32_t TestThreadLockFailureStart(void);
 void TestThreadLockFailureSetIndex(int32_t failIndex);
+// Make the failIndex-th write-lock call (counted from zero) fail with BSL_SAL_ERR_BAD_PARAM.
+void TestThreadLockFailureSetWriteFailIndex(int32_t failIndex);
 uint32_t TestThreadLockFailureGetWriteCalls(void);
 uint32_t TestThreadLockFailureGetFreeCalls(void);
 void TestThreadLockFailureStop(void);

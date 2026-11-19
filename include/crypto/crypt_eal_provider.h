@@ -211,6 +211,12 @@ typedef int32_t (*CRYPT_EAL_ProviderProcessCb)(CRYPT_EAL_ProvMgrCtx *ctx, void *
  * @param ctx [IN] Library context containing the providers to process
  * @param cb [IN] Callback function to be applied to each provider
  * @param args [IN] Arguments to be passed to the callback function
+ * @warning The callback runs without the libCtx lock and sees only the providers
+ *          loaded when the traversal started. It may re-enter provider manager
+ *          APIs with the same libCtx, but never from a provider query or free
+ *          callback: the manager holds the non-recursive libCtx lock there and
+ *          the call deadlocks. If the post-callback cleanup fails, the call
+ *          returns an error and keeps traversal references held.
  *
  * @retval #CRYPT_SUCCESS if all providers were processed successfully
  *         The first error code encountered if any provider processing fails

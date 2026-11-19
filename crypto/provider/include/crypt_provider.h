@@ -55,6 +55,13 @@ struct EAL_LibCtx {
 };
 
 int32_t CRYPT_EAL_InitPreDefinedProviders(void);
+
+/**
+ * @brief Final teardown of the process-wide default provider libCtx (g_libCtx).
+ *
+ * @attention Must not race with any crypto operation: providers are freed
+ *            unconditionally, ignoring reference counts.
+ */
 void CRYPT_EAL_FreePreDefinedProviders(void);
 
 int32_t CRYPT_EAL_DefaultProvInit(CRYPT_EAL_ProvMgrCtx *mgrCtx, BSL_Param *param,

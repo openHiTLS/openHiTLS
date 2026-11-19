@@ -21,6 +21,7 @@
 #include "crypt_errno.h"
 #include "crypt_eal_init.h"
 #include "crypt_eal_provider.h"
+#include "crypt_eal_rand.h"
 #include "crypt_provider_local.h"
 #include "crypt_eal_implprovider.h"
 #include "crypt_provider.h"
@@ -151,15 +152,15 @@ void SDV_CRYPTO_PROVIDER_LOAD_TC001(char *path, char *path2, char *test1, char *
     ASSERT_EQ(BSL_LIST_COUNT(libCtx->providers), 2);
     CRYPT_EAL_ProvMgrCtx *providerMgr = (CRYPT_EAL_ProvMgrCtx *)BSL_LIST_FIRST_ELMT(libCtx->providers);
     ASSERT_TRUE(providerMgr != NULL);
-    ASSERT_EQ(providerMgr->ref.count, PROVIDER_LOAD_SAIZE_2);
+    ASSERT_EQ(providerMgr->loadRefs, PROVIDER_LOAD_SAIZE_2);
 
     providerMgr = (CRYPT_EAL_ProvMgrCtx *)BSL_LIST_LAST_ELMT(libCtx->providers);
     ASSERT_TRUE(providerMgr != NULL);
-    ASSERT_EQ(providerMgr->ref.count, PROVIDER_LOAD_SAIZE_2);
+    ASSERT_EQ(providerMgr->loadRefs, PROVIDER_LOAD_SAIZE_2);
 
     // Test if loading the same name with different cmd is successful and not recognized as the same provider
     ASSERT_EQ(CRYPT_EAL_ProviderLoad(libCtx, cmd2, test1, NULL, NULL), CRYPT_SUCCESS);
-    ASSERT_EQ(providerMgr->ref.count, PROVIDER_LOAD_SAIZE_2);
+    ASSERT_EQ(providerMgr->loadRefs, PROVIDER_LOAD_SAIZE_2);
 
     // Test if loading the same provider name with the same cmd from different paths is successful
     // and will recognized as the same provider。
@@ -167,7 +168,7 @@ void SDV_CRYPTO_PROVIDER_LOAD_TC001(char *path, char *path2, char *test1, char *
     ASSERT_EQ(CRYPT_EAL_ProviderLoad(libCtx, cmd, test1, NULL, NULL), CRYPT_SUCCESS);
     providerMgr = (CRYPT_EAL_ProvMgrCtx *)BSL_LIST_FIRST_ELMT(libCtx->providers);
     ASSERT_TRUE(providerMgr != NULL);
-    ASSERT_EQ(providerMgr->ref.count, PROVIDER_LOAD_SAIZE_2 + 1);
+    ASSERT_EQ(providerMgr->loadRefs, PROVIDER_LOAD_SAIZE_2 + 1);
 
     ASSERT_EQ(CRYPT_EAL_ProviderSetLoadPath(libCtx, path), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_ProviderLoad(libCtx, cmd, test2, NULL, NULL), CRYPT_SUCCESS);
@@ -1283,4 +1284,379 @@ EXIT:
 #endif
 }
 
+/* END_CASE */
+
+/**
+ * @test SDV_CRYPTO_PROVIDER_DEFAULT_RAND_LIB_CTX_TC001
+ * @title Default provider random state isolation between library contexts
+ * @brief
+ *    Load two default providers, free one context, and generate random bytes with the other context.
+ * @expect
+ *    The remaining context initializes and uses its default random provider successfully.
+ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_PROVIDER_DEFAULT_RAND_LIB_CTX_TC001(void)
+{
+#if !defined(HITLS_CRYPTO_PROVIDER) || !defined(HITLS_CRYPTO_ENTROPY_DEFAULT) || !defined(HITLS_CRYPTO_DRBG_HASH) || \
+    !defined(HITLS_CRYPTO_SHA256)
+    SKIP_TEST();
+#else
+    uint8_t random[32] = {0};
+    CRYPT_EAL_LibCtx *first = CRYPT_EAL_LibCtxNew();
+    CRYPT_EAL_LibCtx *second = CRYPT_EAL_LibCtxNew();
+    ASSERT_TRUE(first != NULL);
+    ASSERT_TRUE(second != NULL);
+    ASSERT_EQ(CRYPT_EAL_ProviderLoad(first, BSL_SAL_LIB_FMT_OFF, "default", NULL, NULL), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_ProviderLoad(second, BSL_SAL_LIB_FMT_OFF, "default", NULL, NULL), CRYPT_SUCCESS);
+    CRYPT_EAL_LibCtxFree(second);
+    second = NULL;
+    ASSERT_EQ(CRYPT_EAL_ProviderRandInitCtx(first, CRYPT_RAND_SHA256, "provider=default", NULL, 0, NULL),
+              CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_RandbytesEx(first, random, sizeof(random)), CRYPT_SUCCESS);
+    ASSERT_TRUE(TestIsErrStackEmpty());
+EXIT:
+    CRYPT_EAL_RandDeinitEx(first);
+    CRYPT_EAL_LibCtxFree(first);
+    CRYPT_EAL_LibCtxFree(second);
+#endif
+}
+/* END_CASE */
+
+#if defined(HITLS_CRYPTO_PROVIDER) && defined(HITLS_BSL_SAL_DL)
+typedef struct {
+    CRYPT_EAL_LibCtx *libCtx;
+    bool unloaded;
+    bool stillLoaded;
+    int32_t isLoadedRet;
+} UnloadDuringWalkArgs;
+
+static int32_t UnloadDuringWalkCb(CRYPT_EAL_ProvMgrCtx *provMgr, void *args)
+{
+    (void)provMgr;
+    UnloadDuringWalkArgs *walkArgs = (UnloadDuringWalkArgs *)args;
+    walkArgs->unloaded = CRYPT_EAL_ProviderUnload(walkArgs->libCtx, BSL_SAL_LIB_FMT_OFF, "default") == CRYPT_SUCCESS;
+    walkArgs->isLoadedRet =
+        CRYPT_EAL_ProviderIsLoaded(walkArgs->libCtx, BSL_SAL_LIB_FMT_OFF, "default", &walkArgs->stillLoaded);
+    return CRYPT_SUCCESS;
+}
+#endif
+
+/**
+ * @test SDV_CRYPTO_PROVIDER_UNLOAD_DURING_PROCESS_TC001
+ * @title Unload during traversal keeps the provider unfindable
+ * @brief
+ *    Drop the last load reference of the default provider from inside a
+ *    ProviderProcessAll callback, then query the provider load state.
+ * @expect
+ *    The unload succeeds, the traversal returns CRYPT_SUCCESS, the provider is
+ *    not findable after its load references reach zero, and it can be loaded again.
+ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_PROVIDER_UNLOAD_DURING_PROCESS_TC001(void)
+{
+#if !defined(HITLS_CRYPTO_PROVIDER) || !defined(HITLS_BSL_SAL_DL)
+    SKIP_TEST();
+#else
+    bool loaded = true;
+    UnloadDuringWalkArgs args = {0};
+    args.libCtx = CRYPT_EAL_LibCtxNew();
+    ASSERT_TRUE(args.libCtx != NULL);
+    ASSERT_EQ(CRYPT_EAL_ProviderLoad(args.libCtx, BSL_SAL_LIB_FMT_OFF, "default", NULL, NULL), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_ProviderProcessAll(args.libCtx, UnloadDuringWalkCb, &args), CRYPT_SUCCESS);
+    ASSERT_TRUE(args.unloaded);
+    ASSERT_EQ(args.isLoadedRet, CRYPT_SUCCESS);
+    ASSERT_TRUE(!args.stillLoaded);
+    ASSERT_EQ(CRYPT_EAL_ProviderIsLoaded(args.libCtx, BSL_SAL_LIB_FMT_OFF, "default", &loaded), CRYPT_SUCCESS);
+    ASSERT_TRUE(!loaded);
+    ASSERT_EQ(CRYPT_EAL_ProviderLoad(args.libCtx, BSL_SAL_LIB_FMT_OFF, "default", NULL, NULL), CRYPT_SUCCESS);
+    ASSERT_TRUE(TestIsErrStackEmpty());
+EXIT:
+    CRYPT_EAL_LibCtxFree(args.libCtx);
+#endif
+}
+/* END_CASE */
+
+#if defined(HITLS_CRYPTO_PROVIDER) && defined(HITLS_BSL_SAL_DL)
+#define WALK_PROV_CTRL_TEST_CMD 100
+
+static int32_t g_walkProvDestructs = 0;
+static bool g_walkProvCtrlUsed = false;
+
+static void WalkProvFree(void *provCtx)
+{
+    (void)provCtx;
+    g_walkProvDestructs++;
+}
+
+static int32_t WalkProvQuery(void *provCtx, int32_t operaId, CRYPT_EAL_AlgInfo **algInfos)
+{
+    (void)provCtx;
+    (void)operaId;
+    *algInfos = NULL;
+    return CRYPT_SUCCESS;
+}
+
+static int32_t WalkProvCtrl(void *provCtx, int32_t cmd, void *val, uint32_t valLen)
+{
+    (void)provCtx;
+    (void)val;
+    (void)valLen;
+    if (cmd == WALK_PROV_CTRL_TEST_CMD) {
+        g_walkProvCtrlUsed = true;
+    }
+    return CRYPT_SUCCESS;
+}
+
+static CRYPT_EAL_Func g_walkProvOutFuncs[] = {{CRYPT_EAL_PROVCB_QUERY, WalkProvQuery},
+                                              {CRYPT_EAL_PROVCB_FREE, WalkProvFree},
+                                              {CRYPT_EAL_PROVCB_CTRL, WalkProvCtrl},
+                                              CRYPT_EAL_FUNC_END};
+
+static int32_t WalkProvInit(CRYPT_EAL_ProvMgrCtx *mgrCtx, BSL_Param *param, CRYPT_EAL_Func *capFuncs,
+                            CRYPT_EAL_Func **outFuncs, void **provCtx)
+{
+    (void)mgrCtx;
+    (void)param;
+    (void)capFuncs;
+    *outFuncs = g_walkProvOutFuncs;
+    *provCtx = NULL;
+    return CRYPT_SUCCESS;
+}
+
+typedef struct {
+    CRYPT_EAL_LibCtx *libCtx;
+    bool unloaded;
+    bool aliveAfterUnload;
+    int32_t destructsInCb;
+} WalkLifetimeArgs;
+
+static int32_t UnloadWalkLifetimeCb(CRYPT_EAL_ProvMgrCtx *provMgr, void *args)
+{
+    WalkLifetimeArgs *walkArgs = (WalkLifetimeArgs *)args;
+    walkArgs->unloaded = CRYPT_EAL_ProviderUnload(walkArgs->libCtx, BSL_SAL_LIB_FMT_OFF, "walk_test") == CRYPT_SUCCESS;
+    g_walkProvCtrlUsed = false;
+    walkArgs->aliveAfterUnload =
+        CRYPT_EAL_ProviderCtrl(provMgr, WALK_PROV_CTRL_TEST_CMD, NULL, 0) == CRYPT_SUCCESS && g_walkProvCtrlUsed;
+    walkArgs->destructsInCb = g_walkProvDestructs;
+    return CRYPT_SUCCESS;
+}
+#endif
+
+/**
+ * @test SDV_CRYPTO_PROVIDER_UNLOAD_DURING_PROCESS_TC002
+ * @title Provider stays alive during traversal and is destroyed once after it
+ * @brief
+ *    Register a provider with an observable destructor, unload it from inside
+ *    a ProviderProcessAll callback, and call its control method after the unload.
+ * @expect
+ *    The provider answers the control call after its unload, is not destroyed
+ *    while the traversal runs, is destroyed exactly once when the traversal
+ *    ends, and a register-unload cycle destroys it once more.
+ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_PROVIDER_UNLOAD_DURING_PROCESS_TC002(void)
+{
+#if !defined(HITLS_CRYPTO_PROVIDER) || !defined(HITLS_BSL_SAL_DL)
+    SKIP_TEST();
+#else
+    WalkLifetimeArgs args = {0};
+    args.libCtx = CRYPT_EAL_LibCtxNew();
+    ASSERT_TRUE(args.libCtx != NULL);
+    ASSERT_EQ(CRYPT_EAL_ProviderRegister(args.libCtx, "walk_test", WalkProvInit, NULL, NULL), CRYPT_SUCCESS);
+    g_walkProvDestructs = 0;
+    g_walkProvCtrlUsed = false;
+    ASSERT_EQ(CRYPT_EAL_ProviderProcessAll(args.libCtx, UnloadWalkLifetimeCb, &args), CRYPT_SUCCESS);
+    ASSERT_TRUE(args.unloaded);
+    ASSERT_TRUE(args.aliveAfterUnload);
+    ASSERT_EQ(args.destructsInCb, 0);
+    ASSERT_EQ(g_walkProvDestructs, 1);
+    ASSERT_EQ(CRYPT_EAL_ProviderRegister(args.libCtx, "walk_test", WalkProvInit, NULL, NULL), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_ProviderUnload(args.libCtx, BSL_SAL_LIB_FMT_OFF, "walk_test"), CRYPT_SUCCESS);
+    ASSERT_EQ(g_walkProvDestructs, 2);
+    ASSERT_TRUE(TestIsErrStackEmpty());
+EXIT:
+    CRYPT_EAL_LibCtxFree(args.libCtx);
+#endif
+}
+/* END_CASE */
+
+#if defined(HITLS_CRYPTO_PROVIDER) && defined(HITLS_BSL_SAL_DL)
+static int32_t NoopWalkCb(CRYPT_EAL_ProvMgrCtx *provMgr, void *args)
+{
+    (void)provMgr;
+    (void)args;
+    return CRYPT_SUCCESS;
+}
+#endif
+
+/**
+ * @test SDV_CRYPTO_PROVIDER_PROCESS_CLEANUP_LOCK_FAIL_TC001
+ * @title Cleanup lock failure keeps references and reports the error
+ * @brief
+ *    Fail the write-lock call that drops the traversal references after the
+ *    callbacks, then check the provider state and a later traversal.
+ * @expect
+ *    ProviderProcessAll returns the lock error, the provider stays loaded and
+ *    usable, and a traversal without the failure works again.
+ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_PROVIDER_PROCESS_CLEANUP_LOCK_FAIL_TC001(void)
+{
+#if !defined(HITLS_CRYPTO_PROVIDER) || !defined(HITLS_BSL_SAL_DL)
+    SKIP_TEST();
+#else
+    bool loaded = false;
+    int32_t ret = CRYPT_SUCCESS;
+    CRYPT_EAL_LibCtx *libCtx = NULL;
+    TestMemInit();
+    // Install the callbacks before the libCtx: without SAL lock support the context lock would be NULL.
+    ASSERT_EQ(TestThreadLockFailureStart(), BSL_SUCCESS);
+    libCtx = CRYPT_EAL_LibCtxNew();
+    ASSERT_TRUE(libCtx != NULL);
+    ASSERT_EQ(CRYPT_EAL_ProviderRegister(libCtx, "walk_test", WalkProvInit, NULL, NULL), CRYPT_SUCCESS);
+    // Write-lock call zero takes the snapshot, call one is the cleanup lock.
+    TestThreadLockFailureSetWriteFailIndex(1);
+    ret = CRYPT_EAL_ProviderProcessAll(libCtx, NoopWalkCb, NULL);
+    TestThreadLockFailureSetWriteFailIndex(-1);
+    ASSERT_EQ(ret, BSL_SAL_ERR_BAD_PARAM);
+    TestErrClear();
+
+    ASSERT_EQ(CRYPT_EAL_ProviderIsLoaded(libCtx, BSL_SAL_LIB_FMT_OFF, "walk_test", &loaded), CRYPT_SUCCESS);
+    ASSERT_TRUE(loaded);
+    ASSERT_EQ(CRYPT_EAL_ProviderProcessAll(libCtx, NoopWalkCb, NULL), CRYPT_SUCCESS);
+    ASSERT_TRUE(TestIsErrStackEmpty());
+EXIT:
+    TestThreadLockFailureSetWriteFailIndex(-1);
+    // Free the libCtx while the callbacks still run, then remove them.
+    CRYPT_EAL_LibCtxFree(libCtx);
+    TestThreadLockFailureStop();
+#endif
+}
+/* END_CASE */
+
+#if defined(HITLS_CRYPTO_PROVIDER) && defined(HITLS_BSL_SAL_DL)
+typedef struct {
+    CRYPT_EAL_LibCtx *libCtx;
+    int32_t result;
+    bool aliveAfterUnload;
+    int32_t destructsInCb;
+} ConcurrentWalkArg;
+
+static pthread_mutex_t g_concMutex = PTHREAD_MUTEX_INITIALIZER;
+static pthread_cond_t g_concCond = PTHREAD_COND_INITIALIZER;
+static bool g_concCbReady = false;
+static bool g_concChurnDone = false;
+
+static void ConcurrentWaitForFlag(bool *flag)
+{
+    (void)pthread_mutex_lock(&g_concMutex);
+    while (*flag == false) {
+        (void)pthread_cond_wait(&g_concCond, &g_concMutex);
+    }
+    (void)pthread_mutex_unlock(&g_concMutex);
+}
+
+static void ConcurrentSetFlag(bool *flag)
+{
+    (void)pthread_mutex_lock(&g_concMutex);
+    *flag = true;
+    (void)pthread_cond_broadcast(&g_concCond);
+    (void)pthread_mutex_unlock(&g_concMutex);
+}
+
+// Publish that the snapshot is taken, wait for the other thread to drop the last
+// load reference, then prove the provider is still usable.
+static int32_t ConcurrentUnloadWalkCb(CRYPT_EAL_ProvMgrCtx *provMgr, void *args)
+{
+    ConcurrentWalkArg *walkArg = (ConcurrentWalkArg *)args;
+    ConcurrentSetFlag(&g_concCbReady);
+    ConcurrentWaitForFlag(&g_concChurnDone);
+    g_walkProvCtrlUsed = false;
+    walkArg->aliveAfterUnload =
+        CRYPT_EAL_ProviderCtrl(provMgr, WALK_PROV_CTRL_TEST_CMD, NULL, 0) == CRYPT_SUCCESS && g_walkProvCtrlUsed;
+    walkArg->destructsInCb = g_walkProvDestructs;
+    return CRYPT_SUCCESS;
+}
+
+static void *ConcurrentWalkThread(void *arg)
+{
+    ConcurrentWalkArg *walkArg = (ConcurrentWalkArg *)arg;
+    walkArg->result = CRYPT_EAL_ProviderProcessAll(walkArg->libCtx, ConcurrentUnloadWalkCb, walkArg);
+    return NULL;
+}
+
+static void *ConcurrentUnloadThread(void *arg)
+{
+    ConcurrentWalkArg *churnArg = (ConcurrentWalkArg *)arg;
+    ConcurrentWaitForFlag(&g_concCbReady);
+    churnArg->result = CRYPT_EAL_ProviderUnload(churnArg->libCtx, BSL_SAL_LIB_FMT_OFF, "walk_test");
+    ConcurrentSetFlag(&g_concChurnDone);
+    return NULL;
+}
+#endif
+
+/**
+ * @test SDV_CRYPTO_PROVIDER_CONCURRENT_PROCESS_TC001
+ * @title Traversal keeps the provider alive across a concurrent final unload
+ * @brief
+ *    Run ProviderProcessAll in one thread; its callback waits until another
+ *    thread unloads the provider, then calls the provider control method.
+ * @expect
+ *    The provider answers the control call after the unload, is not destroyed
+ *    during the traversal, and is destroyed exactly once when it ends.
+ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_PROVIDER_CONCURRENT_PROCESS_TC001(void)
+{
+#if !defined(HITLS_CRYPTO_PROVIDER) || !defined(HITLS_BSL_SAL_DL)
+    SKIP_TEST();
+#else
+    bool loaded = true;
+    pthread_t walkThread;
+    pthread_t churnThread;
+    ConcurrentWalkArg walkArg = {0};
+    ConcurrentWalkArg churnArg = {0};
+    CRYPT_EAL_LibCtx *libCtx = CRYPT_EAL_LibCtxNew();
+    ASSERT_TRUE(libCtx != NULL);
+    ASSERT_EQ(CRYPT_EAL_ProviderRegister(libCtx, "walk_test", WalkProvInit, NULL, NULL), CRYPT_SUCCESS);
+    g_walkProvDestructs = 0;
+    g_walkProvCtrlUsed = false;
+    g_concCbReady = false;
+    g_concChurnDone = false;
+    walkArg.libCtx = libCtx;
+    walkArg.result = CRYPT_NOT_SUPPORT;
+    churnArg.libCtx = libCtx;
+    churnArg.result = CRYPT_NOT_SUPPORT;
+
+    int32_t ret = pthread_create(&walkThread, NULL, ConcurrentWalkThread, &walkArg);
+    bool walkStarted = ret == 0;
+    int32_t churnRet = 0;
+    if (walkStarted) {
+        churnRet = pthread_create(&churnThread, NULL, ConcurrentUnloadThread, &churnArg);
+        if (churnRet != 0) {
+            // Release the waiting callback so the walker exits before the cleanup.
+            ConcurrentSetFlag(&g_concChurnDone);
+        }
+    }
+    if (walkStarted) {
+        ASSERT_EQ(pthread_join(walkThread, NULL), 0);
+    }
+    if (walkStarted && churnRet == 0) {
+        ASSERT_EQ(pthread_join(churnThread, NULL), 0);
+    }
+    ASSERT_EQ(ret, 0);
+    ASSERT_EQ(churnRet, 0);
+    ASSERT_EQ(walkArg.result, CRYPT_SUCCESS);
+    ASSERT_EQ(churnArg.result, CRYPT_SUCCESS);
+    ASSERT_TRUE(walkArg.aliveAfterUnload);
+    ASSERT_EQ(walkArg.destructsInCb, 0);
+    ASSERT_EQ(g_walkProvDestructs, 1);
+    TestErrClear();
+    ASSERT_EQ(CRYPT_EAL_ProviderIsLoaded(libCtx, BSL_SAL_LIB_FMT_OFF, "walk_test", &loaded), CRYPT_SUCCESS);
+    ASSERT_TRUE(!loaded);
+    ASSERT_TRUE(TestIsErrStackEmpty());
+EXIT:
+    CRYPT_EAL_LibCtxFree(libCtx);
+#endif
+}
 /* END_CASE */

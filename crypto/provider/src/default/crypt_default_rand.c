@@ -30,25 +30,17 @@
 #include "crypt_default_provider.h"
 
 #ifdef HITLS_CRYPTO_ENTROPY
-static int32_t GetDefaultSeed(BSL_Param *param)
+static void GetDefaultSeed(const CRYPT_EAL_DefProvCtx *provCtx, BSL_Param *param)
 {
-    void *defaultSeedCtx = NULL;
-    CRYPT_RandSeedMethod *defaultSeedMethod = NULL;
-    int32_t ret = CRYPT_EAL_ProviderGetSeed(&defaultSeedMethod, &defaultSeedCtx);
-    if (ret != CRYPT_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
-        return ret;
-    }
-    (void)BSL_PARAM_InitValue(&param[0], CRYPT_PARAM_RAND_SEEDCTX, BSL_PARAM_TYPE_CTX_PTR, defaultSeedCtx, 0);
+    (void)BSL_PARAM_InitValue(&param[0], CRYPT_PARAM_RAND_SEEDCTX, BSL_PARAM_TYPE_CTX_PTR, provCtx->seedCtx, 0);
     (void)BSL_PARAM_InitValue(&param[1], CRYPT_PARAM_RAND_SEED_GETENTROPY, BSL_PARAM_TYPE_FUNC_PTR,
-        defaultSeedMethod->getEntropy, 0);
+        provCtx->seedMethod.getEntropy, 0);
     (void)BSL_PARAM_InitValue(&param[2], CRYPT_PARAM_RAND_SEED_CLEANENTROPY, BSL_PARAM_TYPE_FUNC_PTR,
-        defaultSeedMethod->cleanEntropy, 0);
+        provCtx->seedMethod.cleanEntropy, 0);
     (void)BSL_PARAM_InitValue(&param[3], CRYPT_PARAM_RAND_SEED_GETNONCE, BSL_PARAM_TYPE_FUNC_PTR,
-        defaultSeedMethod->getNonce, 0);
+        provCtx->seedMethod.getNonce, 0);
     (void)BSL_PARAM_InitValue(&param[4], CRYPT_PARAM_RAND_SEED_CLEANNONCE, BSL_PARAM_TYPE_FUNC_PTR,
-        defaultSeedMethod->cleanNonce, 0);
-    return CRYPT_SUCCESS;
+        provCtx->seedMethod.cleanNonce, 0);
 }
 #endif
 
@@ -80,11 +72,12 @@ static void *DRBG_DefRandNewCtx(CRYPT_EAL_DefProvCtx *provCtx, int32_t algId, BS
     }
     if (param == NULL || getEnt == NULL) {
 #ifdef HITLS_CRYPTO_ENTROPY
-        BSL_Param defaultParam[6] = {BSL_PARAM_END};
-        if (GetDefaultSeed(defaultParam) != CRYPT_SUCCESS) {
+        if (provCtx == NULL) {
             BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
             return NULL;
         }
+        BSL_Param defaultParam[6] = {BSL_PARAM_END};
+        GetDefaultSeed(provCtx, defaultParam);
         return DRBG_NewEx(libCtx, algId, defaultParam);
 #else
         BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);

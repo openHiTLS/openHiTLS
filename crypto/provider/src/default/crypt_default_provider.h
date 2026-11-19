@@ -33,9 +33,11 @@ extern "C" {
 
 typedef struct EalDefProvCtx {
     void *libCtx;
+#ifdef HITLS_CRYPTO_ENTROPY
+    void *seedCtx;
+    CRYPT_RandSeedMethod seedMethod;
+#endif
 } CRYPT_EAL_DefProvCtx;
-
-int32_t CRYPT_EAL_ProviderGetSeed(CRYPT_RandSeedMethod **method, void **seedCtx);
 
 #ifdef __cplusplus
 }

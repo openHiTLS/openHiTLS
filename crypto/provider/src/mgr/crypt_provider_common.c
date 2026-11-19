@@ -225,8 +225,6 @@ void CRYPT_EAL_ProviderMgrCtxFree(CRYPT_EAL_ProvMgrCtx  *ctx)
     BSL_SAL_FREE(ctx->providerName);
     BSL_SAL_FREE(ctx->providerPath);
 
-    BSL_SAL_ReferencesFree(&(ctx->ref));
-
 #ifdef HITLS_BSL_SAL_DL
     if (ctx->handle != NULL) {
         BSL_SAL_UnLoadLib(ctx->handle);
@@ -265,15 +263,8 @@ int32_t CRYPT_EAL_AddNewProvMgrCtx(CRYPT_EAL_LibCtx *libCtx, const char *provide
             return CRYPT_MEM_ALLOC_FAIL;
         }
     }
-    int32_t ret = BSL_SAL_ReferencesInit(&mgrCtx->ref);
-    if (ret != BSL_SUCCESS) {
-        BSL_SAL_FREE(mgrCtx->providerName);
-        BSL_SAL_FREE(mgrCtx->providerPath);
-        BSL_SAL_Free(mgrCtx);
-        BSL_ERR_PUSH_ERROR(ret);
-        return ret;
-    }
-    ret = CRYPT_EAL_InitProviderMethod(mgrCtx, param, init);
+    mgrCtx->loadRefs = 1; // the load reference held by the list entry
+    int32_t ret = CRYPT_EAL_InitProviderMethod(mgrCtx, param, init);
     if (ret != BSL_SUCCESS) {
         CRYPT_EAL_ProviderMgrCtxFree(mgrCtx);
         return ret;

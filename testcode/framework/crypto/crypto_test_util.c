@@ -62,7 +62,9 @@ typedef struct {
 
 static uint8_t g_testPoisonLock;
 static int32_t g_testThreadLockFailIndex = -1;
+static int32_t g_testThreadLockWriteFailIndex = -1;
 static uint32_t g_testThreadLockNewCalls = 0;
+static uint32_t g_testThreadLockWriteCalls = 0;
 static uint32_t g_testPoisonWriteCalls = 0;
 static uint32_t g_testPoisonFreeCalls = 0;
 
@@ -111,6 +113,10 @@ static int32_t TestThreadReadLock(BSL_SAL_ThreadLockHandle lock)
 
 static int32_t TestThreadWriteLock(BSL_SAL_ThreadLockHandle lock)
 {
+    uint32_t callIndex = g_testThreadLockWriteCalls++;
+    if (g_testThreadLockWriteFailIndex >= 0 && callIndex == (uint32_t)g_testThreadLockWriteFailIndex) {
+        return BSL_SAL_ERR_BAD_PARAM;
+    }
     if (lock == &g_testPoisonLock) {
         g_testPoisonWriteCalls++;
         return BSL_SAL_ERR_BAD_PARAM;
@@ -132,7 +138,9 @@ static int32_t TestThreadUnlock(BSL_SAL_ThreadLockHandle lock)
 int32_t TestThreadLockFailureStart(void)
 {
     g_testThreadLockFailIndex = -1;
+    g_testThreadLockWriteFailIndex = -1;
     g_testThreadLockNewCalls = 0;
+    g_testThreadLockWriteCalls = 0;
     g_testPoisonWriteCalls = 0;
     g_testPoisonFreeCalls = 0;
     int32_t ret = BSL_SAL_CallBack_Ctrl(BSL_SAL_THREAD_LOCK_NEW_CB_FUNC, TestThreadLockNew);
@@ -160,6 +168,12 @@ void TestThreadLockFailureSetIndex(int32_t failIndex)
     g_testThreadLockNewCalls = 0;
 }
 
+void TestThreadLockFailureSetWriteFailIndex(int32_t failIndex)
+{
+    g_testThreadLockWriteFailIndex = failIndex;
+    g_testThreadLockWriteCalls = 0;
+}
+
 uint32_t TestThreadLockFailureGetWriteCalls(void)
 {
     return g_testPoisonWriteCalls;
@@ -172,6 +186,12 @@ uint32_t TestThreadLockFailureGetFreeCalls(void)
 
 void TestThreadLockFailureStop(void)
 {
+    g_testThreadLockFailIndex = -1;
+    g_testThreadLockNewCalls = 0;
+    g_testThreadLockWriteFailIndex = -1;
+    g_testThreadLockWriteCalls = 0;
+    g_testPoisonWriteCalls = 0;
+    g_testPoisonFreeCalls = 0;
     (void)BSL_SAL_CallBack_Ctrl(BSL_SAL_THREAD_LOCK_NEW_CB_FUNC, NULL);
     (void)BSL_SAL_CallBack_Ctrl(BSL_SAL_THREAD_LOCK_FREE_CB_FUNC, NULL);
     (void)BSL_SAL_CallBack_Ctrl(BSL_SAL_THREAD_LOCK_READ_LOCK_CB_FUNC, NULL);
