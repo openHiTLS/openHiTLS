@@ -65,12 +65,11 @@
 #define OCSP_CLIENT_TIMEOUT_SEC 15
 /* Clock-skew tolerance for the thisUpdate/nextUpdate checks. */
 #define OCSP_CLIENT_VALIDITY_DRIFT_SEC 300
-/* Maximum accepted age of thisUpdate. Real responders refresh thisUpdate every
- * ~6-24 h, so a fixed limit can reject a still-valid response; a negative value
- * disables the maxage check (expiration is still enforced through nextUpdate).
- * Note: 0 is not "disabled" -- HITLS_OCSP_CheckValidity then requires thisUpdate
- * to be no earlier than now. */
-#define OCSP_CLIENT_VALIDITY_MAXAGE_SEC (-1)
+/* maxage fallback for responses without the optional nextUpdate; when
+ * nextUpdate is present it already bounds freshness. 0 is not "disabled": it
+ * requires thisUpdate to be no earlier than now. */
+#define OCSP_CLIENT_VALIDITY_MAXAGE_SEC      (48 * 60 * 60)
+#define OCSP_CLIENT_VALIDITY_MAXAGE_DISABLED (-1)
 
 /* Preset certificate chain (PEM, from the demo dir *.crt files):
  * leaf "*.openhitls.net" (AIA OCSP URL http://status.geotrust.com)
@@ -587,6 +586,12 @@ int main(int argc, char *argv[])
         goto EXIT;
     }
     printf("[6] nonce check    : %s\n", OcspClientNonceStr(nonceStatus));
+    if (nonceStatus == HITLS_OCSP_NONCE_NOT_EQUAL || nonceStatus == HITLS_OCSP_NONCE_RESP_ONLY) {
+        /* The return code only says the comparison ran; a foreign nonce means
+         * the response is not ours. "request only" stays acceptable. */
+        printf("    nonce does not match the request; the response is not ours.\n");
+        verifyFailed = true;
+    }
 
     /* Verify the SingleResponse answers the requested CertID. */
     HITLS_OCSP_SingleReq *reqSr = NULL;
@@ -608,8 +613,15 @@ int main(int argc, char *argv[])
     }
     printf("[8] cert status    : %s\n", HITLS_OCSP_CertStatusToStr(certStatus));
 
-    int32_t valRet = HITLS_OCSP_CheckValidity(single, OCSP_CLIENT_VALIDITY_DRIFT_SEC, OCSP_CLIENT_VALIDITY_MAXAGE_SEC);
-    printf("[9] validity check : %s (ret=0x%x)\n", valRet == HITLS_PKI_SUCCESS ? "ok" : "failed", (unsigned)valRet);
+    /* nextUpdate is optional: disable maxage when present, else use the fallback. */
+    BSL_TIME nextUpdate = {0};
+    int32_t nextRet =
+        HITLS_OCSP_SingleRespCtrl(single, HITLS_OCSP_SINGLERESP_GET_NEXT_UPDATE, &nextUpdate, sizeof(nextUpdate));
+    int64_t maxageSec =
+        (nextRet == HITLS_PKI_SUCCESS) ? OCSP_CLIENT_VALIDITY_MAXAGE_DISABLED : OCSP_CLIENT_VALIDITY_MAXAGE_SEC;
+    int32_t valRet = HITLS_OCSP_CheckValidity(single, OCSP_CLIENT_VALIDITY_DRIFT_SEC, maxageSec);
+    printf("[9] validity check : %s (ret=0x%x, maxAge=%lld)\n", valRet == HITLS_PKI_SUCCESS ? "ok" : "failed",
+           (unsigned)valRet, (long long)maxageSec);
     if (valRet != HITLS_PKI_SUCCESS) {
         verifyFailed = true;
     }

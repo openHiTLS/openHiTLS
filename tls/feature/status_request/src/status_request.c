@@ -231,16 +231,25 @@ int32_t ParseServerStatusRequest(ParsePacket *pkt)
 #endif /* HITLS_TLS_HOST_CLIENT */
 
 #ifdef HITLS_TLS_HOST_SERVER
-/* RFC 6960 section 4.2.1: ResponderID is a CHOICE of byName [1] Name (0xA1,
- * constructed) and byKey [2] KeyHash (0xA2, primitive), both DER encoded.
- * The status_request feature does not consume the value, so only the RFC 6960
- * content constraints are checked with the public ASN.1 decoder: a known tag,
- * a definite length, an exact fit, and -- matching the OCSP module's own
- * ResponderID parser (OcspParseResponderID) -- byKey must be exactly one
- * OCTET STRING of 20 bytes (KeyHash is the SHA-1 hash of the responder key)
- * and byName must be exactly one Name SEQUENCE. This rejects truncated,
- * oversized or non-DER bodies without pulling full ASN.1 decoding into the
- * status_request feature. */
+/* DER tag/length reader that also enforces the minimal length encoding
+ * (X.690 10.1), which BSL_ASN1_DecodeLen does not check. */
+static bool DecodeResponderIdTagLen(uint8_t tag, uint8_t **der, uint32_t *remaining, uint32_t *contentLen)
+{
+    const uint8_t *start = *der;
+    if (BSL_ASN1_DecodeTagLen(tag, der, remaining, contentLen) != BSL_SUCCESS) {
+        return false;
+    }
+    uint8_t lenOctet = start[1];
+    /* Long form (0x81..) for a value below 128, or a leading zero length
+     * octet, is not DER (X.690 10.1). */
+    if (lenOctet >= 0x81 && (*contentLen < 0x80 || start[2] == 0)) {
+        return false;
+    }
+    return true;
+}
+
+/* RFC 6066 section 8: ResponderID is DER. byKey [2] is exactly one 20-byte
+ * OCTET STRING (SHA-1 KeyHash), byName [1] exactly one Name SEQUENCE. */
 static bool IsValidResponderIdDer(const uint8_t *der, uint32_t len)
 {
     if (der == NULL || len == 0) {
@@ -255,15 +264,15 @@ static bool IsValidResponderIdDer(const uint8_t *der, uint32_t len)
         return false;
     }
     /* The wrapper TLV must fill the element exactly (DER has no trailing bytes). */
-    if (BSL_ASN1_DecodeTagLen(tag, &p, &remaining, &contentLen) != BSL_SUCCESS || remaining != contentLen) {
+    if (!DecodeResponderIdTagLen(tag, &p, &remaining, &contentLen) || remaining != contentLen) {
         return false;
     }
     if (tag == (BSL_ASN1_CLASS_CTX_SPECIFIC | BSL_ASN1_TAG_CONSTRUCTED | 2)) {
         /* byKey [2] KeyHash: the content must be exactly one OCTET STRING whose
          * value is 20 bytes (KeyHash is a SHA-1 hash, RFC 6066 section 8). */
         uint32_t keyLen = 0;
-        if (BSL_ASN1_DecodeTagLen(BSL_ASN1_TAG_OCTETSTRING, &p, &remaining, &keyLen) != BSL_SUCCESS ||
-            remaining != keyLen || keyLen != STATUS_REQ_SHA1_DIGEST_SIZE) {
+        if (!DecodeResponderIdTagLen(BSL_ASN1_TAG_OCTETSTRING, &p, &remaining, &keyLen) || remaining != keyLen ||
+            keyLen != STATUS_REQ_SHA1_DIGEST_SIZE) {
             return false;
         }
         return true;
@@ -272,8 +281,8 @@ static bool IsValidResponderIdDer(const uint8_t *der, uint32_t len)
      * valid RDNSequence (RFC 5280 section 4.1.2.4), parsed with the X509 name
      * parser. */
     uint32_t nameLen = 0;
-    if (BSL_ASN1_DecodeTagLen(BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE, &p, &remaining, &nameLen) !=
-        BSL_SUCCESS || remaining != nameLen) {
+    if (!DecodeResponderIdTagLen(BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE, &p, &remaining, &nameLen) ||
+        remaining != nameLen) {
         return false;
     }
     return SAL_CERT_StatusReqCheckByName(p, nameLen);
@@ -293,10 +302,9 @@ int32_t ParseClientStatusRequest(ParsePacket *pkt, ClientHelloMsg *msg)
         /* DTLS/TLCP do not carry status_request; ignore the offer. */
         return HITLS_SUCCESS;
     }
-    /* RFC 6066 section 8: the body is status_type(1) + responder_id_list
-     * length(2) + request_extensions length(2). A shorter body cannot be
-     * decoded and aborts with decode_error. */
-    if (pkt->bufLen < (sizeof(uint8_t) + sizeof(uint16_t) * 2)) {
+    /* status_type first: the OCSP layout rules below do not apply to an
+     * unsupported type, which is ignored whatever the body length. */
+    if (pkt->bufLen == 0) {
         return ParseErrorProcess(pkt->ctx, HITLS_PARSE_INVALID_MSG_LEN, BINLOG_ID17442,
                                  BINGLOG_STR("status_request length is incorrect"), ALERT_DECODE_ERROR);
     }
@@ -305,6 +313,11 @@ int32_t ParseClientStatusRequest(ParsePacket *pkt, ClientHelloMsg *msg)
          * ocsp(1) as the only status_type); an unsupported type means the
          * server cannot fulfil the request and ignores it. */
         return HITLS_SUCCESS;
+    }
+    /* OCSP body: status_type(1) + two 2-byte lengths; shorter cannot be decoded. */
+    if (pkt->bufLen < (sizeof(uint8_t) + sizeof(uint16_t) * 2)) {
+        return ParseErrorProcess(pkt->ctx, HITLS_PARSE_INVALID_MSG_LEN, BINLOG_ID17442,
+                                 BINGLOG_STR("status_request length is incorrect"), ALERT_DECODE_ERROR);
     }
     /* responder_id_list is ResponderID<0..2^16-1>: a 2-byte length followed by
      * per-element opaque<1..2^16-1> DER values. request_extensions follows as

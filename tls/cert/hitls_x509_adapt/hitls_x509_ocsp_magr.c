@@ -237,13 +237,11 @@ EXIT:
     return result;
 }
 
-/* Validate the request_extensions field of a TLS status_request offer (RFC
- * 6066 section 8): a zero-length value means "no extensions"; otherwise the
- * value must be a well-formed RFC 5280 Extensions SEQUENCE, parsed with the
- * X509 extension parser (the same parser the OCSP module uses via
- * OcspDecodeExt). The extensions are not interpreted here -- they are meant
- * for the OCSP responder the server may consult -- so no criticality policy
- * is applied. */
+/* Validate request_extensions of a TLS status_request offer (RFC 6066 section
+ * 8): zero length means "no extensions", otherwise exactly one RFC 5280
+ * Extensions SEQUENCE with at least one Extension. Structural only -- no
+ * allocation and no OID de-duplication, as this runs on peer data before
+ * authentication. */
 int32_t SAL_CERT_StatusReqCheckExtensions(const BSL_Buffer *ext)
 {
     if (ext == NULL || (ext->dataLen != 0 && ext->data == NULL)) {
@@ -255,21 +253,26 @@ int32_t SAL_CERT_StatusReqCheckExtensions(const BSL_Buffer *ext)
          * that there are no extensions. */
         return HITLS_SUCCESS;
     }
-    HITLS_X509_Ext *x509Ext = HITLS_X509_ExtNew(HITLS_X509_EXT_TYPE_OCSP);
-    if (x509Ext == NULL) {
-        BSL_ERR_PUSH_ERROR(HITLS_MEMALLOC_FAIL);
-        return HITLS_MEMALLOC_FAIL;
+    const uint8_t seqTag = BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE;
+    uint8_t *der = ext->data;
+    uint32_t remaining = ext->dataLen;
+    uint32_t seqLen = 0;
+    /* Exactly one outer SEQUENCE covering the value, SIZE (1..MAX) (RFC 5280 A.1). */
+    if (BSL_ASN1_DecodeTagLen(seqTag, &der, &remaining, &seqLen) != BSL_SUCCESS || remaining != seqLen || seqLen == 0) {
+        BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_PARSE_EXT_BUF);
+        return HITLS_X509_ERR_PARSE_EXT_BUF;
     }
-    BSL_ASN1_Buffer extAsn = {BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE, ext->dataLen, ext->data};
-    int32_t ret = HITLS_X509_ParseExt(&extAsn, x509Ext);
-    /* Extensions ::= SEQUENCE SIZE (1..MAX) OF Extension (RFC 5280 A.1): when
-     * present, the value must carry at least one extension. */
-    if (ret == HITLS_PKI_SUCCESS && BSL_LIST_COUNT(x509Ext->extList) == 0) {
-        ret = HITLS_X509_ERR_PARSE_EXT_BUF;
-        BSL_ERR_PUSH_ERROR(ret);
+    while (remaining != 0) {
+        BSL_ASN1_Buffer item = {0};
+        HITLS_X509_ExtEntry entry = {0};
+        /* Validates Extension structure, rejects trailing bytes, no allocation. */
+        if (BSL_ASN1_DecodeItem(&der, &remaining, &item) != BSL_SUCCESS || item.tag != seqTag ||
+            HITLS_X509_ParseExtItem(&item, &entry) != HITLS_PKI_SUCCESS) {
+            BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_PARSE_EXT_BUF);
+            return HITLS_X509_ERR_PARSE_EXT_BUF;
+        }
     }
-    HITLS_X509_ExtFree(x509Ext);
-    return ret;
+    return HITLS_PKI_SUCCESS;
 }
 
 /* Validate a byName Name (RDNSequence content, without the outer SEQUENCE

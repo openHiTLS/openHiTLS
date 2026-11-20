@@ -874,13 +874,11 @@ EXIT:
 * @brief
 1. Create a TLS 1.2 server config and link.
 2. Feed status_request extension bodies to ParseClientStatusRequest.
-3. Check that a truncated body, a semantically invalid ResponderID (byKey not
-   a 20-byte OCTET STRING, byName not a single Name SEQUENCE), and an invalid
-   request_extensions (RFC 5280 Extensions) are rejected (RFC 5246 section
-   7.2.2 decode_error), a valid body is accepted, and an unsupported
-   status_type is ignored.
-* @expect  1. Truncated body: rejected. 2. Invalid ResponderID DER/semantics: rejected.
-3. Valid body: accepted and statusExpected set. 4. Unsupported status_type: ignored.
+3. Check that malformed bodies (truncated, invalid ResponderID or
+   request_extensions, empty) are rejected with decode_error, a valid body is
+   accepted, and an unsupported status_type is ignored.
+* @expect  1. Malformed body: rejected with decode_error. 2. Valid body: accepted and
+statusExpected set. 3. Unsupported status_type: ignored.
 * @prior  Level 2
 * @auto  TRUE
 @ */
@@ -898,7 +896,7 @@ void SDV_TLS_OCSP_STAPLING_TLS12_PARSE_CH_STRICT_TC031()
     link = FRAME_CreateLink(config, BSL_UIO_TCP);
     ASSERT_TRUE(link != NULL);
     tls = (TLS_Ctx *)FRAME_GetTlsCtx(link);
-    tls->method.sendAlert = TestSendAlert;
+    tls->method.sendAlert = TestSendAlertRecord;
 
     /* A 2-byte body is too short for status_type(1) + responder_id_list
      * length(2) + request_extensions length(2); RFC 5246 section 7.2.2
@@ -906,7 +904,9 @@ void SDV_TLS_OCSP_STAPLING_TLS12_PARSE_CH_STRICT_TC031()
     uint8_t shortBody[] = {0x01, 0x00};
     uint32_t off = 0;
     ParsePacket pkt = {.ctx = tls, .buf = shortBody, .bufLen = sizeof(shortBody), .bufOffset = &off};
-    ASSERT_NE(ParseClientStatusRequest(&pkt, NULL), HITLS_SUCCESS);
+    g_lastAlertDesc = ALERT_CLOSE_NOTIFY;
+    ASSERT_EQ(ParseClientStatusRequest(&pkt, NULL), HITLS_PARSE_INVALID_MSG_LEN);
+    ASSERT_EQ(g_lastAlertDesc, ALERT_DECODE_ERROR);
     ASSERT_TRUE(!tls->statusExpected);
 
     /* The responder_id_list carries one ResponderID whose DER is a single 0x00
@@ -916,7 +916,9 @@ void SDV_TLS_OCSP_STAPLING_TLS12_PARSE_CH_STRICT_TC031()
     off = 0;
     pkt.buf = badDerBody;
     pkt.bufLen = sizeof(badDerBody);
-    ASSERT_NE(ParseClientStatusRequest(&pkt, NULL), HITLS_SUCCESS);
+    g_lastAlertDesc = ALERT_CLOSE_NOTIFY;
+    ASSERT_EQ(ParseClientStatusRequest(&pkt, NULL), HITLS_PARSE_INVALID_MSG_LEN);
+    ASSERT_EQ(g_lastAlertDesc, ALERT_DECODE_ERROR);
     ASSERT_TRUE(!tls->statusExpected);
 
     /* A structurally valid request (empty responder_id_list and
@@ -938,6 +940,24 @@ void SDV_TLS_OCSP_STAPLING_TLS12_PARSE_CH_STRICT_TC031()
     ASSERT_EQ(ParseClientStatusRequest(&pkt, NULL), HITLS_SUCCESS);
     ASSERT_TRUE(!tls->statusExpected);
 
+    /* A short body of an unsupported status_type is ignored too. */
+    uint8_t shortOtherTypeBody[] = {0x02, 0x00};
+    off = 0;
+    pkt.buf = shortOtherTypeBody;
+    pkt.bufLen = sizeof(shortOtherTypeBody);
+    ASSERT_EQ(ParseClientStatusRequest(&pkt, NULL), HITLS_SUCCESS);
+    ASSERT_TRUE(!tls->statusExpected);
+
+    /* A zero-length body cannot even carry status_type. */
+    uint8_t dummyBody = 0;
+    off = 0;
+    pkt.buf = &dummyBody;
+    pkt.bufLen = 0;
+    g_lastAlertDesc = ALERT_CLOSE_NOTIFY;
+    ASSERT_EQ(ParseClientStatusRequest(&pkt, NULL), HITLS_PARSE_INVALID_MSG_LEN);
+    ASSERT_EQ(g_lastAlertDesc, ALERT_DECODE_ERROR);
+    ASSERT_TRUE(!tls->statusExpected);
+
     /* RFC 6960 section 4.2.1: KeyHash is a SHA-1 hash (20 bytes), so a byKey
      * ResponderID carrying a 19-byte OCTET STRING is malformed. */
     uint8_t shortKeyBody[] = {
@@ -951,7 +971,9 @@ void SDV_TLS_OCSP_STAPLING_TLS12_PARSE_CH_STRICT_TC031()
     off = 0;
     pkt.buf = shortKeyBody;
     pkt.bufLen = sizeof(shortKeyBody);
-    ASSERT_NE(ParseClientStatusRequest(&pkt, NULL), HITLS_SUCCESS);
+    g_lastAlertDesc = ALERT_CLOSE_NOTIFY;
+    ASSERT_EQ(ParseClientStatusRequest(&pkt, NULL), HITLS_PARSE_INVALID_MSG_LEN);
+    ASSERT_EQ(g_lastAlertDesc, ALERT_DECODE_ERROR);
     ASSERT_TRUE(!tls->statusExpected);
 
     /* A byKey ResponderID whose content is 20 raw bytes (not wrapped in an
@@ -967,7 +989,9 @@ void SDV_TLS_OCSP_STAPLING_TLS12_PARSE_CH_STRICT_TC031()
     off = 0;
     pkt.buf = rawKeyBody;
     pkt.bufLen = sizeof(rawKeyBody);
-    ASSERT_NE(ParseClientStatusRequest(&pkt, NULL), HITLS_SUCCESS);
+    g_lastAlertDesc = ALERT_CLOSE_NOTIFY;
+    ASSERT_EQ(ParseClientStatusRequest(&pkt, NULL), HITLS_PARSE_INVALID_MSG_LEN);
+    ASSERT_EQ(g_lastAlertDesc, ALERT_DECODE_ERROR);
     ASSERT_TRUE(!tls->statusExpected);
 
     /* A byKey ResponderID with a trailing byte after the OCTET STRING does not
@@ -984,7 +1008,26 @@ void SDV_TLS_OCSP_STAPLING_TLS12_PARSE_CH_STRICT_TC031()
     off = 0;
     pkt.buf = trailingKeyBody;
     pkt.bufLen = sizeof(trailingKeyBody);
-    ASSERT_NE(ParseClientStatusRequest(&pkt, NULL), HITLS_SUCCESS);
+    g_lastAlertDesc = ALERT_CLOSE_NOTIFY;
+    ASSERT_EQ(ParseClientStatusRequest(&pkt, NULL), HITLS_PARSE_INVALID_MSG_LEN);
+    ASSERT_EQ(g_lastAlertDesc, ALERT_DECODE_ERROR);
+    ASSERT_TRUE(!tls->statusExpected);
+
+    /* DER requires the minimal length encoding (X.690 10.1). */
+    uint8_t nonMinimalKeyBody[] = {
+        0x01, 0x00, 0x1B,          /* status_type, responder_id_list length 27 */
+        0x00, 0x19,                /* responder_id length 25 */
+        0xA2, 0x17, 0x04, 0x81, 0x14, /* byKey [2], OCTET STRING, long-form length 20 */
+        0xAB, 0xAB, 0xAB, 0xAB, 0xAB, 0xAB, 0xAB, 0xAB, 0xAB, 0xAB, 0xAB, 0xAB,
+        0xAB, 0xAB, 0xAB, 0xAB, 0xAB, 0xAB, 0xAB, 0xAB,
+        0x00, 0x00
+    };
+    off = 0;
+    pkt.buf = nonMinimalKeyBody;
+    pkt.bufLen = sizeof(nonMinimalKeyBody);
+    g_lastAlertDesc = ALERT_CLOSE_NOTIFY;
+    ASSERT_EQ(ParseClientStatusRequest(&pkt, NULL), HITLS_PARSE_INVALID_MSG_LEN);
+    ASSERT_EQ(g_lastAlertDesc, ALERT_DECODE_ERROR);
     ASSERT_TRUE(!tls->statusExpected);
 
     /* A byKey ResponderID carrying exactly one 20-byte OCTET STRING is valid. */
@@ -1014,7 +1057,9 @@ void SDV_TLS_OCSP_STAPLING_TLS12_PARSE_CH_STRICT_TC031()
     off = 0;
     pkt.buf = intNameBody;
     pkt.bufLen = sizeof(intNameBody);
-    ASSERT_NE(ParseClientStatusRequest(&pkt, NULL), HITLS_SUCCESS);
+    g_lastAlertDesc = ALERT_CLOSE_NOTIFY;
+    ASSERT_EQ(ParseClientStatusRequest(&pkt, NULL), HITLS_PARSE_INVALID_MSG_LEN);
+    ASSERT_EQ(g_lastAlertDesc, ALERT_DECODE_ERROR);
     ASSERT_TRUE(!tls->statusExpected);
 
     /* Two TLVs inside byName is not a single Name. */
@@ -1027,7 +1072,9 @@ void SDV_TLS_OCSP_STAPLING_TLS12_PARSE_CH_STRICT_TC031()
     off = 0;
     pkt.buf = twoNameBody;
     pkt.bufLen = sizeof(twoNameBody);
-    ASSERT_NE(ParseClientStatusRequest(&pkt, NULL), HITLS_SUCCESS);
+    g_lastAlertDesc = ALERT_CLOSE_NOTIFY;
+    ASSERT_EQ(ParseClientStatusRequest(&pkt, NULL), HITLS_PARSE_INVALID_MSG_LEN);
+    ASSERT_EQ(g_lastAlertDesc, ALERT_DECODE_ERROR);
     ASSERT_TRUE(!tls->statusExpected);
 
     /* A byName ResponderID carrying exactly one Name SEQUENCE is valid. */
@@ -1062,7 +1109,9 @@ void SDV_TLS_OCSP_STAPLING_TLS12_PARSE_CH_STRICT_TC031()
     off = 0;
     pkt.buf = nonSetNameBody;
     pkt.bufLen = sizeof(nonSetNameBody);
-    ASSERT_NE(ParseClientStatusRequest(&pkt, NULL), HITLS_SUCCESS);
+    g_lastAlertDesc = ALERT_CLOSE_NOTIFY;
+    ASSERT_EQ(ParseClientStatusRequest(&pkt, NULL), HITLS_PARSE_INVALID_MSG_LEN);
+    ASSERT_EQ(g_lastAlertDesc, ALERT_DECODE_ERROR);
     ASSERT_TRUE(!tls->statusExpected);
 
     /* An empty RDNSequence (30 00) is a valid Name (RFC 5280 allows an empty
@@ -1087,7 +1136,9 @@ void SDV_TLS_OCSP_STAPLING_TLS12_PARSE_CH_STRICT_TC031()
     off = 0;
     pkt.buf = badExtBody;
     pkt.bufLen = sizeof(badExtBody);
-    ASSERT_NE(ParseClientStatusRequest(&pkt, NULL), HITLS_SUCCESS);
+    g_lastAlertDesc = ALERT_CLOSE_NOTIFY;
+    ASSERT_EQ(ParseClientStatusRequest(&pkt, NULL), HITLS_PARSE_INVALID_MSG_LEN);
+    ASSERT_EQ(g_lastAlertDesc, ALERT_DECODE_ERROR);
     ASSERT_TRUE(!tls->statusExpected);
 
     /* Extensions ::= SEQUENCE SIZE (1..MAX) OF Extension (RFC 5280 A.1): an
@@ -1096,7 +1147,9 @@ void SDV_TLS_OCSP_STAPLING_TLS12_PARSE_CH_STRICT_TC031()
     off = 0;
     pkt.buf = emptyExtBody;
     pkt.bufLen = sizeof(emptyExtBody);
-    ASSERT_NE(ParseClientStatusRequest(&pkt, NULL), HITLS_SUCCESS);
+    g_lastAlertDesc = ALERT_CLOSE_NOTIFY;
+    ASSERT_EQ(ParseClientStatusRequest(&pkt, NULL), HITLS_PARSE_INVALID_MSG_LEN);
+    ASSERT_EQ(g_lastAlertDesc, ALERT_DECODE_ERROR);
     ASSERT_TRUE(!tls->statusExpected);
 
     /* A well-formed Extensions SEQUENCE (one unknown-OID extension) is
@@ -1125,7 +1178,9 @@ void SDV_TLS_OCSP_STAPLING_TLS12_PARSE_CH_STRICT_TC031()
     off = 0;
     pkt.buf = trailingExtBody;
     pkt.bufLen = sizeof(trailingExtBody);
-    ASSERT_NE(ParseClientStatusRequest(&pkt, NULL), HITLS_SUCCESS);
+    g_lastAlertDesc = ALERT_CLOSE_NOTIFY;
+    ASSERT_EQ(ParseClientStatusRequest(&pkt, NULL), HITLS_PARSE_INVALID_MSG_LEN);
+    ASSERT_EQ(g_lastAlertDesc, ALERT_DECODE_ERROR);
     ASSERT_TRUE(!tls->statusExpected);
 
 EXIT:
