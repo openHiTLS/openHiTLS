@@ -31,6 +31,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdbool.h>
 #include <limits.h>
 #include <errno.h>
 #include <fcntl.h>
@@ -65,8 +66,11 @@
 /* Clock-skew tolerance for the thisUpdate/nextUpdate checks. */
 #define OCSP_CLIENT_VALIDITY_DRIFT_SEC 300
 /* Maximum accepted age of thisUpdate. Real responders refresh thisUpdate every
- * ~6-24 h, so a strict limit rejects valid responses; 0 disables the check. */
-#define OCSP_CLIENT_VALIDITY_MAXAGE_SEC 0
+ * ~6-24 h, so a fixed limit can reject a still-valid response; a negative value
+ * disables the maxage check (expiration is still enforced through nextUpdate).
+ * Note: 0 is not "disabled" -- HITLS_OCSP_CheckValidity then requires thisUpdate
+ * to be no earlier than now. */
+#define OCSP_CLIENT_VALIDITY_MAXAGE_SEC (-1)
 
 /* Preset certificate chain (PEM, from the demo dir *.crt files):
  * leaf "*.openhitls.net" (AIA OCSP URL http://status.geotrust.com)
@@ -320,6 +324,7 @@ static const char *OcspClientNonceStr(int32_t status)
 int main(int argc, char *argv[])
 {
     int32_t rc = 1;
+    bool verifyFailed = false;
     HITLS_X509_Cert *cert = NULL;
     HITLS_X509_Cert *issuer = NULL;
     HITLS_X509_Cert *ca = NULL;
@@ -557,7 +562,11 @@ int main(int argc, char *argv[])
 
     /* Verify the response and extract the certificate status. */
     int32_t respStatus = -1;
-    (void)HITLS_OCSP_RespCtrl(resp, HITLS_OCSP_RESP_GET_STATUS, &respStatus, sizeof(respStatus));
+    ret = HITLS_OCSP_RespCtrl(resp, HITLS_OCSP_RESP_GET_STATUS, &respStatus, sizeof(respStatus));
+    if (ret != HITLS_PKI_SUCCESS) {
+        printf("[5] response status: failed (ret=0x%x)\n", (unsigned)ret);
+        goto EXIT;
+    }
     printf("[5] response status: %s\n", HITLS_OCSP_RespStatusToStr(respStatus));
     if (respStatus != HITLS_OCSP_RESP_STATUS_SUCCESSFUL) {
         printf("    no BasicOCSPResponse to check for a non-successful status.\n");
@@ -572,7 +581,11 @@ int main(int argc, char *argv[])
     }
 
     int32_t nonceStatus = -1;
-    (void)HITLS_OCSP_CheckNonce(req, bs, &nonceStatus);
+    ret = HITLS_OCSP_CheckNonce(req, bs, &nonceStatus);
+    if (ret != HITLS_PKI_SUCCESS) {
+        printf("[6] nonce check    : failed (ret=0x%x)\n", (unsigned)ret);
+        goto EXIT;
+    }
     printf("[6] nonce check    : %s\n", OcspClientNonceStr(nonceStatus));
 
     /* Verify the SingleResponse answers the requested CertID. */
@@ -588,11 +601,18 @@ int main(int argc, char *argv[])
     printf("[7] SingleResponse matches request : yes\n");
 
     HITLS_OCSP_CertStatus certStatus = HITLS_OCSP_CERT_STATUS_UNKNOWN;
-    (void)HITLS_OCSP_SingleRespCtrl(single, HITLS_OCSP_SINGLERESP_GET_CERT_STATUS, &certStatus, sizeof(certStatus));
+    ret = HITLS_OCSP_SingleRespCtrl(single, HITLS_OCSP_SINGLERESP_GET_CERT_STATUS, &certStatus, sizeof(certStatus));
+    if (ret != HITLS_PKI_SUCCESS) {
+        printf("[8] cert status    : failed (ret=0x%x)\n", (unsigned)ret);
+        goto EXIT;
+    }
     printf("[8] cert status    : %s\n", HITLS_OCSP_CertStatusToStr(certStatus));
 
     int32_t valRet = HITLS_OCSP_CheckValidity(single, OCSP_CLIENT_VALIDITY_DRIFT_SEC, OCSP_CLIENT_VALIDITY_MAXAGE_SEC);
     printf("[9] validity check : %s (ret=0x%x)\n", valRet == HITLS_PKI_SUCCESS ? "ok" : "failed", (unsigned)valRet);
+    if (valRet != HITLS_PKI_SUCCESS) {
+        verifyFailed = true;
+    }
 
     if (ca != NULL) {
         store = HITLS_X509_StoreCtxNew();
@@ -610,6 +630,9 @@ int main(int argc, char *argv[])
         }
         ret = HITLS_OCSP_BasicRespVerify(bs, signerCerts, store, 0);
         printf("[10] signature verify: %s (ret=0x%x)\n", ret == HITLS_PKI_SUCCESS ? "ok" : "failed", (unsigned)ret);
+        if (ret != HITLS_PKI_SUCCESS) {
+            verifyFailed = true;
+        }
     }
 
     /* Optionally dump the raw DER OCSPResponse to a file for a stapling demo. */
@@ -631,8 +654,13 @@ int main(int argc, char *argv[])
         BSL_SAL_FREE(der.data);
     }
 
-    printf("\nOCSP exchange completed.\n");
-    rc = 0;
+    if (verifyFailed) {
+        printf("\nOCSP exchange completed with verification failures.\n");
+        rc = 1;
+    } else {
+        printf("\nOCSP exchange completed.\n");
+        rc = 0;
+    }
 EXIT:
     HITLS_OCSP_RespFree(resp);
     HITLS_OCSP_HttpReqCtxFree(ctx);
