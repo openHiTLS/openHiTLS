@@ -38,6 +38,8 @@
 #include "rec.h"
 #include "rec_header.h"
 #include "hs_msg.h"
+#include "hs_ctx.h"
+#include "hs.h"
 #include "dtls_cid.h"
 /* END_HEADER */
 
@@ -46,6 +48,7 @@ void AckStateDeinit(Dtls13AckState *state);
 int32_t AckStateInsertSeqMap(Dtls13AckState *state, const RecordNumber *recordNum, uint32_t offset, uint32_t len);
 int32_t AckStateGetFragment(const Dtls13AckState *state, uint32_t maxFragmentLen, Dtls13FragmentList *list);
 int32_t AckStateProcessAck(Dtls13AckState *state, const RecordNumber *recordNum);
+int32_t HS_ReassAppend(TLS_Ctx *ctx, HS_MsgInfo *msgInfo);
 
 STUB_DEFINE_RET4(int32_t, REC_Write, TLS_Ctx *, REC_Type, const uint8_t *, uint32_t);
 STUB_DEFINE_RET1(int32_t, REC_RetransmitListFlush, TLS_Ctx *);
@@ -1429,6 +1432,141 @@ EXIT:
     STUB_RESTORE(REC_RecOutBufReSet);
     STUB_RESTORE(REC_QueryMtu);
     REC_RetransmitListClean(&recCtx);
+    return;
+}
+/* END_CASE */
+
+/** @
+* @test UT_TLS_DTLS13_ACTIVE_PENDING_STATE_FUNC_TC001
+* @spec -
+* @title DTLS1.3 read state activation discards buffered handshake data of the old epoch.
+* @precon nan
+* @brief
+*    1. Build a datagram context whose read pendingState is ready while stale data stays in both
+*    the handshake plaintext cache list and the reassembly queue.
+*    2. Activate the pending read state with REC_ActivePendingState.
+* @expect
+*    1. REC_HasBufferedHsData is true before the activation.
+*    2. The activation returns success instead of HITLS_REC_ERR_NOT_ON_RECORD_BOUNDARY, both
+*    buffered containers are cleared, and the read state switches to the pending state with
+*    epoch jumping from 0 to 2.
+@ */
+/* BEGIN_CASE */
+void UT_TLS_DTLS13_ACTIVE_PENDING_STATE_FUNC_TC001(void)
+{
+    TLS_Ctx ctx = {0};
+    RecCtx recCtx = {0};
+    HS_Ctx hsCtx = {0};
+    RecConnState *readState = NULL;
+    RecBuf recBuf = {0};
+    HS_MsgInfo msgInfo = {0};
+    uint8_t hsMsg[DTLS_HS_MSG_HEADER_SIZE + 4] = {0};
+
+    ctx.recCtx = &recCtx;
+    ctx.hsCtx = &hsCtx;
+    ctx.negotiatedInfo.version = HITLS_VERSION_DTLS13;
+    ctx.config.tlsConfig.originVersionMask = DTLS13_VERSION_BIT;
+
+    recCtx.hsRecList = RecBufListNew();
+    ASSERT_TRUE(recCtx.hsRecList != NULL);
+    recBuf.buf = malloc(16);
+    ASSERT_TRUE(recBuf.buf != NULL);
+    recBuf.bufSize = 16;
+    recBuf.end = 16;
+    recBuf.isHoldBuffer = true;
+    ASSERT_EQ(RecBufListAddBuffer(recCtx.hsRecList, &recBuf), HITLS_SUCCESS);
+
+    ASSERT_EQ(HS_ReassQueueInit(&ctx), HITLS_SUCCESS);
+    BuildDtls13HsMsg(hsMsg, FINISHED, hsCtx.expectRecvSeq + 1, 4);
+    msgInfo.type = FINISHED;
+    msgInfo.length = 4;
+    msgInfo.sequence = hsCtx.expectRecvSeq + 1;
+    msgInfo.fragmentOffset = 0;
+    msgInfo.fragmentLength = 4;
+    msgInfo.rawMsg = hsMsg;
+    msgInfo.headerAndBodyLen = sizeof(hsMsg);
+    ASSERT_EQ(HS_ReassAppend(&ctx, &msgInfo), HITLS_SUCCESS);
+    ASSERT_TRUE(HS_ReassQueueIsEmpty(&ctx) == false);
+
+    readState = RecConnStateNew();
+    ASSERT_TRUE(readState != NULL);
+    recCtx.readStates.pendingState = readState;
+
+    ASSERT_TRUE(REC_HasBufferedHsData(&ctx) == true);
+    ASSERT_EQ(REC_ActivePendingState(&ctx, false), HITLS_SUCCESS);
+    ASSERT_TRUE(REC_HasBufferedHsData(&ctx) == false);
+    ASSERT_TRUE(RecBufListEmpty(recCtx.hsRecList) == true);
+    ASSERT_TRUE(HS_ReassQueueIsEmpty(&ctx) == true);
+    ASSERT_TRUE(recCtx.readStates.currentState == readState);
+    ASSERT_TRUE(recCtx.readStates.pendingState == NULL);
+    ASSERT_TRUE(recCtx.readStates.outdatedState == NULL);
+    ASSERT_EQ(RecConnGetEpoch(recCtx.readStates.currentState), 2);
+    ASSERT_EQ(recCtx.readEpoch, 2);
+EXIT:
+    HS_ReassQueueFree(&ctx);
+    RecBufListFree(recCtx.hsRecList);
+    RecConnStateFree(recCtx.readStates.currentState);
+    RecConnStateFree(recCtx.readStates.pendingState);
+    return;
+}
+/* END_CASE */
+
+/** @
+* @test UT_TLS_DTLS13_ACTIVE_PENDING_STATE_FUNC_TC002
+* @spec -
+* @title Stream read state activation still fails on buffered handshake data.
+* @precon nan
+* @brief
+*    1. Build a stream-only context whose read pendingState is ready while stale data stays in the
+*    handshake plaintext cache list.
+*    2. Activate the pending read state with REC_ActivePendingState.
+* @expect
+*    1. The activation fails with HITLS_REC_ERR_NOT_ON_RECORD_BOUNDARY and sends a fatal
+*    unexpected_message alert.
+*    2. The buffered data and the pending read state are kept unchanged.
+@ */
+/* BEGIN_CASE */
+void UT_TLS_DTLS13_ACTIVE_PENDING_STATE_FUNC_TC002(void)
+{
+    TLS_Ctx ctx = {0};
+    RecCtx recCtx = {0};
+    RecConnState *readState = NULL;
+    RecBuf recBuf = {0};
+
+    ctx.recCtx = &recCtx;
+    ctx.negotiatedInfo.version = HITLS_VERSION_TLS13;
+    ctx.config.tlsConfig.originVersionMask = TLS13_VERSION_BIT;
+    ctx.method.sendAlert = STUB_SendAlert;
+
+    recCtx.hsRecList = RecBufListNew();
+    ASSERT_TRUE(recCtx.hsRecList != NULL);
+    recBuf.buf = malloc(16);
+    ASSERT_TRUE(recBuf.buf != NULL);
+    recBuf.bufSize = 16;
+    recBuf.end = 16;
+    recBuf.isHoldBuffer = true;
+    ASSERT_EQ(RecBufListAddBuffer(recCtx.hsRecList, &recBuf), HITLS_SUCCESS);
+
+    readState = RecConnStateNew();
+    ASSERT_TRUE(readState != NULL);
+    recCtx.readStates.pendingState = readState;
+
+    g_stubAlertCnt = 0;
+    g_stubAlertLevel = 0;
+    g_stubAlertDescription = 0;
+    ASSERT_TRUE(REC_HasBufferedHsData(&ctx) == true);
+    ASSERT_EQ(REC_ActivePendingState(&ctx, false), HITLS_REC_ERR_NOT_ON_RECORD_BOUNDARY);
+    ASSERT_EQ(g_stubAlertCnt, 1);
+    ASSERT_EQ(g_stubAlertLevel, ALERT_LEVEL_FATAL);
+    ASSERT_EQ(g_stubAlertDescription, ALERT_UNEXPECTED_MESSAGE);
+    ASSERT_TRUE(REC_HasBufferedHsData(&ctx) == true);
+    ASSERT_TRUE(recCtx.readStates.pendingState == readState);
+    ASSERT_TRUE(recCtx.readStates.currentState == NULL);
+    ASSERT_EQ(recCtx.readEpoch, 0);
+EXIT:
+    RecBufListFree(recCtx.hsRecList);
+    RecConnStateFree(recCtx.readStates.currentState);
+    RecConnStateFree(recCtx.readStates.pendingState);
     return;
 }
 /* END_CASE */

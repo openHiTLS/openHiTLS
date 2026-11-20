@@ -3095,3 +3095,125 @@ EXIT:
     HITLS_CFG_FreeConfig(config);
 }
 /* END_CASE */
+
+/** @
+* @test SDV_TLS_DTLS13_ANTI_REPLAY_EPOCH0_HRR_TC041
+* @spec -
+* @title DTLS1.3 anti-replay window blocks a replayed epoch-0 plaintext HRR datagram.
+* @precon nan
+* @brief
+*    1. Create DTLS1.3 client and server links over UDP with cookie exchange enabled.
+*    2. Capture the server cookie HelloRetryRequest datagram and let the client process it once.
+*    3. Replay the same HRR datagram to the client.
+*    4. Complete the handshake and exchange application data.
+* @expect
+*    1. The HRR is a classic epoch-0 handshake record and its sequence is marked in the
+*       client read anti-replay window after the first processing.
+*    2. The replayed HRR is silently discarded without a fatal alert.
+*    3. The handshake still completes and application data can be exchanged.
+@ */
+/* BEGIN_CASE */
+void SDV_TLS_DTLS13_ANTI_REPLAY_EPOCH0_HRR_TC041(void)
+{
+    HITLS_Config *config = NULL;
+    FRAME_LinkObj *client = NULL;
+    FRAME_LinkObj *server = NULL;
+#ifdef HITLS_TLS_FEATURE_ANTI_REPLAY
+    uint8_t hrrBuf[MAX_RECORD_LENTH] = {0};
+    uint32_t hrrLen = sizeof(hrrBuf);
+    uint16_t hrrEpoch = 0;
+    uint64_t hrrSeq = 0;
+    uint32_t offset = 0;
+    bool found = false;
+    uint8_t appData[] = "DTLS13 epoch0 hrr replay app data";
+    uint8_t readBuf[APP_READ_BUF_SIZE] = {0};
+    uint32_t writeLen = 0;
+    uint32_t readLen = 0;
+    int32_t ret;
+    ALERT_Info alert = {0};
+    FrameUioUserData *serverIo = NULL;
+    FrameUioUserData *clientIo = NULL;
+
+    FRAME_Init();
+
+    config = HITLS_CFG_NewDTLS13Config();
+    ASSERT_TRUE(config != NULL);
+    ASSERT_EQ(HITLS_CFG_SetDtlsCookieExchangeSupport(config, true), HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_CFG_SetTicketNums(config, 0), HITLS_SUCCESS);
+    /* A single key share group keeps the second ClientHello in one record so the
+     * single-datagram test IO can carry the whole flight. */
+    uint16_t groups[] = {HITLS_EC_GROUP_SECP256R1};
+    ASSERT_EQ(HITLS_CFG_SetGroups(config, groups, sizeof(groups) / sizeof(groups[0])), HITLS_SUCCESS);
+
+    client = FRAME_CreateLink(config, BSL_UIO_UDP);
+    ASSERT_TRUE(client != NULL);
+    server = FRAME_CreateLink(config, BSL_UIO_UDP);
+    ASSERT_TRUE(server != NULL);
+
+    // Drive the server to emit the cookie HRR and capture the raw datagram
+    ASSERT_EQ(FRAME_CreateConnection(client, server, false, TRY_RECV_CLIENT_HELLO), HITLS_SUCCESS);
+    ret = HITLS_Accept(server->ssl);
+    ASSERT_TRUE(ret == HITLS_SUCCESS || ret == HITLS_REC_NORMAL_RECV_BUF_EMPTY ||
+        ret == HITLS_REC_NORMAL_IO_BUSY || ret == HITLS_REC_NORMAL_RECV_UNEXPECT_MSG);
+    serverIo = BSL_UIO_GetUserData(server->io);
+    ASSERT_TRUE(serverIo != NULL);
+    ASSERT_TRUE(serverIo->sndMsg.len != 0);
+    ASSERT_TRUE(serverIo->sndMsg.len <= hrrLen);
+    hrrLen = serverIo->sndMsg.len;
+    memcpy(hrrBuf, serverIo->sndMsg.msg, hrrLen);
+
+    // Locate the epoch-0 plaintext handshake record, skipping a leading ACK/CCS record if any
+    while ((offset + REC_DTLS_RECORD_HEADER_LEN) <= hrrLen) {
+        if (hrrBuf[offset] == REC_TYPE_HANDSHAKE) {
+            found = true;
+            break;
+        }
+        offset += REC_DTLS_RECORD_HEADER_LEN + BSL_ByteToUint16(&hrrBuf[offset + REC_DTLS_RECORD_LENGTH_OFFSET]);
+    }
+    ASSERT_TRUE(found);
+    uint64_t hrrEpochSeq = BSL_ByteToUint64(&hrrBuf[offset + REC_DTLS_RECORD_EPOCH_OFFSET]);
+    hrrEpoch = REC_EPOCH_GET(hrrEpochSeq);
+    hrrSeq = REC_SEQ_GET(hrrEpochSeq);
+    ASSERT_EQ(hrrEpoch, 0);
+
+    // The client processes the HRR once and sends the second ClientHello
+    ASSERT_EQ(FRAME_TrasferMsgBetweenLink(server, client), HITLS_SUCCESS);
+    ret = HITLS_Connect(client->ssl);
+    ASSERT_TRUE(ret == HITLS_SUCCESS || ret == HITLS_REC_NORMAL_RECV_BUF_EMPTY ||
+        ret == HITLS_REC_NORMAL_IO_BUSY || ret == HITLS_REC_NORMAL_RECV_UNEXPECT_MSG);
+
+    // The read anti-replay window has already marked the epoch-0 HRR sequence
+    ASSERT_TRUE(RecAntiReplayCheck(&((RecCtx *)client->ssl->recCtx)->readStates.currentState->window, hrrSeq));
+
+    // Replay the same HRR datagram: the record layer must silently discard it
+    clientIo = BSL_UIO_GetUserData(client->io);
+    ASSERT_TRUE(clientIo != NULL);
+    clientIo->recMsg.len = 0;
+    ASSERT_EQ(FRAME_TransportRecMsg(client->io, hrrBuf, hrrLen), HITLS_SUCCESS);
+    uint32_t replayLen = 0;
+    ASSERT_EQ(REC_Read(client->ssl, REC_TYPE_HANDSHAKE, readBuf, &replayLen, sizeof(readBuf)),
+        HITLS_REC_NORMAL_RECV_BUF_EMPTY);
+    ASSERT_EQ(replayLen, 0);
+    ALERT_GetInfo(client->ssl, &alert);
+    ASSERT_TRUE(alert.flag != ALERT_FLAG_SEND);
+    /* Drop the replayed datagram from the test IO so the framework can continue the handshake. */
+    clientIo->recMsg.len = 0;
+
+    // The connection survives: finish the handshake and exchange application data
+    ASSERT_EQ(FRAME_TrasferMsgBetweenLink(client, server), HITLS_SUCCESS);
+    ASSERT_EQ(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_Write(client->ssl, appData, sizeof(appData), &writeLen), HITLS_SUCCESS);
+    ASSERT_EQ(writeLen, sizeof(appData));
+    ASSERT_EQ(FRAME_TrasferMsgBetweenLink(client, server), HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_Read(server->ssl, readBuf, sizeof(readBuf), &readLen), HITLS_SUCCESS);
+    ASSERT_EQ(readLen, sizeof(appData));
+    ASSERT_EQ(memcmp(readBuf, appData, sizeof(appData)), 0);
+#else
+    SKIP_TEST();
+#endif
+EXIT:
+    HITLS_CFG_FreeConfig(config);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+}
+/* END_CASE */

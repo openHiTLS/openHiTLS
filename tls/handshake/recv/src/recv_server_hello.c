@@ -1053,6 +1053,11 @@ int32_t Tls13ClientRecvHelloRetryRequestProcess(TLS_Ctx *ctx, const HS_Msg *msg)
         return ret;
     }
 
+#if defined(HITLS_TLS_PROTO_DATAGRAM) && defined(HITLS_BSL_UIO_UDP)
+    if (ctx->negotiatedInfo.version == HITLS_VERSION_DTLS13) {
+        REC_RetransmitListClean(ctx->recCtx);
+    }
+#endif
     return HS_ChangeState(ctx, TRY_SEND_CLIENT_HELLO);
 }
 static int32_t CheckDowngradeRandom(TLS_Ctx *ctx, const ServerHelloMsg *serverHello, uint16_t *negotiatedVersion)
@@ -1403,6 +1408,11 @@ int32_t Tls13ProcessServerHello(TLS_Ctx *ctx, const HS_Msg *msg)
     }
 #endif
 
+#if defined(HITLS_TLS_PROTO_DATAGRAM) && defined(HITLS_BSL_UIO_UDP)
+    if (ctx->negotiatedInfo.version == HITLS_VERSION_DTLS13) {
+        REC_RetransmitListClean(ctx->recCtx);
+    }
+#endif
     return HS_ChangeState(ctx, TRY_RECV_ENCRYPTED_EXTENSIONS);
 }
 

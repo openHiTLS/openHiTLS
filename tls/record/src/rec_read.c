@@ -1386,11 +1386,10 @@ static int32_t Dtls13DiscardOutdatedHandshake(TLS_Ctx *ctx, const RecHdr *hdr, c
 #if defined(HITLS_TLS_PROTO_DTLS13) && defined(HITLS_BSL_UIO_UDP) && defined(HITLS_TLS_FEATURE_ANTI_REPLAY)
 static int32_t Dtls13AntiReplayAfterDecrypt(TLS_Ctx *ctx, RecHdr *hdr, RecBuf *decryptBuf)
 {
-    if (ctx->negotiatedInfo.version != HITLS_VERSION_DTLS13 || REC_EPOCH_GET(hdr->epochSeq) == 0) {
+    if (ctx->negotiatedInfo.version != HITLS_VERSION_DTLS13) {
         return HITLS_SUCCESS;
     }
 
-    /* RFC 9147: update the window only after the record has been deprotected successfully. */
     int32_t ret = AntiReplay(ctx, hdr);
     if (ret != HITLS_SUCCESS) {
         FreeHeldRecordBuf(decryptBuf);
@@ -1403,7 +1402,7 @@ static int32_t Dtls13AntiReplayAfterDecrypt(TLS_Ctx *ctx, RecHdr *hdr, RecBuf *d
     defined(HITLS_TLS_FEATURE_ANTI_REPLAY)
 static int32_t DtlsUpdateAntiReplayWindow(TLS_Ctx *ctx, const RecHdr *hdr, RecBuf *decryptBuf)
 {
-    if (!BSL_UIO_GetUioChainTransportType(ctx->uio, BSL_UIO_UDP) || REC_EPOCH_GET(hdr->epochSeq) == 0) {
+    if (!BSL_UIO_GetUioChainTransportType(ctx->uio, BSL_UIO_UDP)) {
         return HITLS_SUCCESS;
     }
 #ifdef HITLS_TLS_PROTO_DTLS13

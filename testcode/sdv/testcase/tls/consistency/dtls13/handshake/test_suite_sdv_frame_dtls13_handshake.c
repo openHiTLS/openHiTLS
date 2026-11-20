@@ -3255,6 +3255,8 @@ void SDV_TLS_DTLS13_HANDSHAKE_CONSISTENCY_FUNC_TC040(void)
     clientHello->cookie.size = hvrCookieLen;
     clientHello->cookie.state = INITIAL_FIELD;
     FRAME_ModifyMsgInteger(1u, &clientHelloMsg.body.hsMsg.sequence);
+    /* The retransmit filter now also covers epoch-0 records: use a fresh record sequence for CH2. */
+    FRAME_ModifyMsgInteger(1u, &clientHelloMsg.sequence);
     sendLen = sizeof(sendBuf);
     ASSERT_EQ(FRAME_PackMsg(&clientHelloType, &clientHelloMsg, sendBuf, sizeof(sendBuf), &sendLen), HITLS_SUCCESS);
 
@@ -3332,6 +3334,8 @@ void SDV_TLS_DTLS13_HANDSHAKE_CONSISTENCY_FUNC_TC041(void)
     ASSERT_EQ(Dtls13PrepareCookieHrr(hrrClient, hrrServer, hrrBuf, &hrrLen), HITLS_SUCCESS);
     ASSERT_EQ(ParseDtls13BufferedHsMsg(hrrServer, false, SERVER_HELLO, &hrrMsg), HITLS_SUCCESS);
     FRAME_ModifyMsgInteger(1u, &hrrMsg.body.hsMsg.sequence);
+    /* The retransmit filter now also covers epoch-0 records: use a fresh record sequence. */
+    FRAME_ModifyMsgInteger(2u, &hrrMsg.sequence);
     hrrLen = sizeof(hrrBuf);
     ASSERT_EQ(FRAME_PackMsg(&serverHelloType, &hrrMsg, hrrBuf, sizeof(hrrBuf), &hrrLen), HITLS_SUCCESS);
     FrameUioUserData *clientIoUserData = BSL_UIO_GetUserData(client->io);
@@ -4911,6 +4915,119 @@ void SDV_TLS_DTLS13_HANDSHAKE_CONSISTENCY_FUNC_TC064(int cacheCurrent)
     ASSERT_TRUE(HS_ReassQueueIsEmpty(client->ssl));
     ASSERT_EQ(client->ssl->state, CM_STATE_TRANSPORTING);
     ASSERT_TRUE(TestIsErrStackEmpty());
+
+EXIT:
+    HITLS_CFG_FreeConfig(config);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+}
+/* END_CASE */
+
+static uint32_t Dtls13RetransmitNodeCnt(const REC_Ctx *recCtx)
+{
+    uint32_t count = 0;
+    for (const ListHead *item = recCtx->retransmitList.head.next;
+        item != &recCtx->retransmitList.head; item = item->next) {
+        count++;
+    }
+    return count;
+}
+
+/** @
+* @test SDV_TLS_DTLS13_HANDSHAKE_CONSISTENCY_FUNC_TC065
+* @spec -
+* @title DTLS1.3 client clears the retransmit list after processing ServerHello.
+* @precon nan
+* @brief
+*    1. Create DTLS1.3 client and server links over UDP.
+*    2. Stop the client at TRY_RECV_SERVER_HELLO after the ClientHello is sent and the server flight is delivered.
+*    3. Resume the client until ServerHello processing completes at TRY_RECV_ENCRYPTED_EXTENSIONS.
+* @expect
+*    1. The sent ClientHello is kept in the client retransmit list before ServerHello processing.
+*    2. The client retransmit list is empty at TRY_RECV_ENCRYPTED_EXTENSIONS.
+@ */
+/* BEGIN_CASE */
+void SDV_TLS_DTLS13_HANDSHAKE_CONSISTENCY_FUNC_TC065(void)
+{
+    HITLS_Config *config = NULL;
+    FRAME_LinkObj *client = NULL;
+    FRAME_LinkObj *server = NULL;
+
+    FRAME_Init();
+
+    config = HITLS_CFG_NewDTLS13Config();
+    ASSERT_TRUE(config != NULL);
+    ASSERT_EQ(HITLS_CFG_SetTicketNums(config, 0), HITLS_SUCCESS);
+    ASSERT_EQ(Dtls13UseSingleKeyShareGroup(config), HITLS_SUCCESS);
+
+    client = FRAME_CreateLink(config, BSL_UIO_UDP);
+    ASSERT_TRUE(client != NULL);
+    server = FRAME_CreateLink(config, BSL_UIO_UDP);
+    ASSERT_TRUE(server != NULL);
+
+    ASSERT_EQ(FRAME_CreateConnection(client, server, true, TRY_RECV_SERVER_HELLO), HITLS_SUCCESS);
+    ASSERT_TRUE(client->ssl->hsCtx != NULL);
+    ASSERT_EQ(client->ssl->hsCtx->state, TRY_RECV_SERVER_HELLO);
+    ASSERT_TRUE(REC_RetransmitIsEmpty(client->ssl->recCtx) == false);
+
+    ASSERT_EQ(FRAME_CreateConnection(client, server, true, TRY_RECV_ENCRYPTED_EXTENSIONS), HITLS_SUCCESS);
+    ASSERT_EQ(client->ssl->hsCtx->state, TRY_RECV_ENCRYPTED_EXTENSIONS);
+    ASSERT_EQ(client->ssl->negotiatedInfo.version, HITLS_VERSION_DTLS13);
+    ASSERT_TRUE(REC_RetransmitIsEmpty(client->ssl->recCtx) == true);
+
+EXIT:
+    HITLS_CFG_FreeConfig(config);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+}
+/* END_CASE */
+
+/** @
+* @test SDV_TLS_DTLS13_HANDSHAKE_CONSISTENCY_FUNC_TC066
+* @spec -
+* @title DTLS1.3 client drops the first ClientHello from the retransmit list when processing HelloRetryRequest.
+* @precon nan
+* @brief
+*    1. Enable DTLS1.3 cookie exchange and make the server answer the first ClientHello with HRR.
+*    2. Let the client process the HRR and send the second ClientHello carrying the cookie.
+* @expect
+*    1. Only the first ClientHello is queued before the HRR is processed.
+*    2. Only the second ClientHello is queued after the HRR is processed.
+@ */
+/* BEGIN_CASE */
+void SDV_TLS_DTLS13_HANDSHAKE_CONSISTENCY_FUNC_TC066(void)
+{
+    HITLS_Config *config = NULL;
+    FRAME_LinkObj *client = NULL;
+    FRAME_LinkObj *server = NULL;
+    uint8_t hrrBuf[MAX_RECORD_LENTH] = {0};
+    uint32_t hrrLen = sizeof(hrrBuf);
+
+    FRAME_Init();
+
+    config = HITLS_CFG_NewDTLS13Config();
+    ASSERT_TRUE(config != NULL);
+    ASSERT_EQ(HITLS_CFG_SetDtlsCookieExchangeSupport(config, true), HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_CFG_SetTicketNums(config, 0), HITLS_SUCCESS);
+    ASSERT_EQ(Dtls13UseSingleKeyShareGroup(config), HITLS_SUCCESS);
+
+    client = FRAME_CreateLink(config, BSL_UIO_UDP);
+    ASSERT_TRUE(client != NULL);
+    server = FRAME_CreateLink(config, BSL_UIO_UDP);
+    ASSERT_TRUE(server != NULL);
+
+    ASSERT_EQ(Dtls13PrepareCookieHrr(client, server, hrrBuf, &hrrLen), HITLS_SUCCESS);
+    ASSERT_TRUE(hrrLen != 0);
+    ASSERT_EQ(Dtls13RetransmitNodeCnt(client->ssl->recCtx), 1);
+    RecRetransmitList *firstHello = BSL_LIST_ENTRY(client->ssl->recCtx->retransmitList.head.next,
+        RecRetransmitList, head);
+    ASSERT_EQ(firstHello->hsType, CLIENT_HELLO);
+
+    ASSERT_EQ(Dtls13ClientProcessHrr(client, server), HITLS_SUCCESS);
+    ASSERT_EQ(Dtls13RetransmitNodeCnt(client->ssl->recCtx), 1);
+    RecRetransmitList *secondHello = BSL_LIST_ENTRY(client->ssl->recCtx->retransmitList.head.next,
+        RecRetransmitList, head);
+    ASSERT_EQ(secondHello->hsType, CLIENT_HELLO);
 
 EXIT:
     HITLS_CFG_FreeConfig(config);

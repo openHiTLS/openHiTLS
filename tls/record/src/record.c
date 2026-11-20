@@ -713,6 +713,15 @@ int32_t REC_ActivePendingState(TLS_Ctx *ctx, bool isOut)
     RecCtx *recordCtx = (RecCtx *)ctx->recCtx;
 
     if (!isOut) {
+#if defined(HITLS_TLS_PROTO_DATAGRAM)
+        if (IS_SUPPORT_DATAGRAM(ctx->config.tlsConfig.originVersionMask)) {
+            /* Datagram: cached data belongs to the old epoch, discard it and continue. */
+            if (REC_HasBufferedHsData(ctx)) {
+                BSL_LIST_DeleteAll(recordCtx->hsRecList, (void (*)(void *))RecBufFree);
+                HS_ReassQueueClear(ctx);
+            }
+        } else
+#endif
         if (REC_HasBufferedHsData(ctx)) {
             ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_UNEXPECTED_MESSAGE);
             BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17383, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
