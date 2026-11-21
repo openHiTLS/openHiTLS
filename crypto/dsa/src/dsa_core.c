@@ -854,20 +854,55 @@ ERR:
     return ret;
 }
 
+/* Inputs are zero-padded to their allocated widths, including any carry limb. */
+static void DsaAddQ(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *q)
+{
+    BN_UINT carry = 0;
+    for (uint32_t i = 0; i < r->room; i++) {
+        BN_UINT left = i < a->room ? a->data[i] : 0;
+        BN_UINT right = i < q->size ? q->data[i] : 0;
+        BN_UINT sum = left + right;
+        BN_UINT value = sum + carry;
+        carry = (BN_UINT)(sum < left) | (BN_UINT)(value < sum);
+        r->data[i] = value;
+    }
+    r->size = r->room;
+}
+
+/* Choose an equivalent exponent whose bit length is exactly qBits + 1. */
+static void DsaPrepareExponent(BN_BigNum *k1, BN_BigNum *k2, const BN_BigNum *k, const BN_BigNum *q)
+{
+    uint32_t qBits = BN_Bits(q);
+    // k1 = k + q, k2 = k + 2q
+    DsaAddQ(k1, k, q);
+    DsaAddQ(k2, k1, q);
+    BN_UINT bit = (k1->data[qBits / BN_UINT_BITS] >> (qBits % BN_UINT_BITS)) & 1U;
+    BN_UINT mask = (BN_UINT)0 - bit;
+    // if bitlen(k1) == bitlen(q) + 1, then k1 = k1, else k1 = k2;
+    for (uint32_t i = 0; i < k1->room; i++) {
+        k1->data[i] = (k1->data[i] & mask) | (k2->data[i] & ~mask);
+    }
+    k1->size = BITS_TO_BN_UNIT(qBits + 1U);
+}
+
 static int32_t SignCore(const CRYPT_DSA_Ctx *ctx, BN_BigNum *d, BN_BigNum *r,
     BN_BigNum *s)
 {
     int32_t cnt = 0;
     int32_t ret = CRYPT_SUCCESS;
-    BN_BigNum *k = BN_Create(BN_Bits(ctx->para->q));
+    uint32_t qBits = BN_Bits(ctx->para->q);
+    BN_BigNum *k = BN_Create(qBits);
+    BN_BigNum *k1 = BN_Create(qBits + 2U);
+    BN_BigNum *k2 = BN_Create(qBits + 2U);
     BN_Mont *montP = BN_MontCreate(ctx->para->p);
     BN_Optimizer *opt = BN_OptimizerCreate();
-    if (k == NULL || montP == NULL || opt == NULL) {
+    if (k == NULL || k1 == NULL || k2 == NULL || montP == NULL || opt == NULL) {
         ret = CRYPT_MEM_ALLOC_FAIL;
         BSL_ERR_PUSH_ERROR(ret);
         goto EXIT;
     }
     (void)BN_SetFlag(k, CRYPT_BN_FLAG_CONSTTIME);
+    (void)BN_SetFlag(k1, CRYPT_BN_FLAG_CONSTTIME);
     for (cnt = 0; cnt < CRYPT_DSA_TRY_MAX_CNT; cnt++) {
         // Generate random number k of [1, q-1], see RFC6979-2.4.2 */
         ret = RandRangeQ(ctx->libCtx, k, ctx->para->q);
@@ -876,7 +911,8 @@ static int32_t SignCore(const CRYPT_DSA_Ctx *ctx, BN_BigNum *d, BN_BigNum *r,
             goto EXIT;
         }
         // Compute r = g^k mod p mod q, see RFC6979-2.4.3 */
-        ret = BN_MontExp(r, ctx->para->g, k, montP, opt);
+        DsaPrepareExponent(k1, k2, k, ctx->para->q);
+        ret = BN_MontExp(r, ctx->para->g, k1, montP, opt);
         if (ret != CRYPT_SUCCESS) {
             BSL_ERR_PUSH_ERROR(ret);
             goto EXIT;
@@ -903,6 +939,8 @@ static int32_t SignCore(const CRYPT_DSA_Ctx *ctx, BN_BigNum *d, BN_BigNum *r,
     BSL_ERR_PUSH_ERROR(ret);
 EXIT:
     BN_Destroy(k);
+    BN_Destroy(k1);
+    BN_Destroy(k2);
     BN_MontDestroy(montP);
     BN_OptimizerDestroy(opt);
     return ret;

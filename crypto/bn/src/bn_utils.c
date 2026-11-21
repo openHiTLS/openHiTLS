@@ -110,10 +110,10 @@ int32_t BN_Bn2BinFixZero(const BN_BigNum *a, uint8_t *bin, uint32_t binLen)
         BSL_ERR_PUSH_ERROR(CRYPT_BN_BUFF_LEN_NOT_ENOUGH);
         return CRYPT_BN_BUFF_LEN_NOT_ENOUGH;
     }
-    memset(bin, 0, binLen);
     for (uint32_t i = 0; i < binLen; i++) {
         uint32_t limb = i / sizeof(BN_UINT);
         BN_UINT value = 0;
+        // a->room is not sensitive information
         if (limb < a->room) {
             BN_UINT mask = (BN_UINT)0 - (BN_UINT)(Uint32ConstTimeLt(limb, a->size) & 1U);
             value = a->data[limb] & mask;
