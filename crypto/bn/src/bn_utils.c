@@ -64,16 +64,6 @@ int32_t BN_Bin2Bn(BN_BigNum *r, const uint8_t *bin, uint32_t binLen)
     return CRYPT_SUCCESS;
 }
 
-/* convert BN_UINT to bin */
-static inline void Limb2Bin(uint8_t *bin, BN_UINT num)
-{
-    // convert BN_UINT to bin: buff[0] is the most significant bit.
-    uint32_t i;
-    for (i = 0; i < sizeof(BN_UINT); i++) { // big-endian
-        bin[sizeof(BN_UINT) - i - 1] = (uint8_t)(num >> (8 * i)); // 8: indicates the number of bits in a byte.
-    }
-}
-
 int32_t BN_Bn2Bin(const BN_BigNum *a, uint8_t *bin, uint32_t *binLen)
 {
     if (a == NULL || bin == NULL || binLen == NULL) {
@@ -120,33 +110,16 @@ int32_t BN_Bn2BinFixZero(const BN_BigNum *a, uint8_t *bin, uint32_t binLen)
         BSL_ERR_PUSH_ERROR(CRYPT_BN_BUFF_LEN_NOT_ENOUGH);
         return CRYPT_BN_BUFF_LEN_NOT_ENOUGH;
     }
-    uint32_t fixLen = binLen - bytes;
-    uint8_t *base = bin + fixLen;
-    memset(bin, 0, fixLen);
-    if (bytes == 0) {
-        return CRYPT_SUCCESS;
+    memset(bin, 0, binLen);
+    for (uint32_t i = 0; i < binLen; i++) {
+        uint32_t limb = i / sizeof(BN_UINT);
+        BN_UINT value = 0;
+        if (limb < a->room) {
+            BN_UINT mask = (BN_UINT)0 - (BN_UINT)(Uint32ConstTimeLt(limb, a->size) & 1U);
+            value = a->data[limb] & mask;
+        }
+        bin[binLen - i - 1U] = (uint8_t)(value >> (8U * (i % sizeof(BN_UINT))));
     }
-
-    uint32_t index = a->size - 1;
-    uint32_t left = bytes % sizeof(BN_UINT); // High-order non-integrated data
-    uint32_t offset = 0;
-    while (left != 0) {
-        base[offset] = (uint8_t)((a->data[index] >> (8 * (left - 1))) & 0xFF); // 1byte = 8bit
-        left--;
-        offset++;
-    }
-    if (offset != 0) {
-        index--;
-    }
-    uint32_t num = bytes / sizeof(BN_UINT); // High-order non-integrated data
-
-    // Cyclically parse the entire data block.
-    for (uint32_t i = 0; i < num; i++) {
-        Limb2Bin(base + offset, a->data[index]);
-        index--;
-        offset += sizeof(BN_UINT);
-    }
-
     return CRYPT_SUCCESS;
 }
 
