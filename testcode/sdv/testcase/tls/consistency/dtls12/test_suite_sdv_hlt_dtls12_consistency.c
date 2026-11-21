@@ -401,3 +401,170 @@ EXIT:
     HLT_FreeAllProcess();
 }
 /* END_CASE */
+
+#ifdef HITLS_TLS_PROTO_DTLS12
+HS_ReassQueue *HS_ReassNew(void);
+void HS_ReassFree(HS_ReassQueue *reassQueue);
+int32_t HS_ReassAppend(TLS_Ctx *ctx, HS_MsgInfo *msgInfo);
+bool HS_ReassQueueIsEmpty(const TLS_Ctx *ctx);
+void HS_ReassQueueClear(TLS_Ctx *ctx);
+#endif
+
+static uint32_t g_stubAlertCnt = 0;
+static ALERT_Level g_stubAlertLevel = 0;
+static ALERT_Description g_stubAlertDescription = 0;
+
+static void STUB_SendAlert(const TLS_Ctx *ctx, ALERT_Level level, ALERT_Description description)
+{
+    (void)ctx;
+    g_stubAlertCnt++;
+    g_stubAlertLevel = level;
+    g_stubAlertDescription = description;
+}
+
+static void BuildDtls12HsMsg(uint8_t *msg, HS_MsgType msgType, uint16_t msgSeq, uint32_t bodyLen)
+{
+    msg[0] = (uint8_t)msgType;
+    BSL_Uint24ToByte(bodyLen, &msg[DTLS_HS_MSGLEN_ADDR]);
+    BSL_Uint16ToByte(msgSeq, &msg[DTLS_HS_MSGSEQ_ADDR]);
+    BSL_Uint24ToByte(0, &msg[DTLS_HS_FRAGMENT_OFFSET_ADDR]);
+    BSL_Uint24ToByte(bodyLen, &msg[DTLS_HS_FRAGMENT_LEN_ADDR]);
+    for (uint32_t i = 0; i < bodyLen; i++) {
+        msg[DTLS_HS_MSG_HEADER_SIZE + i] = (uint8_t)(i + 1u);
+    }
+}
+
+/** @
+* @test SDV_TLS_DTLS12_ACTIVE_PENDING_STATE_FUNC_TC001
+* @spec -
+* @title DTLS1.2 read state activation discards buffered handshake data of the old epoch.
+* @precon nan
+* @brief
+*    1. Build a datagram context whose read pendingState is ready while stale data stays in both
+*    the handshake plaintext cache list and the reassembly queue.
+*    2. Activate the pending read state with REC_ActivePendingState.
+* @expect
+*    1. Buffered handshake data exists before the activation.
+*    2. The activation returns success instead of HITLS_REC_ERR_NOT_ON_RECORD_BOUNDARY, both
+*    buffered containers are cleared, and the read state switches to the pending state with
+*    epoch jumping from 0 to 1.
+@ */
+/* BEGIN_CASE */
+void SDV_TLS_DTLS12_ACTIVE_PENDING_STATE_FUNC_TC001(void)
+{
+    TLS_Ctx ctx = {0};
+    RecCtx recCtx = {0};
+    HS_Ctx hsCtx = {0};
+    RecConnState *readState = NULL;
+    RecBuf recBuf = {0};
+    HS_MsgInfo msgInfo = {0};
+    uint8_t hsMsg[DTLS_HS_MSG_HEADER_SIZE + 4] = {0};
+
+    ctx.recCtx = &recCtx;
+    ctx.hsCtx = &hsCtx;
+    ctx.negotiatedInfo.version = HITLS_VERSION_DTLS12;
+    ctx.config.tlsConfig.originVersionMask = DTLS12_VERSION_BIT;
+
+    recCtx.hsRecList = RecBufListNew();
+    ASSERT_TRUE(recCtx.hsRecList != NULL);
+    recBuf.buf = malloc(16);
+    ASSERT_TRUE(recBuf.buf != NULL);
+    recBuf.bufSize = 16;
+    recBuf.end = 16;
+    recBuf.isHoldBuffer = true;
+    ASSERT_EQ(RecBufListAddBuffer(recCtx.hsRecList, &recBuf), HITLS_SUCCESS);
+
+    hsCtx.reassMsg = HS_ReassNew();
+    ASSERT_TRUE(hsCtx.reassMsg != NULL);
+    BuildDtls12HsMsg(hsMsg, FINISHED, hsCtx.expectRecvSeq + 1u, 4u);
+    msgInfo.type = FINISHED;
+    msgInfo.length = 4u;
+    msgInfo.sequence = hsCtx.expectRecvSeq + 1u;
+    msgInfo.fragmentOffset = 0u;
+    msgInfo.fragmentLength = 4u;
+    msgInfo.rawMsg = hsMsg;
+    msgInfo.headerAndBodyLen = sizeof(hsMsg);
+    ASSERT_EQ(HS_ReassAppend(&ctx, &msgInfo), HITLS_SUCCESS);
+    ASSERT_TRUE(!LIST_IS_EMPTY(&ctx.hsCtx->reassMsg->head));
+
+    readState = RecConnStateNew();
+    ASSERT_TRUE(readState != NULL);
+    readState->suiteInfo = (RecConnSuitInfo *)BSL_SAL_Calloc(1u, sizeof(RecConnSuitInfo));
+    ASSERT_TRUE(readState->suiteInfo != NULL);
+    recCtx.readStates.pendingState = readState;
+
+    ASSERT_TRUE(!RecBufListEmpty(recCtx.hsRecList));
+    ASSERT_EQ(REC_ActivePendingState(&ctx, false), HITLS_SUCCESS);
+    ASSERT_TRUE(RecBufListEmpty(recCtx.hsRecList) == true);
+    ASSERT_TRUE(LIST_IS_EMPTY(&ctx.hsCtx->reassMsg->head));
+    ASSERT_TRUE(recCtx.readStates.currentState == readState);
+    ASSERT_TRUE(recCtx.readStates.pendingState == NULL);
+    ASSERT_TRUE(recCtx.readStates.outdatedState == NULL);
+    ASSERT_EQ(RecConnGetEpoch(recCtx.readStates.currentState), 1);
+    ASSERT_EQ(recCtx.readEpoch, 1);
+EXIT:
+    HS_ReassFree(hsCtx.reassMsg);
+    RecBufListFree(recCtx.hsRecList);
+    RecConnStateFree(recCtx.readStates.currentState);
+    RecConnStateFree(recCtx.readStates.pendingState);
+    return;
+}
+/* END_CASE */
+ 
+/** @
+* @test SDV_TLS_DTLS12_ACTIVE_PENDING_STATE_FUNC_TC002
+* @spec -
+* @title Stream read state activation still fails on buffered handshake data.
+* @precon nan
+* @brief
+*    1. Build a stream-only context whose read pendingState is ready while stale data stays in the
+*    handshake plaintext cache list.
+*    2. Activate the pending read state with REC_ActivePendingState.
+* @expect
+*    1. The activation fails with HITLS_REC_ERR_NOT_ON_RECORD_BOUNDARY and sends a fatal
+*    unexpected_message alert.
+*    2. The buffered data and the pending read state are kept unchanged.
+@ */
+/* BEGIN_CASE */
+void SDV_TLS_DTLS12_ACTIVE_PENDING_STATE_FUNC_TC002(void)
+{
+    TLS_Ctx ctx = {0};
+    RecCtx recCtx = {0};
+    RecConnState *readState = NULL;
+    RecBuf recBuf = {0};
+
+    ctx.recCtx = &recCtx;
+    ctx.negotiatedInfo.version = HITLS_VERSION_TLS12;
+    ctx.config.tlsConfig.originVersionMask = TLS12_VERSION_BIT;
+    ctx.method.sendAlert = STUB_SendAlert;
+
+    recCtx.hsRecList = RecBufListNew();
+    ASSERT_TRUE(recCtx.hsRecList != NULL);
+    recBuf.buf = malloc(16);
+    ASSERT_TRUE(recBuf.buf != NULL);
+    recBuf.bufSize = 16;
+    recBuf.end = 16;
+    recBuf.isHoldBuffer = true;
+    ASSERT_EQ(RecBufListAddBuffer(recCtx.hsRecList, &recBuf), HITLS_SUCCESS);
+ 
+    readState = RecConnStateNew();
+    ASSERT_TRUE(readState != NULL);
+    recCtx.readStates.pendingState = readState;
+
+    g_stubAlertCnt = 0;
+    g_stubAlertLevel = 0;
+    g_stubAlertDescription = 0;
+    ASSERT_TRUE(!RecBufListEmpty(recCtx.hsRecList));
+    ASSERT_EQ(REC_ActivePendingState(&ctx, false), HITLS_REC_ERR_NOT_ON_RECORD_BOUNDARY);
+    ASSERT_EQ(g_stubAlertCnt, 1);
+    ASSERT_EQ(g_stubAlertLevel, ALERT_LEVEL_FATAL);
+    ASSERT_EQ(g_stubAlertDescription, ALERT_UNEXPECTED_MESSAGE);
+    ASSERT_TRUE(recCtx.readStates.pendingState == readState);
+    ASSERT_TRUE(recCtx.readStates.currentState == NULL);
+    ASSERT_EQ(recCtx.readEpoch, 0);
+EXIT:
+    RecBufListFree(recCtx.hsRecList);
+    RecConnStateFree(recCtx.readStates.currentState);
+    RecConnStateFree(recCtx.readStates.pendingState);
+    return;
+}

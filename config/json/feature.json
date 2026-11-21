@@ -1637,6 +1637,7 @@
                 ".include": [
                     "tls/handshake/include",
                     "tls/handshake/common/include",
+                    "tls/handshake/reass/include",
                     "tls/alert/include",
                     "bsl/async/include",
                     "tls/include"

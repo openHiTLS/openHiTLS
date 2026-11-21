@@ -26,6 +26,8 @@
 #include "rec_read.h"
 #include "rec_crypto.h"
 #include "hs.h"
+#include "hs_reass.h"
+#include "hs_ctx.h"
 #include "record.h"
 
 // Release RecStatesSuite
@@ -557,12 +559,41 @@ int32_t REC_TLS13InitPendingState(const TLS_Ctx *ctx, const REC_SecParameters *p
 }
 #endif /* HITLS_TLS_PROTO_TLS13 */
 
+static bool REC_HasBufferedHsData(const TLS_Ctx *ctx)
+{
+    if (ctx == NULL || ctx->recCtx == NULL) {
+        return false;
+    }
+
+    const RecCtx *recordCtx = (const RecCtx *)ctx->recCtx;
+    if (recordCtx->hsRecList != NULL && !RecBufListEmpty(recordCtx->hsRecList)) {
+        return true;
+    }
+#ifdef HITLS_TLS_PROTO_DTLS12
+    if (ctx->hsCtx != NULL && ctx->hsCtx->reassMsg != NULL &&
+        !LIST_IS_EMPTY(&ctx->hsCtx->reassMsg->head)) {
+        return true;
+    }
+#endif
+    return false;
+}
+
 int32_t REC_ActivePendingState(TLS_Ctx *ctx, bool isOut)
 {
     RecCtx *recordCtx = (RecCtx *)ctx->recCtx;
 
     if (!isOut) {
-        if ((recordCtx->hsRecList != NULL && !RecBufListEmpty(recordCtx->hsRecList))) {
+        bool hasBuffered = REC_HasBufferedHsData(ctx);
+#ifdef HITLS_TLS_PROTO_DTLS12
+        if (IS_SUPPORT_DATAGRAM(ctx->config.tlsConfig.originVersionMask)) {
+            /* Datagram: cached data belongs to the old epoch, discard it and continue. */
+            if (hasBuffered) {
+                BSL_LIST_DeleteAll(recordCtx->hsRecList, (void (*)(void *))RecBufFree);
+                HS_ReassRemoveUpTo(ctx, UINT16_MAX);
+            }
+        } else
+#endif
+        if (hasBuffered) {
             ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_UNEXPECTED_MESSAGE);
             BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17383, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
                 "Record: read key change not on record boundary.", 0, 0, 0, 0);
