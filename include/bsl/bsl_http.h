@@ -130,13 +130,21 @@ int32_t HITLS_HTTP_ReqCtxAddHeader(HITLS_HTTP_ReqCtx *ctx, const char *name, con
  *                        Must be non-NULL with *respBody == NULL on input).
  * @param respLen   [OUT] Response body length (filled when ret == BSL_SUCCESS. Must be non-NULL
  *                        with *respLen == 0 on input).
- * @retval BSL_SUCCESS = complete (respBody/respLen filled).
- * @retval BSL_HTTP_ERR_IN_PROGRESS = in progress (non-blocking I/O, retry).
+ * @retval BSL_SUCCESS = complete (respBody/respLen filled). A body without a
+ *         Content-Length is complete when the peer closes the connection, so an
+ *         EOF that ends such a body is reported as success, not as an error.
+ * @retval BSL_UIO_IO_BUSY = would block (non-blocking I/O); call again.
  * @retval BSL_HTTP_ERR_RESP_STATUS = the response status code is not 200 (the
  *         transfer stops at the status line; the code is available via
  *         HITLS_HTTP_CTRL_GET_RESP_STATUS).
- * @retval BSL_HTTP_ERR_PARAM / _IO / _RESP_PARSE / _RESP_HDR_LINES / _RESP_TOO_LARGE / _CONTENT_TYPE /
- *         _STATE / BSL_MALLOC_FAIL = error (pushed once; later calls return the same code unchanged).
+ * @retval BSL_UIO_IO_EOF = the peer closed the connection before the response
+ *         status line, the header block or the declared Content-Length body was
+ *         complete (the uio code is reported unchanged).
+ * @retval other BSL_UIO_* codes = a hard uio error, reported unchanged.
+ * @retval BSL_HTTP_ERR_TIMEOUT = the transfer deadline was reached.
+ * @retval BSL_HTTP_ERR_RESP_PARSE / _RESP_HDR_LINES / _RESP_LINE_TOO_LONG / _RESP_TOO_LARGE /
+ *         _CONTENT_TYPE / _STATE / BSL_HTTP_ERR_PARAM / BSL_MALLOC_FAIL = error (pushed once; later calls
+ *         return the same code unchanged).
  *         BSL_HTTP_ERR_PARAM is also returned when *respBody is non-NULL or *respLen is non-zero on input.
  * @retval BSL_HTTP_ERR_REQ_NOT_SET = the request body has not been set with
  *         HITLS_HTTP_ReqCtxSetReq yet (a POST always carries a body).

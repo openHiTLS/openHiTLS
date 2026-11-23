@@ -57,12 +57,14 @@ HITLS_HTTP_ReqCtx *HITLS_OCSP_HttpReqCtxNew(BSL_UIO *uio, const char *path, cons
  * @param resp [OUT] Decoded OCSPResponse (caller releases); only filled when
  *               ret == HITLS_PKI_SUCCESS.
  * @retval HITLS_PKI_SUCCESS = complete (*resp filled).
- * @retval HITLS_OCSP_ERR_IN_PROGRESS = non-blocking in progress; the caller
- *         retries (typically sleeping between attempts).
+ * @retval BSL_UIO_IO_BUSY = would block (non-blocking I/O); call again, typically
+ *         sleeping between attempts.
  * @retval HITLS_OCSP_ERR_HTTP_STATUS = the responder returned a non-200 HTTP
  *         status (the code is available via HITLS_HTTP_CTRL_GET_RESP_STATUS).
- * @retval other error codes (HTTP layer errors pass through; DER decode
- *         failures return the codec error).
+ * @retval other error codes: the transport and HTTP layer errors are passed
+ *         through unchanged (e.g. BSL_UIO_IO_EOF when the peer closes the
+ *         connection before a complete response); DER decode failures return
+ *         the codec error.
  */
 int32_t HITLS_OCSP_HttpReqCtxExchange(HITLS_HTTP_ReqCtx *ctx, HITLS_OCSP_Resp **resp);
 

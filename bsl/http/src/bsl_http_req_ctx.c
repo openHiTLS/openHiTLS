@@ -57,15 +57,17 @@ static int32_t HttpCheckDeadline(HITLS_HTTP_ReqCtx *ctx)
     return BSL_SUCCESS;
 }
 
-/* Return IN_PROGRESS, or the fatal result of HttpCheckDeadline (BSL_HTTP_ERR_TIMEOUT
- * when the deadline has passed, or the SAL error when the clock is unavailable). */
-static int32_t HttpInProgressOrTimeout(HITLS_HTTP_ReqCtx *ctx)
+/* Return the UIO would-block code, or the fatal result of HttpCheckDeadline
+ * (BSL_HTTP_ERR_TIMEOUT when the deadline has passed, or the SAL error when the
+ * clock is unavailable). The UIO code is passed through unchanged so the caller
+ * sees the same "retry later" indication as the underlying transport. */
+static int32_t HttpBusyOrTimeout(HITLS_HTTP_ReqCtx *ctx)
 {
     int32_t ret = HttpCheckDeadline(ctx);
     if (ret != BSL_SUCCESS) {
         return ret;
     }
-    return BSL_HTTP_ERR_IN_PROGRESS;
+    return BSL_UIO_IO_BUSY;
 }
 
 static char *HttpStrDup(const char *s)
@@ -590,9 +592,9 @@ static int32_t HttpTerminateHdr(HITLS_HTTP_ReqCtx *ctx)
 }
 
 /* Write |len| bytes from |data| to the uio, advancing *sent until all bytes
- * are flushed. Returns BSL_SUCCESS, BSL_HTTP_ERR_IN_PROGRESS when the uio
- * would block (deadline permitting), or an error. Shared by the request-header
- * and request-body writers. */
+ * are flushed. Returns BSL_SUCCESS, BSL_UIO_IO_BUSY when the uio would block
+ * (deadline permitting), or the uio error unchanged. Shared by the
+ * request-header and request-body writers. */
 static int32_t HttpWriteChunk(HITLS_HTTP_ReqCtx *ctx, const void *data, uint32_t len, uint32_t *sent)
 {
     while (*sent < len) {
@@ -607,14 +609,13 @@ static int32_t HttpWriteChunk(HITLS_HTTP_ReqCtx *ctx, const void *data, uint32_t
         if (ret == BSL_UIO_IO_BUSY) {
             /* The buffered UIO wrapper reports a full/failed flush as BUSY:
              * the transfer is still in progress, not a hard I/O error. */
-            return HttpInProgressOrTimeout(ctx);
+            return HttpBusyOrTimeout(ctx);
         }
         if (ret != BSL_SUCCESS) {
-            BSL_ERR_PUSH_ERROR(BSL_HTTP_ERR_IO);
-            return BSL_HTTP_ERR_IO;
+            return ret;
         }
         if (writeLen == 0) {
-            return HttpInProgressOrTimeout(ctx);
+            return HttpBusyOrTimeout(ctx);
         }
         *sent += writeLen;
     }
@@ -670,10 +671,9 @@ static int32_t HttpFlush(HITLS_HTTP_ReqCtx *ctx)
         return BSL_SUCCESS;
     }
     if (ret == BSL_UIO_IO_BUSY) {
-        return HttpInProgressOrTimeout(ctx);
+        return HttpBusyOrTimeout(ctx);
     }
-    BSL_ERR_PUSH_ERROR(BSL_HTTP_ERR_IO);
-    return BSL_HTTP_ERR_IO;
+    return ret;
 }
 
 /* Extract one complete line (NUL-terminated, CR/LF stripped) in place at the
@@ -874,10 +874,10 @@ static int32_t HttpAppendLineBufBody(HITLS_HTTP_ReqCtx *ctx)
 }
 
 /* Read up to |want| bytes from the uio into |buf|. Returns BSL_SUCCESS with
- * *readLen > 0 on data, BSL_HTTP_ERR_IN_PROGRESS when the uio would block
- * (deadline permitting), BSL_UIO_IO_EOF at end of stream (the caller decides
- * whether EOF is legal), or BSL_HTTP_ERR_IO on a hard I/O error. Shared by the
- * header and body readers. */
+ * *readLen > 0 on data, BSL_UIO_IO_BUSY when the uio would block (deadline
+ * permitting), and otherwise the uio result unchanged: BSL_UIO_IO_EOF at end
+ * of stream (the caller decides whether EOF is legal) or a hard uio error.
+ * Shared by the header and body readers. */
 static int32_t HttpReadChunk(HITLS_HTTP_ReqCtx *ctx, uint8_t *buf, uint32_t want, uint32_t *readLen)
 {
     /* Hard deadline: fail once the transfer has exceeded its allowed time. */
@@ -886,20 +886,17 @@ static int32_t HttpReadChunk(HITLS_HTTP_ReqCtx *ctx, uint8_t *buf, uint32_t want
         return deadlineRet;
     }
     int32_t ret = BSL_UIO_Read(ctx->uio, buf, want, readLen);
-    if (ret == BSL_SUCCESS) {
-        if (*readLen > 0) {
-            return BSL_SUCCESS;
-        }
-        return HttpInProgressOrTimeout(ctx);
-    }
     if (ret == BSL_UIO_IO_BUSY) {
-        return HttpInProgressOrTimeout(ctx);
+        return HttpBusyOrTimeout(ctx);
     }
-    if (ret == BSL_UIO_IO_EOF) {
-        return BSL_UIO_IO_EOF;
+    if (ret != BSL_SUCCESS) {
+        /* EOF and hard uio errors are passed through unchanged. */
+        return ret;
     }
-    BSL_ERR_PUSH_ERROR(BSL_HTTP_ERR_IO);
-    return BSL_HTTP_ERR_IO;
+    if (*readLen == 0) {
+        return HttpBusyOrTimeout(ctx);
+    }
+    return BSL_SUCCESS;
 }
 
 static int32_t HttpReadResponseHeader(HITLS_HTTP_ReqCtx *ctx)
@@ -931,13 +928,14 @@ static int32_t HttpReadResponseHeader(HITLS_HTTP_ReqCtx *ctx)
         uint32_t want = (room < HITLS_HTTP_READ_CHUNK) ? room : HITLS_HTTP_READ_CHUNK;
         if (want == 0) {
             /* The buffer is full without a terminator: the line exceeds the limit. */
-            BSL_ERR_PUSH_ERROR(BSL_HTTP_ERR_RESP_PARSE);
-            return BSL_HTTP_ERR_RESP_PARSE;
+            BSL_ERR_PUSH_ERROR(BSL_HTTP_ERR_RESP_LINE_TOO_LONG);
+            return BSL_HTTP_ERR_RESP_LINE_TOO_LONG;
         }
         int32_t ret = HttpReadChunk(ctx, chunk, want, &readLen);
         if (ret == BSL_UIO_IO_EOF) {
-            BSL_ERR_PUSH_ERROR(BSL_HTTP_ERR_RESP_PARSE);
-            return BSL_HTTP_ERR_RESP_PARSE;
+            /* The peer closed the connection before the status line / headers
+             * were complete: report the uio EOF unchanged. */
+            return BSL_UIO_IO_EOF;
         }
         if (ret != BSL_SUCCESS) {
             return ret;
@@ -965,17 +963,16 @@ static int32_t HttpProbeRespBodyEof(HITLS_HTTP_ReqCtx *ctx)
         return BSL_SUCCESS;
     }
     if (ret == BSL_UIO_IO_BUSY) {
-        return HttpInProgressOrTimeout(ctx);
+        return HttpBusyOrTimeout(ctx);
     }
     if (ret == BSL_SUCCESS) {
         if (probeLen > 0) {
             BSL_ERR_PUSH_ERROR(BSL_HTTP_ERR_RESP_TOO_LARGE);
             return BSL_HTTP_ERR_RESP_TOO_LARGE;
         }
-        return HttpInProgressOrTimeout(ctx);
+        return HttpBusyOrTimeout(ctx);
     }
-    BSL_ERR_PUSH_ERROR(BSL_HTTP_ERR_IO);
-    return BSL_HTTP_ERR_IO;
+    return ret;
 }
 
 static int32_t HttpReadResponseBody(HITLS_HTTP_ReqCtx *ctx)
@@ -1000,8 +997,8 @@ static int32_t HttpReadResponseBody(HITLS_HTTP_ReqCtx *ctx)
         int32_t ret = HttpReadChunk(ctx, chunk, want, &readLen);
         if (ret == BSL_UIO_IO_EOF) {
             if (ctx->hasContentLength && ctx->respBodyLen < ctx->respContentLength) {
-                BSL_ERR_PUSH_ERROR(BSL_HTTP_ERR_RESP_PARSE);
-                return BSL_HTTP_ERR_RESP_PARSE;
+                /* The peer closed before the declared body was complete. */
+                return BSL_UIO_IO_EOF;
             }
             ctx->state = HITLS_HTTP_STATE_DONE;
             return BSL_SUCCESS;
@@ -1018,8 +1015,8 @@ static int32_t HttpReadResponseBody(HITLS_HTTP_ReqCtx *ctx)
 
 /* Run the handler for the current state. A handler returns BSL_SUCCESS when it
  * advanced the state machine to a new phase (completion is detected by the
- * driver via state == DONE), BSL_HTTP_ERR_IN_PROGRESS when it is blocked on I/O,
- * or an error code. */
+ * driver via state == DONE), BSL_UIO_IO_BUSY when it is blocked on I/O, or the
+ * uio/parse error unchanged. */
 static int32_t HttpRunState(HITLS_HTTP_ReqCtx *ctx)
 {
     switch (ctx->state) {
@@ -1077,7 +1074,7 @@ int32_t HITLS_HTTP_ReqCtxExchange(HITLS_HTTP_ReqCtx *ctx, const uint8_t **respBo
     for (;;) {
         HITLS_HTTP_State prevState = ctx->state;
         int32_t r = HttpRunState(ctx);
-        if (r == BSL_HTTP_ERR_IN_PROGRESS) {
+        if (r == BSL_UIO_IO_BUSY) {
             /* Would-block (EAGAIN convention): no progress was made, the caller
              * must poll again. Not an error. */
             return r;

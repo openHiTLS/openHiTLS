@@ -6462,7 +6462,8 @@ EXIT:
  *    2. Call HITLS_OCSP_HttpReqCtxExchange(ctx, resp) twice.
  * @expect
  *    1. The response is set up and the context created successfully.
- *    2. The first call returns HITLS_OCSP_ERR_IN_PROGRESS and the retry returns HITLS_PKI_SUCCESS.
+ *    2. The first call returns the transport would-block code BSL_UIO_IO_BUSY and the retry returns
+ *       HITLS_PKI_SUCCESS.
  */
 /* BEGIN_CASE */
 void SDV_OCSP_HTTP_TC004(void)
@@ -6488,7 +6489,7 @@ void SDV_OCSP_HTTP_TC004(void)
     ASSERT_TRUE(ctx != NULL);
     g_httpWriteBlockFirst = 1;
     int32_t ret = HITLS_OCSP_HttpReqCtxExchange(ctx, &parsed);
-    ASSERT_EQ(ret, HITLS_OCSP_ERR_IN_PROGRESS);
+    ASSERT_EQ(ret, BSL_UIO_IO_BUSY);
     ASSERT_TRUE(parsed == NULL);
     ret = HITLS_OCSP_HttpReqCtxExchange(ctx, &parsed);
     ASSERT_EQ(ret, HITLS_PKI_SUCCESS);
@@ -6515,7 +6516,7 @@ EXIT:
  *    2. Call HITLS_OCSP_HttpReqCtxExchange once.
  * @expect
  *    1. The context is created successfully.
- *    2. HttpReqCtxExchange returns the HTTP I/O error code.
+ *    2. HttpReqCtxExchange returns the transport error code (BSL_UIO_IO_EXCEPTION) unchanged.
  */
 /* BEGIN_CASE */
 void SDV_OCSP_HTTP_TC005(void)
@@ -6533,7 +6534,7 @@ void SDV_OCSP_HTTP_TC005(void)
     ctx = HITLS_OCSP_HttpReqCtxNew(uio, "/responder/ocsp", req);
     ASSERT_TRUE(ctx != NULL);
     g_httpWriteRet = BSL_UIO_IO_EXCEPTION;
-    ASSERT_EQ(HITLS_OCSP_HttpReqCtxExchange(ctx, &parsed), BSL_HTTP_ERR_IO);
+    ASSERT_EQ(HITLS_OCSP_HttpReqCtxExchange(ctx, &parsed), BSL_UIO_IO_EXCEPTION);
 EXIT:
     HITLS_OCSP_RespFree(parsed);
     HITLS_OCSP_HttpReqCtxFree(ctx);
@@ -6977,7 +6978,7 @@ void SDV_OCSP_HTTP_TC013(void)
     int32_t ret;
     do {
         ret = HITLS_OCSP_HttpReqCtxExchange(ctx, &parsed);
-    } while (ret == HITLS_OCSP_ERR_IN_PROGRESS);
+    } while (ret == BSL_UIO_IO_BUSY);
     ASSERT_EQ(ret, BSL_HTTP_ERR_TIMEOUT);
     ASSERT_TRUE(parsed == NULL);
 EXIT:

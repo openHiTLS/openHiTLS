@@ -97,12 +97,10 @@ int32_t HITLS_OCSP_HttpReqCtxExchange(HITLS_HTTP_ReqCtx *ctx, HITLS_OCSP_Resp **
     *resp = NULL;
     const uint8_t *respBody = NULL;
     uint32_t respLen = 0;
-    /* One non-blocking step of the HTTP exchange; on HITLS_OCSP_ERR_IN_PROGRESS
-     * the caller retries (typically sleeping between attempts). */
+    /* One non-blocking step of the HTTP exchange. The transport result is
+     * passed through, so a would-block is reported as BSL_UIO_IO_BUSY and the
+     * caller retries on it (typically sleeping between attempts). */
     int32_t ret = HITLS_HTTP_ReqCtxExchange(ctx, &respBody, &respLen);
-    if (ret == BSL_HTTP_ERR_IN_PROGRESS) {
-        return HITLS_OCSP_ERR_IN_PROGRESS;
-    }
     if (ret != BSL_SUCCESS) {
         /* A non-200 status means the responder did not produce an OCSP
          * response; surface it as an HTTP-status error instead of the raw

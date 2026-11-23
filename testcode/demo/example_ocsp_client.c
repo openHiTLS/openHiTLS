@@ -544,10 +544,10 @@ int main(int argc, char *argv[])
     uint32_t timeoutSec = OCSP_CLIENT_TIMEOUT_SEC;
     (void)HITLS_HTTP_ReqCtxCtrl(ctx, HITLS_HTTP_CTRL_SET_TIMEOUT, &timeoutSec, sizeof(timeoutSec));
 
-    ret = HITLS_OCSP_ERR_IN_PROGRESS;
-    for (int32_t tries = 0; tries < OCSP_CLIENT_POLL_TRIES && ret == HITLS_OCSP_ERR_IN_PROGRESS; tries++) {
+    ret = BSL_UIO_IO_BUSY;
+    for (int32_t tries = 0; tries < OCSP_CLIENT_POLL_TRIES && ret == BSL_UIO_IO_BUSY; tries++) {
         ret = HITLS_OCSP_HttpReqCtxExchange(ctx, &resp);
-        if (ret == HITLS_OCSP_ERR_IN_PROGRESS) {
+        if (ret == BSL_UIO_IO_BUSY) {
             struct timeval sl = {0, OCSP_CLIENT_POLL_MS * 1000};
             (void)select(0, NULL, NULL, NULL, &sl);
         }

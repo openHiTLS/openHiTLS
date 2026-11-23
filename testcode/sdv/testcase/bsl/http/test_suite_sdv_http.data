@@ -118,7 +118,7 @@ SDV_BSL_HTTP_EXCHANGE_TC005:
 Content-Type mismatch is rejected
 SDV_BSL_HTTP_EXCHANGE_TC006:
 
-I/O error is reported
+A transport I/O error is reported unchanged
 SDV_BSL_HTTP_EXCHANGE_TC007:
 
 HTTP/1.1 response is accepted
@@ -246,3 +246,12 @@ SDV_BSL_HTTP_EXCHANGE_TC037:
 
 Body bytes exceeding the declared Content-Length are rejected
 SDV_BSL_HTTP_EXCHANGE_TC038:
+
+A response header truncated by a peer close is reported as the transport EOF
+SDV_BSL_HTTP_UIO_TC039:
+
+A declared Content-Length body truncated by a peer close is reported as the transport EOF
+SDV_BSL_HTTP_UIO_TC040:
+
+A transport would-block is passed through and the transfer resumes on retry
+SDV_BSL_HTTP_UIO_TC041:

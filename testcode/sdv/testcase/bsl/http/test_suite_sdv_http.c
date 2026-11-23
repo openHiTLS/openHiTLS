@@ -126,7 +126,7 @@ static const char RESP_500_TEXT[] = "HTTP/1.1 500 Internal Server Error\r\n"
                                     "error";
 
 /* Drive Exchange until completion/error; return the final ret, out params and the
- * number of BSL_HTTP_ERR_IN_PROGRESS returns. */
+ * number of would-block (BSL_UIO_IO_BUSY) returns. */
 static int32_t HttpTestDrive(HITLS_HTTP_ReqCtx *ctx, const uint8_t **body, uint32_t *len, uint32_t *progressCount)
 {
     uint32_t count = 0;
@@ -134,7 +134,7 @@ static int32_t HttpTestDrive(HITLS_HTTP_ReqCtx *ctx, const uint8_t **body, uint3
         const uint8_t *b = NULL;
         uint32_t l = 0;
         int32_t ret = HITLS_HTTP_ReqCtxExchange(ctx, &b, &l);
-        if (ret == BSL_HTTP_ERR_IN_PROGRESS) {
+        if (ret == BSL_UIO_IO_BUSY) {
             count++;
             continue;
         }
@@ -1013,7 +1013,7 @@ void SDV_BSL_HTTP_CTRL_TC008(void)
     g_httpWriteBlockFirst = 1;
     const uint8_t *body = NULL;
     uint32_t len = 0;
-    ASSERT_EQ(HITLS_HTTP_ReqCtxExchange(ctx, &body, &len), BSL_HTTP_ERR_IN_PROGRESS);
+    ASSERT_EQ(HITLS_HTTP_ReqCtxExchange(ctx, &body, &len), BSL_UIO_IO_BUSY);
     uint32_t v = 1024;
     ASSERT_EQ(HITLS_HTTP_ReqCtxCtrl(ctx, HITLS_HTTP_CTRL_SET_MAX_RESP_LEN, &v, sizeof(v)), BSL_HTTP_ERR_PARAM);
     ASSERT_EQ(HITLS_HTTP_ReqCtxCtrl(ctx, HITLS_HTTP_CTRL_SET_EXP_CONTENT_TYPE, "text/html", 0), BSL_HTTP_ERR_PARAM);
@@ -1109,7 +1109,7 @@ EXIT:
  *    2. On a fresh context, drive a response with a header line over the limit.
  * @expect
  *    1. The short response completes.
- *    2. Exchange returns BSL_HTTP_ERR_RESP_PARSE.
+ *    2. Exchange returns BSL_HTTP_ERR_RESP_LINE_TOO_LONG.
  */
 /* BEGIN_CASE */
 void SDV_BSL_HTTP_CTRL_TC011(void)
@@ -1146,7 +1146,7 @@ void SDV_BSL_HTTP_CTRL_TC011(void)
     HttpTestSetResponseBuf((const uint8_t *)resp, (uint32_t)pos);
     body = NULL;
     len = 0;
-    ASSERT_EQ(HttpTestDrive(ctx, &body, &len, NULL), BSL_HTTP_ERR_RESP_PARSE);
+    ASSERT_EQ(HttpTestDrive(ctx, &body, &len, NULL), BSL_HTTP_ERR_RESP_LINE_TOO_LONG);
     HITLS_HTTP_ReqCtxFree(ctx);
     BSL_UIO_Free(uio);
 EXIT:
@@ -1294,7 +1294,7 @@ EXIT:
  * @expect
  *    1. The request is configured successfully.
  *    2. The first write and the first read block once.
- *    3. Exchange returns at least twice BSL_HTTP_ERR_IN_PROGRESS and finally BSL_SUCCESS
+ *    3. Exchange returns at least twice BSL_UIO_IO_BUSY and finally BSL_SUCCESS
  *       with the correct response body.
  */
 /* BEGIN_CASE */
@@ -1606,7 +1606,7 @@ EXIT:
  * @expect
  *    1. The request is configured successfully.
  *    2. The stub write fails.
- *    3. Exchange returns BSL_HTTP_ERR_IO.
+ *    3. Exchange returns the uio error BSL_UIO_IO_EXCEPTION unchanged.
  */
 /* BEGIN_CASE */
 void SDV_BSL_HTTP_EXCHANGE_TC007(void)
@@ -1621,7 +1621,7 @@ void SDV_BSL_HTTP_EXCHANGE_TC007(void)
     ASSERT_EQ(ret, BSL_SUCCESS);
     g_httpWriteRet = BSL_UIO_IO_EXCEPTION;
     ret = HttpTestDrive(ctx, NULL, NULL, NULL);
-    ASSERT_EQ(ret, BSL_HTTP_ERR_IO);
+    ASSERT_EQ(ret, BSL_UIO_IO_EXCEPTION);
     HITLS_HTTP_ReqCtxFree(ctx);
     BSL_UIO_Free(uio);
 EXIT:
@@ -1857,7 +1857,7 @@ EXIT:
  *    2. Call Exchange once and inspect the out parameters.
  * @expect
  *    1. The request is configured successfully.
- *    2. Exchange returns BSL_HTTP_ERR_IN_PROGRESS and the out parameters are NULL/0.
+ *    2. Exchange returns BSL_UIO_IO_BUSY and the out parameters are NULL/0.
  */
 /* BEGIN_CASE */
 void SDV_BSL_HTTP_EXCHANGE_TC013(void)
@@ -1873,7 +1873,7 @@ void SDV_BSL_HTTP_EXCHANGE_TC013(void)
     const uint8_t *body = NULL;
     uint32_t len = 0;
     ret = HITLS_HTTP_ReqCtxExchange(ctx, &body, &len);
-    ASSERT_EQ(ret, BSL_HTTP_ERR_IN_PROGRESS);
+    ASSERT_EQ(ret, BSL_UIO_IO_BUSY);
     ASSERT_TRUE(body == NULL);
     ASSERT_EQ(len, 0);
     HITLS_HTTP_ReqCtxFree(ctx);
@@ -2453,7 +2453,7 @@ void SDV_BSL_HTTP_CTX_TC032(void)
     body = NULL;
     len = 0;
     ret = HITLS_HTTP_ReqCtxExchange(ctx, &body, &len);
-    ASSERT_EQ(ret, BSL_HTTP_ERR_IN_PROGRESS);
+    ASSERT_EQ(ret, BSL_UIO_IO_BUSY);
     ASSERT_EQ(ctx->state, HITLS_HTTP_STATE_READ_HDR);
     ASSERT_EQ(HITLS_HTTP_ReqCtxSetReq(ctx, "application/ocsp-request", NULL, 0), BSL_HTTP_ERR_PARAM);
     HITLS_HTTP_ReqCtxFree(ctx);
@@ -2602,7 +2602,7 @@ void SDV_BSL_HTTP_ADDHEADER_TC012(void)
     const uint8_t *body = NULL;
     uint32_t len = 0;
     int32_t ret = HITLS_HTTP_ReqCtxExchange(ctx, &body, &len);
-    ASSERT_EQ(ret, BSL_HTTP_ERR_IN_PROGRESS);
+    ASSERT_EQ(ret, BSL_UIO_IO_BUSY);
     ASSERT_TRUE(ctx->state != HITLS_HTTP_STATE_INIT);
     ASSERT_EQ(HITLS_HTTP_ReqCtxAddHeader(ctx, "X-Test", "late"), BSL_HTTP_ERR_PARAM);
     HITLS_HTTP_ReqCtxFree(ctx);
@@ -3075,6 +3075,109 @@ void SDV_BSL_HTTP_EXCHANGE_TC028(void)
     uint32_t status = 0;
     ASSERT_EQ(HITLS_HTTP_ReqCtxCtrl(ctx, HITLS_HTTP_CTRL_GET_RESP_STATUS, &status, sizeof(status)), BSL_SUCCESS);
     ASSERT_EQ(status, 404);
+    HITLS_HTTP_ReqCtxFree(ctx);
+    BSL_UIO_Free(uio);
+EXIT:
+    return;
+}
+/* END_CASE */
+
+/**
+ * @test  SDV_BSL_HTTP_UIO_TC039
+ * @title  A response header truncated by a peer close is reported as the transport EOF
+ * @precon  nan
+ * @brief
+ *    1. Drive Exchange against a response whose header block is never terminated
+ *       (no blank line) while the peer closes the connection.
+ *    2. Call Exchange again on the failed context.
+ * @expect
+ *    1. The transport code BSL_UIO_IO_EOF is returned unchanged and latched, so the
+ *       second call returns it again without an out-parameter update.
+ */
+/* BEGIN_CASE */
+void SDV_BSL_HTTP_UIO_TC039(void)
+{
+    HttpTestReset();
+    BSL_UIO *uio = HttpTestNewUio();
+    ASSERT_TRUE(uio != NULL);
+    HITLS_HTTP_ReqCtx *ctx = HITLS_HTTP_ReqCtxNew(uio, HITLS_HTTP_METHOD_POST, "/responder/ocsp");
+    ASSERT_TRUE(ctx != NULL);
+    ASSERT_EQ(HITLS_HTTP_ReqCtxSetReq(ctx, "application/ocsp-request", NULL, 0), BSL_SUCCESS);
+    static const char partialHdr[] = "HTTP/1.0 200 OK\r\nContent-Type: application/ocsp-response\r\n";
+    HttpTestSetResponseBuf((const uint8_t *)partialHdr, (uint32_t)strlen(partialHdr));
+    g_httpEof = 1;
+    ASSERT_EQ(HttpTestDrive(ctx, NULL, NULL, NULL), BSL_UIO_IO_EOF);
+    const uint8_t *body = NULL;
+    uint32_t len = 0;
+    ASSERT_EQ(HITLS_HTTP_ReqCtxExchange(ctx, &body, &len), BSL_UIO_IO_EOF);
+    ASSERT_TRUE(body == NULL);
+    ASSERT_EQ(len, 0);
+    HITLS_HTTP_ReqCtxFree(ctx);
+    BSL_UIO_Free(uio);
+EXIT:
+    return;
+}
+/* END_CASE */
+
+/**
+ * @test  SDV_BSL_HTTP_UIO_TC040
+ * @title  A declared Content-Length body truncated by a peer close is reported as the transport EOF
+ * @precon  nan
+ * @brief
+ *    1. Drive Exchange against a response declaring Content-Length: 10 but carrying
+ *       only 5 body bytes while the peer closes the connection.
+ * @expect
+ *    1. The transport code BSL_UIO_IO_EOF is returned unchanged instead of a parse error.
+ */
+/* BEGIN_CASE */
+void SDV_BSL_HTTP_UIO_TC040(void)
+{
+    HttpTestReset();
+    BSL_UIO *uio = HttpTestNewUio();
+    ASSERT_TRUE(uio != NULL);
+    HITLS_HTTP_ReqCtx *ctx = HITLS_HTTP_ReqCtxNew(uio, HITLS_HTTP_METHOD_POST, "/responder/ocsp");
+    ASSERT_TRUE(ctx != NULL);
+    ASSERT_EQ(HITLS_HTTP_ReqCtxSetReq(ctx, "application/ocsp-request", NULL, 0), BSL_SUCCESS);
+    static const char partialBody[] = "HTTP/1.0 200 OK\r\nContent-Type: application/ocsp-response\r\n"
+                                      "Content-Length: 10\r\n\r\n12345";
+    HttpTestSetResponseBuf((const uint8_t *)partialBody, (uint32_t)strlen(partialBody));
+    g_httpEof = 1;
+    ASSERT_EQ(HttpTestDrive(ctx, NULL, NULL, NULL), BSL_UIO_IO_EOF);
+    HITLS_HTTP_ReqCtxFree(ctx);
+    BSL_UIO_Free(uio);
+EXIT:
+    return;
+}
+/* END_CASE */
+
+/**
+ * @test  SDV_BSL_HTTP_UIO_TC041
+ * @title  A transport would-block is passed through and the transfer resumes on retry
+ * @precon  nan
+ * @brief
+ *    1. Make the stub read return BSL_UIO_IO_BUSY and drive Exchange once.
+ *    2. Clear the would-block condition and drive Exchange until completion.
+ * @expect
+ *    1. The first call returns BSL_UIO_IO_BUSY unchanged (not latched as an error).
+ *    2. The retry completes with BSL_SUCCESS and the full body.
+ */
+/* BEGIN_CASE */
+void SDV_BSL_HTTP_UIO_TC041(void)
+{
+    HttpTestReset();
+    BSL_UIO *uio = HttpTestNewUio();
+    ASSERT_TRUE(uio != NULL);
+    HITLS_HTTP_ReqCtx *ctx = HITLS_HTTP_ReqCtxNew(uio, HITLS_HTTP_METHOD_POST, "/responder/ocsp");
+    ASSERT_TRUE(ctx != NULL);
+    ASSERT_EQ(HITLS_HTTP_ReqCtxSetReq(ctx, "application/ocsp-request", NULL, 0), BSL_SUCCESS);
+    HttpTestSetResponse(RESP_OK);
+    g_httpReadRet = BSL_UIO_IO_BUSY;
+    const uint8_t *body = NULL;
+    uint32_t len = 0;
+    ASSERT_EQ(HITLS_HTTP_ReqCtxExchange(ctx, &body, &len), BSL_UIO_IO_BUSY);
+    g_httpReadRet = BSL_SUCCESS;
+    ASSERT_EQ(HttpTestDrive(ctx, &body, &len, NULL), BSL_SUCCESS);
+    ASSERT_TRUE(body != NULL && len == 5 && memcmp(body, "12345", 5) == 0);
     HITLS_HTTP_ReqCtxFree(ctx);
     BSL_UIO_Free(uio);
 EXIT:
