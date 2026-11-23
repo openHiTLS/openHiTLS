@@ -52,10 +52,12 @@ int32_t ParseCertificateStatus(TLS_Ctx *ctx, const uint8_t *buf, uint32_t bufLen
         return ParseErrorProcess(ctx, HITLS_PARSE_INVALID_MSG_LEN, BINLOG_ID17434,
                                  BINGLOG_STR("certificate status response length is incorrect"), ALERT_DECODE_ERROR);
     }
+    /* RFC 6066 §2.2 declares OCSPResponse as opaque<1..2^24-1>; a zero-length
+     * response violates the size bound and is a decoding error. */
     if (respLen == 0) {
         return ParseErrorProcess(ctx, HITLS_MSG_HANDLE_OCSP_STATUS_ERR, BINLOG_ID17434,
                                  BINGLOG_STR("certificate status response is empty"),
-                                 ALERT_BAD_CERTIFICATE_STATUS_RESPONSE);
+                                 ALERT_DECODE_ERROR);
     }
     msg->response = (uint8_t *)BSL_SAL_Dump(&buf[sizeof(uint8_t) + UINT24_SIZE], respLen);
     if (msg->response == NULL) {

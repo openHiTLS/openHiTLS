@@ -485,14 +485,17 @@ int32_t ClientRecvCertificateStatus(TLS_Ctx *ctx, const HS_Msg *hsMsg)
         return ParseErrorProcess(ctx, HITLS_MSG_HANDLE_UNEXPECTED_MESSAGE, 0, NULL, ALERT_UNEXPECTED_MESSAGE);
     }
     if (msg->statusType != HITLS_STATUS_REQUEST_TYPE_OCSP) {
-        return ParseErrorProcess(ctx, HITLS_MSG_HANDLE_OCSP_STATUS_ERR, 0, NULL, ALERT_ILLEGAL_PARAMETER);
+        /* RFC 6066 section 8 defines ocsp(1) as the only status_type; a value
+         * outside that set cannot be decoded as a CertificateStatus, which
+         * RFC 5246 section 7.2.2 classifies as decode_error. */
+        return ParseErrorProcess(ctx, HITLS_MSG_HANDLE_OCSP_STATUS_ERR, 0, NULL, ALERT_DECODE_ERROR);
     }
-    /* RFC 6066 section 8: OCSPResponse is opaque<1..2^24-1>, and a client that requested the status
-     * request must abort with bad_certificate_status_response(113) on an unsatisfactory response. */
+    /* RFC 6066 section 8 declares OCSPResponse as opaque<1..2^24-1>; a zero-length
+     * response violates the size bound and is a decoding error. */
     if (msg->response == NULL || msg->responseLen == 0) {
         return ParseErrorProcess(ctx, HITLS_MSG_HANDLE_OCSP_STATUS_ERR, BINLOG_ID17426,
                                  BINGLOG_STR("certificate status response is empty"),
-                                 ALERT_BAD_CERTIFICATE_STATUS_RESPONSE);
+                                 ALERT_DECODE_ERROR);
     }
     /* The peer response must be a parseable OCSPResponse; a malformed DER is an
      * unsatisfactory response and aborts the handshake. */
@@ -562,24 +565,24 @@ int32_t ParseCertEntryOcspStatus(TLS_Ctx *ctx, const uint8_t *buf, uint32_t bufL
                                  ALERT_DECODE_ERROR);
     }
     if (buf[0] != HITLS_STATUS_REQUEST_TYPE_OCSP) {
-        /* RFC 6066 defines only the OCSP status type. */
-        return ParseErrorProcess(ctx, HITLS_MSG_HANDLE_OCSP_STATUS_ERR, 0, NULL, ALERT_ILLEGAL_PARAMETER);
+        /* RFC 6066 defines only the OCSP status type; a value outside the
+         * defined set is a decoding error (RFC 8446 section 6.2). */
+        return ParseErrorProcess(ctx, HITLS_MSG_HANDLE_OCSP_STATUS_ERR, 0, NULL, ALERT_DECODE_ERROR);
     }
     uint32_t respLen = BSL_ByteToUint24(&buf[1]);
-    /* RFC 8446 section 6.2: an invalid OCSP response provided via status_request is
-     * reported with bad_certificate_status_response. RFC 6066 makes OCSPResponse
-     * opaque<1..2^24-1>, so a zero-length response is invalid. */
-    if (respLen == 0) {
-        return ParseErrorProcess(ctx, HITLS_MSG_HANDLE_OCSP_STATUS_ERR, BINLOG_ID17430,
-                                 BINGLOG_STR("certificate entry OCSP response is empty"),
-                                 ALERT_BAD_CERTIFICATE_STATUS_RESPONSE);
-    }
     /* RFC 8446 section 4.4.2.1: the extension is exactly status_type(1) +
      * response length(3) + the OCSPResponse DER; a length mismatch (trailing
      * bytes after the response, or a length larger than the body) is malformed. */
     if (respLen != (bufLen - (sizeof(uint8_t) + UINT24_SIZE))) {
         return ParseErrorProcess(ctx, HITLS_PARSE_INVALID_MSG_LEN, BINLOG_ID17431,
                                  BINGLOG_STR("certificate entry OCSP response length is incorrect"),
+                                 ALERT_DECODE_ERROR);
+    }
+    /* RFC 6066 makes OCSPResponse opaque<1..2^24-1>; a zero-length response
+     * violates the size bound and is a decoding error. */
+    if (respLen == 0) {
+        return ParseErrorProcess(ctx, HITLS_MSG_HANDLE_OCSP_STATUS_ERR, BINLOG_ID17430,
+                                 BINGLOG_STR("certificate entry OCSP response is empty"),
                                  ALERT_DECODE_ERROR);
     }
     /* The entry response must be a parseable OCSPResponse; a malformed DER is an

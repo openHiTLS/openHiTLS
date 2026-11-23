@@ -43,6 +43,7 @@ int32_t ParseClientStatusRequest(ParsePacket *pkt, ClientHelloMsg *msg);
 int32_t ParseServerStatusRequest(ParsePacket *pkt);
 int32_t CheckCertificateStatusType(TLS_Ctx *ctx, const HS_MsgType msgType);
 int32_t ClientRecvCertificateStatus(TLS_Ctx *ctx, const HS_Msg *hsMsg);
+int32_t ParseCertificateStatus(TLS_Ctx *ctx, const uint8_t *buf, uint32_t bufLen, HS_Msg *hsMsg);
 /* END_HEADER */
 
 /* Certificate chain + OCSP responses for the stapling tests. The server uses
@@ -1602,7 +1603,8 @@ EXIT:
 * @brief
 1. Create a TLS 1.3 client that requested the status request and feed it malformed CertificateEntry extension bodies.
 2. Cover a truncated header, an unknown status type, a zero-length OCSPResponse, and a response length that overruns the body.
-* @expect  1. Every malformed body is rejected with a non-success code instead of being silently ignored.
+* @expect  1. Every malformed body is rejected with a non-success code instead of being silently ignored;
+*           an unknown status type, a zero-length response and an overrunning length are rejected with decode_error.
 * @prior  Level 2
 * @auto  TRUE
 @ */
@@ -1621,23 +1623,31 @@ void SDV_TLS_OCSP_STAPLING_CERTENTRY_STRICT_TC019()
     ASSERT_TRUE(reqLink != NULL);
 
     TLS_Ctx *tls = (TLS_Ctx *)FRAME_GetTlsCtx(reqLink);
-    tls->method.sendAlert = TestSendAlert;
+    tls->method.sendAlert = TestSendAlertRecord;
 
     /* Truncated header: cannot carry status_type(1) + response length(3). */
     const uint8_t tooShort[] = {0x01};
+    g_lastAlertDesc = ALERT_CLOSE_NOTIFY;
     ASSERT_NE(ParseCertEntryOcspStatus(tls, tooShort, sizeof(tooShort), 0), HITLS_SUCCESS);
+    ASSERT_EQ(g_lastAlertDesc, ALERT_DECODE_ERROR);
 
-    /* Unknown status type (only ocsp(1) is defined by RFC 6066). */
+    /* A status_type outside the defined set is a decoding error. */
     const uint8_t badType[] = {0x02, 0x00, 0x00, 0x01, 0x00};
+    g_lastAlertDesc = ALERT_CLOSE_NOTIFY;
     ASSERT_NE(ParseCertEntryOcspStatus(tls, badType, sizeof(badType), 0), HITLS_SUCCESS);
+    ASSERT_EQ(g_lastAlertDesc, ALERT_DECODE_ERROR);
 
     /* Zero-length OCSPResponse violates opaque<1..2^24-1>. */
     const uint8_t zeroLen[] = {0x01, 0x00, 0x00, 0x00};
+    g_lastAlertDesc = ALERT_CLOSE_NOTIFY;
     ASSERT_NE(ParseCertEntryOcspStatus(tls, zeroLen, sizeof(zeroLen), 0), HITLS_SUCCESS);
+    ASSERT_EQ(g_lastAlertDesc, ALERT_DECODE_ERROR);
 
     /* Declared response length overruns the extension body. */
     const uint8_t overrun[] = {0x01, 0x00, 0x00, 0x05, 0x00};
+    g_lastAlertDesc = ALERT_CLOSE_NOTIFY;
     ASSERT_NE(ParseCertEntryOcspStatus(tls, overrun, sizeof(overrun), 0), HITLS_SUCCESS);
+    ASSERT_EQ(g_lastAlertDesc, ALERT_DECODE_ERROR);
 
 EXIT:
     HITLS_CFG_FreeConfig(reqConfig);
@@ -1648,12 +1658,13 @@ EXIT:
 /* @
 * @test  SDV_TLS_OCSP_STAPLING_TLS12_EMPTY_RESP_TC020
 * @spec  -
-* @title  TLS 1.2: an empty OCSPResponse violates opaque<1..2^24-1> and is rejected.
+* @title  TLS 1.2: an empty OCSPResponse or an unknown status_type is rejected with decode_error.
 * @precon  nan
 * @brief
 1. Create a TLS 1.2 client that requested the status request.
-2. Hand ClientRecvCertificateStatus a CertificateStatus message with status_type=ocsp but a zero-length response.
-* @expect  1. The empty response is rejected with a non-success code instead of being accepted as "no stapling".
+2. Hand ClientRecvCertificateStatus a CertificateStatus message with status_type=ocsp but a zero-length
+   response, then one with a status_type outside the defined set.
+* @expect  1. Both are rejected with decode_error instead of being accepted as "no stapling".
 * @prior  Level 2
 * @auto  TRUE
 @ */
@@ -1672,14 +1683,33 @@ void SDV_TLS_OCSP_STAPLING_TLS12_EMPTY_RESP_TC020()
     ASSERT_TRUE(reqLink != NULL);
 
     TLS_Ctx *tls = (TLS_Ctx *)FRAME_GetTlsCtx(reqLink);
-    tls->method.sendAlert = TestSendAlert;
+    tls->method.sendAlert = TestSendAlertRecord;
+    /* The server echoed the status_request extension, so the client waits for
+     * CertificateStatus; otherwise the message is rejected as unexpected. */
+    tls->statusExpected = true;
 
     HS_Msg hsMsg;
     (void)memset(&hsMsg, 0, sizeof(hsMsg));
     hsMsg.body.certificateStatus.statusType = HITLS_STATUS_REQUEST_TYPE_OCSP;
     hsMsg.body.certificateStatus.response = NULL;
     hsMsg.body.certificateStatus.responseLen = 0;
-    ASSERT_NE(ClientRecvCertificateStatus(tls, &hsMsg), HITLS_SUCCESS);
+    g_lastAlertDesc = ALERT_CLOSE_NOTIFY;
+    ASSERT_EQ(ClientRecvCertificateStatus(tls, &hsMsg), HITLS_MSG_HANDLE_OCSP_STATUS_ERR);
+    ASSERT_EQ(g_lastAlertDesc, ALERT_DECODE_ERROR);
+
+    /* A status_type outside the defined set is a decoding error as well. */
+    (void)memset(&hsMsg, 0, sizeof(hsMsg));
+    hsMsg.body.certificateStatus.statusType = HITLS_STATUS_REQUEST_TYPE_OCSP + 1;
+    g_lastAlertDesc = ALERT_CLOSE_NOTIFY;
+    ASSERT_EQ(ClientRecvCertificateStatus(tls, &hsMsg), HITLS_MSG_HANDLE_OCSP_STATUS_ERR);
+    ASSERT_EQ(g_lastAlertDesc, ALERT_DECODE_ERROR);
+
+    /* The message parser classifies the empty body as a length violation. */
+    const uint8_t emptyBody[] = {0x01, 0x00, 0x00, 0x00};
+    (void)memset(&hsMsg, 0, sizeof(hsMsg));
+    g_lastAlertDesc = ALERT_CLOSE_NOTIFY;
+    ASSERT_EQ(ParseCertificateStatus(tls, emptyBody, sizeof(emptyBody), &hsMsg), HITLS_MSG_HANDLE_OCSP_STATUS_ERR);
+    ASSERT_EQ(g_lastAlertDesc, ALERT_DECODE_ERROR);
 
 EXIT:
     HITLS_CFG_FreeConfig(reqConfig);
