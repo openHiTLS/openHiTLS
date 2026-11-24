@@ -426,8 +426,10 @@ static int32_t DtlsCheckAndParseMsg(TLS_Ctx *ctx, HS_MsgInfo *hsMsgInfo, HS_Msg 
     }
 
     hsCtx->expectRecvSeq++; /* Auto-increment of the received message sequence number */
-    HS_ReassRemove(ctx, hsMsgInfo->sequence);
-    return ret;
+    /* The reassembly node of the consumed message and the nodes of older messages can no longer be
+     * delivered: the queue lookup is driven by expectRecvSeq, which has already moved on. */
+    HS_ReassRemoveUpTo(ctx, hsMsgInfo->sequence);
+    return HITLS_SUCCESS;
 }
 
 static int32_t ReadDtlsHsMessage(TLS_Ctx *ctx, HS_MsgInfo *hsMsgInfo)
@@ -467,6 +469,58 @@ static int32_t ReadDtlsHsMessage(TLS_Ctx *ctx, HS_MsgInfo *hsMsgInfo)
     return ret;
 }
 
+static bool DtlsIsRepeatedInitialClientHello(TLS_Ctx *ctx, const HS_MsgInfo *hsMsgInfo)
+{
+    /* A retransmission of the ClientHello consumed by the latest cookie exchange round carries a
+     * message_seq one less than expectRecvSeq, for every round. Older duplicates and future
+     * messages are dropped by the disorder handling instead of restarting the sequence. */
+    return hsMsgInfo->sequence + 1u == ctx->hsCtx->expectRecvSeq &&
+        ctx->hsCtx->state == TRY_RECV_CLIENT_HELLO && hsMsgInfo->type == CLIENT_HELLO &&
+        !IsUnexpectedHandshaking(ctx) && ctx->state == CM_STATE_HANDSHAKING &&
+        !BSL_UIO_GetUioChainTransportType(ctx->uio, BSL_UIO_SCTP);
+}
+
+/*
+ * Handle a retransmission of the initial ClientHello received while the server waits for the
+ * cookie-carrying ClientHello (the HelloVerifyRequest was lost).
+ * Only a complete retransmitted ClientHello may restart the message sequence:
+ * - A complete single-record retransmission is delivered directly with the sequences reset.
+ * - A fragment is cached in the reassembly queue; if it completes the message, the sequences are
+ *   reset and the reassembled message is delivered.
+ * - An incomplete fragment (e.g. a stale duplicate of the consumed ClientHello received again)
+ *   must not reset expectRecvSeq, otherwise the server would wait forever for fragments of the
+ *   consumed ClientHello while the cookie-carrying ClientHello is cached out of order, deadlocking
+ *   the handshake.
+ */
+static int32_t DtlsProcessRepeatedInitialClientHello(TLS_Ctx *ctx, HS_MsgInfo *hsMsgInfo,
+    uint32_t *msgLen)
+{
+    if (hsMsgInfo->fragmentLength == hsMsgInfo->length) {
+        /* A complete single-record retransmission: reset the sequences and deliver the message. */
+        ctx->hsCtx->expectRecvSeq = hsMsgInfo->sequence;
+        ctx->hsCtx->nextSendSeq = hsMsgInfo->sequence;
+        return HITLS_SUCCESS;
+    }
+
+    int32_t ret = HS_ReassAppend(ctx, hsMsgInfo);
+    if (ret != HITLS_SUCCESS) {
+        return ret;
+    }
+    uint16_t seqTmp = ctx->hsCtx->expectRecvSeq;
+    ctx->hsCtx->expectRecvSeq = hsMsgInfo->sequence;
+    ret = HS_GetReassMsg(ctx, hsMsgInfo, msgLen);
+    ctx->hsCtx->expectRecvSeq = seqTmp;
+    if (ret != HITLS_SUCCESS || *msgLen == 0) {
+        /* Incomplete retransmission: keep waiting for the cookie-carrying ClientHello. */
+        return ret;
+    }
+
+    /* The retransmitted fragments form a complete ClientHello: restart the message sequence. */
+    ctx->hsCtx->expectRecvSeq = hsMsgInfo->sequence;
+    ctx->hsCtx->nextSendSeq = hsMsgInfo->sequence;
+    return HITLS_SUCCESS;
+}
+
 static int32_t DtlsReadAndParseHandshakeMsg(TLS_Ctx *ctx, HS_Msg *hsMsg)
 {
     /* Read the message with the expected sequence number from the reassembly queue. If no message exists, read the
@@ -487,13 +541,13 @@ static int32_t DtlsReadAndParseHandshakeMsg(TLS_Ctx *ctx, HS_Msg *hsMsg)
         buf = ctx->hsCtx->msgBuf;
         dataLen = ctx->hsCtx->msgLen;
         ctx->hsCtx->msgLen = 0;
-        /* when the hello verify request is lost and a clienthello with 0 message sequence is received again,
-           the expect sequence is reset and dealt with same as receiving it for the first time. */
-        if (hsMsgInfo.sequence == 0 && ctx->hsCtx->expectRecvSeq == 1 && ctx->hsCtx->state == TRY_RECV_CLIENT_HELLO &&
-            hsMsgInfo.type == CLIENT_HELLO && !IsUnexpectedHandshaking(ctx) && ctx->state == CM_STATE_HANDSHAKING &&
-            !BSL_UIO_GetUioChainTransportType(ctx->uio, BSL_UIO_SCTP)) {
-            ctx->hsCtx->expectRecvSeq = 0;
-            ctx->hsCtx->nextSendSeq = 0;
+        /* When the hello verify request is lost, only a complete repeated initial ClientHello
+         * restarts the message sequence. */
+        if (DtlsIsRepeatedInitialClientHello(ctx, &hsMsgInfo)) {
+            ret = DtlsProcessRepeatedInitialClientHello(ctx, &hsMsgInfo, &dataLen);
+            if (ret != HITLS_SUCCESS) {
+                return ret;
+            }
         }
 
         /* SCTP messages are not out of order. Therefore, an alert message must be sent for the out-of-order messages */

@@ -736,6 +736,11 @@ int32_t DtlsRecordRead(TLS_Ctx *ctx, REC_Type recordType, uint8_t *data, uint32_
     uint8_t *cachRecord = NULL;
     int32_t ret = DtlsGetRecord(ctx, recordType, &hdr, &recordBody, &cachRecord);
     if (ret != HITLS_SUCCESS) {
+        /* The record has been cached in the unprocessed message list and will be consumed after the read epoch
+         * advances. For an application read there is no data to return yet, so the user is told to read again. */
+        if (ret == HITLS_REC_NORMAL_RECV_DISORDER_MSG && recordType == REC_TYPE_APP) {
+            return HITLS_REC_NORMAL_RECV_BUF_EMPTY;
+        }
         return ret;
     }
     /* Construct parameters before decryption */

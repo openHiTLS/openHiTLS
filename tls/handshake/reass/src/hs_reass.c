@@ -145,21 +145,6 @@ static HS_ReassQueue *GetReassNode(HS_ReassQueue *reassQueue, uint16_t sequence)
     return NULL;
 }
 
-void HS_ReassRemove(TLS_Ctx *ctx, uint16_t sequence)
-{
-    if (ctx == NULL || ctx->hsCtx == NULL || ctx->hsCtx->reassMsg == NULL) {
-        return;
-    }
-    HS_ReassQueue *node = GetReassNode(ctx->hsCtx->reassMsg, sequence);
-    if (node == NULL) {
-        return;
-    }
-    LIST_REMOVE(&node->head);
-    BSL_SAL_FREE(node->reassBitMap);
-    BSL_SAL_FREE(node->msg);
-    BSL_SAL_FREE(node);
-}
-
 static HS_ReassQueue *ReassNodeNew(HS_ReassQueue *reassQueue, HS_MsgInfo *msgInfo)
 {
     HS_ReassQueue *node = (HS_ReassQueue *)BSL_SAL_Calloc(1u, sizeof(HS_ReassQueue));

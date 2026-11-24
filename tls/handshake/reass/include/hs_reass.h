@@ -65,8 +65,6 @@ int32_t HS_ReassAppend(TLS_Ctx *ctx, HS_MsgInfo *msgInfo);
  */
 int32_t HS_GetReassMsg(TLS_Ctx *ctx, HS_MsgInfo *msgInfo, uint32_t *len);
 
-void HS_ReassRemove(TLS_Ctx *ctx, uint16_t sequence);
-
 /**
  * @brief Remove the reassembly nodes whose sequence numbers are not greater than the given sequence.
  *

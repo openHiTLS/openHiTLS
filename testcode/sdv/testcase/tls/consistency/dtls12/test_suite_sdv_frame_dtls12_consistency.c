@@ -3460,3 +3460,414 @@ EXIT:
     HITLS_CFG_FreeConfig(config);
 }
 /* END_CASE */
+
+/** @
+* @test UT_TLS_DTLS_CONSISTENCY_RECV_FUTURE_EPOCH_APP_MSG_TC001
+* @spec -
+* @title After the DTLS1.2 connection is established, an application message of the next epoch is received and cached.
+* @precon nan
+* @brief
+* 1. Use the default configuration items to configure the client and server. Expected result 1.
+* 2. A DTLS connection is established between the client and server, and the read epoch of the server is 1. Expected result 2.
+* 3. Construct an epoch 2 application record and send it to the server. Expected result 3.
+* 4. The server invokes HITLS_Read. Expected result 4.
+* @expect
+* 1. The initialization is successful.
+* 2. The connection is set up successfully and the server enters the CM_STATE_TRANSPORTING state.
+* 3. The record is cached in the unprocessed message list instead of being decrypted.
+* 4. HITLS_Read returns HITLS_REC_NORMAL_RECV_BUF_EMPTY so that the user reads again.
+* @prior Level 1
+* @auto TRUE
+@ */
+/* BEGIN_CASE */
+void UT_TLS_DTLS_CONSISTENCY_RECV_FUTURE_EPOCH_APP_MSG_TC001(void)
+{
+    HandshakeTestInfo testInfo = {0};
+    testInfo.state = HS_STATE_BUTT;
+    testInfo.isClient = false;
+    testInfo.emsMode = HITLS_EMS_MODE_FORCE;
+    ASSERT_TRUE(DefaultCfgStatusParkWithSuite(&testInfo, BSL_UIO_UDP) == HITLS_SUCCESS);
+    ASSERT_TRUE(testInfo.server->ssl != NULL);
+    ASSERT_EQ(testInfo.server->ssl->state, CM_STATE_TRANSPORTING);
+
+    RecCtx *recCtx = (RecCtx *)testInfo.server->ssl->recCtx;
+    ASSERT_EQ(recCtx->readEpoch, 1);
+
+    /* Construct a DTLS1.2 record: type = app, epoch = 2, seq = 0. */
+    uint8_t recordBody[] = {0xDE, 0xAD, 0xBE, 0xEF, 0x01, 0x02, 0x03, 0x04,
+                            0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C};
+    uint8_t record[REC_DTLS_RECORD_HEADER_LEN + sizeof(recordBody)] = {0};
+    record[0] = REC_TYPE_APP;
+    BSL_Uint16ToByte(HITLS_VERSION_DTLS12, &record[1]);
+    BSL_Uint16ToByte(2, &record[REC_DTLS_RECORD_EPOCH_OFFSET]);
+    BSL_Uint16ToByte(sizeof(recordBody), &record[REC_DTLS_RECORD_LENGTH_OFFSET]);
+    (void)memcpy(&record[REC_DTLS_RECORD_HEADER_LEN], recordBody, sizeof(recordBody));
+
+    FrameUioUserData *ioUserData = BSL_UIO_GetUserData(testInfo.server->io);
+    ioUserData->recMsg.len = 0;
+    ASSERT_TRUE(FRAME_TransportRecMsg(testInfo.server->io, record, sizeof(record)) == HITLS_SUCCESS);
+
+    uint8_t data[1024] = {0};
+    uint32_t dataSize = 0;
+    ASSERT_EQ(HITLS_Read(testInfo.server->ssl, data, sizeof(data), &dataSize), HITLS_REC_NORMAL_RECV_BUF_EMPTY);
+    ASSERT_EQ(dataSize, 0);
+    /* The record is cached and will be processed after the read epoch advances to 2. */
+    ASSERT_EQ(recCtx->unprocessedAppMsgList.count, 1);
+    ASSERT_EQ(REC_EPOCH_GET(LIST_ENTRY(recCtx->unprocessedAppMsgList.head.next, UnprocessedAppMsg, head)->hdr.epochSeq),
+        2);
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
+EXIT:
+    HITLS_CFG_FreeConfig(testInfo.config);
+    FRAME_FreeLink(testInfo.client);
+    FRAME_FreeLink(testInfo.server);
+    FRAME_DeRegCryptMethod();
+}
+/* END_CASE */
+
+/* Drive the DTLS 1.2 server past the initial ClientHello until it emits HelloVerifyRequest, and capture
+ * the handshake message bytes of that ClientHello. */
+static int32_t DriveServerToHvr(FRAME_LinkObj *client, FRAME_LinkObj *server, uint8_t *chMsg, uint32_t *chMsgLen)
+{
+    for (uint32_t guard = 0; guard < 4; guard++) {
+        (void)HITLS_Connect(client->ssl);
+        FrameUioUserData *clientIo = BSL_UIO_GetUserData(client->io);
+        if (clientIo->sndMsg.len == 0) {
+            continue;
+        }
+        if (clientIo->sndMsg.len <= REC_DTLS_RECORD_HEADER_LEN) {
+            return HITLS_INTERNAL_EXCEPTION;
+        }
+        (void)memcpy(chMsg, &clientIo->sndMsg.msg[REC_DTLS_RECORD_HEADER_LEN],
+            clientIo->sndMsg.len - REC_DTLS_RECORD_HEADER_LEN);
+        *chMsgLen = clientIo->sndMsg.len - REC_DTLS_RECORD_HEADER_LEN;
+        int32_t ret = FRAME_TrasferMsgBetweenLink(client, server);
+        if (ret != HITLS_SUCCESS) {
+            return ret;
+        }
+        (void)HITLS_Accept(server->ssl);
+        FrameUioUserData *serverIo = BSL_UIO_GetUserData(server->io);
+        if (serverIo->sndMsg.len != 0) {
+            return HITLS_SUCCESS;
+        }
+    }
+    return HITLS_INTERNAL_EXCEPTION;
+}
+
+/** @
+* @test SDV_TLS_DTLS12_DUP_LAST_CH_FRAGMENT_TC001
+* @spec -
+* @title A duplicate of the last initial ClientHello fragment received after HelloVerifyRequest must not block the
+*        handshake.
+* @precon nan
+* @brief
+* 1. Create a DTLS 1.2 client and server with cookie exchange enabled. The server consumes the initial
+*    ClientHello and sends HelloVerifyRequest. Expected result 1.
+* 2. Deliver the last fragment of the consumed ClientHello a second time to the server. Expected result 2.
+* 3. Let the client receive the HelloVerifyRequest and finish the handshake. Expected result 3.
+* @expect
+* 1. The server sends HelloVerifyRequest and stays in TRY_RECV_CLIENT_HELLO with expectRecvSeq 1.
+* 2. The duplicate fragment cannot complete the ClientHello, so expectRecvSeq stays 1 and the server keeps
+*    waiting for the cookie-carrying ClientHello instead of restarting the consumed one.
+* 3. The handshake completes successfully on both sides.
+* @prior Level 1
+* @auto TRUE
+@ */
+/* BEGIN_CASE */
+void SDV_TLS_DTLS12_DUP_LAST_CH_FRAGMENT_TC001(void)
+{
+    FRAME_Init();
+    HITLS_Config *config = NULL;
+    FRAME_LinkObj *client = NULL;
+    FRAME_LinkObj *server = NULL;
+    uint8_t chMsg[MAX_RECORD_LENTH] = {0};
+    uint32_t chMsgLen = 0;
+
+    config = HITLS_CFG_NewDTLS12Config();
+    ASSERT_TRUE(config != NULL);
+    ASSERT_EQ(HITLS_CFG_SetDtlsCookieExchangeSupport(config, true), HITLS_SUCCESS);
+    client = FRAME_CreateLink(config, BSL_UIO_UDP);
+    server = FRAME_CreateLink(config, BSL_UIO_UDP);
+    ASSERT_TRUE(client != NULL && server != NULL);
+
+    /* 1. The server consumes the initial ClientHello and emits HelloVerifyRequest. */
+    ASSERT_EQ(DriveServerToHvr(client, server, chMsg, &chMsgLen), HITLS_SUCCESS);
+    ASSERT_TRUE(server->ssl->hsCtx != NULL);
+    ASSERT_EQ(server->ssl->hsCtx->state, TRY_RECV_CLIENT_HELLO);
+    ASSERT_EQ(server->ssl->hsCtx->expectRecvSeq, 1u);
+    uint32_t chBodyLen = BSL_ByteToUint24(&chMsg[DTLS_HS_MSGLEN_ADDR]);
+    ASSERT_EQ(chMsgLen, DTLS_HS_MSG_HEADER_SIZE + chBodyLen);
+    uint32_t headFragLen = chBodyLen / 2;
+    ASSERT_TRUE(headFragLen > 0u && headFragLen < chBodyLen);
+
+    /* 2. The last ClientHello fragment arrives a second time after HelloVerifyRequest has been sent. */
+    ASSERT_EQ(SendReassFragment(client, server, chMsg, headFragLen, chBodyLen - headFragLen), HITLS_SUCCESS);
+    (void)HITLS_Accept(server->ssl);
+
+    /* The duplicate fragment must not restart the consumed initial ClientHello. */
+    ASSERT_EQ(server->ssl->hsCtx->expectRecvSeq, 1u);
+
+    /* 3. The client answers the HelloVerifyRequest and the handshake completes. */
+    ASSERT_EQ(FRAME_TrasferMsgBetweenLink(server, client), HITLS_SUCCESS);
+    ASSERT_EQ(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_SUCCESS);
+    ASSERT_EQ(client->ssl->state, CM_STATE_TRANSPORTING);
+    ASSERT_EQ(server->ssl->state, CM_STATE_TRANSPORTING);
+
+EXIT:
+    HITLS_CFG_FreeConfig(config);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+    FRAME_DeRegCryptMethod();
+}
+/* END_CASE */
+
+/** @
+* @test SDV_TLS_DTLS12_RETRANSMIT_FRAGMENTED_CH_TC001
+* @spec -
+* @title A fragmented retransmission of the initial ClientHello with a lost HelloVerifyRequest is reassembled and
+*        answered with a new HelloVerifyRequest.
+* @precon nan
+* @brief
+* 1. Create a DTLS 1.2 client and server with cookie exchange enabled. The server consumes the initial
+*    ClientHello and sends HelloVerifyRequest, which is lost. Expected result 1.
+* 2. The client retransmits the initial ClientHello as two fragments. Expected result 2.
+* 3. Let the client receive the new HelloVerifyRequest and finish the handshake. Expected result 3.
+* @expect
+* 1. The server stays in TRY_RECV_CLIENT_HELLO with expectRecvSeq 1.
+* 2. A partial retransmission neither resets expectRecvSeq nor triggers a response; once the retransmitted
+*    fragments form a complete ClientHello, the server restarts the sequence and sends a new HelloVerifyRequest.
+* 3. The handshake completes successfully on both sides.
+* @prior Level 1
+* @auto TRUE
+@ */
+/* BEGIN_CASE */
+void SDV_TLS_DTLS12_RETRANSMIT_FRAGMENTED_CH_TC001(void)
+{
+    FRAME_Init();
+    HITLS_Config *config = NULL;
+    FRAME_LinkObj *client = NULL;
+    FRAME_LinkObj *server = NULL;
+    uint8_t chMsg[MAX_RECORD_LENTH] = {0};
+    uint32_t chMsgLen = 0;
+
+    config = HITLS_CFG_NewDTLS12Config();
+    ASSERT_TRUE(config != NULL);
+    ASSERT_EQ(HITLS_CFG_SetDtlsCookieExchangeSupport(config, true), HITLS_SUCCESS);
+    client = FRAME_CreateLink(config, BSL_UIO_UDP);
+    server = FRAME_CreateLink(config, BSL_UIO_UDP);
+    ASSERT_TRUE(client != NULL && server != NULL);
+
+    /* 1. The server consumes the initial ClientHello and emits HelloVerifyRequest, which is lost. */
+    ASSERT_EQ(DriveServerToHvr(client, server, chMsg, &chMsgLen), HITLS_SUCCESS);
+    ASSERT_EQ(server->ssl->hsCtx->expectRecvSeq, 1u);
+    uint32_t chBodyLen = BSL_ByteToUint24(&chMsg[DTLS_HS_MSGLEN_ADDR]);
+    ASSERT_EQ(chMsgLen, DTLS_HS_MSG_HEADER_SIZE + chBodyLen);
+    uint32_t headFragLen = chBodyLen / 2;
+    ASSERT_TRUE(headFragLen > 0u && headFragLen < chBodyLen);
+    FrameUioUserData *serverIo = BSL_UIO_GetUserData(server->io);
+    serverIo->sndMsg.len = 0;
+
+    /* 2. The client retransmits the initial ClientHello as two fragments. */
+    ASSERT_EQ(SendReassFragment(client, server, chMsg, 0, headFragLen), HITLS_SUCCESS);
+    (void)HITLS_Accept(server->ssl);
+    ASSERT_EQ(server->ssl->hsCtx->expectRecvSeq, 1u);
+    ASSERT_TRUE(serverIo->sndMsg.len == 0);
+    ASSERT_EQ(SendReassFragment(client, server, chMsg, headFragLen, chBodyLen - headFragLen), HITLS_SUCCESS);
+    (void)HITLS_Accept(server->ssl);
+
+    /* The complete retransmitted ClientHello restarts the sequence and triggers a new HelloVerifyRequest. */
+    ASSERT_TRUE(serverIo->sndMsg.len != 0);
+    ASSERT_EQ(server->ssl->hsCtx->expectRecvSeq, 1u);
+
+    /* 3. The client answers the new HelloVerifyRequest and the handshake completes. */
+    ASSERT_EQ(FRAME_TrasferMsgBetweenLink(server, client), HITLS_SUCCESS);
+    ASSERT_EQ(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_SUCCESS);
+    ASSERT_EQ(client->ssl->state, CM_STATE_TRANSPORTING);
+    ASSERT_EQ(server->ssl->state, CM_STATE_TRANSPORTING);
+
+EXIT:
+    HITLS_CFG_FreeConfig(config);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+    FRAME_DeRegCryptMethod();
+}
+/* END_CASE */
+
+static uint32_t g_multiRoundCheckCount = 0;
+static uint32_t g_multiRoundInvalidRounds = 2u;
+static int32_t STUB_MultiRoundCheckCookie(TLS_Ctx *ctx, const ClientHelloMsg *clientHello, bool *isCookieValid)
+{
+    (void)ctx;
+    (void)clientHello;
+    g_multiRoundCheckCount++;
+    /* The first g_multiRoundInvalidRounds ClientHellos are rejected to force cookie rounds. */
+    *isCookieValid = (g_multiRoundCheckCount > g_multiRoundInvalidRounds);
+    return HITLS_SUCCESS;
+}
+
+/* The reassembly queue lives in the handshake context instead of the TLS context. */
+static uint32_t CountReassNodes(const HITLS_Ctx *ssl)
+{
+    uint32_t count = 0;
+    if (ssl->hsCtx == NULL || ssl->hsCtx->reassMsg == NULL) {
+        return 0;
+    }
+    ListHead *node = ssl->hsCtx->reassMsg->head.next;
+    while (node != &ssl->hsCtx->reassMsg->head) {
+        count++;
+        node = node->next;
+    }
+    return count;
+}
+
+static bool ReassQueueIsEmpty(const HITLS_Ctx *ssl)
+{
+    if (ssl->hsCtx == NULL || ssl->hsCtx->reassMsg == NULL) {
+        return true;
+    }
+    return LIST_IS_EMPTY(&ssl->hsCtx->reassMsg->head);
+}
+
+/** @
+* @test SDV_TLS_DTLS12_MULTI_ROUND_DUP_CH_FRAGMENT_TC001
+* @spec -
+* @title A duplicate fragment of the ClientHello consumed by a later cookie exchange round must not block the
+*        handshake.
+* @precon nan
+* @brief
+* 1. Create a DTLS 1.2 client and server with cookie exchange enabled. Stub the cookie check so the first two
+*    ClientHellos are rejected, forcing two HelloVerifyRequest rounds. Expected result 1.
+* 2. Deliver the last fragment of the second-round ClientHello a second time to the server. Expected result 2.
+* 3. Let the client receive the second HelloVerifyRequest and finish the handshake. Expected result 3.
+* @expect
+* 1. After two rounds the server is in TRY_RECV_CLIENT_HELLO with expectRecvSeq 2.
+* 2. The duplicate fragment of the round-two ClientHello cannot complete the message, so expectRecvSeq stays 2
+*    and the server keeps waiting for the next cookie-carrying ClientHello instead of restarting the sequence.
+* 3. The stale reassembly node is dropped when the cookie exchange completes and the handshake completes
+*    successfully on both sides.
+* @prior Level 1
+* @auto TRUE
+@ */
+/* BEGIN_CASE */
+void SDV_TLS_DTLS12_MULTI_ROUND_DUP_CH_FRAGMENT_TC001(void)
+{
+    FRAME_Init();
+    HITLS_Config *config = NULL;
+    FRAME_LinkObj *client = NULL;
+    FRAME_LinkObj *server = NULL;
+    uint8_t chMsg1[MAX_RECORD_LENTH] = {0};
+    uint32_t chMsg1Len = 0;
+    uint8_t chMsg2[MAX_RECORD_LENTH] = {0};
+    uint32_t chMsg2Len = 0;
+
+    config = HITLS_CFG_NewDTLS12Config();
+    ASSERT_TRUE(config != NULL);
+    ASSERT_EQ(HITLS_CFG_SetDtlsCookieExchangeSupport(config, true), HITLS_SUCCESS);
+    client = FRAME_CreateLink(config, BSL_UIO_UDP);
+    server = FRAME_CreateLink(config, BSL_UIO_UDP);
+    ASSERT_TRUE(client != NULL && server != NULL);
+    g_multiRoundCheckCount = 0;
+    STUB_REPLACE(HS_CheckCookie, STUB_MultiRoundCheckCookie);
+
+    /* 1. Round one: the server consumes the first ClientHello and emits HelloVerifyRequest. */
+    ASSERT_EQ(DriveServerToHvr(client, server, chMsg1, &chMsg1Len), HITLS_SUCCESS);
+    (void)chMsg1Len;
+    ASSERT_EQ(FRAME_TrasferMsgBetweenLink(server, client), HITLS_SUCCESS);
+    /* Round two: the client answers with a cookie-carrying ClientHello which is rejected again. */
+    ASSERT_EQ(DriveServerToHvr(client, server, chMsg2, &chMsg2Len), HITLS_SUCCESS);
+    ASSERT_TRUE(server->ssl->hsCtx != NULL);
+    ASSERT_EQ(server->ssl->hsCtx->state, TRY_RECV_CLIENT_HELLO);
+    ASSERT_EQ(server->ssl->hsCtx->expectRecvSeq, 2u);
+    uint32_t chBodyLen = BSL_ByteToUint24(&chMsg2[DTLS_HS_MSGLEN_ADDR]);
+    ASSERT_EQ(chMsg2Len, DTLS_HS_MSG_HEADER_SIZE + chBodyLen);
+    uint32_t headFragLen = chBodyLen / 2;
+    ASSERT_TRUE(headFragLen > 0u && headFragLen < chBodyLen);
+
+    /* 2. The last fragment of the round-two ClientHello arrives a second time. */
+    ASSERT_EQ(SendReassFragment(client, server, chMsg2, headFragLen, chBodyLen - headFragLen), HITLS_SUCCESS);
+    (void)HITLS_Accept(server->ssl);
+    ASSERT_EQ(server->ssl->hsCtx->expectRecvSeq, 2u);
+    ASSERT_TRUE(!ReassQueueIsEmpty(server->ssl));
+
+    /* 3. The client answers the second HelloVerifyRequest and the handshake completes. */
+    ASSERT_EQ(FRAME_TrasferMsgBetweenLink(server, client), HITLS_SUCCESS);
+    ASSERT_EQ(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_SUCCESS);
+    ASSERT_EQ(client->ssl->state, CM_STATE_TRANSPORTING);
+    ASSERT_EQ(server->ssl->state, CM_STATE_TRANSPORTING);
+
+EXIT:
+    STUB_RESTORE(HS_CheckCookie);
+    HITLS_CFG_FreeConfig(config);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+    FRAME_DeRegCryptMethod();
+}
+/* END_CASE */
+
+/** @
+* @test SDV_TLS_DTLS12_MULTI_ROUND_REASS_PRUNE_TC001
+* @spec -
+* @title Consuming a ClientHello prunes the stale reassembly nodes left by earlier cookie exchange rounds.
+* @precon nan
+* @brief
+* 1. Create a DTLS 1.2 client and server with cookie exchange enabled. Stub the cookie check so the
+*    first three ClientHellos are rejected, forcing three HelloVerifyRequest rounds. Expected result 1.
+* 2. In each round, deliver an incomplete fragment of the ClientHello consumed by that round. Expected
+*    result 2.
+* 3. Let the fourth ClientHello validate the cookie and finish the handshake. Expected result 3.
+* @expect
+* 1. Each round advances expectRecvSeq without completing the retransmission.
+* 2. The reassembly queue never holds more than one stale node: consuming each ClientHello removes the
+*    nodes of the earlier rounds instead of accumulating them.
+* 3. The handshake completes successfully on both sides.
+* @prior Level 1
+* @auto TRUE
+@ */
+/* BEGIN_CASE */
+void SDV_TLS_DTLS12_MULTI_ROUND_REASS_PRUNE_TC001(void)
+{
+    FRAME_Init();
+    HITLS_Config *config = NULL;
+    FRAME_LinkObj *client = NULL;
+    FRAME_LinkObj *server = NULL;
+    uint8_t chMsg[MAX_RECORD_LENTH] = {0};
+    uint32_t chMsgLen = 0;
+
+    config = HITLS_CFG_NewDTLS12Config();
+    ASSERT_TRUE(config != NULL);
+    ASSERT_EQ(HITLS_CFG_SetDtlsCookieExchangeSupport(config, true), HITLS_SUCCESS);
+    client = FRAME_CreateLink(config, BSL_UIO_UDP);
+    server = FRAME_CreateLink(config, BSL_UIO_UDP);
+    ASSERT_TRUE(client != NULL && server != NULL);
+    g_multiRoundCheckCount = 0;
+    g_multiRoundInvalidRounds = 3u;
+    STUB_REPLACE(HS_CheckCookie, STUB_MultiRoundCheckCookie);
+
+    /* 1./2. Three rejected rounds; each round leaves one incomplete retransmission node. */
+    for (uint32_t round = 0; round < 3; round++) {
+        ASSERT_EQ(DriveServerToHvr(client, server, chMsg, &chMsgLen), HITLS_SUCCESS);
+        ASSERT_EQ(FRAME_TrasferMsgBetweenLink(server, client), HITLS_SUCCESS);
+        uint32_t chBodyLen = BSL_ByteToUint24(&chMsg[DTLS_HS_MSGLEN_ADDR]);
+        uint32_t headFragLen = chBodyLen / 2;
+        ASSERT_EQ(SendReassFragment(client, server, chMsg, headFragLen, chBodyLen - headFragLen), HITLS_SUCCESS);
+        (void)HITLS_Accept(server->ssl);
+        /* The fragment cannot complete the ClientHello, so the round must not restart the sequence. */
+        ASSERT_EQ(server->ssl->hsCtx->expectRecvSeq, round + 1u);
+        /* Consuming the next ClientHello prunes the earlier rounds' nodes: no accumulation. */
+        ASSERT_EQ(CountReassNodes(server->ssl), 1u);
+    }
+
+    /* 3. The fourth ClientHello carries a valid cookie and the handshake completes. */
+    ASSERT_EQ(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_SUCCESS);
+    ASSERT_EQ(client->ssl->state, CM_STATE_TRANSPORTING);
+    ASSERT_EQ(server->ssl->state, CM_STATE_TRANSPORTING);
+
+EXIT:
+    STUB_RESTORE(HS_CheckCookie);
+    HITLS_CFG_FreeConfig(config);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+    FRAME_DeRegCryptMethod();
+}
+/* END_CASE */
+
