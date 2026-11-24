@@ -566,7 +566,7 @@ AARCH64_PACIASP
     rev32   v23.16b, v23.16b
 
     /* Execute 64 rounds of compression */
-    bl      CRYPT_AARCH64_SYM(sha256_block_x2)
+    bl      sha256_block_x2
 
     subs    w9, w9, #1
     bne     .L_fullblk_2x
@@ -657,7 +657,7 @@ AARCH64_PACIASP
     rev32   v22.16b, v22.16b
     rev32   v19.16b, v19.16b
     rev32   v23.16b, v23.16b
-    bl      CRYPT_AARCH64_SYM(sha256_block_x2)
+    bl      sha256_block_x2
     
     /* Prepare second block: zeros + length */
     /* For direct vector register manipulation, always use rev (not REVBE)
@@ -714,7 +714,7 @@ AARCH64_PACIASP
     rev32   v23.16b, v23.16b
 
 .L_process_final_2x:
-    bl      CRYPT_AARCH64_SYM(sha256_block_x2)
+    bl      sha256_block_x2
 
 .L_finalize_2x:
     /* Output results: state arrays (little-endian) and digests (big-endian) */
@@ -740,7 +740,7 @@ AARCH64_AUTIASP
 /* Local subroutine: 64-round SHA-256 compression for dual messages
  * Input: v16-v19, v20-v23 (msg schedules), v24-v27 (states)
  * Modifies: v0-v7, v16-v23, v28-v31, x16 */
-CRYPT_AARCH64_LOCAL_FUNC_START(sha256_block_x2)
+sha256_block_x2:
     mov v4.16b, v24.16b
     mov v5.16b, v25.16b
     mov v6.16b, v26.16b
@@ -784,7 +784,6 @@ CRYPT_AARCH64_LOCAL_FUNC_START(sha256_block_x2)
     add         v26.4s, v26.4s, v6.4s
     add         v27.4s, v27.4s, v7.4s
     ret
-CRYPT_AARCH64_LOCAL_FUNC_END(sha256_block_x2)
 
 
 /*
@@ -838,7 +837,7 @@ AARCH64_PACIASP
     rev32   v23.16b, v23.16b
     
     /* Execute 64 rounds of compression */
-    bl      CRYPT_AARCH64_SYM(sha256_block_x2)
+    bl      sha256_block_x2
     
     /* Decrement block counter and loop if more blocks remain */
     subs    w4, w4, #1

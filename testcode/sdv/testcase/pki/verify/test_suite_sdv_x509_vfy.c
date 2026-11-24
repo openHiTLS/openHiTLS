@@ -3809,10 +3809,9 @@ void SDV_X509_VFY_NOAKID_CERT_PASS_TC009(void)
     ASSERT_EQ(X509_AddCertToChainTest(chain, inter), HITLS_PKI_SUCCESS);
     ASSERT_EQ(X509_AddCertToChainTest(chain, root), HITLS_PKI_SUCCESS);
 
-    int64_t now = (int64_t)time(NULL);
-    ASSERT_EQ(HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_SET_TIME, &now, sizeof(now)),
+    uint64_t flag = HITLS_X509_VFY_FLAG_DISABLE_TIME_CHECK;
+    ASSERT_EQ(HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_SET_PARAM_FLAGS, &flag, sizeof(flag)),
         HITLS_PKI_SUCCESS);
-
     int32_t ret = HITLS_X509_CertVerify(store, chain);
     ASSERT_EQ(ret, HITLS_PKI_SUCCESS);
     ASSERT_TRUE(TestIsErrStackEmpty());

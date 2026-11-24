@@ -64,16 +64,6 @@ int32_t BN_Bin2Bn(BN_BigNum *r, const uint8_t *bin, uint32_t binLen)
     return CRYPT_SUCCESS;
 }
 
-/* convert BN_UINT to bin */
-static inline void Limb2Bin(uint8_t *bin, BN_UINT num)
-{
-    // convert BN_UINT to bin: buff[0] is the most significant bit.
-    uint32_t i;
-    for (i = 0; i < sizeof(BN_UINT); i++) { // big-endian
-        bin[sizeof(BN_UINT) - i - 1] = (uint8_t)(num >> (8 * i)); // 8: indicates the number of bits in a byte.
-    }
-}
-
 int32_t BN_Bn2Bin(const BN_BigNum *a, uint8_t *bin, uint32_t *binLen)
 {
     if (a == NULL || bin == NULL || binLen == NULL) {
