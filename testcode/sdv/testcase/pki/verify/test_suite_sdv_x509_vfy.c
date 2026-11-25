@@ -2682,8 +2682,8 @@ void SDV_X509_BUILD_SLHDSA_CERT_CHAIN_FUNC_TC001(char *variant)
     HITLS_X509_StoreCtx *store = HITLS_X509_StoreCtxNew();
     ASSERT_TRUE(store != NULL);
 
-    uint64_t flag = HITLS_X509_VFY_FLAG_DISABLE_TIME_CHECK;
-    ASSERT_EQ(HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_SET_PARAM_FLAGS, &flag, sizeof(flag)),
+    int64_t verifyTime = 1767225600; /* 2026-01-01 00:00:00 UTC, inside the chain validity */
+    ASSERT_EQ(HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_SET_TIME, &verifyTime, sizeof(verifyTime)),
         HITLS_PKI_SUCCESS);
 
     // Step 1: Add intermediate CA to store
@@ -2723,11 +2723,12 @@ void SDV_X509_BUILD_SLHDSA_CERT_CHAIN_FUNC_TC001(char *variant)
         ASSERT_EQ(HITLS_X509_CertChainBuild(store, false, entityInvalidKu, &chain), HITLS_PKI_SUCCESS);
         ASSERT_TRUE(TestIsErrStackEmpty());
         // Verification should fail due to forbidden keyEncipherment
-        ASSERT_NE(HITLS_X509_CertVerify(store, chain), HITLS_PKI_SUCCESS);
+        ASSERT_EQ(HITLS_X509_CertVerify(store, chain), HITLS_X509_ERR_EXT_KU);
+        TestErrClear();
         BSL_LIST_FREE(chain, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);
         HITLS_X509_CertFree(entityInvalidKu);
 
-        // Test 7b: Certificate with missing required key usage
+        // Test 7b: Certificate without the key usage extension
         HITLS_X509_Cert *entityMissingKu = NULL;
         char missingKuPath[256] = {0};
         ret = snprintf(missingKuPath, sizeof(missingKuPath),
@@ -2736,8 +2737,8 @@ void SDV_X509_BUILD_SLHDSA_CERT_CHAIN_FUNC_TC001(char *variant)
         ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_PEM, missingKuPath, &entityMissingKu), HITLS_PKI_SUCCESS);
 
         ASSERT_EQ(HITLS_X509_CertChainBuild(store, false, entityMissingKu, &chain), HITLS_PKI_SUCCESS);
-        // Verification should fail due to missing required key usage
-        ASSERT_TRUE(HITLS_X509_CertVerify(store, chain) != HITLS_PKI_SUCCESS);
+        // RFC 9909 section 6 applies only when keyUsage is present.
+        ASSERT_EQ(HITLS_X509_CertVerify(store, chain), HITLS_PKI_SUCCESS);
         HITLS_X509_CertFree(entityMissingKu);
     }
 
@@ -4764,8 +4765,8 @@ void SDV_X509_VFY_NOAKID_CERT_PASS_TC009(void)
     ASSERT_EQ(X509_AddCertToChainTest(chain, inter), HITLS_PKI_SUCCESS);
     ASSERT_EQ(X509_AddCertToChainTest(chain, root), HITLS_PKI_SUCCESS);
 
-    int64_t now = (int64_t)time(NULL);
-    ASSERT_EQ(HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_SET_TIME, &now, sizeof(now)),
+    int64_t verifyTime = 1767225600; /* 2026-01-01 00:00:00 UTC, inside the chain validity */
+    ASSERT_EQ(HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_SET_TIME, &verifyTime, sizeof(verifyTime)),
         HITLS_PKI_SUCCESS);
 
     int32_t ret = HITLS_X509_CertVerify(store, chain);
