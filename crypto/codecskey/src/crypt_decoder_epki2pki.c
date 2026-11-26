@@ -135,6 +135,7 @@ void DECODER_EPKI2PKI_FreeOutData(void *ctx, BSL_Param *outParam)
     }
     BSL_Param *dataParam = BSL_PARAM_FindParam(outParam, CRYPT_PARAM_DECODE_BUFFER_DATA);
     if (dataParam == NULL) {
+        BSL_SAL_Free(outParam);
         return;
     }
     BSL_SAL_ClearFree(dataParam->value, dataParam->valueLen);

@@ -92,10 +92,25 @@ static int32_t MatchWithSingleWildcard(const char *pattern, const char *hostname
     return HITLS_PKI_SUCCESS;
 }
 
+static int32_t CountWildcards(const char *str, size_t len)
+{
+    int32_t count = 0;
+    for (size_t i = 0; i < len; i++) {
+        if (str[i] == '*') {
+            count++;
+        }
+    }
+    return count;
+}
+
 /* ref RFC6125 to support that match rules similar to  *.a.com matches foo.a.com,
     f*.com matches foo.com. */
 static int32_t MatchWithPartialWildcard(const char *pattern, const char *hostname)
 {
+    if (strchr(pattern, '*') == NULL) {
+        return BSL_SAL_StrcaseCmp(pattern, hostname) == 0 ?
+            HITLS_PKI_SUCCESS : HITLS_X509_ERR_VFY_HOSTNAME_FAIL;
+    }
     const char *p = pattern;
     const char *h = hostname;
     int32_t labelCount = 0;
@@ -107,11 +122,7 @@ static int32_t MatchWithPartialWildcard(const char *pattern, const char *hostnam
         size_t pLen = (pDot == NULL) ? strlen(p) : (size_t)(pDot - p);
         size_t hLen = (hDot == NULL) ? strlen(h) : (size_t)(hDot - h);
 
-        for (size_t i = 0; i < pLen; i++) {
-            if (p[i] == '*') {
-                wildcardCount++;
-            }
-        }
+        wildcardCount = CountWildcards(p, pLen);
         if (wildcardCount > 1) { // only one wildcard is allowed in the pattern
             return HITLS_X509_ERR_VFY_HOSTNAME_FAIL;
         }

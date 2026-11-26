@@ -3100,6 +3100,28 @@ EXIT:
 /* END_CASE */
 
 /*
+ * Test that empty labels are compared rather than matching arbitrary hostname labels.
+ */
+/* BEGIN_CASE */
+void SDV_PKI_HOSTNAME_EMPTY_LABEL_TC001(int flag)
+{
+#if defined(HITLS_PKI_X509_VFY) && defined(HITLS_PKI_X509_VFY_IDENTITY)
+    uint32_t testFlag = flag == 0 ? 0 : HITLS_X509_FLAG_VFY_WITH_PARTIAL_WILDCARD;
+    TestMemInit();
+    // An empty label in the pattern must not match arbitrary hostname labels.
+    ASSERT_EQ(HITLS_X509_MatchPattern(testFlag, ".example.com", "www.example.com"),
+        HITLS_X509_ERR_VFY_HOSTNAME_FAIL);
+    ASSERT_TRUE(TestIsErrStackEmpty());
+EXIT:
+    return;
+#else
+    (void)flag;
+    SKIP_TEST();
+#endif
+}
+/* END_CASE */
+
+/*
  * Test for HITLS_X509_VerifyHostname with various SANs.
  */
 /* BEGIN_CASE */
