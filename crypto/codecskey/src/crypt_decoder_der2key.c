@@ -323,10 +323,12 @@ void DECODER_DER2KEY_FreeOutData(void *ctx, BSL_Param *outParam)
         return;
     }
     if (decoderCtx->method.freeCtx == NULL) {
+        BSL_SAL_Free(outParam);
         return;
     }
     BSL_Param *outKey = BSL_PARAM_FindParam(outParam, CRYPT_PARAM_DECODE_OBJECT_DATA);
     if (outKey == NULL) {
+        BSL_SAL_Free(outParam);
         return;
     }
     decoderCtx->method.freeCtx(outKey->value);
