@@ -1408,6 +1408,8 @@ int32_t CryptDsaFips1864ValidatePq(int32_t algId, void *libCtx, const char *mdAt
         }
         goto ERR;
     }
+    ret = CRYPT_DSA_PARA_NOT_EQUAL;
+    BSL_ERR_PUSH_ERROR(ret);
 ERR:
     OptimizerEnd(opt);
     BN_OptimizerDestroy(opt);

@@ -990,6 +990,68 @@ int32_t STUB_CRYPT_EAL_RandbytesEx(CRYPT_EAL_LibCtx *libCtx, uint8_t *byte, uint
 
 #endif /* HITLS_CRYPTO_DSA */
 
+#ifdef HITLS_CRYPTO_DSA_GEN_PARA
+STUB_DEFINE_RET2(int32_t, BN_Cmp, const BN_BigNum *, const BN_BigNum *);
+static BN_BigNum *g_dsaPMin = NULL;
+static uint32_t g_dsaShortPCount = 0;
+
+static int32_t STUB_DsaCompareShortP(const BN_BigNum *a, const BN_BigNum *b)
+{
+    if (get_real_BN_Cmp()(b, g_dsaPMin) == 0) {
+        g_dsaShortPCount++;
+        return -1;
+    }
+    return get_real_BN_Cmp()(a, b);
+}
+#endif
+
+/**
+ * @brief Validate PQ candidate-loop exhaustion.
+ * @precon DSA parameter generation is enabled.
+ * @expect Exhaustion returns a parameter mismatch and records the error.
+ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_DSA_VERIFY_PQ_EXHAUST_FUNC_TC001(int algId, Hex *seed, char *pHex, char *qHex,
+    int counter)
+{
+#ifndef HITLS_CRYPTO_DSA_GEN_PARA
+    (void)algId;
+    (void)seed;
+    (void)pHex;
+    (void)qHex;
+    (void)counter;
+    SKIP_TEST();
+#else
+    BSL_Buffer seedTmp = {seed->x, seed->len};
+    BN_BigNum *p = NULL;
+    BN_BigNum *q = NULL;
+    ASSERT_EQ(BN_Hex2Bn(&p, pHex), CRYPT_SUCCESS);
+    ASSERT_EQ(BN_Hex2Bn(&q, qHex), CRYPT_SUCCESS);
+    g_dsaPMin = BN_Create(BN_Bits(p));
+    ASSERT_TRUE(g_dsaPMin != NULL);
+    ASSERT_EQ(BN_SetLimb(g_dsaPMin, 1), CRYPT_SUCCESS);
+    ASSERT_EQ(BN_Lshift(g_dsaPMin, g_dsaPMin, BN_Bits(p) - 1), CRYPT_SUCCESS);
+    ASSERT_EQ(TestRandInit(), CRYPT_SUCCESS);
+    ASSERT_TRUE(get_real_BN_Cmp() != NULL);
+    CRYPT_DSA_Para dsaPara = {p, q, NULL};
+    g_dsaShortPCount = 0;
+    STUB_REPLACE(BN_Cmp, STUB_DsaCompareShortP);
+    ASSERT_EQ(CryptDsaFips1864ValidatePq(algId, NULL, NULL, CRYPT_DSA_FFC_PARAM, &seedTmp,
+        &dsaPara, counter), CRYPT_DSA_PARA_NOT_EQUAL);
+    ASSERT_EQ(g_dsaShortPCount, (uint32_t)counter + 1);
+    ASSERT_EQ(BSL_ERR_GetLastError(), CRYPT_DSA_PARA_NOT_EQUAL);
+    ASSERT_TRUE(TestIsErrStackEmpty());
+EXIT:
+    STUB_RESTORE(BN_Cmp);
+    TestRandDeInit();
+    BN_Destroy(g_dsaPMin);
+    g_dsaPMin = NULL;
+    BN_Destroy(p);
+    BN_Destroy(q);
+#endif
+}
+/* END_CASE */
+
 /* BEGIN_CASE */
 void SDV_CRYPTO_DSA_VERIFY_PQ_FUNC_TC001(int algId, Hex *seed, char *pHex, char *qHex)
 {
