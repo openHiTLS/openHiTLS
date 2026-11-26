@@ -314,7 +314,9 @@ int32_t CRYPT_SHAKE256_GetParam(CRYPT_SHAKE256_Ctx *ctx, BSL_Param *param)
 static uint64_t load64(const uint8_t x[8])
 {
 #if defined(__aarch64__) && !defined(HITLS_BIG_ENDIAN)
-    return *(const uint64_t *)(uintptr_t)x;
+    uint64_t value;
+    memcpy(&value, x, sizeof(value));
+    return value;
 #else
     uint32_t i;
     uint64_t r = 0;
@@ -330,7 +332,7 @@ static uint64_t load64(const uint8_t x[8])
 static void store64(uint8_t x[8], uint64_t u)
 {
 #if defined(__aarch64__) && !defined(HITLS_BIG_ENDIAN)
-    *(uint64_t *)(uintptr_t)x = u;
+    memcpy(x, &u, sizeof(u));
 #else
     for (uint32_t i = 0; i < 8; i++) {
         x[i] = (uint8_t)(u >> 8 * i);
