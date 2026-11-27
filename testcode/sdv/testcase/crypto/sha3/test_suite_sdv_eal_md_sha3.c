@@ -562,3 +562,29 @@ EXIT:
     CRYPT_EAL_MdFreeCtx(ctx);
 }
 /* END_CASE */
+
+/**
+ * @test   SDV_CRYPTO_SHA3_UNALIGNED_FUNC_TC001
+ * @title  SHA3-256 unaligned input and output regression test.
+ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_SHA3_UNALIGNED_FUNC_TC001(void)
+{
+    static const uint8_t expectedDigest[32] = {
+        0x07, 0x0f, 0xa1, 0xab, 0x6f, 0xcc, 0x55, 0x7e,
+        0xd1, 0x4d, 0x42, 0x94, 0x1f, 0x19, 0x67, 0x69,
+        0x30, 0x48, 0x55, 0x1e, 0xb9, 0x04, 0x2a, 0x8d,
+        0x0a, 0x05, 0x7a, 0xfb, 0xd7, 0x5e, 0x81, 0xe0
+    };
+    uint64_t alignedInput[9] = {0};
+    uint64_t alignedOutput[5] = {0};
+    const uint8_t *unalignedInput = (const uint8_t *)alignedInput + 1;
+    uint8_t *unalignedOutput = (uint8_t *)alignedOutput + 1;
+
+    CRYPT_SHA3_256(unalignedOutput, unalignedInput, 64);
+    ASSERT_COMPARE("unaligned SHA3-256 result", unalignedOutput, 32, expectedDigest, sizeof(expectedDigest));
+
+EXIT:
+    return;
+}
+/* END_CASE */
