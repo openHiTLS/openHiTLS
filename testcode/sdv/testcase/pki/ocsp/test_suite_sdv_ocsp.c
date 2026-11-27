@@ -807,7 +807,7 @@ static HITLS_OCSP_Resp *OcspTestRebuildResp(const HITLS_OCSP_BasicResp *parsedBs
             CRYPT_EAL_MdFreeCtx(mdCtx);
             return NULL;
         }
-        HITLS_OCSP_CertStatus status = (HITLS_OCSP_CertStatus)0xFF;
+        int32_t status = (int32_t)0xFF;
         HITLS_OCSP_SingleRespCtrl(psr, HITLS_OCSP_SINGLERESP_GET_CERT_STATUS, &status, sizeof(status));
         BSL_TIME thisUpdate = {0};
         HITLS_OCSP_SingleRespCtrl(psr, HITLS_OCSP_SINGLERESP_GET_THIS_UPDATE, &thisUpdate, sizeof(thisUpdate));
@@ -1423,7 +1423,7 @@ void SDV_OCSP_E2E_SINGLE_TC001(void)
     ASSERT_EQ(HITLS_OCSP_BasicRespGetRespByIndex(parsedBs, 0, &parsedSr), HITLS_PKI_SUCCESS);
     ASSERT_TRUE(parsedSr != NULL);
 
-    HITLS_OCSP_CertStatus certStatus = 0;
+    int32_t certStatus = 0;
     ASSERT_EQ(
         HITLS_OCSP_SingleRespCtrl(parsedSr, HITLS_OCSP_SINGLERESP_GET_CERT_STATUS, &certStatus, sizeof(certStatus)),
         HITLS_PKI_SUCCESS);
@@ -1578,7 +1578,7 @@ void SDV_OCSP_E2E_MULTI_TC002(void)
     // First: GOOD
     HITLS_OCSP_SingleResp *parsedSr0 = NULL;
     ASSERT_EQ(HITLS_OCSP_BasicRespGetRespByIndex(parsedBs, 0, &parsedSr0), HITLS_PKI_SUCCESS);
-    HITLS_OCSP_CertStatus status0 = 0;
+    int32_t status0 = 0;
     ASSERT_EQ(HITLS_OCSP_SingleRespCtrl(parsedSr0, HITLS_OCSP_SINGLERESP_GET_CERT_STATUS, &status0, sizeof(status0)),
               HITLS_PKI_SUCCESS);
     ASSERT_EQ(status0, HITLS_OCSP_CERT_STATUS_GOOD);
@@ -1586,7 +1586,7 @@ void SDV_OCSP_E2E_MULTI_TC002(void)
     // Second: REVOKED
     HITLS_OCSP_SingleResp *parsedSr1 = NULL;
     ASSERT_EQ(HITLS_OCSP_BasicRespGetRespByIndex(parsedBs, 1, &parsedSr1), HITLS_PKI_SUCCESS);
-    HITLS_OCSP_CertStatus status1 = 0;
+    int32_t status1 = 0;
     ASSERT_EQ(HITLS_OCSP_SingleRespCtrl(parsedSr1, HITLS_OCSP_SINGLERESP_GET_CERT_STATUS, &status1, sizeof(status1)),
               HITLS_PKI_SUCCESS);
     ASSERT_EQ(status1, HITLS_OCSP_CERT_STATUS_REVOKED);
@@ -1673,7 +1673,7 @@ void SDV_OCSP_RESP_REVOKED_TC003(void)
     HITLS_OCSP_SingleResp *parsedSr = NULL;
     ASSERT_EQ(HITLS_OCSP_BasicRespGetRespByIndex(parsedBs, 0, &parsedSr), HITLS_PKI_SUCCESS);
 
-    HITLS_OCSP_CertStatus status = 0;
+    int32_t status = 0;
     ASSERT_EQ(HITLS_OCSP_SingleRespCtrl(parsedSr, HITLS_OCSP_SINGLERESP_GET_CERT_STATUS, &status, sizeof(status)),
               HITLS_PKI_SUCCESS);
     ASSERT_EQ(status, HITLS_OCSP_CERT_STATUS_REVOKED);
@@ -1739,7 +1739,7 @@ void SDV_OCSP_RESP_UNKNOWN_TC004(void)
     HITLS_OCSP_SingleResp *parsedSr = NULL;
     ASSERT_EQ(HITLS_OCSP_BasicRespGetRespByIndex(parsedBs, 0, &parsedSr), HITLS_PKI_SUCCESS);
 
-    HITLS_OCSP_CertStatus status = 0;
+    int32_t status = 0;
     ASSERT_EQ(HITLS_OCSP_SingleRespCtrl(parsedSr, HITLS_OCSP_SINGLERESP_GET_CERT_STATUS, &status, sizeof(status)),
               HITLS_PKI_SUCCESS);
     ASSERT_EQ(status, HITLS_OCSP_CERT_STATUS_UNKNOWN);
@@ -2413,7 +2413,7 @@ void SDV_OCSP_PRESET_FULL_TC017(void)
 
     HITLS_OCSP_SingleResp *parsedSr = NULL;
     ASSERT_EQ(HITLS_OCSP_BasicRespGetRespByIndex(parsedBs, 0, &parsedSr), HITLS_PKI_SUCCESS);
-    HITLS_OCSP_CertStatus certStatus = 0;
+    int32_t certStatus = 0;
     ASSERT_EQ(
         HITLS_OCSP_SingleRespCtrl(parsedSr, HITLS_OCSP_SINGLERESP_GET_CERT_STATUS, &certStatus, sizeof(certStatus)),
         HITLS_PKI_SUCCESS);
@@ -2526,7 +2526,7 @@ void SDV_OCSP_PRESET_MINIMAL_TC018(void)
     // Verify cert status
     HITLS_OCSP_SingleResp *parsedSr = NULL;
     ASSERT_EQ(HITLS_OCSP_BasicRespGetRespByIndex(parsedBs, 0, &parsedSr), HITLS_PKI_SUCCESS);
-    HITLS_OCSP_CertStatus certStatus = 0;
+    int32_t certStatus = 0;
     ASSERT_EQ(
         HITLS_OCSP_SingleRespCtrl(parsedSr, HITLS_OCSP_SINGLERESP_GET_CERT_STATUS, &certStatus, sizeof(certStatus)),
         HITLS_PKI_SUCCESS);
@@ -3093,7 +3093,7 @@ void SDV_OCSP_PRESET_PREDATA_RESP_FULL_TC021(void)
     HITLS_OCSP_SingleResp *sr = NULL;
     ASSERT_EQ(HITLS_OCSP_BasicRespGetRespByIndex(bs, 0, &sr), HITLS_PKI_SUCCESS);
     ASSERT_TRUE(sr != NULL);
-    HITLS_OCSP_CertStatus certStatus = (HITLS_OCSP_CertStatus)0xFF;
+    int32_t certStatus = (int32_t)0xFF;
     ASSERT_EQ(HITLS_OCSP_SingleRespCtrl(sr, HITLS_OCSP_SINGLERESP_GET_CERT_STATUS, &certStatus, sizeof(certStatus)),
               HITLS_PKI_SUCCESS);
     ASSERT_EQ(certStatus, HITLS_OCSP_CERT_STATUS_UNKNOWN);
@@ -3176,7 +3176,7 @@ void SDV_OCSP_PRESET_PREDATA_RESP_MINIMAL_TC022(void)
     HITLS_OCSP_SingleResp *sr = NULL;
     ASSERT_EQ(HITLS_OCSP_BasicRespGetRespByIndex(bs, 0, &sr), HITLS_PKI_SUCCESS);
     ASSERT_TRUE(sr != NULL);
-    HITLS_OCSP_CertStatus certStatus = (HITLS_OCSP_CertStatus)0xFF;
+    int32_t certStatus = (int32_t)0xFF;
     ASSERT_EQ(HITLS_OCSP_SingleRespCtrl(sr, HITLS_OCSP_SINGLERESP_GET_CERT_STATUS, &certStatus, sizeof(certStatus)),
               HITLS_PKI_SUCCESS);
     ASSERT_EQ(certStatus, HITLS_OCSP_CERT_STATUS_UNKNOWN);
@@ -3441,7 +3441,7 @@ void SDV_OCSP_PRESET_PREDATA_API_RESP_GOOD_TC025(void)
     HITLS_OCSP_SingleResp *sr = NULL;
     ASSERT_EQ(HITLS_OCSP_BasicRespGetRespByIndex(bs, 0, &sr), HITLS_PKI_SUCCESS);
     ASSERT_TRUE(sr != NULL);
-    HITLS_OCSP_CertStatus certStatus = (HITLS_OCSP_CertStatus)0xFF;
+    int32_t certStatus = (int32_t)0xFF;
     ASSERT_EQ(HITLS_OCSP_SingleRespCtrl(sr, HITLS_OCSP_SINGLERESP_GET_CERT_STATUS, &certStatus, sizeof(certStatus)),
               HITLS_PKI_SUCCESS);
     ASSERT_EQ(certStatus, HITLS_OCSP_CERT_STATUS_GOOD);
@@ -3549,7 +3549,7 @@ void SDV_OCSP_PRESET_PREDATA_API_RESP_REVOKED_TC026(void)
     HITLS_OCSP_SingleResp *sr = NULL;
     ASSERT_EQ(HITLS_OCSP_BasicRespGetRespByIndex(bs, 0, &sr), HITLS_PKI_SUCCESS);
     ASSERT_TRUE(sr != NULL);
-    HITLS_OCSP_CertStatus certStatus = (HITLS_OCSP_CertStatus)0xFF;
+    int32_t certStatus = (int32_t)0xFF;
     ASSERT_EQ(HITLS_OCSP_SingleRespCtrl(sr, HITLS_OCSP_SINGLERESP_GET_CERT_STATUS, &certStatus, sizeof(certStatus)),
               HITLS_PKI_SUCCESS);
     ASSERT_EQ(certStatus, HITLS_OCSP_CERT_STATUS_REVOKED);
@@ -3628,7 +3628,7 @@ void SDV_OCSP_PRESET_PREDATA_API_RESP_MINIMAL_TC027(void)
     HITLS_OCSP_SingleResp *sr = NULL;
     ASSERT_EQ(HITLS_OCSP_BasicRespGetRespByIndex(bs, 0, &sr), HITLS_PKI_SUCCESS);
     ASSERT_TRUE(sr != NULL);
-    HITLS_OCSP_CertStatus certStatus = (HITLS_OCSP_CertStatus)0xFF;
+    int32_t certStatus = (int32_t)0xFF;
     ASSERT_EQ(HITLS_OCSP_SingleRespCtrl(sr, HITLS_OCSP_SINGLERESP_GET_CERT_STATUS, &certStatus, sizeof(certStatus)),
               HITLS_PKI_SUCCESS);
     ASSERT_EQ(certStatus, HITLS_OCSP_CERT_STATUS_UNKNOWN);
@@ -3812,7 +3812,7 @@ void SDV_OCSP_PRESET_PREDATA_API_RESP_COMPREHENSIVE_TC029(void)
     HITLS_OCSP_SingleResp *sr0 = NULL;
     ASSERT_EQ(HITLS_OCSP_BasicRespGetRespByIndex(bs, 0, &sr0), HITLS_PKI_SUCCESS);
     ASSERT_TRUE(sr0 != NULL);
-    HITLS_OCSP_CertStatus certStatus0 = (HITLS_OCSP_CertStatus)0xFF;
+    int32_t certStatus0 = (int32_t)0xFF;
     ASSERT_EQ(HITLS_OCSP_SingleRespCtrl(sr0, HITLS_OCSP_SINGLERESP_GET_CERT_STATUS, &certStatus0, sizeof(certStatus0)),
               HITLS_PKI_SUCCESS);
     ASSERT_EQ(certStatus0, HITLS_OCSP_CERT_STATUS_GOOD);
@@ -3822,7 +3822,7 @@ void SDV_OCSP_PRESET_PREDATA_API_RESP_COMPREHENSIVE_TC029(void)
     HITLS_OCSP_SingleResp *sr1 = NULL;
     ASSERT_EQ(HITLS_OCSP_BasicRespGetRespByIndex(bs, 1, &sr1), HITLS_PKI_SUCCESS);
     ASSERT_TRUE(sr1 != NULL);
-    HITLS_OCSP_CertStatus certStatus1 = (HITLS_OCSP_CertStatus)0xFF;
+    int32_t certStatus1 = (int32_t)0xFF;
     ASSERT_EQ(HITLS_OCSP_SingleRespCtrl(sr1, HITLS_OCSP_SINGLERESP_GET_CERT_STATUS, &certStatus1, sizeof(certStatus1)),
               HITLS_PKI_SUCCESS);
     ASSERT_EQ(certStatus1, HITLS_OCSP_CERT_STATUS_REVOKED);
@@ -3833,7 +3833,7 @@ void SDV_OCSP_PRESET_PREDATA_API_RESP_COMPREHENSIVE_TC029(void)
     HITLS_OCSP_SingleResp *sr2 = NULL;
     ASSERT_EQ(HITLS_OCSP_BasicRespGetRespByIndex(bs, 2, &sr2), HITLS_PKI_SUCCESS);
     ASSERT_TRUE(sr2 != NULL);
-    HITLS_OCSP_CertStatus certStatus2 = (HITLS_OCSP_CertStatus)0xFF;
+    int32_t certStatus2 = (int32_t)0xFF;
     ASSERT_EQ(HITLS_OCSP_SingleRespCtrl(sr2, HITLS_OCSP_SINGLERESP_GET_CERT_STATUS, &certStatus2, sizeof(certStatus2)),
               HITLS_PKI_SUCCESS);
     ASSERT_EQ(certStatus2, HITLS_OCSP_CERT_STATUS_UNKNOWN);
@@ -4065,7 +4065,7 @@ void SDV_OCSP_PRESET_PREDATA_API_RESP_DELEGATED_TC030(void)
     HITLS_OCSP_SingleResp *sr = NULL;
     ASSERT_EQ(HITLS_OCSP_BasicRespGetRespByIndex(bs, 0, &sr), HITLS_PKI_SUCCESS);
     ASSERT_TRUE(sr != NULL);
-    HITLS_OCSP_CertStatus certStatus = (HITLS_OCSP_CertStatus)0xFF;
+    int32_t certStatus = (int32_t)0xFF;
     ASSERT_EQ(HITLS_OCSP_SingleRespCtrl(sr, HITLS_OCSP_SINGLERESP_GET_CERT_STATUS,
                                          &certStatus, sizeof(certStatus)), HITLS_PKI_SUCCESS);
     ASSERT_EQ(certStatus, HITLS_OCSP_CERT_STATUS_GOOD);
@@ -5618,7 +5618,7 @@ static int32_t OcspTestMallocFlow(void)
     if (HITLS_OCSP_BasicRespGetRespByIndex(parsedBs, 0, &parsedSingleResp) != HITLS_PKI_SUCCESS) {
         goto EXIT;
     }
-    HITLS_OCSP_CertStatus certStatus = 0;
+    int32_t certStatus = 0;
     if (HITLS_OCSP_SingleRespCtrl(parsedSingleResp, HITLS_OCSP_SINGLERESP_GET_CERT_STATUS, &certStatus,
                                   sizeof(certStatus)) != HITLS_PKI_SUCCESS) {
         goto EXIT;
@@ -5629,7 +5629,7 @@ static int32_t OcspTestMallocFlow(void)
     HITLS_OCSP_BasicRespFindResp(parsedBs, parsedCid, &parsedSingleResp);
     HITLS_OCSP_CertIdGetInfo(parsedCid, NULL, NULL, NULL, NULL);
     HITLS_OCSP_CertIdCmp(parsedCid, parsedCid);
-    HITLS_OCSP_CertStatusToStr(certStatus);
+    HITLS_OCSP_CertStatusToStr((HITLS_OCSP_CertStatus)certStatus);
     HITLS_OCSP_RespStatusToStr((HITLS_OCSP_RespStatus)respStatus);
     HITLS_OCSP_RevocationReasonToStr(HITLS_X509_REVOKED_REASON_UNSPECIFIED);
     HITLS_OCSP_GetCertOcspUrls(g_chain1.ee, NULL);

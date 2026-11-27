@@ -317,11 +317,11 @@ static int32_t OcspSingleRespGetCtrl(HITLS_OCSP_SingleResp_Internal *internal, i
             *(HITLS_OCSP_CertId **)val = internal->certId;
             return HITLS_PKI_SUCCESS;
         case HITLS_OCSP_SINGLERESP_GET_CERT_STATUS:
-            if (valLen != sizeof(HITLS_OCSP_CertStatus)) {
+            if (valLen != sizeof(int32_t)) {
                 BSL_ERR_PUSH_ERROR(HITLS_OCSP_ERR_INVALID_PARAM);
                 return HITLS_OCSP_ERR_INVALID_PARAM;
             }
-            *(HITLS_OCSP_CertStatus *)val = internal->certStatus;
+            *(int32_t *)val = (int32_t)internal->certStatus;
             return HITLS_PKI_SUCCESS;
         case HITLS_OCSP_SINGLERESP_GET_THIS_UPDATE:
             if (valLen != sizeof(BSL_TIME)) {
